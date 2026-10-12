@@ -2,12 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import { ID, Order, Payment, RequestContext, TransactionalConnection } from '@vendure/core';
 
-import { DEFERRED_PAYMENT_METHOD_CODE } from './constants';
 import { UNCONFIRMED_ERP_STATUSES } from './open-deferred-exposure.service';
 
 const MAX_SCANNED_ORDERS = 500;
-const FLAGGED_PAYMENT_SQL = `p.method = :method
-    AND p.state IN ('Authorized', 'Settled')
+const FLAGGED_PAYMENT_SQL = `p.state IN ('Authorized', 'Settled')
     AND p.metadata::jsonb -> 'public' ->> 'creditLimitExceeded' = 'true'`;
 
 @Injectable()
@@ -22,7 +20,7 @@ export class CreditFlagService {
             .getRepository(ctx, Payment)
             .createQueryBuilder('p')
             .where('p."orderId" = :orderId', { orderId })
-            .andWhere(FLAGGED_PAYMENT_SQL, { method: DEFERRED_PAYMENT_METHOD_CODE })
+            .andWhere(FLAGGED_PAYMENT_SQL)
             .getCount();
         return count > 0;
     }
@@ -40,7 +38,6 @@ export class CreditFlagService {
             })
             .andWhere(
                 `EXISTS (SELECT 1 FROM payment p WHERE p."orderId" = ${alias}.id AND ${FLAGGED_PAYMENT_SQL})`,
-                { method: DEFERRED_PAYMENT_METHOD_CODE },
             )
             .getMany();
         const ids = orders

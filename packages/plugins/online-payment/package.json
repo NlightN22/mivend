@@ -14,7 +14,8 @@
         "@vendure/core": "^3.7.3"
     },
     "dependencies": {
-        "@mivend/plugin-acquiring": "workspace:*"
+        "@mivend/plugin-acquiring": "workspace:*",
+        "@mivend/plugin-deferred-payment": "workspace:*"
     },
     "devDependencies": {
         "@nestjs/common": "^11.0.0",

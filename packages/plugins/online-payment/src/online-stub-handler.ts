@@ -7,6 +7,7 @@ import {
     PaymentMetadata,
     RequestContext,
 } from '@vendure/core';
+import { CreditPlacementService } from '@mivend/plugin-deferred-payment';
 import {
     ProformaInvoice,
     ProformaInvoiceService,
@@ -18,6 +19,7 @@ export const ONLINE_STUB_METHOD_CODE = 'online-stub';
 let proformaInvoiceService: ProformaInvoiceService;
 let globalSettingsService: GlobalSettingsService;
 let paymentAttemptService: PaymentAttemptService;
+let creditPlacementService: CreditPlacementService;
 
 interface SplitResult {
     metadata: PaymentMetadata;
@@ -60,11 +62,7 @@ async function computeProformaInvoiceSplit(
     }
 }
 
-// PaymentStubPage.vue's success/pending/fail buttons map directly to this handler's result via
-// the `status` metadata arg. This represents a real (demo-stub) attempt to move money right now —
-// each proforma invoice in the split gets its own PaymentAttempt via PaymentAttemptService.payProformaInvoice (the
-// same recording/allocation path the standalone "Pay proforma invoice" flow uses), so /payments reflects
-// checkout-originated payments too, not only ones made later from the proforma invoice detail page.
+// Card form (demo stub): `status` metadata maps the stub page buttons; each invoice gets a PaymentAttempt.
 export const onlineStubPaymentHandler = new PaymentMethodHandler({
     code: ONLINE_STUB_METHOD_CODE,
     description: [{ languageCode: LanguageCode.en, value: 'Online payment (demo stub)' }],
@@ -73,6 +71,7 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
         proformaInvoiceService = injector.get(ProformaInvoiceService);
         globalSettingsService = injector.get(GlobalSettingsService);
         paymentAttemptService = injector.get(PaymentAttemptService);
+        creditPlacementService = injector.get(CreditPlacementService);
     },
     createPayment: async (
         ctx,
@@ -81,6 +80,7 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
         _args,
         metadata: PaymentMetadata & { status?: string },
     ) => {
+        const placement = await creditPlacementService.place(ctx, order, 'card', metadata);
         const {
             metadata: proformaInvoiceMetadata,
             declineMessage,
@@ -88,7 +88,7 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
         } = await computeProformaInvoiceSplit(ctx, order);
         if (declineMessage) {
             return {
-                amount: order.totalWithTax,
+                amount: placement.amount,
                 state: 'Declined' as const,
                 errorMessage: declineMessage,
                 metadata,
@@ -108,9 +108,9 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
                 );
             }
             return {
-                amount: order.totalWithTax,
+                amount: placement.amount,
                 state: 'Declined' as const,
-                metadata: { ...metadata, ...proformaInvoiceMetadata },
+                metadata: { ...placement.metadata, ...proformaInvoiceMetadata },
             };
         }
         const settled = metadata?.status !== 'pending';
@@ -123,9 +123,9 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
             );
         }
         return {
-            amount: order.totalWithTax,
+            amount: placement.amount,
             state: settled ? ('Settled' as const) : ('Authorized' as const),
-            metadata: { ...metadata, ...proformaInvoiceMetadata },
+            metadata: { ...placement.metadata, ...proformaInvoiceMetadata },
         };
     },
     settlePayment: () => ({ success: true }),

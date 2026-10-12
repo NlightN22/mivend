@@ -10,11 +10,7 @@ import {
 import { NumberingOrderCodeStrategy } from './order-code.strategy';
 import { OrderUuidSubscriber } from './order-uuid.subscriber';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
-import {
-    DeferredPaymentPlugin,
-    deferredPaymentHandler,
-    deferredEligibilityChecker,
-} from '@mivend/plugin-deferred-payment';
+import { DeferredPaymentPlugin } from '@mivend/plugin-deferred-payment';
 import { FreightShippingPlugin } from '@mivend/plugin-freight-shipping';
 import { PickupShippingPlugin } from '@mivend/plugin-pickup-shipping';
 import { OnlinePaymentPlugin, onlineStubPaymentHandler } from '@mivend/plugin-online-payment';
@@ -52,7 +48,11 @@ import { NumberingPlugin } from '@mivend/plugin-numbering';
 import { OrderIdentityPlugin } from '@mivend/plugin-order-identity';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
-import { AcquiringPlugin, offlineTermsPaymentHandler } from '@mivend/plugin-acquiring';
+import {
+    AcquiringPlugin,
+    cashPaymentHandler,
+    offlineTermsPaymentHandler,
+} from '@mivend/plugin-acquiring';
 import { SavedViewsPlugin } from '@mivend/plugin-saved-views';
 import { SystemHealthDashboardPlugin } from './system-health-dashboard.plugin';
 import { DefaultSuperadminAlertDashboardPlugin } from './default-superadmin-alert-dashboard.plugin';
@@ -107,7 +107,7 @@ if (
 
 // DocumentsPlugin (always loaded, every instance) already imports AcquiringPlugin as a NestJS
 // module dependency, so AcquiringPlugin's entities/services/resolvers run on every instance
-// regardless of this array — confirmed empirically (offline-terms/online-stub/deferred-payment
+// regardless of this array — confirmed empirically (cash/offline-terms/online-stub
 // all exist on a branch instance's own DB). `.init({})` is called unconditionally here only so
 // AcquiringPluginOptions is actually set on every instance too, not left undefined on branch.
 const instancePlugins = [AcquiringPlugin.init({})];
@@ -587,9 +587,8 @@ export const config: VendureConfig = {
         paymentMethodHandlers: [
             offlineTermsPaymentHandler,
             onlineStubPaymentHandler,
-            deferredPaymentHandler,
+            cashPaymentHandler,
         ],
-        paymentMethodEligibilityCheckers: [deferredEligibilityChecker],
     },
     plugins: [
         AssetServerPlugin.init({

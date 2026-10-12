@@ -73,6 +73,11 @@ export const CustomPermission = {
         description:
             'Confirm or release a manual order reservation (order-confirmation flow, see docs/order-flow.md)',
     }),
+    ConfirmPaymentReceived: new PermissionDefinition({
+        name: 'ConfirmPaymentReceived',
+        description:
+            'Mark a cash or bank-transfer payment as received (settles the order payment, see docs/payments.md)',
+    }),
     CancelOrder: new PermissionDefinition({
         name: 'CancelOrder',
         description:

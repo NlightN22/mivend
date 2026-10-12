@@ -36,6 +36,9 @@ import { SettlementEntryService } from './settlement-entry.service';
 import { ProformaInvoiceVisibilityService } from './proforma-invoice-visibility.service';
 import { PaymentVisibilityService } from './payment-visibility.service';
 import { OfflineTermsBootstrapService } from './offline-terms-bootstrap.service';
+import { CashBootstrapService } from './cash-bootstrap.service';
+import { PaymentReceivedService } from './payment-received.service';
+import { PaymentReceivedResolver } from './payment-received.resolver';
 import {
     ProformaInvoiceAdminResolver,
     ProformaInvoiceShopResolver,
@@ -89,6 +92,8 @@ import type { AcquiringPluginOptions } from './types';
         ProformaInvoiceVisibilityService,
         PaymentVisibilityService,
         OfflineTermsBootstrapService,
+        CashBootstrapService,
+        PaymentReceivedService,
         VariantOrganizationHealthService,
         {
             provide: ACQUIRING_PLUGIN_OPTIONS,
@@ -112,6 +117,7 @@ import type { AcquiringPluginOptions } from './types';
             AdminOrderPaymentViewResolver,
             PaymentReconciliationIssueResolver,
             VariantOrganizationHealthResolver,
+            PaymentReceivedResolver,
             // Field resolver for ProformaInvoice.order (admin.schema.ts) — previously only registered
             // for shopApiExtensions, so the admin API's ProformaInvoice.order was a dead schema field
             // with no resolver wired to it at all (see admin.schema.ts's comment on ProformaInvoice.order).

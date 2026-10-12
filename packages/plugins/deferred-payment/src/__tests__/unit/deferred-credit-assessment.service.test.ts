@@ -41,27 +41,50 @@ beforeEach(() => {
 
 describe('DeferredCreditAssessmentService.assess', () => {
     it('is not exceeded when the order fits the available credit', async () => {
-        getForCustomer.mockResolvedValue({ id: 3, creditLimit: 1000, creditBalance: 200 });
+        getForCustomer.mockResolvedValue({
+            id: 3,
+            creditLimit: 1000,
+            creditBalance: 200,
+            paymentDelayDays: 14,
+        });
         expect(await service.assess(ctx, order(50000))).toEqual({
             exceeded: false,
             availableCredit: 800,
             orderAmount: 500,
             allowExceedingCreditLimit: false,
+            prepaymentReserveDays: 3,
+            limitControlled: true,
+            excessKopecks: 0,
         });
     });
 
     it('is not exceeded when the order equals the available credit exactly', async () => {
-        getForCustomer.mockResolvedValue({ id: 3, creditLimit: 1000, creditBalance: 200 });
+        getForCustomer.mockResolvedValue({
+            id: 3,
+            creditLimit: 1000,
+            creditBalance: 200,
+            paymentDelayDays: 14,
+        });
         expect((await service.assess(ctx, order(80000)))?.exceeded).toBe(false);
     });
 
     it('is exceeded one kopeck above the available credit', async () => {
-        getForCustomer.mockResolvedValue({ id: 3, creditLimit: 1000, creditBalance: 200 });
+        getForCustomer.mockResolvedValue({
+            id: 3,
+            creditLimit: 1000,
+            creditBalance: 200,
+            paymentDelayDays: 14,
+        });
         expect((await service.assess(ctx, order(80001)))?.exceeded).toBe(true);
     });
 
     it('subtracts open unconfirmed deferred orders from the available credit', async () => {
-        getForCustomer.mockResolvedValue({ id: 3, creditLimit: 1000, creditBalance: 200 });
+        getForCustomer.mockResolvedValue({
+            id: 3,
+            creditLimit: 1000,
+            creditBalance: 200,
+            paymentDelayDays: 14,
+        });
         sumUnconfirmedRubles.mockResolvedValue(300);
         const result = await service.assess(ctx, order(50001));
         expect(result).toEqual({
@@ -69,12 +92,20 @@ describe('DeferredCreditAssessmentService.assess', () => {
             availableCredit: 500,
             orderAmount: 500,
             allowExceedingCreditLimit: false,
+            prepaymentReserveDays: 3,
+            limitControlled: true,
+            excessKopecks: 0,
         });
         expect(sumUnconfirmedRubles).toHaveBeenCalledWith(ctx, 3, 9);
     });
 
     it('exposes the order branch setting when the branch allows exceeding', async () => {
-        getForCustomer.mockResolvedValue({ id: 3, creditLimit: 1000, creditBalance: 0 });
+        getForCustomer.mockResolvedValue({
+            id: 3,
+            creditLimit: 1000,
+            creditBalance: 0,
+            paymentDelayDays: 14,
+        });
         resolveEffective.mockResolvedValue({ allowExceedingCreditLimit: true });
         const result = await service.assess(ctx, order(100, 7, 'branch-a'));
         expect(result?.allowExceedingCreditLimit).toBe(true);
@@ -83,7 +114,12 @@ describe('DeferredCreditAssessmentService.assess', () => {
     });
 
     it('falls back to the preferred trading point branch before placement', async () => {
-        getForCustomer.mockResolvedValue({ id: 3, creditLimit: 1000, creditBalance: 0 });
+        getForCustomer.mockResolvedValue({
+            id: 3,
+            creditLimit: 1000,
+            creditBalance: 0,
+            paymentDelayDays: 14,
+        });
         getPreferredForCustomer.mockResolvedValue({ id: 5 });
         resolveServicingBranchId.mockResolvedValue('branch-b');
         resolveEffective.mockResolvedValue({ allowExceedingCreditLimit: false });
@@ -101,13 +137,58 @@ describe('DeferredCreditAssessmentService.assess', () => {
     it('evaluates each counterparty against its own limit and exposure', async () => {
         getForCustomer.mockImplementation(async (_c: unknown, id: number) =>
             id === 1
-                ? { id: 1, creditLimit: 100, creditBalance: 0 }
-                : { id: 2, creditLimit: 10000, creditBalance: 0 },
+                ? { id: 1, creditLimit: 100, creditBalance: 0, paymentDelayDays: 14 }
+                : { id: 2, creditLimit: 10000, creditBalance: 0, paymentDelayDays: 14 },
         );
         sumUnconfirmedRubles.mockImplementation(async (_c: unknown, cp: number) =>
             cp === 1 ? 0 : 50,
         );
         expect((await service.assess(ctx, order(50000, 1)))?.exceeded).toBe(true);
         expect((await service.assess(ctx, order(50000, 2)))?.exceeded).toBe(false);
+    });
+
+    it('reads the prepayment reserve days from the branch settings', async () => {
+        getForCustomer.mockResolvedValue({
+            id: 3,
+            creditLimit: 0,
+            creditBalance: 0,
+            paymentDelayDays: 0,
+        });
+        resolveEffective.mockResolvedValue({ prepaymentReserveDays: 5 });
+        expect((await service.assess(ctx, order(100)))?.prepaymentReserveDays).toBe(5);
+    });
+
+    it.each([
+        [0, 14],
+        [1000, 0],
+    ])(
+        'is prepayment (limit %s, delay %s days): never exceeded, no excess',
+        async (limit, delay) => {
+            getForCustomer.mockResolvedValue({
+                id: 3,
+                creditLimit: limit,
+                creditBalance: 5000,
+                paymentDelayDays: delay,
+            });
+            expect(await service.assess(ctx, order(10_000_000))).toMatchObject({
+                limitControlled: false,
+                exceeded: false,
+                excessKopecks: 0,
+            });
+        },
+    );
+
+    it('reports the excess over the limit that exists before this order, in kopecks', async () => {
+        getForCustomer.mockResolvedValue({
+            id: 3,
+            creditLimit: 1000,
+            creditBalance: 900,
+            paymentDelayDays: 14,
+        });
+        sumUnconfirmedRubles.mockResolvedValue(250.5);
+        expect(await service.assess(ctx, order(100))).toMatchObject({
+            exceeded: true,
+            excessKopecks: 15_050,
+        });
     });
 });

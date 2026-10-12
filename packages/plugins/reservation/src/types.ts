@@ -25,10 +25,6 @@ declare module '@vendure/core' {
     interface CustomOrderLineFields {
         organizationId?: number | null;
     }
-    interface CustomPaymentMethodFields {
-        paymentClassification?: string | null;
-        reservationTtlDays?: number | null;
-    }
     // Owned by @mivend/plugin-moq (declaration merging) — reserveOrder()'s defense-in-depth
     // multiplicity guard reads this without taking a package dependency on plugin-moq, see
     // docs/order-flow.md "Pack-size / MOQ".
@@ -96,30 +92,3 @@ export type ReservationFailureReason =
     | 'ERP_EXPORT_DATA_MISSING'
     | 'NOT_ELIGIBLE'
     | 'UNEXPECTED';
-
-// PaymentMethod.customFields.paymentClassification — same exception as OrderReservationState
-// above: a fixed, small set of internal technical classes that drive the reservation trigger
-// (see docs/order-flow.md "Payment classification (decided)"), not ERP/business data that
-// changes without a deploy. Unlike price types/statuses/categories (which DO belong in the
-// database per the backend-plugin-rules skill), adding a genuinely new payment classification is a code change in
-// its own right — reservation-payment.service.ts would need new branching logic for it
-// regardless of where the label lives, so there is no DB-driven flexibility to gain by moving
-// it out of code. Configured per `PaymentMethod` via this fixed dropdown in the native Vendure
-// Admin UI (port 3000) — see reservation.plugin.ts's customFields.PaymentMethod definition,
-// which must use this same array for its `options` so the two never drift apart.
-export const PAYMENT_CLASSIFICATIONS = ['PREPAID', 'CREDIT', 'OFFLINE_TERMS'] as const;
-export type PaymentClassification = (typeof PAYMENT_CLASSIFICATIONS)[number];
-
-export const PAYMENT_CLASSIFICATION_LABELS: Record<PaymentClassification, string> = {
-    PREPAID: 'Prepaid',
-    CREDIT: 'Credit terms',
-    OFFLINE_TERMS: 'Offline terms',
-};
-
-// A PaymentMethod with no classification configured yet (paymentClassification is nullable —
-// see CustomPaymentMethodFields above) is deliberately treated the same as CREDIT/
-// OFFLINE_TERMS: non-prepaid, enters the manual AWAITING_CONFIRMATION queue, never
-// auto-reserved. This is the safe default (never silently skip a reservation a human should
-// review) and is intentional, not a gap to "fix" by requiring configuration up front — see
-// ReservationPaymentService.handleOrderPlaced/handlePaymentStateReached, both of which check
-// `=== 'PREPAID'` rather than `!== undefined`.

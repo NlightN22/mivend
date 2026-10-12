@@ -13,11 +13,7 @@ import {
 import { OFFLINE_TERMS_METHOD_CODE } from './offline-terms-handler';
 import { loggerCtx } from './types';
 
-// Idempotent, safe to run on every boot — same pattern as
-// plugin-deferred-payment's DeferredPaymentBootstrapService. Gated on
-// `!processContext.isWorker` only; AcquiringPlugin itself is instantiated only on the central
-// instance (see apps/server/src/vendure-config.ts's instancePlugins), so this bootstrap
-// currently only ever runs on central as a byproduct of that, not via any gating here.
+// Idempotent, safe on every boot; the central instance only, as a byproduct of AcquiringPlugin's loading.
 @Injectable()
 export class OfflineTermsBootstrapService implements OnApplicationBootstrap {
     constructor(
@@ -63,7 +59,7 @@ export class OfflineTermsBootstrapService implements OnApplicationBootstrap {
             translations: [
                 {
                     languageCode: LanguageCode.en,
-                    name: 'ProformaInvoice / deferred payment',
+                    name: 'Bank transfer',
                 },
             ],
         });

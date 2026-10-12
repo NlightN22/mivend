@@ -16,9 +16,9 @@ import { CreditFlagService } from './credit-flag.service';
 import { CreditFlagAdminResolver, OrderCreditFlagResolver } from './api/admin.resolver';
 import { adminApiExtensions } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
-import { DeferredPaymentBootstrapService } from './deferred-payment-bootstrap.service';
+import { CreditPlacementService } from './credit-placement.service';
 
-// Handler and eligibility checker are plain objects registered in vendure-config's paymentOptions.
+// Credit control is a policy applied by every payment-form handler via CreditPlacementService.
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin, ErpOrderPlugin],
     shopApiExtensions: { schema: shopApiExtensions, resolvers: [DeferredCreditShopResolver] },
@@ -28,10 +28,11 @@ import { DeferredPaymentBootstrapService } from './deferred-payment-bootstrap.se
     },
     providers: [
         CreditFlagService,
-        DeferredPaymentBootstrapService,
+        CreditPlacementService,
         OpenDeferredExposureService,
         DeferredCreditAssessmentService,
     ],
+    exports: [CreditPlacementService],
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.GlobalSettings = [
             ...(config.customFields.GlobalSettings ?? []),

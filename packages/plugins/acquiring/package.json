@@ -16,6 +16,7 @@
     },
     "dependencies": {
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-deferred-payment": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
         "@mivend/plugin-notification": "workspace:*",

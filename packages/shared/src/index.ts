@@ -12,13 +12,13 @@ export { withAggregateLock } from './aggregate-lock';
 // consumed by ts-node/Node backend code, so it never hit this).
 export { CREDIT_LIMIT_EXCEEDED_KEY } from './creditLimit';
 export {
-    COUNTS_AGAINST_LIMIT_KEY,
     CREDIT_ACKNOWLEDGED_KEY,
     DEFAULT_PREPAYMENT_RESERVE_DAYS,
     PAYMENT_FORMS,
     PAYMENT_FORM_BY_METHOD_CODE,
-    PLACEMENT_ROUTE_KEY,
+    PLACEMENT_KEY,
     type PaymentForm,
+    type PlacementMetadata,
     type PlacementRoute,
 } from './paymentPolicy';
 

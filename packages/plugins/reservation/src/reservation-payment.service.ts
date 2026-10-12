@@ -1,21 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
     GlobalSettingsService,
+    ID,
     Order,
-    PaymentMethod,
+    Payment,
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
+import { PLACEMENT_KEY, type PlacementMetadata } from 'shared';
 
 import { Reservation } from './entities/reservation.entity';
 import { isExpectedReservationError } from './reservation-failure';
 import { ReservationFailureService } from './reservation-failure.service';
 import { ReservationService } from './reservation.service';
-import { DEFAULT_PREPAID_RESERVATION_TTL_DAYS, DEFAULT_RESERVATION_DAYS, loggerCtx } from './types';
+import {
+    DEFAULT_PREPAID_RESERVATION_TTL_DAYS,
+    DEFAULT_RESERVATION_DAYS,
+    loggerCtx,
+    type ReservationCreationMethod,
+} from './types';
 
-// Owns "which trigger applies to this order and what TTL should it get" — split out of
-// ReservationService to keep that file under AGENTS.md's ~300-line guideline. Depends on
-// ReservationService for the actual reserve/state-set work; never duplicates it.
+// Owns which trigger applies to an order and its TTL; reserve/state writes stay in ReservationService.
 @Injectable()
 export class ReservationPaymentService {
     constructor(
@@ -25,47 +30,34 @@ export class ReservationPaymentService {
         private failureService: ReservationFailureService,
     ) {}
 
-    // Called from an OrderPlacedEvent subscriber (reservation.plugin.ts). Prepaid orders are
-    // left alone here — handlePaymentStateReached owns their auto-reserve trigger. Non-prepaid
-    // (and unset/CREDIT/OFFLINE_TERMS classifications, per docs/order-flow.md's decision) enter
-    // the confirmation queue. Guarded by the current state so a replayed/duplicate event never
-    // clobbers a state set since (e.g. FAILED, or an already-manual-confirmed RESERVED).
+    // OrderPlacedEvent: the stored placement route decides (docs/payments.md); a replay is guarded by the stored state.
     async handleOrderPlaced(ctx: RequestContext, order: Order): Promise<void> {
-        const fullOrder =
-            order.payments !== undefined
-                ? order
-                : await this.connection
-                      .getRepository(ctx, Order)
-                      .findOne({ where: { id: order.id }, relations: ['payments'] });
-        if (!fullOrder) {
+        const placement = await this.loadPlacement(ctx, order);
+        if (placement?.route === 'after-payment') {
             return;
         }
 
-        const paymentMethodCode = fullOrder.payments?.[0]?.method;
-        const method = paymentMethodCode
-            ? await this.getPaymentMethod(ctx, paymentMethodCode)
-            : null;
-        const classification = method?.customFields?.paymentClassification ?? null;
-        if (classification === 'PREPAID') {
-            return;
-        }
-
-        // The event's own Order object can be stale (a repeat, or a manual confirm that won the
-        // race); the stored state decides. Falls back to the event's copy while the row is not
-        // visible yet to this fresh context.
+        // The event's Order can be stale; the stored state decides.
         const stored = await this.connection
             .getRepository(ctx, Order)
-            .findOne({ where: { id: fullOrder.id } });
-        if ((stored ?? fullOrder).customFields?.reservationState !== 'NOT_REQUIRED') {
+            .findOne({ where: { id: order.id } });
+        if ((stored ?? order).customFields?.reservationState !== 'NOT_REQUIRED') {
             return;
         }
-        await this.markAwaitingConfirmation(ctx, fullOrder);
-        await this.autoReserveIfEnabled(ctx, fullOrder, method, classification);
+        await this.markAwaitingConfirmation(ctx, order);
+        if (placement?.route === 'erp-now') {
+            await this.reserveOrRecord(
+                ctx,
+                order.id,
+                placement.reserveDays ?? DEFAULT_RESERVATION_DAYS,
+                'auto-trust-rule',
+            );
+            return;
+        }
+        if (!placement) await this.autoReserveIfEnabled(ctx, order);
     }
 
-    // Under a row lock and conditional on the stored NOT_REQUIRED, so a manual confirm that reaches
-    // RESERVED first is never rolled back (#199 audit); re-applied only if a trailing Vendure save puts
-    // NOT_REQUIRED back.
+    // Row lock + stored NOT_REQUIRED guard, so a manual confirm is never rolled back (#199); re-applied if a trailing save reverts it.
     private async markAwaitingConfirmation(ctx: RequestContext, order: Order): Promise<void> {
         const apply = (): Promise<void> =>
             this.connection.withTransaction(ctx, async txCtx => {
@@ -99,100 +91,70 @@ export class ReservationPaymentService {
         }
     }
 
-    // Global switch (GlobalSettings.autoReserveOnPlacement) that skips the manual confirmation
-    // queue; a failed reserve leaves the order in AWAITING_CONFIRMATION for staff.
-    private async autoReserveIfEnabled(
-        ctx: RequestContext,
-        order: Order,
-        method: PaymentMethod | null,
-        classification: string | null,
-    ): Promise<void> {
+    // Orders without a placement route only: GlobalSettings.autoReserveOnPlacement skips the manual queue.
+    private async autoReserveIfEnabled(ctx: RequestContext, order: Order): Promise<void> {
         const settings = await this.globalSettingsService.getSettings(ctx);
         if (!settings.customFields?.autoReserveOnPlacement) return;
-        // An over-limit deferred order always waits for a manager (#188).
-        if (order.payments?.some(p => p.metadata?.public?.creditLimitExceeded === true)) return;
-        try {
-            await this.reservationService.reserveOrder(
-                ctx,
-                order.id,
-                this.resolveReservationTtlDays(method, classification),
-                'auto-trust-rule',
-            );
-        } catch (error) {
-            await this.failureService.record(ctx, order.id, error);
-            if (isExpectedReservationError(error)) {
-                Logger.warn(
-                    `Auto-reserve on placement failed for order ${String(order.id)}: ${(error as Error).message}`,
-                    loggerCtx,
-                );
-                return;
-            }
-            throw error;
-        }
+        // An over-limit order always waits for a manager (#188).
+        const payments = await this.loadPayments(ctx, order);
+        if (payments.some(p => p.metadata?.public?.creditLimitExceeded === true)) return;
+        await this.reserveOrRecord(ctx, order.id, DEFAULT_RESERVATION_DAYS, 'auto-trust-rule');
     }
 
-    // Called from an OrderStateTransitionEvent subscriber (reservation.plugin.ts) on the same
-    // fromState/toState guard Vendure's own DefaultStockAllocationStrategy uses. Owns the
-    // prepaid path only — non-prepaid orders are already routed to AWAITING_CONFIRMATION at
-    // placement (handleOrderPlaced). reserveOrder()'s own idempotency makes this safe to call
-    // for both the Authorized and Settled transitions of the same order.
-    async handlePaymentStateReached(ctx: RequestContext, order: Order): Promise<void> {
-        const fullOrder =
-            order.payments !== undefined
-                ? order
-                : await this.connection
-                      .getRepository(ctx, Order)
-                      .findOne({ where: { id: order.id }, relations: ['payments'] });
-        if (!fullOrder) {
-            return;
-        }
-
-        const paymentMethodCode = fullOrder.payments?.[0]?.method;
-        if (!paymentMethodCode) {
-            return;
-        }
-        const method = await this.getPaymentMethod(ctx, paymentMethodCode);
-        const classification = method?.customFields?.paymentClassification ?? null;
-        if (classification !== 'PREPAID') {
-            return;
-        }
-
-        const ttlDays = this.resolveReservationTtlDays(method, classification);
-        try {
-            await this.reservationService.reserveOrder(ctx, fullOrder.id, ttlDays, 'auto-prepaid');
-        } catch (error) {
-            await this.failureService.record(ctx, fullOrder.id, error);
-            if (isExpectedReservationError(error)) {
-                Logger.warn(
-                    `Auto-reserve failed for prepaid order ${String(fullOrder.id)}: ${(error as Error).message}`,
-                    loggerCtx,
-                );
-                return;
-            }
-            throw error;
-        }
-    }
-
-    private async getPaymentMethod(
+    private async reserveOrRecord(
         ctx: RequestContext,
-        paymentMethodCode: string,
-    ): Promise<PaymentMethod | null> {
-        return this.connection
-            .getRepository(ctx, PaymentMethod)
-            .findOne({ where: { code: paymentMethodCode } });
+        orderId: ID,
+        ttlDays: number,
+        trigger: ReservationCreationMethod,
+    ): Promise<void> {
+        try {
+            await this.reservationService.reserveOrder(ctx, orderId, ttlDays, trigger);
+        } catch (error) {
+            await this.failureService.record(ctx, orderId, error);
+            if (isExpectedReservationError(error)) {
+                Logger.warn(
+                    `Auto-reserve (${trigger}) failed for order ${String(orderId)}: ${(error as Error).message}`,
+                    loggerCtx,
+                );
+                return;
+            }
+            throw error;
+        }
     }
 
-    // See docs/order-flow.md "TTL (decided)": an explicit per-method override wins; otherwise
-    // 30 days for PREPAID, DEFAULT_RESERVATION_DAYS (7) for everything else.
-    private resolveReservationTtlDays(
-        method: PaymentMethod | null,
-        classification: string | null,
-    ): number {
-        if (method?.customFields?.reservationTtlDays) {
-            return method.customFields.reservationTtlDays;
+    // Only the `after-payment` route (card) reserves here, once a payment is Settled; reserveOrder() is idempotent.
+    async handlePaymentStateReached(ctx: RequestContext, order: Order): Promise<void> {
+        const payments = await this.loadPayments(ctx, order);
+        const placement = this.placementOf(payments);
+        if (placement?.route !== 'after-payment') {
+            return;
         }
-        return classification === 'PREPAID'
-            ? DEFAULT_PREPAID_RESERVATION_TTL_DAYS
-            : DEFAULT_RESERVATION_DAYS;
+        if (!payments.some(p => p.state === 'Settled')) {
+            return;
+        }
+        await this.reserveOrRecord(
+            ctx,
+            order.id,
+            DEFAULT_PREPAID_RESERVATION_TTL_DAYS,
+            'auto-prepaid',
+        );
+    }
+
+    private async loadPayments(ctx: RequestContext, order: Order): Promise<Payment[]> {
+        return this.connection
+            .getRepository(ctx, Payment)
+            .find({ where: { order: { id: order.id } } });
+    }
+
+    private async loadPlacement(
+        ctx: RequestContext,
+        order: Order,
+    ): Promise<PlacementMetadata | null> {
+        return this.placementOf(await this.loadPayments(ctx, order));
+    }
+
+    private placementOf(payments: Payment[]): PlacementMetadata | null {
+        const holder = payments.find(p => p.metadata?.[PLACEMENT_KEY]);
+        return holder ? (holder.metadata[PLACEMENT_KEY] as PlacementMetadata) : null;
     }
 }

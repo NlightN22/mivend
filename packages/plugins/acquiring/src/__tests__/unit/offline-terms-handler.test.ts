@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { offlineTermsPaymentHandler } from '../../offline-terms-handler';
 
+const place = vi.fn(async (_ctx: unknown, order: { totalWithTax: number }) => ({
+    amount: order.totalWithTax,
+    decision: {},
+    metadata: { public: { creditLimitExceeded: false }, placement: { route: 'erp-now' } },
+}));
+
 function fakeInjector(overrides: {
     proformaInvoiceService?: unknown;
     globalSettingsService?: unknown;
@@ -11,6 +17,7 @@ function fakeInjector(overrides: {
     const byName: Record<string, unknown> = {
         ProformaInvoiceService: overrides.proformaInvoiceService,
         GlobalSettingsService: overrides.globalSettingsService,
+        CreditPlacementService: { place },
     };
     return {
         get: (token: unknown) => byName[(token as { name: string }).name],
@@ -115,5 +122,32 @@ describe('offlineTermsPaymentHandler', () => {
         );
 
         expect(result.state).toBe('Authorized');
+    });
+
+    it('applies the credit policy as the bank-transfer form and keeps its placement in the payment metadata', async () => {
+        place.mockClear();
+        offlineTermsPaymentHandler.init(
+            fakeInjector({
+                proformaInvoiceService: {
+                    createProformaInvoicesForOrder: vi.fn().mockResolvedValue([]),
+                    updateStatusForOrder: vi.fn(),
+                },
+                globalSettingsService: { getSettings: vi.fn().mockResolvedValue({}) },
+            }) as never,
+        );
+        const result = await offlineTermsPaymentHandler.createPayment(
+            mockCtx,
+            mockOrder,
+            1000,
+            [],
+            { creditLimitAcknowledged: true },
+            mockMethod,
+        );
+        expect(place).toHaveBeenCalledWith(mockCtx, mockOrder, 'bank-transfer', {
+            creditLimitAcknowledged: true,
+        });
+        expect((result as { metadata: { placement: unknown } }).metadata.placement).toEqual({
+            route: 'erp-now',
+        });
     });
 });

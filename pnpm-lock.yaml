@@ -458,6 +458,9 @@ importers:
             '@mivend/plugin-counterparty':
                 specifier: workspace:*
                 version: link:../counterparty
+            '@mivend/plugin-deferred-payment':
+                specifier: workspace:*
+                version: link:../deferred-payment
             '@mivend/plugin-erp-order':
                 specifier: workspace:*
                 version: link:../erp-order
@@ -1045,6 +1048,9 @@ importers:
             '@mivend/plugin-acquiring':
                 specifier: workspace:*
                 version: link:../acquiring
+            '@mivend/plugin-deferred-payment':
+                specifier: workspace:*
+                version: link:../deferred-payment
         devDependencies:
             '@nestjs/common':
                 specifier: ^11.0.0

@@ -1,4 +1,5 @@
 export { AcquiringPlugin } from './src/acquiring.plugin';
+export { cashPaymentHandler, CASH_METHOD_CODE } from './src/cash-handler';
 export {
     ProformaInvoice,
     type ProformaInvoiceStatus,

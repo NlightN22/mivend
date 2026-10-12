@@ -52,8 +52,6 @@ import { ReservationWriteOffSyncService } from './reservation-write-off-sync.ser
 import {
     DEFAULT_ORDER_RESERVATION_STATE,
     DEFAULT_RESERVATION_DAYS,
-    PAYMENT_CLASSIFICATIONS,
-    PAYMENT_CLASSIFICATION_LABELS,
     RESERVATION_PLUGIN_OPTIONS,
     loggerCtx,
 } from './types';
@@ -342,55 +340,6 @@ const adminApiSchema = gql`
                 ],
             },
         ];
-        config.customFields.PaymentMethod = [
-            ...(config.customFields.PaymentMethod ?? []),
-            {
-                name: 'paymentClassification',
-                type: 'string' as const,
-                nullable: true,
-                // Built from PAYMENT_CLASSIFICATIONS (types.ts), the single source of truth for
-                // this fixed set — never list a value here that isn't in that array, or the
-                // Admin UI dropdown and the code's `=== 'PREPAID'` checks can drift apart.
-                options: PAYMENT_CLASSIFICATIONS.map(value => ({
-                    value,
-                    label: [
-                        {
-                            languageCode: LanguageCode.en,
-                            value: PAYMENT_CLASSIFICATION_LABELS[value],
-                        },
-                    ],
-                })),
-                public: false,
-                label: [{ languageCode: LanguageCode.en, value: 'Payment classification' }],
-                // Configured per payment method in the native Vendure Admin UI (port 3000) — see
-                // docs/order-flow.md "Payment classification (decided)". Unset (and CREDIT/
-                // OFFLINE_TERMS) all resolve to non-prepaid for reservation purposes: until an
-                // admin sets online-stub -> PREPAID here, it will also (correctly, by that same
-                // rule) enter the AWAITING_CONFIRMATION queue — self-correcting once configured,
-                // not a bug to special-case in code.
-                description: [
-                    {
-                        languageCode: LanguageCode.en,
-                        value: 'PREPAID auto-reserves on payment (stage 4); CREDIT/OFFLINE_TERMS/unset require manual confirmation.',
-                    },
-                ],
-            },
-            {
-                name: 'reservationTtlDays',
-                type: 'int' as const,
-                nullable: true,
-                public: false,
-                label: [
-                    { languageCode: LanguageCode.en, value: 'Reservation TTL override (days)' },
-                ],
-                description: [
-                    {
-                        languageCode: LanguageCode.en,
-                        value: 'Falls back to 30 days (PREPAID) / 7 days (non-prepaid) when unset — see docs/order-flow.md "TTL (decided)".',
-                    },
-                ],
-            },
-        ];
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
             createReservationExpiryTask(ReservationPlugin.options),
@@ -445,17 +394,15 @@ export class ReservationPlugin implements OnApplicationBootstrap {
             loggerCtx,
         );
 
-        // Mirrors Vendure's own DefaultStockAllocationStrategy.shouldAllocateStock guard — same
-        // signal, so the auto-prepaid reservation path fires exactly when Vendure's own stock
-        // allocation would (see docs/order-flow.md "Prepaid — an EventBus listener...").
+        // Order became paid: first Authorized/Settled out of ArrangingPayment, or any later PaymentSettled.
         subscribeAndLog(
             this.eventBus,
             OrderStateTransitionEvent,
             async event => {
-                if (
-                    event.fromState !== 'ArrangingPayment' ||
-                    (event.toState !== 'PaymentAuthorized' && event.toState !== 'PaymentSettled')
-                ) {
+                const firstPayment =
+                    event.fromState === 'ArrangingPayment' &&
+                    (event.toState === 'PaymentAuthorized' || event.toState === 'PaymentSettled');
+                if (!firstPayment && event.toState !== 'PaymentSettled') {
                     return;
                 }
                 const ctx = await this.requestContextService.create({ apiType: 'admin' });

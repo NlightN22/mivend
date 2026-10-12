@@ -1,358 +1,153 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DataSource } from 'typeorm';
-import { CounterpartyService, CreditLimitCheckService } from '@mivend/plugin-counterparty';
-import type { Injector, Order, RequestContext } from '@vendure/core';
-import {
-    createTestSchema,
-    dropTestSchema,
-    testDataSourceConnectionOptions,
-    testSchemaOptions,
-} from 'shared';
+import { describe, expect, it } from 'vitest';
 
-import { deferredEligibilityChecker } from '../../deferred-eligibility-checker';
-import { deferredPaymentHandler } from '../../deferred-payment-handler';
-import { OpenDeferredExposureService } from '../../open-deferred-exposure.service';
-import { DeferredCreditAssessmentService } from '../../deferred-credit-assessment.service';
+import { useCreditPlacementHarness } from './credit-placement.harness';
 
-// Real SQL (exposure sum), real CreditLimitCheckService.decide and the real handler/checker run over
-// a schema-faithful replica of the Vendure tables they touch. Only CounterpartyService (another
-// plugin) is replaced by its own join query, copied from counterparty.service.ts getForCustomer.
-const { schema, extra } = testSchemaOptions('deferred_credit');
-let dataSource: DataSource;
-const ctx = {} as RequestContext;
-let maxAgeDays: number | null = 7;
+const h = useCreditPlacementHarness('deferred_credit');
+const exceeded = async (...args: Parameters<typeof h.place>): Promise<boolean> =>
+    (await h.place(...args)).decision.creditLimitExceeded;
 
-const run = (sql: string, params: unknown[] = []): Promise<Array<Record<string, unknown>>> =>
-    dataSource.query(sql, params);
-
-const counterpartyService = {
-    async getForCustomer(_ctx: RequestContext, customerId: number) {
-        const rows = await run(
-            `SELECT c.* FROM counterparty c
-             INNER JOIN customer cu ON cu."customFieldsCounterpartyid"::text = c.id::text
-             WHERE cu.id = $1`,
-            [customerId],
-        );
-        return rows[0] ?? null;
-    },
-};
-const creditLimitCheckService = new CreditLimitCheckService(null as never, null as never);
-const exposureService = new OpenDeferredExposureService(
-    {
-        getRepository: () => ({
-            query: (sql: string, params: unknown[]) => run(sql, params),
-        }),
-    } as never,
-    {
-        getSettings: async () => ({
-            customFields: { deferredOrderMaxAgeDays: maxAgeDays },
-        }),
-    } as never,
-);
-const providers = new Map<unknown, unknown>([
-    [CounterpartyService, counterpartyService],
-    [CreditLimitCheckService, creditLimitCheckService],
-    [OpenDeferredExposureService, exposureService],
-    [
-        DeferredCreditAssessmentService,
-        new DeferredCreditAssessmentService(
-            counterpartyService as never,
-            creditLimitCheckService,
-            exposureService,
-            { resolveEffective: async () => null } as never,
-            { getPreferredForCustomer: async () => null } as never,
-        ),
-    ],
-]);
-const injector = { get: (token: unknown) => providers.get(token) } as unknown as Injector;
-
-interface Buyer {
-    customerId: number;
-    counterpartyId: number;
-}
-
-async function addBuyer(creditLimit: number, creditBalance = 0, delayDays = 14): Promise<Buyer> {
-    const [cp] = await run(
-        `INSERT INTO counterparty ("erpId", "creditLimit", "creditBalance", "paymentDelayDays")
-         VALUES ($1, $2, $3, $4) RETURNING id`,
-        [`cnt-${Math.random()}`, creditLimit, creditBalance, delayDays],
-    );
-    const [cu] = await run(
-        `INSERT INTO customer ("customFieldsCounterpartyid") VALUES ($1) RETURNING id`,
-        [String(cp.id)],
-    );
-    return { customerId: Number(cu.id), counterpartyId: Number(cp.id) };
-}
-
-async function addOrder(
-    buyer: Buyer,
-    rubles: number,
-    opts: {
-        erpStatus?: string;
-        method?: string;
-        paymentState?: string;
-        state?: string;
-        placedDaysAgo?: number;
-    } = {},
-): Promise<number> {
-    const [o] = await run(
-        `INSERT INTO "order" ("customerId", "customFieldsErpstatus", state, "orderPlacedAt", "subTotalWithTax")
-         VALUES ($1, $2, $3, now() - make_interval(days => $4::int), $5) RETURNING id`,
-        [
-            buyer.customerId,
-            opts.erpStatus ?? 'PENDING',
-            opts.state ?? 'PaymentAuthorized',
-            opts.placedDaysAgo ?? 0,
-            Math.round(rubles * 100),
-        ],
-    );
-    await run(`INSERT INTO payment ("orderId", method, state, amount) VALUES ($1, $2, $3, $4)`, [
-        o.id,
-        opts.method ?? 'deferred-payment',
-        opts.paymentState ?? 'Authorized',
-        Math.round(rubles * 100),
-    ]);
-    return Number(o.id);
-}
-
-async function placeDeferred(buyer: Buyer, rubles: number, orderId = 999_999) {
-    const order = {
-        id: orderId,
-        totalWithTax: Math.round(rubles * 100),
-        customer: { id: buyer.customerId },
-    } as unknown as Order;
-    const result = await deferredPaymentHandler.createPayment(
-        ctx,
-        order,
-        order.totalWithTax,
-        [],
-        {},
-        undefined as never,
-    );
-    const meta = result.metadata as { public?: { creditLimitExceeded?: boolean } };
-    return { state: result.state, exceeded: meta.public?.creditLimitExceeded };
-}
-
-beforeAll(async () => {
-    await createTestSchema(schema);
-    dataSource = new DataSource({
-        type: 'postgres',
-        ...testDataSourceConnectionOptions(),
-        schema,
-        extra,
-    });
-    await dataSource.initialize();
-    await run(`CREATE TABLE counterparty (
-        id serial PRIMARY KEY, "erpId" varchar, "creditLimit" bigint NOT NULL DEFAULT 0,
-        "creditBalance" bigint NOT NULL DEFAULT 0, "paymentDelayDays" integer NOT NULL DEFAULT 0)`);
-    await run(
-        `CREATE TABLE customer (id serial PRIMARY KEY, "customFieldsCounterpartyid" varchar)`,
-    );
-    await run(`CREATE TABLE "order" (
-        id serial PRIMARY KEY, "customerId" int, "customFieldsErpstatus" varchar,
-        state varchar, "orderPlacedAt" timestamp,
-        "subTotalWithTax" int NOT NULL DEFAULT 0, "shippingWithTax" int NOT NULL DEFAULT 0)`);
-    await run(`CREATE TABLE payment (
-        id serial PRIMARY KEY, "orderId" int, method varchar, state varchar, amount int)`);
-    void deferredPaymentHandler.init?.(injector);
-    void deferredEligibilityChecker.init?.(injector);
-});
-
-afterAll(async () => {
-    await dataSource.destroy();
-    await dropTestSchema(schema);
-});
-
-beforeEach(async () => {
-    maxAgeDays = 7;
-    await run(`TRUNCATE payment, "order", customer, counterparty RESTART IDENTITY`);
-});
-
-describe('deferred eligibility (real counterparty join)', () => {
-    it('shows deferred to a buyer with a credit limit and hides it from a prepayment buyer', async () => {
-        const limited = await addBuyer(100_000);
-        const prepay = await addBuyer(0);
-        const check = (b: Buyer) =>
-            deferredEligibilityChecker.check(
-                ctx,
-                { customer: { id: b.customerId } } as unknown as Order,
-                [],
-                {} as never,
-            );
-        expect(await check(limited)).toBe(true);
-        expect(await check(prepay)).toBe(false);
-        expect(await check(await addBuyer(100_000, 0, 0))).toBe(false);
-    });
-});
-
-describe('deferred credit check over open orders (real SQL + decide)', () => {
-    it('authorizes within the limit and does not flag it', async () => {
-        const buyer = await addBuyer(100_000);
-        expect(await placeDeferred(buyer, 40_000)).toEqual({
-            state: 'Authorized',
-            exceeded: false,
+describe('credit control over open orders (real SQL + decide)', () => {
+    it('places within the limit unflagged and sends cash to the ERP now', async () => {
+        const buyer = await h.addBuyer(100_000);
+        const result = await h.place(buyer, 40_000);
+        expect(result.decision).toMatchObject({
+            route: 'erp-now',
+            creditLimitExceeded: false,
+            countsAgainstLimit: true,
         });
+        expect(result.metadata.public).toEqual({ creditLimitExceeded: false });
     });
 
-    it('still authorizes a single order over the limit but flags it', async () => {
-        const buyer = await addBuyer(100_000);
-        expect(await placeDeferred(buyer, 100_000.01)).toEqual({
-            state: 'Authorized',
-            exceeded: true,
+    it('still places a single order over the limit but flags it for a manager', async () => {
+        const buyer = await h.addBuyer(100_000);
+        expect((await h.place(buyer, 100_000.01)).decision).toMatchObject({
+            route: 'manager-confirmation',
+            creditLimitExceeded: true,
         });
     });
 
     it('lands exactly on the limit without flagging, one kopeck more flags', async () => {
-        const buyer = await addBuyer(100_000, 40_000);
-        expect((await placeDeferred(buyer, 60_000)).exceeded).toBe(false);
-        expect((await placeDeferred(buyer, 60_000.01)).exceeded).toBe(true);
+        const buyer = await h.addBuyer(100_000, 40_000);
+        expect(await exceeded(buyer, 60_000)).toBe(false);
+        expect(await exceeded(buyer, 60_000.01)).toBe(true);
     });
 
-    it('sums several open unconfirmed deferred orders before the new one', async () => {
-        const buyer = await addBuyer(100_000);
-        await addOrder(buyer, 30_000, { erpStatus: 'PENDING' });
-        await addOrder(buyer, 30_000, { erpStatus: 'SENT_TO_ERP' });
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(false); // 80k
-        await addOrder(buyer, 30_000, { erpStatus: 'RESERVED' });
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true); // 110k
-        expect((await placeDeferred(buyer, 10_000)).exceeded).toBe(false); // exactly 100k
+    it('sums several open unconfirmed orders before the new one', async () => {
+        const buyer = await h.addBuyer(100_000);
+        await h.addOrder(buyer, 30_000, { erpStatus: 'PENDING' });
+        await h.addOrder(buyer, 30_000, { erpStatus: 'SENT_TO_ERP' });
+        expect(await exceeded(buyer, 20_000)).toBe(false); // 80k
+        await h.addOrder(buyer, 30_000, { erpStatus: 'RESERVED' });
+        expect(await exceeded(buyer, 20_000)).toBe(true); // 110k
+        expect(await exceeded(buyer, 10_000)).toBe(false); // exactly 100k
     });
 
     it('adds the open orders on top of the ERP credit balance', async () => {
-        const buyer = await addBuyer(100_000, 50_000);
-        await addOrder(buyer, 30_000);
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(false);
-        expect((await placeDeferred(buyer, 20_000.01)).exceeded).toBe(true);
+        const buyer = await h.addBuyer(100_000, 50_000);
+        await h.addOrder(buyer, 30_000);
+        expect(await exceeded(buyer, 20_000)).toBe(false);
+        expect(await exceeded(buyer, 20_000.01)).toBe(true);
     });
 
     it('ignores orders ERP already confirmed (they are in the balance) and dead payments', async () => {
-        const buyer = await addBuyer(100_000);
-        await addOrder(buyer, 90_000, { erpStatus: 'SHIPPING' });
-        await addOrder(buyer, 90_000, { erpStatus: 'DELIVERING' });
-        await addOrder(buyer, 90_000, { erpStatus: 'DELIVERED' });
-        await addOrder(buyer, 90_000, { erpStatus: 'CANCELLED' });
-        await addOrder(buyer, 90_000, { paymentState: 'Declined' });
-        expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
+        const buyer = await h.addBuyer(100_000);
+        for (const erpStatus of ['SHIPPING', 'DELIVERING', 'DELIVERED', 'CANCELLED']) {
+            await h.addOrder(buyer, 90_000, { erpStatus });
+        }
+        await h.addOrder(buyer, 90_000, { paymentState: 'Declined' });
+        expect(await exceeded(buyer, 90_000)).toBe(false);
     });
 
     it.each(['CONFIRMED', 'UNDER_APPROVAL', 'APPROVED', 'PICKING'])(
         'still counts an order in %s (no sales document, debt not in the ERP balance yet)',
         async erpStatus => {
-            const buyer = await addBuyer(100_000);
-            await addOrder(buyer, 90_000, { erpStatus });
-            expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
+            const buyer = await h.addBuyer(100_000);
+            await h.addOrder(buyer, 90_000, { erpStatus });
+            expect(await exceeded(buyer, 20_000)).toBe(true);
         },
     );
 
     it('counts one order once however many payment attempts it has', async () => {
-        const buyer = await addBuyer(100_000);
-        const orderId = await addOrder(buyer, 60_000, {
-            method: 'card-online',
-            paymentState: 'Created',
-        });
-        for (const method of ['card-online', 'offline-terms']) {
-            await run(
-                `INSERT INTO payment ("orderId", method, state, amount) VALUES ($1, $2, 'Created', 6000000)`,
-                [orderId, method],
-            );
-        }
-        expect((await placeDeferred(buyer, 40_000)).exceeded).toBe(false); // 60k + 40k
-        expect((await placeDeferred(buyer, 40_000.01)).exceeded).toBe(true);
+        const buyer = await h.addBuyer(100_000);
+        const orderId = await h.addOrder(buyer, 60_000, { paymentState: 'Created' });
+        await h.addPayment(orderId, 'online-stub', 'Created', 6_000_000);
+        await h.addPayment(orderId, 'offline-terms', 'Created', 6_000_000);
+        expect(await exceeded(buyer, 40_000)).toBe(false);
+        expect(await exceeded(buyer, 40_000.01)).toBe(true);
     });
 
     it('counts only the unsettled remainder of a partially paid order', async () => {
-        const buyer = await addBuyer(100_000);
-        const orderId = await addOrder(buyer, 90_000, {
-            method: 'card-online',
-            paymentState: 'Created',
+        const buyer = await h.addBuyer(100_000);
+        const orderId = await h.addOrder(buyer, 90_000, { paymentState: 'Created' });
+        await h.addPayment(orderId, 'online-stub', 'Settled', 5_000_000);
+        expect(await exceeded(buyer, 60_000)).toBe(false); // 40k + 60k
+        expect(await exceeded(buyer, 60_000.01)).toBe(true);
+    });
+
+    it('counts an unpaid order of any form, ignores one already paid by money', async () => {
+        const buyer = await h.addBuyer(100_000);
+        await h.addOrder(buyer, 30_000, { method: 'offline-terms' });
+        await h.addOrder(buyer, 30_000, { method: 'cash', paymentState: 'Created' });
+        await h.addOrder(buyer, 90_000, { method: 'online-stub', paymentState: 'Settled' });
+        await h.addOrder(buyer, 90_000, { method: 'cash', paymentState: 'Settled' });
+        expect(await exceeded(buyer, 40_000)).toBe(false); // 100k
+        expect(await exceeded(buyer, 40_000.01)).toBe(true);
+    });
+
+    it('does not count a card order that opted out until its payment arrives', async () => {
+        const buyer = await h.addBuyer(100_000);
+        await h.addOrder(buyer, 90_000, {
+            method: 'online-stub',
+            metadata: { placement: { route: 'after-payment', countsAgainstLimit: false } },
         });
-        await run(
-            `INSERT INTO payment ("orderId", method, state, amount) VALUES ($1, 'card-online', 'Settled', 5000000)`,
-            [orderId],
-        );
-        expect((await placeDeferred(buyer, 60_000)).exceeded).toBe(false); // 40k + 60k
-        expect((await placeDeferred(buyer, 60_000.01)).exceeded).toBe(true);
+        expect(await exceeded(buyer, 90_000)).toBe(false);
     });
 
-    it('counts an unpaid order of any method, ignores one already paid by money', async () => {
-        const buyer = await addBuyer(100_000);
-        await addOrder(buyer, 30_000, { method: 'offline-terms' });
-        await addOrder(buyer, 30_000, { method: 'cash', paymentState: 'Created' });
-        await addOrder(buyer, 90_000, { method: 'card-online', paymentState: 'Settled' });
-        await addOrder(buyer, 90_000, { method: 'offline-terms', paymentState: 'Settled' });
-        expect((await placeDeferred(buyer, 40_000)).exceeded).toBe(false); // 100k
-        expect((await placeDeferred(buyer, 40_000.01)).exceeded).toBe(true);
-    });
-
-    it('keeps counting a legacy deferred payment even when marked Settled', async () => {
-        const buyer = await addBuyer(100_000);
-        await addOrder(buyer, 90_000, { paymentState: 'Settled' });
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
-    });
-
-    it('stops counting an order once money settles it next to its deferred payment', async () => {
-        const buyer = await addBuyer(100_000);
-        const orderId = await addOrder(buyer, 90_000);
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
-        await run(
-            `INSERT INTO payment ("orderId", method, state, amount) VALUES ($1, 'card-online', 'Settled', 9000000)`,
-            [orderId],
-        );
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(false);
+    it('counts a legacy payment without a placement marker', async () => {
+        const buyer = await h.addBuyer(100_000);
+        await h.addOrder(buyer, 90_000, { method: 'offline-terms', metadata: {} });
+        expect(await exceeded(buyer, 20_000)).toBe(true);
     });
 
     it('never counts a cancelled order even if ERP has not confirmed it', async () => {
-        const buyer = await addBuyer(100_000);
-        await addOrder(buyer, 90_000, { state: 'Cancelled' });
-        expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
+        const buyer = await h.addBuyer(100_000);
+        await h.addOrder(buyer, 90_000, { state: 'Cancelled' });
+        expect(await exceeded(buyer, 90_000)).toBe(false);
     });
 
     it('stops counting an open order older than the max age (boundary and setting)', async () => {
-        const buyer = await addBuyer(100_000);
-        await addOrder(buyer, 90_000, { placedDaysAgo: 6 });
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
-        await run(`TRUNCATE payment, "order" RESTART IDENTITY`);
-        await addOrder(buyer, 90_000, { placedDaysAgo: 8 });
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(false);
-        maxAgeDays = 10;
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
-        maxAgeDays = null;
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(false);
+        const buyer = await h.addBuyer(100_000);
+        await h.addOrder(buyer, 90_000, { placedDaysAgo: 6 });
+        expect(await exceeded(buyer, 20_000)).toBe(true);
+        await h.run(`TRUNCATE payment, "order" RESTART IDENTITY`);
+        await h.addOrder(buyer, 90_000, { placedDaysAgo: 8 });
+        expect(await exceeded(buyer, 20_000)).toBe(false);
+        h.state.maxAgeDays = 10;
+        expect(await exceeded(buyer, 20_000)).toBe(true);
+        h.state.maxAgeDays = null;
+        expect(await exceeded(buyer, 20_000)).toBe(false);
     });
 
-    it('excludes an order rejected by the ERP from exposure, even though still open', async () => {
-        const buyer = await addBuyer(100_000);
-        await addOrder(buyer, 90_000, { erpStatus: 'REJECTED' });
-        expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
-    });
-
-    it('re-enters exposure once a rejected order is un-rejected back to SENT_TO_ERP', async () => {
-        const buyer = await addBuyer(100_000);
-        const orderId = await addOrder(buyer, 90_000, { erpStatus: 'REJECTED' });
-        expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
-        await run(`UPDATE "order" SET "customFieldsErpstatus" = 'SENT_TO_ERP' WHERE id = $1`, [
+    it('excludes an order rejected by the ERP, and re-counts it once un-rejected', async () => {
+        const buyer = await h.addBuyer(100_000);
+        const orderId = await h.addOrder(buyer, 90_000, { erpStatus: 'REJECTED' });
+        expect(await exceeded(buyer, 90_000)).toBe(false);
+        await h.run(`UPDATE "order" SET "customFieldsErpstatus" = 'SENT_TO_ERP' WHERE id = $1`, [
             orderId,
         ]);
-        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
+        expect(await exceeded(buyer, 20_000)).toBe(true);
     });
 
     it('does not count another counterparty’s open orders (data isolation)', async () => {
-        const buyer = await addBuyer(100_000);
-        const other = await addBuyer(100_000);
-        await addOrder(other, 95_000);
-        expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
+        const buyer = await h.addBuyer(100_000);
+        await h.addOrder(await h.addBuyer(100_000), 95_000);
+        expect(await exceeded(buyer, 90_000)).toBe(false);
     });
 
-    it('does not count the order being paid itself (idempotent re-run)', async () => {
-        const buyer = await addBuyer(100_000);
-        const orderId = await addOrder(buyer, 70_000);
-        expect((await placeDeferred(buyer, 70_000, orderId)).exceeded).toBe(false);
-        expect((await placeDeferred(buyer, 70_000, orderId)).exceeded).toBe(false);
-    });
-
-    it('declines a customer without a counterparty', async () => {
-        const [cu] = await run(`INSERT INTO customer DEFAULT VALUES RETURNING id`);
-        const result = await placeDeferred({ customerId: Number(cu.id), counterpartyId: 0 }, 1);
-        expect(result.state).toBe('Declined');
+    it('does not count the order being placed itself (idempotent re-run)', async () => {
+        const buyer = await h.addBuyer(100_000);
+        const orderId = await h.addOrder(buyer, 70_000);
+        expect(await exceeded(buyer, 70_000, 'cash', orderId)).toBe(false);
+        expect(await exceeded(buyer, 70_000, 'cash', orderId)).toBe(false);
     });
 });

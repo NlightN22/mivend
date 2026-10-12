@@ -9,6 +9,7 @@
     "references": [
         { "path": "../access-control" },
         { "path": "../counterparty" },
+        { "path": "../deferred-payment" },
         { "path": "../erp-order" },
         { "path": "../sync" },
         { "path": "../notification" },

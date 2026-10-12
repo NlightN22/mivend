@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { onlineStubPaymentHandler } from '../../online-stub-handler';
 
+const place = vi.fn(async (_ctx: unknown, order: { totalWithTax: number }) => ({
+    amount: order.totalWithTax,
+    decision: {},
+    metadata: { public: { creditLimitExceeded: false }, placement: { route: 'erp-now' } },
+}));
+
 function fakeInjector(overrides: {
     proformaInvoiceService?: unknown;
     globalSettingsService?: unknown;
@@ -13,6 +19,7 @@ function fakeInjector(overrides: {
         ProformaInvoiceService: overrides.proformaInvoiceService,
         GlobalSettingsService: overrides.globalSettingsService,
         PaymentAttemptService: overrides.paymentAttemptService,
+        CreditPlacementService: { place },
     };
     return {
         get: (token: unknown) => byName[(token as { name: string }).name],
@@ -136,5 +143,35 @@ describe('onlineStubPaymentHandler', () => {
             'fail',
             'online-acquiring',
         );
+    });
+
+    it('creates the payment for the amount the credit policy returns for a card', async () => {
+        place.mockResolvedValueOnce({
+            amount: 3500,
+            decision: {},
+            metadata: {
+                public: { creditLimitExceeded: true },
+                placement: { route: 'manager-confirmation' },
+            },
+        });
+        onlineStubPaymentHandler.init(
+            fakeInjector({
+                proformaInvoiceService: {
+                    createProformaInvoicesForOrder: vi.fn().mockResolvedValue([]),
+                },
+                globalSettingsService: { getSettings: vi.fn().mockResolvedValue({}) },
+                paymentAttemptService: { payProformaInvoice: vi.fn() },
+            }) as never,
+        );
+        const result = await onlineStubPaymentHandler.createPayment(
+            mockCtx,
+            mockOrder,
+            1000,
+            [],
+            {},
+            mockMethod,
+        );
+        expect(place).toHaveBeenLastCalledWith(mockCtx, mockOrder, 'card', {});
+        expect(result.amount).toBe(3500);
     });
 });

@@ -6,8 +6,9 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
+import { PLACEMENT_KEY } from 'shared';
 
-import { DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS, DEFERRED_PAYMENT_METHOD_CODE } from './constants';
+import { DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS } from './constants';
 
 // Orders whose debt is not in the ERP credit balance yet: it appears only with the sales document
 // (realization, SHIPPING and later). REJECTED is excluded (#204) so it stops blocking the limit.
@@ -35,8 +36,8 @@ export class OpenDeferredExposureService {
         return days && days > 0 ? days : DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS;
     }
 
-    // Per order, once: order total minus Settled non-deferred payments (a legacy deferred payment is
-    // Authorized without money, so it keeps counting). Excludes `excludeOrderId`, cancelled and too-old orders.
+    // Per order, once: order total minus Settled payments, for orders with a live payment that does not
+    // opt out (card awaiting payment). Excludes `excludeOrderId`, cancelled and too-old orders.
     async sumUnconfirmedRubles(
         ctx: RequestContext,
         counterpartyId: ID,
@@ -49,7 +50,7 @@ export class OpenDeferredExposureService {
                 `SELECT COALESCE(SUM(GREATEST(
                         o."subTotalWithTax" + o."shippingWithTax" - COALESCE((
                             SELECT SUM(paid.amount) FROM payment paid
-                            WHERE paid."orderId" = o.id AND paid.state = 'Settled' AND paid.method <> $2
+                            WHERE paid."orderId" = o.id AND paid.state = 'Settled'
                         ), 0), 0)), 0) AS total
                  FROM "order" o
                  INNER JOIN customer cu ON cu.id = o."customerId"
@@ -57,6 +58,7 @@ export class OpenDeferredExposureService {
                    AND EXISTS (
                        SELECT 1 FROM payment p
                        WHERE p."orderId" = o.id AND p.state IN ('Created', 'Authorized', 'Settled')
+                         AND COALESCE(p.metadata::jsonb -> $2::text ->> 'countsAgainstLimit', 'true') <> 'false'
                    )
                    AND o.id <> $3
                    AND o."customFieldsErpstatus" = ANY($4)
@@ -64,7 +66,7 @@ export class OpenDeferredExposureService {
                    AND o."orderPlacedAt" > now() - make_interval(days => $5::int)`,
                 [
                     String(counterpartyId),
-                    DEFERRED_PAYMENT_METHOD_CODE,
+                    PLACEMENT_KEY,
                     excludeOrderId,
                     UNCONFIRMED_ERP_STATUSES,
                     maxAgeDays,

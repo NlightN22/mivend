@@ -24,13 +24,23 @@ function createMockOrderRepo(order: unknown): {
     };
 }
 
-function createMockPaymentMethodRepo(): { findOne: ReturnType<typeof vi.fn> } {
-    return { findOne: vi.fn(async () => null) };
+function createMockPaymentRepo(): { find: ReturnType<typeof vi.fn> } {
+    return { find: vi.fn(async () => []) };
 }
+
+const withPlacement = (
+    route: string,
+    state = 'Authorized',
+    reserveDays: number | null = null,
+): { method: string; state: string; metadata: object } => ({
+    method: 'cash',
+    state,
+    metadata: { placement: { route, countsAgainstLimit: true, reserveDays } },
+});
 
 describe('ReservationPaymentService', () => {
     let orderRepo: ReturnType<typeof createMockOrderRepo>;
-    let paymentMethodRepo: ReturnType<typeof createMockPaymentMethodRepo>;
+    let paymentRepo: ReturnType<typeof createMockPaymentRepo>;
     let reservationRepo: { count: ReturnType<typeof vi.fn> };
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
@@ -48,12 +58,12 @@ describe('ReservationPaymentService', () => {
     beforeEach(() => {
         autoReserveOnPlacement = false;
         orderRepo = createMockOrderRepo(null);
-        paymentMethodRepo = createMockPaymentMethodRepo();
+        paymentRepo = createMockPaymentRepo();
         reservationRepo = { count: vi.fn(async () => 0) };
         connection = {
             getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
-                entity?.name === 'PaymentMethod'
-                    ? paymentMethodRepo
+                entity?.name === 'Payment'
+                    ? paymentRepo
                     : entity?.name === 'Reservation'
                       ? reservationRepo
                       : orderRepo,
@@ -79,7 +89,7 @@ describe('ReservationPaymentService', () => {
         const placed = () => ({
             id: 'order-1',
             customFields: { reservationState: 'NOT_REQUIRED' },
-            payments: [{ method: 'deferred-payment' }],
+            payments: [],
         });
 
         it('reserves right away with the non-prepaid TTL when the switch is on', async () => {
@@ -95,16 +105,10 @@ describe('ReservationPaymentService', () => {
 
         it('leaves an order flagged creditLimitExceeded awaiting a manager even with the switch on', async () => {
             autoReserveOnPlacement = true;
-            const overLimit = {
-                ...placed(),
-                payments: [
-                    {
-                        method: 'deferred-payment',
-                        metadata: { public: { creditLimitExceeded: true } },
-                    },
-                ],
-            };
-            await service.handleOrderPlaced(ctx, overLimit as never);
+            paymentRepo.find.mockResolvedValue([
+                { method: 'offline-terms', metadata: { public: { creditLimitExceeded: true } } },
+            ]);
+            await service.handleOrderPlaced(ctx, placed() as never);
             expect(reservationService.reserveOrder).not.toHaveBeenCalled();
             expect(orderRepo.update).toHaveBeenCalledWith(
                 'order-1',
@@ -228,119 +232,103 @@ describe('ReservationPaymentService', () => {
     });
 
     describe('handleOrderPlaced', () => {
-        it('sets AWAITING_CONFIRMATION for a non-prepaid order at NOT_REQUIRED', async () => {
-            paymentMethodRepo.findOne.mockResolvedValue({
-                customFields: { paymentClassification: 'OFFLINE_TERMS' },
-            });
-            const placedOrder = {
-                id: 'order-1',
-                customFields: { reservationState: 'NOT_REQUIRED' },
-                payments: [{ method: 'offline-terms' }],
-            };
+        const placedOrder = (): object => ({
+            id: 'order-1',
+            customFields: { reservationState: 'NOT_REQUIRED' },
+            payments: [],
+        });
+        const awaiting = expect.objectContaining({
+            customFields: expect.objectContaining({ reservationState: 'AWAITING_CONFIRMATION' }),
+        });
 
-            await service.handleOrderPlaced(ctx, placedOrder as never);
+        it('queues an order without a placement route for a manager', async () => {
+            await service.handleOrderPlaced(ctx, placedOrder() as never);
+            expect(orderRepo.update).toHaveBeenCalledWith('order-1', awaiting);
+            expect(reservationService.reserveOrder).not.toHaveBeenCalled();
+        });
 
-            expect(orderRepo.update).toHaveBeenCalledWith(
+        it('reserves an erp-now order at once with the standard TTL', async () => {
+            paymentRepo.find.mockResolvedValue([withPlacement('erp-now')]);
+            await service.handleOrderPlaced(ctx, placedOrder() as never);
+            expect(orderRepo.update).toHaveBeenCalledWith('order-1', awaiting);
+            expect(reservationService.reserveOrder).toHaveBeenCalledWith(
+                ctx,
                 'order-1',
-                expect.objectContaining({
-                    customFields: expect.objectContaining({
-                        reservationState: 'AWAITING_CONFIRMATION',
-                    }),
-                }),
+                7,
+                'auto-trust-rule',
             );
         });
 
-        it('trusts the stored reservation state over a stale copy on the event', async () => {
+        it('uses the short prepayment reserve stored at placement', async () => {
+            paymentRepo.find.mockResolvedValue([withPlacement('erp-now', 'Authorized', 3)]);
+            await service.handleOrderPlaced(ctx, placedOrder() as never);
+            expect(reservationService.reserveOrder).toHaveBeenCalledWith(
+                ctx,
+                'order-1',
+                3,
+                'auto-trust-rule',
+            );
+        });
+
+        it('erp-now reserves even when the global auto-reserve switch is off', async () => {
+            autoReserveOnPlacement = false;
+            paymentRepo.find.mockResolvedValue([withPlacement('erp-now')]);
+            await service.handleOrderPlaced(ctx, placedOrder() as never);
+            expect(reservationService.reserveOrder).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps a manager-confirmation order waiting even with the switch on', async () => {
             autoReserveOnPlacement = true;
-            orderRepo.findOne.mockResolvedValue({
-                id: 'order-1',
-                customFields: { reservationState: 'RESERVED' },
-            });
+            paymentRepo.find.mockResolvedValue([withPlacement('manager-confirmation')]);
+            await service.handleOrderPlaced(ctx, placedOrder() as never);
+            expect(orderRepo.update).toHaveBeenCalledWith('order-1', awaiting);
+            expect(reservationService.reserveOrder).not.toHaveBeenCalled();
+        });
 
-            await service.handleOrderPlaced(ctx, {
-                id: 'order-1',
-                customFields: { reservationState: 'NOT_REQUIRED' },
-                payments: [{ method: 'deferred-payment' }],
-            } as never);
-
+        it('leaves an after-payment (card) order untouched', async () => {
+            paymentRepo.find.mockResolvedValue([withPlacement('after-payment')]);
+            await service.handleOrderPlaced(ctx, placedOrder() as never);
             expect(orderRepo.update).not.toHaveBeenCalled();
             expect(reservationService.reserveOrder).not.toHaveBeenCalled();
         });
 
-        it('is a no-op for PREPAID orders', async () => {
-            paymentMethodRepo.findOne.mockResolvedValue({
-                customFields: { paymentClassification: 'PREPAID' },
-            });
-            const placedOrder = {
+        it('trusts the stored reservation state over a stale copy on the event', async () => {
+            paymentRepo.find.mockResolvedValue([withPlacement('erp-now')]);
+            orderRepo.findOne.mockResolvedValue({
                 id: 'order-1',
-                customFields: { reservationState: 'NOT_REQUIRED' },
-                payments: [{ method: 'online-stub' }],
-            };
-
-            await service.handleOrderPlaced(ctx, placedOrder as never);
-
+                customFields: { reservationState: 'RESERVED' },
+            });
+            await service.handleOrderPlaced(ctx, placedOrder() as never);
             expect(orderRepo.update).not.toHaveBeenCalled();
+            expect(reservationService.reserveOrder).not.toHaveBeenCalled();
         });
 
         it('does not clobber a state other than NOT_REQUIRED', async () => {
-            const placedOrder = {
+            await service.handleOrderPlaced(ctx, {
                 id: 'order-1',
                 customFields: { reservationState: 'RESERVED' },
                 payments: [],
-            };
-
-            await service.handleOrderPlaced(ctx, placedOrder as never);
-
+            } as never);
             expect(orderRepo.update).not.toHaveBeenCalled();
         });
 
-        it('treats an unset payment classification as non-prepaid', async () => {
-            paymentMethodRepo.findOne.mockResolvedValue(null);
-            const placedOrder = {
-                id: 'order-1',
-                customFields: { reservationState: 'NOT_REQUIRED' },
-                payments: [{ method: 'offline-terms' }],
-            };
-
-            await service.handleOrderPlaced(ctx, placedOrder as never);
-
-            expect(orderRepo.update).toHaveBeenCalled();
+        it('records an erp-now reserve failure and leaves the order awaiting confirmation', async () => {
+            paymentRepo.find.mockResolvedValue([withPlacement('erp-now')]);
+            const error = new InsufficientStockError([]);
+            reservationService.reserveOrder.mockRejectedValue(error);
+            await expect(
+                service.handleOrderPlaced(ctx, placedOrder() as never),
+            ).resolves.toBeUndefined();
+            expect(failureService.record).toHaveBeenCalledWith(ctx, 'order-1', error);
         });
     });
 
     describe('handlePaymentStateReached', () => {
-        it('auto-reserves a PREPAID order using the payment method TTL override', async () => {
-            paymentMethodRepo.findOne.mockResolvedValue({
-                customFields: { paymentClassification: 'PREPAID', reservationTtlDays: 45 },
-            });
-            const placedOrder = {
-                id: 'order-1',
-                customFields: {},
-                payments: [{ method: 'online-stub' }],
-            };
+        const order = { id: 'order-1', customFields: {}, payments: [] };
 
-            await service.handlePaymentStateReached(ctx, placedOrder as never);
-
-            expect(reservationService.reserveOrder).toHaveBeenCalledWith(
-                ctx,
-                'order-1',
-                45,
-                'auto-prepaid',
-            );
-        });
-
-        it('falls back to the 30-day PREPAID default when no override is set', async () => {
-            paymentMethodRepo.findOne.mockResolvedValue({
-                customFields: { paymentClassification: 'PREPAID' },
-            });
-            const placedOrder = {
-                id: 'order-1',
-                customFields: {},
-                payments: [{ method: 'online-stub' }],
-            };
-
-            await service.handlePaymentStateReached(ctx, placedOrder as never);
-
+        it('reserves a card order once its payment is Settled, with the prepaid TTL', async () => {
+            paymentRepo.find.mockResolvedValue([withPlacement('after-payment', 'Settled')]);
+            await service.handlePaymentStateReached(ctx, order as never);
             expect(reservationService.reserveOrder).toHaveBeenCalledWith(
                 ctx,
                 'order-1',
@@ -349,52 +337,43 @@ describe('ReservationPaymentService', () => {
             );
         });
 
-        it('is a no-op for non-PREPAID classifications', async () => {
-            paymentMethodRepo.findOne.mockResolvedValue({
-                customFields: { paymentClassification: 'OFFLINE_TERMS' },
-            });
-            const placedOrder = {
-                id: 'order-1',
-                customFields: {},
-                payments: [{ method: 'offline-terms' }],
-            };
-
-            await service.handlePaymentStateReached(ctx, placedOrder as never);
-
+        it('waits while a card payment is only Authorized', async () => {
+            paymentRepo.find.mockResolvedValue([withPlacement('after-payment', 'Authorized')]);
+            await service.handlePaymentStateReached(ctx, order as never);
             expect(reservationService.reserveOrder).not.toHaveBeenCalled();
         });
 
-        it('records the failure for a prepaid order whose reserve fails', async () => {
-            paymentMethodRepo.findOne.mockResolvedValue({
-                customFields: { paymentClassification: 'PREPAID' },
-            });
+        it.each(['erp-now', 'manager-confirmation'])(
+            'does not reserve a %s order on payment',
+            async route => {
+                paymentRepo.find.mockResolvedValue([withPlacement(route, 'Settled')]);
+                await service.handlePaymentStateReached(ctx, order as never);
+                expect(reservationService.reserveOrder).not.toHaveBeenCalled();
+            },
+        );
+
+        it('is a no-op for payments without a placement route', async () => {
+            paymentRepo.find.mockResolvedValue([{ method: 'offline-terms', state: 'Settled' }]);
+            await service.handlePaymentStateReached(ctx, order as never);
+            expect(reservationService.reserveOrder).not.toHaveBeenCalled();
+        });
+
+        it('records the failure for a card order whose reserve fails, without throwing', async () => {
+            paymentRepo.find.mockResolvedValue([withPlacement('after-payment', 'Settled')]);
             const error = new InsufficientStockError([]);
             reservationService.reserveOrder.mockRejectedValue(error);
-            const placedOrder = {
-                id: 'order-1',
-                customFields: {},
-                payments: [{ method: 'online-stub' }],
-            };
-
-            await service.handlePaymentStateReached(ctx, placedOrder as never);
-
+            await expect(
+                service.handlePaymentStateReached(ctx, order as never),
+            ).resolves.toBeUndefined();
             expect(failureService.record).toHaveBeenCalledWith(ctx, 'order-1', error);
         });
 
-        it('swallows InsufficientStockError instead of throwing', async () => {
-            paymentMethodRepo.findOne.mockResolvedValue({
-                customFields: { paymentClassification: 'PREPAID' },
-            });
-            reservationService.reserveOrder.mockRejectedValue(new InsufficientStockError([]));
-            const placedOrder = {
-                id: 'order-1',
-                customFields: {},
-                payments: [{ method: 'online-stub' }],
-            };
-
-            await expect(
-                service.handlePaymentStateReached(ctx, placedOrder as never),
-            ).resolves.toBeUndefined();
+        it('rethrows an unexpected error', async () => {
+            paymentRepo.find.mockResolvedValue([withPlacement('after-payment', 'Settled')]);
+            reservationService.reserveOrder.mockRejectedValue(new Error('db down'));
+            await expect(service.handlePaymentStateReached(ctx, order as never)).rejects.toThrow(
+                'db down',
+            );
         });
     });
 });
