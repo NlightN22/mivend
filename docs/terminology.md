@@ -19,6 +19,16 @@ Fixed vocabulary for documents and payments. Use these terms in code, UI, docs a
 *sales invoice*. The old `Invoice` entity is the proforma invoice and was renamed in #223 (table `proforma_invoice`); the SalesInvoice mirror
 is a separate later task. Legacy mentions in older docs are corrected as files are touched.
 
+## Mapping from external and legacy names
+
+- The order-changed event's `linkedDocuments[]` entry of type `invoice` (a 1C payment request) maps to
+  ProformaInvoice; type `realization` maps to the future SalesInvoice.
+- GraphQL fields and types renamed to `proformaInvoice*` (for example `PaymentAttempt.proformaInvoiceId`) are a
+  breaking change for external Shop API / Admin API clients.
+- Legacy persisted keys, routes and file names that still say `invoice` (document type key `invoice`, `/invoices`
+  portal routes, `invoices/` page folders, `Invoice*` component and file names) are renamed in a separate later
+  run; do not rename them piecemeal.
+
 ## Related
 
 - Form of payment vs terms: `docs/payments.md`, "Target model".
