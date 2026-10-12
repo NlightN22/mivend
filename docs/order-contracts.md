@@ -250,7 +250,7 @@ Priority, highest first (the first matching fact wins):
 - Whether marking an order for deletion also zeroes its reserve in the register automatically (expected: yes,
   "two in one"); if not, B must include A explicitly.
 
-## Historical ERP orders without a mivend `orderUuid` (decided in #215, implementation waits for the ERP contract fields)
+## Historical ERP orders without a mivend `orderUuid` (decided in #215)
 
 Orders created in the ERP before mivend existed keep arriving as `order-changed` without an `orderUuid`.
 Today the consumer drops them as a `noop`. Decision: import them as real `Order` rows and mark them as external.
@@ -269,9 +269,8 @@ Today the consumer drops them as a `noop`. Decision: import them as real `Order`
   customer notifications/emails that assume `order.customer`. Managing them is deliberately later.
 - **Credit control: no change.** The open deferred exposure counts only mivend deferred payments not yet
   reflected in the ERP balance; external orders have no mivend payment and are already in the ERP balance.
-- **Data needed from the ERP (blocks implementation).** `order-changed` carries no document date, line prices or
-  totals. Ask the ERP side to add document date, line unit price/amount and order total (new event-contracts
-  version); implementation starts once the fields exist. Until then an import would have zero totals.
+- **Data.** `order-changed` carries the full order snapshot since event-contracts 0.62.1 (document date, currency,
+  totals, VAT, line price/amount, linked documents). A historical order's `status` may be an empty string, not an error.
 - **Vendure state.** Created directly in the Vendure state matching `erpStatus` (no state-machine transitions);
   an `OrderProcess` guard (same idea as `ReplicaOrderProcess`) rejects every transition of an external order.
 - **Visibility.** All portal users of the counterparty see its external orders (they have no author user);
@@ -282,6 +281,28 @@ Today the consumer drops them as a `noop`. Decision: import them as real `Order`
 - **Open for later.** Writing a mivend `orderUuid`/number back to the ERP needs a new event type
   (`confirmed` would register a duplicate) and an ERP-side change; not required for showing history.
 - **Migration.** Backfill `counterpartyId` on existing orders from their customer's counterparty.
+
+## Settlement documents (receivables history, #224)
+
+Documents that form a customer's receivables (sales, payments, returns, corrections) arrive on two streams
+(event-contracts 0.65.0): `company.customers.events.v1.settlement-document-changed` and
+`company.customers.events.v1.settlement-balance-changed`. Contract source: search-platform#195.
+
+- **Entities (ERP-owned).** `SettlementDocument` (key: the document uuid, never the number) -> `SettlementEntry`
+  (one per organization/counterparty/contract triple, signed amount) -> `SettlementOrderLink` (order uuid, amount).
+  Not the `documents` plugin Document and not the proforma invoice. Amounts are stored as integer minor units.
+- **Idempotency.** A re-sent version replaces the whole entries array; stale versions are dropped; `isDeleted`
+  voids all entries; an unknown uuid with `isDeleted` is a no-op; a cleaned document that changes again is upserted.
+- **Order link.** Only by the document's own `order_links`; never inferred, and never from `orderDebt`,
+  `shippedQuantity` or `paidAmount`. A document without an order is valid and is shown by counterparty/contract.
+- **Balance.** `SettlementBalanceChanged` per (organization, counterparty, contract) is a reconciliation fact; the
+  balance is never summed from documents. Overdue aging (FIFO) is computed in mivend from `due_date` or the
+  contract's payment delay (`ContractChanged.payment_delay_days`).
+- **Pending.** An entry whose contract/counterparty is not imported yet waits and is attached later. Employee and
+  supplier contracts are filtered by `contract_kind`/`contract_type`/`payment_kind`.
+- **Retention cleaner.** Scheduled and idempotent; removes only explicit ERP-owned rows outside the window of their
+  triple (`opening_date`) plus a period set in the Vendure admin dashboard; never a row linked to an order or
+  payment still open in mivend.
 
 ## Deliberately out of scope (open questions)
 
