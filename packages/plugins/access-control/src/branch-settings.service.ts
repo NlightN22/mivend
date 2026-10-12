@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { DEFAULT_PREPAYMENT_RESERVE_DAYS } from 'shared';
 import {
     GlobalSettingsService,
     Logger,
@@ -18,6 +19,7 @@ export interface BranchSettingsInput {
     packagesOnly?: boolean;
     enforceMultiplicity?: boolean;
     allowExceedingCreditLimit?: boolean;
+    prepaymentReserveDays?: number;
 }
 
 // CRUD + fallback resolution for issue #66's per-branch business settings. Never a source of
@@ -46,6 +48,8 @@ export class BranchSettingsService {
                 input.enforceMultiplicity ?? settings.enforceMultiplicity;
             settings.allowExceedingCreditLimit =
                 input.allowExceedingCreditLimit ?? settings.allowExceedingCreditLimit;
+            settings.prepaymentReserveDays =
+                input.prepaymentReserveDays ?? settings.prepaymentReserveDays;
         } else {
             settings = repo.create({
                 branchId: input.branchId,
@@ -56,6 +60,8 @@ export class BranchSettingsService {
                 packagesOnly: input.packagesOnly ?? false,
                 enforceMultiplicity: input.enforceMultiplicity ?? false,
                 allowExceedingCreditLimit: input.allowExceedingCreditLimit ?? false,
+                prepaymentReserveDays:
+                    input.prepaymentReserveDays ?? DEFAULT_PREPAYMENT_RESERVE_DAYS,
             });
         }
         const saved = await repo.save(settings);

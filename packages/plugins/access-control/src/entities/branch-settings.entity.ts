@@ -42,4 +42,8 @@ export class BranchSettings extends VendureEntity {
     // #222: an over-limit order may go on with the customer's acknowledgement, no manager wait.
     @Column({ type: 'boolean', default: false })
     allowExceedingCreditLimit!: boolean;
+
+    // #222: how long a prepayment (no limit) order holds its reserve before the standard auto-cancel.
+    @Column({ type: 'int', default: 3 })
+    prepaymentReserveDays!: number;
 }

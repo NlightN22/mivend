@@ -538,6 +538,7 @@ export type BranchSettings = {
     enforceMultiplicity: Scalars['Boolean']['output'];
     id: Scalars['ID']['output'];
     packagesOnly: Scalars['Boolean']['output'];
+    prepaymentReserveDays: Scalars['Int']['output'];
     visiblePriceTypeIds: Maybe<Array<Scalars['String']['output']>>;
     visibleWarehouseIds: Maybe<Array<Scalars['String']['output']>>;
 };
@@ -4941,6 +4942,7 @@ export type MutationSetBranchSettingsArgs = {
     defaultWarehouseId: Scalars['String']['input'];
     enforceMultiplicity?: InputMaybe<Scalars['Boolean']['input']>;
     packagesOnly?: InputMaybe<Scalars['Boolean']['input']>;
+    prepaymentReserveDays?: InputMaybe<Scalars['Int']['input']>;
     visiblePriceTypeIds?: InputMaybe<Array<Scalars['String']['input']>>;
     visibleWarehouseIds?: InputMaybe<Array<Scalars['String']['input']>>;
 };
@@ -9720,6 +9722,7 @@ export type BranchSettingsFieldsFragment = {
     packagesOnly: boolean;
     enforceMultiplicity: boolean;
     allowExceedingCreditLimit: boolean;
+    prepaymentReserveDays: number;
 };
 
 export type WarehousesQueryVariables = Exact<{ [key: string]: never }>;
@@ -9777,6 +9780,8 @@ export type BranchSettingsForBranchQuery = {
         packagesOnly: boolean;
         enforceMultiplicity: boolean;
         allowExceedingCreditLimit: boolean;
+        prepaymentReserveDays: number;
+        prepaymentReserveDays: number;
     } | null;
 };
 
@@ -9793,6 +9798,7 @@ export type SetBranchSettingsMutationVariables = Exact<{
     packagesOnly: Scalars['Boolean']['input'];
     enforceMultiplicity: Scalars['Boolean']['input'];
     allowExceedingCreditLimit: Scalars['Boolean']['input'];
+    prepaymentReserveDays: Scalars['Int']['input'];
 }>;
 
 export type SetBranchSettingsMutation = {
@@ -9806,6 +9812,8 @@ export type SetBranchSettingsMutation = {
         packagesOnly: boolean;
         enforceMultiplicity: boolean;
         allowExceedingCreditLimit: boolean;
+        prepaymentReserveDays: number;
+        prepaymentReserveDays: number;
     };
 };
 
@@ -11815,6 +11823,7 @@ export const BranchSettingsFieldsFragmentDoc = new TypedDocumentString(
   packagesOnly
   enforceMultiplicity
   allowExceedingCreditLimit
+  prepaymentReserveDays
 }
     `,
     { fragmentName: 'BranchSettingsFields' },
@@ -12391,12 +12400,13 @@ export const BranchSettingsForBranchDocument = new TypedDocumentString(`
   packagesOnly
   enforceMultiplicity
   allowExceedingCreditLimit
+  prepaymentReserveDays
 }`) as unknown as TypedDocumentString<
     BranchSettingsForBranchQuery,
     BranchSettingsForBranchQueryVariables
 >;
 export const SetBranchSettingsDocument = new TypedDocumentString(`
-    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!, $enforceMultiplicity: Boolean!, $allowExceedingCreditLimit: Boolean!) {
+    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!, $enforceMultiplicity: Boolean!, $allowExceedingCreditLimit: Boolean!, $prepaymentReserveDays: Int!) {
   setBranchSettings(
     branchId: $branchId
     defaultPriceTypeId: $defaultPriceTypeId
@@ -12406,6 +12416,7 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
     packagesOnly: $packagesOnly
     enforceMultiplicity: $enforceMultiplicity
     allowExceedingCreditLimit: $allowExceedingCreditLimit
+    prepaymentReserveDays: $prepaymentReserveDays
   ) {
     ...BranchSettingsFields
   }
@@ -12420,6 +12431,7 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
   packagesOnly
   enforceMultiplicity
   allowExceedingCreditLimit
+  prepaymentReserveDays
 }`) as unknown as TypedDocumentString<
     SetBranchSettingsMutation,
     SetBranchSettingsMutationVariables

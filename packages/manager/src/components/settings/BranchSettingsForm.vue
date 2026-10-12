@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue';
-import { MvFormField, MvSelect, MvMultiSelect, MvButton, MvNotice, MvSwitch } from '@mivend/ui-kit';
+import { MvFormField, MvInput, MvSelect, MvMultiSelect, MvButton, MvNotice, MvSwitch } from '@mivend/ui-kit';
 import type { SelectOption } from '@mivend/ui-kit';
 import type { BranchSettings, PriceTypeOption, Warehouse } from '../../api/branchSettings';
 
@@ -22,6 +22,7 @@ const emit = defineEmits<{
             packagesOnly: boolean;
             enforceMultiplicity: boolean;
             allowExceedingCreditLimit: boolean;
+            prepaymentReserveDays: number;
         },
     ];
 }>();
@@ -34,6 +35,7 @@ const form = reactive({
     packagesOnly: false,
     enforceMultiplicity: false,
     allowExceedingCreditLimit: false,
+    prepaymentReserveDays: 3,
 });
 
 // Re-seeds the form whenever a different branch's settings load (or none exist yet) — the two
@@ -49,6 +51,7 @@ watch(
         form.packagesOnly = settings?.packagesOnly ?? false;
         form.enforceMultiplicity = settings?.enforceMultiplicity ?? false;
         form.allowExceedingCreditLimit = settings?.allowExceedingCreditLimit ?? false;
+        form.prepaymentReserveDays = settings?.prepaymentReserveDays ?? 3;
     },
     { immediate: true },
 );
@@ -81,6 +84,7 @@ function onSave(): void {
         packagesOnly: form.packagesOnly,
         enforceMultiplicity: form.enforceMultiplicity,
         allowExceedingCreditLimit: form.allowExceedingCreditLimit,
+        prepaymentReserveDays: form.prepaymentReserveDays,
     });
 }
 </script>
@@ -142,6 +146,14 @@ function onSave(): void {
                     When on, a customer over the credit limit can place the order after
                     acknowledging it, without waiting for a manager. When off, such orders wait for
                     manager confirmation.
+                </p>
+            </MvFormField>
+
+            <MvFormField label="Prepayment reserve (days)">
+                <MvInput v-model.number="form.prepaymentReserveDays" type="number" min="1" />
+                <p class="branch-settings-form__hint">
+                    How long stock stays reserved for an order that is waiting for payment (no
+                    credit terms) before it is cancelled automatically.
                 </p>
             </MvFormField>
         </section>

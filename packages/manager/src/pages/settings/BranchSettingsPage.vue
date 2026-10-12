@@ -170,6 +170,7 @@ async function onSave(payload: {
     packagesOnly: boolean;
     enforceMultiplicity: boolean;
     allowExceedingCreditLimit: boolean;
+    prepaymentReserveDays: number;
 }): Promise<void> {
     if (!selectedBranchId.value) return;
     saving.value = true;
@@ -188,6 +189,7 @@ async function onSave(payload: {
             packagesOnly: payload.packagesOnly,
             enforceMultiplicity: payload.enforceMultiplicity,
             allowExceedingCreditLimit: payload.allowExceedingCreditLimit,
+            prepaymentReserveDays: payload.prepaymentReserveDays,
         });
     } catch (e) {
         saveError.value = e instanceof Error ? e.message : 'Could not save branch settings';

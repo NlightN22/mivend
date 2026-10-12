@@ -86,6 +86,24 @@ describe('BranchSettingsService', () => {
         );
     });
 
+    it('defaults prepaymentReserveDays to 3 and keeps the stored value when an update omits it', async () => {
+        repo.findOne.mockResolvedValue(null);
+        const base = {
+            branchId: 'branch-1',
+            defaultPriceTypeId: 'pt-1',
+            defaultWarehouseId: 'wh-1',
+        };
+        await service.upsert(ctx, base);
+        expect(repo.create).toHaveBeenLastCalledWith(
+            expect.objectContaining({ prepaymentReserveDays: 3 }),
+        );
+        repo.findOne.mockResolvedValue({ branchId: 'branch-1', prepaymentReserveDays: 5 });
+        await service.upsert(ctx, base);
+        expect(repo.save).toHaveBeenLastCalledWith(
+            expect.objectContaining({ prepaymentReserveDays: 5 }),
+        );
+    });
+
     it('persists an explicit packagesOnly: true', async () => {
         repo.findOne.mockResolvedValue(null);
         await service.upsert(ctx, {

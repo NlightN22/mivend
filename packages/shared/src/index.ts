@@ -11,6 +11,16 @@ export { withAggregateLock } from './aggregate-lock';
 // the first time this package was consumed by a Vite-bundled frontend (sync.ts is only ever
 // consumed by ts-node/Node backend code, so it never hit this).
 export { CREDIT_LIMIT_EXCEEDED_KEY } from './creditLimit';
+export {
+    COUNTS_AGAINST_LIMIT_KEY,
+    CREDIT_ACKNOWLEDGED_KEY,
+    DEFAULT_PREPAYMENT_RESERVE_DAYS,
+    PAYMENT_FORMS,
+    PAYMENT_FORM_BY_METHOD_CODE,
+    PLACEMENT_ROUTE_KEY,
+    type PaymentForm,
+    type PlacementRoute,
+} from './paymentPolicy';
 
 export {
     buildFacetValueFilters,
