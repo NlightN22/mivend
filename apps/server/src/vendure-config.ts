@@ -705,6 +705,8 @@ export const config: VendureConfig = {
         // Issue #102: Admin-API-only, runs on every instance like PriceEntryPlugin/CounterpartyPlugin
         // — only erp-integration's handler (central-only) ever writes to it.
         RetroBonusPlugin,
+        // Before DocumentsPlugin: its schema extends ProformaInvoice, and Vendure applies extensions in plugin order.
+        ...instancePlugins,
         DocumentsPlugin,
         DeferredPaymentPlugin,
         OnlinePaymentPlugin,
@@ -947,7 +949,6 @@ export const config: VendureConfig = {
         NotificationPlugin,
         MoqPlugin,
         SavedViewsPlugin,
-        ...instancePlugins,
     ],
 };
 // force restart 1784646839

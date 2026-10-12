@@ -1886,8 +1886,6 @@ export type Mutation = {
     logout: Success;
     markNotificationRead: Notification;
     payProformaInvoice: ProformaInvoice;
-    /** Issues (or returns the unchanged) current proforma invoices of the customer's own placed, not cancelled order; changed content makes a new version. */
-    requestProformaInvoices: Array<ProformaInvoice>;
     /** Regenerate and send a verification token for a new Customer registration. Only applicable if `authOptions.requireVerification` is set to true. */
     refreshCustomerVerification: RefreshCustomerVerificationResult;
     /**
@@ -1928,6 +1926,8 @@ export type Mutation = {
     removeOrderLine: RemoveOrderItemsResult;
     /** Requests a password reset email to be sent */
     requestPasswordReset?: Maybe<RequestPasswordResetResult>;
+    /** Issues (or returns the unchanged) current proforma invoices of the customer's own placed, not cancelled order; changed content makes a new version. */
+    requestProformaInvoices: Array<ProformaInvoice>;
     /**
      * Request to update the emailAddress of the active Customer. If `authOptions.requireVerification` is enabled
      * (as is the default), then the `identifierChangeToken` will be assigned to the current User and
@@ -2073,10 +2073,6 @@ export type MutationPayProformaInvoiceArgs = {
     status: Scalars['String']['input'];
 };
 
-export type MutationRequestProformaInvoicesArgs = {
-    orderCode: Scalars['String']['input'];
-};
-
 export type MutationRefreshCustomerVerificationArgs = {
     emailAddress: Scalars['String']['input'];
 };
@@ -2095,6 +2091,10 @@ export type MutationRemoveOrderLineArgs = {
 
 export type MutationRequestPasswordResetArgs = {
     emailAddress: Scalars['String']['input'];
+};
+
+export type MutationRequestProformaInvoicesArgs = {
+    orderCode: Scalars['String']['input'];
 };
 
 export type MutationRequestUpdateCustomerEmailAddressArgs = {
@@ -3379,25 +3379,6 @@ export type ProformaInvoice = {
     version: Scalars['Int']['output'];
 };
 
-/** Seller requisites of the organization that issued a proforma invoice. */
-export type ProformaInvoiceSeller = {
-    bankAccount?: Maybe<Scalars['String']['output']>;
-    bankBik?: Maybe<Scalars['String']['output']>;
-    bankName?: Maybe<Scalars['String']['output']>;
-    correspondentAccount?: Maybe<Scalars['String']['output']>;
-    inn?: Maybe<Scalars['String']['output']>;
-    kpp?: Maybe<Scalars['String']['output']>;
-    legalAddress?: Maybe<Scalars['String']['output']>;
-    legalName: Scalars['String']['output'];
-};
-
-/** Another version of the same proforma invoice (a new version is a new document with its own number). */
-export type ProformaInvoiceVersionRef = {
-    id: Scalars['ID']['output'];
-    number: Scalars['String']['output'];
-    version: Scalars['Int']['output'];
-};
-
 export type ProformaInvoiceLine = {
     linePriceWithTax: Scalars['Int']['output'];
     productVariant: ProformaInvoiceLineProductVariant;
@@ -3425,6 +3406,25 @@ export type ProformaInvoiceListOptions = {
 export type ProformaInvoiceOrder = {
     code: Scalars['String']['output'];
     id: Scalars['ID']['output'];
+};
+
+/** Seller requisites of the organization that issued a proforma invoice. */
+export type ProformaInvoiceSeller = {
+    bankAccount?: Maybe<Scalars['String']['output']>;
+    bankBik?: Maybe<Scalars['String']['output']>;
+    bankName?: Maybe<Scalars['String']['output']>;
+    correspondentAccount?: Maybe<Scalars['String']['output']>;
+    inn?: Maybe<Scalars['String']['output']>;
+    kpp?: Maybe<Scalars['String']['output']>;
+    legalAddress?: Maybe<Scalars['String']['output']>;
+    legalName: Scalars['String']['output'];
+};
+
+/** Another version of the same proforma invoice (a new version is a new document with its own number). */
+export type ProformaInvoiceVersionRef = {
+    id: Scalars['ID']['output'];
+    number: Scalars['String']['output'];
+    version: Scalars['Int']['output'];
 };
 
 export type Promotion = Node & {
