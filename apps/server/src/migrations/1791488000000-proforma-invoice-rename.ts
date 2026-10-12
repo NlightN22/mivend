@@ -1,36 +1,35 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-import {
-    renameInvoiceToProformaInvoice,
-    revertProformaInvoiceRename,
-} from '../proforma-invoice-rename';
+const LINK_TABLES = [
+    'payment_attempt',
+    'settlement_entry',
+    'payment_reconciliation_issue',
+    'document',
+];
 
-// Frees the name "invoice" for the ERP sales invoice (#223); rows and identity are untouched.
+// Frees the name "invoice" for the ERP sales invoice (#223); rows and identity are kept.
 export class ProformaInvoiceRename1791488000000 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await renameInvoiceToProformaInvoice(
-            sql => queryRunner.query(sql),
-            (table, column) => exists(queryRunner, table, column),
+        await queryRunner.query(`ALTER TABLE "invoice" RENAME TO "proforma_invoice"`);
+        await queryRunner.query(
+            `ALTER SEQUENCE IF EXISTS "invoice_id_seq" RENAME TO "proforma_invoice_id_seq"`,
         );
+        for (const table of LINK_TABLES) {
+            await queryRunner.query(
+                `ALTER TABLE "${table}" RENAME COLUMN "invoiceId" TO "proformaInvoiceId"`,
+            );
+        }
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await revertProformaInvoiceRename(
-            sql => queryRunner.query(sql),
-            (table, column) => exists(queryRunner, table, column),
+        for (const table of LINK_TABLES) {
+            await queryRunner.query(
+                `ALTER TABLE "${table}" RENAME COLUMN "proformaInvoiceId" TO "invoiceId"`,
+            );
+        }
+        await queryRunner.query(
+            `ALTER SEQUENCE IF EXISTS "proforma_invoice_id_seq" RENAME TO "invoice_id_seq"`,
         );
+        await queryRunner.query(`ALTER TABLE "proforma_invoice" RENAME TO "invoice"`);
     }
-}
-
-async function exists(queryRunner: QueryRunner, table: string, column?: string): Promise<boolean> {
-    const rows: unknown[] = column
-        ? await queryRunner.query(
-              `SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2`,
-              [table, column],
-          )
-        : await queryRunner.query(
-              `SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = $1`,
-              [table],
-          );
-    return rows.length > 0;
 }
