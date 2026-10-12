@@ -21,7 +21,8 @@ and is never an idempotency key for a business entity.
   Refund, SettlementEntry, DiscountGrant.
 - **uuid only**: OrderLine, Reservation (replaces the separate `erpOperationId` / `erpReleaseOperationId` ids as the
   entity identity; operation ids stay for operations), rendered Document records, reconciliation issue records, and every
-  other mivend-created entity as it is touched (shared base for plugin entities, a custom field for Vendure core entities).
+  other mivend-created entity as it is touched (shared base for plugin entities, a custom field for Vendure core entities except OrderLine, whose uuid has its own
+  table because line custom fields take part in Vendure's line merge, #221).
 - **Neither** (ERP-owned masters: Counterparty, Contract, Product, Organization, Warehouse, ...): they keep the ERP's own
   `entityId`.
 
@@ -62,9 +63,20 @@ and is never an idempotency key for a business entity.
 
 ## Implementation status (issue #207)
 
-- Done: `Order.customFields.uuid` / `OrderLine.customFields.uuid`, assigned synchronously at insert by
-  `apps/server/src/order-uuid.subscriber.ts` (a TypeORM `EntitySubscriber`, not an EventBus listener, so it is atomic
-  with the row's own insert); backfilled for existing rows by migration `1791460000000-order-uuid`.
+- Done: `Order.customFields.uuid`, assigned synchronously at insert by `apps/server/src/order-uuid.subscriber.ts` (a
+  TypeORM `EntitySubscriber`, not an EventBus listener, so it is atomic with the row's own insert); backfilled for
+  existing rows by migration `1791460000000-order-uuid`.
+- Done (issue #221): the OrderLine uuid lives in its own table `order_line_identity` (`packages/plugins/order-identity`:
+  one row per line, `orderLineId` primary key and cascading foreign key, `uuid` unique), not in `OrderLine.customFields`.
+  Vendure's `addItemToOrder` merges into an existing line only when the variant **and every OrderLine custom field**
+  match (`OrderModifier.customFieldsAreEqual`), so an immutable uuid there made every add a new line. The row is
+  inserted by `OrderLineIdentitySubscriber.afterInsert` through the insert's own entity manager (same transaction, so a
+  committed line always has its uuid); a merged add only updates the quantity and creates no row. Readers use
+  `OrderLineIdentityService.uuidsByLineId` (one batched query). Migration `1791487000000-order-line-identity` copies
+  every existing `customFieldsUuid`, drops the column, and merges duplicate lines of carts in `AddingItems` (same
+  variant and line custom fields, one list price and no adjustments, so the stored order totals stay exact; the
+  oldest line and its uuid are kept). On the `synchronize` contours the same step runs before bootstrap
+  (`apps/server/src/order-line-identity-carryover.ts`), because `synchronize` would drop the column first.
 - Done: `order.submitted`'s duplicate-publish guard (issue #199), in `OrderSubmittedBuilder.build()` via
   `OutboundGateway.hasActiveEntryForOrder`, with `OrderSubmittedListener.handle()` serializing the whole
   check-then-enqueue sequence on the same `reserve-order:<id>` advisory lock `order-contract.service.ts`'s
@@ -108,7 +120,7 @@ and is never an idempotency key for a business entity.
 - Done: `order.submitted` carries `orderUuid`/`orderNumber`/`lineUuid` in mivend's own producer-side mirror
   (`packages/plugins/erp-integration/src/schemas/order-submitted.schema.ts`, `OrderSubmittedBuilder.build()`).
   `orderNumber` is `order.code` as-is (today's `ORD-YYYYMM-XXXXXXXX` format, see the deferred item below — not
-  affected by this change); `orderUuid`/`lineUuid` come from `Order.customFields.uuid`/`OrderLine.customFields.uuid`.
+  affected by this change); `orderUuid` comes from `Order.customFields.uuid`, `lineUuid` from `order_line_identity` (#221).
   All three required, matching `contractId`'s own precedent. **Follow-up, not done here:** the canonical
   `@nlightn22/event-contracts` npm package has the same three fields prepared but unpublished, on a
   `/opt/search-platform-wt-order-uuid` worktree, branch `feat/order-submitted-uuid` — the npm bump into mivend's
