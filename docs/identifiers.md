@@ -34,7 +34,7 @@ and is never an idempotency key for a business entity.
   any coordination, so the number is issued **immediately** by the instance that creates the document, hub or branch,
   with no wait for synchronization and no dependency on the hub being reachable.
 - Gaps after a rolled-back transaction are acceptable: these are not accounting documents (the ERP holds those);
-  gapless numbering is a legal requirement for tax invoices only.
+  gapless numbering is a legal requirement for tax documents only.
 - `Order.code` is the order number (digits only).
 - Documents that belong to an order are numbered `<order number>-NN` (`1000000012-01`, `-02`, ...), NN being the
   ordinal of the document within the order. Other document types (payment document, refund, discount grant) have

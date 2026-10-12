@@ -199,7 +199,7 @@ An event that keeps failing is dead-lettered (`status: 'failed'`, terminal) afte
 (`AcquiringPluginOptions`, default `PAYMENT_INBOX_POLL_INTERVAL_DEFAULT` = 60s) and calls
 `PaymentInboxProcessorService.processPendingEvents()`, which is where the actual, risky
 processing (`PaymentAttemptService.payProformaInvoice`) happens — never inline in whatever received the
-event. An ops-only admin mutation, `triggerPaymentInboxSweep` (`invoice.resolver.ts`), runs the
+event. An ops-only admin mutation, `triggerPaymentInboxSweep` (`proforma-invoice.resolver.ts`), runs the
 exact same `processPendingEvents()` path on demand — a "run the sweep now" tool, not a bypass of
 the async contract.
 
@@ -333,7 +333,7 @@ primary process — it exists only as a correction path.
   re-allocation adds new allocation rows, it never edits the original `payment.captured` entry.
 
 This matches how ERP systems commonly model mutual settlements against counterparties by
-settlement document: an amount allocated against a specific sale/invoice counts as settled; the
+settlement document: an amount allocated against a specific sale/sales invoice counts as settled; the
 remainder sitting on the payment document itself counts as an advance; one payment can be split
 across several settlement-object lines. `SettlementEntry`'s allocation rows are the platform-side
 mirror of that same shape — this is what lets ERP reconciliation match cleanly (see below) rather
@@ -706,7 +706,7 @@ until #222 ships, the sections that follow describe the current behavior.
 - New branch setting: allow exceeding the limit with the customer's acknowledgement (no manager wait).
 - "Cash received" is a dedicated manager action if cheap, otherwise `ConfirmOrder`.
 - Code consequences: `deferred-payment` becomes a policy applied to every form; `offline-terms` becomes a clean
-  bank-invoice form whose payment is not `Authorized` at placement; the reserve/ERP trigger follows payment or
+  bank-transfer form whose payment is not `Authorized` at placement; the reserve/ERP trigger follows payment or
   manager confirmation; exposure is computed from payment fact, not ERP status.
 
 ### Credit limit on deferred orders
