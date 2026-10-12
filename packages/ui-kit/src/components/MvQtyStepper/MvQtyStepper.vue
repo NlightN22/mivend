@@ -24,6 +24,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{ 'update:modelValue': [n: number] }>();
 
 const draft = ref(String(props.modelValue));
+const focused = ref(false);
 const parsedDraft = computed(() => (/^\d+$/.test(draft.value) ? Number(draft.value) : null));
 const dirty = computed(() => draft.value !== String(props.modelValue));
 const editing = computed(() => props.editable && dirty.value);
@@ -38,7 +39,7 @@ const canConfirm = computed(
 watch(
     () => props.modelValue,
     v => {
-        draft.value = String(v);
+        if (!focused.value) draft.value = String(v);
     },
 );
 
@@ -93,6 +94,8 @@ function inc() {
             class="mv-qty-stepper__val mv-qty-stepper__input"
             inputmode="numeric"
             :disabled="disabled"
+            @focus="focused = true"
+            @blur="focused = false"
             @keydown.enter.prevent="confirm"
             @keydown.esc.prevent="revert"
         />
@@ -145,13 +148,8 @@ function inc() {
     font-size: 16px;
 }
 .mv-qty-stepper--sm .mv-qty-stepper__input {
-    width: 44px;
-    min-width: 0;
-    border: none;
-    outline: none;
-    background: transparent;
-    font-family: inherit;
-    user-select: text;
+    width: 40px;
+    height: 24px;
 }
 .mv-qty-stepper__confirm {
     width: 34px;
@@ -188,13 +186,23 @@ function inc() {
 }
 
 .mv-qty-stepper__input {
-    width: 44px;
+    width: 52px;
+    height: 30px;
     min-width: 0;
+    margin: 0 2px;
     border: none;
+    border-radius: 8px;
     outline: none;
-    background: transparent;
+    background: #f1f5f3;
     font-family: inherit;
     user-select: text;
+    transition: background 0.1s;
+}
+.mv-qty-stepper__input:hover {
+    background: #e8efec;
+}
+.mv-qty-stepper__input:focus {
+    background: #e2f8ef;
 }
 .mv-qty-stepper__confirm {
     width: 34px;

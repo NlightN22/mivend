@@ -143,7 +143,7 @@ function cancelRemove(): void {
                 <MvFavoriteButton :is-favorited="isFavorited" @toggle="toggleFavorite" />
                 <MvTooltip placement="bottom">
                     <template #trigger>
-                        <MvButton variant="ghost" size="sm">Analogs</MvButton>
+                        <MvButton variant="subtle" size="sm">Analogs</MvButton>
                     </template>
                     Analogs are not available yet. Coming later.
                 </MvTooltip>

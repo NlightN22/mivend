@@ -1,5 +1,12 @@
 <script setup lang="ts">
-export type ButtonVariant = 'primary' | 'secondary' | 'catalog' | 'buy' | 'ghost' | 'danger';
+export type ButtonVariant =
+    | 'primary'
+    | 'secondary'
+    | 'catalog'
+    | 'buy'
+    | 'ghost'
+    | 'subtle'
+    | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface Props {
@@ -166,6 +173,19 @@ function handleClick(event: MouseEvent): void {
 }
 .mv-button--ghost:active:not(:disabled) {
     background: #c8f7ec;
+}
+
+.mv-button--subtle {
+    background: #f4faf7;
+    color: #66736e;
+    border: none;
+}
+.mv-button--subtle:hover:not(:disabled) {
+    background: #e2f8ef;
+    color: #008a64;
+}
+.mv-button--subtle:active:not(:disabled) {
+    background: #cdf1e1;
 }
 
 .mv-button--danger {
