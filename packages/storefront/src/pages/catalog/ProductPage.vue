@@ -50,6 +50,24 @@ const nearestPack = computed(() =>
 );
 const salesUnit = computed(() => salesUnitOf(variant.value?.customFields, packagesOnly.value));
 const unitLabels = computed(() => salesUnitLabels(salesUnit.value));
+const unitChips = computed(() => {
+    const own = variant.value?.customFields;
+    const soldRatio = salesUnit.value?.ratio ?? 1;
+    const all = [
+        { name: 'pc.', ratioToBase: 1 },
+        ...(own?.unitName && own.unitRatioToBase && own.unitRatioToBase !== 1
+            ? [{ name: own.unitName, ratioToBase: own.unitRatioToBase }]
+            : []),
+        ...(product.value?.packagingLevels ?? []),
+    ];
+    const seen = new Set<string>();
+    return all
+        .filter(
+            u => !seen.has(`${u.name}|${u.ratioToBase}`) && seen.add(`${u.name}|${u.ratioToBase}`),
+        )
+        .sort((a, b) => a.ratioToBase - b.ratioToBase)
+        .map(u => ({ ...u, active: u.ratioToBase === soldRatio }));
+});
 const brand = computed(() => brandOf(product.value?.manufacturer));
 
 // A product can belong to several collections; the deepest one (most breadcrumbs) gives the
@@ -152,6 +170,7 @@ onMounted(() => {
                     :multiplicity-label="unitLabels.multiplicity"
                     :show-multiplicity="multiplicityEnforced"
                     :packaging-levels="product.packagingLevels"
+                    :units="unitChips"
                     :extra-specs="extraSpecs"
                     :stock-variant-label="stockVariantLabel"
                     :related="[]"

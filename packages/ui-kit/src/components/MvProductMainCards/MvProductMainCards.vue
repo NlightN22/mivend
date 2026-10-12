@@ -29,6 +29,7 @@ interface Props {
     multiplicityLabel?: string;
     showMultiplicity?: boolean;
     packagingLevels?: { name: string; ratioToBase: number }[];
+    units?: { name: string; ratioToBase: number; active?: boolean }[];
     extraSpecs?: { label: string; value: string }[];
     stockVariantLabel: StockVariant;
     related: RelatedProduct[];
@@ -48,6 +49,7 @@ const props = withDefaults(defineProps<Props>(), {
     multiplicityLabel: '',
     showMultiplicity: true,
     packagingLevels: () => [],
+    units: () => [],
     extraSpecs: () => [],
     showRelatedPrices: false,
     showAddToCartButton: true,
@@ -90,7 +92,22 @@ function getBrand(p: RelatedProduct) {
                 >
             </div>
             <div class="pmc__mini">
-                <div class="pmc__mini-item">
+                <div v-if="units.length" class="pmc__mini-item pmc__mini-item--wide">
+                    <div class="pmc__mini-lbl">Units</div>
+                    <div class="pmc__chips">
+                        <MvStatusBadge
+                            v-for="unit in units"
+                            :key="`${unit.name}-${unit.ratioToBase}`"
+                            :variant="unit.active ? 'success' : 'neutral'"
+                        >
+                            {{ unit.name
+                            }}<template v-if="unit.ratioToBase !== 1">
+                                · {{ unit.ratioToBase }} pc.</template
+                            >
+                        </MvStatusBadge>
+                    </div>
+                </div>
+                <div v-else class="pmc__mini-item">
                     <div class="pmc__mini-lbl">Unit</div>
                     <div class="pmc__mini-val">{{ unitLabel }}</div>
                 </div>
@@ -100,7 +117,10 @@ function getBrand(p: RelatedProduct) {
                         {{ multiplicityLabel || `${multiplicity} pc.` }}
                     </div>
                 </div>
-                <div v-if="packagingLevels.length" class="pmc__mini-item pmc__mini-item--wide">
+                <div
+                    v-if="!units.length && packagingLevels.length"
+                    class="pmc__mini-item pmc__mini-item--wide"
+                >
                     <div class="pmc__mini-lbl">Packaging</div>
                     <div class="pmc__chips">
                         <MvStatusBadge v-for="level in packagingLevels" :key="level.name">
