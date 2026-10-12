@@ -2,6 +2,7 @@ export type SqlRunner = (sql: string) => Promise<unknown[]>;
 
 export interface OrderLineIdentityMigrationResult {
     mergedLines: number;
+    skippedGroups: number;
 }
 
 // Names match TypeORM's DefaultNamingStrategy for OrderLineIdentity, so synchronize sees no diff.
@@ -24,9 +25,15 @@ const BACKFILL_MISSING =
     `SELECT ol."id", gen_random_uuid() FROM "order_line" ol ` +
     `WHERE NOT EXISTS (SELECT 1 FROM "order_line_identity" i WHERE i."orderLineId" = ol."id")`;
 
+// OrderLine custom fields that decide whether Vendure would merge two lines; a new field must be added here or allow-listed.
+export const MERGE_PARTITION_FIELDS = ['organizationId', 'manualUnitPrice', 'manualPriceReason'];
+
+const columnOf = (field: string): string =>
+    `ol."customFields${field[0].toUpperCase()}${field.slice(1).toLowerCase()}"`;
+
 // Duplicates Vendure would have merged (same variant and line custom fields) in carts only. A group
 // is merged only at one list price and without adjustments, so the stored order totals stay exact.
-const MERGE_DUPLICATE_LINES = `
+const mergeDuplicateLines = (reservationGuard: string): string => `
 WITH ranked AS (
     SELECT ol."id",
         row_number() OVER ordered AS rn,
@@ -34,22 +41,29 @@ WITH ranked AS (
         sum(ol."quantity") OVER grp AS total,
         min(ol."listPrice") OVER grp AS min_price,
         max(ol."listPrice") OVER grp AS max_price,
-        bool_and(ol."adjustments" = '[]') OVER grp AS plain
+        bool_and(ol."adjustments" = '[]') OVER grp AS plain,
+        bool_or(${reservationGuard}) OVER grp AS held
     FROM "order_line" ol
     JOIN "order" o ON o."id" = ol."orderId"
     WHERE o."state" = 'AddingItems'
-    WINDOW grp AS (PARTITION BY ol."orderId", ol."productVariantId", ol."customFieldsOrganizationid",
-                       ol."customFieldsManualunitprice", ol."customFieldsManualpricereason"),
+    WINDOW grp AS (PARTITION BY ol."orderId", ol."productVariantId", ${MERGE_PARTITION_FIELDS.map(columnOf).join(', ')}),
            ordered AS (grp ORDER BY ol."createdAt", ol."id")
 ), eligible AS (
     SELECT * FROM ranked WHERE n > 1 AND min_price = max_price AND plain
+        AND NOT held
 ), kept AS (
     UPDATE "order_line" ol SET "quantity" = e.total FROM eligible e WHERE ol."id" = e."id" AND e.rn = 1
     RETURNING ol."id"
 ), removed AS (
     DELETE FROM "order_line" ol USING eligible e WHERE ol."id" = e."id" AND e.rn > 1 RETURNING ol."id"
 )
-SELECT (SELECT count(*) FROM removed)::int AS "mergedLines", (SELECT count(*) FROM kept)::int AS "keptLines"`;
+SELECT (SELECT count(*) FROM removed)::int AS "mergedLines",
+    (SELECT count(*) FROM ranked WHERE n > 1 AND rn = 1 AND "id" NOT IN (SELECT "id" FROM eligible))::int AS "skippedGroups"`;
+
+const RESERVATION_GUARD = (hasReservations: boolean): string =>
+    hasReservations
+        ? `EXISTS (SELECT 1 FROM "reservation" r WHERE r."orderLineId" = ol."id"::varchar AND r."status" = 'active')`
+        : 'false';
 
 // Shared by the production migration and the synchronize-contour startup step; idempotent.
 export async function migrateOrderLineIdentity(
@@ -58,6 +72,13 @@ export async function migrateOrderLineIdentity(
     for (const sql of CREATE_TABLE) await run(sql);
     await run(COPY_UUIDS);
     await run(BACKFILL_MISSING);
-    const [row] = (await run(MERGE_DUPLICATE_LINES)) as Array<{ mergedLines: number }>;
-    return { mergedLines: row?.mergedLines ?? 0 };
+    const [table] = (await run(
+        `SELECT to_regclass('reservation') IS NOT NULL AS "exists"`,
+    )) as Array<{
+        exists: boolean;
+    }>;
+    const [row] = (await run(
+        mergeDuplicateLines(RESERVATION_GUARD(table?.exists === true)),
+    )) as Array<{ mergedLines: number; skippedGroups: number }>;
+    return { mergedLines: row?.mergedLines ?? 0, skippedGroups: row?.skippedGroups ?? 0 };
 }

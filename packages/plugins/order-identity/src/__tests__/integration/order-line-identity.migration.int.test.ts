@@ -37,13 +37,15 @@ class MirrorOrderLineIdentity {
 
 const { schema, extra } = testSchemaOptions('order_line_identity_migration');
 let ds: DataSource;
-const migrate = (): Promise<{ mergedLines: number }> =>
+const migrate = (): Promise<{ mergedLines: number; skippedGroups: number }> =>
     migrateOrderLineIdentity(sql => ds.query(sql));
 
 const U = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 async function seed(): Promise<void> {
-    await ds.query(`DROP TABLE IF EXISTS "order_line_identity", "order_line", "order"`);
+    await ds.query(
+        `DROP TABLE IF EXISTS "order_line_identity", "reservation", "order_line", "order"`,
+    );
     await ds.query(`CREATE TABLE "order" ("id" integer PRIMARY KEY, "state" varchar NOT NULL)`);
     await ds.query(`CREATE TABLE "order_line" (
         "id" serial PRIMARY KEY, "orderId" integer REFERENCES "order"("id"), "productVariantId" integer NOT NULL,
@@ -60,7 +62,17 @@ async function seed(): Promise<void> {
         [5, 1, 11, 1, 600, '[]', 2, null],
         [6, 2, 10, 1, 500, '[]', 1, null], // placed order: left alone
         [7, 2, 10, 1, 500, '[]', 2, null],
+        [8, 1, 12, 1, 500, '[]', 1, null], // line 9 has an active reservation: group left alone
+        [9, 1, 12, 1, 500, '[]', 2, null],
+        [10, 1, 13, 1, 500, '[]', 1, null], // released reservation does not block the merge
+        [11, 1, 13, 2, 500, '[]', 2, null],
     ];
+    await ds.query(
+        `CREATE TABLE "reservation" ("id" serial PRIMARY KEY, "orderLineId" varchar NOT NULL, "status" varchar NOT NULL)`,
+    );
+    await ds.query(
+        `INSERT INTO "reservation" ("orderLineId", "status") VALUES ('9', 'active'), ('11', 'released')`,
+    );
     for (const [id, orderId, variant, qty, price, adj, minute, org] of lines) {
         await ds.query(
             `INSERT INTO "order_line" VALUES ($1, $2, $3, $4, $5, $6, timestamp '2026-01-01' + $7 * interval '1 minute', $8, NULL, NULL, $9)`,
@@ -97,7 +109,7 @@ const identities = async (): Promise<Record<number, string>> =>
 
 describe('order_line_identity migration', () => {
     it('keeps every surviving line uuid and merges only safe cart duplicates', async () => {
-        expect(await migrate()).toEqual({ mergedLines: 1 });
+        expect(await migrate()).toEqual({ mergedLines: 2, skippedGroups: 2 });
 
         const lines = await ds.query(`SELECT "id", "quantity" FROM "order_line" ORDER BY "id"`);
         expect(lines).toEqual([
@@ -107,6 +119,9 @@ describe('order_line_identity migration', () => {
             { id: 5, quantity: 1 },
             { id: 6, quantity: 1 },
             { id: 7, quantity: 1 },
+            { id: 8, quantity: 1 },
+            { id: 9, quantity: 1 },
+            { id: 10, quantity: 3 },
         ]);
         expect(await identities()).toEqual({
             2: U(2),
@@ -115,6 +130,9 @@ describe('order_line_identity migration', () => {
             5: U(5),
             6: U(6),
             7: U(7),
+            8: U(8),
+            9: U(9),
+            10: U(10),
         });
     });
 
@@ -122,7 +140,7 @@ describe('order_line_identity migration', () => {
         await migrate();
         const before = await identities();
 
-        expect(await migrate()).toEqual({ mergedLines: 0 });
+        expect(await migrate()).toEqual({ mergedLines: 0, skippedGroups: 2 });
         expect(await identities()).toEqual(before);
     });
 
