@@ -25,6 +25,7 @@ const emit = defineEmits<{ 'update:modelValue': [n: number] }>();
 
 const draft = ref(String(props.modelValue));
 const focused = ref(false);
+const staleWhileFocused = ref(false);
 const parsedDraft = computed(() => (/^\d+$/.test(draft.value) ? Number(draft.value) : null));
 const dirty = computed(() => draft.value !== String(props.modelValue));
 const editing = computed(() => props.editable && dirty.value);
@@ -39,12 +40,20 @@ const canConfirm = computed(
 watch(
     () => props.modelValue,
     v => {
-        if (!focused.value) draft.value = String(v);
+        if (focused.value) staleWhileFocused.value = true;
+        else draft.value = String(v);
     },
 );
 
 function confirm() {
     if (canConfirm.value) emit('update:modelValue', parsedDraft.value as number);
+}
+
+function onBlur() {
+    focused.value = false;
+    if (!staleWhileFocused.value) return;
+    staleWhileFocused.value = false;
+    draft.value = String(props.modelValue);
 }
 
 function revert() {
@@ -83,6 +92,7 @@ function inc() {
             v-else
             class="mv-qty-stepper__btn"
             type="button"
+            aria-label="Decrease"
             :disabled="disabled || modelValue <= min"
             @click="dec"
         >
@@ -93,9 +103,10 @@ function inc() {
             v-model="draft"
             class="mv-qty-stepper__val mv-qty-stepper__input"
             inputmode="numeric"
+            aria-label="Quantity"
             :disabled="disabled"
             @focus="focused = true"
-            @blur="focused = false"
+            @blur="onBlur"
             @keydown.enter.prevent="confirm"
             @keydown.esc.prevent="revert"
         />
@@ -110,7 +121,14 @@ function inc() {
         >
             <IconCheck :size="18" />
         </button>
-        <button v-else class="mv-qty-stepper__btn" type="button" :disabled="disabled" @click="inc">
+        <button
+            v-else
+            class="mv-qty-stepper__btn"
+            type="button"
+            aria-label="Increase"
+            :disabled="disabled"
+            @click="inc"
+        >
             +
         </button>
     </div>
