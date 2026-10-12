@@ -13,12 +13,13 @@ export class PackagingPolicyService {
         private readonly tradingPointService: TradingPointService,
     ) {}
 
-    // order.customFields.branchId is unset until placement, so resolve from the preferred TradingPoint first.
+    // A placed order keeps its own branch; the preferred TradingPoint is only the pre-placement fallback.
     async resolveBranchId(
         ctx: RequestContext,
         customerId: ID | null | undefined,
         orderBranchId: string | null = null,
     ): Promise<string | null> {
+        if (orderBranchId) return orderBranchId;
         if (customerId) {
             const tradingPoint = await this.tradingPointService.getPreferredForCustomer(
                 ctx,
@@ -29,7 +30,7 @@ export class PackagingPolicyService {
                 : null;
             if (branchId) return branchId;
         }
-        return orderBranchId;
+        return null;
     }
 
     async isPackagesOnly(

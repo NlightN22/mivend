@@ -29,12 +29,20 @@ function makeService(options: {
 }
 
 describe('PackagingPolicyService', () => {
-    it("uses the customer's preferred trading point branch before the order's own branch", async () => {
+    it("uses the order's own branch even when the customer's preferred trading point changed", async () => {
         const { service } = makeService({
             preferredBranchId: 'branch-a',
             settingsByBranchId: { 'branch-a': true, 'branch-b': false },
         });
-        expect(await service.isPackagesOnly(ctx, 'customer-1', 'branch-b')).toBe(true);
+        expect(await service.isPackagesOnly(ctx, 'customer-1', 'branch-b')).toBe(false);
+    });
+
+    it('uses the preferred trading point branch before the order is placed', async () => {
+        const { service } = makeService({
+            preferredBranchId: 'branch-a',
+            settingsByBranchId: { 'branch-a': true },
+        });
+        expect(await service.isPackagesOnly(ctx, 'customer-1', null)).toBe(true);
     });
 
     it('falls back to the order branch when the customer has no preferred trading point', async () => {
