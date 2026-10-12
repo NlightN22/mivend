@@ -176,8 +176,20 @@ function cancelRemove(): void {
         <div class="cart-item__qty">
             <div v-if="confirmingRemove" class="cart-item__remove-confirm">
                 <span>Remove?</span>
-                <MvButton variant="danger" size="sm" @click="confirmRemove">Yes</MvButton>
-                <MvButton variant="secondary" size="sm" @click="cancelRemove">No</MvButton>
+                <MvButton
+                    class="cart-item__remove-confirm-yes"
+                    variant="danger"
+                    size="sm"
+                    @click="confirmRemove"
+                    >Yes</MvButton
+                >
+                <MvButton
+                    class="cart-item__remove-confirm-no"
+                    variant="secondary"
+                    size="sm"
+                    @click="cancelRemove"
+                    >No</MvButton
+                >
             </div>
             <MvQtyStepper
                 v-else
