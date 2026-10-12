@@ -1,4 +1,4 @@
-import { Client } from 'pg';
+import { createDbClient } from './db-client';
 
 // Issue #140: catches a wrongly-provisioned production DB (wrong/missing ICU locale) regardless
 // of how it got that way — see docs/environments.md's "Database locale" section.
@@ -13,13 +13,7 @@ export async function assertDatabaseLocale(): Promise<void> {
         );
     }
 
-    const client = new Client({
-        host: process.env.DB_HOST ?? 'localhost',
-        port: parseInt(process.env.DB_PORT ?? '5432'),
-        user: process.env.DB_USERNAME ?? 'postgres',
-        password: process.env.DB_PASSWORD ?? 'postgres',
-        database: process.env.DB_NAME ?? 'mivend',
-    });
+    const client = createDbClient();
     await client.connect();
     try {
         const result = await client.query<{ daticulocale: string | null }>(

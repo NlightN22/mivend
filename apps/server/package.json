@@ -36,6 +36,7 @@
         "@mivend/plugin-pickup-shipping": "workspace:*",
         "@mivend/plugin-popular-products": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
+        "@mivend/plugin-order-identity": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",
         "@mivend/plugin-retro-bonus": "workspace:*",
         "@mivend/plugin-saved-views": "workspace:*",

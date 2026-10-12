@@ -8,7 +8,7 @@ import {
     VendureConfig,
 } from '@vendure/core';
 import { NumberingOrderCodeStrategy } from './order-code.strategy';
-import { OrderUuidSubscriber, OrderLineUuidSubscriber } from './order-uuid.subscriber';
+import { OrderUuidSubscriber } from './order-uuid.subscriber';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import {
     DeferredPaymentPlugin,
@@ -49,6 +49,7 @@ import { ReservationPlugin } from '@mivend/plugin-reservation';
 import { NotificationPlugin } from '@mivend/plugin-notification';
 import { MoqPlugin } from '@mivend/plugin-moq';
 import { NumberingPlugin } from '@mivend/plugin-numbering';
+import { OrderIdentityPlugin } from '@mivend/plugin-order-identity';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { AcquiringPlugin, offlineTermsPaymentHandler } from '@mivend/plugin-acquiring';
@@ -201,7 +202,7 @@ export const config: VendureConfig = {
         database: process.env.DB_NAME ?? 'mivend',
         // Production-only (synchronize:false there) — see docs/environments.md's "Migrations".
         migrations: [path.join(__dirname, 'migrations/*.+(js|ts)')],
-        subscribers: [OrderUuidSubscriber, OrderLineUuidSubscriber],
+        subscribers: [OrderUuidSubscriber],
     },
     customFields: {
         TaxCategory: [
@@ -383,17 +384,6 @@ export const config: VendureConfig = {
                 type: 'string',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Rejection Reason Text' }],
-            },
-        ],
-        OrderLine: [
-            {
-                // Immutable identity for idempotency/exchange — see docs/identifiers.md. Assigned
-                // synchronously at insert by OrderUuidSubscriber, never left null after creation.
-                name: 'uuid',
-                type: 'string',
-                nullable: true,
-                unique: true,
-                label: [{ languageCode: LanguageCode.en, value: 'UUID' }],
             },
         ],
         Product: [
@@ -728,6 +718,7 @@ export const config: VendureConfig = {
         CounterpartyPlugin,
         PriceEntryPlugin,
         NumberingPlugin.init({ instanceNumberCode }),
+        OrderIdentityPlugin,
         // Issue #102: Admin-API-only, runs on every instance like PriceEntryPlugin/CounterpartyPlugin
         // — only erp-integration's handler (central-only) ever writes to it.
         RetroBonusPlugin,

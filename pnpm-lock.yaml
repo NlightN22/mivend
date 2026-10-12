@@ -112,6 +112,9 @@ importers:
             '@mivend/plugin-online-payment':
                 specifier: workspace:*
                 version: link:../../packages/plugins/online-payment
+            '@mivend/plugin-order-identity':
+                specifier: workspace:*
+                version: link:../../packages/plugins/order-identity
             '@mivend/plugin-pickup-shipping':
                 specifier: workspace:*
                 version: link:../../packages/plugins/pickup-shipping
@@ -263,6 +266,9 @@ importers:
             '@mivend/plugin-online-payment':
                 specifier: workspace:*
                 version: link:../plugins/online-payment
+            '@mivend/plugin-order-identity':
+                specifier: workspace:*
+                version: link:../plugins/order-identity
             '@mivend/plugin-pickup-shipping':
                 specifier: workspace:*
                 version: link:../plugins/pickup-shipping
@@ -805,6 +811,9 @@ importers:
             '@mivend/plugin-notification':
                 specifier: workspace:*
                 version: link:../notification
+            '@mivend/plugin-order-identity':
+                specifier: workspace:*
+                version: link:../order-identity
             '@mivend/plugin-price-entry':
                 specifier: workspace:*
                 version: link:../price-entry
@@ -1046,6 +1055,30 @@ importers:
             vitest:
                 specifier: ^1.0.0
                 version: 1.6.1(@types/node@20.19.43)(lightningcss@1.32.0)(supports-color@8.1.1)
+
+    packages/plugins/order-identity:
+        devDependencies:
+            '@nestjs/common':
+                specifier: ^11.0.0
+                version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
+            '@vendure/common':
+                specifier: ^3.7.3
+                version: 3.7.3
+            '@vendure/core':
+                specifier: ^3.7.3
+                version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+            shared:
+                specifier: workspace:*
+                version: link:../../shared
+            typeorm:
+                specifier: ^0.3.0
+                version: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
+            typescript:
+                specifier: ^5.4.0
+                version: 5.9.3
+            vitest:
+                specifier: ^4.1.9
+                version: 4.1.9(@types/node@20.19.43)(msw@2.15.0(@types/node@20.19.43)(typescript@5.9.3))(vite@8.1.0(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
 
     packages/plugins/pickup-shipping:
         devDependencies:
@@ -15593,10 +15626,10 @@ packages:
                 integrity: sha512-YbGqHZ5/eW4SnkPNR44mKVc6ZKQoRs/Rux1sxC6rdwXb4qpbOSYfDr9DsTHolOTGmIKgM9j141mZbBeg05R1pw==,
             }
 
-    vue-component-type-helpers@3.3.12:
+    vue-component-type-helpers@3.3.13:
         resolution:
             {
-                integrity: sha512-HwCqmgTfLFskQc4P5TRnbduCMyPat2Ezu0elLWOGn0dD/6BKHP15B5bxce6aDi+E4kblPtru8amIBQzu0Di3qQ==,
+                integrity: sha512-02KCxSmKDhIITjKyJ4QT5csP6L0WoRborLqY/34a40+S9uvMvdNgMV0yVjO3p2Gkz3ZoPmFz/0JsGHacwJYTxw==,
             }
 
     vue-component-type-helpers@3.3.5:
@@ -18900,7 +18933,7 @@ snapshots:
             ts-dedent: 2.3.0
             type-fest: 2.19.0
             vue: 3.5.39(typescript@5.9.3)
-            vue-component-type-helpers: 3.3.12
+            vue-component-type-helpers: 3.3.13
 
     '@stryker-mutator/api@9.6.1':
         dependencies:
@@ -25508,7 +25541,7 @@ snapshots:
 
     vue-component-type-helpers@2.2.12: {}
 
-    vue-component-type-helpers@3.3.12: {}
+    vue-component-type-helpers@3.3.13: {}
 
     vue-component-type-helpers@3.3.5: {}
 

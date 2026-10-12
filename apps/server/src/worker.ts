@@ -1,6 +1,7 @@
 import { bootstrapWorker } from '@vendure/core';
 import { config } from './vendure-config';
 import { assertDatabaseLocale } from './db-locale-check';
+import { carryOverOrderLineIdentity } from './order-line-identity-carryover';
 
 // Must not overlap worker-email.ts's `send-email` — see the vendure-workers skill.
 const ALL_QUEUES_EXCEPT_EMAIL = [
@@ -18,6 +19,7 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
 }
 
 assertDatabaseLocale()
+    .then(carryOverOrderLineIdentity)
     .then(() =>
         bootstrapWorker({
             ...config,

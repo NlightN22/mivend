@@ -5697,14 +5697,12 @@ export type OrderLineCustomFields = {
     manualPriceReason: Maybe<Scalars['String']['output']>;
     manualUnitPrice: Maybe<Scalars['Int']['output']>;
     organizationId: Maybe<Scalars['Int']['output']>;
-    uuid: Maybe<Scalars['String']['output']>;
 };
 
 export type OrderLineCustomFieldsInput = {
     manualPriceReason?: InputMaybe<Scalars['String']['input']>;
     manualUnitPrice?: InputMaybe<Scalars['Int']['input']>;
     organizationId?: InputMaybe<Scalars['Int']['input']>;
-    uuid?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type OrderLineInput = {

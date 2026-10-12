@@ -23,6 +23,7 @@
         "@mivend/plugin-erp-order": "workspace:*",
         "@mivend/plugin-notification": "workspace:*",
         "@mivend/plugin-price-entry": "workspace:*",
+        "@mivend/plugin-order-identity": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",
         "@mivend/plugin-retro-bonus": "workspace:*",
         "@nestjs/swagger": "^11.0.0",

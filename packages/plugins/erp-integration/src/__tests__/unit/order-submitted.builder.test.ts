@@ -14,7 +14,6 @@ interface TestLine {
         productId?: string | null;
         customFields?: { defaultSalesUnitId?: string | null; unitRatioToBase?: number | null };
     } | null;
-    customFields?: { uuid: string };
 }
 
 function makeOrder(
@@ -40,7 +39,7 @@ function makeOrder(
         totalWithTax: 10000,
         currencyCode: 'RUB',
         customFields: { uuid: 'order-uuid-1', ...customFields },
-        lines: lines.map(line => ({ customFields: { uuid: `${line.id}-uuid` }, ...line })),
+        lines,
     };
 }
 
@@ -59,6 +58,7 @@ function makeBuilder(options: {
     contract?: { erpId: string; organizationId: string } | null;
     packagesOnly?: boolean;
     priorOutboxEntries?: Array<{ payload: { orderId?: string }; status: string }>;
+    linesWithoutIdentity?: string[];
 }): OrderSubmittedBuilder {
     const orderRepo = { findOne: vi.fn().mockResolvedValue(options.order) };
     const connection = {
@@ -124,6 +124,7 @@ function makeBuilder(options: {
         reservationService as never,
         outboundGateway as never,
         { isPackagesOnly: vi.fn(async () => options.packagesOnly === true) } as never,
+        identityService(options.linesWithoutIdentity ?? []) as never,
     );
 }
 
@@ -136,6 +137,14 @@ const reservation = (
     stockLocationId,
     status: 'active',
     expiresAt: new Date(expiresAt),
+});
+
+// Line uuids come from plugin-order-identity in one batched read (#221).
+const identityService = (missing: string[]): unknown => ({
+    uuidsByLineId: vi.fn(
+        async (_ctx: RequestContext, ids: string[]) =>
+            new Map(ids.filter(id => !missing.includes(id)).map(id => [id, `${id}-uuid`])),
+    ),
 });
 
 const build = (builder: OrderSubmittedBuilder): Promise<OutboundBuildResult> =>
@@ -255,6 +264,25 @@ describe('OrderSubmittedBuilder', () => {
         expect(await build(builder)).toEqual({
             kind: 'skip',
             reason: expect.stringContaining('no active contract'),
+        });
+    });
+
+    it('skips the whole order, naming the line, when a line has no identity uuid', async () => {
+        const result = await build(
+            makeBuilder({
+                order: makeOrder([packLine()]),
+                reservations: [reservation('line-1', 'location-1')],
+                warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
+                productExternalIds: { 'v-1': 'product-1' },
+                counterparty: { erpId: 'counterparty-1' },
+                priceType: null,
+                linesWithoutIdentity: ['line-1'],
+            }),
+        );
+
+        expect(result).toEqual({
+            kind: 'skip',
+            reason: expect.stringContaining('lineUuid=undefined'),
         });
     });
 

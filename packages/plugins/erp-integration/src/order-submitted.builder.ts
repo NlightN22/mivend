@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { ID } from '@vendure/common/lib/shared-types';
 import { PackagingPolicyService, wholePacks } from '@mivend/plugin-moq';
+import { OrderLineIdentityService } from '@mivend/plugin-order-identity';
 import { ReservationService } from '@mivend/plugin-reservation';
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
@@ -28,6 +29,7 @@ export class OrderSubmittedBuilder {
         private readonly reservationService: ReservationService,
         private readonly outboundGateway: OutboundGateway,
         private readonly packagingPolicyService: PackagingPolicyService,
+        private readonly orderLineIdentityService: OrderLineIdentityService,
     ) {}
 
     async build(ctx: RequestContext, orderId: ID, orderCode: string): Promise<OutboundBuildResult> {
@@ -77,6 +79,11 @@ export class OrderSubmittedBuilder {
             order.lines.map(line => line.productVariant?.productId),
         );
 
+        const lineUuidById = await this.orderLineIdentityService.uuidsByLineId(
+            ctx,
+            order.lines.map(line => line.id),
+        );
+
         const packagesOnly = await this.packagingPolicyService.isPackagesOnly(
             ctx,
             order.customerId,
@@ -91,7 +98,7 @@ export class OrderSubmittedBuilder {
             const productId = line.productVariant?.productId
                 ? productExternalIdByProductId.get(String(line.productVariant.productId))
                 : undefined;
-            const lineUuid = line.customFields?.uuid;
+            const lineUuid = lineUuidById.get(String(line.id));
             if (!warehouseId || !productId || !lineUuid) {
                 unbuildable.push(
                     `line ${String(line.id)} (warehouseId=${String(warehouseId)}, ` +
@@ -148,13 +155,8 @@ export class OrderSubmittedBuilder {
         ]);
     }
 
-    // Blocks a second external effect for the same order (re-confirm, release-then-reconfirm,
-    // expiry-then-reconfirm — issue #199/docs/identifiers.md's "Exchange" guard), unless the ERP
-    // rejected the previous submission (decision 5: a re-submit is then allowed). No dedicated
-    // "ERP rejected" signal exists on IntegrationOutboxEntry today, so this checks
-    // Order.customFields.erpStatus === 'REJECTED' (set by ReservationWriteOffSyncService from the
-    // ERP's own registration result) as the only known rejection fact; any other non-skipped,
-    // non-failed prior entry for this order blocks a new submit.
+    // One external effect per order unless the ERP rejected the previous submission; see
+    // docs/identifiers.md "Implementation status" (issue #199 guard).
     private async wasAlreadySubmitted(orderId: ID, order: Order): Promise<boolean> {
         if (order.customFields?.erpStatus === 'REJECTED') return false;
         return this.outboundGateway.hasActiveEntry('order.confirmed', String(orderId));

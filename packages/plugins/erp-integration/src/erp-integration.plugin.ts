@@ -7,6 +7,7 @@ import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { NotificationPlugin } from '@mivend/plugin-notification';
+import { OrderIdentityPlugin } from '@mivend/plugin-order-identity';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
 
 import { ProductPhotoSyncService } from './product-photo-sync.service';
@@ -121,6 +122,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         CounterpartyPlugin,
         DocumentsPlugin,
         ReservationPlugin,
+        OrderIdentityPlugin,
         NotificationPlugin,
     ],
     entities: PLUGIN_ENTITIES,

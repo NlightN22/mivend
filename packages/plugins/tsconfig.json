@@ -22,6 +22,7 @@
         { "path": "./erp-integration" },
         { "path": "./erp-import" },
         { "path": "./reservation" },
+        { "path": "./order-identity" },
         { "path": "./notification" },
         { "path": "./moq" },
         { "path": "./versioning" },
