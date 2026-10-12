@@ -1,0 +1,65 @@
+import type { PaymentForm } from 'shared';
+
+export const PAYMENT_FORM_ORDER: PaymentForm[] = ['bank-transfer', 'card', 'cash'];
+
+export const METHOD_CODE_BY_FORM: Record<PaymentForm, string> = {
+    cash: 'cash',
+    'bank-transfer': 'offline-terms',
+    card: 'online-stub',
+};
+
+// Mirrors CREDIT_ACKNOWLEDGED_KEY in `shared` (a runtime import would pull the CJS package into the bundle).
+export const CREDIT_ACKNOWLEDGED_KEY = 'creditLimitAcknowledged';
+
+export interface CreditPolicyPreview {
+    exceeded: boolean;
+    limitControlled: boolean;
+    allowExceedingCreditLimit: boolean;
+    acknowledgementRequired: boolean;
+    payableCardAmount: number;
+    availableForms: string[];
+}
+
+export function orderedForms(available: string[]): PaymentForm[] {
+    return PAYMENT_FORM_ORDER.filter(form => available.includes(form));
+}
+
+// A card payment covers the excess plus the order, so only cash and bank transfer need the acknowledgement.
+export function acknowledgementNeeded(
+    preview: CreditPolicyPreview | null,
+    form: PaymentForm | null,
+): boolean {
+    return preview?.acknowledgementRequired === true && form !== null && form !== 'card';
+}
+
+export function waitsForManager(
+    preview: CreditPolicyPreview | null,
+    form: PaymentForm | null,
+): boolean {
+    return (
+        acknowledgementNeeded(preview, form) &&
+        preview?.limitControlled === true &&
+        preview.allowExceedingCreditLimit === false
+    );
+}
+
+// Rubles the card payment charges on top of the order total (the debt above the limit).
+export function cardExcess(payableCardAmount: number, orderTotal: number): number {
+    const excess = Math.round((payableCardAmount - orderTotal) * 100) / 100;
+    return excess > 0 ? excess : 0;
+}
+
+export function placementMetadata(acknowledged: boolean): Record<string, boolean> {
+    return acknowledged ? { [CREDIT_ACKNOWLEDGED_KEY]: true } : {};
+}
+
+export interface ProformaInvoiceRef {
+    id: string;
+    status: string;
+}
+
+// Bank transfer opens one printable page per organization's proforma invoice; other forms open none.
+export function proformaTabIds(form: PaymentForm, invoices: ProformaInvoiceRef[]): string[] {
+    if (form !== 'bank-transfer') return [];
+    return invoices.filter(i => i.status !== 'cancelled').map(i => i.id);
+}

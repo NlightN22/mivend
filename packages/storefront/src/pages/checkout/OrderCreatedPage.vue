@@ -6,6 +6,7 @@ import { MvErrorState, formatDocumentNumber } from '@mivend/ui-kit';
 import { shopApi } from '../../api/client';
 import { useAuthStore } from '../../stores/auth';
 import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
+import { describeOrderCreated, PAYMENT_LABELS } from '../../utils/orderCreatedText';
 import { OrderCreatedDocument, type OrderCreatedQuery } from '../../api/generated/graphql';
 
 const route = useRoute();
@@ -21,17 +22,19 @@ const order = computed(() => data.value?.orderByCode ?? null);
 const payment = computed(() => order.value?.payments?.[0] ?? null);
 const methodCode = computed(() => payment.value?.method ?? '');
 
-const PAYMENT_LABELS: Record<string, string> = {
-    'offline-terms': 'Bank proforma invoice',
-    'deferred-payment': 'Deferred payment',
-    'online-stub': 'Online payment',
-};
 const paymentLabel = computed(() => PAYMENT_LABELS[methodCode.value] ?? methodCode.value);
+const text = computed(() => describeOrderCreated(code.value, methodCode.value));
 
-const limitExceeded = computed(() => {
-    const meta = payment.value?.metadata as { public?: { creditLimitExceeded?: boolean } } | null;
-    return meta?.public?.creditLimitExceeded === true;
-});
+const publicFlags = computed(
+    () =>
+        (
+            payment.value?.metadata as {
+                public?: { creditLimitExceeded?: boolean; awaitingManagerConfirmation?: boolean };
+            } | null
+        )?.public ?? {},
+);
+const awaitingManager = computed(() => publicFlags.value.awaitingManagerConfirmation === true);
+const limitExceeded = computed(() => publicFlags.value.creditLimitExceeded === true);
 
 const tradingPoint = computed(() => {
     const id = order.value?.customFields?.tradingPointId;
@@ -54,32 +57,10 @@ const placedAt = computed(() =>
           }).format(new Date(order.value.orderPlacedAt))
         : null,
 );
-const proformaInvoiceId = computed(
-    () => data.value?.myProformaInvoices.items.find(i => i.order?.code === code.value)?.id ?? null,
-);
-
-const statusText = computed(() => {
-    const ref = `Your order ${code.value} has been created`;
-    if (methodCode.value === 'deferred-payment')
-        return `${ref} and will be processed under your deferred payment terms.`;
-    if (methodCode.value === 'offline-terms')
-        return `${ref}. Pay the proforma invoice via your bank; the order will be reserved once payment is received.`;
-    return `${ref}.`;
-});
-
-const steps = computed(() =>
-    methodCode.value === 'offline-terms'
-        ? [
-              'Download and send the proforma invoice to your bank.',
-              "We'll reserve the goods when payment arrives.",
-              "You'll get a notification when the order is ready.",
-          ]
-        : [
-              'Your order is queued for processing.',
-              'Goods will be reserved.',
-              "You'll get a notification when the order is ready.",
-          ],
-);
+function invoiceHref(id: string): string {
+    return router.resolve({ path: `/proforma-invoices/${id}`, query: { print: '1' } }).href;
+}
+const proformaInvoices = computed(() => data.value?.myProformaInvoices.items ?? []);
 
 async function load(): Promise<void> {
     if (!code.value) {
@@ -130,20 +111,30 @@ onMounted(load);
                     <IconCheck :size="32" stroke-width="3" aria-hidden="true" />
                 </div>
                 <h2 class="oc-status-title">Order created</h2>
-                <p class="oc-status-text">{{ statusText }}</p>
-                <MvNotice v-if="limitExceeded" variant="warning">
+                <p class="oc-status-text">{{ text.status }}</p>
+                <MvNotice v-if="text.waitingForCashConfirmation" variant="info">
+                    Waiting for the manager to confirm the cash receipt. The order moves on once the
+                    manager has confirmed it.
+                </MvNotice>
+                <MvNotice v-if="awaitingManager" variant="warning">
                     Your credit limit is exceeded. Please wait for your manager to confirm the
                     order.
+                </MvNotice>
+                <MvNotice v-else-if="limitExceeded" variant="warning">
+                    Your credit limit is exceeded; the order was accepted with your acknowledgement.
                 </MvNotice>
                 <div class="oc-actions">
                     <RouterLink :to="`/orders/${order.id}`" class="oc-btn oc-btn--primary"
                         >Open order</RouterLink
                     >
-                    <RouterLink
-                        v-if="proformaInvoiceId"
-                        :to="`/proforma-invoices/${proformaInvoiceId}`"
+                    <a
+                        v-for="invoice in proformaInvoices"
+                        :key="invoice.id"
+                        :href="invoiceHref(invoice.id)"
+                        target="_blank"
+                        rel="noopener"
                         class="oc-btn oc-btn--secondary"
-                        >Open proforma invoice</RouterLink
+                        >Print proforma invoice {{ invoice.number }}</a
                     >
                     <RouterLink to="/catalog" class="oc-btn oc-btn--ghost"
                         >Continue shopping</RouterLink
@@ -177,7 +168,7 @@ onMounted(load);
                 <div class="oc-card">
                     <h3 class="oc-card-title">What's next</h3>
                     <ol class="oc-steps">
-                        <li v-for="(step, i) in steps" :key="i" class="oc-step">
+                        <li v-for="(step, i) in text.steps" :key="i" class="oc-step">
                             <span class="oc-step-num">{{ i + 1 }}</span>
                             <span>{{ step }}</span>
                         </li>

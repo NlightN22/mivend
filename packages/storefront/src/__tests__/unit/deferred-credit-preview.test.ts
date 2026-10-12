@@ -14,67 +14,91 @@ vi.mock('../../api/generated/graphql', () => ({ DeferredCreditPreviewDocument: {
 
 import { shopApi } from '../../api/client';
 import { useCartStore } from '../../stores/cart';
-import { useCheckoutStore } from '../../stores/checkout';
+import { useCheckoutStore, type CreditPreview } from '../../stores/checkout';
 import { useDeferredCreditPreview } from '../../composables/useDeferredCreditPreview';
 
-const preview = (exceeded: boolean, orderAmount = 500) => ({
-    deferredCreditPreview: { exceeded, availableCredit: 100, orderAmount },
+const make = (over: Partial<CreditPreview> = {}): CreditPreview => ({
+    exceeded: false,
+    availableCredit: 100,
+    orderAmount: 500,
+    limitControlled: true,
+    allowExceedingCreditLimit: false,
+    acknowledgementRequired: false,
+    payableCardAmount: 500,
+    availableForms: ['cash', 'bank-transfer', 'card'],
+    ...over,
 });
+const over = (extra: Partial<CreditPreview> = {}): CreditPreview =>
+    make({ exceeded: true, acknowledgementRequired: true, payableCardAmount: 900, ...extra });
+const preview = (value: CreditPreview) => ({ deferredCreditPreview: value });
 
 describe('checkout credit gating', () => {
     beforeEach(() => setActivePinia(createPinia()));
 
-    it('blocks placing until acknowledged, only while deferred is selected', () => {
+    it('lists the forms the server reports, in display order, and picks the first', () => {
         const store = useCheckoutStore();
-        store.setPayment('deferred');
-        store.setCreditPreview({ exceeded: true, availableCredit: 100, orderAmount: 500 });
-        expect(store.canPlaceOrder).toBe(false);
-        store.creditAcknowledged = true;
-        expect(store.canPlaceOrder).toBe(true);
+        store.setCreditPreview(make({ availableForms: ['card', 'cash'] }));
+        expect(store.availableMethods).toEqual(['card', 'cash']);
+        expect(store.selectedPayment).toBe('card');
+        store.setCreditPreview(make({ availableForms: ['cash', 'bank-transfer'] }));
+        expect(store.selectedPayment).toBe('bank-transfer');
     });
 
-    it('drops the requirement when switching to another payment method', () => {
+    it.each(['cash', 'bank-transfer'] as const)(
+        'blocks placing a %s order until the limit excess is acknowledged',
+        form => {
+            const store = useCheckoutStore();
+            store.setCreditPreview(over());
+            store.setPayment(form);
+            expect(store.creditWarningVisible).toBe(true);
+            expect(store.canPlaceOrder).toBe(false);
+            store.creditAcknowledged = true;
+            expect(store.canPlaceOrder).toBe(true);
+        },
+    );
+
+    it('does not require the acknowledgement for a card, which pays the excess', () => {
         const store = useCheckoutStore();
-        store.setPayment('deferred');
-        store.setCreditPreview({ exceeded: true, availableCredit: 100, orderAmount: 500 });
-        store.setPayment('invoice');
+        store.setCreditPreview(over());
+        store.setPayment('card');
         expect(store.creditWarningVisible).toBe(false);
         expect(store.canPlaceOrder).toBe(true);
     });
 
+    it('announces the manager wait only when exceeding is not allowed', () => {
+        const store = useCheckoutStore();
+        store.setCreditPreview(over());
+        store.setPayment('cash');
+        expect(store.waitsForManagerConfirmation).toBe(true);
+        store.setCreditPreview(over({ allowExceedingCreditLimit: true }));
+        expect(store.waitsForManagerConfirmation).toBe(false);
+        expect(store.creditWarningVisible).toBe(true);
+    });
+
     it('does not gate a within-limit order', () => {
         const store = useCheckoutStore();
-        store.setPayment('deferred');
-        store.setCreditPreview({ exceeded: false, availableCredit: 900, orderAmount: 500 });
+        store.setCreditPreview(make());
+        store.setPayment('bank-transfer');
         expect(store.canPlaceOrder).toBe(true);
     });
 
-    it('keeps deferred disabled until the preview answered and re-disables while it reloads', () => {
+    it('stays disabled until the preview answered and while it reloads', () => {
         const store = useCheckoutStore();
-        store.setPayment('deferred');
         expect(store.canPlaceOrder).toBe(false);
-        store.setCreditPreview({ exceeded: false, availableCredit: 900, orderAmount: 500 });
+        store.setCreditPreview(make());
         expect(store.canPlaceOrder).toBe(true);
         store.markCreditPreviewPending();
         expect(store.canPlaceOrder).toBe(false);
-        store.setCreditPreview(null);
-        expect(store.canPlaceOrder).toBe(true);
-    });
-
-    it('does not wait for the preview when another method is selected', () => {
-        const store = useCheckoutStore();
-        store.setPayment('invoice');
-        expect(store.canPlaceOrder).toBe(true);
     });
 
     it('resets the acknowledgement when the numbers change', () => {
         const store = useCheckoutStore();
-        store.setPayment('deferred');
-        store.setCreditPreview({ exceeded: true, availableCredit: 100, orderAmount: 500 });
+        store.setCreditPreview(over());
+        store.setPayment('cash');
         store.creditAcknowledged = true;
-        store.setCreditPreview({ exceeded: true, availableCredit: 100, orderAmount: 500 });
+        store.setCreditPreview(over());
         expect(store.creditAcknowledged).toBe(true);
-        store.setCreditPreview({ exceeded: true, availableCredit: 100, orderAmount: 700 });
+        store.setCreditPreview(over({ orderAmount: 700 }));
         expect(store.creditAcknowledged).toBe(false);
     });
 });
@@ -87,22 +111,21 @@ describe('useDeferredCreditPreview', () => {
     });
     afterEach(() => vi.useRealTimers());
 
-    it('debounces refetches on cart changes and ignores other payment methods', async () => {
-        vi.mocked(shopApi).mockResolvedValue(preview(true) as never);
+    it('loads the preview on mount and debounces refetches on cart changes', async () => {
+        vi.mocked(shopApi).mockResolvedValue(preview(over()) as never);
         const store = useCheckoutStore();
         const cart = useCartStore();
-        store.setPayment('invoice');
         effectScope().run(() => useDeferredCreditPreview());
-        await vi.advanceTimersByTimeAsync(1000);
-        expect(shopApi).not.toHaveBeenCalled();
-
-        store.setPayment('deferred');
-        await nextTick();
-        cart.order = { totalWithTax: 100 } as never;
-        await nextTick();
         await vi.advanceTimersByTimeAsync(1000);
         expect(shopApi).toHaveBeenCalledTimes(1);
         expect(store.creditPreview?.exceeded).toBe(true);
+
+        cart.order = { totalWithTax: 100 } as never;
+        await nextTick();
+        cart.order = { totalWithTax: 200 } as never;
+        await nextTick();
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(shopApi).toHaveBeenCalledTimes(2);
     });
 
     it('keeps only the latest response when responses arrive out of order', async () => {
@@ -112,7 +135,6 @@ describe('useDeferredCreditPreview', () => {
         );
         const store = useCheckoutStore();
         const cart = useCartStore();
-        store.setPayment('deferred');
         effectScope().run(() => useDeferredCreditPreview());
         await vi.advanceTimersByTimeAsync(400);
         cart.order = { totalWithTax: 100 } as never;
@@ -120,14 +142,11 @@ describe('useDeferredCreditPreview', () => {
         await vi.advanceTimersByTimeAsync(400);
         expect(resolvers).toHaveLength(2);
 
-        resolvers[1](preview(false, 700));
+        resolvers[1](preview(make({ orderAmount: 700 })));
         await vi.advanceTimersByTimeAsync(0);
-        resolvers[0](preview(true, 500));
+        resolvers[0](preview(over({ orderAmount: 500 })));
         await vi.advanceTimersByTimeAsync(0);
-        expect(store.creditPreview).toEqual({
-            exceeded: false,
-            availableCredit: 100,
-            orderAmount: 700,
-        });
+        expect(store.creditPreview?.orderAmount).toBe(700);
+        expect(store.creditPreview?.exceeded).toBe(false);
     });
 });

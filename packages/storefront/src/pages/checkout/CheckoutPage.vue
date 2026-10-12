@@ -12,13 +12,7 @@ const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
 useDeferredCreditPreview();
 
-onMounted(() =>
-    Promise.all([
-        cartStore.fetchCart(),
-        checkoutStore.loadPaymentMethods(),
-        checkoutStore.loadDeliveryMethods(),
-    ]),
-);
+onMounted(() => Promise.all([cartStore.fetchCart(), checkoutStore.loadDeliveryMethods()]));
 </script>
 
 <template>
@@ -37,7 +31,7 @@ onMounted(() =>
                 <PaymentMethodSelector />
                 <DeliverySelector />
                 <CheckoutOrderItems />
-                <MvNotice v-if="checkoutStore.selectedPayment === 'online'" variant="info">
+                <MvNotice v-if="checkoutStore.selectedPayment === 'card'" variant="info">
                     After clicking "Pay online" you will be redirected to the payment service. Order
                     status is updated via webhook, not only on customer return.
                 </MvNotice>

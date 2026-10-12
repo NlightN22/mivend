@@ -3,5 +3,10 @@ query DeferredCreditPreview {
         exceeded
         availableCredit
         orderAmount
+        limitControlled
+        allowExceedingCreditLimit
+        acknowledgementRequired
+        payableCardAmount
+        availableForms
     }
 }

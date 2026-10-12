@@ -15,23 +15,38 @@ const meta: Meta<typeof OrderCreatedPage> = {
 
 export default meta;
 
-function mockOrder(method: string, limitExceeded = false): void {
+function mockOrder(method: string, limitExceeded = false, awaitingManager = false): void {
     registerMock('OrderCreated', () => ({
         orderByCode: {
             id: '10',
             code: 'ORD-SB-0001',
             orderPlacedAt: '2026-10-06T08:30:00.000Z',
-            payments: [{ method, metadata: { public: { creditLimitExceeded: limitExceeded } } }],
+            payments: [
+                {
+                    method,
+                    metadata: {
+                        public: {
+                            creditLimitExceeded: limitExceeded,
+                            awaitingManagerConfirmation: awaitingManager,
+                        },
+                    },
+                },
+            ],
             shippingLines: [{ shippingMethod: { name: 'Courier' } }],
             customFields: { tradingPointId: 'point-1' },
         },
         myTradingPoints: [{ id: 'point-1', name: 'Trading point A', address: 'branch-a address' }],
-        myProformaInvoices: { items: [{ id: '5', order: { code: 'ORD-SB-0001' } }] },
+        myProformaInvoices: {
+            items: [
+                { id: '5', number: '1001-01', status: 'issued' },
+                { id: '6', number: '1001-02', status: 'issued' },
+            ],
+        },
     }));
 }
 type Story = StoryObj<typeof OrderCreatedPage>;
 
-export const ProformaInvoice: Story = {
+export const BankTransfer: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
@@ -45,11 +60,11 @@ export const ProformaInvoice: Story = {
     }),
 };
 
-export const Deferred: Story = {
+export const CashWaitingForConfirmation: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
-            mockOrder('deferred-payment');
+            mockOrder('cash');
             await router.push('/order-created?code=ORD-SB-0001');
         },
     ],
@@ -59,11 +74,25 @@ export const Deferred: Story = {
     }),
 };
 
-export const DeferredOverLimit: Story = {
+export const Card: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
-            mockOrder('deferred-payment', true);
+            mockOrder('online-stub');
+            await router.push('/order-created?code=ORD-SB-0001');
+        },
+    ],
+    render: () => ({
+        components: { OrderCreatedPage },
+        template: '<OrderCreatedPage />',
+    }),
+};
+
+export const OverLimitWaitingForManager: Story = {
+    loaders: [
+        async () => {
+            registerDefaultMocks();
+            mockOrder('offline-terms', true, true);
             await router.push('/order-created?code=ORD-SB-0001');
         },
     ],

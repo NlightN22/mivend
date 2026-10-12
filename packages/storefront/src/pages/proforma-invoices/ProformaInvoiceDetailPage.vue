@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { nextTick, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
@@ -13,8 +13,13 @@ import {
 const route = useRoute();
 const { proformaInvoice, loading, load } = useProformaInvoiceDetail();
 
-onMounted(() => {
-    void load(route.params.id as string);
+// `?print=1` (opened in a new tab after checkout) shows the browser print dialog once loaded.
+onMounted(async () => {
+    await load(route.params.id as string);
+    if (route.query.print === '1' && proformaInvoice.value) {
+        await nextTick();
+        window.print();
+    }
 });
 
 function formatAmount(cents: number, currency: string): string {
@@ -28,10 +33,10 @@ function formatAmount(cents: number, currency: string): string {
 
 <template>
     <div class="id-layout">
-        <AccountSidebar />
+        <AccountSidebar class="id-sidebar" />
 
         <section class="id-content">
-            <router-link to="/proforma-invoices" class="id-back"
+            <router-link to="/proforma-invoices" class="id-back id-no-print"
                 >← My proforma invoices</router-link
             >
 
@@ -376,6 +381,17 @@ function formatAmount(cents: number, currency: string): string {
 }
 .id-detail-val {
     font-weight: 850;
+}
+
+@media print {
+    .id-sidebar,
+    .id-no-print {
+        display: none;
+    }
+
+    .id-layout {
+        display: block;
+    }
 }
 
 @media (max-width: 1100px) {

@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
 import { toast } from '@mivend/ui-kit';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore, type DeliveryType } from '../../stores/checkout';
+import { useOrderPlacement } from '../../composables/useOrderPlacement';
+import { cardExcess } from '../../utils/checkoutPolicy';
 import { useCurrency } from '../../composables/useCurrency';
 import DeferredCreditWarning from './DeferredCreditWarning.vue';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 
 const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
-const router = useRouter();
 const submitting = ref(false);
 
 const packaging = computed(() => useOrderPackaging(cartStore.lines));
@@ -21,8 +21,14 @@ const totalQty = computed(() => cartStore.totalQuantity);
 
 const { formatWhole } = useCurrency();
 const creditPreview = computed(() =>
-    checkoutStore.selectedPayment === 'deferred' ? checkoutStore.creditPreview : null,
+    checkoutStore.creditPreview?.limitControlled ? checkoutStore.creditPreview : null,
 );
+const cardPayable = computed(() =>
+    checkoutStore.selectedPayment === 'card'
+        ? (checkoutStore.creditPreview?.payableCardAmount ?? 0)
+        : 0,
+);
+const excess = computed(() => cardExcess(cardPayable.value, cartStore.totalPrice));
 const overLimit = computed(() =>
     creditPreview.value
         ? Math.max(creditPreview.value.orderAmount - creditPreview.value.availableCredit, 0)
@@ -41,32 +47,24 @@ const discountLabel = computed(() => `− ${formatRub(cartStore.discountAmount)}
 const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽');
 
 const btnLabel = computed(() => {
-    if (checkoutStore.selectedPayment === 'online') return 'Pay online →';
-    if (checkoutStore.selectedPayment === 'invoice') return 'Place order & get proforma invoice';
-    return 'Confirm order';
+    if (checkoutStore.selectedPayment === 'card') return 'Pay online →';
+    if (checkoutStore.selectedPayment === 'bank-transfer')
+        return 'Place order & get proforma invoice';
+    return 'Place order';
 });
 
 const DELIVERY_LABELS: Record<DeliveryType, string> = { courier: 'Courier', pickup: 'Self-pickup' };
 const deliveryLabel = computed(() => DELIVERY_LABELS[checkoutStore.selectedDelivery]);
 
-const btnOrange = computed(() => checkoutStore.selectedPayment === 'online');
+const btnOrange = computed(() => checkoutStore.selectedPayment === 'card');
+
+const { place } = useOrderPlacement();
 
 async function handlePrimary(): Promise<void> {
     if (submitting.value) return;
     submitting.value = true;
     try {
-        const ready = await cartStore.beginCheckout();
-        if (!ready) return;
-
-        if (checkoutStore.selectedPayment === 'online') {
-            router.push('/payment-stub');
-            return;
-        }
-        const code =
-            checkoutStore.selectedPayment === 'deferred'
-                ? await cartStore.completeDeferredPayment()
-                : await cartStore.completeOfflinePayment();
-        if (code) router.push({ path: '/order-created', query: { code } });
+        await place();
     } catch (err) {
         console.error('Checkout failed', err);
         toast('Could not place order, please try again or contact support', 'error');
@@ -110,6 +108,17 @@ async function handlePrimary(): Promise<void> {
                 </div>
             </template>
 
+            <template v-if="cardPayable > 0">
+                <div class="checkout-summary__line">
+                    <span>To pay online</span>
+                    <strong>{{ formatRub(cardPayable * 100) }}</strong>
+                </div>
+                <p v-if="excess > 0" class="checkout-summary__legal">
+                    Includes {{ formatRub(excess * 100) }} of debt above your credit limit; paying
+                    online clears it together with this order.
+                </p>
+            </template>
+
             <div class="checkout-summary__total">
                 <span>Total</span>
                 <strong>{{ total }}</strong>
@@ -131,7 +140,7 @@ async function handlePrimary(): Promise<void> {
                 {{ submitting ? 'Processing…' : btnLabel }}
             </button>
 
-            <p v-if="checkoutStore.selectedPayment === 'online'" class="checkout-summary__legal">
+            <p v-if="checkoutStore.selectedPayment === 'card'" class="checkout-summary__legal">
                 By clicking the button, you are redirected to the payment service and agree to the
                 <a href="#">payment terms</a>.
             </p>

@@ -980,9 +980,19 @@ export type DateTimeStructFieldConfig = StructField & {
 };
 
 export type DeferredCreditPreview = {
+    /** Checkout must show the over-limit warning and an acknowledgement. */
+    acknowledgementRequired: Scalars['Boolean']['output'];
+    /** The branch lets an over-limit order go on after the customer acknowledges it. */
+    allowExceedingCreditLimit: Scalars['Boolean']['output'];
     availableCredit: Scalars['Float']['output'];
+    /** Payment forms the customer can choose: cash, bank-transfer, card. */
+    availableForms: Array<Scalars['String']['output']>;
     exceeded: Scalars['Boolean']['output'];
+    /** Limit control applies: the counterparty has a credit limit and payment delay days. */
+    limitControlled: Scalars['Boolean']['output'];
     orderAmount: Scalars['Float']['output'];
+    /** What an online card payment is created for: existing excess over the limit plus the order total. */
+    payableCardAmount: Scalars['Float']['output'];
 };
 
 export type DeletionResponse = {
@@ -2838,6 +2848,8 @@ export enum Permission {
     CancelOrder = 'CancelOrder',
     /** Confirm or release a manual order reservation (order-confirmation flow, see docs/order-flow.md) */
     ConfirmOrder = 'ConfirmOrder',
+    /** Mark a cash or bank-transfer payment as received (settles the order payment, see docs/payments.md) */
+    ConfirmPaymentReceived = 'ConfirmPaymentReceived',
     /** Grants permission to create Administrator */
     CreateAdministrator = 'CreateAdministrator',
     /** Grants permission to create ApiKey */
@@ -3371,6 +3383,7 @@ export type ProformaInvoiceList = {
 };
 
 export type ProformaInvoiceListOptions = {
+    orderCode?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     status?: InputMaybe<Scalars['String']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
@@ -4642,7 +4655,16 @@ export type ProductDetailQuery = {
 export type DeferredCreditPreviewQueryVariables = Exact<{ [key: string]: never }>;
 
 export type DeferredCreditPreviewQuery = {
-    deferredCreditPreview: { exceeded: boolean; availableCredit: number; orderAmount: number };
+    deferredCreditPreview: {
+        exceeded: boolean;
+        availableCredit: number;
+        orderAmount: number;
+        limitControlled: boolean;
+        allowExceedingCreditLimit: boolean;
+        acknowledgementRequired: boolean;
+        payableCardAmount: number;
+        availableForms: Array<string>;
+    };
 };
 
 export type MyTradingPointsForDeliverySelectorQueryVariables = Exact<{ [key: string]: never }>;
@@ -4673,7 +4695,15 @@ export type OrderCreatedQuery = {
         customFields?: { tradingPointId?: string | null } | null;
     } | null;
     myTradingPoints: Array<{ id: string; name: string; address: string }>;
-    myProformaInvoices: { items: Array<{ id: string; order: { code: string } }> };
+    myProformaInvoices: { items: Array<{ id: string; number: string; status: string }> };
+};
+
+export type OrderProformaInvoicesQueryVariables = Exact<{
+    orderCode: Scalars['String']['input'];
+}>;
+
+export type OrderProformaInvoicesQuery = {
+    myProformaInvoices: { items: Array<{ id: string; number: string; status: string }> };
 };
 
 export type MyDocumentsQueryVariables = Exact<{
@@ -5171,38 +5201,21 @@ export type TransitionToArrangingPaymentMutation = {
         | null;
 };
 
-export type CompleteOfflinePaymentMutationVariables = Exact<{ [key: string]: never }>;
+export type CompleteOrderPaymentMutationVariables = Exact<{
+    method: Scalars['String']['input'];
+    metadata: Scalars['JSON']['input'];
+}>;
 
-export type CompleteOfflinePaymentMutation = {
+export type CompleteOrderPaymentMutation = {
     addPaymentToOrder:
         | { __typename: 'CouponRemovedDuringCheckoutError'; errorCode: ErrorCode; message: string }
         | { __typename: 'IneligiblePaymentMethodError'; errorCode: ErrorCode; message: string }
         | { __typename: 'NoActiveOrderError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'Order'; code: string }
+        | { __typename: 'Order'; id: string; code: string }
         | { __typename: 'OrderPaymentStateError'; errorCode: ErrorCode; message: string }
         | { __typename: 'OrderStateTransitionError'; errorCode: ErrorCode; message: string }
         | { __typename: 'PaymentDeclinedError'; errorCode: ErrorCode; message: string }
         | { __typename: 'PaymentFailedError'; errorCode: ErrorCode; message: string };
-};
-
-export type CompleteDeferredPaymentMutationVariables = Exact<{ [key: string]: never }>;
-
-export type CompleteDeferredPaymentMutation = {
-    addPaymentToOrder:
-        | { __typename: 'CouponRemovedDuringCheckoutError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'IneligiblePaymentMethodError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'NoActiveOrderError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'Order'; code: string }
-        | { __typename: 'OrderPaymentStateError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'OrderStateTransitionError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'PaymentDeclinedError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'PaymentFailedError'; errorCode: ErrorCode; message: string };
-};
-
-export type EligiblePaymentMethodsForCheckoutQueryVariables = Exact<{ [key: string]: never }>;
-
-export type EligiblePaymentMethodsForCheckoutQuery = {
-    eligiblePaymentMethods: Array<{ code: string; isEligible: boolean }>;
 };
 
 export type CompleteOnlinePaymentMutationVariables = Exact<{
@@ -5741,6 +5754,11 @@ export const DeferredCreditPreviewDocument = new TypedDocumentString(`
     exceeded
     availableCredit
     orderAmount
+    limitControlled
+    allowExceedingCreditLimit
+    acknowledgementRequired
+    payableCardAmount
+    availableForms
   }
 }
     `) as unknown as TypedDocumentString<
@@ -5791,16 +5809,29 @@ export const OrderCreatedDocument = new TypedDocumentString(`
     name
     address
   }
-  myProformaInvoices(options: {take: 50}) {
+  myProformaInvoices(options: {orderCode: $code, take: 50}) {
     items {
       id
-      order {
-        code
-      }
+      number
+      status
     }
   }
 }
     `) as unknown as TypedDocumentString<OrderCreatedQuery, OrderCreatedQueryVariables>;
+export const OrderProformaInvoicesDocument = new TypedDocumentString(`
+    query OrderProformaInvoices($orderCode: String!) {
+  myProformaInvoices(options: {orderCode: $orderCode, take: 50}) {
+    items {
+      id
+      number
+      status
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    OrderProformaInvoicesQuery,
+    OrderProformaInvoicesQueryVariables
+>;
 export const MyDocumentsDocument = new TypedDocumentString(`
     query MyDocuments($options: DocumentListOptions) {
   myDocuments(options: $options) {
@@ -6366,50 +6397,23 @@ export const TransitionToArrangingPaymentDocument = new TypedDocumentString(`
     TransitionToArrangingPaymentMutation,
     TransitionToArrangingPaymentMutationVariables
 >;
-export const CompleteOfflinePaymentDocument = new TypedDocumentString(`
-    mutation CompleteOfflinePayment {
-  addPaymentToOrder(input: {method: "offline-terms", metadata: {}}) {
+export const CompleteOrderPaymentDocument = new TypedDocumentString(`
+    mutation CompleteOrderPayment($method: String!, $metadata: JSON!) {
+  addPaymentToOrder(input: {method: $method, metadata: $metadata}) {
     __typename
     ... on ErrorResult {
       errorCode
       message
     }
     ... on Order {
+      id
       code
     }
   }
 }
     `) as unknown as TypedDocumentString<
-    CompleteOfflinePaymentMutation,
-    CompleteOfflinePaymentMutationVariables
->;
-export const CompleteDeferredPaymentDocument = new TypedDocumentString(`
-    mutation CompleteDeferredPayment {
-  addPaymentToOrder(input: {method: "deferred-payment", metadata: {}}) {
-    __typename
-    ... on ErrorResult {
-      errorCode
-      message
-    }
-    ... on Order {
-      code
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<
-    CompleteDeferredPaymentMutation,
-    CompleteDeferredPaymentMutationVariables
->;
-export const EligiblePaymentMethodsForCheckoutDocument = new TypedDocumentString(`
-    query EligiblePaymentMethodsForCheckout {
-  eligiblePaymentMethods {
-    code
-    isEligible
-  }
-}
-    `) as unknown as TypedDocumentString<
-    EligiblePaymentMethodsForCheckoutQuery,
-    EligiblePaymentMethodsForCheckoutQueryVariables
+    CompleteOrderPaymentMutation,
+    CompleteOrderPaymentMutationVariables
 >;
 export const CompleteOnlinePaymentDocument = new TypedDocumentString(`
     mutation CompleteOnlinePayment($status: JSON!) {

@@ -1,35 +1,29 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
+import type { PaymentForm } from 'shared';
 import { shopApi } from '../api/client';
+import { EligibleShippingMethodsForCheckoutDocument } from '../api/generated/graphql';
 import {
-    EligiblePaymentMethodsForCheckoutDocument,
-    EligibleShippingMethodsForCheckoutDocument,
-} from '../api/generated/graphql';
+    acknowledgementNeeded,
+    orderedForms,
+    waitsForManager,
+    type CreditPolicyPreview,
+} from '../utils/checkoutPolicy';
 import { SHIPPING_CODE_BY_DELIVERY, type DeliveryType } from '../utils/deliveryMethods';
 import { useAuthStore } from './auth';
 
-export interface CreditPreview {
-    exceeded: boolean;
+export interface CreditPreview extends CreditPolicyPreview {
     availableCredit: number;
     orderAmount: number;
 }
 
-export type PaymentMethod = 'online' | 'invoice' | 'deferred';
-export type { DeliveryType };
+export type { DeliveryType, PaymentForm };
 
 const DELIVERY_ORDER: DeliveryType[] = ['courier', 'pickup'];
 export type ResultState = 'success' | 'pending' | 'fail' | null;
 
-const METHOD_BY_CODE: Record<string, PaymentMethod> = {
-    'online-stub': 'online',
-    'offline-terms': 'invoice',
-    'deferred-payment': 'deferred',
-};
-
 export const useCheckoutStore = defineStore('checkout', () => {
-    const availableMethods = ref<PaymentMethod[]>([]);
-    const methodsLoaded = ref(false);
-    const selectedPayment = ref<PaymentMethod | null>(null);
+    const selectedPayment = ref<PaymentForm | null>(null);
     const availableDeliveries = ref<DeliveryType[]>([]);
     const deliveryLoaded = ref(false);
     const selectedDelivery = ref<DeliveryType>('courier');
@@ -38,14 +32,22 @@ export const useCheckoutStore = defineStore('checkout', () => {
     const creditAcknowledged = ref(false);
     const creditPreviewReady = ref(false);
 
-    const creditWarningVisible = computed(
-        () => selectedPayment.value === 'deferred' && creditPreview.value?.exceeded === true,
+    const availableMethods = computed<PaymentForm[]>(() =>
+        orderedForms(creditPreview.value?.availableForms ?? []),
+    );
+    const methodsLoaded = computed(() => creditPreviewReady.value);
+    const acknowledgementRequired = computed(() =>
+        acknowledgementNeeded(creditPreview.value, selectedPayment.value),
+    );
+    const creditWarningVisible = acknowledgementRequired;
+    const waitsForManagerConfirmation = computed(() =>
+        waitsForManager(creditPreview.value, selectedPayment.value),
     );
     const canPlaceOrder = computed(
         () =>
             selectedPayment.value !== null &&
-            (selectedPayment.value !== 'deferred' || creditPreviewReady.value) &&
-            (!creditWarningVisible.value || creditAcknowledged.value),
+            creditPreviewReady.value &&
+            (!acknowledgementRequired.value || creditAcknowledged.value),
     );
 
     function setCreditPreview(next: CreditPreview | null): void {
@@ -53,24 +55,17 @@ export const useCheckoutStore = defineStore('checkout', () => {
         const changed =
             prev?.availableCredit !== next?.availableCredit ||
             prev?.orderAmount !== next?.orderAmount;
-        if (!next?.exceeded || changed) creditAcknowledged.value = false;
+        if (!next?.acknowledgementRequired || changed) creditAcknowledged.value = false;
         creditPreview.value = next;
         creditPreviewReady.value = true;
+        const forms = availableMethods.value;
+        if (!selectedPayment.value || !forms.includes(selectedPayment.value)) {
+            selectedPayment.value = forms[0] ?? null;
+        }
     }
 
     function markCreditPreviewPending(): void {
         creditPreviewReady.value = false;
-    }
-
-    async function loadPaymentMethods(): Promise<void> {
-        const { eligiblePaymentMethods } = await shopApi(EligiblePaymentMethodsForCheckoutDocument);
-        availableMethods.value = eligiblePaymentMethods
-            .filter(m => m.isEligible && m.code in METHOD_BY_CODE)
-            .map(m => METHOD_BY_CODE[m.code]);
-        if (!selectedPayment.value || !availableMethods.value.includes(selectedPayment.value)) {
-            selectedPayment.value = availableMethods.value[0] ?? null;
-        }
-        methodsLoaded.value = true;
     }
 
     async function loadDeliveryMethods(): Promise<void> {
@@ -98,7 +93,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
         return null;
     });
 
-    function setPayment(method: PaymentMethod): void {
+    function setPayment(method: PaymentForm): void {
         selectedPayment.value = method;
     }
 
@@ -111,8 +106,6 @@ export const useCheckoutStore = defineStore('checkout', () => {
     }
 
     function reset(): void {
-        availableMethods.value = [];
-        methodsLoaded.value = false;
         selectedPayment.value = null;
         availableDeliveries.value = [];
         deliveryLoaded.value = false;
@@ -135,10 +128,11 @@ export const useCheckoutStore = defineStore('checkout', () => {
         creditPreview,
         creditAcknowledged,
         creditWarningVisible,
+        acknowledgementRequired,
+        waitsForManagerConfirmation,
         canPlaceOrder,
         setCreditPreview,
         markCreditPreviewPending,
-        loadPaymentMethods,
         loadDeliveryMethods,
         setPayment,
         setDelivery,

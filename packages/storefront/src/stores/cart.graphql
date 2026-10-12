@@ -175,36 +175,17 @@ mutation TransitionToArrangingPayment {
     }
 }
 
-mutation CompleteOfflinePayment {
-    addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) {
+mutation CompleteOrderPayment($method: String!, $metadata: JSON!) {
+    addPaymentToOrder(input: { method: $method, metadata: $metadata }) {
         __typename
         ... on ErrorResult {
             errorCode
             message
         }
         ... on Order {
+            id
             code
         }
-    }
-}
-
-mutation CompleteDeferredPayment {
-    addPaymentToOrder(input: { method: "deferred-payment", metadata: {} }) {
-        __typename
-        ... on ErrorResult {
-            errorCode
-            message
-        }
-        ... on Order {
-            code
-        }
-    }
-}
-
-query EligiblePaymentMethodsForCheckout {
-    eligiblePaymentMethods {
-        code
-        isEligible
     }
 }
 

@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue';
-import { MvFormField, MvInput, MvSelect, MvMultiSelect, MvButton, MvNotice, MvSwitch } from '@mivend/ui-kit';
+import {
+    MvFormField,
+    MvInput,
+    MvSelect,
+    MvMultiSelect,
+    MvButton,
+    MvNotice,
+    MvSwitch,
+} from '@mivend/ui-kit';
 import type { SelectOption } from '@mivend/ui-kit';
 import type { BranchSettings, PriceTypeOption, Warehouse } from '../../api/branchSettings';
 
@@ -150,7 +158,12 @@ function onSave(): void {
             </MvFormField>
 
             <MvFormField label="Prepayment reserve (days)">
-                <MvInput v-model.number="form.prepaymentReserveDays" type="number" min="1" />
+                <MvInput
+                    :model-value="String(form.prepaymentReserveDays)"
+                    type="number"
+                    min="1"
+                    @update:model-value="form.prepaymentReserveDays = Number($event)"
+                />
                 <p class="branch-settings-form__hint">
                     How long stock stays reserved for an order that is waiting for payment (no
                     credit terms) before it is cancelled automatically.

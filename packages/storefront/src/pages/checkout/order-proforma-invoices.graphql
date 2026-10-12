@@ -1,0 +1,9 @@
+query OrderProformaInvoices($orderCode: String!) {
+    myProformaInvoices(options: { orderCode: $orderCode, take: 50 }) {
+        items {
+            id
+            number
+            status
+        }
+    }
+}

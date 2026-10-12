@@ -9,8 +9,6 @@ import {
     AddToCartDocument,
     AdjustCartLineDocument,
     ActiveOrderDocument,
-    CompleteDeferredPaymentDocument,
-    CompleteOfflinePaymentDocument,
     CompleteOnlinePaymentDocument,
     EligibleShippingMethodsForCheckoutDocument,
     RemoveAllCartLinesDocument,
@@ -345,31 +343,6 @@ export const useCartStore = defineStore('cart', () => {
         return true;
     }
 
-    // Offline payment terms (proforma invoice / deferred) settle immediately in Vendure's
-    // payment flow — actual money collection happens outside the system, tracked
-    // via the existing ERP status sync, not via Vendure's payment state.
-    // Returns the placed order's code, or null when the payment was rejected.
-    async function completeOfflinePayment(): Promise<string | null> {
-        const result = await shopApi(CompleteOfflinePaymentDocument);
-        await fetchCart();
-        if (result.addPaymentToOrder.__typename !== 'Order') {
-            toast(result.addPaymentToOrder.message ?? 'Could not place order', 'error');
-            return null;
-        }
-        return result.addPaymentToOrder.code;
-    }
-
-    async function completeDeferredPayment(): Promise<string | null> {
-        const result = await shopApi(CompleteDeferredPaymentDocument);
-        await fetchCart();
-        const payment = result.addPaymentToOrder;
-        if (payment.__typename !== 'Order') {
-            toast(payment.message ?? 'Could not place order', 'error');
-            return null;
-        }
-        return payment.code;
-    }
-
     async function completeOnlinePayment(status: 'success' | 'pending' | 'fail'): Promise<boolean> {
         const result = await shopApi(CompleteOnlinePaymentDocument, { status: { status } });
         await fetchCart();
@@ -417,8 +390,6 @@ export const useCartStore = defineStore('cart', () => {
         removeItems,
         clearCart,
         beginCheckout,
-        completeOfflinePayment,
-        completeDeferredPayment,
         completeOnlinePayment,
     };
 });

@@ -1,45 +1,39 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { IconBuildingBank, IconCalendarTime, IconCreditCard } from '@tabler/icons-vue';
+import { IconBuildingBank, IconCash, IconCreditCard } from '@tabler/icons-vue';
 import { MvSkeleton } from '@mivend/ui-kit';
 import { useCheckoutStore } from '../../stores/checkout';
-import { useAuthStore } from '../../stores/auth';
 
 const checkoutStore = useCheckoutStore();
-const authStore = useAuthStore();
-
-const methodCards = computed(() => [
+const methodCards = [
     {
-        id: 'online' as const,
+        id: 'bank-transfer' as const,
+        icon: IconBuildingBank,
+        title: 'Bank proforma invoice',
+        note: 'We generate a proforma invoice for each organization of the order; pay via bank.',
+        badge: 'Printable invoice',
+        badgeOrange: false,
+    },
+    {
+        id: 'card' as const,
         icon: IconCreditCard,
-        title: 'Online payment',
-        note: 'Card, SBP or other method via bank/acquiring.',
+        title: 'Card online',
+        note: 'Pay by card on the payment page right after placing the order.',
         badge: 'Quick confirmation',
         badgeOrange: false,
     },
     {
-        id: 'invoice' as const,
-        icon: IconBuildingBank,
-        title: 'Bank proforma invoice',
-        note: 'Generate PDF proforma invoice and pay via bank.',
-        badge: 'Status after receipt',
+        id: 'cash' as const,
+        icon: IconCash,
+        title: 'Cash',
+        note: 'Pay cash on pickup or delivery; a manager confirms the receipt.',
+        badge: 'Manager confirms receipt',
         badgeOrange: true,
     },
-    {
-        id: 'deferred' as const,
-        icon: IconCalendarTime,
-        title: 'Deferred payment',
-        note:
-            (authStore.counterparty?.paymentDelayDays ?? 0) > 0
-                ? `Payment terms: ${authStore.counterparty?.paymentDelayDays} days.`
-                : 'Available per contract terms and limit.',
-        badge: checkoutStore.creditPreview?.exceeded ? 'Limit exceeded' : 'Limit available',
-        badgeOrange: checkoutStore.creditPreview?.exceeded === true,
-    },
-]);
+];
 
 const methods = computed(() =>
-    methodCards.value.filter(card => checkoutStore.availableMethods.includes(card.id)),
+    methodCards.filter(card => checkoutStore.availableMethods.includes(card.id)),
 );
 </script>
 

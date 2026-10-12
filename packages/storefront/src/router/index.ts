@@ -95,18 +95,18 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
-                    path: 'proformaInvoices',
+                    path: 'proforma-invoices',
                     component: () => import('../pages/proforma-invoices/ProformaInvoicesPage.vue'),
                     meta: { requiresAuth: true },
                 },
                 {
-                    path: 'proformaInvoices/:id',
+                    path: 'proforma-invoices/:id',
                     component: () =>
                         import('../pages/proforma-invoices/ProformaInvoiceDetailPage.vue'),
                     meta: { requiresAuth: true },
                 },
                 {
-                    path: 'proformaInvoices/:id/pay',
+                    path: 'proforma-invoices/:id/pay',
                     component: () =>
                         import('../pages/proforma-invoices/ProformaInvoicePayPage.vue'),
                     meta: { requiresAuth: true },

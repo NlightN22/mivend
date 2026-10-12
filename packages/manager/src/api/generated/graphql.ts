@@ -1281,15 +1281,10 @@ export type CreateGroupOptionInput = {
     translations: Array<ProductOptionGroupTranslationInput>;
 };
 
-export type CreatePaymentMethodCustomFieldsInput = {
-    paymentClassification?: InputMaybe<Scalars['String']['input']>;
-    reservationTtlDays?: InputMaybe<Scalars['Int']['input']>;
-};
-
 export type CreatePaymentMethodInput = {
     checker?: InputMaybe<ConfigurableOperationInput>;
     code: Scalars['String']['input'];
-    customFields?: InputMaybe<CreatePaymentMethodCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     enabled: Scalars['Boolean']['input'];
     handler: ConfigurableOperationInput;
     translations: Array<PaymentMethodTranslationInput>;
@@ -3819,6 +3814,8 @@ export type Mutation = {
     cancelOrderAsStaff: OrderCancelResult;
     cancelPayment: CancelPaymentResult;
     confirmOrder: Array<Reservation>;
+    /** Marks the order's cash or bank-transfer payment as received (Settled); a repeat is a no-op. */
+    confirmPaymentReceived: Order;
     /** Create a new Administrator */
     createAdministrator: Administrator;
     createAdministratorFromErpUser: Administrator;
@@ -4336,6 +4333,10 @@ export type MutationCancelPaymentArgs = {
 export type MutationConfirmOrderArgs = {
     orderId: Scalars['ID']['input'];
     reservationDays: Scalars['Int']['input'];
+};
+
+export type MutationConfirmPaymentReceivedArgs = {
+    orderId: Scalars['ID']['input'];
 };
 
 export type MutationCreateAdministratorArgs = {
@@ -5900,7 +5901,7 @@ export type PaymentMethod = Node & {
     checker: Maybe<ConfigurableOperation>;
     code: Scalars['String']['output'];
     createdAt: Scalars['DateTime']['output'];
-    customFields: Maybe<PaymentMethodCustomFields>;
+    customFields: Maybe<Scalars['JSON']['output']>;
     description: Scalars['String']['output'];
     enabled: Scalars['Boolean']['output'];
     handler: ConfigurableOperation;
@@ -5908,11 +5909,6 @@ export type PaymentMethod = Node & {
     name: Scalars['String']['output'];
     translations: Array<PaymentMethodTranslation>;
     updatedAt: Scalars['DateTime']['output'];
-};
-
-export type PaymentMethodCustomFields = {
-    paymentClassification: Maybe<Scalars['String']['output']>;
-    reservationTtlDays: Maybe<Scalars['Int']['output']>;
 };
 
 export type PaymentMethodFilterParameter = {
@@ -5924,8 +5920,6 @@ export type PaymentMethodFilterParameter = {
     enabled?: InputMaybe<BooleanOperators>;
     id?: InputMaybe<IdOperators>;
     name?: InputMaybe<StringOperators>;
-    paymentClassification?: InputMaybe<StringOperators>;
-    reservationTtlDays?: InputMaybe<NumberOperators>;
     updatedAt?: InputMaybe<DateOperators>;
 };
 
@@ -5972,8 +5966,6 @@ export type PaymentMethodSortParameter = {
     description?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     name?: InputMaybe<SortOrder>;
-    paymentClassification?: InputMaybe<SortOrder>;
-    reservationTtlDays?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
 };
 
@@ -6084,6 +6076,8 @@ export type Permission =
     | 'CancelOrder'
     /** Confirm or release a manual order reservation (order-confirmation flow, see docs/order-flow.md) */
     | 'ConfirmOrder'
+    /** Mark a cash or bank-transfer payment as received (settles the order payment, see docs/payments.md) */
+    | 'ConfirmPaymentReceived'
     /** Grants permission to create Administrator */
     | 'CreateAdministrator'
     /** Grants permission to create ApiKey */
@@ -9142,15 +9136,10 @@ export type UpdateOrderNoteInput = {
     noteId: Scalars['ID']['input'];
 };
 
-export type UpdatePaymentMethodCustomFieldsInput = {
-    paymentClassification?: InputMaybe<Scalars['String']['input']>;
-    reservationTtlDays?: InputMaybe<Scalars['Int']['input']>;
-};
-
 export type UpdatePaymentMethodInput = {
     checker?: InputMaybe<ConfigurableOperationInput>;
     code?: InputMaybe<Scalars['String']['input']>;
-    customFields?: InputMaybe<UpdatePaymentMethodCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     enabled?: InputMaybe<Scalars['Boolean']['input']>;
     handler?: InputMaybe<ConfigurableOperationInput>;
     id: Scalars['ID']['input'];
@@ -9781,7 +9770,6 @@ export type BranchSettingsForBranchQuery = {
         enforceMultiplicity: boolean;
         allowExceedingCreditLimit: boolean;
         prepaymentReserveDays: number;
-        prepaymentReserveDays: number;
     } | null;
 };
 
@@ -9812,7 +9800,6 @@ export type SetBranchSettingsMutation = {
         packagesOnly: boolean;
         enforceMultiplicity: boolean;
         allowExceedingCreditLimit: boolean;
-        prepaymentReserveDays: number;
         prepaymentReserveDays: number;
     };
 };
@@ -10656,12 +10643,6 @@ export type CancelOrderAsStaffMutation = {
         | { outcome: OrderCancelOutcome };
 };
 
-export type ConfirmPaymentReceivedMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-}>;
-
-export type ConfirmPaymentReceivedMutation = { confirmPaymentReceived: { id: string } };
-
 export type OrderCreateCounterpartiesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type OrderCreateCounterpartiesQuery = {
@@ -10948,10 +10929,10 @@ export type OrderDetailQuery = {
             creditLimitExceeded: boolean;
             currencyCode: CurrencyCode;
             packagesOnlySales: boolean;
-            payments: Array<{ id: string; method: string; state: string }> | null;
             subTotalWithTax: any;
             shippingWithTax: any;
             totalWithTax: any;
+            payments: Array<{ id: string; method: string; state: string }> | null;
             customFields: {
                 reservationDays: number | null;
                 reservationFailureReason: string | null;
@@ -11196,6 +11177,12 @@ export type OrganizationsQuery = {
         hasCompleteRequisites: boolean;
     }>;
 };
+
+export type ConfirmPaymentReceivedMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type ConfirmPaymentReceivedMutation = { confirmPaymentReceived: { id: string } };
 
 export type PaymentListItemFieldsFragment = {
     id: string;
@@ -13375,16 +13362,6 @@ export const CancelOrderAsStaffDocument = new TypedDocumentString(`
     CancelOrderAsStaffMutation,
     CancelOrderAsStaffMutationVariables
 >;
-export const ConfirmPaymentReceivedDocument = new TypedDocumentString(`
-    mutation ConfirmPaymentReceived($orderId: ID!) {
-  confirmPaymentReceived(orderId: $orderId) {
-    id
-  }
-}
-    `) as unknown as TypedDocumentString<
-    ConfirmPaymentReceivedMutation,
-    ConfirmPaymentReceivedMutationVariables
->;
 export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
     query OrderCreateCounterparties {
   counterparties(options: {take: 500}) {
@@ -13959,6 +13936,16 @@ export const OrganizationsDocument = new TypedDocumentString(`
   createdAt
   hasCompleteRequisites
 }`) as unknown as TypedDocumentString<OrganizationsQuery, OrganizationsQueryVariables>;
+export const ConfirmPaymentReceivedDocument = new TypedDocumentString(`
+    mutation ConfirmPaymentReceived($orderId: ID!) {
+  confirmPaymentReceived(orderId: $orderId) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ConfirmPaymentReceivedMutation,
+    ConfirmPaymentReceivedMutationVariables
+>;
 export const PaymentViewCountsDocument = new TypedDocumentString(`
     query PaymentViewCounts($counterpartyId: ID) {
   all: visiblePayments(options: {take: 0}, counterpartyId: $counterpartyId) {

@@ -190,39 +190,10 @@ describe('cart store mutation queue', () => {
     });
 });
 
-describe('cart store deferred checkout', () => {
+describe('cart store checkout', () => {
     beforeEach(() => {
         setActivePinia(createPinia());
         vi.mocked(shopApi).mockReset();
-    });
-
-    const placed = (code: string) =>
-        ({ addPaymentToOrder: { __typename: 'Order', code } }) as never;
-
-    it('returns the placed order code for a deferred payment', async () => {
-        const store = useCartStore();
-        vi.mocked(shopApi)
-            .mockResolvedValueOnce(placed('ORD-1'))
-            .mockResolvedValueOnce({ activeOrder: null } as never);
-        expect(await store.completeDeferredPayment()).toBe('ORD-1');
-    });
-
-    it('returns the placed order code for a proforma invoice payment', async () => {
-        const store = useCartStore();
-        vi.mocked(shopApi)
-            .mockResolvedValueOnce(placed('ORD-2'))
-            .mockResolvedValueOnce({ activeOrder: null } as never);
-        expect(await store.completeOfflinePayment()).toBe('ORD-2');
-    });
-
-    it('returns null when the payment is rejected', async () => {
-        const store = useCartStore();
-        vi.mocked(shopApi)
-            .mockResolvedValueOnce({
-                addPaymentToOrder: { __typename: 'PaymentFailedError', message: 'no' },
-            } as never)
-            .mockResolvedValueOnce({ activeOrder: null } as never);
-        expect(await store.completeDeferredPayment()).toBeNull();
     });
 
     it('leaves ArrangingPayment before starting checkout again', async () => {
