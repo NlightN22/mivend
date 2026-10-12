@@ -16,6 +16,7 @@ function fakeInjector(overrides: {
 } {
     const byName: Record<string, unknown> = {
         ProformaInvoiceService: overrides.proformaInvoiceService,
+        ProformaInvoiceIssuingService: overrides.proformaInvoiceService,
         GlobalSettingsService: overrides.globalSettingsService,
         CreditPlacementService: { place },
     };
@@ -31,10 +32,12 @@ const mockMethod = {} as never;
 describe('offlineTermsPaymentHandler', () => {
     it('settles as Authorized, surfaces the proforma invoice split in metadata, and does NOT record a PaymentAttempt (no real money has moved yet)', async () => {
         const proformaInvoiceService = {
-            createProformaInvoicesForOrder: vi.fn().mockResolvedValue([
-                { id: 10, organizationId: 1, amount: 600 },
-                { id: 11, organizationId: 2, amount: 400 },
-            ]),
+            issueForOrder: vi.fn().mockResolvedValue({
+                current: [
+                    { id: 10, organizationId: 1, amount: 600 },
+                    { id: 11, organizationId: 2, amount: 400 },
+                ],
+            }),
             updateStatusForOrder: vi.fn(),
         };
         const globalSettingsService = {
@@ -71,9 +74,7 @@ describe('offlineTermsPaymentHandler', () => {
 
     it('declines when the split is required but cannot be computed', async () => {
         const proformaInvoiceService = {
-            createProformaInvoicesForOrder: vi
-                .fn()
-                .mockRejectedValue(new Error('no organizationId')),
+            issueForOrder: vi.fn().mockRejectedValue(new Error('no organizationId')),
         };
         const globalSettingsService = {
             getSettings: vi
@@ -98,9 +99,7 @@ describe('offlineTermsPaymentHandler', () => {
 
     it('does not block payment when the split cannot be computed but enforcement is off', async () => {
         const proformaInvoiceService = {
-            createProformaInvoicesForOrder: vi
-                .fn()
-                .mockRejectedValue(new Error('no organizationId')),
+            issueForOrder: vi.fn().mockRejectedValue(new Error('no organizationId')),
             updateStatusForOrder: vi.fn(),
         };
         const globalSettingsService = {
@@ -129,7 +128,7 @@ describe('offlineTermsPaymentHandler', () => {
         offlineTermsPaymentHandler.init(
             fakeInjector({
                 proformaInvoiceService: {
-                    createProformaInvoicesForOrder: vi.fn().mockResolvedValue([]),
+                    issueForOrder: vi.fn().mockResolvedValue({ current: [] }),
                     updateStatusForOrder: vi.fn(),
                 },
                 globalSettingsService: { getSettings: vi.fn().mockResolvedValue({}) },

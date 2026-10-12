@@ -10,10 +10,12 @@ import {
 import { CreditPlacementService } from '@mivend/plugin-deferred-payment';
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { ProformaInvoiceService } from './proforma-invoice.service';
+import { ProformaInvoiceIssuingService } from './proforma-invoice-issuing.service';
 
 export const OFFLINE_TERMS_METHOD_CODE = 'offline-terms';
 
 let proformaInvoiceService: ProformaInvoiceService;
+let issuingService: ProformaInvoiceIssuingService;
 let globalSettingsService: GlobalSettingsService;
 let creditPlacementService: CreditPlacementService;
 
@@ -33,10 +35,7 @@ async function computeProformaInvoiceSplit(
     const splitEnabled = Boolean(settings.customFields?.organizationSplitEnabled);
 
     try {
-        const proformaInvoices = await proformaInvoiceService.createProformaInvoicesForOrder(
-            ctx,
-            order,
-        );
+        const { current: proformaInvoices } = await issuingService.issueForOrder(ctx, order.id);
         return {
             metadata: {
                 proformaInvoices: proformaInvoices.map(proformaInvoice => ({
@@ -70,6 +69,7 @@ export const offlineTermsPaymentHandler = new PaymentMethodHandler({
     args: {},
     init(injector: Injector) {
         proformaInvoiceService = injector.get(ProformaInvoiceService);
+        issuingService = injector.get(ProformaInvoiceIssuingService);
         globalSettingsService = injector.get(GlobalSettingsService);
         creditPlacementService = injector.get(CreditPlacementService);
     },

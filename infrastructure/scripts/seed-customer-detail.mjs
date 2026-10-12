@@ -84,7 +84,7 @@ async function shopLogin(username, password) {
 // Real end-to-end checkout — same shop-api mutations/sequence as
 // packages/e2e/storefront/orders/helpers.ts's placeTestOrder, plus a payment. `variantIds` can be
 // one or several (a multi-organization order needs 2+ variants from different organizations so
-// ProformaInvoiceService.computeSplit actually produces more than one ProformaInvoice for the order — see
+// ProformaInvoiceIssuingService.issueForOrder actually produces more than one ProformaInvoice for the order — see
 // packages/e2e/storefront/proforma-invoices/helpers.ts's pickTwoVariantsFromDifferentOrganizations).
 // `paymentPlan` selects which payment-method handler code path to exercise (see
 // plugin-acquiring's offline-terms-handler.ts / plugin-online-payment's online-stub-handler.ts):

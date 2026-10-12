@@ -168,14 +168,7 @@ beforeAll(async () => {
         formatOrderDocumentNumber: (orderNumber: string, ordinal: number) =>
             `${orderNumber}-${String(ordinal).padStart(2, '0')}`,
     } as never;
-    proformaInvoiceService = new ProformaInvoiceService(
-        connectionShim,
-        {} as never,
-        {} as never,
-        {} as never,
-        {} as never,
-        numberingServiceShim,
-    );
+    proformaInvoiceService = new ProformaInvoiceService(connectionShim);
     settlementEntryService = new SettlementEntryService(connectionShim, proformaInvoiceService);
     paymentAttemptService = new PaymentAttemptService(
         connectionShim,

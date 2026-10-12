@@ -25,14 +25,7 @@ describe('ProformaInvoiceService.findByOrderId', () => {
             { id: 2, orderId: 5 } as ProformaInvoice,
         ];
         mockRepo.find.mockResolvedValue(proformaInvoices);
-        const service = new ProformaInvoiceService(
-            mockConnection,
-            {} as never,
-            {} as never,
-            {} as never,
-            {} as never,
-            {} as never,
-        );
+        const service = new ProformaInvoiceService(mockConnection);
 
         const result = await service.findByOrderId(mockCtx, 5);
 

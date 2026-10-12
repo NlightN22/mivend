@@ -175,6 +175,17 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
         expect(mockPaymentAttemptRepo.create).not.toHaveBeenCalled();
     });
 
+    it('rejects paying a superseded proforma invoice with a clear error', async () => {
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'superseded', number: '1000007-01' }),
+        );
+
+        await expect(service.payProformaInvoice(mockCtx, 1, 'success')).rejects.toThrow(
+            /1000007-01 was replaced by a newer version/,
+        );
+        expect(mockPaymentAttemptRepo.create).not.toHaveBeenCalled();
+    });
+
     it('rejects paying a proforma invoice that does not exist', async () => {
         mockProformaInvoiceService.findOne.mockResolvedValue(null);
 

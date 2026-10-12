@@ -18,6 +18,7 @@ function fakeInjector(overrides: {
 } {
     const byName: Record<string, unknown> = {
         ProformaInvoiceService: overrides.proformaInvoiceService,
+        ProformaInvoiceIssuingService: overrides.proformaInvoiceService,
         GlobalSettingsService: overrides.globalSettingsService,
         PaymentAttemptService: overrides.paymentAttemptService,
         CreditPlacementService: { place },
@@ -34,9 +35,9 @@ const mockMethod = {} as never;
 describe('onlineStubPaymentHandler', () => {
     it('settles successfully, includes the proforma invoice split, and records a captured PaymentAttempt per proforma invoice (online-acquiring channel)', async () => {
         const proformaInvoiceService = {
-            createProformaInvoicesForOrder: vi
+            issueForOrder: vi
                 .fn()
-                .mockResolvedValue([{ id: 20, organizationId: 1, amount: 1000 }]),
+                .mockResolvedValue({ current: [{ id: 20, organizationId: 1, amount: 1000 }] }),
         };
         const globalSettingsService = {
             getSettings: vi
@@ -72,9 +73,9 @@ describe('onlineStubPaymentHandler', () => {
 
     it('records a "pending" PaymentAttempt per proforma invoice when metadata.status is "pending"', async () => {
         const proformaInvoiceService = {
-            createProformaInvoicesForOrder: vi
+            issueForOrder: vi
                 .fn()
-                .mockResolvedValue([{ id: 21, organizationId: 1, amount: 1000 }]),
+                .mockResolvedValue({ current: [{ id: 21, organizationId: 1, amount: 1000 }] }),
         };
         const globalSettingsService = {
             getSettings: vi
@@ -110,9 +111,9 @@ describe('onlineStubPaymentHandler', () => {
 
     it('declines when metadata.status is fail, regardless of split, and records a failed PaymentAttempt per proforma invoice', async () => {
         const proformaInvoiceService = {
-            createProformaInvoicesForOrder: vi
+            issueForOrder: vi
                 .fn()
-                .mockResolvedValue([{ id: 22, organizationId: 1, amount: 1000 }]),
+                .mockResolvedValue({ current: [{ id: 22, organizationId: 1, amount: 1000 }] }),
         };
         const globalSettingsService = {
             getSettings: vi
@@ -159,7 +160,7 @@ describe('onlineStubPaymentHandler', () => {
         onlineStubPaymentHandler.init(
             fakeInjector({
                 proformaInvoiceService: {
-                    createProformaInvoicesForOrder: vi.fn().mockResolvedValue([]),
+                    issueForOrder: vi.fn().mockResolvedValue({ current: [] }),
                 },
                 globalSettingsService: { getSettings: vi.fn().mockResolvedValue({}) },
                 paymentAttemptService: { payProformaInvoice: vi.fn() },
@@ -187,7 +188,7 @@ describe('onlineStubPaymentHandler', () => {
                 placement: { route: 'after-payment' },
             },
         });
-        const proformaInvoiceService = { createProformaInvoicesForOrder: vi.fn() };
+        const proformaInvoiceService = { issueForOrder: vi.fn() };
         onlineStubPaymentHandler.init(
             fakeInjector({
                 proformaInvoiceService,
@@ -205,6 +206,6 @@ describe('onlineStubPaymentHandler', () => {
         );
         expect(result.state).toBe('Declined');
         expect(result.errorMessage).toContain('CARD_AMOUNT_CHANGED');
-        expect(proformaInvoiceService.createProformaInvoicesForOrder).not.toHaveBeenCalled();
+        expect(proformaInvoiceService.issueForOrder).not.toHaveBeenCalled();
     });
 });

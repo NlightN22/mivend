@@ -12,6 +12,8 @@ function makeSource(overrides: Partial<ProformaInvoiceSource> = {}): ProformaInv
         issueDate: new Date('2026-07-01T10:00:00.000Z'),
         currencyCode: 'RUB',
         totalAmount: 25000,
+        version: 1,
+        superseded: false,
         lines: [
             {
                 quantity: 2,
@@ -119,5 +121,30 @@ describe('renderProformaInvoiceHtml', () => {
         const html = renderProformaInvoiceHtml(data);
         expect(html).toContain(`<img class="logo" src="${logoDataUri}"`);
         expect(html).not.toContain('class="logo logo--fallback"');
+    });
+});
+
+describe('proforma invoice version and validity in the template', () => {
+    it('shows the version next to the issue date', () => {
+        const html = renderProformaInvoiceHtml(
+            buildProformaInvoiceTemplateData(
+                makeSource({ version: 2 }),
+                makeRequisites() as CompleteOrganizationRequisites,
+                'Buyer',
+            ),
+        );
+        expect(html).toContain('Version 2 · 2026-07-01');
+        expect(html).not.toContain('Superseded, not valid');
+    });
+
+    it('marks a superseded version as not valid', () => {
+        const html = renderProformaInvoiceHtml(
+            buildProformaInvoiceTemplateData(
+                makeSource({ superseded: true }),
+                makeRequisites() as CompleteOrganizationRequisites,
+                'Buyer',
+            ),
+        );
+        expect(html).toContain('Superseded, not valid');
     });
 });

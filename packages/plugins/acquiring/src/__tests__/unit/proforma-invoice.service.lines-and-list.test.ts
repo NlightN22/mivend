@@ -1,8 +1,6 @@
-import { EntityHydrator, Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
 import { ProformaInvoiceService } from '../../proforma-invoice.service';
 
 const mockQb = {
@@ -34,77 +32,12 @@ const mockConnection = {
 
 const mockCtx = {} as unknown as RequestContext;
 
-const mockTranslator = { translate: vi.fn(entity => entity) };
-
-describe('ProformaInvoiceService.getLinesForProformaInvoice', () => {
-    let service: ProformaInvoiceService;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        service = new ProformaInvoiceService(
-            mockConnection,
-            {} as unknown as EntityHydrator,
-            {} as unknown as CounterpartyService,
-            {} as never,
-            mockTranslator as never,
-            {} as never,
-        );
-    });
-
-    it('returns only the lines belonging to the proforma invoice organization', async () => {
-        const order = {
-            id: 5,
-            lines: [
-                { id: 'l1', customFields: { organizationId: 1 }, productVariant: {} },
-                { id: 'l2', customFields: { organizationId: 2 }, productVariant: {} },
-            ],
-        } as unknown as Order;
-        mockQb.getOne.mockResolvedValue(order);
-        const proformaInvoice = { id: 10, orderId: 5, organizationId: 1 } as ProformaInvoice;
-
-        const lines = await service.getLinesForProformaInvoice(mockCtx, proformaInvoice);
-
-        expect(lines).toHaveLength(1);
-        expect(lines[0].id).toBe('l1');
-    });
-
-    it('translates each line productVariant (name requires translations, unlike sku/customFields)', async () => {
-        const variant = {};
-        const order = {
-            id: 5,
-            lines: [{ id: 'l1', customFields: { organizationId: 1 }, productVariant: variant }],
-        } as unknown as Order;
-        mockQb.getOne.mockResolvedValue(order);
-        const proformaInvoice = { id: 10, orderId: 5, organizationId: 1 } as ProformaInvoice;
-
-        await service.getLinesForProformaInvoice(mockCtx, proformaInvoice);
-
-        expect(mockTranslator.translate).toHaveBeenCalledWith(variant, mockCtx);
-    });
-
-    it('throws when the order is not found', async () => {
-        mockQb.getOne.mockResolvedValue(null);
-        const proformaInvoice = { id: 10, orderId: 999, organizationId: 1 } as ProformaInvoice;
-
-        await expect(service.getLinesForProformaInvoice(mockCtx, proformaInvoice)).rejects.toThrow(
-            /Order 999 not found/,
-        );
-    });
-});
-
 describe('ProformaInvoiceService.findForCounterparty', () => {
     let service: ProformaInvoiceService;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        service = new ProformaInvoiceService(
-            mockConnection,
-            {} as unknown as EntityHydrator,
-            {} as unknown as CounterpartyService,
-            {} as never,
-            mockTranslator as never,
-            {} as never,
-        );
+        service = new ProformaInvoiceService(mockConnection);
     });
 
     it('paginates and scopes by counterpartyId', async () => {
@@ -148,14 +81,7 @@ describe('ProformaInvoiceService.findForCounterparty orderCode', () => {
     it('restricts the list to the proforma invoices of one order code', async () => {
         vi.clearAllMocks();
         mockQb.getManyAndCount.mockResolvedValue([[], 0]);
-        const service = new ProformaInvoiceService(
-            mockConnection,
-            {} as unknown as EntityHydrator,
-            {} as unknown as CounterpartyService,
-            {} as never,
-            mockTranslator as never,
-            {} as never,
-        );
+        const service = new ProformaInvoiceService(mockConnection);
         await service.findForCounterparty(mockCtx, '42', { orderCode: 'ORD-1' });
         expect(mockQb.andWhere).toHaveBeenCalledWith(
             expect.stringContaining('o.code = :orderCode'),
@@ -173,21 +99,17 @@ describe('ProformaInvoiceService.updateStatusForOrder', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockUpdate.mockReset();
-        service = new ProformaInvoiceService(
-            {
-                getRepository: vi.fn(() => ({ update: mockUpdate })),
-            } as unknown as TransactionalConnection,
-            {} as unknown as EntityHydrator,
-            {} as unknown as CounterpartyService,
-            {} as never,
-            mockTranslator as never,
-            {} as never,
-        );
+        service = new ProformaInvoiceService({
+            getRepository: vi.fn(() => ({ update: mockUpdate })),
+        } as unknown as TransactionalConnection);
     });
 
-    it('updates the status of every proforma invoice belonging to the order', async () => {
+    it('updates the status of the pending proforma invoices of the order', async () => {
         await service.updateStatusForOrder(mockCtx, 7, 'paid');
 
-        expect(mockUpdate).toHaveBeenCalledWith({ orderId: 7 }, { status: 'paid' });
+        expect(mockUpdate).toHaveBeenCalledWith(
+            { orderId: 7, status: 'pending' },
+            { status: 'paid' },
+        );
     });
 });

@@ -163,16 +163,19 @@ export class PdfGeneratorService implements OnModuleInit {
                 proformaInvoice.organizationId,
             );
             this.documentsService.assertRequisitesComplete(requisites);
-            const orgLines = await this.proformaInvoiceService.getLinesForProformaInvoice(
-                ctx,
-                proformaInvoice,
-            );
             source = {
                 documentNumber: document.number,
                 issueDate: document.issueDate,
                 currencyCode: proformaInvoice.currencyCode,
                 totalAmount: proformaInvoice.amount,
-                lines: orgLines,
+                version: proformaInvoice.version,
+                superseded: proformaInvoice.status === 'superseded',
+                lines: proformaInvoice.lines.map(line => ({
+                    quantity: line.quantity,
+                    unitPriceWithTax: line.unitPriceWithTax,
+                    linePriceWithTax: line.linePriceWithTax,
+                    productVariant: { name: line.name, sku: line.sku },
+                })),
             };
         } else {
             requisites = await this.documentsService.getActiveRequisites(ctx);
@@ -182,6 +185,8 @@ export class PdfGeneratorService implements OnModuleInit {
                 issueDate: new Date(order.orderPlacedAt ?? order.createdAt),
                 currencyCode: order.currencyCode,
                 totalAmount: order.totalWithTax,
+                version: 1,
+                superseded: false,
                 lines: order.lines,
             };
         }

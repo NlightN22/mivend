@@ -23,12 +23,16 @@ export interface ProformaInvoiceSource {
     issueDate: Date;
     currencyCode: string | null;
     totalAmount: number;
+    version: number;
+    superseded: boolean;
     lines: ProformaInvoiceSourceLine[];
 }
 
 export interface ProformaInvoiceTemplateData {
     documentNumber: string;
     issueDate: string;
+    version: number;
+    superseded: boolean;
     seller: {
         legalName: string;
         address: string;
@@ -72,6 +76,8 @@ export function buildProformaInvoiceTemplateData(
     return {
         documentNumber: source.documentNumber,
         issueDate: source.issueDate.toISOString().slice(0, 10),
+        version: source.version,
+        superseded: source.superseded,
         seller: {
             legalName: requisites.legalName,
             address: requisites.legalAddress,
@@ -136,6 +142,7 @@ export function renderProformaInvoiceHtml(data: ProformaInvoiceTemplateData): st
                     display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; }
             .title { font-size: 26px; font-weight: 800; margin: 0; }
             .doc-meta { color: #66736e; font-size: 13px; margin-top: 2px; }
+            .superseded { color: #b3261e; font-weight: 800; }
             .parties { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
             .party { font-size: 12px; line-height: 1.5; }
             .party h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #66736e; margin: 0 0 6px; }
@@ -150,8 +157,9 @@ export function renderProformaInvoiceHtml(data: ProformaInvoiceTemplateData): st
         <div class="header">
             ${renderLogoMarkup(data.seller.legalName, data.logoDataUri)}
             <div>
-                <p class="title">ProformaInvoice ${data.documentNumber}</p>
-                <p class="doc-meta">Issued ${data.issueDate}</p>
+                <p class="title">Proforma invoice ${data.documentNumber}</p>
+                <p class="doc-meta">Version ${data.version} · ${data.issueDate}</p>
+                ${data.superseded ? '<p class="doc-meta superseded">Superseded, not valid</p>' : ''}
             </div>
         </div>
 

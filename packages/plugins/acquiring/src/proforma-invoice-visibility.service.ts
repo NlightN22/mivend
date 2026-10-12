@@ -11,7 +11,7 @@ import { ProformaInvoiceListOptions } from './proforma-invoice.service';
 // Row-level visibility for the manager portal's proforma invoice list — mirrors
 // packages/plugins/erp-order/src/order-visibility.service.ts. ProformaInvoice already carries
 // counterpartyId directly (no join-through-Customer needed like Order does), and its own
-// denormalized branchId (set at creation time — see ProformaInvoiceService.createProformaInvoicesForOrder).
+// denormalized branchId (set at creation time — see ProformaInvoiceIssuingService.issueForOrder).
 @Injectable()
 export class ProformaInvoiceVisibilityService {
     constructor(

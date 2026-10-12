@@ -4,16 +4,17 @@ import {
     Ctx,
     CustomerService,
     ForbiddenError,
-    OrderLine,
     OrderService,
     PaginatedList,
     Permission,
     RequestContext,
 } from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { ProformaInvoiceService, ProformaInvoiceListOptions } from './proforma-invoice.service';
+import { ProformaInvoiceIssuingService } from './proforma-invoice-issuing.service';
 import { PaymentAttemptService, PayProformaInvoiceOutcome } from './payment-attempt.service';
 import { PaymentChannel } from './entities/payment-attempt.entity';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
@@ -24,6 +25,7 @@ export class ProformaInvoiceAdminResolver {
     constructor(
         private proformaInvoiceService: ProformaInvoiceService,
         private paymentInboxProcessorService: PaymentInboxProcessorService,
+        private orderVisibility: OrderVisibilityService,
     ) {}
 
     @Query()
@@ -32,6 +34,11 @@ export class ProformaInvoiceAdminResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: string },
     ): Promise<ProformaInvoice[]> {
+        const qb = await this.orderVisibility.buildVisibleOrdersQuery(ctx);
+        const visible = await qb
+            .andWhere(`${qb.alias}.id = :orderId`, { orderId: args.orderId })
+            .getOne();
+        if (!visible) return [];
         return this.proformaInvoiceService.findByOrderId(ctx, Number(args.orderId));
     }
 
@@ -119,19 +126,59 @@ export class ProformaInvoiceShopResolver {
     }
 }
 
+interface SnapshotLine {
+    productVariant: { name: string; sku: string };
+    quantity: number;
+    unitPriceWithTax: number;
+    linePriceWithTax: number;
+}
+
+interface VersionRef {
+    id: string;
+    number: string;
+    version: number;
+}
+
 @Resolver('ProformaInvoice')
 export class ProformaInvoiceFieldResolver {
     constructor(
         private proformaInvoiceService: ProformaInvoiceService,
+        private issuing: ProformaInvoiceIssuingService,
         private orderService: OrderService,
     ) {}
 
     @ResolveField()
-    async lines(
+    lines(@Parent() proformaInvoice: ProformaInvoice): SnapshotLine[] {
+        return proformaInvoice.lines.map(line => ({
+            productVariant: { name: line.name, sku: line.sku },
+            quantity: line.quantity,
+            unitPriceWithTax: line.unitPriceWithTax,
+            linePriceWithTax: line.linePriceWithTax,
+        }));
+    }
+
+    @ResolveField()
+    supersedes(
         @Ctx() ctx: RequestContext,
         @Parent() proformaInvoice: ProformaInvoice,
-    ): Promise<OrderLine[]> {
-        return this.proformaInvoiceService.getLinesForProformaInvoice(ctx, proformaInvoice);
+    ): Promise<VersionRef | null> {
+        return this.versionRef(ctx, proformaInvoice.supersedesId);
+    }
+
+    @ResolveField()
+    supersededBy(
+        @Ctx() ctx: RequestContext,
+        @Parent() proformaInvoice: ProformaInvoice,
+    ): Promise<VersionRef | null> {
+        return this.versionRef(ctx, proformaInvoice.supersededById);
+    }
+
+    @ResolveField()
+    orderChangedDifference(
+        @Ctx() ctx: RequestContext,
+        @Parent() proformaInvoice: ProformaInvoice,
+    ): Promise<number | null> {
+        return this.issuing.differenceAfterPayment(ctx, proformaInvoice);
     }
 
     @ResolveField()
@@ -146,5 +193,13 @@ export class ProformaInvoiceFieldResolver {
             );
         }
         return { id: String(order.id), code: order.code };
+    }
+
+    private async versionRef(ctx: RequestContext, id: number | null): Promise<VersionRef | null> {
+        if (id == null) return null;
+        const other = await this.proformaInvoiceService.findOne(ctx, id);
+        return other
+            ? { id: String(other.id), number: other.number, version: other.version }
+            : null;
     }
 }

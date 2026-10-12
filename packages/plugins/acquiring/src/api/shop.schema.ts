@@ -24,8 +24,20 @@ export const shopApiExtensions: DocumentNode = gql`
         code: String!
     }
 
+    "Another version of the same proforma invoice (a new version is a new document with its own number)."
+    type ProformaInvoiceVersionRef {
+        id: ID!
+        number: String!
+        version: Int!
+    }
+
     type ProformaInvoice {
         id: ID!
+        version: Int!
+        supersedes: ProformaInvoiceVersionRef
+        supersededBy: ProformaInvoiceVersionRef
+        "Current order content minus this paid snapshot; null unless the order changed after payment."
+        orderChangedDifference: Int
         uuid: String!
         number: String!
         orderId: ID!
@@ -161,5 +173,7 @@ export const shopApiExtensions: DocumentNode = gql`
             status: String!
             channel: String
         ): ProformaInvoice!
+        "Issues (or returns the unchanged) current proforma invoices of the customer's own placed, not cancelled order; changed content makes a new version."
+        requestProformaInvoices(orderCode: String!): [ProformaInvoice!]!
     }
 `;

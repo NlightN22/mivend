@@ -319,19 +319,21 @@ describe('DocumentsService', () => {
     });
 
     describe('createProformaInvoicePlaceholder', () => {
-        it('derives counterpartyId/amount/currency/proformaInvoiceId from the given ProformaInvoice, not the order', async () => {
-            const order = { id: 42, code: 'ORD-1' } as never;
-            const proformaInvoice = {
-                id: 7,
-                organizationId: 2,
-                counterpartyId: 5,
-                amount: 12345,
-                currencyCode: 'RUB',
-            } as never;
+        const proformaInvoice = {
+            id: 7,
+            orderId: 42,
+            number: '1000042-02',
+            organizationId: 2,
+            counterpartyId: 5,
+            amount: 12345,
+            currencyCode: 'RUB',
+        } as never;
 
-            const result = await service.createProformaInvoicePlaceholder(
+        it('derives the row from the ProformaInvoice and uses its own number', async () => {
+            mockRepo.findOne.mockResolvedValueOnce(null);
+
+            const { document, created } = await service.createProformaInvoicePlaceholder(
                 mockCtx,
-                order,
                 proformaInvoice,
             );
 
@@ -341,14 +343,24 @@ describe('DocumentsService', () => {
                     counterpartyId: '5',
                     orderId: '42',
                     proformaInvoiceId: '7',
-                    number: 'ORD-1-2',
+                    number: '1000042-02',
                     amount: 12345,
                     currencyCode: 'RUB',
                 }),
             );
-            expect(result).toEqual(
-                expect.objectContaining({ proformaInvoiceId: '7', number: 'ORD-1-2' }),
-            );
+            expect(created).toBe(true);
+            expect(document).toEqual(expect.objectContaining({ number: '1000042-02' }));
+        });
+
+        it('is idempotent per snapshot: an existing document is returned, nothing is created', async () => {
+            const existing = { id: 'doc-1', proformaInvoiceId: '7' };
+            mockRepo.findOne.mockResolvedValueOnce(existing);
+            mockRepo.create.mockClear();
+
+            const result = await service.createProformaInvoicePlaceholder(mockCtx, proformaInvoice);
+
+            expect(result).toEqual({ document: existing, created: false });
+            expect(mockRepo.create).not.toHaveBeenCalled();
         });
     });
 

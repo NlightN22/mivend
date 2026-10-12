@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
-import type { EntityHydrator, RequestContext, TransactionalConnection } from '@vendure/core';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestSchema,
     dropTestSchema,
@@ -49,14 +49,7 @@ beforeAll(async () => {
         rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
-    service = new ProformaInvoiceService(
-        connectionShim,
-        {} as unknown as EntityHydrator,
-        {} as never,
-        {} as never,
-        {} as never,
-        { formatOrderDocumentNumber: () => 'ORD-7-01' } as never,
-    );
+    service = new ProformaInvoiceService(connectionShim);
 });
 
 afterAll(async () => {

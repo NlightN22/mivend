@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
     Logger,
-    Order,
     PaginatedList,
     RequestContext,
     TransactionalConnection,
@@ -311,28 +310,24 @@ export class DocumentsService {
         return requisites;
     }
 
-    // Creates the placeholder row synchronously (customer sees "generating" right
-    // away); actual PDF rendering is enqueued separately by the caller via
-    // PdfGeneratorService.enqueue(document.id) — kept out of this service to avoid
-    // a circular DI dependency between DocumentsService and PdfGeneratorService.
+    // Creates the placeholder row synchronously (customer sees "generating" right away); PDF rendering
+    // is enqueued by the caller via PdfGeneratorService.enqueue (avoids a DocumentsService <-> PdfGeneratorService cycle).
+    // One document per proforma invoice snapshot: a repeat returns the existing row with created=false.
     async createProformaInvoicePlaceholder(
         ctx: RequestContext,
-        order: Order,
         proformaInvoice: ProformaInvoice,
-    ): Promise<Document> {
+    ): Promise<{ document: Document; created: boolean }> {
         const repo = this.connection.getRepository(ctx, Document);
-        // A document number must stay unique per organization-split proforma invoice, not just per
-        // order — one order can now have several proforma invoices (docs/payments.md "Organizations").
-        const documentNumber =
-            proformaInvoice.organizationId != null
-                ? `${order.code}-${proformaInvoice.organizationId}`
-                : order.code;
+        const existing = await repo.findOne({
+            where: { type: 'proforma-invoice', proformaInvoiceId: String(proformaInvoice.id) },
+        });
+        if (existing) return { document: existing, created: false };
         const entity = repo.create({
             type: 'proforma-invoice',
             counterpartyId: String(proformaInvoice.counterpartyId),
-            orderId: String(order.id),
+            orderId: String(proformaInvoice.orderId),
             proformaInvoiceId: String(proformaInvoice.id),
-            number: documentNumber,
+            number: proformaInvoice.number,
             issueDate: new Date(),
             amount: proformaInvoice.amount,
             currencyCode: proformaInvoice.currencyCode,
@@ -344,8 +339,17 @@ export class DocumentsService {
             metadata: null,
         });
         const saved = await repo.save(entity);
-        Logger.verbose(`Created proforma invoice placeholder for order ${order.code}`, loggerCtx);
-        return saved;
+        Logger.verbose(`Created proforma invoice placeholder ${proformaInvoice.number}`, loggerCtx);
+        return { document: saved, created: true };
+    }
+
+    async findForProformaInvoice(
+        ctx: RequestContext,
+        proformaInvoiceId: ID,
+    ): Promise<Document | null> {
+        return this.connection.getRepository(ctx, Document).findOne({
+            where: { type: 'proforma-invoice', proformaInvoiceId: String(proformaInvoiceId) },
+        });
     }
 
     async createContractPlaceholder(ctx: RequestContext, counterpartyId: ID): Promise<Document> {

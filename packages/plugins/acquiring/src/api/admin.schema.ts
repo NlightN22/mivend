@@ -8,8 +8,33 @@ export const adminApiExtensions: DocumentNode = gql`
         code: String!
     }
 
+    type ProformaInvoiceLineProductVariant {
+        name: String!
+        sku: String!
+    }
+
+    "A line of the immutable snapshot taken when the proforma invoice was issued."
+    type ProformaInvoiceLine {
+        productVariant: ProformaInvoiceLineProductVariant!
+        quantity: Int!
+        unitPriceWithTax: Int!
+        linePriceWithTax: Int!
+    }
+
+    "Another version of the same proforma invoice (a new version is a new document with its own number)."
+    type ProformaInvoiceVersionRef {
+        id: ID!
+        number: String!
+        version: Int!
+    }
+
     type ProformaInvoice {
         id: ID!
+        version: Int!
+        supersedes: ProformaInvoiceVersionRef
+        supersededBy: ProformaInvoiceVersionRef
+        "Current order content minus this paid snapshot; null unless the order changed after payment."
+        orderChangedDifference: Int
         "Human-facing business number — generated at creation, distinct from the order's own code — see ProformaInvoice.number's own doc comment (proforma-invoice.entity.ts)."
         number: String!
         createdAt: DateTime!
@@ -22,8 +47,8 @@ export const adminApiExtensions: DocumentNode = gql`
         branchId: ID
         "Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: ProformaInvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page)."
         order: ProformaInvoiceOrder!
-        "Resolved via ProformaInvoiceFieldResolver.lines — must be declared here too: registering ProformaInvoiceFieldResolver without declaring every field it resolves throws 'ProformaInvoice.lines defined in resolvers, but not in schema' at bootstrap (real incident, caught before merging)."
-        lines: [OrderLine!]!
+        "Snapshot lines, resolved via ProformaInvoiceFieldResolver.lines."
+        lines: [ProformaInvoiceLine!]!
     }
 
     type ProformaInvoiceList {
@@ -181,5 +206,7 @@ export const adminApiExtensions: DocumentNode = gql`
         recordPaymentDispute(paymentId: ID!, type: String!, amount: Int!, status: String): Dispute!
         "Marks the order's cash or bank-transfer payment (or the one given by paymentId) as received (Settled), recording who and when; a repeat is a no-op."
         confirmPaymentReceived(orderId: ID!, paymentId: ID): Order!
+        "Issues (or returns the unchanged) current proforma invoice snapshots of a placed, not cancelled order; changed content makes a new version. Idempotent per order content."
+        requestProformaInvoicesForOrder(orderId: ID!): [ProformaInvoice!]!
     }
 `;

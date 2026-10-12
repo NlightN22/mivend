@@ -41,6 +41,24 @@ export const adminApiExtensions = gql`
         hasCompleteRequisites: Boolean!
     }
 
+    "Seller requisites of the organization that issued a proforma invoice."
+    type ProformaInvoiceSeller {
+        legalName: String!
+        inn: String
+        kpp: String
+        legalAddress: String
+        bankName: String
+        bankAccount: String
+        bankBik: String
+        correspondentAccount: String
+    }
+
+    extend type ProformaInvoice {
+        seller: ProformaInvoiceSeller
+        "The printable document of this snapshot; null until the document row exists."
+        document: Document
+    }
+
     extend type Query {
         # Visibility inherits counterparty visibility — no dedicated permission, filtered by
         # the same counterpartyId (see docs/ai/manager-portal-concept.md §3.3 "/documents").

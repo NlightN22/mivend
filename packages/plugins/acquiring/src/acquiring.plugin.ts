@@ -24,6 +24,7 @@ import { DisputeService } from './dispute.service';
 import { IdempotencyService } from './idempotency.service';
 import { InboxService } from './inbox.service';
 import { ProformaInvoiceService } from './proforma-invoice.service';
+import { ProformaInvoiceIssuingService } from './proforma-invoice-issuing.service';
 import { PaymentAttemptService } from './payment-attempt.service';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
 import { contractOrderGuard } from './contract-order-guard';
@@ -44,6 +45,10 @@ import {
     ProformaInvoiceShopResolver,
     ProformaInvoiceFieldResolver,
 } from './proforma-invoice.resolver';
+import {
+    ProformaInvoiceRequestAdminResolver,
+    ProformaInvoiceRequestShopResolver,
+} from './proforma-invoice-request.resolver';
 import { PaymentAdminResolver } from './payment-admin.resolver';
 import { PaymentFieldResolver, PaymentShopResolver } from './payment.resolver';
 import { AdminProformaInvoiceVisibilityResolver } from './admin-proforma-invoice-visibility.resolver';
@@ -82,6 +87,7 @@ import type { AcquiringPluginOptions } from './types';
         IdempotencyService,
         InboxService,
         ProformaInvoiceService,
+        ProformaInvoiceIssuingService,
         PaymentAttemptService,
         SettlementEntryService,
         PaymentInboxProcessorService,
@@ -104,6 +110,7 @@ import type { AcquiringPluginOptions } from './types';
         IdempotencyService,
         InboxService,
         ProformaInvoiceService,
+        ProformaInvoiceIssuingService,
         PaymentAttemptService,
         SettlementEntryService,
     ],
@@ -111,6 +118,7 @@ import type { AcquiringPluginOptions } from './types';
         schema: adminApiExtensions,
         resolvers: [
             ProformaInvoiceAdminResolver,
+            ProformaInvoiceRequestAdminResolver,
             PaymentAdminResolver,
             AdminProformaInvoiceVisibilityResolver,
             AdminPaymentVisibilityResolver,
@@ -128,6 +136,7 @@ import type { AcquiringPluginOptions } from './types';
         schema: shopApiExtensions,
         resolvers: [
             ProformaInvoiceShopResolver,
+            ProformaInvoiceRequestShopResolver,
             ProformaInvoiceFieldResolver,
             PaymentShopResolver,
             PaymentFieldResolver,

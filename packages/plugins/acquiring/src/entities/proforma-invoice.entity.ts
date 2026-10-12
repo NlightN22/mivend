@@ -2,7 +2,17 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
-export type ProformaInvoiceStatus = 'pending' | 'issued' | 'paid' | 'cancelled';
+export type ProformaInvoiceStatus = 'pending' | 'issued' | 'paid' | 'cancelled' | 'superseded';
+
+export interface ProformaInvoiceLineSnapshot {
+    variantId: number;
+    sku: string;
+    name: string;
+    quantity: number;
+    unitPriceWithTax: number;
+    linePriceWithTax: number;
+    discounts: { description: string; amount: number }[];
+}
 
 // One aggregate storefront Order can split into several ProformaInvoices — one per our own legal
 // entity (OrganizationRequisites, plugin-documents) that owns the stock the order lines are
@@ -29,7 +39,7 @@ export class ProformaInvoice extends UuidEntity {
     orderId!: number;
 
     // `<order number>-NN` (NumberingService.formatOrderDocumentNumber, see
-    // ProformaInvoiceService.createProformaInvoicesForOrder) — reusing Order.code directly here would give every
+    // ProformaInvoiceIssuingService.issueForOrder) — reusing Order.code directly here would give every
     // proforma invoice split off one order the same visible identity as that order, indistinguishable from
     // it in a shared list. `orderId` (below) is the real, queryable link
     // back to the order; this column is ProformaInvoice's own identity, not a derived alias of Order's.
@@ -63,4 +73,18 @@ export class ProformaInvoice extends UuidEntity {
     @Index()
     @Column({ type: 'varchar', nullable: true })
     branchId!: string | null;
+
+    // Immutable snapshot of the organization's order lines at issue time (#206).
+    @Column({ type: 'jsonb', default: () => "'[]'" })
+    lines!: ProformaInvoiceLineSnapshot[];
+
+    // 1, 2, ...: a new version is a new document with its own number; the older unpaid one becomes `superseded`.
+    @Column({ type: 'int', default: 1 })
+    version!: number;
+
+    @Column({ type: 'int', nullable: true })
+    supersedesId!: number | null;
+
+    @Column({ type: 'int', nullable: true })
+    supersededById!: number | null;
 }

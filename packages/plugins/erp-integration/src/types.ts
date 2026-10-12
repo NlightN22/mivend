@@ -19,7 +19,7 @@ declare module '@vendure/core' {
         // read here without taking a package dependency on
         // whichever plugin ends up owning it, same established pattern as plugin-sync/types.ts.
         // Lives on ProductVariant, NOT Order — an order can span multiple organizations (see
-        // GlobalSettings.organizationSplitEnabled / ProformaInvoiceService.createProformaInvoicesForOrder), so
+        // GlobalSettings.organizationSplitEnabled / ProformaInvoiceIssuingService.issueForOrder), so
         // there is no single per-Order organizationId to read.
         organizationId?: number | null;
         // The StorageLocationChanged.priority that last won organizationId above — see

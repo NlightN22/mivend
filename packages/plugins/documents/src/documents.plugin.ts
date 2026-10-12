@@ -4,12 +4,18 @@ import {
     Order,
     OrderStateTransitionEvent,
     PluginCommonModule,
+    RequestContext,
     TransactionalConnection,
     VendurePlugin,
 } from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
-import { AcquiringPlugin, ProformaInvoiceService } from '@mivend/plugin-acquiring';
+import {
+    AcquiringPlugin,
+    ProformaInvoice,
+    ProformaInvoiceIssuedEvent,
+    ProformaInvoiceService,
+} from '@mivend/plugin-acquiring';
 import { subscribeAndLog } from 'shared';
 
 import { loggerCtx } from './constants';
@@ -21,6 +27,7 @@ import {
     DocumentFieldResolver,
     DocumentsAdminResolver,
     OrganizationFieldResolver,
+    ProformaInvoiceDocumentFieldResolver,
 } from './documents.resolver';
 import { shopApiExtensions } from './api/shop.schema';
 import { adminApiExtensions } from './api/admin.schema';
@@ -42,11 +49,16 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
     entities: [Document, OrganizationRequisites],
     shopApiExtensions: {
         schema: shopApiExtensions,
-        resolvers: [DocumentsResolver, DocumentFieldResolver],
+        resolvers: [DocumentsResolver, DocumentFieldResolver, ProformaInvoiceDocumentFieldResolver],
     },
     adminApiExtensions: {
         schema: adminApiExtensions,
-        resolvers: [DocumentsAdminResolver, DocumentFieldResolver, OrganizationFieldResolver],
+        resolvers: [
+            DocumentsAdminResolver,
+            DocumentFieldResolver,
+            OrganizationFieldResolver,
+            ProformaInvoiceDocumentFieldResolver,
+        ],
     },
     providers: [DocumentsService, PdfBrowserService, PdfGeneratorService],
     exports: [DocumentsService, PdfGeneratorService],
@@ -71,6 +83,12 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
             },
             loggerCtx,
         );
+        subscribeAndLog(
+            this.eventBus,
+            ProformaInvoiceIssuedEvent,
+            event => this.ensureDocument(event.ctx, event.proformaInvoice),
+            loggerCtx,
+        );
     }
 
     private async onOfflineTermsPaymentAuthorized(event: OrderStateTransitionEvent): Promise<void> {
@@ -78,7 +96,6 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
             .getRepository(event.ctx, Order)
             .createQueryBuilder('order')
             .leftJoinAndSelect('order.payments', 'payments')
-            .leftJoinAndSelect('order.customer', 'customer')
             .where('order.id = :id', { id: event.order.id })
             .getOne();
         if (!order) return;
@@ -86,21 +103,25 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
         const isOfflineTerms = order.payments?.some(p => p.method === OFFLINE_TERMS_METHOD);
         if (!isOfflineTerms) return;
 
-        // One proforma invoice document per organization-split ProformaInvoice (docs/payments.md
-        // "Organizations"), not one per order — offlineTermsPaymentHandler already
-        // materialized the real ProformaInvoice split in createPayment(), before this transition
-        // fires, so this is just reading it back (idempotent, no re-computation).
+        // The split was materialized by the payment handler before this transition; read it back.
         const proformaInvoices = await this.proformaInvoiceService.findByOrderId(
             event.ctx,
             Number(order.id),
         );
         for (const proformaInvoice of proformaInvoices) {
-            const document = await this.documentsService.createProformaInvoicePlaceholder(
-                event.ctx,
-                order,
-                proformaInvoice,
-            );
-            await this.pdfGeneratorService.enqueue(document.id);
+            if (proformaInvoice.status === 'superseded') continue;
+            await this.ensureDocument(event.ctx, proformaInvoice);
         }
+    }
+
+    private async ensureDocument(
+        ctx: RequestContext,
+        proformaInvoice: ProformaInvoice,
+    ): Promise<void> {
+        const { document, created } = await this.documentsService.createProformaInvoicePlaceholder(
+            ctx,
+            proformaInvoice,
+        );
+        if (created) await this.pdfGeneratorService.enqueue(document.id);
     }
 }

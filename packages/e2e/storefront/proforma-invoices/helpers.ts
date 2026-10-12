@@ -25,7 +25,7 @@ export interface ProformaInvoiceSummary {
 
 // Picks two in-stock variants whose products were assigned to two *different* organizations
 // (global-setup.ts round-robins organizationId across seed fixtures) — this is what actually
-// forces ProformaInvoiceService.computeSplit to produce more than one ProformaInvoice for a single order.
+// forces ProformaInvoiceIssuingService.issueForOrder to produce more than one ProformaInvoice for a single order.
 export async function pickTwoVariantsFromDifferentOrganizations(
     page: Page,
 ): Promise<[string, string]> {

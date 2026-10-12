@@ -127,6 +127,11 @@ export class PaymentAttemptService {
                 `ProformaInvoice ${proformaInvoiceId} is cancelled and cannot be paid`,
             );
         }
+        if (proformaInvoice.status === 'superseded') {
+            throw new UserInputError(
+                `ProformaInvoice ${proformaInvoice.number} was replaced by a newer version and cannot be paid`,
+            );
+        }
         if (
             expectedOrganizationId !== undefined &&
             expectedOrganizationId !== proformaInvoice.organizationId

@@ -134,3 +134,24 @@ export class OrganizationFieldResolver {
         return requisites.inn != null && requisites.legalAddress != null;
     }
 }
+
+@Resolver('ProformaInvoice')
+export class ProformaInvoiceDocumentFieldResolver {
+    constructor(private documentsService: DocumentsService) {}
+
+    @ResolveField()
+    seller(
+        @Ctx() ctx: RequestContext,
+        @Parent() proformaInvoice: { organizationId: number },
+    ): Promise<OrganizationRequisites> {
+        return this.documentsService.getRequisitesById(ctx, proformaInvoice.organizationId);
+    }
+
+    @ResolveField()
+    document(
+        @Ctx() ctx: RequestContext,
+        @Parent() proformaInvoice: { id: number | string },
+    ): Promise<Document | null> {
+        return this.documentsService.findForProformaInvoice(ctx, proformaInvoice.id);
+    }
+}

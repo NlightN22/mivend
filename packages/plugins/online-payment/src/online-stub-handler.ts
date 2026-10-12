@@ -13,13 +13,13 @@ import {
 } from '@mivend/plugin-deferred-payment';
 import {
     ProformaInvoice,
-    ProformaInvoiceService,
+    ProformaInvoiceIssuingService,
     PaymentAttemptService,
 } from '@mivend/plugin-acquiring';
 
 export const ONLINE_STUB_METHOD_CODE = 'online-stub';
 
-let proformaInvoiceService: ProformaInvoiceService;
+let issuingService: ProformaInvoiceIssuingService;
 let globalSettingsService: GlobalSettingsService;
 let paymentAttemptService: PaymentAttemptService;
 let creditPlacementService: CreditPlacementService;
@@ -40,10 +40,7 @@ async function computeProformaInvoiceSplit(
     const splitEnabled = Boolean(settings.customFields?.organizationSplitEnabled);
 
     try {
-        const proformaInvoices = await proformaInvoiceService.createProformaInvoicesForOrder(
-            ctx,
-            order,
-        );
+        const { current: proformaInvoices } = await issuingService.issueForOrder(ctx, order.id);
         return {
             metadata: {
                 proformaInvoices: proformaInvoices.map(proformaInvoice => ({
@@ -71,7 +68,7 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
     description: [{ languageCode: LanguageCode.en, value: 'Online payment (demo stub)' }],
     args: {},
     init(injector: Injector) {
-        proformaInvoiceService = injector.get(ProformaInvoiceService);
+        issuingService = injector.get(ProformaInvoiceIssuingService);
         globalSettingsService = injector.get(GlobalSettingsService);
         paymentAttemptService = injector.get(PaymentAttemptService);
         creditPlacementService = injector.get(CreditPlacementService);
