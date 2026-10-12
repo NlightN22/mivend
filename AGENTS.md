@@ -203,6 +203,11 @@ Applies to every entity mivend creates and to every exchange with another system
   database sequence, never `MAX+1` or a random suffix. Documents of one order are numbered `<order number>-NN`.
 - Contracts that carry an entity carry both `uuid` (key) and `number` (reference). Details: `docs/identifiers.md`.
 
+## Terminology
+
+Document vocabulary is fixed in `docs/terminology.md`: *proforma invoice* (our payment request) and
+*sales invoice* (the ERP's fact of sale). Never use bare "invoice".
+
 ## Comments
 
 Write no comments by default.
