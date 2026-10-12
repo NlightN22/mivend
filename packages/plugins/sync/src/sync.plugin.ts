@@ -3,6 +3,7 @@ import type { RuntimeVendureConfig } from '@vendure/core';
 import gql from 'graphql-tag';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
+import { isRestSurfaceEnabled } from 'shared';
 
 import { ReplicaOrderInterceptor, ReplicaOrderProcess } from './replica-order.guard';
 
@@ -61,7 +62,9 @@ const adminApiSchema = gql`
             useFactory: (): SyncPluginOptions => SyncPlugin.options,
         },
     ],
-    controllers: [ErpCallbackController, ErpOrderStatusController],
+    controllers: isRestSurfaceEnabled('ERP_CALLBACK_ENABLED', 'ERP_CALLBACK_API_KEY')
+        ? [ErpCallbackController, ErpOrderStatusController]
+        : [],
     adminApiExtensions: {
         schema: adminApiSchema,
         resolvers: [PaymentSyncResolver],

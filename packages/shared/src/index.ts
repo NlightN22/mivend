@@ -59,3 +59,12 @@ export {
 } from './characteristicFacet';
 export { UuidEntity } from './uuid-entity';
 export { documentNumberSearchTerm, normalizeDocumentNumber } from './documentNumberSearch';
+export {
+    API_KEY_MIN_LENGTH,
+    extractApiKey,
+    isApiKeyUsable,
+    isRestSurfaceEnabled,
+    verifyApiKey,
+    type ApiKeyHeaders,
+    type ApiKeyOptions,
+} from './api-key';

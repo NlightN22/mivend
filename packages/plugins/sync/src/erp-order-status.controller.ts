@@ -1,14 +1,17 @@
-import { Controller, Get, NotFoundException, Param, Req } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, NotFoundException, Param, Req, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { RequestContextService } from '@vendure/core';
 import { ErpOrderService } from '@mivend/plugin-erp-order';
 import { OrderErpStatusDto } from './dto/order-erp-status.dto';
+import { ErpCallbackApiKeyGuard } from './erp-callback-api-key.guard';
 
 // Complements ErpCallbackController's push path (POST order-status) — lets
 // the ERP re-query current status on demand (e.g. after a missed callback,
 // or for reconciliation) instead of relying solely on us pushing updates.
 @ApiTags('ERP Callback')
+@ApiSecurity('erp-callback-api-key')
+@UseGuards(ErpCallbackApiKeyGuard)
 @Controller('erp/orders')
 export class ErpOrderStatusController {
     constructor(

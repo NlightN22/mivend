@@ -20,7 +20,10 @@ async function postErpPaymentCallback(
 ): Promise<void> {
     const res = await fetch(`${SERVER_URL}/erp/callback/payment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': process.env.ERP_CALLBACK_API_KEY ?? 'dev-callback-key-change-me-0000',
+        },
         body: JSON.stringify({
             proformaInvoiceUuid,
             organizationId: Number(organizationId),

@@ -1,8 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { DataSource } from 'typeorm';
 
 import { KafkaStatusDto } from './dto/kafka-status.dto';
+import { KafkaStatusApiKeyGuard } from './kafka-status-api-key.guard';
 import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 
 // Reads the status row KafkaConsumerService persists on CONNECT/DISCONNECT/CRASH — this
@@ -12,6 +13,8 @@ import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 // kafka-consumer-status.entity.ts's own doc comment. No row yet (consumer never started) reads
 // as connected: false — the same safe default as "not connected".
 @ApiTags('ERP Callback')
+@ApiSecurity('erp-callback-api-key')
+@UseGuards(KafkaStatusApiKeyGuard)
 @Controller('erp')
 export class KafkaStatusController {
     constructor(private readonly dataSource: DataSource) {}

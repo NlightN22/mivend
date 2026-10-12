@@ -10,7 +10,10 @@ async function postStatus(
 ): Promise<void> {
     const res = await page.request.post(`${SERVER_URL}/erp/callback/order-status`, {
         data: { orderCode: code, status, erpOrderId: 'E2E-DOC-1' },
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': process.env.ERP_CALLBACK_API_KEY ?? 'dev-callback-key-change-me-0000',
+        },
     });
     expect(res.ok()).toBe(true);
 }

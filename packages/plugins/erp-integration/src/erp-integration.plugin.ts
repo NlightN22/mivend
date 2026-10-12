@@ -43,6 +43,7 @@ import { IntegrationInboxEventResolver } from './integration-inbox-event.resolve
 import { KafkaConsumerService } from './kafka-consumer.service';
 import { KafkaConsumerBootstrapService } from './kafka-consumer-bootstrap.service';
 import { KafkaStatusController } from './kafka-status.controller';
+import { isRestSurfaceEnabled } from 'shared';
 import { MoqPlugin } from '@mivend/plugin-moq';
 import { UnitLookupService } from './unit-lookup.service';
 import { SearchResultSalesUnitResolver } from './search-result-sales-unit.resolver';
@@ -126,7 +127,9 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         NotificationPlugin,
     ],
     entities: PLUGIN_ENTITIES,
-    controllers: [KafkaStatusController],
+    controllers: isRestSurfaceEnabled('ERP_CALLBACK_ENABLED', 'ERP_CALLBACK_API_KEY')
+        ? [KafkaStatusController]
+        : [],
     providers: [
         IntegrationOutboxService,
         IntegrationOutboxProcessorService,

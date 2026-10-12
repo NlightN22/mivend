@@ -1,5 +1,13 @@
-import { BadRequestException, Body, Controller, HttpCode, Post, Req } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+    BadRequestException,
+    Body,
+    Controller,
+    HttpCode,
+    Post,
+    Req,
+    UseGuards,
+} from '@nestjs/common';
+import { ApiBody, ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { EventBus, RequestContextService } from '@vendure/core';
 import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
@@ -7,11 +15,14 @@ import type { ErpOrderStatus } from '@mivend/plugin-erp-order';
 import { ErpStatusUpdateDto } from './dto/erp-status-update.dto';
 import { ERP_PAYMENT_OUTCOMES, ErpPaymentReportedDto } from './dto/erp-payment-reported.dto';
 import { ErpPaymentReportedEvent } from './erp-payment.events';
+import { ErpCallbackApiKeyGuard } from './erp-callback-api-key.guard';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DOCUMENT_NUMBER_PATTERN = /^\d+(-\d+)*$/;
 
 @ApiTags('ERP Callback')
+@ApiSecurity('erp-callback-api-key')
+@UseGuards(ErpCallbackApiKeyGuard)
 @Controller('erp/callback')
 export class ErpCallbackController {
     constructor(
