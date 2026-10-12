@@ -24,7 +24,10 @@ export class SearchResultPackagingLevelsService {
             const ids = new Set<string>();
             const result = Promise.resolve().then(() => {
                 this.batches.delete(ctx);
-                return this.levelsService.getForProducts(ctx, [...ids]);
+                return this.levelsService.getForProducts(
+                    ctx,
+                    [...ids].filter(id => /^\d+$/.test(id)),
+                );
             });
             batch = { ids, result };
             this.batches.set(ctx, batch);

@@ -38,6 +38,8 @@ export class VariantSalesUnitService {
         ctx: RequestContext,
         ids: string[],
     ): Promise<Map<string, VariantSalesUnitView>> {
+        const numericIds = ids.filter(id => /^\d+$/.test(id));
+        if (numericIds.length === 0) return new Map();
         const rows = await this.connection
             .getRepository(ctx, 'product_variant')
             .createQueryBuilder('pv')
@@ -45,7 +47,7 @@ export class VariantSalesUnitService {
             .addSelect('pv."customFieldsUnitname"', 'unitName')
             .addSelect('pv."customFieldsUnitratiotobase"', 'unitRatioToBase')
             .addSelect('pv."customFieldsMultiplicity"', 'multiplicity')
-            .where('pv.id IN (:...ids)', { ids })
+            .where('pv.id IN (:...ids)', { ids: numericIds })
             .getRawMany<{
                 id: string;
                 unitName: string | null;

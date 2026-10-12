@@ -27,3 +27,26 @@ describe('SearchResultPackagingLevelsService', () => {
         expect(b).toEqual([]);
     });
 });
+
+describe('SearchResultPackagingLevelsService garbage ids', () => {
+    it('does not pass non-numeric ids to the query and still resolves the others', async () => {
+        const getForProducts = vi.fn(
+            async () => new Map([['1', [{ name: 'pack', ratioToBase: 12 }]]]),
+        );
+        const service = new SearchResultPackagingLevelsService({
+            getForProducts,
+        } as unknown as ProductPackagingLevelsService);
+        const ctx = {} as RequestContext;
+
+        const [good, bad, empty] = await Promise.all([
+            service.load(ctx, '1'),
+            service.load(ctx, 'abc'),
+            service.load(ctx, ''),
+        ]);
+
+        expect(getForProducts).toHaveBeenCalledWith(ctx, ['1']);
+        expect(good).toHaveLength(1);
+        expect(bad).toEqual([]);
+        expect(empty).toEqual([]);
+    });
+});
