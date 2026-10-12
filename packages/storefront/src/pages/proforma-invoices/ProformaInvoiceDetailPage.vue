@@ -4,11 +4,14 @@ import { useRoute } from 'vue-router';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import AccountSidebar from '../account/AccountSidebar.vue';
-import { useInvoiceDetail } from './useInvoiceDetail';
-import { INVOICE_STATUS_LABEL, INVOICE_STATUS_VARIANT } from './useInvoices';
+import { useProformaInvoiceDetail } from './useProformaInvoiceDetail';
+import {
+    PROFORMA_INVOICE_STATUS_LABEL,
+    PROFORMA_INVOICE_STATUS_VARIANT,
+} from './useProformaInvoices';
 
 const route = useRoute();
-const { invoice, loading, load } = useInvoiceDetail();
+const { proformaInvoice, loading, load } = useProformaInvoiceDetail();
 
 onMounted(() => {
     void load(route.params.id as string);
@@ -28,22 +31,31 @@ function formatAmount(cents: number, currency: string): string {
         <AccountSidebar />
 
         <section class="id-content">
-            <router-link to="/invoices" class="id-back">← My proforma invoices</router-link>
+            <router-link to="/proforma-invoices" class="id-back"
+                >← My proforma invoices</router-link
+            >
 
             <div v-if="loading" class="id-state">Loading...</div>
 
-            <div v-else-if="!invoice" class="id-state">Proforma invoice not found.</div>
+            <div v-else-if="!proformaInvoice" class="id-state">Proforma invoice not found.</div>
 
             <template v-else>
                 <div class="id-head">
                     <div>
-                        <h1 class="id-title">Proforma invoice #{{ invoice.number }}</h1>
+                        <h1 class="id-title">Proforma invoice #{{ proformaInvoice.number }}</h1>
                         <div class="id-meta">
-                            Order {{ formatDocumentNumber(invoice.order.code) }}
+                            Order {{ formatDocumentNumber(proformaInvoice.order.code) }}
                         </div>
                     </div>
-                    <MvStatusBadge :variant="INVOICE_STATUS_VARIANT[invoice.status] ?? 'neutral'">
-                        {{ INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status }}
+                    <MvStatusBadge
+                        :variant="
+                            PROFORMA_INVOICE_STATUS_VARIANT[proformaInvoice.status] ?? 'neutral'
+                        "
+                    >
+                        {{
+                            PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.status] ??
+                            proformaInvoice.status
+                        }}
                     </MvStatusBadge>
                 </div>
 
@@ -51,7 +63,7 @@ function formatAmount(cents: number, currency: string): string {
                     <div class="id-summary-card">
                         <div class="id-summary-title">Proforma invoice total</div>
                         <div class="id-summary-value">
-                            {{ formatAmount(invoice.amount, invoice.currencyCode) }}
+                            {{ formatAmount(proformaInvoice.amount, proformaInvoice.currencyCode) }}
                         </div>
                     </div>
                 </div>
@@ -71,7 +83,7 @@ function formatAmount(cents: number, currency: string): string {
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="(line, index) in invoice.lines"
+                                    v-for="(line, index) in proformaInvoice.lines"
                                     :key="index"
                                     class="id-row"
                                 >
@@ -82,7 +94,7 @@ function formatAmount(cents: number, currency: string): string {
                                         {{
                                             formatAmount(
                                                 line.unitPriceWithTax,
-                                                invoice.currencyCode,
+                                                proformaInvoice.currencyCode,
                                             )
                                         }}
                                     </td>
@@ -90,7 +102,7 @@ function formatAmount(cents: number, currency: string): string {
                                         {{
                                             formatAmount(
                                                 line.linePriceWithTax,
-                                                invoice.currencyCode,
+                                                proformaInvoice.currencyCode,
                                             )
                                         }}
                                     </td>
@@ -102,10 +114,10 @@ function formatAmount(cents: number, currency: string): string {
                             <div>
                                 <div class="id-linked-order-title">Linked order</div>
                                 <div class="id-linked-order-meta">
-                                    {{ formatDocumentNumber(invoice.order.code) }}
+                                    {{ formatDocumentNumber(proformaInvoice.order.code) }}
                                 </div>
                             </div>
-                            <router-link :to="`/orders/${invoice.order.id}`">
+                            <router-link :to="`/orders/${proformaInvoice.order.id}`">
                                 <MvButton variant="secondary" size="sm">Open order</MvButton>
                             </router-link>
                         </div>
@@ -115,27 +127,41 @@ function formatAmount(cents: number, currency: string): string {
                         <div class="id-pay-card">
                             <h2 class="id-section-title">Payment</h2>
                             <div class="id-pay-amount">
-                                {{ formatAmount(invoice.amount, invoice.currencyCode) }}
+                                {{
+                                    formatAmount(
+                                        proformaInvoice.amount,
+                                        proformaInvoice.currencyCode,
+                                    )
+                                }}
                             </div>
-                            <p v-if="invoice.status === 'paid'" class="id-pay-note">
+                            <p v-if="proformaInvoice.status === 'paid'" class="id-pay-note">
                                 This proforma invoice is fully paid.
                             </p>
-                            <p v-else-if="invoice.status === 'cancelled'" class="id-pay-note">
+                            <p
+                                v-else-if="proformaInvoice.status === 'cancelled'"
+                                class="id-pay-note"
+                            >
                                 This proforma invoice is cancelled.
                             </p>
                             <p v-else class="id-pay-note">
-                                Pay this proforma invoice any time — independent of the order it came from.
+                                Pay this proforma invoice any time — independent of the order it
+                                came from.
                             </p>
                             <MvButton
-                                v-if="invoice.status === 'paid' || invoice.status === 'cancelled'"
+                                v-if="
+                                    proformaInvoice.status === 'paid' ||
+                                    proformaInvoice.status === 'cancelled'
+                                "
                                 variant="primary"
                                 size="md"
                                 disabled
                             >
                                 Pay proforma invoice
                             </MvButton>
-                            <RouterLink v-else :to="`/invoices/${invoice.id}/pay`">
-                                <MvButton variant="primary" size="md">Pay proforma invoice</MvButton>
+                            <RouterLink v-else :to="`/proforma-invoices/${proformaInvoice.id}/pay`">
+                                <MvButton variant="primary" size="md"
+                                    >Pay proforma invoice</MvButton
+                                >
                             </RouterLink>
                         </div>
 
@@ -143,11 +169,15 @@ function formatAmount(cents: number, currency: string): string {
                             <h2 class="id-section-title">Proforma invoice details</h2>
                             <div class="id-detail-row">
                                 <span>Organization</span>
-                                <span class="id-detail-val">{{ invoice.organizationId }}</span>
+                                <span class="id-detail-val">{{
+                                    proformaInvoice.organizationId
+                                }}</span>
                             </div>
                             <div class="id-detail-row">
                                 <span>Currency</span>
-                                <span class="id-detail-val">{{ invoice.currencyCode }}</span>
+                                <span class="id-detail-val">{{
+                                    proformaInvoice.currencyCode
+                                }}</span>
                             </div>
                         </div>
                     </aside>

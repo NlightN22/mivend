@@ -13,7 +13,7 @@ export interface MyDocumentsOptions {
 }
 
 // ERP-pushed documents (return/reconciliation) carry a direct fileUrl (ERP
-// already hosts the file). Self-generated documents (invoice/contract) carry
+// already hosts the file). Self-generated documents (proforma-invoice/contract) carry
 // `asset` instead, whose `source` is already a full absolute URL built by
 // Vendure's own Asset resolver — never construct download URLs client-side.
 function downloadUrlOf(doc: DocumentSummary): string | null {
@@ -21,14 +21,14 @@ function downloadUrlOf(doc: DocumentSummary): string | null {
 }
 
 export const DOCUMENT_TYPE_LABEL: Record<string, string> = {
-    invoice: 'Proforma invoice',
+    'proforma-invoice': 'Proforma invoice',
     contract: 'Contract',
     return: 'Return',
     reconciliation: 'Reconciliation report',
 };
 
 const DOCUMENT_TYPE_ICON: Record<string, { icon: string; iconVariant: DocData['iconVariant'] }> = {
-    invoice: { icon: '₽', iconVariant: 'orange' },
+    'proforma-invoice': { icon: '₽', iconVariant: 'orange' },
     contract: { icon: '📄', iconVariant: 'blue' },
     return: { icon: '↩', iconVariant: 'green' },
     reconciliation: { icon: '🧾', iconVariant: 'blue' },

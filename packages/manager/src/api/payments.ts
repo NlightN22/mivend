@@ -43,7 +43,7 @@ export const PAYMENT_STATUS_OPTIONS = [
 // Single source of truth for the PaymentAttempt status badge color (the frontend-rules skill's ui-kit "single
 // source of truth" rule) — mirrors api/orders.ts's ORDER_STATE_BADGE_VARIANT. Real incident this
 // fixes: PaymentsTable.vue rendered every status badge with no variant at all (always the
-// default gray), found in the same table-consistency audit that flagged InvoicesTable.vue's
+// default gray), found in the same table-consistency audit that flagged ProformaInvoicesTable.vue's
 // identical bug.
 export const PAYMENT_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
     pending: 'warning',
@@ -73,7 +73,7 @@ export interface PaymentViewCounts {
 }
 
 // Lean counts for the view chips (`options: { take: 0 }` returns totalItems, a real COUNT, with
-// no row data) — same shape as api/invoices.ts's fetchInvoiceViewCounts/api/customers.ts's
+// no row data) — same shape as api/proforma-invoices.ts's fetchProformaInvoiceViewCounts/api/customers.ts's
 // fetchCustomerOrderViewCounts, one round trip via GraphQL aliases. Curated to the 5 most
 // operationally relevant statuses (a manager checking a customer's payments cares about
 // Captured/Pending/Failed/Refunded first) rather than all 10 PAYMENT_STATUS_OPTIONS values —

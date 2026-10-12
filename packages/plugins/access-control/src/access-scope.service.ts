@@ -42,7 +42,7 @@ export class AccessScopeService {
     // resolvePaymentScope, per docs/access-control.md's "derived resource" rule (same pattern as
     // documents inheriting counterparty scope).
     async resolveProformaInvoiceScope(ctx: RequestContext): Promise<AccessScope> {
-        return this.resolveScope(ctx, 'invoice');
+        return this.resolveScope(ctx, 'proformaInvoice');
     }
 
     // The caller's own departmentId, independent of any resource's scope resolution — needed

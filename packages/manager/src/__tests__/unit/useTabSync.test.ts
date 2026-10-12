@@ -15,7 +15,7 @@ import { useTabSync } from '../../composables/useTabSync';
 //   invalid/missing `tab` query value falls back to the given default.
 // - Data ownership/scope: none — pure client-side UI/URL state, no backend boundary.
 // - Failure modes covered: (a) the exact regression reported live — alternating tab clicks
-//   ("Orders", "Invoices", "Orders", "Invoices"...) must each update the URL, not just every
+//   ("Orders", "ProformaInvoices", "Orders", "ProformaInvoices"...) must each update the URL, not just every
 //   other one (this is what the old flag-based implementation got wrong); (b) a second, later
 //   regression, also reported live: `activeTab` must not flip (mounting the next tab's
 //   component) until *after* the query string is actually cleared — two tabs that happen to
@@ -33,8 +33,8 @@ import { useTabSync } from '../../composables/useTabSync';
 // - Deliberate omissions: no E2E spec; live Playwright checks during this session already
 //   confirmed the fix end-to-end but aren't part of the committed suite.
 
-type TestTab = 'overview' | 'orders' | 'invoices';
-const TABS: readonly TestTab[] = ['overview', 'orders', 'invoices'];
+type TestTab = 'overview' | 'orders' | 'proformaInvoices';
+const TABS: readonly TestTab[] = ['overview', 'orders', 'proformaInvoices'];
 
 async function setup(initialPath: string): Promise<{
     router: Router;
@@ -70,18 +70,18 @@ describe('useTabSync', () => {
     });
 
     it('reads an initial valid tab from the query on mount', async () => {
-        const { state: s } = await setup('/customers/1?tab=invoices');
-        expect(s.activeTab.value).toBe('invoices');
+        const { state: s } = await setup('/customers/1?tab=proformaInvoices');
+        expect(s.activeTab.value).toBe('proformaInvoices');
     });
 
     it('a real tab switch updates route.query.tab and drops any other query keys', async () => {
         await router.replace({ query: { tab: 'orders', code: '1002', totalMin: '1000' } });
         await flushPromises();
 
-        await state.selectTab('invoices');
+        await state.selectTab('proformaInvoices');
         await flushPromises();
 
-        expect(router.currentRoute.value.query).toEqual({ tab: 'invoices' });
+        expect(router.currentRoute.value.query).toEqual({ tab: 'proformaInvoices' });
     });
 
     // The exact regression reported live: with the old flag-based implementation, only every
@@ -89,7 +89,13 @@ describe('useTabSync', () => {
     // "route changed externally" got permanently stuck after the very first switch, because
     // Vue's watch() never refires from a same-value ref write.
     it('every switch in an alternating sequence updates the URL, not just every other one', async () => {
-        const sequence: TestTab[] = ['orders', 'invoices', 'orders', 'invoices', 'orders'];
+        const sequence: TestTab[] = [
+            'orders',
+            'proformaInvoices',
+            'orders',
+            'proformaInvoices',
+            'orders',
+        ];
 
         for (const tab of sequence) {
             await state.selectTab(tab);
@@ -112,12 +118,12 @@ describe('useTabSync', () => {
         // Don't await yet — activeTab must still read the *old* tab while the navigation is
         // in flight, proving the write order (query first, activeTab second), not just the
         // eventual end state.
-        const switching = state.selectTab('invoices');
+        const switching = state.selectTab('proformaInvoices');
         expect(state.activeTab.value).toBe('orders');
 
         await switching;
-        expect(state.activeTab.value).toBe('invoices');
-        expect(router.currentRoute.value.query).toEqual({ tab: 'invoices' });
+        expect(state.activeTab.value).toBe('proformaInvoices');
+        expect(router.currentRoute.value.query).toEqual({ tab: 'proformaInvoices' });
     });
 
     it('a route-driven change (e.g. browser back/forward) updates activeTab without rewriting the query', async () => {
@@ -127,10 +133,10 @@ describe('useTabSync', () => {
         // Simulate the browser restoring a prior history entry that still has other filter
         // params — this must be preserved verbatim, not stripped like a real selectTab() switch
         // would (that's the whole point of the route watcher being read-only).
-        await router.replace({ query: { tab: 'invoices', search: '9' } });
+        await router.replace({ query: { tab: 'proformaInvoices', search: '9' } });
         await flushPromises();
 
-        expect(state.activeTab.value).toBe('invoices');
-        expect(router.currentRoute.value.query).toEqual({ tab: 'invoices', search: '9' });
+        expect(state.activeTab.value).toBe('proformaInvoices');
+        expect(router.currentRoute.value.query).toEqual({ tab: 'proformaInvoices', search: '9' });
     });
 });

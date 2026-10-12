@@ -4,7 +4,7 @@ import { registerMock } from '../../../.storybook/graphql-mock-registry';
 import { paginate } from '../../../.storybook/mock-list-utils';
 import CustomerDetailPage from './CustomerDetailPage.vue';
 import type { CustomerOrderItem } from '../../api/customers';
-import type { InvoiceListItem } from '../../api/invoices';
+import type { ProformaInvoiceListItem } from '../../api/proforma-invoices';
 import type { PaymentListItem } from '../../api/payments';
 
 type PaymentBucket = 'unpaid' | 'partial' | 'paid';
@@ -53,9 +53,9 @@ const CUSTOMER_ORDERS: CustomerOrderItem[] = Array.from({ length: 27 }, (_, i) =
     },
 }));
 
-const INVOICE_STATUSES = ['pending', 'issued', 'paid', 'cancelled'];
-// 6 invoices cycling through all 4 statuses — enough to exercise every chip/badge variant.
-const CUSTOMER_INVOICES: InvoiceListItem[] = Array.from({ length: 6 }, (_, i) => ({
+const PROFORMA_INVOICE_STATUSES = ['pending', 'issued', 'paid', 'cancelled'];
+// 6 proforma invoices cycling through all 4 statuses — enough to exercise every chip/badge variant.
+const CUSTOMER_PROFORMA_INVOICES: ProformaInvoiceListItem[] = Array.from({ length: 6 }, (_, i) => ({
     id: `INV-${1000 + i}`,
     number: `ORD-${200 + i}-1`,
     createdAt: new Date(2026, 6, 1 + i).toISOString(),
@@ -63,7 +63,7 @@ const CUSTOMER_INVOICES: InvoiceListItem[] = Array.from({ length: 6 }, (_, i) =>
     counterpartyId: '1',
     amount: 45000 + i * 8760,
     currencyCode: 'RUB',
-    status: INVOICE_STATUSES[i % INVOICE_STATUSES.length],
+    status: PROFORMA_INVOICE_STATUSES[i % PROFORMA_INVOICE_STATUSES.length],
     branchId: 'branch-a',
     order: { code: `ORD-${200 + i}` },
 }));
@@ -176,24 +176,30 @@ function mockCustomerDetailData(): void {
         discountGrantsForCounterparty: { totalItems: 0, items: [] },
     }));
     registerMock('CustomerDocumentsPage', () => ({ documents: { totalItems: 0, items: [] } }));
-    // Feeds CustomerInvoicesTab (the "Invoices" tab) — same shape as the standalone
-    // InvoicesPage.vue, filtered by status server-side per view chip.
-    registerMock('InvoicesPage', (rawVariables: Record<string, unknown>) => {
+    // Feeds CustomerProformaInvoicesTab (the "ProformaInvoices" tab) — same shape as the standalone
+    // ProformaInvoicesPage.vue, filtered by status server-side per view chip.
+    registerMock('ProformaInvoicesPage', (rawVariables: Record<string, unknown>) => {
         const variables = rawVariables as unknown as {
             options?: { skip?: number; take?: number; status?: string };
         };
         const status = variables.options?.status;
         const filtered = status
-            ? CUSTOMER_INVOICES.filter(inv => inv.status === status)
-            : CUSTOMER_INVOICES;
+            ? CUSTOMER_PROFORMA_INVOICES.filter(inv => inv.status === status)
+            : CUSTOMER_PROFORMA_INVOICES;
         return { visibleProformaInvoices: paginate(filtered, variables.options) };
     });
-    registerMock('InvoiceViewCounts', () => ({
-        all: { totalItems: CUSTOMER_INVOICES.length },
-        pending: { totalItems: CUSTOMER_INVOICES.filter(i => i.status === 'pending').length },
-        issued: { totalItems: CUSTOMER_INVOICES.filter(i => i.status === 'issued').length },
-        paid: { totalItems: CUSTOMER_INVOICES.filter(i => i.status === 'paid').length },
-        cancelled: { totalItems: CUSTOMER_INVOICES.filter(i => i.status === 'cancelled').length },
+    registerMock('ProformaInvoiceViewCounts', () => ({
+        all: { totalItems: CUSTOMER_PROFORMA_INVOICES.length },
+        pending: {
+            totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.status === 'pending').length,
+        },
+        issued: {
+            totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.status === 'issued').length,
+        },
+        paid: { totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.status === 'paid').length },
+        cancelled: {
+            totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.status === 'cancelled').length,
+        },
     }));
     // Feeds CustomerPaymentsTab (the "Payments" tab) — same shape as the standalone
     // PaymentsPage.vue, filtered by status/channel server-side via PaymentsFilterBar.

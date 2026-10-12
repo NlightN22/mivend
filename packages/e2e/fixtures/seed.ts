@@ -300,10 +300,10 @@ export const seedRecords = [
         // to find. Not an accumulation/pagination bug — a plain seed gap.
         // issueDate is re-stamped to "now" on every seed run (upsert by erpId) rather than a
         // fixed past date: the Documents tab's server-side query has no type filter, only
-        // take/skip sorted by issueDate DESC, and this counterparty accumulates real invoice
+        // take/skip sorted by issueDate DESC, and this counterparty accumulates real proforma invoice
         // documents from every e2e run with no cleanup (documents are immutable financial
         // records, never deleted) — a stale issueDate would eventually sort behind however many
-        // invoice documents piled up across all past sessions, not just this run's.
+        // proforma invoice documents piled up across all past sessions, not just this run's.
         type: 'document' as const,
         data: {
             erpId: 'e2e-doc-contract-001',

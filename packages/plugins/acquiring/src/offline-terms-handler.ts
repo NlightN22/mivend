@@ -26,7 +26,7 @@ interface SplitResult {
 // Always computes and materializes the real per-organization ProformaInvoice split (ProformaInvoiceService,
 // decided direction in docs/payments.md "Organizations") — offline terms need this too (issue
 // #46 open question #5: the split applies to proforma invoice/deferred payment the same as online, just
-// without online payment's time pressure) — and surfaces it in Payment.metadata.invoices for
+// without online payment's time pressure) — and surfaces it in Payment.metadata.proforma invoices for
 // visibility. Still creates exactly one Vendure Payment for the whole order (real per-organization
 // payment routing is issue #46, out of scope here).
 //

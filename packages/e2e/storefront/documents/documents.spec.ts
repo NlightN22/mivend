@@ -46,11 +46,11 @@ async function waitForDocumentReady(
 }
 
 // Regression coverage for the /documents storefront page — previously fully
-// mocked (hardcoded UPD/Invoice/Waybill array), now backed by the real
+// mocked (hardcoded UPD/ProformaInvoice/Waybill array), now backed by the real
 // `myDocuments` Shop API query in plugin-documents. Covers all 4 document
 // types and both real data sources: ERP push (return/reconciliation, seeded
 // directly via the erp-import REST endpoint) and Vendure-generated
-// (invoice via a real deferred-payment checkout, contract via the Admin
+// (proforma invoice via a real deferred-payment checkout, contract via the Admin
 // mutation) — see docs/ai/PROJECT_CONTEXT.md "Documents Phase 1".
 test.describe('Documents page — all document types', () => {
     test('ERP-pushed return and reconciliation documents render with the correct type, number and a working download link', async ({
@@ -135,11 +135,11 @@ test.describe('Documents page — all document types', () => {
             `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename } }`,
         );
 
-        const invoice = await waitForDocumentReady(
+        const proformaInvoice = await waitForDocumentReady(
             page,
-            d => d.type === 'invoice' && d.number === orderCode,
+            d => d.type === 'proforma-invoice' && d.number === orderCode,
         );
-        expect(invoice.status).toBe('ready');
+        expect(proformaInvoice.status).toBe('ready');
 
         await page.goto('/documents');
         await page.waitForLoadState('domcontentloaded');
@@ -147,10 +147,10 @@ test.describe('Documents page — all document types', () => {
 
         // Asset-backed PDFs trigger a native browser download (not a new tab) —
         // unlike ERP-pushed fileUrl documents, which open as a normal page.
-        const invoiceRow = page.locator('.doc-row', { hasText: orderCode });
+        const proformaInvoiceRow = page.locator('.doc-row', { hasText: orderCode });
         const [download] = await Promise.all([
             page.waitForEvent('download'),
-            invoiceRow.getByRole('link', { name: 'Download' }).click(),
+            proformaInvoiceRow.getByRole('link', { name: 'Download' }).click(),
         ]);
         expect(download.url()).toContain('/assets/source/');
     });

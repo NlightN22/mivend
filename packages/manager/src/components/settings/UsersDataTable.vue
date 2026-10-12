@@ -14,9 +14,9 @@ import type { PortalUser } from '../../api/users';
 import type { RoleSummary } from '../../api/settings';
 
 // Settings > Users (issue #119 Phase 2) — created manager-portal accounts. Server-side paginated
-// + filtered, same shape as CustomerInvoicesDataTable.vue (manager-table-standard skill). Email
+// + filtered, same shape as CustomerProformaInvoicesDataTable.vue (manager-table-standard skill). Email
 // is the identifying/searched column (point 1): unique per Administrator, unlike Name, which can
-// collide and isn't guaranteed unique the way an order/invoice number is.
+// collide and isn't guaranteed unique the way an order/proforma-invoice number is.
 const props = defineProps<{
     users: PortalUser[];
     loading: boolean;
@@ -98,7 +98,7 @@ const { state: tableState } = useDataTableState<UserFilterState>(
         columns: ALL_COLUMNS,
         allowedFilterKeys: ['status', 'emailAddress'],
         // status/search/pageSize are owned by UsersPage.vue (the real fetch) — see
-        // CustomerInvoicesDataTable.vue's identical `externallyOwned` for why.
+        // CustomerProformaInvoicesDataTable.vue's identical `externallyOwned` for why.
         externallyOwned: { pageSize: true, filterKeys: ['status', 'emailAddress'] },
     },
 );

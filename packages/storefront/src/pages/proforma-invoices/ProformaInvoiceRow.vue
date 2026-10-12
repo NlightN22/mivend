@@ -2,9 +2,13 @@
 import { useRouter } from 'vue-router';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
-import { INVOICE_STATUS_LABEL, INVOICE_STATUS_VARIANT, type InvoiceSummary } from './useInvoices';
+import {
+    PROFORMA_INVOICE_STATUS_LABEL,
+    PROFORMA_INVOICE_STATUS_VARIANT,
+    type ProformaInvoiceSummary,
+} from './useProformaInvoices';
 
-const props = defineProps<{ invoice: InvoiceSummary }>();
+const props = defineProps<{ proformaInvoice: ProformaInvoiceSummary }>();
 const router = useRouter();
 
 function formatAmount(cents: number, currency: string): string {
@@ -16,43 +20,48 @@ function formatAmount(cents: number, currency: string): string {
 }
 
 function openOrder(): void {
-    void router.push(`/orders/${props.invoice.order.id}`);
+    void router.push(`/orders/${props.proformaInvoice.order.id}`);
 }
 
-function openInvoice(): void {
-    void router.push(`/invoices/${props.invoice.id}`);
+function openProformaInvoice(): void {
+    void router.push(`/proforma-invoices/${props.proformaInvoice.id}`);
 }
 
 function payProformaInvoice(): void {
-    void router.push(`/invoices/${props.invoice.id}/pay`);
+    void router.push(`/proforma-invoices/${props.proformaInvoice.id}/pay`);
 }
 
-const isPayable = props.invoice.status !== 'paid' && props.invoice.status !== 'cancelled';
+const isPayable =
+    props.proformaInvoice.status !== 'paid' && props.proformaInvoice.status !== 'cancelled';
 </script>
 
 <template>
-    <article class="invoice-row">
+    <article class="proforma-invoice-row">
         <div>
-            <div class="invoice-row__name">Proforma invoice #{{ invoice.number }}</div>
-            <div class="invoice-row__meta">
-                Order {{ formatDocumentNumber(invoice.order.code) }}
+            <div class="proforma-invoice-row__name">
+                Proforma invoice #{{ proformaInvoice.number }}
+            </div>
+            <div class="proforma-invoice-row__meta">
+                Order {{ formatDocumentNumber(proformaInvoice.order.code) }}
             </div>
         </div>
 
         <div>
-            <div class="invoice-row__cell-title">Amount</div>
-            <div class="invoice-row__cell-value">
-                {{ formatAmount(invoice.amount, invoice.currencyCode) }}
+            <div class="proforma-invoice-row__cell-title">Amount</div>
+            <div class="proforma-invoice-row__cell-value">
+                {{ formatAmount(proformaInvoice.amount, proformaInvoice.currencyCode) }}
             </div>
         </div>
 
-        <MvStatusBadge :variant="INVOICE_STATUS_VARIANT[invoice.status] ?? 'neutral'">
-            {{ INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status }}
+        <MvStatusBadge
+            :variant="PROFORMA_INVOICE_STATUS_VARIANT[proformaInvoice.status] ?? 'neutral'"
+        >
+            {{ PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.status] ?? proformaInvoice.status }}
         </MvStatusBadge>
 
-        <div class="invoice-row__actions">
+        <div class="proforma-invoice-row__actions">
             <MvButton variant="secondary" size="sm" @click="openOrder">Order</MvButton>
-            <MvButton variant="secondary" size="sm" @click="openInvoice">Open</MvButton>
+            <MvButton variant="secondary" size="sm" @click="openProformaInvoice">Open</MvButton>
             <MvButton v-if="isPayable" variant="primary" size="sm" @click="payProformaInvoice"
                 >Pay</MvButton
             >
@@ -61,7 +70,7 @@ const isPayable = props.invoice.status !== 'paid' && props.invoice.status !== 'c
 </template>
 
 <style scoped>
-.invoice-row {
+.proforma-invoice-row {
     background: #fff;
     border: 1px solid rgba(221, 231, 226, 0.9);
     border-radius: 22px;
@@ -73,33 +82,33 @@ const isPayable = props.invoice.status !== 'paid' && props.invoice.status !== 'c
     align-items: center;
 }
 
-.invoice-row__name {
+.proforma-invoice-row__name {
     font-weight: 950;
     letter-spacing: -0.02em;
     margin-bottom: 5px;
     line-height: 1.28;
 }
 
-.invoice-row__meta {
+.proforma-invoice-row__meta {
     color: #66736e;
     font-size: 13px;
     line-height: 1.35;
 }
 
-.invoice-row__cell-title {
+.proforma-invoice-row__cell-title {
     color: #66736e;
     font-size: 12px;
     margin-bottom: 4px;
     font-weight: 850;
 }
 
-.invoice-row__cell-value {
+.proforma-invoice-row__cell-value {
     font-size: 14px;
     font-weight: 900;
     line-height: 1.3;
 }
 
-.invoice-row__actions {
+.proforma-invoice-row__actions {
     display: flex;
     justify-content: flex-end;
     align-items: center;
@@ -108,20 +117,20 @@ const isPayable = props.invoice.status !== 'paid' && props.invoice.status !== 'c
 }
 
 @media (max-width: 960px) {
-    .invoice-row {
+    .proforma-invoice-row {
         grid-template-columns: minmax(0, 1fr) 120px;
     }
-    .invoice-row__actions {
+    .proforma-invoice-row__actions {
         grid-column: 1 / -1;
         justify-content: flex-start;
     }
 }
 
 @media (max-width: 640px) {
-    .invoice-row {
+    .proforma-invoice-row {
         grid-template-columns: 1fr;
     }
-    .invoice-row__actions {
+    .proforma-invoice-row__actions {
         grid-column: auto;
     }
 }

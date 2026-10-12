@@ -111,7 +111,7 @@ const { state: tableState } = useDataTableState<WarehouseFilterState>(
         ),
         // `name` (search) and `pageSize` are BranchSettingsPage's own concern — it owns the
         // filtering/slicing — so always seed from its current prop values, never stale
-        // localStorage (same reasoning as CustomerInvoicesDataTable.vue).
+        // localStorage (same reasoning as CustomerProformaInvoicesDataTable.vue).
         externallyOwned: { pageSize: true, filterKeys: ['name'] },
     },
 );

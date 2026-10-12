@@ -18,7 +18,7 @@ function mockOrdersAside(): void {
     registerMock('MyAdvanceBalance', () => ({
         myAdvanceBalance: [{ amount: 50000, currencyCode: 'RUB' }],
     }));
-    registerMock('MyInvoices', () => ({
+    registerMock('MyProformaInvoices', () => ({
         myProformaInvoices: { items: [], totalItems: 0 },
     }));
 }

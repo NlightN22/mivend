@@ -31,7 +31,7 @@ function mockOrder(method: string, limitExceeded = false): void {
 }
 type Story = StoryObj<typeof OrderCreatedPage>;
 
-export const Invoice: Story = {
+export const ProformaInvoice: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();

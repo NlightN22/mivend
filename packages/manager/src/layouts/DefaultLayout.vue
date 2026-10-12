@@ -66,11 +66,11 @@ const menuItems = computed<AppSidebarItem[]>(() => {
         { label: 'Dashboard', path: '/' },
         { label: 'Orders', path: '/orders' },
     ];
-    // Gated on the same CustomPermission.ReadInvoice/ReadPayment the visibleProformaInvoices/
-    // visiblePayments queries themselves check — see AdminInvoiceVisibilityResolver/
+    // Gated on the same CustomPermission.ReadProformaInvoice/ReadPayment the visibleProformaInvoices/
+    // visiblePayments queries themselves check — see AdminProformaInvoiceVisibilityResolver/
     // AdminPaymentVisibilityResolver.
-    if (authStore.hasPermission('ReadInvoice'))
-        items.push({ label: 'Proforma invoices', path: '/invoices' });
+    if (authStore.hasPermission('ReadProformaInvoice'))
+        items.push({ label: 'Proforma invoices', path: '/proforma-invoices' });
     if (authStore.hasPermission('ReadPayment'))
         items.push({ label: 'Payments', path: '/payments' });
     items.push(
@@ -116,8 +116,12 @@ const mobileNavItems = computed<AppMobileNavItem[]>(() => [
 // route the current admin's permissions would just have the underlying query/mutation reject.
 const moreSheetItems = computed<AppMobileSheetItem[]>(() => {
     const items: AppMobileSheetItem[] = [];
-    if (authStore.hasPermission('ReadInvoice'))
-        items.push({ key: 'invoices', label: 'Proforma invoices', path: '/invoices' });
+    if (authStore.hasPermission('ReadProformaInvoice'))
+        items.push({
+            key: 'proformaInvoices',
+            label: 'Proforma invoices',
+            path: '/proforma-invoices',
+        });
     if (authStore.hasPermission('ReadPayment'))
         items.push({ key: 'payments', label: 'Payments', path: '/payments' });
     items.push(

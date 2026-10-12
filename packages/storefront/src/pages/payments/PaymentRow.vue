@@ -21,7 +21,9 @@ function openPayment(): void {
     void router.push(`/payments/${props.payment.id}`);
 }
 
-const invoiceAllocations = computed(() => props.payment.allocations.filter(a => !a.isAdvance));
+const proformaInvoiceAllocations = computed(() =>
+    props.payment.allocations.filter(a => !a.isAdvance),
+);
 const remaining = computed(() => {
     const advance = props.payment.allocations.find(a => a.isAdvance);
     return advance ? advance.amount : 0;
@@ -67,8 +69,12 @@ const remaining = computed(() => {
         <div>
             <div class="payment-row__cell-title">Applied to</div>
             <div class="payment-row__chips">
-                <span v-if="!invoiceAllocations.length" class="payment-row__muted">—</span>
-                <span v-for="(a, i) in invoiceAllocations" :key="i" class="payment-row__chip">
+                <span v-if="!proformaInvoiceAllocations.length" class="payment-row__muted">—</span>
+                <span
+                    v-for="(a, i) in proformaInvoiceAllocations"
+                    :key="i"
+                    class="payment-row__chip"
+                >
                     Proforma invoice #{{ a.proformaInvoice?.number }}
                 </span>
             </div>

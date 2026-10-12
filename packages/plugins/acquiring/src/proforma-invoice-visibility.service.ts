@@ -58,7 +58,7 @@ export class ProformaInvoiceVisibilityService {
             .leftJoin(
                 Counterparty,
                 'counterparty',
-                'counterparty.id::text = proforma proformaInvoice."counterpartyId"::text',
+                'counterparty.id::text = proformaInvoice."counterpartyId"::text',
             )
             .andWhere('proformaInvoice.counterpartyId = :counterpartyId', { counterpartyId })
             .andWhere('proformaInvoice.status IN (:...statuses)', {
@@ -137,7 +137,7 @@ export class ProformaInvoiceVisibilityService {
                 // so the camelCase column must be quoted by hand or Postgres lowercases it to
                 // the nonexistent "counterpartyid" (real bug, caught by a live query — the mock-
                 // based unit tests for this service never exercise real SQL).
-                'counterparty.id::text = proforma proformaInvoice."counterpartyId"::text',
+                'counterparty.id::text = proformaInvoice."counterpartyId"::text',
             );
         if (options?.status) {
             qb.andWhere('proformaInvoice.status = :status', { status: options.status });

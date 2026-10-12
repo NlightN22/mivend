@@ -16,18 +16,18 @@ import {
     type PaymentListItem,
 } from '../../api/payments';
 
-// Third consumer of @mivend/ui-kit's MvAdvancedDataTable, following CustomerInvoicesDataTable.vue's
+// Third consumer of @mivend/ui-kit's MvAdvancedDataTable, following CustomerProformaInvoicesDataTable.vue's
 // shape. Renders both desktop and MvAdvancedDataTable's own built-in mobile card view (see
 // MvAdvancedMobileCardList.vue) — CustomerPaymentsTab.vue no longer needs its own isMobile branch.
 //
 // The base/required column (`number`, "Payment #") gets both a toolbar search box and its own
 // funnel filter — backed by a real server-side filter (`PaymentListOptions.search`, a substring
 // match against PaymentAttempt.number, this project's own internally-generated business number,
-// same principle as Order.code/Invoice.number/DiscountGrant.number). Deliberately NOT
+// same principle as Order.code/ProformaInvoice.number/DiscountGrant.number). Deliberately NOT
 // providerPaymentId (the payment's real external reference — acquirer RRN, kassa receipt, ERP
 // payment-doc id) — per the external-integration-rules skill the two serve different purposes and must stay
 // separate fields; providerPaymentId is fetched (PaymentListItem.providerPaymentId) for a future
-// reconciliation-facing column but isn't shown here yet. `amount`/`invoice` still have no filter:
+// reconciliation-facing column but isn't shown here yet. `amount`/`proforma invoice` still have no filter:
 // the backend genuinely doesn't support filtering by either yet.
 const props = defineProps<{
     payments: PaymentListItem[];
@@ -86,7 +86,12 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         mobile: { badge: true },
     },
     { field: 'amount', header: 'Amount', width: 140, filterConfig: { type: 'none' } },
-    { field: 'invoice', header: 'Proforma invoice', width: 120, filterConfig: { type: 'none' } },
+    {
+        field: 'proformaInvoice',
+        header: 'Proforma invoice',
+        width: 120,
+        filterConfig: { type: 'none' },
+    },
 ];
 
 interface PaymentFilterState {
@@ -116,7 +121,7 @@ const { state: tableState } = useDataTableState<PaymentFilterState>(
         allowedFilterKeys: ALL_COLUMNS.filter(c => c.filterConfig.type !== 'none').map(
             c => c.field,
         ),
-        // Same reasoning as CustomerInvoicesDataTable.vue: status/channel/number(search)/pageSize
+        // Same reasoning as CustomerProformaInvoicesDataTable.vue: status/channel/number(search)/pageSize
         // are the tab's own concern (it owns the fetch) — always seed from the tab's current prop
         // values, never from stale localStorage.
         externallyOwned: { pageSize: true, filterKeys: ['status', 'channel', 'number'] },
@@ -178,7 +183,7 @@ interface PaymentRow {
     status: string;
     statusVariant: StatusBadgeVariant;
     amount: string;
-    invoice: string;
+    proformaInvoice: string;
 }
 const rows = computed<PaymentRow[]>(() =>
     props.payments.map(payment => ({
@@ -189,7 +194,7 @@ const rows = computed<PaymentRow[]>(() =>
         status: payment.paymentStatus,
         statusVariant: PAYMENT_STATUS_BADGE_VARIANT[payment.paymentStatus] ?? 'neutral',
         amount: money(payment),
-        invoice: payment.proformaInvoiceId ?? '—',
+        proformaInvoice: payment.proformaInvoiceId ?? '—',
     })),
 );
 </script>
@@ -213,7 +218,7 @@ const rows = computed<PaymentRow[]>(() =>
     >
         <template #toolbar-start>
             <!-- Reserved slot for CustomerPaymentsTab.vue's quick-filter view chips — same shape
-                 as CustomerOrdersDataTable.vue/CustomerInvoicesDataTable.vue. -->
+                 as CustomerOrdersDataTable.vue/CustomerProformaInvoicesDataTable.vue. -->
             <slot name="view-chips" />
         </template>
 

@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
 import { shopApi } from '../../api/client';
 import { MyAdvanceBalanceDocument } from '../../api/generated/graphql';
-import { useInvoices } from '../invoices/useInvoices';
+import { useProformaInvoices } from '../proforma-invoices/useProformaInvoices';
 
 const authStore = useAuthStore();
 const { formatWhole } = useCurrency();
@@ -21,11 +21,11 @@ const paymentDelay = computed(() => {
     return days != null && days > 0 ? `${days} days` : '—';
 });
 
-// Real payment obligations now live entirely on /invoices (which can independently span
+// Real payment obligations now live entirely on /proforma-invoices (which can independently span
 // several of our organizations per split order — see docs/payments.md "Organizations") — this
 // sidebar only surfaces an honest summary and links there, rather than duplicating a
 // pay-anything widget with no real backing.
-const { invoices, load: loadInvoices } = useInvoices();
+const { proformaInvoices, load: loadProformaInvoices } = useProformaInvoices();
 const advanceBalances = ref<{ amount: number; currencyCode: string }[]>([]);
 
 function formatMoney(cents: number, currency: string): string {
@@ -38,11 +38,11 @@ function formatMoney(cents: number, currency: string): string {
 
 const unpaidTotal = computed(() => {
     const byCurrency = new Map<string, number>();
-    for (const invoice of invoices.value) {
-        if (invoice.status === 'paid' || invoice.status === 'cancelled') continue;
+    for (const proformaInvoice of proformaInvoices.value) {
+        if (proformaInvoice.status === 'paid' || proformaInvoice.status === 'cancelled') continue;
         byCurrency.set(
-            invoice.currencyCode,
-            (byCurrency.get(invoice.currencyCode) ?? 0) + invoice.amount,
+            proformaInvoice.currencyCode,
+            (byCurrency.get(proformaInvoice.currencyCode) ?? 0) + proformaInvoice.amount,
         );
     }
     return (
@@ -57,7 +57,7 @@ const advanceTotal = computed(() =>
 );
 
 onMounted(async () => {
-    void loadInvoices({ take: 200, skip: 0 });
+    void loadProformaInvoices({ take: 200, skip: 0 });
     const result = await shopApi(MyAdvanceBalanceDocument, {});
     advanceBalances.value = result.myAdvanceBalance;
 });
@@ -68,10 +68,12 @@ onMounted(async () => {
         <div class="aside-card">
             <div class="aside-title">Payments &amp; proforma invoices</div>
             <div class="aside-subtitle">
-                Every order can split into several proforma invoices (one per organization) — pay any of them
-                any time from the proforma invoices page.
+                Every order can split into several proforma invoices (one per organization) — pay
+                any of them any time from the proforma invoices page.
             </div>
-            <router-link to="/invoices" class="wide-btn orange">Go to proforma invoices</router-link>
+            <router-link to="/proforma-invoices" class="wide-btn orange"
+                >Go to proforma invoices</router-link
+            >
         </div>
 
         <div class="aside-card">

@@ -70,10 +70,10 @@ test.describe('Checkout places a real order (regression)', () => {
 
         await page.goto('/checkout');
         await page.waitForLoadState('networkidle');
-        await page.getByRole('button', { name: /Bank invoice/i }).click();
+        await page.getByRole('button', { name: /Bank proforma-invoice/i }).click();
         await page.getByRole('button', { name: 'Place order & get proforma invoice' }).click();
 
-        await expect(page).toHaveURL(/\/order-created\?method=invoice/, { timeout: 15000 });
+        await expect(page).toHaveURL(/\/order-created\?method=proformaInvoice/, { timeout: 15000 });
 
         const state = await latestOrderState(page);
         expect(state).not.toBe('AddingItems');

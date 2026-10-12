@@ -17,10 +17,10 @@ import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 //
 // The 4 keys below are the real values this app actually produces today — see
 // Document.type's own doc comment (plugin-documents/src/entities/document.entity.ts:
-// 'invoice' | 'contract' | 'return' | 'reconciliation') and DocumentRecord's (types.ts). An
+// 'proforma-invoice' | 'contract' | 'return' | 'reconciliation') and DocumentRecord's (types.ts). An
 // earlier version of this map invented a richer 6-value fictional set (waybill/certificate/
 // credit note/'reconciliation act') that matched a UI mockup but not any real ERP-pushed or
-// internally-generated value — so every real document except 'invoice' silently fell through to
+// internally-generated value — so every real document except 'proforma-invoice' silently fell through to
 // the neutral default (found via a live GraphQL query against seeded data, not by inspection).
 // Add a new key here only once a real value shows up (grep this plugin's `type:` literals and
 // erp-import's document handler first) — do not pre-guess future ERP categories.
@@ -37,7 +37,7 @@ export interface DocumentTypeStyle {
 }
 
 const STYLES: Record<string, DocumentTypeStyle> = {
-    invoice: { icon: IconFileInvoice, variant: 'info', label: 'Proforma invoice' },
+    'proforma-invoice': { icon: IconFileInvoice, variant: 'info', label: 'Proforma invoice' },
     contract: { icon: IconFilePencil, variant: 'warning' },
     return: { icon: IconRotate2, variant: 'danger' },
     reconciliation: { icon: IconScale, variant: 'success' },

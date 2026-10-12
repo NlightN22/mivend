@@ -2,14 +2,14 @@ import { ref, type Ref } from 'vue';
 import { shopApi } from '../../api/client';
 import { PayProformaInvoiceDocument } from '../../api/generated/graphql';
 
-export type PayInvoiceOutcome = 'success' | 'pending' | 'fail';
+export type PayProformaInvoiceOutcome = 'success' | 'pending' | 'fail';
 
-export function usePayInvoice(): {
+export function usePayProformaInvoice(): {
     loading: Ref<boolean>;
     error: Ref<string | null>;
     payProformaInvoice: (
-        invoiceId: string,
-        outcome: PayInvoiceOutcome,
+        proformaInvoiceId: string,
+        outcome: PayProformaInvoiceOutcome,
     ) => Promise<{ status: string } | null>;
 } {
     const loading = ref(false);
@@ -17,7 +17,7 @@ export function usePayInvoice(): {
 
     async function payProformaInvoice(
         proformaInvoiceId: string,
-        outcome: PayInvoiceOutcome,
+        outcome: PayProformaInvoiceOutcome,
     ): Promise<{ status: string } | null> {
         loading.value = true;
         error.value = null;

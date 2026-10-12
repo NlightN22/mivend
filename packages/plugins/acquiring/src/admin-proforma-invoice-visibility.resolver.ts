@@ -15,7 +15,7 @@ export class AdminProformaInvoiceVisibilityResolver {
     constructor(private proformaInvoiceVisibilityService: ProformaInvoiceVisibilityService) {}
 
     @Query()
-    @Allow(CustomPermission.ReadInvoice.Permission)
+    @Allow(CustomPermission.ReadProformaInvoice.Permission)
     async visibleProformaInvoices(
         @Ctx() ctx: RequestContext,
         @Args() args: { options?: ProformaInvoiceListOptions; counterpartyId?: string },
@@ -28,7 +28,7 @@ export class AdminProformaInvoiceVisibilityResolver {
     }
 
     @Query()
-    @Allow(CustomPermission.ReadInvoice.Permission)
+    @Allow(CustomPermission.ReadProformaInvoice.Permission)
     async proformaInvoiceOutstandingBalance(
         @Ctx() ctx: RequestContext,
         @Args() args: { counterpartyId: string },

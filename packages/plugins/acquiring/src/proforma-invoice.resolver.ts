@@ -28,7 +28,7 @@ export class ProformaInvoiceAdminResolver {
 
     @Query()
     @Allow(Permission.ReadOrder)
-    async invoicesForOrder(
+    async proformaInvoicesForOrder(
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: string },
     ): Promise<ProformaInvoice[]> {

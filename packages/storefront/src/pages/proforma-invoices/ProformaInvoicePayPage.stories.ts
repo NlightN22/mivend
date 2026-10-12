@@ -2,16 +2,16 @@ import type { Meta, StoryObj } from '@storybook/vue3';
 import { router } from '../../router';
 import { registerMock } from '../../../.storybook/graphql-mock-registry';
 import { registerDefaultMocks } from '../../../.storybook/default-mocks';
-import InvoicePayPage from './InvoicePayPage.vue';
+import ProformaInvoicePayPage from './ProformaInvoicePayPage.vue';
 
-const meta: Meta<typeof InvoicePayPage> = {
-    title: 'Pages/Invoices/InvoicePayPage',
-    component: InvoicePayPage,
+const meta: Meta<typeof ProformaInvoicePayPage> = {
+    title: 'Pages/ProformaInvoices/ProformaInvoicePayPage',
+    component: ProformaInvoicePayPage,
     tags: ['autodocs'],
 };
 
 export default meta;
-type Story = StoryObj<typeof InvoicePayPage>;
+type Story = StoryObj<typeof ProformaInvoicePayPage>;
 
 export const Default: Story = {
     loaders: [
@@ -30,11 +30,11 @@ export const Default: Story = {
                     lines: [],
                 },
             }));
-            await router.push('/invoices/1/pay');
+            await router.push('/proforma-invoices/1/pay');
         },
     ],
     render: () => ({
-        components: { InvoicePayPage },
-        template: '<InvoicePayPage />',
+        components: { ProformaInvoicePayPage },
+        template: '<ProformaInvoicePayPage />',
     }),
 };

@@ -133,8 +133,8 @@ export async function fetchCustomerById(counterpartyId: string): Promise<Custome
 }
 
 // Lightweight name-only lookup for rendering a "Customer" column against a bounded set of ids
-// (one page of Invoices/Payments, never the full counterparty table) — shared by
-// pages/invoices/InvoicesPage.vue and pages/payments/PaymentsPage.vue instead of each
+// (one page of ProformaInvoices/Payments, never the full counterparty table) — shared by
+// pages/proforma-invoices/ProformaInvoicesPage.vue and pages/payments/PaymentsPage.vue instead of each
 // duplicating this fetch-per-id pattern (mirrors OrdersTable's managerName/branchName lookup
 // shape, but resolved per-page here since counterparties aren't a small preloadable set).
 export async function fetchCounterpartyNames(ids: string[]): Promise<Map<string, string>> {
@@ -437,7 +437,7 @@ export interface CustomerDocument {
 // Document.status is a fixed internal technical state (the document-generation pipeline's own
 // lifecycle — see plugin-documents/src/entities/document.entity.ts), not ERP-sourced business
 // data — same carve-out as api/orders.ts's ORDER_STATE_OPTIONS. Document.type, unlike status, is
-// real ERP/business-sourced data (invoice/contract/return/reconciliation/anything else the ERP
+// real ERP/business-sourced data (proforma-invoice/contract/return/reconciliation/anything else the ERP
 // pushes — see the entity's own doc comment) and must NOT be a hardcoded dropdown (the backend-plugin-rules skill's
 // "Business data must live in the database") — but that doesn't rule out a checklist filter, only
 // a *hardcoded* one: fetchDocumentTypes below pulls the real, currently-visible distinct type
@@ -453,7 +453,7 @@ export const DOCUMENT_STATUS_OPTIONS = [
 ] as const;
 
 // Single source of truth for the status badge color (the frontend-rules skill's ui-kit rule) — mirrors
-// PAYMENT_STATUS_BADGE_VARIANT/INVOICE_STATUS_BADGE_VARIANT. Previously an inline variant()
+// PAYMENT_STATUS_BADGE_VARIANT/PROFORMA_INVOICE_STATUS_BADGE_VARIANT. Previously an inline variant()
 // function local to CustomerDocumentsTab.vue.
 export const DOCUMENT_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
     pending: 'neutral',
@@ -479,7 +479,7 @@ export const DEFAULT_CUSTOMER_DOCUMENT_FILTERS: CustomerDocumentFilters = {
 };
 
 // Real server-side pagination (the backend-plugin-rules skill's "Pagination" rule — documents accumulate over a
-// customer's lifetime just like orders/invoices/payments, and aren't exempt just because the
+// customer's lifetime just like orders/proforma-invoices/payments, and aren't exempt just because the
 // tab is small on screen). Replaces an earlier flat `take: 100` fetch with no pagination at all,
 // which silently dropped a long-lived customer's older documents past the 100th row with no way
 // for the user to see more (found in the same pagination-antipattern audit as
@@ -616,7 +616,7 @@ export const DISCOUNT_GRANT_STATUS_OPTIONS = [
 ] as const;
 
 // Single source of truth for the status badge color (the frontend-rules skill's ui-kit rule) — mirrors
-// PAYMENT_STATUS_BADGE_VARIANT/INVOICE_STATUS_BADGE_VARIANT.
+// PAYMENT_STATUS_BADGE_VARIANT/PROFORMA_INVOICE_STATUS_BADGE_VARIANT.
 export const DISCOUNT_GRANT_STATUS_BADGE_VARIANT: Record<DiscountGrantStatus, StatusBadgeVariant> =
     {
         active: 'success',
@@ -632,7 +632,7 @@ export interface DiscountGrantViewCounts {
 }
 
 // Lean counts for the view chips (`options: { take: 0 }` returns totalItems, a real COUNT, with
-// no row data) — same shape as fetchCustomerOrderViewCounts/fetchInvoiceViewCounts above, one
+// no row data) — same shape as fetchCustomerOrderViewCounts/fetchProformaInvoiceViewCounts above, one
 // round trip via GraphQL aliases (aliased `expiringSoon` since GraphQL alias names can't contain
 // a hyphen like the `expiring-soon` status value itself).
 export async function fetchDiscountGrantViewCounts(

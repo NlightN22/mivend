@@ -4,13 +4,16 @@ import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
 import { MvTable, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
-import { INVOICE_STATUS_BADGE_VARIANT, type InvoiceListItem } from '../../api/invoices';
+import {
+    PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
+    type ProformaInvoiceListItem,
+} from '../../api/proforma-invoices';
 
 const props = defineProps<{
-    invoices: InvoiceListItem[];
+    proformaInvoices: ProformaInvoiceListItem[];
     counterpartyNames: Map<string, string>;
     // Nested customer-tab usage hides the Customer column (redundant — the whole tab is already
-    // scoped to one customer) and disables row-click navigation (no standalone invoice detail
+    // scoped to one customer) and disables row-click navigation (no standalone proforma invoice detail
     // page exists yet).
     compact?: boolean;
     // See OrdersTable.vue's identical doc comment — keeps table height stable across page
@@ -23,7 +26,7 @@ const props = defineProps<{
 }>();
 const router = useRouter();
 
-function money(item: InvoiceListItem): string {
+function money(item: ProformaInvoiceListItem): string {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: item.currencyCode,
@@ -32,7 +35,13 @@ function money(item: InvoiceListItem): string {
 
 const columns = computed<Column<TableRow>[]>(() => {
     const cols: Column<TableRow>[] = [
-        { key: 'id', title: 'Proforma invoice #', dataKey: 'id', width: 120, mobile: { primary: true } },
+        {
+            key: 'id',
+            title: 'Proforma invoice #',
+            dataKey: 'id',
+            width: 120,
+            mobile: { primary: true },
+        },
     ];
     if (!props.compact) {
         cols.push({ key: 'customer', title: 'Customer', dataKey: 'customer', width: 220 });
@@ -60,22 +69,24 @@ const columns = computed<Column<TableRow>[]>(() => {
 });
 
 const rows = computed<TableRow[]>(() =>
-    props.invoices.map(invoice => ({
-        id: invoice.id,
-        customer: props.counterpartyNames.get(invoice.counterpartyId) ?? invoice.counterpartyId,
-        status: invoice.status,
-        statusVariant: INVOICE_STATUS_BADGE_VARIANT[invoice.status] ?? 'neutral',
-        amount: money(invoice),
-        order: invoice.order.code,
-        orderDisplay: formatDocumentNumber(invoice.order.code),
+    props.proformaInvoices.map(proformaInvoice => ({
+        id: proformaInvoice.id,
+        customer:
+            props.counterpartyNames.get(proformaInvoice.counterpartyId) ??
+            proformaInvoice.counterpartyId,
+        status: proformaInvoice.status,
+        statusVariant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT[proformaInvoice.status] ?? 'neutral',
+        amount: money(proformaInvoice),
+        order: proformaInvoice.order.code,
+        orderDisplay: formatDocumentNumber(proformaInvoice.order.code),
     })),
 );
 
 function openOrder(payload: { rowData: TableRow }): void {
     if (props.compact) return;
-    // Real incident: this used to push invoice.orderId (the numeric internal Order id) into a
+    // Real incident: this used to push proforma invoice.orderId (the numeric internal Order id) into a
     // route that expects Order.code (see router's 'orders/:code') — every click landed on a
-    // broken order-detail page. order.code now comes from the real Invoice.order resolve field.
+    // broken order-detail page. order.code now comes from the real ProformaInvoice.order resolve field.
     router.push(`/orders/${payload.rowData.order as string}`);
 }
 </script>

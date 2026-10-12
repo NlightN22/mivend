@@ -2,10 +2,10 @@ import { test, expect, type Page } from '@playwright/test';
 import { gql } from '../orders/helpers';
 import {
     buildOrderAcrossOrganizations,
-    myInvoicesForOrder,
-    payAllOpenInvoices,
+    myProformaInvoicesForOrder,
+    payAllOpenProformaInvoices,
     payProformaInvoice,
-} from '../invoices/helpers';
+} from '../proforma-invoices/helpers';
 
 async function goToPayments(page: Page): Promise<void> {
     await page.goto('/payments');
@@ -13,9 +13,9 @@ async function goToPayments(page: Page): Promise<void> {
     await expect(page.getByRole('heading', { name: 'Payments' })).toBeVisible({ timeout: 20000 });
 }
 
-async function findPaymentByInvoiceId(
+async function findPaymentByProformaInvoiceId(
     page: Page,
-    invoiceId: string,
+    proformaInvoiceId: string,
 ): Promise<{ id: string; proformaInvoiceId: string | null }> {
     const result = await gql(
         page,
@@ -24,18 +24,18 @@ async function findPaymentByInvoiceId(
     const items = (
         result.myPayments as { items: { id: string; proformaInvoiceId: string | null }[] }
     ).items;
-    const match = items.find(i => i.proformaInvoiceId === invoiceId);
-    if (!match) throw new Error(`No payment found for proforma invoice ${invoiceId}`);
+    const match = items.find(i => i.proformaInvoiceId === proformaInvoiceId);
+    if (!match) throw new Error(`No payment found for proforma invoice ${proformaInvoiceId}`);
     return match;
 }
 
-async function buildAndPayInvoice(
+async function buildAndPayProformaInvoice(
     page: Page,
     outcome: 'success' | 'pending' | 'fail' | 'cancel',
     channel?: 'online-acquiring' | 'branch-kassa' | 'bank-transfer-erp',
 ): Promise<{
-    invoiceId: string;
-    invoiceNumber: string;
+    proformaInvoiceId: string;
+    proformaInvoiceNumber: string;
     orderCode: string;
     paymentStatus: string;
 }> {
@@ -46,15 +46,15 @@ async function buildAndPayInvoice(
         page,
         `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename } }`,
     );
-    const [invoice] = await myInvoicesForOrder(page, orderCode);
-    await payProformaInvoice(page, invoice.id, outcome, channel);
-    const payment = await findPaymentByInvoiceId(page, invoice.id);
+    const [proformaInvoice] = await myProformaInvoicesForOrder(page, orderCode);
+    await payProformaInvoice(page, proformaInvoice.id, outcome, channel);
+    const payment = await findPaymentByProformaInvoiceId(page, proformaInvoice.id);
     const result = await gql(page, `query($id: ID!) { payment(id: $id) { status } }`, {
         id: payment.id,
     });
     return {
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.number,
+        proformaInvoiceId: proformaInvoice.id,
+        proformaInvoiceNumber: proformaInvoice.number,
         orderCode,
         paymentStatus: (result.payment as { status: string }).status,
     };
@@ -62,7 +62,7 @@ async function buildAndPayInvoice(
 
 test.describe('Payments page', () => {
     test('payments page loads and shows rows', async ({ page }) => {
-        await buildAndPayInvoice(page, 'success');
+        await buildAndPayProformaInvoice(page, 'success');
         await goToPayments(page);
         await expect(page.locator('.payment-row').first()).toBeVisible({ timeout: 10000 });
     });
@@ -70,7 +70,7 @@ test.describe('Payments page', () => {
     test('a payment made with the bank-transfer-erp channel shows the correct source label', async ({
         page,
     }) => {
-        const { invoiceNumber, paymentStatus } = await buildAndPayInvoice(
+        const { proformaInvoiceNumber, paymentStatus } = await buildAndPayProformaInvoice(
             page,
             'success',
             'bank-transfer-erp',
@@ -79,7 +79,7 @@ test.describe('Payments page', () => {
 
         await goToPayments(page);
         const row = page
-            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceNumber}` })
+            .locator('.payment-row', { hasText: `Proforma invoice #${proformaInvoiceNumber}` })
             .first();
         await expect(row).toBeVisible({ timeout: 10000 });
         await expect(row).toContainText('Bank transfer (ERP)');
@@ -88,8 +88,8 @@ test.describe('Payments page', () => {
     test('the "Succeeded" status filter shows only captured payments', async ({ page }) => {
         // Guarantee at least one non-succeeded payment exists this run, so this filter is a real
         // narrowing test rather than trivially true because nothing else is in the DB.
-        await buildAndPayInvoice(page, 'fail');
-        await buildAndPayInvoice(page, 'success');
+        await buildAndPayProformaInvoice(page, 'fail');
+        await buildAndPayProformaInvoice(page, 'success');
 
         await goToPayments(page);
         await page.getByRole('button', { name: 'Succeeded' }).click();
@@ -106,7 +106,7 @@ test.describe('Payments page', () => {
     test('the "Failed" status filter shows only failed payments', async ({ page }) => {
         // 'fail' never allocates a SettlementEntry, so the row has no "Proforma invoice #X" chip — locate
         // it by order code instead, which every row shows regardless of allocation.
-        const { orderCode } = await buildAndPayInvoice(page, 'fail');
+        const { orderCode } = await buildAndPayProformaInvoice(page, 'fail');
 
         await goToPayments(page);
         await page.getByRole('button', { name: 'Failed' }).click();
@@ -123,7 +123,7 @@ test.describe('Payments page', () => {
     });
 
     test('the "Cancelled" status filter shows only cancelled payments', async ({ page }) => {
-        const { orderCode } = await buildAndPayInvoice(page, 'cancel');
+        const { orderCode } = await buildAndPayProformaInvoice(page, 'cancel');
 
         await goToPayments(page);
         await page.getByRole('button', { name: 'Cancelled' }).click();
@@ -142,15 +142,19 @@ test.describe('Payments page', () => {
     test('the "Bank transfer (ERP)" source filter shows only that channel\'s payments', async ({
         page,
     }) => {
-        await buildAndPayInvoice(page, 'success', 'online-acquiring');
-        const { invoiceNumber } = await buildAndPayInvoice(page, 'success', 'bank-transfer-erp');
+        await buildAndPayProformaInvoice(page, 'success', 'online-acquiring');
+        const { proformaInvoiceNumber } = await buildAndPayProformaInvoice(
+            page,
+            'success',
+            'bank-transfer-erp',
+        );
 
         await goToPayments(page);
         await page.getByRole('button', { name: 'Bank transfer (ERP)' }).click();
         await page.waitForLoadState('networkidle');
 
         const row = page
-            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceNumber}` })
+            .locator('.payment-row', { hasText: `Proforma invoice #${proformaInvoiceNumber}` })
             .first();
         await expect(row).toBeVisible({ timeout: 10000 });
 
@@ -164,7 +168,11 @@ test.describe('Payments page', () => {
     test('combining a status and a source filter narrows to their intersection', async ({
         page,
     }) => {
-        const { invoiceNumber } = await buildAndPayInvoice(page, 'success', 'branch-kassa');
+        const { proformaInvoiceNumber } = await buildAndPayProformaInvoice(
+            page,
+            'success',
+            'branch-kassa',
+        );
 
         await goToPayments(page);
         await page.getByRole('button', { name: 'Succeeded' }).click();
@@ -173,7 +181,7 @@ test.describe('Payments page', () => {
         await page.waitForLoadState('networkidle');
 
         const row = page
-            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceNumber}` })
+            .locator('.payment-row', { hasText: `Proforma invoice #${proformaInvoiceNumber}` })
             .first();
         await expect(row).toBeVisible({ timeout: 10000 });
         const rowTexts = await page.locator('.payment-row').allTextContents();
@@ -196,15 +204,15 @@ test.describe('Payments page', () => {
         page,
     }) => {
         test.setTimeout(90000);
-        await payAllOpenInvoices(page);
-        const { invoiceId, orderCode } = await buildAndPayInvoice(page, 'success');
-        // Duplicate the same payment — its invoice is already paid and (after the drain above)
+        await payAllOpenProformaInvoices(page);
+        const { proformaInvoiceId, orderCode } = await buildAndPayProformaInvoice(page, 'success');
+        // Duplicate the same payment — its proforma invoice is already paid and (after the drain above)
         // nothing else is open in that organization, so the whole amount becomes an advance.
-        await payProformaInvoice(page, invoiceId, 'success');
+        await payProformaInvoice(page, proformaInvoiceId, 'success');
 
         await goToPayments(page);
         // Both payments (original + duplicate) share the same order, so filter on that rather
-        // than "Proforma invoice #X" — the duplicate/advance row has no invoice allocation chip at all.
+        // than "Proforma invoice #X" — the duplicate/advance row has no proforma invoice allocation chip at all.
         const rows = page.locator('.payment-row', { hasText: `Order ${orderCode}` });
         await expect(rows.first()).toBeVisible({ timeout: 10000 });
         expect(await rows.count()).toBe(2);
@@ -231,24 +239,29 @@ test.describe('Payment detail page', () => {
     test('detail page shows amount, status, source and the proforma invoice it was applied to', async ({
         page,
     }) => {
-        const { invoiceId, invoiceNumber } = await buildAndPayInvoice(page, 'success');
-        const payment = await findPaymentByInvoiceId(page, invoiceId);
+        const { proformaInvoiceId, proformaInvoiceNumber } = await buildAndPayProformaInvoice(
+            page,
+            'success',
+        );
+        const payment = await findPaymentByProformaInvoiceId(page, proformaInvoiceId);
 
         await page.goto(`/payments/${payment.id}`);
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.pd-title')).toBeVisible({ timeout: 10000 });
         await expect(page.locator('.pd-source-pill')).toContainText('Online acquiring');
-        await expect(page.locator('.pd-table')).toContainText(`Proforma invoice #${invoiceNumber}`);
+        await expect(page.locator('.pd-table')).toContainText(
+            `Proforma invoice #${proformaInvoiceNumber}`,
+        );
     });
 
     test('a payment that ends up entirely as an advance shows the "held entirely as an advance" message and a matching unallocated total', async ({
         page,
     }) => {
         test.setTimeout(90000);
-        await payAllOpenInvoices(page);
-        const { invoiceId } = await buildAndPayInvoice(page, 'success');
+        await payAllOpenProformaInvoices(page);
+        const { proformaInvoiceId } = await buildAndPayProformaInvoice(page, 'success');
         // Duplicate: nothing else open in this organization after the drain above.
-        await payProformaInvoice(page, invoiceId, 'success');
+        await payProformaInvoice(page, proformaInvoiceId, 'success');
 
         const payments = await gql(
             page,
@@ -256,7 +269,7 @@ test.describe('Payment detail page', () => {
         );
         const matches = (
             payments.myPayments as { items: { id: string; proformaInvoiceId: string | null }[] }
-        ).items.filter(i => i.proformaInvoiceId === invoiceId);
+        ).items.filter(i => i.proformaInvoiceId === proformaInvoiceId);
         expect(matches.length).toBeGreaterThanOrEqual(2);
         const duplicatePaymentId = matches[0].id; // most recent (list is createdAt/id DESC)
 
@@ -269,8 +282,8 @@ test.describe('Payment detail page', () => {
     });
 
     test('back link returns to payments list', async ({ page }) => {
-        const { invoiceId } = await buildAndPayInvoice(page, 'success');
-        const payment = await findPaymentByInvoiceId(page, invoiceId);
+        const { proformaInvoiceId } = await buildAndPayProformaInvoice(page, 'success');
+        const payment = await findPaymentByProformaInvoiceId(page, proformaInvoiceId);
 
         await page.goto(`/payments/${payment.id}`);
         await page.waitForLoadState('domcontentloaded');

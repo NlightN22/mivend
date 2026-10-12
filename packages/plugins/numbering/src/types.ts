@@ -1,6 +1,6 @@
 export type NumberingDocumentType =
     | 'order'
-    | 'invoice'
+    | 'proforma-invoice'
     | 'payment'
     | 'refund'
     | 'discount-grant'
@@ -9,7 +9,7 @@ export type NumberingDocumentType =
 // Fixed, hardcoded names — never built from caller input (see NumberingService.next).
 export const NUMBERING_SEQUENCE_NAMES: Record<NumberingDocumentType, string> = {
     order: 'mivend_number_seq_order',
-    invoice: 'mivend_number_seq_invoice',
+    'proforma-invoice': 'mivend_number_seq_proforma_invoice',
     payment: 'mivend_number_seq_payment',
     refund: 'mivend_number_seq_refund',
     'discount-grant': 'mivend_number_seq_discount_grant',

@@ -8,7 +8,7 @@ import { PAYMENT_STATUS_BADGE_VARIANT, type PaymentListItem } from '../../api/pa
 const props = defineProps<{
     payments: PaymentListItem[];
     counterpartyNames: Map<string, string>;
-    // See InvoicesTable.vue's identical doc comment.
+    // See ProformaInvoicesTable.vue's identical doc comment.
     compact?: boolean;
     pageSize?: number;
     // Must be threaded through to MvTable, not used to unmount this component at the page
@@ -56,7 +56,12 @@ const columns = computed<Column<TableRow>[]>(() => {
             },
         },
         { key: 'amount', title: 'Amount', dataKey: 'amount', width: 140, align: 'right' },
-        { key: 'invoice', title: 'Proforma invoice', dataKey: 'invoice', width: 120 },
+        {
+            key: 'proformaInvoice',
+            title: 'Proforma invoice',
+            dataKey: 'proformaInvoice',
+            width: 120,
+        },
     );
     return cols;
 });
@@ -69,7 +74,7 @@ const rows = computed<TableRow[]>(() =>
         status: payment.paymentStatus,
         statusVariant: PAYMENT_STATUS_BADGE_VARIANT[payment.paymentStatus] ?? 'neutral',
         amount: money(payment),
-        invoice: payment.proformaInvoiceId ?? '—',
+        proformaInvoice: payment.proformaInvoiceId ?? '—',
     })),
 );
 </script>

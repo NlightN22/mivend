@@ -4780,7 +4780,7 @@ export type MutationRecordPaymentRefundArgs = {
 
 export type MutationRecordWitnessedPaymentArgs = {
     amount: Scalars['Int']['input'];
-    invoiceId?: InputMaybe<Scalars['Int']['input']>;
+    proformaInvoiceId?: InputMaybe<Scalars['Int']['input']>;
     method: Scalars['String']['input'];
     orderId: Scalars['ID']['input'];
     organizationId?: InputMaybe<Scalars['Int']['input']>;
@@ -6221,7 +6221,7 @@ export type Permission =
     /** Read the raw floor-price threshold for a variant (financial data, layer 4 redaction) */
     | 'ReadFloorPrice'
     /** Read proforma invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveProformaInvoiceScope) */
-    | 'ReadInvoice'
+    | 'ReadProformaInvoice'
     /** Grants permission to read Order */
     | 'ReadOrder'
     /** Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope) */
@@ -6865,7 +6865,7 @@ export type ProformaInvoice = {
     lines: Array<OrderLine>;
     /** Human-facing business number — generated at creation, distinct from the order's own code — see ProformaInvoice.number's own doc comment (proforma-invoice.entity.ts). */
     number: Scalars['String']['output'];
-    /** Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: InvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page). */
+    /** Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: ProformaInvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page). */
     order: ProformaInvoiceOrder;
     orderId: Scalars['ID']['output'];
     organizationId: Scalars['ID']['output'];
@@ -7123,7 +7123,7 @@ export type Query = {
     integrationOutboxProblems: IntegrationOutboxProblemList;
     /** One row per stream: union of the event contract, configured topics and inbox rows, with Kafka lag, inbox backlog and drift (issue #195). */
     integrationStreamHealth: IntegrationStreamHealthReport;
-    invoicesForOrder: Array<ProformaInvoice>;
+    proformaInvoicesForOrder: Array<ProformaInvoice>;
     job: Maybe<Job>;
     jobBufferSize: Array<JobBufferSize>;
     jobQueues: Array<JobQueue>;
@@ -7449,7 +7449,7 @@ export type QueryIntegrationOutboxProblemsArgs = {
     options?: InputMaybe<IntegrationOutboxProblemListOptions>;
 };
 
-export type QueryInvoicesForOrderArgs = {
+export type QueryProformaInvoicesForOrderArgs = {
     orderId: Scalars['ID']['input'];
 };
 

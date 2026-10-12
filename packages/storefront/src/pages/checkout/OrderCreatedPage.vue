@@ -54,7 +54,7 @@ const placedAt = computed(() =>
           }).format(new Date(order.value.orderPlacedAt))
         : null,
 );
-const invoiceId = computed(
+const proformaInvoiceId = computed(
     () => data.value?.myProformaInvoices.items.find(i => i.order?.code === code.value)?.id ?? null,
 );
 
@@ -140,8 +140,8 @@ onMounted(load);
                         >Open order</RouterLink
                     >
                     <RouterLink
-                        v-if="invoiceId"
-                        :to="`/invoices/${invoiceId}`"
+                        v-if="proformaInvoiceId"
+                        :to="`/proforma-invoices/${proformaInvoiceId}`"
                         class="oc-btn oc-btn--secondary"
                         >Open proforma invoice</RouterLink
                     >

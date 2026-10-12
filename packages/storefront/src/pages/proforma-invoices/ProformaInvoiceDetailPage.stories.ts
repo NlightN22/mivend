@@ -2,18 +2,18 @@ import type { Meta, StoryObj } from '@storybook/vue3';
 import { router } from '../../router';
 import { registerMock } from '../../../.storybook/graphql-mock-registry';
 import { registerDefaultMocks } from '../../../.storybook/default-mocks';
-import InvoiceDetailPage from './InvoiceDetailPage.vue';
+import ProformaInvoiceDetailPage from './ProformaInvoiceDetailPage.vue';
 
-const meta: Meta<typeof InvoiceDetailPage> = {
-    title: 'Pages/Invoices/InvoiceDetailPage',
-    component: InvoiceDetailPage,
+const meta: Meta<typeof ProformaInvoiceDetailPage> = {
+    title: 'Pages/ProformaInvoices/ProformaInvoiceDetailPage',
+    component: ProformaInvoiceDetailPage,
     tags: ['autodocs'],
 };
 
 export default meta;
-type Story = StoryObj<typeof InvoiceDetailPage>;
+type Story = StoryObj<typeof ProformaInvoiceDetailPage>;
 
-function mockInvoice(status: string): void {
+function mockProformaInvoice(status: string): void {
     registerMock('ProformaInvoiceDetail', () => ({
         proformaInvoice: {
             id: '1',
@@ -40,13 +40,13 @@ export const Issued: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
-            mockInvoice('issued');
-            await router.push('/invoices/1');
+            mockProformaInvoice('issued');
+            await router.push('/proforma-invoices/1');
         },
     ],
     render: () => ({
-        components: { InvoiceDetailPage },
-        template: '<InvoiceDetailPage />',
+        components: { ProformaInvoiceDetailPage },
+        template: '<ProformaInvoiceDetailPage />',
     }),
 };
 
@@ -54,12 +54,12 @@ export const Paid: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
-            mockInvoice('paid');
-            await router.push('/invoices/1');
+            mockProformaInvoice('paid');
+            await router.push('/proforma-invoices/1');
         },
     ],
     render: () => ({
-        components: { InvoiceDetailPage },
-        template: '<InvoiceDetailPage />',
+        components: { ProformaInvoiceDetailPage },
+        template: '<ProformaInvoiceDetailPage />',
     }),
 };

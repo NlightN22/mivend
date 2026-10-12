@@ -345,7 +345,7 @@ export const useCartStore = defineStore('cart', () => {
         return true;
     }
 
-    // Offline payment terms (invoice / deferred) settle immediately in Vendure's
+    // Offline payment terms (proforma invoice / deferred) settle immediately in Vendure's
     // payment flow — actual money collection happens outside the system, tracked
     // via the existing ERP status sync, not via Vendure's payment state.
     // Returns the placed order's code, or null when the payment was rejected.

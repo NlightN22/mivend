@@ -2,20 +2,20 @@
 import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 
 // Quick-filter chip row — reused across manager portal pages (Dashboard, Orders, Discounts,
-// Invoices) wherever a saved/quick filter selector sits above a table, below the main filter
+// ProformaInvoices) wherever a saved/quick filter selector sits above a table, below the main filter
 // widget.
 //
 // `variant` is optional and colors the chip using the same palette as MvStatusBadge (see below)
 // — pass it whenever a chip represents the same status/state that's also shown as a colored row
 // badge in the table underneath (e.g. an Orders "Unpaid"/"Partially paid"/"Cancelled" quick
 // filter next to a Payment/Commercial-state column), reusing that column's own *_BADGE_VARIANT
-// map (api/orders.ts's ORDER_STATE_BADGE_VARIANT, api/invoices.ts's INVOICE_STATUS_BADGE_VARIANT,
+// map (api/orders.ts's ORDER_STATE_BADGE_VARIANT, api/proforma-invoices.ts's PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
 // etc.) as the single source of truth — never a second, independent color choice for the chip.
 // A variant chip carries its color *at rest*, like the badge it mirrors — selection is shown by
 // deepening that same color (darker background/border), not by switching to an unrelated color.
 // This lets a user recognize "this chip = that badge color" before ever clicking anything, and
 // matches an already-selected chip to its badge at a glance instead of requiring them to read the
-// label. Real incident this fixes: CustomerOrdersTab.vue/CustomerInvoicesTab.vue each had their
+// label. Real incident this fixes: CustomerOrdersTab.vue/CustomerProformaInvoicesTab.vue each had their
 // own bespoke `__view-chip` button + scoped CSS (itself a "never style a UI element inside a page component" violation of the
 // frontend-rules skill) that was plain white/gray at rest and only ever went green
 // on selection regardless of what the chip meant, so nothing about a chip's own color hinted at

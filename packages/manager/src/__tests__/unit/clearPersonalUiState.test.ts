@@ -29,13 +29,13 @@ describe('clearPersonalUiState', () => {
 
     it('removes every key ending with :<administratorId>, regardless of table name', () => {
         localStorageMock.setItem('customer-orders-datatable-v2:42', '{}');
-        localStorageMock.setItem('customer-invoices-datatable:42', '{}');
+        localStorageMock.setItem('customer-proforma-invoices-datatable:42', '{}');
         localStorageMock.setItem('orders-datatable:42', '{}');
 
         clearPersonalUiState('42');
 
         expect(localStorageMock.getItem('customer-orders-datatable-v2:42')).toBeNull();
-        expect(localStorageMock.getItem('customer-invoices-datatable:42')).toBeNull();
+        expect(localStorageMock.getItem('customer-proforma-invoices-datatable:42')).toBeNull();
         expect(localStorageMock.getItem('orders-datatable:42')).toBeNull();
     });
 

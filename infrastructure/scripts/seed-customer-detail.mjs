@@ -6,11 +6,11 @@
 // Idempotent: each section checks its current count for this customer/counterparty first and
 // only creates the difference up to TARGET_COUNT. Safe to re-run.
 //
-// Invoice (plugin-acquiring) is only ever materialized by the payment-method handlers'
-// createPayment (computeInvoiceSplit, in plugin-acquiring's/plugin-online-payment's own handler
+// ProformaInvoice (plugin-acquiring) is only ever materialized by the payment-method handlers'
+// createPayment (computeProformaInvoiceSplit, in plugin-acquiring's/plugin-online-payment's own handler
 // files) — there is no
-// GraphQL mutation to create one directly, by design (an Invoice must only ever come from a real
-// checkout, never be synthesized). So Orders/Invoices/Payments here are all seeded together via
+// GraphQL mutation to create one directly, by design (an ProformaInvoice must only ever come from a real
+// checkout, never be synthesized). So Orders/ProformaInvoices/Payments here are all seeded together via
 // one real shop-api checkout per order (login as the customer, add items, pay), cycling through
 // 'online-stub' (succeeded/pending) and 'offline-terms' — the same real code path a storefront
 // checkout uses. This also means a real checkout with online-stub 'succeeded' produces a real
@@ -84,14 +84,14 @@ async function shopLogin(username, password) {
 // Real end-to-end checkout — same shop-api mutations/sequence as
 // packages/e2e/storefront/orders/helpers.ts's placeTestOrder, plus a payment. `variantIds` can be
 // one or several (a multi-organization order needs 2+ variants from different organizations so
-// InvoiceService.computeSplit actually produces more than one Invoice for the order — see
-// packages/e2e/storefront/invoices/helpers.ts's pickTwoVariantsFromDifferentOrganizations).
+// ProformaInvoiceService.computeSplit actually produces more than one ProformaInvoice for the order — see
+// packages/e2e/storefront/proforma-invoices/helpers.ts's pickTwoVariantsFromDifferentOrganizations).
 // `paymentPlan` selects which payment-method handler code path to exercise (see
 // plugin-acquiring's offline-terms-handler.ts / plugin-online-payment's online-stub-handler.ts):
-// 'online-succeeded' -> Settled order, Invoice(s) 'paid', real PaymentAttempt 'success'
-// 'online-pending'   -> Authorized order, Invoice(s) 'issued', real PaymentAttempt 'pending'
-// 'online-failed'    -> Declined order, Invoice(s) stay 'pending' (never touched), PaymentAttempt 'failed'
-// 'offline-terms'    -> Authorized order, Invoice(s) 'issued', no PaymentAttempt (deferred payment)
+// 'online-succeeded' -> Settled order, ProformaInvoice(s) 'paid', real PaymentAttempt 'success'
+// 'online-pending'   -> Authorized order, ProformaInvoice(s) 'issued', real PaymentAttempt 'pending'
+// 'online-failed'    -> Declined order, ProformaInvoice(s) stay 'pending' (never touched), PaymentAttempt 'failed'
+// 'offline-terms'    -> Authorized order, ProformaInvoice(s) 'issued', no PaymentAttempt (deferred payment)
 async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminToken) {
     await shopGql(
         `mutation { transitionOrderToState(state: "AddingItems") { __typename } }`,
@@ -149,15 +149,15 @@ async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminTok
     const orderId = transition.data.transitionOrderToState.id;
 
     if (paymentPlan === 'unpaid') {
-        // Leave the order in ArrangingPayment with no payment attempt at all — no Invoice is
-        // materialized either (computeInvoiceSplit only runs inside createPayment), so this plan
+        // Leave the order in ArrangingPayment with no payment attempt at all — no ProformaInvoice is
+        // materialized either (computeProformaInvoiceSplit only runs inside createPayment), so this plan
         // exists purely to give the Orders tab an "unpaid, nothing attempted yet" row; it must
-        // not be counted toward the Invoice top-up target (see caller).
-        return { id: orderId, invoiceCount: 0 };
+        // not be counted toward the ProformaInvoice top-up target (see caller).
+        return { id: orderId, proformaInvoiceCount: 0 };
     }
 
     // Inline literal (not a $input variable) to match the exact shape
-    // packages/e2e/storefront/invoices/helpers.ts's addPaymentToOrder calls use.
+    // packages/e2e/storefront/proforma-invoices/helpers.ts's addPaymentToOrder calls use.
     const method = paymentPlan === 'offline-terms' ? 'offline-terms' : 'online-stub';
     const metadataLiteral =
         paymentPlan === 'online-pending'
@@ -189,23 +189,23 @@ async function checkoutOneOrder(customerToken, variantIds, paymentPlan, adminTok
             adminToken,
         );
     }
-    return { id: orderId, invoiceCount: variantIds.length };
+    return { id: orderId, proformaInvoiceCount: variantIds.length };
 }
 
-// Pays exactly one invoice of an already-created multi-invoice order via the real customer-facing
-// payProformaInvoice mutation (shop-api, Permission.Owner) — the direct, per-invoice equivalent of what a
-// customer does from the invoice detail page. Leaves the order's other invoice(s) at 'issued',
+// Pays exactly one proforma invoice of an already-created multi-proforma-invoice order via the real customer-facing
+// payProformaInvoice mutation (shop-api, Permission.Owner) — the direct, per-proforma-invoice equivalent of what a
+// customer does from the proforma invoice detail page. Leaves the order's other proforma invoice(s) at 'issued',
 // which is what makes the order show up as "Partially paid" (CustomerOrdersTab's real captured-vs-
-// total comparison), not just "every invoice has the same status" like a single checkout produces.
-async function payOneInvoice(customerToken, invoiceId) {
+// total comparison), not just "every proforma invoice has the same status" like a single checkout produces.
+async function payOneProformaInvoice(customerToken, proformaInvoiceId) {
     await shopGql(
-        `mutation($invoiceId: ID!) { payProformaInvoice(proformaInvoiceId: $invoiceId, status: "success", channel: "online-acquiring") { id status } }`,
-        { invoiceId },
+        `mutation($proformaInvoiceId: ID!) { payProformaInvoice(proformaInvoiceId: $proformaInvoiceId, status: "success", channel: "online-acquiring") { id status } }`,
+        { proformaInvoiceId },
         customerToken,
     );
 }
 
-async function topUpOrdersInvoicesAndPayments(
+async function topUpOrdersProformaInvoicesAndPayments(
     directorToken,
     counterpartyId,
     variantIds,
@@ -221,7 +221,7 @@ async function topUpOrdersInvoicesAndPayments(
     const currentCount = existing.data.visibleProformaInvoices.totalItems;
     const toCreate = Math.max(0, TARGET_COUNT - currentCount);
     console.log(
-        `Invoices: ${currentCount} existing for counterparty ${counterpartyId}, checking out orders for ${toCreate} more...`,
+        `ProformaInvoices: ${currentCount} existing for counterparty ${counterpartyId}, checking out orders for ${toCreate} more...`,
     );
 
     const customerToken = await shopLogin(CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
@@ -230,7 +230,7 @@ async function topUpOrdersInvoicesAndPayments(
         // Cycle index starts at currentCount, not 0 — otherwise every incremental top-up run
         // (currentCount rising a little at a time across reruns) always starts the plans cycle
         // over from 'online-succeeded' and never reaches the later plans (real incident: several
-        // small top-up runs in a row never produced a single 'online-failed'/pending-Invoice
+        // small top-up runs in a row never produced a single 'online-failed'/pending-ProformaInvoice
         // example because toCreate was never large enough in one run to loop that far).
         const plans = [
             'online-succeeded',
@@ -245,13 +245,13 @@ async function topUpOrdersInvoicesAndPayments(
             const variantId = variantIds[i % variantIds.length];
             const plan = plans[i % plans.length];
             const result = await checkoutOneOrder(customerToken, [variantId], plan, directorToken);
-            created += result.invoiceCount;
+            created += result.proformaInvoiceCount;
             i++;
         }
     }
 
     // A handful of genuinely unpaid orders (no payment attempted at all) and multi-organization
-    // partially-paid orders — small fixed targets, checked independently of the invoice count
+    // partially-paid orders — small fixed targets, checked independently of the proforma invoice count
     // above so they don't get skipped once that target is already met.
     const orgIds = Object.keys(variantsByOrg);
     if (orgIds.length >= 2) {
@@ -277,14 +277,16 @@ async function topUpOrdersInvoicesAndPayments(
                 [variantA, variantB],
                 'offline-terms',
             );
-            const invoicesRes = await adminGql(
+            const proformaInvoicesRes = await adminGql(
                 `query($orderId: ID!) { proformaInvoicesForOrder(orderId: $orderId) { id } }`,
                 { orderId: result.id },
                 directorToken,
             );
-            const invoiceIds = invoicesRes.data.proformaInvoicesForOrder.map(inv => inv.id);
-            if (invoiceIds.length >= 2) {
-                await payOneInvoice(customerToken, invoiceIds[0]);
+            const proformaInvoiceIds = proformaInvoicesRes.data.proformaInvoicesForOrder.map(
+                inv => inv.id,
+            );
+            if (proformaInvoiceIds.length >= 2) {
+                await payOneProformaInvoice(customerToken, proformaInvoiceIds[0]);
             }
         }
     }
@@ -515,7 +517,7 @@ async function topUpErpCancelledOrders(customerToken, directorToken, variantIds)
         // active order* — confirmed live via `activeOrder` on a fresh shop-api login — which
         // silently blocked every subsequent checkoutOneOrder call in this script from ever
         // creating a genuinely new order again (every later "checking out orders for N more" loop
-        // just kept reusing/re-editing this same order, and the real invoice/order counts never
+        // just kept reusing/re-editing this same order, and the real proforma-invoice/order counts never
         // progressed past whatever they were before this ran). Real ERP order closure should also
         // close out the Vendure order, not just leave a dangling customFields flag — cancel it for
         // real so the customer's active-order slot frees up.
@@ -631,7 +633,7 @@ async function checkoutOneOrderAsAdmin(adminToken, customerId, variantIds) {
 // (checkoutOneOrder, shop-api) and a few different staff members placing orders on the
 // customer's behalf (checkoutOneOrderAsAdmin, admin-api draft orders) — plus line-count variety
 // (1-3 items) on the admin-placed batch, since checkoutOneOrder elsewhere is mostly called with a
-// single variantId. Small fixed target, independent of the Invoice top-up target above, so it
+// single variantId. Small fixed target, independent of the ProformaInvoice top-up target above, so it
 // isn't skipped once that target is already met.
 async function topUpAdminPlacedOrders(customerId, variantIds) {
     const target = 4;
@@ -1040,7 +1042,7 @@ async function main() {
         throw new Error(`Counterparty ${COUNTERPARTY_ERP_ID} not found — run \`make seed\` first.`);
     const tradingPointIds = targetCounterparty.tradingPoints.map(tp => tp.id);
 
-    await topUpOrdersInvoicesAndPayments(
+    await topUpOrdersProformaInvoicesAndPayments(
         directorToken,
         targetCounterparty.id,
         variantIds,

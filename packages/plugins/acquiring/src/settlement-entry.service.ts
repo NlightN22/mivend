@@ -39,7 +39,7 @@ export class SettlementEntryService {
             throw new Error(
                 `PaymentAttempt ${paymentAttempt.id} has no proformaInvoiceId — cannot resolve which ` +
                     'counterparty/organization to allocate against (lump payments with no ' +
-                    'invoice reference are not wired yet, see docs/payments.md)',
+                    'proforma invoice reference are not wired yet, see docs/payments.md)',
             );
         }
         const targetProformaInvoice = await this.proformaInvoiceService.findOne(

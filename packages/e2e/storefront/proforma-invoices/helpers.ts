@@ -12,7 +12,7 @@ interface InStockVariant {
     organizationId: number | null;
 }
 
-export interface InvoiceSummary {
+export interface ProformaInvoiceSummary {
     id: string;
     uuid: string;
     number: string;
@@ -25,7 +25,7 @@ export interface InvoiceSummary {
 
 // Picks two in-stock variants whose products were assigned to two *different* organizations
 // (global-setup.ts round-robins organizationId across seed fixtures) — this is what actually
-// forces InvoiceService.computeSplit to produce more than one Invoice for a single order.
+// forces ProformaInvoiceService.computeSplit to produce more than one ProformaInvoice for a single order.
 export async function pickTwoVariantsFromDifferentOrganizations(
     page: Page,
 ): Promise<[string, string]> {
@@ -71,7 +71,7 @@ export async function pickTwoVariantsFromDifferentOrganizations(
     if (byOrg.size < 2) {
         throw new Error(
             `Only found variants from ${byOrg.size} distinct organization(s) among ${variants.length} ` +
-                'in-stock candidates — cannot exercise a multi-invoice split. Seed more products/organizations.',
+                'in-stock candidates — cannot exercise a multi-proforma-invoice split. Seed more products/organizations.',
         );
     }
     const [first, second] = [...byOrg.values()];
@@ -96,7 +96,7 @@ export async function buildOrderAcrossOrganizations(page: Page): Promise<[string
     await gql(
         page,
         `mutation { setOrderShippingAddress(input: {
-            fullName: "E2E Invoice Test", streetLine1: "Test Street 1", city: "Test City", countryCode: "RU"
+            fullName: "E2E ProformaInvoice Test", streetLine1: "Test Street 1", city: "Test City", countryCode: "RU"
         }) { __typename } }`,
     );
 
@@ -116,25 +116,28 @@ export async function buildOrderAcrossOrganizations(page: Page): Promise<[string
     return [variantA, variantB];
 }
 
-export async function myInvoicesForOrder(page: Page, orderCode: string): Promise<InvoiceSummary[]> {
+export async function myProformaInvoicesForOrder(
+    page: Page,
+    orderCode: string,
+): Promise<ProformaInvoiceSummary[]> {
     const result = await gql(
         page,
         `query { myProformaInvoices(options: { take: 50 }) { items { id uuid number status organizationId amount currencyCode order { code } } } }`,
     );
-    const items = (result.myProformaInvoices as { items: InvoiceSummary[] }).items;
+    const items = (result.myProformaInvoices as { items: ProformaInvoiceSummary[] }).items;
     return items.filter(i => i.order.code === orderCode);
 }
 
 export async function payProformaInvoice(
     page: Page,
-    invoiceId: string,
+    proformaInvoiceId: string,
     status: 'success' | 'pending' | 'fail' | 'cancel',
     channel?: 'online-acquiring' | 'branch-kassa' | 'bank-transfer-erp',
 ): Promise<{ id: string; status: string }> {
     const result = await gql(
         page,
-        `mutation($invoiceId: ID!, $status: String!, $channel: String) { payProformaInvoice(proformaInvoiceId: $invoiceId, status: $status, channel: $channel) { id status } }`,
-        { invoiceId, status, channel },
+        `mutation($proformaInvoiceId: ID!, $status: String!, $channel: String) { payProformaInvoice(proformaInvoiceId: $proformaInvoiceId, status: $status, channel: $channel) { id status } }`,
+        { proformaInvoiceId, status, channel },
     );
     return result.payProformaInvoice as { id: string; status: string };
 }
@@ -147,11 +150,11 @@ export async function myAdvanceBalance(
 }
 
 // The dev database is shared across test runs (no per-test DB reset), so "nothing else open"
-// scenarios need a real clean slate rather than an assumption. Pays each invoice against
-// *itself* (payProformaInvoice always uses the target invoice's own amount) — this always fully covers
-// that invoice with zero remainder, so a single pass over every currently-open invoice reliably
+// scenarios need a real clean slate rather than an assumption. Pays each proforma invoice against
+// *itself* (payProformaInvoice always uses the target proforma invoice's own amount) — this always fully covers
+// that proforma invoice with zero remainder, so a single pass over every currently-open proforma invoice reliably
 // clears all of them; no partial-coverage/overflow can occur from a self-payment.
-export async function payAllOpenInvoices(page: Page): Promise<void> {
+export async function payAllOpenProformaInvoices(page: Page): Promise<void> {
     const result = await gql(
         page,
         `query { myProformaInvoices(options: { take: 5000 }) { items { id status } } }`,
@@ -160,11 +163,13 @@ export async function payAllOpenInvoices(page: Page): Promise<void> {
         result.myProformaInvoices as { items: { id: string; status: string }[] }
     ).items.filter(inv => inv.status === 'pending' || inv.status === 'issued');
     // Run with bounded concurrency rather than one request at a time — this dev DB accumulates
-    // invoices across an entire long-running test session (thousands by now), and a fully
+    // proforma invoices across an entire long-running test session (thousands by now), and a fully
     // sequential drain here was timing out tests that need a genuine clean slate.
     const CONCURRENCY = 10;
     for (let i = 0; i < open.length; i += CONCURRENCY) {
         const batch = open.slice(i, i + CONCURRENCY);
-        await Promise.all(batch.map(invoice => payProformaInvoice(page, invoice.id, 'success')));
+        await Promise.all(
+            batch.map(proformaInvoice => payProformaInvoice(page, proformaInvoice.id, 'success')),
+        );
     }
 }

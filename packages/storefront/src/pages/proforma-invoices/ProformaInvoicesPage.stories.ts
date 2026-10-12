@@ -2,16 +2,16 @@ import type { Meta, StoryObj } from '@storybook/vue3';
 import { router } from '../../router';
 import { registerMock } from '../../../.storybook/graphql-mock-registry';
 import { registerDefaultMocks } from '../../../.storybook/default-mocks';
-import InvoicesPage from './InvoicesPage.vue';
+import ProformaInvoicesPage from './ProformaInvoicesPage.vue';
 
-const meta: Meta<typeof InvoicesPage> = {
-    title: 'Pages/Invoices/InvoicesPage',
-    component: InvoicesPage,
+const meta: Meta<typeof ProformaInvoicesPage> = {
+    title: 'Pages/ProformaInvoices/ProformaInvoicesPage',
+    component: ProformaInvoicesPage,
     tags: ['autodocs'],
 };
 
 export default meta;
-type Story = StoryObj<typeof InvoicesPage>;
+type Story = StoryObj<typeof ProformaInvoicesPage>;
 
 export const Default: Story = {
     loaders: [
@@ -44,12 +44,12 @@ export const Default: Story = {
                     totalItems: 2,
                 },
             }));
-            await router.push('/invoices');
+            await router.push('/proforma-invoices');
         },
     ],
     render: () => ({
-        components: { InvoicesPage },
-        template: '<InvoicesPage />',
+        components: { ProformaInvoicesPage },
+        template: '<ProformaInvoicesPage />',
     }),
 };
 
@@ -60,11 +60,11 @@ export const Empty: Story = {
             registerMock('MyProformaInvoices', () => ({
                 myProformaInvoices: { items: [], totalItems: 0 },
             }));
-            await router.push('/invoices');
+            await router.push('/proforma-invoices');
         },
     ],
     render: () => ({
-        components: { InvoicesPage },
-        template: '<InvoicesPage />',
+        components: { ProformaInvoicesPage },
+        template: '<ProformaInvoicesPage />',
     }),
 };

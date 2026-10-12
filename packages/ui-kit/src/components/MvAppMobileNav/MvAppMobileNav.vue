@@ -29,7 +29,7 @@ function isActive(item: AppMobileNavItem, activePath: string): boolean {
 }
 
 // "More" groups every page that has no dedicated bottom-bar slot (Discounts/Team/Settings/
-// Catalog/Invoices/Payments, per MvAppMobileMoreSheet's item list). Without this, visiting any
+// Catalog/ProformaInvoices/Payments, per MvAppMobileMoreSheet's item list). Without this, visiting any
 // of those pages leaves no tab highlighted at all — the user loses "where am I right now",
 // which is the whole point of a bottom nav (Material Design: exactly one destination active).
 const isMoreActive = computed(

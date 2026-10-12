@@ -10,7 +10,7 @@ import {
 
 import { ReservationReconciliationIssueService } from '../../reservation-reconciliation-issue.service';
 
-// Same approach as plugin-acquiring's invoice.service.int.test.ts: ReservationReconciliationIssue
+// Same approach as plugin-acquiring's proforma invoice.service.int.test.ts: ReservationReconciliationIssue
 // extends VendureEntity, which needs a bootstrapped EntityIdStrategy — mirror the production
 // table with a standalone TypeORM entity against real Postgres instead of using the real class.
 @Entity('reservation_reconciliation_issue')

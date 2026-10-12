@@ -12,27 +12,27 @@ import {
     type StatusBadgeVariant,
 } from '@mivend/ui-kit';
 import {
-    INVOICE_STATUS_OPTIONS,
-    INVOICE_STATUS_BADGE_VARIANT,
-    type InvoiceListItem,
-} from '../../api/invoices';
+    PROFORMA_INVOICE_STATUS_OPTIONS,
+    PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
+    type ProformaInvoiceListItem,
+} from '../../api/proforma-invoices';
 
 // Second real consumer of @mivend/ui-kit's MvAdvancedDataTable (the standard table for the
 // manager portal — see CustomerOrdersDataTable.vue, the first one, for the fuller feature set).
 // Renders both desktop and MvAdvancedDataTable's own built-in mobile card view (see
-// MvAdvancedMobileCardList.vue) — CustomerInvoicesTab.vue no longer needs its own isMobile branch.
+// MvAdvancedMobileCardList.vue) — CustomerProformaInvoicesTab.vue no longer needs its own isMobile branch.
 //
-// The base/required column (`number`, "Invoice #") gets both a toolbar search box and its own
+// The base/required column (`number`, "ProformaInvoice #") gets both a toolbar search box and its own
 // funnel filter, same as Orders' `code` column — per the manager-portal-rules skill, every
 // table's toolbar search defaults to the base column, backed by a real server-side filter
-// (`ProformaInvoiceListOptions.search`, a substring match against Invoice.number — this invoice's own
+// (`ProformaInvoiceListOptions.search`, a substring match against ProformaInvoice.number — this proforma invoice's own
 // generated business number, distinct from the order's own `code`, see that column's own doc
 // comment in plugin-acquiring). `amount`/`order` still have no filter: the backend genuinely
 // doesn't support filtering by either yet, and adding filter UI with nothing behind it would
 // mislead a user into thinking it does something.
-// No `sortField` on any column — there's no server-side sort at all for invoices.
+// No `sortField` on any column — there's no server-side sort at all for proforma invoices.
 const props = defineProps<{
-    invoices: InvoiceListItem[];
+    proformaInvoices: ProformaInvoiceListItem[];
     loading: boolean;
     totalItems: number;
     page: number;
@@ -67,10 +67,10 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         filterConfig: {
             type: 'status',
             placeholder: 'All statuses',
-            options: INVOICE_STATUS_OPTIONS.filter(o => o.value).map(o => ({
+            options: PROFORMA_INVOICE_STATUS_OPTIONS.filter(o => o.value).map(o => ({
                 value: o.value,
                 label: o.label,
-                variant: INVOICE_STATUS_BADGE_VARIANT[o.value] ?? 'neutral',
+                variant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT[o.value] ?? 'neutral',
             })),
         },
         mobile: { badge: true },
@@ -79,15 +79,15 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     { field: 'order', header: 'Order', width: 120, filterConfig: { type: 'none' } },
 ];
 
-interface InvoiceFilterState {
+interface ProformaInvoiceFilterState {
     [key: string]: unknown;
     status: string;
     number: string;
 }
-const BLANK_FILTERS: InvoiceFilterState = { status: '', number: '' };
+const BLANK_FILTERS: ProformaInvoiceFilterState = { status: '', number: '' };
 
-const { state: tableState } = useDataTableState<InvoiceFilterState>(
-    `customer-invoices-datatable:${props.administratorId || 'anonymous'}`,
+const { state: tableState } = useDataTableState<ProformaInvoiceFilterState>(
+    `customer-proforma-invoices-datatable:${props.administratorId || 'anonymous'}`,
     {
         columnOrder: ALL_COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
@@ -150,7 +150,7 @@ function money(item: { amount: number; currencyCode: string }): string {
     }).format(item.amount / 100);
 }
 
-interface InvoiceRow {
+interface ProformaInvoiceRow {
     [key: string]: unknown;
     id: string;
     number: string;
@@ -160,21 +160,21 @@ interface InvoiceRow {
     amount: string;
     orderCode: string;
 }
-const rows = computed<InvoiceRow[]>(() =>
-    props.invoices.map(invoice => ({
-        id: invoice.id,
-        number: invoice.number,
-        createdAt: invoice.createdAt,
-        status: invoice.status,
-        statusVariant: INVOICE_STATUS_BADGE_VARIANT[invoice.status] ?? 'neutral',
-        amount: money(invoice),
-        orderCode: invoice.order.code,
+const rows = computed<ProformaInvoiceRow[]>(() =>
+    props.proformaInvoices.map(proformaInvoice => ({
+        id: proformaInvoice.id,
+        number: proformaInvoice.number,
+        createdAt: proformaInvoice.createdAt,
+        status: proformaInvoice.status,
+        statusVariant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT[proformaInvoice.status] ?? 'neutral',
+        amount: money(proformaInvoice),
+        orderCode: proformaInvoice.order.code,
     })),
 );
 
-// No dedicated invoice-detail page exists yet — clicking a row goes to the underlying order,
-// same as InvoicesTable.vue's existing (non-compact) behavior.
-function onRowClick(event: AdvancedDataTableRowClickPayload<InvoiceRow>): void {
+// No dedicated proforma-invoice-detail page exists yet — clicking a row goes to the underlying order,
+// same as ProformaInvoicesTable.vue's existing (non-compact) behavior.
+function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>): void {
     router.push(`/orders/${event.row.orderCode}`);
 }
 </script>
@@ -205,18 +205,18 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<InvoiceRow>): void {
         </template>
 
         <template #cell-createdAt="{ data }">
-            <MvDateTimeCell :value="(data as InvoiceRow).createdAt" />
+            <MvDateTimeCell :value="(data as ProformaInvoiceRow).createdAt" />
         </template>
         <template #cell-status="{ data }">
-            <MvStatusBadge :variant="(data as InvoiceRow).statusVariant">{{
-                (data as InvoiceRow).status
+            <MvStatusBadge :variant="(data as ProformaInvoiceRow).statusVariant">{{
+                (data as ProformaInvoiceRow).status
             }}</MvStatusBadge>
         </template>
         <template #cell-number="{ data }">{{
-            formatDocumentNumber((data as InvoiceRow).number)
+            formatDocumentNumber((data as ProformaInvoiceRow).number)
         }}</template>
         <template #cell-order="{ data }">{{
-            formatDocumentNumber((data as InvoiceRow).orderCode)
+            formatDocumentNumber((data as ProformaInvoiceRow).orderCode)
         }}</template>
     </MvAdvancedDataTable>
 </template>

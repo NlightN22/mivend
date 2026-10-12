@@ -2,18 +2,18 @@ import type { Meta, StoryObj } from '@storybook/vue3';
 import { router } from '../../router';
 import { registerMock } from '../../../.storybook/graphql-mock-registry';
 import { paginate } from '../../../.storybook/mock-list-utils';
-import InvoicesPage from './InvoicesPage.vue';
+import ProformaInvoicesPage from './ProformaInvoicesPage.vue';
 
-const meta: Meta<typeof InvoicesPage> = {
-    title: 'Pages/Invoices/InvoicesPage',
-    component: InvoicesPage,
+const meta: Meta<typeof ProformaInvoicesPage> = {
+    title: 'Pages/ProformaInvoices/ProformaInvoicesPage',
+    component: ProformaInvoicesPage,
     tags: ['autodocs'],
 };
 
 export default meta;
-type Story = StoryObj<typeof InvoicesPage>;
+type Story = StoryObj<typeof ProformaInvoicesPage>;
 
-const INVOICES = [
+const PROFORMA_INVOICES = [
     {
         id: '1',
         orderId: '1',
@@ -70,14 +70,14 @@ const INVOICES = [
     },
 ];
 
-interface InvoicesPageVariables {
+interface ProformaInvoicesPageVariables {
     options?: { skip?: number; take?: number; status?: string };
     counterpartyId?: string;
 }
 
-function mockInvoicesData(): void {
-    registerMock('InvoicesPage', (variables: InvoicesPageVariables) => {
-        let filtered = INVOICES;
+function mockProformaInvoicesData(): void {
+    registerMock('ProformaInvoicesPage', (variables: ProformaInvoicesPageVariables) => {
+        let filtered = PROFORMA_INVOICES;
         if (variables.options?.status) {
             filtered = filtered.filter(i => i.status === variables.options!.status);
         }
@@ -91,27 +91,27 @@ function mockInvoicesData(): void {
 export const Default: Story = {
     loaders: [
         async () => {
-            mockInvoicesData();
-            await router.push('/invoices');
+            mockProformaInvoicesData();
+            await router.push('/proforma-invoices');
         },
     ],
     render: () => ({
-        components: { InvoicesPage },
-        template: '<InvoicesPage />',
+        components: { ProformaInvoicesPage },
+        template: '<ProformaInvoicesPage />',
     }),
 };
 
 export const Empty: Story = {
     loaders: [
         async () => {
-            registerMock('InvoicesPage', () => ({
+            registerMock('ProformaInvoicesPage', () => ({
                 visibleProformaInvoices: { items: [], totalItems: 0 },
             }));
-            await router.push('/invoices');
+            await router.push('/proforma-invoices');
         },
     ],
     render: () => ({
-        components: { InvoicesPage },
-        template: '<InvoicesPage />',
+        components: { ProformaInvoicesPage },
+        template: '<ProformaInvoicesPage />',
     }),
 };

@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { useFavoritesStore } from '../../stores/favorites';
 import { useDocuments } from '../documents/useDocuments';
-import { useInvoices } from '../invoices/useInvoices';
+import { useProformaInvoices } from '../proforma-invoices/useProformaInvoices';
 import { useOrders } from '../orders/useOrders';
 import { usePayments } from '../payments/usePayments';
 import { useCompanyName } from './useCompanyName';
@@ -23,7 +23,7 @@ watch(
     },
 );
 
-const { totalItems: invoiceCount, load: loadInvoices } = useInvoices();
+const { totalItems: proformaInvoiceCount, load: loadProformaInvoices } = useProformaInvoices();
 const { totalItems: paymentCount, load: loadPayments } = usePayments();
 const { totalItems: orderCount, load: loadOrders } = useOrders();
 const { totalItems: documentCount, load: loadDocuments } = useDocuments();
@@ -35,7 +35,7 @@ onMounted(() => {
     void loadOrders({ take: 1, skip: 0 });
     void loadDocuments({ take: 1, skip: 0 });
     void loadPoints();
-    void loadInvoices({ take: 1, skip: 0 });
+    void loadProformaInvoices({ take: 1, skip: 0 });
     void loadPayments({ take: 1, skip: 0 });
 });
 
@@ -97,13 +97,13 @@ const isActive = (path: string) => route.path === path;
                     }}</span>
                 </RouterLink>
                 <RouterLink
-                    to="/invoices"
+                    to="/proforma-invoices"
                     class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/invoices') }"
+                    :class="{ 'account-sidebar__link--active': isActive('/proforma-invoices') }"
                 >
                     <span>Proforma invoices</span
-                    ><span v-if="invoiceCount > 0" class="account-sidebar__count">{{
-                        invoiceCount
+                    ><span v-if="proformaInvoiceCount > 0" class="account-sidebar__count">{{
+                        proformaInvoiceCount
                     }}</span>
                 </RouterLink>
                 <RouterLink

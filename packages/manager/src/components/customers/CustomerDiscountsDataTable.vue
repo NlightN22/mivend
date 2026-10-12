@@ -177,7 +177,7 @@ const rows = computed<DiscountRow[]>(() =>
     >
         <template #toolbar-start>
             <!-- Reserved slot for CustomerDiscountsTab.vue's quick-filter view chips — same shape
-                 as CustomerOrdersDataTable.vue/CustomerInvoicesDataTable.vue. -->
+                 as CustomerOrdersDataTable.vue/CustomerProformaInvoicesDataTable.vue. -->
             <slot name="view-chips" />
         </template>
         <template #toolbar-end>

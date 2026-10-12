@@ -136,7 +136,7 @@ watch([statusFilter, searchFilter, pageSize], () => {
     page.value = 1;
 });
 // useLatestRequest has no built-in error channel (see its own source) — every other table in
-// the manager portal shares this same gap (CustomerInvoicesTab.vue etc. all call `void load()`
+// the manager portal shares this same gap (CustomerProformaInvoicesTab.vue etc. all call `void load()`
 // too), pre-existing and out of scope to fix broadly here; this page wraps its own calls so a
 // failed fetch is at least visible instead of leaving the table stuck on stale/empty data with
 // no explanation.

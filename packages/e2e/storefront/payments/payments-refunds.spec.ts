@@ -3,13 +3,13 @@ import { gql } from '../orders/helpers';
 import { adminGql } from '../../helpers/api';
 import {
     buildOrderAcrossOrganizations,
-    myInvoicesForOrder,
+    myProformaInvoicesForOrder,
     payProformaInvoice,
-} from '../invoices/helpers';
+} from '../proforma-invoices/helpers';
 
 async function buildCapturedOnlinePayment(
     page: Page,
-): Promise<{ paymentId: string; invoiceId: string }> {
+): Promise<{ paymentId: string; proformaInvoiceId: string }> {
     await buildOrderAcrossOrganizations(page);
     const orderData = await gql(page, `query { activeOrder { code } }`);
     const orderCode = (orderData.activeOrder as { code: string }).code;
@@ -17,8 +17,8 @@ async function buildCapturedOnlinePayment(
         page,
         `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename } }`,
     );
-    const [invoice] = await myInvoicesForOrder(page, orderCode);
-    await payProformaInvoice(page, invoice.id, 'success', 'online-acquiring');
+    const [proformaInvoice] = await myProformaInvoicesForOrder(page, orderCode);
+    await payProformaInvoice(page, proformaInvoice.id, 'success', 'online-acquiring');
 
     const result = await gql(
         page,
@@ -27,9 +27,9 @@ async function buildCapturedOnlinePayment(
     const items = (
         result.myPayments as { items: { id: string; proformaInvoiceId: string | null }[] }
     ).items;
-    const match = items.find(i => i.proformaInvoiceId === invoice.id);
-    if (!match) throw new Error(`No payment found for proforma invoice ${invoice.id}`);
-    return { paymentId: match.id, invoiceId: invoice.id };
+    const match = items.find(i => i.proformaInvoiceId === proformaInvoice.id);
+    if (!match) throw new Error(`No payment found for proforma invoice ${proformaInvoice.id}`);
+    return { paymentId: match.id, proformaInvoiceId: proformaInvoice.id };
 }
 
 async function adminToken(): Promise<string> {
@@ -113,8 +113,8 @@ test.describe('Payment detail page — refunds and disputes', () => {
             page,
             `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename } }`,
         );
-        const [invoice] = await myInvoicesForOrder(page, orderCode);
-        await payProformaInvoice(page, invoice.id, 'success', 'bank-transfer-erp');
+        const [proformaInvoice] = await myProformaInvoicesForOrder(page, orderCode);
+        await payProformaInvoice(page, proformaInvoice.id, 'success', 'bank-transfer-erp');
 
         const result = await gql(
             page,
@@ -123,8 +123,8 @@ test.describe('Payment detail page — refunds and disputes', () => {
         const items = (
             result.myPayments as { items: { id: string; proformaInvoiceId: string | null }[] }
         ).items;
-        const match = items.find(i => i.proformaInvoiceId === invoice.id);
-        if (!match) throw new Error(`No payment found for proforma invoice ${invoice.id}`);
+        const match = items.find(i => i.proformaInvoiceId === proformaInvoice.id);
+        if (!match) throw new Error(`No payment found for proforma invoice ${proformaInvoice.id}`);
 
         await page.goto(`/payments/${match.id}`);
         await page.waitForLoadState('domcontentloaded');
@@ -152,8 +152,8 @@ test.describe('Payment detail page — refunds and disputes', () => {
             page,
             `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename } }`,
         );
-        const [invoice] = await myInvoicesForOrder(page, orderCode);
-        await payProformaInvoice(page, invoice.id, 'success', 'branch-kassa');
+        const [proformaInvoice] = await myProformaInvoicesForOrder(page, orderCode);
+        await payProformaInvoice(page, proformaInvoice.id, 'success', 'branch-kassa');
 
         const result = await gql(
             page,
@@ -162,14 +162,14 @@ test.describe('Payment detail page — refunds and disputes', () => {
         const items = (
             result.myPayments as { items: { id: string; proformaInvoiceId: string | null }[] }
         ).items;
-        const match = items.find(i => i.proformaInvoiceId === invoice.id);
-        if (!match) throw new Error(`No payment found for proforma invoice ${invoice.id}`);
+        const match = items.find(i => i.proformaInvoiceId === proformaInvoice.id);
+        if (!match) throw new Error(`No payment found for proforma invoice ${proformaInvoice.id}`);
 
         await page.goto(`/payments/${match.id}`);
         await page.waitForLoadState('domcontentloaded');
         const row = page.locator('.pd-detail-row', { hasText: 'External reference' });
         await expect(row).toBeVisible({ timeout: 10000 });
         await expect(row).not.toContainText('—');
-        await expect(row).toContainText(`STUB-branch-kassa-${invoice.id}`);
+        await expect(row).toContainText(`STUB-branch-kassa-${proformaInvoice.id}`);
     });
 });

@@ -14,7 +14,7 @@ import {
 } from '../../api/payments';
 
 // Server-side paginated + filtered (the backend-plugin-rules skill's "Pagination" rule) — same shape as
-// CustomerInvoicesTab.vue. CustomerPaymentsDataTable (built on @mivend/ui-kit's
+// CustomerProformaInvoicesTab.vue. CustomerPaymentsDataTable (built on @mivend/ui-kit's
 // MvAdvancedDataTable) renders both desktop and its own built-in mobile card view — no separate
 // isMobile branch (or the old PaymentsFilterBar/PaymentsTable mobile fallback) needed here
 // anymore (see MvAdvancedMobileCardList.vue in @mivend/ui-kit).
@@ -29,7 +29,7 @@ const payments = ref<PaymentListItem[]>([]);
 
 // Single source of truth for each filter — this ref *is* tableState.filters.status/channel
 // inside CustomerPaymentsDataTable, kept in sync via :status-filter/:channel-filter prop down /
-// @update:filters emit up (same wiring as CustomerInvoicesTab.vue's statusFilter/searchFilter).
+// @update:filters emit up (same wiring as CustomerProformaInvoicesTab.vue's statusFilter/searchFilter).
 const statusFilter = ref('');
 const channelFilter = ref('');
 const searchFilter = ref('');
@@ -61,7 +61,7 @@ const viewChips = computed<FilterChip[]>(() =>
     })),
 );
 // Single source of truth for the active view: this ref *is* the `status` filter value, same
-// wiring as CustomerInvoicesTab.vue's activeView.
+// wiring as CustomerProformaInvoicesTab.vue's activeView.
 const activeView = computed<ViewKey>({
     get: () => (statusFilter.value || 'all') as ViewKey,
     set: view => {

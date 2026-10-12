@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
 // page it was originally diagnosed on.
 const PAGES = [
     '/orders',
-    '/invoices',
+    '/proforma-invoices',
     '/payments',
     '/discounts',
     '/customers',

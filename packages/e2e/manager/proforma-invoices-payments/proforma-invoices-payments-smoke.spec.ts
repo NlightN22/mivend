@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('proforma invoices page loads and shows rows for an all-scope account', async ({ page }) => {
-    await page.goto('/invoices');
+    await page.goto('/proforma-invoices');
     await expect(page.getByRole('heading', { name: 'Proforma invoices', exact: true })).toBeVisible(
         {
             timeout: 15000,
@@ -25,6 +25,6 @@ test('customer detail proforma invoices tab shows a "View all" link that pre-fil
     await page.getByRole('button', { name: 'Proforma invoices' }).click();
     await page.getByRole('button', { name: 'View all proforma invoices' }).click();
 
-    await expect(page).toHaveURL(/\/invoices\?counterpartyId=2/);
+    await expect(page).toHaveURL(/\/proforma-invoices\?counterpartyId=2/);
     await expect(page.getByText('Filtered to one customer')).toBeVisible({ timeout: 15000 });
 });

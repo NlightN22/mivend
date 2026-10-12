@@ -46,9 +46,9 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
-                    path: 'invoices',
-                    name: 'invoices',
-                    component: () => import('../pages/invoices/InvoicesPage.vue'),
+                    path: 'proforma-invoices',
+                    name: 'proformaInvoices',
+                    component: () => import('../pages/proforma-invoices/ProformaInvoicesPage.vue'),
                     meta: { requiresAuth: true },
                 },
                 {

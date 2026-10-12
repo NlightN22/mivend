@@ -20,7 +20,7 @@ const PAYMENTS = [
         paymentStatus: 'captured',
         amount: 450000,
         currencyCode: 'RUB',
-        invoiceId: '1',
+        proformaInvoiceId: '1',
         counterpartyId: '1',
     },
     {
@@ -29,7 +29,7 @@ const PAYMENTS = [
         paymentStatus: 'pending',
         amount: 129000,
         currencyCode: 'RUB',
-        invoiceId: '2',
+        proformaInvoiceId: '2',
         counterpartyId: '2',
     },
     {
@@ -38,7 +38,7 @@ const PAYMENTS = [
         paymentStatus: 'failed',
         amount: 78000,
         currencyCode: 'RUB',
-        invoiceId: '3',
+        proformaInvoiceId: '3',
         counterpartyId: '1',
     },
     {
@@ -47,7 +47,7 @@ const PAYMENTS = [
         paymentStatus: 'captured',
         amount: 315000,
         currencyCode: 'RUB',
-        invoiceId: '4',
+        proformaInvoiceId: '4',
         counterpartyId: '3',
     },
     {
@@ -56,7 +56,7 @@ const PAYMENTS = [
         paymentStatus: 'captured',
         amount: 54000,
         currencyCode: 'RUB',
-        invoiceId: '5',
+        proformaInvoiceId: '5',
         counterpartyId: '2',
     },
     {
@@ -65,7 +65,7 @@ const PAYMENTS = [
         paymentStatus: 'refunded',
         amount: 96000,
         currencyCode: 'RUB',
-        invoiceId: '6',
+        proformaInvoiceId: '6',
         counterpartyId: '3',
     },
 ];

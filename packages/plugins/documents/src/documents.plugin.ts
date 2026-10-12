@@ -35,7 +35,7 @@ import { PdfGeneratorService } from './pdf/pdf-generator.service';
 // to `PaymentSettled` and are excluded here — only offline-terms orders need an
 // proforma invoice document generated automatically.
 const OFFLINE_TERMS_METHOD = 'offline-terms';
-const INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
+const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
 
 @VendurePlugin({
     imports: [PluginCommonModule, CounterpartyPlugin, AccessControlPlugin, AcquiringPlugin],
@@ -66,7 +66,7 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
             this.eventBus,
             OrderStateTransitionEvent,
             async event => {
-                if (event.toState !== INVOICE_TRIGGER_STATE) return;
+                if (event.toState !== PROFORMA_INVOICE_TRIGGER_STATE) return;
                 await this.onOfflineTermsPaymentAuthorized(event);
             },
             loggerCtx,

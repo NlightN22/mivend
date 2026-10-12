@@ -122,7 +122,7 @@ describe('RoleScopeConfigService', () => {
 
         it('reports a role as not missing when its stored config exactly matches DEFAULT_ROLES', async () => {
             repo.find.mockResolvedValue([
-                scopeRow('manager', { counterparty: 'own', order: 'own', invoice: 'own' }),
+                scopeRow('manager', { counterparty: 'own', order: 'own', proformaInvoice: 'own' }),
             ]);
             const status = await service.getProvisioningStatus(ctx);
             const manager = status.find(item => item.roleCode === 'manager');
@@ -131,7 +131,7 @@ describe('RoleScopeConfigService', () => {
 
         it('reports a role as missing when its stored config has drifted from DEFAULT_ROLES', async () => {
             repo.find.mockResolvedValue([
-                scopeRow('manager', { counterparty: 'all', order: 'own', invoice: 'own' }),
+                scopeRow('manager', { counterparty: 'all', order: 'own', proformaInvoice: 'own' }),
             ]);
             const status = await service.getProvisioningStatus(ctx);
             const manager = status.find(item => item.roleCode === 'manager');

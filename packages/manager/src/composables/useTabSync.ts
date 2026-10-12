@@ -43,8 +43,8 @@ export function useTabSync<T extends string>(
     // disjoint set of keys via its own useUrlSyncedState call (see CustomerOrdersTab.vue etc.),
     // and none of them know about each other's keys, so nothing else would clear them. Real bug
     // this fixes (a separate, earlier regression): switching from Orders (with filters active) to
-    // Invoices left Orders' filter params sitting in the URL, visible/shareable even though
-    // Invoices' own UI showed no corresponding active filter.
+    // ProformaInvoices left Orders' filter params sitting in the URL, visible/shareable even though
+    // ProformaInvoices' own UI showed no corresponding active filter.
     //
     // `router.replace` is awaited *before* `activeTab` is written — not fire-and-forget. A second
     // real regression this fixes: `router.replace` resolves asynchronously, but the old

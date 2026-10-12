@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useInvoiceDetail } from './useInvoiceDetail';
-import { usePayInvoice, type PayInvoiceOutcome } from './usePayInvoice';
+import { useProformaInvoiceDetail } from './useProformaInvoiceDetail';
+import { usePayProformaInvoice, type PayProformaInvoiceOutcome } from './usePayProformaInvoice';
 
 const route = useRoute();
 const router = useRouter();
-const invoiceId = route.params.id as string;
+const proformaInvoiceId = route.params.id as string;
 
-const { invoice, loading: loadingInvoice, load } = useInvoiceDetail();
-const { loading: paying, payProformaInvoice } = usePayInvoice();
+const { proformaInvoice, loading: loadingProformaInvoice, load } = useProformaInvoiceDetail();
+const { loading: paying, payProformaInvoice } = usePayProformaInvoice();
 
 onMounted(() => {
-    void load(invoiceId);
+    void load(proformaInvoiceId);
 });
 
 function formatAmount(cents: number, currency: string): string {
@@ -23,9 +23,9 @@ function formatAmount(cents: number, currency: string): string {
     );
 }
 
-async function choose(outcome: PayInvoiceOutcome): Promise<void> {
-    await payProformaInvoice(invoiceId, outcome);
-    void router.push(`/invoices/${invoiceId}`);
+async function choose(outcome: PayProformaInvoiceOutcome): Promise<void> {
+    await payProformaInvoice(proformaInvoiceId, outcome);
+    void router.push(`/proforma-invoices/${proformaInvoiceId}`);
 }
 </script>
 
@@ -41,9 +41,10 @@ async function choose(outcome: PayInvoiceOutcome): Promise<void> {
                 provider redirect.
             </div>
 
-            <div v-if="loadingInvoice" class="stub-order">Loading…</div>
-            <div v-else-if="invoice" class="stub-order">
-                Proforma invoice #{{ invoice.number }} · {{ formatAmount(invoice.amount, invoice.currencyCode) }}
+            <div v-if="loadingProformaInvoice" class="stub-order">Loading…</div>
+            <div v-else-if="proformaInvoice" class="stub-order">
+                Proforma invoice #{{ proformaInvoice.number }} ·
+                {{ formatAmount(proformaInvoice.amount, proformaInvoice.currencyCode) }}
             </div>
 
             <div class="stub-actions">
@@ -66,7 +67,7 @@ async function choose(outcome: PayInvoiceOutcome): Promise<void> {
                 </button>
             </div>
 
-            <RouterLink :to="`/invoices/${invoiceId}`" class="stub-back"
+            <RouterLink :to="`/proforma-invoices/${proformaInvoiceId}`" class="stub-back"
                 >← Back to proforma invoice</RouterLink
             >
         </div>

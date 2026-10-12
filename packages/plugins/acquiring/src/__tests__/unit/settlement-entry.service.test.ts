@@ -159,7 +159,7 @@ describe('SettlementEntryService.allocate', () => {
     });
 
     it('a second "success" payment against an already-paid target proforma invoice never touches it again, and flows entirely to the next open proforma invoice (double-payment / duplicate-channel scenario)', async () => {
-        // target proforma invoice is already paid — the open-invoices query naturally excludes it (only
+        // target proforma invoice is already paid — the open-proforma-invoices query naturally excludes it (only
         // pending/issued are fetched), so the second capture never marks it "paid" a second time.
         const other = makeProformaInvoice({ id: 2, amount: 4000 });
         mockProformaInvoiceService.findOne.mockResolvedValue(
@@ -215,7 +215,7 @@ describe('SettlementEntryService.allocate', () => {
         ).rejects.toThrow(/Currency mismatch/);
     });
 
-    it('bounds the open-invoices scan and locks the rows (does not fetch/lock every open proforma invoice a counterparty has ever accumulated)', async () => {
+    it('bounds the open-proforma-invoices scan and locks the rows (does not fetch/lock every open proforma invoice a counterparty has ever accumulated)', async () => {
         const target = makeProformaInvoice({ id: 1, amount: 5000 });
         mockProformaInvoiceService.findOne.mockResolvedValue(target);
         setup([target]);

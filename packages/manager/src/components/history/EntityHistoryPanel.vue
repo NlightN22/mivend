@@ -22,7 +22,7 @@ import type { ManagerOption } from '../../api/orders';
 // human label without this component hardcoding business entity names.
 //
 // Seventh consumer of @mivend/ui-kit's MvAdvancedDataTable — see manager-table-standard skill.
-// An audit log has no natural "number" the way an order/invoice/discount does; `summary`
+// An audit log has no natural "number" the way an order/proforma-invoice/discount does; `summary`
 // ("Changes") is the closest thing to an identifying column (what a reviewer scans first when
 // hunting for who changed what) and gets the required/search slot instead. Action/Object
 // type/Changed by/Date range are real EntityVersion columns pushed into

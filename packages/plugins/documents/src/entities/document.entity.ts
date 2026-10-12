@@ -10,7 +10,7 @@ export class Document extends UuidEntity {
         super(input);
     }
 
-    // 'invoice' | 'contract' | 'return' | 'reconciliation' — business values from ERP
+    // 'proforma invoice' | 'contract' | 'return' | 'reconciliation' — business values from ERP
     // or internal generation code paths, not validated against a hardcoded enum.
     @Column({ type: 'varchar' })
     type!: string;

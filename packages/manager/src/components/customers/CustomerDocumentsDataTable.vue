@@ -31,7 +31,7 @@ import {
 // show different colors for the same type. `status` is a real status filter backed by the
 // document-generation pipeline's own fixed lifecycle. `issueDate` has no filter — the backend
 // doesn't support filtering by it yet (a date-range filter would need backend support first, same
-// as `amount`/`order` on CustomerInvoicesDataTable.vue).
+// as `amount`/`order` on CustomerProformaInvoicesDataTable.vue).
 const props = defineProps<{
     documents: CustomerDocument[];
     loading: boolean;

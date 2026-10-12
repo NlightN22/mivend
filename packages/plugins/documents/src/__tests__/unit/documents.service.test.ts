@@ -138,11 +138,11 @@ describe('DocumentsService', () => {
             await service.findForCounterparty(mockCtx, '1', {
                 take: 10,
                 skip: 0,
-                type: 'invoice',
+                type: 'proforma-invoice',
                 search: 'INV-1',
             });
             expect(mockQb.andWhere).toHaveBeenCalledWith('document.type = :type', {
-                type: 'invoice',
+                type: 'proforma-invoice',
             });
             expect(mockQb.andWhere).toHaveBeenCalledWith('document.number ILIKE :term', {
                 term: '%INV-1%',
@@ -337,7 +337,7 @@ describe('DocumentsService', () => {
 
             expect(mockRepo.create).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    type: 'invoice',
+                    type: 'proforma-invoice',
                     counterpartyId: '5',
                     orderId: '42',
                     proformaInvoiceId: '7',
@@ -391,20 +391,23 @@ describe('DocumentsService', () => {
             mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
             mockRepo.findAndCount.mockResolvedValue([[], 0]);
 
-            await service.findVisible(mockCtx, { types: ['invoice', 'waybill'] });
+            await service.findVisible(mockCtx, { types: ['proforma-invoice', 'waybill'] });
 
             const where = mockRepo.findAndCount.mock.calls[0][0].where;
-            expect(where.type).toMatchObject({ _type: 'in', _value: ['invoice', 'waybill'] });
+            expect(where.type).toMatchObject({
+                _type: 'in',
+                _value: ['proforma-invoice', 'waybill'],
+            });
         });
 
         it('prefers `types` over `type` when both are given', async () => {
             mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }]);
             mockRepo.findAndCount.mockResolvedValue([[], 0]);
 
-            await service.findVisible(mockCtx, { type: 'contract', types: ['invoice'] });
+            await service.findVisible(mockCtx, { type: 'contract', types: ['proforma-invoice'] });
 
             const where = mockRepo.findAndCount.mock.calls[0][0].where;
-            expect(where.type).toMatchObject({ _type: 'in', _value: ['invoice'] });
+            expect(where.type).toMatchObject({ _type: 'in', _value: ['proforma-invoice'] });
         });
 
         it('omits type/status from the where clause entirely when not provided', async () => {
@@ -463,7 +466,10 @@ describe('DocumentsService', () => {
 
         it('returns the distinct type values from the scoped query, in the order the DB returns them', async () => {
             mockCounterpartyService.findVisible.mockResolvedValue([{ id: '1' }, { id: '2' }]);
-            mockQb.getRawMany.mockResolvedValue([{ type: 'contract' }, { type: 'invoice' }]);
+            mockQb.getRawMany.mockResolvedValue([
+                { type: 'contract' },
+                { type: 'proforma-invoice' },
+            ]);
 
             const result = await service.findVisibleTypes(mockCtx);
 
@@ -472,7 +478,7 @@ describe('DocumentsService', () => {
                 'document.counterpartyId IN (:...counterpartyIds)',
                 { counterpartyIds: ['1', '2'] },
             );
-            expect(result).toEqual(['contract', 'invoice']);
+            expect(result).toEqual(['contract', 'proforma-invoice']);
         });
     });
 });

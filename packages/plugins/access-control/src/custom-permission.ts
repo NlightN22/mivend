@@ -78,8 +78,8 @@ export const CustomPermission = {
         description:
             'Cancel a pending order on behalf of a customer (refused once an order or sale exists in the ERP, see docs/order-contracts.md)',
     }),
-    ReadInvoice: new PermissionDefinition({
-        name: 'ReadInvoice',
+    ReadProformaInvoice: new PermissionDefinition({
+        name: 'ReadProformaInvoice',
         description:
             'Read proforma invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveProformaInvoiceScope)',
     }),

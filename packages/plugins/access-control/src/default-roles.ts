@@ -21,7 +21,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
-            'ReadInvoice',
+            'ReadProformaInvoice',
             'ReadPayment',
             'CreateOrder',
             'UpdateOrder',
@@ -33,7 +33,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         accessScopeConfig: {
             counterparty: 'department',
             order: 'department',
-            invoice: 'department',
+            proformaInvoice: 'department',
         },
     },
     {
@@ -43,7 +43,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
-            'ReadInvoice',
+            'ReadProformaInvoice',
             'ReadPayment',
             'CreateOrder',
             'UpdateOrder',
@@ -56,7 +56,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'RequestDiscountGrantApproval',
             'RequestCreditTermApproval',
         ],
-        accessScopeConfig: { counterparty: 'own', order: 'own', invoice: 'own' },
+        accessScopeConfig: { counterparty: 'own', order: 'own', proformaInvoice: 'own' },
     },
     {
         code: 'department-head',
@@ -65,7 +65,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
-            'ReadInvoice',
+            'ReadProformaInvoice',
             'ReadPayment',
             'ReadCustomer',
             'ReadCounterparty',
@@ -78,7 +78,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         accessScopeConfig: {
             counterparty: 'department',
             order: 'department',
-            invoice: 'department',
+            proformaInvoice: 'department',
         },
     },
     {
@@ -87,7 +87,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
-            'ReadInvoice',
+            'ReadProformaInvoice',
             'ReadPayment',
             'ReadCustomer',
             'ReadCounterparty',
@@ -117,7 +117,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             counterparty: 'all',
             order: 'all',
             teamVisibility: 'all',
-            invoice: 'all',
+            proformaInvoice: 'all',
         },
     },
     {
@@ -126,7 +126,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
-            'ReadInvoice',
+            'ReadProformaInvoice',
             'ReadPayment',
             'ReadCustomer',
             'ReadCounterparty',
@@ -139,7 +139,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             counterparty: 'all',
             order: 'all',
             teamVisibility: 'all',
-            invoice: 'all',
+            proformaInvoice: 'all',
         },
     },
     {
@@ -149,7 +149,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
-            'ReadInvoice',
+            'ReadProformaInvoice',
             'ReadPayment',
             'ReadCustomer',
             'ReadCounterparty',
@@ -181,7 +181,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             counterparty: 'all',
             order: 'all',
             teamVisibility: 'all',
-            invoice: 'all',
+            proformaInvoice: 'all',
         },
     },
 ];

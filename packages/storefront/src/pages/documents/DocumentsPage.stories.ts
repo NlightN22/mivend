@@ -22,7 +22,7 @@ export const Default: Story = {
                     items: [
                         {
                             id: '1',
-                            type: 'invoice',
+                            type: 'proformaInvoice',
                             number: 'INV-0001',
                             issueDate: new Date().toISOString(),
                             amount: 460000,

@@ -30,7 +30,7 @@ const confirmTarget = ref<CounterpartyPortalUser | null>(null);
 
 // This tab is exempt from server-side pagination (manager-table-standard point 6) — a
 // counterparty's own portal-user count is a small, structurally bounded set (client_admin/buyer/
-// accountant/observer roles), not something that accumulates unboundedly like orders/invoices.
+// accountant/observer roles), not something that accumulates unboundedly like orders/proforma-invoices.
 async function load(): Promise<void> {
     loading.value = true;
     error.value = '';

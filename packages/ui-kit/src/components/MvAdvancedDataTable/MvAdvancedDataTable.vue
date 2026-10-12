@@ -41,7 +41,7 @@ import type {
 // query, sort-field mapping, currency formatting, routing, and state persistence
 // (`useDataTableState`, called by the consumer, not this component). Extracted from
 // CustomerOrdersDataTable.vue, the first full-featured consumer — see that component and the new
-// CustomerInvoicesDataTable.vue for real usage examples.
+// CustomerProformaInvoicesDataTable.vue for real usage examples.
 const props = withDefaults(
     defineProps<{
         columns: AdvancedDataTableColumn[];
@@ -294,7 +294,7 @@ const first = ref(0);
 // without `immediate: true` never fires on its own at setup — the *first* time this callback runs
 // is already a genuine, user-caused filter change, not a synthetic initial call to ignore. Adding
 // a guard that skips "the first invocation" was silently eating that very first real filter
-// change for every consumer of this component, not just Invoices (where it was first noticed) —
+// change for every consumer of this component, not just ProformaInvoices (where it was first noticed) —
 // the fetched data updated correctly (the consumer's own `page` ref did reset via `reset-page`
 // firing... except it never fired at all here, since the guard swallowed it).
 watch(

@@ -99,7 +99,7 @@ function logoInitial(legalName: string): string {
     return legalName.trim().charAt(0).toUpperCase() || '?';
 }
 
-// Shared between invoice-template.ts and contract-template.ts — a real logo
+// Shared between proforma-invoice-template.ts and contract-template.ts — a real logo
 // (base64-embedded) when set via the Admin API, otherwise a generic initial-
 // letter badge. Never a jurisdiction-specific or hardcoded brand mark.
 export function renderLogoMarkup(legalName: string, logoDataUri: string | null): string {

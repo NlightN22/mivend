@@ -13,7 +13,7 @@ export interface UseLatestRequest<Args extends unknown[]> {
 // arrives *last* wins by default, not whichever was requested last, so a user could see "page 2"
 // showing page 3's rows with page 3 itself empty. This is a generic version of the ad hoc
 // `loadSeq`/`seq` counter that first fixed it in two places (CustomerOrdersTab.vue/
-// CustomerInvoicesTab.vue) — same "two instances, extract" precedent as this project's other
+// CustomerProformaInvoicesTab.vue) — same "two instances, extract" precedent as this project's other
 // shared composables (see e.g. useDebouncedCallback's own doc comment).
 //
 // This doesn't cancel the stale network request itself (this project's `adminApi` client has no

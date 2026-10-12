@@ -20,7 +20,7 @@ import {
     type ManagerOption,
     type BranchOption,
 } from '../../api/orders';
-import { fetchOutstandingBalance, type OutstandingBalance } from '../../api/invoices';
+import { fetchOutstandingBalance, type OutstandingBalance } from '../../api/proforma-invoices';
 import { fetchCounterpartyTeam, type CounterpartyTeamMember } from '../../api/counterpartyTeam';
 import type { EntityRef } from '../../api/history';
 import { Location, Wallet, User } from '@element-plus/icons-vue';
@@ -41,7 +41,7 @@ import CustomerOverviewTab from '../../components/customers/CustomerOverviewTab.
 import CustomerOrdersTab from '../../components/customers/CustomerOrdersTab.vue';
 import CustomerDiscountsTab from '../../components/customers/CustomerDiscountsTab.vue';
 import CustomerDocumentsTab from '../../components/customers/CustomerDocumentsTab.vue';
-import CustomerInvoicesTab from '../../components/customers/CustomerInvoicesTab.vue';
+import CustomerProformaInvoicesTab from '../../components/customers/CustomerProformaInvoicesTab.vue';
 import CustomerPaymentsTab from '../../components/customers/CustomerPaymentsTab.vue';
 import CustomerTeamTab from '../../components/customers/CustomerTeamTab.vue';
 import CustomerPortalUsersTab from '../../components/customers/CustomerPortalUsersTab.vue';
@@ -85,7 +85,7 @@ const canManagePortalAccess = computed(() =>
 type CustomerDetailTab =
     | 'overview'
     | 'orders'
-    | 'invoices'
+    | 'proformaInvoices'
     | 'payments'
     | 'discounts'
     | 'documents'
@@ -95,7 +95,7 @@ type CustomerDetailTab =
 const TABS: CustomerDetailTab[] = [
     'overview',
     'orders',
-    'invoices',
+    'proformaInvoices',
     'payments',
     'discounts',
     'documents',
@@ -106,7 +106,7 @@ const TABS: CustomerDetailTab[] = [
 const TAB_LABELS: Record<CustomerDetailTab, string> = {
     overview: 'Overview',
     orders: 'Orders',
-    invoices: 'Proforma invoices',
+    proformaInvoices: 'Proforma invoices',
     payments: 'Payments',
     discounts: 'Discounts',
     documents: 'Documents',
@@ -117,7 +117,7 @@ const TAB_LABELS: Record<CustomerDetailTab, string> = {
 const TAB_ICONS: Record<CustomerDetailTab, typeof IconHome2> = {
     overview: IconHome2,
     orders: IconShoppingBag,
-    invoices: IconFileInvoice,
+    proformaInvoices: IconFileInvoice,
     payments: IconCreditCard,
     discounts: IconDiscount,
     documents: IconFolder,
@@ -223,7 +223,7 @@ async function load(): Promise<void> {
             ? await fetchOrdersForCustomer(vendureCustomerId.value)
             : [];
         teamMembers.value = await fetchCounterpartyTeam(counterpartyId);
-        // CustomerInvoicesTab/CustomerPaymentsTab/CustomerDiscountsTab now own their own
+        // CustomerProformaInvoicesTab/CustomerPaymentsTab/CustomerDiscountsTab now own their own
         // fetching/pagination (same shape as CustomerOrdersTab) — this page only still needs
         // outstandingBalance for its own KPI card.
         outstandingBalance.value = await fetchOutstandingBalance(counterpartyId);
@@ -451,8 +451,8 @@ function initials(name: string | null): string {
             <p v-else-if="activeTab === 'orders'" class="customer-detail__no-orders">
                 No orders yet
             </p>
-            <CustomerInvoicesTab
-                v-else-if="activeTab === 'invoices'"
+            <CustomerProformaInvoicesTab
+                v-else-if="activeTab === 'proformaInvoices'"
                 :counterparty-id="customer.id"
             />
             <CustomerPaymentsTab

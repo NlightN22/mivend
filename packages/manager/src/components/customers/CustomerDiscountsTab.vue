@@ -18,7 +18,7 @@ import {
 // shape as CustomerPaymentsTab.vue. This list previously had no pagination at all under a claim
 // of being "genuinely bounded" — wrong: nothing removes an expired grant, so it accumulates one
 // row per approved renewal over the customer's whole lifetime, same growth pattern as
-// orders/invoices/payments (see DiscountGrantService.findForCounterparty's doc comment).
+// orders/proforma-invoices/payments (see DiscountGrantService.findForCounterparty's doc comment).
 const props = defineProps<{ counterpartyId: string }>();
 const router = useRouter();
 const authStore = useAuthStore();

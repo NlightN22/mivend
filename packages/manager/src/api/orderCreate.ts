@@ -177,7 +177,7 @@ export async function requestPriceAdjustment(
 
 // Only two payment handlers actually exist (see @mivend/plugin-acquiring's
 // offline-terms-handler.ts and @mivend/plugin-online-payment's online-stub-handler.ts) —
-// "Deferred"/"Invoice" from the design concept both map to the same offline-terms handler.
+// "Deferred"/"ProformaInvoice" from the design concept both map to the same offline-terms handler.
 export const PAYMENT_METHOD_OPTIONS = [
     { value: 'online-stub', label: 'Online payment' },
     { value: 'offline-terms', label: 'Proforma invoice / deferred payment' },

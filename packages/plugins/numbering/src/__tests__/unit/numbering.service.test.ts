@@ -21,7 +21,7 @@ describe('NumberingService', () => {
 
     it('prefixes with the exact 3-digit instance code', async () => {
         const service = makeService(['42']);
-        const number = await service.next(mockCtx, 'invoice');
+        const number = await service.next(mockCtx, 'proforma-invoice');
         expect(number.slice(0, 3)).toBe('100');
     });
 

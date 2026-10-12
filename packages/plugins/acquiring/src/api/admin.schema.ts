@@ -20,7 +20,7 @@ export const adminApiExtensions: DocumentNode = gql`
         currencyCode: String!
         status: String!
         branchId: ID
-        "Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: InvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page)."
+        "Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: ProformaInvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page)."
         order: ProformaInvoiceOrder!
         "Resolved via ProformaInvoiceFieldResolver.lines — must be declared here too: registering ProformaInvoiceFieldResolver without declaring every field it resolves throws 'ProformaInvoice.lines defined in resolvers, but not in schema' at bootstrap (real incident, caught before merging)."
         lines: [OrderLine!]!
@@ -136,7 +136,7 @@ export const adminApiExtensions: DocumentNode = gql`
     extend type Query {
         "Enabled variants and how many have no organization (cannot be ordered). Integration health."
         variantOrganizationHealth: VariantOrganizationHealth!
-        invoicesForOrder(orderId: ID!): [ProformaInvoice!]!
+        proformaInvoicesForOrder(orderId: ID!): [ProformaInvoice!]!
         "Seed-script helper only — lists real captured online-acquiring payments to attach mock refunds/disputes to (backend-plugin-rules skill's Dev seed rules exception, see seed-payment-refunds.mjs)."
         capturedOnlinePayments(take: Int): [PaymentAttempt!]!
         "Seed-script idempotency helper only — see seed-payment-refunds.mjs."

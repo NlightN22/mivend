@@ -2977,7 +2977,7 @@ export enum Permission {
     /** Read the raw floor-price threshold for a variant (financial data, layer 4 redaction) */
     ReadFloorPrice = 'ReadFloorPrice',
     /** Read proforma invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveProformaInvoiceScope) */
-    ReadInvoice = 'ReadInvoice',
+    ReadProformaInvoice = 'ReadProformaInvoice',
     /** Grants permission to read Order */
     ReadOrder = 'ReadOrder',
     /** Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope) */
