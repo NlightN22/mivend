@@ -75,10 +75,8 @@ const branchNames = (process.env.BOOTSTRAP_BRANCH_NAMES ?? 'Main')
     .filter(Boolean);
 const integrationKafkaEnabled = process.env.INTEGRATION_KAFKA_ENABLED === 'true';
 // Issue #68 contour model: the legacy direct-REST ERP intake and the real Kafka/Integration
-// Service path are mutually exclusive per contour — set explicitly per env file (true for
-// local/branch dev, false for staging-integration/production), same shape as
-// INTEGRATION_KAFKA_ENABLED above.
-const erpImportEnabled = process.env.ERP_IMPORT_ENABLED !== 'false';
+// Service path are mutually exclusive per contour. Closed by default: only exactly 'true' mounts it.
+const erpImportEnabled = process.env.ERP_IMPORT_ENABLED === 'true';
 
 // Issue #68 follow-up: a bare `?? 'mivend-central-hub-local'` fallback would silently apply the
 // *local* contour's Kafka identity to staging-integration/production too if one of these env vars
@@ -114,19 +112,11 @@ if (
 // AcquiringPluginOptions is actually set on every instance too, not left undefined on branch.
 const instancePlugins = [AcquiringPlugin.init({})];
 
-// Issue #121: devMode writes real emails (real token/link, same code path as production) to
-// disk and serves them at /mailbox instead of sending. Deliberately NOT gated on
-// NODE_ENV !== 'production' (unlike dbConnectionOptions.synchronize above, which genuinely must
-// stay production-only — auto schema sync against a real DB is dangerous in a way an unsent
-// email is not): the SMTP-relay vs. transactional-email-API decision (#121) is still open, and
-// production always sets NODE_ENV=production (Dockerfile/docker-compose.yml) regardless of
-// whether that decision has landed yet — tying devMode to NODE_ENV would mean password-
-// reset/account-activation links (#119/#120) simply vanish in production until #121's provider
-// is chosen. Instead: devMode is on whenever no real transport has been configured at all
-// (EMAIL_TRANSPORT unset), independent of contour — so the mailbox stays reachable in production
-// too until a real provider is wired in via EMAIL_TRANSPORT.
+// Issue #121: until a real transport exists, emails (real token/link) are written to disk instead
+// of sent. The HTTP /mailbox route exposes those tokens, so it exists only with the explicit flag.
+const emailDevMailboxEnabled = process.env.EMAIL_DEV_MAILBOX_ENABLED === 'true';
 const emailTransportConfigured = Boolean(process.env.EMAIL_TRANSPORT);
-const emailDevMode = !emailTransportConfigured;
+const emailOutputPath = path.join(__dirname, '../static/email/test-mailbox');
 
 // Issue #119: password-reset links (Administrator lifecycle) point at the manager portal's
 // /set-password page, not at this server itself — Vendure core has no concept of "my frontend's
@@ -137,33 +127,27 @@ const emailDevMode = !emailTransportConfigured;
 // broken link, not a broken boot, and a missing env var shouldn't take down the whole server.
 const managerPublicUrl = process.env.MANAGER_PUBLIC_URL ?? '';
 
+const emailCommonOptions = {
+    templateLoader: new FileBasedTemplateLoader(path.join(__dirname, '../static/email/templates')),
+    handlers: [emailVerificationHandler, passwordResetHandler, emailAddressChangeHandler],
+    globalTemplateVars: {
+        fromAddress: '"mivend" <noreply@example.com>',
+        passwordResetUrl: `${managerPublicUrl}/set-password`,
+    },
+};
+
+if (emailTransportConfigured) {
+    // Fails only on explicit opt-in, so an unrelated deploy never crashes over an email decision.
+    throw new Error(
+        `EMAIL_TRANSPORT=${process.env.EMAIL_TRANSPORT} was set, but no real EmailTransportOptions ` +
+            'is implemented yet — see issue #121. Unset EMAIL_TRANSPORT to keep the file transport.',
+    );
+}
+
 const emailPlugin = EmailPlugin.init(
-    emailDevMode
-        ? {
-              devMode: true,
-              outputPath: path.join(__dirname, '../static/email/test-mailbox'),
-              route: 'mailbox',
-              templateLoader: new FileBasedTemplateLoader(
-                  path.join(__dirname, '../static/email/templates'),
-              ),
-              handlers: [emailVerificationHandler, passwordResetHandler, emailAddressChangeHandler],
-              globalTemplateVars: {
-                  fromAddress: '"mivend" <noreply@example.com>',
-                  passwordResetUrl: `${managerPublicUrl}/set-password`,
-              },
-          }
-        : // EMAIL_TRANSPORT is set, but no real transport (SMTP relay vs. transactional-email
-          // API — #121) is implemented yet. This only throws when someone explicitly opts in by
-          // setting EMAIL_TRANSPORT, never on an ordinary boot, so it doesn't reintroduce the
-          // "unrelated deploy crashes over an email decision" problem devMode's own gate avoids.
-          ((): never => {
-              throw new Error(
-                  `EMAIL_TRANSPORT=${process.env.EMAIL_TRANSPORT} was set, but no real ` +
-                      'EmailTransportOptions is implemented yet — see issue #121 (the SMTP-relay ' +
-                      'vs. transactional-email-API decision is still open). Implement the chosen ' +
-                      'transport here, or unset EMAIL_TRANSPORT to keep using devMode.',
-              );
-          })(),
+    emailDevMailboxEnabled
+        ? { ...emailCommonOptions, devMode: true, outputPath: emailOutputPath, route: 'mailbox' }
+        : { ...emailCommonOptions, transport: { type: 'file', outputPath: emailOutputPath } },
 );
 
 export const config: VendureConfig = {
