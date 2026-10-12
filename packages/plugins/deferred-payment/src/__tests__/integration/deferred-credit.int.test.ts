@@ -59,6 +59,8 @@ const providers = new Map<unknown, unknown>([
             counterpartyService as never,
             creditLimitCheckService,
             exposureService,
+            { resolveEffective: async () => null } as never,
+            { getPreferredForCustomer: async () => null } as never,
         ),
     ],
 ]);
@@ -221,14 +223,40 @@ describe('deferred credit check over open orders (real SQL + decide)', () => {
         expect((await placeDeferred(buyer, 20_000.01)).exceeded).toBe(true);
     });
 
-    it('ignores orders ERP already confirmed (they are in the balance), other methods and dead payments', async () => {
+    it('ignores orders ERP already confirmed (they are in the balance) and dead payments', async () => {
         const buyer = await addBuyer(100_000);
         await addOrder(buyer, 90_000, { erpStatus: 'CONFIRMED' });
         await addOrder(buyer, 90_000, { erpStatus: 'SHIPPING' });
         await addOrder(buyer, 90_000, { erpStatus: 'CANCELLED' });
-        await addOrder(buyer, 90_000, { method: 'offline-terms' });
         await addOrder(buyer, 90_000, { paymentState: 'Declined' });
         expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
+    });
+
+    it('counts an unpaid order of any method, ignores one already paid by money', async () => {
+        const buyer = await addBuyer(100_000);
+        await addOrder(buyer, 30_000, { method: 'offline-terms' });
+        await addOrder(buyer, 30_000, { method: 'cash', paymentState: 'Created' });
+        await addOrder(buyer, 90_000, { method: 'card-online', paymentState: 'Settled' });
+        await addOrder(buyer, 90_000, { method: 'offline-terms', paymentState: 'Settled' });
+        expect((await placeDeferred(buyer, 40_000)).exceeded).toBe(false); // 100k
+        expect((await placeDeferred(buyer, 40_000.01)).exceeded).toBe(true);
+    });
+
+    it('keeps counting a legacy deferred payment even when marked Settled', async () => {
+        const buyer = await addBuyer(100_000);
+        await addOrder(buyer, 90_000, { paymentState: 'Settled' });
+        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
+    });
+
+    it('stops counting an order once money settles it next to its deferred payment', async () => {
+        const buyer = await addBuyer(100_000);
+        const orderId = await addOrder(buyer, 90_000);
+        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
+        await run(
+            `INSERT INTO payment ("orderId", method, state, amount) VALUES ($1, 'card-online', 'Settled', 9000000)`,
+            [orderId],
+        );
+        expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(false);
     });
 
     it('never counts a cancelled order even if ERP has not confirmed it', async () => {

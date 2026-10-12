@@ -6,15 +6,25 @@ import { DeferredCreditAssessmentService } from '../../deferred-credit-assessmen
 
 const getForCustomer = vi.fn();
 const sumUnconfirmedRubles = vi.fn();
+const resolveEffective = vi.fn();
+const getPreferredForCustomer = vi.fn();
+const resolveServicingBranchId = vi.fn();
 const service = new DeferredCreditAssessmentService(
     { getForCustomer } as never,
     new CreditLimitCheckService(null as never, null as never),
     { sumUnconfirmedRubles } as never,
+    { resolveEffective } as never,
+    { getPreferredForCustomer, resolveServicingBranchId } as never,
 );
 const ctx = {} as RequestContext;
-const order = (kopecks: number, customerId: number | undefined = 7): Order =>
+const order = (
+    kopecks: number,
+    customerId: number | undefined = 7,
+    branchId: string | null = null,
+): Order =>
     ({
         id: 9,
+        customFields: { branchId },
         totalWithTax: kopecks,
         customer: customerId ? { id: customerId } : undefined,
     }) as never;
@@ -23,6 +33,10 @@ beforeEach(() => {
     getForCustomer.mockReset();
     sumUnconfirmedRubles.mockReset();
     sumUnconfirmedRubles.mockResolvedValue(0);
+    resolveEffective.mockReset();
+    resolveEffective.mockResolvedValue(null);
+    getPreferredForCustomer.mockReset();
+    getPreferredForCustomer.mockResolvedValue(null);
 });
 
 describe('DeferredCreditAssessmentService.assess', () => {
@@ -32,6 +46,7 @@ describe('DeferredCreditAssessmentService.assess', () => {
             exceeded: false,
             availableCredit: 800,
             orderAmount: 500,
+            allowExceedingCreditLimit: false,
         });
     });
 
@@ -49,8 +64,32 @@ describe('DeferredCreditAssessmentService.assess', () => {
         getForCustomer.mockResolvedValue({ id: 3, creditLimit: 1000, creditBalance: 200 });
         sumUnconfirmedRubles.mockResolvedValue(300);
         const result = await service.assess(ctx, order(50001));
-        expect(result).toEqual({ exceeded: true, availableCredit: 500, orderAmount: 500 });
+        expect(result).toEqual({
+            exceeded: true,
+            availableCredit: 500,
+            orderAmount: 500,
+            allowExceedingCreditLimit: false,
+        });
         expect(sumUnconfirmedRubles).toHaveBeenCalledWith(ctx, 3, 9);
+    });
+
+    it('exposes the order branch setting when the branch allows exceeding', async () => {
+        getForCustomer.mockResolvedValue({ id: 3, creditLimit: 1000, creditBalance: 0 });
+        resolveEffective.mockResolvedValue({ allowExceedingCreditLimit: true });
+        const result = await service.assess(ctx, order(100, 7, 'branch-a'));
+        expect(result?.allowExceedingCreditLimit).toBe(true);
+        expect(resolveEffective).toHaveBeenCalledWith(ctx, 'branch-a');
+        expect(getPreferredForCustomer).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the preferred trading point branch before placement', async () => {
+        getForCustomer.mockResolvedValue({ id: 3, creditLimit: 1000, creditBalance: 0 });
+        getPreferredForCustomer.mockResolvedValue({ id: 5 });
+        resolveServicingBranchId.mockResolvedValue('branch-b');
+        resolveEffective.mockResolvedValue({ allowExceedingCreditLimit: false });
+        const result = await service.assess(ctx, order(100));
+        expect(result?.allowExceedingCreditLimit).toBe(false);
+        expect(resolveEffective).toHaveBeenCalledWith(ctx, 'branch-b');
     });
 
     it('returns null without a counterparty or customer', async () => {

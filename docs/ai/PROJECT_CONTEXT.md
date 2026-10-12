@@ -9,6 +9,10 @@ Updated: 2026-10-12 12:00
 - **Caution**: the integration `outbound_command` queue is shared by production and dev 1C bases — never create test commands there without the owner confirming which base will pick them up.
 - **Open**: live check of a package-only order with the 1C line (needs the Integration Service owner); a unit field on `order-registration-result`; pack display in catalog cards; dataloader for `packagingLevels`; the 1C trace prefix is shown to managers as-is.
 
+## #222 stage 1: limit exposure by payment fact (2026-10-12, done, not yet audited; stages 2+ open)
+- `OpenDeferredExposureService` counts any unpaid unconfirmed order (any method); a Settled non-`deferred-payment` payment frees it; legacy deferred keeps counting. Details: `docs/payments.md` "Target model".
+- `BranchSettings.allowExceedingCreditLimit` (default off, migration 1791489000000, manager Branch settings "Credit" section) is returned by `DeferredCreditAssessmentService.assess`; checkout does not act on it yet (stage 2). Manager `generated/graphql.ts` was edited by hand (codegen needs the dev server): re-run `codegen` when convenient.
+
 ## #194 reserve deadline / order cancel (2026-10-11, DONE: audited, pushed, closed)
 
 - **Decisions (docs/order-contracts.md "Order events topic and warehouse semantics")**: one topic `mivend.orders.events.v1.order-events` (key `orderUuid`, `type` in body + header, one subject, `oneOf` union, event-contracts 0.59.0 published), types `confirmed` (+ mandatory `reserveUntil`) and `cancel-requested`; ONE `confirmed` per order with ONE `warehouseId`, no `registrationUuid`, no per-line warehouse; old `order.submitted` topic dropped at once (integration contour, no dual-publish). ERP answers on `company.orders.events.v1.order-cancel-result` (per `orderUuid`, cancelled|rejected). Topic + ACLs exist on the broker; consumer group is the existing hub group. Search-platform side (consumer, tombstone, cancel command) is done by `sp.issue.178-179`, not by us; the ERP will switch to the standard autoreserve later (until then the reserve lands on the warehouse we send).

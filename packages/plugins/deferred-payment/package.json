@@ -22,6 +22,7 @@
         "vitest": "^4.1.9"
     },
     "dependencies": {
+        "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-counterparty": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
         "@nestjs/graphql": "^13.0.0",

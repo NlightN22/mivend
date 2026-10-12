@@ -712,6 +712,12 @@ until #222 ships, the sections that follow describe the current behavior.
   bank-transfer form whose payment is not `Authorized` at placement; the reserve/ERP trigger follows payment or
   manager confirmation; exposure is computed from payment fact, not ERP status.
 
+**Stage 1 done (#222):** `OpenDeferredExposureService` is payment-method-agnostic: an unconfirmed (ERP `PENDING`/
+`SENT_TO_ERP`/`RESERVED`), non-cancelled, not-too-old order of the counterparty counts until a payment of a method
+other than `deferred-payment` is `Settled`. Legacy `deferred-payment` payments (`Authorized` at placement, no money)
+keep counting. New branch setting `allowExceedingCreditLimit` (default off, manager portal Settings -> Branches) is
+exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; checkout does not use it yet (stage 2).
+
 ### Credit limit on deferred orders
 
 Decision (2026-10-06): exceeding the limit **does not reject** the order. It is placed, and the

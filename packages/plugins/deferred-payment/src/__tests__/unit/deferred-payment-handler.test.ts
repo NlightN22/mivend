@@ -20,6 +20,8 @@ const providers = new Map<unknown, unknown>([
             { getForCustomer } as never,
             { decide } as never,
             { sumUnconfirmedRubles } as never,
+            { resolveEffective: async () => null } as never,
+            { getPreferredForCustomer: async () => null } as never,
         ),
     ],
 ]);

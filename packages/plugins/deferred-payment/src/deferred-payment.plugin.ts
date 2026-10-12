@@ -5,6 +5,7 @@ import {
     VendurePlugin,
 } from '@vendure/core';
 
+import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS } from './constants';
@@ -19,7 +20,7 @@ import { DeferredPaymentBootstrapService } from './deferred-payment-bootstrap.se
 
 // Handler and eligibility checker are plain objects registered in vendure-config's paymentOptions.
 @VendurePlugin({
-    imports: [PluginCommonModule, CounterpartyPlugin, ErpOrderPlugin],
+    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin, ErpOrderPlugin],
     shopApiExtensions: { schema: shopApiExtensions, resolvers: [DeferredCreditShopResolver] },
     adminApiExtensions: {
         schema: adminApiExtensions,

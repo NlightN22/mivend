@@ -649,6 +649,9 @@ importers:
 
     packages/plugins/deferred-payment:
         dependencies:
+            '@mivend/plugin-access-control':
+                specifier: workspace:*
+                version: link:../access-control
             '@mivend/plugin-counterparty':
                 specifier: workspace:*
                 version: link:../counterparty
