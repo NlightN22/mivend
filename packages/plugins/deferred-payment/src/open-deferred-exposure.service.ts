@@ -9,9 +9,17 @@ import {
 
 import { DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS, DEFERRED_PAYMENT_METHOD_CODE } from './constants';
 
-// Orders neither confirmed by ERP nor reflected in its credit balance yet. REJECTED is
-// deliberately excluded (#204) — its sum must stop blocking the customer's limit immediately.
-export const UNCONFIRMED_ERP_STATUSES = ['PENDING', 'SENT_TO_ERP', 'RESERVED'];
+// Orders whose debt is not in the ERP credit balance yet: it appears only with the sales document
+// (realization, SHIPPING and later). REJECTED is excluded (#204) so it stops blocking the limit.
+export const UNCONFIRMED_ERP_STATUSES = [
+    'PENDING',
+    'SENT_TO_ERP',
+    'RESERVED',
+    'CONFIRMED',
+    'UNDER_APPROVAL',
+    'APPROVED',
+    'PICKING',
+];
 
 @Injectable()
 export class OpenDeferredExposureService {
@@ -27,8 +35,8 @@ export class OpenDeferredExposureService {
         return days && days > 0 ? days : DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS;
     }
 
-    // Unpaid = no Settled non-deferred payment; legacy deferred is Authorized without money, so it keeps
-    // counting. Excludes `excludeOrderId` and cancelled or too-old orders.
+    // Per order, once: order total minus Settled non-deferred payments (a legacy deferred payment is
+    // Authorized without money, so it keeps counting). Excludes `excludeOrderId`, cancelled and too-old orders.
     async sumUnconfirmedRubles(
         ctx: RequestContext,
         counterpartyId: ID,
@@ -38,15 +46,17 @@ export class OpenDeferredExposureService {
         const rows: Array<{ total: string | null }> = await this.connection
             .getRepository(ctx, Payment)
             .query(
-                `SELECT COALESCE(SUM(p.amount), 0) AS total
-                 FROM payment p
-                 INNER JOIN "order" o ON o.id = p."orderId"
+                `SELECT COALESCE(SUM(GREATEST(
+                        o."subTotalWithTax" + o."shippingWithTax" - COALESCE((
+                            SELECT SUM(paid.amount) FROM payment paid
+                            WHERE paid."orderId" = o.id AND paid.state = 'Settled' AND paid.method <> $2
+                        ), 0), 0)), 0) AS total
+                 FROM "order" o
                  INNER JOIN customer cu ON cu.id = o."customerId"
                  WHERE cu."customFieldsCounterpartyid"::text = $1
-                   AND p.state IN ('Created', 'Authorized', 'Settled')
-                   AND NOT EXISTS (
-                       SELECT 1 FROM payment paid
-                       WHERE paid."orderId" = o.id AND paid.state = 'Settled' AND paid.method <> $2
+                   AND EXISTS (
+                       SELECT 1 FROM payment p
+                       WHERE p."orderId" = o.id AND p.state IN ('Created', 'Authorized', 'Settled')
                    )
                    AND o.id <> $3
                    AND o."customFieldsErpstatus" = ANY($4)

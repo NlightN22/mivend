@@ -96,13 +96,14 @@ async function addOrder(
     } = {},
 ): Promise<number> {
     const [o] = await run(
-        `INSERT INTO "order" ("customerId", "customFieldsErpstatus", state, "orderPlacedAt")
-         VALUES ($1, $2, $3, now() - make_interval(days => $4::int)) RETURNING id`,
+        `INSERT INTO "order" ("customerId", "customFieldsErpstatus", state, "orderPlacedAt", "subTotalWithTax")
+         VALUES ($1, $2, $3, now() - make_interval(days => $4::int), $5) RETURNING id`,
         [
             buyer.customerId,
             opts.erpStatus ?? 'PENDING',
             opts.state ?? 'PaymentAuthorized',
             opts.placedDaysAgo ?? 0,
+            Math.round(rubles * 100),
         ],
     );
     await run(`INSERT INTO payment ("orderId", method, state, amount) VALUES ($1, $2, $3, $4)`, [
@@ -149,7 +150,8 @@ beforeAll(async () => {
     );
     await run(`CREATE TABLE "order" (
         id serial PRIMARY KEY, "customerId" int, "customFieldsErpstatus" varchar,
-        state varchar, "orderPlacedAt" timestamp)`);
+        state varchar, "orderPlacedAt" timestamp,
+        "subTotalWithTax" int NOT NULL DEFAULT 0, "shippingWithTax" int NOT NULL DEFAULT 0)`);
     await run(`CREATE TABLE payment (
         id serial PRIMARY KEY, "orderId" int, method varchar, state varchar, amount int)`);
     void deferredPaymentHandler.init?.(injector);
@@ -225,11 +227,51 @@ describe('deferred credit check over open orders (real SQL + decide)', () => {
 
     it('ignores orders ERP already confirmed (they are in the balance) and dead payments', async () => {
         const buyer = await addBuyer(100_000);
-        await addOrder(buyer, 90_000, { erpStatus: 'CONFIRMED' });
         await addOrder(buyer, 90_000, { erpStatus: 'SHIPPING' });
+        await addOrder(buyer, 90_000, { erpStatus: 'DELIVERING' });
+        await addOrder(buyer, 90_000, { erpStatus: 'DELIVERED' });
         await addOrder(buyer, 90_000, { erpStatus: 'CANCELLED' });
         await addOrder(buyer, 90_000, { paymentState: 'Declined' });
         expect((await placeDeferred(buyer, 90_000)).exceeded).toBe(false);
+    });
+
+    it.each(['CONFIRMED', 'UNDER_APPROVAL', 'APPROVED', 'PICKING'])(
+        'still counts an order in %s (no sales document, debt not in the ERP balance yet)',
+        async erpStatus => {
+            const buyer = await addBuyer(100_000);
+            await addOrder(buyer, 90_000, { erpStatus });
+            expect((await placeDeferred(buyer, 20_000)).exceeded).toBe(true);
+        },
+    );
+
+    it('counts one order once however many payment attempts it has', async () => {
+        const buyer = await addBuyer(100_000);
+        const orderId = await addOrder(buyer, 60_000, {
+            method: 'card-online',
+            paymentState: 'Created',
+        });
+        for (const method of ['card-online', 'offline-terms']) {
+            await run(
+                `INSERT INTO payment ("orderId", method, state, amount) VALUES ($1, $2, 'Created', 6000000)`,
+                [orderId, method],
+            );
+        }
+        expect((await placeDeferred(buyer, 40_000)).exceeded).toBe(false); // 60k + 40k
+        expect((await placeDeferred(buyer, 40_000.01)).exceeded).toBe(true);
+    });
+
+    it('counts only the unsettled remainder of a partially paid order', async () => {
+        const buyer = await addBuyer(100_000);
+        const orderId = await addOrder(buyer, 90_000, {
+            method: 'card-online',
+            paymentState: 'Created',
+        });
+        await run(
+            `INSERT INTO payment ("orderId", method, state, amount) VALUES ($1, 'card-online', 'Settled', 5000000)`,
+            [orderId],
+        );
+        expect((await placeDeferred(buyer, 60_000)).exceeded).toBe(false); // 40k + 60k
+        expect((await placeDeferred(buyer, 60_000.01)).exceeded).toBe(true);
     });
 
     it('counts an unpaid order of any method, ignores one already paid by money', async () => {
