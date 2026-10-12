@@ -14,8 +14,8 @@ export class PaymentReceivedResolver {
     @Allow(CustomPermission.ConfirmPaymentReceived.Permission)
     confirmPaymentReceived(
         @Ctx() ctx: RequestContext,
-        @Args() args: { orderId: ID },
+        @Args() args: { orderId: ID; paymentId?: ID | null },
     ): Promise<Order> {
-        return this.paymentReceived.confirm(ctx, args.orderId);
+        return this.paymentReceived.confirm(ctx, args.orderId, args.paymentId);
     }
 }

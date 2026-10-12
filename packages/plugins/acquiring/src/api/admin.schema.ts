@@ -179,7 +179,7 @@ export const adminApiExtensions: DocumentNode = gql`
         ): PaymentRefund!
         "Records a real Dispute/chargeback row for a payment — its own lifecycle, never folded into PaymentAttempt.paymentStatus."
         recordPaymentDispute(paymentId: ID!, type: String!, amount: Int!, status: String): Dispute!
-        "Marks the order's cash or bank-transfer payment as received (Settled); a repeat is a no-op."
-        confirmPaymentReceived(orderId: ID!): Order!
+        "Marks the order's cash or bank-transfer payment (or the one given by paymentId) as received (Settled), recording who and when; a repeat is a no-op."
+        confirmPaymentReceived(orderId: ID!, paymentId: ID): Order!
     }
 `;

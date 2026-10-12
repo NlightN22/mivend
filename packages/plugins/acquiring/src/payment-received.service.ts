@@ -2,16 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import {
+    AdministratorService,
     EntityNotFoundError,
     Order,
     OrderService,
     Payment,
+    PaymentMetadata,
     RequestContext,
     TransactionalConnection,
     UserInputError,
     isGraphQlErrorResult,
 } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { PLACEMENT_KEY, withAggregateLock } from 'shared';
 
 import { CASH_METHOD_CODE } from './cash-handler';
 import { OFFLINE_TERMS_METHOD_CODE } from './offline-terms-handler';
@@ -25,10 +27,12 @@ export class PaymentReceivedService {
         private connection: TransactionalConnection,
         private orderService: OrderService,
         private visibility: OrderVisibilityService,
+        private administratorService: AdministratorService,
     ) {}
 
-    // Idempotent: under the order lock, only Authorized manual payments are settled, so a repeat finds none.
-    async confirm(ctx: RequestContext, orderId: ID): Promise<Order> {
+    // Idempotent: under the order lock, only Authorized manual payments carrying a placement are settled, so a
+    // repeat finds none. A payment that predates placement metadata (legacy) is never settled here.
+    async confirm(ctx: RequestContext, orderId: ID, paymentId?: ID | null): Promise<Order> {
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
         const visible = await qb.andWhere(`${qb.alias}.id = :orderId`, { orderId }).getOne();
         if (!visible) throw new EntityNotFoundError('Order', String(orderId));
@@ -38,16 +42,30 @@ export class PaymentReceivedService {
             ctx,
             `payment-received:${orderId}`,
             async txCtx => {
-                const payments = await this.connection
-                    .getRepository(txCtx, Payment)
-                    .createQueryBuilder('p')
-                    .where('p."orderId" = :orderId', { orderId })
-                    .andWhere('p.method IN (:...methods)', { methods: MANUAL_METHODS })
-                    .getMany();
-                if (payments.length === 0) {
+                const repo = this.connection.getRepository(txCtx, Payment);
+                const manual = (
+                    await repo
+                        .createQueryBuilder('p')
+                        .where('p."orderId" = :orderId', { orderId })
+                        .andWhere('p.method IN (:...methods)', { methods: MANUAL_METHODS })
+                        .getMany()
+                ).filter(p => Boolean(p.metadata?.[PLACEMENT_KEY]));
+                const candidates = paymentId
+                    ? manual.filter(p => String(p.id) === String(paymentId))
+                    : manual;
+                if (candidates.length === 0) {
                     throw new UserInputError('The order has no cash or bank-transfer payment');
                 }
-                for (const payment of payments.filter(p => p.state === 'Authorized')) {
+                const admin = ctx.activeUserId
+                    ? await this.administratorService.findOneByUserId(txCtx, ctx.activeUserId)
+                    : undefined;
+                for (const payment of candidates.filter(p => p.state === 'Authorized')) {
+                    const metadata: PaymentMetadata = {
+                        ...payment.metadata,
+                        confirmedByAdministratorId: admin ? String(admin.id) : null,
+                        confirmedAt: new Date().toISOString(),
+                    };
+                    await repo.update(payment.id, { metadata });
                     const result = await this.orderService.settlePayment(txCtx, payment.id);
                     if (isGraphQlErrorResult(result)) throw new UserInputError(result.message);
                 }

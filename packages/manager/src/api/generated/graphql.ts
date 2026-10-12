@@ -4337,6 +4337,7 @@ export type MutationConfirmOrderArgs = {
 
 export type MutationConfirmPaymentReceivedArgs = {
     orderId: Scalars['ID']['input'];
+    paymentId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type MutationCreateAdministratorArgs = {
