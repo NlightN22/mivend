@@ -328,7 +328,9 @@ auto-round silently.
 **Opt-in per branch (#219).** Multiplicity is enforced and shown only when the resolved
 `BranchSettings.enforceMultiplicity` is `true` (default `false`); when off, the interceptor and
 reservation skip it and the storefront hides the Multiplicity cell/block. The pack rule below is
-unaffected. ERP import keeps writing the field. Both enforcement points call
+unaffected. Deploy note: migration `1791486000000` sets `enforceMultiplicity=false` on every existing
+branch (owner decision), so a 1C multiplicity > 1 that used to always apply now applies only where the
+flag is enabled. ERP import keeps writing the field. Both enforcement points call
 `PackagingPolicyService.requiredMultiple`, so they always agree.
 
 **Only some SKUs are constrained — this is intentional, not a partial implementation.** In ERP,
