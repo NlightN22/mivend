@@ -52,6 +52,12 @@ created one, which would show no diff at all) — not an incremental step on top
 never-written migration. Any schema change from here on (a new column, a new entity, a new index)
 needs its own incremental migration generated the same way, kept in `apps/server/src/migrations/`.
 
+**Renames need a carry-over on synchronize contours (#223).** `synchronize` would drop a renamed table and
+create an empty one, so `1791488000000-proforma-invoice-rename` (`invoice` -> `proforma_invoice`, link columns
+`invoiceId` -> `proformaInvoiceId`, indexes) shares its idempotent SQL with
+`apps/server/src/proforma-invoice-carryover.ts`, which runs before bootstrap on non-production contours;
+production only verifies the rename was migrated.
+
 `migrationsRun` is deliberately not set on `dbConnectionOptions` — nothing runs migrations
 automatically at `main.ts`/`worker.ts`/`worker-email.ts` boot. Instead `make prod-up` runs
 `infrastructure/docker/docker-compose.yml`'s `migrate` service (`node dist/migration.js run`,

@@ -363,14 +363,14 @@ plugin is an open implementation question, not decided here.
 
 ## Cross-instance facts as independent event streams (rule #10)
 
-A cross-instance fact about an order or invoice that a **non-owning** instance can legitimately
+A cross-instance fact about an order or proforma invoice that a **non-owning** instance can legitimately
 witness (a payment, a reservation, an approval, an ERP status) is never a direct mutation of
 another instance's record, and never folded into a general `*.updated` event's payload — it is
 its own independent event stream. `docs/architecture.md`'s "Order as a read-model" section has
 the full reasoning; this section documents the concrete payment instance of it.
 
-**Payment facts** (`plugin-acquiring`'s `Invoice`/`PaymentAttempt`) flow in from two directions,
-both landing in `plugin-acquiring`'s payment inbox rather than mutating an `Invoice` directly
+**Payment facts** (`plugin-acquiring`'s `ProformaInvoice`/`PaymentAttempt`) flow in from two directions,
+both landing in `plugin-acquiring`'s payment inbox rather than mutating an `ProformaInvoice` directly
 from `plugin-sync`:
 
 - **ERP → Central**: `plugin-sync`'s `ErpCallbackController` (`POST /erp/callback/payment`)

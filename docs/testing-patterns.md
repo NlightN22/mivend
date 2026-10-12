@@ -11,7 +11,7 @@ exceptions.
 ## Data and scope isolation
 
 **Applies to**: any operation scoped by counterparty, branch, channel, organization, department,
-document, order, invoice, payment, user, or trading point.
+document, order, proforma invoice, payment, user, or trading point.
 
 **Risk**: an operation reads or mutates data outside its intended scope, especially when an
 external id collides across scopes.
@@ -330,7 +330,7 @@ is actually blocked at runtime.
 
 **mivend example**: `ReplicaOrderInterceptor`, `PaymentReconciliationIssue` (`plugin-acquiring`) —
 `payment-inbox.int.test.ts`'s "a payment event declaring the wrong organization" proves the
-disallowed mutation is actually rejected at runtime (invoice status left untouched, event
+disallowed mutation is actually rejected at runtime (proforma invoice status left untouched, event
 dead-lettered, `PaymentReconciliationIssue` reported), not just that the check exists.
 
 **Exceptions**: none — this is architecturally non-negotiable per the external-integration-rules/internal-sync-rules skills.

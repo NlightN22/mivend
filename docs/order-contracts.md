@@ -7,7 +7,7 @@ Issues: #201, #202, #203, #205 (ERP rejection handling is #204, tracked separate
 
 | Concept                   | Where it lives                                  | Used for                                               |
 | ------------------------- | ----------------------------------------------- | ------------------------------------------------------ |
-| Line organization         | `OrderLine.customFields.organizationId`         | Invoices, payment split, reservations (our own split)  |
+| Line organization         | `OrderLine.customFields.organizationId`         | Proforma invoices, payment split, reservations (our own split)  |
 | Order (header) contract   | `Order.customFields.selectedContractId`         | `order.confirmed` header: contract + contract's organization |
 
 - The line organization comes from the product: one storage location = one product = one
@@ -17,8 +17,8 @@ Issues: #201, #202, #203, #205 (ERP rejection handling is #204, tracked separate
   organization bound to that contract, and each line carries its own organization that the ERP
   distributes itself from the storage location. That distribution later splits the order into
   separate sales documents and settlements inside the ERP. We do not send or imitate it.
-- We split on our side too: one invoice per distinct line organization in the cart (one cart with
-  three organizations gives three invoices), created at cart confirmation, independent of the
+- We split on our side too: one proforma invoice per distinct line organization in the cart (one cart with
+  three organizations gives three proforma invoices), created at cart confirmation, independent of the
   payment method.
 
 ## A product without an organization is not sellable (#201)
@@ -70,14 +70,14 @@ counterparty. It takes the same lock as `reserveOrder()`. The customer has no ch
   pushing to its `master`, bump the dependency here. See `docs/integration-health.md` for the
   contract drift indicator on the Outbound tab.
 
-## Invoices
+## Proforma invoices
 
-Terminology (owner decision, #223): our payment request is a **proforma invoice** (code still `Invoice` until
-#223 lands); "sales invoice" is reserved for the ERP's fact of sale (1C realization), which mivend never issues. It will be mirrored as a read-only, ERP-owned `SalesInvoice` (fact of
+Terminology (owner decision, #223): our payment request is a **proforma invoice** (the entity was named `Invoice` before
+#223); "sales invoice" is reserved for the ERP's fact of sale (1C realization), which mivend never issues. It will be mirrored as a read-only, ERP-owned `SalesInvoice` (fact of
 shipment) in a later task; #223 only frees the name.
 
-- Invoices (`Invoice`, one per distinct line organization) are created for the payment methods that
-  need them: pay-by-invoice and online payment. Orders on deferred terms get no automatic invoices:
+- Proforma invoices (`ProformaInvoice`, one per distinct line organization) are created for the payment methods that
+  need them: pay-by-invoice and online payment. Orders on deferred terms get no automatic proforma invoices:
   the ERP holds the accounting documents (sales documents after its own distribution, settlements).
 - A customer who needs a document to pay against requests a **proforma payment invoice**: an
   immutable snapshot (number, organization, lines, amounts), idempotent per order content, a new
@@ -277,7 +277,7 @@ Today the consumer drops them as a `noop`. Decision: import them as real `Order`
 - **Visibility.** All portal users of the counterparty see its external orders (they have no author user);
   managers by the usual scope. The storefront "my orders" list shows them in the same list with a "from ERP"
   badge and a source filter, without actions (no cancel, no repeat).
-- **Guards by flag.** Skip external orders in anything that assumes `order.customer`: invoices, reserve, moq,
+- **Guards by flag.** Skip external orders in anything that assumes `order.customer`: proforma invoices, reserve, moq,
   price resolution, replication, notifications. `order-submitted` already skips an order without a customer.
 - **Open for later.** Writing a mivend `orderUuid`/number back to the ERP needs a new event type
   (`confirmed` would register a duplicate) and an ERP-side change; not required for showing history.

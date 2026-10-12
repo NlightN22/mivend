@@ -198,7 +198,7 @@ An event that keeps failing is dead-lettered (`status: 'failed'`, terminal) afte
 `@nestjs/schedule` or Vendure's `JobQueueService`) sweeps every `paymentInboxPollIntervalMs`
 (`AcquiringPluginOptions`, default `PAYMENT_INBOX_POLL_INTERVAL_DEFAULT` = 60s) and calls
 `PaymentInboxProcessorService.processPendingEvents()`, which is where the actual, risky
-processing (`PaymentAttemptService.payInvoice`) happens — never inline in whatever received the
+processing (`PaymentAttemptService.payProformaInvoice`) happens — never inline in whatever received the
 event. An ops-only admin mutation, `triggerPaymentInboxSweep` (`invoice.resolver.ts`), runs the
 exact same `processPendingEvents()` path on demand — a "run the sweep now" tool, not a bypass of
 the async contract.
@@ -221,11 +221,11 @@ Both events carry a `RequestContext` (`event.ctx`) rather than the listener re-d
 both event classes live in `plugin-sync` (`erp-payment.events.ts`) — `plugin-acquiring` imports
 them from `plugin-sync`'s public `index.ts` only, never `plugin-sync/src/...` directly. The
 listener itself (`payment-event.listener.ts`) only ever calls `inboxService.enqueue(...)` — it
-must never call `payInvoice` directly; that would silently reintroduce the exact rule-#12
+must never call `payProformaInvoice` directly; that would silently reintroduce the exact rule-#12
 anti-pattern this whole design exists to prevent.
 
 Note: `online-acquiring` does **not** go through this inbox today — `onlineStubPaymentHandler`
-calls `payInvoice` synchronously at checkout time, which is itself an instance of the rule-#12
+calls `payProformaInvoice` synchronously at checkout time, which is itself an instance of the rule-#12
 anti-pattern, accepted for now only because there is no real acquirer webhook yet (see "Flow:
 online payment" below). Once Robokassa is integrated, its webhook must be routed through this
 same inbox, not left as a synchronous checkout-time call.
@@ -263,13 +263,13 @@ redeliver.
 
 ## Entities
 
-- **`Invoice`** (new — see "Organizations" below) — one per our organization within an aggregate
+- **`ProformaInvoice`** (new — see "Organizations" below) — one per our organization within an aggregate
   `Order`: `orderId`, `organizationId` (references `OrganizationRequisites`, `plugin-documents`),
   `counterpartyId`, `amount`, `currencyCode`, `status`
   (`pending`/`issued`/`paid`/`cancelled`). The object a payment actually settles — not `Order`
   directly, once real splitting is wired.
 - **`PaymentAttempt`** (the platform's own record of a payment) — `paymentId`, `channel`
-  (`online-acquiring` | `branch-kassa` | `bank-transfer-erp`), `invoiceId` (which `Invoice` — and
+  (`online-acquiring` | `branch-kassa` | `bank-transfer-erp`), `proformaInvoiceId` (which `ProformaInvoice` — and
   therefore which of our organizations — this payment settles; nullable today, see "Organizations"
   below), `orderId` (nullable — a lump payment may not be allocated to an order yet, see "Cash
   application" below), `amount`, `currencyCode` (was missing from the original `payment.recorded`
@@ -287,7 +287,7 @@ redeliver.
   `PaymentRefund`.
 - **`SettlementEntry`** — an append-only, per-counterparty **and per-organization** ledger row
   (not per-order — see "Organizations" below for why organization is a required second axis, not
-  optional), referencing `invoiceId`, the local provisional reflection of a movement
+  optional), referencing `proformaInvoiceId`, the local provisional reflection of a movement
   (`sourceType`: `payment.captured` | `refund.succeeded` | `chargeback.created` | `order.created` |
   `erp-reconciliation`), `reconciled: boolean`, plus `allocatedOrderId`/`allocationAmount` (see
   "Cash application" — one `SettlementEntry` can spawn several allocation rows if a single payment
@@ -301,7 +301,7 @@ redeliver.
              | ORGANIZATION_MISMATCH | ERP_DOCUMENT_MISSING | PLATFORM_PAYMENT_MISSING
              | UNKNOWN_PROVIDER_OPERATION | INVALID_STATE_TRANSITION
              | REFUND_EXCEEDS_CAPTURED_AMOUNT
-    paymentId, invoiceId, providerPaymentId, erpDocumentId
+    paymentId, proformaInvoiceId, providerPaymentId, erpDocumentId
     expectedAmount, actualAmount, expectedCurrency, actualCurrency
     detectedAt, status, resolution
     ```
@@ -353,7 +353,7 @@ location = one product = one organization — a deliberate constraint for scanni
 unit/package codes cleanly, not an accident; this is a stricter instance of the generally
 recommended "bind marked goods to specific storage cells/batches" practice, not an anti-pattern).
 So **one storefront checkout can legitimately span several of our organizations** — e.g. 3 order
-lines, 3 organizations, 3 invoices, 3 payments.
+lines, 3 organizations, 3 proforma invoices, 3 payments.
 
 **This is not optional and not deferrable to "after payment."** A split-payment acquirer (the
 correct primitive here — see below) requires the full recipient/amount breakdown **at
@@ -366,18 +366,18 @@ async ERP acknowledgement is not compatible with this.
 
 **Decided direction:**
 
-- **`Invoice`** (new entity, `plugin-acquiring`) — one aggregate `Order` splits into one `Invoice`
+- **`ProformaInvoice`** (new entity, `plugin-acquiring`) — one aggregate `Order` splits into one `ProformaInvoice`
   per organization it touches: `orderId`, `organizationId`, `counterpartyId`, `amount`,
   `currencyCode`, `status`. `PaymentAttempt`/`SettlementEntry`/`PaymentReconciliationIssue`
-  reference `invoiceId` (nullable today — see "Not yet designed" below), not a bare
-  `organizationId` — `Invoice` is the single source of truth for which organization a payment
+  reference `proformaInvoiceId` (nullable today — see "Not yet designed" below), not a bare
+  `organizationId` — `ProformaInvoice` is the single source of truth for which organization a payment
   belongs to.
 - The organization-per-product mapping (today only known inside the ERP's warehouse/storage-location
   data) is imported into the platform as **catalog master data**, the same way `PriceEntry` is
   (the external-integration-rules skill — ERP is master; the platform holds a local read replica so checkout
   doesn't need a synchronous round-trip to the ERP): `ProductVariant.customFields.organizationId`, set
   by `erp-import`'s product record. `OrderLine.customFields.organizationId` is stamped from it
-  each time the order enters `ArrangingPayment` (`organizationOrderGuard.onTransitionEnd`); invoice
+  each time the order enters `ArrangingPayment` (`organizationOrderGuard.onTransitionEnd`); proforma invoice
   split, reservation gate and the `order.submitted` builder read the line, never the variant. The
   `order.submitted` carries the organization of the order's contract instead; the contract is the
   stored selection, else the main one, else another active contract (docs/order-flow.md "Order
@@ -438,12 +438,12 @@ exactly one legal entity on the buyer side. Not a design gap; no action needed h
 - Per-organization `creditLimit`/`paymentDelayDays` on `Counterparty`, or contracts/agreements
   (`TODO.md`: "Добавить организации и лимиты в разрезе организаций. Добавить договоры и лимиты в
   разрезе договоров.") — touches `plugin-counterparty`, `plugin-erp-order`, order creation,
-  credit-terms approval, and the manager portal's finance views. `Invoice`/`SettlementEntry`
+  credit-terms approval, and the manager portal's finance views. `ProformaInvoice`/`SettlementEntry`
   already carry `organizationId`, which is enough for correct payment allocation without this.
   UI direction for when it does land: aggregate totals in dashboard KPI tiles, per-organization
   breakdown lower on the page/in tabs —
   [#48](https://github.com/NlightN22/mivend/issues/48) (needs a real design pass later).
-- Refund/dispute/document (invoice PDF) generation per-`Invoice` rather than per-`Order`.
+- Refund/dispute/document (proforma invoice PDF) generation per-`ProformaInvoice` rather than per-`Order`.
 - Cash-application FIFO ("open obligations") must, once wired, scope by
   **`(counterpartyId, organizationId)` together** — a debt owed to organization A must never be
   silently offset by a payment made to organization B.
@@ -522,7 +522,7 @@ operation), a bank transfer is a fact the ERP already knows about (an accountant
 bank statement) and needs to push **into** this platform — the reverse direction:
 
 ```
-1.  ERP posts a payment document against an Invoice it knows about (organizationId/counterpartyId
+1.  ERP posts a payment document against a ProformaInvoice it knows about (organizationId/counterpartyId
     resolved on the ERP side, same as any other ERP-sourced fact).
 2.  ERP calls POST /erp/callback/payment (plugin-sync's ErpCallbackController) with
     { invoiceId, outcome, erpEventId } — see ErpPaymentReportedDto, documented at /api-docs for
@@ -532,7 +532,7 @@ bank statement) and needs to push **into** this platform — the reverse directi
 4.  plugin-acquiring's PaymentEventListener enqueues the event into the payment inbox
     (provider: 'erp', providerEventId: erpEventId) and returns.
 5.  PaymentInboxWorker's next sweep (or an ops-triggered triggerPaymentInboxSweep) calls
-    PaymentAttemptService.payInvoice, which does the real, transactional work: create the
+    PaymentAttemptService.payProformaInvoice, which does the real, transactional work: create the
     PaymentAttempt, run FIFO cash-application via SettlementEntryService.allocate.
 6.  A resend of the same erpEventId (ERP retrying after a timeout, a duplicate exchange record)
     is a no-op at step 4 — InboxService.enqueue returns the existing row instead of creating a
@@ -596,7 +596,7 @@ existing `payment.recorded` outbox event (`order-sync.service.ts`), reaches Cent
 normal branch→central sync transport (`docs/sync.md`'s "Branch → Hub" flow — no new transport was
 added for this). `PaymentRecordedPayload` (`packages/shared/src/sync.ts`) gained optional
 `invoiceId`/`outcome` fields so the same event can carry "this cash payment settles
-`plugin-acquiring`'s `Invoice` #N" when the caller knows it. `CentralConsumer.handlePaymentRecorded`
+`plugin-acquiring`'s `ProformaInvoice` #N" when the caller knows it. `CentralConsumer.handlePaymentRecorded`
 applies the payment fact as before (unchanged) and, when those optional fields are present, also
 publishes `BranchKassaPaymentEvent` on the `EventBus` — which durably lands in the payment inbox
 exactly like the ERP path above (see the "Idempotency" section's "Producers" list). What's still
@@ -667,7 +667,7 @@ These are real, acknowledged gaps — not guessed at here, tracked for a future 
 - `deferred-payment` (plugin-deferred-payment) owns credit control. Its eligibility checker hides the
   method for counterparties without a computed general limit (`creditLimit > 0` required; prepayment
   customers). `Counterparty.creditLimit` is filled by the credit-limit job below, not by import.
-- `offline-terms` (bank invoice) stays in acquiring (documents depend on it). `OFFLINE_TERMS_ENABLED=false`
+- `offline-terms` (bank proforma invoice) stays in acquiring (documents depend on it). `OFFLINE_TERMS_ENABLED=false`
   disables its PaymentMethod row.
 - `online-stub` PaymentMethod is enabled by `OnlinePaymentPlugin`'s bootstrap only when
   `ONLINE_PAYMENT_STUB_ENABLED=true` (`apps/server/.env.central`; the staging-integration contour leaves
@@ -675,31 +675,31 @@ These are real, acknowledged gaps — not guessed at here, tracked for a future 
 
 ### Target model: form of payment vs terms (issue #222, decided 2026-10-12, not built yet)
 
-The checkout list below mixes a form (invoice, online) with terms (deferred). The decided model separates them;
+The checkout list below mixes a form (proforma invoice, online) with terms (deferred). The decided model separates them;
 until #222 ships, the sections that follow describe the current behavior.
 
-- **Form** (customer choice): cash, bank invoice, card online. There is no "deferred" option.
+- **Form** (customer choice): cash, bank proforma invoice, card online. There is no "deferred" option.
 - **Terms** (derived, never chosen): limit > 0 and payment delay days > 0 means limit control applies; otherwise
   prepayment, or a one-off manager confirmation. The limit is a hidden control, not a payment method.
-- An order occupies the limit until it is paid (cash accepted, invoices paid, card payment received); a paid order
+- An order occupies the limit until it is paid (cash accepted, proforma invoices paid, card payment received); a paid order
   does not count. How shipment/realization replaces the preliminary estimate is a separate discussion.
-- An invoice (a proforma invoice, renamed in #223) is a document of the order and can be requested on any form and
+- A proforma invoice (formerly `Invoice`, renamed in #223) is a document of the order and can be requested on any form and
   under any terms (#206). Order of work: #222, #223, #206.
 
 | Limit state | Form | Placement | Goes to ERP | Counts against limit |
 | --- | --- | --- | --- | --- |
 | Within limit | cash | placed | immediately | until cash accepted |
-| Within limit | bank invoice | invoices generated, printable pages opened in new browser tabs | immediately | until paid |
+| Within limit | bank proforma invoice | proforma invoices generated, printable pages opened in new browser tabs | immediately | until paid |
 | Within limit | card online | payment page at once | after payment | no |
 | Over limit | any | placed with `creditLimitExceeded`, customer ticks an acknowledgement | immediately if the branch allows exceeding and the customer ticked; otherwise after manager confirmation | yes |
 | No limit | cash | placed, waits for a manager | immediately with a short reserve; manager confirms cash received | no (prepayment) |
-| No limit | bank invoice | invoices generated and opened at once | immediately with a short reserve; a manager marks paid (no automatic tracking yet) | no |
+| No limit | bank proforma invoice | proforma invoices generated and opened at once | immediately with a short reserve; a manager marks paid (no automatic tracking yet) | no |
 | No limit | card online | payment page at once | after payment | no |
 
 - Prepayment orders go to the ERP at placement with `reserveUntil` = placement + N days (default 3, a business
   setting in the manager portal, not the Vendure admin); expiry follows the standard reserve auto-cancel (#194).
 - Card payment amount = existing excess over the limit (max(0, exposure - limit), before this order) + the full
-  order total; no excess means the order total. Invoices and payments are always for the full amount; partial
+  order total; no excess means the order total. Proforma invoices and payments are always for the full amount; partial
   payments and overpayment come later.
 - A manager may confirm without payment when there is no limit: a one-off deferral under their responsibility;
   the order occupies the limit.
@@ -738,7 +738,7 @@ through is decided downstream (ERP, later a manager-portal approval workflow, se
   counting. Real TTL cancellation and ERP notification are separate work, not built here.
 - Per-contract limits (`controlledIndividually`) are not evaluated here: the order carries no contract.
 - Known limitations: concurrent checkouts of one counterparty are not serialized (the warning may be
-  missed in a race, nothing is blocked either way); related-orders links are not built; mandatory invoice requisites are deferred.
+  missed in a race, nothing is blocked either way); related-orders links are not built; mandatory proforma invoice requisites are deferred.
 
 ### General credit limit job
 

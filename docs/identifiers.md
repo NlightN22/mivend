@@ -17,7 +17,7 @@ and is never an idempotency key for a business entity.
 
 ## Which entities
 
-- **uuid + number** (documents): Order, Invoice (and proforma snapshots, #206), PaymentAttempt / payment document,
+- **uuid + number** (documents): Order, ProformaInvoice (and proforma snapshots, #206), PaymentAttempt / payment document,
   Refund, SettlementEntry, DiscountGrant.
 - **uuid only**: OrderLine, Reservation (replaces the separate `erpOperationId` / `erpReleaseOperationId` ids as the
   entity identity; operation ids stay for operations), rendered Document records, reconciliation issue records, and every
@@ -46,7 +46,7 @@ and is never an idempotency key for a business entity.
   the ERP's event id) is stored and shown separately as the provider/bank reference and never replaces our number.
 - Shown everywhere people see a document and accepted by every search box (typing digits finds it).
 - **Display only:** storefront/manager UIs render a dash after the 3-digit instance code for readability
-  (`1000000012` → `100-0000012`; an Invoice's real `-NN` suffix is left alone, giving `100-0000012-01`) via
+  (`1000000012` → `100-0000012`; a ProformaInvoice's real `-NN` suffix is left alone, giving `100-0000012-01`) via
   `@mivend/ui-kit`'s `formatDocumentNumber` — the stored value, sort, navigation and server-side search filters all
   stay the plain digit string; nothing is ever reformatted before being sent back to the server. Every number search
   box runs the search term through `shared`'s `documentNumberSearchTerm` first, which undoes that one display dash
@@ -99,7 +99,7 @@ and is never an idempotency key for a business entity.
   validated as exactly 3 digits at plugin init and documented in `.env.local.example`/`docs/environments.md`.
 - Done: shared `UuidEntity` base (`packages/shared/src/uuid-entity.ts`), assigned via `@BeforeInsert()` so it is
   readable before the row's own insert commits.
-- Done: `UuidEntity` applied to Invoice/PaymentAttempt/PaymentRefund/SettlementEntry/DiscountGrant/Document/
+- Done: `UuidEntity` applied to ProformaInvoice/PaymentAttempt/PaymentRefund/SettlementEntry/DiscountGrant/Document/
   ErpReconciliationIssue/Reservation (migration `1791480000000-plugin-entities-uuid`, backfilled then unique-indexed).
   SettlementEntry gets uuid only — it has no human-facing number field (confirmed by reading its entity/service: it is
   a ledger row, never shown or searched by a number of its own). Reservation gets uuid only, additively:
@@ -109,15 +109,15 @@ and is never an idempotency key for a business entity.
   reserve-by-order stream key a reservation; that is real follow-up work, not done by adding the column.
 - Done: every `generateDocumentCode` call site replaced with `NumberingService`; `generateDocumentCode`/
   `documentCode.ts` is deleted. Order-scoping decisions made:
-  - **Invoice**: order-scoped, `<order number>-NN` via `NumberingService.formatOrderDocumentNumber`. The ordinal is
-    computed inside `InvoiceService.createUnderLock`, which already runs under a per-order `withAggregateLock` lock
+  - **ProformaInvoice**: order-scoped, `<order number>-NN` via `NumberingService.formatOrderDocumentNumber`. The ordinal is
+    computed inside `ProformaInvoiceService.createUnderLock`, which already runs under a per-order `withAggregateLock` lock
     (pre-existing, for the idempotent-retry guarantee) — no separate locking was needed, just computing the ordinal as
     the split's 1-based index within that existing locked section. A concurrent-writer test
-    (`invoice-creation.concurrency.int.test.ts`) asserts every Invoice number for one order is distinct even when
-    `createInvoicesForOrder` is called concurrently.
+    (`proforma-invoice-creation.concurrency.int.test.ts`) asserts every ProformaInvoice number for one order is distinct even when
+    `createProformaInvoicesForOrder` is called concurrently.
   - **PaymentAttempt / PaymentRefund**: flat per-instance sequence (`NumberingService.next(ctx, 'payment'|'refund')`),
     not order-scoped. Reasoning: docs/identifiers.md's "Payment documents" paragraph says the number "always comes
-    from the sequence", unlike Invoice which this doc explicitly calls out as `<order number>-NN`; `providerPaymentId`/
+    from the sequence", unlike ProformaInvoice which this doc explicitly calls out as `<order number>-NN`; `providerPaymentId`/
     `providerRefundId` already carry the acquirer/kassa reference separately. Revisit if this reading turns out wrong.
   - **DiscountGrant**: flat per-instance sequence — it has no `orderId`, so `<order number>-NN` does not apply.
 - Done: `order.submitted` carries `orderUuid`/`orderNumber`/`lineUuid` in mivend's own producer-side mirror

@@ -190,7 +190,7 @@ reference. A custom assertion must not hide significant logic — failure messag
 ## E2E strategy
 
 Critical routes only: login + trading-point selection, product search + cart, order creation,
-approval/confirmation, payment, invoice/payment display, branch/counterparty access rights, one
+approval/confirmation, payment, proforma invoice/payment display, branch/counterparty access rights, one
 central-branch sync flow, one redelivery scenario, one recovery-after-transient-failure scenario.
 
 Requirements: no duplicated business rules (those live at lower levels), stable seed data,

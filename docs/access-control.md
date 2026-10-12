@@ -183,7 +183,7 @@ interchangeable id spaces:
   visibility of anything, anywhere, full stop** (2026-09-20 product decision, corrects an earlier
   version of this doc/several services that did filter by it — see "Branch scope" below). The
   `AccessScopeKind` enum still has a `'department'` value for historical reasons — its cases in
-  `AccessScopeService`/`CounterpartyService`/`OrderVisibilityService`/`InvoiceVisibilityService`
+  `AccessScopeService`/`CounterpartyService`/`OrderVisibilityService`/`ProformaInvoiceVisibilityService`
   no longer compare `departmentId` at all; renaming the enum value itself (e.g. to `'branch'`) is
   an open question for issue #123, not done yet.
   **Confirmed against the real Kafka contracts** (`@nlightn22/event-contracts`,
@@ -231,7 +231,7 @@ naming — renaming to something like `'branch'` is an open question for issue #
 yet), but every consumer's `'department'` case must compare `branchId` only, never
 `departmentId`. This corrects an earlier version of this section/several services
 (`CounterpartyService.findVisible`, `AccessScopeService.assertCounterpartyWritable`,
-`OrderVisibilityService`, `InvoiceVisibilityService`) that did filter by `departmentId` — see
+`OrderVisibilityService`, `ProformaInvoiceVisibilityService`) that did filter by `departmentId` — see
 "Branch vs Department" above for why, and for the confirmed proto evidence that the ERP never sends a
 distinct "branch" concept at all.
 
@@ -272,7 +272,7 @@ scope.branchId` anyway. It "worked" only by accident — `Administrator.customFi
   Deliberately **no** `OR c.branchId IS NULL` carve-out — an unassigned Counterparty is invisible
   to every branch-scoped role (deny-by-default), visible only to `'all'`-scope roles
   (general-director, portal-admin), until issue #65/#123's real assignment/triage workflow
-  populates `branchId` for real accounts. This intentionally differs from Order/Invoice's own
+  populates `branchId` for real accounts. This intentionally differs from Order/ProformaInvoice's own
   `OR branchId IS NULL` carve-out below — those resources denormalize a _different_, more
   reliably-populated `branchId` (from `TradingPoint.servicingBranchId`/an order's placement-time
   snapshot), where the permissive carve-out was itself a targeted bug fix (a real order silently
@@ -287,12 +287,12 @@ scope.branchId` anyway. It "worked" only by accident — `Administrator.customFi
   join — same pattern as `Reservation.stockLocationId`). Defaults to the parent `Counterparty`'s
   `branchId` at `TradingPoint` creation time (covers the ~90–95% single-branch case with zero
   manual work); explicitly overridable per point for chain accounts. `OrderVisibilityService`/
-  `InvoiceVisibilityService` already correctly filtered by this denormalized `branchId` (never
+  `ProformaInvoiceVisibilityService` already correctly filtered by this denormalized `branchId` (never
   `Counterparty.branchId`) before today's fix — the only change there was dropping the
   additional, wrong `departmentId` comparison they also used to apply.
 - **The preferred trading point is self-healing, and reading it can write.**
   `TradingPointService.getPreferredForCustomer` — used by the Shop API `preferredTradingPoint`
-  field, invoices, MOQ and order placement — runs one atomic `UPDATE ... RETURNING` on the
+  field, proforma invoices, MOQ and order placement — runs one atomic `UPDATE ... RETURNING` on the
   customer row. If the stored preferred point is missing, inactive or hidden by the customer, it
   is replaced by the counterparty's first active, visible point (ordered by name); a working
   choice is never touched. A customer never has to pick a point by hand, and the placement-time

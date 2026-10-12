@@ -415,7 +415,7 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
   an organization blocks that transition for everyone, and the stamp itself re-checks it: it writes
   only organizations read in that statement and fails the transition if a variant lost its
   organization after the first check.
-- Invoice split (one `Invoice` per organization, created under a per-order advisory lock so a double
+- ProformaInvoice split (one `ProformaInvoice` per organization, created under a per-order advisory lock so a double
   submit yields one set), the `reserveOrder()` gate and the `order.confirmed` builder read the line,
   never the variant. `order.confirmed` is a different thing (see "Order contract" below).
 - Not modeled: a per-warehouse organization check. Reservation picks the warehouse by branch stock,
@@ -456,7 +456,7 @@ All contract and organization decisions are collected in `docs/order-contracts.m
   document header organization and the ERP distributes line organizations itself (this later splits
   the order into separate sales documents and settlements). So `order.confirmed` carries
   `organizationId` = the contract's organization and `contractId` = `Contract.erpId`, with no line
-  organizations, one event per order with one warehouse. Our own split (invoices, payment split,
+  organizations, one event per order with one warehouse. Our own split (proforma invoices, payment split,
   reservations) stays on the line organization.
 - `Order.customFields.selectedContractId` is set when the order enters `ArrangingPayment`
   (`contractOrderGuard`, plugin-acquiring). Selection order: (1) the stored selection if still valid

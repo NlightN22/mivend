@@ -18,7 +18,7 @@ Fixed vocabulary for documents and payments. Use these terms in code, UI, docs a
 ## The word "invoice" alone
 
 **Do not use bare "invoice" anywhere** (code, UI, docs, issues, commits). Say *proforma invoice* or
-*sales invoice*. The old `Invoice` entity is the proforma invoice and is renamed in #223; the SalesInvoice mirror
+*sales invoice*. The old `Invoice` entity is the proforma invoice and was renamed in #223 (table `proforma_invoice`); the SalesInvoice mirror
 is a separate later task. Legacy mentions in older docs are corrected as files are touched.
 
 ## Related
