@@ -14,7 +14,7 @@ const loggerCtx = 'PaymentEventListener';
 // here (a payload that's about to be rejected as invalid), but is always durably recorded as
 // received (the no-silent-drops messaging invariant), never silently omitted from the row.
 interface StoredPaymentPayload {
-    invoiceId: number;
+    proformaInvoiceId: number;
     organizationId: number;
     outcome: string;
     channel: PaymentChannel;
@@ -41,7 +41,7 @@ export class PaymentEventListener implements OnModuleInit {
             ErpPaymentReportedEvent,
             async event => {
                 const payload: IncomingPaymentPayload = {
-                    invoiceId: event.invoiceId,
+                    proformaInvoiceId: event.proformaInvoiceId,
                     organizationId: event.organizationId,
                     outcome: event.outcome,
                     channel: 'bank-transfer-erp' satisfies PaymentChannel,
@@ -63,7 +63,7 @@ export class PaymentEventListener implements OnModuleInit {
             BranchKassaPaymentEvent,
             async event => {
                 const payload: StoredPaymentPayload = {
-                    invoiceId: event.invoiceId,
+                    proformaInvoiceId: event.proformaInvoiceId,
                     organizationId: event.organizationId,
                     outcome: event.outcome,
                     channel: 'branch-kassa' satisfies PaymentChannel,

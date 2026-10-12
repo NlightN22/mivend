@@ -120,7 +120,7 @@ export class CentralConsumer implements OnModuleInit {
         if (await this.isAlreadyProcessed(event.eventId)) return;
         await this.orderSyncService.applyPaymentRecorded(event);
         if (
-            event.payload.invoiceId !== undefined &&
+            event.payload.proformaInvoiceId !== undefined &&
             event.payload.organizationId !== undefined &&
             event.payload.outcome !== undefined
         ) {
@@ -130,7 +130,7 @@ export class CentralConsumer implements OnModuleInit {
             this.eventBus.publish(
                 new BranchKassaPaymentEvent(
                     ctx,
-                    event.payload.invoiceId,
+                    event.payload.proformaInvoiceId,
                     event.payload.organizationId,
                     event.payload.outcome,
                     event.eventId,

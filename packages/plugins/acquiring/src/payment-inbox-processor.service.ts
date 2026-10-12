@@ -10,7 +10,7 @@ import {
 } from './payment-attempt.service';
 
 export interface IncomingPaymentPayload {
-    invoiceId: number;
+    proformaInvoiceId: number;
     // The organization the reporting side (ERP/branch) believes this payment belongs to.
     // PaymentAttemptService.payProformaInvoice validates this against the target ProformaInvoice's real
     // organizationId before applying — a mismatch is a genuine cross-system discrepancy
@@ -66,7 +66,7 @@ export class PaymentInboxProcessorService {
                 }
                 await this.paymentAttemptService.payProformaInvoice(
                     ctx,
-                    payload.invoiceId,
+                    payload.proformaInvoiceId,
                     payload.outcome,
                     payload.channel,
                     payload.externalReference,

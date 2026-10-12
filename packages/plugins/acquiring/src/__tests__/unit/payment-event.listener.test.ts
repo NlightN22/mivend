@@ -59,7 +59,7 @@ describe('PaymentEventListener', () => {
         expect(provider).toBe('erp');
         expect(providerEventId).toBe('ERP-EVT-1');
         expect(payload).toEqual({
-            invoiceId: 42,
+            proformaInvoiceId: 42,
             organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
@@ -79,7 +79,7 @@ describe('PaymentEventListener', () => {
         expect(provider).toBe('branch-kassa');
         expect(providerEventId).toBe('SYNC-EVT-9');
         expect(payload).toEqual({
-            invoiceId: 7,
+            proformaInvoiceId: 7,
             organizationId: 1,
             outcome: 'pending',
             channel: 'branch-kassa',
@@ -97,7 +97,7 @@ describe('PaymentEventListener', () => {
 
         const [, , , , payload] = inboxService.enqueue.mock.calls[0];
         expect(payload).toEqual({
-            invoiceId: 8,
+            proformaInvoiceId: 8,
             organizationId: 1,
             outcome: 'success',
             channel: 'branch-kassa',

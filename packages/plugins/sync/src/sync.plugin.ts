@@ -33,7 +33,7 @@ const adminApiSchema = gql`
             orderId: ID!
             method: String!
             amount: Int!
-            invoiceId: Int
+            proformaInvoiceId: Int
             organizationId: Int
             outcome: String
             rrn: String

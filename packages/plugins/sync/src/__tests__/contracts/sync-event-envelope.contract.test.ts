@@ -220,7 +220,7 @@ describe('SyncEventSchema (contract)', () => {
                 eventType: 'payment.recorded',
                 payload: {
                     ...validPaymentPayload(),
-                    invoiceId: 42,
+                    proformaInvoiceId: 42,
                     organizationId: 1,
                     outcome: 'success',
                     rrn: '123456789012',
@@ -233,7 +233,7 @@ describe('SyncEventSchema (contract)', () => {
             const result = SyncEventSchema.safeParse({
                 ...validEnvelope(),
                 eventType: 'payment.recorded',
-                payload: { ...validPaymentPayload(), invoiceId: 42, outcome: 'bogus' },
+                payload: { ...validPaymentPayload(), proformaInvoiceId: 42, outcome: 'bogus' },
             });
             expect(result.success).toBe(false);
         });
@@ -260,7 +260,7 @@ describe('SyncEventSchema (contract)', () => {
             const result = SyncEventSchema.safeParse({
                 ...validEnvelope(),
                 eventType: 'payment.recorded',
-                payload: { ...validPaymentPayload(), invoiceId: 0 },
+                payload: { ...validPaymentPayload(), proformaInvoiceId: 0 },
             });
             expect(result.success).toBe(false);
         });
@@ -274,7 +274,7 @@ describe('SyncEventSchema (contract)', () => {
             const result = SyncEventSchema.safeParse({
                 ...validEnvelope(),
                 eventType: 'payment.recorded',
-                payload: { ...validPaymentPayload(), invoiceId: 42, outcome: 'success' },
+                payload: { ...validPaymentPayload(), proformaInvoiceId: 42, outcome: 'success' },
             });
             expect(result.success).toBe(true);
         });

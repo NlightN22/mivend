@@ -301,7 +301,7 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
             'erp-evt-1',
             'hash-1',
             {
-                invoiceId: Number(invoice.id),
+                proformaInvoiceId: Number(invoice.id),
                 organizationId: 1,
                 outcome: 'success',
                 channel: 'bank-transfer-erp',
@@ -365,7 +365,7 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
             status: 'issued',
         });
         const payload = {
-            invoiceId: Number(invoice.id),
+            proformaInvoiceId: Number(invoice.id),
             organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
@@ -405,7 +405,7 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
             status: 'issued',
         });
         await inboxService.enqueue(mockCtx, 'bank-transfer-erp', 'erp-evt-3', 'hash-3', {
-            invoiceId: Number(invoice.id),
+            proformaInvoiceId: Number(invoice.id),
             organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
@@ -459,7 +459,7 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
         expect(enqueuedRow.provider).toBe('erp');
         expect(enqueuedRow.status).toBe('pending');
         expect(JSON.parse(enqueuedRow.payload)).toEqual({
-            invoiceId: Number(invoice.id),
+            proformaInvoiceId: Number(invoice.id),
             organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
@@ -648,7 +648,7 @@ describe('Payment inbox: organization data isolation within a single sweep batch
         });
 
         await inboxService.enqueue(mockCtx, 'bank-transfer-erp', 'shared-ref-001', 'hash-a', {
-            invoiceId: Number(invoiceA.id),
+            proformaInvoiceId: Number(invoiceA.id),
             organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
@@ -658,7 +658,7 @@ describe('Payment inbox: organization data isolation within a single sweep batch
         // provider+providerEventId row (level 2 dedup scope), so it must not collide with or
         // affect org A's processing despite the coincidentally identical reference value.
         await inboxService.enqueue(mockCtx, 'branch-kassa', 'shared-ref-001', 'hash-b', {
-            invoiceId: Number(invoiceB.id),
+            proformaInvoiceId: Number(invoiceB.id),
             organizationId: 2,
             outcome: 'success',
             channel: 'branch-kassa',

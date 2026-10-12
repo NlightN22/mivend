@@ -8,7 +8,7 @@ export type ErpPaymentOutcome = 'success' | 'pending' | 'fail' | 'cancel';
 export class ErpPaymentReportedEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,
-        public readonly invoiceId: number,
+        public readonly proformaInvoiceId: number,
         // The organization the reporting side (the ERP) believes this payment belongs to — validated
         // against the target ProformaInvoice's real organizationId before applying (the external-integration-rules
         // skill's external-reference-id rule). Payment allocation is scoped by organization only; branch is a visibility
@@ -28,7 +28,7 @@ export class ErpPaymentReportedEvent extends VendureEvent {
 export class BranchKassaPaymentEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,
-        public readonly invoiceId: number,
+        public readonly proformaInvoiceId: number,
         // Same organization-scope validation as ErpPaymentReportedEvent — the branch reporting
         // this cash payment already knows its own organization context; this is validated
         // against the target ProformaInvoice's real organizationId, never used to restrict which

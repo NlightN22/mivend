@@ -212,7 +212,7 @@ the async contract.
   own id for the payment fact — a resend is a safe no-op). Also the simulation entry point until
   a real ERP integration exists.
 - `provider: 'branch-kassa'` — no separate transport: a branch's existing `payment.recorded`
-  outbox event (see "Flow: branch till (kassa) payment" below) carries optional `invoiceId`/
+  outbox event (see "Flow: branch till (kassa) payment" below) carries optional `proformaInvoiceId`/
   `outcome` fields; Central's `CentralConsumer.handlePaymentRecorded` publishes
   `BranchKassaPaymentEvent` (`providerEventId = ` the sync envelope's own `eventId`) once it has
   applied the payment fact locally, and the same `PaymentEventListener` enqueues it.
@@ -595,7 +595,7 @@ a kassa-server outage), never as a routine input path.
 existing `payment.recorded` outbox event (`order-sync.service.ts`), reaches Central through the
 normal branch→central sync transport (`docs/sync.md`'s "Branch → Hub" flow — no new transport was
 added for this). `PaymentRecordedPayload` (`packages/shared/src/sync.ts`) gained optional
-`invoiceId`/`outcome` fields so the same event can carry "this cash payment settles
+`proformaInvoiceId`/`outcome` fields so the same event can carry "this cash payment settles
 `plugin-acquiring`'s `ProformaInvoice` #N" when the caller knows it. `CentralConsumer.handlePaymentRecorded`
 applies the payment fact as before (unchanged) and, when those optional fields are present, also
 publishes `BranchKassaPaymentEvent` on the `EventBus` — which durably lands in the payment inbox

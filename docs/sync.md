@@ -380,7 +380,7 @@ from `plugin-sync`:
 - **Branch → Central**: a branch-witnessed cash payment (`recordWitnessedPayment`) travels
   through the existing `payment.recorded` outbox/RabbitMQ transport documented above (nothing new
   here — same envelope, same consumer). `CentralConsumer.handlePaymentRecorded` applies the
-  payment fact as it always did, and — only when the payload carries the optional `invoiceId`/
+  payment fact as it always did, and — only when the payload carries the optional `proformaInvoiceId`/
   `outcome` fields (`PaymentRecordedPayload`, `packages/shared/src/sync.ts`) — additionally
   publishes `BranchKassaPaymentEvent` on the `EventBus`.
 

@@ -106,7 +106,7 @@ const PaymentRecordedPayload = z.object({
     // Optional: present when the witnessed payment applies to a specific plugin-acquiring
     // ProformaInvoice (rather than only the legacy native-Order payment above) — lets
     // CentralConsumer additionally publish BranchKassaPaymentEvent for the acquiring inbox.
-    invoiceId: z.number().int().positive().optional(),
+    proformaInvoiceId: z.number().int().positive().optional(),
     // The organization (plugin-documents OrganizationRequisites) this payment is for — mandatory
     // whenever proformaInvoiceId/outcome are present, validated against the target ProformaInvoice's real
     // organizationId before the payment is applied (the external-integration-rules skill). Left optional at

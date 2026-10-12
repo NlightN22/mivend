@@ -412,7 +412,7 @@ calling that a contract test — it never exercises version skew.
 `safeParse`, no DB/RabbitMQ needed: required envelope/payload fields, allowed-value enums,
 unknown-field tolerance (forward compatibility), and the `<eventType>.<target>` routing-key
 format — including a dedicated `payment.recorded` section for the branch-kassa/plugin-acquiring
-payment boundary (legacy vs. full shape, `outcome`/`state` enums, positive-invoiceId, and the
+payment boundary (legacy vs. full shape, `outcome`/`state` enums, positive-proformaInvoiceId, and the
 explicit "mandatory-together fields are NOT enforced at this schema layer, PaymentEventListener
 does that instead" boundary). `plugin-sync`'s `ErpCallbackController`/`ErpPaymentReportedDto` (the
 REST ERP→platform boundary, `erp-callback.controller.test.ts`) enforces required fields

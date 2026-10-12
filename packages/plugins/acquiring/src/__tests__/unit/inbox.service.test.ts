@@ -50,7 +50,7 @@ describe('InboxService', () => {
             mockRepo.findOne.mockResolvedValue(null);
 
             const result = await service.enqueue(mockCtx, 'bank-transfer-erp', 'evt-1', 'hash', {
-                invoiceId: 7,
+                proformaInvoiceId: 7,
             });
 
             expect(mockRepo.save).toHaveBeenCalledWith(
@@ -59,7 +59,7 @@ describe('InboxService', () => {
                     providerEventId: 'evt-1',
                     status: 'pending',
                     attempts: 0,
-                    payload: JSON.stringify({ invoiceId: 7 }),
+                    payload: JSON.stringify({ proformaInvoiceId: 7 }),
                 }),
             );
             expect(result.status).toBe('pending');
