@@ -62,7 +62,7 @@ test.describe('Checkout places a real order (regression)', () => {
         await page.context().storageState({ path: AUTH_STATE_PATH });
     });
 
-    test('invoice payment moves the order out of AddingItems and it appears in /orders', async ({
+    test('proforma invoice payment moves the order out of AddingItems and it appears in /orders', async ({
         page,
     }) => {
         await clearCart(page);
@@ -71,7 +71,7 @@ test.describe('Checkout places a real order (regression)', () => {
         await page.goto('/checkout');
         await page.waitForLoadState('networkidle');
         await page.getByRole('button', { name: /Bank invoice/i }).click();
-        await page.getByRole('button', { name: 'Place order & get invoice' }).click();
+        await page.getByRole('button', { name: 'Place order & get proforma invoice' }).click();
 
         await expect(page).toHaveURL(/\/order-created\?method=invoice/, { timeout: 15000 });
 

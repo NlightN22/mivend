@@ -5,22 +5,26 @@ import { buildOrderAcrossOrganizations } from './helpers';
 async function goToInvoices(page: Page): Promise<void> {
     await page.goto('/invoices');
     await page.waitForLoadState('domcontentloaded');
-    await expect(page.getByRole('heading', { name: 'Invoices' })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole('heading', { name: 'Proforma invoices' })).toBeVisible({
+        timeout: 20000,
+    });
 }
 
-test.describe('Invoices page', () => {
-    test('invoices page loads and shows rows', async ({ page }) => {
+test.describe('Proforma invoices page', () => {
+    test('proforma invoices page loads and shows rows', async ({ page }) => {
         await goToInvoices(page);
         await expect(page.locator('.invoice-row').first()).toBeVisible({ timeout: 10000 });
     });
 
-    test('invoices page shows status filter chips', async ({ page }) => {
+    test('proforma invoices page shows status filter chips', async ({ page }) => {
         await goToInvoices(page);
-        await expect(page.getByRole('button', { name: 'All invoices' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'All proforma invoices' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Pending' })).toBeVisible();
     });
 
-    test('status filter chip narrows the list to matching invoices only', async ({ page }) => {
+    test('status filter chip narrows the list to matching proforma invoices only', async ({
+        page,
+    }) => {
         // Guarantee at least one 'pending' invoice exists for this test, rather than assuming
         // ambient DB state left by other tests — a declined online-stub payment is the one
         // reliable way to produce 'pending' (see invoice-lifecycle.spec.ts).
@@ -48,7 +52,7 @@ test.describe('Invoices page', () => {
         }
     });
 
-    test('Open button navigates to invoice detail page with no console errors', async ({
+    test('Open button navigates to proforma invoice detail page with no console errors', async ({
         page,
     }) => {
         await goToInvoices(page);
@@ -64,7 +68,7 @@ test.describe('Invoices page', () => {
     });
 });
 
-test.describe('Invoice detail page', () => {
+test.describe('Proforma invoice detail page', () => {
     let invoiceId: string;
 
     test.beforeAll(async ({ browser }) => {
@@ -80,7 +84,7 @@ test.describe('Invoice detail page', () => {
         await ctx.close();
     });
 
-    test('detail page shows the invoice title and status', async ({ page }) => {
+    test('detail page shows the proforma invoice title and status', async ({ page }) => {
         await page.goto(`/invoices/${invoiceId}`);
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.id-title')).toBeVisible({ timeout: 10000 });
@@ -88,7 +92,7 @@ test.describe('Invoice detail page', () => {
         expect(title).toMatch(/Invoice\s+#\d+/);
     });
 
-    test('detail page shows invoice line items', async ({ page }) => {
+    test('detail page shows proforma invoice line items', async ({ page }) => {
         await page.goto(`/invoices/${invoiceId}`);
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.id-row').first()).toBeVisible({ timeout: 10000 });
@@ -103,7 +107,7 @@ test.describe('Invoice detail page', () => {
         ).toBeVisible();
     });
 
-    test('Pay invoice button opens the pay flow and settles the invoice end-to-end', async ({
+    test('Pay proforma invoice button opens the pay flow and settles the proforma invoice end-to-end', async ({
         page,
     }) => {
         await buildOrderAcrossOrganizations(page);
@@ -121,17 +125,17 @@ test.describe('Invoice detail page', () => {
         await row.getByRole('button', { name: 'Open' }).click();
         await page.waitForLoadState('domcontentloaded');
 
-        await expect(page.getByRole('link', { name: 'Pay invoice' })).toBeVisible();
-        await page.getByRole('link', { name: 'Pay invoice' }).click();
+        await expect(page.getByRole('link', { name: 'Pay proforma invoice' })).toBeVisible();
+        await page.getByRole('link', { name: 'Pay proforma invoice' }).click();
         await expect(page).toHaveURL(/\/invoices\/[a-zA-Z0-9]+\/pay$/, { timeout: 10000 });
 
         await page.getByRole('button', { name: /Payment successful/ }).click();
         await expect(page).toHaveURL(/\/invoices\/[a-zA-Z0-9]+$/, { timeout: 10000 });
         await expect(page.locator('.id-pay-note')).toContainText('fully paid');
-        await expect(page.getByRole('button', { name: 'Pay invoice' })).toBeDisabled();
+        await expect(page.getByRole('button', { name: 'Pay proforma invoice' })).toBeDisabled();
     });
 
-    test('back link returns to invoices list', async ({ page }) => {
+    test('back link returns to proforma invoices list', async ({ page }) => {
         await page.goto(`/invoices/${invoiceId}`);
         await page.waitForLoadState('domcontentloaded');
         await page.locator('.id-back').click();

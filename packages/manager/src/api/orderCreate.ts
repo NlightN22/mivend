@@ -180,7 +180,7 @@ export async function requestPriceAdjustment(
 // "Deferred"/"Invoice" from the design concept both map to the same offline-terms handler.
 export const PAYMENT_METHOD_OPTIONS = [
     { value: 'online-stub', label: 'Online payment' },
-    { value: 'offline-terms', label: 'Invoice / deferred payment' },
+    { value: 'offline-terms', label: 'Proforma invoice / deferred payment' },
 ] as const;
 
 export async function finalizeOrder(

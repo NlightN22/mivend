@@ -106,7 +106,7 @@ const TABS: CustomerDetailTab[] = [
 const TAB_LABELS: Record<CustomerDetailTab, string> = {
     overview: 'Overview',
     orders: 'Orders',
-    invoices: 'Invoices',
+    invoices: 'Proforma invoices',
     payments: 'Payments',
     discounts: 'Discounts',
     documents: 'Documents',

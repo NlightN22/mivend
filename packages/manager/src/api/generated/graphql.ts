@@ -3188,39 +3188,39 @@ export type InvalidFulfillmentHandlerError = ErrorResult & {
     message: Scalars['String']['output'];
 };
 
-export type Invoice = {
+export type ProformaInvoice = {
     amount: Scalars['Int']['output'];
     branchId: Maybe<Scalars['ID']['output']>;
     counterpartyId: Scalars['ID']['output'];
     createdAt: Scalars['DateTime']['output'];
     currencyCode: Scalars['String']['output'];
     id: Scalars['ID']['output'];
-    /** Resolved via InvoiceFieldResolver.lines — must be declared here too: registering InvoiceFieldResolver without declaring every field it resolves throws 'Invoice.lines defined in resolvers, but not in schema' at bootstrap (real incident, caught before merging). */
+    /** Resolved via ProformaInvoiceFieldResolver.lines — must be declared here too: registering ProformaInvoiceFieldResolver without declaring every field it resolves throws 'ProformaInvoice.lines defined in resolvers, but not in schema' at bootstrap (real incident, caught before merging). */
     lines: Array<OrderLine>;
-    /** Human-facing business number — generated at creation, distinct from the order's own code — see Invoice.number's own doc comment (invoice.entity.ts). */
+    /** Human-facing business number — generated at creation, distinct from the order's own code — see ProformaInvoice.number's own doc comment (proforma-invoice.entity.ts). */
     number: Scalars['String']['output'];
-    /** Resolved via InvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: InvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page). */
-    order: InvoiceOrder;
+    /** Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: InvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page). */
+    order: ProformaInvoiceOrder;
     orderId: Scalars['ID']['output'];
     organizationId: Scalars['ID']['output'];
     status: Scalars['String']['output'];
 };
 
-export type InvoiceList = {
-    items: Array<Invoice>;
+export type ProformaInvoiceList = {
+    items: Array<ProformaInvoice>;
     totalItems: Scalars['Int']['output'];
 };
 
-export type InvoiceListOptions = {
-    /** Substring match against the invoice's own number (Invoice.number). */
+export type ProformaInvoiceListOptions = {
+    /** Substring match against the proforma invoice's own number (ProformaInvoice.number). */
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     status?: InputMaybe<Scalars['String']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
 };
 
-/** Mirrors shop.schema.ts's InvoiceOrder — a lightweight ref, not the full core Order type. */
-export type InvoiceOrder = {
+/** Mirrors shop.schema.ts's ProformaInvoiceOrder — a lightweight ref, not the full core Order type. */
+export type ProformaInvoiceOrder = {
     code: Scalars['String']['output'];
     id: Scalars['ID']['output'];
 };
@@ -5897,13 +5897,13 @@ export type Payment = Node & {
 export type PaymentAttempt = {
     amount: Scalars['Int']['output'];
     channel: Scalars['String']['output'];
-    /** Only populated when returned from visiblePayments (joined from its Invoice) — null elsewhere. */
+    /** Only populated when returned from visiblePayments (joined from its ProformaInvoice) — null elsewhere. */
     counterpartyId: Maybe<Scalars['ID']['output']>;
     createdAt: Scalars['DateTime']['output'];
     currencyCode: Scalars['String']['output'];
     id: Scalars['ID']['output'];
-    invoiceId: Maybe<Scalars['ID']['output']>;
-    /** The payment's own internal, human-facing business number — generated the same way as Order.code/Invoice.number/DiscountGrant.number. See PaymentAttempt.number's own doc comment (payment-attempt.entity.ts) for why this is distinct from providerPaymentId below (the external-integration-rules skill). */
+    proformaInvoiceId: Maybe<Scalars['ID']['output']>;
+    /** The payment's own internal, human-facing business number — generated the same way as Order.code/ProformaInvoice.number/DiscountGrant.number. See PaymentAttempt.number's own doc comment (payment-attempt.entity.ts) for why this is distinct from providerPaymentId below (the external-integration-rules skill). */
     number: Scalars['String']['output'];
     paymentStatus: Scalars['String']['output'];
     /** The payment's real external reference — an acquirer RRN, a branch kassa receipt number, an ERP payment-document id, or (until a real acquirer is wired in) a clearly-marked stub value. Mandatory for every channel; used for reconciliation, never as this payment's own displayed identity. */
@@ -6041,7 +6041,7 @@ export type PaymentReconciliationIssue = {
     expectedAmount: Maybe<Scalars['Int']['output']>;
     expectedCurrency: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
-    invoiceId: Maybe<Scalars['ID']['output']>;
+    proformaInvoiceId: Maybe<Scalars['ID']['output']>;
     issueType: Scalars['String']['output'];
     organizationId: Maybe<Scalars['ID']['output']>;
     paymentId: Maybe<Scalars['ID']['output']>;
@@ -6255,11 +6255,11 @@ export type Permission =
     | 'ReadFacet'
     /** Read the raw floor-price threshold for a variant (financial data, layer 4 redaction) */
     | 'ReadFloorPrice'
-    /** Read invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveInvoiceScope) */
+    /** Read proforma invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveProformaInvoiceScope) */
     | 'ReadInvoice'
     /** Grants permission to read Order */
     | 'ReadOrder'
-    /** Read payment records for the manager portal — a resource derived from Invoice, scoped the same way (AccessScopeService.resolveInvoiceScope) */
+    /** Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope) */
     | 'ReadPayment'
     /** Grants permission to read PaymentMethod */
     | 'ReadPaymentMethod'
@@ -7121,9 +7121,9 @@ export type Query = {
     integrationOutboxProblems: IntegrationOutboxProblemList;
     /** One row per stream: union of the event contract, configured topics and inbox rows, with Kafka lag, inbox backlog and drift (issue #195). */
     integrationStreamHealth: IntegrationStreamHealthReport;
-    /** Sum of a counterparty's unpaid (pending/issued) invoices, scoped the same way visibleInvoices is. Null if the counterparty has no unpaid invoices, not zero-with-a-currency. */
-    invoiceOutstandingBalance: Maybe<MoneyAmount>;
-    invoicesForOrder: Array<Invoice>;
+    /** Sum of a counterparty's unpaid (pending/issued) proforma invoices, scoped the same way visibleProformaInvoices is. Null if the counterparty has no unpaid proforma invoices, not zero-with-a-currency. */
+    proformaInvoiceOutstandingBalance: Maybe<MoneyAmount>;
+    proformaInvoicesForOrder: Array<ProformaInvoice>;
     job: Maybe<Job>;
     jobBufferSize: Array<JobBufferSize>;
     jobQueues: Array<JobQueue>;
@@ -7231,10 +7231,10 @@ export type Query = {
     variantOrganizationHealth: VariantOrganizationHealth;
     /** How many variants reference a unit that has not arrived (soft link, issue #200). */
     variantUnitHealth: VariantUnitHealth;
-    /** Manager-portal invoice list, branch-scoped via AccessScopeService.resolveInvoiceScope — see AdminInvoiceVisibilityResolver / docs/access-control.md. */
-    visibleInvoices: InvoiceList;
+    /** Manager-portal proforma invoice list, branch-scoped via AccessScopeService.resolveProformaInvoiceScope — see AdminProformaInvoiceVisibilityResolver / docs/access-control.md. */
+    visibleProformaInvoices: ProformaInvoiceList;
     visibleOrders: OrderList;
-    /** Manager-portal payment list — derived-from-Invoice scoping, see PaymentVisibilityService. */
+    /** Manager-portal payment list — derived-from-ProformaInvoice scoping, see PaymentVisibilityService. */
     visiblePayments: PaymentAttemptList;
     warehouses: Array<Warehouse>;
     zone: Maybe<Zone>;
@@ -7447,11 +7447,11 @@ export type QueryIntegrationOutboxProblemsArgs = {
     options?: InputMaybe<IntegrationOutboxProblemListOptions>;
 };
 
-export type QueryInvoiceOutstandingBalanceArgs = {
+export type QueryProformaInvoiceOutstandingBalanceArgs = {
     counterpartyId: Scalars['ID']['input'];
 };
 
-export type QueryInvoicesForOrderArgs = {
+export type QueryProformaInvoicesForOrderArgs = {
     orderId: Scalars['ID']['input'];
 };
 
@@ -7712,9 +7712,9 @@ export type QueryTradingPointArgs = {
     id: Scalars['ID']['input'];
 };
 
-export type QueryVisibleInvoicesArgs = {
+export type QueryVisibleProformaInvoicesArgs = {
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
-    options?: InputMaybe<InvoiceListOptions>;
+    options?: InputMaybe<ProformaInvoiceListOptions>;
 };
 
 export type QueryVisibleOrdersArgs = {
@@ -10536,7 +10536,7 @@ export type RunErpReconciliationMutation = {
     runErpReconciliation: { checked: number; issuesFound: number; skipped: Array<string> };
 };
 
-export type InvoiceListItemFieldsFragment = {
+export type ProformaInvoiceListItemFieldsFragment = {
     id: string;
     number: string;
     createdAt: any;
@@ -10549,13 +10549,13 @@ export type InvoiceListItemFieldsFragment = {
     order: { code: string };
 };
 
-export type InvoicesPageQueryVariables = Exact<{
-    options?: InputMaybe<InvoiceListOptions>;
+export type ProformaInvoicesPageQueryVariables = Exact<{
+    options?: InputMaybe<ProformaInvoiceListOptions>;
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
-export type InvoicesPageQuery = {
-    visibleInvoices: {
+export type ProformaInvoicesPageQuery = {
+    visibleProformaInvoices: {
         totalItems: number;
         items: Array<{
             id: string;
@@ -10572,11 +10572,11 @@ export type InvoicesPageQuery = {
     };
 };
 
-export type InvoiceViewCountsQueryVariables = Exact<{
+export type ProformaInvoiceViewCountsQueryVariables = Exact<{
     counterpartyId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
-export type InvoiceViewCountsQuery = {
+export type ProformaInvoiceViewCountsQuery = {
     all: { totalItems: number };
     pending: { totalItems: number };
     issued: { totalItems: number };
@@ -10584,12 +10584,12 @@ export type InvoiceViewCountsQuery = {
     cancelled: { totalItems: number };
 };
 
-export type InvoiceOutstandingBalanceQueryVariables = Exact<{
+export type ProformaInvoiceOutstandingBalanceQueryVariables = Exact<{
     counterpartyId: Scalars['ID']['input'];
 }>;
 
-export type InvoiceOutstandingBalanceQuery = {
-    invoiceOutstandingBalance: { amount: number; currencyCode: string } | null;
+export type ProformaInvoiceOutstandingBalanceQuery = {
+    proformaInvoiceOutstandingBalance: { amount: number; currencyCode: string } | null;
 };
 
 export type NotificationFieldsFragment = {
@@ -11241,7 +11241,7 @@ export type PaymentListItemFieldsFragment = {
     paymentStatus: string;
     amount: number;
     currencyCode: string;
-    invoiceId: string | null;
+    proformaInvoiceId: string | null;
     counterpartyId: string | null;
 };
 
@@ -11274,7 +11274,7 @@ export type PaymentsPageQuery = {
             paymentStatus: string;
             amount: number;
             currencyCode: string;
-            invoiceId: string | null;
+            proformaInvoiceId: string | null;
             counterpartyId: string | null;
         }>;
     };
@@ -11911,9 +11911,9 @@ export const EntityVersionRowFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'EntityVersionRowFields' },
 ) as unknown as TypedDocumentString<EntityVersionRowFieldsFragment, unknown>;
-export const InvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
+export const ProformaInvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
     `
-    fragment InvoiceListItemFields on Invoice {
+    fragment ProformaInvoiceListItemFields on ProformaInvoice {
   id
   number
   createdAt
@@ -11928,8 +11928,8 @@ export const InvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
   }
 }
     `,
-    { fragmentName: 'InvoiceListItemFields' },
-) as unknown as TypedDocumentString<InvoiceListItemFieldsFragment, unknown>;
+    { fragmentName: 'ProformaInvoiceListItemFields' },
+) as unknown as TypedDocumentString<ProformaInvoiceListItemFieldsFragment, unknown>;
 export const NotificationFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment NotificationFields on Notification {
@@ -12039,7 +12039,7 @@ export const PaymentListItemFieldsFragmentDoc = new TypedDocumentString(
   paymentStatus
   amount
   currencyCode
-  invoiceId
+  proformaInvoiceId
   counterpartyId
 }
     `,
@@ -13242,16 +13242,16 @@ export const RunErpReconciliationDocument = new TypedDocumentString(`
     RunErpReconciliationMutation,
     RunErpReconciliationMutationVariables
 >;
-export const InvoicesPageDocument = new TypedDocumentString(`
-    query InvoicesPage($options: InvoiceListOptions, $counterpartyId: ID) {
-  visibleInvoices(options: $options, counterpartyId: $counterpartyId) {
+export const ProformaInvoicesPageDocument = new TypedDocumentString(`
+    query ProformaInvoicesPage($options: ProformaInvoiceListOptions, $counterpartyId: ID) {
+  visibleProformaInvoices(options: $options, counterpartyId: $counterpartyId) {
     totalItems
     items {
-      ...InvoiceListItemFields
+      ...ProformaInvoiceListItemFields
     }
   }
 }
-    fragment InvoiceListItemFields on Invoice {
+    fragment ProformaInvoiceListItemFields on ProformaInvoice {
   id
   number
   createdAt
@@ -13264,48 +13264,54 @@ export const InvoicesPageDocument = new TypedDocumentString(`
   order {
     code
   }
-}`) as unknown as TypedDocumentString<InvoicesPageQuery, InvoicesPageQueryVariables>;
-export const InvoiceViewCountsDocument = new TypedDocumentString(`
-    query InvoiceViewCounts($counterpartyId: ID) {
-  all: visibleInvoices(options: {take: 0}, counterpartyId: $counterpartyId) {
+}`) as unknown as TypedDocumentString<
+    ProformaInvoicesPageQuery,
+    ProformaInvoicesPageQueryVariables
+>;
+export const ProformaInvoiceViewCountsDocument = new TypedDocumentString(`
+    query ProformaInvoiceViewCounts($counterpartyId: ID) {
+  all: visibleProformaInvoices(options: {take: 0}, counterpartyId: $counterpartyId) {
     totalItems
   }
-  pending: visibleInvoices(
+  pending: visibleProformaInvoices(
     options: {take: 0, status: "pending"}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
-  issued: visibleInvoices(
+  issued: visibleProformaInvoices(
     options: {take: 0, status: "issued"}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
-  paid: visibleInvoices(
+  paid: visibleProformaInvoices(
     options: {take: 0, status: "paid"}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
-  cancelled: visibleInvoices(
+  cancelled: visibleProformaInvoices(
     options: {take: 0, status: "cancelled"}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
 }
-    `) as unknown as TypedDocumentString<InvoiceViewCountsQuery, InvoiceViewCountsQueryVariables>;
-export const InvoiceOutstandingBalanceDocument = new TypedDocumentString(`
-    query InvoiceOutstandingBalance($counterpartyId: ID!) {
-  invoiceOutstandingBalance(counterpartyId: $counterpartyId) {
+    `) as unknown as TypedDocumentString<
+    ProformaInvoiceViewCountsQuery,
+    ProformaInvoiceViewCountsQueryVariables
+>;
+export const ProformaInvoiceOutstandingBalanceDocument = new TypedDocumentString(`
+    query ProformaInvoiceOutstandingBalance($counterpartyId: ID!) {
+  proformaInvoiceOutstandingBalance(counterpartyId: $counterpartyId) {
     amount
     currencyCode
   }
 }
     `) as unknown as TypedDocumentString<
-    InvoiceOutstandingBalanceQuery,
-    InvoiceOutstandingBalanceQueryVariables
+    ProformaInvoiceOutstandingBalanceQuery,
+    ProformaInvoiceOutstandingBalanceQueryVariables
 >;
 export const NotificationsDocument = new TypedDocumentString(`
     query Notifications($options: NotificationListOptions) {
@@ -14029,7 +14035,7 @@ export const PaymentsPageDocument = new TypedDocumentString(`
   paymentStatus
   amount
   currencyCode
-  invoiceId
+  proformaInvoiceId
   counterpartyId
 }`) as unknown as TypedDocumentString<PaymentsPageQuery, PaymentsPageQueryVariables>;
 export const ProductBySlugDocument = new TypedDocumentString(`

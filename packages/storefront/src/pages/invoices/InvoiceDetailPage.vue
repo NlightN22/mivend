@@ -28,16 +28,16 @@ function formatAmount(cents: number, currency: string): string {
         <AccountSidebar />
 
         <section class="id-content">
-            <router-link to="/invoices" class="id-back">← My invoices</router-link>
+            <router-link to="/invoices" class="id-back">← My proforma invoices</router-link>
 
             <div v-if="loading" class="id-state">Loading...</div>
 
-            <div v-else-if="!invoice" class="id-state">Invoice not found.</div>
+            <div v-else-if="!invoice" class="id-state">Proforma invoice not found.</div>
 
             <template v-else>
                 <div class="id-head">
                     <div>
-                        <h1 class="id-title">Invoice #{{ invoice.id }}</h1>
+                        <h1 class="id-title">Proforma invoice #{{ invoice.id }}</h1>
                         <div class="id-meta">
                             Order {{ formatDocumentNumber(invoice.order.code) }}
                         </div>
@@ -49,7 +49,7 @@ function formatAmount(cents: number, currency: string): string {
 
                 <div class="id-summary">
                     <div class="id-summary-card">
-                        <div class="id-summary-title">Invoice total</div>
+                        <div class="id-summary-title">Proforma invoice total</div>
                         <div class="id-summary-value">
                             {{ formatAmount(invoice.amount, invoice.currencyCode) }}
                         </div>
@@ -58,7 +58,7 @@ function formatAmount(cents: number, currency: string): string {
 
                 <div class="id-body">
                     <div class="id-lines">
-                        <h2 class="id-section-title">Invoice items</h2>
+                        <h2 class="id-section-title">Proforma invoice items</h2>
                         <table class="id-table">
                             <thead>
                                 <tr>
@@ -118,13 +118,13 @@ function formatAmount(cents: number, currency: string): string {
                                 {{ formatAmount(invoice.amount, invoice.currencyCode) }}
                             </div>
                             <p v-if="invoice.status === 'paid'" class="id-pay-note">
-                                This invoice is fully paid.
+                                This proforma invoice is fully paid.
                             </p>
                             <p v-else-if="invoice.status === 'cancelled'" class="id-pay-note">
-                                This invoice is cancelled.
+                                This proforma invoice is cancelled.
                             </p>
                             <p v-else class="id-pay-note">
-                                Pay this invoice any time — independent of the order it came from.
+                                Pay this proforma invoice any time — independent of the order it came from.
                             </p>
                             <MvButton
                                 v-if="invoice.status === 'paid' || invoice.status === 'cancelled'"
@@ -132,15 +132,15 @@ function formatAmount(cents: number, currency: string): string {
                                 size="md"
                                 disabled
                             >
-                                Pay invoice
+                                Pay proforma invoice
                             </MvButton>
                             <RouterLink v-else :to="`/invoices/${invoice.id}/pay`">
-                                <MvButton variant="primary" size="md">Pay invoice</MvButton>
+                                <MvButton variant="primary" size="md">Pay proforma invoice</MvButton>
                             </RouterLink>
                         </div>
 
                         <div class="id-details-card">
-                            <h2 class="id-section-title">Invoice details</h2>
+                            <h2 class="id-section-title">Proforma invoice details</h2>
                             <div class="id-detail-row">
                                 <span>Organization</span>
                                 <span class="id-detail-val">{{ invoice.organizationId }}</span>

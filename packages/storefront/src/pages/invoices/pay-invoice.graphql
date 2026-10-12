@@ -1,5 +1,5 @@
-mutation PayInvoice($invoiceId: ID!, $status: String!) {
-    payInvoice(invoiceId: $invoiceId, status: $status) {
+mutation PayProformaInvoice($proformaInvoiceId: ID!, $status: String!) {
+    payProformaInvoice(proformaInvoiceId: $proformaInvoiceId, status: $status) {
         id
         status
     }

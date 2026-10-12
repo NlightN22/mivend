@@ -56,7 +56,7 @@ const columns = computed<Column<TableRow>[]>(() => {
             },
         },
         { key: 'amount', title: 'Amount', dataKey: 'amount', width: 140, align: 'right' },
-        { key: 'invoice', title: 'Invoice', dataKey: 'invoice', width: 120 },
+        { key: 'invoice', title: 'Proforma invoice', dataKey: 'invoice', width: 120 },
     );
     return cols;
 });
@@ -69,7 +69,7 @@ const rows = computed<TableRow[]>(() =>
         status: payment.paymentStatus,
         statusVariant: PAYMENT_STATUS_BADGE_VARIANT[payment.paymentStatus] ?? 'neutral',
         amount: money(payment),
-        invoice: payment.invoiceId ?? '—',
+        invoice: payment.proformaInvoiceId ?? '—',
     })),
 );
 </script>

@@ -66,8 +66,8 @@ onMounted(load);
 <template>
     <div class="invoices-page">
         <div class="invoices-page__header">
-            <div class="invoices-page__breadcrumb">Workspace / Invoices</div>
-            <h1 class="invoices-page__title">Invoices</h1>
+            <div class="invoices-page__breadcrumb">Workspace / Proforma invoices</div>
+            <h1 class="invoices-page__title">Proforma invoices</h1>
             <p class="invoices-page__subtitle">
                 {{ totalItems }} invoices across your accessible scope.
             </p>
@@ -83,7 +83,7 @@ onMounted(load);
             }}).
         </MvWarningBanner>
 
-        <MvPanel title="Invoices list">
+        <MvPanel title="Proforma invoices list">
             <InvoicesFilterBar
                 :filters="filters"
                 @update:filters="Object.assign(filters, $event)"

@@ -1,4 +1,4 @@
-fragment InvoiceListItemFields on Invoice {
+fragment ProformaInvoiceListItemFields on ProformaInvoice {
     id
     number
     createdAt
@@ -13,35 +13,35 @@ fragment InvoiceListItemFields on Invoice {
     }
 }
 
-query InvoicesPage($options: InvoiceListOptions, $counterpartyId: ID) {
-    visibleInvoices(options: $options, counterpartyId: $counterpartyId) {
+query ProformaInvoicesPage($options: ProformaInvoiceListOptions, $counterpartyId: ID) {
+    visibleProformaInvoices(options: $options, counterpartyId: $counterpartyId) {
         totalItems
         items {
-            ...InvoiceListItemFields
+            ...ProformaInvoiceListItemFields
         }
     }
 }
 
-query InvoiceViewCounts($counterpartyId: ID) {
-    all: visibleInvoices(options: { take: 0 }, counterpartyId: $counterpartyId) {
+query ProformaInvoiceViewCounts($counterpartyId: ID) {
+    all: visibleProformaInvoices(options: { take: 0 }, counterpartyId: $counterpartyId) {
         totalItems
     }
-    pending: visibleInvoices(
+    pending: visibleProformaInvoices(
         options: { take: 0, status: "pending" }
         counterpartyId: $counterpartyId
     ) {
         totalItems
     }
-    issued: visibleInvoices(
+    issued: visibleProformaInvoices(
         options: { take: 0, status: "issued" }
         counterpartyId: $counterpartyId
     ) {
         totalItems
     }
-    paid: visibleInvoices(options: { take: 0, status: "paid" }, counterpartyId: $counterpartyId) {
+    paid: visibleProformaInvoices(options: { take: 0, status: "paid" }, counterpartyId: $counterpartyId) {
         totalItems
     }
-    cancelled: visibleInvoices(
+    cancelled: visibleProformaInvoices(
         options: { take: 0, status: "cancelled" }
         counterpartyId: $counterpartyId
     ) {
@@ -49,8 +49,8 @@ query InvoiceViewCounts($counterpartyId: ID) {
     }
 }
 
-query InvoiceOutstandingBalance($counterpartyId: ID!) {
-    invoiceOutstandingBalance(counterpartyId: $counterpartyId) {
+query ProformaInvoiceOutstandingBalance($counterpartyId: ID!) {
+    proformaInvoiceOutstandingBalance(counterpartyId: $counterpartyId) {
         amount
         currencyCode
     }

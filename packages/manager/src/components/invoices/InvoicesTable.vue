@@ -32,7 +32,7 @@ function money(item: InvoiceListItem): string {
 
 const columns = computed<Column<TableRow>[]>(() => {
     const cols: Column<TableRow>[] = [
-        { key: 'id', title: 'Invoice #', dataKey: 'id', width: 120, mobile: { primary: true } },
+        { key: 'id', title: 'Proforma invoice #', dataKey: 'id', width: 120, mobile: { primary: true } },
     ];
     if (!props.compact) {
         cols.push({ key: 'customer', title: 'Customer', dataKey: 'customer', width: 220 });
@@ -86,7 +86,7 @@ function openOrder(payload: { rowData: TableRow }): void {
         :data="rows"
         :height="Math.max(rows.length, props.pageSize ?? 1) * 52 + 40"
         :loading="loading"
-        empty-text="No invoices match your filters"
+        empty-text="No proforma invoices match your filters"
         @row-click="openOrder"
     />
 </template>

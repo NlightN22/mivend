@@ -184,7 +184,7 @@ const rows = computed<TeamRow[]>(() => {
         <div class="customer-team__panel customer-team__notifications-panel">
             <h4 class="customer-team__panel-title">Team notifications</h4>
             <p class="customer-team__panel-subtitle">
-                Choose who will receive notifications about orders, invoices and payments for this
+                Choose who will receive notifications about orders, proforma invoices and payments for this
                 customer.
             </p>
             <div class="customer-team__notifications">

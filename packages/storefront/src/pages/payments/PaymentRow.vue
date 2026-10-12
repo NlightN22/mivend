@@ -69,7 +69,7 @@ const remaining = computed(() => {
             <div class="payment-row__chips">
                 <span v-if="!invoiceAllocations.length" class="payment-row__muted">—</span>
                 <span v-for="(a, i) in invoiceAllocations" :key="i" class="payment-row__chip">
-                    Invoice #{{ a.invoice?.id }}
+                    Invoice #{{ a.proformaInvoice?.id }}
                 </span>
             </div>
         </div>

@@ -60,7 +60,7 @@ async function createOpenInvoice(
 }
 
 test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
-    test('a real callback flows through EventBus + inbox + worker sweep and pays the invoice', async ({
+    test('a real callback flows through EventBus + inbox + worker sweep and pays the proforma invoice', async ({
         page,
     }) => {
         const { invoiceId, organizationId } = await createOpenInvoice(page);
@@ -70,14 +70,20 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
         const { processed } = await triggerSweep();
         expect(processed).toBeGreaterThanOrEqual(1);
 
-        const invoiceResult = await gql(page, `query($id: ID!) { invoice(id: $id) { status } }`, {
-            id: invoiceId,
-        });
-        expect((invoiceResult.invoice as { status: string }).status).toBe('paid');
+        const invoiceResult = await gql(
+            page,
+            `query($id: ID!) { proformaInvoice(id: $id) { status } }`,
+            {
+                id: invoiceId,
+            },
+        );
+        expect((invoiceResult.proformaInvoice as { status: string }).status).toBe('paid');
 
         await page.goto('/payments');
         await page.waitForLoadState('domcontentloaded');
-        const row = page.locator('.payment-row', { hasText: `Invoice #${invoiceId}` }).first();
+        const row = page
+            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceId}` })
+            .first();
         await expect(row).toBeVisible({ timeout: 10000 });
         await expect(row).toContainText('Bank transfer (ERP)');
         await expect(row).toContainText('Succeeded');
@@ -93,18 +99,24 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
         await postErpPaymentCallback(invoiceId, organizationId, 'success', erpEventId);
         await triggerSweep();
 
-        const invoiceResult = await gql(page, `query($id: ID!) { invoice(id: $id) { status } }`, {
-            id: invoiceId,
-        });
-        expect((invoiceResult.invoice as { status: string }).status).toBe('paid');
+        const invoiceResult = await gql(
+            page,
+            `query($id: ID!) { proformaInvoice(id: $id) { status } }`,
+            {
+                id: invoiceId,
+            },
+        );
+        expect((invoiceResult.proformaInvoice as { status: string }).status).toBe('paid');
 
         const paymentsResult = await gql(
             page,
-            `query { myPayments(options: { take: 200 }) { items { id invoiceId } } }`,
+            `query { myPayments(options: { take: 200 }) { items { id proformaInvoiceId } } }`,
         );
         const matches = (
-            paymentsResult.myPayments as { items: { id: string; invoiceId: string | null }[] }
-        ).items.filter(i => i.invoiceId === invoiceId);
+            paymentsResult.myPayments as {
+                items: { id: string; proformaInvoiceId: string | null }[];
+            }
+        ).items.filter(i => i.proformaInvoiceId === invoiceId);
         expect(matches.length).toBe(1);
     });
 
@@ -119,11 +131,13 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
 
         const paymentsResult = await gql(
             page,
-            `query { myPayments(options: { take: 200 }) { items { id invoiceId } } }`,
+            `query { myPayments(options: { take: 200 }) { items { id proformaInvoiceId } } }`,
         );
         const paymentId = (
-            paymentsResult.myPayments as { items: { id: string; invoiceId: string | null }[] }
-        ).items.find(i => i.invoiceId === invoiceId)!.id;
+            paymentsResult.myPayments as {
+                items: { id: string; proformaInvoiceId: string | null }[];
+            }
+        ).items.find(i => i.proformaInvoiceId === invoiceId)!.id;
 
         await page.goto(`/payments/${paymentId}`);
         await page.waitForLoadState('domcontentloaded');
@@ -134,7 +148,7 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
         await expect(historyCard.locator('.pd-mock-tag')).toHaveCount(0);
     });
 
-    test('a callback declaring the wrong organization is rejected — never silently applied to an invoice from another organization', async ({
+    test('a callback declaring the wrong organization is rejected — never silently applied to a proforma invoice from another organization', async ({
         page,
     }) => {
         const { invoiceId, organizationId } = await createOpenInvoice(page);
@@ -145,10 +159,14 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
         const { failed } = await triggerSweep();
         expect(failed).toBeGreaterThanOrEqual(1);
 
-        const invoiceResult = await gql(page, `query($id: ID!) { invoice(id: $id) { status } }`, {
-            id: invoiceId,
-        });
-        expect((invoiceResult.invoice as { status: string }).status).not.toBe('paid');
+        const invoiceResult = await gql(
+            page,
+            `query($id: ID!) { proformaInvoice(id: $id) { status } }`,
+            {
+                id: invoiceId,
+            },
+        );
+        expect((invoiceResult.proformaInvoice as { status: string }).status).not.toBe('paid');
     });
 
     test('an online-acquiring payment honestly shows no step-by-step history, never fabricated stages', async ({
@@ -157,19 +175,19 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
         const { invoiceId, orderCode } = await createOpenInvoice(page);
         await gql(
             page,
-            `mutation($id: ID!) { payInvoice(invoiceId: $id, status: "success") { status } }`,
+            `mutation($id: ID!) { payProformaInvoice(proformaInvoiceId: $id, status: "success") { status } }`,
             { id: invoiceId },
         );
 
         const paymentsResult = await gql(
             page,
-            `query { myPayments(options: { take: 200 }) { items { id invoiceId channel } } }`,
+            `query { myPayments(options: { take: 200 }) { items { id proformaInvoiceId channel } } }`,
         );
         const payment = (
             paymentsResult.myPayments as {
-                items: { id: string; invoiceId: string | null; channel: string }[];
+                items: { id: string; proformaInvoiceId: string | null; channel: string }[];
             }
-        ).items.find(i => i.invoiceId === invoiceId && i.channel === 'online-acquiring');
+        ).items.find(i => i.proformaInvoiceId === invoiceId && i.channel === 'online-acquiring');
         expect(payment, `expected an online-acquiring payment for order ${orderCode}`).toBeTruthy();
 
         await page.goto(`/payments/${payment!.id}`);

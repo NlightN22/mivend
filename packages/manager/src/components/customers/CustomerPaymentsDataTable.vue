@@ -86,7 +86,7 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
         mobile: { badge: true },
     },
     { field: 'amount', header: 'Amount', width: 140, filterConfig: { type: 'none' } },
-    { field: 'invoice', header: 'Invoice', width: 120, filterConfig: { type: 'none' } },
+    { field: 'invoice', header: 'Proforma invoice', width: 120, filterConfig: { type: 'none' } },
 ];
 
 interface PaymentFilterState {
@@ -189,7 +189,7 @@ const rows = computed<PaymentRow[]>(() =>
         status: payment.paymentStatus,
         statusVariant: PAYMENT_STATUS_BADGE_VARIANT[payment.paymentStatus] ?? 'neutral',
         amount: money(payment),
-        invoice: payment.invoiceId ?? '—',
+        invoice: payment.proformaInvoiceId ?? '—',
     })),
 );
 </script>

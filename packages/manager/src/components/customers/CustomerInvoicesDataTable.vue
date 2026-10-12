@@ -25,7 +25,7 @@ import {
 // The base/required column (`number`, "Invoice #") gets both a toolbar search box and its own
 // funnel filter, same as Orders' `code` column — per the manager-portal-rules skill, every
 // table's toolbar search defaults to the base column, backed by a real server-side filter
-// (`InvoiceListOptions.search`, a substring match against Invoice.number — this invoice's own
+// (`ProformaInvoiceListOptions.search`, a substring match against Invoice.number — this invoice's own
 // generated business number, distinct from the order's own `code`, see that column's own doc
 // comment in plugin-acquiring). `amount`/`order` still have no filter: the backend genuinely
 // doesn't support filtering by either yet, and adding filter UI with nothing behind it would
@@ -53,10 +53,10 @@ const router = useRouter();
 const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'number',
-        header: 'Invoice #',
+        header: 'Proforma invoice #',
         width: 180,
         required: true,
-        filterConfig: { type: 'text', placeholder: 'Invoice number contains…' },
+        filterConfig: { type: 'text', placeholder: 'Proforma invoice number contains…' },
         mobile: { primary: true },
     },
     { field: 'createdAt', header: 'Date created', width: 140, filterConfig: { type: 'none' } },

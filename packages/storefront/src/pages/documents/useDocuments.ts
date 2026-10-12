@@ -21,7 +21,7 @@ function downloadUrlOf(doc: DocumentSummary): string | null {
 }
 
 export const DOCUMENT_TYPE_LABEL: Record<string, string> = {
-    invoice: 'Invoice',
+    invoice: 'Proforma invoice',
     contract: 'Contract',
     return: 'Return',
     reconciliation: 'Reconciliation report',

@@ -1,5 +1,5 @@
-query InvoiceDetail($id: ID!) {
-    invoice(id: $id) {
+query ProformaInvoiceDetail($id: ID!) {
+    proformaInvoice(id: $id) {
         id
         orderId
         organizationId

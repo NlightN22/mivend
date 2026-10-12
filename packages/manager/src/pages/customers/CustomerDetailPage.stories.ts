@@ -79,7 +79,7 @@ const CUSTOMER_PAYMENTS: PaymentListItem[] = Array.from({ length: 5 }, (_, i) =>
     paymentStatus: PAYMENT_STATUSES[i % PAYMENT_STATUSES.length],
     amount: 45000 + i * 8760,
     currencyCode: 'RUB',
-    invoiceId: `INV-${1000 + i}`,
+    proformaInvoiceId: `INV-${1000 + i}`,
     counterpartyId: '1',
 }));
 
@@ -186,7 +186,7 @@ function mockCustomerDetailData(): void {
         const filtered = status
             ? CUSTOMER_INVOICES.filter(inv => inv.status === status)
             : CUSTOMER_INVOICES;
-        return { visibleInvoices: paginate(filtered, variables.options) };
+        return { visibleProformaInvoices: paginate(filtered, variables.options) };
     });
     registerMock('InvoiceViewCounts', () => ({
         all: { totalItems: CUSTOMER_INVOICES.length },

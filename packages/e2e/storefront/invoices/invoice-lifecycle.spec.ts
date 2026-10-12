@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 import { gql } from '../orders/helpers';
 import { buildOrderAcrossOrganizations, myInvoicesForOrder } from './helpers';
 
-test.describe('Invoice lifecycle: order split, payment, status, filters', () => {
-    test('a multi-organization order produces one Invoice per organization, all "pending" before payment', async ({
+test.describe('Proforma invoice lifecycle: order split, payment, status, filters', () => {
+    test('a multi-organization order produces one proforma invoice per organization, all "pending" before payment', async ({
         page,
     }) => {
         await buildOrderAcrossOrganizations(page);
@@ -31,7 +31,7 @@ test.describe('Invoice lifecycle: order split, payment, status, filters', () => 
         }
     });
 
-    test('settling payment via the online-stub marks every invoice for the order as "paid"', async ({
+    test('settling payment via the online-stub marks every proforma invoice for the order as "paid"', async ({
         page,
     }) => {
         await buildOrderAcrossOrganizations(page);
@@ -54,12 +54,12 @@ test.describe('Invoice lifecycle: order split, payment, status, filters', () => 
         await page.waitForLoadState('domcontentloaded');
         for (const invoice of invoices) {
             await expect(
-                page.locator('.invoice-row', { hasText: `Invoice #${invoice.id}` }),
+                page.locator('.invoice-row', { hasText: `Proforma invoice #${invoice.id}` }),
             ).toContainText('Paid');
         }
     });
 
-    test('offline-terms checkout leaves invoices "issued" (deferred payment, not yet settled)', async ({
+    test('offline-terms checkout leaves proforma invoices "issued" (deferred payment, not yet settled)', async ({
         page,
     }) => {
         await buildOrderAcrossOrganizations(page);
@@ -78,7 +78,7 @@ test.describe('Invoice lifecycle: order split, payment, status, filters', () => 
         }
     });
 
-    test('a declined online-stub payment leaves invoices "pending" (retryable, not cancelled)', async ({
+    test('a declined online-stub payment leaves proforma invoices "pending" (retryable, not cancelled)', async ({
         page,
     }) => {
         await buildOrderAcrossOrganizations(page);
@@ -120,7 +120,7 @@ test.describe('Invoice lifecycle: order split, payment, status, filters', () => 
             await page.waitForLoadState('networkidle');
             const state = page.locator('.invoices-page__state');
             if (await state.isVisible().catch(() => false)) {
-                continue; // "No invoices found" for this status in this run — not a failure
+                continue; // "No proforma invoices found" for this status in this run — not a failure
             }
             await expect(page.locator('.invoice-row').first()).toBeVisible({ timeout: 10000 });
             // Read all row texts in one shot instead of asserting index-by-index — the list can
@@ -132,7 +132,7 @@ test.describe('Invoice lifecycle: order split, payment, status, filters', () => 
             }
         }
 
-        await page.getByRole('button', { name: 'All invoices' }).click();
+        await page.getByRole('button', { name: 'All proforma invoices' }).click();
         await page.waitForLoadState('networkidle');
         await expect(page.locator('.invoice-row').first()).toBeVisible({ timeout: 10000 });
     });

@@ -7,7 +7,7 @@ fragment PaymentListItemFields on PaymentAttempt {
     paymentStatus
     amount
     currencyCode
-    invoiceId
+    proformaInvoiceId
     counterpartyId
 }
 

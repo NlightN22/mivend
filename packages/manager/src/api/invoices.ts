@@ -1,13 +1,13 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
 import {
-    InvoiceOutstandingBalanceDocument,
-    InvoicesPageDocument,
-    InvoiceViewCountsDocument,
-    type InvoiceListItemFieldsFragment,
+    ProformaInvoiceOutstandingBalanceDocument,
+    ProformaInvoicesPageDocument,
+    ProformaInvoiceViewCountsDocument,
+    type ProformaInvoiceListItemFieldsFragment,
 } from './generated/graphql';
 
-export type InvoiceListItem = InvoiceListItemFieldsFragment;
+export type InvoiceListItem = ProformaInvoiceListItemFieldsFragment;
 
 export interface InvoiceFilters {
     // Index signature lets InvoiceFilters satisfy useUrlSyncedState's generic Record<string,
@@ -51,7 +51,7 @@ export async function fetchInvoicesPage(
     page: number,
     pageSize: number,
 ): Promise<{ items: InvoiceListItem[]; totalItems: number }> {
-    const result = await adminApi(InvoicesPageDocument, {
+    const result = await adminApi(ProformaInvoicesPageDocument, {
         options: {
             skip: (page - 1) * pageSize,
             take: pageSize,
@@ -60,7 +60,7 @@ export async function fetchInvoicesPage(
         },
         counterpartyId: filters.counterpartyId || undefined,
     });
-    return result.visibleInvoices;
+    return result.visibleProformaInvoices;
 }
 
 export interface InvoiceViewCounts {
@@ -75,7 +75,7 @@ export interface InvoiceViewCounts {
 // api/customers.ts's fetchCustomerOrderViewCounts, so chip counts reflect the whole visible set,
 // not just the currently-loaded page.
 export async function fetchInvoiceViewCounts(counterpartyId: string): Promise<InvoiceViewCounts> {
-    const result = await adminApi(InvoiceViewCountsDocument, { counterpartyId });
+    const result = await adminApi(ProformaInvoiceViewCountsDocument, { counterpartyId });
     return {
         all: result.all.totalItems,
         pending: result.pending.totalItems,
@@ -93,6 +93,6 @@ export interface OutstandingBalance {
 export async function fetchOutstandingBalance(
     counterpartyId: string,
 ): Promise<OutstandingBalance | null> {
-    const result = await adminApi(InvoiceOutstandingBalanceDocument, { counterpartyId });
-    return result.invoiceOutstandingBalance ?? null;
+    const result = await adminApi(ProformaInvoiceOutstandingBalanceDocument, { counterpartyId });
+    return result.proformaInvoiceOutstandingBalance ?? null;
 }

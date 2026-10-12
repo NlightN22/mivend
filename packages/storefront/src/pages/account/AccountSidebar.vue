@@ -101,7 +101,7 @@ const isActive = (path: string) => route.path === path;
                     class="account-sidebar__link"
                     :class="{ 'account-sidebar__link--active': isActive('/invoices') }"
                 >
-                    <span>Invoices</span
+                    <span>Proforma invoices</span
                     ><span v-if="invoiceCount > 0" class="account-sidebar__count">{{
                         invoiceCount
                     }}</span>

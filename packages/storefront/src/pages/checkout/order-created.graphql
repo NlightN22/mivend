@@ -21,7 +21,7 @@ query OrderCreated($code: String!) {
         name
         address
     }
-    myInvoices(options: { take: 50 }) {
+    myProformaInvoices(options: { take: 50 }) {
         items {
             id
             order {

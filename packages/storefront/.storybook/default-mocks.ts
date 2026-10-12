@@ -30,6 +30,6 @@ export function registerDefaultMocks(): void {
             },
         },
     }));
-    registerMock('MyInvoices', () => ({ myInvoices: { items: [], totalItems: 0 } }));
+    registerMock('MyInvoices', () => ({ myProformaInvoices: { items: [], totalItems: 0 } }));
     registerMock('MyPayments', () => ({ myPayments: { items: [], totalItems: 0 } }));
 }

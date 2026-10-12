@@ -110,7 +110,7 @@ onMounted(async () => {
                     <h1 class="payments-page__title">Payments</h1>
                     <p class="payments-page__subtitle">
                         Track incoming payments, their source, status and allocation across
-                        invoices.
+                        proforma invoices.
                     </p>
                 </div>
             </div>
@@ -193,8 +193,8 @@ onMounted(async () => {
                 <div>
                     <h3>What this page shows</h3>
                     <p>
-                        Payments are money movements. A payment may settle one invoice, several
-                        invoices, or remain partly unapplied as advance balance. Invoice pages
+                        Payments are money movements. A payment may settle one proforma invoice, several
+                        proforma invoices, or remain partly unapplied as advance balance. Proforma invoice pages
                         remain the source of truth for obligations.
                     </p>
                 </div>

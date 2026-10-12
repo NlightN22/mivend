@@ -22,7 +22,7 @@ const payment = computed(() => order.value?.payments?.[0] ?? null);
 const methodCode = computed(() => payment.value?.method ?? '');
 
 const PAYMENT_LABELS: Record<string, string> = {
-    'offline-terms': 'Bank invoice',
+    'offline-terms': 'Bank proforma invoice',
     'deferred-payment': 'Deferred payment',
     'online-stub': 'Online payment',
 };
@@ -55,7 +55,7 @@ const placedAt = computed(() =>
         : null,
 );
 const invoiceId = computed(
-    () => data.value?.myInvoices.items.find(i => i.order?.code === code.value)?.id ?? null,
+    () => data.value?.myProformaInvoices.items.find(i => i.order?.code === code.value)?.id ?? null,
 );
 
 const statusText = computed(() => {
@@ -63,14 +63,14 @@ const statusText = computed(() => {
     if (methodCode.value === 'deferred-payment')
         return `${ref} and will be processed under your deferred payment terms.`;
     if (methodCode.value === 'offline-terms')
-        return `${ref}. Pay the invoice via your bank; the order will be reserved once payment is received.`;
+        return `${ref}. Pay the proforma invoice via your bank; the order will be reserved once payment is received.`;
     return `${ref}.`;
 });
 
 const steps = computed(() =>
     methodCode.value === 'offline-terms'
         ? [
-              'Download and send the invoice to your bank.',
+              'Download and send the proforma invoice to your bank.',
               "We'll reserve the goods when payment arrives.",
               "You'll get a notification when the order is ready.",
           ]
@@ -143,7 +143,7 @@ onMounted(load);
                         v-if="invoiceId"
                         :to="`/invoices/${invoiceId}`"
                         class="oc-btn oc-btn--secondary"
-                        >Open invoice</RouterLink
+                        >Open proforma invoice</RouterLink
                     >
                     <RouterLink to="/catalog" class="oc-btn oc-btn--ghost"
                         >Continue shopping</RouterLink

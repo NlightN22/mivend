@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const docs = [
     { title: 'UPD #91384', note: 'Order #348510 · Jun 24', action: 'Download' },
-    { title: 'Invoice #88241', note: 'Order #348744 · Jun 25', action: 'Download' },
+    { title: 'Proforma invoice #88241', note: 'Order #348744 · Jun 25', action: 'Download' },
     { title: 'Reconciliation report', note: 'June 2026', action: 'Open' },
 ];
 </script>

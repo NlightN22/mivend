@@ -66,12 +66,12 @@ onMounted(async () => {
 <template>
     <aside class="orders-aside">
         <div class="aside-card">
-            <div class="aside-title">Payments &amp; invoices</div>
+            <div class="aside-title">Payments &amp; proforma invoices</div>
             <div class="aside-subtitle">
                 Every order can split into several invoices (one per organization) — pay any of them
-                any time from the Invoices page.
+                any time from the proforma invoices page.
             </div>
-            <router-link to="/invoices" class="wide-btn orange">Go to invoices</router-link>
+            <router-link to="/invoices" class="wide-btn orange">Go to proforma invoices</router-link>
         </div>
 
         <div class="aside-card">
@@ -83,7 +83,7 @@ onMounted(async () => {
                 <span>Payment delay</span><strong>{{ paymentDelay }}</strong>
             </div>
             <div class="aside-line">
-                <span>Unpaid (all invoices)</span><strong>{{ unpaidTotal }}</strong>
+                <span>Unpaid (all proforma invoices)</span><strong>{{ unpaidTotal }}</strong>
             </div>
             <div v-if="advanceBalances.length" class="aside-line">
                 <span>Advance balance</span><strong>{{ advanceTotal }}</strong>

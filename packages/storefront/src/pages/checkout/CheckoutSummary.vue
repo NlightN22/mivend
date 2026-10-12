@@ -42,7 +42,7 @@ const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.tot
 
 const btnLabel = computed(() => {
     if (checkoutStore.selectedPayment === 'online') return 'Pay online →';
-    if (checkoutStore.selectedPayment === 'invoice') return 'Place order & get invoice';
+    if (checkoutStore.selectedPayment === 'invoice') return 'Place order & get proforma invoice';
     return 'Confirm order';
 });
 

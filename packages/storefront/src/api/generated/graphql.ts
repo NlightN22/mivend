@@ -1455,41 +1455,41 @@ export type InvalidCredentialsError = ErrorResult & {
     message: Scalars['String']['output'];
 };
 
-export type Invoice = {
+export type ProformaInvoice = {
     amount: Scalars['Int']['output'];
     currencyCode: Scalars['String']['output'];
     id: Scalars['ID']['output'];
-    lines: Array<InvoiceLine>;
-    order: InvoiceOrder;
+    lines: Array<ProformaInvoiceLine>;
+    order: ProformaInvoiceOrder;
     orderId: Scalars['ID']['output'];
     organizationId: Scalars['ID']['output'];
     status: Scalars['String']['output'];
 };
 
-export type InvoiceLine = {
+export type ProformaInvoiceLine = {
     linePriceWithTax: Scalars['Int']['output'];
-    productVariant: InvoiceLineProductVariant;
+    productVariant: ProformaInvoiceLineProductVariant;
     quantity: Scalars['Int']['output'];
     unitPriceWithTax: Scalars['Int']['output'];
 };
 
-export type InvoiceLineProductVariant = {
+export type ProformaInvoiceLineProductVariant = {
     name: Scalars['String']['output'];
     sku: Scalars['String']['output'];
 };
 
-export type InvoiceList = {
-    items: Array<Invoice>;
+export type ProformaInvoiceList = {
+    items: Array<ProformaInvoice>;
     totalItems: Scalars['Int']['output'];
 };
 
-export type InvoiceListOptions = {
+export type ProformaInvoiceListOptions = {
     skip?: InputMaybe<Scalars['Int']['input']>;
     status?: InputMaybe<Scalars['String']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
 };
 
-export type InvoiceOrder = {
+export type ProformaInvoiceOrder = {
     code: Scalars['String']['output'];
     id: Scalars['ID']['output'];
 };
@@ -1909,7 +1909,7 @@ export type Mutation = {
     /** End the current authenticated session */
     logout: Success;
     markNotificationRead: Notification;
-    payInvoice: Invoice;
+    payProformaInvoice: ProformaInvoice;
     /** Regenerate and send a verification token for a new Customer registration. Only applicable if `authOptions.requireVerification` is set to true. */
     refreshCustomerVerification: RefreshCustomerVerificationResult;
     /**
@@ -2089,9 +2089,9 @@ export type MutationMarkNotificationReadArgs = {
     id: Scalars['ID']['input'];
 };
 
-export type MutationPayInvoiceArgs = {
+export type MutationPayProformaInvoiceArgs = {
     channel?: InputMaybe<Scalars['String']['input']>;
-    invoiceId: Scalars['ID']['input'];
+    proformaInvoiceId: Scalars['ID']['input'];
     status: Scalars['String']['input'];
 };
 
@@ -2719,7 +2719,7 @@ export type Payment = Node & {
 
 export type PaymentAllocation = {
     amount: Scalars['Int']['output'];
-    invoice?: Maybe<Invoice>;
+    proformaInvoice?: Maybe<ProformaInvoice>;
     isAdvance: Scalars['Boolean']['output'];
 };
 
@@ -2732,9 +2732,9 @@ export type PaymentAttempt = {
     disputes: Array<Dispute>;
     externalReference?: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
-    invoice?: Maybe<Invoice>;
-    invoiceId?: Maybe<Scalars['ID']['output']>;
-    order?: Maybe<InvoiceOrder>;
+    proformaInvoice?: Maybe<ProformaInvoice>;
+    proformaInvoiceId?: Maybe<Scalars['ID']['output']>;
+    order?: Maybe<ProformaInvoiceOrder>;
     orderId?: Maybe<Scalars['ID']['output']>;
     processingEvents: Array<PaymentProcessingEvent>;
     refunds: Array<PaymentRefund>;
@@ -3010,11 +3010,11 @@ export enum Permission {
     ReadFacet = 'ReadFacet',
     /** Read the raw floor-price threshold for a variant (financial data, layer 4 redaction) */
     ReadFloorPrice = 'ReadFloorPrice',
-    /** Read invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveInvoiceScope) */
+    /** Read proforma invoice records for the manager portal (scope resolved separately by AccessScopeService.resolveProformaInvoiceScope) */
     ReadInvoice = 'ReadInvoice',
     /** Grants permission to read Order */
     ReadOrder = 'ReadOrder',
-    /** Read payment records for the manager portal — a resource derived from Invoice, scoped the same way (AccessScopeService.resolveInvoiceScope) */
+    /** Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope) */
     ReadPayment = 'ReadPayment',
     /** Grants permission to read PaymentMethod */
     ReadPaymentMethod = 'ReadPaymentMethod',
@@ -3470,14 +3470,14 @@ export type Query = {
     facet?: Maybe<Facet>;
     /** A list of Facets available to the shop */
     facets: FacetList;
-    invoice?: Maybe<Invoice>;
+    proformaInvoice?: Maybe<ProformaInvoice>;
     /** Returns information about the current authenticated User */
     me?: Maybe<CurrentUser>;
     multiplicityEnforced: Scalars['Boolean']['output'];
     myAdvanceBalance: Array<MoneyAmount>;
     myDocuments: DocumentList;
     myHiddenTradingPoints: Array<TradingPoint>;
-    myInvoices: InvoiceList;
+    myProformaInvoices: ProformaInvoiceList;
     myOrders: OrderList;
     myPayments: PaymentAttemptList;
     mySessions: Array<SessionSummary>;
@@ -3528,7 +3528,7 @@ export type QueryFacetsArgs = {
     options?: InputMaybe<FacetListOptions>;
 };
 
-export type QueryInvoiceArgs = {
+export type QueryProformaInvoiceArgs = {
     id: Scalars['ID']['input'];
 };
 
@@ -3536,8 +3536,8 @@ export type QueryMyDocumentsArgs = {
     options?: InputMaybe<DocumentListOptions>;
 };
 
-export type QueryMyInvoicesArgs = {
-    options?: InputMaybe<InvoiceListOptions>;
+export type QueryMyProformaInvoicesArgs = {
+    options?: InputMaybe<ProformaInvoiceListOptions>;
 };
 
 export type QueryMyOrdersArgs = {
@@ -4647,7 +4647,7 @@ export type OrderCreatedQuery = {
         customFields?: { tradingPointId?: string | null } | null;
     } | null;
     myTradingPoints: Array<{ id: string; name: string; address: string }>;
-    myInvoices: { items: Array<{ id: string; order: { code: string } }> };
+    myProformaInvoices: { items: Array<{ id: string; order: { code: string } }> };
 };
 
 export type MyDocumentsQueryVariables = Exact<{
@@ -4705,12 +4705,12 @@ export type MyAdvanceBalanceQuery = {
     myAdvanceBalance: Array<{ amount: number; currencyCode: string }>;
 };
 
-export type InvoiceDetailQueryVariables = Exact<{
+export type ProformaInvoiceDetailQueryVariables = Exact<{
     id: Scalars['ID']['input'];
 }>;
 
-export type InvoiceDetailQuery = {
-    invoice?: {
+export type ProformaInvoiceDetailQuery = {
+    proformaInvoice?: {
         id: string;
         orderId: string;
         organizationId: string;
@@ -4727,12 +4727,12 @@ export type InvoiceDetailQuery = {
     } | null;
 };
 
-export type MyInvoicesQueryVariables = Exact<{
-    options?: InputMaybe<InvoiceListOptions>;
+export type MyProformaInvoicesQueryVariables = Exact<{
+    options?: InputMaybe<ProformaInvoiceListOptions>;
 }>;
 
-export type MyInvoicesQuery = {
-    myInvoices: {
+export type MyProformaInvoicesQuery = {
+    myProformaInvoices: {
         totalItems: number;
         items: Array<{
             id: string;
@@ -4746,12 +4746,12 @@ export type MyInvoicesQuery = {
     };
 };
 
-export type PayInvoiceMutationVariables = Exact<{
-    invoiceId: Scalars['ID']['input'];
+export type PayProformaInvoiceMutationVariables = Exact<{
+    proformaInvoiceId: Scalars['ID']['input'];
     status: Scalars['String']['input'];
 }>;
 
-export type PayInvoiceMutation = { payInvoice: { id: string; status: string } };
+export type PayProformaInvoiceMutation = { payProformaInvoice: { id: string; status: string } };
 
 export type CancelOrderMutationVariables = Exact<{
     code: Scalars['String']['input'];
@@ -4862,12 +4862,12 @@ export type MyPaymentsQuery = {
             channel: string;
             status: string;
             createdAt: any;
-            invoiceId?: string | null;
+            proformaInvoiceId?: string | null;
             order?: { id: string; code: string } | null;
             allocations: Array<{
                 amount: number;
                 isAdvance: boolean;
-                invoice?: { id: string } | null;
+                proformaInvoice?: { id: string } | null;
             }>;
             refunds: Array<{ amount: number; status: string }>;
         }>;
@@ -4886,7 +4886,7 @@ export type PaymentDetailQuery = {
         channel: string;
         status: string;
         createdAt: any;
-        invoiceId?: string | null;
+        proformaInvoiceId?: string | null;
         orderId?: string | null;
         externalReference?: string | null;
         refunds: Array<{
@@ -4905,12 +4905,12 @@ export type PaymentDetailQuery = {
             openedAt: any;
         }>;
         processingEvents: Array<{ stage: string; occurredAt: any; note?: string | null }>;
-        invoice?: { id: string; status: string } | null;
+        proformaInvoice?: { id: string; status: string } | null;
         order?: { id: string; code: string } | null;
         allocations: Array<{
             amount: number;
             isAdvance: boolean;
-            invoice?: {
+            proformaInvoice?: {
                 id: string;
                 amount: number;
                 currencyCode: string;
@@ -5762,7 +5762,7 @@ export const OrderCreatedDocument = new TypedDocumentString(`
     name
     address
   }
-  myInvoices(options: {take: 50}) {
+  myProformaInvoices(options: {take: 50}) {
     items {
       id
       order {
@@ -5831,9 +5831,9 @@ export const MyAdvanceBalanceDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<MyAdvanceBalanceQuery, MyAdvanceBalanceQueryVariables>;
-export const InvoiceDetailDocument = new TypedDocumentString(`
-    query InvoiceDetail($id: ID!) {
-  invoice(id: $id) {
+export const ProformaInvoiceDetailDocument = new TypedDocumentString(`
+    query ProformaInvoiceDetail($id: ID!) {
+  proformaInvoice(id: $id) {
     id
     orderId
     organizationId
@@ -5855,10 +5855,13 @@ export const InvoiceDetailDocument = new TypedDocumentString(`
     }
   }
 }
-    `) as unknown as TypedDocumentString<InvoiceDetailQuery, InvoiceDetailQueryVariables>;
-export const MyInvoicesDocument = new TypedDocumentString(`
-    query MyInvoices($options: InvoiceListOptions) {
-  myInvoices(options: $options) {
+    `) as unknown as TypedDocumentString<
+    ProformaInvoiceDetailQuery,
+    ProformaInvoiceDetailQueryVariables
+>;
+export const MyProformaInvoicesDocument = new TypedDocumentString(`
+    query MyProformaInvoices($options: ProformaInvoiceListOptions) {
+  myProformaInvoices(options: $options) {
     items {
       id
       orderId
@@ -5874,15 +5877,18 @@ export const MyInvoicesDocument = new TypedDocumentString(`
     totalItems
   }
 }
-    `) as unknown as TypedDocumentString<MyInvoicesQuery, MyInvoicesQueryVariables>;
-export const PayInvoiceDocument = new TypedDocumentString(`
-    mutation PayInvoice($invoiceId: ID!, $status: String!) {
-  payInvoice(invoiceId: $invoiceId, status: $status) {
+    `) as unknown as TypedDocumentString<MyProformaInvoicesQuery, MyProformaInvoicesQueryVariables>;
+export const PayProformaInvoiceDocument = new TypedDocumentString(`
+    mutation PayProformaInvoice($proformaInvoiceId: ID!, $status: String!) {
+  payProformaInvoice(proformaInvoiceId: $proformaInvoiceId, status: $status) {
     id
     status
   }
 }
-    `) as unknown as TypedDocumentString<PayInvoiceMutation, PayInvoiceMutationVariables>;
+    `) as unknown as TypedDocumentString<
+    PayProformaInvoiceMutation,
+    PayProformaInvoiceMutationVariables
+>;
 export const CancelOrderDocument = new TypedDocumentString(`
     mutation CancelOrder($code: String!) {
   cancelOrder(code: $code) {
@@ -5990,7 +5996,7 @@ export const MyPaymentsDocument = new TypedDocumentString(`
       channel
       status
       createdAt
-      invoiceId
+      proformaInvoiceId
       order {
         id
         code
@@ -5998,7 +6004,7 @@ export const MyPaymentsDocument = new TypedDocumentString(`
       allocations {
         amount
         isAdvance
-        invoice {
+        proformaInvoice {
           id
         }
       }
@@ -6020,7 +6026,7 @@ export const PaymentDetailDocument = new TypedDocumentString(`
     channel
     status
     createdAt
-    invoiceId
+    proformaInvoiceId
     orderId
     externalReference
     refunds {
@@ -6043,7 +6049,7 @@ export const PaymentDetailDocument = new TypedDocumentString(`
       occurredAt
       note
     }
-    invoice {
+    proformaInvoice {
       id
       status
     }
@@ -6054,7 +6060,7 @@ export const PaymentDetailDocument = new TypedDocumentString(`
     allocations {
       amount
       isAdvance
-      invoice {
+      proformaInvoice {
         id
         amount
         currencyCode

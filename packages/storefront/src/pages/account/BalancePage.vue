@@ -229,7 +229,7 @@ const payments = [
                             <div class="bal-mini-item">
                                 <div class="bal-mini-title">Documents</div>
                                 <div class="bal-mini-note">
-                                    Invoices, UPD and reconciliation acts are available in the
+                                    Proforma invoices, UPD and reconciliation acts are available in the
                                     Documents section.
                                 </div>
                             </div>

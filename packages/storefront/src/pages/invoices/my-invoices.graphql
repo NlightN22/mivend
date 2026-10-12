@@ -1,5 +1,5 @@
-query MyInvoices($options: InvoiceListOptions) {
-    myInvoices(options: $options) {
+query MyProformaInvoices($options: ProformaInvoiceListOptions) {
+    myProformaInvoices(options: $options) {
         items {
             id
             orderId

@@ -9,7 +9,7 @@ const router = useRouter();
 const invoiceId = route.params.id as string;
 
 const { invoice, loading: loadingInvoice, load } = useInvoiceDetail();
-const { loading: paying, payInvoice } = usePayInvoice();
+const { loading: paying, payProformaInvoice } = usePayInvoice();
 
 onMounted(() => {
     void load(invoiceId);
@@ -24,7 +24,7 @@ function formatAmount(cents: number, currency: string): string {
 }
 
 async function choose(outcome: PayInvoiceOutcome): Promise<void> {
-    await payInvoice(invoiceId, outcome);
+    await payProformaInvoice(invoiceId, outcome);
     void router.push(`/invoices/${invoiceId}`);
 }
 </script>
@@ -67,7 +67,7 @@ async function choose(outcome: PayInvoiceOutcome): Promise<void> {
             </div>
 
             <RouterLink :to="`/invoices/${invoiceId}`" class="stub-back"
-                >← Back to invoice</RouterLink
+                >← Back to proforma invoice</RouterLink
             >
         </div>
     </div>

@@ -88,10 +88,10 @@ const refundedTotal = computed(() =>
                             formatDocumentNumber(payment.order.code)
                         }}</router-link>
                     </div>
-                    <div class="pd-meta-item" v-if="payment.invoice">
-                        <label>Target invoice</label>
-                        <router-link class="pd-link" :to="`/invoices/${payment.invoice.id}`"
-                            >Invoice #{{ payment.invoice.id }}</router-link
+                    <div class="pd-meta-item" v-if="payment.proformaInvoice">
+                        <label>Target proforma invoice</label>
+                        <router-link class="pd-link" :to="`/invoices/${payment.proformaInvoice.id}`"
+                            >Proforma invoice #{{ payment.proformaInvoice.id }}</router-link
                         >
                     </div>
                 </div>
@@ -102,7 +102,7 @@ const refundedTotal = computed(() =>
                         ><strong>{{ formatAmount(payment.amount, payment.currencyCode) }}</strong>
                     </div>
                     <div class="pd-summary-row">
-                        <span>Applied to invoices</span
+                        <span>Applied to proforma invoices</span
                         ><strong>{{ formatAmount(appliedTotal, payment.currencyCode) }}</strong>
                     </div>
                     <div class="pd-summary-row">
@@ -120,16 +120,16 @@ const refundedTotal = computed(() =>
                 <div class="pd-body">
                     <div class="pd-main">
                         <section class="pd-card">
-                            <h2 class="pd-card-title">Invoice allocation</h2>
+                            <h2 class="pd-card-title">Proforma invoice allocation</h2>
                             <p class="pd-card-sub">
-                                Shows which invoices were covered by this payment and how much was
+                                Shows which proforma invoices were covered by this payment and how much was
                                 applied.
                             </p>
                             <table v-if="invoiceAllocations.length" class="pd-table">
                                 <thead>
                                     <tr>
-                                        <th>Invoice</th>
-                                        <th class="pd-th-num">Invoice total</th>
+                                        <th>Proforma invoice</th>
+                                        <th class="pd-th-num">Proforma invoice total</th>
                                         <th class="pd-th-num">Applied</th>
                                         <th>Status</th>
                                     </tr>
@@ -139,20 +139,20 @@ const refundedTotal = computed(() =>
                                         <td>
                                             <router-link
                                                 class="pd-link"
-                                                :to="`/invoices/${a.invoice?.id}`"
-                                                >Invoice #{{ a.invoice?.id }}</router-link
+                                                :to="`/invoices/${a.proformaInvoice?.id}`"
+                                                >Proforma invoice #{{ a.proformaInvoice?.id }}</router-link
                                             >
-                                            <div class="pd-row-meta" v-if="a.invoice?.order">
+                                            <div class="pd-row-meta" v-if="a.proformaInvoice?.order">
                                                 Order
-                                                {{ formatDocumentNumber(a.invoice.order.code) }}
+                                                {{ formatDocumentNumber(a.proformaInvoice.order.code) }}
                                             </div>
                                         </td>
                                         <td class="pd-num">
                                             {{
-                                                a.invoice
+                                                a.proformaInvoice
                                                     ? formatAmount(
-                                                          a.invoice.amount,
-                                                          a.invoice.currencyCode,
+                                                          a.proformaInvoice.amount,
+                                                          a.proformaInvoice.currencyCode,
                                                       )
                                                     : '—'
                                             }}
@@ -163,18 +163,18 @@ const refundedTotal = computed(() =>
                                         <td>
                                             <MvStatusBadge
                                                 :variant="
-                                                    a.invoice?.status === 'paid'
+                                                    a.proformaInvoice?.status === 'paid'
                                                         ? 'success'
                                                         : 'warning'
                                                 "
-                                                >{{ a.invoice?.status }}</MvStatusBadge
+                                                >{{ a.proformaInvoice?.status }}</MvStatusBadge
                                             >
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
                             <p v-else class="pd-empty">
-                                This payment was not applied to any invoice — it is held entirely as
+                                This payment was not applied to any proforma invoice — it is held entirely as
                                 an advance.
                             </p>
                         </section>
@@ -316,10 +316,10 @@ const refundedTotal = computed(() =>
 
                         <section class="pd-card">
                             <h2 class="pd-card-title">Related records</h2>
-                            <div class="pd-detail-row" v-if="payment.invoice">
-                                <span>Invoice</span>
-                                <router-link class="pd-link" :to="`/invoices/${payment.invoice.id}`"
-                                    >Invoice #{{ payment.invoice.id }}</router-link
+                            <div class="pd-detail-row" v-if="payment.proformaInvoice">
+                                <span>Proforma invoice</span>
+                                <router-link class="pd-link" :to="`/invoices/${payment.proformaInvoice.id}`"
+                                    >Proforma invoice #{{ payment.proformaInvoice.id }}</router-link
                                 >
                             </div>
                             <div class="pd-detail-row" v-if="payment.order">

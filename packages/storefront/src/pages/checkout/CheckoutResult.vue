@@ -40,14 +40,14 @@ const stateConfig: Record<NonNullable<ResultState>, StateConfig> = {
         icon: '×',
         variant: 'fail',
         title: 'Payment failed',
-        text: 'Payment not confirmed. You can retry, choose bank invoice, or return to the order.',
+        text: 'Payment not confirmed. You can retry, choose bank proforma invoice, or return to the order.',
         actions: [
             {
                 label: 'Try again',
                 primary: true,
                 handler: () => checkoutStore.setResultState(null),
             },
-            { label: 'Generate invoice', handler: () => checkoutStore.setResultState(null) },
+            { label: 'Generate proforma invoice', handler: () => checkoutStore.setResultState(null) },
             { label: 'Back to order', handler: () => checkoutStore.setResultState(null) },
         ],
     },

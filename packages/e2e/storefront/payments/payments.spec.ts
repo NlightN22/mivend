@@ -4,7 +4,7 @@ import {
     buildOrderAcrossOrganizations,
     myInvoicesForOrder,
     payAllOpenInvoices,
-    payInvoice,
+    payProformaInvoice,
 } from '../invoices/helpers';
 
 async function goToPayments(page: Page): Promise<void> {
@@ -16,15 +16,16 @@ async function goToPayments(page: Page): Promise<void> {
 async function findPaymentByInvoiceId(
     page: Page,
     invoiceId: string,
-): Promise<{ id: string; invoiceId: string | null }> {
+): Promise<{ id: string; proformaInvoiceId: string | null }> {
     const result = await gql(
         page,
-        `query { myPayments(options: { take: 200 }) { items { id invoiceId createdAt } } }`,
+        `query { myPayments(options: { take: 200 }) { items { id proformaInvoiceId createdAt } } }`,
     );
-    const items = (result.myPayments as { items: { id: string; invoiceId: string | null }[] })
-        .items;
-    const match = items.find(i => i.invoiceId === invoiceId);
-    if (!match) throw new Error(`No payment found for invoice ${invoiceId}`);
+    const items = (
+        result.myPayments as { items: { id: string; proformaInvoiceId: string | null }[] }
+    ).items;
+    const match = items.find(i => i.proformaInvoiceId === invoiceId);
+    if (!match) throw new Error(`No payment found for proforma invoice ${invoiceId}`);
     return match;
 }
 
@@ -41,7 +42,7 @@ async function buildAndPayInvoice(
         `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename } }`,
     );
     const [invoice] = await myInvoicesForOrder(page, orderCode);
-    await payInvoice(page, invoice.id, outcome, channel);
+    await payProformaInvoice(page, invoice.id, outcome, channel);
     const payment = await findPaymentByInvoiceId(page, invoice.id);
     const result = await gql(page, `query($id: ID!) { payment(id: $id) { status } }`, {
         id: payment.id,
@@ -71,7 +72,9 @@ test.describe('Payments page', () => {
         expect(paymentStatus).toBe('captured');
 
         await goToPayments(page);
-        const row = page.locator('.payment-row', { hasText: `Invoice #${invoiceId}` }).first();
+        const row = page
+            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceId}` })
+            .first();
         await expect(row).toBeVisible({ timeout: 10000 });
         await expect(row).toContainText('Bank transfer (ERP)');
     });
@@ -140,7 +143,9 @@ test.describe('Payments page', () => {
         await page.getByRole('button', { name: 'Bank transfer (ERP)' }).click();
         await page.waitForLoadState('networkidle');
 
-        const row = page.locator('.payment-row', { hasText: `Invoice #${invoiceId}` }).first();
+        const row = page
+            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceId}` })
+            .first();
         await expect(row).toBeVisible({ timeout: 10000 });
 
         const rowTexts = await page.locator('.payment-row').allTextContents();
@@ -161,7 +166,9 @@ test.describe('Payments page', () => {
         await page.getByRole('button', { name: 'Branch cash desk' }).click();
         await page.waitForLoadState('networkidle');
 
-        const row = page.locator('.payment-row', { hasText: `Invoice #${invoiceId}` }).first();
+        const row = page
+            .locator('.payment-row', { hasText: `Proforma invoice #${invoiceId}` })
+            .first();
         await expect(row).toBeVisible({ timeout: 10000 });
         const rowTexts = await page.locator('.payment-row').allTextContents();
         for (const text of rowTexts) {
@@ -187,7 +194,7 @@ test.describe('Payments page', () => {
         const { invoiceId, orderCode } = await buildAndPayInvoice(page, 'success');
         // Duplicate the same payment — its invoice is already paid and (after the drain above)
         // nothing else is open in that organization, so the whole amount becomes an advance.
-        await payInvoice(page, invoiceId, 'success');
+        await payProformaInvoice(page, invoiceId, 'success');
 
         await goToPayments(page);
         // Both payments (original + duplicate) share the same order, so filter on that rather
@@ -215,7 +222,7 @@ test.describe('Payments page', () => {
 });
 
 test.describe('Payment detail page', () => {
-    test('detail page shows amount, status, source and the invoice it was applied to', async ({
+    test('detail page shows amount, status, source and the proforma invoice it was applied to', async ({
         page,
     }) => {
         const { invoiceId } = await buildAndPayInvoice(page, 'success');
@@ -225,7 +232,7 @@ test.describe('Payment detail page', () => {
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.pd-title')).toBeVisible({ timeout: 10000 });
         await expect(page.locator('.pd-source-pill')).toContainText('Online acquiring');
-        await expect(page.locator('.pd-table')).toContainText(`Invoice #${invoiceId}`);
+        await expect(page.locator('.pd-table')).toContainText(`Proforma invoice #${invoiceId}`);
     });
 
     test('a payment that ends up entirely as an advance shows the "held entirely as an advance" message and a matching unallocated total', async ({
@@ -235,24 +242,24 @@ test.describe('Payment detail page', () => {
         await payAllOpenInvoices(page);
         const { invoiceId } = await buildAndPayInvoice(page, 'success');
         // Duplicate: nothing else open in this organization after the drain above.
-        await payInvoice(page, invoiceId, 'success');
+        await payProformaInvoice(page, invoiceId, 'success');
 
         const payments = await gql(
             page,
-            `query { myPayments(options: { take: 200 }) { items { id invoiceId } } }`,
+            `query { myPayments(options: { take: 200 }) { items { id proformaInvoiceId } } }`,
         );
         const matches = (
-            payments.myPayments as { items: { id: string; invoiceId: string | null }[] }
-        ).items.filter(i => i.invoiceId === invoiceId);
+            payments.myPayments as { items: { id: string; proformaInvoiceId: string | null }[] }
+        ).items.filter(i => i.proformaInvoiceId === invoiceId);
         expect(matches.length).toBeGreaterThanOrEqual(2);
         const duplicatePaymentId = matches[0].id; // most recent (list is createdAt/id DESC)
 
         await page.goto(`/payments/${duplicatePaymentId}`);
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.pd-title')).toBeVisible({ timeout: 10000 });
-        await expect(page.locator('.pd-card', { hasText: 'Invoice allocation' })).toContainText(
-            'held entirely as an advance',
-        );
+        await expect(
+            page.locator('.pd-card', { hasText: 'Proforma invoice allocation' }),
+        ).toContainText('held entirely as an advance');
     });
 
     test('back link returns to payments list', async ({ page }) => {

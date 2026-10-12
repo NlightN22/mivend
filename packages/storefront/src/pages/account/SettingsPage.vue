@@ -177,7 +177,7 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
                         <div>
                             <div class="set-toggle-title">Documents</div>
                             <div class="set-toggle-note">
-                                New invoices, UPD, reconciliation acts and order documents.
+                                New proforma invoices, UPD, reconciliation acts and order documents.
                             </div>
                         </div>
                         <button

@@ -207,7 +207,7 @@ describe('cart store deferred checkout', () => {
         expect(await store.completeDeferredPayment()).toBe('ORD-1');
     });
 
-    it('returns the placed order code for an invoice payment', async () => {
+    it('returns the placed order code for a proforma invoice payment', async () => {
         const store = useCartStore();
         vi.mocked(shopApi)
             .mockResolvedValueOnce(placed('ORD-2'))

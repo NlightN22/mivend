@@ -1,8 +1,11 @@
 import { ref, type Ref } from 'vue';
 import { shopApi } from '../../api/client';
-import { MyInvoicesDocument, type MyInvoicesQuery } from '../../api/generated/graphql';
+import {
+    MyProformaInvoicesDocument,
+    type MyProformaInvoicesQuery,
+} from '../../api/generated/graphql';
 
-export type InvoiceSummary = MyInvoicesQuery['myInvoices']['items'][number];
+export type InvoiceSummary = MyProformaInvoicesQuery['myProformaInvoices']['items'][number];
 
 export interface MyInvoicesOptions {
     take: number;
@@ -38,9 +41,9 @@ export function useInvoices(): {
     async function load(options: MyInvoicesOptions): Promise<void> {
         loading.value = true;
         try {
-            const result = await shopApi(MyInvoicesDocument, { options });
-            invoices.value = result.myInvoices.items;
-            totalItems.value = result.myInvoices.totalItems;
+            const result = await shopApi(MyProformaInvoicesDocument, { options });
+            invoices.value = result.myProformaInvoices.items;
+            totalItems.value = result.myProformaInvoices.totalItems;
         } catch (e) {
             console.error('[useInvoices]', e);
         } finally {

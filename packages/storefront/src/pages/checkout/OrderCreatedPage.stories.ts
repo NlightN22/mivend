@@ -26,7 +26,7 @@ function mockOrder(method: string, limitExceeded = false): void {
             customFields: { tradingPointId: 'point-1' },
         },
         myTradingPoints: [{ id: 'point-1', name: 'Trading point A', address: 'branch-a address' }],
-        myInvoices: { items: [{ id: '5', order: { code: 'ORD-SB-0001' } }] },
+        myProformaInvoices: { items: [{ id: '5', order: { code: 'ORD-SB-0001' } }] },
     }));
 }
 type Story = StoryObj<typeof OrderCreatedPage>;

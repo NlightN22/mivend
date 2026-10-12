@@ -18,7 +18,7 @@ export const Default: Story = {
         async () => {
             registerDefaultMocks();
             registerMock('MyInvoices', () => ({
-                myInvoices: {
+                myProformaInvoices: {
                     items: [
                         {
                             id: '1',
@@ -55,7 +55,9 @@ export const Empty: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
-            registerMock('MyInvoices', () => ({ myInvoices: { items: [], totalItems: 0 } }));
+            registerMock('MyInvoices', () => ({
+                myProformaInvoices: { items: [], totalItems: 0 },
+            }));
             await router.push('/invoices');
         },
     ],

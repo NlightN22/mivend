@@ -20,8 +20,8 @@ const methodCards = computed(() => [
     {
         id: 'invoice' as const,
         icon: IconBuildingBank,
-        title: 'Bank invoice',
-        note: 'Generate PDF invoice and pay via bank.',
+        title: 'Bank proforma invoice',
+        note: 'Generate PDF proforma invoice and pay via bank.',
         badge: 'Status after receipt',
         badgeOrange: true,
     },

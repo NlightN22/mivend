@@ -5,7 +5,7 @@ import {
     myAdvanceBalance,
     myInvoicesForOrder,
     payAllOpenInvoices,
-    payInvoice,
+    payProformaInvoice,
 } from './helpers';
 
 // Cash application (docs/payments.md "Cash application and payment allocation"): a captured
@@ -15,8 +15,8 @@ import {
 // the specific scenario that prompted it: the customer paid the same debt twice through two
 // different channels (e.g. online acquiring, then a bank transfer reported by the ERP for the
 // same invoice) — the second capture must not error and must not double-count, it must cascade.
-test.describe('Invoice payment: pay-any-time, independent of order/session state', () => {
-    test('payInvoice settles an invoice directly via GraphQL, with no dependency on activeOrder/session', async ({
+test.describe('Proforma invoice payment: pay-any-time, independent of order/session state', () => {
+    test('payProformaInvoice settles a proforma invoice directly via GraphQL, with no dependency on activeOrder/session', async ({
         page,
     }) => {
         await buildOrderAcrossOrganizations(page);
@@ -34,14 +34,14 @@ test.describe('Invoice payment: pay-any-time, independent of order/session state
 
         // Now pay it — a completely separate mutation, no addPaymentToOrder, no activeOrder
         // involvement, callable any time after the fact.
-        const paid = await payInvoice(page, invoiceA.id, 'success');
+        const paid = await payProformaInvoice(page, invoiceA.id, 'success');
         expect(paid.status).toBe('paid');
 
         const [refetched] = await myInvoicesForOrder(page, orderCode);
         expect(refetched.status).toBe('paid');
     });
 
-    test('a duplicate "success" payment on an already-paid invoice is not re-processed, and its amount is recorded against the SAME organization only (never a different one)', async ({
+    test('a duplicate "success" payment on an already-paid proforma invoice is not re-processed, and its amount is recorded against the SAME organization only (never a different one)', async ({
         page,
     }) => {
         // Start from a clean slate — the dev DB is shared across test runs, so "what's open in
@@ -58,12 +58,12 @@ test.describe('Invoice payment: pay-any-time, independent of order/session state
         );
         const [invoiceA, invoiceB] = await myInvoicesForOrder(page, orderCode);
 
-        await payInvoice(page, invoiceA.id, 'success');
+        await payProformaInvoice(page, invoiceA.id, 'success');
         const balanceBeforeA = await myAdvanceBalance(page);
 
         // Duplicate: "another channel" (e.g. a bank transfer the ERP later reports) pays the
         // SAME already-paid invoice again.
-        await payInvoice(page, invoiceA.id, 'success');
+        await payProformaInvoice(page, invoiceA.id, 'success');
 
         const [refetchedA] = await myInvoicesForOrder(page, orderCode);
         expect(refetchedA.status).toBe('paid'); // unchanged — not "double paid"
@@ -104,13 +104,13 @@ test.describe('Invoice payment: pay-any-time, independent of order/session state
         );
         const invoices = await myInvoicesForOrder(page, orderCode);
         for (const invoice of invoices) {
-            await payInvoice(page, invoice.id, 'success');
+            await payProformaInvoice(page, invoice.id, 'success');
         }
         const balanceBefore = await myAdvanceBalance(page);
 
         // Duplicate-pay the first invoice again — its organization has nothing open (just paid
         // everything above), so this must become a pure advance.
-        await payInvoice(page, invoices[0].id, 'success');
+        await payProformaInvoice(page, invoices[0].id, 'success');
 
         const balanceAfter = await myAdvanceBalance(page);
         const before =

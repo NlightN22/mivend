@@ -84,7 +84,7 @@ function mockInvoicesData(): void {
         if (variables.counterpartyId) {
             filtered = filtered.filter(i => i.counterpartyId === variables.counterpartyId);
         }
-        return { visibleInvoices: paginate(filtered, variables.options) };
+        return { visibleProformaInvoices: paginate(filtered, variables.options) };
     });
 }
 
@@ -104,7 +104,9 @@ export const Default: Story = {
 export const Empty: Story = {
     loaders: [
         async () => {
-            registerMock('InvoicesPage', () => ({ visibleInvoices: { items: [], totalItems: 0 } }));
+            registerMock('InvoicesPage', () => ({
+                visibleProformaInvoices: { items: [], totalItems: 0 },
+            }));
             await router.push('/invoices');
         },
     ],

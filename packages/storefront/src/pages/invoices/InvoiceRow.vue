@@ -23,7 +23,7 @@ function openInvoice(): void {
     void router.push(`/invoices/${props.invoice.id}`);
 }
 
-function payInvoice(): void {
+function payProformaInvoice(): void {
     void router.push(`/invoices/${props.invoice.id}/pay`);
 }
 
@@ -33,7 +33,7 @@ const isPayable = props.invoice.status !== 'paid' && props.invoice.status !== 'c
 <template>
     <article class="invoice-row">
         <div>
-            <div class="invoice-row__name">Invoice #{{ invoice.id }}</div>
+            <div class="invoice-row__name">Proforma invoice #{{ invoice.id }}</div>
             <div class="invoice-row__meta">
                 Order {{ formatDocumentNumber(invoice.order.code) }}
             </div>
@@ -53,7 +53,7 @@ const isPayable = props.invoice.status !== 'paid' && props.invoice.status !== 'c
         <div class="invoice-row__actions">
             <MvButton variant="secondary" size="sm" @click="openOrder">Order</MvButton>
             <MvButton variant="secondary" size="sm" @click="openInvoice">Open</MvButton>
-            <MvButton v-if="isPayable" variant="primary" size="sm" @click="payInvoice"
+            <MvButton v-if="isPayable" variant="primary" size="sm" @click="payProformaInvoice"
                 >Pay</MvButton
             >
         </div>

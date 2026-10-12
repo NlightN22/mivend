@@ -66,11 +66,11 @@ const menuItems = computed<AppSidebarItem[]>(() => {
         { label: 'Dashboard', path: '/' },
         { label: 'Orders', path: '/orders' },
     ];
-    // Gated on the same CustomPermission.ReadInvoice/ReadPayment the visibleInvoices/
+    // Gated on the same CustomPermission.ReadInvoice/ReadPayment the visibleProformaInvoices/
     // visiblePayments queries themselves check — see AdminInvoiceVisibilityResolver/
     // AdminPaymentVisibilityResolver.
     if (authStore.hasPermission('ReadInvoice'))
-        items.push({ label: 'Invoices', path: '/invoices' });
+        items.push({ label: 'Proforma invoices', path: '/invoices' });
     if (authStore.hasPermission('ReadPayment'))
         items.push({ label: 'Payments', path: '/payments' });
     items.push(
@@ -117,7 +117,7 @@ const mobileNavItems = computed<AppMobileNavItem[]>(() => [
 const moreSheetItems = computed<AppMobileSheetItem[]>(() => {
     const items: AppMobileSheetItem[] = [];
     if (authStore.hasPermission('ReadInvoice'))
-        items.push({ key: 'invoices', label: 'Invoices', path: '/invoices' });
+        items.push({ key: 'invoices', label: 'Proforma invoices', path: '/invoices' });
     if (authStore.hasPermission('ReadPayment'))
         items.push({ key: 'payments', label: 'Payments', path: '/payments' });
     items.push(

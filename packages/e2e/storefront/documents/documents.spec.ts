@@ -108,7 +108,7 @@ test.describe('Documents page — all document types', () => {
         await popup.close();
     });
 
-    test('a checkout with deferred payment generates a real, downloadable invoice document', async ({
+    test('a checkout with deferred payment generates a real, downloadable proforma invoice document', async ({
         page,
     }) => {
         await clearCart(page);

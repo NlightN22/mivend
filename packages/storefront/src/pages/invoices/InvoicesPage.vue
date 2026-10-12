@@ -13,7 +13,7 @@ const { filters: urlState, page } = useUrlState({ status: 'all' });
 const activeFilter = toRef(urlState, 'status');
 
 const statusFilters = [
-    { key: 'all', label: 'All invoices' },
+    { key: 'all', label: 'All proforma invoices' },
     ...Object.entries(INVOICE_STATUS_LABEL).map(([key, label]) => ({ key, label })),
 ];
 
@@ -61,7 +61,7 @@ const outstandingTotal = computed(() => {
         <section class="invoices-page__content">
             <div class="invoices-page__head">
                 <div>
-                    <h1 class="invoices-page__title">Invoices</h1>
+                    <h1 class="invoices-page__title">Proforma invoices</h1>
                     <p class="invoices-page__subtitle">
                         Payment obligations and links to their orders.
                     </p>
@@ -70,13 +70,13 @@ const outstandingTotal = computed(() => {
 
             <div class="invoices-page__stats">
                 <div class="invoices-page__stat-card">
-                    <div class="invoices-page__stat-title">Invoices on this page</div>
+                    <div class="invoices-page__stat-title">Proforma invoices on this page</div>
                     <div class="invoices-page__stat-value">{{ totalItems }}</div>
                 </div>
                 <div class="invoices-page__stat-card">
                     <div class="invoices-page__stat-title">Outstanding (this page)</div>
                     <div class="invoices-page__stat-value">{{ outstandingTotal }}</div>
-                    <div class="invoices-page__stat-note">Excludes paid and cancelled invoices</div>
+                    <div class="invoices-page__stat-note">Excludes paid and cancelled proforma invoices</div>
                 </div>
             </div>
 
@@ -96,7 +96,7 @@ const outstandingTotal = computed(() => {
 
                 <div v-if="loading" class="invoices-page__state">Loading...</div>
                 <div v-else-if="!invoices.length" class="invoices-page__state">
-                    No invoices found.
+                    No proforma invoices found.
                 </div>
                 <template v-else>
                     <MvPagination

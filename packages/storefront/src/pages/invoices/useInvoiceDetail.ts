@@ -1,8 +1,11 @@
 import { ref } from 'vue';
 import { shopApi } from '../../api/client';
-import { InvoiceDetailDocument, type InvoiceDetailQuery } from '../../api/generated/graphql';
+import {
+    ProformaInvoiceDetailDocument,
+    type ProformaInvoiceDetailQuery,
+} from '../../api/generated/graphql';
 
-export type InvoiceDetail = NonNullable<InvoiceDetailQuery['invoice']>;
+export type InvoiceDetail = NonNullable<ProformaInvoiceDetailQuery['proformaInvoice']>;
 
 export function useInvoiceDetail(): {
     invoice: ReturnType<typeof ref<InvoiceDetail | null>>;
@@ -15,8 +18,8 @@ export function useInvoiceDetail(): {
     async function load(id: string): Promise<void> {
         loading.value = true;
         try {
-            const result = await shopApi(InvoiceDetailDocument, { id });
-            invoice.value = result.invoice ?? null;
+            const result = await shopApi(ProformaInvoiceDetailDocument, { id });
+            invoice.value = result.proformaInvoice ?? null;
         } catch (e) {
             console.error('[useInvoiceDetail]', e);
         } finally {
