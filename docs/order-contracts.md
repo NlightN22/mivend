@@ -245,7 +245,7 @@ Priority, highest first (the first matching fact wins):
 - Whether marking an order for deletion also zeroes its reserve in the register automatically (expected: yes,
   "two in one"); if not, B must include A explicitly.
 
-## Historical ERP orders without a mivend `orderUuid` (decided in #215, not yet implemented)
+## Historical ERP orders without a mivend `orderUuid` (decided in #215, implementation waits for the ERP contract fields)
 
 Orders created in the ERP before mivend existed keep arriving as `order-changed` without an `orderUuid`.
 Today the consumer drops them as a `noop`. Decision: import them as real `Order` rows and mark them as external.
@@ -262,8 +262,18 @@ Today the consumer drops them as a `noop`. Decision: import them as real `Order`
 - **Rules by owner.** External orders are read-only for mivend for now: no reserve release/matching from
   `order-changed`, no reserve deadline auto-cancel, no `cancel-requested`, no customer-facing mutations, skipped by
   customer notifications/emails that assume `order.customer`. Managing them is deliberately later.
-- **Credit control.** External orders that are not yet approved/closed must count toward the counterparty's
-  exposure like our own; verify that credit control counts by order state, not by a mivend-only field.
+- **Credit control: no change.** The open deferred exposure counts only mivend deferred payments not yet
+  reflected in the ERP balance; external orders have no mivend payment and are already in the ERP balance.
+- **Data needed from the ERP (blocks implementation).** `order-changed` carries no document date, line prices or
+  totals. Ask the ERP side to add document date, line unit price/amount and order total (new event-contracts
+  version); implementation starts once the fields exist. Until then an import would have zero totals.
+- **Vendure state.** Created directly in the Vendure state matching `erpStatus` (no state-machine transitions);
+  an `OrderProcess` guard (same idea as `ReplicaOrderProcess`) rejects every transition of an external order.
+- **Visibility.** All portal users of the counterparty see its external orders (they have no author user);
+  managers by the usual scope. The storefront "my orders" list shows them in the same list with a "from ERP"
+  badge and a source filter, without actions (no cancel, no repeat).
+- **Guards by flag.** Skip external orders in anything that assumes `order.customer`: invoices, reserve, moq,
+  price resolution, replication, notifications. `order-submitted` already skips an order without a customer.
 - **Open for later.** Writing a mivend `orderUuid`/number back to the ERP needs a new event type
   (`confirmed` would register a duplicate) and an ERP-side change; not required for showing history.
 - **Migration.** Backfill `counterpartyId` on existing orders from their customer's counterparty.
