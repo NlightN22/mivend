@@ -306,6 +306,10 @@ Documents that form a customer's receivables (sales, payments, returns, correcti
 - **Balance.** `SettlementBalanceChanged` per (organization, counterparty, contract) is a reconciliation fact; the
   balance is never summed from documents. Overdue aging (FIFO) is computed in mivend from `due_date` or the
   contract's payment delay (`ContractChanged.payment_delay_days`).
+- **Corrected balance.** After an unposting/deletion Integration Service may send a corrected balance event that
+  changes only `closing_balance` (`opening_*` stay; a triple missing from the register becomes 0). Then
+  `closing = opening + sum(entries)` may temporarily not hold: `closing_balance` is authoritative, never reject or
+  alert on that mismatch. Versions are monotonic per document and per triple.
 - **Pending.** An entry whose contract/counterparty is not imported yet waits and is attached later. Employee and
   supplier contracts are filtered by `contract_kind`/`contract_type`/`payment_kind`.
 - **Retention cleaner.** Scheduled and idempotent; removes only explicit ERP-owned rows outside the window of their
