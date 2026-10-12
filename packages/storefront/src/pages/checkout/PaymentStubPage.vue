@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { toast } from '@mivend/ui-kit';
 import { IconAlertTriangle, IconCheck, IconHourglass, IconLock, IconX } from '@tabler/icons-vue';
 import { useCartStore } from '../../stores/cart';
 
@@ -7,7 +8,12 @@ const router = useRouter();
 const cartStore = useCartStore();
 
 async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
-    await cartStore.completeOnlinePayment(status);
+    const outcome = await cartStore.completeOnlinePayment(status);
+    if (outcome === 'amount-changed') {
+        toast('The amount to pay has changed. Please review it and confirm again.', 'error');
+        router.push('/checkout');
+        return;
+    }
     router.push(`/payment-result?status=${status}`);
 }
 </script>

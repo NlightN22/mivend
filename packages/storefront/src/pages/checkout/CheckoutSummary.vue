@@ -6,7 +6,7 @@ import { useCheckoutStore, type DeliveryType } from '../../stores/checkout';
 import { useOrderPlacement } from '../../composables/useOrderPlacement';
 import { cardExcess } from '../../utils/checkoutPolicy';
 import { useCurrency } from '../../composables/useCurrency';
-import DeferredCreditWarning from './DeferredCreditWarning.vue';
+import CreditLimitNotice from './CreditLimitNotice.vue';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 
 const cartStore = useCartStore();
@@ -47,7 +47,10 @@ const discountLabel = computed(() => `− ${formatRub(cartStore.discountAmount)}
 const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽');
 
 const btnLabel = computed(() => {
-    if (checkoutStore.selectedPayment === 'card') return 'Pay online →';
+    if (checkoutStore.selectedPayment === 'card')
+        return cardPayable.value > 0
+            ? `Pay ${formatRub(cardPayable.value * 100)} →`
+            : 'Pay online →';
     if (checkoutStore.selectedPayment === 'bank-transfer')
         return 'Place order & get proforma invoice';
     return 'Place order';
@@ -124,7 +127,7 @@ async function handlePrimary(): Promise<void> {
                 <strong>{{ total }}</strong>
             </div>
 
-            <DeferredCreditWarning class="checkout-summary__credit" />
+            <CreditLimitNotice class="checkout-summary__credit" />
 
             <button
                 class="checkout-summary__pay-btn"

@@ -256,4 +256,43 @@ describe('cart store checkout', () => {
         expect(docs[1]).toContain('adjustOrderLine');
         vi.useRealTimers();
     });
+
+    describe('completeOnlinePayment', () => {
+        const preview = {
+            exceeded: false,
+            availableCredit: 0,
+            orderAmount: 10,
+            limitControlled: false,
+            allowExceedingCreditLimit: false,
+            acknowledgementRequired: false,
+            payableCardAmount: 1234.5,
+            availableForms: ['card'],
+        };
+
+        it('sends the amount the customer saw, in kopecks, with the status', async () => {
+            useCheckoutStore().setCreditPreview(preview);
+            vi.mocked(shopApi)
+                .mockResolvedValueOnce({ addPaymentToOrder: { __typename: 'Order' } } as never)
+                .mockResolvedValueOnce({ activeOrder: null } as never);
+            expect(await useCartStore().completeOnlinePayment('success')).toBe('paid');
+            expect(vi.mocked(shopApi).mock.calls[0][1]).toEqual({
+                status: { status: 'success', expectedAmountKopecks: 123450 },
+            });
+        });
+
+        it('reports a changed amount distinctly from an ordinary decline', async () => {
+            const declined = (paymentErrorMessage: string): never =>
+                ({
+                    addPaymentToOrder: { __typename: 'PaymentDeclinedError', paymentErrorMessage },
+                }) as never;
+            vi.mocked(shopApi)
+                .mockResolvedValueOnce(declined('CARD_AMOUNT_CHANGED: the amount changed'))
+                .mockResolvedValueOnce({ activeOrder: null } as never)
+                .mockResolvedValueOnce(declined('Payment declined'))
+                .mockResolvedValueOnce({ activeOrder: null } as never);
+            const store = useCartStore();
+            expect(await store.completeOnlinePayment('success')).toBe('amount-changed');
+            expect(await store.completeOnlinePayment('fail')).toBe('declined');
+        });
+    });
 });

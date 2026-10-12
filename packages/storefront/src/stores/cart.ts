@@ -4,6 +4,7 @@ import { toast } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
 import { brandOf } from '../utils/brand';
 import { SHIPPING_CODE_BY_DELIVERY } from '../utils/deliveryMethods';
+import { cardPaymentMetadata, isCardAmountChanged } from '../utils/checkoutPolicy';
 import { useCheckoutStore } from './checkout';
 import {
     AddToCartDocument,
@@ -343,10 +344,18 @@ export const useCartStore = defineStore('cart', () => {
         return true;
     }
 
-    async function completeOnlinePayment(status: 'success' | 'pending' | 'fail'): Promise<boolean> {
-        const result = await shopApi(CompleteOnlinePaymentDocument, { status: { status } });
+    async function completeOnlinePayment(
+        status: 'success' | 'pending' | 'fail',
+    ): Promise<'paid' | 'declined' | 'amount-changed'> {
+        const payable = useCheckoutStore().creditPreview?.payableCardAmount ?? null;
+        const result = await shopApi(CompleteOnlinePaymentDocument, {
+            status: cardPaymentMetadata(status, payable),
+        });
         await fetchCart();
-        return result.addPaymentToOrder.__typename === 'Order';
+        const payment = result.addPaymentToOrder;
+        if (payment.__typename === 'Order') return 'paid';
+        const message = 'paymentErrorMessage' in payment ? payment.paymentErrorMessage : null;
+        return isCardAmountChanged(message) ? 'amount-changed' : 'declined';
     }
 
     async function removeItems(lineIds: string[]): Promise<void> {

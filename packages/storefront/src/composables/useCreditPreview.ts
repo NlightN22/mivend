@@ -1,18 +1,18 @@
 import { watch } from 'vue';
 import { useDebouncedCallback, useLatestRequest } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
-import { DeferredCreditPreviewDocument } from '../api/generated/graphql';
+import { CreditPreviewDocument } from '../api/generated/graphql';
 import { useCartStore } from '../stores/cart';
 import { useCheckoutStore } from '../stores/checkout';
 
 const DEBOUNCE_MS = 300;
 
-export function useDeferredCreditPreview(): void {
+export function useCreditPreview(): void {
     const cartStore = useCartStore();
     const checkoutStore = useCheckoutStore();
 
     const { run } = useLatestRequest(
-        () => shopApi(DeferredCreditPreviewDocument),
+        () => shopApi(CreditPreviewDocument),
         result => checkoutStore.setCreditPreview(result.deferredCreditPreview),
     );
 

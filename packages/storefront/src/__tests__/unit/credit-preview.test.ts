@@ -10,12 +10,12 @@ vi.mock('@mivend/ui-kit', async () => ({
         .useLatestRequest,
 }));
 vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
-vi.mock('../../api/generated/graphql', () => ({ DeferredCreditPreviewDocument: {} }));
+vi.mock('../../api/generated/graphql', () => ({ CreditPreviewDocument: {} }));
 
 import { shopApi } from '../../api/client';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore, type CreditPreview } from '../../stores/checkout';
-import { useDeferredCreditPreview } from '../../composables/useDeferredCreditPreview';
+import { useCreditPreview } from '../../composables/useCreditPreview';
 
 const make = (over: Partial<CreditPreview> = {}): CreditPreview => ({
     exceeded: false,
@@ -103,7 +103,7 @@ describe('checkout credit gating', () => {
     });
 });
 
-describe('useDeferredCreditPreview', () => {
+describe('useCreditPreview', () => {
     beforeEach(() => {
         vi.useFakeTimers();
         setActivePinia(createPinia());
@@ -115,7 +115,7 @@ describe('useDeferredCreditPreview', () => {
         vi.mocked(shopApi).mockResolvedValue(preview(over()) as never);
         const store = useCheckoutStore();
         const cart = useCartStore();
-        effectScope().run(() => useDeferredCreditPreview());
+        effectScope().run(() => useCreditPreview());
         await vi.advanceTimersByTimeAsync(1000);
         expect(shopApi).toHaveBeenCalledTimes(1);
         expect(store.creditPreview?.exceeded).toBe(true);
@@ -135,7 +135,7 @@ describe('useDeferredCreditPreview', () => {
         );
         const store = useCheckoutStore();
         const cart = useCartStore();
-        effectScope().run(() => useDeferredCreditPreview());
+        effectScope().run(() => useCreditPreview());
         await vi.advanceTimersByTimeAsync(400);
         cart.order = { totalWithTax: 100 } as never;
         await nextTick();

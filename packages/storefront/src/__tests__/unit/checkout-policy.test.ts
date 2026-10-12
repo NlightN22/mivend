@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
     cardExcess,
+    cardPaymentMetadata,
+    isCardAmountChanged,
     orderedForms,
     placementMetadata,
     proformaTabIds,
@@ -45,5 +47,19 @@ describe('checkout policy helpers', () => {
         expect(describeOrderCreated('1', 'offline-terms').waitingForCashConfirmation).toBe(false);
         expect(describeOrderCreated('1', 'online-stub').waitingForCashConfirmation).toBe(false);
         expect(describeOrderCreated('1', 'cash').status).toMatch(/Waiting for the manager/);
+    });
+
+    it('adds the confirmed card amount in kopecks only when a preview exists', () => {
+        expect(cardPaymentMetadata('success', 100.1)).toEqual({
+            status: 'success',
+            expectedAmountKopecks: 10010,
+        });
+        expect(cardPaymentMetadata('fail', null)).toEqual({ status: 'fail' });
+    });
+
+    it('recognises the amount-changed decline by its code', () => {
+        expect(isCardAmountChanged('CARD_AMOUNT_CHANGED: again')).toBe(true);
+        expect(isCardAmountChanged('declined')).toBe(false);
+        expect(isCardAmountChanged(undefined)).toBe(false);
     });
 });

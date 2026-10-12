@@ -7,7 +7,10 @@ import {
     PaymentMetadata,
     RequestContext,
 } from '@vendure/core';
-import { CreditPlacementService } from '@mivend/plugin-deferred-payment';
+import {
+    CARD_AMOUNT_CHANGED_MESSAGE,
+    CreditPlacementService,
+} from '@mivend/plugin-deferred-payment';
 import {
     ProformaInvoice,
     ProformaInvoiceService,
@@ -62,7 +65,7 @@ async function computeProformaInvoiceSplit(
     }
 }
 
-// Card form (demo stub): `status` metadata maps the stub page buttons; each invoice gets a PaymentAttempt.
+// Card form (demo stub): `status` metadata maps the stub page buttons; each proforma invoice gets a PaymentAttempt.
 export const onlineStubPaymentHandler = new PaymentMethodHandler({
     code: ONLINE_STUB_METHOD_CODE,
     description: [{ languageCode: LanguageCode.en, value: 'Online payment (demo stub)' }],
@@ -81,6 +84,14 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
         metadata: PaymentMetadata & { status?: string },
     ) => {
         const placement = await creditPlacementService.place(ctx, order, 'card', metadata);
+        if (placement.amountChanged) {
+            return {
+                amount: placement.amount,
+                state: 'Declined' as const,
+                errorMessage: CARD_AMOUNT_CHANGED_MESSAGE,
+                metadata,
+            };
+        }
         const {
             metadata: proformaInvoiceMetadata,
             declineMessage,

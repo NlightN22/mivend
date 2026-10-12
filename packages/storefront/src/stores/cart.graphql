@@ -196,6 +196,9 @@ mutation CompleteOnlinePayment($status: JSON!) {
             errorCode
             message
         }
+        ... on PaymentDeclinedError {
+            paymentErrorMessage
+        }
     }
 }
 

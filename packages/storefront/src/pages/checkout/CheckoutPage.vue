@@ -2,7 +2,7 @@
 import { onMounted } from 'vue';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore } from '../../stores/checkout';
-import { useDeferredCreditPreview } from '../../composables/useDeferredCreditPreview';
+import { useCreditPreview } from '../../composables/useCreditPreview';
 import PaymentMethodSelector from './PaymentMethodSelector.vue';
 import DeliverySelector from './DeliverySelector.vue';
 import CheckoutOrderItems from './CheckoutOrderItems.vue';
@@ -10,7 +10,7 @@ import CheckoutSummary from './CheckoutSummary.vue';
 
 const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
-useDeferredCreditPreview();
+useCreditPreview();
 
 onMounted(() => Promise.all([cartStore.fetchCart(), checkoutStore.loadDeliveryMethods()]));
 </script>

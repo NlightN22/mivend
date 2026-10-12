@@ -4,6 +4,7 @@ import { onlineStubPaymentHandler } from '../../online-stub-handler';
 
 const place = vi.fn(async (_ctx: unknown, order: { totalWithTax: number }) => ({
     amount: order.totalWithTax,
+    amountChanged: false,
     decision: {},
     metadata: { public: { creditLimitExceeded: false }, placement: { route: 'erp-now' } },
 }));
@@ -148,6 +149,7 @@ describe('onlineStubPaymentHandler', () => {
     it('creates the payment for the amount the credit policy returns for a card', async () => {
         place.mockResolvedValueOnce({
             amount: 3500,
+            amountChanged: false,
             decision: {},
             metadata: {
                 public: { creditLimitExceeded: false },
@@ -173,5 +175,36 @@ describe('onlineStubPaymentHandler', () => {
         );
         expect(place).toHaveBeenLastCalledWith(mockCtx, mockOrder, 'card', {});
         expect(result.amount).toBe(3500);
+    });
+
+    it('declines with the amount-changed code, before any proforma invoice is created', async () => {
+        place.mockResolvedValueOnce({
+            amount: 3500,
+            amountChanged: true,
+            decision: {},
+            metadata: {
+                public: { creditLimitExceeded: false },
+                placement: { route: 'after-payment' },
+            },
+        });
+        const proformaInvoiceService = { createProformaInvoicesForOrder: vi.fn() };
+        onlineStubPaymentHandler.init(
+            fakeInjector({
+                proformaInvoiceService,
+                globalSettingsService: { getSettings: vi.fn().mockResolvedValue({}) },
+                paymentAttemptService: { payProformaInvoice: vi.fn() },
+            }) as never,
+        );
+        const result = await onlineStubPaymentHandler.createPayment(
+            mockCtx,
+            mockOrder,
+            1000,
+            [],
+            { expectedAmountKopecks: 1000 },
+            mockMethod,
+        );
+        expect(result.state).toBe('Declined');
+        expect(result.errorMessage).toContain('CARD_AMOUNT_CHANGED');
+        expect(proformaInvoiceService.createProformaInvoicesForOrder).not.toHaveBeenCalled();
     });
 });

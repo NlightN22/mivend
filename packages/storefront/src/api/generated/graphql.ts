@@ -4652,9 +4652,9 @@ export type ProductDetailQuery = {
     } | null;
 };
 
-export type DeferredCreditPreviewQueryVariables = Exact<{ [key: string]: never }>;
+export type CreditPreviewQueryVariables = Exact<{ [key: string]: never }>;
 
-export type DeferredCreditPreviewQuery = {
+export type CreditPreviewQuery = {
     deferredCreditPreview: {
         exceeded: boolean;
         availableCredit: number;
@@ -5230,7 +5230,12 @@ export type CompleteOnlinePaymentMutation = {
         | { __typename: 'Order' }
         | { __typename: 'OrderPaymentStateError'; errorCode: ErrorCode; message: string }
         | { __typename: 'OrderStateTransitionError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'PaymentDeclinedError'; errorCode: ErrorCode; message: string }
+        | {
+              __typename: 'PaymentDeclinedError';
+              paymentErrorMessage: string;
+              errorCode: ErrorCode;
+              message: string;
+          }
         | { __typename: 'PaymentFailedError'; errorCode: ErrorCode; message: string };
 };
 
@@ -5748,8 +5753,8 @@ export const ProductDetailDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<ProductDetailQuery, ProductDetailQueryVariables>;
-export const DeferredCreditPreviewDocument = new TypedDocumentString(`
-    query DeferredCreditPreview {
+export const CreditPreviewDocument = new TypedDocumentString(`
+    query CreditPreview {
   deferredCreditPreview {
     exceeded
     availableCredit
@@ -5761,10 +5766,7 @@ export const DeferredCreditPreviewDocument = new TypedDocumentString(`
     availableForms
   }
 }
-    `) as unknown as TypedDocumentString<
-    DeferredCreditPreviewQuery,
-    DeferredCreditPreviewQueryVariables
->;
+    `) as unknown as TypedDocumentString<CreditPreviewQuery, CreditPreviewQueryVariables>;
 export const MyTradingPointsForDeliverySelectorDocument = new TypedDocumentString(`
     query MyTradingPointsForDeliverySelector {
   myTradingPoints {
@@ -6422,6 +6424,9 @@ export const CompleteOnlinePaymentDocument = new TypedDocumentString(`
     ... on ErrorResult {
       errorCode
       message
+    }
+    ... on PaymentDeclinedError {
+      paymentErrorMessage
     }
   }
 }

@@ -66,6 +66,20 @@ describe('placement matrix on real data', () => {
         expect((await h.place(buyer, 10_000, 'cash')).amount).toBe(1_000_000);
     });
 
+    it('flags a card amount that differs from the one the customer confirmed', async () => {
+        const buyer = await h.addBuyer(100_000, 120_000);
+        const expected = 2_000_000 + 1_000_000;
+        const same = await h.place(buyer, 10_000, 'card', 999_999, {
+            expectedAmountKopecks: expected,
+        });
+        expect(same.amountChanged).toBe(false);
+        const stale = await h.place(buyer, 10_000, 'card', 999_999, {
+            expectedAmountKopecks: 1_000_000,
+        });
+        expect(stale.amountChanged).toBe(true);
+        expect((await h.place(buyer, 10_000, 'card')).amountChanged).toBe(false);
+    });
+
     it('waits for a manager when over the limit and exceeding is not allowed, even if acknowledged', async () => {
         const buyer = await h.addBuyer(100_000);
         await h.addOrder(buyer, 95_000);

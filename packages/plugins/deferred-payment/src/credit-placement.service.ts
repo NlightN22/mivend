@@ -9,9 +9,11 @@ import {
 } from '@vendure/core';
 import {
     AWAITING_MANAGER_KEY,
+    CARD_AMOUNT_CHANGED_CODE,
     CREDIT_ACKNOWLEDGED_KEY,
     CREDIT_LIMIT_EXCEEDED_KEY,
     DEFAULT_PREPAYMENT_RESERVE_DAYS,
+    EXPECTED_AMOUNT_KEY,
     PAYMENT_FORM_BY_METHOD_CODE,
     PLACEMENT_KEY,
     withAggregateLock,
@@ -25,8 +27,11 @@ import {
 } from './deferred-credit-assessment.service';
 import { decidePlacement, payableAmountKopecks, type PlacementDecision } from './placement-policy';
 
+export const CARD_AMOUNT_CHANGED_MESSAGE = `${CARD_AMOUNT_CHANGED_CODE}: the amount to pay changed, confirm it again`;
+
 export interface PlacementResult {
     amount: number;
+    amountChanged: boolean;
     decision: PlacementDecision;
     metadata: PaymentMetadata;
 }
@@ -78,8 +83,11 @@ export class CreditPlacementService {
                 acknowledged: inputMetadata[CREDIT_ACKNOWLEDGED_KEY] === true,
             });
             const reserveDays = decision.prepayment ? assessment.prepaymentReserveDays : null;
+            const amount = payableAmountKopecks(form, order.totalWithTax, assessment.excessKopecks);
+            const expected = inputMetadata[EXPECTED_AMOUNT_KEY];
             return {
-                amount: payableAmountKopecks(form, order.totalWithTax, assessment.excessKopecks),
+                amount,
+                amountChanged: typeof expected === 'number' && expected !== amount,
                 decision,
                 metadata: {
                     ...inputMetadata,

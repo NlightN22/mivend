@@ -11,7 +11,7 @@ const methodCards = [
         icon: IconBuildingBank,
         title: 'Bank proforma invoice',
         note: 'We generate a proforma invoice for each organization of the order; pay via bank.',
-        badge: 'Printable invoice',
+        badge: 'Printable proforma invoice',
         badgeOrange: false,
     },
     {

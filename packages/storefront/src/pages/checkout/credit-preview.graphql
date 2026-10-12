@@ -1,4 +1,4 @@
-query DeferredCreditPreview {
+query CreditPreview {
     deferredCreditPreview {
         exceeded
         availableCredit

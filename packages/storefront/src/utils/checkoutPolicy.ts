@@ -63,3 +63,21 @@ export function proformaTabIds(form: PaymentForm, invoices: ProformaInvoiceRef[]
     if (form !== 'bank-transfer') return [];
     return invoices.filter(i => i.status !== 'cancelled').map(i => i.id);
 }
+
+// Mirror EXPECTED_AMOUNT_KEY and CARD_AMOUNT_CHANGED_CODE in `shared` (same runtime-import reason as above).
+export const EXPECTED_AMOUNT_KEY = 'expectedAmountKopecks';
+export const CARD_AMOUNT_CHANGED_CODE = 'CARD_AMOUNT_CHANGED';
+
+// The amount the customer confirmed on screen travels with the card payment; the server rejects a different one.
+export function cardPaymentMetadata(
+    status: string,
+    payableCardAmount: number | null,
+): Record<string, string | number> {
+    return payableCardAmount === null
+        ? { status }
+        : { status, [EXPECTED_AMOUNT_KEY]: Math.round(payableCardAmount * 100) };
+}
+
+export function isCardAmountChanged(message: string | null | undefined): boolean {
+    return message?.startsWith(CARD_AMOUNT_CHANGED_CODE) === true;
+}

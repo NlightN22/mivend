@@ -57,7 +57,7 @@ const placedAt = computed(() =>
           }).format(new Date(order.value.orderPlacedAt))
         : null,
 );
-function invoiceHref(id: string): string {
+function proformaInvoiceHref(id: string): string {
     return router.resolve({ path: `/proforma-invoices/${id}`, query: { print: '1' } }).href;
 }
 const proformaInvoices = computed(() => data.value?.myProformaInvoices.items ?? []);
@@ -128,13 +128,13 @@ onMounted(load);
                         >Open order</RouterLink
                     >
                     <a
-                        v-for="invoice in proformaInvoices"
-                        :key="invoice.id"
-                        :href="invoiceHref(invoice.id)"
+                        v-for="proformaInvoice in proformaInvoices"
+                        :key="proformaInvoice.id"
+                        :href="proformaInvoiceHref(proformaInvoice.id)"
                         target="_blank"
                         rel="noopener"
                         class="oc-btn oc-btn--secondary"
-                        >Print proforma invoice {{ invoice.number }}</a
+                        >Print proforma invoice {{ proformaInvoice.number }}</a
                     >
                     <RouterLink to="/catalog" class="oc-btn oc-btn--ghost"
                         >Continue shopping</RouterLink
