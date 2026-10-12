@@ -79,12 +79,20 @@ shipment) in a later task; #223 only frees the name.
 - Proforma invoices (`ProformaInvoice`, one per distinct line organization) are created for the payment methods that
   need them: pay-by-proforma-invoice and online payment. Orders on deferred terms get no automatic proforma invoices:
   the ERP holds the accounting documents (sales documents after its own distribution, settlements).
-- A customer who needs a document to pay against requests a **proforma payment proforma invoice**: an
-  immutable snapshot (number, organization, lines, amounts), idempotent per order content, a new
-  version when the order changed, the older unpaid one marked superseded, a paid one never rewritten
-  (a later difference is shown on the order and settled through the ERP). Not an accounting document
-  and not synced to the ERP. Tracked in #206 together with the question of system-level versioning; requestable on any form and under any
-  terms. Payment forms and terms are separated in #222 (see `docs/payments.md`, "Target model").
+- **Versions and snapshots (#206, implemented).** A proforma invoice is an immutable snapshot: number, organization,
+  lines (`ProformaInvoice.lines`, with variant, quantity, prices and discounts), amount and currency at issue time.
+  Per (order, organization) the content hash decides: unchanged content returns the same snapshot; changed content
+  creates a new version (a new document with its own next `<order number>-NN` number, `version` + 1,
+  `supersedesId`/`supersededById`) and marks the unpaid older one `superseded` (kept, never edited, cannot be paid). A
+  paid snapshot stays paid and no new version is created for it: the order shows "order changed after payment,
+  difference X" (current organization content minus the paid amount) and the difference is settled through the ERP. An
+  organization that left the order has its unpaid snapshot cancelled. Not an accounting document and not synced to
+  the ERP.
+- **Request on demand.** Shop `requestProformaInvoices(orderCode)` (own order only) and Admin
+  `requestProformaInvoicesForOrder(orderId)` (permission `UpdateOrder`, order visibility scope). Allowed for a placed,
+  non-cancelled order on any payment form and terms; refused for a cart and for a cancelled order. Idempotent and
+  serialized per order (`proformaInvoices-for-order:<orderId>` advisory lock). Checkout creates version 1 through the
+  same service, so a later request with unchanged content returns it.
 
 ## Reserve and order cancellation (decided and implemented in #194)
 

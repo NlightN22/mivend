@@ -795,6 +795,20 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront 
   `down()` of both migrations cannot restore them.
 - `ERP_CALLBACK_API_KEY` guards refuse the dev placeholder key when `NODE_ENV=production`, like the import guard.
 
+**Proforma invoice versions (#206):**
+
+- `ProformaInvoice` carries `lines` (immutable snapshot), `version`, `supersedesId`, `supersededById`; status
+  `superseded` joins pending/issued/paid/cancelled. `ProformaInvoiceIssuingService.issueForOrder` is the only creator
+  (checkout handlers and the on-demand request call it); see `docs/order-contracts.md`, "Proforma invoices".
+- Payment binds to a snapshot (`proformaInvoiceId`). `payProformaInvoice` rejects a superseded one with a clear
+  error; FIFO cash application only sees pending/issued, so superseded snapshots never absorb money. A payment the ERP
+  reports against a superseded version is rejected the same way (reconciliation of that case is a follow-up).
+- Whole-order status updates at checkout (`updateStatusForOrder`) only move `pending` snapshots.
+- Difference after payment = current content of the organization minus the paid snapshot amount (GraphQL
+  `ProformaInvoice.orderChangedDifference`, null when nothing changed); no new version is made for a paid snapshot.
+- The `Document` of a snapshot uses the proforma invoice's own number (a legacy `<order>-<organizationId>` number is
+  fixed by migration `1791495000000`); the PDF shows "Version N" and "Superseded, not valid".
+
 **Known gaps (#222, deliberate):**
 
 - Orders in `SHIPPING`/`DELIVERING` stop counting in the open exposure (the ERP balance is expected to include them),

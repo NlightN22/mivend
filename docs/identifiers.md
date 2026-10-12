@@ -116,7 +116,7 @@ and is never an idempotency key for a business entity.
     (pre-existing, for the idempotent-retry guarantee) — no separate locking was needed, just computing the ordinal as
     the split's 1-based index within that existing locked section. A concurrent-writer test
     (`proforma-invoice-creation.concurrency.int.test.ts`) asserts every ProformaInvoice number for one order is distinct even when
-    `createProformaInvoicesForOrder` is called concurrently.
+    `issueForOrder` is called concurrently.
   - **PaymentAttempt / PaymentRefund**: flat per-instance sequence (`NumberingService.next(ctx, 'payment'|'refund')`),
     not order-scoped. Reasoning: docs/identifiers.md's "Payment documents" paragraph says the number "always comes
     from the sequence", unlike ProformaInvoice which this doc explicitly calls out as `<order number>-NN`; `providerPaymentId`/

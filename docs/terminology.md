@@ -12,6 +12,8 @@ Fixed vocabulary for documents and payments. Use these terms in code, UI, docs a
 | **Sales return / credit note** | A return from the customer. | ERP | ERP |
 
 - A proforma invoice is not a sales invoice and never becomes one: the sale is the ERP's fact.
+- **Version** of a proforma invoice: a changed order content makes a new document (own number, `version` + 1); the
+  older unpaid one is `superseded` (kept, not valid). The version is an attribute shown as "v2", not part of the number.
 
 ## The word "invoice" alone
 
