@@ -14,7 +14,8 @@ export class ProductPackagingLevelsService {
     constructor(private readonly connection: TransactionalConnection) {}
 
     async getForProduct(ctx: RequestContext, productId: string): Promise<PackagingLevelView[]> {
-        return (await this.getForProducts(ctx, [productId])).get(productId) ?? [];
+        const key = String(productId);
+        return (await this.getForProducts(ctx, [key])).get(key) ?? [];
     }
 
     async getForProducts(
