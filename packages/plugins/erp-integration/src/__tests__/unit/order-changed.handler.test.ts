@@ -70,7 +70,7 @@ describe('OrderChangedStreamHandler', () => {
         expect(syncService.handleOrderChanged).not.toHaveBeenCalled();
         expect(upsert).toHaveBeenCalledWith(
             ctx,
-            expect.objectContaining({ erpOrderId: 'legacy-1', erpStatus: 'CONFIRMED' }),
+            expect.objectContaining({ erpOrderId: 'legacy-1', erpStatus: null }),
         );
     });
 

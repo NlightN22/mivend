@@ -22,10 +22,10 @@ describe('buildExternalOrderInput', () => {
         raw: { quantity: 2, price: 100, amount: 180 },
     };
 
-    it('treats an empty status as CONFIRMED with the raw status kept', () => {
+    it('keeps a fact-less event status-less (the service decides), with the raw status kept', () => {
         const input = buildExternalOrderInput('e1', { status: '', customerId: 'cp' }, null, []);
         expect(input).toMatchObject({
-            erpStatus: 'CONFIRMED',
+            erpStatus: null,
             erpOrderStatus: '',
             counterpartyErpId: 'cp',
         });

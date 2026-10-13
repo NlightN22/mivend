@@ -1,5 +1,6 @@
 import type { OrderState } from '@vendure/core';
 
+import { canAdvanceErpStatus } from './erp-status-rank';
 import type { ErpOrderStatus } from './types';
 
 export const DEFAULT_EXTERNAL_ERP_STATUS: ErpOrderStatus = 'CONFIRMED';
@@ -17,4 +18,14 @@ export function externalOrderState(erpStatus: ErpOrderStatus): OrderState {
         default:
             return 'PaymentAuthorized';
     }
+}
+
+// Same forward-only rule as mivend orders; CANCELLED is terminal. Null means "leave as is".
+export function nextExternalErpStatus(
+    current: string | null | undefined,
+    derived: ErpOrderStatus | null,
+): ErpOrderStatus | null {
+    if (derived === null || current === 'CANCELLED') return null;
+    if (derived === 'CANCELLED') return derived;
+    return canAdvanceErpStatus(current, derived) ? derived : null;
 }

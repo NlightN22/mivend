@@ -77,4 +77,23 @@ describe('OrderExternalAndCounterparty migration (integration, real Postgres)', 
             dataSource.query(`INSERT INTO "order" ("customFieldsErporderid") VALUES ('e1')`),
         ).rejects.toThrow();
     });
+
+    it('refuses to build the unique index over duplicate erpOrderIds and names them', async () => {
+        await dataSource.query(
+            `INSERT INTO "order" ("customFieldsErporderid") VALUES ('dup-1'), ('dup-1'), ('ok')`,
+        );
+
+        await expect(up()).rejects.toThrow(/duplicates exist: dup-1 \(x2\)/);
+    });
+
+    it('builds a partial index so empty erpOrderIds never conflict', async () => {
+        await up();
+
+        const [row] = await dataSource.query(
+            `SELECT indexdef FROM pg_indexes WHERE indexname = 'IDX_order_custom_fields_erporderid'
+               AND schemaname = $1`,
+            [schema],
+        );
+        expect(row.indexdef).toMatch(/WHERE .*IS NOT NULL/);
+    });
 });

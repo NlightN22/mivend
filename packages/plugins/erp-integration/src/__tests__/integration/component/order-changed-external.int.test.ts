@@ -11,7 +11,11 @@ import {
 import type { EntityManager } from 'typeorm';
 import { Order, OrderLine } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
-import { ExternalOrderService } from '@mivend/plugin-erp-order';
+import {
+    EXTERNAL_ORDER_OWNER_CLAUSE,
+    ExternalOrderReconcileService,
+    ExternalOrderService,
+} from '@mivend/plugin-erp-order';
 import {
     createTestSchema,
     dropTestSchema,
@@ -42,6 +46,10 @@ class TestOrderCustomFields {
     counterpartyId!: string | null;
     @Column({ name: 'customFieldsPendingcounterpartyerpid', type: 'varchar', nullable: true })
     pendingCounterpartyErpId!: string | null;
+    @Column({ name: 'customFieldsBranchid', type: 'varchar', nullable: true })
+    branchId!: string | null;
+    @Column({ name: 'customFieldsExternallinesincomplete', type: 'boolean', default: false })
+    externalLinesIncomplete!: boolean;
 }
 
 @Entity('order')
@@ -92,6 +100,7 @@ class TestVariant {
 class TestCounterparty {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'varchar', unique: true }) erpId!: string;
+    @Column({ type: 'varchar', nullable: true }) branchId!: string | null;
 }
 
 const { schema, extra } = testSchemaOptions('order_changed_external');
@@ -190,8 +199,11 @@ const payload = (overrides: Record<string, unknown> = {}): Record<string, unknow
 
 const orders = (): Promise<TestOrder[]> =>
     dataSource.getRepository(TestOrder).find({ order: { id: 'ASC' } });
-const addCounterparty = (erpId: string): Promise<TestCounterparty> =>
-    dataSource.getRepository(TestCounterparty).save({ erpId });
+const addCounterparty = (
+    erpId: string,
+    branchId: string | null = null,
+): Promise<TestCounterparty> =>
+    dataSource.getRepository(TestCounterparty).save({ erpId, branchId });
 
 describe('order-changed without orderUuid (component, real Postgres)', () => {
     it('creates an external order for a known counterparty with an empty status', async () => {
@@ -296,5 +308,172 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
 
         expect(sync.handleOrderChanged).toHaveBeenCalledTimes(1);
         expect(await orders()).toHaveLength(1);
+    });
+
+    describe('status never rolls back', () => {
+        beforeEach(async () => {
+            await addCounterparty('cp-1');
+        });
+
+        it('keeps DELIVERED when a later event carries no facts, still refreshing raw fields', async () => {
+            await handler.apply(ctx, ERP_ORDER, payload({ delivered: true }));
+
+            await handler.apply(
+                ctx,
+                ERP_ORDER,
+                payload({ status: 'raw-2', documentNumber: 'DOC-2' }),
+            );
+
+            const [order] = await orders();
+            expect(order.state).toBe('Delivered');
+            expect(order.customFields).toMatchObject({
+                erpStatus: 'DELIVERED',
+                erpOrderStatus: 'raw-2',
+                erpRegistrationDocumentNumber: 'DOC-2',
+            });
+        });
+
+        it('keeps DELIVERED when a later fact derives an earlier status', async () => {
+            await handler.apply(ctx, ERP_ORDER, payload({ delivered: true }));
+
+            await handler.apply(ctx, ERP_ORDER, payload({ hasOrder: true }));
+
+            expect((await orders())[0]).toMatchObject({ state: 'Delivered' });
+        });
+
+        it('keeps CANCELLED terminal even when a later event says delivered', async () => {
+            await handler.apply(ctx, ERP_ORDER, payload({ markedForDeletion: true }));
+
+            await handler.apply(ctx, ERP_ORDER, payload({ delivered: true }));
+            await handler.apply(ctx, ERP_ORDER, payload());
+
+            const [order] = await orders();
+            expect(order.state).toBe('Cancelled');
+            expect(order.customFields.erpStatus).toBe('CANCELLED');
+        });
+
+        it('moves forward and may cancel from any non-cancelled status', async () => {
+            await handler.apply(ctx, ERP_ORDER, payload({ inDelivery: true }));
+            expect((await orders())[0]).toMatchObject({ state: 'Shipped' });
+
+            await handler.apply(ctx, ERP_ORDER, payload({ markedForDeletion: true }));
+
+            expect((await orders())[0]).toMatchObject({ state: 'Cancelled' });
+        });
+
+        it('does not clear the known counterparty or document number from a sparse event', async () => {
+            await handler.apply(ctx, ERP_ORDER, payload());
+
+            await handler.apply(
+                ctx,
+                ERP_ORDER,
+                payload({ customerId: undefined, documentNumber: '' }),
+            );
+
+            const [order] = await orders();
+            expect(order.customFields.counterpartyId).not.toBeNull();
+            expect(order.customFields.erpRegistrationDocumentNumber).toBe('DOC-1');
+        });
+    });
+
+    describe('lines of unknown products', () => {
+        const mixedLines = [
+            { productId: 'prod-1', quantity: 2, price: 130, amount: 250.5 },
+            { productId: 'prod-missing', quantity: 1, price: 10, amount: 10 },
+        ];
+
+        it('flags the order incomplete, then clears the flag once all lines resolve', async () => {
+            await addCounterparty('cp-1');
+            const outcome = await handler.apply(ctx, ERP_ORDER, payload({ lines: mixedLines }));
+            expect(outcome).toMatchObject({ kind: 'noop' });
+            expect((await orders())[0].customFields.externalLinesIncomplete).toBe(true);
+            expect(await dataSource.getRepository(TestOrderLine).count()).toBe(1);
+
+            await handler.apply(ctx, ERP_ORDER, payload());
+
+            expect((await orders())[0].customFields.externalLinesIncomplete).toBe(false);
+        });
+    });
+
+    describe('counterparty branch', () => {
+        it('copies the counterparty branch onto the order, also when attached later', async () => {
+            await addCounterparty('cp-1', 'branch-a');
+            await handler.apply(ctx, ERP_ORDER, payload());
+            await handler.apply(ctx, 'erp-order-2', payload({ customerId: 'cp-2' }));
+
+            const late = await addCounterparty('cp-2', 'branch-b');
+            await externalOrders.attachCounterparty(ctx, 'cp-2', String(late.id));
+
+            const [first, second] = await orders();
+            expect(first.customFields.branchId).toBe('branch-a');
+            expect(second.customFields.branchId).toBe('branch-b');
+        });
+    });
+
+    describe('pending counterparty reconciliation', () => {
+        const reconciler = (): ExternalOrderReconcileService =>
+            new ExternalOrderReconcileService(
+                {
+                    getRepository: () => ({
+                        query: dataSource.query.bind(dataSource),
+                    }),
+                } as never,
+                {
+                    findByErpId: (_c: RequestContext, erpId: string) =>
+                        dataSource.getRepository(TestCounterparty).findOne({ where: { erpId } }),
+                } as never,
+                externalOrders,
+                { isWorker: false } as never,
+                {} as never,
+            );
+
+        it('attaches counterparties that arrived without an event, twice safely', async () => {
+            await handler.apply(ctx, ERP_ORDER, payload());
+            await handler.apply(ctx, 'erp-order-2', payload({ customerId: 'cp-2' }));
+            const cp = await addCounterparty('cp-1');
+
+            const first = await reconciler().reconcilePendingCounterparties(ctx);
+            const second = await reconciler().reconcilePendingCounterparties(ctx);
+
+            expect(first).toEqual({ counterparties: 1, orders: 1 });
+            expect(second).toEqual({ counterparties: 0, orders: 0 });
+            const [attached, stillPending] = await orders();
+            expect(attached.customFields).toMatchObject({
+                counterpartyId: String(cp.id),
+                pendingCounterpartyErpId: null,
+            });
+            expect(stillPending.customFields.pendingCounterpartyErpId).toBe('cp-2');
+        });
+    });
+
+    describe('customer order list isolation', () => {
+        const visibleTo = async (counterpartyId: string): Promise<string[]> => {
+            const rows: Array<{ code: string }> = await dataSource.query(
+                `SELECT code FROM "order"
+                 WHERE ${EXTERNAL_ORDER_OWNER_CLAUSE.replace(':counterpartyId', '$1')}
+                 ORDER BY id`,
+                [counterpartyId],
+            );
+            return rows.map(r => r.code);
+        };
+
+        it('an external order of counterparty A is invisible to counterparty B and vice versa', async () => {
+            const a = await addCounterparty('cp-a');
+            const b = await addCounterparty('cp-b');
+            await handler.apply(ctx, 'erp-a', payload({ customerId: 'cp-a' }));
+            await handler.apply(ctx, 'erp-b', payload({ customerId: 'cp-b' }));
+            const [orderA, orderB] = await orders();
+
+            expect(await visibleTo(String(a.id))).toEqual([orderA.code]);
+            expect(await visibleTo(String(b.id))).toEqual([orderB.code]);
+            expect(await visibleTo(String(b.id))).not.toContain(orderA.code);
+        });
+
+        it('a pending external order is visible to nobody', async () => {
+            const a = await addCounterparty('cp-a');
+            await handler.apply(ctx, 'erp-x', payload({ customerId: 'cp-unknown' }));
+
+            expect(await visibleTo(String(a.id))).toEqual([]);
+        });
     });
 });

@@ -199,6 +199,18 @@ describe('ProformaInvoiceIssuingService versions (real Postgres)', () => {
         await expect(issuing.requestForOrder(ctx, 7)).rejects.toThrow(/placed/);
     });
 
+    it('refuses an order that came from the ERP and creates nothing', async () => {
+        orderState = {
+            state: 'PaymentAuthorized',
+            active: false,
+            customFields: { isExternal: true },
+        } as typeof orderState;
+
+        await expect(issuing.requestForOrder(ctx, 7)).rejects.toThrow(/from the ERP/);
+
+        expect(await rows()).toHaveLength(0);
+    });
+
     it('cancels the unpaid snapshot of an organization removed from the order', async () => {
         await issuing.issueForOrder(ctx, 7);
         orderLines = [orderLine(1, 1, 1000)];

@@ -13,6 +13,8 @@ import { Brackets, WhereExpressionBuilder } from 'typeorm';
 import { documentNumberSearchTerm } from 'shared';
 import { TradingPointService } from '@mivend/plugin-counterparty';
 
+import { EXTERNAL_ORDER_OWNER_CLAUSE } from './external-order-visibility';
+
 @Resolver()
 export class ErpOrderResolver {
     constructor(
@@ -55,10 +57,9 @@ export class ErpOrderResolver {
                 new Brackets((bqb: WhereExpressionBuilder) => {
                     bqb.where('user.id = :userId', { userId: ctx.activeUserId });
                     if (counterpartyId) {
-                        bqb.orWhere(
-                            '("order"."customFieldsIsexternal" = true AND "order"."customFieldsCounterpartyid" = :counterpartyId)',
-                            { counterpartyId: String(counterpartyId) },
-                        );
+                        bqb.orWhere(EXTERNAL_ORDER_OWNER_CLAUSE, {
+                            counterpartyId: String(counterpartyId),
+                        });
                     }
                 }),
             )

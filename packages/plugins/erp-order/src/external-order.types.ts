@@ -9,7 +9,7 @@ export interface ExternalOrderLineInput {
 export interface ExternalOrderInput {
     erpOrderId: string;
     counterpartyErpId: string | null;
-    erpStatus: ErpOrderStatus;
+    erpStatus: ErpOrderStatus | null;
     erpOrderStatus: string;
     documentNumber: string | null;
     contractId: string | null;
@@ -18,6 +18,7 @@ export interface ExternalOrderInput {
     vatTotalMinor: number | null;
     amountIncludesVat: boolean;
     lines: ExternalOrderLineInput[];
+    skippedLineCount: number;
 }
 
 export interface ExternalOrderResult {

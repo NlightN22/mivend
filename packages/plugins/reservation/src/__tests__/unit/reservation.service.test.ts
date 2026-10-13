@@ -418,6 +418,19 @@ describe('ReservationService', () => {
             expect(reservationRepo.save).not.toHaveBeenCalled();
         });
 
+        it('refuses an order that came from the ERP and writes nothing', async () => {
+            orderRepo.findOne.mockResolvedValue({
+                ...order,
+                customFields: { ...order.customFields, isExternal: true },
+            });
+
+            await expect(service.confirmOrder(ctx, 'order-1', 3)).rejects.toThrow(
+                OrderNotEligibleError,
+            );
+            expect(reservationRepo.save).not.toHaveBeenCalled();
+            expect(eventBus.publish).not.toHaveBeenCalled();
+        });
+
         it('rejects the whole order when no active contract can register it', async () => {
             contractService.resolveOrderContract.mockResolvedValue(null);
 

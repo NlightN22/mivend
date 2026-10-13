@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Order, OrderState, RequestContext } from '@vendure/core';
 
-import { externalOrderState } from '../../external-order-state';
+import { ExternalOrderAccessStrategy } from '../../external-order-access.strategy';
+import { externalOrderState, nextExternalErpStatus } from '../../external-order-state';
 import { externalOrderProcess, EXTERNAL_ORDER_READONLY_MESSAGE } from '../../external-order.guard';
 import { computeExternalTotals } from '../../external-order.service';
 import type { ExternalOrderInput } from '../../external-order.types';
@@ -76,5 +77,37 @@ describe('computeExternalTotals', () => {
         };
         expect(computeExternalTotals(absent).subTotalWithTax).toBe(2000);
         expect(computeExternalTotals({ ...absent, totalWithTaxMinor: 0 }).subTotalWithTax).toBe(0);
+    });
+});
+
+describe('nextExternalErpStatus', () => {
+    it.each([
+        ['CONFIRMED', 'DELIVERED', 'DELIVERED'],
+        [null, 'CONFIRMED', 'CONFIRMED'],
+        ['DELIVERED', 'CONFIRMED', null],
+        ['DELIVERED', 'DELIVERED', null],
+        ['SHIPPING', 'CANCELLED', 'CANCELLED'],
+        ['CANCELLED', 'DELIVERED', null],
+        ['CANCELLED', 'CANCELLED', null],
+        ['DELIVERED', null, null],
+    ] as const)('%s + %s -> %s', (current, derived, expected) => {
+        expect(nextExternalErpStatus(current, derived)).toBe(expected);
+    });
+});
+
+describe('ExternalOrderAccessStrategy', () => {
+    const inner = { canAccessOrder: vi.fn(() => true) };
+    const strategy = new ExternalOrderAccessStrategy(inner);
+    const ctx = {} as RequestContext;
+    const order = (isExternal: boolean): Order =>
+        ({ customFields: { isExternal } }) as unknown as Order;
+
+    it('denies an external order by code even where the default strategy would allow it', () => {
+        expect(strategy.canAccessOrder(ctx, order(true))).toBe(false);
+    });
+
+    it('delegates a mivend order to the wrapped strategy', () => {
+        expect(strategy.canAccessOrder(ctx, order(false))).toBe(true);
+        expect(inner.canAccessOrder).toHaveBeenCalledTimes(1);
     });
 });

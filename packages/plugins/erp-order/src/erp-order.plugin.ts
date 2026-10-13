@@ -17,6 +17,9 @@ import { ErpOrderStatusEvent } from './erp-order.events';
 import { ErpOrderResolver } from './erp-order.resolver';
 import { AdminOrderVisibilityResolver } from './admin-order-visibility.resolver';
 import { ErpOrderService } from './erp-order.service';
+import { ExternalOrderAccessStrategy } from './external-order-access.strategy';
+import { ExternalOrderReconcileService } from './external-order-reconcile.service';
+import { createExternalOrderReconcileTask } from './external-order-reconcile.scheduled-task';
 import { ExternalOrderService } from './external-order.service';
 import { ExternalOrderCounterpartyListener } from './external-order-counterparty.listener';
 import { externalOrderProcess } from './external-order.guard';
@@ -41,6 +44,7 @@ const adminApiSchema = gql`
         OrderVisibilityService,
         ExternalOrderService,
         ExternalOrderCounterpartyListener,
+        ExternalOrderReconcileService,
     ],
     exports: [ErpOrderService, OrderVisibilityService, ExternalOrderService],
     shopApiExtensions: {
@@ -75,10 +79,25 @@ const adminApiSchema = gql`
                 public: false,
                 label: [{ languageCode: LanguageCode.en, value: 'Pending counterparty ERP ID' }],
             },
+            {
+                name: 'externalLinesIncomplete',
+                type: 'boolean',
+                nullable: false,
+                defaultValue: false,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Lines incomplete' }],
+            },
         ];
         config.orderOptions.process = [
             ...(config.orderOptions.process ?? []),
             externalOrderProcess,
+        ];
+        config.orderOptions.orderByCodeAccessStrategy = new ExternalOrderAccessStrategy(
+            config.orderOptions.orderByCodeAccessStrategy,
+        );
+        config.schedulerOptions.tasks = [
+            ...(config.schedulerOptions.tasks ?? []),
+            createExternalOrderReconcileTask(),
         ];
         return config;
     },

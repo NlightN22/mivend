@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
     ConfigService,
+    Logger,
     Order,
     OrderLine,
     RequestContext,
@@ -9,7 +10,11 @@ import {
 import { withAggregateLock } from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
-import { externalOrderState } from './external-order-state';
+import {
+    DEFAULT_EXTERNAL_ERP_STATUS,
+    externalOrderState,
+    nextExternalErpStatus,
+} from './external-order-state';
 import { buildExternalOrderLines, externalLinesSignature } from './external-order-lines';
 import type { VariantTaxRef } from './external-order-lines';
 import type { ExternalOrderInput, ExternalOrderResult } from './external-order.types';
@@ -44,15 +49,21 @@ export class ExternalOrderService {
     async findByErpOrderId(
         ctx: RequestContext,
         erpOrderId: string,
-    ): Promise<{ id: string; isExternal: boolean } | null> {
-        const rows: Array<{ id: string; isExternal: boolean }> = await this.connection
-            .getRepository(ctx, Order)
-            .query(
-                `SELECT id, "customFieldsIsexternal" AS "isExternal" FROM "order"
+    ): Promise<{ id: string; isExternal: boolean; erpStatus: string | null } | null> {
+        const rows: Array<{ id: string; isExternal: boolean; erpStatus: string | null }> =
+            await this.connection.getRepository(ctx, Order).query(
+                `SELECT id, "customFieldsIsexternal" AS "isExternal",
+                        "customFieldsErpstatus" AS "erpStatus" FROM "order"
                  WHERE "customFieldsErporderid" = $1 LIMIT 1`,
                 [erpOrderId],
             );
-        return rows[0] ? { id: String(rows[0].id), isExternal: rows[0].isExternal === true } : null;
+        return rows[0]
+            ? {
+                  id: String(rows[0].id),
+                  isExternal: rows[0].isExternal === true,
+                  erpStatus: rows[0].erpStatus ?? null,
+              }
+            : null;
     }
 
     async upsert(ctx: RequestContext, input: ExternalOrderInput): Promise<ExternalOrderResult> {
@@ -85,8 +96,10 @@ export class ExternalOrderService {
                 const [rows]: [unknown[], number] = await this.connection
                     .getRepository(txCtx, Order)
                     .query(
-                        `UPDATE "order" SET "customFieldsCounterpartyid" = $1,
-                             "customFieldsPendingcounterpartyerpid" = NULL
+                        `UPDATE "order" SET "customFieldsCounterpartyid" = $1::text,
+                             "customFieldsPendingcounterpartyerpid" = NULL,
+                             "customFieldsBranchid" = COALESCE("customFieldsBranchid",
+                                 (SELECT c."branchId" FROM counterparty c WHERE c.id::text = $1::text))
                          WHERE "customFieldsPendingcounterpartyerpid" = $2
                            AND "customFieldsCounterpartyid" IS NULL
                          RETURNING id`,
@@ -101,31 +114,50 @@ export class ExternalOrderService {
         ctx: RequestContext,
         input: ExternalOrderInput,
     ): Promise<ExternalOrderResult> {
-        const counterpartyId = input.counterpartyErpId
-            ? ((await this.counterpartyService.findByErpId(ctx, input.counterpartyErpId))?.id ??
-              null)
+        const counterparty = input.counterpartyErpId
+            ? await this.counterpartyService.findByErpId(ctx, input.counterpartyErpId)
             : null;
-        const counterpartyPending = Boolean(input.counterpartyErpId) && counterpartyId === null;
+        const counterpartyPending = Boolean(input.counterpartyErpId) && counterparty === null;
         const variants = await this.loadVariants(ctx, input);
         const existing = await this.findByErpOrderId(ctx, input.erpOrderId);
-        const customFields = {
-            erpStatus: input.erpStatus,
-            erpStatusAt: new Date(),
-            erpOrderStatus: input.erpOrderStatus,
-            erpRegistrationDocumentNumber: input.documentNumber,
-            erpContractId: input.contractId,
-            counterpartyId: counterpartyId === null ? null : String(counterpartyId),
-            pendingCounterpartyErpId: counterpartyPending ? input.counterpartyErpId : null,
-        };
-        const totals = computeExternalTotals(input);
-        const state = externalOrderState(input.erpStatus);
-        const repo = this.connection.getRepository(ctx, Order);
-
         if (existing && !existing.isExternal) {
             throw new Error(`Order ${existing.id} is not external, refusing to overwrite it`);
         }
+        if (input.skippedLineCount > 0) {
+            Logger.warn(
+                `external order ${input.erpOrderId}: ${input.skippedLineCount} line(s) skipped (product unknown)`,
+                'ExternalOrderService',
+            );
+        }
+        const nextStatus = existing
+            ? nextExternalErpStatus(existing.erpStatus, input.erpStatus)
+            : (input.erpStatus ?? DEFAULT_EXTERNAL_ERP_STATUS);
+        const counterpartyFields = input.counterpartyErpId
+            ? {
+                  counterpartyId: counterparty ? String(counterparty.id) : null,
+                  pendingCounterpartyErpId: counterpartyPending ? input.counterpartyErpId : null,
+                  branchId: counterparty?.branchId ?? null,
+              }
+            : {};
+        const customFields = {
+            ...counterpartyFields,
+            erpOrderStatus: input.erpOrderStatus,
+            externalLinesIncomplete: input.skippedLineCount > 0,
+            ...(input.documentNumber === null
+                ? {}
+                : { erpRegistrationDocumentNumber: input.documentNumber }),
+            ...(input.contractId === null ? {} : { erpContractId: input.contractId }),
+            ...(nextStatus === null ? {} : { erpStatus: nextStatus, erpStatusAt: new Date() }),
+        };
+        const totals = computeExternalTotals(input);
+        const repo = this.connection.getRepository(ctx, Order);
+
         if (existing) {
-            await repo.update(existing.id, { state, ...totals, customFields });
+            await repo.update(existing.id, {
+                ...(nextStatus === null ? {} : { state: externalOrderState(nextStatus) }),
+                ...totals,
+                customFields,
+            });
             await this.replaceLinesIfChanged(ctx, existing.id, input, variants);
             return { kind: 'updated', orderId: existing.id, counterpartyPending };
         }
@@ -134,7 +166,7 @@ export class ExternalOrderService {
         const order = await repo.save(
             new Order({
                 code: await this.configService.orderOptions.orderCodeStrategy.generate(ctx),
-                state,
+                state: externalOrderState(nextStatus ?? DEFAULT_EXTERNAL_ERP_STATUS),
                 active: false,
                 orderPlacedAt: placedAt,
                 createdAt: placedAt,

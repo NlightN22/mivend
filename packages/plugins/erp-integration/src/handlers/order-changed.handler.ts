@@ -140,12 +140,12 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         }
 
         if (isExternal) {
+            const skipped = linesWithoutProductId + unknownProducts;
             const result = await this.externalOrderService.upsert(
                 ctx,
-                buildExternalOrderInput(entityId, payload, derivedStatus, resolvedLines),
+                buildExternalOrderInput(entityId, payload, derivedStatus, resolvedLines, skipped),
             );
             await this.settlementPending.attachOrder(ctx, entityId);
-            const skipped = linesWithoutProductId + unknownProducts;
             if (result.counterpartyPending || skipped > 0) {
                 return inboundNoop(
                     `order-changed ${entityId}: external order ${result.kind}` +

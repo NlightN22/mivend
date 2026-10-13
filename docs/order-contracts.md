@@ -290,7 +290,19 @@ Today the consumer drops them as a `noop`. Decision: import them as real `Order`
 - **Import mapping.** Customer is taken from `customerId` (`Counterparty.erpId`; `organizationId` is the seller
   organization). An empty or non-derivable status gives `erpStatus = CONFIRMED`. Quantity is converted to the
   base unit and stored in Vendure's integer line quantity (see docs/order-flow.md, fractional quantities); lines
-  with an unknown product are skipped and the order total comes from `totalAmount`.
+  with an unknown product are skipped and the order total comes from `totalAmount`; such an order is flagged
+  `externalLinesIncomplete` (cleared when a later event resolves every line) and the skipped count is logged.
+- **Status is forward-only.** An existing external order follows the same rule as a mivend order: `erpStatus`
+  and the Vendure state only advance (`canAdvanceErpStatus`), `CANCELLED` is terminal, and an event without
+  status facts leaves both untouched (it still refreshes the raw status, document number and totals). A sparse
+  event never clears a known counterparty or document number.
+- **Branch.** The order copies `Counterparty.branchId` (also when the counterparty is attached later); a
+  counterparty without a branch leaves it empty, which follows the temporary branch-less carve-out of #123.
+- **Reconciliation.** Pending counterparties are also attached by a scheduled, idempotent task (and once at
+  worker bootstrap), not only by `CounterpartyCreatedEvent`.
+- **No access by code.** An external order has no customer, so the Shop API `order(id)` returns nothing and
+  `orderByCode` is denied for it (also for anonymous callers inside the default access window); it is listed
+  only through `myOrders`.
 - **Visibility.** All portal users of the counterparty see its external orders (they have no author user);
   managers by the usual scope. The storefront "my orders" list shows them in the same list with a "from ERP"
   badge and a source filter, without actions (no cancel, no repeat).

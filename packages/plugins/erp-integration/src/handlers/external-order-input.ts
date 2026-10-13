@@ -1,4 +1,3 @@
-import { DEFAULT_EXTERNAL_ERP_STATUS } from '@mivend/plugin-erp-order';
 import type {
     ErpOrderStatus,
     ExternalOrderInput,
@@ -45,13 +44,14 @@ export function buildExternalOrderInput(
     payload: Record<string, unknown>,
     derivedStatus: ErpOrderStatus | null,
     lines: ResolvedOrderLine[],
+    skippedLineCount = 0,
 ): ExternalOrderInput {
     const totalAmount = optionalNumber(payload.totalAmount);
     const vatTotal = optionalNumber(payload.vatTotal);
     return {
         erpOrderId: entityId,
         counterpartyErpId: optionalString(payload.customerId),
-        erpStatus: derivedStatus ?? DEFAULT_EXTERNAL_ERP_STATUS,
+        erpStatus: derivedStatus,
         erpOrderStatus: payload.status != null ? String(payload.status) : '',
         documentNumber: optionalString(payload.documentNumber),
         contractId: optionalString(payload.contractId),
@@ -60,5 +60,6 @@ export function buildExternalOrderInput(
         vatTotalMinor: vatTotal === null ? null : toMinor(vatTotal),
         amountIncludesVat: payload.amountIncludesVat !== false,
         lines: lines.map(externalLine),
+        skippedLineCount,
     };
 }

@@ -42,6 +42,8 @@ declare module '@vendure/core' {
         counterpartyId?: string | null;
         // Raw ERP counterparty id of an external order whose counterparty is not imported yet.
         pendingCounterpartyErpId?: string | null;
+        // Set when an external order's event had lines for products not imported yet (skipped).
+        externalLinesIncomplete?: boolean;
     }
 }
 

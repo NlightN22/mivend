@@ -7,8 +7,15 @@ export type { ErpOrderStatus, ErpStatusUpdatePayload } from './src/types';
 export { ERP_ORDER_STATUSES } from './src/types';
 export { canAdvanceErpStatus } from './src/erp-status-rank';
 export { ExternalOrderService } from './src/external-order.service';
+export { ExternalOrderAccessStrategy } from './src/external-order-access.strategy';
+export { ExternalOrderReconcileService } from './src/external-order-reconcile.service';
+export { EXTERNAL_ORDER_OWNER_CLAUSE } from './src/external-order-visibility';
 export { externalOrderProcess } from './src/external-order.guard';
-export { externalOrderState, DEFAULT_EXTERNAL_ERP_STATUS } from './src/external-order-state';
+export {
+    externalOrderState,
+    nextExternalErpStatus,
+    DEFAULT_EXTERNAL_ERP_STATUS,
+} from './src/external-order-state';
 export type {
     ExternalOrderInput,
     ExternalOrderLineInput,

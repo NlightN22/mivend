@@ -105,6 +105,9 @@ export class ReservationService {
                     if (!order) {
                         throw new OrderNotEligibleError('Order not found');
                     }
+                    if (order.customFields?.isExternal === true) {
+                        throw new OrderNotEligibleError('Orders from the ERP are managed there');
+                    }
                     if (order.lines.length === 0) {
                         throw new OrderNotEligibleError('Order has no lines');
                     }
