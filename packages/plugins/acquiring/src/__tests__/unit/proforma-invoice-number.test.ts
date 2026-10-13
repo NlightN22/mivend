@@ -13,8 +13,13 @@ describe('parseProformaNumber', () => {
         expect(parseProformaNumber('1000000303-12-10')?.ordinal).toBe(12);
     });
 
-    it('rejects the unversioned legacy shape', () => {
-        expect(parseProformaNumber('1000000303-01')).toBeNull();
+    it('parses the pre-versioning shape as ordinal NN, not 0', () => {
+        expect(parseProformaNumber('1000000303-02')).toEqual({
+            documentId: '1000000303-02',
+            ordinal: 2,
+            version: null,
+        });
+        expect(parseProformaNumber('1000000303')).toBeNull();
     });
 });
 

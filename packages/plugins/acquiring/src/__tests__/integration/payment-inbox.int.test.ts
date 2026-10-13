@@ -766,6 +766,66 @@ describe('Payment inbox producers: real cross-plugin events land in the inbox (i
     });
 });
 
+describe('Payment inbox: declared number vs versioned proforma number (integration, real Postgres)', () => {
+    const cases: [string, string, string][] = [
+        ['full versioned number', '3000-01-2', '3000-01-2'],
+        ['stable document part (pre-versioning fact)', '3000-01-2', '3000-01'],
+    ];
+    it.each(cases)('accepts the %s', async (_label, stored, declared) => {
+        const proformaInvoice = await dataSource.getRepository(TestProformaInvoice).save({
+            orderId: 30,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 600,
+            currencyCode: 'RUB',
+            status: 'issued',
+            number: stored,
+        });
+        await eventBus.publish(
+            new ErpPaymentReportedEvent(mockCtx, {
+                proformaInvoiceUuid: proformaInvoice.uuid,
+                organizationId: 1,
+                outcome: 'success',
+                erpEventId: `erp-evt-versioned-${declared}`,
+                amount: proformaInvoice.amount,
+                currencyCode: 'RUB',
+                proformaInvoiceNumber: declared,
+            }),
+        );
+        expect(await processorService.processPendingEvents(mockCtx)).toEqual({
+            processed: 1,
+            failed: 0,
+        });
+    });
+
+    it('rejects a number that matches neither the versioned nor the document part', async () => {
+        const proformaInvoice = await dataSource.getRepository(TestProformaInvoice).save({
+            orderId: 31,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 600,
+            currencyCode: 'RUB',
+            status: 'issued',
+            number: '3100-01-2',
+        });
+        await eventBus.publish(
+            new ErpPaymentReportedEvent(mockCtx, {
+                proformaInvoiceUuid: proformaInvoice.uuid,
+                organizationId: 1,
+                outcome: 'success',
+                erpEventId: 'erp-evt-versioned-bad',
+                amount: proformaInvoice.amount,
+                currencyCode: 'RUB',
+                proformaInvoiceNumber: '3100-02',
+            }),
+        );
+        expect(await processorService.processPendingEvents(mockCtx)).toEqual({
+            processed: 0,
+            failed: 1,
+        });
+    });
+});
+
 describe('Payment inbox: organization data isolation within a single sweep batch (integration, real Postgres)', () => {
     // AGENTS.md's scope-isolation pattern: two proforma invoices in different organizations, processed in
     // the SAME sweep batch (claimBatch's default limit is 20 — both events land in one call), one

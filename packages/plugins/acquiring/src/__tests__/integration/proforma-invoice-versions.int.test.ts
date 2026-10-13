@@ -263,6 +263,26 @@ describe('head selection and numbering (real Postgres)', () => {
     });
 });
 
+describe('mixed legacy and versioned numbers (real Postgres)', () => {
+    it('counts a pre-versioning number as its ordinal when numbering a new organization', async () => {
+        const base = {
+            orderId: 7,
+            counterpartyId: 42,
+            currencyCode: 'RUB',
+            status: 'issued' as const,
+        };
+        await dataSource.getRepository(TestProformaInvoice).save([
+            { ...base, organizationId: 1, amount: 1, version: 1, number: '1000007-03' },
+            { ...base, organizationId: 3, amount: 1, version: 1, number: '1000007-02-1' },
+        ]);
+        orderLines = [orderLine(1, 1, 1000), orderLine(2, 2, 500)];
+
+        const result = await issuing.issueForOrder(ctx, 7);
+
+        expect(result.created.find(i => i.organizationId === 2)?.number).toBe('1000007-04-1');
+    });
+});
+
 describe('document id, dates and kind (real Postgres)', () => {
     it('gives a new organization the next ordinal and keeps v1 numbers stable across versions', async () => {
         orderLines = [orderLine(1, 1, 1000)];

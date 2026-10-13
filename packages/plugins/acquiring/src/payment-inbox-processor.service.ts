@@ -4,6 +4,7 @@ import { normalizeDocumentNumber } from 'shared';
 
 import { PaymentChannel } from './entities/payment-attempt.entity';
 import { InboxService } from './inbox.service';
+import { parseProformaNumber } from './proforma-invoice-number';
 import { ProformaInvoiceService } from './proforma-invoice.service';
 import {
     PayProformaInvoiceOutcome,
@@ -16,6 +17,12 @@ export class ProformaInvoiceReferenceError extends Error {}
 
 // Retryable: the payment fact may arrive before the document reaches this instance.
 export class UnknownProformaInvoiceError extends Error {}
+
+// The uuid is the key: both the versioned number and the stable document part (pre-versioning facts) match.
+function acceptedNumbers(number: string): string[] {
+    const documentId = parseProformaNumber(number)?.documentId;
+    return [number, ...(documentId ? [documentId] : [])].map(normalizeDocumentNumber);
+}
 
 export interface IncomingPaymentPayload {
     // The ERP names a document by uuid (+ optional number); a branch reports the internal id.
@@ -81,8 +88,9 @@ export class PaymentInboxProcessorService {
         }
         if (
             payload.proformaInvoiceNumber !== undefined &&
-            normalizeDocumentNumber(payload.proformaInvoiceNumber) !==
-                normalizeDocumentNumber(document.number)
+            !acceptedNumbers(document.number).includes(
+                normalizeDocumentNumber(payload.proformaInvoiceNumber),
+            )
         ) {
             throw new ProformaInvoiceReferenceError(
                 `ProformaInvoice ${payload.proformaInvoiceUuid} has number ${document.number}, ` +

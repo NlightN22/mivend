@@ -62,8 +62,6 @@ export class SettlementEntryService {
             organizationId: document.organizationId,
             preferredId: Number(document.id),
         };
-        const targetProformaInvoice = target;
-
         const openProformaInvoices = await this.getOpenProformaInvoicesFifo(
             ctx,
             target.counterpartyId,
@@ -86,8 +84,8 @@ export class SettlementEntryService {
             entries.push(
                 await repo.save(
                     repo.create({
-                        counterpartyId: targetProformaInvoice.counterpartyId,
-                        organizationId: targetProformaInvoice.organizationId,
+                        counterpartyId: target.counterpartyId,
+                        organizationId: target.organizationId,
                         proformaInvoiceId: Number(proformaInvoice.id),
                         sourceType: 'payment.captured',
                         sourcePaymentId: Number(paymentAttempt.id),
@@ -113,8 +111,8 @@ export class SettlementEntryService {
             entries.push(
                 await repo.save(
                     repo.create({
-                        counterpartyId: targetProformaInvoice.counterpartyId,
-                        organizationId: targetProformaInvoice.organizationId,
+                        counterpartyId: target.counterpartyId,
+                        organizationId: target.organizationId,
                         proformaInvoiceId: null,
                         sourceType: 'payment.captured',
                         sourcePaymentId: Number(paymentAttempt.id),
