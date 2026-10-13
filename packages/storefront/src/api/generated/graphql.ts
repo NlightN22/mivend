@@ -3569,6 +3569,8 @@ export type Query = {
     /** Search Products based on the criteria set by the `SearchInput` */
     search: SearchResponse;
     searchCapabilities: SearchCapabilities;
+    settlementBalances: Array<SettlementBalanceCard>;
+    settlementDocuments: SettlementDocumentPage;
     tradingPoint?: Maybe<TradingPoint>;
 };
 
@@ -3641,6 +3643,17 @@ export type QueryProformaInvoiceArgs = {
 
 export type QuerySearchArgs = {
     input: SearchInput;
+};
+
+export type QuerySettlementBalancesArgs = {
+    contractId?: InputMaybe<Scalars['String']['input']>;
+    organizationId?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QuerySettlementDocumentsArgs = {
+    filter?: InputMaybe<SettlementDocumentFilter>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryTradingPointArgs = {
@@ -3892,6 +3905,57 @@ export type SetOrderShippingMethodResult =
     | NoActiveOrderError
     | Order
     | OrderModificationError;
+
+export type SettlementBalanceCard = {
+    contractId?: Maybe<Scalars['String']['output']>;
+    contractName?: Maybe<Scalars['String']['output']>;
+    currency: Scalars['String']['output'];
+    currentBalance: Scalars['Money']['output'];
+    openingBalance: Scalars['Money']['output'];
+    organizationId: Scalars['String']['output'];
+    organizationName?: Maybe<Scalars['String']['output']>;
+    overdue: Scalars['Money']['output'];
+};
+
+export type SettlementDocumentFilter = {
+    category?: InputMaybe<Scalars['String']['input']>;
+    contractId?: InputMaybe<Scalars['String']['input']>;
+    dateFrom?: InputMaybe<Scalars['DateTime']['input']>;
+    dateTo?: InputMaybe<Scalars['DateTime']['input']>;
+    organizationId?: InputMaybe<Scalars['String']['input']>;
+    overdueOnly?: InputMaybe<Scalars['Boolean']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SettlementDocumentPage = {
+    items: Array<SettlementDocumentRow>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type SettlementDocumentRow = {
+    amount: Scalars['Money']['output'];
+    category: Scalars['String']['output'];
+    contractId?: Maybe<Scalars['String']['output']>;
+    contractName?: Maybe<Scalars['String']['output']>;
+    currency: Scalars['String']['output'];
+    date: Scalars['DateTime']['output'];
+    documentType: Scalars['String']['output'];
+    documentTypeLabel: Scalars['String']['output'];
+    dueDate?: Maybe<Scalars['DateTime']['output']>;
+    id: Scalars['ID']['output'];
+    number: Scalars['String']['output'];
+    orders: Array<SettlementOrderRef>;
+    organizationId: Scalars['String']['output'];
+    organizationName?: Maybe<Scalars['String']['output']>;
+    paymentStatus?: Maybe<Scalars['String']['output']>;
+};
+
+export type SettlementOrderRef = {
+    amount: Scalars['Money']['output'];
+    orderCode?: Maybe<Scalars['String']['output']>;
+    orderErpId: Scalars['String']['output'];
+    orderId?: Maybe<Scalars['ID']['output']>;
+};
 
 export type ShippingLine = {
     customFields?: Maybe<Scalars['JSON']['output']>;
@@ -5062,6 +5126,57 @@ export type ProformaInvoiceDetailQuery = {
             productVariant: { name: string; sku: string };
         }>;
     } | null;
+};
+
+export type SettlementDocumentsQueryVariables = Exact<{
+    filter?: InputMaybe<SettlementDocumentFilter>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type SettlementDocumentsQuery = {
+    settlementDocuments: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            documentType: string;
+            documentTypeLabel: string;
+            category: string;
+            number: string;
+            date: any;
+            organizationId: string;
+            organizationName?: string | null;
+            contractId?: string | null;
+            contractName?: string | null;
+            currency: string;
+            amount: any;
+            dueDate?: any | null;
+            paymentStatus?: string | null;
+            orders: Array<{
+                orderId?: string | null;
+                orderCode?: string | null;
+                orderErpId: string;
+            }>;
+        }>;
+    };
+};
+
+export type SettlementBalancesQueryVariables = Exact<{
+    contractId?: InputMaybe<Scalars['String']['input']>;
+    organizationId?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type SettlementBalancesQuery = {
+    settlementBalances: Array<{
+        organizationId: string;
+        organizationName?: string | null;
+        contractId?: string | null;
+        contractName?: string | null;
+        currency: string;
+        openingBalance: any;
+        currentBalance: any;
+        overdue: any;
+    }>;
 };
 
 export type ActiveCustomerForAuthQueryVariables = Exact<{ [key: string]: never }>;
@@ -6296,6 +6411,51 @@ export const ProformaInvoiceDetailDocument = new TypedDocumentString(`
     ProformaInvoiceDetailQuery,
     ProformaInvoiceDetailQueryVariables
 >;
+export const SettlementDocumentsDocument = new TypedDocumentString(`
+    query SettlementDocuments($filter: SettlementDocumentFilter, $skip: Int, $take: Int) {
+  settlementDocuments(filter: $filter, skip: $skip, take: $take) {
+    items {
+      id
+      documentType
+      documentTypeLabel
+      category
+      number
+      date
+      organizationId
+      organizationName
+      contractId
+      contractName
+      currency
+      amount
+      dueDate
+      paymentStatus
+      orders {
+        orderId
+        orderCode
+        orderErpId
+      }
+    }
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SettlementDocumentsQuery,
+    SettlementDocumentsQueryVariables
+>;
+export const SettlementBalancesDocument = new TypedDocumentString(`
+    query SettlementBalances($contractId: String, $organizationId: String) {
+  settlementBalances(contractId: $contractId, organizationId: $organizationId) {
+    organizationId
+    organizationName
+    contractId
+    contractName
+    currency
+    openingBalance
+    currentBalance
+    overdue
+  }
+}
+    `) as unknown as TypedDocumentString<SettlementBalancesQuery, SettlementBalancesQueryVariables>;
 export const ActiveCustomerForAuthDocument = new TypedDocumentString(`
     query ActiveCustomerForAuth {
   activeCustomer {

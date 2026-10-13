@@ -95,6 +95,16 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'settlements',
+                    component: () => import('../pages/settlements/SettlementDocumentsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'reconciliation-acts',
+                    component: () => import('../pages/settlements/ReconciliationActsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'proforma-invoices',
                     component: () => import('../pages/proforma-invoices/ProformaInvoicesPage.vue'),
                     meta: { requiresAuth: true },

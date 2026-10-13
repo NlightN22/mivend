@@ -1,0 +1,39 @@
+query SettlementDocuments($filter: SettlementDocumentFilter, $skip: Int, $take: Int) {
+    settlementDocuments(filter: $filter, skip: $skip, take: $take) {
+        items {
+            id
+            documentType
+            documentTypeLabel
+            category
+            number
+            date
+            organizationId
+            organizationName
+            contractId
+            contractName
+            currency
+            amount
+            dueDate
+            paymentStatus
+            orders {
+                orderId
+                orderCode
+                orderErpId
+            }
+        }
+        totalItems
+    }
+}
+
+query SettlementBalances($contractId: String, $organizationId: String) {
+    settlementBalances(contractId: $contractId, organizationId: $organizationId) {
+        organizationId
+        organizationName
+        contractId
+        contractName
+        currency
+        openingBalance
+        currentBalance
+        overdue
+    }
+}

@@ -97,6 +97,20 @@ const isActive = (path: string) => route.path === path;
                     }}</span>
                 </RouterLink>
                 <RouterLink
+                    to="/settlements"
+                    class="account-sidebar__link"
+                    :class="{ 'account-sidebar__link--active': isActive('/settlements') }"
+                >
+                    <span>Settlements</span>
+                </RouterLink>
+                <RouterLink
+                    to="/reconciliation-acts"
+                    class="account-sidebar__link"
+                    :class="{ 'account-sidebar__link--active': isActive('/reconciliation-acts') }"
+                >
+                    <span>Reconciliation acts</span>
+                </RouterLink>
+                <RouterLink
                     to="/proforma-invoices"
                     class="account-sidebar__link"
                     :class="{ 'account-sidebar__link--active': isActive('/proforma-invoices') }"
