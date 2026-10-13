@@ -6,7 +6,6 @@ import { useFavoritesStore } from '../../stores/favorites';
 import { useDocuments } from '../documents/useDocuments';
 import { useProformaInvoices } from '../proforma-invoices/useProformaInvoices';
 import { useOrders } from '../orders/useOrders';
-import { usePayments } from '../payments/usePayments';
 import { useCompanyName } from './useCompanyName';
 import { useTradingPoints } from './useTradingPoints';
 
@@ -24,7 +23,6 @@ watch(
 );
 
 const { totalItems: proformaInvoiceCount, load: loadProformaInvoices } = useProformaInvoices();
-const { totalItems: paymentCount, load: loadPayments } = usePayments();
 const { totalItems: orderCount, load: loadOrders } = useOrders();
 const { totalItems: documentCount, load: loadDocuments } = useDocuments();
 const { visiblePoints, loadPoints } = useTradingPoints();
@@ -36,7 +34,6 @@ onMounted(() => {
     void loadDocuments({ take: 1, skip: 0 });
     void loadPoints();
     void loadProformaInvoices({ take: 1, skip: 0 });
-    void loadPayments({ take: 1, skip: 0 });
 });
 
 const { companyName, initials } = useCompanyName();
@@ -87,32 +84,16 @@ const isActive = (path: string) => route.path === path;
                     }}</span>
                 </RouterLink>
                 <RouterLink
-                    to="/documents"
-                    class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/documents') }"
-                >
-                    <span>Documents</span
-                    ><span v-if="documentCount > 0" class="account-sidebar__count">{{
-                        documentCount
-                    }}</span>
-                </RouterLink>
-                <RouterLink
                     to="/settlements"
                     class="account-sidebar__link"
                     :class="{ 'account-sidebar__link--active': isActive('/settlements') }"
                 >
-                    <span>Settlements</span>
+                    <span>Account statement</span>
                 </RouterLink>
-                <RouterLink
-                    to="/reconciliation-acts"
-                    class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/reconciliation-acts') }"
-                >
-                    <span>Reconciliation acts</span>
-                </RouterLink>
+                <div class="account-sidebar__group-title">Documents</div>
                 <RouterLink
                     to="/proforma-invoices"
-                    class="account-sidebar__link"
+                    class="account-sidebar__link account-sidebar__link--sub"
                     :class="{ 'account-sidebar__link--active': isActive('/proforma-invoices') }"
                 >
                     <span>Proforma invoices</span
@@ -121,14 +102,21 @@ const isActive = (path: string) => route.path === path;
                     }}</span>
                 </RouterLink>
                 <RouterLink
-                    to="/payments"
-                    class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/payments') }"
+                    to="/documents"
+                    class="account-sidebar__link account-sidebar__link--sub"
+                    :class="{ 'account-sidebar__link--active': isActive('/documents') }"
                 >
-                    <span>Payments</span
-                    ><span v-if="paymentCount > 0" class="account-sidebar__count">{{
-                        paymentCount
+                    <span>Contracts and files</span
+                    ><span v-if="documentCount > 0" class="account-sidebar__count">{{
+                        documentCount
                     }}</span>
+                </RouterLink>
+                <RouterLink
+                    to="/reconciliation-acts"
+                    class="account-sidebar__link account-sidebar__link--sub"
+                    :class="{ 'account-sidebar__link--active': isActive('/reconciliation-acts') }"
+                >
+                    <span>Reconciliation acts</span>
                 </RouterLink>
                 <RouterLink
                     to="/favorites"
@@ -268,6 +256,19 @@ const isActive = (path: string) => route.path === path;
     font-weight: 750;
     font-size: 14px;
     text-decoration: none;
+}
+
+.account-sidebar__group-title {
+    margin: 10px 10px 2px;
+    color: #66736e;
+    font-size: 12px;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.account-sidebar__link--sub {
+    padding-left: 22px;
 }
 
 .account-sidebar__link:hover {

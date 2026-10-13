@@ -95,7 +95,7 @@ onMounted(() => {
 
         <section class="settlement-page__content">
             <div>
-                <h1 class="settlement-page__title">Settlements</h1>
+                <h1 class="settlement-page__title">Account statement</h1>
                 <p class="settlement-page__subtitle">
                     Sales, payments, returns and corrections that make up your balance.
                 </p>
