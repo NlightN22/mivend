@@ -7,12 +7,14 @@ import {
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 
 import { SettlementBalance } from './entities/settlement-balance.entity';
+import { SettlementDocumentType } from './entities/settlement-document-type.entity';
 import { SettlementDocumentEntry } from './entities/settlement-document-entry.entity';
 import { SettlementDocument } from './entities/settlement-document.entity';
 import { SettlementOrderLink } from './entities/settlement-order-link.entity';
 import { SettlementBalanceService } from './settlement-balance.service';
 import { SettlementCounterpartyListener } from './settlement-counterparty.listener';
 import { SettlementDocumentService } from './settlement-document.service';
+import { SettlementDocumentTypeService } from './settlement-document-type.service';
 import { SettlementPendingService } from './settlement-pending.service';
 import { SettlementReferenceResolver } from './settlement-reference-resolver';
 import { shopApiExtensions } from './api/shop.schema';
@@ -26,46 +28,34 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
 
 @VendurePlugin({
     imports: [PluginCommonModule, CounterpartyPlugin],
-    entities: [SettlementDocument, SettlementDocumentEntry, SettlementOrderLink, SettlementBalance],
+    entities: [
+        SettlementDocument,
+        SettlementDocumentEntry,
+        SettlementOrderLink,
+        SettlementBalance,
+        SettlementDocumentType,
+    ],
     shopApiExtensions: { schema: shopApiExtensions, resolvers: [SettlementShopResolver] },
     providers: [
         SettlementReferenceResolver,
         SettlementDocumentService,
         SettlementBalanceService,
+        SettlementDocumentTypeService,
         SettlementPendingService,
         SettlementRetentionService,
         SettlementReconcileService,
         SettlementCounterpartyListener,
         SettlementShopService,
     ],
-    exports: [SettlementDocumentService, SettlementBalanceService, SettlementPendingService],
+    exports: [
+        SettlementDocumentService,
+        SettlementBalanceService,
+        SettlementDocumentTypeService,
+        SettlementPendingService,
+    ],
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.GlobalSettings = [
             ...(config.customFields.GlobalSettings ?? []),
-            {
-                name: 'settlementCustomerContractKinds',
-                type: 'string' as const,
-                nullable: true,
-                public: false,
-                label: [
-                    {
-                        languageCode: LanguageCode.en,
-                        value: 'Settlement documents: contract kinds shown to customers (comma separated, empty = nothing visible; interim until the ERP supplies it)',
-                    },
-                ],
-            },
-            {
-                name: 'settlementTypeCategories',
-                type: 'text' as const,
-                nullable: true,
-                public: false,
-                label: [
-                    {
-                        languageCode: LanguageCode.en,
-                        value: 'Settlement documents: customer-visible types as documentType=category (sale, payment, return, correction, bonus), comma separated; empty or unlisted = hidden (interim until the ERP supplies it)',
-                    },
-                ],
-            },
             {
                 name: 'settlementRetentionMonths',
                 type: 'int' as const,

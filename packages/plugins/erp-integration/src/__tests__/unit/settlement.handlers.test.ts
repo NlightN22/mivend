@@ -4,6 +4,7 @@ import type { RequestContext } from '@vendure/core';
 import { NonRetryableInboundError } from '../../non-retryable-inbound-error';
 import { SettlementBalanceStreamHandler } from '../../handlers/settlement-balance.handler';
 import { SettlementDocumentStreamHandler } from '../../handlers/settlement-document.handler';
+import { SettlementDocumentTypeStreamHandler } from '../../handlers/settlement-document-type.handler';
 
 const ctx = {} as RequestContext;
 
@@ -174,5 +175,65 @@ describe('SettlementBalanceStreamHandler', () => {
 
         expect(outcome.kind).toBe('noop');
         expect(apply).not.toHaveBeenCalled();
+    });
+});
+
+describe('SettlementDocumentTypeStreamHandler', () => {
+    const typePayload = {
+        version: '2026-10-01T10:00:00Z',
+        documentTypeLabel: 'Sale label',
+        category: 'sale',
+        customerVisible: true,
+        sortOrder: 3,
+        someFutureField: 'ignored',
+    };
+
+    function typeHandler(result = 'applied'): {
+        handler: SettlementDocumentTypeStreamHandler;
+        apply: ReturnType<typeof vi.fn>;
+    } {
+        const apply = vi.fn().mockResolvedValue(result);
+        return { handler: new SettlementDocumentTypeStreamHandler({ apply } as never), apply };
+    }
+
+    it('maps the reference and tolerates unknown extra fields', async () => {
+        const { handler, apply } = typeHandler();
+
+        const outcome = await handler.apply(ctx, 'Sale', typePayload);
+
+        expect(outcome).toEqual({ kind: 'applied' });
+        expect(apply.mock.calls[0][1]).toMatchObject({
+            documentType: 'Sale',
+            label: 'Sale label',
+            category: 'sale',
+            customerVisible: true,
+            sortOrder: 3,
+            isDeleted: false,
+        });
+    });
+
+    it('treats an absent customer_visible as not visible and an absent sort order as null', async () => {
+        const { handler, apply } = typeHandler();
+        const rest: Record<string, unknown> = { ...typePayload };
+        delete rest.customerVisible;
+        delete rest.sortOrder;
+
+        await handler.apply(ctx, 'Sale', rest);
+
+        expect(apply.mock.calls[0][1]).toMatchObject({ customerVisible: false, sortOrder: null });
+    });
+
+    it('keeps an unknown category as sent and noops on stale, unknown deletion or a missing version', async () => {
+        const { handler, apply } = typeHandler('stale');
+        await handler.apply(ctx, 'Sale', { ...typePayload, category: 'brand-new' });
+        expect(apply.mock.calls[0][1].category).toBe('brand-new');
+
+        expect((await handler.apply(ctx, 'Sale', typePayload)).kind).toBe('noop');
+        expect(
+            (await typeHandler('unknown-deleted').handler.apply(ctx, 'Sale', typePayload)).kind,
+        ).toBe('noop');
+        expect((await handler.apply(ctx, 'Sale', { ...typePayload, version: '' })).kind).toBe(
+            'noop',
+        );
     });
 });

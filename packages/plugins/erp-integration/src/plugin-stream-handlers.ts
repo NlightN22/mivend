@@ -30,6 +30,7 @@ import { BankStreamHandler } from './handlers/bank.handler';
 import { BankAccountStreamHandler } from './handlers/bank-account.handler';
 import { ProductPhotoStreamHandler } from './handlers/product-photo.handler';
 import { SettlementDocumentStreamHandler } from './handlers/settlement-document.handler';
+import { SettlementDocumentTypeStreamHandler } from './handlers/settlement-document-type.handler';
 import { SettlementBalanceStreamHandler } from './handlers/settlement-balance.handler';
 
 // One provider per inbound stream; IntegrationInboxProcessorService maps stream -> handler.
@@ -67,4 +68,5 @@ export const STREAM_HANDLERS = [
     ProductPhotoStreamHandler,
     SettlementDocumentStreamHandler,
     SettlementBalanceStreamHandler,
+    SettlementDocumentTypeStreamHandler,
 ];

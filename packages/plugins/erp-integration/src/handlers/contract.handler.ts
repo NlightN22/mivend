@@ -65,6 +65,7 @@ export class ContractStreamHandler implements InboundStreamHandler {
             isActive,
             contractKind: String(payload.contractKind ?? ''),
             contractType: String(payload.contractType ?? ''),
+            isCustomerContract: payload.isCustomerContract === true,
             creditLimit:
                 'creditLimit' in payload
                     ? ((payload.creditLimit as string | null) ?? null)

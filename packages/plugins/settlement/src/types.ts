@@ -42,12 +42,20 @@ export interface SettlementBalanceInput {
     closingBalance: number;
 }
 
+export interface SettlementDocumentTypeInput {
+    documentType: string;
+    version: string;
+    isDeleted: boolean;
+    label: string;
+    category: string;
+    customerVisible: boolean;
+    sortOrder: number | null;
+}
+
 export type SettlementApplyResult = 'applied' | 'stale' | 'unknown-deleted';
 
 declare module '@vendure/core' {
     interface CustomGlobalSettingsFields {
         settlementRetentionMonths?: number | null;
-        settlementCustomerContractKinds?: string | null;
-        settlementTypeCategories?: string | null;
     }
 }

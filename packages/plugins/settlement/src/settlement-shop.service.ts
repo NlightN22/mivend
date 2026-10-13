@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GlobalSettingsService, RequestContext, TransactionalConnection } from '@vendure/core';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { SettlementDocument } from './entities/settlement-document.entity';
 import { capOverdue, paymentStatusOf } from './settlement-aging';
@@ -11,7 +11,7 @@ import type {
     SettlementDocumentRow,
     SettlementOrderRef,
 } from './settlement-shop.types';
-import { categoryOf, parseVisibility, type SettlementVisibility } from './settlement-visibility';
+import { CATEGORY_SQL, normalizeCategory } from './settlement-visibility';
 
 const MAX_PAGE = 100;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
@@ -20,18 +20,10 @@ type Row = Record<string, unknown>;
 
 @Injectable()
 export class SettlementShopService {
-    constructor(
-        private readonly connection: TransactionalConnection,
-        private readonly globalSettingsService: GlobalSettingsService,
-    ) {}
+    constructor(private readonly connection: TransactionalConnection) {}
 
     private query(ctx: RequestContext, sql: string, params: unknown[]): Promise<Row[]> {
         return this.connection.getRepository(ctx, SettlementDocument).query(sql, params);
-    }
-
-    private async visibility(ctx: RequestContext): Promise<SettlementVisibility> {
-        const settings = await this.globalSettingsService.getSettings(ctx);
-        return parseVisibility(settings.customFields ?? {});
     }
 
     async balanceCards(
@@ -39,7 +31,6 @@ export class SettlementShopService {
         counterpartyId: string,
         filter: Pick<SettlementDocumentFilter, 'contractId' | 'organizationId'> = {},
     ): Promise<SettlementBalanceCard[]> {
-        const visibility = await this.visibility(ctx);
         const rows = await this.query(
             ctx,
             `WITH ${AGING_CTE}
@@ -50,7 +41,7 @@ export class SettlementShopService {
                     AND a.ctr = bal.ctr AND a.due < now()), 0) AS overdue
              FROM bal LEFT JOIN organization_requisites org ON org."erpId" = bal.org
              ORDER BY bal.org, bal.ctr`,
-            [counterpartyId, visibility.contractKinds],
+            [counterpartyId],
         );
         return rows
             .map(
@@ -79,9 +70,7 @@ export class SettlementShopService {
         skip: number,
         take: number,
     ): Promise<SettlementDocumentPage> {
-        const visibility = await this.visibility(ctx);
-        const typeKeys = [...visibility.typeCategories.keys()];
-        const params: unknown[] = [counterpartyId, visibility.contractKinds, typeKeys];
+        const params: unknown[] = [counterpartyId];
         const bind = (value: unknown): string => {
             params.push(value);
             return `$${params.length}`;
@@ -90,8 +79,8 @@ export class SettlementShopService {
             'e."counterpartyId" = $1',
             'NOT d."isDeleted"',
             'e."contractId" IS NOT NULL',
-            'c."contractKind" = ANY($2::text[])',
-            'd."documentType" = ANY($3::text[])',
+            'c."isCustomerContract" IS TRUE',
+            't."customerVisible"',
         ];
         if (filter.contractId) where.push(`e."contractId" = ${bind(filter.contractId)}`);
         if (filter.organizationId) {
@@ -111,16 +100,12 @@ export class SettlementShopService {
                     OR (o."customFieldsCounterpartyid" = e."counterpartyId"
                         AND o.code ILIKE ${term} ESCAPE '\\'))))`);
         }
-        if (filter.category) {
-            const types = [...visibility.typeCategories]
-                .filter(([, category]) => category === filter.category)
-                .map(([type]) => type);
-            where.push(`d."documentType" = ANY(${bind(types)})`);
-        }
+        if (filter.category) where.push(`${CATEGORY_SQL} = ${bind(filter.category)}`);
         if (filter.overdueOnly) where.push('aged.open > 0 AND aged.due < now()');
         const from = `FROM settlement_document_entry e
             JOIN settlement_document d ON d.id = e."documentId"
-            LEFT JOIN contract c ON c.id::text = e."contractId"
+            JOIN settlement_document_type t ON t."documentType" = d."documentType" AND NOT t."isDeleted"
+            JOIN contract c ON c.id::text = e."contractId"
             LEFT JOIN organization_requisites org ON org."erpId" = e."organizationErpId"
             LEFT JOIN bal ON bal.org = e."organizationErpId"
                 AND bal.ctr = e."contractId"
@@ -135,7 +120,8 @@ export class SettlementShopService {
         const rows = await this.query(
             ctx,
             `WITH ${AGING_CTE}
-             SELECT e.id AS "entryId", d."documentType", d."documentTypeLabel", d.number, d.date,
+             SELECT e.id AS "entryId", d."documentType", COALESCE(t.label, d."documentTypeLabel") AS "documentTypeLabel",
+                ${CATEGORY_SQL} AS category, d.number, d.date,
                 e."organizationErpId", org."legalName" AS "organizationName", e."contractId",
                 c.name AS "contractName", e.currency, e."amountMinor", e."dueDate",
                 aged.open AS "open", aged.due AS "agedDue", (bal.org IS NOT NULL) AS "hasBalance",
@@ -146,12 +132,12 @@ export class SettlementShopService {
         );
         const now = new Date();
         return {
-            items: rows.map(r => this.toRow(r, visibility, now)),
+            items: rows.map(r => this.toRow(r, now)),
             totalItems: Number(total),
         };
     }
 
-    private toRow(r: Row, visibility: SettlementVisibility, now: Date): SettlementDocumentRow {
+    private toRow(r: Row, now: Date): SettlementDocumentRow {
         const amount = Number(r.amountMinor);
         const due = r.dueDate ?? r.agedDue;
         const dueDate = due ? new Date(due as string) : null;
@@ -168,7 +154,7 @@ export class SettlementShopService {
             id: String(r.entryId),
             documentType: String(r.documentType),
             documentTypeLabel: String(r.documentTypeLabel),
-            category: categoryOf(visibility, String(r.documentType)),
+            category: normalizeCategory(r.category as string),
             number: String(r.number),
             date: new Date(r.date as string),
             organizationId: String(r.organizationErpId),

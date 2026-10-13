@@ -942,6 +942,10 @@ export const config: VendureConfig = {
                     'settlement-balance':
                         process.env.INTEGRATION_KAFKA_TOPIC_SETTLEMENT_BALANCE ??
                         'company.customers.events.v1.settlement-balance-changed',
+                    // Issue #227: document type reference, see SettlementDocumentTypeStreamHandler.
+                    'settlement-document-type':
+                        process.env.INTEGRATION_KAFKA_TOPIC_SETTLEMENT_DOCUMENT_TYPE ??
+                        'company.customers.events.v1.settlement-document-type-changed',
                 },
             },
             schemaRegistry: {

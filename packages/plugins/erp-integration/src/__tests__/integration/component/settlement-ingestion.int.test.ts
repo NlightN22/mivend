@@ -4,6 +4,7 @@ import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import {
     SettlementBalanceChangedSchema,
     SettlementDocumentChangedSchema,
+    SettlementDocumentTypeChangedSchema,
 } from '@nlightn22/event-contracts';
 import {
     SettlementBalance,
@@ -11,6 +12,8 @@ import {
     SettlementDocument,
     SettlementDocumentEntry,
     SettlementDocumentService,
+    SettlementDocumentType,
+    SettlementDocumentTypeService,
     SettlementOrderLink,
     SettlementPendingService,
     SettlementReferenceResolver,
@@ -30,12 +33,14 @@ import {
 import { ContractStreamHandler } from '../../../handlers/contract.handler';
 import { SettlementBalanceStreamHandler } from '../../../handlers/settlement-balance.handler';
 import { SettlementDocumentStreamHandler } from '../../../handlers/settlement-document.handler';
+import { SettlementDocumentTypeStreamHandler } from '../../../handlers/settlement-document-type.handler';
 import { classifyInboundMessage } from '../../../kafka-inbound-message';
 
 const { schema, extra } = testSchemaOptions('settlement_ingestion');
 let dataSource: DataSource;
 let documentHandler: SettlementDocumentStreamHandler;
 let balanceHandler: SettlementBalanceStreamHandler;
+let typeHandler: SettlementDocumentTypeStreamHandler;
 let contractHandler: ContractStreamHandler;
 const contractsByErpId = new Map<string, { id: number }>();
 
@@ -51,6 +56,7 @@ beforeAll(async () => {
             SettlementDocumentEntry,
             SettlementOrderLink,
             SettlementBalance,
+            SettlementDocumentType,
         ],
         synchronize: true,
     });
@@ -79,6 +85,9 @@ beforeAll(async () => {
     balanceHandler = new SettlementBalanceStreamHandler(
         new SettlementBalanceService(connection, resolver),
     );
+    typeHandler = new SettlementDocumentTypeStreamHandler(
+        new SettlementDocumentTypeService(connection),
+    );
     contractHandler = new ContractStreamHandler(
         contractService as never,
         counterpartyService as never,
@@ -93,7 +102,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query(
-        'TRUNCATE settlement_document, settlement_balance, "order" RESTART IDENTITY CASCADE',
+        'TRUNCATE settlement_document, settlement_balance, settlement_document_type, "order" RESTART IDENTITY CASCADE',
     );
     contractsByErpId.clear();
 });
@@ -102,9 +111,12 @@ const DOC_ID = '33333333-3333-4333-8333-333333333333';
 const ENVELOPE = { eventId: '11111111-1111-4111-8111-111111111111', entityId: DOC_ID };
 
 function decode<
-    S extends typeof SettlementDocumentChangedSchema | typeof SettlementBalanceChangedSchema,
+    S extends
+        | typeof SettlementDocumentChangedSchema
+        | typeof SettlementBalanceChangedSchema
+        | typeof SettlementDocumentTypeChangedSchema,
 >(
-    stream: 'settlement-document' | 'settlement-balance',
+    stream: 'settlement-document' | 'settlement-balance' | 'settlement-document-type',
     schemaDef: S,
     init: MessageInitShape<S>,
 ): Record<string, unknown> {
@@ -234,5 +246,63 @@ describe('settlement ingestion (decode -> handler -> real Postgres)', () => {
         expect(stale.kind).toBe('noop');
         const [balance] = await dataSource.getRepository(SettlementBalance).find();
         expect(balance).toMatchObject({ openingBalance: 10000, closingBalance: 0 });
+    });
+
+    it('stores a decoded document type reference; absent customer_visible stays hidden and a stale version is dropped', async () => {
+        const payload = (
+            version: string,
+            init: MessageInitShape<typeof SettlementDocumentTypeChangedSchema> = {},
+        ): Record<string, unknown> =>
+            decode('settlement-document-type', SettlementDocumentTypeChangedSchema, {
+                eventId: ENVELOPE.eventId,
+                entityId: 'Sale',
+                version,
+                documentType: 'Sale',
+                documentTypeLabel: 'Sale',
+                category: 'sale',
+                ...init,
+            });
+
+        expect(await typeHandler.apply(ctx, 'Sale', payload('2026-10-01T10:00:00Z'))).toEqual({
+            kind: 'applied',
+        });
+        const stale = await typeHandler.apply(
+            ctx,
+            'Sale',
+            payload('2026-09-01T10:00:00Z', { customerVisible: true }),
+        );
+
+        expect(stale.kind).toBe('noop');
+        const rows = await dataSource.getRepository(SettlementDocumentType).find();
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({
+            customerVisible: false,
+            category: 'sale',
+            sortOrder: null,
+        });
+    });
+
+    it('stores a customer-visible type with a sort order and re-applies idempotently', async () => {
+        const payload = decode('settlement-document-type', SettlementDocumentTypeChangedSchema, {
+            eventId: ENVELOPE.eventId,
+            entityId: 'Bonus',
+            version: '2026-10-01T10:00:00Z',
+            documentType: 'Bonus',
+            documentTypeLabel: 'Retro bonus accrual',
+            category: 'bonus',
+            customerVisible: true,
+            sortOrder: 7,
+        });
+
+        await typeHandler.apply(ctx, 'Bonus', payload);
+        await typeHandler.apply(ctx, 'Bonus', payload);
+
+        const rows = await dataSource.getRepository(SettlementDocumentType).find();
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({
+            customerVisible: true,
+            sortOrder: 7,
+            label: 'Retro bonus accrual',
+        });
     });
 });

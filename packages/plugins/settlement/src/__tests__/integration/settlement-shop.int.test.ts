@@ -8,11 +8,23 @@ import type { SettlementDocumentInput, SettlementEntryInput } from '../../types'
 
 let h: Harness;
 let shop: SettlementShopService;
-let settings: Record<string, unknown>;
 
-const visible = {
-    settlementCustomerContractKinds: 'client,supplier',
-    settlementTypeCategories: 'Sale=sale,Pay=payment,Ret=return',
+const typeRef = async (
+    documentType: string,
+    category: string,
+    customerVisible: boolean,
+    version = '2026-10-01T10:00:00Z',
+    label = documentType,
+): Promise<void> => {
+    await h.types.apply(ctx, {
+        documentType,
+        version,
+        isDeleted: false,
+        label,
+        category,
+        customerVisible,
+        sortOrder: null,
+    });
 };
 
 beforeAll(async () => {
@@ -22,14 +34,12 @@ beforeAll(async () => {
     );
     await h.dataSource.query(
         `CREATE TABLE contract (id serial primary key, "erpId" varchar, name varchar,
-            "contractKind" varchar, "paymentDelayDays" int)`,
+            "contractKind" varchar, "paymentDelayDays" int, "isCustomerContract" boolean)`,
     );
     await h.dataSource.query(
         `CREATE TABLE organization_requisites (id serial primary key, "erpId" varchar, "legalName" varchar)`,
     );
-    shop = new SettlementShopService(h.connection, {
-        getSettings: async () => ({ customFields: settings }),
-    } as never);
+    shop = new SettlementShopService(h.connection);
 });
 
 afterAll(async () => {
@@ -38,10 +48,12 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    settings = { ...visible };
     await h.dataSource.query(
-        'TRUNCATE settlement_document, settlement_balance, "order", contract, organization_requisites RESTART IDENTITY CASCADE',
+        'TRUNCATE settlement_document, settlement_balance, settlement_document_type, "order", contract, organization_requisites RESTART IDENTITY CASCADE',
     );
+    await typeRef('Sale', 'sale', true);
+    await typeRef('Pay', 'payment', true);
+    await typeRef('Ret', 'return', true);
     h.counterparties.clear();
     h.contracts.clear();
     h.counterparties.set('cp-1', 1);
@@ -49,8 +61,8 @@ beforeEach(async () => {
     h.contracts.set('ct-1', 1);
     h.contracts.set('ct-2', 2);
     await h.dataSource.query(
-        `INSERT INTO contract ("erpId", name, "contractKind", "paymentDelayDays")
-         VALUES ('ct-1', 'Main', 'client', 10), ('ct-2', 'Supplier deal', 'supplier', 0)`,
+        `INSERT INTO contract ("erpId", name, "contractKind", "paymentDelayDays", "isCustomerContract")
+         VALUES ('ct-1', 'Main', 'client', 10, true), ('ct-2', 'Supplier deal', 'supplier', 0, NULL)`,
     );
     await h.dataSource.query(
         `INSERT INTO organization_requisites ("erpId", "legalName") VALUES ('org-1', 'Seller One')`,
@@ -101,7 +113,7 @@ describe('settlement shop queries (real Postgres)', () => {
         expect((await shop.documents(ctx, '3', {}, 0, 20)).totalItems).toBe(0);
     });
 
-    it('does not show deleted documents or other contract kinds when configured', async () => {
+    it('does not show deleted documents or documents of a non-customer contract', async () => {
         await doc('d-sale', { number: '1', entries: [entry()] });
         await doc('d-supplier', { number: '2', entries: [entry({ contractErpId: 'ct-2' })] });
         await doc('d-gone', { number: '3', entries: [entry()] });
@@ -111,23 +123,26 @@ describe('settlement shop queries (real Postgres)', () => {
             version: '2026-10-02T10:00:00Z',
             entries: [],
         });
-        expect((await shop.documents(ctx, '1', {}, 0, 20)).items.map(i => i.number).sort()).toEqual(
-            ['1', '2'],
-        );
-        settings = { ...visible, settlementCustomerContractKinds: 'client' };
         expect((await shop.documents(ctx, '1', {}, 0, 20)).items.map(i => i.number)).toEqual(['1']);
     });
 
-    it('applies the document type whitelist and the category filter', async () => {
+    it('filters by the reference category and shows the reference label', async () => {
+        await typeRef('Bonus', 'bonus', true, '2026-10-01T10:00:00Z', 'Retro bonus accrual');
         await doc('d-sale', { number: '1', documentType: 'Sale', entries: [entry()] });
         await doc('d-pay', { number: '2', documentType: 'Pay', entries: [entry({ amount: -40 })] });
-        await doc('d-odd', { number: '3', documentType: 'Odd', entries: [entry()] });
-        settings = { ...visible, settlementTypeCategories: 'Sale=sale,Pay=payment' };
-        const all = await shop.documents(ctx, '1', {}, 0, 20);
-        expect(all.items.map(i => i.number).sort()).toEqual(['1', '2']);
+        await doc('d-bonus', {
+            number: '3',
+            documentType: 'Bonus',
+            documentTypeLabel: 'Приходный кассовый ордер',
+            entries: [entry({ amount: -5 })],
+        });
         const payments = await shop.documents(ctx, '1', { category: 'payment' }, 0, 20);
         expect(payments.items.map(i => i.number)).toEqual(['2']);
-        expect(payments.items[0].category).toBe('payment');
+        const bonus = await shop.documents(ctx, '1', { category: 'bonus' }, 0, 20);
+        expect(bonus.items[0]).toMatchObject({
+            category: 'bonus',
+            documentTypeLabel: 'Retro bonus accrual',
+        });
     });
 
     it('paginates server-side and filters by period and number', async () => {
@@ -274,6 +289,9 @@ describe('settlement shop queries (real Postgres)', () => {
     });
 
     it('caps overdue at the current balance and keeps currencies apart', async () => {
+        await h.dataSource.query(
+            `UPDATE contract SET "isCustomerContract" = true WHERE "erpId" = 'ct-2'`,
+        );
         await balance('cp-1', 'ct-1', 0, 100);
         await doc('d-old', {
             number: '1',
@@ -298,26 +316,50 @@ describe('settlement shop queries (real Postgres)', () => {
         expect(cards.find(c => c.currency === 'USD')).toMatchObject({ currentBalance: 2000 });
     });
 
-    it('shows nothing while the visibility settings are empty', async () => {
-        await balance('cp-1', 'ct-1', 0, 100);
-        await doc('d-1', { number: '1', entries: [entry()] });
-        settings = {};
+    it('hides a type that is invisible, missing from the reference, or deleted there', async () => {
+        await typeRef('Hidden', 'sale', false);
+        await doc('d-hidden', { number: '1', documentType: 'Hidden', entries: [entry()] });
+        await doc('d-unknown', { number: '2', documentType: 'NoReference', entries: [entry()] });
+        await typeRef('Gone', 'sale', true);
+        await doc('d-gone', { number: '3', documentType: 'Gone', entries: [entry()] });
+        await h.types.apply(ctx, {
+            documentType: 'Gone',
+            version: '2026-10-02T10:00:00Z',
+            isDeleted: true,
+            label: 'Gone',
+            category: 'sale',
+            customerVisible: true,
+            sortOrder: null,
+        });
         expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
-        expect(await shop.balanceCards(ctx, '1')).toEqual([]);
-        settings = { settlementCustomerContractKinds: 'client' };
-        expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
-        expect(await shop.balanceCards(ctx, '1')).toHaveLength(1);
-        settings = { settlementTypeCategories: 'Sale=sale' };
-        expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
-        expect(await shop.balanceCards(ctx, '1')).toEqual([]);
     });
 
-    it('shows a mapped type and hides an unmapped one', async () => {
-        await doc('d-sale', { number: '1', documentType: 'Sale', entries: [entry()] });
-        await doc('d-odd', { number: '2', documentType: 'Odd', entries: [entry()] });
-        const page = await shop.documents(ctx, '1', {}, 0, 20);
+    it('shows a customer-contract balance only and hides a non-customer one', async () => {
+        await balance('cp-1', 'ct-1', 0, 100);
+        await balance('cp-1', 'ct-2', 0, 500);
+        const cards = await shop.balanceCards(ctx, '1');
+        expect(cards.map(c => c.contractId)).toEqual(['1']);
+    });
+
+    it('shows an unknown reference category under other', async () => {
+        await typeRef('Odd', 'brand-new', true);
+        await doc('d-odd', { number: '1', documentType: 'Odd', entries: [entry()] });
+        const other = await shop.documents(ctx, '1', { category: 'other' }, 0, 20);
+        expect(other.items.map(i => i.number)).toEqual(['1']);
+        expect(other.items[0].category).toBe('other');
+    });
+
+    it('replaces a type by version and ignores a stale or repeated one', async () => {
+        await typeRef('Sale', 'return', true, '2026-10-02T10:00:00Z');
+        await typeRef('Sale', 'sale', false, '2026-10-01T10:00:00Z');
+        await typeRef('Sale', 'return', true, '2026-10-02T10:00:00Z');
+        await doc('d-1', { number: '1', documentType: 'Sale', entries: [entry()] });
+        const page = await shop.documents(ctx, '1', { category: 'return' }, 0, 20);
         expect(page.items.map(i => i.number)).toEqual(['1']);
-        expect((await shop.documents(ctx, '1', { category: 'other' }, 0, 20)).totalItems).toBe(0);
+        const [{ n }] = await h.dataSource.query(
+            `SELECT COUNT(*)::int AS n FROM settlement_document_type WHERE "documentType" = 'Sale'`,
+        );
+        expect(n).toBe(1);
     });
 
     it('always hides entries and balances whose contract is not imported', async () => {

@@ -1,13 +1,13 @@
 // FIFO per (organization, contract) triple of one counterparty, evaluated in SQL: credits (payments,
 // returns, a negative opening balance) close the oldest debts first; a positive opening balance is
-// the oldest lot and counts as already overdue. $1 = counterparty id, $2 = visible contract kinds (empty = none).
+// the oldest lot and counts as already overdue. $1 = counterparty id; only customer contracts count.
 export const AGING_CTE = `
 bal AS (
     SELECT b."organizationErpId" AS org, b."contractId" AS ctr, b."openingDate" AS od,
         b."openingBalance" AS ob, b."closingBalance" AS cb, b.currency,
         COALESCE(c."paymentDelayDays", 0) AS delay, c.name AS cname
     FROM settlement_balance b
-    JOIN contract c ON c.id::text = b."contractId" AND c."contractKind" = ANY($2::text[])
+    JOIN contract c ON c.id::text = b."contractId" AND c."isCustomerContract" IS TRUE
     WHERE b."counterpartyId" = $1 AND NOT b."isDeleted" AND b."contractId" IS NOT NULL
 ),
 ent AS (

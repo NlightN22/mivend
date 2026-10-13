@@ -24,6 +24,7 @@ export interface ContractStreamFields {
     paymentKind?: string | null;
     paymentDelayDays: number | null;
     contractType: string;
+    isCustomerContract?: boolean;
     brandManufacturerId?: string | null;
 }
 
@@ -48,6 +49,9 @@ export class ContractService {
             entity.isActive = fields.isActive;
             entity.contractKind = fields.contractKind;
             entity.contractType = fields.contractType;
+            if (fields.isCustomerContract !== undefined) {
+                entity.isCustomerContract = fields.isCustomerContract;
+            }
             if (fields.creditLimit !== undefined) entity.creditLimit = fields.creditLimit;
             if (fields.currency !== undefined) entity.currency = fields.currency;
             entity.controlledIndividually = fields.controlledIndividually;
@@ -71,6 +75,7 @@ export class ContractService {
                 isActive: fields.isActive,
                 contractKind: fields.contractKind,
                 contractType: fields.contractType,
+                isCustomerContract: fields.isCustomerContract ?? null,
                 creditLimit: fields.creditLimit ?? null,
                 currency: fields.currency ?? null,
                 controlledIndividually: fields.controlledIndividually,

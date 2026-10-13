@@ -63,6 +63,10 @@ export class Contract extends VendureEntity {
     @Column({ type: 'varchar' })
     contractType!: string;
 
+    // ERP-decided: a buyer/commission contract. Absent (null) is never a customer contract.
+    @Column({ type: 'boolean', nullable: true })
+    isCustomerContract!: boolean | null;
+
     @Column({ type: 'varchar', nullable: true })
     brandManufacturerId!: string | null;
 }

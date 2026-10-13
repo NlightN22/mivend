@@ -51,6 +51,7 @@ function makeOptions(
                 position: 'pos3',
                 'settlement-document': 'sdoc',
                 'settlement-balance': 'sbal',
+                'settlement-document-type': 'sdtype',
             },
         },
         schemaRegistry: { url: 'http://x' },

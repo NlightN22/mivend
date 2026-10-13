@@ -96,6 +96,29 @@ describe('ContractStreamHandler', () => {
         expect(contractService.upsertActiveState).not.toHaveBeenCalled();
     });
 
+    it('stores isCustomerContract only when the ERP says true; an absent flag is not a customer contract', async () => {
+        const { handler, contractService } = makeHandler();
+        const base = {
+            name: 'Deal',
+            isActive: true,
+            counterpartyId: 'erp-cp-1',
+            organizationId: 'org-1',
+            priceTypeId: 'pt-1',
+            contractKind: 'СПокупателем',
+            contractType: 'ТоварыИУслуги',
+        };
+
+        await handler.apply(ctx, 'contract-1', { ...base, isCustomerContract: true });
+        await handler.apply(ctx, 'contract-2', base);
+
+        expect(contractService.upsertActiveState.mock.calls[0][2]).toMatchObject({
+            isCustomerContract: true,
+        });
+        expect(contractService.upsertActiveState.mock.calls[1][2]).toMatchObject({
+            isCustomerContract: false,
+        });
+    });
+
     it('reads controlledIndividually as false, not undefined, when absent (proto3 zero-value omission)', async () => {
         const { handler, contractService } = makeHandler();
 

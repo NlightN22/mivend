@@ -205,7 +205,9 @@ export type InboundStream =
     | 'granted-retro-bonus'
     // Issue #224: receivables history, see SettlementDocumentStreamHandler / SettlementBalanceStreamHandler.
     | 'settlement-document'
-    | 'settlement-balance';
+    | 'settlement-balance'
+    // Issue #227: the ERP-owned document type reference (category, customer visibility).
+    | 'settlement-document-type';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -317,6 +319,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'granted-retro-bonus': true,
     'settlement-document': true,
     'settlement-balance': true,
+    'settlement-document-type': true,
 } satisfies Record<InboundStream, true>;
 export const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

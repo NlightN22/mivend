@@ -1,24 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import { categoryOf, parseVisibility } from '../../settlement-visibility';
+import { KNOWN_CATEGORIES, normalizeCategory } from '../../settlement-visibility';
 
-describe('parseVisibility', () => {
-    it('treats empty settings as no restriction', () => {
-        const v = parseVisibility({});
-        expect(v.contractKinds).toEqual([]);
-        expect(v.typeCategories.size).toBe(0);
-        expect(categoryOf(v, 'AnyType')).toBe('other');
+describe('normalizeCategory', () => {
+    it('keeps every known category', () => {
+        for (const category of KNOWN_CATEGORIES) {
+            expect(normalizeCategory(category)).toBe(category);
+        }
     });
 
-    it('parses contract kinds and documentType=category pairs', () => {
-        const v = parseVisibility({
-            settlementCustomerContractKinds: 'client, retail',
-            settlementTypeCategories: 'Sale=sale,\nPayment=payment, Odd',
-        });
-        expect(v.contractKinds).toEqual(['client', 'retail']);
-        expect(categoryOf(v, 'Sale')).toBe('sale');
-        expect(categoryOf(v, 'Payment')).toBe('payment');
-        expect(v.typeCategories.get('Odd')).toBe('other');
-        expect(categoryOf(v, 'Unlisted')).toBe('other');
+    it('maps an unknown, empty or missing category to other', () => {
+        expect(normalizeCategory('brand-new')).toBe('other');
+        expect(normalizeCategory('')).toBe('other');
+        expect(normalizeCategory(null)).toBe('other');
+        expect(normalizeCategory(undefined)).toBe('other');
     });
 });
