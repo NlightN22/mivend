@@ -24,8 +24,11 @@ export interface ProformaInvoiceSource {
     issueDate: Date;
     currencyCode: string | null;
     totalAmount: number;
+    dueDate: Date | null;
     version: number;
-    superseded: boolean;
+    kind: string;
+    salesInvoiceNumber: string | null;
+    hasNewerVersion: boolean;
     lines: ProformaInvoiceSourceLine[];
 }
 
@@ -67,7 +70,8 @@ export interface ProformaInvoiceTemplateData {
     };
     title: string;
     versionLabel: string | null;
-    superseded: boolean;
+    dueLine: string | null;
+    newerVersionNote: string | null;
     supplier: string;
     buyer: string;
     rows: ProformaInvoiceRow[];
@@ -136,6 +140,15 @@ export function printedRowsTotal(source: ProformaInvoiceSource): number {
     return source.lines.reduce((sum, line) => sum + lineNetAmount(line), 0);
 }
 
+function versionLabel(source: ProformaInvoiceSource): string | null {
+    const parts: string[] = [];
+    if (source.version > 1) parts.push(`Версия ${source.version}`);
+    if (source.kind === 'by-shipment' && source.salesInvoiceNumber) {
+        parts.push(`по отгрузке (реализация № ${source.salesInvoiceNumber})`);
+    }
+    return parts.length > 0 ? parts.join(', ') : null;
+}
+
 export function buildProformaInvoiceTemplateData(
     source: ProformaInvoiceSource,
     requisites: CompleteOrganizationRequisites,
@@ -160,8 +173,9 @@ export function buildProformaInvoiceTemplateData(
             recipientName: requisites.legalName,
         },
         title: `Счет на оплату № ${source.documentNumber} от ${dateInWords(source.issueDate)}`,
-        versionLabel: source.version > 1 ? `Версия ${source.version}` : null,
-        superseded: source.superseded,
+        versionLabel: versionLabel(source),
+        dueLine: source.dueDate ? `Срок оплаты до ${dateInWords(source.dueDate)}` : null,
+        newerVersionNote: source.hasNewerVersion ? 'Есть более новая версия' : null,
         supplier: partyLine(supplier),
         buyer: partyLine(buyer),
         rows: source.lines.map((line, i) => ({
@@ -191,7 +205,6 @@ export function buildProformaInvoiceTemplateData(
             documentNumber: source.documentNumber,
             issueDate: source.issueDate,
             amountKopecks: source.totalAmount,
-            superseded: source.superseded,
             vatKopecks: vat.kind === 'amount' ? vat.amount : null,
             recipientName: requisites.legalName,
             account: requisites.bankAccount,

@@ -1,10 +1,10 @@
-// Undoes formatDocumentNumber's display-only leading dash if a pasted search term carries it —
-// never an ProformaInvoice `-NN` suffix, which is a real part of the stored number, not cosmetic.
+// Undoes the display-only dash after the first three digits ("100-0000303-01-2" -> "1000000303-01-2").
+// A dash followed by fewer than three digits is a real separator of `<order>-<NN>-<version>` and stays.
 export function documentNumberSearchTerm(search: string): string {
-    return `%${search.replace(/^(\d{3})-/, '$1')}%`;
+    return `%${normalizeDocumentNumber(search)}%`;
 }
 
-// Maps the displayed form ("001-234-01") to the stored one ("001234-01"); stored values pass through.
+// Maps the displayed form to the stored one; stored values pass through.
 export function normalizeDocumentNumber(value: string): string {
-    return value.replace(/^(\d{3})-(?=\d)/, '$1');
+    return value.replace(/^(\d{3})-(?=\d{3})/, '$1');
 }

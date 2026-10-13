@@ -9,12 +9,15 @@ import type { CompleteOrganizationRequisites } from '../../entities/organization
 
 function makeSource(overrides: Partial<ProformaInvoiceSource> = {}): ProformaInvoiceSource {
     return {
-        documentNumber: '1000042-01',
+        documentNumber: '1000042-01-2',
         issueDate: new Date('2026-10-12T10:00:00.000Z'),
         currencyCode: 'RUB',
         totalAmount: 25000,
+        dueDate: new Date('2026-10-15T10:00:00.000Z'),
         version: 1,
-        superseded: false,
+        kind: 'order-placed',
+        salesInvoiceNumber: null,
+        hasNewerVersion: false,
         lines: [
             {
                 quantity: 2,
@@ -76,10 +79,10 @@ describe('proforma payment QR in the print form', () => {
         expect(renderProformaInvoiceHtml(data)).toContain('<div class="qr-box"></div>');
     });
 
-    it('prints no QR for a superseded version', () => {
-        expect(render(makeSource({ superseded: true }), makeRequisites())).toContain(
-            '<div class="qr-box"></div>',
-        );
+    it('still prints the QR for a version that has a newer one: it stays payable', () => {
+        const html = render(makeSource({ hasNewerVersion: true }), makeRequisites());
+        expect(html).not.toContain('<div class="qr-box"></div>');
+        expect(html).toContain('<svg');
     });
 
     it('carries the amount of this version in kopecks and the VAT in the purpose', () => {

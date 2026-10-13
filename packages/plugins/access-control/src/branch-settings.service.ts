@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DEFAULT_PREPAYMENT_RESERVE_DAYS } from 'shared';
+import { DEFAULT_PREPAYMENT_RESERVE_DAYS, DEFAULT_PROFORMA_PAYMENT_TERM_DAYS } from 'shared';
 import {
     GlobalSettingsService,
     Logger,
@@ -20,6 +20,7 @@ export interface BranchSettingsInput {
     enforceMultiplicity?: boolean;
     allowExceedingCreditLimit?: boolean;
     prepaymentReserveDays?: number;
+    proformaPaymentTermDays?: number;
 }
 
 // CRUD + fallback resolution for issue #66's per-branch business settings. Never a source of
@@ -50,6 +51,8 @@ export class BranchSettingsService {
                 input.allowExceedingCreditLimit ?? settings.allowExceedingCreditLimit;
             settings.prepaymentReserveDays =
                 input.prepaymentReserveDays ?? settings.prepaymentReserveDays;
+            settings.proformaPaymentTermDays =
+                input.proformaPaymentTermDays ?? settings.proformaPaymentTermDays;
         } else {
             settings = repo.create({
                 branchId: input.branchId,
@@ -62,6 +65,8 @@ export class BranchSettingsService {
                 allowExceedingCreditLimit: input.allowExceedingCreditLimit ?? false,
                 prepaymentReserveDays:
                     input.prepaymentReserveDays ?? DEFAULT_PREPAYMENT_RESERVE_DAYS,
+                proformaPaymentTermDays:
+                    input.proformaPaymentTermDays ?? DEFAULT_PROFORMA_PAYMENT_TERM_DAYS,
             });
         }
         const saved = await repo.save(settings);

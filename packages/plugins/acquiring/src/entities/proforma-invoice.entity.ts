@@ -2,6 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
+export type ProformaInvoiceKind = 'order-placed' | 'order-changed' | 'by-shipment';
+
 export type ProformaInvoiceStatus = 'pending' | 'issued' | 'paid' | 'cancelled' | 'superseded';
 
 export interface ProformaInvoiceLineSnapshot {
@@ -42,11 +44,7 @@ export class ProformaInvoice extends UuidEntity {
     @Column({ type: 'int' })
     orderId!: number;
 
-    // `<order number>-NN` (NumberingService.formatOrderDocumentNumber, see
-    // ProformaInvoiceIssuingService.issueForOrder) — reusing Order.code directly here would give every
-    // proforma invoice split off one order the same visible identity as that order, indistinguishable from
-    // it in a shared list. `orderId` (below) is the real, queryable link
-    // back to the order; this column is ProformaInvoice's own identity, not a derived alias of Order's.
+    // `<order number>-<NN>-<version>`: `<order number>-<NN>` is the stable document id per (order, organization).
     @Index()
     @Column({ type: 'varchar' })
     number!: string;
@@ -82,7 +80,7 @@ export class ProformaInvoice extends UuidEntity {
     @Column({ type: 'jsonb', default: () => "'[]'" })
     lines!: ProformaInvoiceLineSnapshot[];
 
-    // 1, 2, ...: a new version is a new document with its own number; the older unpaid one becomes `superseded`.
+    // 1, 2, ...: a new version keeps the document id and bumps the last number part; the older one becomes `superseded`.
     @Column({ type: 'int', default: 1 })
     version!: number;
 
@@ -91,4 +89,17 @@ export class ProformaInvoice extends UuidEntity {
 
     @Column({ type: 'int', nullable: true })
     supersededById!: number | null;
+
+    @Column({ type: 'timestamptz', default: () => 'now()' })
+    issuedAt!: Date;
+
+    @Column({ type: 'timestamptz', default: () => 'now()' })
+    dueDate!: Date;
+
+    @Column({ type: 'varchar', default: 'order-placed' })
+    kind!: ProformaInvoiceKind;
+
+    // Set only on a "by shipment" version: the ERP sales invoice (realization) it is based on.
+    @Column({ type: 'varchar', nullable: true })
+    salesInvoiceNumber!: string | null;
 }

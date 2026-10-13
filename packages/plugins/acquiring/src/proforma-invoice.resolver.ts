@@ -13,6 +13,8 @@ import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
+import { displayStatusOf } from './proforma-invoice-display';
+import { ProformaInvoiceWithdrawService } from './proforma-invoice-withdraw.service';
 import { ProformaInvoiceService, ProformaInvoiceListOptions } from './proforma-invoice.service';
 import { ProformaInvoiceIssuingService } from './proforma-invoice-issuing.service';
 import { PaymentAttemptService, PayProformaInvoiceOutcome } from './payment-attempt.service';
@@ -26,7 +28,23 @@ export class ProformaInvoiceAdminResolver {
         private proformaInvoiceService: ProformaInvoiceService,
         private paymentInboxProcessorService: PaymentInboxProcessorService,
         private orderVisibility: OrderVisibilityService,
+        private withdrawService: ProformaInvoiceWithdrawService,
     ) {}
+
+    @Mutation()
+    @Allow(Permission.UpdateOrder)
+    async withdrawProformaInvoice(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string },
+    ): Promise<ProformaInvoice> {
+        const invoice = await this.proformaInvoiceService.findOne(ctx, Number(args.id));
+        const qb = await this.orderVisibility.buildVisibleOrdersQuery(ctx);
+        const visible = invoice
+            ? await qb.andWhere(`${qb.alias}.id = :orderId`, { orderId: invoice.orderId }).getOne()
+            : null;
+        if (!invoice || !visible) throw new ForbiddenError();
+        return this.withdrawService.withdraw(ctx, Number(invoice.id));
+    }
 
     @Query()
     @Allow(Permission.ReadOrder)
@@ -155,6 +173,11 @@ export class ProformaInvoiceFieldResolver {
             unitPriceWithTax: line.unitPriceWithTax,
             linePriceWithTax: line.linePriceWithTax,
         }));
+    }
+
+    @ResolveField()
+    displayStatus(@Parent() proformaInvoice: ProformaInvoice): string {
+        return displayStatusOf(proformaInvoice.status);
     }
 
     @ResolveField()

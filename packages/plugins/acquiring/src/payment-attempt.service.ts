@@ -170,17 +170,12 @@ export class PaymentAttemptService {
                 proformaInvoice.currencyCode,
             );
         }
-        // A direct "pay now" never pays a dead version; an ERP-reported fact is money already received
+        // A direct "pay now" never pays a cancelled document (a superseded version stays payable); an ERP-reported fact is money already received
         // and is applied by allocate (current version of the chain, else FIFO, else advance).
         if (expectedOrganizationId === undefined) {
             if (proformaInvoice.status === 'cancelled') {
                 throw new UserInputError(
                     `ProformaInvoice ${proformaInvoiceId} is cancelled and cannot be paid`,
-                );
-            }
-            if (proformaInvoice.status === 'superseded') {
-                throw new UserInputError(
-                    `ProformaInvoice ${proformaInvoice.number} was replaced by a newer version and cannot be paid`,
                 );
             }
         }

@@ -214,12 +214,15 @@ export class PdfGeneratorService implements OnModuleInit {
                 proformaInvoice.lines.map(line => line.variantId),
             );
             source = {
-                documentNumber: document.number,
-                issueDate: document.issueDate,
+                documentNumber: proformaInvoice.number,
+                issueDate: proformaInvoice.issuedAt,
+                dueDate: proformaInvoice.dueDate,
                 currencyCode: proformaInvoice.currencyCode,
                 totalAmount: proformaInvoice.amount,
                 version: proformaInvoice.version,
-                superseded: proformaInvoice.status === 'superseded',
+                kind: proformaInvoice.kind,
+                salesInvoiceNumber: proformaInvoice.salesInvoiceNumber,
+                hasNewerVersion: proformaInvoice.status === 'superseded',
                 lines: proformaInvoice.lines.map(line => ({
                     quantity: line.quantity,
                     unitPriceWithTax: line.unitPriceWithTax,
@@ -261,8 +264,11 @@ export class PdfGeneratorService implements OnModuleInit {
                 issueDate: new Date(order.orderPlacedAt ?? order.createdAt),
                 currencyCode: order.currencyCode,
                 totalAmount: order.totalWithTax,
+                dueDate: null,
                 version: 1,
-                superseded: false,
+                kind: 'order-placed',
+                salesInvoiceNumber: null,
+                hasNewerVersion: false,
                 lines: order.lines.map(line => ({
                     quantity: line.quantity,
                     unitPriceWithTax: line.unitPriceWithTax,

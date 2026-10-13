@@ -218,6 +218,7 @@ export class AccessControlResolver {
             enforceMultiplicity?: boolean;
             allowExceedingCreditLimit?: boolean;
             prepaymentReserveDays?: number;
+            proformaPaymentTermDays?: number;
         },
     ): Promise<BranchSettings> {
         return this.branchSettingsService.upsert(ctx, {
@@ -230,6 +231,7 @@ export class AccessControlResolver {
             enforceMultiplicity: args.enforceMultiplicity,
             allowExceedingCreditLimit: args.allowExceedingCreditLimit,
             prepaymentReserveDays: args.prepaymentReserveDays,
+            proformaPaymentTermDays: args.proformaPaymentTermDays,
         });
     }
 

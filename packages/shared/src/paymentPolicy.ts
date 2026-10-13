@@ -1,4 +1,5 @@
 export const DEFAULT_PREPAYMENT_RESERVE_DAYS = 3;
+export const DEFAULT_PROFORMA_PAYMENT_TERM_DAYS = 3;
 
 export const PLACEMENT_KEY = 'placement' as const;
 export const CREDIT_ACKNOWLEDGED_KEY = 'creditLimitAcknowledged' as const;

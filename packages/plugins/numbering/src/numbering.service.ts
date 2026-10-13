@@ -21,7 +21,7 @@ export class NumberingService {
         return `${this.options.instanceNumberCode}${String(seqValue).padStart(7, '0')}`;
     }
 
-    formatOrderDocumentNumber(orderNumber: string, ordinal: number): string {
-        return `${orderNumber}-${String(ordinal).padStart(2, '0')}`;
+    formatOrderDocumentNumber(orderNumber: string, ordinal: number, version: number): string {
+        return `${orderNumber}-${String(ordinal).padStart(2, '0')}-${version}`;
     }
 }

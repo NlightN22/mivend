@@ -8,11 +8,13 @@ import {
     TranslatorService,
     UserInputError,
 } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { DEFAULT_PROFORMA_PAYMENT_TERM_DAYS, withAggregateLock } from 'shared';
+import { BranchSettingsService } from '@mivend/plugin-access-control';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { NumberingService } from '@mivend/plugin-numbering';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
+import { addDays, parseProformaNumber } from './proforma-invoice-number';
 import { ProformaInvoiceIssuedEvent } from './proforma-invoice-issued.event';
 import {
     OrganizationContent,
@@ -33,9 +35,13 @@ export interface IssueResult {
 const PRE_PLACED_STATES = ['Created', 'AddingItems', 'ArrangingPayment', 'Draft'];
 const UNPAID = ['pending', 'issued'];
 
-// Numbers are `<order number>-NN`; the next ordinal follows the highest one used, not the row count.
+// A new organization takes the next ordinal after the highest one used, not the row count.
+function ordinalOf(row: ProformaInvoice): number {
+    return parseProformaNumber(row.number)?.ordinal ?? 0;
+}
+
 function maxOrdinal(rows: ProformaInvoice[]): number {
-    return rows.reduce((max, r) => Math.max(max, Number(/-(\d+)$/.exec(r.number)?.[1] ?? 0)), 0);
+    return rows.reduce((max, r) => Math.max(max, ordinalOf(r)), 0);
 }
 
 // Issues and versions proforma invoices for an order: one current snapshot per organization,
@@ -49,6 +55,7 @@ export class ProformaInvoiceIssuingService {
         private translator: TranslatorService,
         private numberingService: NumberingService,
         private eventBus: EventBus,
+        private branchSettingsService: BranchSettingsService,
     ) {}
 
     async issueForOrder(
@@ -124,11 +131,15 @@ export class ProformaInvoiceIssuingService {
         const created: ProformaInvoice[] = [];
         let ordinal = maxOrdinal(existing);
         let owner: { counterpartyId: number; branchId: string | null } | undefined;
+        let termDays: number | undefined;
         for (const group of content) {
             const head = heads.get(group.organizationId);
             if (decideVersion(head, group, order.currencyCode) !== 'create') continue;
             owner ??= await this.resolveOwner(ctx, order);
-            ordinal += 1;
+            termDays ??= await this.paymentTermDays(ctx, owner.branchId);
+            const documentOrdinal = head ? ordinalOf(head) : (ordinal += 1);
+            const version = head ? head.version + 1 : 1;
+            const issuedAt = new Date();
             const next = await repo.save(
                 repo.create({
                     orderId: Number(order.id),
@@ -142,9 +153,16 @@ export class ProformaInvoiceIssuingService {
                         head && UNPAID.includes(head.status)
                             ? head.status
                             : (options.initialStatus ?? 'pending'),
-                    version: head ? head.version + 1 : 1,
+                    version,
+                    kind: head ? 'order-changed' : 'order-placed',
+                    issuedAt,
+                    dueDate: addDays(issuedAt, termDays),
                     supersedesId: head ? Number(head.id) : null,
-                    number: this.numberingService.formatOrderDocumentNumber(order.code, ordinal),
+                    number: this.numberingService.formatOrderDocumentNumber(
+                        order.code,
+                        documentOrdinal,
+                        version,
+                    ),
                 }),
             );
             if (head && UNPAID.includes(head.status)) {
@@ -171,6 +189,12 @@ export class ProformaInvoiceIssuingService {
             current: current.filter(i => i.status !== 'superseded'),
             created,
         };
+    }
+
+    // Branch setting of the order's servicing branch, falling back to the default branch's, then the constant.
+    private async paymentTermDays(ctx: RequestContext, branchId: string | null): Promise<number> {
+        const settings = await this.branchSettingsService.resolveEffective(ctx, branchId);
+        return settings?.proformaPaymentTermDays ?? DEFAULT_PROFORMA_PAYMENT_TERM_DAYS;
     }
 
     private contentFor(order: Order): OrganizationContent[] {

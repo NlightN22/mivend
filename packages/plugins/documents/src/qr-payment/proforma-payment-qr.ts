@@ -5,7 +5,6 @@ export interface ProformaQrSource {
     documentNumber: string;
     issueDate: Date;
     amountKopecks: number;
-    superseded: boolean;
     vatKopecks: number | null;
     recipientName: string;
     account: string;
@@ -27,7 +26,6 @@ function formatDate(date: Date): string {
 }
 
 export function buildProformaPaymentQr(source: ProformaQrSource): ProformaPaymentQr {
-    if (source.superseded) return { payload: null, problems: [] };
     const vat =
         source.vatKopecks === null ? '' : `, в т.ч. НДС ${formatMoneyRu(source.vatKopecks)}`;
     const result = buildPaymentQrPayload({

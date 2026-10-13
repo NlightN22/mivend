@@ -27,12 +27,17 @@ class TestProformaInvoice {
     @Column({ type: 'int', default: 1 }) version!: number;
     @Column({ type: 'int', nullable: true }) supersedesId!: number | null;
     @Column({ type: 'int', nullable: true }) supersededById!: number | null;
+    @Column({ type: 'timestamptz', default: () => 'now()' }) issuedAt!: Date;
+    @Column({ type: 'timestamptz', default: () => 'now()' }) dueDate!: Date;
+    @Column({ type: 'varchar', default: 'order-placed' }) kind!: string;
+    @Column({ type: 'varchar', nullable: true }) salesInvoiceNumber!: string | null;
 }
 
 let dataSource: DataSource;
 let issuing: ProformaInvoiceIssuingService;
 let published: unknown[];
 let orderLines: unknown[];
+let termDays = 3;
 let orderState: { state: string; active: boolean };
 const { schema, extra } = testSchemaOptions('proformaInvoice_versions');
 
@@ -99,16 +104,18 @@ beforeAll(async () => {
         } as never,
         { translate: (entity: unknown) => entity } as never,
         {
-            formatOrderDocumentNumber: (orderNumber: string, ordinal: number) =>
-                `${orderNumber}-${String(ordinal).padStart(2, '0')}`,
+            formatOrderDocumentNumber: (orderNumber: string, ordinal: number, version: number) =>
+                `${orderNumber}-${String(ordinal).padStart(2, '0')}-${version}`,
         } as never,
         { publish: vi.fn(async (event: unknown) => published.push(event)) } as never,
+        { resolveEffective: async () => ({ proformaPaymentTermDays: termDays }) } as never,
     );
 });
 
 beforeEach(async () => {
     await dataSource.getRepository(TestProformaInvoice).clear();
     published = [];
+    termDays = 3;
     orderState = { state: 'PaymentAuthorized', active: false };
     orderLines = [orderLine(1, 1, 1000), orderLine(2, 2, 500)];
 });
@@ -128,10 +135,10 @@ describe('ProformaInvoiceIssuingService versions (real Postgres)', () => {
 
         expect(second.created).toHaveLength(0);
         expect(second.current.map(i => i.id)).toEqual(first.current.map(i => i.id));
-        expect((await rows()).map(r => r.number)).toEqual(['1000007-01', '1000007-02']);
+        expect((await rows()).map(r => r.number)).toEqual(['1000007-01-1', '1000007-02-1']);
     });
 
-    it('creates a new version with its own number and supersedes the unpaid one', async () => {
+    it('creates a new version keeping the document id (order-NN) and supersedes the unpaid one', async () => {
         await issuing.issueForOrder(ctx, 7, { initialStatus: 'issued' });
         orderLines = [orderLine(1, 1, 1000, 3), orderLine(2, 2, 500)];
 
@@ -141,14 +148,15 @@ describe('ProformaInvoiceIssuingService versions (real Postgres)', () => {
         expect(result.created).toHaveLength(1);
         const [v1, , v2] = all;
         expect(v2).toMatchObject({
-            number: '1000007-03',
+            number: '1000007-01-2',
             version: 2,
+            kind: 'order-changed',
             amount: 3000,
             status: 'issued',
             supersedesId: v1.id,
         });
         expect(v1).toMatchObject({ status: 'superseded', supersededById: v2.id, amount: 1000 });
-        expect(result.current.map(i => i.number)).toEqual(['1000007-02', '1000007-03']);
+        expect(result.current.map(i => i.number)).toEqual(['1000007-01-2', '1000007-02-1']);
     });
 
     it('keeps a paid snapshot untouched and reports the difference', async () => {
@@ -223,7 +231,7 @@ describe('ProformaInvoiceIssuingService versions (real Postgres)', () => {
 });
 
 describe('head selection and numbering (real Postgres)', () => {
-    it('issues a new document when a removed organization returns with the same content', async () => {
+    it('issues a new version of the same document when a removed organization returns', async () => {
         await issuing.issueForOrder(ctx, 7, { initialStatus: 'issued' });
         orderLines = [orderLine(1, 1, 1000)];
         await issuing.issueForOrder(ctx, 7);
@@ -237,21 +245,59 @@ describe('head selection and numbering (real Postgres)', () => {
             [2, 'issued'],
         ]);
         expect(result.current.filter(i => i.organizationId === 2)).toHaveLength(2);
-        expect(result.created[0].number).toBe('1000007-03');
+        expect(result.created[0].number).toBe('1000007-02-2');
     });
 
     it('picks the highest version, then the highest id, among non-superseded rows', async () => {
         const repo = dataSource.getRepository(TestProformaInvoice);
         const base = { orderId: 7, organizationId: 1, counterpartyId: 42, currencyCode: 'RUB' };
         await repo.save([
-            { ...base, amount: 1, status: 'issued', version: 2, number: '1000007-05' },
-            { ...base, amount: 1, status: 'issued', version: 1, number: '1000007-01' },
+            { ...base, amount: 1, status: 'issued', version: 2, number: '1000007-05-2' },
+            { ...base, amount: 1, status: 'issued', version: 1, number: '1000007-05-1' },
         ]);
         orderLines = [orderLine(1, 1, 1000)];
 
         const result = await issuing.issueForOrder(ctx, 7);
 
-        expect(result.created[0]).toMatchObject({ version: 3, number: '1000007-06' });
+        expect(result.created[0]).toMatchObject({ version: 3, number: '1000007-05-3' });
+    });
+});
+
+describe('document id, dates and kind (real Postgres)', () => {
+    it('gives a new organization the next ordinal and keeps v1 numbers stable across versions', async () => {
+        orderLines = [orderLine(1, 1, 1000)];
+        await issuing.issueForOrder(ctx, 7);
+        orderLines = [orderLine(1, 1, 1000, 2)];
+        await issuing.issueForOrder(ctx, 7);
+        orderLines = [orderLine(1, 1, 1000, 2), orderLine(2, 2, 500)];
+        await issuing.issueForOrder(ctx, 7);
+        orderLines = [orderLine(1, 1, 1000, 3), orderLine(2, 2, 500)];
+        await issuing.issueForOrder(ctx, 7);
+
+        expect((await rows()).map(r => r.number)).toEqual([
+            '1000007-01-1',
+            '1000007-01-2',
+            '1000007-02-1',
+            '1000007-01-3',
+        ]);
+    });
+
+    it('stamps each version with its own issue date, due date from the term, and kind', async () => {
+        termDays = 5;
+        await issuing.issueForOrder(ctx, 7);
+        orderLines = [orderLine(1, 1, 1000, 2), orderLine(2, 2, 500)];
+        termDays = 2;
+        await issuing.issueForOrder(ctx, 7);
+
+        const org1 = (await rows()).filter(r => r.organizationId === 1);
+        const days = (r: TestProformaInvoice) =>
+            Math.round((r.dueDate.getTime() - r.issuedAt.getTime()) / 86_400_000);
+        expect(org1.map(r => [r.kind, days(r)])).toEqual([
+            ['order-placed', 5],
+            ['order-changed', 2],
+        ]);
+        expect(org1[1].issuedAt.getTime()).toBeGreaterThanOrEqual(org1[0].issuedAt.getTime());
+        expect(org1.every(r => r.salesInvoiceNumber === null)).toBe(true);
     });
 });
 

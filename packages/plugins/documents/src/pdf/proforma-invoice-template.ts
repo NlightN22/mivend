@@ -42,8 +42,8 @@ const STYLES = `
     .qr-box svg { width: 26mm; height: 26mm; display: block; margin: 0 auto; }
     h1 { font-size: 15px; margin: 14px 0 4px; padding-bottom: 6px; border-bottom: 2px solid #000; }
     .version { font-size: 11px; margin: 0 0 4px; }
-    .superseded { font-size: 20px; font-weight: 800; color: #b3261e; border: 3px solid #b3261e;
-        display: inline-block; padding: 2px 10px; margin: 4px 0; }
+    .due, .newer { font-size: 11px; margin: 0 0 4px; }
+    .newer { color: #555; }
     .parties td { padding: 3px 0; }
     .parties .role { width: 34mm; padding-right: 6px; }
     .parties .who { font-weight: 700; }
@@ -170,8 +170,9 @@ export function renderProformaInvoiceHtml(data: ProformaInvoiceTemplateData): st
         <p class="notice">${esc(data.notice)}</p>
         ${renderBank(data.bank, data.paymentQr.payload)}
         <h1>${esc(data.title)}</h1>
-        ${data.versionLabel ? `<p class="version">${data.versionLabel}</p>` : ''}
-        ${data.superseded ? '<div class="superseded">Заменён, не действителен</div>' : ''}
+        ${data.dueLine ? `<p class="due">${esc(data.dueLine)}</p>` : ''}
+        ${data.versionLabel ? `<p class="version">${esc(data.versionLabel)}</p>` : ''}
+        ${data.newerVersionNote ? `<p class="newer">${esc(data.newerVersionNote)}</p>` : ''}
         <table class="parties">
             ${party('Поставщик:', data.supplier)}
             ${party('Грузоотправитель:', data.supplier)}

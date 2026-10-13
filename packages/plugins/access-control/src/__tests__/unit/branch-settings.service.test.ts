@@ -104,6 +104,24 @@ describe('BranchSettingsService', () => {
         );
     });
 
+    it('defaults proformaPaymentTermDays to 3 and keeps the stored value when an update omits it', async () => {
+        repo.findOne.mockResolvedValue(null);
+        const base = {
+            branchId: 'branch-1',
+            defaultPriceTypeId: 'pt-1',
+            defaultWarehouseId: 'wh-1',
+        };
+        await service.upsert(ctx, base);
+        expect(repo.create).toHaveBeenLastCalledWith(
+            expect.objectContaining({ proformaPaymentTermDays: 3 }),
+        );
+        repo.findOne.mockResolvedValue({ branchId: 'branch-1', proformaPaymentTermDays: 7 });
+        await service.upsert(ctx, base);
+        expect(repo.save).toHaveBeenLastCalledWith(
+            expect.objectContaining({ proformaPaymentTermDays: 7 }),
+        );
+    });
+
     it('persists an explicit packagesOnly: true', async () => {
         repo.findOne.mockResolvedValue(null);
         await service.upsert(ctx, {

@@ -293,7 +293,7 @@ export class DocumentsService {
             orderId: String(proformaInvoice.orderId),
             proformaInvoiceId: String(proformaInvoice.id),
             number: proformaInvoice.number,
-            issueDate: new Date(),
+            issueDate: proformaInvoice.issuedAt,
             amount: proformaInvoice.amount,
             currencyCode: proformaInvoice.currencyCode,
             status: 'pending' as const,

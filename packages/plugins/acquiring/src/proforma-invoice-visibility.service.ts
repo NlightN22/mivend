@@ -6,6 +6,7 @@ import { Counterparty } from '@mivend/plugin-counterparty';
 import { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
+import { applyStatusFilter } from './proforma-invoice-display';
 import { ProformaInvoiceListOptions } from './proforma-invoice.service';
 
 // Row-level visibility for the manager portal's proforma invoice list — mirrors
@@ -140,7 +141,7 @@ export class ProformaInvoiceVisibilityService {
                 'counterparty.id::text = proformaInvoice."counterpartyId"::text',
             );
         if (options?.status) {
-            qb.andWhere('proformaInvoice.status = :status', { status: options.status });
+            applyStatusFilter(qb, 'proformaInvoice', options.status);
         }
         if (options?.search) {
             qb.andWhere('proformaInvoice.number ILIKE :search', {

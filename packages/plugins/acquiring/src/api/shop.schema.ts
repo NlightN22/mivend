@@ -45,6 +45,16 @@ export const shopApiExtensions: DocumentNode = gql`
         amount: Int!
         currencyCode: String!
         status: String!
+        "When this version was issued; each version has its own date."
+        issuedAt: DateTime!
+        "Pay-by date of this version: issue date plus the branch's payment term."
+        dueDate: DateTime!
+        "order-placed | order-changed | by-shipment"
+        kind: String!
+        "ERP sales invoice (realization) number; set only on a by-shipment version."
+        salesInvoiceNumber: String
+        "User-facing status: current | superseded | cancelled. Never 'paid': payment is shown at order level."
+        displayStatus: String!
         lines: [ProformaInvoiceLine!]!
         order: ProformaInvoiceOrder!
     }

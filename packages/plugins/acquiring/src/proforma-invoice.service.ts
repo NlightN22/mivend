@@ -3,6 +3,7 @@ import { ID } from '@vendure/common/lib/shared-types';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { documentNumberSearchTerm } from 'shared';
 
+import { applyStatusFilter } from './proforma-invoice-display';
 import { ProformaInvoice, ProformaInvoiceStatus } from './entities/proforma-invoice.entity';
 
 export interface ProformaInvoiceListOptions {
@@ -82,7 +83,7 @@ export class ProformaInvoiceService {
             .skip(skip);
 
         if (options?.status) {
-            qb.andWhere('proformaInvoice.status = :status', { status: options.status });
+            applyStatusFilter(qb, 'proformaInvoice', options.status);
         }
         if (options?.search) {
             qb.andWhere('proformaInvoice.number ILIKE :search', {

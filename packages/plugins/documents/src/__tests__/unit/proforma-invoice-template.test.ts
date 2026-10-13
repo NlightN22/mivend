@@ -13,8 +13,11 @@ function makeSource(overrides: Partial<ProformaInvoiceSource> = {}): ProformaInv
         issueDate: new Date('2026-10-12T10:00:00.000Z'),
         currencyCode: 'RUB',
         totalAmount: 25000,
+        dueDate: new Date('2026-10-15T10:00:00.000Z'),
         version: 1,
-        superseded: false,
+        kind: 'order-placed',
+        salesInvoiceNumber: null,
+        hasNewerVersion: false,
         lines: [
             {
                 quantity: 2,
@@ -279,11 +282,21 @@ describe('renderProformaInvoiceHtml', () => {
         expect(html).toContain('Director');
     });
 
-    it('marks superseded versions and shows the version line and VAT', () => {
-        const html = render(makeSource({ version: 2, superseded: true }));
+    it('shows the version line and VAT, and only a neutral note when a newer version exists', () => {
+        const html = render(makeSource({ version: 2, hasNewerVersion: true }));
         expect(html).toContain('Версия 2');
-        expect(html).toContain('Заменён, не действителен');
+        expect(html).toContain('Есть более новая версия');
+        expect(html).not.toContain('не действителен');
         expect(html).toContain('В том числе НДС');
+    });
+
+    it('prints the due date under the title and the shipment basis when present', () => {
+        const html = render(
+            makeSource({ kind: 'by-shipment', salesInvoiceNumber: 'R-77', version: 3 }),
+        );
+        expect(html).toContain('Срок оплаты до 15 октября 2026 г.');
+        expect(html).toContain('по отгрузке (реализация № R-77)');
+        expect(render(makeSource({ dueDate: null }))).not.toContain('Срок оплаты');
     });
 
     it('renders discount columns only when a discount exists', () => {

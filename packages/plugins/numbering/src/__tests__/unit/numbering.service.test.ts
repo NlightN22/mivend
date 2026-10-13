@@ -31,9 +31,9 @@ describe('NumberingService', () => {
         expect(number).toBe('10012345678');
     });
 
-    it('formats order document numbers with zero-padded ordinal', () => {
+    it('formats order document numbers with zero-padded ordinal and the version', () => {
         const service = makeService([]);
-        expect(service.formatOrderDocumentNumber('1000000012', 1)).toBe('1000000012-01');
-        expect(service.formatOrderDocumentNumber('1000000012', 15)).toBe('1000000012-15');
+        expect(service.formatOrderDocumentNumber('1000000012', 1, 1)).toBe('1000000012-01-1');
+        expect(service.formatOrderDocumentNumber('1000000012', 15, 12)).toBe('1000000012-15-12');
     });
 });

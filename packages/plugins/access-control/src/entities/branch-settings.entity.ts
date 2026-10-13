@@ -46,4 +46,8 @@ export class BranchSettings extends VendureEntity {
     // #222: how long a prepayment (no limit) order holds its reserve before the standard auto-cancel.
     @Column({ type: 'int', default: 3 })
     prepaymentReserveDays!: number;
+
+    // #206: payment term of each proforma invoice version, in days after its issue date.
+    @Column({ type: 'int', default: 3 })
+    proformaPaymentTermDays!: number;
 }

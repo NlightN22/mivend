@@ -100,7 +100,6 @@ describe('buildProformaPaymentQr', () => {
         documentNumber: '1000042-01',
         issueDate: new Date('2026-10-05T10:00:00Z'),
         amountKopecks: 25000,
-        superseded: false,
         vatKopecks: 4166,
         recipientName: 'Example Supplier LLC',
         account: '40702000000000000000',
@@ -130,11 +129,9 @@ describe('buildProformaPaymentQr', () => {
         expect(qr).toEqual({ payload: null, problems: ['correspAcc: missing'] });
     });
 
-    it('never builds a QR for a superseded version', () => {
-        expect(buildProformaPaymentQr({ ...source, superseded: true })).toEqual({
-            payload: null,
-            problems: [],
-        });
+    it('puts the full versioned number into the purpose', () => {
+        const qr = buildProformaPaymentQr({ ...source, documentNumber: '1000042-01-2' });
+        expect(qr.payload).toContain('Оплата по счету № 1000042-01-2 от 05.10.2026');
     });
 });
 

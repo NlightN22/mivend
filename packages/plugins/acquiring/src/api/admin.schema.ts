@@ -44,6 +44,16 @@ export const adminApiExtensions: DocumentNode = gql`
         amount: Int!
         currencyCode: String!
         status: String!
+        "When this version was issued; each version has its own date."
+        issuedAt: DateTime!
+        "Pay-by date of this version: issue date plus the branch's payment term."
+        dueDate: DateTime!
+        "order-placed | order-changed | by-shipment"
+        kind: String!
+        "ERP sales invoice (realization) number; set only on a by-shipment version."
+        salesInvoiceNumber: String
+        "User-facing status: current | superseded | cancelled. Never 'paid': payment is shown at order level."
+        displayStatus: String!
         branchId: ID
         "Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: ProformaInvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page)."
         order: ProformaInvoiceOrder!
@@ -192,6 +202,8 @@ export const adminApiExtensions: DocumentNode = gql`
     }
 
     extend type Mutation {
+        "Withdraws the current proforma invoice of an organization without a replacement (status cancelled)."
+        withdrawProformaInvoice(id: ID!): ProformaInvoice!
         "Manually runs one payment inbox sweep immediately, instead of waiting for the periodic worker. Ops/test visibility only — does not change the async processing contract (the external-integration-rules skill): this still goes through the same InboxService.claimBatch/PaymentInboxProcessorService path the timer uses, it just runs it on demand."
         triggerPaymentInboxSweep: PaymentInboxSweepResult!
         "Records a real PaymentRefund row (the external-integration-rules skill: a refund is its own entity, never a negative payment record), modeled on Robokassa's RefundOperation API — providerRefundId mirrors Robokassa's OpKey."

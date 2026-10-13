@@ -60,6 +60,7 @@ import { shopApiExtensions } from './api/shop.schema';
 import { VariantOrganizationHealthResolver } from './variant-organization-health.resolver';
 import { VariantOrganizationHealthService } from './variant-organization-health.service';
 import { ProductVariantAvailabilityResolver } from './variant-availability.resolver';
+import { ProformaInvoiceWithdrawService } from './proforma-invoice-withdraw.service';
 import { ACQUIRING_PLUGIN_OPTIONS } from './types';
 import type { AcquiringPluginOptions } from './types';
 
@@ -88,6 +89,7 @@ import type { AcquiringPluginOptions } from './types';
         InboxService,
         ProformaInvoiceService,
         ProformaInvoiceIssuingService,
+        ProformaInvoiceWithdrawService,
         PaymentAttemptService,
         SettlementEntryService,
         PaymentInboxProcessorService,

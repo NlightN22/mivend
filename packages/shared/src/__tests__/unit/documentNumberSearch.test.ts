@@ -10,6 +10,16 @@ describe('documentNumberSearchTerm', () => {
         expect(documentNumberSearchTerm('100-0000002-01')).toBe('%1000000002-01%');
     });
 
+    it('accepts the versioned proforma number in display and stored form', () => {
+        expect(documentNumberSearchTerm('100-0000303-01-2')).toBe('%1000000303-01-2%');
+        expect(documentNumberSearchTerm('1000000303-01-2')).toBe('%1000000303-01-2%');
+    });
+
+    it('keeps a partial number whose first group is followed by a short group', () => {
+        expect(documentNumberSearchTerm('303-01-1')).toBe('%303-01-1%');
+        expect(documentNumberSearchTerm('-01-2')).toBe('%-01-2%');
+    });
+
     it('leaves a plain digits-only search unchanged', () => {
         expect(documentNumberSearchTerm('1000000002')).toBe('%1000000002%');
     });
@@ -22,7 +32,7 @@ describe('documentNumberSearchTerm', () => {
 
 describe('normalizeDocumentNumber', () => {
     it('maps the displayed form to the stored one and leaves stored values alone', () => {
-        expect(normalizeDocumentNumber('001-234-01')).toBe('001234-01');
+        expect(normalizeDocumentNumber('001-2345-01-1')).toBe('0012345-01-1');
         expect(normalizeDocumentNumber('001234-01')).toBe('001234-01');
         expect(normalizeDocumentNumber('1042-01')).toBe('1042-01');
     });
