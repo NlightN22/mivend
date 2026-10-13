@@ -346,6 +346,18 @@ everything else. See `ProductRecordDto.multiplicity`'s Swagger description
 given to the ERP's integrators — that description is the source of truth for the ERP side, keep it
 in sync with this paragraph if either changes.
 
+### Fractional quantities: sell in a small base unit
+
+Vendure stores `OrderLine.quantity` as an integer and the core cannot be changed, so mivend never stores a
+fractional quantity. Goods sold by measure (draught liquids in millilitres, weight, length) are modelled with a
+base unit small enough that every sellable amount is whole: millilitres, grams, millimetres. Price is per base
+unit; the variant, stock, reservations and the order line are all in that unit.
+
+- The ERP's own unit (litre, kilogram) is shown through its ratio to the base (`ratioToBase`); a quantity arriving
+  in the ERP unit is converted to base units and rounded only if the result is not whole.
+- Choose the base unit in the ERP when the product is created: a base unit too coarse for the smallest sellable
+  amount cannot be fixed by mivend.
+
 ### Order weight/volume and branch-conditional packaging (mivend#103)
 
 Decided architecture, not yet implemented. Two ERP-sourced facts drive this, both confirmed live
