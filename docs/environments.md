@@ -389,6 +389,21 @@ rejected). Changing it logs everybody out exactly once.
 The plain rename migrations (#223) do not rename FK/PK/index hash names, so `migration:run` on a
 non-synchronize database drifts those names from entity-derived ones. Accepted: there is no production database yet.
 
+## ERP REST callbacks are a test tool, not an integration channel
+
+`POST /erp/callback/payment`, `POST /erp/callback/order-status`, `GET /erp/orders/:code/status` and
+`GET /erp/kafka-status` exist only to simulate ERP pushes in the local contour and in e2e/seed scripts.
+
+- Nobody real calls them: the real exchange with the ERP is Kafka through the Integration Service
+  (orders, settlement documents, balances). Real payments will arrive on a future Kafka stream (#195),
+  not here.
+- They are off by default (`ERP_CALLBACK_ENABLED`) and need `ERP_CALLBACK_API_KEY` when on; never enable
+  them on staging-integration or production.
+- The payment callback models a standard payment fact: required `proformaInvoiceUuid`, the payment's own
+  `amount` and `currencyCode`, organization, outcome and `erpEventId` (idempotency key). A payment with no
+  document reference is NOT supported here; that case (FIFO allocation) belongs to the real stream.
+- Do not extend them with new business behaviour or contracts: put that on the Kafka contracts instead.
+
 ## REST/dev-surface flags
 
 Policy: every non-GraphQL REST endpoint and dev surface is **closed by default** behind an explicit
