@@ -147,6 +147,7 @@ export class ExternalOrderService {
                 ? {}
                 : { erpRegistrationDocumentNumber: input.documentNumber }),
             ...(input.contractId === null ? {} : { erpContractId: input.contractId }),
+            ...(input.paidAmountMinor === null ? {} : { erpPaidAmount: input.paidAmountMinor }),
             ...(nextStatus === null ? {} : { erpStatus: nextStatus, erpStatusAt: new Date() }),
         };
         const totals = computeExternalTotals(input);

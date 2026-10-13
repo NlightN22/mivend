@@ -17,6 +17,7 @@ export interface ExternalOrderInput {
     totalWithTaxMinor: number | null;
     vatTotalMinor: number | null;
     amountIncludesVat: boolean;
+    paidAmountMinor: number | null;
     lines: ExternalOrderLineInput[];
     skippedLineCount: number;
 }

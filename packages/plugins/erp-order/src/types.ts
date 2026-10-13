@@ -44,6 +44,8 @@ declare module '@vendure/core' {
         pendingCounterpartyErpId?: string | null;
         // Set when an external order's event had lines for products not imported yet (skipped).
         externalLinesIncomplete?: boolean;
+        // OrderChanged.paid_amount in minor units: a lower bound, null when the ERP did not compute it.
+        erpPaidAmount?: number | null;
     }
 }
 

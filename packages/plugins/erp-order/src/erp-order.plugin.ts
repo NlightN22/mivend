@@ -87,6 +87,13 @@ const adminApiSchema = gql`
                 public: false,
                 label: [{ languageCode: LanguageCode.en, value: 'Lines incomplete' }],
             },
+            {
+                name: 'erpPaidAmount',
+                type: 'float',
+                nullable: true,
+                readonly: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Paid per ERP (minor units)' }],
+            },
         ];
         config.orderOptions.process = [
             ...(config.orderOptions.process ?? []),

@@ -40,6 +40,8 @@ class TestOrderCustomFields {
     erpRegistrationDocumentNumber!: string | null;
     @Column({ name: 'customFieldsErpcontractid', type: 'varchar', nullable: true })
     erpContractId!: string | null;
+    @Column({ name: 'customFieldsErppaidamount', type: 'float', nullable: true })
+    erpPaidAmount!: number | null;
     @Column({ name: 'customFieldsIsexternal', type: 'boolean', default: false })
     isExternal!: boolean;
     @Column({ name: 'customFieldsCounterpartyid', type: 'varchar', nullable: true })
@@ -373,6 +375,28 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
             const [order] = await orders();
             expect(order.customFields.counterpartyId).not.toBeNull();
             expect(order.customFields.erpRegistrationDocumentNumber).toBe('DOC-1');
+        });
+    });
+
+    describe('paid amount', () => {
+        beforeEach(async () => {
+            await addCounterparty('cp-1');
+        });
+
+        it('stores the paid amount, keeps it when a later event omits it, and refreshes it', async () => {
+            await handler.apply(ctx, ERP_ORDER, payload({ paidAmount: 100.5 }));
+            expect((await orders())[0].customFields.erpPaidAmount).toBe(10050);
+
+            await handler.apply(ctx, ERP_ORDER, payload());
+            expect((await orders())[0].customFields.erpPaidAmount).toBe(10050);
+
+            await handler.apply(ctx, ERP_ORDER, payload({ paidAmount: 250.5 }));
+            expect((await orders())[0].customFields.erpPaidAmount).toBe(25050);
+        });
+
+        it('leaves it null when never reported', async () => {
+            await handler.apply(ctx, ERP_ORDER, payload());
+            expect((await orders())[0].customFields.erpPaidAmount).toBeNull();
         });
     });
 

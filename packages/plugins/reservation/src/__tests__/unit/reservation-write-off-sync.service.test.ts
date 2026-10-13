@@ -1120,6 +1120,25 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         },
     );
 
+    it('writes only the paid amount key when present, never when absent', async () => {
+        const base = {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            status: '',
+            reservedLines: [],
+            contractId: null,
+            derivedStatus: null,
+        };
+        await service.handleOrderChanged(ctx, { ...base, paidAmountMinor: 5000 });
+        await service.handleOrderChanged(ctx, { ...base, paidAmountMinor: null });
+
+        expect(orderRepo.update.mock.calls[0][1].customFields).toEqual({
+            erpOrderStatus: '',
+            erpPaidAmount: 5000,
+        });
+        expect(orderRepo.update.mock.calls[1][1].customFields).toEqual({ erpOrderStatus: '' });
+    });
+
     it('persists contractId when present', async () => {
         await service.handleOrderChanged(ctx, {
             orderUuid: null,

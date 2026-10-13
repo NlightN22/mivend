@@ -41,6 +41,16 @@ describe('buildExternalOrderInput', () => {
             documentNumber: null,
             counterpartyErpId: null,
             amountIncludesVat: true,
+            paidAmountMinor: null,
+        });
+    });
+
+    it('converts paidAmount to minor units, keeping an explicit zero', () => {
+        expect(buildExternalOrderInput('e1', { paidAmount: 120.35 }, null, [])).toMatchObject({
+            paidAmountMinor: 12035,
+        });
+        expect(buildExternalOrderInput('e1', { paidAmount: 0 }, null, [])).toMatchObject({
+            paidAmountMinor: 0,
         });
     });
 

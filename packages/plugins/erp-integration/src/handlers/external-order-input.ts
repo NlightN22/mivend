@@ -20,6 +20,12 @@ function optionalString(value: unknown): string | null {
     return typeof value === 'string' && value !== '' ? value : null;
 }
 
+// OrderChanged.paid_amount is a real `optional double`: null means not computed, never zero.
+export function paidAmountMinor(payload: Record<string, unknown>): number | null {
+    const paid = optionalNumber(payload.paidAmount);
+    return paid === null ? null : toMinor(paid);
+}
+
 // google.protobuf.Timestamp arrives as an RFC3339 string (see promo-rule.handler.ts).
 function parseTimestamp(value: unknown): Date | null {
     if (typeof value !== 'string' || !value) return null;
@@ -59,6 +65,7 @@ export function buildExternalOrderInput(
         totalWithTaxMinor: totalAmount === null ? null : toMinor(totalAmount),
         vatTotalMinor: vatTotal === null ? null : toMinor(vatTotal),
         amountIncludesVat: payload.amountIncludesVat !== false,
+        paidAmountMinor: paidAmountMinor(payload),
         lines: lines.map(externalLine),
         skippedLineCount,
     };

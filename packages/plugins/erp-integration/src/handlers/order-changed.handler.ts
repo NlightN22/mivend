@@ -7,7 +7,7 @@ import { SettlementPendingService } from '@mivend/plugin-settlement';
 import { deriveOrderErpStatus } from '../order-erp-status.derivation';
 import { MissingDependencyError } from '../types';
 import { UnitLookupService } from '../unit-lookup.service';
-import { buildExternalOrderInput } from './external-order-input';
+import { buildExternalOrderInput, paidAmountMinor } from './external-order-input';
 import type { ResolvedOrderLine } from './external-order-input';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
@@ -172,6 +172,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             contractId,
             documentNumber,
             derivedStatus,
+            paidAmountMinor: paidAmountMinor(payload),
         });
         await this.settlementPending.attachOrder(ctx, entityId);
         return linesWithoutProductId > 0

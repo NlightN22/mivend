@@ -74,6 +74,8 @@ export interface OrderChangedInput {
     documentNumber?: string | null;
     // mivend's own status derived from the stream's facts; null when none could be derived.
     derivedStatus: ErpOrderStatus | null;
+    // OrderChanged.paid_amount in minor units; null/absent means not computed and never overwrites.
+    paidAmountMinor?: number | null;
 }
 
 // Bridges company.orders.events.v1.order-registration-result into the local reservation domain
@@ -259,6 +261,9 @@ export class ReservationWriteOffSyncService {
         }
         if (input.documentNumber) {
             customFields.erpRegistrationDocumentNumber = input.documentNumber;
+        }
+        if (input.paidAmountMinor != null) {
+            customFields.erpPaidAmount = input.paidAmountMinor;
         }
         // `repo.update()`, not `.save(order)` — same calculated-getter gotcha as
         // handleOrderRegistrationResult above.

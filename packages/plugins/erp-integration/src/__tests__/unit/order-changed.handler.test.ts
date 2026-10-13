@@ -119,6 +119,7 @@ describe('OrderChangedStreamHandler', () => {
             contractId: null,
             documentNumber: null,
             derivedStatus: null,
+            paidAmountMinor: null,
         });
     });
 
@@ -286,6 +287,7 @@ describe('OrderChangedStreamHandler', () => {
             contractId: null,
             documentNumber: null,
             derivedStatus: null,
+            paidAmountMinor: null,
         });
     });
 
@@ -316,6 +318,7 @@ describe('OrderChangedStreamHandler', () => {
             contractId: null,
             documentNumber: null,
             derivedStatus: null,
+            paidAmountMinor: null,
         });
     });
 
@@ -471,5 +474,28 @@ describe('OrderChangedStreamHandler', () => {
             ctx,
             expect.objectContaining({ orderUuid: null }),
         );
+    });
+
+    describe('paidAmount on a mivend order', () => {
+        const run = async (payload: Record<string, unknown>): Promise<unknown> => {
+            const sync = { handleOrderChanged: vi.fn() };
+            const handler = new OrderChangedStreamHandler(
+                createConnection([]) as never,
+                sync as never,
+                { findByEntityId: vi.fn() } as never,
+                { findByErpOrderId: vi.fn().mockResolvedValue(null), upsert: vi.fn() } as never,
+                { attachOrder: vi.fn() } as never,
+            );
+            await handler.apply(ctx, 'oc-1', { orderUuid: 'u-1', lines: [], ...payload });
+            return sync.handleOrderChanged.mock.calls[0][1];
+        };
+
+        it('passes the paid amount in minor units when present', async () => {
+            expect(await run({ paidAmount: 99.9 })).toMatchObject({ paidAmountMinor: 9990 });
+        });
+
+        it('passes null when the event does not carry it', async () => {
+            expect(await run({})).toMatchObject({ paidAmountMinor: null });
+        });
     });
 });
