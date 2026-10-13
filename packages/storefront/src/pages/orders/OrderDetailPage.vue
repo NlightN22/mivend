@@ -170,6 +170,14 @@ function formatDate(iso: string): string {
                                     )
                                 "
                                 :total="formatAmount(order.totalWithTax, order.currencyCode)"
+                                :overpaid="
+                                    order.customFields.erpPaidAmount > order.totalWithTax
+                                        ? formatAmount(
+                                              order.customFields.erpPaidAmount - order.totalWithTax,
+                                              order.currencyCode,
+                                          )
+                                        : null
+                                "
                             />
                         </div>
 

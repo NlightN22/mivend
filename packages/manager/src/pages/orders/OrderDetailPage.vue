@@ -157,6 +157,11 @@ watch(() => route.params.code, load);
                             v-if="order.customFields.erpPaidAmount != null"
                             :paid="money(order.customFields.erpPaidAmount)"
                             :total="money(order.totalWithTax)"
+                            :overpaid="
+                                order.customFields.erpPaidAmount > order.totalWithTax
+                                    ? money(order.customFields.erpPaidAmount - order.totalWithTax)
+                                    : null
+                            "
                         />
                         <strong>Total: {{ money(order.totalWithTax) }}</strong>
                     </div>

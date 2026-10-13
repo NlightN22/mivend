@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type {
     ErpOrderStatus,
     ExternalOrderInput,
@@ -21,9 +22,21 @@ function optionalString(value: unknown): string | null {
 }
 
 // OrderChanged.paid_amount is a real `optional double`: null means not computed, never zero.
+// The column is int4 (a bigint would need a GraphQL scalar), so a value beyond it is ignored, not stored.
+const INT4_MAX = 2_147_483_647;
+
 export function paidAmountMinor(payload: Record<string, unknown>): number | null {
+    if (payload.paidAmount === undefined || payload.paidAmount === null) return null;
     const paid = optionalNumber(payload.paidAmount);
-    return paid === null ? null : toMinor(paid);
+    const minor = paid === null ? NaN : toMinor(paid);
+    if (!Number.isSafeInteger(minor) || minor < 0 || minor > INT4_MAX) {
+        Logger.warn(
+            `Ignoring unusable paidAmount ${String(payload.paidAmount)}`,
+            'ExternalOrderInput',
+        );
+        return null;
+    }
+    return minor;
 }
 
 // google.protobuf.Timestamp arrives as an RFC3339 string (see promo-rule.handler.ts).

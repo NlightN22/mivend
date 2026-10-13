@@ -54,6 +54,15 @@ describe('buildExternalOrderInput', () => {
         });
     });
 
+    it.each([-5, Number.NaN, Number.POSITIVE_INFINITY, 1e12, 'abc'])(
+        'ignores an unusable paidAmount %s',
+        paidAmount => {
+            expect(buildExternalOrderInput('e1', { paidAmount }, null, [])).toMatchObject({
+                paidAmountMinor: null,
+            });
+        },
+    );
+
     it('reads an explicit zero total and an explicit false includes-VAT flag', () => {
         const input = buildExternalOrderInput(
             'e1',

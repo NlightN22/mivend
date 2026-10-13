@@ -95,6 +95,34 @@ export const PartiallyPaid: Story = {
     }),
 };
 
+export const Overpaid: Story = {
+    loaders: [
+        async () => {
+            registerDefaultMocks();
+            registerMock('OrderDetail', () => ({
+                order: {
+                    id: '1',
+                    code: 'ORD-103',
+                    state: 'PaymentAuthorized',
+                    createdAt: new Date().toISOString(),
+                    totalWithTax: 460000,
+                    subTotalWithTax: 440000,
+                    shippingWithTax: 20000,
+                    currencyCode: 'RUB',
+                    lines: [],
+                    shippingAddress: null,
+                    customFields: { erpStatus: 'CONFIRMED', erpPaidAmount: 500000 },
+                },
+            }));
+            await router.push('/orders/1');
+        },
+    ],
+    render: () => ({
+        components: { OrderDetailPage },
+        template: '<OrderDetailPage />',
+    }),
+};
+
 export const NotFound: Story = {
     loaders: [
         async () => {

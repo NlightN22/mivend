@@ -91,6 +91,19 @@ export const PartiallyPaid: Story = {
     }),
 };
 
+export const Overpaid: Story = {
+    loaders: [
+        async () => {
+            mockOrderDetailData(500000);
+            await router.push('/orders/ORD-101');
+        },
+    ],
+    render: () => ({
+        components: { OrderDetailPage },
+        template: '<OrderDetailPage />',
+    }),
+};
+
 export const NotFound: Story = {
     loaders: [
         async () => {
