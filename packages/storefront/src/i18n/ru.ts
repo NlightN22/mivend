@@ -45,7 +45,6 @@ export default {
             title: 'Заказ {number}',
             actions: 'Действия по заказу',
             itemsCount: 'Количество позиций',
-            itemsValue: '{n} товаров',
             organization: 'Организация',
             pickupPoint: 'Точка выдачи',
             repeat: 'Повторить заказ',

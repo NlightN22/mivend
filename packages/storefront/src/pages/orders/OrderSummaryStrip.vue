@@ -8,13 +8,22 @@ defineProps<{
     pickupPoint: string | null;
 }>();
 const { t } = useI18n();
+
+function productsLabel(n: number): string {
+    const forms = ['товар', 'товара', 'товаров'];
+    const mod100 = n % 100;
+    const mod10 = n % 10;
+    const form =
+        mod100 >= 11 && mod100 <= 14 ? 2 : mod10 === 1 ? 0 : mod10 >= 2 && mod10 <= 4 ? 1 : 2;
+    return `${n} ${forms[form]}`;
+}
 </script>
 
 <template>
     <div class="oss">
         <div class="oss-item">
             <span class="oss-label">{{ t('orders.detail.itemsCount') }}</span>
-            <span class="oss-value">{{ t('orders.detail.itemsValue', { n: count }) }}</span>
+            <span class="oss-value">{{ productsLabel(count) }}</span>
         </div>
         <div class="oss-item">
             <span class="oss-label">{{ t('orders.detail.orderTotal') }}</span>
@@ -44,7 +53,8 @@ const { t } = useI18n();
 }
 .oss-item {
     display: grid;
-    gap: 4px;
+    align-content: start;
+    gap: 6px;
     padding: 14px 18px;
     background: #fff;
 }

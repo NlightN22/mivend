@@ -23,7 +23,7 @@ onMounted(() => void load());
 </script>
 
 <template>
-    <div class="opi-card">
+    <div v-if="proformaInvoices.length || !cancelled" class="opi-card">
         <h2 class="opi-title">{{ t('orders.detail.proforma.title') }}</h2>
         <p v-if="!proformaInvoices.length" class="opi-empty">
             {{ t('orders.detail.proforma.empty') }}

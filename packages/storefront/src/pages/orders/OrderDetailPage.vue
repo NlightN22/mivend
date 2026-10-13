@@ -33,7 +33,7 @@ const { cancelling, refusalReason, failed, canCancel, cancel } = useCancelOrder(
 const pickupPoint = computed(() => {
     const id = order.value?.customFields?.tradingPointId;
     const point = tradingPoints.value.find(p => p.id === id);
-    return point ? [point.name, point.address].filter(Boolean).join(', ') : null;
+    return point?.name ?? null;
 });
 
 async function confirmCancel(): Promise<void> {
@@ -64,98 +64,104 @@ onMounted(() => {
 
             <div v-else-if="!order" class="od-state">{{ t('orders.detail.notFound') }}</div>
 
-            <template v-else>
-                <div class="od-head">
-                    <div>
-                        <h1 class="od-title">
-                            {{
-                                t('orders.detail.title', {
-                                    number: formatDocumentNumber(order.code),
-                                })
-                            }}
-                        </h1>
-                        <div class="od-meta">{{ formatDate(order.createdAt) }}</div>
-                    </div>
-                    <span
-                        class="od-status"
-                        :class="STATUS_VARIANT[order.customFields?.erpStatus ?? 'PENDING']"
-                    >
-                        {{ t(`orders.statusLabel.${order.customFields?.erpStatus ?? 'PENDING'}`) }}
-                    </span>
-                </div>
-
-                <OrderSummaryStrip
-                    :count="order.lines.length"
-                    :total="formatAmount(order.totalWithTax, order.currencyCode)"
-                    :organization="auth.counterparty?.fullName ?? null"
-                    :pickup-point="pickupPoint"
-                />
-
-                <div v-if="refusalReason" class="od-cancel-msg">
-                    {{ t(`orders.cancel.refused.${refusalReason}`) }}
-                </div>
-                <div v-else-if="failed" class="od-cancel-msg">{{ t('orders.cancel.failed') }}</div>
-
-                <MvModal
-                    v-if="confirmOpen"
-                    :title="t('orders.cancel.confirmTitle')"
-                    @close="confirmOpen = false"
-                >
-                    <p>{{ t('orders.cancel.confirmText') }}</p>
-                    <div class="od-cancel">
-                        <MvButton variant="secondary" @click="confirmOpen = false">{{
-                            t('orders.cancel.keep')
-                        }}</MvButton>
-                        <MvButton variant="danger" :loading="cancelling" @click="confirmCancel">{{
-                            t('orders.cancel.confirm')
-                        }}</MvButton>
-                    </div>
-                </MvModal>
-
-                <div class="od-body">
-                    <OrderLinesTable :order="order" />
-
-                    <aside class="od-aside">
-                        <OrderActionsCard
-                            :repeating="repeating"
-                            :can-cancel="canCancel"
-                            @repeat="repeatOrder"
-                            @cancel="confirmOpen = true"
-                        />
-                        <OrderTotalsCard :order="order" />
-                        <OrderProformaInvoices
-                            :order-code="order.code"
-                            :cancelled="order.state === 'Cancelled'"
-                        />
-                        <div
-                            v-if="
-                                order.shippingAddress?.streetLine1 ||
-                                order.shippingAddress?.fullName
-                            "
-                            class="od-address-card"
-                        >
-                            <h2 class="od-section-title">
-                                {{ t('orders.detail.deliveryAddress') }}
-                            </h2>
-                            <div class="od-address-line">{{ order.shippingAddress.fullName }}</div>
-                            <div class="od-address-line">
-                                {{ order.shippingAddress.streetLine1 }}
-                            </div>
-                            <div v-if="order.shippingAddress.streetLine2" class="od-address-line">
-                                {{ order.shippingAddress.streetLine2 }}
-                            </div>
-                            <div class="od-address-line">
+            <div v-else class="od-body">
+                <div class="od-main">
+                    <div class="od-head">
+                        <div>
+                            <h1 class="od-title">
                                 {{
-                                    [order.shippingAddress.city, order.shippingAddress.postalCode]
-                                        .filter(Boolean)
-                                        .join(', ')
+                                    t('orders.detail.title', {
+                                        number: formatDocumentNumber(order.code),
+                                    })
                                 }}
-                            </div>
+                            </h1>
+                            <div class="od-meta">{{ formatDate(order.createdAt) }}</div>
                         </div>
-                        <OrderDocumentCard :order="order" />
-                    </aside>
+                        <span
+                            class="od-status"
+                            :class="STATUS_VARIANT[order.customFields?.erpStatus ?? 'PENDING']"
+                        >
+                            {{
+                                t(
+                                    `orders.statusLabel.${order.customFields?.erpStatus ?? 'PENDING'}`,
+                                )
+                            }}
+                        </span>
+                    </div>
+
+                    <OrderSummaryStrip
+                        :count="order.lines.length"
+                        :total="formatAmount(order.totalWithTax, order.currencyCode)"
+                        :organization="auth.counterparty?.fullName ?? null"
+                        :pickup-point="pickupPoint"
+                    />
+
+                    <div v-if="refusalReason" class="od-cancel-msg">
+                        {{ t(`orders.cancel.refused.${refusalReason}`) }}
+                    </div>
+                    <div v-else-if="failed" class="od-cancel-msg">
+                        {{ t('orders.cancel.failed') }}
+                    </div>
+
+                    <MvModal
+                        v-if="confirmOpen"
+                        :title="t('orders.cancel.confirmTitle')"
+                        @close="confirmOpen = false"
+                    >
+                        <p>{{ t('orders.cancel.confirmText') }}</p>
+                        <div class="od-cancel">
+                            <MvButton variant="secondary" @click="confirmOpen = false">{{
+                                t('orders.cancel.keep')
+                            }}</MvButton>
+                            <MvButton
+                                variant="danger"
+                                :loading="cancelling"
+                                @click="confirmCancel"
+                                >{{ t('orders.cancel.confirm') }}</MvButton
+                            >
+                        </div>
+                    </MvModal>
+
+                    <OrderLinesTable :order="order" />
                 </div>
-            </template>
+
+                <aside class="od-aside">
+                    <OrderActionsCard
+                        :repeating="repeating"
+                        :can-cancel="canCancel"
+                        @repeat="repeatOrder"
+                        @cancel="confirmOpen = true"
+                    />
+                    <OrderTotalsCard :order="order" />
+                    <OrderProformaInvoices
+                        :order-code="order.code"
+                        :cancelled="order.state === 'Cancelled'"
+                    />
+                    <div
+                        v-if="order.shippingAddress?.streetLine1 || order.shippingAddress?.fullName"
+                        class="od-address-card"
+                    >
+                        <h2 class="od-section-title">
+                            {{ t('orders.detail.deliveryAddress') }}
+                        </h2>
+                        <div class="od-address-line">{{ order.shippingAddress.fullName }}</div>
+                        <div class="od-address-line">
+                            {{ order.shippingAddress.streetLine1 }}
+                        </div>
+                        <div v-if="order.shippingAddress.streetLine2" class="od-address-line">
+                            {{ order.shippingAddress.streetLine2 }}
+                        </div>
+                        <div class="od-address-line">
+                            {{
+                                [order.shippingAddress.city, order.shippingAddress.postalCode]
+                                    .filter(Boolean)
+                                    .join(', ')
+                            }}
+                        </div>
+                    </div>
+                    <OrderDocumentCard :order="order" />
+                </aside>
+            </div>
         </section>
     </div>
 </template>
@@ -251,9 +257,15 @@ onMounted(() => {
     font-size: 14px;
 }
 
+.od-main {
+    display: grid;
+    gap: 0;
+    min-width: 0;
+}
+
 .od-body {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
+    grid-template-columns: minmax(0, 1fr) 320px;
     gap: 22px;
     align-items: start;
 }

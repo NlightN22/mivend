@@ -81,9 +81,7 @@ const preview = computed(() => {
                 <router-link :to="`/orders/${order.id}`" class="small-btn primary"
                     >Open</router-link
                 >
-                <button class="small-btn" :disabled="repeating" @click="repeatOrder">
-                    Repeat
-                </button>
+                <button class="small-btn" :disabled="repeating" @click="repeatOrder">Repeat</button>
                 <button class="small-btn">Documents</button>
             </div>
         </div>
