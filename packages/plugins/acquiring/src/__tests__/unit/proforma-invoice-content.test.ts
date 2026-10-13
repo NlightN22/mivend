@@ -42,6 +42,14 @@ describe('groupByOrganization', () => {
         ]);
     });
 
+    it('subtracts line discounts so the amount equals the printed line totals', () => {
+        const [group] = groupByOrganization([
+            line(1, 1, 100, 2, [{ description: 'promo', amountWithTax: -20 }]),
+            line(2, 1, 50),
+        ]);
+        expect(group.amount).toBe(230);
+    });
+
     it('snapshots variant, quantity, prices and discounts', () => {
         const [group] = groupByOrganization([
             line(1, 1, 100, 2, [{ description: 'promo', amountWithTax: -20 }]),

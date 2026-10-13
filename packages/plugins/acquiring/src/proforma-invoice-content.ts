@@ -52,8 +52,11 @@ export function groupByOrganization(lines: OrderLine[]): OrganizationContent[] {
             amount: 0,
             lines: [],
         };
-        group.amount += line.linePriceWithTax;
-        group.lines.push(snapshotLine(line));
+        const snapshot = snapshotLine(line);
+        // linePriceWithTax is pre-discount; the amount must equal the printed line totals.
+        group.amount +=
+            snapshot.linePriceWithTax + snapshot.discounts.reduce((sum, d) => sum + d.amount, 0);
+        group.lines.push(snapshot);
         byOrganization.set(organizationId, group);
     }
     return [...byOrganization.values()];
