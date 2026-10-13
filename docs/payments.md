@@ -314,6 +314,34 @@ redeliver.
 
 ---
 
+## Proforma invoice: concept, versions, statuses (decided 2026-10-13)
+
+- **A proforma invoice is informational.** It is a payment request, not a debt and not an accounting
+  document. It is never "closed": money and debt live in the ERP. The only source of debt is the **sales
+  invoice** (the ERP's realization of an actual shipment); the order is only a preliminary commitment.
+- **One document, many versions.** One document per (order, organization); its versions are successive
+  editions: v1 at order placement, v2 when the order changes, v3 "by shipment" once the realization is
+  ingested (not available yet: the settlement stream, #224, must carry realizations first; design for it
+  now, build it later). The shipment version links to the sales invoice number and is labelled as such;
+  it is still a proforma (informational), never an accounting document.
+- **Number carries the version:** `<order number>-<NN>-<version>` (digits and hyphens only), e.g.
+  `1000000303-01-1`, `1000000303-01-2`. `<order number>-<NN>` is the stable document id, the last part is the
+  version; unique, never reused. The same number goes into the print form, the payment QR and the
+  payment purpose, so a payment shows which version the customer paid and we link to that version.
+- **Dates per version:** each version has its own issue date and its own due date (payment term in days,
+  a business setting, default 3). Yesterday's version keeps its date and term; today's has a new one. The
+  customer may pay any version; money lands on the balance either way.
+- **Statuses (customer/manager facing):** *Current* (the latest version, not cancelled), *Superseded* (a newer
+  version exists; informational "there is a newer version", the old one stays readable and payable, never
+  "not valid"), *Cancelled* (withdrawn without replacement: order cancelled, the organization has no lines
+  left, or a manager withdrew it). "Paid" is not shown on a proforma: payment is shown at order level from
+  ERP data (`paidAmount`, settlement documents).
+- **Allocation of payments to documents (FIFO in this module) is frozen:** kept as is, not extended and not
+  used for display. Payments are money on the counterparty balance; documents and debt come from the ERP.
+  Later: the customer allocates a payment across orders in our system (the allocation must be sent to the
+  ERP: a contract designed with the integration side), and FIFO over the balance can drive a computed "paid"
+  display. Overpayment is an advance that offsets the next sales invoice.
+
 ## Payment allocation
 
 How an ERP-reported payment fact is applied (`PaymentInboxProcessorService` -> `PaymentAttemptService` ->
