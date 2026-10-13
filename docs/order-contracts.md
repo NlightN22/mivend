@@ -316,8 +316,12 @@ Documents that form a customer's receivables (sales, payments, returns, correcti
   alert on that mismatch. Versions are monotonic per document and per triple.
 - **Pending.** An entry whose contract/counterparty is not imported yet waits and is attached later. Employee and
   supplier contracts are filtered by `contract_kind`/`contract_type`/`payment_kind`.
+- **Customer view.** A separate storefront section (own menu item) with balance cards (opening, current from
+  `closing_balance`, overdue), type chips, filters by contract/organization/period/number, built on the standard
+  ui-kit table and filters. Customer-visible types are a whitelist by `documentType`. A "Reconciliation acts" menu
+  item exists with a "not implemented yet" page; acts themselves are #226.
 - **Retention cleaner.** Scheduled and idempotent; removes only explicit ERP-owned rows outside the window of their
-  triple (`opening_date`) plus a period set in the Vendure admin dashboard; never a row linked to an order or
+  triple (`opening_date`) plus a period set in the Vendure admin dashboard (default 12 months); never a row linked to an order or
   payment still open in mivend.
 
 ## Deliberately out of scope (open questions)
