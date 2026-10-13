@@ -1,4 +1,4 @@
-import { type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { adminGql, postBatch, waitForRun } from '../../helpers/api';
 import { gql, clearCart } from '../orders/helpers';
 
@@ -250,4 +250,9 @@ export async function boostStock(skus: string[], stockOnHand = 1000): Promise<vo
         skus.map(sku => ({ type: 'stock', data: { sku, stockOnHand } })),
     );
     await waitForRun(exchangeId);
+}
+
+// The checkout is ready once a payment-method button is rendered.
+export async function waitForCheckoutReady(page: Page): Promise<void> {
+    await expect(page.getByRole('button', { name: /Card online|^Cash/i }).first()).toBeVisible();
 }

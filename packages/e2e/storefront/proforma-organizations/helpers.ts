@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { gql } from '../orders/helpers';
 import { addSku, admin, placeViaApi } from '../checkout-credit/helpers';
 
@@ -99,6 +99,15 @@ export async function waitForReadyDocument(
         await new Promise(r => setTimeout(r, delay));
         delay = Math.min(delay * 2, 2000);
     }
+}
+
+// CI must fail when the worker never produced the PDF; a local run without a worker skips visibly.
+export function requirePdfWorker(rows: ProformaRow[] | null): asserts rows is ProformaRow[] {
+    if (rows !== null) return;
+    const reason =
+        'PDF generation job did not run: no worker process on this contour (make dev starts it)';
+    if (process.env.CI) throw new Error(reason);
+    test.skip(true, reason);
 }
 
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174';

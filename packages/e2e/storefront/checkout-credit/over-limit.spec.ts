@@ -1,3 +1,4 @@
+import { TEST_TIMEOUT_MS } from '../../timeouts';
 import { test, expect, type Page } from '@playwright/test';
 import {
     CREDIT_BUYER,
@@ -14,10 +15,11 @@ import {
     placeViaApi,
     setAllowExceeding,
     type BranchSettingsSnapshot,
+    waitForCheckoutReady,
 } from './helpers';
 
 test.use({ storageState: { cookies: [], origins: [] } });
-test.setTimeout(150000);
+test.setTimeout(TEST_TIMEOUT_MS.checkoutLong);
 
 let base: BranchSettingsSnapshot;
 
@@ -39,7 +41,7 @@ async function overLimitCheckout(page: Page): Promise<void> {
     await loginBuyer(page, CREDIT_BUYER);
     await fillCartOverLimit(page);
     await page.goto('/checkout');
-    await page.waitForLoadState('networkidle');
+    await waitForCheckoutReady(page);
 }
 
 test.describe('over the credit limit', () => {
@@ -114,7 +116,7 @@ test.describe('over the credit limit', () => {
         expect(preview.payableCardAmount).toBeGreaterThan(preview.orderAmount);
 
         await page.goto('/checkout');
-        await page.waitForLoadState('networkidle');
+        await waitForCheckoutReady(page);
         await page.getByRole('button', { name: /Card online/i }).click();
         await expect(page.getByText(/debt above your credit limit/)).toBeVisible();
         await page.getByRole('button', { name: /^Pay .* →$/ }).click();

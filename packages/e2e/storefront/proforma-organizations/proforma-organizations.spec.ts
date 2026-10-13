@@ -1,3 +1,4 @@
+import { TEST_TIMEOUT_MS } from '../../timeouts';
 import { test, expect } from '@playwright/test';
 import {
     CREDIT_BUYER,
@@ -13,6 +14,7 @@ import {
     placeBankOrder,
     proformasOf,
     requestProformas,
+    requirePdfWorker,
     waitForReadyDocument,
 } from './helpers';
 import { gql } from '../orders/helpers';
@@ -96,10 +98,10 @@ test.describe('proformas per organization', () => {
     test('the PDF carries the number, seller requisites, QR caption, VAT, version and total in words', async ({
         page,
     }) => {
-        test.setTimeout(90000);
+        test.setTimeout(TEST_TIMEOUT_MS.slow);
         const code = await placeBankOrder(page, ['E2E-FLT-001']);
         const rows = await waitForReadyDocument(page, code);
-        test.skip(rows === null, 'PDF generation job did not run: no worker on this contour');
+        requirePdfWorker(rows);
         const [row] = rows as ProformaRow[];
         const { text, pages } = await pdfTextAndPages(page, row.document?.asset?.source as string);
         expect(pages).toBe(1);
@@ -112,10 +114,10 @@ test.describe('proformas per organization', () => {
     });
 
     test('a superseded document is marked invalid and has no QR', async ({ page }) => {
-        test.setTimeout(120000);
+        test.setTimeout(TEST_TIMEOUT_MS.pdf);
         const code = await placeBankOrder(page, ['E2E-FLT-001']);
         const first = await waitForReadyDocument(page, code);
-        test.skip(first === null, 'PDF generation job did not run: no worker on this contour');
+        requirePdfWorker(first);
         const v1 = (first as ProformaRow[])[0];
         const { id: orderId } = await orderTotal(code);
         await modifyOrderQuantity(orderId, 2);

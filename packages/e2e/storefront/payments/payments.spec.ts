@@ -1,3 +1,4 @@
+import { TEST_TIMEOUT_MS } from '../../timeouts';
 import { test, expect, type Page } from '@playwright/test';
 import { gql } from '../orders/helpers';
 import {
@@ -203,7 +204,7 @@ test.describe('Payments page', () => {
     test('a duplicate payment that becomes a pure advance produces a second row for the same order, with a non-zero Remaining', async ({
         page,
     }) => {
-        test.setTimeout(90000);
+        test.setTimeout(TEST_TIMEOUT_MS.slow);
         await payAllOpenProformaInvoices(page);
         const { proformaInvoiceId, orderCode } = await buildAndPayProformaInvoice(page, 'success');
         // Duplicate the same payment — its proforma invoice is already paid and (after the drain above)
@@ -257,7 +258,7 @@ test.describe('Payment detail page', () => {
     test('a payment that ends up entirely as an advance shows the "held entirely as an advance" message and a matching unallocated total', async ({
         page,
     }) => {
-        test.setTimeout(90000);
+        test.setTimeout(TEST_TIMEOUT_MS.slow);
         await payAllOpenProformaInvoices(page);
         const { proformaInvoiceId } = await buildAndPayProformaInvoice(page, 'success');
         // Duplicate: nothing else open in this organization after the drain above.

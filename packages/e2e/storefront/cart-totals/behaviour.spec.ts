@@ -1,3 +1,4 @@
+import { TEST_TIMEOUT_MS } from '../../timeouts';
 import { test, expect } from './fixture';
 import {
     addSku,
@@ -26,7 +27,7 @@ async function waitForQuantity(
 }
 
 test.describe('Cart behaviour @cart-totals', () => {
-    test.setTimeout(90000);
+    test.setTimeout(TEST_TIMEOUT_MS.slow);
 
     test('stepper increase, decrease and remove keep the invariants', async ({ page }) => {
         await addSku(page, DISCOUNTED_SKUS[0], 1);

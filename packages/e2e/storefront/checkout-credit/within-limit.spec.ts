@@ -1,3 +1,4 @@
+import { TEST_TIMEOUT_MS } from '../../timeouts';
 import { test, expect, type Page } from '@playwright/test';
 import { gql } from '../orders/helpers';
 import {
@@ -8,16 +9,17 @@ import {
     adminOrder,
     cancelOpenOrders,
     loginBuyer,
+    waitForCheckoutReady,
 } from './helpers';
 
 test.use({ storageState: { cookies: [], origins: [] } });
-test.setTimeout(60000);
+test.setTimeout(TEST_TIMEOUT_MS.standard);
 
 async function openCheckout(page: Page, email: string): Promise<void> {
     await loginBuyer(page, email);
     await addSku(page, 'E2E-FLT-001', 1);
     await page.goto('/checkout');
-    await page.waitForLoadState('networkidle');
+    await waitForCheckoutReady(page);
 }
 
 async function orderCodeFromUrl(page: Page): Promise<string> {

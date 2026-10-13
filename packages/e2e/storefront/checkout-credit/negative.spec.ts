@@ -1,3 +1,4 @@
+import { TEST_TIMEOUT_MS } from '../../timeouts';
 import { test, expect } from '@playwright/test';
 import { gql } from '../orders/helpers';
 import {
@@ -10,10 +11,11 @@ import {
     creditPreview,
     loginBuyer,
     placeViaApi,
+    waitForCheckoutReady,
 } from './helpers';
 
 test.use({ storageState: { cookies: [], origins: [] } });
-test.setTimeout(60000);
+test.setTimeout(TEST_TIMEOUT_MS.standard);
 
 test.beforeEach(async () => {
     await cancelOpenOrders(CREDIT_BUYER);
@@ -41,7 +43,7 @@ test.describe('checkout negative paths', () => {
         await loginBuyer(page, CREDIT_BUYER);
         await addSku(page, 'E2E-FLT-001', 1);
         await page.goto('/checkout');
-        await page.waitForLoadState('networkidle');
+        await waitForCheckoutReady(page);
         await page.getByRole('button', { name: /Card online/i }).click();
         await page.getByRole('button', { name: /^Pay .* →$/ }).click();
         await expect(page).toHaveURL(/\/payment-stub/, { timeout: 15000 });

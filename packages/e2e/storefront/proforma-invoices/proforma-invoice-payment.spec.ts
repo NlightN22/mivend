@@ -1,3 +1,4 @@
+import { TEST_TIMEOUT_MS } from '../../timeouts';
 import { test, expect } from '@playwright/test';
 import { gql } from '../orders/helpers';
 import {
@@ -46,7 +47,7 @@ test.describe('Proforma invoice payment: pay-any-time, independent of order/sess
     }) => {
         // Start from a clean slate — the dev DB is shared across test runs, so "what's open in
         // this organization" must be established, not assumed.
-        test.setTimeout(90000);
+        test.setTimeout(TEST_TIMEOUT_MS.slow);
         await payAllOpenProformaInvoices(page);
 
         await buildOrderAcrossOrganizations(page);
@@ -95,7 +96,7 @@ test.describe('Proforma invoice payment: pay-any-time, independent of order/sess
         // Clean slate first — otherwise a leftover open proforma invoice from an earlier test/run in the
         // same organization would legitimately (and silently) absorb the duplicate instead of it
         // becoming a pure advance, which would make this test flaky rather than wrong.
-        test.setTimeout(90000);
+        test.setTimeout(TEST_TIMEOUT_MS.slow);
         await payAllOpenProformaInvoices(page);
 
         await buildOrderAcrossOrganizations(page);
