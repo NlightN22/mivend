@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt } from './entities/payment-attempt.entity';
@@ -181,22 +181,32 @@ export class SettlementEntryService {
             proformaInvoice => Number(proformaInvoice.id) === preferredProformaInvoiceId,
         );
         if (preferredIndex < 0) {
-            // Not in the open set: beyond the scan limit, or already paid/superseded/cancelled.
-            // Re-read it under the lock; a version replaced meanwhile must not fall back to FIFO.
-            const preferred = await this.connection
-                .getRepository(ctx, ProformaInvoice)
-                .createQueryBuilder('proformaInvoice')
-                .where('proformaInvoice.id = :id', { id: preferredProformaInvoiceId })
-                .andWhere('proformaInvoice.counterpartyId = :counterpartyId', { counterpartyId })
-                .andWhere('proformaInvoice.organizationId = :organizationId', { organizationId })
-                .setLock('pessimistic_write')
-                .getOne();
+            // Not in the open set: beyond the scan limit, or paid/superseded/cancelled. A superseded
+            // version hands its payment to the current version of its chain (re-read under the lock).
+            const repo = this.connection.getRepository(ctx, ProformaInvoice);
+            const load = (id: number): Promise<ProformaInvoice | null> =>
+                repo
+                    .createQueryBuilder('proformaInvoice')
+                    .where('proformaInvoice.id = :id', { id })
+                    .andWhere('proformaInvoice.counterpartyId = :counterpartyId', {
+                        counterpartyId,
+                    })
+                    .andWhere('proformaInvoice.organizationId = :organizationId', {
+                        organizationId,
+                    })
+                    .setLock('pessimistic_write')
+                    .getOne();
+            let preferred = await load(preferredProformaInvoiceId);
+            for (let hops = 0; preferred?.status === 'superseded' && hops < 20; hops++) {
+                if (!preferred.supersededById) break;
+                const next = await load(preferred.supersededById);
+                if (!next) break;
+                preferred = next;
+            }
             if (preferred && (preferred.status === 'pending' || preferred.status === 'issued')) {
+                const at = open.findIndex(p => Number(p.id) === Number(preferred!.id));
+                if (at >= 0) open.splice(at, 1);
                 open.unshift(preferred);
-            } else if (preferred?.status === 'superseded' || preferred?.status === 'cancelled') {
-                throw new UserInputError(
-                    `ProformaInvoice ${preferred.number} is ${preferred.status} and cannot be paid`,
-                );
             }
         } else if (preferredIndex > 0) {
             const [preferred] = open.splice(preferredIndex, 1);

@@ -76,6 +76,7 @@ class TestProformaInvoice {
     @Column({ type: 'varchar' }) currencyCode!: string;
     @Column({ type: 'varchar', default: 'pending' }) status!: string;
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }) createdAt!: Date;
+    @Column({ type: 'int', nullable: true }) supersededById!: number | null;
 }
 
 @Entity('payment_attempt')
@@ -826,5 +827,72 @@ describe('Payment inbox: organization data isolation within a single sweep batch
         expect(allSettlements).toHaveLength(2);
         expect(allSettlements.filter(entry => entry.organizationId === 1)).toHaveLength(1);
         expect(allSettlements.filter(entry => entry.organizationId === 2)).toHaveLength(1);
+    });
+});
+
+describe('Payment fact for a superseded or already paid document (integration, real Postgres, docs/payments.md cash application)', () => {
+    const invoices = (): ReturnType<DataSource['getRepository']> =>
+        dataSource.getRepository(TestProformaInvoice);
+    const enqueueFact = (id: number, ref: string): Promise<unknown> =>
+        inboxService.enqueue(mockCtx, 'bank-transfer-erp', ref, `hash-${ref}`, {
+            proformaInvoiceId: id,
+            organizationId: 1,
+            outcome: 'success',
+            channel: 'bank-transfer-erp',
+            externalReference: ref,
+        });
+
+    it('a fact for a superseded version settles the current version of the chain and the event is processed', async () => {
+        const head = await invoices().save({
+            orderId: 1,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 1000,
+            currencyCode: 'RUB',
+            status: 'issued',
+        });
+        const old = await invoices().save({
+            orderId: 1,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 1000,
+            currencyCode: 'RUB',
+            status: 'superseded',
+            supersededById: head.id,
+        });
+
+        await enqueueFact(Number(old.id), 'erp-sup-1');
+        expect(await processorService.processPendingEvents(mockCtx)).toEqual({
+            processed: 1,
+            failed: 0,
+        });
+
+        expect((await invoices().findOneByOrFail({ id: head.id })).status).toBe('paid');
+        const entries = await dataSource.getRepository(TestSettlementEntry).find();
+        expect(entries.map(e => e.proformaInvoiceId)).toEqual([head.id]);
+    });
+
+    it('a second fact (new event id) for an already paid document is FIFO-allocated to the next open document', async () => {
+        const paid = await invoices().save({
+            orderId: 1,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 1000,
+            currencyCode: 'RUB',
+            status: 'paid',
+        });
+        const next = await invoices().save({
+            orderId: 2,
+            organizationId: 1,
+            counterpartyId: 5,
+            amount: 1000,
+            currencyCode: 'RUB',
+            status: 'issued',
+        });
+
+        await enqueueFact(Number(paid.id), 'erp-dup-1');
+        await processorService.processPendingEvents(mockCtx);
+
+        expect((await invoices().findOneByOrFail({ id: next.id })).status).toBe('paid');
     });
 });

@@ -317,6 +317,25 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
         expect(mockSettlementEntryService.allocate).toHaveBeenCalledTimes(1);
     });
 
+    it.each(['superseded', 'cancelled'] as const)(
+        'an ERP-reported fact for a %s document is still allocated, not rejected',
+        async status => {
+            const proformaInvoice = makeProformaInvoice({ organizationId: 1, status });
+            mockProformaInvoiceService.findOne.mockResolvedValue(proformaInvoice);
+
+            await service.payProformaInvoice(
+                mockCtx,
+                1,
+                'success',
+                'bank-transfer-erp',
+                'ERP-EVT-1',
+                1,
+            );
+
+            expect(mockSettlementEntryService.allocate).toHaveBeenCalledTimes(1);
+        },
+    );
+
     it('skips organization validation entirely when expectedOrganizationId is not provided (a direct "pay now" call has no externally-claimed scope)', async () => {
         const proformaInvoice = makeProformaInvoice({ organizationId: 1, status: 'issued' });
         mockProformaInvoiceService.findOne

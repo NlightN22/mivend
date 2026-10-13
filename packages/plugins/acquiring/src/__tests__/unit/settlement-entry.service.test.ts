@@ -241,17 +241,41 @@ describe('SettlementEntryService.allocate', () => {
         );
     });
 
-    it.each(['superseded', 'cancelled'] as const)(
-        'rejects a payment whose target became %s under the lock instead of FIFO-ing to other proformas',
-        async status => {
-            const stale = makeProformaInvoice({ id: 1, status: 'issued' });
-            mockProformaInvoiceService.findOne.mockResolvedValue(stale);
-            setup([makeProformaInvoice({ id: 2 })], makeProformaInvoice({ id: 1, status }));
+    it('hands a payment for a superseded version to the current version of its chain', async () => {
+        const v1 = makeProformaInvoice({ id: 1, status: 'superseded', supersededById: 2 });
+        const v2 = makeProformaInvoice({ id: 2, status: 'superseded', supersededById: 3 });
+        const v3 = makeProformaInvoice({ id: 3, amount: 5000, status: 'issued' });
+        mockProformaInvoiceService.findOne.mockResolvedValue(v1);
+        setup([makeProformaInvoice({ id: 9, amount: 5000 })], v1);
+        preferredQb.getOne
+            .mockResolvedValueOnce(v1)
+            .mockResolvedValueOnce(v2)
+            .mockResolvedValueOnce(v3);
 
-            await expect(
-                service.allocate(mockCtx, makePaymentAttempt({ proformaInvoiceId: 1 })),
-            ).rejects.toThrow(/cannot be paid/);
-            expect(mockSettlementRepo.save).not.toHaveBeenCalled();
+        const entries = await service.allocate(
+            mockCtx,
+            makePaymentAttempt({ proformaInvoiceId: 1 }),
+        );
+
+        expect(entries).toHaveLength(1);
+        expect(entries[0]).toMatchObject({ proformaInvoiceId: 3, allocationAmount: 5000 });
+        expect(mockProformaInvoiceService.updateStatus).toHaveBeenCalledWith(mockCtx, 3, 'paid');
+    });
+
+    it.each(['superseded', 'cancelled', 'paid'] as const)(
+        'applies FIFO over the open documents when the target is %s and has no open current version',
+        async status => {
+            const dead = makeProformaInvoice({ id: 1, status });
+            mockProformaInvoiceService.findOne.mockResolvedValue(dead);
+            setup([makeProformaInvoice({ id: 2, amount: 5000 })], dead);
+
+            const entries = await service.allocate(
+                mockCtx,
+                makePaymentAttempt({ proformaInvoiceId: 1 }),
+            );
+
+            expect(entries).toHaveLength(1);
+            expect(entries[0]).toMatchObject({ proformaInvoiceId: 2, allocationAmount: 5000 });
         },
     );
 

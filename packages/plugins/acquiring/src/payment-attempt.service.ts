@@ -122,16 +122,6 @@ export class PaymentAttemptService {
         if (!proformaInvoice) {
             throw new UserInputError(`ProformaInvoice ${proformaInvoiceId} not found`);
         }
-        if (proformaInvoice.status === 'cancelled') {
-            throw new UserInputError(
-                `ProformaInvoice ${proformaInvoiceId} is cancelled and cannot be paid`,
-            );
-        }
-        if (proformaInvoice.status === 'superseded') {
-            throw new UserInputError(
-                `ProformaInvoice ${proformaInvoice.number} was replaced by a newer version and cannot be paid`,
-            );
-        }
         if (
             expectedOrganizationId !== undefined &&
             expectedOrganizationId !== proformaInvoice.organizationId
@@ -149,6 +139,21 @@ export class PaymentAttemptService {
                 expectedOrganizationId,
                 proformaInvoice.organizationId,
             );
+        }
+
+        // A direct "pay now" never pays a dead version; an ERP-reported fact is money already received
+        // and is applied by allocate (current version of the chain, else FIFO, else advance).
+        if (expectedOrganizationId === undefined) {
+            if (proformaInvoice.status === 'cancelled') {
+                throw new UserInputError(
+                    `ProformaInvoice ${proformaInvoiceId} is cancelled and cannot be paid`,
+                );
+            }
+            if (proformaInvoice.status === 'superseded') {
+                throw new UserInputError(
+                    `ProformaInvoice ${proformaInvoice.number} was replaced by a newer version and cannot be paid`,
+                );
+            }
         }
 
         const paymentStatus = OUTCOME_TO_PAYMENT_STATUS[outcome];
