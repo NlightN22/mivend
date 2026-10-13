@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { IconChevronDown } from '@tabler/icons-vue';
 import { useAuthStore } from '../../stores/auth';
 import { useFavoritesStore } from '../../stores/favorites';
 import { useDocuments } from '../documents/useDocuments';
@@ -41,6 +42,13 @@ const { companyName, initials } = useCompanyName();
 const role = computed(() => authStore.customer?.customFields?.portalRole ?? '—');
 
 const isActive = (path: string) => route.path === path;
+
+const DOCUMENT_PATHS = ['/proforma-invoices', '/documents', '/reconciliation-acts'];
+const inDocuments = computed(() => DOCUMENT_PATHS.some(p => route.path.startsWith(p)));
+const documentsOpen = ref(inDocuments.value);
+watch(inDocuments, inside => {
+    if (inside) documentsOpen.value = true;
+});
 </script>
 
 <template>
@@ -90,34 +98,51 @@ const isActive = (path: string) => route.path === path;
                 >
                     <span>Account statement</span>
                 </RouterLink>
-                <div class="account-sidebar__group-title">Documents</div>
-                <RouterLink
-                    to="/proforma-invoices"
-                    class="account-sidebar__link account-sidebar__link--sub"
-                    :class="{ 'account-sidebar__link--active': isActive('/proforma-invoices') }"
+                <button
+                    type="button"
+                    class="account-sidebar__link account-sidebar__group-toggle"
+                    :class="{ 'account-sidebar__link--active': inDocuments && !documentsOpen }"
+                    :aria-expanded="documentsOpen"
+                    @click="documentsOpen = !documentsOpen"
                 >
-                    <span>Proforma invoices</span
-                    ><span v-if="proformaInvoiceCount > 0" class="account-sidebar__count">{{
-                        proformaInvoiceCount
-                    }}</span>
-                </RouterLink>
-                <RouterLink
-                    to="/documents"
-                    class="account-sidebar__link account-sidebar__link--sub"
-                    :class="{ 'account-sidebar__link--active': isActive('/documents') }"
-                >
-                    <span>Contracts and files</span
-                    ><span v-if="documentCount > 0" class="account-sidebar__count">{{
-                        documentCount
-                    }}</span>
-                </RouterLink>
-                <RouterLink
-                    to="/reconciliation-acts"
-                    class="account-sidebar__link account-sidebar__link--sub"
-                    :class="{ 'account-sidebar__link--active': isActive('/reconciliation-acts') }"
-                >
-                    <span>Reconciliation acts</span>
-                </RouterLink>
+                    <span>Documents</span>
+                    <IconChevronDown
+                        :size="16"
+                        class="account-sidebar__chevron"
+                        :class="{ 'account-sidebar__chevron--open': documentsOpen }"
+                    />
+                </button>
+                <div v-show="documentsOpen" class="account-sidebar__submenu">
+                    <RouterLink
+                        to="/proforma-invoices"
+                        class="account-sidebar__link account-sidebar__link--sub"
+                        :class="{ 'account-sidebar__link--active': isActive('/proforma-invoices') }"
+                    >
+                        <span>Proforma invoices</span
+                        ><span v-if="proformaInvoiceCount > 0" class="account-sidebar__count">{{
+                            proformaInvoiceCount
+                        }}</span>
+                    </RouterLink>
+                    <RouterLink
+                        to="/documents"
+                        class="account-sidebar__link account-sidebar__link--sub"
+                        :class="{ 'account-sidebar__link--active': isActive('/documents') }"
+                    >
+                        <span>Contracts and files</span
+                        ><span v-if="documentCount > 0" class="account-sidebar__count">{{
+                            documentCount
+                        }}</span>
+                    </RouterLink>
+                    <RouterLink
+                        to="/reconciliation-acts"
+                        class="account-sidebar__link account-sidebar__link--sub"
+                        :class="{
+                            'account-sidebar__link--active': isActive('/reconciliation-acts'),
+                        }"
+                    >
+                        <span>Reconciliation acts</span>
+                    </RouterLink>
+                </div>
                 <RouterLink
                     to="/favorites"
                     class="account-sidebar__link"
@@ -258,13 +283,27 @@ const isActive = (path: string) => route.path === path;
     text-decoration: none;
 }
 
-.account-sidebar__group-title {
-    margin: 10px 10px 2px;
-    color: #66736e;
-    font-size: 12px;
-    font-weight: 850;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+.account-sidebar__group-toggle {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.account-sidebar__chevron {
+    flex: 0 0 auto;
+    transition: transform 0.14s ease;
+}
+
+.account-sidebar__chevron--open {
+    transform: rotate(180deg);
+}
+
+.account-sidebar__submenu {
+    display: grid;
+    gap: 2px;
 }
 
 .account-sidebar__link--sub {

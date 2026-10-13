@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { MvColumnFilterDateRange, MvFilterChips, MvSelect } from '@mivend/ui-kit';
+import { computed } from 'vue';
+import {
+    MvDatePicker,
+    MvFilterChips,
+    MvInput,
+    MvSelect,
+    resolveDateRangePreset,
+} from '@mivend/ui-kit';
 import type { DateRangeFilterValue, SelectOption } from '@mivend/ui-kit';
 import { PERIOD_PRESETS, TYPE_CHIPS } from './settlementChips';
 
-defineProps<{
+const props = defineProps<{
     chip: string;
     contract: string;
     organization: string;
@@ -12,11 +19,23 @@ defineProps<{
     contractOptions: SelectOption[];
     organizationOptions: SelectOption[];
 }>();
-defineEmits<{
+const emit = defineEmits<{
     (e: 'update:chip' | 'update:contract' | 'update:organization', val: string): void;
     (e: 'update:search', val: string): void;
     (e: 'update:range', val: DateRangeFilterValue): void;
 }>();
+
+const periodOptions = PERIOD_PRESETS.map(p => ({ value: p.key, label: p.label }));
+const isCustom = computed(() => props.range.preset === 'custom');
+
+function selectPreset(key: string): void {
+    const { from, to } = key === 'custom' ? { from: '', to: '' } : resolveDateRangePreset(key);
+    emit('update:range', { preset: key, from, to });
+}
+
+function setBound(bound: 'from' | 'to', value: string): void {
+    emit('update:range', { ...props.range, preset: 'custom', [bound]: value });
+}
 </script>
 
 <template>
@@ -39,23 +58,39 @@ defineEmits<{
                     @update:model-value="$emit('update:organization', $event)"
                 />
             </label>
-            <div class="settlement-filters__field settlement-filters__field--period">
+            <label class="settlement-filters__field">
                 <span>Period</span>
-                <MvColumnFilterDateRange
-                    :config="{ type: 'date-range', presets: PERIOD_PRESETS }"
-                    :model-value="range"
-                    @update:model-value="$emit('update:range', $event)"
-                />
-            </div>
-            <label class="settlement-filters__field settlement-filters__field--wide">
-                <span>Document or order number</span>
-                <input
-                    class="settlement-filters__search"
-                    placeholder="Enter a number"
-                    :value="search"
-                    @input="$emit('update:search', ($event.target as HTMLInputElement).value)"
+                <MvSelect
+                    :model-value="range.preset || 'all'"
+                    :options="periodOptions"
+                    @update:model-value="selectPreset"
                 />
             </label>
+            <label class="settlement-filters__field">
+                <span>Document or order number</span>
+                <MvInput
+                    size="sm"
+                    placeholder="Enter a number"
+                    :model-value="search"
+                    @update:model-value="$emit('update:search', $event)"
+                />
+            </label>
+        </div>
+        <div v-if="isCustom" class="settlement-filters__row settlement-filters__row--dates">
+            <div class="settlement-filters__field">
+                <span>From</span>
+                <MvDatePicker
+                    :model-value="range.from"
+                    @update:model-value="setBound('from', $event)"
+                />
+            </div>
+            <div class="settlement-filters__field">
+                <span>To</span>
+                <MvDatePicker
+                    :model-value="range.to"
+                    @update:model-value="setBound('to', $event)"
+                />
+            </div>
         </div>
     </div>
 </template>
@@ -73,7 +108,7 @@ defineEmits<{
 
 .settlement-filters__row {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 1.6fr) minmax(0, 1.4fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
     align-items: end;
 }
@@ -86,18 +121,8 @@ defineEmits<{
     font-weight: 800;
 }
 
-.settlement-filters__search {
-    min-height: 40px;
-    border: 1px solid #dde7e2;
-    border-radius: 12px;
-    padding: 0 12px;
-    font-family: inherit;
-    font-size: 14px;
-    outline: none;
-}
-
-.settlement-filters__search:focus {
-    border-color: #00a878;
+.settlement-filters__row--dates {
+    grid-template-columns: repeat(2, minmax(0, 260px));
 }
 
 @media (max-width: 1100px) {
