@@ -1,7 +1,11 @@
 import * as contracts from '@nlightn22/event-contracts';
 import { version } from '@nlightn22/event-contracts/package.json';
 
-const NOT_EVENT_SCHEMAS = new Set(['OrderChangedLineSchema', 'OrderChangedLinkedDocumentSchema']);
+const NOT_EVENT_SCHEMAS = new Set([
+    'OrderChangedLineSchema',
+    'OrderChangedLinkedDocumentSchema',
+    'OrganizationSignatorySchema',
+]);
 
 export function streamNameFromSchemaExport(exportName: string): string | null {
     if (!exportName.endsWith('Schema') || exportName.startsWith('Proto')) return null;
