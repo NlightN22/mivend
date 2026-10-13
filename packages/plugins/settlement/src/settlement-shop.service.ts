@@ -12,6 +12,7 @@ import type {
     SettlementOrderRef,
 } from './settlement-shop.types';
 import { CATEGORY_SQL, normalizeCategory } from './settlement-visibility';
+import { toAlphaCurrency } from './currency-code';
 
 const MAX_PAGE = 100;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
@@ -50,7 +51,7 @@ export class SettlementShopService {
                     organizationName: (b.organizationName as string | null) ?? null,
                     contractId: (b.contractId as string | null) ?? null,
                     contractName: (b.contractName as string | null) ?? null,
-                    currency: String(b.currency),
+                    currency: toAlphaCurrency(String(b.currency)),
                     openingBalance: Number(b.openingBalance),
                     currentBalance: Number(b.closingBalance),
                     overdue: capOverdue(Number(b.overdue), Number(b.closingBalance)),
@@ -161,7 +162,7 @@ export class SettlementShopService {
             organizationName: (r.organizationName as string | null) ?? null,
             contractId: (r.contractId as string | null) ?? null,
             contractName: (r.contractName as string | null) ?? null,
-            currency: String(r.currency),
+            currency: toAlphaCurrency(String(r.currency)),
             amount,
             dueDate,
             paymentStatus: paymentStatusOf(amount, r.hasBalance ? open : null, dueDate, now),

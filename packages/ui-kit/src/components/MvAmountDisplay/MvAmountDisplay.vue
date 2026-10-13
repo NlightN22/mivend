@@ -15,12 +15,16 @@ withDefaults(defineProps<Props>(), {
 });
 
 function formatAmount(value: number, currency: string, decimals: number): string {
-    return new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency,
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-    }).format(value);
+    try {
+        return new Intl.NumberFormat('ru-RU', {
+            style: 'currency',
+            currency,
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+        }).format(value);
+    } catch {
+        return `${value.toFixed(decimals)} ${currency}`;
+    }
 }
 </script>
 
