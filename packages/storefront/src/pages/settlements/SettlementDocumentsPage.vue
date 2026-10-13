@@ -75,8 +75,8 @@ function reload(): void {
         overdueOnly: chip.value === 'overdue' ? true : undefined,
         contractId: contract.value || undefined,
         organizationId: organization.value || undefined,
-        dateFrom: from.value ? `${from.value}T00:00:00.000Z` : undefined,
-        dateTo: to.value ? `${to.value}T23:59:59.999Z` : undefined,
+        dateFrom: from.value || undefined,
+        dateTo: to.value || undefined,
         search: search.value.trim() || undefined,
     });
 }

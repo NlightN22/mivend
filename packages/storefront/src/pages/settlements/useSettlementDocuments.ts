@@ -34,6 +34,7 @@ export const PAYMENT_STATUS_LABEL: Record<string, string> = {
     partial: 'Partially paid',
     overdue: 'Overdue',
     open: 'Open',
+    unknown: 'No balance data yet',
 };
 
 export const PAYMENT_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> =

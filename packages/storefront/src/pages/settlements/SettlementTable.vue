@@ -67,8 +67,13 @@ const formatDate = (value: string | null | undefined): string =>
                     </td>
                     <td>{{ formatDate(row.dueDate) }}</td>
                     <td>
+                        <span
+                            v-if="row.paymentStatus === 'unknown'"
+                            :title="PAYMENT_STATUS_LABEL.unknown"
+                            >—</span
+                        >
                         <MvStatusBadge
-                            v-if="row.paymentStatus"
+                            v-else-if="row.paymentStatus"
                             :variant="PAYMENT_STATUS_VARIANT[row.paymentStatus]"
                         >
                             {{ PAYMENT_STATUS_LABEL[row.paymentStatus] }}

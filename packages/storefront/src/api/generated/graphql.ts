@@ -3920,8 +3920,8 @@ export type SettlementBalanceCard = {
 export type SettlementDocumentFilter = {
     category?: InputMaybe<Scalars['String']['input']>;
     contractId?: InputMaybe<Scalars['String']['input']>;
-    dateFrom?: InputMaybe<Scalars['DateTime']['input']>;
-    dateTo?: InputMaybe<Scalars['DateTime']['input']>;
+    dateFrom?: InputMaybe<Scalars['String']['input']>;
+    dateTo?: InputMaybe<Scalars['String']['input']>;
     organizationId?: InputMaybe<Scalars['String']['input']>;
     overdueOnly?: InputMaybe<Scalars['Boolean']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
