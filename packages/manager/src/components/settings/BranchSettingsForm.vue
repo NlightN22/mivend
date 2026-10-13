@@ -179,6 +179,7 @@ function onSave(): void {
                     :model-value="String(form.proformaPaymentTermDays)"
                     type="number"
                     min="1"
+                    max="90"
                     @update:model-value="form.proformaPaymentTermDays = Number($event)"
                 />
                 <p class="branch-settings-form__hint">

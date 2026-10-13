@@ -5,6 +5,7 @@ import {
     Logger,
     RequestContext,
     TransactionalConnection,
+    UserInputError,
 } from '@vendure/core';
 
 import { BranchSettings } from './entities/branch-settings.entity';
@@ -37,6 +38,10 @@ export class BranchSettingsService {
     }
 
     async upsert(ctx: RequestContext, input: BranchSettingsInput): Promise<BranchSettings> {
+        const term = input.proformaPaymentTermDays;
+        if (term !== undefined && (!Number.isInteger(term) || term < 1 || term > 90)) {
+            throw new UserInputError('proformaPaymentTermDays must be an integer from 1 to 90');
+        }
         const repo = this.connection.getRepository(ctx, BranchSettings);
         let settings = await repo.findOne({ where: { branchId: input.branchId } });
         if (settings) {

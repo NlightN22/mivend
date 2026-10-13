@@ -122,6 +122,22 @@ describe('BranchSettingsService', () => {
         );
     });
 
+    it.each([0, -1, 91, 2.5, Number.NaN])(
+        'rejects proformaPaymentTermDays %s with a clear error and saves nothing',
+        async days => {
+            repo.findOne.mockResolvedValue(null);
+            await expect(
+                service.upsert(ctx, {
+                    branchId: 'branch-1',
+                    defaultPriceTypeId: 'pt-1',
+                    defaultWarehouseId: 'wh-1',
+                    proformaPaymentTermDays: days,
+                }),
+            ).rejects.toThrow('integer from 1 to 90');
+            expect(repo.save).not.toHaveBeenCalled();
+        },
+    );
+
     it('persists an explicit packagesOnly: true', async () => {
         repo.findOne.mockResolvedValue(null);
         await service.upsert(ctx, {
