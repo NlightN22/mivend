@@ -241,6 +241,20 @@ describe('SettlementEntryService.allocate', () => {
         );
     });
 
+    it.each(['superseded', 'cancelled'] as const)(
+        'rejects a payment whose target became %s under the lock instead of FIFO-ing to other proformas',
+        async status => {
+            const stale = makeProformaInvoice({ id: 1, status: 'issued' });
+            mockProformaInvoiceService.findOne.mockResolvedValue(stale);
+            setup([makeProformaInvoice({ id: 2 })], makeProformaInvoice({ id: 1, status }));
+
+            await expect(
+                service.allocate(mockCtx, makePaymentAttempt({ proformaInvoiceId: 1 })),
+            ).rejects.toThrow(/cannot be paid/);
+            expect(mockSettlementRepo.save).not.toHaveBeenCalled();
+        },
+    );
+
     it('still settles the target proforma invoice first even when it falls outside the bounded FIFO scan (fetched separately, also locked)', async () => {
         // Simulate a counterparty/organization with 200 older open proforma invoices already filling the
         // bounded scan — the target proforma invoice (id 1) isn't among them, so it must be fetched

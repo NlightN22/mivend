@@ -193,6 +193,10 @@ describe('ProformaInvoiceIssuingService versions (real Postgres)', () => {
         await expect(issuing.requestForOrder(ctx, 7)).rejects.toThrow(/cancelled/);
         orderState = { state: 'ArrangingPayment', active: true };
         await expect(issuing.requestForOrder(ctx, 7)).rejects.toThrow(/placed/);
+        orderState = { state: 'Draft', active: false };
+        await expect(issuing.requestForOrder(ctx, 7)).rejects.toThrow(/placed/);
+        orderState = { state: 'ArrangingPayment', active: false };
+        await expect(issuing.requestForOrder(ctx, 7)).rejects.toThrow(/placed/);
     });
 
     it('cancels the unpaid snapshot of an organization removed from the order', async () => {
@@ -203,6 +207,39 @@ describe('ProformaInvoiceIssuingService versions (real Postgres)', () => {
 
         const removed = (await rows()).find(r => r.organizationId === 2)!;
         expect(removed.status).toBe('cancelled');
+    });
+});
+
+describe('head selection and numbering (real Postgres)', () => {
+    it('issues a new document when a removed organization returns with the same content', async () => {
+        await issuing.issueForOrder(ctx, 7, { initialStatus: 'issued' });
+        orderLines = [orderLine(1, 1, 1000)];
+        await issuing.issueForOrder(ctx, 7);
+        orderLines = [orderLine(1, 1, 1000), orderLine(2, 2, 500)];
+
+        const result = await issuing.issueForOrder(ctx, 7, { initialStatus: 'issued' });
+
+        const org2 = (await rows()).filter(r => r.organizationId === 2);
+        expect(org2.map(r => [r.version, r.status])).toEqual([
+            [1, 'cancelled'],
+            [2, 'issued'],
+        ]);
+        expect(result.current.filter(i => i.organizationId === 2)).toHaveLength(2);
+        expect(result.created[0].number).toBe('1000007-03');
+    });
+
+    it('picks the highest version, then the highest id, among non-superseded rows', async () => {
+        const repo = dataSource.getRepository(TestProformaInvoice);
+        const base = { orderId: 7, organizationId: 1, counterpartyId: 42, currencyCode: 'RUB' };
+        await repo.save([
+            { ...base, amount: 1, status: 'issued', version: 2, number: '1000007-05' },
+            { ...base, amount: 1, status: 'issued', version: 1, number: '1000007-01' },
+        ]);
+        orderLines = [orderLine(1, 1, 1000)];
+
+        const result = await issuing.issueForOrder(ctx, 7);
+
+        expect(result.created[0]).toMatchObject({ version: 3, number: '1000007-06' });
     });
 });
 

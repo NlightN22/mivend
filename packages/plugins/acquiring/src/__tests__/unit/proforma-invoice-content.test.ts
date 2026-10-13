@@ -120,6 +120,12 @@ describe('decideVersion', () => {
         expect(decideVersion(head('pending'), changed, 'RUB')).toBe('create');
     });
 
+    it('creates a new document when the head is cancelled, even for the same content', () => {
+        expect(decideVersion({ ...head('issued'), status: 'cancelled' }, base, 'RUB')).toBe(
+            'create',
+        );
+    });
+
     it('never replaces a paid head', () => {
         expect(decideVersion(head('paid'), changed, 'RUB')).toBe('paid-changed');
     });

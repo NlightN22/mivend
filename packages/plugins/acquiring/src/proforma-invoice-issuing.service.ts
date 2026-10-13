@@ -30,7 +30,13 @@ export interface IssueResult {
     created: ProformaInvoice[];
 }
 
+const PRE_PLACED_STATES = ['Created', 'AddingItems', 'ArrangingPayment', 'Draft'];
 const UNPAID = ['pending', 'issued'];
+
+// Numbers are `<order number>-NN`; the next ordinal follows the highest one used, not the row count.
+function maxOrdinal(rows: ProformaInvoice[]): number {
+    return rows.reduce((max, r) => Math.max(max, Number(/-(\d+)$/.exec(r.number)?.[1] ?? 0)), 0);
+}
 
 // Issues and versions proforma invoices for an order: one current snapshot per organization,
 // idempotent by content (docs/payments.md "Proforma invoice versions").
@@ -67,7 +73,7 @@ export class ProformaInvoiceIssuingService {
         if (order.state === 'Cancelled') {
             throw new UserInputError('Proforma invoices cannot be requested for a cancelled order');
         }
-        if (order.active) {
+        if (order.active || PRE_PLACED_STATES.includes(order.state)) {
             throw new UserInputError('Proforma invoices can be requested only for a placed order');
         }
         const { current, created } = await this.issueForOrder(ctx, orderId, {
@@ -111,11 +117,12 @@ export class ProformaInvoiceIssuingService {
         const heads = new Map(
             existing
                 .filter(i => i.supersededById == null && i.status !== 'superseded')
+                .sort((a, b) => a.version - b.version || Number(a.id) - Number(b.id))
                 .map(i => [i.organizationId, i] as const),
         );
 
         const created: ProformaInvoice[] = [];
-        let ordinal = existing.length;
+        let ordinal = maxOrdinal(existing);
         let owner: { counterpartyId: number; branchId: string | null } | undefined;
         for (const group of content) {
             const head = heads.get(group.organizationId);

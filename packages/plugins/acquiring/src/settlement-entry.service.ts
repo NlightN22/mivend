@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt } from './entities/payment-attempt.entity';
@@ -180,10 +180,9 @@ export class SettlementEntryService {
         const preferredIndex = open.findIndex(
             proformaInvoice => Number(proformaInvoice.id) === preferredProformaInvoiceId,
         );
-        if (preferredIndex < 0 && open.length >= SettlementEntryService.FIFO_SCAN_LIMIT) {
-            // The target proforma invoice itself wasn't among the oldest FIFO_SCAN_LIMIT open proforma invoices —
-            // fetch it directly so it's still settled first per "Cash application"'s own rule,
-            // even though it won't be found by the bounded scan above.
+        if (preferredIndex < 0) {
+            // Not in the open set: beyond the scan limit, or already paid/superseded/cancelled.
+            // Re-read it under the lock; a version replaced meanwhile must not fall back to FIFO.
             const preferred = await this.connection
                 .getRepository(ctx, ProformaInvoice)
                 .createQueryBuilder('proformaInvoice')
@@ -194,6 +193,10 @@ export class SettlementEntryService {
                 .getOne();
             if (preferred && (preferred.status === 'pending' || preferred.status === 'issued')) {
                 open.unshift(preferred);
+            } else if (preferred?.status === 'superseded' || preferred?.status === 'cancelled') {
+                throw new UserInputError(
+                    `ProformaInvoice ${preferred.number} is ${preferred.status} and cannot be paid`,
+                );
             }
         } else if (preferredIndex > 0) {
             const [preferred] = open.splice(preferredIndex, 1);
