@@ -1,6 +1,17 @@
 # Project Context
 
-Updated: 2026-10-12 12:00
+Updated: 2026-10-13 20:26
+
+## #215 / #224 / #227 historical ERP orders and settlement documents (2026-10-13, closed, on main; follow-ups #228/#229/#226)
+
+- **External orders (#215)**: an `order-changed` with no `orderUuid` and no `erpOrderId` match becomes an `Order` with `isExternal`, direct `counterpartyId` (pending until the counterparty exists, then attached by event + periodic reconcile), no Customer, state written directly from `erpStatus` (forward-only), read-only (transition guard, no reserve/cancel/proforma/confirm, no access by code). Visibility everywhere by `counterpartyId` (COALESCE with the customer's counterparty for drafts). Storefront "My orders": From ERP badge, source filter, ERP document number. Migration adds a unique partial index on `erpOrderId`: a DB with duplicates stops with a clear error. Decisions in `docs/order-contracts.md`.
+- **Settlement documents (#224)**: plugin `packages/plugins/settlement` (documents -> entries per organization/counterparty/contract triple -> order links, balances per triple). Streams `settlement-document-changed`, `settlement-balance-changed`, `settlement-document-type-changed` (event-contracts 0.68.x). Key = ERP document uuid; whole-entries replace; tombstones kept 2x the retention period; `closing_balance` authoritative, never summed; pending references attached by events and a periodic reconcile; retention cleaner (period `settlementRetentionMonths`, default 12, in the Vendure admin).
+- **Customer visibility fails closed (#227)**: a document is shown only if its type is `customerVisible` in the ERP reference AND its contract has `isCustomerContract` (true also for employee contracts, salary types are invisible). Categories (sale/payment/return/correction/bonus) come from the reference. The two interim admin settings were removed.
+- **Payment term vs amount limit (docs/payments.md)**: the term is the counterparty's `paymentDelayDays` (own `debtDaysLimit` for an individually controlled contract); `Contract.paymentDelayDays` is empty in 1C, never read; no term = no due date, nothing overdue. Currency arrives as ISO numeric (643), the API returns alphabetic.
+- **Storefront menu**: Account statement (`/settlements`) + collapsible Documents group (Proforma invoices, Contracts and files, Reconciliation acts placeholder). The old Payments page was removed by owner decision.
+- **Fractional quantities**: Vendure `OrderLine.quantity` is an integer; sell measured goods in a small base unit (ml, g) (docs/order-flow.md).
+- **Contour facts**: ERP seeds only a debt-covering window (+12 months) per triple, so old paid contracts have no documents (verified with search-platform). 12.8k failed `stock` rows on staging-integration came from a hidden warehouse tombstone (fixed, rows stay failed). `ts-node-dev` children can spin at 90% CPU and never listen: kill the children by PID, `touch` a file to respawn; never `pkill -f` with a pattern that matches your own shell.
+
 
 ## Payment allocation (#206)
 
@@ -30,23 +41,13 @@ The ERP payment fact carries its own amount/currency (allocation uses it, not th
 - `OpenDeferredExposureService` counts any unpaid unconfirmed order (any method); a Settled non-`deferred-payment` payment frees it; legacy deferred keeps counting. Details: `docs/payments.md` "Target model".
 - `BranchSettings.allowExceedingCreditLimit` (default off, migration 1791489000000, manager Branch settings "Credit" section) is returned by `DeferredCreditAssessmentService.assess`; checkout does not act on it yet (stage 2). Manager and storefront `generated/graphql.ts` were regenerated against the live server in stage 2b.
 
-## #194 reserve deadline / order cancel (2026-10-11, DONE: audited, pushed, closed)
+## #194 reserve deadline / order cancel (2026-10-11, DONE: audited, pushed, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-13-sections-full.md`)
 
-- **Decisions (docs/order-contracts.md "Order events topic and warehouse semantics")**: one topic `mivend.orders.events.v1.order-events` (key `orderUuid`, `type` in body + header, one subject, `oneOf` union, event-contracts 0.59.0 published), types `confirmed` (+ mandatory `reserveUntil`) and `cancel-requested`; ONE `confirmed` per order with ONE `warehouseId`, no `registrationUuid`, no per-line warehouse; old `order.submitted` topic dropped at once (integration contour, no dual-publish). ERP answers on `company.orders.events.v1.order-cancel-result` (per `orderUuid`, cancelled|rejected). Topic + ACLs exist on the broker; consumer group is the existing hub group. Search-platform side (consumer, tombstone, cancel command) is done by `sp.issue.178-179`, not by us; the ERP will switch to the standard autoreserve later (until then the reserve lands on the warehouse we send).
-- **Stage 1 DONE** (`ba394eee`, lint/test/test-int green): builder emits one `confirmed` per order (warehouse = largest total quantity, `reserveUntil` = earliest active `expiresAt`, skip without reservation), producer publishes only to the new topic, `order.submitted` renamed `order.confirmed` in the outbox registry. Uses a local mirror schema `schemas/order-events.schema.ts`.
-- **Update 2026-10-10 (later)**: stages 1-3 pushed (c8e71d64), live-verified on staging-integration: `confirmed` with `reserveUntil`, cancel before registration, cancel of a registered order (ERP marks for deletion, `order-cancel-result` applied). NOT built on purpose: customer/manager cancel entry points, paid-order rule, lost-answer auto-retry. **Blocked on order statuses from the integration side (sp#189: hasOrder/hasRealization/markedForDeletion -> pending/in_progress/shipped); after that the cancellability matrix is fixed in docs/order-contracts.md and entry points built (#56).** Written rules found on the ERP side: cancel only without posted warehouse order and sale; in_progress = request to a person; shipped = never; reject codes ORDER_SHIPPED/ORDER_IN_PROGRESS/ORDER_MISMATCH/ORDER_NOT_FOUND/PROCESSING_ERROR; payment/prepayment rules and who may cancel are NOT decided.
-- **Done 2026-10-11**: event-contracts 0.60.0 consumed; statuses derived from ERP facts into our own `erpStatus` (APPROVED > PICKING > SHIPPING > DELIVERING > DELIVERED, forward-only, CANCELLED terminal), live-verified on staging with a simulated chain (rollback and stale versions ignored). Cancellability and who may cancel are fixed in `docs/order-contracts.md`: customer/manager only while pending; once a warehouse order or sale exists, refuse at once. Entry points: shop `cancelOrder(code)`, admin `cancelOrderAsStaff(orderId)` (permission `CancelOrder`, result union `OrderCancelResult`), storefront and manager buttons, "not registered in the ERP" badge. `reservedQuantity` is the ERP's remaining reserve, not a status signal. Storefront i18n debt: #216.
-- **Follow-ups shipped 2026-10-11 (pushed 3b2ce63a, `make ci` green; no separate audit)**: ERP document number shown on the storefront order page and in the manager 'ERP document' panel with the raw registration status (#111 closed); storefront 'My Orders' shows Cancelled orders (the list used to hide them) with Delivered/Cancelled chips; list filters/search/page live in the URL query on storefront lists via `useUrlState`/`useUrlSyncedState` in ui-kit (#217 closed; rule only in `frontend-rules`). Browser back verified on orders, documents, proforma invoices, payments, requests, catalog; NOT checked live: employees, favorites, notifications.
-- **Open follow-ups**: #216 storefront translations (most pages hardcoded English); staff warning for registered orders at the reserve deadline never fires; transient ERP refusal stays REFUSED; no auto-retry of a lost `cancel-requested` answer; `useUrlState` page-2 behaviour unchecked on lists other than orders; storefront `OrderDetailPage.vue` is 453 lines (over the limit, pre-existing).
-- **Contour notes**: staging-integration dashboard (:5185/:8016) needs `make dev-staging-integration` restart after a plugin schema change; an ERP-side cancel shows in 1C only after the manual exchange (about 2 minutes); a shared tree holds other sessions' uncommitted work, so unit failures there are not necessarily yours.
-- **Rules saved**: topic-design rule (one stream per entity, not per event type) in `external-integration-rules` skill + global `audit`/`consumer-resilience-audit`.
-- **Known gaps**: an ERP refusal (`REFUSED`) is terminal, even for transient codes; no paid-order cancel (needs a refund flow); no auto-retry of a lost `cancel-requested` answer; deadline for registered orders does nothing (their reservation is released); rejection reason fields not cleared when facts advance from REJECTED; `options.kafka.topic` unused; `reservation-write-off-sync.service.ts` over the size limit; organization vs storage place per line not coordinated with the ERP.
+- One topic `mivend.orders.events.v1.order-events` (key `orderUuid`; types `confirmed` with `reserveUntil`, `cancel-requested`), ERP answers on `order-cancel-result`; statuses derive from ERP facts into `erpStatus` (forward-only). Rules in `docs/order-contracts.md`. Open: #216 translations, terminal ERP refusal, lost-answer auto-retry, deadline warning for registered orders.
 
 ## #208/#209/#211/#212/#213 (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-11-208-213-full.md`)
 
 - #208 cross-system verification pass (runbook `docs/cross-system-verification.md`) plus concurrency hardening: order row lock in the contract guard, `erpOrderId` hidden from customers, sibling lock on tier rebalance, auto-reserve vs manual-confirm race. Spin-offs: #209 write only changed `customFields` keys (no stale full snapshots), #211 `UnknownOrderUuidError` (unknown `orderUuid` is not retried forever), #212 undecodable inbox rows can be dismissed (`dismissFailedIntegrationInbox`).
-- #213 flaky sync-cycle backoff test: `SyncPluginOptions.retryBaseDelayMs` injectable, the test uses its own `RabbitMQService`; pattern recorded in `docs/testing-strategy.md` "Retry/backoff testing".
-- Workflow: parallel `general-purpose` agents (never a fork of a long session), one peer session owning `make test-int`/push/audit, staging explicit paths only.
 
 ## Package-only sales (#214: audited, closed, on main) — spec in the issue; integration side search-platform#184/#186
 
@@ -87,15 +88,10 @@ The ERP payment fact carries its own amount/currency (allocation uses it, not th
 ## #204 ERP order rejection (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-10-204-erp-order-rejection-full.md`)
 
 `Order.customFields.erpStatus` REJECTED (non-terminal, cleared by a later non-rejected
-`order-registration-result`) + reason code/text; order correlation fixed to resolve via
-`requestEntityId`/outbox/`payload.orderId` before `orderEntityId`; REJECTED excluded from deferred-payment's unconfirmed-exposure sum; reservation gets its own 7-day deadline independent of the ERP outcome. Commits: 91ae02e..6254524.
 
 ## #195/#200 integration health + gateways (2026-10-10, shipped/audited/closed; pushed to a6c7028b) — full text: `.backup/PROJECT_CONTEXT-2026-10-09-195-integration-health.md`, runbook `docs/integration-health.md`
 
 - Dashboard System -> Integration health: Inbound tab (stream x contract x Kafka lag x inbox backlog, drift rows, contract version vs registry via `EVENT_CONTRACTS_REGISTRY_TOKEN`, variants-without-organization/unit lines), Outbound tab (outbox per event type, skipped, schema source), Inbox issues / Outbound problems lists with Replay/Requeue/Rebuild (permission `RecoverIntegrationEvents`, SuperAdmin only so far). Count links work via user table settings (a ListPage with a `pageId` ignores URL filters).
-- Principles (skill external-integration-rules, docs/testing-patterns "Silent drop"): no silent drops; `OutboundGateway` is the only outbox writer (lint rule `outbound/no-direct-outbound`), inbound handlers return `inboundApplied`/`inboundNoop(reason)`; outbox retries with backoff for 24h, `skipped`/`resolved` statuses; inbox replay `failed -> replay_requested -> resolved` only when the replayed event is processed (1 h timeout back to failed).
-- Soft vs hard references: soft links (counterparty manager, product -> default sales unit) never block the owner and are back-filled; hard ones (contract/point-of-sale -> counterparty, price/stock/photo targets) retry. A manager id may be a 1C user GROUP that is never published (permanent null manager, by design).
-- State: contract package 0.56.0 exports `ORDER_SUBMITTED_JSON_SCHEMA`, staging shows schema source `contract`; receiver-side Confluent wire format parsing was tracked on the Integration Service side (search-platform#176), production still needs migrations applied and its own read-only registry token. Open: `product.handler.ts`/`types.ts` oversized (pre-existing), no `make test/test-int/ci` re-run after the last split commit.
 
 ## #198 order branch fallback + auto-reserve switch (compressed, shipped/audited — full text: `.backup/PROJECT_CONTEXT-2026-10-12-198-branch-fallback-full.md`)
 
@@ -116,18 +112,10 @@ Over-limit deferred order is NOT rejected (flag `creditLimitExceeded`, manager c
 ## Product photos (issue #181, shipped/audited/closed; pushed to d845536; earlier design text: `.backup/PROJECT_CONTEXT.20261006-181-photos-design.md`)
 
 - **Flow**: Integration Service stream `product-photo` (`ProductPhotoChanged`, event-contracts 0.46.0+, search-platform#170) -> `ProductPhotoStreamHandler` stores metadata in `ProductPhoto` (+ `syncQueuedAt`, `replayAttempts`) -> `ProductPhotoSyncService` (Vendure job queue `product-photo-sync`, must be in `worker.ts` activeQueues) downloads the pre-signed URL, checks MD5, `AssetService.createFromFileStream`, sets product assets by `position` (0 = featured). Same hash stored once; tombstone detaches. Serialized per product by `pg_advisory_xact_lock`; queue concurrency 1 (long transaction by design). ERP owns product photos: sync REPLACES the product's whole asset list.
-- **Never pass a stringified product id to `productService.update`** (TypeORM inserts a duplicate Product, #144 trap; hit once, 517 stray rows deleted on staging). Use the raw numeric id from the raw query.
-- **Self-healing**: scheduled task `erp-integration-product-photo-recovery` (10 min, central) re-queues stuck photos (1 h from `syncQueuedAt`) and, only with `kafkaEnabled`, replays `failed` ones via `POST /api/resync/v1/replay` (`aggregateType: productPhoto`, response `{aggregateType, results:[{entityId,status}]}`, verified live; `sourceSystem` = `INTEGRATION_RESYNC_SOURCE_SYSTEM`, default `onec-main`), max 5 attempts 1 h apart, attempts recorded before the call. Dashboard: Settings > Product photos (pending/failed, Replay). Expired link (7 days) is fixed by replay.
-- **Storage**: Garage (S3) in `docker-compose.dev.yml`, config `infrastructure/docker/garage/garage.toml`. Create bucket+key per contour with `infrastructure/scripts/garage-init.sh <bucket> <GK+24hex> <64hex>` (NOT in `make up`), then set `S3_ENDPOINT/S3_REGION/S3_BUCKET/S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY` in the contour `.env` (gitignored); unset `S3_ENDPOINT` = local `static/assets`. Managed S3 later = env only. MinIO is NOT used (images discontinued).
-- **Storefront**: `SearchResult.galleryPreviews` (erp-integration, batched DataLoader) feeds card carousels; `assetUrl(preview, 'thumb'|'small'|'large')` adds Vendure presets; `MvProductGallery` hides the thumb strip for a single photo; `MvFavoriteButton overlay`. Marketing chips on cards (discounts/price) are a later task.
-- **Facts**: staging got ~1040 photos (source backfill is partial: half of the 1C rows have no file, ~24% of files < 200 px). The watermark on many photos is baked into the file held by 1C (confirmed byte-for-byte), not fixable here. Follow-up #187 (GC of orphaned Assets/S3 objects). Production needs migration `1791000000009` (edited in place before ever running there). Vite dev server of a contour can serve a stale ui-kit module after edits; a contour restart fixes it.
 
 ## #166/#168/#164/#170 + 2026-10-05 storefront UX (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT.20261007-166-168-164-170-storefront-ux.md`)
 
 - Characteristics: every key is a checkbox facet group (`characteristic:<key>`, FacetValue code = normalized value, `CharacteristicFacetService`, per-key advisory lock). No sliders/refId facets yet; internal search backend does not know characteristics (#177). Brand = `Product.manufacturer` (no brand facet); manufacturers have their own stream `manufacturer`.
-- Unit volume is m³ end to end (ERP's `volume_l` carries m³). Dev/staging use `synchronize`: rename a column in the DB before the code or data is lost.
-- Active-filter chips (`MvActiveFilters`, `useActiveFilterChips`), header search suggestions, outage bar/heartbeat in the storefront, lazy PDF Chromium (`PDF_BROWSER_IDLE_MS`). Check `ps aux | grep puppeteer` before blaming code for a slow box.
-- `make test-int` restarts the shared Postgres and knocks staging over; `make ci` catches prettier issues lint/test miss; codegen output needs `prettier --write`.
 
 ## #162 favorites (compressed, shipped — full text: `.backup/PROJECT_CONTEXT-2026-10-12-162-favorites-full.md`)
 
@@ -136,14 +124,11 @@ Over-limit deferred order is NOT rejected (flag `creditLimitExceeded`, manager c
 ## #164 category browse/filters on ExternalSearchPlugin (compressed, closed/audited — full text: `.backup/PROJECT_CONTEXT.20261006-164-category-facets.md`)
 
 - Category = Collection slug `cat-<ErpId>`; manufacturer = Facet `manufacturer` (FacetValue code = ERP id, mirrored by `ManufacturerFacetService`). An unresolvable filter = empty result, never the unfiltered set.
-- A bare request (no term/category/filter) is answered from mivend's own DB (`ProductLookupService.browse`); sort is `relevance`/`name` ASC only (#165 to hide the rest in UI).
-- Restart lesson: `main.ts` on :3010 does not hot-reload linked plugin `dist`; use `make dev-staging-integration` and wait for `/health` 200.
 
 ## #70 guest price, branch stock tiers (compressed, closed/audited — full text: `.backup/PROJECT_CONTEXT.20261005-70-stock-tiers.md`)
 
 - Guests: API resolves default price (branch default `PriceType`); UI hides price AND stock tier. Default branch/price type/RUB currency bootstrapped from options (`BOOTSTRAP_BRANCH_NAMES`, `DEFAULT_PRICE_TYPE_CODE`, `DEFAULT_CURRENCY_CODE`); branch is mivend's own entity.
-- Stock tiers: `stockLevel` = tier of the viewer's branch ATP (none/low/medium/high, thresholds in GlobalSettings). Resolver-only override: never `extend type ProductVariant { stockLevel }` (crashes bootstrap). `inStock` filter (ERP stock) can briefly disagree with `stockLevel` (mivend ATP). #167: `stock.handler.ts` skips facts for tombstoned warehouses.
-- Staging test customer `test@komponent-m.ru` (creds: `STAGING_TEST_CUSTOMER_EMAIL`/`_PASSWORD` in the gitignored `.env.central.staging-integration`); KEEP it. Warehouses were assigned to branches by hand.
+
 ## #160/#59/#158 search backend + category tree/hierarchy (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-03-04-160-59-158-full.md`)
 
 Kafka `CategoryChanged.parent_id` builds the real Collection tree (design: `docs/category-hierarchy.md`); both portals render it (mega-menu/drill-down, `packages/shared/src/collectionTree.ts`); `SEARCH_BACKEND=external` resolves `totalItems`/ranking via search-service. Open: #159 (34 storefront e2e specs), staging products/facets blocked by #69.
@@ -159,25 +144,9 @@ the inbox/outbox + resilience patterns in `docs/testing-patterns.md` and the
 `external-integration-rules` skill. Full per-stream detail (handlers, migrations, gotchas):
 `docs/ai/.backup/PROJECT_CONTEXT-2026-10-04-streams-101-102-106-108-full.md`.
 
-## History (compressed)
+## History (compressed; full text: `.backup/PROJECT_CONTEXT-2026-10-13-sections-full.md`)
 
-Full narrative before 2026-09-29: `docs/ai/.backup/PROJECT_CONTEXT-2026-09-29-pre-108-full.md`
-(#105 Contract entity + #50 CreditLimitCheckService, staging full resync, #144/#145/#148/#149
-inbox throughput, #147 migration tooling introduced, #141 ERP tax auto-provisioning, payment/
-shipping plugin-ownership pattern). Chains back to
-`docs/ai/.backup/PROJECT_CONTEXT-2026-09-22-locale-dashboard-tax-design-full.md` and earlier.
-Durable facts still true: #100/#103/#104/#105/#108/#109/#110/#115/#116/#119/#121/#126/#128/#129/
-#131/#140/#141/#144/#145/#147/#148/#149/#152/#153/#101/#102 all shipped/closed; #117 (Position entity, now shipped) was still
-blocked; #130 (Administrator-lifecycle E2E) designed, not implemented; #50/#143/#44 open with
-deferred parts tracked (#150/#151). **#103** (order weight/volume + branch-conditional packaging,
-`unit-changed` stream): `ProductVariant.customFields.unitRatioToBase`/`unitWeightKg`/`unitVolumeM3`/
-`defaultSalesUnitId`, `BranchSettings.packagesOnly` (was `allowPiecewiseSale`, #214), `MultiplicityOrderInterceptor` resolves
-branch via the customer's preferred `TradingPoint` (never `order.customFields.branchId` pre-
-placement — real audit bug, fixed). `UnitStreamHandler` refresh is a single bounded
-values-changed-only UPDATE inside the inbox transaction, not a `ProductVariantService.update`
-fan-out (a shared base unit can match nearly every variant in the catalog). Unit volume is stored/shown in m³ (the ERP's `volume_l` carries m³); a local DB on
-`synchronize` that pulls this loses old volumes (column renamed) until the `unit` stream is
-re-imported — resync it after pulling.
+- Earlier milestones (plugins, sync, search, credit control, storefront UX) are summarized in the sections above and in `.backup/`; read the plugin docs and `docs/` for the current state.
 
 ## Project purpose
 
@@ -263,31 +232,12 @@ manages manager-portal login accounts; org-structure directory is the separate `
 Org-structure-blocking infra actions (creating a Branch) live in the native Dashboard instead,
 `Permission.SuperAdmin`.
 
-## Planned next work
+## Planned next work (full list: `.backup/PROJECT_CONTEXT-2026-10-13-sections-full.md`)
 
-0. **Follow-ups of #181**: #187 (asset GC), card marketing chips (discount/price badges), wire `garage-init` into `make up`.
-1. **Issue #154** (low-priority, open) — discount-rule follow-ups: `limitAmount` enforcement
-   (real cap, not just safe-exclude), conflict-scope simplification, unreachable ERP-vs-portal
-   branch, upstream version-collision/dedup risk (needs a search-platform-side issue number once
-   they file it — update `docs/ai/erp-streams-map.md` + this issue with the cross-link then).
-2. **Issue #44** — storefront's cosmetic shipping selector. Real fix: render
-   `eligibleShippingMethods` instead of hardcoded buttons; real freight pricing logic
-   (`ShippingCalculator` by distance/zone/order value) for `freight-delivery` (currently 0-rate
-   placeholder only).
-3. **Issue #143** — real credit-limit check for `deferred-payment` (via `plugin-approval-workflow`'s
-   `creditTermApproval`), storefront routing fix (`CheckoutSummary.vue`/`cart.ts` currently route
-   both `'invoice'` and `'deferred'` to the same `offline-terms` call; since #222 routing is by payment form), limit-exceeded UX.
-4. **`access-control-review`** pass on `AcquiringPlugin` running fully on branch — confirm
-   branch-level RBAC actually scopes its mutations correctly, not yet checked.
-5. **Issue #138** — sort/filter audit for ~17 remaining `MvAdvancedDataTable` consumers in
-   `packages/manager`. Follow `manager-table-standard` skill per table.
-6. **Issue #130** — Administrator-lifecycle E2E tests. Design resolved, not started.
-7. **#150** — decide checkout integration point for #50's `CreditLimitCheckService` (needs a
-   project-owner UX decision, not an agent guess). **#151** — ask search-platform whether the ERP
-   exposes a per-contract balance register (needed before #50's contract-level check can resolve
-   past `'undetermined'`).
-8. ~~#117~~ done (see Recent changes); `UserChanged.role` (#109) still deferred.
-9. `branchId`/`departmentId` access-control cleanup track (#123/#124/#125) — still design-only.
+- #228 follow-ups of the settlement section (i18n, organization names from `organization_requisites`, e2e with data via the real ingestion path); #229 role gating of receivables (low); #226 reconciliation acts.
+- #181 follow-ups (#187 asset GC, card chips, `garage-init` into `make up`); #154 discount-rule follow-ups; #44 shipping selector and freight pricing; #143 deferred routing UX.
+- `access-control-review` of `AcquiringPlugin` on a branch; #138 sort/filter audit of ~17 `MvAdvancedDataTable` consumers (`manager-table-standard`); #130 Administrator-lifecycle E2E.
+- #150 checkout integration point for `CreditLimitCheckService` (owner UX decision), #151 per-contract balance register question to search-platform; `UserChanged.role` (#109) deferred; `branchId`/`departmentId` cleanup (#123-#125) design-only.
 
 ## Known problems and limitations
 
@@ -334,6 +284,7 @@ Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
 
 ## Do not redo / do not forget
 
+- #215/#224/#227: external orders are ERP-owned and read-only; settlement visibility is reference-driven and fail closed; never read `Contract.paymentDelayDays`; amounts are integer minor units (ERP sends major units); do not sell fractional quantities (small base unit instead).
 - **Decide-then-mutate for any multi-row conditional write**: resolve every outcome first (reads,
   guard checks, what-would-happen-to-each-row), only mutate/save after nothing aborts the write —
   an early `return` partway through a mutating loop can leave unrelated rows in a half-applied
