@@ -60,6 +60,9 @@ export class OrderCancellationService {
                 .getRepository(txCtx, Order)
                 .findOne({ where: { id: orderId } });
             if (!order) throw new OrderNotEligibleError('Order not found');
+            if (order.customFields.isExternal) {
+                throw new OrderNotEligibleError('Orders from the ERP are managed there');
+            }
 
             const decision = await this.decide(txCtx, order, options.requestRegistered ?? true);
             return this.perform(txCtx, order, reason, decision);

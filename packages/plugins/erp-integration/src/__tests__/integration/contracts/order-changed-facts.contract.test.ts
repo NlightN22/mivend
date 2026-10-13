@@ -31,12 +31,15 @@ async function derivedStatusFor(
     if (classified.kind !== 'enqueue') throw new Error('expected an enqueue');
     const sync = {
         handleOrderChanged: vi.fn(),
-        isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
     };
     const handler = new OrderChangedStreamHandler(
         {} as never,
         sync as never,
         { findByEntityId: vi.fn() } as never,
+        {
+            findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+            upsert: vi.fn(),
+        } as never,
     );
     await handler.apply({} as RequestContext, 'erp-order-1', classified.input.payload);
     return sync.handleOrderChanged.mock.calls[0][1].derivedStatus;

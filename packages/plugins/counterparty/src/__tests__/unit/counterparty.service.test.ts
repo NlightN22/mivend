@@ -59,11 +59,13 @@ describe('CounterpartyService', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockRepo.save.mockImplementation(async (entity: unknown) => entity);
         service = new CounterpartyService(
             mockConnection as unknown as TransactionalConnection,
             mockCustomerService,
             mockCustomerPricingService,
             mockAccessScopeService,
+            { publish: vi.fn() } as never,
         );
     });
 

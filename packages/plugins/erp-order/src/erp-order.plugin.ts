@@ -1,10 +1,12 @@
 import { OnApplicationBootstrap } from '@nestjs/common';
 import {
     EventBus,
+    LanguageCode,
     FulfillmentStateTransitionEvent,
     OrderPlacedEvent,
     OrderStateTransitionEvent,
     PluginCommonModule,
+    RuntimeVendureConfig,
     VendurePlugin,
 } from '@vendure/core';
 import gql from 'graphql-tag';
@@ -15,6 +17,9 @@ import { ErpOrderStatusEvent } from './erp-order.events';
 import { ErpOrderResolver } from './erp-order.resolver';
 import { AdminOrderVisibilityResolver } from './admin-order-visibility.resolver';
 import { ErpOrderService } from './erp-order.service';
+import { ExternalOrderService } from './external-order.service';
+import { ExternalOrderCounterpartyListener } from './external-order-counterparty.listener';
+import { externalOrderProcess } from './external-order.guard';
 import { OrderVisibilityService } from './order-visibility.service';
 import { shopApiExtensions } from './api/shop.schema';
 
@@ -31,8 +36,13 @@ const adminApiSchema = gql`
 
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
-    providers: [ErpOrderService, OrderVisibilityService],
-    exports: [ErpOrderService, OrderVisibilityService],
+    providers: [
+        ErpOrderService,
+        OrderVisibilityService,
+        ExternalOrderService,
+        ExternalOrderCounterpartyListener,
+    ],
+    exports: [ErpOrderService, OrderVisibilityService, ExternalOrderService],
     shopApiExtensions: {
         schema: shopApiExtensions,
         resolvers: [ErpOrderResolver],
@@ -40,6 +50,37 @@ const adminApiSchema = gql`
     adminApiExtensions: {
         schema: adminApiSchema,
         resolvers: [AdminOrderVisibilityResolver],
+    },
+    configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
+        config.customFields.Order = [
+            ...(config.customFields.Order ?? []),
+            {
+                name: 'isExternal',
+                type: 'boolean',
+                nullable: false,
+                defaultValue: false,
+                label: [{ languageCode: LanguageCode.en, value: 'From ERP' }],
+            },
+            {
+                name: 'counterpartyId',
+                type: 'string',
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Counterparty' }],
+            },
+            {
+                name: 'pendingCounterpartyErpId',
+                type: 'string',
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'Pending counterparty ERP ID' }],
+            },
+        ];
+        config.orderOptions.process = [
+            ...(config.orderOptions.process ?? []),
+            externalOrderProcess,
+        ];
+        return config;
     },
     compatibility: '>0.0.0',
 })

@@ -1,12 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { ExternalOrderService } from '@mivend/plugin-erp-order';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 
 import { deriveOrderErpStatus } from '../order-erp-status.derivation';
 import { MissingDependencyError } from '../types';
 import { UnitLookupService } from '../unit-lookup.service';
+import { buildExternalOrderInput } from './external-order-input';
+import type { ResolvedOrderLine } from './external-order-input';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
+import { decideOrderChangedRoute } from './order-changed-route';
 
 const loggerCtx = 'IntegrationOrderChangedHandler';
 
@@ -34,9 +38,10 @@ const loggerCtx = 'IntegrationOrderChangedHandler';
 // from reservedQuantity), are ALSO deliberately not consumed — explicit decision, not an
 // oversight (mivend.audit.common's #110 review flagged these as needing a written call, same as
 // the discount fields above): the order's customer/organization/warehouse are already known
-// locally from the Order itself (this handler only correlates by entityId into an existing
-// Order — it never creates one), so re-deriving them from this stream would be a redundant,
-// unused write. `quantity` (the ordered amount, as opposed to reservedQuantity, the ERP-confirmed
+// locally from the Order itself (for mivend orders this handler only correlates by entityId into
+// an existing Order), so re-deriving them would be a redundant, unused write. An order with no
+// orderUuid and no local match is imported as an external order instead (#215), where customerId
+// is the counterparty. `quantity` (the ordered amount, as opposed to reservedQuantity, the ERP-confirmed
 // reserved amount) has no current consumer — only reservedQuantity feeds #72's reservation
 // tracking. Revisit if a future feature needs to detect an ERP-side order-line quantity edit
 // independent of reservation state.
@@ -46,6 +51,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         private readonly connection: TransactionalConnection,
         private readonly reservationWriteOffSyncService: ReservationWriteOffSyncService,
         private readonly unitLookupService: UnitLookupService,
+        private readonly externalOrderService: ExternalOrderService,
     ) {}
 
     async apply(
@@ -78,11 +84,11 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         const documentNumber =
             payload.documentNumber != null ? String(payload.documentNumber) : null;
 
-        if (await this.reservationWriteOffSyncService.isUnmatchedLegacyOrder(orderUuid, entityId)) {
-            return inboundNoop(
-                `order-changed ${entityId}: ERP order without a mivend orderUuid and no local order, ignored`,
-            );
-        }
+        const route = decideOrderChangedRoute(
+            orderUuid,
+            await this.externalOrderService.findByErpOrderId(ctx, entityId),
+        );
+        const isExternal = route !== 'apply-to-mivend-order';
 
         const derivedStatus = deriveOrderErpStatus({
             markedForDeletion: payload.markedForDeletion as boolean | undefined,
@@ -94,15 +100,15 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         });
 
         const rawLines = Array.isArray(payload.lines) ? payload.lines : [];
-        const reservedLines: Array<{ productVariantId: string; reservedQuantity: number }> = [];
+        const resolvedLines: ResolvedOrderLine[] = [];
         let linesWithoutProductId = 0;
+        let unknownProducts = 0;
         for (const rawLine of rawLines) {
             const line = rawLine as Record<string, unknown>;
             const productId = line.productId != null ? String(line.productId) : '';
             // reservedQuantity is a plain (non-optional) proto3 double — an absent key means 0
             // (a fully-cancelled/zeroed line), not a malformed line — only productId (a string
             // field, genuinely invalid when empty) is a real malformed-payload check here.
-            const reservedQuantity = Number(line.reservedQuantity ?? 0);
             if (!productId) {
                 Logger.warn(
                     `order-changed ${entityId}: skipping line with missing productId`,
@@ -113,6 +119,10 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             }
 
             const variant = await this.findVariant(productId);
+            if (!variant && isExternal) {
+                unknownProducts += 1;
+                continue;
+            }
             if (!variant) {
                 // Ordinary eventual-consistency race (product stream not consumed yet) — retry
                 // via MissingDependencyError, same as OrderRegistrationResultHandler's own
@@ -122,14 +132,34 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
                     `order-changed ${entityId}: variant not found for productId=${productId}`,
                 );
             }
-            const variantId = variant.id;
             const unitId = line.unitId != null ? String(line.unitId) : null;
             const ratio = unitId ? await this.unitRatioToBase(ctx, entityId, unitId, variant) : 1;
-            reservedLines.push({
-                productVariantId: variantId,
-                reservedQuantity: Math.round(reservedQuantity * ratio),
-            });
+            resolvedLines.push({ productVariantId: variant.id, ratioToBase: ratio, raw: line });
         }
+
+        if (isExternal) {
+            const result = await this.externalOrderService.upsert(
+                ctx,
+                buildExternalOrderInput(entityId, payload, derivedStatus, resolvedLines),
+            );
+            const skipped = linesWithoutProductId + unknownProducts;
+            if (result.counterpartyPending || skipped > 0) {
+                return inboundNoop(
+                    `order-changed ${entityId}: external order ${result.kind}` +
+                        (result.counterpartyPending ? ', counterparty not imported yet' : '') +
+                        (skipped > 0 ? `, ${skipped} line(s) without a known product skipped` : ''),
+                );
+            }
+            return inboundApplied();
+        }
+
+        // reservedQuantity is a plain proto3 double: absent means 0, not a malformed line.
+        const reservedLines = resolvedLines.map(resolved => ({
+            productVariantId: resolved.productVariantId,
+            reservedQuantity: Math.round(
+                Number(resolved.raw.reservedQuantity ?? 0) * resolved.ratioToBase,
+            ),
+        }));
 
         await this.reservationWriteOffSyncService.handleOrderChanged(ctx, {
             orderUuid,

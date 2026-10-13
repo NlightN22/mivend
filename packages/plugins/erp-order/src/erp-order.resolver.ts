@@ -11,10 +11,14 @@ import {
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 import { Brackets, WhereExpressionBuilder } from 'typeorm';
 import { documentNumberSearchTerm } from 'shared';
+import { TradingPointService } from '@mivend/plugin-counterparty';
 
 @Resolver()
 export class ErpOrderResolver {
-    constructor(private readonly connection: TransactionalConnection) {}
+    constructor(
+        private readonly connection: TransactionalConnection,
+        private readonly tradingPointService: TradingPointService,
+    ) {}
 
     @Query()
     @Allow(Permission.Owner)
@@ -34,16 +38,30 @@ export class ErpOrderResolver {
         const erpStatuses = (args.options?.filter as { erpStatus?: { in?: string[] } } | undefined)
             ?.erpStatus?.in;
 
+        const isExternal = (args.options?.filter as { isExternal?: { eq?: boolean } } | undefined)
+            ?.isExternal?.eq;
+        const counterpartyId = await this.tradingPointService.getCounterpartyIdForUser(ctx);
+
         const qb = this.connection
             .getRepository(ctx, Order)
             .createQueryBuilder('order')
-            .innerJoin('order.customer', 'customer')
-            .innerJoin('customer.user', 'user')
+            .leftJoin('order.customer', 'customer')
+            .leftJoin('customer.user', 'user')
             .leftJoinAndSelect('order.lines', 'lines')
             .leftJoinAndSelect('lines.productVariant', 'variant')
             .leftJoinAndSelect('variant.product', 'product')
             .leftJoin('product.translations', 'productTranslation')
-            .where('user.id = :userId', { userId: ctx.activeUserId })
+            .where(
+                new Brackets((bqb: WhereExpressionBuilder) => {
+                    bqb.where('user.id = :userId', { userId: ctx.activeUserId });
+                    if (counterpartyId) {
+                        bqb.orWhere(
+                            '("order"."customFieldsIsexternal" = true AND "order"."customFieldsCounterpartyid" = :counterpartyId)',
+                            { counterpartyId: String(counterpartyId) },
+                        );
+                    }
+                }),
+            )
             // 'Draft' is an admin-side work-in-progress state (manager portal's /orders/new,
             // or any admin `createDraftOrder` call) — the customer was attached
             // (`setCustomerForDraftOrder`) but the order was never actually placed/handed to
@@ -57,6 +75,10 @@ export class ErpOrderResolver {
             .orderBy('order.createdAt', 'DESC')
             .take(take)
             .skip(skip);
+
+        if (isExternal !== undefined) {
+            qb.andWhere('"order"."customFieldsIsexternal" = :isExternal', { isExternal });
+        }
 
         if (erpStatuses && erpStatuses.length > 0) {
             // PENDING has no real ERP status yet (customFieldsErpstatus IS NULL) — a plain `IN`

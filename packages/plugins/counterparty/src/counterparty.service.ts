@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
     CustomerService,
+    EventBus,
     Logger,
     PaginatedList,
     RequestContext,
@@ -13,6 +14,7 @@ import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
+import { CounterpartyCreatedEvent } from './counterparty-created.event';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyErpDetails, definedErpDetails } from './counterparty-erp-details';
 import { CounterpartySortParameter, CounterpartyUpsertPayload, loggerCtx } from './types';
@@ -35,17 +37,20 @@ export class CounterpartyService {
         private customerService: CustomerService,
         private customerPricingService: CustomerPricingService,
         private accessScopeService: AccessScopeService,
+        private eventBus: EventBus,
     ) {}
 
     async upsert(ctx: RequestContext, payload: CounterpartyUpsertPayload): Promise<Counterparty> {
         const repo = this.connection.getRepository(ctx, Counterparty);
         let record = await repo.findOne({ where: { erpId: payload.erpId } });
+        const isNew = !record;
         if (record) {
             Object.assign(record, payload);
         } else {
             record = repo.create(payload);
         }
         const saved = await repo.save(record);
+        if (isNew) this.publishCreated(ctx, saved);
         Logger.verbose(`Upserted counterparty erpId=${payload.erpId}`, loggerCtx);
         return saved;
     }
@@ -124,7 +129,7 @@ export class CounterpartyService {
             return true;
         }
         if (!fields.name) return false;
-        await repo.save(
+        const created = await repo.save(
             repo.create({
                 erpId,
                 legalName: fields.name,
@@ -142,8 +147,15 @@ export class CounterpartyService {
                 ...definedErpDetails(fields),
             }),
         );
+        this.publishCreated(ctx, created);
         Logger.verbose(`Created partial counterparty erpId=${erpId} from Kafka stream`, loggerCtx);
         return true;
+    }
+
+    private publishCreated(ctx: RequestContext, counterparty: Counterparty): void {
+        this.eventBus.publish(
+            new CounterpartyCreatedEvent(ctx, String(counterparty.id), counterparty.erpId),
+        );
     }
 
     // mivend.audit.common (2026-09-20): called from AdministratorLinkedListener once an erpId

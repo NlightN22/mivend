@@ -46,7 +46,13 @@ beforeAll(async () => {
             },
         }),
     } as unknown as TransactionalConnection;
-    service = new CounterpartyService(connection, {} as never, {} as never, {} as never);
+    service = new CounterpartyService(
+        connection,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+    );
 });
 
 beforeEach(async () => {

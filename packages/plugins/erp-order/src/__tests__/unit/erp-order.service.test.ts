@@ -35,6 +35,7 @@ const mockTradingPointService = {
     resolveServicingBranchId: vi.fn(),
 };
 const mockAdministratorService = { findOneByUserId: vi.fn() };
+const mockCounterpartyService = { getForCustomer: vi.fn() };
 
 const mockCtx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
@@ -51,6 +52,7 @@ describe('ErpOrderService', () => {
             mockEventBus as never,
             mockTradingPointService as never,
             mockAdministratorService as never,
+            mockCounterpartyService as never,
         );
     });
 

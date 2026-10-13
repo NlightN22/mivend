@@ -90,6 +90,7 @@ beforeAll(async () => {
         null as never,
         null as never,
         null as never,
+        null as never,
     );
     const eventBus = {
         publish: (event: unknown) => {

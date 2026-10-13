@@ -32,12 +32,15 @@ describe('OrderChangedStreamHandler', () => {
     it('skips a deleted event without calling the sync service', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'oc-1', { isDeleted: true });
@@ -45,35 +48,58 @@ describe('OrderChangedStreamHandler', () => {
         expect(syncService.handleOrderChanged).not.toHaveBeenCalled();
     });
 
-    it('ignores an order without orderUuid that matches no local order', async () => {
-        const syncService = {
-            handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(true),
-        };
+    it('imports an order without orderUuid and no local match as an external order, not through the reservation sync', async () => {
+        const syncService = { handleOrderChanged: vi.fn() };
+        const upsert = vi.fn().mockResolvedValue({ kind: 'created', counterpartyPending: false });
         const handler = new OrderChangedStreamHandler(
-            createConnection([]) as never,
+            createConnection([{ id: 'variant-1' }]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            { findByErpOrderId: vi.fn().mockResolvedValue(null), upsert } as never,
         );
 
         const outcome = await handler.apply(ctx, 'legacy-1', {
-            status: 'Проведён',
-            lines: [{ productId: 'prod-1', reservedQuantity: 1 }],
+            status: '',
+            customerId: 'cp-1',
+            lines: [{ productId: 'prod-1', quantity: 1, price: 10 }],
         });
 
-        expect(outcome).toMatchObject({ kind: 'noop' });
+        expect(outcome).toEqual({ kind: 'applied' });
         expect(syncService.handleOrderChanged).not.toHaveBeenCalled();
+        expect(upsert).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ erpOrderId: 'legacy-1', erpStatus: 'CONFIRMED' }),
+        );
+    });
+
+    it('reports a pending counterparty as a noop with the reason', async () => {
+        const handler = new OrderChangedStreamHandler(
+            createConnection([]) as never,
+            { handleOrderChanged: vi.fn() } as never,
+            { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue(null),
+                upsert: vi.fn().mockResolvedValue({ kind: 'created', counterpartyPending: true }),
+            } as never,
+        );
+
+        const outcome = await handler.apply(ctx, 'legacy-2', { customerId: 'cp-9' });
+
+        expect(outcome).toMatchObject({ kind: 'noop' });
     });
 
     it('resolves lines productId to a ProductVariant id and passes entityId as orderEntityId', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([{ id: 'variant-1' }]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -95,12 +121,15 @@ describe('OrderChangedStreamHandler', () => {
     it('converts a line quantity expressed in its unit to base units', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([{ id: 'variant-1' }]) as never,
             syncService as never,
             { findByEntityId: vi.fn().mockResolvedValue({ ratioToBase: 0.9 }) } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -118,12 +147,15 @@ describe('OrderChangedStreamHandler', () => {
     it('reads an unknown line unit as base instead of stalling the order', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([{ id: 'variant-1' }]) as never,
             syncService as never,
             { findByEntityId: vi.fn().mockResolvedValue(null) } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -141,7 +173,6 @@ describe('OrderChangedStreamHandler', () => {
     it('uses the variant own ratio when the line unit is its default sales unit (no unit lookup)', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const findByEntityId = vi.fn();
         const handler = new OrderChangedStreamHandler(
@@ -150,6 +181,10 @@ describe('OrderChangedStreamHandler', () => {
             ]) as never,
             syncService as never,
             { findByEntityId } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -168,12 +203,15 @@ describe('OrderChangedStreamHandler', () => {
     it('passes the variant id as a string even though Postgres returns the integer id as a number', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([{ id: 27708 }]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [{ productId: 'prod-1' }] });
@@ -191,12 +229,15 @@ describe('OrderChangedStreamHandler', () => {
     it('throws MissingDependencyError for a line whose productId does not resolve to a known variant', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([undefined]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await expect(
@@ -212,12 +253,15 @@ describe('OrderChangedStreamHandler', () => {
     it('applies a line with an absent reservedQuantity as an explicit 0, not a dropped line', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([{ id: 'variant-1' }]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -238,12 +282,15 @@ describe('OrderChangedStreamHandler', () => {
     it('drops (and does not report) a line with a missing productId', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -265,12 +312,15 @@ describe('OrderChangedStreamHandler', () => {
     it('treats an absent status as the empty string, never skipped/null', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [] });
@@ -285,12 +335,15 @@ describe('OrderChangedStreamHandler', () => {
     it('passes contractId through when present', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -308,12 +361,15 @@ describe('OrderChangedStreamHandler', () => {
     it('passes contractId as null when absent, not fabricated', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [] });
@@ -335,12 +391,15 @@ describe('OrderChangedStreamHandler', () => {
     ])('%s', async (_name, extra, expected) => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [], ...extra });
@@ -356,12 +415,15 @@ describe('OrderChangedStreamHandler', () => {
     it('passes orderUuid through when present', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [], orderUuid: 'order-uuid-1' });
@@ -375,12 +437,15 @@ describe('OrderChangedStreamHandler', () => {
     it('passes orderUuid as null when absent, for orders not registered through our integration', async () => {
         const syncService = {
             handleOrderChanged: vi.fn(),
-            isUnmatchedLegacyOrder: vi.fn().mockResolvedValue(false),
         };
         const handler = new OrderChangedStreamHandler(
             createConnection([]) as never,
             syncService as never,
             { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [] });

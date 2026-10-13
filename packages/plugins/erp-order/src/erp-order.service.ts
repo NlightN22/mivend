@@ -7,7 +7,7 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
-import { TradingPointService } from '@mivend/plugin-counterparty';
+import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { OrderReadyForErpEvent } from './erp-order.events';
 import './types';
 import type { ErpOrderStatus, ErpStatusUpdatePayload, OrderErpStatusInfo } from './types';
@@ -21,6 +21,7 @@ export class ErpOrderService {
         private readonly eventBus: EventBus,
         private readonly tradingPointService: TradingPointService,
         private readonly administratorService: AdministratorService,
+        private readonly counterpartyService: CounterpartyService,
     ) {}
 
     async onOrderPlaced(ctx: RequestContext, order: Order): Promise<void> {
@@ -33,6 +34,13 @@ export class ErpOrderService {
         // is not an error: the order simply has no branch scope, same as any other optional
         // custom field.
         if (order.customerId) {
+            if (!order.customFields.counterpartyId) {
+                const counterparty = await this.counterpartyService.getForCustomer(
+                    ctx,
+                    order.customerId,
+                );
+                if (counterparty) order.customFields.counterpartyId = String(counterparty.id);
+            }
             const tradingPoint = await this.tradingPointService.getPreferredForCustomer(
                 ctx,
                 order.customerId,

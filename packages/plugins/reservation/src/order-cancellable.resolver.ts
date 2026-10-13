@@ -9,6 +9,7 @@ export class OrderCancellableResolver {
 
     @ResolveField()
     async cancellable(@Ctx() ctx: RequestContext, @Parent() order: Order): Promise<boolean> {
+        if (order.customFields.isExternal) return false;
         const payments = await this.connection
             .getRepository(ctx, Payment)
             .find({ where: { order: { id: order.id } } });

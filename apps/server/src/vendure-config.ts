@@ -216,6 +216,7 @@ export const config: VendureConfig = {
                 name: 'erpOrderId',
                 type: 'string',
                 nullable: true,
+                unique: true,
                 public: false,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Order ID' }],
             },

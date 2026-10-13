@@ -6,3 +6,11 @@ export { OrderReadyForErpEvent, ErpOrderStatusEvent } from './src/erp-order.even
 export type { ErpOrderStatus, ErpStatusUpdatePayload } from './src/types';
 export { ERP_ORDER_STATUSES } from './src/types';
 export { canAdvanceErpStatus } from './src/erp-status-rank';
+export { ExternalOrderService } from './src/external-order.service';
+export { externalOrderProcess } from './src/external-order.guard';
+export { externalOrderState, DEFAULT_EXTERNAL_ERP_STATUS } from './src/external-order-state';
+export type {
+    ExternalOrderInput,
+    ExternalOrderLineInput,
+    ExternalOrderResult,
+} from './src/external-order.types';

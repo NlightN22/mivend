@@ -281,6 +281,10 @@ Today the consumer drops them as a `noop`. Decision: import them as real `Order`
   totals, VAT, line price/amount, linked documents). A historical order's `status` may be an empty string, not an error.
 - **Vendure state.** Created directly in the Vendure state matching `erpStatus` (no state-machine transitions);
   an `OrderProcess` guard (same idea as `ReplicaOrderProcess`) rejects every transition of an external order.
+- **Import mapping.** Customer is taken from `customerId` (`Counterparty.erpId`; `organizationId` is the seller
+  organization). An empty or non-derivable status gives `erpStatus = CONFIRMED`. Quantity is converted to the
+  base unit and stored in Vendure's integer line quantity (rounded only if the conversion is not whole); lines
+  with an unknown product are skipped and the order total comes from `totalAmount`.
 - **Visibility.** All portal users of the counterparty see its external orders (they have no author user);
   managers by the usual scope. The storefront "my orders" list shows them in the same list with a "from ERP"
   badge and a source filter, without actions (no cancel, no repeat).

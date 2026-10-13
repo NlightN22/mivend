@@ -61,6 +61,9 @@ export class ProformaInvoiceIssuingService {
     // On-demand request for a placed, not cancelled order; any payment form and terms are allowed.
     async requestForOrder(ctx: RequestContext, orderId: ID): Promise<ProformaInvoice[]> {
         const order = await this.loadOrder(ctx, orderId);
+        if (order.customFields.isExternal) {
+            throw new UserInputError('Proforma invoices are not issued for orders from the ERP');
+        }
         if (order.state === 'Cancelled') {
             throw new UserInputError('Proforma invoices cannot be requested for a cancelled order');
         }

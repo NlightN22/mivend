@@ -76,6 +76,7 @@ beforeAll(async () => {
                         code: '1000007',
                         currencyCode: 'RUB',
                         customer: { id: 'cust-1' },
+                        customFields: { isExternal: false },
                         lines: orderLines,
                         ...orderState,
                     }),

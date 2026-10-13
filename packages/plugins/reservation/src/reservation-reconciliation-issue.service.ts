@@ -74,8 +74,8 @@ export class ReservationReconciliationIssueService {
     // reconciliation issues for every branch's orders. Scoped the same way
     // OrderVisibilityService.buildVisibleOrdersQuery scopes Order itself (own = key-account
     // read exception via applyOwnCounterpartyFilter, department = order's own denormalized
-    // branch, OR NULL for a legitimately branch-less order) — joined via `order`/`customer` raw
-    // tables since ReservationReconciliationIssue only carries orderId, not a real relation.
+    // branch, OR NULL for a legitimately branch-less order) — joined via the raw `order`
+    // table's counterpartyId since ReservationReconciliationIssue only carries orderId, not a real relation.
     async findOpen(
         ctx: RequestContext,
         options?: OpenReservationReconciliationIssueListOptions,
@@ -90,13 +90,11 @@ export class ReservationReconciliationIssueService {
             .where('issue.status = :status', { status: 'open' });
 
         if (scope.kind !== 'all') {
-            qb.leftJoin('order', 'o', 'o.id::text = issue."orderId"')
-                .leftJoin('customer', 'customer', 'customer.id = o."customerId"')
-                .leftJoin(
-                    Counterparty,
-                    'counterparty',
-                    'customer."customFieldsCounterpartyid"::text = counterparty.id::text',
-                );
+            qb.leftJoin('order', 'o', 'o.id::text = issue."orderId"').leftJoin(
+                Counterparty,
+                'counterparty',
+                'o."customFieldsCounterpartyid" = counterparty.id::text',
+            );
             if (scope.kind === 'own') {
                 this.accessScopeService.applyOwnCounterpartyFilter(
                     qb,

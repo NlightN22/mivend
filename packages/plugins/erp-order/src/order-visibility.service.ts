@@ -8,9 +8,8 @@ import { Counterparty } from '@mivend/plugin-counterparty';
 
 /**
  * Row-level visibility for the manager portal's order list — mirrors
- * CounterpartyService.findVisible (see docs/access-control.md, layer 3). Order has no direct
- * department/branch/manager column of its own, so scope is resolved by joining through
- * Customer -> Counterparty, which already carries assignedManagerId/departmentId/branchId.
+ * CounterpartyService.findVisible (see docs/access-control.md, layer 3). Scope is resolved by
+ * joining Order.counterpartyId to Counterparty, which carries assignedManagerId/departmentId/branchId.
  */
 @Injectable()
 export class OrderVisibilityService {
@@ -47,7 +46,7 @@ export class OrderVisibilityService {
         qb.leftJoinAndSelect(`${qb.alias}.customer`, 'customer').leftJoin(
             Counterparty,
             'counterparty',
-            'customer."customFieldsCounterpartyid"::text = counterparty.id::text',
+            `COALESCE("${qb.alias}"."customFieldsCounterpartyid", customer."customFieldsCounterpartyid")::text = counterparty.id::text`,
         );
 
         if (managerId) {

@@ -102,6 +102,7 @@ beforeAll(async () => {
         { update: vi.fn() } as never,
         { assignCustomerPriceTypeByCode: vi.fn() } as never,
         mockAccessScopeService as unknown as AccessScopeService,
+        { publish: vi.fn() } as never,
     );
     assignmentService = new CounterpartyManagerAssignmentService(
         connectionShim,

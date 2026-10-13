@@ -22,13 +22,18 @@ describe('ErpOrderResolver.myOrders', () => {
     let qb: ReturnType<typeof mockQueryBuilder>;
     let connection: { getRepository: ReturnType<typeof vi.fn> };
     let resolver: ErpOrderResolver;
+    let tradingPoints: { getCounterpartyIdForUser: ReturnType<typeof vi.fn> };
 
     beforeEach(() => {
         qb = mockQueryBuilder();
         connection = {
             getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
         };
-        resolver = new ErpOrderResolver(connection as unknown as TransactionalConnection);
+        tradingPoints = { getCounterpartyIdForUser: vi.fn().mockResolvedValue('cp-1') };
+        resolver = new ErpOrderResolver(
+            connection as unknown as TransactionalConnection,
+            tradingPoints as never,
+        );
     });
 
     // Real incident this guards against: an admin-created Draft order (manager portal's
@@ -50,5 +55,43 @@ describe('ErpOrderResolver.myOrders', () => {
         );
         expect(result).toEqual({ items: [], totalItems: 0 });
         expect(connection.getRepository).not.toHaveBeenCalled();
+    });
+
+    it("scopes external orders to the user's own counterparty id only", async () => {
+        const brackets: Array<{ whereFactory: (b: unknown) => void }> = [];
+        qb.where = vi.fn((arg: { whereFactory: (b: unknown) => void }) => {
+            brackets.push(arg);
+            return qb;
+        });
+        await resolver.myOrders(mockCtx, {});
+
+        const inner = { where: vi.fn(() => inner), orWhere: vi.fn(() => inner) };
+        brackets[0].whereFactory(inner);
+        expect(inner.orWhere).toHaveBeenCalledWith(expect.stringContaining('Isexternal'), {
+            counterpartyId: 'cp-1',
+        });
+    });
+
+    it('adds no counterparty branch for a user without a counterparty', async () => {
+        tradingPoints.getCounterpartyIdForUser.mockResolvedValue(null);
+        const brackets: Array<{ whereFactory: (b: unknown) => void }> = [];
+        qb.where = vi.fn((arg: { whereFactory: (b: unknown) => void }) => {
+            brackets.push(arg);
+            return qb;
+        });
+        await resolver.myOrders(mockCtx, {});
+
+        const inner = { where: vi.fn(() => inner), orWhere: vi.fn(() => inner) };
+        brackets[0].whereFactory(inner);
+        expect(inner.orWhere).not.toHaveBeenCalled();
+    });
+
+    it.each([true, false])('applies the source filter isExternal=%s', async value => {
+        await resolver.myOrders(mockCtx, {
+            options: { filter: { isExternal: { eq: value } } } as never,
+        });
+        expect(qb.andWhere).toHaveBeenCalledWith('"order"."customFieldsIsexternal" = :isExternal', {
+            isExternal: value,
+        });
     });
 });

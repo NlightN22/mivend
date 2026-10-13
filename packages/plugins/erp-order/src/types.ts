@@ -36,6 +36,12 @@ declare module '@vendure/core' {
         // leaves REJECTED. See ReservationWriteOffSyncService.handleOrderRegistrationResult.
         erpRejectionReasonCode?: string | null;
         erpRejectionReasonText?: string | null;
+        // Set once at creation: the order came from the ERP with no mivend orderUuid (#215).
+        isExternal?: boolean;
+        // Denormalized Counterparty.id; the visibility key for managers and the customer's own list.
+        counterpartyId?: string | null;
+        // Raw ERP counterparty id of an external order whose counterparty is not imported yet.
+        pendingCounterpartyErpId?: string | null;
     }
 }
 
