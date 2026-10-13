@@ -343,6 +343,10 @@ Documents that form a customer's receivables (sales, payments, returns, correcti
   `closing_balance`, overdue), type chips, filters by contract/organization/period/number, built on the standard
   ui-kit table and filters. Customer-visible types are a whitelist by `documentType`. A "Reconciliation acts" menu
   item exists with a "not implemented yet" page; acts themselves are #226.
+- **Customer-visible settings (Vendure admin, GlobalSettings).** `settlementTypeCategories` maps `documentType` to a
+  category (`documentType=category`, whitelist; empty = everything under `other`) and `settlementCustomerContractKinds`
+  lists the contract kinds a customer sees (empty = no restriction). Real ERP type and kind names are entered there,
+  never hardcoded. Overdue status is FIFO from `due_date` or date + the contract's payment delay.
 - **Retention cleaner.** Scheduled and idempotent; removes only explicit ERP-owned rows outside the window of their
   triple (`opening_date`) plus a period set in the Vendure admin dashboard (default 12 months); never a row linked to an order or
   payment still open in mivend. A tombstone (`isDeleted`) is kept for twice that period so a late older version
