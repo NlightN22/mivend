@@ -2746,9 +2746,7 @@ export type GlobalSettingsCustomFields = {
     defaultBranchId: Maybe<Scalars['String']['output']>;
     deferredOrderMaxAgeDays: Maybe<Scalars['Int']['output']>;
     organizationSplitEnabled: Maybe<Scalars['Boolean']['output']>;
-    settlementCustomerContractKinds: Maybe<Scalars['String']['output']>;
     settlementRetentionMonths: Maybe<Scalars['Int']['output']>;
-    settlementTypeCategories: Maybe<Scalars['String']['output']>;
     stockTierLowMax: Maybe<Scalars['Int']['output']>;
     stockTierMediumMax: Maybe<Scalars['Int']['output']>;
 };
@@ -9138,9 +9136,7 @@ export type UpdateGlobalSettingsCustomFieldsInput = {
     defaultBranchId?: InputMaybe<Scalars['String']['input']>;
     deferredOrderMaxAgeDays?: InputMaybe<Scalars['Int']['input']>;
     organizationSplitEnabled?: InputMaybe<Scalars['Boolean']['input']>;
-    settlementCustomerContractKinds?: InputMaybe<Scalars['String']['input']>;
     settlementRetentionMonths?: InputMaybe<Scalars['Int']['input']>;
-    settlementTypeCategories?: InputMaybe<Scalars['String']['input']>;
     stockTierLowMax?: InputMaybe<Scalars['Int']['input']>;
     stockTierMediumMax?: InputMaybe<Scalars['Int']['input']>;
 };
