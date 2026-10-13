@@ -70,6 +70,12 @@ counterparty. It takes the same lock as `reserveOrder()`. The customer has no ch
   pushing to its `master`, bump the dependency here. See `docs/integration-health.md` for the
   contract drift indicator on the Outbound tab.
 
+## Payment allocation (#206)
+
+An ERP payment fact is applied to the named document, or to the current head of its version chain when that is
+superseded, then FIFO over the counterparty's open documents in the same organization; a remainder becomes an advance.
+The paid snapshot is never rewritten. Rules: `docs/payments.md`, "Payment allocation".
+
 ## Proforma invoices
 
 Terminology (owner decision, #223): our payment request is a **proforma invoice** (the entity was named `ProformaInvoice` before

@@ -314,6 +314,30 @@ redeliver.
 
 ---
 
+## Payment allocation
+
+How an ERP-reported payment fact is applied (`PaymentInboxProcessorService` -> `PaymentAttemptService` ->
+`SettlementEntryService.allocate`):
+
+1. **Reference.** The fact names a document by `proformaInvoiceUuid` (optionally with its number, which must match).
+   A fact that names no document is dead-lettered today (lump payments with no reference are not wired). The fact's
+   organization must match the document's organization, otherwise an `ORGANIZATION_MISMATCH` issue is raised.
+2. **Order.** The named document first, when open (`pending`/`issued`). A `superseded` named document redirects to
+   the current head of its version chain (`supersededById`, same counterparty and organization). Whatever remains,
+   or everything when the named document is not open (`paid`, `cancelled`, no open head), goes FIFO over the
+   counterparty's open documents of the same organization and currency, oldest first. An already paid named
+   document never blocks the money.
+3. **Remainder.** Money no open document can take is stored as an advance `SettlementEntry` (no document, no
+   order) on the counterparty. It is not consumed automatically by later documents; a person re-allocates it.
+4. **Version is irrelevant.** The printed version the customer paid does not matter, only the fact of payment.
+5. **Idempotency** is by the ERP event id only (`channel` + external reference). A repeated fact with another event
+   id is new money and is allocated by the rules above.
+6. **Why a document link remains.** It marks documents paid/open for the customer and managers and keeps the audit
+   trail per document. The link is to the current version, never required to be the printed one.
+7. **Order change after payment** never rewrites a paid snapshot; the difference is settled through the ERP.
+
+---
+
 ## Cash application and payment allocation (decided)
 
 **Automatic hybrid model: explicit reference first, then FIFO.** Manual allocation is not the
@@ -373,17 +397,22 @@ cells and only rows may break across pages (totals and signatures stay together)
   `taxAmount`, taken at issue time from the order line's tax lines; prices are VAT-inclusive, so
   `taxAmount = round(net line amount * rate / (100 + rate))` and the total is the sum of line amounts.
   Tax data is not part of the content hash (a version follows the money; a rate change alone never
-  re-issues). All lines 0% prints "Без НДС". A rate is "not confirmed" when the line has no tax line or
-  a 0 rate on the ERP placeholder rate (name contains "(auto,"); the snapshot stores `taxRate: null`
-  and PDF generation fails with "VAT rate not confirmed for category X", so no wrong invoice is
-  printed. The `vat-rate` handler renames the rate on confirmation. Failed documents are not
-  requeued on rate confirmation; they stay failed until regenerated. Snapshots issued before tax data
+  re-issues). All lines 0% prints "НДС 0%" when a line's category is НДС0, else "Без НДС".
+  A rate is "not confirmed" when the line has no tax line or a 0 rate on the ERP placeholder rate
+  (`isUnconfirmedTaxRateName` in `shared`, used by both the auto-create and the snapshot); the snapshot
+  stores `taxRate: null` and is never rewritten. At print time VAT is derived from the category's
+  confirmed rate; while it is still unknown, generation fails with "VAT rate not confirmed for category X".
+  The `vat-rate` handler renames the rate on confirmation and requeues failed documents of that category.
+  An order line normally has one tax line; several would be summed. Snapshots issued before tax data
   was stored print "не указан" with a logged warning; nothing is derived for them.
 - Payment QR (`plugin-documents/src/qr-payment/`): GOST R 56042-2014 format ST00012 ("ST0001" +
   encoding digit, 2 = UTF-8; 1 = windows-1251, 3 = KOI8-R), plain bank details, no SBP. Payload
   `ST00012|Name|PersonalAcc|BankName|BIC|CorrespAcc|Sum|Purpose|PayeeINN[|KPP]`, `Sum` in kopecks.
   Limits: Name 160, BankName 45, Purpose 210, accounts 20 digits, BIC 9, INN 10 or 12, KPP 9, whole
-  string 300 characters; `|` and control characters inside values become spaces. Our rule is stricter
+  string 300 characters (the Purpose limit is the standard's own table value, 210 "at the time of writing",
+  see [the standard text](https://meganorm.ru/Data2/1/4293771/4293771168.htm)); a BankName over 45 is cut on
+  a word boundary instead of dropping the QR; the SVG keeps a 4-module quiet zone; `|` and control
+  characters inside values become spaces. Our rule is stricter
   than the standard: Sum (this version's amount, > 0), Purpose and PayeeINN are required too; Purpose
   is "Оплата по счету № <number> от dd.mm.yyyy" plus ", в т.ч. НДС <sum>" when the VAT total is known;
   KPP is sent only when the organization has one. Any missing or invalid value, or a superseded
@@ -846,9 +875,10 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront 
 - `ProformaInvoice` carries `lines` (immutable snapshot), `version`, `supersedesId`, `supersededById`; status
   `superseded` joins pending/issued/paid/cancelled. `ProformaInvoiceIssuingService.issueForOrder` is the only creator
   (checkout handlers and the on-demand request call it); see `docs/order-contracts.md`, "Proforma invoices".
-- Payment binds to a snapshot (`proformaInvoiceId`). `payProformaInvoice` rejects a superseded one with a clear
-  error; FIFO cash application only sees pending/issued, so superseded snapshots never absorb money. A payment the ERP
-  reports against a superseded version is rejected the same way (reconciliation of that case is a follow-up).
+- Payment binds to a snapshot (`proformaInvoiceId`). A direct `payProformaInvoice` call rejects a superseded or
+  cancelled one with a clear error. A payment fact reported by the ERP never fails on the version: allocation follows
+  `supersededById` to the current version (same counterparty and organization) and settles it first; if that is not
+  open, the "Cash application" rules above apply (FIFO over the open documents of the organization, then advance).
 - Whole-order status updates at checkout (`updateStatusForOrder`) only move `pending` snapshots.
 - Difference after payment = current content of the organization minus the paid snapshot amount (GraphQL
   `ProformaInvoice.orderChangedDifference`, null when nothing changed). The paid head stays the current document, so
@@ -857,8 +887,8 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront 
 - A `cancelled` head (organization left the order) is never reused: if the organization returns, a new version is
   issued (next version, next `-NN` number, `supersedesId` = the cancelled one). Head selection is deterministic
   (highest version, then highest id among non-superseded rows) and the next `-NN` follows the highest used ordinal.
-- Pay vs supersede race: allocation re-reads the target under its row lock; a target that became `superseded` or
-  `cancelled` meanwhile is rejected with a clear error, money never falls back to FIFO over unrelated proformas.
+- Pay vs supersede race: allocation re-reads the target under its row lock; a target that became `superseded` meanwhile
+  hands the payment to the current version of its chain, otherwise the cash-application rules above apply.
 - Requesting a proforma (Shop `requestProformaInvoices`) is scoped to the counterparty, not the author: a colleague's
   order of the same counterparty is allowed, because proformas are visible to the whole counterparty anyway. Draft
   and pre-placement states (`Created`, `AddingItems`, `ArrangingPayment`, `Draft`) are refused.

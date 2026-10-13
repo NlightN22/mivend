@@ -2,6 +2,12 @@
 
 Updated: 2026-10-12 12:00
 
+## Payment allocation (#206)
+
+An ERP payment fact is applied to the named document, or to the current head of its version chain when that is
+superseded, then FIFO over the counterparty's open documents in the same organization; a remainder becomes an advance.
+The paid snapshot is never rewritten. Rules: `docs/payments.md`, "Payment allocation".
+
 ## #223 legacy-name rename (2026-10-12, done)
 
 - Routes `/proforma-invoices` (both portals), `ProformaInvoice*`/`useProformaInvoices` files and `pages/proforma-invoices` folders; persisted keys: Document.type `proforma-invoice`, numbering type `proforma-invoice` (`mivend_number_seq_proforma_invoice`), permission `ReadProformaInvoice`, access-scope key `proformaInvoice`.

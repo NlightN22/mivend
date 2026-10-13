@@ -67,7 +67,10 @@ empty storage state (each test logs in as a seeded buyer through the Shop API):
 
 Prerequisites: `make seed` (run id v12 gives `credit-limited@buyer.example` and `prepay@buyer.example` their
 contracts with a seeded organization, otherwise the contract guard blocks checkout). The PDF tests need
-the worker (the `generate-document` job); without it they skip with a reason. The tests release the buyers'
+the worker process (the `generate-document` job; `make dev` starts it with the rest of the stack): on CI
+(`CI` set) a missing worker fails them, locally they skip with a visible reason. Per-test budgets live in
+`packages/e2e/timeouts.ts`. The seeded organization for the checkout buyers' contracts depends on the seed run
+id (bumped in `infrastructure/scripts/seed-erp.mjs`, commit 618311d9): after pulling a bump, re-run `make seed`. The tests release the buyers'
 reservations and cancel their orders before and after each test; `over-limit` raises the stock of three
 SKUs through an ERP-import stock record and restores the branch setting afterwards.
 
