@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { formatDocumentNumber } from '@mivend/ui-kit';
+import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { OrderSummary } from './useOrders';
 import { STATUS_LABEL, STATUS_VARIANT, erpDocumentStatusLabel } from './useOrders';
 
 const props = defineProps<{ order: OrderSummary }>();
 
+const isExternal = computed(() => props.order.customFields?.isExternal === true);
 const statusKey = computed(() => props.order.customFields?.erpStatus ?? 'PENDING');
 const statusLabel = computed(() => STATUS_LABEL[statusKey.value] ?? statusKey.value);
 const statusVariant = computed(() => STATUS_VARIANT[statusKey.value] ?? 'default');
@@ -46,7 +47,10 @@ const preview = computed(() => {
     <article class="order-card">
         <div class="order-card-head">
             <div>
-                <div class="order-title">Order {{ formatDocumentNumber(order.code) }}</div>
+                <div class="order-title">
+                    Order {{ formatDocumentNumber(order.code) }}
+                    <MvStatusBadge v-if="isExternal" variant="info">From ERP</MvStatusBadge>
+                </div>
                 <div class="order-meta">{{ meta }}</div>
             </div>
             <span class="status-pill" :class="statusVariant !== 'default' ? statusVariant : ''">
@@ -61,7 +65,7 @@ const preview = computed(() => {
                 <div class="order-thumb">📦</div>
                 <div>{{ preview }}</div>
             </div>
-            <div class="order-card-actions">
+            <div v-if="!isExternal" class="order-card-actions">
                 <router-link :to="`/orders/${order.id}`" class="small-btn primary"
                     >Open</router-link
                 >
@@ -91,6 +95,10 @@ const preview = computed(() => {
 }
 
 .order-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
     font-size: 18px;
     font-weight: 950;
     letter-spacing: -0.035em;

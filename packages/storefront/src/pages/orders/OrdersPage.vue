@@ -11,8 +11,9 @@ const { orders, totalItems, loading, load } = useOrders();
 
 const PAGE_SIZE = 20;
 
-const { filters: urlState, page } = useUrlState({ status: 'all', q: '' }, { typingKeys: ['q'] });
+const { filters: urlState, page } = useUrlState({ status: 'all', source: 'all', q: '' }, { typingKeys: ['q'] });
 const activeFilter = toRef(urlState, 'status');
+const activeSource = toRef(urlState, 'source');
 const searchQuery = toRef(urlState, 'q');
 
 const FILTER_GROUPS: Record<string, ErpStatus[]> = {
@@ -32,16 +33,25 @@ const filters = [
     { key: 'cancelled', label: 'Cancelled' },
 ];
 
+const sources = [
+    { key: 'all', label: 'All sources' },
+    { key: 'mivend', label: 'Placed here' },
+    { key: 'erp', label: 'From ERP' },
+];
+
+const SOURCE_EXTERNAL: Record<string, boolean | undefined> = { mivend: false, erp: true };
+
 function reload(): void {
     void load({
         take: PAGE_SIZE,
         skip: (page.value - 1) * PAGE_SIZE,
         search: searchQuery.value.trim() || undefined,
         erpStatuses: activeFilter.value === 'all' ? undefined : FILTER_GROUPS[activeFilter.value],
+        isExternal: SOURCE_EXTERNAL[activeSource.value],
     });
 }
 
-watch([activeFilter, searchQuery, page], reload);
+watch([activeFilter, activeSource, searchQuery, page], reload);
 
 onMounted(reload);
 </script>
@@ -74,6 +84,18 @@ onMounted(reload);
                     @click="activeFilter = f.key"
                 >
                     {{ f.label }}
+                </button>
+            </div>
+
+            <div class="filter-chips">
+                <button
+                    v-for="s in sources"
+                    :key="s.key"
+                    class="chip"
+                    :class="{ active: activeSource === s.key }"
+                    @click="activeSource = s.key"
+                >
+                    {{ s.label }}
                 </button>
             </div>
 

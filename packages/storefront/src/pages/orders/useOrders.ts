@@ -23,6 +23,7 @@ export interface MyOrdersOptions {
     skip: number;
     search?: string;
     erpStatuses?: ErpStatus[];
+    isExternal?: boolean;
 }
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -65,6 +66,15 @@ export function erpDocumentStatusLabel(status: string | null | undefined): strin
     return (status && ERP_DOCUMENT_STATUS_LABEL[status]) || null;
 }
 
+function orderFilter(options: MyOrdersOptions): Record<string, unknown> | undefined {
+    const filter: Record<string, unknown> = {};
+    if (options.erpStatuses && options.erpStatuses.length > 0) {
+        filter.erpStatus = { in: options.erpStatuses };
+    }
+    if (options.isExternal !== undefined) filter.isExternal = { eq: options.isExternal };
+    return Object.keys(filter).length > 0 ? filter : undefined;
+}
+
 export function useOrders(): {
     orders: Ref<OrderSummary[]>;
     totalItems: Ref<number>;
@@ -82,10 +92,7 @@ export function useOrders(): {
                 options: {
                     take: options.take,
                     skip: options.skip,
-                    filter:
-                        options.erpStatuses && options.erpStatuses.length > 0
-                            ? { erpStatus: { in: options.erpStatuses } }
-                            : undefined,
+                    filter: orderFilter(options),
                 },
                 search: options.search,
             });

@@ -30,6 +30,7 @@ query MyOrders($options: OrderListOptions, $search: String) {
                 erpStatus
                 erpStatusAt
                 erpOrderStatus
+                isExternal
             }
         }
         totalItems

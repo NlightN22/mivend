@@ -2389,6 +2389,7 @@ export type OrderCustomFields = {
     erpRejectionReasonText?: Maybe<Scalars['String']['output']>;
     erpStatus?: Maybe<Scalars['String']['output']>;
     erpStatusAt?: Maybe<Scalars['DateTime']['output']>;
+    isExternal?: Maybe<Scalars['Boolean']['output']>;
     latestFulfillmentState?: Maybe<Scalars['String']['output']>;
     paymentStatus?: Maybe<Scalars['String']['output']>;
     placedByAdministratorId?: Maybe<Scalars['String']['output']>;
@@ -2418,6 +2419,7 @@ export type OrderFilterParameter = {
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
     id?: InputMaybe<IdOperators>;
+    isExternal?: InputMaybe<BooleanOperators>;
     latestFulfillmentState?: InputMaybe<StringOperators>;
     /**
      * The date & time that the Order was placed, i.e. the Customer
@@ -2583,6 +2585,7 @@ export type OrderSortParameter = {
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
+    isExternal?: InputMaybe<SortOrder>;
     latestFulfillmentState?: InputMaybe<SortOrder>;
     /**
      * The date & time that the Order was placed, i.e. the Customer
@@ -4231,6 +4234,7 @@ export type UpdateOrderCustomFieldsInput = {
     erpRejectionReasonText?: InputMaybe<Scalars['String']['input']>;
     erpStatus?: InputMaybe<Scalars['String']['input']>;
     erpStatusAt?: InputMaybe<Scalars['DateTime']['input']>;
+    isExternal?: InputMaybe<Scalars['Boolean']['input']>;
     latestFulfillmentState?: InputMaybe<Scalars['String']['input']>;
     paymentStatus?: InputMaybe<Scalars['String']['input']>;
     placedByAdministratorId?: InputMaybe<Scalars['String']['input']>;
@@ -4861,6 +4865,7 @@ export type MyOrdersQuery = {
                 erpStatus?: string | null;
                 erpStatusAt?: any | null;
                 erpOrderStatus?: string | null;
+                isExternal?: boolean | null;
             } | null;
         }>;
     };
@@ -6044,6 +6049,7 @@ export const MyOrdersDocument = new TypedDocumentString(`
         erpStatus
         erpStatusAt
         erpOrderStatus
+        isExternal
       }
     }
     totalItems
