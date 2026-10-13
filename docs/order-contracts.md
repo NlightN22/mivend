@@ -337,18 +337,23 @@ Documents that form a customer's receivables (sales, payments, returns, correcti
   changes only `closing_balance` (`opening_*` stay; a triple missing from the register becomes 0). Then
   `closing = opening + sum(entries)` may temporarily not hold: `closing_balance` is authoritative, never reject or
   alert on that mismatch. Versions are monotonic per document and per triple.
-- **Pending.** An entry whose contract/counterparty is not imported yet waits and is attached later. Employee and
-  supplier contracts are filtered by `contract_kind`/`contract_type`/`payment_kind`.
-- **Customer view.** A separate storefront section (own menu item) with balance cards (opening, current from
-  `closing_balance`, overdue), type chips, filters by contract/organization/period/number, built on the standard
-  ui-kit table and filters. Customer-visible types are a whitelist by `documentType`. A "Reconciliation acts" menu
-  item exists with a "not implemented yet" page; acts themselves are #226.
-- **Customer-visible settings (Vendure admin, GlobalSettings) - interim until #227.** `settlementTypeCategories`
-  maps `documentType` to a category (`documentType=category`) and `settlementCustomerContractKinds` lists the
-  contract kinds a customer sees. Both fail closed: empty means nothing is visible, a `documentType` missing from the
-  mapping is hidden (no implicit category), and entries or balances whose contract is not imported yet are always
-  hidden. The real source of both classifications will come from the ERP side (#227). Overdue status is FIFO from
-  `due_date` or date + the contract's payment delay.
+- **Pending.** An entry whose contract/counterparty is not imported yet waits and is attached later.
+- **Customer view (reference-driven, #227).** A separate storefront section ("Account statement", own menu item)
+  with balance cards (opening, current from `closing_balance`, overdue), type chips, filters by
+  contract/organization/period/number, built on the standard ui-kit controls. A "Reconciliation acts" menu item
+  exists with a "not implemented yet" page; acts themselves are #226.
+- **Visibility rule (fail closed).** A document entry is shown only when (1) its `documentType` exists in the
+  `settlement-document-type` reference (`SettlementDocumentTypeChanged`, key = `documentType`) with
+  `customer_visible = true`, and (2) its contract is a customer contract (`ContractChanged.is_customer_contract`,
+  absent = no) and is imported. A balance card needs only (2). Everything else is hidden. The classification
+  is owned by the ERP side; mivend never hard-codes type names or contract kinds and has no admin whitelist.
+- **Categories.** The chip and the row category come from the reference `category` (free string owned by the ERP:
+  sale, payment, return, correction, bonus, other); an unknown value is shown under `other`. The label comes from
+  the reference, not from the document (a retro-bonus accrual document carries a wrong 1C synonym). A retro-bonus
+  accrual arrives as a settlement document (category `bonus`); `GrantedRetroBonusChanged` is informational only and
+  must not be added to the balance.
+- **Reference lifecycle.** Upsert by `documentType`, version guarded, idempotent; a type missing from the
+  reference is hidden until it arrives (Integration Service auto-registers a new type as `other`, not visible).
 - **Open owner decision (role gating).** Settlement documents and balances are visible to every user of the
   counterparty; which of the customer's employees may see receivables is not decided yet, so the code does not
   gate by portal role.

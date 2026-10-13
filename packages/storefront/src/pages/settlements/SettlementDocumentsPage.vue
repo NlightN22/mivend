@@ -65,7 +65,7 @@ const totals = computed(() =>
     ),
 );
 
-const CATEGORY_CHIPS = ['sale', 'payment', 'return', 'correction'];
+const CATEGORY_CHIPS = ['sale', 'payment', 'return', 'correction', 'bonus'];
 
 function reload(): void {
     void load({

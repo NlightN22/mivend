@@ -6,6 +6,7 @@ export const TYPE_CHIPS: FilterChip[] = [
     { key: 'payment', label: 'Payments' },
     { key: 'return', label: 'Returns' },
     { key: 'correction', label: 'Corrections' },
+    { key: 'bonus', label: 'Bonuses' },
     { key: 'overdue', label: 'Overdue', variant: 'danger' },
 ];
 
