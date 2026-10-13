@@ -157,6 +157,7 @@ beforeAll(async () => {
         { handleOrderChanged: vi.fn() } as never,
         { findByEntityId: vi.fn() } as never,
         externalOrders,
+        { attachOrder: vi.fn() } as never,
     );
     ctx = { channel: { defaultCurrencyCode: 'RUB' } } as unknown as RequestContext;
 });
@@ -288,6 +289,7 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
             sync as never,
             { findByEntityId: vi.fn() } as never,
             externalOrders,
+            { attachOrder: vi.fn() } as never,
         );
 
         await mivendHandler.apply(ctx, ERP_ORDER, { lines: [] });

@@ -27,6 +27,7 @@ import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { RetroBonusPlugin } from '@mivend/plugin-retro-bonus';
+import { SettlementPlugin } from '@mivend/plugin-settlement';
 import { ErpImportPlugin } from '@mivend/plugin-erp-import';
 import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
 import { searchPlugins } from '@mivend/plugin-search';
@@ -706,6 +707,7 @@ export const config: VendureConfig = {
         // Issue #102: Admin-API-only, runs on every instance like PriceEntryPlugin/CounterpartyPlugin
         // — only erp-integration's handler (central-only) ever writes to it.
         RetroBonusPlugin,
+        SettlementPlugin,
         // Before DocumentsPlugin: its schema extends ProformaInvoice, and Vendure applies extensions in plugin order.
         ...instancePlugins,
         DocumentsPlugin,
@@ -933,6 +935,13 @@ export const config: VendureConfig = {
                     'granted-retro-bonus':
                         process.env.INTEGRATION_KAFKA_TOPIC_GRANTED_RETRO_BONUS ??
                         'company.customers.events.v1.granted-retro-bonus-changed',
+                    // Issue #224: receivables history. See SettlementDocumentStreamHandler.
+                    'settlement-document':
+                        process.env.INTEGRATION_KAFKA_TOPIC_SETTLEMENT_DOCUMENT ??
+                        'company.customers.events.v1.settlement-document-changed',
+                    'settlement-balance':
+                        process.env.INTEGRATION_KAFKA_TOPIC_SETTLEMENT_BALANCE ??
+                        'company.customers.events.v1.settlement-balance-changed',
                 },
             },
             schemaRegistry: {

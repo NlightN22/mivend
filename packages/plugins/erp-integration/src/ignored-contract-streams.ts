@@ -6,9 +6,5 @@ export const IGNORED_CONTRACT_STREAMS: Readonly<Record<string, string>> = {
     'order-change-result':
         'Reply to an order change command; mivend sends no such commands yet (order-changed is consumed)',
     'product-group': 'Dictionary referenced by point-of-sale product_group_ids; not resolved yet',
-    'settlement-balance': 'Settlement documents (receivables history) are tracked in #224',
-    'settlement-document': 'Settlement documents (receivables history) are tracked in #224',
-    'settlement-entry': 'Settlement documents (receivables history) are tracked in #224',
-    'settlement-order-link': 'Settlement documents (receivables history) are tracked in #224',
     'point-of-sale-type': 'Dictionary referenced by point-of-sale point_type_ids; not resolved yet',
 };

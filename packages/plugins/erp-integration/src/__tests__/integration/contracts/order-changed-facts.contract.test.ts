@@ -40,6 +40,7 @@ async function derivedStatusFor(
             findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
             upsert: vi.fn(),
         } as never,
+        { attachOrder: vi.fn() } as never,
     );
     await handler.apply({} as RequestContext, 'erp-order-1', classified.input.payload);
     return sync.handleOrderChanged.mock.calls[0][1].derivedStatus;

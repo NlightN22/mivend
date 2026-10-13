@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
+import { SettlementPendingService } from '@mivend/plugin-settlement';
 
 import { MissingDependencyError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -15,6 +16,7 @@ export class ContractStreamHandler implements InboundStreamHandler {
     constructor(
         private readonly contractService: ContractService,
         private readonly counterpartyService: CounterpartyService,
+        private readonly settlementPending: SettlementPendingService,
     ) {}
 
     async apply(
@@ -81,6 +83,8 @@ export class ContractStreamHandler implements InboundStreamHandler {
                     ? ((payload.brandManufacturerId as string | null) ?? null)
                     : undefined,
         });
+        const stored = await this.contractService.findByErpId(ctx, entityId);
+        if (stored) await this.settlementPending.attachContract(ctx, entityId, String(stored.id));
         Logger.verbose(`Upserted contract erpId=${entityId}`, loggerCtx);
         return inboundApplied();
     }

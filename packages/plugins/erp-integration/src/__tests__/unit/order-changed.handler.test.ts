@@ -41,6 +41,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'oc-1', { isDeleted: true });
@@ -56,6 +57,7 @@ describe('OrderChangedStreamHandler', () => {
             syncService as never,
             { findByEntityId: vi.fn() } as never,
             { findByErpOrderId: vi.fn().mockResolvedValue(null), upsert } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         const outcome = await handler.apply(ctx, 'legacy-1', {
@@ -81,6 +83,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue(null),
                 upsert: vi.fn().mockResolvedValue({ kind: 'created', counterpartyPending: true }),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         const outcome = await handler.apply(ctx, 'legacy-2', { customerId: 'cp-9' });
@@ -100,6 +103,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -130,6 +134,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -156,6 +161,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -185,6 +191,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -212,6 +219,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [{ productId: 'prod-1' }] });
@@ -238,6 +246,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await expect(
@@ -262,6 +271,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -291,6 +301,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -321,6 +332,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [] });
@@ -344,6 +356,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', {
@@ -370,6 +383,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [] });
@@ -400,6 +414,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [], ...extra });
@@ -424,6 +439,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [], orderUuid: 'order-uuid-1' });
@@ -446,6 +462,7 @@ describe('OrderChangedStreamHandler', () => {
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         await handler.apply(ctx, 'erp-order-1', { lines: [] });

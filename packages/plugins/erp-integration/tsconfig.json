@@ -12,6 +12,7 @@
         { "path": "../customer-pricing" },
         { "path": "../price-entry" },
         { "path": "../retro-bonus" },
+        { "path": "../settlement" },
         { "path": "../access-control" },
         { "path": "../counterparty" },
         { "path": "../notification" },

@@ -43,6 +43,7 @@ describe.each([
             new ContractStreamHandler(
                 { deactivateTombstone: vi.fn().mockResolvedValue(m) } as never,
                 {} as never,
+                { attachContract: vi.fn() } as never,
             ),
         { isDeleted: true },
     ],
@@ -117,6 +118,7 @@ describe.each([
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         const outcome = await handler.apply(ctx, 'o-1', {
@@ -147,6 +149,7 @@ describe.each([
                 findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
                 upsert: vi.fn(),
             } as never,
+            { attachOrder: vi.fn() } as never,
         );
 
         const outcome = await handler.apply(ctx, 'o-1', {

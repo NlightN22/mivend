@@ -40,6 +40,7 @@
         "@mivend/plugin-order-identity": "workspace:*",
         "@mivend/plugin-reservation": "workspace:*",
         "@mivend/plugin-retro-bonus": "workspace:*",
+        "@mivend/plugin-settlement": "workspace:*",
         "@mivend/plugin-saved-views": "workspace:*",
         "@mivend/plugin-search": "workspace:*",
         "@mivend/plugin-session-management": "workspace:*",

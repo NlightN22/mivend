@@ -44,6 +44,8 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             'retro-bonus-rule': 'rbr2',
             'granted-retro-bonus': 'grb2',
             position: 'pos3',
+            'settlement-document': 'sdoc',
+            'settlement-balance': 'sbal',
         },
     },
     schemaRegistry: { url: 'http://registry.test' },

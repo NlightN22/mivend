@@ -5,6 +5,8 @@ const NOT_EVENT_SCHEMAS = new Set([
     'OrderChangedLineSchema',
     'OrderChangedLinkedDocumentSchema',
     'OrganizationSignatorySchema',
+    'SettlementEntrySchema',
+    'SettlementOrderLinkSchema',
 ]);
 
 export function streamNameFromSchemaExport(exportName: string): string | null {

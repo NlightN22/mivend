@@ -3,6 +3,7 @@ import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { RetroBonusPlugin } from '@mivend/plugin-retro-bonus';
+import { SettlementPlugin } from '@mivend/plugin-settlement';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
@@ -122,6 +123,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         CustomerPricingPlugin,
         PriceEntryPlugin,
         RetroBonusPlugin,
+        SettlementPlugin,
         AccessControlPlugin,
         MoqPlugin,
         CounterpartyPlugin,

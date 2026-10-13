@@ -16,11 +16,16 @@ function makeHandler(
     };
     counterpartyService: { findByErpId: ReturnType<typeof vi.fn> };
 } {
-    const contractService = { upsertActiveState, deactivateTombstone };
+    const contractService = {
+        upsertActiveState,
+        deactivateTombstone,
+        findByErpId: vi.fn().mockResolvedValue({ id: 'local-contract' }),
+    };
     const counterpartyService = { findByErpId };
     const handler = new ContractStreamHandler(
         contractService as never,
         counterpartyService as never,
+        { attachContract: vi.fn() } as never,
     );
     return { handler, contractService, counterpartyService };
 }

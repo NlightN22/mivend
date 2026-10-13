@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ExternalOrderService } from '@mivend/plugin-erp-order';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
+import { SettlementPendingService } from '@mivend/plugin-settlement';
 
 import { deriveOrderErpStatus } from '../order-erp-status.derivation';
 import { MissingDependencyError } from '../types';
@@ -52,6 +53,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         private readonly reservationWriteOffSyncService: ReservationWriteOffSyncService,
         private readonly unitLookupService: UnitLookupService,
         private readonly externalOrderService: ExternalOrderService,
+        private readonly settlementPending: SettlementPendingService,
     ) {}
 
     async apply(
@@ -142,6 +144,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
                 ctx,
                 buildExternalOrderInput(entityId, payload, derivedStatus, resolvedLines),
             );
+            await this.settlementPending.attachOrder(ctx, entityId);
             const skipped = linesWithoutProductId + unknownProducts;
             if (result.counterpartyPending || skipped > 0) {
                 return inboundNoop(
@@ -170,6 +173,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             documentNumber,
             derivedStatus,
         });
+        await this.settlementPending.attachOrder(ctx, entityId);
         return linesWithoutProductId > 0
             ? inboundNoop(
                   `order-changed ${entityId}: applied without ${linesWithoutProductId} line(s) lacking a productId`,
