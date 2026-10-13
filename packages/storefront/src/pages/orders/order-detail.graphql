@@ -39,6 +39,12 @@ query OrderDetail($id: ID!) {
             erpPaidAmount
             erpRegistrationStatus
             erpRegistrationDocumentNumber
+            tradingPointId
         }
+    }
+    myTradingPoints {
+        id
+        name
+        address
     }
 }

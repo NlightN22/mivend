@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
+import { MvStatusBadge, formatDocumentNumber, toast } from '@mivend/ui-kit';
+import { useRepeatOrder } from './useRepeatOrder';
 import type { OrderSummary } from './useOrders';
 import { STATUS_LABEL, STATUS_VARIANT, erpDocumentStatusLabel } from './useOrders';
 
 const props = defineProps<{ order: OrderSummary }>();
+const { repeating, repeat } = useRepeatOrder();
+
+async function repeatOrder(): Promise<void> {
+    const { added, skipped } = await repeat(props.order.lines);
+    if (added) toast(`Added to cart: ${added}`, 'success');
+    if (skipped) toast(`Could not add: ${skipped}`, 'error');
+}
 
 const isExternal = computed(() => props.order.customFields?.isExternal === true);
 const displayNumber = computed(() => {
@@ -73,7 +81,9 @@ const preview = computed(() => {
                 <router-link :to="`/orders/${order.id}`" class="small-btn primary"
                     >Open</router-link
                 >
-                <button class="small-btn">Repeat</button>
+                <button class="small-btn" :disabled="repeating" @click="repeatOrder">
+                    Repeat
+                </button>
                 <button class="small-btn">Documents</button>
             </div>
         </div>

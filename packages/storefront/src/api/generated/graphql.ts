@@ -4998,8 +4998,10 @@ export type OrderDetailQuery = {
             erpPaidAmount?: number | null;
             erpRegistrationStatus?: string | null;
             erpRegistrationDocumentNumber?: string | null;
+            tradingPointId?: string | null;
         } | null;
     } | null;
+    myTradingPoints: Array<{ id: string; name: string; address: string }>;
 };
 
 export type MyAdvanceBalanceQueryVariables = Exact<{ [key: string]: never }>;
@@ -6170,7 +6172,13 @@ export const OrderDetailDocument = new TypedDocumentString(`
       erpPaidAmount
       erpRegistrationStatus
       erpRegistrationDocumentNumber
+      tradingPointId
     }
+  }
+  myTradingPoints {
+    id
+    name
+    address
   }
 }
     `) as unknown as TypedDocumentString<OrderDetailQuery, OrderDetailQueryVariables>;
