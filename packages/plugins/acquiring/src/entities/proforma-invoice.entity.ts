@@ -12,6 +12,10 @@ export interface ProformaInvoiceLineSnapshot {
     unitPriceWithTax: number;
     linePriceWithTax: number;
     discounts: { description: string; amount: number }[];
+    // Absent on snapshots issued before tax data was stored; taxRate null = rate not confirmed at issue time.
+    taxRate?: number | null;
+    taxCategoryName?: string | null;
+    taxAmount?: number;
 }
 
 // One aggregate storefront Order can split into several ProformaInvoices — one per our own legal

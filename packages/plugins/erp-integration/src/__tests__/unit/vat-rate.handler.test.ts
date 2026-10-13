@@ -106,7 +106,11 @@ describe('VatRateStreamHandler', () => {
 
         await handler.apply(ctx, 'entity-1', { code: 'НДС20', zone: 'RU', percent: 18 });
 
-        expect(taxRateService.update).toHaveBeenCalledWith(ctx, { id: 'rate-existing', value: 18 });
+        expect(taxRateService.update).toHaveBeenCalledWith(ctx, {
+            id: 'rate-existing',
+            name: expect.not.stringContaining('(auto,'),
+            value: 18,
+        });
         expect(taxRateService.create).not.toHaveBeenCalled();
     });
 

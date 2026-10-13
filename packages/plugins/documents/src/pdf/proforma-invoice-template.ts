@@ -127,7 +127,7 @@ function renderTotalRows(data: ProformaInvoiceTemplateData): string {
         data.showDiscount
             ? row('Итого:', [t.subtotal, t.discount, t.payable])
             : span('Итого:', t.payable),
-        t.vat ? span('В том числе НДС:', t.vat) : '',
+        span('В том числе НДС:', t.vat),
         span('Всего к оплате:', t.payable),
     ].join('');
 }

@@ -205,7 +205,7 @@ export class ProformaInvoiceIssuingService {
             where: { id: orderId },
             relations: {
                 customer: true,
-                lines: { productVariant: { translations: true } },
+                lines: { productVariant: { translations: true }, taxCategory: true },
             },
         });
         if (!order) throw new Error(`Order ${orderId} not found`);

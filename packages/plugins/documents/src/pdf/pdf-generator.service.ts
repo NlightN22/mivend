@@ -202,10 +202,19 @@ export class PdfGeneratorService implements OnModuleInit {
                     unitPriceWithTax: line.unitPriceWithTax,
                     linePriceWithTax: line.linePriceWithTax,
                     discounts: line.discounts,
+                    taxRate: line.taxRate,
+                    taxCategoryName: line.taxCategoryName,
+                    taxAmount: line.taxAmount,
                     unitName: units.get(line.variantId) ?? null,
                     productVariant: { name: line.name, sku: line.sku },
                 })),
             };
+            if (source.lines.some(l => l.taxRate === undefined)) {
+                Logger.warn(
+                    `Document ${document.number}: snapshot has no tax data, VAT printed as not specified`,
+                    loggerCtx,
+                );
+            }
             if (printedRowsTotal(source) !== source.totalAmount) {
                 Logger.error(
                     `Document ${document.number}: printed rows total ${printedRowsTotal(source)} differs ` +

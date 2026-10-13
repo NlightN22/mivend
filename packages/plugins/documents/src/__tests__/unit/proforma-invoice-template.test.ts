@@ -21,6 +21,9 @@ function makeSource(overrides: Partial<ProformaInvoiceSource> = {}): ProformaInv
                 unitPriceWithTax: 10000,
                 linePriceWithTax: 20000,
                 discounts: [],
+                taxRate: 20,
+                taxCategoryName: 'VAT20',
+                taxAmount: 3333,
                 unitName: 'шт.',
                 productVariant: { name: 'Motor Oil 5W-30', sku: 'MOT-5W30-1L' },
             },
@@ -112,20 +115,67 @@ describe('buildProformaInvoiceTemplateData', () => {
         expect(data.totals.discount).toBe('15,00');
     });
 
-    it('shows the version only above 1 and omits the VAT line without VAT data', () => {
+    it('shows the version only above 1 and a single summed VAT total', () => {
         expect(
             buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), buyer),
         ).toMatchObject({
             versionLabel: null,
-            totals: { vat: null },
+            totals: { vat: '33,33' },
         });
+        expect(
+            buildProformaInvoiceTemplateData(makeSource({ version: 3 }), makeRequisites(), buyer)
+                .versionLabel,
+        ).toBe('Версия 3');
+    });
+
+    it('sums mixed rates into one VAT total', () => {
+        const base = makeSource().lines[0];
+        const lines = [
+            base,
+            { ...base, taxRate: 10, taxAmount: 1818 },
+            { ...base, taxRate: 0, taxAmount: 0 },
+        ];
         const data = buildProformaInvoiceTemplateData(
-            makeSource({ version: 3, vatAmount: 4167 }),
+            makeSource({ lines }),
             makeRequisites(),
             buyer,
         );
-        expect(data.versionLabel).toBe('Версия 3');
-        expect(data.totals.vat).toBe('41,67');
+        expect(data.totals.vat).toBe('51,51');
+        expect(render(makeSource({ lines })).match(/В том числе НДС/g)).toHaveLength(1);
+    });
+
+    it('prints "Без НДС" when every line is 0%', () => {
+        const line = { ...makeSource().lines[0], taxRate: 0, taxAmount: 0 };
+        const data = buildProformaInvoiceTemplateData(
+            makeSource({ lines: [line] }),
+            makeRequisites(),
+            buyer,
+        );
+        expect(data.totals.vat).toBe('Без НДС');
+    });
+
+    it('fails when a rate is not confirmed', () => {
+        const line = { ...makeSource().lines[0], taxRate: null, taxCategoryName: 'VAT10' };
+        expect(() =>
+            buildProformaInvoiceTemplateData(
+                makeSource({ lines: [line] }),
+                makeRequisites(),
+                buyer,
+            ),
+        ).toThrow('VAT rate not confirmed for category VAT10');
+    });
+
+    it('prints "не указан" for snapshots without tax data', () => {
+        const { taxRate, taxCategoryName, taxAmount, ...legacy } = makeSource().lines[0];
+        void taxRate;
+        void taxCategoryName;
+        void taxAmount;
+        const data = buildProformaInvoiceTemplateData(
+            makeSource({ lines: [legacy] }),
+            makeRequisites(),
+            buyer,
+        );
+        expect(data.totals.vat).toBe('не указан');
     });
 
     it('skips the amount in words for non-RUB currencies', () => {
@@ -148,7 +198,7 @@ describe('renderProformaInvoiceHtml', () => {
         expect(html).toContain('Грузополучатель:');
         expect(html).toContain('Главный (старший) бухгалтер');
         expect(html).not.toContain('Сумма без скидки');
-        expect(html).not.toContain('В том числе НДС');
+        expect(html).toContain('В том числе НДС');
         expect(html).not.toContain('Версия');
         expect(html).not.toContain('Заменён');
     });
@@ -230,7 +280,7 @@ describe('renderProformaInvoiceHtml', () => {
     });
 
     it('marks superseded versions and shows the version line and VAT', () => {
-        const html = render(makeSource({ version: 2, superseded: true, vatAmount: 100 }));
+        const html = render(makeSource({ version: 2, superseded: true }));
         expect(html).toContain('Версия 2');
         expect(html).toContain('Заменён, не действителен');
         expect(html).toContain('В том числе НДС');

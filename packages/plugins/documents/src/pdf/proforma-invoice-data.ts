@@ -1,5 +1,6 @@
 import { CompleteOrganizationRequisites } from '../entities/organization-requisites.entity';
 import { lineDiscountTotal, lineNetAmount } from '@mivend/plugin-acquiring';
+import { summarizeVat, type VatSourceLine } from './proforma-invoice-vat';
 import { dateInWords, formatMoneyRu, rublesInWords } from './russian-words';
 
 export const PAYMENT_NOTICE =
@@ -7,7 +8,7 @@ export const PAYMENT_NOTICE =
     'Уведомление об оплате обязательно, в противном случае не гарантируется наличие товара на складе. ' +
     'Товар отпускается по факту прихода денег на р/с поставщика.';
 
-export interface ProformaInvoiceSourceLine {
+export interface ProformaInvoiceSourceLine extends VatSourceLine {
     quantity: number;
     unitPriceWithTax: number;
     linePriceWithTax: number;
@@ -22,8 +23,6 @@ export interface ProformaInvoiceSource {
     issueDate: Date;
     currencyCode: string | null;
     totalAmount: number;
-    // Minor units; null when the snapshot carries no tax data — the VAT line is then omitted.
-    vatAmount?: number | null;
     version: number;
     superseded: boolean;
     lines: ProformaInvoiceSourceLine[];
@@ -75,7 +74,7 @@ export interface ProformaInvoiceTemplateData {
     totals: {
         subtotal: string;
         discount: string;
-        vat: string | null;
+        vat: string;
         payable: string;
         summary: string;
         inWords: string | null;
@@ -118,6 +117,12 @@ function headSigner(requisites: CompleteOrganizationRequisites): Signer {
     const fromErp = signerByRole(requisites, HEAD_ROLE);
     if (fromErp.name) return fromErp;
     return { name: requisites.signatoryName, title: requisites.signatoryTitle };
+}
+
+function formatVat(lines: ProformaInvoiceSourceLine[]): string {
+    const vat = summarizeVat(lines);
+    if (vat.kind === 'unavailable') return 'не указан';
+    return vat.kind === 'none' ? 'Без НДС' : formatMoneyRu(vat.amount);
 }
 
 function formatQuantity(quantity: number): string {
@@ -171,7 +176,7 @@ export function buildProformaInvoiceTemplateData(
         totals: {
             subtotal: formatMoneyRu(subtotal),
             discount: formatMoneyRu(totalDiscount),
-            vat: source.vatAmount == null ? null : formatMoneyRu(source.vatAmount),
+            vat: formatVat(source.lines),
             payable: formatMoneyRu(source.totalAmount),
             summary:
                 `Всего наименований ${source.lines.length}, на сумму ${formatMoneyRu(source.totalAmount)} ${currency}`.trim(),

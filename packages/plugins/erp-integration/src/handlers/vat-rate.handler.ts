@@ -82,7 +82,11 @@ export class VatRateStreamHandler implements InboundStreamHandler {
         });
 
         if (existingRate) {
-            await this.taxRateService.update(ctx, { id: existingRate.id, value: percent });
+            await this.taxRateService.update(ctx, {
+                id: existingRate.id,
+                name: `${rawCode} (${zone.name})`,
+                value: percent,
+            });
         } else {
             await this.taxRateService.create(ctx, {
                 name: `${rawCode} (${zone.name})`,

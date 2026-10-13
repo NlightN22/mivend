@@ -6,8 +6,10 @@ import {
     contentHash,
     decideVersion,
     groupByOrganization,
+    snapshotLine,
     type OrganizationContent,
 } from '../../proforma-invoice-content';
+import { extractVat } from '../../proforma-invoice-tax';
 
 function line(
     id: number,
@@ -22,6 +24,8 @@ function line(
         unitPriceWithTax: price,
         linePriceWithTax: price * quantity,
         discounts,
+        taxLines: [{ description: 'VAT20', taxRate: 20 }],
+        taxCategory: { name: 'VAT20' },
         customFields: { organizationId },
         productVariant: { id, sku: `sku-${id}`, name: `Item ${id}` },
     } as unknown as OrderLine;
@@ -62,6 +66,9 @@ describe('groupByOrganization', () => {
             unitPriceWithTax: 100,
             linePriceWithTax: 200,
             discounts: [{ description: 'promo', amount: -20 }],
+            taxRate: 20,
+            taxCategoryName: 'VAT20',
+            taxAmount: 30,
         });
     });
 
@@ -128,5 +135,36 @@ describe('decideVersion', () => {
 
     it('never replaces a paid head', () => {
         expect(decideVersion(head('paid'), changed, 'RUB')).toBe('paid-changed');
+    });
+});
+
+describe('snapshot tax', () => {
+    it('extracts VAT from the net amount and ignores tax in the content hash', () => {
+        const l = groupByOrganization([
+            line(1, 1, 100, 1, [{ description: 'd', amountWithTax: -10 }]),
+        ])[0].lines[0];
+        expect(l).toMatchObject({ taxRate: 20, taxCategoryName: 'VAT20', taxAmount: 15 });
+        const other = { ...l, taxRate: 10, taxAmount: 8 };
+        expect(contentHash(1, 'RUB', 90, [l])).toBe(contentHash(1, 'RUB', 90, [other]));
+    });
+
+    it('stores a null rate for the unconfirmed placeholder or missing tax lines', () => {
+        const placeholder = line(1, 1, 100);
+        placeholder.taxLines = [{ description: 'VAT10 (auto, zone)', taxRate: 0 }] as never;
+        expect(snapshotLine(placeholder).taxRate).toBeNull();
+        const none = line(2, 1, 100);
+        none.taxLines = [];
+        expect(snapshotLine(none).taxRate).toBeNull();
+        const zero = line(3, 1, 100);
+        zero.taxLines = [{ description: 'VAT0 (zone)', taxRate: 0 }] as never;
+        expect(snapshotLine(zero)).toMatchObject({ taxRate: 0, taxAmount: 0 });
+    });
+});
+
+describe('extractVat', () => {
+    it('rounds the extracted VAT', () => {
+        expect(extractVat(10000, 20)).toBe(1667);
+        expect(extractVat(10000, 10)).toBe(909);
+        expect(extractVat(0, 20)).toBe(0);
     });
 });

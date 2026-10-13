@@ -367,8 +367,18 @@ cells and only rows may break across pages (totals and signatures stay together)
   organization lacks them fails and is re-queued once they arrive). Optional, printed only when
   present: KPP, legal address, correspondent account, OGRN, signatory name/title. The buyer needs only a name.
 - Unit comes from the variant's sold-unit name; discount columns appear only if a line has a
-  discount; the "В том числе НДС" line is omitted because snapshots carry no tax data; no
-  manufacturer-code column (no single per-variant code exists).
+  discount; no manufacturer-code column (no single per-variant code exists).
+- VAT: one total line "В том числе НДС: <sum>" between "Итого" and "Всего к оплате" (no per-line or
+  per-rate printing, no VAT column). The snapshot stores per line `taxRate`, `taxCategoryName` and
+  `taxAmount`, taken at issue time from the order line's tax lines; prices are VAT-inclusive, so
+  `taxAmount = round(net line amount * rate / (100 + rate))` and the total is the sum of line amounts.
+  Tax data is not part of the content hash (a version follows the money; a rate change alone never
+  re-issues). All lines 0% prints "Без НДС". A rate is "not confirmed" when the line has no tax line or
+  a 0 rate on the ERP placeholder rate (name contains "(auto,"); the snapshot stores `taxRate: null`
+  and PDF generation fails with "VAT rate not confirmed for category X", so no wrong invoice is
+  printed. The `vat-rate` handler renames the rate on confirmation. Failed documents are not
+  requeued on rate confirmation; they stay failed until regenerated. Snapshots issued before tax data
+  was stored print "не указан" with a logged warning; nothing is derived for them.
 - The payment QR is planned: the box is reserved, nothing is generated yet.
 
 `OrganizationRequisites` (`plugin-documents`) already models one of **our own** legal entities

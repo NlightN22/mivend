@@ -5,6 +5,7 @@ import type {
     ProformaInvoiceLineSnapshot,
     ProformaInvoiceStatus,
 } from './entities/proforma-invoice.entity';
+import { snapshotTax } from './proforma-invoice-tax';
 
 export interface OrganizationContent {
     organizationId: number;
@@ -35,6 +36,10 @@ export function lineNetAmount(snapshot: {
 }
 
 export function snapshotLine(line: OrderLine): ProformaInvoiceLineSnapshot {
+    const discounts = line.discounts.map(d => ({
+        description: d.description,
+        amount: d.amountWithTax,
+    }));
     return {
         variantId: Number(line.productVariant.id),
         sku: line.productVariant.sku,
@@ -42,10 +47,8 @@ export function snapshotLine(line: OrderLine): ProformaInvoiceLineSnapshot {
         quantity: line.quantity,
         unitPriceWithTax: line.unitPriceWithTax,
         linePriceWithTax: line.linePriceWithTax,
-        discounts: line.discounts.map(d => ({
-            description: d.description,
-            amount: d.amountWithTax,
-        })),
+        discounts,
+        ...snapshotTax(line, lineNetAmount({ linePriceWithTax: line.linePriceWithTax, discounts })),
     };
 }
 
@@ -73,6 +76,7 @@ export function groupByOrganization(lines: OrderLine[]): OrganizationContent[] {
     return [...byOrganization.values()];
 }
 
+// Tax data is not hashed: a version follows the money, so a rate change alone never re-issues or settles a document.
 // Order-independent: lines are sorted by variant so a reordered cart is the same content.
 export function contentHash(
     organizationId: number,
