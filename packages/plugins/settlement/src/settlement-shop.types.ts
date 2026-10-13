@@ -1,8 +1,8 @@
 export interface SettlementDocumentFilter {
     contractId?: string | null;
     organizationId?: string | null;
-    dateFrom?: Date | null;
-    dateTo?: Date | null;
+    dateFrom?: string | null;
+    dateTo?: string | null;
     search?: string | null;
     category?: string | null;
     overdueOnly?: boolean | null;
@@ -47,9 +47,4 @@ export interface SettlementBalanceCard {
     openingBalance: number;
     currentBalance: number;
     overdue: number;
-}
-
-export interface SettlementEntryAging {
-    open: number;
-    due: Date | null;
 }

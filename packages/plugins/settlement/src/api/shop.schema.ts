@@ -45,8 +45,8 @@ export const shopApiExtensions = gql`
     input SettlementDocumentFilter {
         contractId: String
         organizationId: String
-        dateFrom: DateTime
-        dateTo: DateTime
+        dateFrom: String
+        dateTo: String
         search: String
         category: String
         overdueOnly: Boolean

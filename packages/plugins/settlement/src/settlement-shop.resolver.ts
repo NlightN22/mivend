@@ -1,5 +1,5 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { Ctx, RequestContext } from '@vendure/core';
+import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
 import { TradingPointService } from '@mivend/plugin-counterparty';
 
 import { SettlementShopService } from './settlement-shop.service';
@@ -19,6 +19,7 @@ export class SettlementShopResolver {
     ) {}
 
     @Query()
+    @Allow(Permission.Authenticated)
     async settlementDocuments(
         @Ctx() ctx: RequestContext,
         @Args() args: { filter?: SettlementDocumentFilter; skip?: number; take?: number },
@@ -35,6 +36,7 @@ export class SettlementShopResolver {
     }
 
     @Query()
+    @Allow(Permission.Authenticated)
     async settlementBalances(
         @Ctx() ctx: RequestContext,
         @Args() args: { contractId?: string; organizationId?: string },

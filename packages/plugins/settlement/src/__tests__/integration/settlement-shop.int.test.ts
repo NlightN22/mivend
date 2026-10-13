@@ -140,8 +140,8 @@ describe('settlement shop queries (real Postgres)', () => {
             ctx,
             '1',
             {
-                dateFrom: new Date('2026-09-02T00:00:00Z'),
-                dateTo: new Date('2026-09-03T00:00:00Z'),
+                dateFrom: '2026-09-02',
+                dateTo: '2026-09-03',
             },
             0,
             20,
@@ -206,5 +206,90 @@ describe('settlement shop queries (real Postgres)', () => {
         await balance('cp-2', 'ct-1', 0, 999);
         expect((await shop.balanceCards(ctx, '1')).map(c => c.currentBalance)).toEqual([10000]);
         expect((await shop.balanceCards(ctx, '2')).map(c => c.currentBalance)).toEqual([99900]);
+    });
+
+    it('keeps a document dated near midnight on its own calendar day', async () => {
+        await doc('d-late', {
+            number: '1',
+            date: new Date('2026-09-02T23:59:00Z'),
+            entries: [entry()],
+        });
+        const day = async (from: string, to: string) =>
+            (await shop.documents(ctx, '1', { dateFrom: from, dateTo: to }, 0, 20)).totalItems;
+        expect(await day('2026-09-02', '2026-09-02')).toBe(1);
+        expect(await day('2026-09-03', '2026-09-03')).toBe(0);
+        expect(await day('2026-09-01', '2026-09-01')).toBe(0);
+    });
+
+    it('treats LIKE wildcards in the search term literally', async () => {
+        await doc('d-a', { number: '10%', entries: [entry()] });
+        await doc('d-b', { number: '1000', entries: [entry()] });
+        expect((await shop.documents(ctx, '1', { search: '10%' }, 0, 20)).items).toHaveLength(1);
+        expect((await shop.documents(ctx, '1', { search: '1_' }, 0, 20)).totalItems).toBe(0);
+    });
+
+    it('masks the order id of a foreign order exactly like its code', async () => {
+        await h.dataSource.query(
+            `INSERT INTO "order" (id, code, "customFieldsCounterpartyid") VALUES (1, '1000001', '1'), (2, '1000002', '2')`,
+        );
+        await doc('d-1', {
+            number: '1',
+            entries: [
+                entry({
+                    orderLinks: [
+                        { orderErpId: 'o-1', orderUuid: null, amount: 50 },
+                        { orderErpId: 'o-2', orderUuid: null, amount: 50 },
+                    ],
+                }),
+            ],
+        });
+        await h.dataSource.query(
+            `UPDATE settlement_order_link SET "orderId" = CASE "orderErpId" WHEN 'o-1' THEN 1 ELSE 2 END`,
+        );
+        const [row] = (await shop.documents(ctx, '1', {}, 0, 20)).items;
+        expect(row.orders.map(o => o.orderId)).toEqual(['1', null]);
+        expect(row.orders.map(o => o.orderCode)).toEqual(['1000001', null]);
+    });
+
+    it('reports unknown status when the contract has no balance fact', async () => {
+        await doc('d-1', { number: '1', entries: [entry({ amount: 100 })] });
+        expect((await shop.documents(ctx, '1', {}, 0, 20)).items[0].paymentStatus).toBe('unknown');
+    });
+
+    it('counts a positive opening balance as overdue in the card and the filter stays consistent', async () => {
+        await balance('cp-1', 'ct-1', 700, 700);
+        await doc('d-new', {
+            number: '1',
+            date: new Date('2026-10-12T00:00:00Z'),
+            entries: [entry({ amount: 5, dueDate: new Date('2030-01-01T00:00:00Z') })],
+        });
+        const [card] = await shop.balanceCards(ctx, '1');
+        expect(card.overdue).toBe(70000);
+        expect((await shop.documents(ctx, '1', { overdueOnly: true }, 0, 20)).totalItems).toBe(0);
+    });
+
+    it('caps overdue at the current balance and keeps currencies apart', async () => {
+        await balance('cp-1', 'ct-1', 0, 100);
+        await doc('d-old', {
+            number: '1',
+            date: new Date('2026-08-05T00:00:00Z'),
+            entries: [entry({ amount: 1000 })],
+        });
+        await h.balances.apply(ctx, {
+            key: 'org-1:cp-1:ct-2',
+            version: '2026-10-01T10:00:00Z',
+            isDeleted: false,
+            organizationErpId: 'org-1',
+            counterpartyErpId: 'cp-1',
+            contractErpId: 'ct-2',
+            currency: 'USD',
+            openingDate: new Date('2026-08-01T00:00:00Z'),
+            openingBalance: 0,
+            closingBalance: 20,
+        });
+        const cards = await shop.balanceCards(ctx, '1');
+        const rub = cards.find(c => c.currency === 'RUB');
+        expect(rub).toMatchObject({ currentBalance: 10000, overdue: 10000 });
+        expect(cards.find(c => c.currency === 'USD')).toMatchObject({ currentBalance: 2000 });
     });
 });
