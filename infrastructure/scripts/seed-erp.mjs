@@ -458,7 +458,8 @@ async function main() {
     // v8 (#59): level-3 oil categories now hold products.
     // v9: warehouse record binding the default stock location to branch-central.
     // v11: contract records — the scheduled credit-limit job derives limit/days from contracts.
-    const run = 'v11';
+    // v12: the checkout buyers' contracts carry a seeded organization, so the contract guard passes.
+    const run = 'v12';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
