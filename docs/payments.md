@@ -351,6 +351,24 @@ provided" and never overwrites a stored one, a non-empty value always does; sign
 erp-import/admin-only. When a row first gets inn and legal address, failed proforma documents of that
 organization are re-queued once (a conditional `failed` -> `pending` update, so no duplicates).
 
+### Proforma invoice print form
+
+The PDF follows the structure of a standard payment-request form: payment-terms notice
+(`PAYMENT_NOTICE`, one constant), bank block (bank, BIK, correspondent and settlement accounts,
+INN/KPP, recipient name, empty QR box captioned "Отсканируйте для оплаты"), title "Счет на оплату №
+<number> от <date in words>" with a "Версия N" line above version 1 and a "Заменён, не
+действителен" mark for superseded versions, supplier/consignor and buyer/consignee lines, the items
+table, totals, amount in words and signature lines. The layout fits the A4 width; long names wrap in
+cells and only rows may break across pages (totals and signatures stay together).
+
+- Required to generate: legal name, INN, bank name, BIK, settlement account (a document whose
+  organization lacks them fails and is re-queued once they arrive). Optional, printed only when
+  present: KPP, legal address, correspondent account, OGRN, signatory name/title. The buyer needs only a name.
+- Unit comes from the variant's sold-unit name; discount columns appear only if a line has a
+  discount; the "В том числе НДС" line is omitted because snapshots carry no tax data; no
+  manufacturer-code column (no single per-variant code exists).
+- The payment QR is planned: the box is reserved, nothing is generated yet.
+
 `OrganizationRequisites` (`plugin-documents`) already models one of **our own** legal entities
 (the seller side — requisites/bank details for document rendering), sourced from the ERP. Today
 it's used for exactly one purpose: `DocumentsService.getActiveRequisites()` picks "the" single

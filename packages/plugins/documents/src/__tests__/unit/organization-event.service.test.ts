@@ -127,7 +127,7 @@ describe('OrganizationEventService.upsertFromEvent', () => {
         await service.upsertFromEvent(ctx, 'org-1', {
             legalName: 'A',
             isActive: true,
-            fields: { inn: '1', legalAddress: 'X' },
+            fields: { inn: '1', bankName: 'B', bankBik: '0', bankAccount: '0' },
         });
         expect(docRepo.update).toHaveBeenCalledWith(
             { id: '10', status: 'failed' },
@@ -148,14 +148,16 @@ describe('OrganizationEventService.upsertFromEvent', () => {
         await service.upsertFromEvent(ctx, 'org-1', {
             legalName: 'A',
             isActive: true,
-            fields: { inn: '1' },
+            fields: { inn: '1', legalAddress: 'X' },
         });
         orgRepo.findOne.mockResolvedValue({
             erpId: 'org-1',
             legalName: 'A',
             isActive: true,
             inn: '1',
-            legalAddress: 'X',
+            bankName: 'B',
+            bankBik: '0',
+            bankAccount: '0',
         });
         await service.upsertFromEvent(ctx, 'org-1', {
             legalName: 'A',

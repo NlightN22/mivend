@@ -6,7 +6,7 @@ export interface ContractTemplateData {
     issueDate: string;
     seller: {
         legalName: string;
-        address: string;
+        address: string | null;
         taxId: string;
     };
     buyer: {
@@ -74,7 +74,7 @@ export function renderContractHtml(data: ContractTemplateData): string {
             <div class="party">
                 <h3>Party A (Seller)</h3>
                 ${data.seller.legalName}<br />
-                ${data.seller.address}<br />
+                ${data.seller.address ? `${data.seller.address}<br />` : ''}
                 Tax ID: ${data.seller.taxId}
             </div>
             <div class="party">

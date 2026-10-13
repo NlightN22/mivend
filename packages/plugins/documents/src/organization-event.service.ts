@@ -5,6 +5,7 @@ import { ProformaInvoice } from '@mivend/plugin-acquiring';
 import { loggerCtx } from './constants';
 import { Document } from './entities/document.entity';
 import { OrganizationRequisites } from './entities/organization-requisites.entity';
+import { hasRequiredRequisites } from './requisites-completeness';
 import { PdfGeneratorService } from './pdf/pdf-generator.service';
 
 export const REQUISITE_FIELDS = [
@@ -100,5 +101,5 @@ export class OrganizationEventService {
 }
 
 function isComplete(requisites: OrganizationRequisites): boolean {
-    return Boolean(requisites.inn) && Boolean(requisites.legalAddress);
+    return hasRequiredRequisites(requisites);
 }

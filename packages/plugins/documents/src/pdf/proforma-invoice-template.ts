@@ -1,201 +1,183 @@
-import { CompleteOrganizationRequisites } from '../entities/organization-requisites.entity';
+import type { ProformaInvoiceRow, ProformaInvoiceTemplateData } from './proforma-invoice-data';
 
-export interface ProformaInvoiceLineData {
-    name: string;
-    sku: string;
-    quantity: number;
-    unitPrice: string;
-    lineTotal: string;
-}
+export {
+    buildProformaInvoiceTemplateData,
+    type ProformaInvoiceSource,
+    type ProformaInvoiceSourceLine,
+    type ProformaInvoiceTemplateData,
+} from './proforma-invoice-data';
 
-export interface ProformaInvoiceSourceLine {
-    quantity: number;
-    unitPriceWithTax: number;
-    linePriceWithTax: number;
-    productVariant: { name: string; sku: string };
-}
-
-// Decoupled from a raw Vendure `Order` — a document can now be one of several
-// organization-split proforma invoices for an order (docs/payments.md "Organizations"), each with its
-// own document number, total, and (usually filtered) line subset — not the whole order.
-export interface ProformaInvoiceSource {
-    documentNumber: string;
-    issueDate: Date;
-    currencyCode: string | null;
-    totalAmount: number;
-    version: number;
-    superseded: boolean;
-    lines: ProformaInvoiceSourceLine[];
-}
-
-export interface ProformaInvoiceTemplateData {
-    documentNumber: string;
-    issueDate: string;
-    version: number;
-    superseded: boolean;
-    seller: {
-        legalName: string;
-        address: string;
-        taxId: string;
-        registrationNumber: string;
-        bankDetails: string | null;
-    };
-    buyer: {
-        legalName: string;
-    };
-    lines: ProformaInvoiceLineData[];
-    currencySymbol: string;
-    totalAmount: string;
-    // Base64 data URI (e.g. "data:image/png;base64,...") — embedded directly so
-    // Puppeteer never needs to resolve a hostname/URL for the image. Null when
-    // no logo has been set via the Admin API (see OrganizationRequisites.logoAssetId).
-    logoDataUri: string | null;
-}
-
-// Generic, universal document — no jurisdiction-specific labels or fields, per
-// this project's public-repo convention (see AGENTS.md privacy section). Real
-// deployments swap this template (and OrganizationRequisites' seeded values)
-// for whatever their own market/jurisdiction requires — this is a demo default.
-function formatMoney(minorUnits: number, currencySymbol: string): string {
-    return `${(minorUnits / 100).toFixed(2)} ${currencySymbol}`;
-}
-
-export function buildProformaInvoiceTemplateData(
-    source: ProformaInvoiceSource,
-    requisites: CompleteOrganizationRequisites,
-    buyerLegalName: string,
-    logoDataUri: string | null = null,
-): ProformaInvoiceTemplateData {
-    const currencySymbol = source.currencyCode ?? '';
-    const bankDetails = requisites.bankName
-        ? [requisites.bankName, requisites.bankAccount, requisites.bankBik]
-              .filter(Boolean)
-              .join(' · ')
-        : null;
-
-    return {
-        documentNumber: source.documentNumber,
-        issueDate: source.issueDate.toISOString().slice(0, 10),
-        version: source.version,
-        superseded: source.superseded,
-        seller: {
-            legalName: requisites.legalName,
-            address: requisites.legalAddress,
-            taxId: requisites.inn,
-            registrationNumber: requisites.ogrn ?? requisites.kpp ?? '—',
-            bankDetails,
-        },
-        buyer: {
-            legalName: buyerLegalName,
-        },
-        lines: source.lines.map(line => ({
-            name: line.productVariant.name,
-            sku: line.productVariant.sku,
-            quantity: line.quantity,
-            unitPrice: formatMoney(line.unitPriceWithTax, currencySymbol),
-            lineTotal: formatMoney(line.linePriceWithTax, currencySymbol),
-        })),
-        currencySymbol,
-        totalAmount: formatMoney(source.totalAmount, currencySymbol),
-        logoDataUri,
-    };
+function esc(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
 
 function logoInitial(legalName: string): string {
     return legalName.trim().charAt(0).toUpperCase() || '?';
 }
 
-// Shared between proforma-invoice-template.ts and contract-template.ts — a real logo
-// (base64-embedded) when set via the Admin API, otherwise a generic initial-
-// letter badge. Never a jurisdiction-specific or hardcoded brand mark.
+// Used by contract-template.ts: a real base64-embedded logo when set, else an initial-letter badge.
 export function renderLogoMarkup(legalName: string, logoDataUri: string | null): string {
     if (logoDataUri) {
-        return `<img class="logo" src="${logoDataUri}" alt="${legalName} logo" />`;
+        return `<img class="logo" src="${logoDataUri}" alt="${esc(legalName)} logo" />`;
     }
     return `<div class="logo logo--fallback">${logoInitial(legalName)}</div>`;
 }
 
-export function renderProformaInvoiceHtml(data: ProformaInvoiceTemplateData): string {
-    const rows = data.lines
+const STYLES = `
+    @page { size: A4; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body { font-family: 'DejaVu Sans', Arial, sans-serif; color: #000; margin: 0; font-size: 9.5px; line-height: 1.35; }
+    .notice { text-align: center; margin: 0 0 8px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    td, th { word-wrap: break-word; overflow-wrap: anywhere; vertical-align: top; }
+    .bank td { border: 1px solid #000; padding: 3px 5px; }
+    .bank .cap { font-size: 8px; color: #333; }
+    .bank .qr { width: 32mm; text-align: center; }
+    .qr-box { height: 26mm; }
+    h1 { font-size: 15px; margin: 14px 0 4px; padding-bottom: 6px; border-bottom: 2px solid #000; }
+    .version { font-size: 11px; margin: 0 0 4px; }
+    .superseded { font-size: 20px; font-weight: 800; color: #b3261e; border: 3px solid #b3261e;
+        display: inline-block; padding: 2px 10px; margin: 4px 0; }
+    .parties td { padding: 3px 0; }
+    .parties .role { width: 34mm; padding-right: 6px; }
+    .parties .who { font-weight: 700; }
+    .items { margin-top: 8px; }
+    .items th, .items td { border: 1px solid #000; padding: 2px 4px; }
+    .items th { text-align: center; font-weight: 700; }
+    .items tr { page-break-inside: avoid; }
+    .num { text-align: right; white-space: nowrap; }
+    .center { text-align: center; }
+    .keep { page-break-inside: avoid; break-inside: avoid; }
+    .totals { margin-top: 6px; }
+    .totals td { padding: 1px 4px; font-weight: 700; }
+    .summary { margin-top: 8px; }
+    .words { font-weight: 700; padding-bottom: 6px; border-bottom: 2px solid #000; }
+    .sign { margin-top: 14px; }
+    .sign td { padding: 0 4px; vertical-align: bottom; }
+    .sign .role { font-weight: 700; width: 30%; }
+    .line { border-top: 1px solid #000; font-size: 8px; text-align: center; padding-top: 1px; }
+    .signed { text-align: center; font-weight: 700; min-height: 12px; }
+`;
+
+function renderBank(bank: ProformaInvoiceTemplateData['bank']): string {
+    return `
+    <table class="bank">
+        <tr>
+            <td rowspan="2" style="width:50%">${esc(bank.bankName)}<div class="cap">Банк получателя</div></td>
+            <td style="width:9%">БИК</td><td>${esc(bank.bik)}</td>
+            <td rowspan="4" class="qr"><div class="qr-box"></div><div class="cap">Отсканируйте для оплаты</div></td>
+        </tr>
+        <tr>${bank.correspondentAccount ? `<td>Сч. №</td><td>${esc(bank.correspondentAccount)}</td>` : '<td></td><td></td>'}</tr>
+        <tr>
+            <td>ИНН ${esc(bank.inn)}${bank.kpp ? ` &nbsp; КПП ${esc(bank.kpp)}` : ''}</td>
+            <td rowspan="2">Сч. №</td><td rowspan="2">${esc(bank.account)}</td>
+        </tr>
+        <tr><td>${esc(bank.recipientName)}<div class="cap">Получатель</div></td></tr>
+    </table>`;
+}
+
+function columnWidths(showDiscount: boolean): number[] {
+    return showDiscount ? [4, 11, 27, 7, 5, 11, 12, 11, 12] : [5, 14, 41, 9, 7, 12, 12];
+}
+
+function renderCols(widths: number[]): string {
+    return `<colgroup>${widths.map(w => `<col style="width:${w}%">`).join('')}</colgroup>`;
+}
+
+function renderItems(rows: ProformaInvoiceRow[], showDiscount: boolean): string {
+    const widths = columnWidths(showDiscount);
+    const heads = [
+        '№',
+        'Артикул',
+        'Товары (работы, услуги)',
+        'Кол-во',
+        'Ед.',
+        'Цена',
+        ...(showDiscount ? ['Сумма без скидки', 'Скидка (наценка)'] : []),
+        'Сумма',
+    ];
+    const head = heads.map(h => `<th>${h}</th>`).join('');
+    const body = rows
         .map(
-            line => `
-            <tr>
-                <td>${line.name}</td>
-                <td>${line.sku}</td>
-                <td class="num">${line.quantity}</td>
-                <td class="num">${line.unitPrice}</td>
-                <td class="num">${line.lineTotal}</td>
-            </tr>`,
+            r => `<tr>
+            <td class="center">${r.index}</td><td>${esc(r.sku)}</td><td>${esc(r.name)}</td>
+            <td class="num">${r.quantity}</td><td class="center">${esc(r.unit)}</td><td class="num">${r.price}</td>
+            ${showDiscount ? `<td class="num">${r.gross}</td><td class="num">${r.discount}</td>` : ''}
+            <td class="num">${r.total}</td></tr>`,
         )
         .join('');
+    return `<table class="items">${renderCols(widths)}<thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
 
+function renderTotalRows(data: ProformaInvoiceTemplateData): string {
+    const t = data.totals;
+    const widths = columnWidths(data.showDiscount);
+    const labelSpan = widths.length - (data.showDiscount ? 3 : 1);
+    const row = (label: string, cells: string[]): string =>
+        `<tr><td colspan="${labelSpan}" style="text-align:right">${label}</td>${cells
+            .map(c => `<td class="num">${c}</td>`)
+            .join('')}</tr>`;
+    const span = (label: string, value: string): string =>
+        row(label, data.showDiscount ? ['', '', value] : [value]);
+    return [
+        data.showDiscount
+            ? row('Итого:', [t.subtotal, t.discount, t.payable])
+            : span('Итого:', t.payable),
+        t.vat ? span('В том числе НДС:', t.vat) : '',
+        span('Всего к оплате:', t.payable),
+    ].join('');
+}
+
+function renderTotals(data: ProformaInvoiceTemplateData): string {
+    const t = data.totals;
     return `
-    <!doctype html>
-    <html>
-    <head>
-        <meta charset="utf-8" />
-        <style>
-            body { font-family: 'DejaVu Sans', Arial, sans-serif; color: #14231f; margin: 0; padding: 36px; }
-            .header { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
-            .logo { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
-            .logo--fallback { background: #00a878; color: #fff;
-                    display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; }
-            .title { font-size: 26px; font-weight: 800; margin: 0; }
-            .doc-meta { color: #66736e; font-size: 13px; margin-top: 2px; }
-            .superseded { color: #b3261e; font-weight: 800; }
-            .parties { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
-            .party { font-size: 12px; line-height: 1.5; }
-            .party h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #66736e; margin: 0 0 6px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border-bottom: 1px solid #dde7e2; padding: 8px 6px; text-align: left; }
-            th { color: #66736e; text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
-            .num { text-align: right; }
-            .total-row td { border-bottom: none; font-weight: 800; font-size: 14px; padding-top: 14px; }
-        </style>
-    </head>
+    <div class="keep">
+        <table class="totals">${renderCols(columnWidths(data.showDiscount))}${renderTotalRows(data)}</table>
+        <div class="summary">${esc(t.summary)}</div>
+        ${t.inWords ? `<div class="words">${esc(t.inWords)}</div>` : '<div class="words"></div>'}
+        ${renderSignatures(data.signatory)}
+    </div>`;
+}
+
+function renderSignatures(signatory: ProformaInvoiceTemplateData['signatory']): string {
+    const row = (role: string, title: string | null, name: string | null): string => `
+        <tr>
+            <td class="role">${role}</td>
+            <td><div class="signed">${title ? esc(title) : ''}</div><div class="line">должность</div></td>
+            <td><div class="signed"></div><div class="line">подпись</div></td>
+            <td><div class="signed">${name ? esc(name) : ''}</div><div class="line">расшифровка подписи</div></td>
+        </tr>`;
+    return `<table class="sign">
+        ${row('Руководитель', signatory.title, signatory.name)}
+        ${row('Главный (старший) бухгалтер', null, null)}
+        ${row('Ответственный', null, null)}
+    </table>`;
+}
+
+export function renderProformaInvoiceHtml(data: ProformaInvoiceTemplateData): string {
+    const party = (role: string, line: string): string =>
+        `<tr><td class="role">${role}</td><td class="who">${esc(line)}</td></tr>`;
+    return `<!doctype html>
+    <html lang="ru">
+    <head><meta charset="utf-8" /><style>${STYLES}</style></head>
     <body>
-        <div class="header">
-            ${renderLogoMarkup(data.seller.legalName, data.logoDataUri)}
-            <div>
-                <p class="title">Proforma invoice ${data.documentNumber}</p>
-                <p class="doc-meta">Version ${data.version} · ${data.issueDate}</p>
-                ${data.superseded ? '<p class="doc-meta superseded">Superseded, not valid</p>' : ''}
-            </div>
-        </div>
-
-        <div class="parties">
-            <div class="party">
-                <h3>Seller</h3>
-                ${data.seller.legalName}<br />
-                ${data.seller.address}<br />
-                Tax ID: ${data.seller.taxId}<br />
-                Registration No.: ${data.seller.registrationNumber}
-                ${data.seller.bankDetails ? `<br />${data.seller.bankDetails}` : ''}
-            </div>
-            <div class="party">
-                <h3>Buyer</h3>
-                ${data.buyer.legalName}
-            </div>
-        </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>SKU</th>
-                    <th class="num">Qty</th>
-                    <th class="num">Unit price</th>
-                    <th class="num">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${rows}
-                <tr class="total-row">
-                    <td colspan="4">Total</td>
-                    <td class="num">${data.totalAmount}</td>
-                </tr>
-            </tbody>
+        <p class="notice">${esc(data.notice)}</p>
+        ${renderBank(data.bank)}
+        <h1>${esc(data.title)}</h1>
+        ${data.versionLabel ? `<p class="version">${data.versionLabel}</p>` : ''}
+        ${data.superseded ? '<div class="superseded">Заменён, не действителен</div>' : ''}
+        <table class="parties">
+            ${party('Поставщик:', data.supplier)}
+            ${party('Грузоотправитель:', data.supplier)}
+            ${party('Покупатель:', data.buyer)}
+            ${party('Грузополучатель:', data.buyer)}
         </table>
+        ${renderItems(data.rows, data.showDiscount)}
+        ${renderTotals(data)}
     </body>
     </html>`;
 }

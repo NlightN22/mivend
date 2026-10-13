@@ -57,10 +57,11 @@ export class OrganizationRequisites extends VendureEntity {
     logoAssetId!: string | null;
 }
 
-// Narrowed type document generation actually needs — DocumentsService.assertRequisitesComplete is
-// the one place that proves inn/legalAddress are non-null (a type predicate), so PdfGeneratorService
-// and the proforma invoice/contract templates never have to re-check them.
+// Narrowed type document generation needs — DocumentsService.assertRequisitesComplete proves the
+// required fields (see requisites-completeness.ts) are non-null; address, kpp, phone are optional.
 export type CompleteOrganizationRequisites = OrganizationRequisites & {
     inn: string;
-    legalAddress: string;
+    bankName: string;
+    bankBik: string;
+    bankAccount: string;
 };

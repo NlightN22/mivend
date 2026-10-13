@@ -18,6 +18,7 @@ import {
     OrganizationRequisites,
     CompleteOrganizationRequisites,
 } from './entities/organization-requisites.entity';
+import { missingRequiredRequisites } from './requisites-completeness';
 import { DocumentRecord, OrganizationRequisitesRecord } from './types';
 
 export interface DocumentListOptions {
@@ -186,16 +187,16 @@ export class DocumentsService {
         return saved;
     }
 
-    // PdfGeneratorService's guard before rendering any document against a given
-    // OrganizationRequisites row — a partial row (issue #88, created from Kafka name/isActive
-    // alone) must never be used to generate a real proforma invoice/contract with blank/fake legal fields.
+    // PdfGeneratorService's guard: a partial row (created from the organization stream's name alone)
+    // must never produce a document with blank legal fields. Address/kpp/phone are optional.
     assertRequisitesComplete(
         requisites: OrganizationRequisites,
     ): asserts requisites is CompleteOrganizationRequisites {
-        if (requisites.inn === null || requisites.legalAddress === null) {
+        const missing = missingRequiredRequisites(requisites);
+        if (missing.length > 0) {
             throw new Error(
                 `Cannot generate a document for organization erpId=${requisites.erpId}: ` +
-                    `missing legal requisites (inn/legalAddress) — awaiting the organization stream or erp-import's full record.`,
+                    `missing required requisites (${missing.join(', ')}) — awaiting the organization stream or erp-import's full record.`,
             );
         }
     }

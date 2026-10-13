@@ -19,10 +19,10 @@ import { GENERATE_DOCUMENT_QUEUE, loggerCtx } from '../constants';
 import { Document } from '../entities/document.entity';
 import { DocumentsService } from '../documents.service';
 import { resolveBuyerLegalName } from './buyer-legal-name';
+import { PartyInput, ProformaInvoiceSource } from './proforma-invoice-data';
 import {
     buildProformaInvoiceTemplateData,
     renderProformaInvoiceHtml,
-    ProformaInvoiceSource,
 } from './proforma-invoice-template';
 import { buildContractTemplateData, renderContractHtml } from './contract-template';
 import { PdfBrowserService } from './pdf-browser.service';
@@ -98,11 +98,34 @@ export class PdfGeneratorService implements OnModuleInit {
         }
     }
 
-    private async getBuyerLegalName(ctx: RequestContext, counterpartyId: string): Promise<string> {
+    private async getBuyer(ctx: RequestContext, counterpartyId: string): Promise<PartyInput> {
         const counterparty = await this.connection
             .getRepository(ctx, Counterparty)
             .findOne({ where: { id: counterpartyId } });
-        return resolveBuyerLegalName(counterparty?.fullName);
+        return {
+            name: resolveBuyerLegalName(counterparty?.fullName),
+            inn: counterparty?.inn ?? null,
+            kpp: counterparty?.kpp ?? null,
+            address: counterparty?.legalAddress ?? null,
+            phone: counterparty?.phone ?? null,
+        };
+    }
+
+    // The sold unit's name is a variant custom field written by erp-integration; read raw because
+    // this plugin does not depend on it (same pattern as DocumentsService.findOrderIdByErpId).
+    private async loadUnitNames(
+        ctx: RequestContext,
+        variantIds: number[],
+    ): Promise<Map<number, string>> {
+        if (variantIds.length === 0) return new Map();
+        const rows = await this.connection
+            .getRepository(ctx, 'product_variant')
+            .createQueryBuilder('pv')
+            .select('pv.id', 'id')
+            .addSelect('pv."customFieldsUnitname"', 'unitName')
+            .where('pv.id IN (:...ids)', { ids: variantIds })
+            .getRawMany<{ id: number | string; unitName: string | null }>();
+        return new Map(rows.filter(r => r.unitName).map(r => [Number(r.id), r.unitName as string]));
     }
 
     // Embeds the logo as a base64 data URI rather than a URL — Puppeteer runs
@@ -163,6 +186,10 @@ export class PdfGeneratorService implements OnModuleInit {
                 proformaInvoice.organizationId,
             );
             this.documentsService.assertRequisitesComplete(requisites);
+            const units = await this.loadUnitNames(
+                ctx,
+                proformaInvoice.lines.map(line => line.variantId),
+            );
             source = {
                 documentNumber: document.number,
                 issueDate: document.issueDate,
@@ -174,12 +201,18 @@ export class PdfGeneratorService implements OnModuleInit {
                     quantity: line.quantity,
                     unitPriceWithTax: line.unitPriceWithTax,
                     linePriceWithTax: line.linePriceWithTax,
+                    discounts: line.discounts,
+                    unitName: units.get(line.variantId) ?? null,
                     productVariant: { name: line.name, sku: line.sku },
                 })),
             };
         } else {
             requisites = await this.documentsService.getActiveRequisites(ctx);
             this.documentsService.assertRequisitesComplete(requisites);
+            const units = await this.loadUnitNames(
+                ctx,
+                order.lines.map(line => Number(line.productVariant.id)),
+            );
             source = {
                 documentNumber: order.code,
                 issueDate: new Date(order.orderPlacedAt ?? order.createdAt),
@@ -187,21 +220,27 @@ export class PdfGeneratorService implements OnModuleInit {
                 totalAmount: order.totalWithTax,
                 version: 1,
                 superseded: false,
-                lines: order.lines,
+                lines: order.lines.map(line => ({
+                    quantity: line.quantity,
+                    unitPriceWithTax: line.unitPriceWithTax,
+                    linePriceWithTax: line.linePriceWithTax,
+                    discounts: line.discounts.map(d => ({ amount: d.amountWithTax })),
+                    unitName: units.get(Number(line.productVariant.id)) ?? null,
+                    productVariant: line.productVariant,
+                })),
             };
         }
 
-        const buyerLegalName = await this.getBuyerLegalName(ctx, document.counterpartyId);
-        const logoDataUri = await this.getLogoDataUri(ctx, requisites);
+        const buyer = await this.getBuyer(ctx, document.counterpartyId);
         return renderProformaInvoiceHtml(
-            buildProformaInvoiceTemplateData(source, requisites, buyerLegalName, logoDataUri),
+            buildProformaInvoiceTemplateData(source, requisites, buyer),
         );
     }
 
     private async buildContractHtml(ctx: RequestContext, document: Document): Promise<string> {
         const requisites = await this.documentsService.getActiveRequisites(ctx);
         this.documentsService.assertRequisitesComplete(requisites);
-        const buyerLegalName = await this.getBuyerLegalName(ctx, document.counterpartyId);
+        const buyerLegalName = (await this.getBuyer(ctx, document.counterpartyId)).name;
         const logoDataUri = await this.getLogoDataUri(ctx, requisites);
         return renderContractHtml(
             buildContractTemplateData(document.number, requisites, buyerLegalName, logoDataUri),

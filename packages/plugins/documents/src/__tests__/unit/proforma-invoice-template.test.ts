@@ -4,12 +4,13 @@ import {
     renderProformaInvoiceHtml,
     ProformaInvoiceSource,
 } from '../../pdf/proforma-invoice-template';
+import type { PartyInput } from '../../pdf/proforma-invoice-data';
 import type { CompleteOrganizationRequisites } from '../../entities/organization-requisites.entity';
 
 function makeSource(overrides: Partial<ProformaInvoiceSource> = {}): ProformaInvoiceSource {
     return {
-        documentNumber: 'ORD-202607-TEST',
-        issueDate: new Date('2026-07-01T10:00:00.000Z'),
+        documentNumber: '1000042-01',
+        issueDate: new Date('2026-10-12T10:00:00.000Z'),
         currencyCode: 'RUB',
         totalAmount: 25000,
         version: 1,
@@ -19,6 +20,8 @@ function makeSource(overrides: Partial<ProformaInvoiceSource> = {}): ProformaInv
                 quantity: 2,
                 unitPriceWithTax: 10000,
                 linePriceWithTax: 20000,
+                discounts: [],
+                unitName: 'шт.',
                 productVariant: { name: 'Motor Oil 5W-30', sku: 'MOT-5W30-1L' },
             },
         ],
@@ -30,121 +33,148 @@ function makeRequisites(
     overrides: Partial<CompleteOrganizationRequisites> = {},
 ): CompleteOrganizationRequisites {
     return {
-        legalName: 'Demo Trading Co.',
+        legalName: 'Example Supplier LLC',
         legalAddress: '1 Demo Ave',
-        inn: '000000000000',
+        inn: '0000000000',
         kpp: '000000000',
         ogrn: null,
-        bankName: 'Demo Bank',
-        bankAccount: '000000000',
+        bankName: 'Example Bank',
+        bankAccount: '00000000000000000000',
         bankBik: '000000000',
+        correspondentAccount: '11111111111111111111',
+        signatoryName: null,
+        signatoryTitle: null,
         ...overrides,
     } as CompleteOrganizationRequisites;
 }
 
+const buyer: PartyInput = {
+    name: 'Buyer "A&B" LLC',
+    inn: null,
+    kpp: null,
+    address: null,
+    phone: null,
+};
+
+function render(
+    source = makeSource(),
+    requisites = makeRequisites(),
+    party: PartyInput = buyer,
+): string {
+    return renderProformaInvoiceHtml(buildProformaInvoiceTemplateData(source, requisites, party));
+}
+
 describe('buildProformaInvoiceTemplateData', () => {
-    it('maps order lines, amounts and requisites correctly', () => {
-        const data = buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
-
-        expect(data.documentNumber).toBe('ORD-202607-TEST');
-        expect(data.issueDate).toBe('2026-07-01');
-        expect(data.seller.legalName).toBe('Demo Trading Co.');
-        expect(data.seller.taxId).toBe('000000000000');
-        expect(data.buyer.legalName).toBe('Buyer LLC');
-        expect(data.lines).toHaveLength(1);
-        expect(data.lines[0]).toEqual({
-            name: 'Motor Oil 5W-30',
+    it('builds title, rows and totals in Russian format', () => {
+        const data = buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), buyer);
+        expect(data.title).toBe('Счет на оплату № 1000042-01 от 12 октября 2026 г.');
+        expect(data.rows[0]).toMatchObject({
+            index: 1,
             sku: 'MOT-5W30-1L',
-            quantity: 2,
-            unitPrice: '100.00 RUB',
-            lineTotal: '200.00 RUB',
+            quantity: '2',
+            unit: 'шт.',
+            price: '100,00',
+            total: '200,00',
         });
-        expect(data.totalAmount).toBe('250.00 RUB');
+        expect(data.totals.payable).toBe('250,00');
+        expect(data.totals.summary).toBe('Всего наименований 1, на сумму 250,00 RUB');
+        expect(data.totals.inWords).toBe('Двести пятьдесят рублей 00 копеек');
     });
 
-    it('falls back to ogrn when kpp is null for registrationNumber, and to a dash when both are null', () => {
-        const withOgrn = buildProformaInvoiceTemplateData(
-            makeSource(),
-            makeRequisites({ kpp: null, ogrn: '1234567890123' }),
-            'Buyer LLC',
-        );
-        expect(withOgrn.seller.registrationNumber).toBe('1234567890123');
-
-        const withNeither = buildProformaInvoiceTemplateData(
-            makeSource(),
-            makeRequisites({ kpp: null, ogrn: null }),
-            'Buyer LLC',
-        );
-        expect(withNeither.seller.registrationNumber).toBe('—');
-    });
-
-    it('omits bank details when no bank is configured', () => {
+    it('prints party fields only when present', () => {
         const data = buildProformaInvoiceTemplateData(
             makeSource(),
-            makeRequisites({ bankName: null, bankAccount: null, bankBik: null }),
-            'Buyer LLC',
+            makeRequisites({ kpp: null, legalAddress: null }),
+            { ...buyer, inn: '1', phone: '+0 000' },
         );
-        expect(data.seller.bankDetails).toBeNull();
+        expect(data.supplier).toBe('Example Supplier LLC, ИНН 0000000000');
+        expect(data.buyer).toBe('Buyer "A&B" LLC, ИНН 1, тел.: +0 000');
+    });
+
+    it('computes discounts per line and shows the columns only when a discount exists', () => {
+        const none = buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), buyer);
+        expect(none.showDiscount).toBe(false);
+        const source = makeSource();
+        source.lines[0].discounts = [{ amount: -1500 }];
+        const data = buildProformaInvoiceTemplateData(source, makeRequisites(), buyer);
+        expect(data.showDiscount).toBe(true);
+        expect(data.rows[0]).toMatchObject({ gross: '200,00', discount: '15,00', total: '185,00' });
+        expect(data.totals.discount).toBe('15,00');
+    });
+
+    it('shows the version only above 1 and omits the VAT line without VAT data', () => {
+        expect(
+            buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), buyer),
+        ).toMatchObject({
+            versionLabel: null,
+            totals: { vat: null },
+        });
+        const data = buildProformaInvoiceTemplateData(
+            makeSource({ version: 3, vatAmount: 4167 }),
+            makeRequisites(),
+            buyer,
+        );
+        expect(data.versionLabel).toBe('Версия 3');
+        expect(data.totals.vat).toBe('41,67');
+    });
+
+    it('skips the amount in words for non-RUB currencies', () => {
+        const data = buildProformaInvoiceTemplateData(
+            makeSource({ currencyCode: 'USD' }),
+            makeRequisites(),
+            buyer,
+        );
+        expect(data.totals.inWords).toBeNull();
     });
 });
 
 describe('renderProformaInvoiceHtml', () => {
-    it('embeds the seller, buyer, line items and total into the HTML output', () => {
-        const data = buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
-        const html = renderProformaInvoiceHtml(data);
-
-        expect(html).toContain('ORD-202607-TEST');
-        expect(html).toContain('Demo Trading Co.');
-        expect(html).toContain('Buyer LLC');
-        expect(html).toContain('Motor Oil 5W-30');
-        expect(html).toContain('250.00 RUB');
+    it('renders the bank block, QR placeholder, parties and signatures', () => {
+        const html = render();
+        expect(html).toContain('Example Bank');
+        expect(html).toContain('Отсканируйте для оплаты');
+        expect(html).toContain('КПП 000000000');
+        expect(html).toContain('Поставщик:');
+        expect(html).toContain('Грузополучатель:');
+        expect(html).toContain('Главный (старший) бухгалтер');
+        expect(html).not.toContain('Сумма без скидки');
+        expect(html).not.toContain('В том числе НДС');
+        expect(html).not.toContain('Версия');
+        expect(html).not.toContain('Заменён');
     });
 
-    it('renders a generic initial-letter badge when no logo has been set', () => {
-        const data = buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), 'Buyer LLC');
-        expect(data.logoDataUri).toBeNull();
-        const html = renderProformaInvoiceHtml(data);
-        expect(html).toContain('logo--fallback');
-        expect(html).toContain('>D<'); // first letter of "Demo Trading Co."
-        expect(html).not.toContain('<img');
+    it('escapes HTML in names', () => {
+        expect(render()).toContain('Buyer &quot;A&amp;B&quot; LLC');
     });
 
-    it('renders the real logo image when a logo data URI is provided', () => {
-        const logoDataUri = 'data:image/png;base64,iVBORw0KGgo=';
-        const data = buildProformaInvoiceTemplateData(
+    it('omits correspondent account and KPP when absent', () => {
+        const html = render(
             makeSource(),
-            makeRequisites(),
-            'Buyer LLC',
-            logoDataUri,
+            makeRequisites({ kpp: null, correspondentAccount: null }),
         );
-        expect(data.logoDataUri).toBe(logoDataUri);
-        const html = renderProformaInvoiceHtml(data);
-        expect(html).toContain(`<img class="logo" src="${logoDataUri}"`);
-        expect(html).not.toContain('class="logo logo--fallback"');
-    });
-});
-
-describe('proforma invoice version and validity in the template', () => {
-    it('shows the version next to the issue date', () => {
-        const html = renderProformaInvoiceHtml(
-            buildProformaInvoiceTemplateData(
-                makeSource({ version: 2 }),
-                makeRequisites() as CompleteOrganizationRequisites,
-                'Buyer',
-            ),
-        );
-        expect(html).toContain('Version 2 · 2026-07-01');
-        expect(html).not.toContain('Superseded, not valid');
+        expect(html).not.toContain('КПП');
+        expect(html).not.toContain('11111111111111111111');
     });
 
-    it('marks a superseded version as not valid', () => {
-        const html = renderProformaInvoiceHtml(
-            buildProformaInvoiceTemplateData(
-                makeSource({ superseded: true }),
-                makeRequisites() as CompleteOrganizationRequisites,
-                'Buyer',
-            ),
+    it('prints signatory name and title when present', () => {
+        const html = render(
+            makeSource(),
+            makeRequisites({ signatoryName: 'Ivanov I. I.', signatoryTitle: 'Director' }),
         );
-        expect(html).toContain('Superseded, not valid');
+        expect(html).toContain('Ivanov I. I.');
+        expect(html).toContain('Director');
+    });
+
+    it('marks superseded versions and shows the version line and VAT', () => {
+        const html = render(makeSource({ version: 2, superseded: true, vatAmount: 100 }));
+        expect(html).toContain('Версия 2');
+        expect(html).toContain('Заменён, не действителен');
+        expect(html).toContain('В том числе НДС');
+    });
+
+    it('renders discount columns only when a discount exists', () => {
+        const source = makeSource();
+        source.lines[0].discounts = [{ amount: -100 }];
+        expect(render(source)).toContain('Скидка (наценка)');
     });
 });

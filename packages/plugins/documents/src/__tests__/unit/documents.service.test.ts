@@ -219,34 +219,28 @@ describe('DocumentsService', () => {
     });
 
     describe('assertRequisitesComplete', () => {
-        it('throws when inn is missing', () => {
-            expect(() =>
-                service.assertRequisitesComplete({
-                    erpId: 'org-1',
-                    inn: null,
-                    legalAddress: 'Some address',
-                } as never),
-            ).toThrow(/missing legal requisites/);
-        });
+        const complete = {
+            erpId: 'org-1',
+            legalName: 'Org',
+            inn: '123456',
+            bankName: 'Bank',
+            bankBik: '000000000',
+            bankAccount: '000',
+            legalAddress: null,
+            kpp: null,
+        };
 
-        it('throws when legalAddress is missing', () => {
-            expect(() =>
-                service.assertRequisitesComplete({
-                    erpId: 'org-1',
-                    inn: '123456',
-                    legalAddress: null,
-                } as never),
-            ).toThrow(/missing legal requisites/);
-        });
+        it.each(['inn', 'bankName', 'bankBik', 'bankAccount', 'legalName'])(
+            'throws naming %s when it is missing',
+            field => {
+                expect(() =>
+                    service.assertRequisitesComplete({ ...complete, [field]: null } as never),
+                ).toThrow(new RegExp(`missing required requisites \\(${field}\\)`));
+            },
+        );
 
-        it('does not throw when both are present', () => {
-            expect(() =>
-                service.assertRequisitesComplete({
-                    erpId: 'org-1',
-                    inn: '123456',
-                    legalAddress: 'Some address',
-                } as never),
-            ).not.toThrow();
+        it('does not require address, kpp, phone or signatories', () => {
+            expect(() => service.assertRequisitesComplete(complete as never)).not.toThrow();
         });
     });
 

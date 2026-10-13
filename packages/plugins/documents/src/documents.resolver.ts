@@ -14,6 +14,7 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { Document } from './entities/document.entity';
 import { OrganizationRequisites } from './entities/organization-requisites.entity';
+import { hasRequiredRequisites } from './requisites-completeness';
 import { DocumentsService, DocumentListOptions } from './documents.service';
 import { PdfGeneratorService } from './pdf/pdf-generator.service';
 
@@ -131,7 +132,7 @@ export class OrganizationFieldResolver {
     // not the partial legal fields).
     @ResolveField()
     hasCompleteRequisites(@Parent() requisites: OrganizationRequisites): boolean {
-        return requisites.inn != null && requisites.legalAddress != null;
+        return hasRequiredRequisites(requisites);
     }
 }
 
