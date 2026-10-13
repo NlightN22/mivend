@@ -323,6 +323,11 @@ Documents that form a customer's receivables (sales, payments, returns, correcti
   Not the `documents` plugin Document and not the proforma invoice. Amounts are stored as integer minor units.
 - **Idempotency.** A re-sent version replaces the whole entries array; stale versions are dropped; `isDeleted`
   voids all entries; an unknown uuid with `isDeleted` is a no-op; a cleaned document that changes again is upserted.
+  Versions compare as time when both are ISO dates, as integers when both are numeric, otherwise as strings.
+- **Empty entries.** A live (not deleted) document with an empty `entries` array replaces the stored entries with
+  none: the document stays, with no register effect.
+- **Invalid entries.** A live document with an entry missing organization/counterparty/contract or with a
+  non-numeric amount is not a no-op: the inbox row fails at once with the reason (dismissable, #212).
 - **Order link.** Only by the document's own `order_links`; never inferred, and never from `orderDebt`,
   `shippedQuantity` or `paidAmount`. A document without an order is valid and is shown by counterparty/contract.
 - **Balance.** `SettlementBalanceChanged` per (organization, counterparty, contract) is a reconciliation fact; the
@@ -340,7 +345,11 @@ Documents that form a customer's receivables (sales, payments, returns, correcti
   item exists with a "not implemented yet" page; acts themselves are #226.
 - **Retention cleaner.** Scheduled and idempotent; removes only explicit ERP-owned rows outside the window of their
   triple (`opening_date`) plus a period set in the Vendure admin dashboard (default 12 months); never a row linked to an order or
-  payment still open in mivend.
+  payment still open in mivend. A tombstone (`isDeleted`) is kept for twice that period so a late older version
+  cannot resurrect it. Each run logs the count of documents whose triple has no balance fact (never removed).
+- **Reconciliation.** A scheduled, idempotent task (and once at worker bootstrap) attaches pending entries and
+  balances (counterparty, contract) and order links (by ERP order id or order uuid, including a mivend order
+  created after the document arrived), in addition to the event-driven attach.
 
 ## Deliberately out of scope (open questions)
 

@@ -15,6 +15,7 @@ import { SettlementBalanceService } from '../../settlement-balance.service';
 import { SettlementDocumentService } from '../../settlement-document.service';
 import { SettlementPendingService } from '../../settlement-pending.service';
 import { SettlementReferenceResolver } from '../../settlement-reference-resolver';
+import { SettlementReconcileService } from '../../settlement-reconcile.service';
 import { SettlementRetentionService } from '../../settlement-retention.service';
 import type { SettlementDocumentInput } from '../../types';
 
@@ -30,6 +31,7 @@ export interface Harness {
     balances: SettlementBalanceService;
     pending: SettlementPendingService;
     retention: SettlementRetentionService;
+    reconcile: SettlementReconcileService;
 }
 
 export async function createHarness(tag: string): Promise<Harness> {
@@ -76,6 +78,7 @@ export async function createHarness(tag: string): Promise<Harness> {
         { findByErpId: (_c: unknown, id: string) => slowLookup(counterparties, id) } as never,
         { findByErpId: (_c: unknown, id: string) => slowLookup(contracts, id) } as never,
     );
+    const pending = new SettlementPendingService(connection);
     return {
         dataSource,
         schema,
@@ -84,7 +87,14 @@ export async function createHarness(tag: string): Promise<Harness> {
         lookupDelayMs,
         documents: new SettlementDocumentService(connection, resolver),
         balances: new SettlementBalanceService(connection, resolver),
-        pending: new SettlementPendingService(connection),
+        pending,
+        reconcile: new SettlementReconcileService(
+            connection,
+            resolver,
+            pending,
+            { isWorker: false } as never,
+            {} as never,
+        ),
         retention: new SettlementRetentionService(connection, {
             getSettings: async () => ({ customFields: { settlementRetentionMonths: 12 } }),
         } as never),

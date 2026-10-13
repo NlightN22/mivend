@@ -15,6 +15,8 @@ import { SettlementCounterpartyListener } from './settlement-counterparty.listen
 import { SettlementDocumentService } from './settlement-document.service';
 import { SettlementPendingService } from './settlement-pending.service';
 import { SettlementReferenceResolver } from './settlement-reference-resolver';
+import { createSettlementReconcileTask } from './settlement-reconcile.scheduled-task';
+import { SettlementReconcileService } from './settlement-reconcile.service';
 import { createSettlementRetentionTask } from './settlement-retention.scheduled-task';
 import { SettlementRetentionService } from './settlement-retention.service';
 import { DEFAULT_RETENTION_MONTHS } from './types';
@@ -28,6 +30,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
         SettlementBalanceService,
         SettlementPendingService,
         SettlementRetentionService,
+        SettlementReconcileService,
         SettlementCounterpartyListener,
     ],
     exports: [SettlementDocumentService, SettlementBalanceService, SettlementPendingService],
@@ -51,6 +54,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
             createSettlementRetentionTask(),
+            createSettlementReconcileTask(),
         ];
         return config;
     },

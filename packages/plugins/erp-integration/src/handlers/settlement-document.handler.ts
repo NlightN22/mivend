@@ -3,6 +3,7 @@ import type { RequestContext } from '@vendure/core';
 import { SettlementDocumentService } from '@mivend/plugin-settlement';
 import type { SettlementEntryInput } from '@mivend/plugin-settlement';
 
+import { NonRetryableInboundError } from '../non-retryable-inbound-error';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { optionalString, parseTimestamp } from './settlement-payload';
@@ -27,9 +28,14 @@ export class SettlementDocumentStreamHandler implements InboundStreamHandler {
         }
         const isDeleted = payload.isDeleted === true;
         const date = parseTimestamp(payload.date);
-        const entries = this.parseEntries(payload.entries);
-        if (!isDeleted && (!date || entries.length === 0 || entries === 'invalid')) {
-            return inboundNoop(`settlement-document ${entityId}: no date or entries, skipping`);
+        if (!isDeleted && !date) {
+            return inboundNoop(`settlement-document ${entityId}: no date, skipping`);
+        }
+        const parsed = this.parseEntries(payload.entries);
+        if (!isDeleted && parsed.problem) {
+            throw new NonRetryableInboundError(
+                `settlement-document ${entityId}: invalid entry, ${parsed.problem}`,
+            );
         }
 
         const result = await this.documentService.apply(ctx, {
@@ -40,7 +46,7 @@ export class SettlementDocumentStreamHandler implements InboundStreamHandler {
             documentTypeLabel: String(payload.documentTypeLabel ?? ''),
             number: String(payload.number ?? ''),
             date,
-            entries: entries === 'invalid' ? [] : entries,
+            entries: isDeleted ? [] : parsed.entries,
         });
         if (result === 'stale') {
             return inboundNoop(`settlement-document ${entityId}: version not newer than stored`);
@@ -51,17 +57,24 @@ export class SettlementDocumentStreamHandler implements InboundStreamHandler {
         return inboundApplied();
     }
 
-    private parseEntries(raw: unknown): SettlementEntryInput[] | 'invalid' {
-        if (!Array.isArray(raw)) return [];
+    private parseEntries(raw: unknown): { entries: SettlementEntryInput[]; problem?: string } {
         const entries: SettlementEntryInput[] = [];
-        for (const item of raw) {
+        if (!Array.isArray(raw)) return { entries };
+        for (const [index, item] of raw.entries()) {
             const entry = asRecord(item);
             const organizationErpId = String(entry.organizationId ?? '');
             const counterpartyErpId = String(entry.counterpartyId ?? '');
             const contractErpId = String(entry.contractId ?? '');
             const amount = Number(entry.amount ?? 0);
-            if (!organizationErpId || !counterpartyErpId || !contractErpId) return 'invalid';
-            if (!Number.isFinite(amount)) return 'invalid';
+            if (!organizationErpId || !counterpartyErpId || !contractErpId) {
+                return {
+                    entries,
+                    problem: `entry ${index} misses organization, counterparty or contract`,
+                };
+            }
+            if (!Number.isFinite(amount)) {
+                return { entries, problem: `entry ${index} has a non-numeric amount` };
+            }
             const links = Array.isArray(entry.orderLinks) ? entry.orderLinks : [];
             entries.push({
                 organizationErpId,
@@ -80,6 +93,6 @@ export class SettlementDocumentStreamHandler implements InboundStreamHandler {
                 }),
             });
         }
-        return entries;
+        return { entries };
     }
 }

@@ -7,6 +7,7 @@ const loggerCtx = 'IntegrationInboxService';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { replayDidNotResolve } from './inbox-replay-lifecycle';
+import { NonRetryableInboundError } from './non-retryable-inbound-error';
 import { computeRetryBackoffMs } from './retry-policy';
 import { INBOX_RETRY_WALL_CLOCK_BUDGET_MS } from './types';
 import type { InboundStream } from './types';
@@ -218,7 +219,8 @@ export class IntegrationInboxService {
     }
 
     // Every failure retries with backoff (nextRetryAt) and dead-letters only once 24h have passed
-    // since its first failure — one policy for all streams and error kinds (#145). Issue #211:
+    // since its first failure — one policy for all streams and error kinds (#145), except
+    // NonRetryableInboundError, which fails at once. Issue #211:
     // `onBudgetExhausted` lets one error kind resolve to a noop instead, once that budget runs out.
     async markFailed(
         id: number,
@@ -230,8 +232,9 @@ export class IntegrationInboxService {
         const row = await repo.findOneOrFail({ where: { id } });
         const attempts = row.attempts + 1;
         const firstFailedAt = row.firstFailedAt ?? new Date();
-        if (Date.now() - firstFailedAt.getTime() > INBOX_RETRY_WALL_CLOCK_BUDGET_MS) {
-            if (onBudgetExhausted) {
+        const retriable = !(error instanceof NonRetryableInboundError);
+        if (!retriable || Date.now() - firstFailedAt.getTime() > INBOX_RETRY_WALL_CLOCK_BUDGET_MS) {
+            if (retriable && onBudgetExhausted) {
                 await repo.update({ id }, { attempts, lastError: error.message, firstFailedAt });
                 await this.markProcessed(id, onBudgetExhausted.outcome, onBudgetExhausted.reason);
                 return;

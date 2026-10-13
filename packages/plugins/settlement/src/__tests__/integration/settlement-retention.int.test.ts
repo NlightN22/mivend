@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { Logger } from '@vendure/core';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { dropTestSchema } from 'shared';
 
 import { SettlementDocument } from '../../entities/settlement-document.entity';
@@ -127,6 +128,67 @@ describe('SettlementRetentionService (real Postgres)', () => {
 
         await h.dataSource.query(`UPDATE payment_attempt SET "paymentStatus" = 'captured'`);
         expect(await h.retention.sweep(ctx)).toBe(1);
+    });
+
+    it('keeps a tombstone for twice the period so a late older version stays a noop', async () => {
+        await h.documents.apply(ctx, documentInput('gone', { date: OLD }));
+        await h.documents.apply(
+            ctx,
+            documentInput('gone', {
+                date: OLD,
+                version: '2026-10-02T10:00:00Z',
+                isDeleted: true,
+                entries: [],
+            }),
+        );
+
+        expect(await h.retention.sweep(ctx)).toBe(0);
+        const late = await h.documents.apply(
+            ctx,
+            documentInput('gone', { date: OLD, version: '2026-10-01T12:00:00Z' }),
+        );
+
+        expect(late).toBe('stale');
+        expect(await erpIds()).toEqual(['gone']);
+        const [doc] = await h.dataSource.getRepository(SettlementDocument).find();
+        expect(doc.isDeleted).toBe(true);
+    });
+
+    it('removes a tombstone once it is older than twice the period', async () => {
+        const veryOld = new Date('2024-06-14T00:00:00Z');
+        await h.documents.apply(ctx, documentInput('gone', { date: veryOld }));
+        await h.documents.apply(
+            ctx,
+            documentInput('gone', {
+                date: veryOld,
+                version: '2026-10-02T10:00:00Z',
+                isDeleted: true,
+                entries: [],
+            }),
+        );
+
+        expect(await h.retention.sweep(ctx)).toBe(1);
+        expect(await erpIds()).toEqual([]);
+    });
+
+    it('warns with the count of documents whose triple has no balance fact', async () => {
+        const base = documentInput('x').entries[0];
+        await h.documents.apply(
+            ctx,
+            documentInput('no-balance', {
+                date: OLD,
+                entries: [{ ...base, contractErpId: 'other' }],
+            }),
+        );
+        const warn = vi.spyOn(Logger, 'warn').mockImplementation(() => undefined);
+
+        await h.retention.sweep(ctx);
+
+        expect(warn).toHaveBeenCalledWith(
+            expect.stringContaining('1 document(s)'),
+            expect.anything(),
+        );
+        warn.mockRestore();
     });
 
     it('a document re-sent concurrently with the sweep is re-created, not lost', async () => {

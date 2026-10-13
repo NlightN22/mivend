@@ -197,6 +197,21 @@ describe('settlement ingestion (decode -> handler -> real Postgres)', () => {
         expect(doc.isDeleted).toBe(true);
     });
 
+    it('a decoded live document with no entries replaces the stored entries and keeps the document', async () => {
+        await documentHandler.apply(ctx, DOC_ID, documentPayload());
+
+        const outcome = await documentHandler.apply(
+            ctx,
+            DOC_ID,
+            documentPayload({ version: '2026-10-02T10:00:00Z', entries: [] }),
+        );
+
+        expect(outcome).toEqual({ kind: 'applied' });
+        expect(await entries()).toHaveLength(0);
+        const [doc] = await dataSource.getRepository(SettlementDocument).find();
+        expect(doc).toMatchObject({ isDeleted: false, sourceVersion: '2026-10-02T10:00:00Z' });
+    });
+
     it('stores a balance with a closing that disagrees with documents, and drops an older one', async () => {
         const key = 'org-1:cp-1:ct-1';
         const payload = (version: string, closing: number): Record<string, unknown> =>

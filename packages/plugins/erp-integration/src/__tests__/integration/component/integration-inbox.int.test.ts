@@ -11,6 +11,7 @@ import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event
 import { IntegrationInboxHealthService } from '../../../integration-inbox-health.service';
 import { IntegrationInboxRetentionService } from '../../../integration-inbox-retention.service';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
+import { NonRetryableInboundError } from '../../../non-retryable-inbound-error';
 
 // Inbox idempotency/concurrency pattern (docs/testing-patterns.md, the external-integration-rules skill) — mirrors
 // plugin-acquiring's InboxService fix for the real claimBatch race (two concurrent sweeps
@@ -269,6 +270,25 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(updated.status).toBe('failed');
         expect(updated.attempts).toBe(2);
         expect(updated.nextRetryAt).toBeNull();
+    });
+
+    it('markFailed dead-letters a non-retryable error at once with its reason', async () => {
+        const row = await inboxService.enqueue({
+            stream: 'settlement-document',
+            entityId: 'doc-bad',
+            version: '1',
+            sourceEventId: 'evt-bad',
+            payload: {},
+        });
+
+        await inboxService.markFailed(row.id, new NonRetryableInboundError('entry 0 invalid'));
+
+        const updated = await dataSource
+            .getRepository(IntegrationInboxEvent)
+            .findOneOrFail({ where: { id: row.id } });
+        expect(updated.status).toBe('failed');
+        expect(updated.nextRetryAt).toBeNull();
+        expect(updated.lastError).toBe('entry 0 invalid');
     });
 
     // #145: the budget starts at the first failure, not at enqueue — a backlog that waited out a

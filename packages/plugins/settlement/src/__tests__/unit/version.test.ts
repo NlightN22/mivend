@@ -13,6 +13,17 @@ describe('isNewerVersion', () => {
         expect(isNewerVersion('9', '10')).toBe(false);
     });
 
+    it('never mixes time and numeric versions: a mixed pair is compared as strings', () => {
+        expect(isNewerVersion('2026-10-13T10:00:00Z', '9999999999999')).toBe(false);
+        expect(isNewerVersion('9999999999999', '2026-10-13T10:00:00Z')).toBe(true);
+        expect(isNewerVersion('2026', '2026-10-13T10:00:00Z')).toBe(false);
+    });
+
+    it('does not read free text as a date', () => {
+        expect(isNewerVersion('release 12', 'release 9')).toBe(false);
+        expect(isNewerVersion('release 9', 'release 12')).toBe(true);
+    });
+
     it('treats an equal version as not newer', () => {
         expect(isNewerVersion('2026-10-13T10:00:00Z', '2026-10-13T10:00:00Z')).toBe(false);
     });

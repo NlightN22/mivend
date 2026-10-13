@@ -79,6 +79,32 @@ export class SettlementPendingService {
         });
     }
 
+    // Matches by the link's own ERP order id or order uuid, so a mivend order created after the
+    // document arrived (and not yet carrying an erpOrderId) is found too.
+    attachOrderForLink(ctx: RequestContext, linkOrderErpId: string): Promise<number> {
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            orderLockKey(linkOrderErpId),
+            async txCtx => {
+                const [rows]: [unknown[], number] = await this.connection
+                    .getRepository(txCtx, SettlementOrderLink)
+                    .query(
+                        `UPDATE settlement_order_link l SET "orderId" = o.id
+                         FROM "order" o
+                         WHERE l."orderId" IS NULL
+                           AND l."orderErpId" = $1
+                           AND (o."customFieldsErporderid" = l."orderErpId"
+                                OR (l."orderUuid" IS NOT NULL
+                                    AND l."orderUuid" = o."customFieldsUuid"::text))
+                         RETURNING l.id`,
+                        [linkOrderErpId],
+                    );
+                return rows.length;
+            },
+        );
+    }
+
     private async update(
         ctx: RequestContext,
         entity: typeof SettlementDocumentEntry | typeof SettlementBalance,

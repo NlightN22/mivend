@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
+import { NonRetryableInboundError } from '../../non-retryable-inbound-error';
 import { SettlementBalanceStreamHandler } from '../../handlers/settlement-balance.handler';
 import { SettlementDocumentStreamHandler } from '../../handlers/settlement-document.handler';
 
@@ -75,7 +76,7 @@ describe('SettlementDocumentStreamHandler', () => {
         expect(apply.mock.calls[0][1]).toMatchObject({ isDeleted: true, entries: [] });
     });
 
-    it('skips a live document without entries or date and says why', async () => {
+    it('skips a live document without a date and says why', async () => {
         const { handler, apply } = documentHandler();
 
         const outcome = await handler.apply(ctx, 'doc-1', { version: '2', entries: [] });
@@ -84,16 +85,41 @@ describe('SettlementDocumentStreamHandler', () => {
         expect(apply).not.toHaveBeenCalled();
     });
 
-    it('skips a document with an entry missing its triple', async () => {
+    it('passes a live document with an empty entries array through, replacing its entries', async () => {
         const { handler, apply } = documentHandler();
 
-        const outcome = await handler.apply(ctx, 'doc-1', {
-            ...wirePayload,
-            entries: [{ ...wirePayload.entries[0], contractId: '' }],
+        const outcome = await handler.apply(ctx, 'doc-1', { ...wirePayload, entries: [] });
+
+        expect(outcome).toEqual({ kind: 'applied' });
+        expect(apply.mock.calls[0][1]).toMatchObject({ isDeleted: false, entries: [] });
+    });
+
+    it.each([
+        ['an entry missing its contract', { contractId: '' }],
+        ['an entry missing its organization', { organizationId: undefined }],
+        ['an entry with a non-numeric amount', { amount: 'abc' }],
+    ])('rejects a live document with %s as non-retryable', async (_name, override) => {
+        const { handler, apply } = documentHandler();
+
+        await expect(
+            handler.apply(ctx, 'doc-1', {
+                ...wirePayload,
+                entries: [{ ...wirePayload.entries[0], ...override }],
+            }),
+        ).rejects.toBeInstanceOf(NonRetryableInboundError);
+        expect(apply).not.toHaveBeenCalled();
+    });
+
+    it('does not reject a tombstone because of its entries', async () => {
+        const { handler, apply } = documentHandler();
+
+        await handler.apply(ctx, 'doc-1', {
+            version: '3',
+            isDeleted: true,
+            entries: [{ contractId: '' }],
         });
 
-        expect(outcome.kind).toBe('noop');
-        expect(apply).not.toHaveBeenCalled();
+        expect(apply.mock.calls[0][1]).toMatchObject({ isDeleted: true, entries: [] });
     });
 
     it.each(['stale', 'unknown-deleted'])('reports %s as a noop with a reason', async result => {

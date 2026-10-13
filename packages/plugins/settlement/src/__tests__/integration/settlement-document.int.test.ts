@@ -110,6 +110,19 @@ describe('SettlementDocumentService (real Postgres)', () => {
         expect((await docs())[0].isDeleted).toBe(false);
     });
 
+    it('a live re-send with an empty entries array replaces the entries with none and keeps the document', async () => {
+        await h.documents.apply(ctx, documentInput('d1'));
+
+        const result = await h.documents.apply(
+            ctx,
+            documentInput('d1', { version: '2026-10-02T10:00:00Z', entries: [] }),
+        );
+
+        expect(result).toBe('applied');
+        expect(await docs()).toHaveLength(1);
+        expect(await entries()).toHaveLength(0);
+    });
+
     it('a deletion of an unknown uuid is a harmless no-op', async () => {
         const result = await h.documents.apply(
             ctx,

@@ -9,7 +9,10 @@ import { withAggregateLock } from 'shared';
 
 import { SettlementDocument } from './entities/settlement-document.entity';
 import { documentLockKey } from './settlement-document.service';
-import { REMOVABLE_DOCUMENT_PREDICATE } from './settlement-retention.sql';
+import {
+    NO_BALANCE_FACT_COUNT_SQL,
+    REMOVABLE_DOCUMENT_PREDICATE,
+} from './settlement-retention.sql';
 import { DEFAULT_RETENTION_MONTHS, loggerCtx } from './types';
 
 const BATCH_SIZE = 500;
@@ -52,7 +55,20 @@ export class SettlementRetentionService {
             `Settlement retention: removed ${removed} document(s) outside the ${months}-month window`,
             loggerCtx,
         );
+        await this.warnAboutDocumentsWithoutBalance(ctx);
         return removed;
+    }
+
+    private async warnAboutDocumentsWithoutBalance(ctx: RequestContext): Promise<void> {
+        const [row]: Array<{ count: number }> = await this.connection
+            .getRepository(ctx, SettlementDocument)
+            .query(NO_BALANCE_FACT_COUNT_SQL);
+        if (row && row.count > 0) {
+            Logger.warn(
+                `Settlement retention: ${row.count} document(s) reference a counterparty/contract with no balance fact and are never removed`,
+                loggerCtx,
+            );
+        }
     }
 
     private removeIfStillRemovable(
