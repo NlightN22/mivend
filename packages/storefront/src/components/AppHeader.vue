@@ -65,7 +65,6 @@ const ACCOUNT_ZONE_PREFIXES = [
     '/orders',
     '/documents',
     '/proforma-invoices',
-    '/payments',
     '/settlements',
     '/reconciliation-acts',
     '/favorites',

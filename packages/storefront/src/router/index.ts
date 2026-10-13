@@ -122,16 +122,6 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
-                    path: 'payments',
-                    component: () => import('../pages/payments/PaymentsPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'payments/:id',
-                    component: () => import('../pages/payments/PaymentDetailPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
                     path: 'favorites',
                     component: () => import('../pages/favorites/FavoritesPage.vue'),
                     meta: { requiresAuth: true },
