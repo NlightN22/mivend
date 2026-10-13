@@ -11,7 +11,10 @@ const { orders, totalItems, loading, load } = useOrders();
 
 const PAGE_SIZE = 20;
 
-const { filters: urlState, page } = useUrlState({ status: 'all', source: 'all', q: '' }, { typingKeys: ['q'] });
+const { filters: urlState, page } = useUrlState(
+    { status: 'all', source: 'all', q: '' },
+    { typingKeys: ['q'] },
+);
 const activeFilter = toRef(urlState, 'status');
 const activeSource = toRef(urlState, 'source');
 const searchQuery = toRef(urlState, 'q');
