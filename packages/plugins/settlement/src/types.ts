@@ -47,5 +47,7 @@ export type SettlementApplyResult = 'applied' | 'stale' | 'unknown-deleted';
 declare module '@vendure/core' {
     interface CustomGlobalSettingsFields {
         settlementRetentionMonths?: number | null;
+        settlementCustomerContractKinds?: string | null;
+        settlementTypeCategories?: string | null;
     }
 }

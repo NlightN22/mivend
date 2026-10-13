@@ -15,15 +15,19 @@ import { SettlementCounterpartyListener } from './settlement-counterparty.listen
 import { SettlementDocumentService } from './settlement-document.service';
 import { SettlementPendingService } from './settlement-pending.service';
 import { SettlementReferenceResolver } from './settlement-reference-resolver';
+import { shopApiExtensions } from './api/shop.schema';
 import { createSettlementReconcileTask } from './settlement-reconcile.scheduled-task';
 import { SettlementReconcileService } from './settlement-reconcile.service';
 import { createSettlementRetentionTask } from './settlement-retention.scheduled-task';
 import { SettlementRetentionService } from './settlement-retention.service';
+import { SettlementShopResolver } from './settlement-shop.resolver';
+import { SettlementShopService } from './settlement-shop.service';
 import { DEFAULT_RETENTION_MONTHS } from './types';
 
 @VendurePlugin({
     imports: [PluginCommonModule, CounterpartyPlugin],
     entities: [SettlementDocument, SettlementDocumentEntry, SettlementOrderLink, SettlementBalance],
+    shopApiExtensions: { schema: shopApiExtensions, resolvers: [SettlementShopResolver] },
     providers: [
         SettlementReferenceResolver,
         SettlementDocumentService,
@@ -32,11 +36,36 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
         SettlementRetentionService,
         SettlementReconcileService,
         SettlementCounterpartyListener,
+        SettlementShopService,
     ],
     exports: [SettlementDocumentService, SettlementBalanceService, SettlementPendingService],
     configuration: (config: RuntimeVendureConfig) => {
         config.customFields.GlobalSettings = [
             ...(config.customFields.GlobalSettings ?? []),
+            {
+                name: 'settlementCustomerContractKinds',
+                type: 'string' as const,
+                nullable: true,
+                public: false,
+                label: [
+                    {
+                        languageCode: LanguageCode.en,
+                        value: 'Settlement documents: contract kinds shown to customers (comma separated, empty = all)',
+                    },
+                ],
+            },
+            {
+                name: 'settlementTypeCategories',
+                type: 'text' as const,
+                nullable: true,
+                public: false,
+                label: [
+                    {
+                        languageCode: LanguageCode.en,
+                        value: 'Settlement documents: customer-visible types as documentType=category (sale, payment, return, correction, bonus), comma separated, empty = all types',
+                    },
+                ],
+            },
             {
                 name: 'settlementRetentionMonths',
                 type: 'int' as const,

@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import type { RequestContext } from '@vendure/core';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestConnection,
     createTestSchema,
@@ -23,6 +23,7 @@ export const ctx = {} as RequestContext;
 
 export interface Harness {
     dataSource: DataSource;
+    connection: TransactionalConnection;
     schema: string;
     counterparties: Map<string, number>;
     contracts: Map<string, number>;
@@ -81,6 +82,7 @@ export async function createHarness(tag: string): Promise<Harness> {
     const pending = new SettlementPendingService(connection);
     return {
         dataSource,
+        connection,
         schema,
         counterparties,
         contracts,
