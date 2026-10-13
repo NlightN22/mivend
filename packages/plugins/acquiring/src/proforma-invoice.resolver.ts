@@ -1,5 +1,6 @@
 import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import {
+    AdministratorService,
     Allow,
     Ctx,
     CustomerService,
@@ -29,6 +30,7 @@ export class ProformaInvoiceAdminResolver {
         private paymentInboxProcessorService: PaymentInboxProcessorService,
         private orderVisibility: OrderVisibilityService,
         private withdrawService: ProformaInvoiceWithdrawService,
+        private administratorService: AdministratorService,
     ) {}
 
     @Mutation()
@@ -43,7 +45,14 @@ export class ProformaInvoiceAdminResolver {
             ? await qb.andWhere(`${qb.alias}.id = :orderId`, { orderId: invoice.orderId }).getOne()
             : null;
         if (!invoice || !visible) throw new ForbiddenError();
-        return this.withdrawService.withdraw(ctx, Number(invoice.id));
+        const administrator = ctx.activeUserId
+            ? await this.administratorService.findOneByUserId(ctx, ctx.activeUserId)
+            : null;
+        return this.withdrawService.withdraw(
+            ctx,
+            Number(invoice.id),
+            administrator ? String(administrator.id) : null,
+        );
     }
 
     @Query()

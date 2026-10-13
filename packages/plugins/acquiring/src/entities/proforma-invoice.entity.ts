@@ -35,6 +35,10 @@ export interface ProformaInvoiceLineSnapshot {
 // proforma invoices.
 @Entity()
 @Index(['counterpartyId', 'organizationId', 'status'])
+@Index('UQ_proforma_invoice_number', ['number'], { unique: true })
+@Index('UQ_proforma_invoice_order_org_version', ['orderId', 'organizationId', 'version'], {
+    unique: true,
+})
 export class ProformaInvoice extends UuidEntity {
     constructor(input?: DeepPartial<ProformaInvoice>) {
         super(input);
@@ -45,7 +49,6 @@ export class ProformaInvoice extends UuidEntity {
     orderId!: number;
 
     // `<order number>-<NN>-<version>`: `<order number>-<NN>` is the stable document id per (order, organization).
-    @Index()
     @Column({ type: 'varchar' })
     number!: string;
 
@@ -102,4 +105,11 @@ export class ProformaInvoice extends UuidEntity {
     // Set only on a "by shipment" version: the ERP sales invoice (realization) it is based on.
     @Column({ type: 'varchar', nullable: true })
     salesInvoiceNumber!: string | null;
+
+    // Set only when a manager withdrew this version without a replacement.
+    @Column({ type: 'timestamptz', nullable: true })
+    withdrawnAt!: Date | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    withdrawnByAdministratorId!: string | null;
 }
