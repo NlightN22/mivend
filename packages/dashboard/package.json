@@ -36,6 +36,7 @@
         "@mivend/plugin-saved-views": "workspace:*",
         "@mivend/plugin-search": "workspace:*",
         "@mivend/plugin-session-management": "workspace:*",
+        "@mivend/plugin-settlement": "workspace:*",
         "@mivend/plugin-sync": "workspace:*",
         "@mivend/plugin-versioning": "workspace:*",
         "shared": "workspace:*"

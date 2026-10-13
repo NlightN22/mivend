@@ -296,6 +296,9 @@ importers:
             '@mivend/plugin-session-management':
                 specifier: workspace:*
                 version: link:../plugins/session-management
+            '@mivend/plugin-settlement':
+                specifier: workspace:*
+                version: link:../plugins/settlement
             '@mivend/plugin-sync':
                 specifier: workspace:*
                 version: link:../plugins/sync
