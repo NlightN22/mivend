@@ -34,7 +34,11 @@ beforeAll(async () => {
     );
     await h.dataSource.query(
         `CREATE TABLE contract (id serial primary key, "erpId" varchar, name varchar,
-            "contractKind" varchar, "paymentDelayDays" int, "isCustomerContract" boolean)`,
+            "contractKind" varchar, "paymentDelayDays" int, "isCustomerContract" boolean,
+            "controlledIndividually" boolean, "debtDaysLimit" int)`,
+    );
+    await h.dataSource.query(
+        `CREATE TABLE counterparty (id int primary key, "paymentDelayDays" int)`,
     );
     await h.dataSource.query(
         `CREATE TABLE organization_requisites (id serial primary key, "erpId" varchar, "legalName" varchar)`,
@@ -49,7 +53,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await h.dataSource.query(
-        'TRUNCATE settlement_document, settlement_balance, settlement_document_type, "order", contract, organization_requisites RESTART IDENTITY CASCADE',
+        'TRUNCATE settlement_document, settlement_balance, settlement_document_type, "order", contract, counterparty, organization_requisites RESTART IDENTITY CASCADE',
     );
     await typeRef('Sale', 'sale', true);
     await typeRef('Pay', 'payment', true);
@@ -63,6 +67,9 @@ beforeEach(async () => {
     await h.dataSource.query(
         `INSERT INTO contract ("erpId", name, "contractKind", "paymentDelayDays", "isCustomerContract")
          VALUES ('ct-1', 'Main', 'client', 10, true), ('ct-2', 'Supplier deal', 'supplier', 0, NULL)`,
+    );
+    await h.dataSource.query(
+        `INSERT INTO counterparty (id, "paymentDelayDays") VALUES (1, 10), (2, 0)`,
     );
     await h.dataSource.query(
         `INSERT INTO organization_requisites ("erpId", "legalName") VALUES ('org-1', 'Seller One')`,
@@ -191,6 +198,38 @@ describe('settlement shop queries (real Postgres)', () => {
         expect(card).toMatchObject({ currentBalance: 60000, overdue: 60000, currency: 'RUB' });
         const overdue = await shop.documents(ctx, '1', { overdueOnly: true }, 0, 20);
         expect(overdue.items.map(i => i.number)).toEqual(['1']);
+    });
+
+    it('takes the payment term from the counterparty and never invents a zero term', async () => {
+        await balance('cp-1', 'ct-1', 0, 100);
+        await doc('d-sale', {
+            number: '1',
+            date: new Date('2026-09-01T00:00:00Z'),
+            entries: [entry({ amount: 100 })],
+        });
+        const [row] = (await shop.documents(ctx, '1', {}, 0, 20)).items;
+        expect(row.dueDate?.toISOString().slice(0, 10)).toBe('2026-09-11');
+
+        await h.dataSource.query(`UPDATE counterparty SET "paymentDelayDays" = NULL WHERE id = 1`);
+        const [noTerm] = (await shop.documents(ctx, '1', {}, 0, 20)).items;
+        expect(noTerm.dueDate).toBeNull();
+        expect(noTerm.paymentStatus).not.toBe('overdue');
+        const [card] = await shop.balanceCards(ctx, '1');
+        expect(card.overdue).toBe(0);
+    });
+
+    it('uses the own term of an individually controlled contract', async () => {
+        await h.dataSource.query(
+            `UPDATE contract SET "controlledIndividually" = true, "debtDaysLimit" = 30 WHERE "erpId" = 'ct-1'`,
+        );
+        await balance('cp-1', 'ct-1', 0, 100);
+        await doc('d-sale', {
+            number: '1',
+            date: new Date('2026-09-01T00:00:00Z'),
+            entries: [entry({ amount: 100 })],
+        });
+        const [row] = (await shop.documents(ctx, '1', {}, 0, 20)).items;
+        expect(row.dueDate?.toISOString().slice(0, 10)).toBe('2026-10-01');
     });
 
     it('shows an order code only for an order of the same counterparty', async () => {

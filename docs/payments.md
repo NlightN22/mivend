@@ -1005,6 +1005,20 @@ arriving between them can leave the three values briefly inconsistent; the next 
 - Debt = the counterparty balance stream value (all contracts); check = balance + open deferred
   orders + this order against the pool.
 
+### Payment term (days) vs amount limit (decided with #224)
+
+Two different things, do not mix them up:
+
+- **Amount limit**: a general pool on the counterparty plus sublimits of individually controlled contracts (above).
+- **Payment term (days)**: general for the counterparty, `Counterparty.paymentDelayDays` (taken from the main contract's
+  `debtDaysLimit`, 0 = unknown). A contract with `controlledIndividually` has its own, more precise term in its own
+  `debtDaysLimit`. `Contract.paymentDelayDays` (1C "КоличествоДнейОтсрочки") is empty in 1C on every contract: never
+  read it.
+- **Due date of a settlement document**: the document's own `due_date` if the ERP sent one (rare), otherwise document
+  date + the term above (own term for an individually controlled contract, else the counterparty's). No term means
+  no due date and nothing is overdue: never substitute 0 days. Overdue/FIFO (account statement) uses this rule;
+  checkout eligibility for deferred payment still uses the counterparty term only.
+
 ### Local verification data and tests
 
 - `infrastructure/scripts/seed-erp.mjs` (local contour only) seeds two buyers for this flow:

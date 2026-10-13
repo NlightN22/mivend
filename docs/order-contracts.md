@@ -343,7 +343,7 @@ Documents that form a customer's receivables (sales, payments, returns, correcti
   `shippedQuantity` or `paidAmount`. A document without an order is valid and is shown by counterparty/contract.
 - **Balance.** `SettlementBalanceChanged` per (organization, counterparty, contract) is a reconciliation fact; the
   balance is never summed from documents. Overdue aging (FIFO) is computed in mivend from `due_date` or the
-  contract's payment delay (`ContractChanged.payment_delay_days`).
+  the payment term (general `Counterparty.paymentDelayDays`, own `debtDaysLimit` for an individually controlled contract; no term = no due date, nothing overdue; see docs/payments.md "Payment term (days) vs amount limit").
 - **Corrected balance.** After an unposting/deletion Integration Service may send a corrected balance event that
   changes only `closing_balance` (`opening_*` stay; a triple missing from the register becomes 0). Then
   `closing = opening + sum(entries)` may temporarily not hold: `closing_balance` is authoritative, never reject or
