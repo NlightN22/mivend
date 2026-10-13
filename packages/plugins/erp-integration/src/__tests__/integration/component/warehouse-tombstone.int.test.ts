@@ -39,7 +39,7 @@ let seq = 0;
 async function addWarehouseEvent(
     entityId: string,
     status: 'pending' | 'processed' | 'failed',
-    isDeleted: boolean,
+    isDeleted: boolean | 'empty',
     stream: 'warehouse' | 'stock' = 'warehouse',
 ): Promise<void> {
     seq += 1;
@@ -48,7 +48,8 @@ async function addWarehouseEvent(
         entityId,
         version: String(seq),
         sourceEventId: `evt-${seq}`,
-        payload: isDeleted ? { isDeleted: true } : { name: 'warehouse-a' },
+        payload:
+            isDeleted === 'empty' ? {} : isDeleted ? { isDeleted: true } : { name: 'warehouse-a' },
         status,
     });
 }
@@ -72,6 +73,12 @@ describe('isWarehouseTombstoned (integration, real Postgres)', () => {
         await addWarehouseEvent('wh-1', 'processed', true);
         await addWarehouseEvent('wh-1', 'pending', false);
         expect(await isWarehouseTombstoned(dataSource, 'wh-1')).toBe(false);
+    });
+
+    it('stays tombstoned when a later replay carries an empty payload', async () => {
+        await addWarehouseEvent('wh-1', 'processed', true);
+        await addWarehouseEvent('wh-1', 'processed', 'empty');
+        expect(await isWarehouseTombstoned(dataSource, 'wh-1')).toBe(true);
     });
 
     it("ignores other warehouses' tombstones and other streams", async () => {
