@@ -57,11 +57,19 @@ describe('buildPaymentQrPayload', () => {
         ]);
     });
 
+    it('shortens a long bank name on a word boundary instead of dropping the QR', () => {
+        const result = buildPaymentQrPayload({
+            ...valid,
+            bankName: 'Example Regional Commercial Bank Joint Stock Company Branch',
+        });
+        expect(result.ok).toBe(true);
+        const name = (result as { payload: string }).payload.match(/BankName=([^|]*)/)![1];
+        expect(name).toBe('Example Regional Commercial Bank Joint Stock');
+        expect(name.length).toBeLessThanOrEqual(45);
+    });
+
     it('enforces length limits and digit formats', () => {
         expect(errorsOf({ ...valid, name: 'x'.repeat(161) })).toEqual(['name: longer than 160']);
-        expect(errorsOf({ ...valid, bankName: 'x'.repeat(46) })).toEqual([
-            'bankName: longer than 45',
-        ]);
         expect(errorsOf({ ...valid, purpose: 'x'.repeat(211) })).toEqual([
             'purpose: longer than 210',
         ]);

@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 export function renderQrSvg(payload: string): string {
     const { modules } = QRCode.create(payload, { errorCorrectionLevel: 'M' });
     const size = modules.size;
-    const quiet = 2;
+    const quiet = 4;
     let path = '';
     for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {

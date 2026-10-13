@@ -23,6 +23,16 @@ export function sanitizeQrValue(value: string): string {
         .trim();
 }
 
+const BANK_NAME_MAX = 45;
+
+// A long bank name is shortened (the BIC identifies the bank) instead of dropping the whole QR.
+export function truncateAtWord(value: string, max: number): string {
+    if (value.length <= max) return value;
+    const cut = value.slice(0, max);
+    const lastSpace = cut.lastIndexOf(' ');
+    return (lastSpace > max / 2 ? cut.slice(0, lastSpace) : cut).trim();
+}
+
 interface FieldRule {
     key: string;
     label: string;
@@ -40,7 +50,12 @@ function fieldRules(input: PaymentQrInput): FieldRule[] {
             value: sanitizeQrValue(input.personalAcc),
             pattern: /^\d{20}$/,
         },
-        { key: 'BankName', label: 'bankName', value: sanitizeQrValue(input.bankName), max: 45 },
+        {
+            key: 'BankName',
+            label: 'bankName',
+            value: truncateAtWord(sanitizeQrValue(input.bankName), BANK_NAME_MAX),
+            max: BANK_NAME_MAX,
+        },
         { key: 'BIC', label: 'bic', value: sanitizeQrValue(input.bic), pattern: /^\d{9}$/ },
         {
             key: 'CorrespAcc',
