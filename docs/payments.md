@@ -357,7 +357,7 @@ organization are re-queued once (a conditional `failed` -> `pending` update, so 
 
 The PDF follows the structure of a standard payment-request form: payment-terms notice
 (`PAYMENT_NOTICE`, one constant), bank block (bank, BIK, correspondent and settlement accounts,
-INN/KPP, recipient name, empty QR box captioned "Отсканируйте для оплаты"), title "Счет на оплату №
+INN/KPP, recipient name, payment QR box captioned "Отсканируйте для оплаты"), title "Счет на оплату №
 <number> от <date in words>" with a "Версия N" line above version 1 and a "Заменён, не
 действителен" mark for superseded versions, supplier/consignor and buyer/consignee lines, the items
 table, totals, amount in words and signature lines. The layout fits the A4 width; long names wrap in
@@ -379,7 +379,17 @@ cells and only rows may break across pages (totals and signatures stay together)
   printed. The `vat-rate` handler renames the rate on confirmation. Failed documents are not
   requeued on rate confirmation; they stay failed until regenerated. Snapshots issued before tax data
   was stored print "не указан" with a logged warning; nothing is derived for them.
-- The payment QR is planned: the box is reserved, nothing is generated yet.
+- Payment QR (`plugin-documents/src/qr-payment/`): GOST R 56042-2014 format ST00012 ("ST0001" +
+  encoding digit, 2 = UTF-8; 1 = windows-1251, 3 = KOI8-R), plain bank details, no SBP. Payload
+  `ST00012|Name|PersonalAcc|BankName|BIC|CorrespAcc|Sum|Purpose|PayeeINN[|KPP]`, `Sum` in kopecks.
+  Limits: Name 160, BankName 45, Purpose 210, accounts 20 digits, BIC 9, INN 10 or 12, KPP 9, whole
+  string 300 characters; `|` and control characters inside values become spaces. Our rule is stricter
+  than the standard: Sum (this version's amount, > 0), Purpose and PayeeINN are required too; Purpose
+  is "Оплата по счету № <number> от dd.mm.yyyy" plus ", в т.ч. НДС <sum>" when the VAT total is known;
+  KPP is sent only when the organization has one. Any missing or invalid value, or a superseded
+  version, leaves the box empty (a warning lists the fields) and the PDF still generates. The image is
+  an SVG drawn from the `qrcode` package's module matrix (error correction M). Own small module instead
+  of a GOST library: the format is a fixed string, and the existing packages are unmaintained.
 
 `OrganizationRequisites` (`plugin-documents`) already models one of **our own** legal entities
 (the seller side — requisites/bank details for document rendering), sourced from the ERP. Today

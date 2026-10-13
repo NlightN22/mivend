@@ -248,9 +248,14 @@ export class PdfGeneratorService implements OnModuleInit {
         }
 
         const buyer = await this.getBuyer(ctx, document.counterpartyId);
-        return renderProformaInvoiceHtml(
-            buildProformaInvoiceTemplateData(source, requisites, buyer),
-        );
+        const data = buildProformaInvoiceTemplateData(source, requisites, buyer);
+        if (data.paymentQr.problems.length > 0) {
+            Logger.warn(
+                `Document ${document.number}: payment QR not printed (${data.paymentQr.problems.join('; ')})`,
+                loggerCtx,
+            );
+        }
+        return renderProformaInvoiceHtml(data);
     }
 
     private async buildContractHtml(ctx: RequestContext, document: Document): Promise<string> {

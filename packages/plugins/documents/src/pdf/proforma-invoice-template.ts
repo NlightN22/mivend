@@ -1,3 +1,4 @@
+import { renderQrSvg } from '../qr-payment/qr-svg';
 import type { ProformaInvoiceRow, ProformaInvoiceTemplateData } from './proforma-invoice-data';
 
 export {
@@ -38,6 +39,7 @@ const STYLES = `
     .bank .cap { font-size: 8px; color: #333; }
     .bank .qr { width: 32mm; text-align: center; }
     .qr-box { height: 26mm; }
+    .qr-box svg { width: 26mm; height: 26mm; display: block; margin: 0 auto; }
     h1 { font-size: 15px; margin: 14px 0 4px; padding-bottom: 6px; border-bottom: 2px solid #000; }
     .version { font-size: 11px; margin: 0 0 4px; }
     .superseded { font-size: 20px; font-weight: 800; color: #b3261e; border: 3px solid #b3261e;
@@ -63,13 +65,13 @@ const STYLES = `
     .signed { text-align: center; font-weight: 700; min-height: 12px; }
 `;
 
-function renderBank(bank: ProformaInvoiceTemplateData['bank']): string {
+function renderBank(bank: ProformaInvoiceTemplateData['bank'], qrPayload: string | null): string {
     return `
     <table class="bank">
         <tr>
             <td rowspan="2" style="width:50%">${esc(bank.bankName)}<div class="cap">Банк получателя</div></td>
             <td style="width:9%">БИК</td><td>${esc(bank.bik)}</td>
-            <td rowspan="4" class="qr"><div class="qr-box"></div><div class="cap">Отсканируйте для оплаты</div></td>
+            <td rowspan="4" class="qr"><div class="qr-box">${qrPayload ? renderQrSvg(qrPayload) : ''}</div><div class="cap">Отсканируйте для оплаты</div></td>
         </tr>
         <tr>${bank.correspondentAccount ? `<td>Сч. №</td><td>${esc(bank.correspondentAccount)}</td>` : '<td></td><td></td>'}</tr>
         <tr>
@@ -166,7 +168,7 @@ export function renderProformaInvoiceHtml(data: ProformaInvoiceTemplateData): st
     <head><meta charset="utf-8" /><style>${STYLES}</style></head>
     <body>
         <p class="notice">${esc(data.notice)}</p>
-        ${renderBank(data.bank)}
+        ${renderBank(data.bank, data.paymentQr.payload)}
         <h1>${esc(data.title)}</h1>
         ${data.versionLabel ? `<p class="version">${data.versionLabel}</p>` : ''}
         ${data.superseded ? '<div class="superseded">Заменён, не действителен</div>' : ''}

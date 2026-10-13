@@ -1,6 +1,7 @@
 import { CompleteOrganizationRequisites } from '../entities/organization-requisites.entity';
 import { lineDiscountTotal, lineNetAmount } from '@mivend/plugin-acquiring';
-import { summarizeVat, type VatSourceLine } from './proforma-invoice-vat';
+import { summarizeVat, type VatSourceLine, type VatTotal } from './proforma-invoice-vat';
+import { buildProformaPaymentQr, type ProformaPaymentQr } from '../qr-payment/proforma-payment-qr';
 import { dateInWords, formatMoneyRu, rublesInWords } from './russian-words';
 
 export const PAYMENT_NOTICE =
@@ -81,6 +82,7 @@ export interface ProformaInvoiceTemplateData {
     };
     signatory: Signer;
     chiefAccountant: Signer;
+    paymentQr: ProformaPaymentQr;
 }
 
 export function partyLine(party: PartyInput): string {
@@ -119,8 +121,7 @@ function headSigner(requisites: CompleteOrganizationRequisites): Signer {
     return { name: requisites.signatoryName, title: requisites.signatoryTitle };
 }
 
-function formatVat(lines: ProformaInvoiceSourceLine[]): string {
-    const vat = summarizeVat(lines);
+function formatVat(vat: VatTotal): string {
     if (vat.kind === 'unavailable') return 'не указан';
     return vat.kind === 'none' ? 'Без НДС' : formatMoneyRu(vat.amount);
 }
@@ -144,6 +145,7 @@ export function buildProformaInvoiceTemplateData(
     const totalDiscount = discounts.reduce((sum, d) => sum + d, 0);
     const subtotal = source.lines.reduce((sum, line) => sum + line.linePriceWithTax, 0);
     const currency = source.currencyCode ?? '';
+    const vat = summarizeVat(source.lines);
 
     return {
         notice: PAYMENT_NOTICE,
@@ -176,7 +178,7 @@ export function buildProformaInvoiceTemplateData(
         totals: {
             subtotal: formatMoneyRu(subtotal),
             discount: formatMoneyRu(totalDiscount),
-            vat: formatVat(source.lines),
+            vat: formatVat(vat),
             payable: formatMoneyRu(source.totalAmount),
             summary:
                 `Всего наименований ${source.lines.length}, на сумму ${formatMoneyRu(source.totalAmount)} ${currency}`.trim(),
@@ -184,5 +186,19 @@ export function buildProformaInvoiceTemplateData(
         },
         signatory: headSigner(requisites),
         chiefAccountant: signerByRole(requisites, CHIEF_ACCOUNTANT_ROLE),
+        paymentQr: buildProformaPaymentQr({
+            documentNumber: source.documentNumber,
+            issueDate: source.issueDate,
+            amountKopecks: source.totalAmount,
+            superseded: source.superseded,
+            vatKopecks: vat.kind === 'amount' ? vat.amount : null,
+            recipientName: requisites.legalName,
+            account: requisites.bankAccount,
+            bankName: requisites.bankName,
+            bik: requisites.bankBik,
+            correspondentAccount: requisites.correspondentAccount,
+            inn: requisites.inn,
+            kpp: requisites.kpp,
+        }),
     };
 }
