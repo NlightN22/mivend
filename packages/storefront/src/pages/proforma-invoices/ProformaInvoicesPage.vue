@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, toRef, watch } from 'vue';
+import { onMounted, toRef, watch } from 'vue';
 import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import ProformaInvoiceRow from './ProformaInvoiceRow.vue';
@@ -28,30 +28,6 @@ function reload(): void {
 watch([activeFilter, page], reload);
 
 onMounted(reload);
-
-function formatAmount(cents: number, currency: string): string {
-    return (
-        new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100) +
-        ' ' +
-        (currency === 'RUB' ? '₽' : currency)
-    );
-}
-
-const outstandingTotal = computed(() => {
-    const byCurrency = new Map<string, number>();
-    for (const proformaInvoice of proformaInvoices.value) {
-        if (proformaInvoice.status === 'paid' || proformaInvoice.status === 'cancelled') continue;
-        byCurrency.set(
-            proformaInvoice.currencyCode,
-            (byCurrency.get(proformaInvoice.currencyCode) ?? 0) + proformaInvoice.amount,
-        );
-    }
-    return (
-        [...byCurrency.entries()]
-            .map(([currency, amount]) => formatAmount(amount, currency))
-            .join(', ') || '—'
-    );
-});
 </script>
 
 <template>
@@ -74,13 +50,6 @@ const outstandingTotal = computed(() => {
                         Proforma invoices on this page
                     </div>
                     <div class="proforma-invoices-page__stat-value">{{ totalItems }}</div>
-                </div>
-                <div class="proforma-invoices-page__stat-card">
-                    <div class="proforma-invoices-page__stat-title">Outstanding (this page)</div>
-                    <div class="proforma-invoices-page__stat-value">{{ outstandingTotal }}</div>
-                    <div class="proforma-invoices-page__stat-note">
-                        Excludes paid and cancelled proforma invoices
-                    </div>
                 </div>
             </div>
 

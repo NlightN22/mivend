@@ -3364,9 +3364,17 @@ export type ProductVariantTranslation = {
 export type ProformaInvoice = {
     amount: Scalars['Int']['output'];
     currencyCode: Scalars['String']['output'];
+    /** User-facing status: current | superseded | cancelled. Never 'paid': payment is shown at order level. */
+    displayStatus: Scalars['String']['output'];
     /** The printable document of this snapshot; null until the document row exists. */
     document?: Maybe<Document>;
+    /** Pay-by date of this version: issue date plus the branch's payment term. */
+    dueDate: Scalars['DateTime']['output'];
     id: Scalars['ID']['output'];
+    /** When this version was issued; each version has its own date. */
+    issuedAt: Scalars['DateTime']['output'];
+    /** order-placed | order-changed | by-shipment */
+    kind: Scalars['String']['output'];
     lines: Array<ProformaInvoiceLine>;
     number: Scalars['String']['output'];
     order: ProformaInvoiceOrder;
@@ -3374,6 +3382,8 @@ export type ProformaInvoice = {
     orderChangedDifference?: Maybe<Scalars['Int']['output']>;
     orderId: Scalars['ID']['output'];
     organizationId: Scalars['ID']['output'];
+    /** ERP sales invoice (realization) number; set only on a by-shipment version. */
+    salesInvoiceNumber?: Maybe<Scalars['String']['output']>;
     seller?: Maybe<ProformaInvoiceSeller>;
     status: Scalars['String']['output'];
     supersededBy?: Maybe<ProformaInvoiceVersionRef>;
@@ -4818,6 +4828,7 @@ export type OrderProformaInvoicesQuery = {
             number: string;
             version: number;
             status: string;
+            displayStatus: string;
             amount: number;
             currencyCode: string;
             orderChangedDifference?: number | null;
@@ -4832,7 +4843,13 @@ export type RequestProformaInvoicesMutationVariables = Exact<{
 }>;
 
 export type RequestProformaInvoicesMutation = {
-    requestProformaInvoices: Array<{ id: string; number: string; version: number; status: string }>;
+    requestProformaInvoices: Array<{
+        id: string;
+        number: string;
+        version: number;
+        status: string;
+        displayStatus: string;
+    }>;
 };
 
 export type MyDocumentsQueryVariables = Exact<{
@@ -4981,80 +4998,6 @@ export type OrderDetailQuery = {
     } | null;
 };
 
-export type MyPaymentsQueryVariables = Exact<{
-    options?: InputMaybe<PaymentListOptions>;
-}>;
-
-export type MyPaymentsQuery = {
-    myPayments: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            amount: number;
-            currencyCode: string;
-            channel: string;
-            status: string;
-            createdAt: any;
-            proformaInvoiceId?: string | null;
-            order?: { id: string; code: string } | null;
-            allocations: Array<{
-                amount: number;
-                isAdvance: boolean;
-                proformaInvoice?: { id: string; number: string } | null;
-            }>;
-            refunds: Array<{ amount: number; status: string }>;
-        }>;
-    };
-};
-
-export type PaymentDetailQueryVariables = Exact<{
-    id: Scalars['ID']['input'];
-}>;
-
-export type PaymentDetailQuery = {
-    payment?: {
-        id: string;
-        amount: number;
-        currencyCode: string;
-        channel: string;
-        status: string;
-        createdAt: any;
-        proformaInvoiceId?: string | null;
-        orderId?: string | null;
-        externalReference?: string | null;
-        refunds: Array<{
-            id: string;
-            amount: number;
-            status: string;
-            providerRefundId?: string | null;
-            reason: string;
-            createdAt: any;
-        }>;
-        disputes: Array<{
-            id: string;
-            type: string;
-            status: string;
-            amount: number;
-            openedAt: any;
-        }>;
-        processingEvents: Array<{ stage: string; occurredAt: any; note?: string | null }>;
-        proformaInvoice?: { id: string; number: string; status: string } | null;
-        order?: { id: string; code: string } | null;
-        allocations: Array<{
-            amount: number;
-            isAdvance: boolean;
-            proformaInvoice?: {
-                id: string;
-                number: string;
-                amount: number;
-                currencyCode: string;
-                status: string;
-                order: { id: string; code: string };
-            } | null;
-        }>;
-    } | null;
-};
-
 export type MyAdvanceBalanceQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MyAdvanceBalanceQuery = {
@@ -5076,7 +5019,9 @@ export type MyProformaInvoicesQuery = {
             organizationId: string;
             amount: number;
             currencyCode: string;
-            status: string;
+            displayStatus: string;
+            issuedAt: any;
+            dueDate: any;
             supersededBy?: { id: string; number: string; version: number } | null;
             order: { id: string; code: string };
         }>;
@@ -5103,7 +5048,11 @@ export type ProformaInvoiceDetailQuery = {
         organizationId: string;
         amount: number;
         currencyCode: string;
-        status: string;
+        displayStatus: string;
+        issuedAt: any;
+        dueDate: any;
+        kind: string;
+        salesInvoiceNumber?: string | null;
         orderChangedDifference?: number | null;
         supersedes?: { id: string; number: string; version: number } | null;
         supersededBy?: { id: string; number: string; version: number } | null;
@@ -6034,6 +5983,7 @@ export const OrderProformaInvoicesDocument = new TypedDocumentString(`
       number
       version
       status
+      displayStatus
       amount
       currencyCode
       orderChangedDifference
@@ -6062,6 +6012,7 @@ export const RequestProformaInvoicesDocument = new TypedDocumentString(`
     number
     version
     status
+    displayStatus
   }
 }
     `) as unknown as TypedDocumentString<
@@ -6218,97 +6169,6 @@ export const OrderDetailDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<OrderDetailQuery, OrderDetailQueryVariables>;
-export const MyPaymentsDocument = new TypedDocumentString(`
-    query MyPayments($options: PaymentListOptions) {
-  myPayments(options: $options) {
-    items {
-      id
-      amount
-      currencyCode
-      channel
-      status
-      createdAt
-      proformaInvoiceId
-      order {
-        id
-        code
-      }
-      allocations {
-        amount
-        isAdvance
-        proformaInvoice {
-          id
-          number
-        }
-      }
-      refunds {
-        amount
-        status
-      }
-    }
-    totalItems
-  }
-}
-    `) as unknown as TypedDocumentString<MyPaymentsQuery, MyPaymentsQueryVariables>;
-export const PaymentDetailDocument = new TypedDocumentString(`
-    query PaymentDetail($id: ID!) {
-  payment(id: $id) {
-    id
-    amount
-    currencyCode
-    channel
-    status
-    createdAt
-    proformaInvoiceId
-    orderId
-    externalReference
-    refunds {
-      id
-      amount
-      status
-      providerRefundId
-      reason
-      createdAt
-    }
-    disputes {
-      id
-      type
-      status
-      amount
-      openedAt
-    }
-    processingEvents {
-      stage
-      occurredAt
-      note
-    }
-    proformaInvoice {
-      id
-      number
-      status
-    }
-    order {
-      id
-      code
-    }
-    allocations {
-      amount
-      isAdvance
-      proformaInvoice {
-        id
-        number
-        amount
-        currencyCode
-        status
-        order {
-          id
-          code
-        }
-      }
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<PaymentDetailQuery, PaymentDetailQueryVariables>;
 export const MyAdvanceBalanceDocument = new TypedDocumentString(`
     query MyAdvanceBalance {
   myAdvanceBalance {
@@ -6333,7 +6193,9 @@ export const MyProformaInvoicesDocument = new TypedDocumentString(`
       organizationId
       amount
       currencyCode
-      status
+      displayStatus
+      issuedAt
+      dueDate
       order {
         id
         code
@@ -6364,7 +6226,11 @@ export const ProformaInvoiceDetailDocument = new TypedDocumentString(`
     organizationId
     amount
     currencyCode
-    status
+    displayStatus
+    issuedAt
+    dueDate
+    kind
+    salesInvoiceNumber
     orderChangedDifference
     supersedes {
       id

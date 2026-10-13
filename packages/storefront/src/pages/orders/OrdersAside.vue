@@ -4,7 +4,6 @@ import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
 import { shopApi } from '../../api/client';
 import { MyAdvanceBalanceDocument } from '../../api/generated/graphql';
-import { useProformaInvoices } from '../proforma-invoices/useProformaInvoices';
 
 const authStore = useAuthStore();
 const { formatWhole } = useCurrency();
@@ -25,7 +24,6 @@ const paymentDelay = computed(() => {
 // several of our organizations per split order — see docs/payments.md "Organizations") — this
 // sidebar only surfaces an honest summary and links there, rather than duplicating a
 // pay-anything widget with no real backing.
-const { proformaInvoices, load: loadProformaInvoices } = useProformaInvoices();
 const advanceBalances = ref<{ amount: number; currencyCode: string }[]>([]);
 
 function formatMoney(cents: number, currency: string): string {
@@ -36,28 +34,11 @@ function formatMoney(cents: number, currency: string): string {
     );
 }
 
-const unpaidTotal = computed(() => {
-    const byCurrency = new Map<string, number>();
-    for (const proformaInvoice of proformaInvoices.value) {
-        if (proformaInvoice.status === 'paid' || proformaInvoice.status === 'cancelled') continue;
-        byCurrency.set(
-            proformaInvoice.currencyCode,
-            (byCurrency.get(proformaInvoice.currencyCode) ?? 0) + proformaInvoice.amount,
-        );
-    }
-    return (
-        [...byCurrency.entries()]
-            .map(([currency, amount]) => formatMoney(amount, currency))
-            .join(', ') || '0 ₽'
-    );
-});
-
 const advanceTotal = computed(() =>
     advanceBalances.value.map(a => formatMoney(a.amount, a.currencyCode)).join(', '),
 );
 
 onMounted(async () => {
-    void loadProformaInvoices({ take: 200, skip: 0 });
     const result = await shopApi(MyAdvanceBalanceDocument, {});
     advanceBalances.value = result.myAdvanceBalance;
 });
@@ -83,9 +64,6 @@ onMounted(async () => {
             </div>
             <div class="aside-line">
                 <span>Payment delay</span><strong>{{ paymentDelay }}</strong>
-            </div>
-            <div class="aside-line">
-                <span>Unpaid (all proforma invoices)</span><strong>{{ unpaidTotal }}</strong>
             </div>
             <div v-if="advanceBalances.length" class="aside-line">
                 <span>Advance balance</span><strong>{{ advanceTotal }}</strong>

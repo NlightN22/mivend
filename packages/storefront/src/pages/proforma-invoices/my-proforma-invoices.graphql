@@ -13,7 +13,9 @@ query MyProformaInvoices($options: ProformaInvoiceListOptions) {
             organizationId
             amount
             currencyCode
-            status
+            displayStatus
+            issuedAt
+            dueDate
             order {
                 id
                 code

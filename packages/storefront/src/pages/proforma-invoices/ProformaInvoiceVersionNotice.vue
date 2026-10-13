@@ -19,15 +19,14 @@ defineProps<{
 
 <template>
     <div class="version-notices">
-        <MvNotice v-if="supersededBy" variant="warning">
-            Replaced by version v{{ supersededBy.version }} (№ {{ supersededBy.number }}). This
-            version is not valid.
+        <MvNotice v-if="supersededBy" variant="info">
+            There is a newer version v{{ supersededBy.version }} (№ {{ supersededBy.number }}).
             <RouterLink :to="`/proforma-invoices/${supersededBy.id}`"
-                >Open current version</RouterLink
+                >Open newer version</RouterLink
             >
         </MvNotice>
         <MvNotice v-else-if="supersedes" variant="info">
-            Version {{ version }}, replaces № {{ supersedes.number }}.
+            Version {{ version }}, follows № {{ supersedes.number }}.
             <RouterLink :to="`/proforma-invoices/${supersedes.id}`"
                 >Open previous version</RouterLink
             >
@@ -35,7 +34,7 @@ defineProps<{
         <MvNotice v-if="orderChangedDifference != null" variant="warning">
             The order changed after payment, difference
             {{ formatMoney(orderChangedDifference, currencyCode) }}. It is settled through the ERP;
-            this paid proforma invoice stays unchanged.
+            this proforma invoice stays unchanged.
         </MvNotice>
     </div>
 </template>

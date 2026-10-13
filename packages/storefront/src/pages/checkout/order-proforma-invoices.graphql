@@ -5,6 +5,7 @@ query OrderProformaInvoices($orderCode: String!) {
             number
             version
             status
+            displayStatus
             amount
             currencyCode
             orderChangedDifference
@@ -29,5 +30,6 @@ mutation RequestProformaInvoices($orderCode: String!) {
         number
         version
         status
+        displayStatus
     }
 }

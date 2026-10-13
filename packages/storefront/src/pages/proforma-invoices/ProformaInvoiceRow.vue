@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import ProformaInvoiceVersionBadge from './ProformaInvoiceVersionBadge.vue';
+import { formatDate } from './formatDate';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import {
     PROFORMA_INVOICE_STATUS_LABEL,
@@ -32,7 +33,7 @@ function payProformaInvoice(): void {
     void router.push(`/proforma-invoices/${props.proformaInvoice.id}/pay`);
 }
 
-const isPayable = !['paid', 'cancelled', 'superseded'].includes(props.proformaInvoice.status);
+const isPayable = props.proformaInvoice.displayStatus !== 'cancelled';
 </script>
 
 <template>
@@ -43,8 +44,12 @@ const isPayable = !['paid', 'cancelled', 'superseded'].includes(props.proformaIn
                 <ProformaInvoiceVersionBadge :version="proformaInvoice.version" />
             </div>
             <div v-if="proformaInvoice.supersededBy" class="proforma-invoice-row__meta">
-                Replaced by v{{ proformaInvoice.supersededBy.version }} (№
+                There is a newer version v{{ proformaInvoice.supersededBy.version }} (№
                 {{ proformaInvoice.supersededBy.number }})
+            </div>
+            <div class="proforma-invoice-row__meta">
+                Issued {{ formatDate(proformaInvoice.issuedAt) }}, pay by
+                {{ formatDate(proformaInvoice.dueDate) }}
             </div>
             <div class="proforma-invoice-row__meta">
                 Order {{ formatDocumentNumber(proformaInvoice.order.code) }}
@@ -59,9 +64,12 @@ const isPayable = !['paid', 'cancelled', 'superseded'].includes(props.proformaIn
         </div>
 
         <MvStatusBadge
-            :variant="PROFORMA_INVOICE_STATUS_VARIANT[proformaInvoice.status] ?? 'neutral'"
+            :variant="PROFORMA_INVOICE_STATUS_VARIANT[proformaInvoice.displayStatus] ?? 'neutral'"
         >
-            {{ PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.status] ?? proformaInvoice.status }}
+            {{
+                PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.displayStatus] ??
+                proformaInvoice.displayStatus
+            }}
         </MvStatusBadge>
 
         <div class="proforma-invoice-row__actions">

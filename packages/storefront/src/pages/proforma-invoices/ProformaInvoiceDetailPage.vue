@@ -8,6 +8,7 @@ import ProformaInvoiceSellerRows from './ProformaInvoiceSellerRows.vue';
 import ProformaInvoiceVersionBadge from './ProformaInvoiceVersionBadge.vue';
 import ProformaInvoiceVersionNotice from './ProformaInvoiceVersionNotice.vue';
 import { formatMoney } from './formatMoney';
+import { formatDate } from './formatDate';
 import { useProformaInvoiceDetail } from './useProformaInvoiceDetail';
 import {
     PROFORMA_INVOICE_STATUS_LABEL,
@@ -59,12 +60,13 @@ const formatAmount = formatMoney;
                     </div>
                     <MvStatusBadge
                         :variant="
-                            PROFORMA_INVOICE_STATUS_VARIANT[proformaInvoice.status] ?? 'neutral'
+                            PROFORMA_INVOICE_STATUS_VARIANT[proformaInvoice.displayStatus] ??
+                            'neutral'
                         "
                     >
                         {{
-                            PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.status] ??
-                            proformaInvoice.status
+                            PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.displayStatus] ??
+                            proformaInvoice.displayStatus
                         }}
                     </MvStatusBadge>
                 </div>
@@ -152,31 +154,17 @@ const formatAmount = formatMoney;
                                     )
                                 }}
                             </div>
-                            <p v-if="proformaInvoice.status === 'paid'" class="id-pay-note">
-                                This proforma invoice is fully paid.
+                            <p class="id-pay-note">
+                                Pay by {{ formatDate(proformaInvoice.dueDate) }}.
                             </p>
                             <p
-                                v-else-if="proformaInvoice.status === 'cancelled'"
+                                v-if="proformaInvoice.displayStatus === 'cancelled'"
                                 class="id-pay-note"
                             >
                                 This proforma invoice is cancelled.
                             </p>
-                            <p
-                                v-else-if="proformaInvoice.status === 'superseded'"
-                                class="id-pay-note"
-                            >
-                                This version was replaced and cannot be paid.
-                            </p>
-                            <p v-else class="id-pay-note">
-                                Pay this proforma invoice any time — independent of the order it
-                                came from.
-                            </p>
                             <MvButton
-                                v-if="
-                                    proformaInvoice.status === 'paid' ||
-                                    proformaInvoice.status === 'cancelled' ||
-                                    proformaInvoice.status === 'superseded'
-                                "
+                                v-if="proformaInvoice.displayStatus === 'cancelled'"
                                 variant="primary"
                                 size="md"
                                 disabled
@@ -196,6 +184,30 @@ const formatAmount = formatMoney;
                             <div class="id-detail-row">
                                 <span>Version</span>
                                 <span class="id-detail-val">{{ proformaInvoice.version }}</span>
+                            </div>
+                            <div
+                                v-if="proformaInvoice.kind === 'by-shipment'"
+                                class="id-detail-row"
+                            >
+                                <span>Basis</span>
+                                <span class="id-detail-val"
+                                    >By shipment<template v-if="proformaInvoice.salesInvoiceNumber">
+                                        (realization №
+                                        {{ proformaInvoice.salesInvoiceNumber }})</template
+                                    ></span
+                                >
+                            </div>
+                            <div class="id-detail-row">
+                                <span>Issued</span>
+                                <span class="id-detail-val">{{
+                                    formatDate(proformaInvoice.issuedAt)
+                                }}</span>
+                            </div>
+                            <div class="id-detail-row">
+                                <span>Pay by</span>
+                                <span class="id-detail-val">{{
+                                    formatDate(proformaInvoice.dueDate)
+                                }}</span>
                             </div>
                             <div v-if="pdfUrl" class="id-detail-row">
                                 <span>Document</span>

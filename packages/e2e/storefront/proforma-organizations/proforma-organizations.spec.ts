@@ -34,7 +34,7 @@ test.describe('proformas per organization', () => {
         const code = await placeBankOrder(page, ['E2E-FLT-001']);
         const rows = await proformasOf(page, code);
         expect(rows).toHaveLength(1);
-        expect(rows[0].number).toBe(`${code}-01`);
+        expect(rows[0].number).toBe(`${code}-01-1`);
     });
 
     test('two organizations give two proformas that add up to the order total', async ({
@@ -44,7 +44,7 @@ test.describe('proformas per organization', () => {
         const rows = (await proformasOf(page, code)).sort((a, b) =>
             a.number.localeCompare(b.number),
         );
-        expect(rows.map(r => r.number)).toEqual([`${code}-01`, `${code}-02`]);
+        expect(rows.map(r => r.number)).toEqual([`${code}-01-1`, `${code}-02-1`]);
         expect(new Set(rows.map(r => r.organizationId)).size).toBe(2);
         const { total } = await orderTotal(code);
         expect(rows.reduce((s, r) => s + r.amount, 0)).toBe(total);
@@ -72,14 +72,14 @@ test.describe('proformas per organization', () => {
         const v2 = rows.find(r => r.version === 2);
         expect(v2).toBeDefined();
         expect(requested.map(r => r.id)).toContain(v2?.id);
-        expect(v2?.number).toBe(`${code}-02`);
+        expect(v2?.number).toBe(`${code}-01-2`);
         const old = rows.find(r => r.id === v1.id);
         expect(old?.status).toBe('superseded');
         expect(old?.supersededBy?.id).toBe(v2?.id);
 
         await page.goto(`/proforma-invoices/${v1.id}`);
-        await expect(page.getByText(/Replaced by version v2/)).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Pay proforma invoice' })).toBeDisabled();
+        await expect(page.getByText(/There is a newer version v2/)).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Pay proforma invoice' })).toBeVisible();
         await page.goto(`/proforma-invoices/${v2?.id}`);
         await expect(page.locator('.version-badge').first()).toHaveText('v2');
     });
@@ -110,10 +110,11 @@ test.describe('proformas per organization', () => {
         expect(text).toContain('В том числе НДС');
         expect(text).toMatch(/ИНН/);
         expect(text).toMatch(/руб/i);
-        expect(text).not.toContain('Заменён, не действителен');
+        expect(text).not.toContain('не действителен');
+        expect(text).toContain('Срок оплаты до');
     });
 
-    test('a superseded document is marked invalid and has no QR', async ({ page }) => {
+    test('a superseded document carries a neutral note and keeps its QR', async ({ page }) => {
         test.setTimeout(TEST_TIMEOUT_MS.pdf);
         const code = await placeBankOrder(page, ['E2E-FLT-001']);
         const first = await waitForReadyDocument(page, code);
@@ -125,6 +126,8 @@ test.describe('proformas per organization', () => {
         const old = (await proformasOf(page, code)).find(r => r.id === v1.id);
         expect(old?.status).toBe('superseded');
         const { text } = await pdfTextAndPages(page, v1.document?.asset?.source as string);
-        expect(text).toContain('Заменён, не действителен');
+        expect(text).toContain('Есть более новая версия');
+        expect(text).not.toContain('не действителен');
+        expect(text).toContain('Отсканируйте для оплаты');
     });
 });

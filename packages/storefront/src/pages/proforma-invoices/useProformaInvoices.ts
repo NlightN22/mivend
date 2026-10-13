@@ -13,23 +13,20 @@ export interface MyProformaInvoicesOptions {
     status?: string;
 }
 
+// Keyed by the API's displayStatus: a proforma invoice is never shown as paid (payment is shown per order).
 export const PROFORMA_INVOICE_STATUS_LABEL: Record<string, string> = {
-    pending: 'Pending',
-    issued: 'Issued',
-    paid: 'Paid',
-    cancelled: 'Cancelled',
+    current: 'Current',
     superseded: 'Superseded',
+    cancelled: 'Cancelled',
 };
 
 export const PROFORMA_INVOICE_STATUS_VARIANT: Record<
     string,
     'success' | 'warning' | 'neutral' | 'danger'
 > = {
-    pending: 'warning',
-    issued: 'warning',
-    paid: 'success',
-    cancelled: 'neutral',
+    current: 'success',
     superseded: 'neutral',
+    cancelled: 'neutral',
 };
 
 export function useProformaInvoices(): {

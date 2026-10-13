@@ -29,8 +29,10 @@ onMounted(() => void load());
                 >№ {{ invoice.number }}</router-link
             >
             <ProformaInvoiceVersionBadge :version="invoice.version" />
-            <MvStatusBadge :variant="PROFORMA_INVOICE_STATUS_VARIANT[invoice.status] ?? 'neutral'">
-                {{ PROFORMA_INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status }}
+            <MvStatusBadge
+                :variant="PROFORMA_INVOICE_STATUS_VARIANT[invoice.displayStatus] ?? 'neutral'"
+            >
+                {{ PROFORMA_INVOICE_STATUS_LABEL[invoice.displayStatus] ?? invoice.displayStatus }}
             </MvStatusBadge>
             <span class="opi-amount">{{ formatMoney(invoice.amount, invoice.currencyCode) }}</span>
         </div>

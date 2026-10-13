@@ -13,11 +13,15 @@ const meta: Meta<typeof ProformaInvoiceDetailPage> = {
 export default meta;
 type Story = StoryObj<typeof ProformaInvoiceDetailPage>;
 
-function mockProformaInvoice(status: string, extra: Record<string, unknown> = {}): void {
+function mockProformaInvoice(displayStatus: string, extra: Record<string, unknown> = {}): void {
     registerMock('ProformaInvoiceDetail', () => ({
         proformaInvoice: {
             id: '1',
-            number: '1000000001-01',
+            number: '1000000001-01-1',
+            issuedAt: '2026-10-13T09:00:00.000Z',
+            dueDate: '2026-10-16T09:00:00.000Z',
+            kind: 'order-placed',
+            salesInvoiceNumber: null,
             version: 1,
             supersedes: null,
             supersededBy: null,
@@ -32,7 +36,7 @@ function mockProformaInvoice(status: string, extra: Record<string, unknown> = {}
             organizationId: 'org-1',
             amount: 460000,
             currencyCode: 'RUB',
-            status,
+            displayStatus,
             ...extra,
             order: { id: '1', code: 'ORD-101' },
             lines: [
@@ -47,11 +51,11 @@ function mockProformaInvoice(status: string, extra: Record<string, unknown> = {}
     }));
 }
 
-export const Issued: Story = {
+export const Current: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
-            mockProformaInvoice('issued');
+            mockProformaInvoice('current');
             await router.push('/proforma-invoices/1');
         },
     ],
@@ -61,11 +65,15 @@ export const Issued: Story = {
     }),
 };
 
-export const Paid: Story = {
+export const ByShipment: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
-            mockProformaInvoice('paid');
+            mockProformaInvoice('current', {
+                kind: 'by-shipment',
+                salesInvoiceNumber: 'R-0042',
+                version: 3,
+            });
             await router.push('/proforma-invoices/1');
         },
     ],
@@ -80,7 +88,7 @@ export const Superseded: Story = {
         async () => {
             registerDefaultMocks();
             mockProformaInvoice('superseded', {
-                supersededBy: { id: '2', number: '1000000001-03', version: 2 },
+                supersededBy: { id: '2', number: '1000000001-01-2', version: 2 },
             });
             await router.push('/proforma-invoices/1');
         },
@@ -91,11 +99,11 @@ export const Superseded: Story = {
     }),
 };
 
-export const PaidThenOrderChanged: Story = {
+export const CurrentThenOrderChanged: Story = {
     loaders: [
         async () => {
             registerDefaultMocks();
-            mockProformaInvoice('paid', { orderChangedDifference: 120000 });
+            mockProformaInvoice('current', { orderChangedDifference: 120000 });
             await router.push('/proforma-invoices/1');
         },
     ],

@@ -57,7 +57,7 @@ test.describe('Proforma invoice lifecycle: order split, payment, status, filters
                 page.locator('.proforma-invoice-row', {
                     hasText: `Proforma invoice #${proformaInvoice.number}`,
                 }),
-            ).toContainText('Paid');
+            ).toContainText('Current');
         }
     });
 
@@ -107,16 +107,16 @@ test.describe('Proforma invoice lifecycle: order split, payment, status, filters
         page,
     }) => {
         // By this point in the suite, prior tests in this file have created proforma invoices in every
-        // status this project's ProformaInvoice model supports (pending/issued/paid) — verify each
+        // status this project's ProformaInvoice model supports (current/superseded/cancelled) — verify each
         // filter chip only ever shows proforma invoices in its own status.
         await page.goto('/proforma-invoices');
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.proforma-invoice-row').first()).toBeVisible({ timeout: 10000 });
 
         for (const [chipName, expectedText] of [
-            ['Pending', 'Pending'],
-            ['Issued', 'Issued'],
-            ['Paid', 'Paid'],
+            ['Current', 'Current'],
+            ['Superseded', 'Superseded'],
+            ['Cancelled', 'Cancelled'],
         ] as const) {
             await page.getByRole('button', { name: chipName }).click();
             await page.waitForLoadState('networkidle');

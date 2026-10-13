@@ -19,13 +19,13 @@ test.describe('Proforma invoices page', () => {
     test('proforma invoices page shows status filter chips', async ({ page }) => {
         await goToProformaInvoices(page);
         await expect(page.getByRole('button', { name: 'All proforma invoices' })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Pending' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Current' })).toBeVisible();
     });
 
     test('status filter chip narrows the list to matching proforma invoices only', async ({
         page,
     }) => {
-        // Guarantee at least one 'pending' proforma invoice exists for this test, rather than assuming
+        // Guarantee at least one 'current' proforma invoice exists for this test, rather than assuming
         // ambient DB state left by other tests — a declined online-stub payment is the one
         // reliable way to produce 'pending' (see proforma-invoice-lifecycle.spec.ts).
         await buildOrderAcrossOrganizations(page);
@@ -40,7 +40,7 @@ test.describe('Proforma invoices page', () => {
         await goToProformaInvoices(page);
         await expect(page.locator('.proforma-invoice-row').first()).toBeVisible({ timeout: 10000 });
 
-        const pendingChip = page.getByRole('button', { name: 'Pending' });
+        const pendingChip = page.getByRole('button', { name: 'Current' });
         await pendingChip.click();
         await page.waitForLoadState('networkidle');
 
@@ -48,7 +48,7 @@ test.describe('Proforma invoices page', () => {
         const count = await rows.count();
         expect(count).toBeGreaterThan(0);
         for (let i = 0; i < count; i++) {
-            await expect(rows.nth(i)).toContainText('Pending');
+            await expect(rows.nth(i)).toContainText('Current');
         }
     });
 
