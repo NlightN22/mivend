@@ -34,6 +34,7 @@ export { IdempotencyService } from './src/idempotency.service';
 export { InboxService } from './src/inbox.service';
 export { ProformaInvoiceService } from './src/proforma-invoice.service';
 export { ProformaInvoiceIssuingService } from './src/proforma-invoice-issuing.service';
+export { lineDiscountTotal, lineNetAmount } from './src/proforma-invoice-content';
 export { ProformaInvoiceIssuedEvent } from './src/proforma-invoice-issued.event';
 export type { ProformaInvoiceLineSnapshot } from './src/entities/proforma-invoice.entity';
 export {

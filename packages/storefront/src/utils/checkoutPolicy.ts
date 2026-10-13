@@ -61,17 +61,17 @@ export interface ProformaInvoiceRef {
 
 export type ProformaPrintTarget = { kind: 'pdf'; url: string } | { kind: 'page'; id: string };
 
-export function proformaDocumentUrl(invoice: ProformaInvoiceRef): string | null {
-    return invoice.document?.status === 'ready' ? (invoice.document.asset?.source ?? null) : null;
+export function proformaDocumentUrl(proforma: ProformaInvoiceRef): string | null {
+    return proforma.document?.status === 'ready' ? (proforma.document.asset?.source ?? null) : null;
 }
 
 // Bank transfer opens each current proforma invoice: its PDF when ready, otherwise the printable page.
 export function proformaPrintTargets(
     form: PaymentForm,
-    invoices: ProformaInvoiceRef[],
+    proformas: ProformaInvoiceRef[],
 ): ProformaPrintTarget[] {
     if (form !== 'bank-transfer') return [];
-    return invoices
+    return proformas
         .filter(i => i.status !== 'cancelled' && i.status !== 'superseded')
         .map(i => {
             const url = proformaDocumentUrl(i);

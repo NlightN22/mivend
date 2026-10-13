@@ -99,6 +99,11 @@ function integerInWords(n: number, gender: Gender): string {
 
 // Minor units (kopecks) in, e.g. 483370 -> "Четыре тысячи восемьсот тридцать три рубля 70 копеек".
 export function rublesInWords(minorUnits: number): string {
+    if (!Number.isSafeInteger(minorUnits) || minorUnits < 0) {
+        throw new RangeError(
+            `rublesInWords expects non-negative integer minor units, got ${minorUnits}`,
+        );
+    }
     const rubles = Math.floor(minorUnits / 100);
     const kopecks = minorUnits % 100;
     const text = `${integerInWords(rubles, 'm')} ${pluralForm(rubles, RUBLE)}`;
@@ -107,6 +112,7 @@ export function rublesInWords(minorUnits: number): string {
     return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
 
+// UTC calendar date: the project has no configured business timezone.
 export function dateInWords(date: Date): string {
     return `${date.getUTCDate()} ${MONTHS_GENITIVE[date.getUTCMonth()]} ${date.getUTCFullYear()} г.`;
 }

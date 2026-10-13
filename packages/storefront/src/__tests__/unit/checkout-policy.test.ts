@@ -31,17 +31,17 @@ describe('checkout policy helpers', () => {
     });
 
     it('opens one tab per live proforma invoice for bank transfer only', () => {
-        const invoices = [
+        const proformas = [
             { id: '1', status: 'issued' },
             { id: '2', status: 'pending' },
             { id: '3', status: 'cancelled' },
         ];
-        expect(proformaPrintTargets('bank-transfer', invoices)).toEqual([
+        expect(proformaPrintTargets('bank-transfer', proformas)).toEqual([
             { kind: 'page', id: '1' },
             { kind: 'page', id: '2' },
         ]);
-        expect(proformaPrintTargets('cash', invoices)).toEqual([]);
-        expect(proformaPrintTargets('card', invoices)).toEqual([]);
+        expect(proformaPrintTargets('cash', proformas)).toEqual([]);
+        expect(proformaPrintTargets('card', proformas)).toEqual([]);
         expect(proformaPrintTargets('bank-transfer', [])).toEqual([]);
     });
 

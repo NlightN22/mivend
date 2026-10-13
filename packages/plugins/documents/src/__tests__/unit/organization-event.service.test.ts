@@ -19,9 +19,11 @@ const orgRepo = {
     findOne: vi.fn(),
     create: vi.fn((v: unknown) => ({ ...(v as object) })),
     save: vi.fn(async (v: unknown) => ({ id: '5', ...(v as object) })),
+    query: vi.fn(),
 };
 const docRepo = { createQueryBuilder: vi.fn(() => mockQb), update: vi.fn() };
 const connection = {
+    withTransaction: vi.fn(async (c: unknown, work: (x: unknown) => unknown) => work(c)),
     getRepository: vi.fn((_c: unknown, entity: { name: string }) =>
         entity.name === 'Document' ? docRepo : orgRepo,
     ),
@@ -100,6 +102,12 @@ describe('OrganizationEventService.upsertFromEvent', () => {
         );
     });
 
+    it('keeps the stored isActive when the event does not carry it', async () => {
+        orgRepo.findOne.mockResolvedValue({ erpId: 'org-1', legalName: 'A', isActive: true });
+        await service.upsertFromEvent(ctx, 'org-1', { legalName: 'A', fields: none });
+        expect(orgRepo.save).toHaveBeenCalledWith(expect.objectContaining({ isActive: true }));
+    });
+
     it('creates nothing for a nameless event on an unknown row', async () => {
         orgRepo.findOne.mockResolvedValue(null);
         expect(
@@ -137,7 +145,7 @@ describe('OrganizationEventService.upsertFromEvent', () => {
         expect(pdf.enqueue).toHaveBeenCalledWith('10');
     });
 
-    it('does not requeue when requisites stay incomplete or were already complete', async () => {
+    it('does not requeue when requisites stay incomplete', async () => {
         orgRepo.findOne.mockResolvedValue({
             erpId: 'org-1',
             legalName: 'A',
@@ -150,6 +158,27 @@ describe('OrganizationEventService.upsertFromEvent', () => {
             isActive: true,
             fields: { inn: '1', legalAddress: 'X' },
         });
+        expect(mockQb.getRawMany).not.toHaveBeenCalled();
+        expect(pdf.enqueue).not.toHaveBeenCalled();
+    });
+
+    it('takes a per-organization advisory lock before reading the row', async () => {
+        orgRepo.findOne.mockResolvedValue({ erpId: 'org-1', legalName: 'A' });
+        await service.upsertFromEvent(ctx, 'org-1', {
+            legalName: 'A',
+            isActive: true,
+            fields: none,
+        });
+        expect(orgRepo.query).toHaveBeenCalledWith(
+            expect.stringContaining('pg_advisory_xact_lock'),
+            ['organization-requisites:org-1'],
+        );
+        expect(orgRepo.query.mock.invocationCallOrder[0]).toBeLessThan(
+            orgRepo.findOne.mock.invocationCallOrder[0],
+        );
+    });
+
+    it('puts the document back to failed and rethrows when the enqueue fails', async () => {
         orgRepo.findOne.mockResolvedValue({
             erpId: 'org-1',
             legalName: 'A',
@@ -158,14 +187,18 @@ describe('OrganizationEventService.upsertFromEvent', () => {
             bankName: 'B',
             bankBik: '0',
             bankAccount: '0',
+            legalAddress: 'X',
         });
-        await service.upsertFromEvent(ctx, 'org-1', {
-            legalName: 'A',
-            isActive: true,
-            fields: { inn: '2' },
-        });
-        expect(mockQb.getRawMany).not.toHaveBeenCalled();
-        expect(pdf.enqueue).not.toHaveBeenCalled();
+        mockQb.getRawMany.mockResolvedValue([{ id: '10' }]);
+        docRepo.update.mockResolvedValue({ affected: 1 });
+        pdf.enqueue.mockRejectedValueOnce(new Error('queue down'));
+        await expect(
+            service.upsertFromEvent(ctx, 'org-1', { legalName: 'A', isActive: true, fields: none }),
+        ).rejects.toThrow('queue down');
+        expect(docRepo.update).toHaveBeenLastCalledWith(
+            { id: '10', status: 'pending' },
+            { status: 'failed' },
+        );
     });
 
     it('replaces the signatory list with a non-empty one and keeps it on an empty list', async () => {

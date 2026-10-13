@@ -22,6 +22,18 @@ export interface VersionHead {
 
 export type VersionDecision = 'create' | 'reuse' | 'paid-changed';
 
+// Discounts are stored signed (negative reduces the price); the printed discount and the stored amount both use this.
+export function lineDiscountTotal(discounts: { amount: number }[]): number {
+    return -discounts.reduce((sum, d) => sum + d.amount, 0);
+}
+
+export function lineNetAmount(snapshot: {
+    linePriceWithTax: number;
+    discounts: { amount: number }[];
+}): number {
+    return snapshot.linePriceWithTax - lineDiscountTotal(snapshot.discounts);
+}
+
 export function snapshotLine(line: OrderLine): ProformaInvoiceLineSnapshot {
     return {
         variantId: Number(line.productVariant.id),
@@ -54,8 +66,7 @@ export function groupByOrganization(lines: OrderLine[]): OrganizationContent[] {
         };
         const snapshot = snapshotLine(line);
         // linePriceWithTax is pre-discount; the amount must equal the printed line totals.
-        group.amount +=
-            snapshot.linePriceWithTax + snapshot.discounts.reduce((sum, d) => sum + d.amount, 0);
+        group.amount += lineNetAmount(snapshot);
         group.lines.push(snapshot);
         byOrganization.set(organizationId, group);
     }
@@ -92,6 +103,7 @@ export function hashOf(head: VersionHead): string {
     return contentHash(head.organizationId, head.currencyCode, head.amount, head.lines);
 }
 
+// A cancelled head is never reused: the organization returned, so a new document is issued.
 // Same content reuses the head; changed content makes a new version unless the head is paid
 // (a paid snapshot is never rewritten or replaced, the difference is settled through the ERP).
 export function decideVersion(
@@ -99,7 +111,7 @@ export function decideVersion(
     current: OrganizationContent,
     currencyCode: string,
 ): VersionDecision {
-    if (!head) return 'create';
+    if (!head || head.status === 'cancelled') return 'create';
     const same =
         hashOf(head) ===
         contentHash(current.organizationId, currencyCode, current.amount, current.lines);

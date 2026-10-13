@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { ProformaInvoice } from '@mivend/plugin-acquiring';
+import { withAggregateLock } from 'shared';
 
 import { loggerCtx } from './constants';
 import { Document } from './entities/document.entity';
@@ -28,7 +29,7 @@ export type RequisiteFields = Partial<Record<RequisiteField, string | null>>;
 
 export interface OrganizationEventInput {
     legalName: string | null;
-    isActive: boolean;
+    isActive?: boolean;
     fields: RequisiteFields;
     signatories?: OrganizationSignatory[];
 }
@@ -47,25 +48,44 @@ export class OrganizationEventService {
         erpId: string,
         input: OrganizationEventInput,
     ): Promise<boolean> {
+        const saved = await withAggregateLock(
+            this.connection,
+            ctx,
+            `organization-requisites:${erpId}`,
+            txCtx => this.applyUnderLock(txCtx, erpId, input),
+        );
+        if (!saved) return false;
+        // Every event of a complete organization retries failed documents, so a failed requeue is picked up again.
+        if (isComplete(saved)) await this.retryFailedProformas(ctx, saved);
+        return true;
+    }
+
+    // Read under the lock; save() writes only the columns that changed.
+    private async applyUnderLock(
+        ctx: RequestContext,
+        erpId: string,
+        input: OrganizationEventInput,
+    ): Promise<OrganizationRequisites | null> {
         const repo = this.connection.getRepository(ctx, OrganizationRequisites);
         let entity = await repo.findOne({ where: { erpId } });
-        const wasComplete = entity !== null && isComplete(entity);
         if (entity) {
             if (input.legalName) entity.legalName = input.legalName;
-            entity.isActive = input.isActive;
+            if (input.isActive !== undefined) entity.isActive = input.isActive;
         } else if (input.legalName) {
-            entity = repo.create({ erpId, legalName: input.legalName, isActive: input.isActive });
+            entity = repo.create({
+                erpId,
+                legalName: input.legalName,
+                isActive: input.isActive ?? false,
+            });
         } else {
-            return false;
+            return null;
         }
         for (const field of REQUISITE_FIELDS) {
             const value = input.fields[field];
             if (value) entity[field] = value;
         }
         if (input.signatories?.length) entity.signatories = input.signatories;
-        const saved = await repo.save(entity);
-        if (!wasComplete && isComplete(saved)) await this.retryFailedProformas(ctx, saved);
-        return true;
+        return repo.save(entity);
     }
 
     private async retryFailedProformas(
@@ -95,7 +115,16 @@ export class OrganizationEventService {
             const result = await this.connection
                 .getRepository(ctx, Document)
                 .update({ id, status: 'failed' }, { status: 'pending', metadata: null });
-            if (result.affected) await this.pdfGenerator.enqueue(id);
+            if (!result.affected) continue;
+            try {
+                await this.pdfGenerator.enqueue(id);
+            } catch (err) {
+                // No sweep picks up `pending` documents: put it back to failed so the next event retries it.
+                await this.connection
+                    .getRepository(ctx, Document)
+                    .update({ id, status: 'pending' }, { status: 'failed' });
+                throw err;
+            }
         }
         if (failed.length) {
             Logger.info(

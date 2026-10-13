@@ -20,8 +20,13 @@ export class OrganizationStreamHandler implements InboundStreamHandler {
     ): Promise<InboundOutcome> {
         // A deletion tombstone carries no name: it may deactivate a known row, never create one.
         const legalName = text(payload.legalName) ?? text(payload.name);
-        // proto3 omits the false zero-value, so an absent isActive means false.
-        const isActive = payload.isActive === true && payload.isDeleted !== true;
+        // is_active is `optional` (presence-tracked): absent means "not provided", it keeps the stored value.
+        const isActive =
+            payload.isDeleted === true
+                ? false
+                : typeof payload.isActive === 'boolean'
+                  ? payload.isActive
+                  : undefined;
         const fields: RequisiteFields = {};
         for (const field of REQUISITE_FIELDS) fields[field] = text(payload[field]);
 

@@ -831,9 +831,26 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront 
   reports against a superseded version is rejected the same way (reconciliation of that case is a follow-up).
 - Whole-order status updates at checkout (`updateStatusForOrder`) only move `pending` snapshots.
 - Difference after payment = current content of the organization minus the paid snapshot amount (GraphQL
-  `ProformaInvoice.orderChangedDifference`, null when nothing changed); no new version is made for a paid snapshot.
+  `ProformaInvoice.orderChangedDifference`, null when nothing changed). The paid head stays the current document, so
+  no new proforma invoice is ever issued for the difference: by the owner's decision (#206) it is settled through the
+  ERP and the paid snapshot is never rewritten or replaced.
+- A `cancelled` head (organization left the order) is never reused: if the organization returns, a new version is
+  issued (next version, next `-NN` number, `supersedesId` = the cancelled one). Head selection is deterministic
+  (highest version, then highest id among non-superseded rows) and the next `-NN` follows the highest used ordinal.
+- Pay vs supersede race: allocation re-reads the target under its row lock; a target that became `superseded` or
+  `cancelled` meanwhile is rejected with a clear error, money never falls back to FIFO over unrelated proformas.
+- Requesting a proforma (Shop `requestProformaInvoices`) is scoped to the counterparty, not the author: a colleague's
+  order of the same counterparty is allowed, because proformas are visible to the whole counterparty anyway. Draft
+  and pre-placement states (`Created`, `AddingItems`, `ArrangingPayment`, `Draft`) are refused.
+- Printed discount and the stored amount share `lineDiscountTotal`/`lineNetAmount` (acquiring). At PDF time a
+  mismatch between the sum of printed row totals and the stored amount is logged at error level and the stored amount
+  is printed (older versions may carry the old amount); generation is not failed. Amounts in words reject
+  non-integer or negative minor units; dates are printed as UTC calendar dates (no business timezone is configured).
+- A failed proforma document is requeued on every `organization` event of a complete organization; if the queue add
+  fails the document goes back to `failed` and the event is retried (no sweep picks up `pending` documents).
+- `OrganizationChanged.is_active` is `optional` (presence-tracked): an event without it keeps the stored value.
 - The `Document` of a snapshot uses the proforma invoice's own number (a legacy `<order>-<organizationId>` number is
-  fixed by migration `1791495000000`); the PDF shows "Version N" and "Superseded, not valid".
+  fixed by migration `1791495000000`, irreversible: the old numbers are not restored; checked on the dev databases, `document.number` has no unique index and no renumbered value collides); the PDF shows "Version N" and "Superseded, not valid".
 
 **Known gaps (#222, deliberate):**
 

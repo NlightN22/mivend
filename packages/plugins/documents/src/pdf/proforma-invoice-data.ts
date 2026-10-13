@@ -1,4 +1,5 @@
 import { CompleteOrganizationRequisites } from '../entities/organization-requisites.entity';
+import { lineDiscountTotal, lineNetAmount } from '@mivend/plugin-acquiring';
 import { dateInWords, formatMoneyRu, rublesInWords } from './russian-words';
 
 export const PAYMENT_NOTICE =
@@ -123,15 +124,18 @@ function formatQuantity(quantity: number): string {
     return String(quantity).replace('.', ',');
 }
 
+// Stored amounts of older versions may predate net-of-discount totals: callers warn, the stored amount is printed.
+export function printedRowsTotal(source: ProformaInvoiceSource): number {
+    return source.lines.reduce((sum, line) => sum + lineNetAmount(line), 0);
+}
+
 export function buildProformaInvoiceTemplateData(
     source: ProformaInvoiceSource,
     requisites: CompleteOrganizationRequisites,
     buyer: PartyInput,
 ): ProformaInvoiceTemplateData {
     const supplier = sellerParty(requisites);
-    const discounts = source.lines.map(line =>
-        line.discounts.reduce((sum, d) => sum + Math.abs(d.amount), 0),
-    );
+    const discounts = source.lines.map(line => lineDiscountTotal(line.discounts));
     const totalDiscount = discounts.reduce((sum, d) => sum + d, 0);
     const subtotal = source.lines.reduce((sum, line) => sum + line.linePriceWithTax, 0);
     const currency = source.currencyCode ?? '';
@@ -161,7 +165,7 @@ export function buildProformaInvoiceTemplateData(
             price: formatMoneyRu(line.unitPriceWithTax),
             gross: formatMoneyRu(line.linePriceWithTax),
             discount: formatMoneyRu(discounts[i]),
-            total: formatMoneyRu(line.linePriceWithTax - discounts[i]),
+            total: formatMoneyRu(lineNetAmount(line)),
         })),
         showDiscount: totalDiscount > 0,
         totals: {

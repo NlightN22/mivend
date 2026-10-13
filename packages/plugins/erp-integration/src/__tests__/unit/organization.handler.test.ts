@@ -79,7 +79,7 @@ describe('OrganizationStreamHandler', () => {
         await handler.apply(ctx, 'org-1', { name: 'Acme', legalName: '' });
         expect(service.upsertFromEvent).toHaveBeenCalledWith(ctx, 'org-1', {
             legalName: 'Acme',
-            isActive: false,
+            isActive: undefined,
             fields: empty,
             signatories: [],
         });
@@ -91,11 +91,11 @@ describe('OrganizationStreamHandler', () => {
         expect(service.upsertFromEvent.mock.calls[0][2].fields).toEqual(empty);
     });
 
-    it('defaults isActive to false when absent and folds in isDeleted', async () => {
+    it('leaves isActive undefined when absent and folds in isDeleted', async () => {
         const { service, handler } = setup();
         await handler.apply(ctx, 'org-1', { name: 'Acme' });
         await handler.apply(ctx, 'org-1', { name: 'Acme', isActive: true, isDeleted: true });
-        expect(service.upsertFromEvent.mock.calls[0][2].isActive).toBe(false);
+        expect(service.upsertFromEvent.mock.calls[0][2].isActive).toBeUndefined();
         expect(service.upsertFromEvent.mock.calls[1][2].isActive).toBe(false);
     });
 

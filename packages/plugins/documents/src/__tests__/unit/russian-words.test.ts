@@ -38,7 +38,17 @@ describe('pluralForm', () => {
     });
 });
 
+describe('rublesInWords input guard', () => {
+    it.each([-1, 1.5, Number.NaN, Number.MAX_VALUE])('rejects %s', value => {
+        expect(() => rublesInWords(value)).toThrow(RangeError);
+    });
+});
+
 describe('dateInWords', () => {
+    it('uses the UTC calendar date', () => {
+        expect(dateInWords(new Date('2026-10-12T23:30:00Z'))).toBe('12 октября 2026 г.');
+    });
+
     it('writes the month in the genitive case', () => {
         expect(dateInWords(new Date('2026-10-12T10:00:00Z'))).toBe('12 октября 2026 г.');
         expect(dateInWords(new Date('2026-03-01T10:00:00Z'))).toBe('1 марта 2026 г.');

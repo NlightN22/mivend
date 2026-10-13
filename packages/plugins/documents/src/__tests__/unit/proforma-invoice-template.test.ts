@@ -4,7 +4,7 @@ import {
     renderProformaInvoiceHtml,
     ProformaInvoiceSource,
 } from '../../pdf/proforma-invoice-template';
-import type { PartyInput } from '../../pdf/proforma-invoice-data';
+import { printedRowsTotal, type PartyInput } from '../../pdf/proforma-invoice-data';
 import type { CompleteOrganizationRequisites } from '../../entities/organization-requisites.entity';
 
 function makeSource(overrides: Partial<ProformaInvoiceSource> = {}): ProformaInvoiceSource {
@@ -91,6 +91,14 @@ describe('buildProformaInvoiceTemplateData', () => {
         );
         expect(data.supplier).toBe('Example Supplier LLC, ИНН 0000000000');
         expect(data.buyer).toBe('Buyer "A&B" LLC, ИНН 1, тел.: +0 000');
+    });
+
+    it('printedRowsTotal sums the same net row amounts the rows print', () => {
+        const source = makeSource();
+        source.lines[0].discounts = [{ amount: -1500 }, { amount: -500 }];
+        expect(printedRowsTotal(source)).toBe(
+            source.lines.reduce((sum, l, i) => sum + l.linePriceWithTax - (i === 0 ? 2000 : 0), 0),
+        );
     });
 
     it('computes discounts per line and shows the columns only when a discount exists', () => {

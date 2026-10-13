@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, DataSource, Entity, EntityManager, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestSchema,
@@ -41,6 +41,7 @@ class TestDocument {
 }
 
 @Entity('organization_requisites')
+@Index(['erpId'], { unique: true })
 class TestOrganizationRequisites {
     @PrimaryGeneratedColumn()
     id!: number;
@@ -55,6 +56,7 @@ class TestOrganizationRequisites {
     @Column({ type: 'varchar', nullable: true }) bankAccount!: string | null;
     @Column({ type: 'varchar', nullable: true }) bankBik!: string | null;
     @Column({ type: 'varchar', nullable: true }) correspondentAccount!: string | null;
+    @Column({ type: 'varchar', nullable: true }) phone!: string | null;
     @Column({ type: 'varchar', nullable: true }) signatoryName!: string | null;
     @Column({ type: 'varchar', nullable: true }) signatoryTitle!: string | null;
     @Column({ type: 'boolean', default: true }) isActive!: boolean;
@@ -85,11 +87,24 @@ beforeAll(async () => {
         organization_requisites: TestOrganizationRequisites,
     };
     const connectionShim = {
-        getRepository: (_ctx: RequestContext, entity: { name: string }) => {
+        getRepository: (ctx: RequestContext, entity: { name: string } | string) => {
+            const manager = (ctx as unknown as { __manager?: EntityManager }).__manager;
+            if (typeof entity === 'string') {
+                return { query: (sql: string, params?: unknown[]) => manager!.query(sql, params) };
+            }
             const testEntity =
                 entityMap[entity.name === 'Document' ? 'document' : 'organization_requisites'];
-            return dataSource.getRepository(testEntity);
+            return (manager ?? dataSource).getRepository(testEntity);
         },
+        withTransaction: async (
+            ctx: RequestContext,
+            work: (c: RequestContext) => Promise<unknown>,
+        ) =>
+            (ctx as unknown as { __manager?: EntityManager }).__manager
+                ? work(ctx)
+                : dataSource.transaction(manager =>
+                      work({ ...ctx, __manager: manager } as unknown as RequestContext),
+                  ),
         rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
@@ -111,6 +126,23 @@ beforeEach(async () => {
 });
 
 describe('DocumentsService (integration, real Postgres)', () => {
+    it('concurrent organization events keep one row and every provided field', async () => {
+        const fields = ['inn', 'kpp', 'ogrn', 'legalAddress', 'bankName', 'phone'] as const;
+        await Promise.all(
+            fields.map(field =>
+                eventService.upsertFromEvent(mockCtx, 'org-9', {
+                    legalName: 'Acme',
+                    isActive: true,
+                    fields: { [field]: `v-${field}` },
+                }),
+            ),
+        );
+
+        const rows = await dataSource.getRepository(TestOrganizationRequisites).find();
+        expect(rows).toHaveLength(1);
+        for (const field of fields) expect(rows[0][field]).toBe(`v-${field}`);
+    });
+
     it('upsertFromErp is idempotent: the same erpId never creates a second row', async () => {
         mockCounterpartyService.findByErpId.mockResolvedValue({ id: '1' });
         const record = {

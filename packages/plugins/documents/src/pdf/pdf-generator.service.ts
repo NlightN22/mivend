@@ -19,7 +19,7 @@ import { GENERATE_DOCUMENT_QUEUE, loggerCtx } from '../constants';
 import { Document } from '../entities/document.entity';
 import { DocumentsService } from '../documents.service';
 import { resolveBuyerLegalName } from './buyer-legal-name';
-import { PartyInput, ProformaInvoiceSource } from './proforma-invoice-data';
+import { PartyInput, ProformaInvoiceSource, printedRowsTotal } from './proforma-invoice-data';
 import {
     buildProformaInvoiceTemplateData,
     renderProformaInvoiceHtml,
@@ -206,6 +206,13 @@ export class PdfGeneratorService implements OnModuleInit {
                     productVariant: { name: line.name, sku: line.sku },
                 })),
             };
+            if (printedRowsTotal(source) !== source.totalAmount) {
+                Logger.error(
+                    `Document ${document.number}: printed rows total ${printedRowsTotal(source)} differs ` +
+                        `from the stored amount ${source.totalAmount}; printing the stored amount`,
+                    loggerCtx,
+                );
+            }
         } else {
             requisites = await this.documentsService.getActiveRequisites(ctx);
             this.documentsService.assertRequisitesComplete(requisites);

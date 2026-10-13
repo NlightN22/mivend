@@ -197,7 +197,7 @@ Applies to every entity mivend creates and to every exchange with another system
 - **Exchange refers to an entity by its `uuid`.** Idempotency of a business operation is keyed by the entity `uuid`
   (plus the operation/version where it matters), never by a message id. `eventId` is a transport key for redelivery only.
   A producer that publishes an entity twice must have exactly one external effect (guard + a test that publishes twice).
-- **Every document has a numeric-only human number** (orders, invoices, payment documents, proformas, discount grants,
+- **Every document has a numeric-only human number** (orders, proforma invoices, payment documents, proformas, discount grants,
   refunds, anything people quote): digits only, unique per document type, never reused, shown everywhere and used for
   search. It is a reference for people and for the other system's search, never an idempotency key. Generate it from a
   database sequence, never `MAX+1` or a random suffix. Documents of one order are numbered `<order number>-NN`.

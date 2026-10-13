@@ -28,23 +28,23 @@ export function useOrderPlacement(): { place: () => Promise<void> } {
     // The PDF is rendered by a background job: wait briefly for it, then fall back to the printable page.
     async function openProformaTabs(form: PaymentForm, orderCode: string): Promise<void> {
         if (form !== 'bank-transfer') return;
-        let invoices: ProformaInvoiceRef[] = [];
+        let proformas: ProformaInvoiceRef[] = [];
         for (let attempt = 0; attempt < PDF_POLL_ATTEMPTS; attempt += 1) {
             const { myProformaInvoices } = await shopApi(OrderProformaInvoicesDocument, {
                 orderCode,
             });
-            invoices = myProformaInvoices.items;
-            if (invoices.every(i => i.status === 'cancelled' || proformaDocumentUrl(i))) break;
+            proformas = myProformaInvoices.items;
+            if (proformas.every(i => i.status === 'cancelled' || proformaDocumentUrl(i))) break;
             if (attempt < PDF_POLL_ATTEMPTS - 1) {
                 await new Promise(resolve => setTimeout(resolve, PDF_POLL_INTERVAL_MS));
             }
         }
-        for (const target of proformaPrintTargets(form, invoices)) {
+        for (const target of proformaPrintTargets(form, proformas)) {
             const href =
                 target.kind === 'pdf'
                     ? target.url
                     : router.resolve({
-                          path: `/proforma-invoices/${target.id}`,
+                          path: `/proforma-proformas/${target.id}`,
                           query: { print: '1' },
                       }).href;
             window.open(href, '_blank');
