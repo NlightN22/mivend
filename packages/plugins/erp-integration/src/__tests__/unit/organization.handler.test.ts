@@ -17,6 +17,7 @@ const empty = {
     bankAccount: null,
     bankBik: null,
     correspondentAccount: null,
+    phone: null,
 };
 
 describe('OrganizationStreamHandler', () => {
@@ -34,6 +35,17 @@ describe('OrganizationStreamHandler', () => {
             bankAccount: '40702810000000000001',
             bankBik: '044525000',
             correspondentAccount: '30101810000000000002',
+            phone: '+0 000 000',
+            signatories: [
+                {
+                    role: 'Руководитель',
+                    roleLabel: 'Head',
+                    personName: 'Head H. H.',
+                    position: 'CEO',
+                },
+                { role: 'Кассир', roleLabel: 'Cashier', personName: '' },
+                { role: '', personName: 'No Role' },
+            ],
         });
 
         expect(outcome).toEqual({ kind: 'applied' });
@@ -49,7 +61,16 @@ describe('OrganizationStreamHandler', () => {
                 bankAccount: '40702810000000000001',
                 bankBik: '044525000',
                 correspondentAccount: '30101810000000000002',
+                phone: '+0 000 000',
             },
+            signatories: [
+                {
+                    role: 'Руководитель',
+                    roleLabel: 'Head',
+                    personName: 'Head H. H.',
+                    position: 'CEO',
+                },
+            ],
         });
     });
 
@@ -60,6 +81,7 @@ describe('OrganizationStreamHandler', () => {
             legalName: 'Acme',
             isActive: false,
             fields: empty,
+            signatories: [],
         });
     });
 

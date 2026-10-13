@@ -2,6 +2,13 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
+export interface OrganizationSignatory {
+    role: string;
+    roleLabel: string;
+    personName: string;
+    position: string | null;
+}
+
 @Entity()
 @Index(['erpId'], { unique: true })
 export class OrganizationRequisites extends VendureEntity {
@@ -45,6 +52,13 @@ export class OrganizationRequisites extends VendureEntity {
 
     @Column({ type: 'varchar', nullable: true })
     signatoryTitle!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    phone!: string | null;
+
+    // Latest ERP signatory list; role is the ERP enum name (e.g. head, chief accountant).
+    @Column({ type: 'simple-json', nullable: true })
+    signatories!: OrganizationSignatory[] | null;
 
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;

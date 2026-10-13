@@ -60,6 +60,7 @@ Updated: 2026-10-12 12:00
 - **Do not redo**: closing is not a cancellation; deferred-terms orders get no automatic proforma invoices; ERP-owned masters keep the ERP id.
 - **Contour hazards**: `make dev` (local) can kill the staging-integration contour (start staging last); `ts-node-dev` can hang at ~90% CPU after a plugin dist rebuild (restart via `make`). Staging holds orders registered in 1C during tests (one of them had its 1C reserve closed by a test).
 - **Proforma print form (#206)**: `plugin-documents` renders a payment-request style PDF (notice, bank block with reserved empty QR box, Russian title/date/amount in words, parties, items, signatures); required requisites are legal name, INN, bank name/BIK/settlement account (`requisites-completeness.ts`, also drives the failed-document requeue), the rest is optional. See `docs/payments.md`.
+- Organization stream (event-contracts 0.66.0) also maps `phone` and `signatories[]` (JSON column) into `OrganizationRequisites`; print form uses them for the supplier phone and signature lines. Proforma `amount` is now net of line discounts (equals the printed line totals).
 - Print form gaps: no VAT line (snapshots carry no tax), no manufacturer-code column, payment QR not generated yet; unit name is read live from the variant.
 - **Next**: #208 cross-system manual verification pass (positive/negative/duplicate scenarios), #194 implementation, #206 follow-up: live codegen for both portals (generated files were patched by hand, rerun codegen).
 

@@ -4,7 +4,10 @@ import { ProformaInvoice } from '@mivend/plugin-acquiring';
 
 import { loggerCtx } from './constants';
 import { Document } from './entities/document.entity';
-import { OrganizationRequisites } from './entities/organization-requisites.entity';
+import {
+    OrganizationRequisites,
+    OrganizationSignatory,
+} from './entities/organization-requisites.entity';
 import { hasRequiredRequisites } from './requisites-completeness';
 import { PdfGeneratorService } from './pdf/pdf-generator.service';
 
@@ -17,6 +20,7 @@ export const REQUISITE_FIELDS = [
     'bankAccount',
     'bankBik',
     'correspondentAccount',
+    'phone',
 ] as const;
 
 export type RequisiteField = (typeof REQUISITE_FIELDS)[number];
@@ -26,10 +30,11 @@ export interface OrganizationEventInput {
     legalName: string | null;
     isActive: boolean;
     fields: RequisiteFields;
+    signatories?: OrganizationSignatory[];
 }
 
 // Applies the `organization` stream. An empty field means "not provided": it never wipes a
-// stored value, a non-empty one always overwrites. Docs: docs/payments.md "Organizations".
+// stored value, a non-empty one always overwrites (signatories: the whole list). Docs: docs/payments.md "Organizations".
 @Injectable()
 export class OrganizationEventService {
     constructor(
@@ -57,6 +62,7 @@ export class OrganizationEventService {
             const value = input.fields[field];
             if (value) entity[field] = value;
         }
+        if (input.signatories?.length) entity.signatories = input.signatories;
         const saved = await repo.save(entity);
         if (!wasComplete && isComplete(saved)) await this.retryFailedProformas(ctx, saved);
         return true;

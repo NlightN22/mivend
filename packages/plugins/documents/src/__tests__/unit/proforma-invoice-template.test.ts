@@ -44,6 +44,8 @@ function makeRequisites(
         correspondentAccount: '11111111111111111111',
         signatoryName: null,
         signatoryTitle: null,
+        phone: null,
+        signatories: null,
         ...overrides,
     } as CompleteOrganizationRequisites;
 }
@@ -162,6 +164,60 @@ describe('renderProformaInvoiceHtml', () => {
             makeRequisites({ signatoryName: 'Ivanov I. I.', signatoryTitle: 'Director' }),
         );
         expect(html).toContain('Ivanov I. I.');
+        expect(html).toContain('Director');
+    });
+
+    it('prints the supplier phone only when present', () => {
+        expect(render(makeSource(), makeRequisites({ phone: '+0 000 000' }))).toContain(
+            'тел.: +0 000 000',
+        );
+        expect(render()).not.toContain('тел.:');
+    });
+
+    it('fills head and chief accountant lines from signatories, ERP head wins over the fallback', () => {
+        const html = render(
+            makeSource(),
+            makeRequisites({
+                signatoryName: 'Fallback F. F.',
+                signatories: [
+                    {
+                        role: 'Руководитель',
+                        roleLabel: 'Head',
+                        personName: 'Head H. H.',
+                        position: 'CEO',
+                    },
+                    {
+                        role: 'ГлавныйБухгалтер',
+                        roleLabel: 'CA',
+                        personName: 'Acc A. A.',
+                        position: null,
+                    },
+                    {
+                        role: 'Кассир',
+                        roleLabel: 'Cashier',
+                        personName: 'Cash C. C.',
+                        position: null,
+                    },
+                ],
+            }),
+        );
+        expect(html).toContain('Head H. H.');
+        expect(html).toContain('CEO');
+        expect(html).toContain('Acc A. A.');
+        expect(html).not.toContain('Fallback F. F.');
+        expect(html).not.toContain('Cash C. C.');
+    });
+
+    it('falls back to signatoryName/Title for the head when no head signatory exists', () => {
+        const html = render(
+            makeSource(),
+            makeRequisites({
+                signatoryName: 'Fallback F. F.',
+                signatoryTitle: 'Director',
+                signatories: [],
+            }),
+        );
+        expect(html).toContain('Fallback F. F.');
         expect(html).toContain('Director');
     });
 

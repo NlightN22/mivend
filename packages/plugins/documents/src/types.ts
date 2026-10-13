@@ -29,4 +29,5 @@ export interface OrganizationRequisitesRecord {
     correspondentAccount?: string | null;
     signatoryName?: string | null;
     signatoryTitle?: string | null;
+    phone?: string | null;
 }

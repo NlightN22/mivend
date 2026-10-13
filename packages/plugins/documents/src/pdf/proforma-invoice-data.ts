@@ -28,6 +28,11 @@ export interface ProformaInvoiceSource {
     lines: ProformaInvoiceSourceLine[];
 }
 
+export interface Signer {
+    name: string | null;
+    title: string | null;
+}
+
 export interface PartyInput {
     name: string;
     inn: string | null;
@@ -74,7 +79,8 @@ export interface ProformaInvoiceTemplateData {
         summary: string;
         inWords: string | null;
     };
-    signatory: { name: string | null; title: string | null };
+    signatory: Signer;
+    chiefAccountant: Signer;
 }
 
 export function partyLine(party: PartyInput): string {
@@ -95,8 +101,22 @@ export function sellerParty(requisites: CompleteOrganizationRequisites): PartyIn
         inn: requisites.inn,
         kpp: requisites.kpp,
         address: requisites.legalAddress,
-        phone: null,
+        phone: requisites.phone,
     };
+}
+
+const HEAD_ROLE = 'Руководитель';
+const CHIEF_ACCOUNTANT_ROLE = 'ГлавныйБухгалтер';
+
+function signerByRole(requisites: CompleteOrganizationRequisites, role: string): Signer {
+    const found = requisites.signatories?.find(s => s.role === role && s.personName);
+    return { name: found?.personName ?? null, title: found?.position ?? null };
+}
+
+function headSigner(requisites: CompleteOrganizationRequisites): Signer {
+    const fromErp = signerByRole(requisites, HEAD_ROLE);
+    if (fromErp.name) return fromErp;
+    return { name: requisites.signatoryName, title: requisites.signatoryTitle };
 }
 
 function formatQuantity(quantity: number): string {
@@ -153,6 +173,7 @@ export function buildProformaInvoiceTemplateData(
                 `Всего наименований ${source.lines.length}, на сумму ${formatMoneyRu(source.totalAmount)} ${currency}`.trim(),
             inWords: currency === 'RUB' ? rublesInWords(source.totalAmount) : null,
         },
-        signatory: { name: requisites.signatoryName, title: requisites.signatoryTitle },
+        signatory: headSigner(requisites),
+        chiefAccountant: signerByRole(requisites, CHIEF_ACCOUNTANT_ROLE),
     };
 }

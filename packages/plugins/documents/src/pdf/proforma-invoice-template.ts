@@ -139,11 +139,11 @@ function renderTotals(data: ProformaInvoiceTemplateData): string {
         <table class="totals">${renderCols(columnWidths(data.showDiscount))}${renderTotalRows(data)}</table>
         <div class="summary">${esc(t.summary)}</div>
         ${t.inWords ? `<div class="words">${esc(t.inWords)}</div>` : '<div class="words"></div>'}
-        ${renderSignatures(data.signatory)}
+        ${renderSignatures(data)}
     </div>`;
 }
 
-function renderSignatures(signatory: ProformaInvoiceTemplateData['signatory']): string {
+function renderSignatures(data: ProformaInvoiceTemplateData): string {
     const row = (role: string, title: string | null, name: string | null): string => `
         <tr>
             <td class="role">${role}</td>
@@ -152,8 +152,8 @@ function renderSignatures(signatory: ProformaInvoiceTemplateData['signatory']): 
             <td><div class="signed">${name ? esc(name) : ''}</div><div class="line">расшифровка подписи</div></td>
         </tr>`;
     return `<table class="sign">
-        ${row('Руководитель', signatory.title, signatory.name)}
-        ${row('Главный (старший) бухгалтер', null, null)}
+        ${row('Руководитель', data.signatory.title, data.signatory.name)}
+        ${row('Главный (старший) бухгалтер', data.chiefAccountant.title, data.chiefAccountant.name)}
         ${row('Ответственный', null, null)}
     </table>`;
 }
