@@ -336,6 +336,13 @@ redeliver.
   "not valid"), *Cancelled* (withdrawn without replacement: order cancelled, the organization has no lines
   left, or a manager withdrew it). "Paid" is not shown on a proforma: payment is shown at order level from
   ERP data (`paidAmount`, settlement documents).
+- **Implementation (#206):** `ProformaInvoice` has `issuedAt`, `dueDate` (issue + `BranchSettings.proformaPaymentTermDays`,
+  default 3, resolved for the order's servicing branch with the default branch as fallback, edited in the manager
+  Settings), `kind` (`order-placed` | `order-changed` | `by-shipment`; only the first two are produced) and a nullable
+  `salesInvoiceNumber` for the future by-shipment version. The API exposes `displayStatus` (current | superseded |
+  cancelled) and the list filter `status: "current"`; the stored `paid` is never shown. A manager can withdraw a
+  current, unpaid proforma (`withdrawProformaInvoice`, UpdateOrder + order visibility); a later order change or request
+  issues a new version. "Paid X of Y" on the order is not shown: the ERP `paidAmount` is not stored by the order stream.
 - **Allocation of payments to documents (FIFO in this module) is frozen:** kept as is, not extended and not
   used for display. Payments are money on the counterparty balance; documents and debt come from the ERP.
   Later: the customer allocates a payment across orders in our system (the allocation must be sent to the
@@ -413,8 +420,8 @@ organization are re-queued once (a conditional `failed` -> `pending` update, so 
 The PDF follows the structure of a standard payment-request form: payment-terms notice
 (`PAYMENT_NOTICE`, one constant), bank block (bank, BIK, correspondent and settlement accounts,
 INN/KPP, recipient name, payment QR box captioned "Отсканируйте для оплаты"), title "Счет на оплату №
-<number> от <date in words>" with a "Версия N" line above version 1 and a "Заменён, не
-действителен" mark for superseded versions, supplier/consignor and buyer/consignee lines, the items
+<number> от <date in words>" (the full versioned number), a "Срок оплаты до <date>" line, a "Версия N" line above version 1
+(with "по отгрузке (реализация № ...)" for a by-shipment version) and a neutral "Есть более новая версия" note for superseded versions, supplier/consignor and buyer/consignee lines, the items
 table, totals, amount in words and signature lines. The layout fits the A4 width; long names wrap in
 cells and only rows may break across pages (totals and signatures stay together).
 
@@ -446,8 +453,7 @@ cells and only rows may break across pages (totals and signatures stay together)
   characters inside values become spaces. Our rule is stricter
   than the standard: Sum (this version's amount, > 0), Purpose and PayeeINN are required too; Purpose
   is "Оплата по счету № <number> от dd.mm.yyyy" plus ", в т.ч. НДС <sum>" when the VAT total is known;
-  KPP is sent only when the organization has one. Any missing or invalid value, or a superseded
-  version, leaves the box empty (a warning lists the fields) and the PDF still generates. The image is
+  KPP is sent only when the organization has one. Any missing or invalid value leaves the box empty (a superseded version still prints its QR: it stays payable) (a warning lists the fields) and the PDF still generates. The image is
   an SVG drawn from the `qrcode` package's module matrix (error correction M). Own small module instead
   of a GOST library: the format is a fixed string, and the existing packages are unmaintained.
 
@@ -906,8 +912,7 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront 
 - `ProformaInvoice` carries `lines` (immutable snapshot), `version`, `supersedesId`, `supersededById`; status
   `superseded` joins pending/issued/paid/cancelled. `ProformaInvoiceIssuingService.issueForOrder` is the only creator
   (checkout handlers and the on-demand request call it); see `docs/order-contracts.md`, "Proforma invoices".
-- Payment binds to a snapshot (`proformaInvoiceId`). A direct `payProformaInvoice` call rejects a superseded or
-  cancelled one with a clear error. A payment fact reported by the ERP never fails on the version: allocation follows
+- Payment binds to a snapshot (`proformaInvoiceId`). A direct `payProformaInvoice` call rejects a cancelled one with a clear error; a superseded version stays payable. A payment fact reported by the ERP never fails on the version: allocation follows
   `supersededById` to the current version (same counterparty and organization) and settles it first; if that is not
   open, the "Cash application" rules above apply (FIFO over the open documents of the organization, then advance).
 - Whole-order status updates at checkout (`updateStatusForOrder`) only move `pending` snapshots.
@@ -916,8 +921,8 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront 
   no new proforma invoice is ever issued for the difference: by the owner's decision (#206) it is settled through the
   ERP and the paid snapshot is never rewritten or replaced.
 - A `cancelled` head (organization left the order) is never reused: if the organization returns, a new version is
-  issued (next version, next `-NN` number, `supersedesId` = the cancelled one). Head selection is deterministic
-  (highest version, then highest id among non-superseded rows) and the next `-NN` follows the highest used ordinal.
+  issued (next version of the same document id, `supersedesId` = the cancelled one). Head selection is deterministic
+  (highest version, then highest id among non-superseded rows); a new organization's `NN` follows the highest used ordinal.
 - Pay vs supersede race: allocation re-reads the target under its row lock; a target that became `superseded` meanwhile
   hands the payment to the current version of its chain, otherwise the cash-application rules above apply.
 - Requesting a proforma (Shop `requestProformaInvoices`) is scoped to the counterparty, not the author: a colleague's
@@ -931,7 +936,7 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront 
   fails the document goes back to `failed` and the event is retried (no sweep picks up `pending` documents).
 - `OrganizationChanged.is_active` is `optional` (presence-tracked): an event without it keeps the stored value.
 - The `Document` of a snapshot uses the proforma invoice's own number (a legacy `<order>-<organizationId>` number is
-  fixed by migration `1791495000000`, irreversible: the old numbers are not restored; checked on the dev databases, `document.number` has no unique index and no renumbered value collides); the PDF shows "Version N" and "Superseded, not valid".
+  fixed by migration `1791495000000`, irreversible: the old numbers are not restored; checked on the dev databases, `document.number` has no unique index and no renumbered value collides); the PDF shows "Version N" (migration `1791501000000` later moved numbers to `<order>-<NN>-<version>`, irreversible).
 
 **Known gaps (#222, deliberate):**
 

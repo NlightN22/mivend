@@ -13,7 +13,8 @@ Fixed vocabulary for documents and payments. Use these terms in code, UI, docs a
 
 - A proforma invoice is not a sales invoice and never becomes one: the sale is the ERP's fact.
 - **Version** of a proforma invoice: a changed order content makes a new document (own number, `version` + 1); the
-  older unpaid one is `superseded` (kept, not valid). The version is an attribute shown as "v2", not part of the number.
+  older one is `superseded` (kept, still payable; "there is a newer version"). The version is the last part of the number
+  `<order number>-<NN>-<version>`; user-facing statuses are Current / Superseded / Cancelled, never "paid".
 
 ## The word "invoice" alone
 

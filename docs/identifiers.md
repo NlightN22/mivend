@@ -41,9 +41,10 @@ and is never an idempotency key for a business entity.
 - Documents that belong to an order are numbered `<order number>-NN` (`1000000012-01`, `-02`, ...), NN being the
   ordinal of the document within the order. Other document types (payment document, refund, discount grant) have
   their own sequence per instance.
-- **Proforma versions (#206):** every version is a new document with its own new number; the earlier version stays
-  under its old number and the new one links to it ("replaces"), so a number is never reused and `-NN` is only the
-  ordinal within the order; the organization is shown separately.
+- **Proforma versions (#206):** a proforma number is `<order number>-<NN>-<version>` (`1000000012-01-1`, `-01-2`).
+  `<order number>-<NN>` is the stable document id per (order, organization); a new version keeps it and bumps the
+  last part, a new organization on the order takes the next NN. The earlier version keeps its number and the new one
+  links to it, so a number is never reused. The same number is in the PDF, the QR and the payment purpose.
 - **Payment documents:** our number always comes from the sequence; an external reference (acquirer id, receipt number,
   the ERP's event id) is stored and shown separately as the provider/bank reference and never replaces our number.
 - Shown everywhere people see a document and accepted by every search box (typing digits finds it).
@@ -97,7 +98,7 @@ and is never an idempotency key for a business entity.
 - Done: `NumberingService` (`packages/plugins/numbering`) — `next(ctx, documentType)` against a fixed, hardcoded
   Postgres sequence per `NumberingDocumentType` (`order`/`proforma invoice`/`payment`/`refund`/`discount-grant`/`proforma`,
   migration `1791470000000-numbering-sequences`), formats `<3-digit INSTANCE_NUMBER_CODE><7+-digit sequence value>`;
-  `formatOrderDocumentNumber(orderNumber, ordinal)` is the pure `<order number>-NN` helper. `INSTANCE_NUMBER_CODE` is
+  `formatOrderDocumentNumber(orderNumber, ordinal, version)` is the pure `<order number>-NN-<version>` helper. `INSTANCE_NUMBER_CODE` is
   validated as exactly 3 digits at plugin init and documented in `.env.local.example`/`docs/environments.md`.
 - Done: shared `UuidEntity` base (`packages/shared/src/uuid-entity.ts`), assigned via `@BeforeInsert()` so it is
   readable before the row's own insert commits.
@@ -111,7 +112,7 @@ and is never an idempotency key for a business entity.
   reserve-by-order stream key a reservation; that is real follow-up work, not done by adding the column.
 - Done: every `generateDocumentCode` call site replaced with `NumberingService`; `generateDocumentCode`/
   `documentCode.ts` is deleted. Order-scoping decisions made:
-  - **ProformaInvoice**: order-scoped, `<order number>-NN` via `NumberingService.formatOrderDocumentNumber`. The ordinal is
+  - **ProformaInvoice**: order-scoped, `<order number>-NN-<version>` (NN per organization document, not per version) via `NumberingService.formatOrderDocumentNumber`. The ordinal is
     computed inside `ProformaInvoiceService.createUnderLock`, which already runs under a per-order `withAggregateLock` lock
     (pre-existing, for the idempotent-retry guarantee) — no separate locking was needed, just computing the ordinal as
     the split's 1-based index within that existing locked section. A concurrent-writer test

@@ -88,8 +88,8 @@ shipment) in a later task; #223 only frees the name.
 - **Versions and snapshots (#206, implemented).** A proforma invoice is an immutable snapshot: number, organization,
   lines (`ProformaInvoice.lines`, with variant, quantity, prices and discounts), amount and currency at issue time.
   Per (order, organization) the content hash decides: unchanged content returns the same snapshot; changed content
-  creates a new version (a new document with its own next `<order number>-NN` number, `version` + 1,
-  `supersedesId`/`supersededById`) and marks the unpaid older one `superseded` (kept, never edited, cannot be paid). A
+  creates a new version (the same document id `<order number>-<NN>` with `version` + 1 in the number, its own issue and due date, kind `order-changed`,
+  `supersedesId`/`supersededById`) and marks the unpaid older one `superseded` (kept, never edited, still payable). A
   paid snapshot stays paid and no new version is created for it: the order shows "order changed after payment,
   difference X" (current organization content minus the paid amount); no new proforma invoice is issued for the difference, it is settled through the ERP and the paid snapshot is never rewritten. An
   organization that left the order has its unpaid snapshot cancelled. Not an accounting document and not synced to
