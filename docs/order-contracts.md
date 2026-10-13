@@ -263,8 +263,12 @@ Priority, highest first (the first matching fact wins):
 
 `order-changed.paidAmount` (optional; absent = not computed) is stored as `Order.customFields.erpPaidAmount` in minor
 units, on both the mivend-order and the external-order path, and is never cleared by an event without it. Stale events
-are dropped by the inbox version check. It is a lower bound: sales documents may post with an empty deal in the ERP.
-The order page shows "Paid X of Y" from it (see `docs/payments.md`); lists do not.
+are dropped by the inbox version check upstream, so the stored value follows the latest event (it may decrease if the
+ERP corrects it) and the handler needs no comparison of its own. The value is rounded to integer minor units; a
+negative, non-finite or beyond-int4 amount is ignored with a log line (the column is int4; a bigint would need a
+GraphQL scalar). It is a lower bound: sales documents may post with an empty deal in the ERP.
+The order page shows "Paid X of Y" from it (see `docs/payments.md`), or "Paid in full (overpaid by Z)" when X > Y;
+lists do not. The field is public read-only: customers see it for orders they can already see.
 
 ### Still to verify with the ERP side
 

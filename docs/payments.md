@@ -330,7 +330,8 @@ redeliver.
   payment purpose, so a payment shows which version the customer paid and we link to that version.
 - **Dates per version:** each version has its own issue date and its own due date (payment term in days,
   a business setting, default 3). Yesterday's version keeps its date and term; today's has a new one. The
-  customer may pay any version; money lands on the balance either way.
+  customer may pay any version; money lands on the balance either way. Re-issuing a version resets the term by
+  design (issue date + term, resolved at issue time); `proformaPaymentTermDays` is an integer 1..90.
 - **Statuses (customer/manager facing):** *Current* (the latest version, not cancelled), *Superseded* (a newer
   version exists; informational "there is a newer version", the old one stays readable and payable, never
   "not valid"), *Cancelled* (withdrawn without replacement: order cancelled, the organization has no lines
@@ -341,8 +342,11 @@ redeliver.
   Settings), `kind` (`order-placed` | `order-changed` | `by-shipment`; only the first two are produced) and a nullable
   `salesInvoiceNumber` for the future by-shipment version. The API exposes `displayStatus` (current | superseded |
   cancelled) and the list filter `status: "current"`; the stored `paid` is never shown. A manager can withdraw a
-  current, unpaid proforma (`withdrawProformaInvoice`, UpdateOrder + order visibility); a later order change or request
+  current, unpaid proforma (`withdrawProformaInvoice`, UpdateOrder + order visibility); it is refused when the version
+  has any settlement allocation or an active (`pending`/`authorized`) payment attempt, records
+  `withdrawnAt`/`withdrawnByAdministratorId`, and emits no outward event (the ERP does not know proformas yet); a later order change or request
   issues a new version. "Paid X of Y" is shown on the order page only (storefront aside, manager totals), never in lists, from `Order.customFields.erpPaidAmount` (minor units, written by `order-changed` on both the mivend and the external-order path, only when the event carries `paidAmount`). It is a lower bound: sales documents may post with an empty deal in the ERP, so the label says "at least"; nothing is shown when it is null.
+- Migration `1791501000000` renumbers existing documents and is irreversible (its `down()` only drops columns).
 - **Allocation of payments to documents (FIFO in this module) is frozen:** kept as is, not extended and not
   used for display. Payments are money on the counterparty balance; documents and debt come from the ERP.
   Later: the customer allocates a payment across orders in our system (the allocation must be sent to the
@@ -369,7 +373,9 @@ How an ERP-reported payment fact is applied (`PaymentInboxProcessorService` -> `
    order) on the counterparty. It is not consumed automatically by later documents; a person re-allocates it.
 4. **Version is irrelevant.** The printed version the customer paid does not matter, only the fact of payment.
 5. **Idempotency** is by the ERP event id only (`channel` + external reference). A repeated fact with another event
-   id is new money and is allocated by the rules above.
+   id is new money and is allocated by the rules above. The same event id with a different amount is ignored
+   (first wins). A declared document number is accepted when it equals the versioned number or the stable
+   `<order>-<NN>` part (pre-versioning facts); the uuid is the key.
 6. **Why a document link remains.** It marks documents paid/open for the customer and managers and keeps the audit
    trail per document. The link is to the current version, never required to be the printed one.
 7. **Order change after payment** never rewrites a paid snapshot; the difference is settled through the ERP.
