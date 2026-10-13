@@ -10,13 +10,13 @@ export type OrderProformaInvoice =
     OrderProformaInvoicesQuery['myProformaInvoices']['items'][number];
 
 export function useOrderProformaInvoices(orderCode: () => string): {
-    invoices: Ref<OrderProformaInvoice[]>;
+    proformaInvoices: Ref<OrderProformaInvoice[]>;
     requesting: Ref<boolean>;
     failed: Ref<boolean>;
     load: () => Promise<void>;
     request: () => Promise<void>;
 } {
-    const invoices = ref<OrderProformaInvoice[]>([]);
+    const proformaInvoices = ref<OrderProformaInvoice[]>([]);
     const requesting = ref(false);
     const failed = ref(false);
 
@@ -25,7 +25,7 @@ export function useOrderProformaInvoices(orderCode: () => string): {
             const result = await shopApi(OrderProformaInvoicesDocument, {
                 orderCode: orderCode(),
             });
-            invoices.value = result.myProformaInvoices.items;
+            proformaInvoices.value = result.myProformaInvoices.items;
         } catch (e) {
             console.error('[useOrderProformaInvoices]', e);
         }
@@ -45,5 +45,5 @@ export function useOrderProformaInvoices(orderCode: () => string): {
         }
     }
 
-    return { invoices, requesting, failed, load, request };
+    return { proformaInvoices, requesting, failed, load, request };
 }

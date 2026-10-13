@@ -12,10 +12,12 @@ import { useOrderProformaInvoices } from './useOrderProformaInvoices';
 
 const props = defineProps<{ orderCode: string; cancelled: boolean }>();
 const { t } = useI18n();
-const { invoices, requesting, failed, load, request } = useOrderProformaInvoices(
+const { proformaInvoices, requesting, failed, load, request } = useOrderProformaInvoices(
     () => props.orderCode,
 );
-const changed = computed(() => invoices.value.filter(i => i.orderChangedDifference != null));
+const changed = computed(() =>
+    proformaInvoices.value.filter(i => i.orderChangedDifference != null),
+);
 
 onMounted(() => void load());
 </script>
@@ -23,26 +25,35 @@ onMounted(() => void load());
 <template>
     <div class="opi-card">
         <h2 class="opi-title">{{ t('orders.detail.proforma.title') }}</h2>
-        <p v-if="!invoices.length" class="opi-empty">{{ t('orders.detail.proforma.empty') }}</p>
-        <div v-for="invoice in invoices" :key="invoice.id" class="opi-row">
-            <router-link :to="`/proforma-invoices/${invoice.id}`" class="opi-number"
-                >№ {{ invoice.number }}</router-link
+        <p v-if="!proformaInvoices.length" class="opi-empty">
+            {{ t('orders.detail.proforma.empty') }}
+        </p>
+        <div v-for="proformaInvoice in proformaInvoices" :key="proformaInvoice.id" class="opi-row">
+            <router-link :to="`/proforma-invoices/${proformaInvoice.id}`" class="opi-number"
+                >№ {{ proformaInvoice.number }}</router-link
             >
-            <ProformaInvoiceVersionBadge :version="invoice.version" />
+            <ProformaInvoiceVersionBadge :version="proformaInvoice.version" />
             <MvStatusBadge
-                :variant="PROFORMA_INVOICE_STATUS_VARIANT[invoice.displayStatus] ?? 'neutral'"
+                :variant="
+                    PROFORMA_INVOICE_STATUS_VARIANT[proformaInvoice.displayStatus] ?? 'neutral'
+                "
             >
-                {{ PROFORMA_INVOICE_STATUS_LABEL[invoice.displayStatus] ?? invoice.displayStatus }}
+                {{
+                    PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.displayStatus] ??
+                    proformaInvoice.displayStatus
+                }}
             </MvStatusBadge>
-            <span class="opi-amount">{{ formatMoney(invoice.amount, invoice.currencyCode) }}</span>
+            <span class="opi-amount">{{
+                formatMoney(proformaInvoice.amount, proformaInvoice.currencyCode)
+            }}</span>
         </div>
-        <p v-for="invoice in changed" :key="`d-${invoice.id}`" class="opi-diff">
+        <p v-for="proformaInvoice in changed" :key="`d-${proformaInvoice.id}`" class="opi-diff">
             {{
                 t('orders.detail.proforma.changedAfterPayment', {
-                    number: invoice.number,
+                    number: proformaInvoice.number,
                     difference: formatMoney(
-                        invoice.orderChangedDifference ?? 0,
-                        invoice.currencyCode,
+                        proformaInvoice.orderChangedDifference ?? 0,
+                        proformaInvoice.currencyCode,
                     ),
                 })
             }}

@@ -8,9 +8,8 @@ import {
 import { useOrderProformaInvoices } from '../../composables/useOrderProformaInvoices';
 
 const props = defineProps<{ orderId: string; cancelled: boolean }>();
-const { invoices, allowed, requesting, error, load, request, withdraw } = useOrderProformaInvoices(
-    () => props.orderId,
-);
+const { proformaInvoices, allowed, requesting, error, load, request, withdraw } =
+    useOrderProformaInvoices(() => props.orderId);
 
 function date(iso: string): string {
     return new Date(iso).toLocaleDateString('ru-RU', {
@@ -29,58 +28,66 @@ onMounted(() => void load());
 
 <template>
     <MvPanel title="Proforma invoices">
-        <p v-if="!invoices.length" class="pi-empty">No proforma invoices issued yet.</p>
-        <div v-for="invoice in invoices" :key="invoice.id" class="pi-row">
+        <p v-if="!proformaInvoices.length" class="pi-empty">No proforma invoices issued yet.</p>
+        <div v-for="proformaInvoice in proformaInvoices" :key="proformaInvoice.id" class="pi-row">
             <div class="pi-main">
-                <strong>№ {{ invoice.number }}</strong>
-                <MvStatusBadge variant="info">v{{ invoice.version }}</MvStatusBadge>
+                <strong>№ {{ proformaInvoice.number }}</strong>
+                <MvStatusBadge variant="info">v{{ proformaInvoice.version }}</MvStatusBadge>
                 <MvStatusBadge
                     :variant="
-                        PROFORMA_INVOICE_STATUS_BADGE_VARIANT[invoice.displayStatus] ?? 'neutral'
+                        PROFORMA_INVOICE_STATUS_BADGE_VARIANT[proformaInvoice.displayStatus] ??
+                        'neutral'
                     "
                     >{{
-                        PROFORMA_INVOICE_STATUS_LABEL[invoice.displayStatus] ??
-                        invoice.displayStatus
+                        PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.displayStatus] ??
+                        proformaInvoice.displayStatus
                     }}</MvStatusBadge
                 >
-                <span class="pi-amount">{{ money(invoice.amount, invoice.currencyCode) }}</span>
+                <span class="pi-amount">{{
+                    money(proformaInvoice.amount, proformaInvoice.currencyCode)
+                }}</span>
             </div>
             <div class="pi-meta">
-                Seller: {{ invoice.seller?.legalName ?? invoice.organizationId }}
+                Seller: {{ proformaInvoice.seller?.legalName ?? proformaInvoice.organizationId }}
                 <a
-                    v-if="invoice.document?.status === 'ready' && invoice.document.asset"
-                    :href="invoice.document.asset.source"
+                    v-if="
+                        proformaInvoice.document?.status === 'ready' &&
+                        proformaInvoice.document.asset
+                    "
+                    :href="proformaInvoice.document.asset.source"
                     target="_blank"
                     rel="noopener"
                     >PDF</a
                 >
             </div>
             <div class="pi-meta">
-                Issued {{ date(invoice.issuedAt) }}, pay by {{ date(invoice.dueDate) }}
-                <template v-if="invoice.kind === 'by-shipment'">
-                    · by shipment<template v-if="invoice.salesInvoiceNumber">
-                        (realization № {{ invoice.salesInvoiceNumber }})</template
+                Issued {{ date(proformaInvoice.issuedAt) }}, pay by
+                {{ date(proformaInvoice.dueDate) }}
+                <template v-if="proformaInvoice.kind === 'by-shipment'">
+                    · by shipment<template v-if="proformaInvoice.salesInvoiceNumber">
+                        (realization № {{ proformaInvoice.salesInvoiceNumber }})</template
                     ></template
                 >
             </div>
-            <div v-if="invoice.supersededBy" class="pi-meta">
-                There is a newer version v{{ invoice.supersededBy.version }} (№
-                {{ invoice.supersededBy.number }})
+            <div v-if="proformaInvoice.supersededBy" class="pi-meta">
+                There is a newer version v{{ proformaInvoice.supersededBy.version }} (№
+                {{ proformaInvoice.supersededBy.number }})
             </div>
-            <div v-else-if="invoice.supersedes" class="pi-meta">
-                Version {{ invoice.version }}, follows № {{ invoice.supersedes.number }}
+            <div v-else-if="proformaInvoice.supersedes" class="pi-meta">
+                Version {{ proformaInvoice.version }}, follows №
+                {{ proformaInvoice.supersedes.number }}
             </div>
             <MvButton
-                v-if="allowed && invoice.displayStatus === 'current'"
+                v-if="allowed && proformaInvoice.displayStatus === 'current'"
                 variant="secondary"
                 size="sm"
-                @click="withdraw(invoice.id)"
+                @click="withdraw(proformaInvoice.id)"
                 >Withdraw</MvButton
             >
-            <MvNotice v-if="invoice.orderChangedDifference != null" variant="warning">
+            <MvNotice v-if="proformaInvoice.orderChangedDifference != null" variant="warning">
                 Order changed after payment, difference
-                {{ money(invoice.orderChangedDifference, invoice.currencyCode) }}. Settled through
-                the ERP.
+                {{ money(proformaInvoice.orderChangedDifference, proformaInvoice.currencyCode) }}.
+                Settled through the ERP.
             </MvNotice>
         </div>
         <MvButton
