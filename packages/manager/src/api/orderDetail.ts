@@ -34,6 +34,7 @@ function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
             reservationFailedAt: null,
             erpStatus: null,
             erpOrderId: null,
+            erpPaidAmount: null,
             erpRegistrationStatus: null,
             erpRegistrationDocumentNumber: null,
             erpRejectionReasonCode: null,

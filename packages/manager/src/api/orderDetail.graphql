@@ -25,6 +25,7 @@ query OrderDetail($code: String!) {
                 reservationFailedAt
                 erpStatus
                 erpOrderId
+                erpPaidAmount
                 erpRegistrationStatus
                 erpRegistrationDocumentNumber
                 erpRejectionReasonCode

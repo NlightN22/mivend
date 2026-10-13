@@ -259,6 +259,13 @@ Priority, highest first (the first matching fact wins):
   reserve kept, or closed after warehouse orders exist) or still above 0 after shipment. Statuses come from the
   facts only; once a warehouse order exists (PICKING or later) a zero reserve is not reported as a mismatch.
 
+### Paid amount on the order
+
+`order-changed.paidAmount` (optional; absent = not computed) is stored as `Order.customFields.erpPaidAmount` in minor
+units, on both the mivend-order and the external-order path, and is never cleared by an event without it. Stale events
+are dropped by the inbox version check. It is a lower bound: sales documents may post with an empty deal in the ERP.
+The order page shows "Paid X of Y" from it (see `docs/payments.md`); lists do not.
+
 ### Still to verify with the ERP side
 
 - Whether marking an order for deletion also zeroes its reserve in the register automatically (expected: yes,

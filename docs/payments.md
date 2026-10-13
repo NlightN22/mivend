@@ -342,7 +342,7 @@ redeliver.
   `salesInvoiceNumber` for the future by-shipment version. The API exposes `displayStatus` (current | superseded |
   cancelled) and the list filter `status: "current"`; the stored `paid` is never shown. A manager can withdraw a
   current, unpaid proforma (`withdrawProformaInvoice`, UpdateOrder + order visibility); a later order change or request
-  issues a new version. "Paid X of Y" on the order is not shown: the ERP `paidAmount` is not stored by the order stream.
+  issues a new version. "Paid X of Y" is shown on the order page only (storefront aside, manager totals), never in lists, from `Order.customFields.erpPaidAmount` (minor units, written by `order-changed` on both the mivend and the external-order path, only when the event carries `paidAmount`). It is a lower bound: sales documents may post with an empty deal in the ERP, so the label says "at least"; nothing is shown when it is null.
 - **Allocation of payments to documents (FIFO in this module) is frozen:** kept as is, not extended and not
   used for display. Payments are money on the counterparty balance; documents and debt come from the ERP.
   Later: the customer allocates a payment across orders in our system (the allocation must be sent to the

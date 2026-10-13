@@ -20,6 +20,7 @@ import OrderContextPanel from '../../components/order-detail/OrderContextPanel.v
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
 import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
+import OrderPaidAmount from '../../components/order-detail/OrderPaidAmount.vue';
 import OrderCancelPanel from '../../components/order-detail/OrderCancelPanel.vue';
 import ProformaInvoicesPanel from '../../components/order-detail/ProformaInvoicesPanel.vue';
 import PaymentReceivedPanel from '../../components/order-detail/PaymentReceivedPanel.vue';
@@ -152,6 +153,11 @@ watch(() => route.params.code, load);
                         <span>Subtotal: {{ money(order.subTotalWithTax) }}</span>
                         <span>Shipping: {{ money(order.shippingWithTax) }}</span>
                         <span v-if="packagingLabel">Weight / volume: {{ packagingLabel }}</span>
+                        <OrderPaidAmount
+                            v-if="order.customFields.erpPaidAmount != null"
+                            :paid="money(order.customFields.erpPaidAmount)"
+                            :total="money(order.totalWithTax)"
+                        />
                         <strong>Total: {{ money(order.totalWithTax) }}</strong>
                     </div>
                 </MvPanel>

@@ -15,7 +15,7 @@ const meta: Meta<typeof OrderDetailPage> = {
 export default meta;
 type Story = StoryObj<typeof OrderDetailPage>;
 
-function mockOrderDetailData(): void {
+function mockOrderDetailData(erpPaidAmount: number | null = null): void {
     registerMock('OrderDetail', () => ({
         visibleOrders: {
             items: [
@@ -29,7 +29,7 @@ function mockOrderDetailData(): void {
                     subTotalWithTax: 400000,
                     shippingWithTax: 50000,
                     totalWithTax: 450000,
-                    customFields: { reservationDays: 7 },
+                    customFields: { reservationDays: 7, erpPaidAmount },
                     lines: [
                         {
                             id: '1',
@@ -69,6 +69,19 @@ export const Default: Story = {
     loaders: [
         async () => {
             mockOrderDetailData();
+            await router.push('/orders/ORD-101');
+        },
+    ],
+    render: () => ({
+        components: { OrderDetailPage },
+        template: '<OrderDetailPage />',
+    }),
+};
+
+export const PartiallyPaid: Story = {
+    loaders: [
+        async () => {
+            mockOrderDetailData(200000);
             await router.push('/orders/ORD-101');
         },
     ],

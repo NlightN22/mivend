@@ -2383,6 +2383,7 @@ export type OrderCustomFields = {
     branchId?: Maybe<Scalars['String']['output']>;
     erpContractId?: Maybe<Scalars['String']['output']>;
     erpOrderStatus?: Maybe<Scalars['String']['output']>;
+    erpPaidAmount?: Maybe<Scalars['Float']['output']>;
     erpRegistrationDocumentNumber?: Maybe<Scalars['String']['output']>;
     erpRegistrationStatus?: Maybe<Scalars['String']['output']>;
     erpRejectionReasonCode?: Maybe<Scalars['String']['output']>;
@@ -2412,6 +2413,7 @@ export type OrderFilterParameter = {
     currencyCode?: InputMaybe<StringOperators>;
     erpContractId?: InputMaybe<StringOperators>;
     erpOrderStatus?: InputMaybe<StringOperators>;
+    erpPaidAmount?: InputMaybe<NumberOperators>;
     erpRegistrationDocumentNumber?: InputMaybe<StringOperators>;
     erpRegistrationStatus?: InputMaybe<StringOperators>;
     erpRejectionReasonCode?: InputMaybe<StringOperators>;
@@ -2578,6 +2580,7 @@ export type OrderSortParameter = {
     createdAt?: InputMaybe<SortOrder>;
     erpContractId?: InputMaybe<SortOrder>;
     erpOrderStatus?: InputMaybe<SortOrder>;
+    erpPaidAmount?: InputMaybe<SortOrder>;
     erpRegistrationDocumentNumber?: InputMaybe<SortOrder>;
     erpRegistrationStatus?: InputMaybe<SortOrder>;
     erpRejectionReasonCode?: InputMaybe<SortOrder>;
@@ -4992,6 +4995,7 @@ export type OrderDetailQuery = {
             erpStatus?: string | null;
             erpStatusAt?: any | null;
             erpOrderStatus?: string | null;
+            erpPaidAmount?: number | null;
             erpRegistrationStatus?: string | null;
             erpRegistrationDocumentNumber?: string | null;
         } | null;
@@ -6163,6 +6167,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
       erpStatus
       erpStatusAt
       erpOrderStatus
+      erpPaidAmount
       erpRegistrationStatus
       erpRegistrationDocumentNumber
     }

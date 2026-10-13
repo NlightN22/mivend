@@ -8,6 +8,7 @@ import { useCancelOrder } from './useCancelOrder';
 import { useOrderDetail } from './useOrderDetail';
 import { STATUS_VARIANT, erpDocumentStatusLabel } from './useOrders';
 import { isNotRegisteredInErp } from './isNotRegisteredInErp';
+import OrderPaidRow from './OrderPaidRow.vue';
 import OrderProformaInvoices from './OrderProformaInvoices.vue';
 
 const route = useRoute();
@@ -160,6 +161,16 @@ function formatDate(iso: string): string {
                                     formatAmount(order.totalWithTax, order.currencyCode)
                                 }}</span>
                             </div>
+                            <OrderPaidRow
+                                v-if="order.customFields?.erpPaidAmount != null"
+                                :paid="
+                                    formatAmount(
+                                        order.customFields.erpPaidAmount,
+                                        order.currencyCode,
+                                    )
+                                "
+                                :total="formatAmount(order.totalWithTax, order.currencyCode)"
+                            />
                         </div>
 
                         <OrderProformaInvoices
