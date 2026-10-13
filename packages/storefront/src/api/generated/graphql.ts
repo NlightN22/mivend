@@ -4866,6 +4866,7 @@ export type MyOrdersQuery = {
                 erpStatusAt?: any | null;
                 erpOrderStatus?: string | null;
                 isExternal?: boolean | null;
+                erpRegistrationDocumentNumber?: string | null;
             } | null;
         }>;
     };
@@ -6050,6 +6051,7 @@ export const MyOrdersDocument = new TypedDocumentString(`
         erpStatusAt
         erpOrderStatus
         isExternal
+        erpRegistrationDocumentNumber
       }
     }
     totalItems

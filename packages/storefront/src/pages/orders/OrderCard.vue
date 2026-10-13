@@ -7,6 +7,10 @@ import { STATUS_LABEL, STATUS_VARIANT, erpDocumentStatusLabel } from './useOrder
 const props = defineProps<{ order: OrderSummary }>();
 
 const isExternal = computed(() => props.order.customFields?.isExternal === true);
+const displayNumber = computed(() => {
+    const erpNumber = props.order.customFields?.erpRegistrationDocumentNumber;
+    return isExternal.value && erpNumber ? erpNumber : props.order.code;
+});
 const statusKey = computed(() => props.order.customFields?.erpStatus ?? 'PENDING');
 const statusLabel = computed(() => STATUS_LABEL[statusKey.value] ?? statusKey.value);
 const statusVariant = computed(() => STATUS_VARIANT[statusKey.value] ?? 'default');
@@ -48,7 +52,7 @@ const preview = computed(() => {
         <div class="order-card-head">
             <div>
                 <div class="order-title">
-                    Order {{ formatDocumentNumber(order.code) }}
+                    Order {{ formatDocumentNumber(displayNumber) }}
                     <MvStatusBadge v-if="isExternal" variant="info">From ERP</MvStatusBadge>
                 </div>
                 <div class="order-meta">{{ meta }}</div>
