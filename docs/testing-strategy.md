@@ -198,6 +198,12 @@ isolated cart/session per test, no inter-test ordering dependency, trace/screens
 failure, no fixed `waitForTimeout` sleeps, a minimal smoke subset runnable in CI, heavy E2E in a
 separate workflow if runtime requires it.
 
+### Checkout credit and proforma groups
+
+`packages/e2e/storefront/checkout-credit/` (checkout forms x credit-limit states, negative paths) and
+`packages/e2e/storefront/proforma-organizations/` (proformas per organization, versions, PDF); see
+`docs/e2e-testing.md`.
+
 ### Cart totals group
 
 `packages/e2e/storefront/cart-totals/` (Playwright project `storefront-cart-totals`, `make e2e-cart`)

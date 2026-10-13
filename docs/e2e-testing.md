@@ -52,6 +52,25 @@ who has `ReassignCounterpartyManager` within her own department) — this is wha
 `manager-department-head`'s `"department"` scope. All three role projects run the exact same
 spec files with no skips.
 
+## Checkout and credit limits, proformas per organization
+
+Two UI + API sets under `packages/e2e/storefront/`, both run in the `storefront` project with an
+empty storage state (each test logs in as a seeded buyer through the Shop API):
+
+- `checkout-credit/` - the real checkout page and API assertions for cash / bank transfer / card within
+  the limit (credit-limited and prepayment buyer), over the limit with the branch setting
+  `allowExceedingCreditLimit` on/off and the acknowledgement, a card payment of excess + total, and negative
+  paths (bypass without acknowledgement, stale card amount, unknown method, `confirmPaymentReceived`).
+- `proforma-organizations/` - one proforma per organization, `<order>-NN` numbering and sum, idempotent
+  on-demand request, versioning after `modifyOrder` (v2 badge, superseded notice, disabled pay), customer
+  isolation, and the PDF content (pdf.js from cdnjs, text extraction in a blank page).
+
+Prerequisites: `make seed` (run id v12 gives `credit-limited@buyer.example` and `prepay@buyer.example` their
+contracts with a seeded organization, otherwise the contract guard blocks checkout). The PDF tests need
+the worker (the `generate-document` job); without it they skip with a reason. The tests release the buyers'
+reservations and cancel their orders before and after each test; `over-limit` raises the stock of three
+SKUs through an ERP-import stock record and restores the branch setting afterwards.
+
 ## Gotchas learned from experience
 
 ### 1. IntersectionObserver auto-loadMore makes row counts non-deterministic
