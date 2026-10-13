@@ -343,10 +343,12 @@ Documents that form a customer's receivables (sales, payments, returns, correcti
   `closing_balance`, overdue), type chips, filters by contract/organization/period/number, built on the standard
   ui-kit table and filters. Customer-visible types are a whitelist by `documentType`. A "Reconciliation acts" menu
   item exists with a "not implemented yet" page; acts themselves are #226.
-- **Customer-visible settings (Vendure admin, GlobalSettings).** `settlementTypeCategories` maps `documentType` to a
-  category (`documentType=category`, whitelist; empty = everything under `other`) and `settlementCustomerContractKinds`
-  lists the contract kinds a customer sees (empty = no restriction). Real ERP type and kind names are entered there,
-  never hardcoded. Overdue status is FIFO from `due_date` or date + the contract's payment delay.
+- **Customer-visible settings (Vendure admin, GlobalSettings) - interim until #227.** `settlementTypeCategories`
+  maps `documentType` to a category (`documentType=category`) and `settlementCustomerContractKinds` lists the
+  contract kinds a customer sees. Both fail closed: empty means nothing is visible, a `documentType` missing from the
+  mapping is hidden (no implicit category), and entries or balances whose contract is not imported yet are always
+  hidden. The real source of both classifications will come from the ERP side (#227). Overdue status is FIFO from
+  `due_date` or date + the contract's payment delay.
 - **Open owner decision (role gating).** Settlement documents and balances are visible to every user of the
   counterparty; which of the customer's employees may see receivables is not decided yet, so the code does not
   gate by portal role.

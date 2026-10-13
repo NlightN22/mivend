@@ -47,10 +47,10 @@ export class SettlementShopService {
                 bal.ob AS "openingBalance", bal.cb AS "closingBalance", bal.cname AS "contractName",
                 org."legalName" AS "organizationName",
                 COALESCE((SELECT SUM(a.open) FROM aged a WHERE a.org = bal.org
-                    AND a.ctr IS NOT DISTINCT FROM bal.ctr AND a.due < now()), 0) AS overdue
+                    AND a.ctr = bal.ctr AND a.due < now()), 0) AS overdue
              FROM bal LEFT JOIN organization_requisites org ON org."erpId" = bal.org
              ORDER BY bal.org, bal.ctr`,
-            [counterpartyId, kindsParam(visibility)],
+            [counterpartyId, visibility.contractKinds],
         );
         return rows
             .map(
@@ -81,11 +81,7 @@ export class SettlementShopService {
     ): Promise<SettlementDocumentPage> {
         const visibility = await this.visibility(ctx);
         const typeKeys = [...visibility.typeCategories.keys()];
-        const params: unknown[] = [
-            counterpartyId,
-            kindsParam(visibility),
-            typeKeys.length > 0 ? typeKeys : null,
-        ];
+        const params: unknown[] = [counterpartyId, visibility.contractKinds, typeKeys];
         const bind = (value: unknown): string => {
             params.push(value);
             return `$${params.length}`;
@@ -93,8 +89,9 @@ export class SettlementShopService {
         const where = [
             'e."counterpartyId" = $1',
             'NOT d."isDeleted"',
-            '($2::text[] IS NULL OR c."contractKind" = ANY($2))',
-            '($3::text[] IS NULL OR d."documentType" = ANY($3))',
+            'e."contractId" IS NOT NULL',
+            'c."contractKind" = ANY($2::text[])',
+            'd."documentType" = ANY($3::text[])',
         ];
         if (filter.contractId) where.push(`e."contractId" = ${bind(filter.contractId)}`);
         if (filter.organizationId) {
@@ -118,11 +115,7 @@ export class SettlementShopService {
             const types = [...visibility.typeCategories]
                 .filter(([, category]) => category === filter.category)
                 .map(([type]) => type);
-            if (visibility.typeCategories.size > 0) {
-                where.push(`d."documentType" = ANY(${bind(types)})`);
-            } else if (filter.category !== 'other') {
-                where.push('FALSE');
-            }
+            where.push(`d."documentType" = ANY(${bind(types)})`);
         }
         if (filter.overdueOnly) where.push('aged.open > 0 AND aged.due < now()');
         const from = `FROM settlement_document_entry e
@@ -130,7 +123,7 @@ export class SettlementShopService {
             LEFT JOIN contract c ON c.id::text = e."contractId"
             LEFT JOIN organization_requisites org ON org."erpId" = e."organizationErpId"
             LEFT JOIN bal ON bal.org = e."organizationErpId"
-                AND bal.ctr IS NOT DISTINCT FROM e."contractId"
+                AND bal.ctr = e."contractId"
             LEFT JOIN aged ON aged.id = e.id
             WHERE ${where.join(' AND ')}`;
         const [{ total }] = await this.query(
@@ -190,6 +183,3 @@ export class SettlementShopService {
         };
     }
 }
-
-const kindsParam = (v: SettlementVisibility): string[] | null =>
-    v.contractKinds.length > 0 ? v.contractKinds : null;

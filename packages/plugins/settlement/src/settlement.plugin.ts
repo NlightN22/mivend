@@ -50,7 +50,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
                 label: [
                     {
                         languageCode: LanguageCode.en,
-                        value: 'Settlement documents: contract kinds shown to customers (comma separated, empty = all)',
+                        value: 'Settlement documents: contract kinds shown to customers (comma separated, empty = nothing visible; interim until the ERP supplies it)',
                     },
                 ],
             },
@@ -62,7 +62,7 @@ import { DEFAULT_RETENTION_MONTHS } from './types';
                 label: [
                     {
                         languageCode: LanguageCode.en,
-                        value: 'Settlement documents: customer-visible types as documentType=category (sale, payment, return, correction, bonus), comma separated, empty = all types',
+                        value: 'Settlement documents: customer-visible types as documentType=category (sale, payment, return, correction, bonus), comma separated; empty or unlisted = hidden (interim until the ERP supplies it)',
                     },
                 ],
             },

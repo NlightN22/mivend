@@ -10,6 +10,11 @@ let h: Harness;
 let shop: SettlementShopService;
 let settings: Record<string, unknown>;
 
+const visible = {
+    settlementCustomerContractKinds: 'client,supplier',
+    settlementTypeCategories: 'Sale=sale,Pay=payment,Ret=return',
+};
+
 beforeAll(async () => {
     h = await createHarness('settlement_shop');
     await h.dataSource.query(
@@ -33,7 +38,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    settings = {};
+    settings = { ...visible };
     await h.dataSource.query(
         'TRUNCATE settlement_document, settlement_balance, "order", contract, organization_requisites RESTART IDENTITY CASCADE',
     );
@@ -109,7 +114,7 @@ describe('settlement shop queries (real Postgres)', () => {
         expect((await shop.documents(ctx, '1', {}, 0, 20)).items.map(i => i.number).sort()).toEqual(
             ['1', '2'],
         );
-        settings = { settlementCustomerContractKinds: 'client' };
+        settings = { ...visible, settlementCustomerContractKinds: 'client' };
         expect((await shop.documents(ctx, '1', {}, 0, 20)).items.map(i => i.number)).toEqual(['1']);
     });
 
@@ -117,7 +122,7 @@ describe('settlement shop queries (real Postgres)', () => {
         await doc('d-sale', { number: '1', documentType: 'Sale', entries: [entry()] });
         await doc('d-pay', { number: '2', documentType: 'Pay', entries: [entry({ amount: -40 })] });
         await doc('d-odd', { number: '3', documentType: 'Odd', entries: [entry()] });
-        settings = { settlementTypeCategories: 'Sale=sale,Pay=payment' };
+        settings = { ...visible, settlementTypeCategories: 'Sale=sale,Pay=payment' };
         const all = await shop.documents(ctx, '1', {}, 0, 20);
         expect(all.items.map(i => i.number).sort()).toEqual(['1', '2']);
         const payments = await shop.documents(ctx, '1', { category: 'payment' }, 0, 20);
@@ -291,5 +296,35 @@ describe('settlement shop queries (real Postgres)', () => {
         const rub = cards.find(c => c.currency === 'RUB');
         expect(rub).toMatchObject({ currentBalance: 10000, overdue: 10000 });
         expect(cards.find(c => c.currency === 'USD')).toMatchObject({ currentBalance: 2000 });
+    });
+
+    it('shows nothing while the visibility settings are empty', async () => {
+        await balance('cp-1', 'ct-1', 0, 100);
+        await doc('d-1', { number: '1', entries: [entry()] });
+        settings = {};
+        expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
+        expect(await shop.balanceCards(ctx, '1')).toEqual([]);
+        settings = { settlementCustomerContractKinds: 'client' };
+        expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
+        expect(await shop.balanceCards(ctx, '1')).toHaveLength(1);
+        settings = { settlementTypeCategories: 'Sale=sale' };
+        expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
+        expect(await shop.balanceCards(ctx, '1')).toEqual([]);
+    });
+
+    it('shows a mapped type and hides an unmapped one', async () => {
+        await doc('d-sale', { number: '1', documentType: 'Sale', entries: [entry()] });
+        await doc('d-odd', { number: '2', documentType: 'Odd', entries: [entry()] });
+        const page = await shop.documents(ctx, '1', {}, 0, 20);
+        expect(page.items.map(i => i.number)).toEqual(['1']);
+        expect((await shop.documents(ctx, '1', { category: 'other' }, 0, 20)).totalItems).toBe(0);
+    });
+
+    it('always hides entries and balances whose contract is not imported', async () => {
+        h.contracts.delete('ct-1');
+        await balance('cp-1', 'ct-1', 0, 100);
+        await doc('d-1', { number: '1', entries: [entry()] });
+        expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
+        expect(await shop.balanceCards(ctx, '1')).toEqual([]);
     });
 });
