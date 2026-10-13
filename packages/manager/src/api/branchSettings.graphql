@@ -18,6 +18,7 @@ fragment BranchSettingsFields on BranchSettings {
     enforceMultiplicity
     allowExceedingCreditLimit
     prepaymentReserveDays
+    proformaPaymentTermDays
 }
 
 query Warehouses {
@@ -72,6 +73,7 @@ mutation SetBranchSettings(
     $enforceMultiplicity: Boolean!
     $allowExceedingCreditLimit: Boolean!
     $prepaymentReserveDays: Int!
+    $proformaPaymentTermDays: Int!
 ) {
     setBranchSettings(
         branchId: $branchId
@@ -83,6 +85,7 @@ mutation SetBranchSettings(
         enforceMultiplicity: $enforceMultiplicity
         allowExceedingCreditLimit: $allowExceedingCreditLimit
         prepaymentReserveDays: $prepaymentReserveDays
+        proformaPaymentTermDays: $proformaPaymentTermDays
     ) {
         ...BranchSettingsFields
     }

@@ -14,6 +14,7 @@ import {
 import {
     PROFORMA_INVOICE_STATUS_OPTIONS,
     PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
+    PROFORMA_INVOICE_STATUS_LABEL,
     type ProformaInvoiceListItem,
 } from '../../api/proforma-invoices';
 
@@ -165,8 +166,11 @@ const rows = computed<ProformaInvoiceRow[]>(() =>
         id: proformaInvoice.id,
         number: proformaInvoice.number,
         createdAt: proformaInvoice.createdAt,
-        status: proformaInvoice.status,
-        statusVariant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT[proformaInvoice.status] ?? 'neutral',
+        status:
+            PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.displayStatus] ??
+            proformaInvoice.displayStatus,
+        statusVariant:
+            PROFORMA_INVOICE_STATUS_BADGE_VARIANT[proformaInvoice.displayStatus] ?? 'neutral',
         amount: money(proformaInvoice),
         orderCode: proformaInvoice.order.code,
     })),

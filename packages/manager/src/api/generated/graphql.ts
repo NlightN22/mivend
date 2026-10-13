@@ -539,6 +539,7 @@ export type BranchSettings = {
     id: Scalars['ID']['output'];
     packagesOnly: Scalars['Boolean']['output'];
     prepaymentReserveDays: Scalars['Int']['output'];
+    proformaPaymentTermDays: Scalars['Int']['output'];
     visiblePriceTypeIds: Maybe<Array<Scalars['String']['output']>>;
     visibleWarehouseIds: Maybe<Array<Scalars['String']['output']>>;
 };
@@ -2745,6 +2746,9 @@ export type GlobalSettingsCustomFields = {
     defaultBranchId: Maybe<Scalars['String']['output']>;
     deferredOrderMaxAgeDays: Maybe<Scalars['Int']['output']>;
     organizationSplitEnabled: Maybe<Scalars['Boolean']['output']>;
+    settlementCustomerContractKinds: Maybe<Scalars['String']['output']>;
+    settlementRetentionMonths: Maybe<Scalars['Int']['output']>;
+    settlementTypeCategories: Maybe<Scalars['String']['output']>;
     stockTierLowMax: Maybe<Scalars['Int']['output']>;
     stockTierMediumMax: Maybe<Scalars['Int']['output']>;
 };
@@ -4189,6 +4193,8 @@ export type Mutation = {
     upsertPriceType: PriceType;
     upsertTradingPoint: TradingPoint;
     upsertWorkflowDefinition: WorkflowDefinition;
+    /** Withdraws the current proforma invoice of an organization without a replacement (status cancelled). */
+    withdrawProformaInvoice: ProformaInvoice;
 };
 
 export type MutationActivateCounterpartyPortalAccessArgs = {
@@ -4951,6 +4957,7 @@ export type MutationSetBranchSettingsArgs = {
     enforceMultiplicity?: InputMaybe<Scalars['Boolean']['input']>;
     packagesOnly?: InputMaybe<Scalars['Boolean']['input']>;
     prepaymentReserveDays?: InputMaybe<Scalars['Int']['input']>;
+    proformaPaymentTermDays?: InputMaybe<Scalars['Int']['input']>;
     visiblePriceTypeIds?: InputMaybe<Array<Scalars['String']['input']>>;
     visibleWarehouseIds?: InputMaybe<Array<Scalars['String']['input']>>;
 };
@@ -5262,6 +5269,10 @@ export type MutationUpsertWorkflowDefinitionArgs = {
     steps: Array<WorkflowStepInput>;
 };
 
+export type MutationWithdrawProformaInvoiceArgs = {
+    id: Scalars['ID']['input'];
+};
+
 export type NativeAuthInput = {
     password: Scalars['String']['input'];
     username: Scalars['String']['input'];
@@ -5498,6 +5509,7 @@ export type OrderCustomFields = {
     cancelRefusalReason: Maybe<Scalars['String']['output']>;
     cancelRequestStatus: Maybe<Scalars['String']['output']>;
     cancelRequestedAt: Maybe<Scalars['DateTime']['output']>;
+    counterpartyId: Maybe<Scalars['String']['output']>;
     erpContractId: Maybe<Scalars['String']['output']>;
     erpOrderId: Maybe<Scalars['String']['output']>;
     erpOrderStatus: Maybe<Scalars['String']['output']>;
@@ -5507,8 +5519,11 @@ export type OrderCustomFields = {
     erpRejectionReasonText: Maybe<Scalars['String']['output']>;
     erpStatus: Maybe<Scalars['String']['output']>;
     erpStatusAt: Maybe<Scalars['DateTime']['output']>;
+    externalLinesIncomplete: Maybe<Scalars['Boolean']['output']>;
+    isExternal: Maybe<Scalars['Boolean']['output']>;
     latestFulfillmentState: Maybe<Scalars['String']['output']>;
     paymentStatus: Maybe<Scalars['String']['output']>;
+    pendingCounterpartyErpId: Maybe<Scalars['String']['output']>;
     placedByAdministratorId: Maybe<Scalars['String']['output']>;
     reservationDays: Maybe<Scalars['Int']['output']>;
     reservationFailedAt: Maybe<Scalars['DateTime']['output']>;
@@ -5536,6 +5551,7 @@ export type OrderFilterParameter = {
     cancellable?: InputMaybe<BooleanOperators>;
     /** A unique code for the Order */
     code?: InputMaybe<StringOperators>;
+    counterpartyId?: InputMaybe<StringOperators>;
     createdAt?: InputMaybe<DateOperators>;
     creditLimitExceeded?: InputMaybe<BooleanOperators>;
     currencyCode?: InputMaybe<StringOperators>;
@@ -5549,7 +5565,9 @@ export type OrderFilterParameter = {
     erpRejectionReasonText?: InputMaybe<StringOperators>;
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
+    externalLinesIncomplete?: InputMaybe<BooleanOperators>;
     id?: InputMaybe<IdOperators>;
+    isExternal?: InputMaybe<BooleanOperators>;
     latestFulfillmentState?: InputMaybe<StringOperators>;
     multiplicityEnforced?: InputMaybe<BooleanOperators>;
     /**
@@ -5559,6 +5577,7 @@ export type OrderFilterParameter = {
     orderPlacedAt?: InputMaybe<DateOperators>;
     packagesOnlySales?: InputMaybe<BooleanOperators>;
     paymentStatus?: InputMaybe<StringOperators>;
+    pendingCounterpartyErpId?: InputMaybe<StringOperators>;
     placedByAdministratorId?: InputMaybe<StringOperators>;
     reservationDays?: InputMaybe<NumberOperators>;
     reservationFailedAt?: InputMaybe<DateOperators>;
@@ -5757,6 +5776,7 @@ export type OrderSortParameter = {
     cancelRequestedAt?: InputMaybe<SortOrder>;
     /** A unique code for the Order */
     code?: InputMaybe<SortOrder>;
+    counterpartyId?: InputMaybe<SortOrder>;
     createdAt?: InputMaybe<SortOrder>;
     customerLastName?: InputMaybe<SortOrder>;
     erpContractId?: InputMaybe<SortOrder>;
@@ -5768,7 +5788,9 @@ export type OrderSortParameter = {
     erpRejectionReasonText?: InputMaybe<SortOrder>;
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
+    externalLinesIncomplete?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
+    isExternal?: InputMaybe<SortOrder>;
     latestFulfillmentState?: InputMaybe<SortOrder>;
     /**
      * The date & time that the Order was placed, i.e. the Customer
@@ -5776,6 +5798,7 @@ export type OrderSortParameter = {
      */
     orderPlacedAt?: InputMaybe<SortOrder>;
     paymentStatus?: InputMaybe<SortOrder>;
+    pendingCounterpartyErpId?: InputMaybe<SortOrder>;
     placedByAdministratorId?: InputMaybe<SortOrder>;
     reservationDays?: InputMaybe<SortOrder>;
     reservationFailedAt?: InputMaybe<SortOrder>;
@@ -6863,9 +6886,17 @@ export type ProformaInvoice = {
     counterpartyId: Scalars['ID']['output'];
     createdAt: Scalars['DateTime']['output'];
     currencyCode: Scalars['String']['output'];
+    /** User-facing status: current | superseded | cancelled. Never 'paid': payment is shown at order level. */
+    displayStatus: Scalars['String']['output'];
     /** The printable document of this snapshot; null until the document row exists. */
     document: Maybe<Document>;
+    /** Pay-by date of this version: issue date plus the branch's payment term. */
+    dueDate: Scalars['DateTime']['output'];
     id: Scalars['ID']['output'];
+    /** When this version was issued; each version has its own date. */
+    issuedAt: Scalars['DateTime']['output'];
+    /** order-placed | order-changed | by-shipment */
+    kind: Scalars['String']['output'];
     /** Snapshot lines, resolved via ProformaInvoiceFieldResolver.lines. */
     lines: Array<ProformaInvoiceLine>;
     /** Human-facing business number — generated at creation, distinct from the order's own code — see ProformaInvoice.number's own doc comment (proforma-invoice.entity.ts). */
@@ -6876,6 +6907,8 @@ export type ProformaInvoice = {
     orderChangedDifference: Maybe<Scalars['Int']['output']>;
     orderId: Scalars['ID']['output'];
     organizationId: Scalars['ID']['output'];
+    /** ERP sales invoice (realization) number; set only on a by-shipment version. */
+    salesInvoiceNumber: Maybe<Scalars['String']['output']>;
     seller: Maybe<ProformaInvoiceSeller>;
     status: Scalars['String']['output'];
     supersededBy: Maybe<ProformaInvoiceVersionRef>;
@@ -9102,6 +9135,9 @@ export type UpdateGlobalSettingsCustomFieldsInput = {
     defaultBranchId?: InputMaybe<Scalars['String']['input']>;
     deferredOrderMaxAgeDays?: InputMaybe<Scalars['Int']['input']>;
     organizationSplitEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+    settlementCustomerContractKinds?: InputMaybe<Scalars['String']['input']>;
+    settlementRetentionMonths?: InputMaybe<Scalars['Int']['input']>;
+    settlementTypeCategories?: InputMaybe<Scalars['String']['input']>;
     stockTierLowMax?: InputMaybe<Scalars['Int']['input']>;
     stockTierMediumMax?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -9133,6 +9169,7 @@ export type UpdateOrderCustomFieldsInput = {
     cancelRefusalReason?: InputMaybe<Scalars['String']['input']>;
     cancelRequestStatus?: InputMaybe<Scalars['String']['input']>;
     cancelRequestedAt?: InputMaybe<Scalars['DateTime']['input']>;
+    counterpartyId?: InputMaybe<Scalars['String']['input']>;
     erpContractId?: InputMaybe<Scalars['String']['input']>;
     erpOrderId?: InputMaybe<Scalars['String']['input']>;
     erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
@@ -9142,8 +9179,11 @@ export type UpdateOrderCustomFieldsInput = {
     erpRejectionReasonText?: InputMaybe<Scalars['String']['input']>;
     erpStatus?: InputMaybe<Scalars['String']['input']>;
     erpStatusAt?: InputMaybe<Scalars['DateTime']['input']>;
+    externalLinesIncomplete?: InputMaybe<Scalars['Boolean']['input']>;
+    isExternal?: InputMaybe<Scalars['Boolean']['input']>;
     latestFulfillmentState?: InputMaybe<Scalars['String']['input']>;
     paymentStatus?: InputMaybe<Scalars['String']['input']>;
+    pendingCounterpartyErpId?: InputMaybe<Scalars['String']['input']>;
     placedByAdministratorId?: InputMaybe<Scalars['String']['input']>;
     reservationDays?: InputMaybe<Scalars['Int']['input']>;
     reservationFailedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -9759,6 +9799,7 @@ export type BranchSettingsFieldsFragment = {
     enforceMultiplicity: boolean;
     allowExceedingCreditLimit: boolean;
     prepaymentReserveDays: number;
+    proformaPaymentTermDays: number;
 };
 
 export type WarehousesQueryVariables = Exact<{ [key: string]: never }>;
@@ -9817,6 +9858,7 @@ export type BranchSettingsForBranchQuery = {
         enforceMultiplicity: boolean;
         allowExceedingCreditLimit: boolean;
         prepaymentReserveDays: number;
+        proformaPaymentTermDays: number;
     } | null;
 };
 
@@ -9834,6 +9876,7 @@ export type SetBranchSettingsMutationVariables = Exact<{
     enforceMultiplicity: Scalars['Boolean']['input'];
     allowExceedingCreditLimit: Scalars['Boolean']['input'];
     prepaymentReserveDays: Scalars['Int']['input'];
+    proformaPaymentTermDays: Scalars['Int']['input'];
 }>;
 
 export type SetBranchSettingsMutation = {
@@ -9848,6 +9891,7 @@ export type SetBranchSettingsMutation = {
         enforceMultiplicity: boolean;
         allowExceedingCreditLimit: boolean;
         prepaymentReserveDays: number;
+        proformaPaymentTermDays: number;
     };
 };
 
@@ -11069,7 +11113,11 @@ export type OrderProformaInvoicesQuery = {
         id: string;
         number: string;
         version: number;
-        status: string;
+        displayStatus: string;
+        issuedAt: any;
+        dueDate: any;
+        kind: string;
+        salesInvoiceNumber: string | null;
         amount: number;
         currencyCode: string;
         organizationId: string;
@@ -11088,6 +11136,12 @@ export type RequestProformaInvoicesForOrderMutationVariables = Exact<{
 export type RequestProformaInvoicesForOrderMutation = {
     requestProformaInvoicesForOrder: Array<{ id: string }>;
 };
+
+export type WithdrawProformaInvoiceMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type WithdrawProformaInvoiceMutation = { withdrawProformaInvoice: { id: string } };
 
 export type OrderListItemFieldsFragment = {
     id: string;
@@ -11340,7 +11394,9 @@ export type ProformaInvoiceListItemFieldsFragment = {
     counterpartyId: string;
     amount: number;
     currencyCode: string;
-    status: string;
+    displayStatus: string;
+    issuedAt: any;
+    dueDate: any;
     branchId: string | null;
     supersededBy: { number: string; version: number } | null;
     order: { code: string };
@@ -11363,7 +11419,9 @@ export type ProformaInvoicesPageQuery = {
             counterpartyId: string;
             amount: number;
             currencyCode: string;
-            status: string;
+            displayStatus: string;
+            issuedAt: any;
+            dueDate: any;
             branchId: string | null;
             supersededBy: { number: string; version: number } | null;
             order: { code: string };
@@ -11377,9 +11435,8 @@ export type ProformaInvoiceViewCountsQueryVariables = Exact<{
 
 export type ProformaInvoiceViewCountsQuery = {
     all: { totalItems: number };
-    pending: { totalItems: number };
-    issued: { totalItems: number };
-    paid: { totalItems: number };
+    current: { totalItems: number };
+    superseded: { totalItems: number };
     cancelled: { totalItems: number };
 };
 
@@ -11898,6 +11955,7 @@ export const BranchSettingsFieldsFragmentDoc = new TypedDocumentString(
   enforceMultiplicity
   allowExceedingCreditLimit
   prepaymentReserveDays
+  proformaPaymentTermDays
 }
     `,
     { fragmentName: 'BranchSettingsFields' },
@@ -12131,7 +12189,9 @@ export const ProformaInvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
   counterpartyId
   amount
   currencyCode
-  status
+  displayStatus
+  issuedAt
+  dueDate
   branchId
   order {
     code
@@ -12480,12 +12540,13 @@ export const BranchSettingsForBranchDocument = new TypedDocumentString(`
   enforceMultiplicity
   allowExceedingCreditLimit
   prepaymentReserveDays
+  proformaPaymentTermDays
 }`) as unknown as TypedDocumentString<
     BranchSettingsForBranchQuery,
     BranchSettingsForBranchQueryVariables
 >;
 export const SetBranchSettingsDocument = new TypedDocumentString(`
-    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!, $enforceMultiplicity: Boolean!, $allowExceedingCreditLimit: Boolean!, $prepaymentReserveDays: Int!) {
+    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!, $enforceMultiplicity: Boolean!, $allowExceedingCreditLimit: Boolean!, $prepaymentReserveDays: Int!, $proformaPaymentTermDays: Int!) {
   setBranchSettings(
     branchId: $branchId
     defaultPriceTypeId: $defaultPriceTypeId
@@ -12496,6 +12557,7 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
     enforceMultiplicity: $enforceMultiplicity
     allowExceedingCreditLimit: $allowExceedingCreditLimit
     prepaymentReserveDays: $prepaymentReserveDays
+    proformaPaymentTermDays: $proformaPaymentTermDays
   ) {
     ...BranchSettingsFields
   }
@@ -12511,6 +12573,7 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
   enforceMultiplicity
   allowExceedingCreditLimit
   prepaymentReserveDays
+  proformaPaymentTermDays
 }`) as unknown as TypedDocumentString<
     SetBranchSettingsMutation,
     SetBranchSettingsMutationVariables
@@ -13879,7 +13942,11 @@ export const OrderProformaInvoicesDocument = new TypedDocumentString(`
     id
     number
     version
-    status
+    displayStatus
+    issuedAt
+    dueDate
+    kind
+    salesInvoiceNumber
     amount
     currencyCode
     organizationId
@@ -13918,6 +13985,16 @@ export const RequestProformaInvoicesForOrderDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     RequestProformaInvoicesForOrderMutation,
     RequestProformaInvoicesForOrderMutationVariables
+>;
+export const WithdrawProformaInvoiceDocument = new TypedDocumentString(`
+    mutation WithdrawProformaInvoice($id: ID!) {
+  withdrawProformaInvoice(id: $id) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    WithdrawProformaInvoiceMutation,
+    WithdrawProformaInvoiceMutationVariables
 >;
 export const OrdersPageDocument = new TypedDocumentString(`
     query OrdersPage($options: OrderListOptions, $managerId: ID, $search: String) {
@@ -14190,7 +14267,9 @@ export const ProformaInvoicesPageDocument = new TypedDocumentString(`
   counterpartyId
   amount
   currencyCode
-  status
+  displayStatus
+  issuedAt
+  dueDate
   branchId
   order {
     code
@@ -14207,20 +14286,14 @@ export const ProformaInvoiceViewCountsDocument = new TypedDocumentString(`
   ) {
     totalItems
   }
-  pending: visibleProformaInvoices(
-    options: {take: 0, status: "pending"}
+  current: visibleProformaInvoices(
+    options: {take: 0, status: "current"}
     counterpartyId: $counterpartyId
   ) {
     totalItems
   }
-  issued: visibleProformaInvoices(
-    options: {take: 0, status: "issued"}
-    counterpartyId: $counterpartyId
-  ) {
-    totalItems
-  }
-  paid: visibleProformaInvoices(
-    options: {take: 0, status: "paid"}
+  superseded: visibleProformaInvoices(
+    options: {take: 0, status: "superseded"}
     counterpartyId: $counterpartyId
   ) {
     totalItems

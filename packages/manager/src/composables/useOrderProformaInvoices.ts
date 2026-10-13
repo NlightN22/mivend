@@ -3,6 +3,7 @@ import { adminApi } from '../api/client';
 import {
     OrderProformaInvoicesDocument,
     RequestProformaInvoicesForOrderDocument,
+    WithdrawProformaInvoiceDocument,
     type OrderProformaInvoicesQuery,
 } from '../api/generated/graphql';
 import { useAuthStore } from '../stores/auth';
@@ -16,6 +17,7 @@ export interface UseOrderProformaInvoices {
     error: Ref<string | null>;
     load: () => Promise<void>;
     request: () => Promise<void>;
+    withdraw: (id: string) => Promise<void>;
 }
 
 export function useOrderProformaInvoices(orderId: () => string): UseOrderProformaInvoices {
@@ -49,5 +51,17 @@ export function useOrderProformaInvoices(orderId: () => string): UseOrderProform
         }
     }
 
-    return { invoices, allowed, requesting, error, load, request };
+    async function withdraw(id: string): Promise<void> {
+        error.value = null;
+        try {
+            await adminApi(WithdrawProformaInvoiceDocument, { id });
+            await load();
+        } catch (e) {
+            console.error('[useOrderProformaInvoices]', e);
+            error.value =
+                e instanceof Error ? e.message : 'Failed to withdraw the proforma invoice.';
+        }
+    }
+
+    return { invoices, allowed, requesting, error, load, request, withdraw };
 }

@@ -36,6 +36,7 @@ export interface BranchSettingsInput {
     enforceMultiplicity: boolean;
     allowExceedingCreditLimit: boolean;
     prepaymentReserveDays: number;
+    proformaPaymentTermDays: number;
 }
 
 // Warehouses are ERP org-structure master data (see access-control's Warehouse entity) — one

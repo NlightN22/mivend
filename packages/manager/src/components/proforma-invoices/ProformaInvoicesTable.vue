@@ -6,6 +6,7 @@ import { MvTable, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import type { TableRow, StatusBadgeVariant } from '@mivend/ui-kit';
 import {
     PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
+    PROFORMA_INVOICE_STATUS_LABEL,
     type ProformaInvoiceListItem,
 } from '../../api/proforma-invoices';
 
@@ -90,8 +91,11 @@ const rows = computed<TableRow[]>(() =>
         customer:
             props.counterpartyNames.get(proformaInvoice.counterpartyId) ??
             proformaInvoice.counterpartyId,
-        status: proformaInvoice.status,
-        statusVariant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT[proformaInvoice.status] ?? 'neutral',
+        status:
+            PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.displayStatus] ??
+            proformaInvoice.displayStatus,
+        statusVariant:
+            PROFORMA_INVOICE_STATUS_BADGE_VARIANT[proformaInvoice.displayStatus] ?? 'neutral',
         amount: money(proformaInvoice),
         order: proformaInvoice.order.code,
         orderDisplay: formatDocumentNumber(proformaInvoice.order.code),

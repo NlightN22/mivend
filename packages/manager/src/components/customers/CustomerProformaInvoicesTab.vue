@@ -32,15 +32,18 @@ const page = ref(1);
 const totalItems = ref(0);
 const proformaInvoices = ref<ProformaInvoiceListItem[]>([]);
 
-type ViewKey = 'all' | 'pending' | 'issued' | 'paid' | 'cancelled';
+type ViewKey = 'all' | 'current' | 'superseded' | 'cancelled';
 // variant reuses PROFORMA_INVOICE_STATUS_BADGE_VARIANT — the same map CustomerProformaInvoicesDataTable.vue's
 // status-column badge draws from — so the quick-filter chip and the row badge for the same
 // status can never drift into different colors (see MvFilterChips' own doc comment).
 const VIEWS: { key: ViewKey; label: string; variant?: FilterChip['variant'] }[] = [
     { key: 'all', label: 'All' },
-    { key: 'pending', label: 'Pending', variant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT.pending },
-    { key: 'issued', label: 'Issued', variant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT.issued },
-    { key: 'paid', label: 'Paid', variant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT.paid },
+    { key: 'current', label: 'Current', variant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT.current },
+    {
+        key: 'superseded',
+        label: 'Superseded',
+        variant: PROFORMA_INVOICE_STATUS_BADGE_VARIANT.superseded,
+    },
     {
         key: 'cancelled',
         label: 'Cancelled',
@@ -49,9 +52,8 @@ const VIEWS: { key: ViewKey; label: string; variant?: FilterChip['variant'] }[] 
 ];
 const viewCounts = ref<ProformaInvoiceViewCounts>({
     all: 0,
-    pending: 0,
-    issued: 0,
-    paid: 0,
+    current: 0,
+    superseded: 0,
     cancelled: 0,
 });
 const viewChips = computed<FilterChip[]>(() =>

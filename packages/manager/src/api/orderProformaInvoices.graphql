@@ -3,7 +3,11 @@ query OrderProformaInvoices($orderId: ID!) {
         id
         number
         version
-        status
+        displayStatus
+        issuedAt
+        dueDate
+        kind
+        salesInvoiceNumber
         amount
         currencyCode
         organizationId
@@ -32,6 +36,12 @@ query OrderProformaInvoices($orderId: ID!) {
 
 mutation RequestProformaInvoicesForOrder($orderId: ID!) {
     requestProformaInvoicesForOrder(orderId: $orderId) {
+        id
+    }
+}
+
+mutation WithdrawProformaInvoice($id: ID!) {
+    withdrawProformaInvoice(id: $id) {
         id
     }
 }

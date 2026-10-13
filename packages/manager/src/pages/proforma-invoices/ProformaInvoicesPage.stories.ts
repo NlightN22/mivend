@@ -20,7 +20,7 @@ const PROFORMA_INVOICES = [
         counterpartyId: '1',
         amount: 450000,
         currencyCode: 'RUB',
-        status: 'issued',
+        displayStatus: 'current',
         branchId: 'branch-a',
     },
     {
@@ -29,7 +29,7 @@ const PROFORMA_INVOICES = [
         counterpartyId: '2',
         amount: 129000,
         currencyCode: 'RUB',
-        status: 'paid',
+        displayStatus: 'current',
         branchId: 'branch-a',
     },
     {
@@ -38,7 +38,7 @@ const PROFORMA_INVOICES = [
         counterpartyId: '1',
         amount: 78000,
         currencyCode: 'RUB',
-        status: 'overdue',
+        displayStatus: 'superseded',
         branchId: 'branch-b',
     },
     {
@@ -47,7 +47,7 @@ const PROFORMA_INVOICES = [
         counterpartyId: '3',
         amount: 315000,
         currencyCode: 'RUB',
-        status: 'issued',
+        displayStatus: 'current',
         branchId: 'branch-b',
     },
     {
@@ -56,7 +56,7 @@ const PROFORMA_INVOICES = [
         counterpartyId: '2',
         amount: 54000,
         currencyCode: 'RUB',
-        status: 'paid',
+        displayStatus: 'current',
         branchId: 'branch-a',
     },
     {
@@ -65,7 +65,7 @@ const PROFORMA_INVOICES = [
         counterpartyId: '3',
         amount: 96000,
         currencyCode: 'RUB',
-        status: 'cancelled',
+        displayStatus: 'cancelled',
         branchId: 'branch-b',
     },
 ];
@@ -79,7 +79,7 @@ function mockProformaInvoicesData(): void {
     registerMock('ProformaInvoicesPage', (variables: ProformaInvoicesPageVariables) => {
         let filtered = PROFORMA_INVOICES;
         if (variables.options?.status) {
-            filtered = filtered.filter(i => i.status === variables.options!.status);
+            filtered = filtered.filter(i => i.displayStatus === variables.options!.status);
         }
         if (variables.counterpartyId) {
             filtered = filtered.filter(i => i.counterpartyId === variables.counterpartyId);

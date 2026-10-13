@@ -53,11 +53,11 @@ const CUSTOMER_ORDERS: CustomerOrderItem[] = Array.from({ length: 27 }, (_, i) =
     },
 }));
 
-const PROFORMA_INVOICE_STATUSES = ['pending', 'issued', 'paid', 'cancelled'];
-// 6 proforma invoices cycling through all 4 statuses — enough to exercise every chip/badge variant.
+const PROFORMA_INVOICE_STATUSES = ['current', 'superseded', 'cancelled'];
+// 6 proforma invoices cycling through the 3 display statuses — enough to exercise every chip/badge variant.
 const CUSTOMER_PROFORMA_INVOICES: ProformaInvoiceListItem[] = Array.from({ length: 6 }, (_, i) => ({
     id: `INV-${1000 + i}`,
-    number: `ORD-${200 + i}-1`,
+    number: `ORD-${200 + i}-01-1`,
     version: 1,
     supersededBy: null,
     createdAt: new Date(2026, 6, 1 + i).toISOString(),
@@ -65,7 +65,9 @@ const CUSTOMER_PROFORMA_INVOICES: ProformaInvoiceListItem[] = Array.from({ lengt
     counterpartyId: '1',
     amount: 45000 + i * 8760,
     currencyCode: 'RUB',
-    status: PROFORMA_INVOICE_STATUSES[i % PROFORMA_INVOICE_STATUSES.length],
+    displayStatus: PROFORMA_INVOICE_STATUSES[i % PROFORMA_INVOICE_STATUSES.length],
+    issuedAt: new Date(2026, 6, 1 + i).toISOString(),
+    dueDate: new Date(2026, 6, 4 + i).toISOString(),
     branchId: 'branch-a',
     order: { code: `ORD-${200 + i}` },
 }));
@@ -186,21 +188,23 @@ function mockCustomerDetailData(): void {
         };
         const status = variables.options?.status;
         const filtered = status
-            ? CUSTOMER_PROFORMA_INVOICES.filter(inv => inv.status === status)
+            ? CUSTOMER_PROFORMA_INVOICES.filter(inv => inv.displayStatus === status)
             : CUSTOMER_PROFORMA_INVOICES;
         return { visibleProformaInvoices: paginate(filtered, variables.options) };
     });
     registerMock('ProformaInvoiceViewCounts', () => ({
         all: { totalItems: CUSTOMER_PROFORMA_INVOICES.length },
-        pending: {
-            totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.status === 'pending').length,
+        current: {
+            totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.displayStatus === 'current')
+                .length,
         },
-        issued: {
-            totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.status === 'issued').length,
+        superseded: {
+            totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.displayStatus === 'superseded')
+                .length,
         },
-        paid: { totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.status === 'paid').length },
         cancelled: {
-            totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.status === 'cancelled').length,
+            totalItems: CUSTOMER_PROFORMA_INVOICES.filter(i => i.displayStatus === 'cancelled')
+                .length,
         },
     }));
     // Feeds CustomerPaymentsTab (the "Payments" tab) — same shape as the standalone

@@ -31,6 +31,7 @@ const emit = defineEmits<{
             enforceMultiplicity: boolean;
             allowExceedingCreditLimit: boolean;
             prepaymentReserveDays: number;
+            proformaPaymentTermDays: number;
         },
     ];
 }>();
@@ -44,6 +45,7 @@ const form = reactive({
     enforceMultiplicity: false,
     allowExceedingCreditLimit: false,
     prepaymentReserveDays: 3,
+    proformaPaymentTermDays: 3,
 });
 
 // Re-seeds the form whenever a different branch's settings load (or none exist yet) — the two
@@ -60,6 +62,7 @@ watch(
         form.enforceMultiplicity = settings?.enforceMultiplicity ?? false;
         form.allowExceedingCreditLimit = settings?.allowExceedingCreditLimit ?? false;
         form.prepaymentReserveDays = settings?.prepaymentReserveDays ?? 3;
+        form.proformaPaymentTermDays = settings?.proformaPaymentTermDays ?? 3;
     },
     { immediate: true },
 );
@@ -93,6 +96,7 @@ function onSave(): void {
         enforceMultiplicity: form.enforceMultiplicity,
         allowExceedingCreditLimit: form.allowExceedingCreditLimit,
         prepaymentReserveDays: form.prepaymentReserveDays,
+        proformaPaymentTermDays: form.proformaPaymentTermDays,
     });
 }
 </script>
@@ -167,6 +171,19 @@ function onSave(): void {
                 <p class="branch-settings-form__hint">
                     How long stock stays reserved for an order that is waiting for payment (no
                     credit terms) before it is cancelled automatically.
+                </p>
+            </MvFormField>
+
+            <MvFormField label="Proforma invoice payment term (days)">
+                <MvInput
+                    :model-value="String(form.proformaPaymentTermDays)"
+                    type="number"
+                    min="1"
+                    @update:model-value="form.proformaPaymentTermDays = Number($event)"
+                />
+                <p class="branch-settings-form__hint">
+                    Each proforma invoice version is payable until its issue date plus this many
+                    days.
                 </p>
             </MvFormField>
         </section>

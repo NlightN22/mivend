@@ -1,13 +1,24 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { MvButton, MvNotice, MvPanel, MvStatusBadge } from '@mivend/ui-kit';
-import { PROFORMA_INVOICE_STATUS_BADGE_VARIANT } from '../../api/proforma-invoices';
+import {
+    PROFORMA_INVOICE_STATUS_BADGE_VARIANT,
+    PROFORMA_INVOICE_STATUS_LABEL,
+} from '../../api/proforma-invoices';
 import { useOrderProformaInvoices } from '../../composables/useOrderProformaInvoices';
 
 const props = defineProps<{ orderId: string; cancelled: boolean }>();
-const { invoices, allowed, requesting, error, load, request } = useOrderProformaInvoices(
+const { invoices, allowed, requesting, error, load, request, withdraw } = useOrderProformaInvoices(
     () => props.orderId,
 );
+
+function date(iso: string): string {
+    return new Date(iso).toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    });
+}
 
 function money(cents: number, currency: string): string {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
@@ -24,8 +35,13 @@ onMounted(() => void load());
                 <strong>№ {{ invoice.number }}</strong>
                 <MvStatusBadge variant="info">v{{ invoice.version }}</MvStatusBadge>
                 <MvStatusBadge
-                    :variant="PROFORMA_INVOICE_STATUS_BADGE_VARIANT[invoice.status] ?? 'neutral'"
-                    >{{ invoice.status }}</MvStatusBadge
+                    :variant="
+                        PROFORMA_INVOICE_STATUS_BADGE_VARIANT[invoice.displayStatus] ?? 'neutral'
+                    "
+                    >{{
+                        PROFORMA_INVOICE_STATUS_LABEL[invoice.displayStatus] ??
+                        invoice.displayStatus
+                    }}</MvStatusBadge
                 >
                 <span class="pi-amount">{{ money(invoice.amount, invoice.currencyCode) }}</span>
             </div>
@@ -39,13 +55,28 @@ onMounted(() => void load());
                     >PDF</a
                 >
             </div>
+            <div class="pi-meta">
+                Issued {{ date(invoice.issuedAt) }}, pay by {{ date(invoice.dueDate) }}
+                <template v-if="invoice.kind === 'by-shipment'">
+                    · by shipment<template v-if="invoice.salesInvoiceNumber">
+                        (realization № {{ invoice.salesInvoiceNumber }})</template
+                    ></template
+                >
+            </div>
             <div v-if="invoice.supersededBy" class="pi-meta">
-                Replaced by version v{{ invoice.supersededBy.version }} (№
+                There is a newer version v{{ invoice.supersededBy.version }} (№
                 {{ invoice.supersededBy.number }})
             </div>
             <div v-else-if="invoice.supersedes" class="pi-meta">
-                Version {{ invoice.version }}, replaces № {{ invoice.supersedes.number }}
+                Version {{ invoice.version }}, follows № {{ invoice.supersedes.number }}
             </div>
+            <MvButton
+                v-if="allowed && invoice.displayStatus === 'current'"
+                variant="secondary"
+                size="sm"
+                @click="withdraw(invoice.id)"
+                >Withdraw</MvButton
+            >
             <MvNotice v-if="invoice.orderChangedDifference != null" variant="warning">
                 Order changed after payment, difference
                 {{ money(invoice.orderChangedDifference, invoice.currencyCode) }}. Settled through
