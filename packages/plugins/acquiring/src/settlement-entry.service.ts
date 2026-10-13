@@ -38,36 +38,40 @@ export class SettlementEntryService {
         if (!paymentAttempt.proformaInvoiceId) {
             throw new Error(
                 `PaymentAttempt ${paymentAttempt.id} has no proformaInvoiceId — cannot resolve which ` +
-                    'counterparty/organization to allocate against (lump payments with no ' +
-                    'proforma invoice reference are not wired yet, see docs/payments.md)',
+                    'counterparty/organization to allocate against',
             );
         }
-        const targetProformaInvoice = await this.proformaInvoiceService.findOne(
+        const document = await this.proformaInvoiceService.findOne(
             ctx,
             paymentAttempt.proformaInvoiceId,
         );
-        if (!targetProformaInvoice) {
+        if (!document) {
             throw new Error(
                 `ProformaInvoice ${paymentAttempt.proformaInvoiceId} not found for allocation`,
             );
         }
-        if (targetProformaInvoice.currencyCode !== paymentAttempt.currencyCode) {
-            // Never silently cross-allocate currencies — docs/payments.md flags multi-currency
-            // settlement as a genuinely open design question, so refuse rather than guess.
+        if (document.currencyCode !== paymentAttempt.currencyCode) {
             throw new Error(
                 `Currency mismatch: PaymentAttempt ${paymentAttempt.id} is ` +
-                    `${paymentAttempt.currencyCode}, target ProformaInvoice ${targetProformaInvoice.id} is ` +
-                    `${targetProformaInvoice.currencyCode}`,
+                    `${paymentAttempt.currencyCode}, target ProformaInvoice ${document.id} is ` +
+                    `${document.currencyCode}`,
             );
         }
+        const target = {
+            counterpartyId: document.counterpartyId,
+            organizationId: document.organizationId,
+            preferredId: Number(document.id),
+        };
+        const targetProformaInvoice = target;
 
         const openProformaInvoices = await this.getOpenProformaInvoicesFifo(
             ctx,
-            targetProformaInvoice.counterpartyId,
-            targetProformaInvoice.organizationId,
-            targetProformaInvoice.currencyCode,
-            Number(targetProformaInvoice.id),
+            target.counterpartyId,
+            target.organizationId,
+            paymentAttempt.currencyCode,
+            target.preferredId,
         );
+        const alreadyPaid = await this.paidSoFar(ctx, openProformaInvoices);
 
         const repo = this.connection.getRepository(ctx, SettlementEntry);
         const entries: SettlementEntry[] = [];
@@ -75,7 +79,9 @@ export class SettlementEntryService {
 
         for (const proformaInvoice of openProformaInvoices) {
             if (remaining <= 0) break;
-            const owed = proformaInvoice.amount;
+            const owed =
+                proformaInvoice.amount - (alreadyPaid.get(Number(proformaInvoice.id)) ?? 0);
+            if (owed <= 0) continue;
             const allocated = Math.min(remaining, owed);
             entries.push(
                 await repo.save(
@@ -122,6 +128,26 @@ export class SettlementEntryService {
         }
 
         return entries;
+    }
+
+    // Earlier partial payments: a document stays open until the allocations cover its amount.
+    private async paidSoFar(
+        ctx: RequestContext,
+        documents: ProformaInvoice[],
+    ): Promise<Map<number, number>> {
+        if (documents.length === 0) return new Map();
+        const rows = await this.connection
+            .getRepository(ctx, SettlementEntry)
+            .createQueryBuilder('entry')
+            .select('entry.proformaInvoiceId', 'id')
+            .addSelect('SUM(entry.allocationAmount)', 'paid')
+            .where('entry.proformaInvoiceId IN (:...ids)', {
+                ids: documents.map(d => Number(d.id)),
+            })
+            .andWhere('entry.sourceType = :sourceType', { sourceType: 'payment.captured' })
+            .groupBy('entry.proformaInvoiceId')
+            .getRawMany<{ id: number; paid: string }>();
+        return new Map(rows.map(r => [Number(r.id), Number(r.paid)]));
     }
 
     // Running total of unallocated advance credit for a counterparty, grouped by currency. Note:

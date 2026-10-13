@@ -55,7 +55,7 @@ export class ErpCallbackController {
     @HttpCode(200)
     @ApiOperation({
         summary:
-            'Receive a payment fact pushed from the ERP (the ERP) for a ProformaInvoice — durably ' +
+            'Receive a payment document pushed from the ERP, with its own amount; it may name a ProformaInvoice — durably ' +
             'enqueued by plugin-acquiring, never processed inline (the external-integration-rules skill). ' +
             'Also the simulation entry point until a real ERP integration exists.',
     })
@@ -79,6 +79,12 @@ export class ErpCallbackController {
         if (!payload.proformaInvoiceUuid || !UUID_PATTERN.test(payload.proformaInvoiceUuid)) {
             throw new BadRequestException('proformaInvoiceUuid is required and must be a uuid');
         }
+        if (!Number.isSafeInteger(payload.amount) || payload.amount <= 0) {
+            throw new BadRequestException('amount must be a positive integer (minor units)');
+        }
+        if (!payload.currencyCode || !/^[A-Z]{3}$/.test(payload.currencyCode)) {
+            throw new BadRequestException('currencyCode is required (ISO 4217, e.g. RUB)');
+        }
         if (
             payload.proformaInvoiceNumber !== undefined &&
             !DOCUMENT_NUMBER_PATTERN.test(payload.proformaInvoiceNumber)
@@ -94,14 +100,15 @@ export class ErpCallbackController {
         }
         const ctx = await this.requestContextService.create({ apiType: 'admin', req });
         this.eventBus.publish(
-            new ErpPaymentReportedEvent(
-                ctx,
-                payload.proformaInvoiceUuid,
-                payload.organizationId,
-                payload.outcome,
-                payload.erpEventId,
-                payload.proformaInvoiceNumber,
-            ),
+            new ErpPaymentReportedEvent(ctx, {
+                proformaInvoiceUuid: payload.proformaInvoiceUuid,
+                proformaInvoiceNumber: payload.proformaInvoiceNumber,
+                organizationId: payload.organizationId,
+                outcome: payload.outcome,
+                erpEventId: payload.erpEventId,
+                amount: payload.amount,
+                currencyCode: payload.currencyCode,
+            }),
         );
         return { ok: true };
     }

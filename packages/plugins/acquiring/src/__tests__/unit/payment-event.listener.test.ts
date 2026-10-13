@@ -50,14 +50,15 @@ describe('PaymentEventListener', () => {
     it('enqueues an ErpPaymentReportedEvent as provider="erp", channel="bank-transfer-erp"', () => {
         eventBus.emit(
             ErpPaymentReportedEvent,
-            new ErpPaymentReportedEvent(
-                mockCtx,
-                '8b1c7a0e-5d3f-4c1a-9a55-0d3f6f7a1c42',
-                1,
-                'success',
-                'ERP-EVT-1',
-                '1042-01',
-            ),
+            new ErpPaymentReportedEvent(mockCtx, {
+                proformaInvoiceUuid: '8b1c7a0e-5d3f-4c1a-9a55-0d3f6f7a1c42',
+                organizationId: 1,
+                outcome: 'success',
+                erpEventId: 'ERP-EVT-1',
+                amount: 600,
+                currencyCode: 'RUB',
+                proformaInvoiceNumber: '1042-01',
+            }),
         );
 
         expect(inboxService.enqueue).toHaveBeenCalledTimes(1);
@@ -68,6 +69,8 @@ describe('PaymentEventListener', () => {
         expect(payload).toEqual({
             proformaInvoiceUuid: '8b1c7a0e-5d3f-4c1a-9a55-0d3f6f7a1c42',
             proformaInvoiceNumber: '1042-01',
+            amount: 600,
+            currencyCode: 'RUB',
             organizationId: 1,
             outcome: 'success',
             channel: 'bank-transfer-erp',
@@ -79,11 +82,26 @@ describe('PaymentEventListener', () => {
         const uuid = '8b1c7a0e-5d3f-4c1a-9a55-0d3f6f7a1c42';
         eventBus.emit(
             ErpPaymentReportedEvent,
-            new ErpPaymentReportedEvent(mockCtx, uuid, 1, 'success', 'ERP-EVT-2', '1042-01'),
+            new ErpPaymentReportedEvent(mockCtx, {
+                proformaInvoiceUuid: uuid,
+                organizationId: 1,
+                outcome: 'success',
+                erpEventId: 'ERP-EVT-2',
+                amount: 600,
+                currencyCode: 'RUB',
+                proformaInvoiceNumber: '1042-01',
+            }),
         );
         eventBus.emit(
             ErpPaymentReportedEvent,
-            new ErpPaymentReportedEvent(mockCtx, uuid, 1, 'success', 'ERP-EVT-2'),
+            new ErpPaymentReportedEvent(mockCtx, {
+                proformaInvoiceUuid: uuid,
+                organizationId: 1,
+                outcome: 'success',
+                erpEventId: 'ERP-EVT-2',
+                amount: 600,
+                currencyCode: 'RUB',
+            }),
         );
 
         const [first, second] = inboxService.enqueue.mock.calls;
@@ -147,13 +165,14 @@ describe('PaymentEventListener', () => {
     it('does not call payProformaInvoice-adjacent processing — enqueue/rejectAsInvalid are the only side effects', () => {
         eventBus.emit(
             ErpPaymentReportedEvent,
-            new ErpPaymentReportedEvent(
-                mockCtx,
-                '3f1c1a5e-6c1d-4a63-9b0e-0b8a5d2f7a10',
-                1,
-                'success',
-                'ERP-EVT-2',
-            ),
+            new ErpPaymentReportedEvent(mockCtx, {
+                proformaInvoiceUuid: '3f1c1a5e-6c1d-4a63-9b0e-0b8a5d2f7a10',
+                organizationId: 1,
+                outcome: 'success',
+                erpEventId: 'ERP-EVT-2',
+                amount: 600,
+                currencyCode: 'RUB',
+            }),
         );
         expect(Object.keys(inboxService).sort()).toEqual(['enqueue', 'rejectAsInvalid']);
     });

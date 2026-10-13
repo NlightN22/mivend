@@ -23,6 +23,8 @@ describe('ErpCallbackController', () => {
                 organizationId: 1,
                 outcome: 'success',
                 erpEventId: 'ERP-PMT-1',
+                amount: 1000,
+                currencyCode: 'RUB',
             });
 
             expect(eventBus.publish).toHaveBeenCalledTimes(1);
@@ -35,6 +37,8 @@ describe('ErpCallbackController', () => {
                     organizationId: 1,
                     outcome: 'success',
                     erpEventId: '',
+                    amount: 1000,
+                    currencyCode: 'RUB',
                 }),
             ).rejects.toBeInstanceOf(BadRequestException);
 
@@ -48,10 +52,25 @@ describe('ErpCallbackController', () => {
                     organizationId: 0,
                     outcome: 'success',
                     erpEventId: 'ERP-PMT-2',
+                    amount: 1000,
+                    currencyCode: 'RUB',
                 }),
             ).rejects.toBeInstanceOf(BadRequestException);
 
             expect(eventBus.publish).not.toHaveBeenCalled();
+        });
+
+        it.each([0, -5, 1.5, Number.NaN])('rejects amount %s', async amount => {
+            await expect(
+                controller.receivePayment({} as never, {
+                    proformaInvoiceUuid: UUID,
+                    organizationId: 1,
+                    outcome: 'success',
+                    erpEventId: 'ERP-PMT-A',
+                    amount,
+                    currencyCode: 'RUB',
+                }),
+            ).rejects.toBeInstanceOf(BadRequestException);
         });
 
         it('rejects with 400 when proformaInvoiceUuid is missing or not a uuid', async () => {
@@ -61,6 +80,8 @@ describe('ErpCallbackController', () => {
                     organizationId: 1,
                     outcome: 'success',
                     erpEventId: 'ERP-PMT-3',
+                    amount: 1000,
+                    currencyCode: 'RUB',
                 }),
             ).rejects.toBeInstanceOf(BadRequestException);
 
@@ -74,10 +95,12 @@ describe('ErpCallbackController', () => {
                 organizationId: 1,
                 outcome: 'success',
                 erpEventId: 'ERP-PMT-5',
+                amount: 1000,
+                currencyCode: 'RUB',
             });
             const event = eventBus.publish.mock.calls[0][0];
-            expect(event.proformaInvoiceUuid).toBe(UUID);
-            expect(event.proformaInvoiceNumber).toBe('1042-01');
+            expect(event.fact.proformaInvoiceUuid).toBe(UUID);
+            expect(event.fact.proformaInvoiceNumber).toBe('1042-01');
 
             await expect(
                 controller.receivePayment({} as never, {
@@ -86,6 +109,8 @@ describe('ErpCallbackController', () => {
                     organizationId: 1,
                     outcome: 'success',
                     erpEventId: 'ERP-PMT-6',
+                    amount: 1000,
+                    currencyCode: 'RUB',
                 }),
             ).rejects.toBeInstanceOf(BadRequestException);
         });
@@ -97,6 +122,8 @@ describe('ErpCallbackController', () => {
                     organizationId: 1,
                     outcome: 'bogus' as never,
                     erpEventId: 'ERP-PMT-4',
+                    amount: 1000,
+                    currencyCode: 'RUB',
                 }),
             ).rejects.toBeInstanceOf(BadRequestException);
 

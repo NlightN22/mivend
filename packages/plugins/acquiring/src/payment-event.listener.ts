@@ -17,6 +17,8 @@ interface StoredPaymentPayload {
     proformaInvoiceId?: number;
     proformaInvoiceUuid?: string;
     proformaInvoiceNumber?: string;
+    amount?: number;
+    currencyCode?: string;
     organizationId: number;
     outcome: string;
     channel: PaymentChannel;
@@ -44,18 +46,21 @@ export class PaymentEventListener implements OnModuleInit {
             this.eventBus,
             ErpPaymentReportedEvent,
             async event => {
+                const fact = event.fact;
                 const payload: IncomingPaymentPayload = {
-                    proformaInvoiceUuid: event.proformaInvoiceUuid,
-                    proformaInvoiceNumber: event.proformaInvoiceNumber,
-                    organizationId: event.organizationId,
-                    outcome: event.outcome,
+                    proformaInvoiceUuid: fact.proformaInvoiceUuid,
+                    proformaInvoiceNumber: fact.proformaInvoiceNumber,
+                    amount: fact.amount,
+                    currencyCode: fact.currencyCode,
+                    organizationId: fact.organizationId,
+                    outcome: fact.outcome,
                     channel: 'bank-transfer-erp' satisfies PaymentChannel,
-                    externalReference: event.erpEventId,
+                    externalReference: fact.erpEventId,
                 };
                 await this.inboxService.enqueue(
                     event.ctx,
                     'erp',
-                    event.erpEventId,
+                    fact.erpEventId,
                     hashPayload(payload),
                     payload,
                 );

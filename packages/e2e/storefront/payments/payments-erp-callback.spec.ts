@@ -17,6 +17,8 @@ async function postErpPaymentCallback(
     organizationId: string,
     outcome: 'success' | 'pending' | 'fail' | 'cancel',
     erpEventId: string,
+    amount: number,
+    currencyCode: string,
 ): Promise<void> {
     const res = await fetch(`${SERVER_URL}/erp/callback/payment`, {
         method: 'POST',
@@ -29,6 +31,8 @@ async function postErpPaymentCallback(
             organizationId: Number(organizationId),
             outcome,
             erpEventId,
+            amount,
+            currencyCode,
         }),
     });
     if (!res.ok) {
@@ -56,6 +60,8 @@ async function createOpenProformaInvoice(page: Page): Promise<{
     proformaInvoiceUuid: string;
     proformaInvoiceNumber: string;
     organizationId: string;
+    amount: number;
+    currencyCode: string;
     orderCode: string;
 }> {
     await buildOrderAcrossOrganizations(page);
@@ -71,6 +77,8 @@ async function createOpenProformaInvoice(page: Page): Promise<{
         proformaInvoiceUuid: proformaInvoice.uuid,
         proformaInvoiceNumber: proformaInvoice.number,
         organizationId: proformaInvoice.organizationId,
+        amount: proformaInvoice.amount,
+        currencyCode: proformaInvoice.currencyCode,
         orderCode,
     };
 }
@@ -79,11 +87,24 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
     test('a real callback flows through EventBus + inbox + worker sweep and pays the proforma invoice', async ({
         page,
     }) => {
-        const { proformaInvoiceId, proformaInvoiceUuid, proformaInvoiceNumber, organizationId } =
-            await createOpenProformaInvoice(page);
+        const {
+            proformaInvoiceId,
+            proformaInvoiceUuid,
+            proformaInvoiceNumber,
+            organizationId,
+            amount,
+            currencyCode,
+        } = await createOpenProformaInvoice(page);
         const erpEventId = `e2e-erp-${proformaInvoiceId}-${Date.now()}`;
 
-        await postErpPaymentCallback(proformaInvoiceUuid, organizationId, 'success', erpEventId);
+        await postErpPaymentCallback(
+            proformaInvoiceUuid,
+            organizationId,
+            'success',
+            erpEventId,
+            amount,
+            currencyCode,
+        );
         const { processed } = await triggerSweep();
         expect(processed).toBeGreaterThanOrEqual(1);
 
@@ -109,12 +130,26 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
     test('posting the same erpEventId twice does not double-pay or double-allocate', async ({
         page,
     }) => {
-        const { proformaInvoiceId, proformaInvoiceUuid, organizationId } =
+        const { proformaInvoiceId, proformaInvoiceUuid, organizationId, amount, currencyCode } =
             await createOpenProformaInvoice(page);
         const erpEventId = `e2e-erp-dup-${proformaInvoiceId}-${Date.now()}`;
 
-        await postErpPaymentCallback(proformaInvoiceUuid, organizationId, 'success', erpEventId);
-        await postErpPaymentCallback(proformaInvoiceUuid, organizationId, 'success', erpEventId);
+        await postErpPaymentCallback(
+            proformaInvoiceUuid,
+            organizationId,
+            'success',
+            erpEventId,
+            amount,
+            currencyCode,
+        );
+        await postErpPaymentCallback(
+            proformaInvoiceUuid,
+            organizationId,
+            'success',
+            erpEventId,
+            amount,
+            currencyCode,
+        );
         await triggerSweep();
 
         const proformaInvoiceResult = await gql(
@@ -141,11 +176,18 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
     test('the detail page shows a real (not fabricated) processing history for an ERP-sourced payment', async ({
         page,
     }) => {
-        const { proformaInvoiceId, proformaInvoiceUuid, organizationId } =
+        const { proformaInvoiceId, proformaInvoiceUuid, organizationId, amount, currencyCode } =
             await createOpenProformaInvoice(page);
         const erpEventId = `e2e-erp-history-${proformaInvoiceId}-${Date.now()}`;
 
-        await postErpPaymentCallback(proformaInvoiceUuid, organizationId, 'success', erpEventId);
+        await postErpPaymentCallback(
+            proformaInvoiceUuid,
+            organizationId,
+            'success',
+            erpEventId,
+            amount,
+            currencyCode,
+        );
         await triggerSweep();
 
         const paymentsResult = await gql(
@@ -170,7 +212,7 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
     test('a callback declaring the wrong organization is rejected — never silently applied to a proforma invoice from another organization', async ({
         page,
     }) => {
-        const { proformaInvoiceId, proformaInvoiceUuid, organizationId } =
+        const { proformaInvoiceId, proformaInvoiceUuid, organizationId, amount, currencyCode } =
             await createOpenProformaInvoice(page);
         const wrongOrganizationId = String(Number(organizationId) + 1000);
         const erpEventId = `e2e-erp-org-mismatch-${proformaInvoiceId}-${Date.now()}`;
@@ -180,6 +222,8 @@ test.describe('ERP payment callback (bank-transfer-erp inbox flow)', () => {
             wrongOrganizationId,
             'success',
             erpEventId,
+            amount,
+            currencyCode,
         );
         const { failed } = await triggerSweep();
         expect(failed).toBeGreaterThanOrEqual(1);

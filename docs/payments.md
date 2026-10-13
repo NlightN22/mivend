@@ -319,9 +319,12 @@ redeliver.
 How an ERP-reported payment fact is applied (`PaymentInboxProcessorService` -> `PaymentAttemptService` ->
 `SettlementEntryService.allocate`):
 
-1. **Reference.** The fact names a document by `proformaInvoiceUuid` (optionally with its number, which must match).
-   A fact that names no document is dead-lettered today (lump payments with no reference are not wired). The fact's
-   organization must match the document's organization, otherwise an `ORGANIZATION_MISMATCH` issue is raised.
+1. **Reference and amount.** The fact names a document by `proformaInvoiceUuid` (optionally with its number, which
+   must match) and carries the payment's own `amount` (integer minor units, > 0) and `currencyCode`. Allocation uses
+   this amount, never the document's: it may be partial or exceed the document. A currency different from the
+   document's is rejected (`CURRENCY_MISMATCH` issue). The organization must match the document's, otherwise an
+   `ORGANIZATION_MISMATCH` issue is raised. A payment with no document reference belongs to the future real payments
+   stream (#195) and follows the same FIFO rule; the REST callback (test-only) always names a document.
 2. **Order.** The named document first, when open (`pending`/`issued`). A `superseded` named document redirects to
    the current head of its version chain (`supersededById`, same counterparty and organization). Whatever remains,
    or everything when the named document is not open (`paid`, `cancelled`, no open head), goes FIFO over the

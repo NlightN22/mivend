@@ -12,10 +12,26 @@ export const ERP_PAYMENT_OUTCOMES = ['success', 'pending', 'fail', 'cancel'] as 
 
 export class ErpPaymentReportedDto {
     @ApiProperty({
-        description: 'Immutable uuid of the ProformaInvoice this payment applies to.',
+        description: 'Immutable uuid of the ProformaInvoice this payment names.',
         format: 'uuid',
     })
     proformaInvoiceUuid!: string;
+
+    @ApiProperty({
+        description:
+            'Amount the customer actually paid, integer minor units (kopecks), > 0. The payment ' +
+            'is allocated by this amount: it may be partial or exceed the named document (the remainder follows the FIFO rule).',
+        example: 150000,
+    })
+    amount!: number;
+
+    @ApiProperty({
+        description:
+            'ISO 4217 currency of amount; must equal the named document currency (a mismatch is ' +
+            'rejected and recorded as a reconciliation issue).',
+        example: 'RUB',
+    })
+    currencyCode!: string;
 
     @ApiProperty({
         required: false,

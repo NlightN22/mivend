@@ -87,6 +87,20 @@ describe('SettlementEntryService.allocate', () => {
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
     function createMockSettlementRepo() {
         return {
+            createQueryBuilder: vi.fn(() => {
+                const qb = {
+                    select: vi.fn(),
+                    addSelect: vi.fn(),
+                    where: vi.fn(),
+                    andWhere: vi.fn(),
+                    groupBy: vi.fn(),
+                    getRawMany: vi.fn(async () => []),
+                };
+                for (const k of ['select', 'addSelect', 'where', 'andWhere', 'groupBy'] as const) {
+                    qb[k].mockReturnValue(qb);
+                }
+                return qb;
+            }),
             create: vi.fn(input => input),
             save: vi.fn(async (entity: unknown) => ({ ...(entity as object), id: Math.random() })),
         };

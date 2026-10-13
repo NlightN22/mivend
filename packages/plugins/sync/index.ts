@@ -7,6 +7,7 @@ export { StubErpAdapter } from './src/erp-adapter.stub';
 export {
     ErpPaymentReportedEvent,
     BranchKassaPaymentEvent,
+    type ErpPaymentFact,
     type ErpPaymentOutcome,
 } from './src/erp-payment.events';
 export type { SyncPluginOptions, RabbitMQConfig } from './src/types';

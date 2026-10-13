@@ -6,7 +6,7 @@ Updated: 2026-10-12 12:00
 
 An ERP payment fact is applied to the named document, or to the current head of its version chain when that is
 superseded, then FIFO over the counterparty's open documents in the same organization; a remainder becomes an advance.
-The paid snapshot is never rewritten. Rules: `docs/payments.md`, "Payment allocation".
+The ERP payment fact carries its own amount/currency (allocation uses it, not the document's); the paid snapshot is never rewritten. Rules: `docs/payments.md`, "Payment allocation".
 
 ## #223 legacy-name rename (2026-10-12, done)
 

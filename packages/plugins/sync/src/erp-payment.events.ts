@@ -2,23 +2,25 @@ import { RequestContext, VendureEvent } from '@vendure/core';
 
 export type ErpPaymentOutcome = 'success' | 'pending' | 'fail' | 'cancel';
 
-// A payment fact reported by the ERP for a ProformaInvoice (plugin-acquiring's model) — never applied
-// directly here. plugin-acquiring subscribes and durably enqueues it (the external-integration-rules skill);
-// the risky processing (PaymentAttemptService.payProformaInvoice) only ever runs from the inbox worker.
+export interface ErpPaymentFact {
+    // The proforma invoice's immutable uuid; optional human number must match the document when given.
+    proformaInvoiceUuid: string;
+    proformaInvoiceNumber?: string;
+    // Validated against the document's organization.
+    organizationId: number;
+    outcome: ErpPaymentOutcome;
+    erpEventId: string;
+    // What the customer actually paid, integer minor units (> 0): may be partial or exceed the document.
+    amount: number;
+    currencyCode: string;
+}
+
+// A payment document reported by the ERP — never applied directly here. plugin-acquiring subscribes and
+// durably enqueues it (the external-integration-rules skill); processing only runs from the inbox worker.
 export class ErpPaymentReportedEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,
-        // The proforma invoice's immutable uuid; the optional number is a human reference that
-        // must match the document when given.
-        public readonly proformaInvoiceUuid: string,
-        // The organization the reporting side (the ERP) believes this payment belongs to — validated
-        // against the target ProformaInvoice's real organizationId before applying (the external-integration-rules
-        // skill's external-reference-id rule). Payment allocation is scoped by organization only; branch is a visibility
-        // concern, never an allocation boundary — see docs/payments.md "Organizations".
-        public readonly organizationId: number,
-        public readonly outcome: ErpPaymentOutcome,
-        public readonly erpEventId: string,
-        public readonly proformaInvoiceNumber?: string,
+        public readonly fact: ErpPaymentFact,
     ) {
         super();
     }

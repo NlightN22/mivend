@@ -43,6 +43,22 @@ export class PaymentOrganizationMismatchError extends Error {
     }
 }
 
+export class PaymentCurrencyMismatchError extends Error {
+    constructor(proformaInvoiceId: number, expected: string, actual: string) {
+        super(
+            `ProformaInvoice ${proformaInvoiceId} is in ${actual}, but the payment fact is in ` +
+                `${expected} — refusing to apply`,
+        );
+        this.name = 'PaymentCurrencyMismatchError';
+    }
+}
+
+// The payment document itself: what was actually paid, independent of the named document's amount.
+export interface PaymentFact {
+    amount: number;
+    currencyCode: string;
+}
+
 // Until a real acquirer (Robokassa, per docs/payments.md) is wired in, online-acquiring payments
 // still need a mandatory, reconcilable external reference — this stub is deliberately shaped so
 // it can never be mistaken for a real acquirer transaction id once one exists.
@@ -117,6 +133,7 @@ export class PaymentAttemptService {
         channel: PaymentChannel = 'online-acquiring',
         externalReference: string = generateStubExternalReference(channel, proformaInvoiceId),
         expectedOrganizationId?: number,
+        fact?: PaymentFact,
     ): Promise<ProformaInvoice> {
         const proformaInvoice = await this.proformaInvoiceService.findOne(ctx, proformaInvoiceId);
         if (!proformaInvoice) {
@@ -141,6 +158,18 @@ export class PaymentAttemptService {
             );
         }
 
+        if (fact && fact.currencyCode !== proformaInvoice.currencyCode) {
+            await this.reconciliationIssueService.report(ctx, 'CURRENCY_MISMATCH', {
+                proformaInvoiceId,
+                organizationId: proformaInvoice.organizationId,
+                providerPaymentId: externalReference,
+            });
+            throw new PaymentCurrencyMismatchError(
+                proformaInvoiceId,
+                fact.currencyCode,
+                proformaInvoice.currencyCode,
+            );
+        }
         // A direct "pay now" never pays a dead version; an ERP-reported fact is money already received
         // and is applied by allocate (current version of the chain, else FIFO, else advance).
         if (expectedOrganizationId === undefined) {
@@ -191,7 +220,7 @@ export class PaymentAttemptService {
                         channel,
                         proformaInvoiceId: Number(proformaInvoice.id),
                         orderId: proformaInvoice.orderId,
-                        amount: proformaInvoice.amount,
+                        amount: fact?.amount ?? proformaInvoice.amount,
                         currencyCode: proformaInvoice.currencyCode,
                         paymentStatus,
                         providerPaymentId: externalReference,

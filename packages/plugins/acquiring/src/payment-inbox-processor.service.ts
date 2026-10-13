@@ -8,6 +8,7 @@ import { ProformaInvoiceService } from './proforma-invoice.service';
 import {
     PayProformaInvoiceOutcome,
     PaymentAttemptService,
+    PaymentCurrencyMismatchError,
     PaymentOrganizationMismatchError,
 } from './payment-attempt.service';
 
@@ -21,6 +22,10 @@ export interface IncomingPaymentPayload {
     proformaInvoiceId?: number;
     proformaInvoiceUuid?: string;
     proformaInvoiceNumber?: string;
+    // What was actually paid (minor units) and its currency; absent only on branch-kassa facts, which
+    // fall back to the named document's amount.
+    amount?: number;
+    currencyCode?: string;
     // The organization the reporting side (ERP/branch) believes this payment belongs to.
     // PaymentAttemptService.payProformaInvoice validates this against the target ProformaInvoice's real
     // organizationId before applying — a mismatch is a genuine cross-system discrepancy
@@ -62,10 +67,8 @@ export class PaymentInboxProcessorService {
         payload: IncomingPaymentPayload,
     ): Promise<number> {
         if (!payload.proformaInvoiceUuid) {
-            if (payload.proformaInvoiceId === undefined) {
-                throw new ProformaInvoiceReferenceError('Payment fact names no proforma invoice');
-            }
-            return payload.proformaInvoiceId;
+            if (payload.proformaInvoiceId !== undefined) return payload.proformaInvoiceId;
+            throw new ProformaInvoiceReferenceError('Payment fact names no proforma invoice');
         }
         const document = await this.proformaInvoiceService.findByUuid(
             ctx,
@@ -107,19 +110,29 @@ export class PaymentInboxProcessorService {
                     // stub-reference default silently paper over invalid inbound data.
                     throw new Error('Inbox event is missing its mandatory externalReference');
                 }
+                const documentId = await this.resolveProformaInvoiceId(ctx, payload);
+                const fact =
+                    payload.amount !== undefined && payload.currencyCode
+                        ? {
+                              amount: payload.amount,
+                              currencyCode: payload.currencyCode,
+                          }
+                        : undefined;
                 await this.paymentAttemptService.payProformaInvoice(
                     ctx,
-                    await this.resolveProformaInvoiceId(ctx, payload),
+                    documentId,
                     payload.outcome,
                     payload.channel,
                     payload.externalReference,
                     payload.organizationId,
+                    fact,
                 );
                 await this.inboxService.markProcessed(ctx, Number(event.id));
                 processed += 1;
             } catch (err) {
                 if (
                     err instanceof PaymentOrganizationMismatchError ||
+                    err instanceof PaymentCurrencyMismatchError ||
                     err instanceof ProformaInvoiceReferenceError
                 ) {
                     // Retrying cannot fix a wrong organization or document reference, so
