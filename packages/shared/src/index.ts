@@ -52,6 +52,7 @@ export {
 // Backend-only (imports Node's `crypto`) — same "never touched by Vite" carve-out as
 // vendure-events.ts above.
 
+export { isUnconfirmedTaxRateName, unconfirmedTaxRateName } from './vatRate';
 export { cronEveryMs } from './scheduled-task-cron';
 export {
     CATEGORY_FACET_CODE,

@@ -1,16 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ProformaInvoice } from '@mivend/plugin-acquiring';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { withAggregateLock } from 'shared';
 
-import { loggerCtx } from './constants';
-import { Document } from './entities/document.entity';
 import {
     OrganizationRequisites,
     OrganizationSignatory,
 } from './entities/organization-requisites.entity';
 import { hasRequiredRequisites } from './requisites-completeness';
-import { PdfGeneratorService } from './pdf/pdf-generator.service';
+import { ProformaRequeueService } from './proforma-requeue.service';
 
 export const REQUISITE_FIELDS = [
     'inn',
@@ -40,7 +37,7 @@ export interface OrganizationEventInput {
 export class OrganizationEventService {
     constructor(
         private readonly connection: TransactionalConnection,
-        private readonly pdfGenerator: PdfGeneratorService,
+        private readonly requeue: ProformaRequeueService,
     ) {}
 
     async upsertFromEvent(
@@ -56,7 +53,9 @@ export class OrganizationEventService {
         );
         if (!saved) return false;
         // Every event of a complete organization retries failed documents, so a failed requeue is picked up again.
-        if (isComplete(saved)) await this.retryFailedProformas(ctx, saved);
+        if (isComplete(saved)) {
+            await this.requeue.requeueForOrganization(ctx, Number(saved.id), saved.erpId);
+        }
         return true;
     }
 
@@ -86,52 +85,6 @@ export class OrganizationEventService {
         }
         if (input.signatories?.length) entity.signatories = input.signatories;
         return repo.save(entity);
-    }
-
-    private async retryFailedProformas(
-        ctx: RequestContext,
-        organization: OrganizationRequisites,
-    ): Promise<void> {
-        const failed = await this.connection
-            .getRepository(ctx, Document)
-            .createQueryBuilder('document')
-            .select('document.id', 'id')
-            .where('document.type = :type AND document.status = :status', {
-                type: 'proforma-invoice',
-                status: 'failed',
-            })
-            .andWhere(qb => {
-                const sub = qb
-                    .subQuery()
-                    .select('CAST(pi.id AS varchar)')
-                    .from(ProformaInvoice, 'pi')
-                    .where('pi.organizationId = :organizationId')
-                    .getQuery();
-                return `document.proformaInvoiceId IN ${sub}`;
-            })
-            .setParameter('organizationId', Number(organization.id))
-            .getRawMany<{ id: string }>();
-        for (const { id } of failed) {
-            const result = await this.connection
-                .getRepository(ctx, Document)
-                .update({ id, status: 'failed' }, { status: 'pending', metadata: null });
-            if (!result.affected) continue;
-            try {
-                await this.pdfGenerator.enqueue(id);
-            } catch (err) {
-                // No sweep picks up `pending` documents: put it back to failed so the next event retries it.
-                await this.connection
-                    .getRepository(ctx, Document)
-                    .update({ id, status: 'pending' }, { status: 'failed' });
-                throw err;
-            }
-        }
-        if (failed.length) {
-            Logger.info(
-                `Requeued ${failed.length} failed proforma documents for organization ${organization.erpId}`,
-                loggerCtx,
-            );
-        }
     }
 }
 

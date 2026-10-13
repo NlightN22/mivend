@@ -10,8 +10,11 @@ import {
     Order,
     RequestContext,
     RequestContextService,
+    TaxRate,
     TransactionalConnection,
 } from '@vendure/core';
+import { In } from 'typeorm';
+import { isUnconfirmedTaxRateName } from 'shared';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { ProformaInvoiceService } from '@mivend/plugin-acquiring';
 
@@ -26,6 +29,7 @@ import {
 } from './proforma-invoice-template';
 import { buildContractTemplateData, renderContractHtml } from './contract-template';
 import { PdfBrowserService } from './pdf-browser.service';
+import { applyPrintTimeVat } from './proforma-invoice-vat';
 
 interface GenerateDocumentJobData {
     documentId: string;
@@ -128,6 +132,25 @@ export class PdfGeneratorService implements OnModuleInit {
         return new Map(rows.filter(r => r.unitName).map(r => [Number(r.id), r.unitName as string]));
     }
 
+    private async loadConfirmedRates(
+        ctx: RequestContext,
+        lines: ProformaInvoiceSource['lines'],
+    ): Promise<Map<string, number>> {
+        const names = [
+            ...new Set(lines.filter(l => l.taxRate === null).map(l => l.taxCategoryName ?? '')),
+        ].filter(Boolean);
+        if (names.length === 0) return new Map();
+        const rates = await this.connection.getRepository(ctx, TaxRate).find({
+            where: { enabled: true, category: { name: In(names) } },
+            relations: { category: true },
+        });
+        return new Map(
+            rates
+                .filter(r => !isUnconfirmedTaxRateName(r.name))
+                .map(r => [r.category.name, r.value]),
+        );
+    }
+
     // Embeds the logo as a base64 data URI rather than a URL — Puppeteer runs
     // server-side with no reliable public hostname to resolve, and reading the
     // asset's bytes directly avoids that entirely. Returns null when no logo
@@ -209,6 +232,10 @@ export class PdfGeneratorService implements OnModuleInit {
                     productVariant: { name: line.name, sku: line.sku },
                 })),
             };
+            source.lines = applyPrintTimeVat(
+                source.lines,
+                await this.loadConfirmedRates(ctx, source.lines),
+            );
             if (source.lines.some(l => l.taxRate === undefined)) {
                 Logger.warn(
                     `Document ${document.number}: snapshot has no tax data, VAT printed as not specified`,

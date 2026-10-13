@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import { OrganizationEventService } from '../../organization-event.service';
+import { ProformaRequeueService } from '../../proforma-requeue.service';
 
 const ctx = {} as RequestContext;
 const none = {};
@@ -29,7 +30,10 @@ const connection = {
     ),
 };
 const pdf = { enqueue: vi.fn() };
-const service = new OrganizationEventService(connection as never, pdf as never);
+const service = new OrganizationEventService(
+    connection as never,
+    new ProformaRequeueService(connection as never, pdf as never),
+);
 
 beforeEach(() => {
     vi.clearAllMocks();

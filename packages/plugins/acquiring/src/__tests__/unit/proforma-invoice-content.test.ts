@@ -1,3 +1,4 @@
+import { unconfirmedTaxRateName } from 'shared';
 import { describe, expect, it } from 'vitest';
 import type { OrderLine } from '@vendure/core';
 
@@ -150,7 +151,9 @@ describe('snapshot tax', () => {
 
     it('stores a null rate for the unconfirmed placeholder or missing tax lines', () => {
         const placeholder = line(1, 1, 100);
-        placeholder.taxLines = [{ description: 'VAT10 (auto, zone)', taxRate: 0 }] as never;
+        placeholder.taxLines = [
+            { description: unconfirmedTaxRateName('VAT10', 'zone'), taxRate: 0 },
+        ] as never;
         expect(snapshotLine(placeholder).taxRate).toBeNull();
         const none = line(2, 1, 100);
         none.taxLines = [];

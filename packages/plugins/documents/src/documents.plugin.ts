@@ -23,6 +23,7 @@ import { Document } from './entities/document.entity';
 import { OrganizationRequisites } from './entities/organization-requisites.entity';
 import { DocumentsService } from './documents.service';
 import { OrganizationEventService } from './organization-event.service';
+import { ProformaRequeueService } from './proforma-requeue.service';
 import {
     DocumentsResolver,
     DocumentFieldResolver,
@@ -61,8 +62,19 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
             ProformaInvoiceDocumentFieldResolver,
         ],
     },
-    providers: [DocumentsService, PdfBrowserService, PdfGeneratorService, OrganizationEventService],
-    exports: [DocumentsService, PdfGeneratorService, OrganizationEventService],
+    providers: [
+        DocumentsService,
+        PdfBrowserService,
+        PdfGeneratorService,
+        ProformaRequeueService,
+        OrganizationEventService,
+    ],
+    exports: [
+        DocumentsService,
+        PdfGeneratorService,
+        ProformaRequeueService,
+        OrganizationEventService,
+    ],
     compatibility: '>0.0.0',
 })
 export class DocumentsPlugin implements OnApplicationBootstrap {

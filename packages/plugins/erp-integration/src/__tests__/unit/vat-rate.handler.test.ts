@@ -20,6 +20,7 @@ function makeHandler(overrides?: {
     taxRateService?: { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
 }): {
     handler: VatRateStreamHandler;
+    proformaRequeueService: { requeueForUnconfirmedVat: ReturnType<typeof vi.fn> };
     connection: ReturnType<typeof makeConnection>;
     taxCategoryAutoCreateService: { findOrCreate: ReturnType<typeof vi.fn> };
     taxZoneService: { findOrCreateDefaultZone: ReturnType<typeof vi.fn> };
@@ -37,13 +38,24 @@ function makeHandler(overrides?: {
         update: vi.fn().mockResolvedValue({ id: 'rate-existing' }),
     };
 
+    const proformaRequeueService = {
+        requeueForUnconfirmedVat: vi.fn().mockResolvedValue(undefined),
+    };
     const handler = new VatRateStreamHandler(
         connection as never,
         taxCategoryAutoCreateService as never,
         taxZoneService as never,
         taxRateService as never,
+        proformaRequeueService as never,
     );
-    return { handler, connection, taxCategoryAutoCreateService, taxZoneService, taxRateService };
+    return {
+        handler,
+        proformaRequeueService,
+        connection,
+        taxCategoryAutoCreateService,
+        taxZoneService,
+        taxRateService,
+    };
 }
 
 describe('VatRateStreamHandler', () => {
@@ -78,6 +90,22 @@ describe('VatRateStreamHandler', () => {
         expect(taxCategoryAutoCreateService.findOrCreate).not.toHaveBeenCalled();
         expect(taxRateService.create).not.toHaveBeenCalled();
         expect(taxRateService.update).not.toHaveBeenCalled();
+    });
+
+    it('requeues proformas that failed on this category once its rate is confirmed', async () => {
+        const { handler, proformaRequeueService } = makeHandler();
+
+        await handler.apply(ctx, 'entity-1', { code: 'НДС20', zone: 'RU', percent: 20 });
+
+        expect(proformaRequeueService.requeueForUnconfirmedVat).toHaveBeenCalledWith(ctx, 'НДС20');
+    });
+
+    it('does not requeue anything while the rate is still unconfirmed', async () => {
+        const { handler, proformaRequeueService } = makeHandler();
+
+        await handler.apply(ctx, 'entity-1', { code: 'НДС20', zone: 'RU' });
+
+        expect(proformaRequeueService.requeueForUnconfirmedVat).not.toHaveBeenCalled();
     });
 
     it('creates a new TaxRate when none exists yet for (erpVatCode, zone)', async () => {

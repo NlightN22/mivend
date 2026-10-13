@@ -6,6 +6,7 @@ import {
     TaxRateService,
     TransactionalConnection,
 } from '@vendure/core';
+import { unconfirmedTaxRateName } from 'shared';
 
 import { TaxZoneService } from './tax-zone.service';
 import {
@@ -70,7 +71,7 @@ export class TaxCategoryAutoCreateService {
 
         const zone = await this.taxZoneService.findOrCreateDefaultZone(ctx);
         await this.taxRateService.create(ctx, {
-            name: `${rawCode} (auto, ${zone.name})`,
+            name: unconfirmedTaxRateName(rawCode, zone.name),
             enabled: true,
             value: VAT_PLACEHOLDER_RATE_VALUE,
             categoryId: created.id,

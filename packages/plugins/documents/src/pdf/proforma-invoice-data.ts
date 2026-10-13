@@ -123,7 +123,8 @@ function headSigner(requisites: CompleteOrganizationRequisites): Signer {
 
 function formatVat(vat: VatTotal): string {
     if (vat.kind === 'unavailable') return 'не указан';
-    return vat.kind === 'none' ? 'Без НДС' : formatMoneyRu(vat.amount);
+    if (vat.kind === 'none') return 'Без НДС';
+    return vat.kind === 'zero' ? 'НДС 0%' : formatMoneyRu(vat.amount);
 }
 
 function formatQuantity(quantity: number): string {

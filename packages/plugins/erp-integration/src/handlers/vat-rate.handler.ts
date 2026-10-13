@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TaxRate, TaxRateService, TransactionalConnection } from '@vendure/core';
 
+import { ProformaRequeueService } from '@mivend/plugin-documents';
+
 import { TaxCategoryAutoCreateService } from '../tax-category-auto-create.service';
 import { TaxZoneService } from '../tax-zone.service';
 import { toErpVatCode } from '../vat-code-resolver';
@@ -38,6 +40,7 @@ export class VatRateStreamHandler implements InboundStreamHandler {
         private readonly taxCategoryAutoCreateService: TaxCategoryAutoCreateService,
         private readonly taxZoneService: TaxZoneService,
         private readonly taxRateService: TaxRateService,
+        private readonly proformaRequeueService: ProformaRequeueService,
     ) {}
 
     async apply(
@@ -96,6 +99,8 @@ export class VatRateStreamHandler implements InboundStreamHandler {
                 zoneId: zone.id,
             });
         }
+
+        await this.proformaRequeueService.requeueForUnconfirmedVat(ctx, taxCategory.name);
 
         Logger.verbose(
             `Upserted TaxRate for erpVatCode=${erpVatCode} zone=${zone.name} value=${percent}`,
