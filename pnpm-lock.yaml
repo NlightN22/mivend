@@ -130,9 +130,6 @@ importers:
             '@mivend/plugin-retro-bonus':
                 specifier: workspace:*
                 version: link:../../packages/plugins/retro-bonus
-            '@mivend/plugin-settlement':
-                specifier: workspace:*
-                version: link:../../packages/plugins/settlement
             '@mivend/plugin-saved-views':
                 specifier: workspace:*
                 version: link:../../packages/plugins/saved-views
@@ -142,6 +139,9 @@ importers:
             '@mivend/plugin-session-management':
                 specifier: workspace:*
                 version: link:../../packages/plugins/session-management
+            '@mivend/plugin-settlement':
+                specifier: workspace:*
+                version: link:../../packages/plugins/settlement
             '@mivend/plugin-sync':
                 specifier: workspace:*
                 version: link:../../packages/plugins/sync
@@ -768,6 +768,9 @@ importers:
             '@mivend/plugin-documents':
                 specifier: workspace:*
                 version: link:../documents
+            '@mivend/plugin-erp-order':
+                specifier: workspace:*
+                version: link:../erp-order
             '@mivend/plugin-price-entry':
                 specifier: workspace:*
                 version: link:../price-entry
@@ -848,8 +851,8 @@ importers:
                 specifier: ^11.0.0
                 version: 11.4.5(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(reflect-metadata@0.2.2)
             '@nlightn22/event-contracts':
-                specifier: ^0.68.0
-                version: 0.68.0
+                specifier: ^0.69.0
+                version: 0.69.0
             dataloader:
                 specifier: 2.2.3
                 version: 2.2.3
@@ -4891,11 +4894,11 @@ packages:
             rxjs: ^7.2.0
             typeorm: ^0.3.0 || ^1.0.0-dev
 
-    '@nlightn22/event-contracts@0.68.0':
+    '@nlightn22/event-contracts@0.69.0':
         resolution:
             {
-                integrity: sha512-GjqdZ1Tmr0BIprZUS/WhyAm0SxeK8KU2gG1cSTv1Xrpru8222QMkEkF1AtRg0fi/I8YHvbDDed0fzdHWdAMKZw==,
-                tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.68.0/0febf63f8f14ceb95dfd728610fe9e7bf383dc72,
+                integrity: sha512-ZdNC4gAAdgdlO5+U4orFKOiR8b/zMYQRTLavcgL7Pv3Jihh2MQLY1Wc5f3Ajb4b5kEHjrULsYe9vas9GyB4FvQ==,
+                tarball: https://npm.pkg.github.com/download/@nlightn22/event-contracts/0.69.0/207e19780dc1401db71eb2aa8909aabda529ab59,
             }
 
     '@nodelib/fs.scandir@2.1.5':
@@ -18511,7 +18514,7 @@ snapshots:
             rxjs: 7.8.2
             typeorm: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
 
-    '@nlightn22/event-contracts@0.68.0':
+    '@nlightn22/event-contracts@0.69.0':
         dependencies:
             '@bufbuild/protobuf': 2.13.0
 

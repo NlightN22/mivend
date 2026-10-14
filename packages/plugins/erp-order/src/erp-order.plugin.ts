@@ -26,6 +26,9 @@ import { externalOrderProcess } from './external-order.guard';
 import { OrderStatusHistoryEntry } from './entities/order-status-history-entry.entity';
 import { OrderStatusHistoryResolver } from './order-status-history.resolver';
 import { OrderStatusHistoryService } from './order-status-history.service';
+import { OrderStatusReference } from './entities/order-status-reference.entity';
+import { OrderStatusReferenceResolver } from './order-status-reference.resolver';
+import { OrderStatusReferenceService } from './order-status-reference.service';
 import { OrderVisibilityService } from './order-visibility.service';
 import { shopApiExtensions } from './api/shop.schema';
 
@@ -45,6 +48,7 @@ const adminApiSchema = gql`
     providers: [
         ErpOrderService,
         OrderStatusHistoryService,
+        OrderStatusReferenceService,
         OrderVisibilityService,
         ExternalOrderService,
         ExternalOrderCounterpartyListener,
@@ -53,13 +57,14 @@ const adminApiSchema = gql`
     exports: [
         ErpOrderService,
         OrderStatusHistoryService,
+        OrderStatusReferenceService,
         OrderVisibilityService,
         ExternalOrderService,
     ],
-    entities: [OrderStatusHistoryEntry],
+    entities: [OrderStatusHistoryEntry, OrderStatusReference],
     shopApiExtensions: {
         schema: shopApiExtensions,
-        resolvers: [ErpOrderResolver, OrderStatusHistoryResolver],
+        resolvers: [ErpOrderResolver, OrderStatusHistoryResolver, OrderStatusReferenceResolver],
     },
     adminApiExtensions: {
         schema: adminApiSchema,

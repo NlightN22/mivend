@@ -207,7 +207,9 @@ export type InboundStream =
     | 'settlement-document'
     | 'settlement-balance'
     // Issue #227: the ERP-owned document type reference (category, customer visibility).
-    | 'settlement-document-type';
+    | 'settlement-document-type'
+    // sp#200: the ERP-owned order status reference (rank, visibility, description).
+    | 'order-status';
 
 // Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
 // false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
@@ -320,6 +322,7 @@ const ALL_INBOUND_STREAMS_MAP = {
     'settlement-document': true,
     'settlement-balance': true,
     'settlement-document-type': true,
+    'order-status': true,
 } satisfies Record<InboundStream, true>;
 export const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,

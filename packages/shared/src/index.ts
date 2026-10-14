@@ -86,3 +86,4 @@ export {
     type ApiKeyHeaders,
     type ApiKeyOptions,
 } from './api-key';
+export { isNewerVersion, shouldApplyDocument } from './ordering-version';

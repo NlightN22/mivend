@@ -52,6 +52,7 @@ function makeOptions(
                 'settlement-document': 'sdoc',
                 'settlement-balance': 'sbal',
                 'settlement-document-type': 'sdtype',
+                'order-status': 'ostat',
             },
         },
         schemaRegistry: { url: 'http://x' },

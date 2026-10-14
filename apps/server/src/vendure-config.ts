@@ -946,6 +946,10 @@ export const config: VendureConfig = {
                     'settlement-document-type':
                         process.env.INTEGRATION_KAFKA_TOPIC_SETTLEMENT_DOCUMENT_TYPE ??
                         'company.customers.events.v1.settlement-document-type-changed',
+                    // sp#200: order status reference, see OrderStatusStreamHandler.
+                    'order-status':
+                        process.env.INTEGRATION_KAFKA_TOPIC_ORDER_STATUS ??
+                        'company.orders.events.v1.order-status-changed',
                 },
             },
             schemaRegistry: {

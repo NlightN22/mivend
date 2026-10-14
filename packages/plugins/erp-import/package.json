@@ -17,6 +17,7 @@
         "@mivend/plugin-price-entry": "workspace:*",
         "@mivend/plugin-documents": "workspace:*",
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-erp-order": "workspace:*",
         "@nestjs/common": "^11.0.0",
         "@nestjs/core": "^11.0.0",
         "@nestjs/swagger": "^11.0.0",

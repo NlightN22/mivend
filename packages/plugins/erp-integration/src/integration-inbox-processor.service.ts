@@ -19,6 +19,7 @@ import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
 import { GrantedRetroBonusStreamHandler } from './handlers/granted-retro-bonus.handler';
 import { SettlementBalanceStreamHandler } from './handlers/settlement-balance.handler';
 import { SettlementDocumentStreamHandler } from './handlers/settlement-document.handler';
+import { OrderStatusStreamHandler } from './handlers/order-status.handler';
 import { SettlementDocumentTypeStreamHandler } from './handlers/settlement-document-type.handler';
 import { RetroBonusRuleStreamHandler } from './handlers/retro-bonus-rule.handler';
 import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
@@ -91,6 +92,7 @@ export class IntegrationInboxProcessorService {
         settlementDocumentHandler: SettlementDocumentStreamHandler,
         settlementBalanceHandler: SettlementBalanceStreamHandler,
         settlementDocumentTypeHandler: SettlementDocumentTypeStreamHandler,
+        orderStatusHandler: OrderStatusStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -128,6 +130,7 @@ export class IntegrationInboxProcessorService {
             'settlement-document': settlementDocumentHandler,
             'settlement-balance': settlementBalanceHandler,
             'settlement-document-type': settlementDocumentTypeHandler,
+            'order-status': orderStatusHandler,
             // Quantity dimension deliberately deferred to issue #72 (ATP/reservation-drift
             // source-of-truth); organization_id here is not authoritative — StorageLocationChanged
             // above is the sole source for ProductVariant.customFields.organizationId, so this

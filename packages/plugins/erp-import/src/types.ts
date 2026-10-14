@@ -7,6 +7,16 @@ import type {
     EmployeeRecordInput,
 } from '@mivend/plugin-access-control';
 
+export interface OrderStatusRecord {
+    code: string;
+    version: string;
+    name: string;
+    rank: number;
+    terminal: boolean;
+    customerVisible: boolean;
+    description: string;
+}
+
 export interface WarehouseRecord extends WarehouseRecordInput {
     stockLocationName?: string;
 }
@@ -151,7 +161,8 @@ export type ImportRecord =
     | { type: 'branch'; data: BranchRecordInput }
     | { type: 'employee'; data: EmployeeRecordInput }
     | { type: 'warehouse'; data: WarehouseRecord }
-    | { type: 'contract'; data: ContractRecord };
+    | { type: 'contract'; data: ContractRecord }
+    | { type: 'orderStatus'; data: OrderStatusRecord };
 
 export interface BatchImportBody {
     exchangeId: string;

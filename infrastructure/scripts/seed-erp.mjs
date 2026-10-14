@@ -1367,6 +1367,32 @@ async function main() {
         for (const e of positionResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
+    const orderStatuses = [
+        ['UNDER_APPROVAL', 3, 'Under approval', 'Waiting for approval'],
+        ['APPROVED', 4, 'Approved', 'Order approved by the manager'],
+        ['PICKING', 5, 'Picking', 'Order is being picked'],
+        ['SHIPPING', 6, 'Shipped', 'Order shipped from the warehouse'],
+        ['DELIVERING', 7, 'Delivering', 'Order is on its way'],
+        ['DELIVERED', 8, 'Delivered', 'Order delivered'],
+        ['CANCELLED', 0, 'Cancelled', 'Order cancelled'],
+    ].map(([code, rank, name, description]) => ({
+        code,
+        version: '1',
+        name,
+        rank,
+        terminal: code === 'DELIVERED' || code === 'CANCELLED',
+        customerVisible: true,
+        description,
+    }));
+    console.log(`Sending ${orderStatuses.length} order statuses...`);
+    const orderStatusResult = await postBatch(
+        `seed-order-statuses-${run}`,
+        orderStatuses.map(data => ({ type: 'orderStatus', data })),
+    );
+    console.log(
+        `  → status=${orderStatusResult.status} processed=${orderStatusResult.processed} failed=${orderStatusResult.failed}`,
+    );
+
     const employees = [
         {
             erpId: 'emp-001',

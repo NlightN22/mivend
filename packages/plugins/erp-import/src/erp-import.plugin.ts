@@ -4,6 +4,7 @@ import { CrossReferencePlugin } from '@mivend/plugin-cross-reference';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { ErpImportController } from './erp-import.controller';
 import { CategoryHandler } from './handlers/category.handler';
 import { CrossReferenceHandler } from './handlers/cross-reference.handler';
@@ -28,6 +29,7 @@ import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
 import { WarehouseHandler } from './handlers/warehouse.handler';
 import { ContractHandler } from './handlers/contract.handler';
+import { OrderStatusHandler } from './handlers/order-status.handler';
 
 @VendurePlugin({
     imports: [
@@ -37,6 +39,7 @@ import { ContractHandler } from './handlers/contract.handler';
         PriceEntryPlugin,
         DocumentsPlugin,
         AccessControlPlugin,
+        ErpOrderPlugin,
     ],
     entities: [ImportRun, ImportRunError],
     controllers: [ErpImportController],
@@ -62,6 +65,7 @@ import { ContractHandler } from './handlers/contract.handler';
         EmployeeHandler,
         WarehouseHandler,
         ContractHandler,
+        OrderStatusHandler,
     ],
     compatibility: '>0.0.0',
 })

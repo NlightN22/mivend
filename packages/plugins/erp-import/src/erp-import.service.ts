@@ -14,6 +14,7 @@ import { DocumentHandler } from './handlers/document.handler';
 import { OrganizationRequisitesHandler } from './handlers/organization-requisites.handler';
 import { DepartmentHandler } from './handlers/department.handler';
 import { PositionHandler } from './handlers/position.handler';
+import { OrderStatusHandler } from './handlers/order-status.handler';
 import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
 import { WarehouseHandler } from './handlers/warehouse.handler';
@@ -44,6 +45,7 @@ export class ErpImportService {
         private readonly branchHandler: BranchHandler,
         private readonly employeeHandler: EmployeeHandler,
         private readonly positionHandler: PositionHandler,
+        private readonly orderStatusHandler: OrderStatusHandler,
         private readonly warehouseHandler: WarehouseHandler,
         private readonly contractHandler: ContractHandler,
     ) {}
@@ -147,6 +149,9 @@ export class ErpImportService {
                 break;
             case 'contract':
                 await this.contractHandler.upsert(ctx, record.data);
+                break;
+            case 'orderStatus':
+                await this.orderStatusHandler.upsert(ctx, record.data);
                 break;
             default:
                 // No global ValidationPipe/class-validator is wired in this project, so an

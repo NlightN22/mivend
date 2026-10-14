@@ -18,6 +18,14 @@ export const shopApiExtensions = gql`
         previousStatus: String
         status: String!
         createdAt: DateTime!
+        reference: OrderStatusReferenceInfo
+    }
+
+    type OrderStatusReferenceInfo {
+        code: String!
+        name: String!
+        description: String!
+        customerVisible: Boolean!
     }
 
     extend type Order {

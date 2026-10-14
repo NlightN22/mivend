@@ -22,3 +22,9 @@ export type {
     ExternalOrderResult,
 } from './src/external-order.types';
 export { OrderStatusHistoryService } from './src/order-status-history.service';
+export { OrderStatusReferenceService } from './src/order-status-reference.service';
+export type {
+    OrderStatusReferenceInput,
+    OrderStatusReferenceResult,
+} from './src/order-status-reference.service';
+export { OrderStatusReference } from './src/entities/order-status-reference.entity';

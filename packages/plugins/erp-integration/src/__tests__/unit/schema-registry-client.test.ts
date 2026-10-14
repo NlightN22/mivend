@@ -47,6 +47,7 @@ const OPTIONS: ErpIntegrationPluginOptions = {
             'settlement-document': 'sdoc',
             'settlement-balance': 'sbal',
             'settlement-document-type': 'sdtype',
+            'order-status': 'ostat',
         },
     },
     schemaRegistry: { url: 'http://registry.test' },
