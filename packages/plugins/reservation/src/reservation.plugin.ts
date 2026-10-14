@@ -22,6 +22,7 @@ import { ReservationExtensionLimit } from './entities/reservation-extension-limi
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
 import { OrderContractService } from './order-contract.service';
+import { defaultReservationDays, setDefaultReservationDays } from './reservation-days';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { DEFAULT_STOCK_TIER_LOW_MAX, DEFAULT_STOCK_TIER_MEDIUM_MAX } from './stock-tier';
 import { ProductVariantStockResolver } from './product-variant-stock.resolver';
@@ -49,12 +50,7 @@ import { ReservationReconciliationIssueService } from './reservation-reconciliat
 import { ReservationResolver } from './reservation.resolver';
 import { ReservationService } from './reservation.service';
 import { ReservationWriteOffSyncService } from './reservation-write-off-sync.service';
-import {
-    DEFAULT_ORDER_RESERVATION_STATE,
-    DEFAULT_RESERVATION_DAYS,
-    RESERVATION_PLUGIN_OPTIONS,
-    loggerCtx,
-} from './types';
+import { DEFAULT_ORDER_RESERVATION_STATE, RESERVATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ReservationPluginOptions } from './types';
 
 const adminApiSchema = gql`
@@ -209,8 +205,7 @@ const adminApiSchema = gql`
                 name: 'reservationDays',
                 type: 'int' as const,
                 nullable: true,
-                defaultValue:
-                    ReservationPlugin.options?.defaultReservationDays ?? DEFAULT_RESERVATION_DAYS,
+                defaultValue: defaultReservationDays(),
                 // Staff-only — never exposed to the customer-facing Shop API, per
                 // docs/architecture.md's reservation domain note.
                 public: false,
@@ -353,6 +348,7 @@ export class ReservationPlugin implements OnApplicationBootstrap {
 
     static init(options: ReservationPluginOptions): Type<ReservationPlugin> {
         this.options = options;
+        setDefaultReservationDays(options.defaultReservationDays);
         return ReservationPlugin;
     }
 

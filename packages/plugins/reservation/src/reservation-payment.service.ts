@@ -15,10 +15,10 @@ import { ReservationFailureService } from './reservation-failure.service';
 import { ReservationService } from './reservation.service';
 import {
     DEFAULT_PREPAID_RESERVATION_TTL_DAYS,
-    DEFAULT_RESERVATION_DAYS,
     loggerCtx,
     type ReservationCreationMethod,
 } from './types';
+import { defaultReservationDays } from './reservation-days';
 
 const INACTIVE_PAYMENT_STATES: string[] = ['Cancelled', 'Declined', 'Error'];
 
@@ -51,7 +51,7 @@ export class ReservationPaymentService {
             await this.reserveOrRecord(
                 ctx,
                 order.id,
-                placement.reserveDays ?? DEFAULT_RESERVATION_DAYS,
+                placement.reserveDays ?? defaultReservationDays(),
                 'auto-trust-rule',
             );
             return;
@@ -87,7 +87,7 @@ export class ReservationPaymentService {
         // An over-limit order always waits for a manager (#188).
         const payments = await this.loadPayments(ctx, order);
         if (payments.some(p => p.metadata?.public?.creditLimitExceeded === true)) return;
-        await this.reserveOrRecord(ctx, order.id, DEFAULT_RESERVATION_DAYS, 'auto-trust-rule');
+        await this.reserveOrRecord(ctx, order.id, defaultReservationDays(), 'auto-trust-rule');
     }
 
     private async reserveOrRecord(

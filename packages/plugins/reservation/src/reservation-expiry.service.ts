@@ -8,7 +8,8 @@ import { Reservation } from './entities/reservation.entity';
 import { OrderCancellationService } from './order-cancellation.service';
 import type { CancelOutcome } from './order-cancellation.service';
 import { ReservationReleasedEvent } from './reservation.events';
-import { DEFAULT_RESERVATION_DAYS, loggerCtx } from './types';
+import { defaultReservationDays } from './reservation-days';
+import { loggerCtx } from './types';
 
 // A registered/in-progress order is left to the ERP's own release job; staff hear about it only
 // when the reserve is still active this long after the shared deadline.
@@ -42,7 +43,7 @@ export class ReservationExpiryService {
                 .getMany();
 
             const rejectionCutoff = new Date(
-                Date.now() - DEFAULT_RESERVATION_DAYS * 24 * 60 * 60 * 1000,
+                Date.now() - defaultReservationDays() * 24 * 60 * 60 * 1000,
             );
             const rejectedCodes: string[] = (
                 await manager.query(
@@ -131,7 +132,7 @@ export class ReservationExpiryService {
                         sourceType: 'reservation-rejected-release',
                         sourceId: String(row.id),
                         title: 'Reservation released after ERP rejection timeout',
-                        message: `Reservation ${String(row.id)} (order ${row.orderId}) was released after its order stayed REJECTED by the ERP for over ${DEFAULT_RESERVATION_DAYS} day(s).`,
+                        message: `Reservation ${String(row.id)} (order ${row.orderId}) was released after its order stayed REJECTED by the ERP for over ${defaultReservationDays()} day(s).`,
                     });
 
                     const erpReleaseOperationId = randomUUID();

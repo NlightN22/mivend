@@ -198,7 +198,7 @@ reservation — no divergent logic between "automatic" and "manual."
 **Payment classification (superseded by #222 stage 2a)**: the reserve trigger is no longer a per-method
 classification. The placement policy stores `Payment.metadata.placement.route` (`erp-now`,
 `after-payment`, `manager-confirmation`) at checkout and `ReservationPaymentService` reads it:
-`erp-now` reserves at placement (TTL = `placement.reserveDays` for prepayment, else 7 days),
+`erp-now` reserves at placement (TTL = `placement.reserveDays` for prepayment, else the default (3 days)),
 `after-payment` (card, also when over the limit: the payment covers the excess and cures the order) reserves once the payment is Settled (30 days), `manager-confirmation` (cash/bank transfer over the limit) and
 payments without a route (admin-created orders) wait in the confirmation queue (the global
 `autoReserveOnPlacement` switch now only affects orders without a route). See `docs/payments.md`.
@@ -251,12 +251,11 @@ a confirmed business need for it.
 
 ### TTL (decided)
 
-Defaults: **30 days for prepaid**, **7 days for non-prepaid**. Configurable, not hardcoded —
-stored as `PaymentMethod.customFields` (`reservationTtlDays`, nullable int; falls back to the
-30/7 default per classification when unset) so it's editable per payment method in
-**`@vendure/dashboard`** (see `docs/environments.md`'s port table — a standalone app, not
-mounted on the API process) — Vendure's dashboard auto-renders customFields for `PaymentMethod`
-out of the box, no bespoke UI extension needed for this.
+Defaults: **30 days for prepaid** (card, `after-payment` route), **3 days for non-prepaid** (credit
+terms, manual confirmation, auto-reserve), `BranchSettings.prepaymentReserveDays` for prepayment orders.
+The non-prepaid default is the `ReservationPlugin.init({ defaultReservationDays })` option (read through
+`defaultReservationDays()`, never the constant); it also seeds `Order.customFields.reservationDays`, which
+staff can change per order before confirming. The ERP-rejection release timeout reuses the same value.
 Per-channel/per-customer-segment overrides are not needed for stage 1.
 
 **On expiry**:
@@ -546,7 +545,7 @@ qty/location context, so the manager-portal UI can show exactly what's wrong per
 
 - Payment classification and the per-method TTL override were replaced by the placement route
   (#222 stage 2a, see above); the per-method custom fields no longer exist.
-- TTL: 30 days (card paid) / 7 days (credit terms) / `prepaymentReserveDays` (default 3, branch
+- TTL: 30 days (card paid) / 3 days (credit terms, was 7 until 2026-10) / `prepaymentReserveDays` (default 3, branch
   setting) for prepayment orders.
 - `safetyStock`: not needed — dropped from the ATP formula.
 - Audit: reuse Vendure's `HistoryEntry`/`ReadEntityHistory` — no new audit table.

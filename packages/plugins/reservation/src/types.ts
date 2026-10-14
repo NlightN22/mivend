@@ -52,10 +52,9 @@ export const loggerCtx = 'ReservationPlugin';
 
 export const RESERVATION_PLUGIN_OPTIONS = Symbol('RESERVATION_PLUGIN_OPTIONS');
 
-// Manual/non-prepaid default per docs/order-flow.md "TTL (decided)" (7 days non-prepaid / 30
-// days prepaid — the prepaid default is resolved separately, see
-// ReservationService.resolveReservationTtlDays).
-export const DEFAULT_RESERVATION_DAYS = 7;
+// Non-prepaid default, overridable via ReservationPlugin.init({ defaultReservationDays });
+// read it through defaultReservationDays(), never this constant (docs/order-flow.md "TTL").
+export const DEFAULT_RESERVATION_DAYS = 3;
 export const DEFAULT_PREPAID_RESERVATION_TTL_DAYS = 30;
 export const EXPIRY_POLL_INTERVAL_DEFAULT = 60_000;
 

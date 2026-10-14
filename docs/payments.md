@@ -859,7 +859,7 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront 
   the excess is not allocated to the older orders' proforma invoices yet (acquirer/allocation work).
 - Prepayment reserve: `BranchSettings.prepaymentReserveDays` (default 3, manager portal Branch settings -> Credit) is
   copied into `placement.reserveDays` at placement and becomes the reservation TTL, so it reaches the ERP as
-  `reserveUntil`; expiry is the standard #194 auto-cancel. Orders on credit terms keep the 7-day default, paid card
+  `reserveUntil`; expiry is the standard #194 auto-cancel. Orders on credit terms keep the non-prepaid default (3 days), paid card
   orders 30 days.
 - Vendure places an order only on an `Authorized` payment, so cash and bank transfer stay `Authorized` at placement
   (meaning "obligation accepted"); `Settled` is the payment fact. The previous `paymentClassification` /

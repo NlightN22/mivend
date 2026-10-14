@@ -98,7 +98,7 @@ describe('ReservationPaymentService', () => {
             expect(reservationService.reserveOrder).toHaveBeenCalledWith(
                 ctx,
                 'order-1',
-                7,
+                3,
                 'auto-trust-rule',
             );
         });
@@ -254,7 +254,7 @@ describe('ReservationPaymentService', () => {
             expect(reservationService.reserveOrder).toHaveBeenCalledWith(
                 ctx,
                 'order-1',
-                7,
+                3,
                 'auto-trust-rule',
             );
         });
