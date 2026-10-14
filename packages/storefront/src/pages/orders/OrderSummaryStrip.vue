@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { IconBox, IconBuilding, IconCoins, IconMapPin } from '@tabler/icons-vue';
+import { IconBox, IconCoins, IconMapPin } from '@tabler/icons-vue';
 import { MvIconStat } from '@mivend/ui-kit';
 
 defineProps<{
     count: number;
     total: string;
-    organization: string | null;
     pickupPoint: string | null;
 }>();
 const { t } = useI18n();
@@ -34,13 +33,6 @@ function productsLabel(n: number): string {
             :icon="IconCoins"
             :label="t('orders.detail.orderTotal')"
             :value="total"
-        />
-        <MvIconStat
-            v-if="organization"
-            class="oss-item"
-            :icon="IconBuilding"
-            :label="t('orders.detail.organization')"
-            :value="organization"
         />
         <MvIconStat
             v-if="pickupPoint"

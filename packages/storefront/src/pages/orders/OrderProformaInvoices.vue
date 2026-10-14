@@ -59,7 +59,7 @@ onMounted(() => void load());
             }}
         </p>
         <MvButton
-            v-if="!cancelled"
+            v-if="!cancelled && !proformaInvoices.length"
             variant="secondary"
             size="sm"
             :disabled="requesting"

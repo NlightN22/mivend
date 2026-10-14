@@ -100,7 +100,6 @@ onMounted(() => {
                     <OrderSummaryStrip
                         :count="order.lines.length"
                         :total="formatAmount(order.totalWithTax, order.currencyCode)"
-                        :organization="order.organizations.join(', ') || null"
                         :pickup-point="pickupPoint"
                     />
 

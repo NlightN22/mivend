@@ -2301,8 +2301,6 @@ export type Order = Node & {
      * completed the checkout and the Order is no longer "active"
      */
     orderPlacedAt?: Maybe<Scalars['DateTime']['output']>;
-    /** Legal names of the selling organizations of the order lines, in line order. */
-    organizations: Array<Scalars['String']['output']>;
     payments?: Maybe<Array<Payment>>;
     /** Promotions applied to the order. Only gets populated after the payment process has completed. */
     promotions: Array<Promotion>;
@@ -5000,7 +4998,6 @@ export type OrderDetailQuery = {
         code: string;
         state: string;
         cancellable: boolean;
-        organizations: Array<string>;
         createdAt: any;
         totalWithTax: any;
         subTotalWithTax: any;
@@ -6197,7 +6194,6 @@ export const OrderDetailDocument = new TypedDocumentString(`
     code
     state
     cancellable
-    organizations
     createdAt
     totalWithTax
     subTotalWithTax

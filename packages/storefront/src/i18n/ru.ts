@@ -46,7 +46,6 @@ export default {
             actions: 'Действия по заказу',
             history: 'История заказа',
             itemsCount: 'Количество позиций',
-            organization: 'Организация',
             pickupPoint: 'Точка выдачи',
             repeat: 'Повторить заказ',
             copyNumber: 'Скопировать номер заказа',

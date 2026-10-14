@@ -30,8 +30,6 @@ const resultTypes = gql`
     extend type Order {
         "True while the customer or staff may still cancel this order."
         cancellable: Boolean!
-        "Legal names of the selling organizations of the order lines, in line order."
-        organizations: [String!]!
     }
 `;
 
