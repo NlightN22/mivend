@@ -10,17 +10,10 @@ import { PLACEMENT_KEY } from 'shared';
 
 import { DEFAULT_DEFERRED_ORDER_MAX_AGE_DAYS } from './constants';
 
-// Orders whose debt is not in the ERP credit balance yet: it appears only with the sales document
-// (realization, SHIPPING and later). REJECTED is excluded (#204) so it stops blocking the limit.
-export const UNCONFIRMED_ERP_STATUSES = [
-    'PENDING',
-    'SENT_TO_ERP',
-    'RESERVED',
-    'CONFIRMED',
-    'UNDER_APPROVAL',
-    'APPROVED',
-    'PICKING',
-];
+// Statuses whose debt is not in the ERP credit balance yet: it appears only with the sales document
+// (a shipped status); a cancelled or rejected order stops counting (#204). Read from the dictionary.
+export const UNCONFIRMED_ERP_STATUSES_SQL = `SELECT code FROM order_status_reference
+    WHERE NOT shipped AND NOT cancelled AND NOT rejected AND NOT "isDeleted"`;
 
 @Injectable()
 export class OpenDeferredExposureService {
@@ -68,16 +61,10 @@ export class OpenDeferredExposureService {
                        WHERE p."orderId" = o.id AND p.state IN ('Created', 'Authorized', 'Settled')
                    )
                    AND o.id <> $3
-                   AND o."customFieldsErpstatus" = ANY($4)
+                   AND o."customFieldsErpstatus" IN (${UNCONFIRMED_ERP_STATUSES_SQL})
                    AND o.state <> 'Cancelled'
-                   AND o."orderPlacedAt" > now() - make_interval(days => $5::int)`,
-                [
-                    String(counterpartyId),
-                    PLACEMENT_KEY,
-                    excludeOrderId,
-                    UNCONFIRMED_ERP_STATUSES,
-                    maxAgeDays,
-                ],
+                   AND o."orderPlacedAt" > now() - make_interval(days => $4::int)`,
+                [String(counterpartyId), PLACEMENT_KEY, excludeOrderId, maxAgeDays],
             );
         return Number(rows[0]?.total ?? 0) / 100;
     }

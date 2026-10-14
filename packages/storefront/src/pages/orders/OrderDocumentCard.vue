@@ -2,7 +2,6 @@
 import { useI18n } from 'vue-i18n';
 import { MvCopyButton } from '@mivend/ui-kit';
 import type { OrderDetail } from './useOrderDetail';
-import { erpDocumentStatusLabel } from './useOrders';
 import { isNotRegisteredInErp } from './isNotRegisteredInErp';
 import { formatDate } from './orderFormat';
 
@@ -17,13 +16,7 @@ const { t } = useI18n();
             <span class="odc-val">{{ t('orders.detail.notRegistered') }}</span>
         </div>
     </div>
-    <div
-        v-else-if="
-            erpDocumentStatusLabel(order.customFields?.erpOrderStatus) ||
-            order.customFields?.erpRegistrationDocumentNumber
-        "
-        class="odc"
-    >
+    <div v-else-if="order.customFields?.erpRegistrationDocumentNumber" class="odc">
         <h2 class="odc-title">{{ t('orders.detail.document') }}</h2>
         <div v-if="order.customFields?.erpRegistrationDocumentNumber" class="odc-row">
             <span>{{ t('orders.detail.documentNumber') }}</span>
@@ -34,12 +27,6 @@ const { t } = useI18n();
                     :label="t('orders.detail.copyDocumentNumber')"
                 />
             </span>
-        </div>
-        <div v-if="erpDocumentStatusLabel(order.customFields?.erpOrderStatus)" class="odc-row">
-            <span>{{ t('orders.detail.documentStatus') }}</span>
-            <span class="odc-val">{{
-                t(`orders.documentStatus.${order.customFields?.erpOrderStatus}`)
-            }}</span>
         </div>
         <div v-if="order.customFields?.erpStatusAt" class="odc-row">
             <span>{{ t('orders.detail.updated') }}</span>

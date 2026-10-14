@@ -43,13 +43,15 @@ async function derivedStatusFor(
             upsert: vi.fn(),
         } as never,
         { attachOrder: vi.fn() } as never,
-        { findActive: vi.fn().mockResolvedValue(referenceKnown ? {} : null) } as never,
+        {
+            dictionary: async () => ({ get: () => (referenceKnown ? {} : null) }),
+        } as never,
     );
     await handler.apply({} as RequestContext, 'erp-order-1', classified.input.payload);
     return sync.handleOrderChanged.mock.calls[0][1].derivedStatus;
 }
 
-describe('order-changed status_code contract (0.69.0)', () => {
+describe('order-changed status_code contract (0.70.0)', () => {
     it.each([
         'CANCELLED',
         'DELIVERED',
@@ -74,14 +76,11 @@ describe('order-changed status_code contract (0.69.0)', () => {
         expect(await derivedStatusFor({})).toBeNull();
     });
 
-    it('ignores a status_code this code does not know', async () => {
-        expect(await derivedStatusFor({ statusCode: 'SOME_FUTURE_CODE' })).toBeNull();
-    });
-
-    it('retries a code the reference does not carry yet, except CANCELLED', async () => {
-        await expect(derivedStatusFor({ statusCode: 'PICKING' }, false)).rejects.toBeInstanceOf(
-            MissingDependencyError,
-        );
-        expect(await derivedStatusFor({ statusCode: 'CANCELLED' }, false)).toBe('CANCELLED');
+    it('retries a code the dictionary does not carry yet, whatever the code', async () => {
+        for (const code of ['PICKING', 'CANCELLED', 'SOME_FUTURE_CODE']) {
+            await expect(derivedStatusFor({ statusCode: code }, false)).rejects.toBeInstanceOf(
+                MissingDependencyError,
+            );
+        }
     });
 });

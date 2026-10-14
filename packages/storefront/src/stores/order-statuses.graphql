@@ -1,0 +1,16 @@
+query OrderStatuses {
+    orderStatuses {
+        code
+        name
+        description
+        rank
+        customerGroup
+        customerVisible
+        terminal
+        warehouseStarted
+        shipped
+        delivered
+        cancelled
+        rejected
+    }
+}

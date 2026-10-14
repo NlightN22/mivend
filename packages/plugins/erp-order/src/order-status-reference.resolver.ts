@@ -11,7 +11,6 @@ export interface OrderStatusReferenceInfo {
     customerVisible: boolean;
 }
 
-// Null for a mivend-pipeline status: the ERP reference only knows the statuses it derives.
 @Resolver('OrderStatusHistoryEntry')
 export class OrderStatusReferenceResolver {
     constructor(private statuses: OrderStatusReferenceService) {}
@@ -21,13 +20,13 @@ export class OrderStatusReferenceResolver {
         @Ctx() ctx: RequestContext,
         @Parent() entry: OrderStatusHistoryEntry,
     ): Promise<OrderStatusReferenceInfo | null> {
-        const row = await this.statuses.findActive(ctx, entry.status);
-        if (!row) return null;
+        const status = (await this.statuses.dictionary(ctx)).get(entry.status);
+        if (!status) return null;
         return {
-            code: row.code,
-            name: row.name,
-            description: row.description,
-            customerVisible: row.customerVisible,
+            code: status.code,
+            name: status.name,
+            description: status.description,
+            customerVisible: status.customerVisible,
         };
     }
 }

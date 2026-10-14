@@ -11,6 +11,7 @@ import { gql } from 'graphql-tag';
 export const shopApiExtensions = gql`
     extend type Query {
         myOrders(options: OrderListOptions, search: String): OrderList!
+        orderStatuses: [OrderStatusInfo!]!
     }
 
     type OrderStatusHistoryEntry {
@@ -26,6 +27,21 @@ export const shopApiExtensions = gql`
         name: String!
         description: String!
         customerVisible: Boolean!
+    }
+
+    type OrderStatusInfo {
+        code: String!
+        name: String!
+        description: String!
+        rank: Int!
+        customerGroup: String!
+        customerVisible: Boolean!
+        terminal: Boolean!
+        warehouseStarted: Boolean!
+        shipped: Boolean!
+        delivered: Boolean!
+        cancelled: Boolean!
+        rejected: Boolean!
     }
 
     extend type Order {

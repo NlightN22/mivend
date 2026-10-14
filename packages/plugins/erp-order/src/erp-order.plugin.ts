@@ -27,6 +27,8 @@ import { OrderStatusHistoryEntry } from './entities/order-status-history-entry.e
 import { OrderStatusHistoryResolver } from './order-status-history.resolver';
 import { OrderStatusHistoryService } from './order-status-history.service';
 import { OrderStatusReference } from './entities/order-status-reference.entity';
+import { OrderStatusDictionaryResolver } from './order-status-dictionary.resolver';
+import { OrderStatusProvisioningService } from './order-status-provisioning.service';
 import { OrderStatusReferenceResolver } from './order-status-reference.resolver';
 import { OrderStatusReferenceService } from './order-status-reference.service';
 import { OrderVisibilityService } from './order-visibility.service';
@@ -40,6 +42,22 @@ const adminApiSchema = gql`
             customerId: ID
             search: String
         ): OrderList!
+        orderStatuses: [OrderStatusInfo!]!
+    }
+
+    type OrderStatusInfo {
+        code: String!
+        name: String!
+        description: String!
+        rank: Int!
+        customerGroup: String!
+        customerVisible: Boolean!
+        terminal: Boolean!
+        warehouseStarted: Boolean!
+        shipped: Boolean!
+        delivered: Boolean!
+        cancelled: Boolean!
+        rejected: Boolean!
     }
 `;
 
@@ -49,6 +67,7 @@ const adminApiSchema = gql`
         ErpOrderService,
         OrderStatusHistoryService,
         OrderStatusReferenceService,
+        OrderStatusProvisioningService,
         OrderVisibilityService,
         ExternalOrderService,
         ExternalOrderCounterpartyListener,
@@ -64,11 +83,16 @@ const adminApiSchema = gql`
     entities: [OrderStatusHistoryEntry, OrderStatusReference],
     shopApiExtensions: {
         schema: shopApiExtensions,
-        resolvers: [ErpOrderResolver, OrderStatusHistoryResolver, OrderStatusReferenceResolver],
+        resolvers: [
+            ErpOrderResolver,
+            OrderStatusHistoryResolver,
+            OrderStatusReferenceResolver,
+            OrderStatusDictionaryResolver,
+        ],
     },
     adminApiExtensions: {
         schema: adminApiSchema,
-        resolvers: [AdminOrderVisibilityResolver],
+        resolvers: [AdminOrderVisibilityResolver, OrderStatusDictionaryResolver],
     },
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
         config.customFields.Order = [

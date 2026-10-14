@@ -1,3 +1,5 @@
+import type { OrderStatusDictionary } from '@mivend/plugin-erp-order';
+
 export type CancelSubmission = 'none' | 'pending' | 'sent';
 
 export type CancelRefusal =
@@ -7,9 +9,16 @@ export type CancelRefusal =
     | 'refused-by-erp'
     | 'registration-rejected';
 
+// Attributes of the order's erpStatus in the status dictionary; null when it has none yet.
+export interface ErpStageFacts {
+    shipped: boolean;
+    warehouseStarted: boolean;
+    rejected: boolean;
+}
+
 export interface CancelFacts {
     orderState: string;
-    erpStatus: string | null;
+    erpStatus: ErpStageFacts | null;
     erpOrderId: string | null;
     latestFulfillmentState: string | null;
     hasSettledPayment: boolean;
@@ -31,9 +40,7 @@ export type CancelDecision =
     | { action: 'request-only' };
 
 const SHIPPED_ORDER_STATES = ['Shipped', 'PartiallyShipped', 'Delivered', 'PartiallyDelivered'];
-const SHIPPED_ERP_STATUSES = ['SHIPPING', 'DELIVERING', 'DELIVERED'];
 const SHIPPED_FULFILLMENT_STATES = ['Shipped', 'Delivered'];
-const IN_PROGRESS_ERP_STATUSES = ['PICKING'];
 
 // Pure state decision of "what may happen to this order now" (docs/order-contracts.md, "Reserve and
 // order cancellation"); the service performs the chosen action under the order's lock.
@@ -42,21 +49,21 @@ export function decideCancellation(facts: CancelFacts): CancelDecision {
 
     const shipped =
         SHIPPED_ORDER_STATES.includes(facts.orderState) ||
-        (facts.erpStatus !== null && SHIPPED_ERP_STATUSES.includes(facts.erpStatus)) ||
+        facts.erpStatus?.shipped === true ||
         (facts.latestFulfillmentState !== null &&
             SHIPPED_FULFILLMENT_STATES.includes(facts.latestFulfillmentState));
     if (shipped) return { action: 'refuse', reason: 'shipped' };
 
-    if (facts.erpStatus !== null && IN_PROGRESS_ERP_STATUSES.includes(facts.erpStatus)) {
+    if (facts.erpStatus?.warehouseStarted === true) {
         return { action: 'refuse', reason: 'in-progress' };
     }
     if (facts.hasSettledPayment) return { action: 'refuse', reason: 'paid' };
     // At the deadline a rejected order keeps its own rules (#204: notify, then release).
-    if (facts.erpStatus === 'REJECTED' && !facts.requestRegistered) {
+    if (facts.erpStatus?.rejected === true && !facts.requestRegistered) {
         return { action: 'refuse', reason: 'registration-rejected' };
     }
     // The ERP never created a rejected order, so there is nothing to ask it to cancel.
-    if (facts.erpStatus === 'REJECTED') return { action: 'cancel-rejected-locally' };
+    if (facts.erpStatus?.rejected === true) return { action: 'cancel-rejected-locally' };
 
     if (facts.cancelRequestStatus === 'REQUESTED') return { action: 'already-requested' };
     if (facts.cancelRequestStatus === 'REFUSED') {
@@ -78,4 +85,18 @@ export function isOrderCancellable(facts: CancelFacts): boolean {
     if (ACTIVE_CART_STATES.includes(facts.orderState)) return false;
     const { action } = decideCancellation(facts);
     return action !== 'refuse' && action !== 'already-cancelled' && action !== 'leave-to-erp';
+}
+
+export function erpStageFacts(
+    dictionary: OrderStatusDictionary,
+    code: string | null | undefined,
+): ErpStageFacts | null {
+    const entry = dictionary.get(code);
+    return (
+        entry && {
+            shipped: entry.shipped,
+            warehouseStarted: entry.warehouseStarted,
+            rejected: entry.rejected,
+        }
+    );
 }

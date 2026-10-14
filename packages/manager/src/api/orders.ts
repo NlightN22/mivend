@@ -58,11 +58,6 @@ export const ORDER_RESERVATION_STATE_BADGE_VARIANT: Record<string, StatusBadgeVa
     FAILED: 'danger',
 };
 
-// Order.customFields.erpStatus (see plugin-erp-order's ERP_ORDER_STATUSES) — only the one value
-// the manager portal needs a badge/filter for today (issue #204); other statuses are
-// customer-facing only (see storefront's useOrders.ts) and have no manager-side filter yet.
-export const ERP_REJECTED_STATUS = 'REJECTED';
-
 // Order.customFields.reservationFailureReason (plugin-reservation/src/types.ts) — why the last
 // automatic reserve failed; set means "needs staff attention", cleared by a successful reserve (#199).
 export const RESERVATION_FAILURE_LABEL: Record<string, string> = {
@@ -125,7 +120,7 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
         filter.reservationState = { eq: filters.reservationState };
     }
     if (filters.erpStatus) {
-        filter.erpStatus = { eq: filters.erpStatus };
+        filter.erpStatus = { in: filters.erpStatus.split(',') };
     }
     if (filters.reservationFailed) {
         filter.reservationFailureReason = { isNull: false };

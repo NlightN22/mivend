@@ -829,6 +829,11 @@ export type CustomFieldConfig =
     | StructCustomFieldConfig
     | TextCustomFieldConfig;
 
+export type CustomProductMappings = {
+    fullName?: Maybe<Scalars['String']['output']>;
+    oemCodes?: Maybe<Array<Scalars['String']['output']>>;
+};
+
 export type Customer = Node & {
     addresses?: Maybe<Array<Address>>;
     counterparty?: Maybe<Counterparty>;
@@ -2635,6 +2640,21 @@ export type OrderStatusHistoryEntry = {
     uuid: Scalars['String']['output'];
 };
 
+export type OrderStatusInfo = {
+    cancelled: Scalars['Boolean']['output'];
+    code: Scalars['String']['output'];
+    customerGroup: Scalars['String']['output'];
+    customerVisible: Scalars['Boolean']['output'];
+    delivered: Scalars['Boolean']['output'];
+    description: Scalars['String']['output'];
+    name: Scalars['String']['output'];
+    rank: Scalars['Int']['output'];
+    rejected: Scalars['Boolean']['output'];
+    shipped: Scalars['Boolean']['output'];
+    terminal: Scalars['Boolean']['output'];
+    warehouseStarted: Scalars['Boolean']['output'];
+};
+
 export type OrderStatusReferenceInfo = {
     code: Scalars['String']['output'];
     customerVisible: Scalars['Boolean']['output'];
@@ -3113,6 +3133,11 @@ export type PriceRange = {
     min: Scalars['Money']['output'];
 };
 
+export type PriceRangeBucket = {
+    count: Scalars['Int']['output'];
+    to: Scalars['Int']['output'];
+};
+
 export type PriceRangeInput = {
     max: Scalars['Int']['input'];
     min: Scalars['Int']['input'];
@@ -3579,6 +3604,7 @@ export type Query = {
      * general anonymous access to Order data.
      */
     orderByCode?: Maybe<Order>;
+    orderStatuses: Array<OrderStatusInfo>;
     packagesOnlySales: Scalars['Boolean']['output'];
     payment?: Maybe<PaymentAttempt>;
     popularProductIds: Array<Scalars['ID']['output']>;
@@ -3815,7 +3841,9 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
+    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
     inStock?: InputMaybe<Scalars['Boolean']['input']>;
+    priceRange?: InputMaybe<PriceRangeInput>;
     priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
@@ -3831,7 +3859,15 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
+    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
+};
+
+export type SearchResponsePriceData = {
+    buckets: Array<PriceRangeBucket>;
+    bucketsWithTax: Array<PriceRangeBucket>;
+    range: PriceRange;
+    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -3839,6 +3875,9 @@ export type SearchResult = {
     collectionIds: Array<Scalars['ID']['output']>;
     compareAtPrice?: Maybe<Scalars['Int']['output']>;
     currencyCode: CurrencyCode;
+    /** @deprecated Use customProductMappings or customProductVariantMappings */
+    customMappings: CustomProductMappings;
+    customProductMappings: CustomProductMappings;
     customerPrice?: Maybe<Scalars['Int']['output']>;
     description: Scalars['String']['output'];
     discountTiers: Array<DiscountTier>;
@@ -3846,6 +3885,7 @@ export type SearchResult = {
     facetValueIds: Array<Scalars['ID']['output']>;
     /** Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels. */
     galleryPreviews: Array<Scalars['String']['output']>;
+    inStock?: Maybe<Scalars['Boolean']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
     /** Order quantity step of the variant, in base units. */
     multiplicity?: Maybe<Scalars['Int']['output']>;
@@ -5427,6 +5467,25 @@ export type DefaultCurrencyQueryVariables = Exact<{ [key: string]: never }>;
 
 export type DefaultCurrencyQuery = { activeChannel: { defaultCurrencyCode: CurrencyCode } };
 
+export type OrderStatusesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type OrderStatusesQuery = {
+    orderStatuses: Array<{
+        code: string;
+        name: string;
+        description: string;
+        rank: number;
+        customerGroup: string;
+        customerVisible: boolean;
+        terminal: boolean;
+        warehouseStarted: boolean;
+        shipped: boolean;
+        delivered: boolean;
+        cancelled: boolean;
+        rejected: boolean;
+    }>;
+};
+
 export class TypedDocumentString<TResult, TVariables>
     extends String
     implements DocumentTypeDecoration<TResult, TVariables>
@@ -6681,3 +6740,21 @@ export const DefaultCurrencyDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<DefaultCurrencyQuery, DefaultCurrencyQueryVariables>;
+export const OrderStatusesDocument = new TypedDocumentString(`
+    query OrderStatuses {
+  orderStatuses {
+    code
+    name
+    description
+    rank
+    customerGroup
+    customerVisible
+    terminal
+    warehouseStarted
+    shipped
+    delivered
+    cancelled
+    rejected
+  }
+}
+    `) as unknown as TypedDocumentString<OrderStatusesQuery, OrderStatusesQueryVariables>;

@@ -12,11 +12,7 @@ import {
 import { withAggregateLock } from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 
-import {
-    DEFAULT_EXTERNAL_ERP_STATUS,
-    externalOrderState,
-    nextExternalErpStatus,
-} from './external-order-state';
+import { nextExternalErpStatus } from './external-order-state';
 import { buildExternalOrderLines, externalLinesSignature } from './external-order-lines';
 import type { VariantTaxRef } from './external-order-lines';
 import type { ExternalOrderInput, ExternalOrderResult } from './external-order.types';
@@ -133,13 +129,10 @@ export class ExternalOrderService {
                 'ExternalOrderService',
             );
         }
+        const dictionary = await this.statusReference.dictionary(ctx);
         const nextStatus = existing
-            ? nextExternalErpStatus(
-                  existing.erpStatus,
-                  input.erpStatus,
-                  await this.statusReference.ranks(ctx),
-              )
-            : (input.erpStatus ?? DEFAULT_EXTERNAL_ERP_STATUS);
+            ? nextExternalErpStatus(existing.erpStatus, input.erpStatus, dictionary)
+            : (input.erpStatus ?? dictionary.codeWith('externalDefault'));
         const counterpartyFields = input.counterpartyErpId
             ? {
                   counterpartyId: counterparty ? String(counterparty.id) : null,
@@ -163,7 +156,7 @@ export class ExternalOrderService {
 
         if (existing) {
             await repo.update(existing.id, {
-                ...(nextStatus === null ? {} : { state: externalOrderState(nextStatus) }),
+                ...(nextStatus === null ? {} : { state: dictionary.vendureState(nextStatus) }),
                 ...totals,
                 customFields,
             });
@@ -174,11 +167,12 @@ export class ExternalOrderService {
             return { kind: 'updated', orderId: existing.id, counterpartyPending };
         }
 
+        const createdStatus = nextStatus ?? dictionary.codeWith('externalDefault');
         const placedAt = input.orderDate ?? new Date();
         const order = await repo.save(
             new Order({
                 code: await this.configService.orderOptions.orderCodeStrategy.generate(ctx),
-                state: externalOrderState(nextStatus ?? DEFAULT_EXTERNAL_ERP_STATUS),
+                state: dictionary.vendureState(createdStatus),
                 active: false,
                 orderPlacedAt: placedAt,
                 createdAt: placedAt,
@@ -198,7 +192,7 @@ export class ExternalOrderService {
             }),
         );
         await this.insertLines(ctx, order, input, variants);
-        await this.statusHistory.record(ctx, order.id, nextStatus ?? DEFAULT_EXTERNAL_ERP_STATUS);
+        await this.statusHistory.record(ctx, order.id, createdStatus);
         return { kind: 'created', orderId: String(order.id), counterpartyPending };
     }
 

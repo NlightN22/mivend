@@ -1,3 +1,4 @@
+import { testOrderStatusDictionary } from '@mivend/plugin-erp-order';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { Order } from '@vendure/core';
@@ -92,6 +93,7 @@ beforeAll(async () => {
         null as never,
         null as never,
         { record: async () => undefined } as never,
+        { dictionary: async () => testOrderStatusDictionary() } as never,
     );
     const eventBus = {
         publish: (event: unknown) => {
@@ -118,6 +120,7 @@ beforeAll(async () => {
         { reportUnresolvedProductMapping: vi.fn(), reportQuantityMismatch: vi.fn() } as never,
         eventBus as never,
         { apply: vi.fn() } as never,
+        { dictionary: async () => testOrderStatusDictionary() } as never,
     );
     flush = async () => {
         await Promise.all(pending.splice(0));

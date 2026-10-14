@@ -8,13 +8,20 @@ import {
     testDataSourceConnectionOptions,
     testSchemaOptions,
 } from 'shared';
-import { OrderStatusReference, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
+import {
+    MIVEND_ORDER_STATUSES,
+    provisionMivendOrderStatuses,
+    OrderStatusReference,
+    OrderStatusReferenceService,
+} from '@mivend/plugin-erp-order';
 import type { OrderStatusReferenceInput } from '@mivend/plugin-erp-order';
 
 const { schema, extra } = testSchemaOptions('order_status_reference');
 const ctx = {} as RequestContext;
 let dataSource: DataSource;
 let service: OrderStatusReferenceService;
+const provision = (): Promise<void> =>
+    provisionMivendOrderStatuses((sql, params) => dataSource.query(sql, params));
 
 const input = (overrides: Partial<OrderStatusReferenceInput> = {}): OrderStatusReferenceInput => ({
     code: 'PICKING',
@@ -25,6 +32,11 @@ const input = (overrides: Partial<OrderStatusReferenceInput> = {}): OrderStatusR
     terminal: false,
     customerVisible: true,
     description: 'Order is being picked',
+    customerGroup: 'confirmed',
+    warehouseStarted: true,
+    shipped: false,
+    delivered: false,
+    cancelled: false,
     ...overrides,
 });
 
@@ -39,9 +51,8 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    service = new OrderStatusReferenceService(
-        createTestConnection(dataSource) as unknown as TransactionalConnection,
-    );
+    const connection = createTestConnection(dataSource) as unknown as TransactionalConnection;
+    service = new OrderStatusReferenceService(connection);
 });
 
 beforeEach(async () => {
@@ -61,7 +72,15 @@ describe('OrderStatusReferenceService', () => {
         expect(await service.apply(ctx, input())).toBe('applied');
 
         expect(await rows()).toMatchObject([
-            { code: 'PICKING', name: 'Picking', rank: 5, customerVisible: true },
+            {
+                code: 'PICKING',
+                name: 'Picking',
+                rank: 5,
+                customerVisible: true,
+                source: 'erp',
+                warehouseStarted: true,
+                shipped: false,
+            },
         ]);
     });
 
@@ -101,7 +120,7 @@ describe('OrderStatusReferenceService', () => {
         expect(await service.apply(ctx, input({ version: '2026-10-14T11:00:00Z' }))).toBe('stale');
 
         expect(await service.findActive(ctx, 'PICKING')).toBeNull();
-        expect((await service.ranks(ctx)).has('PICKING')).toBe(false);
+        expect((await service.dictionary(ctx)).get('PICKING')).toBeNull();
     });
 
     it('does not create a row for the deletion of an unknown status', async () => {
@@ -121,5 +140,41 @@ describe('OrderStatusReferenceService', () => {
         const stored = await rows();
         expect(stored).toHaveLength(1);
         expect(stored[0].sourceVersion).toBe(versions[7]);
+    });
+
+    it('stores the milestone attributes the decisions read', async () => {
+        await service.apply(ctx, input({ code: 'SHIPPING', shipped: true, rank: 6 }));
+
+        const entry = (await service.dictionary(ctx)).get('SHIPPING');
+        expect(entry).toMatchObject({ shipped: true, warehouseStarted: true, cancelled: false });
+    });
+
+    describe('mivend-owned rows', () => {
+        it('are provisioned at boot, idempotently and under concurrent boots', async () => {
+            await Promise.all([provision(), provision()]);
+            await provision();
+
+            const stored = await rows();
+            expect(stored.map(r => r.code).sort()).toEqual(
+                MIVEND_ORDER_STATUSES.map(r => r.code).sort(),
+            );
+            expect(stored.every(r => r.source === 'mivend')).toBe(true);
+        });
+
+        it('are never overwritten by the stream, and re-provisioning restores them', async () => {
+            await provision();
+
+            expect(await service.apply(ctx, input({ code: 'PENDING', name: 'Hijacked' }))).toBe(
+                'protected',
+            );
+            await dataSource
+                .getRepository(OrderStatusReference)
+                .update({ code: 'PENDING' }, { name: 'Edited in DB' });
+            await provision();
+
+            const dictionary = await service.dictionary(ctx);
+            expect(dictionary.get('PENDING')?.name).toBe('В обработке');
+            expect(dictionary.codeWith('initial')).toBe('PENDING');
+        });
     });
 });

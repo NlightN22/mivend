@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { MvPanel, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
@@ -28,6 +29,8 @@ import OrderContractPanel from '../../components/order-detail/OrderContractPanel
 import ReservationFailurePanel from '../../components/order-detail/ReservationFailurePanel.vue';
 import ReservationPanel from '../../components/order-detail/ReservationPanel.vue';
 
+const statuses = useOrderStatusesStore();
+void statuses.load();
 const route = useRoute();
 const order = ref<OrderDetail | null>(null);
 const managers = ref<ManagerOption[]>([]);
@@ -212,7 +215,10 @@ watch(() => route.params.code, load);
                         <span>{{ order.customFields.erpRegistrationStatus }}</span>
                     </div>
                 </MvPanel>
-                <MvPanel v-if="order.customFields.erpStatus === 'REJECTED'" title="Rejected by ERP">
+                <MvPanel
+                    v-if="statuses.isRejected(order.customFields.erpStatus)"
+                    title="Rejected by ERP"
+                >
                     <div class="order-detail__rejection">
                         <MvStatusBadge variant="danger">Rejected by ERP</MvStatusBadge>
                         <div

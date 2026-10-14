@@ -1,11 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import {
-    ERP_ORDER_STATUSES,
-    ExternalOrderService,
-    OrderStatusReferenceService,
-} from '@mivend/plugin-erp-order';
-import type { ErpOrderStatus } from '@mivend/plugin-erp-order';
+import { ExternalOrderService, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 import { SettlementPendingService } from '@mivend/plugin-settlement';
 
@@ -182,24 +177,20 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             : inboundApplied();
     }
 
-    // status_code is a real `optional string`: absent means the producer derived nothing.
+    // status_code is a real `optional string`: absent means the producer derived nothing. A code the
+    // dictionary does not have yet is a not-yet-arrived dependency and retries.
     private async resolveStatusCode(
         ctx: RequestContext,
         entityId: string,
         statusCode: unknown,
-    ): Promise<ErpOrderStatus | null> {
+    ): Promise<string | null> {
         if (typeof statusCode !== 'string' || statusCode === '') return null;
-        const known = ERP_ORDER_STATUSES.find(code => code === statusCode);
-        if (!known) {
-            Logger.warn(`order-changed ${entityId}: unknown status_code ${statusCode}`, loggerCtx);
-            return null;
-        }
-        if (known !== 'CANCELLED' && !(await this.statusReference.findActive(ctx, known))) {
+        if (!(await this.statusReference.dictionary(ctx)).get(statusCode)) {
             throw new MissingDependencyError(
-                `order-changed ${entityId}: status ${known} is not in the order-status reference yet`,
+                `order-changed ${entityId}: status ${statusCode} is not in the order status dictionary yet`,
             );
         }
-        return known;
+        return statusCode;
     }
 
     // Quantities of a line with a unit are in that unit (#214); local reservations are in base units.

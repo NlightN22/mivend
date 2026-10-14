@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { EventBus, Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
-import type { ErpOrderStatus } from '@mivend/plugin-erp-order';
+import { ErpOrderStatusEvent, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 
 import { OrderErpStatusService } from './order-erp-status.service';
 import { Reservation } from './entities/reservation.entity';
@@ -11,13 +10,6 @@ import { ReservationService } from './reservation.service';
 import { UnknownOrderUuidError } from './reservation-errors';
 import { loggerCtx } from './types';
 import { withAggregateLock } from 'shared';
-
-const WAREHOUSE_ORDER_STATUSES: ReadonlySet<string> = new Set([
-    'PICKING',
-    'SHIPPING',
-    'DELIVERING',
-    'DELIVERED',
-]);
 
 export interface OrderRegistrationResultInput {
     // MiVend's own order uuid (mivend#207), echoed back by the ERP. Preferred correlation key
@@ -73,7 +65,7 @@ export interface OrderChangedInput {
     // Real proto `optional string` (field 15), sent on every emission; null/'' never clears a known number.
     documentNumber?: string | null;
     // mivend's own status derived from the stream's facts; null when none could be derived.
-    derivedStatus: ErpOrderStatus | null;
+    derivedStatus: string | null;
     // OrderChanged.paid_amount in minor units; null/absent means not computed and never overwrites.
     paidAmountMinor?: number | null;
 }
@@ -97,6 +89,7 @@ export class ReservationWriteOffSyncService {
         private reconciliationIssueService: ReservationReconciliationIssueService,
         private eventBus: EventBus,
         private orderErpStatus: OrderErpStatusService,
+        private statuses: OrderStatusReferenceService,
     ) {}
 
     async handleOrderRegistrationResult(
@@ -143,9 +136,11 @@ export class ReservationWriteOffSyncService {
 
         // REJECTED is non-terminal (issue #204): captured here so a later, non-rejected result
         // for the same order can clear both the reason fields and erpStatus back to SENT_TO_ERP.
-        const wasRejected = order.customFields.erpStatus === 'REJECTED';
+        const dictionary = await this.statuses.dictionary(ctx);
+        const wasRejected = dictionary.has(order.customFields.erpStatus, 'rejected');
         const wasPending =
-            order.customFields.erpStatus == null || order.customFields.erpStatus === 'PENDING';
+            order.customFields.erpStatus == null ||
+            dictionary.has(order.customFields.erpStatus, 'initial');
         const missingErpOrderId = !order.customFields.erpOrderId && !!input.orderEntityId;
 
         // Purely informational for staff — never read by the release/quantity-match logic below.
@@ -174,7 +169,9 @@ export class ReservationWriteOffSyncService {
         // erpStatus is owned by plugin-erp-order's ErpOrderService.updateStatus — never written
         // directly here, same separation as ErpCallbackController's own order-status path.
         if (input.rejected) {
-            this.eventBus.publish(new ErpOrderStatusEvent(ctx, order.code, 'REJECTED'));
+            this.eventBus.publish(
+                new ErpOrderStatusEvent(ctx, order.code, dictionary.codeWith('rejected')),
+            );
         } else if (wasRejected || wasPending || missingErpOrderId) {
             // Carries orderEntityId so ErpOrderService.updateStatus stores erpOrderId, the key later
             // order-changed events correlate on; nothing else sets it in this flow.
@@ -182,7 +179,7 @@ export class ReservationWriteOffSyncService {
                 new ErpOrderStatusEvent(
                     ctx,
                     order.code,
-                    'SENT_TO_ERP',
+                    dictionary.codeWith('submitted'),
                     input.orderEntityId ?? undefined,
                 ),
             );
@@ -279,7 +276,7 @@ export class ReservationWriteOffSyncService {
             input.reservedLines,
             input.orderEntityId,
             'order-changed',
-            input.derivedStatus !== null && WAREHOUSE_ORDER_STATUSES.has(input.derivedStatus),
+            (await this.statuses.dictionary(ctx)).has(input.derivedStatus, 'warehouseStarted'),
         );
     }
 

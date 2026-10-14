@@ -49,35 +49,15 @@ declare module '@vendure/core' {
     }
 }
 
-export const ERP_ORDER_STATUSES = [
-    'PENDING',
-    'SENT_TO_ERP',
-    'RESERVED',
-    'CONFIRMED',
-    // Derived from the ERP's order-changed facts (docs/order-contracts.md, "ERP order statuses").
-    'UNDER_APPROVAL',
-    'APPROVED',
-    'PICKING',
-    'SHIPPING',
-    'DELIVERING',
-    'DELIVERED',
-    'CANCELLED',
-    // ERP refused to register the order (issue #204). Non-terminal — a later non-rejected
-    // result clears it back to SENT_TO_ERP.
-    'REJECTED',
-] as const;
-
-export type ErpOrderStatus = (typeof ERP_ORDER_STATUSES)[number];
-
 export interface ErpStatusUpdatePayload {
     orderCode: string;
-    status: ErpOrderStatus;
+    status: string;
     erpOrderId?: string;
 }
 
 export interface OrderErpStatusInfo {
     orderCode: string;
-    status: ErpOrderStatus | null;
+    status: string | null;
     erpOrderId: string | null;
     updatedAt: Date | null;
 }

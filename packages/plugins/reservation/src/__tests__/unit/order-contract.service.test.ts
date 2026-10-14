@@ -1,3 +1,4 @@
+import { testOrderStatusDictionary } from '@mivend/plugin-erp-order';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Order } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
@@ -83,6 +84,7 @@ beforeEach(() => {
         visibility as never,
         { findForOrder: vi.fn(async () => reservations) } as never,
         history as never,
+        { dictionary: async () => testOrderStatusDictionary() } as never,
     );
 });
 

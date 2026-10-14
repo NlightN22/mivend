@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import {
     MvKpiCard,
@@ -25,7 +26,6 @@ import {
     ORDER_STATE_OPTIONS,
     ORDER_RESERVATION_STATE_OPTIONS,
     DATE_RANGE_OPTIONS,
-    ERP_REJECTED_STATUS,
     type OrdersFilters,
     type OrderListItem,
     type OrdersSummary,
@@ -40,6 +40,8 @@ import SavedViewsPanel, { type SavedView } from '../../components/orders/SavedVi
 import MyTableViewsPanel from '../../components/orders/MyTableViewsPanel.vue';
 import type { SavedTableView } from '../../api/orders';
 
+const statuses = useOrderStatusesStore();
+void statuses.load();
 const authStore = useAuthStore();
 
 // Operator/Dept Head/Director/SB see multiple managers' orders; Manager always sees only their
@@ -155,7 +157,7 @@ function applyChip(key: string): void {
               ? 'PaymentSettled'
               : '';
     filters.reservationState = key === 'awaiting-confirmation' ? 'AWAITING_CONFIRMATION' : '';
-    filters.erpStatus = key === 'rejected-by-erp' ? ERP_REJECTED_STATUS : '';
+    filters.erpStatus = key === 'rejected-by-erp' ? statuses.rejectedCodes.join(',') : '';
     filters.reservationFailed = key === 'reservation-failed' ? '1' : '';
     page.value = 1;
 }
@@ -166,7 +168,7 @@ function applyChip(key: string): void {
 // so it can't be round-tripped and always falls back to 'all'.
 function chipFromFilters(f: OrdersFilters): string {
     if (f.reservationState === 'AWAITING_CONFIRMATION') return 'awaiting-confirmation';
-    if (f.erpStatus === ERP_REJECTED_STATUS) return 'rejected-by-erp';
+    if (f.erpStatus && f.erpStatus === statuses.rejectedCodes.join(',')) return 'rejected-by-erp';
     if (f.reservationFailed) return 'reservation-failed';
     if (f.state === 'PaymentAuthorized') return 'processing';
     if (f.state === 'PaymentSettled') return 'awaiting-shipment';

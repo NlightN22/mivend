@@ -1,3 +1,4 @@
+import { testOrderStatusDictionary } from '@mivend/plugin-erp-order';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
@@ -27,6 +28,7 @@ describe('ReservationErpSyncService.handleErpOrderStatus', () => {
         service = new ReservationErpSyncService(
             connection as unknown as TransactionalConnection,
             reservationService as unknown as ReservationService,
+            { dictionary: async () => testOrderStatusDictionary() } as never,
         );
     });
 

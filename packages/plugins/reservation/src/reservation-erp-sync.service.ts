@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { In } from 'typeorm';
+import { OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 
 import { Reservation } from './entities/reservation.entity';
 import { ReservationService } from './reservation.service';
@@ -28,6 +29,7 @@ export class ReservationErpSyncService {
     constructor(
         private connection: TransactionalConnection,
         private reservationService: ReservationService,
+        private statuses: OrderStatusReferenceService,
     ) {}
 
     async handleErpOrderStatus(
@@ -42,7 +44,8 @@ export class ReservationErpSyncService {
             return;
         }
 
-        if (status === 'RESERVED' || status === 'CONFIRMED') {
+        const dictionary = await this.statuses.dictionary(ctx);
+        if (dictionary.has(status, 'reservationConfirmed')) {
             const repo = this.connection.getRepository(ctx, Reservation);
             const active = await repo.find({
                 where: { orderId: String(order.id), status: 'active' },
@@ -57,7 +60,7 @@ export class ReservationErpSyncService {
             return;
         }
 
-        if (status === 'CANCELLED') {
+        if (dictionary.has(status, 'cancelled')) {
             const released = await this.reservationService.releaseReservations(ctx, order.id);
             if (released > 0) {
                 Logger.warn(

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import { computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Column } from 'element-plus';
@@ -25,6 +26,8 @@ const props = defineProps<{
     pageSize?: number;
     hiddenColumnKeys?: Set<string>;
 }>();
+const statuses = useOrderStatusesStore();
+void statuses.load();
 const router = useRouter();
 
 function managerName(id: string | null | undefined): string {
@@ -152,7 +155,7 @@ const rows = computed<TableRow[]>(() =>
             manager: managerName(order.customer?.counterparty?.assignedManagerId),
             state: ORDER_STATE_LABEL[order.state] ?? order.state,
             stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
-            erpRejected: order.customFields?.erpStatus === 'REJECTED',
+            erpRejected: statuses.isRejected(order.customFields?.erpStatus),
             reservationFailed: Boolean(order.customFields?.reservationFailureReason),
             total: new Intl.NumberFormat('en-US', {
                 style: 'currency',

@@ -6,21 +6,17 @@ import type { OrderDetail } from './useOrderDetail';
 import { formatDate } from './orderFormat';
 
 const props = defineProps<{ history: OrderDetail['statusHistory'] }>();
-const { t, te } = useI18n();
+const { t } = useI18n();
 
 type Entry = OrderDetail['statusHistory'][number];
 
-// A status the ERP reference marks as not customer-visible is hidden; one it does not know
-// (the mivend-pipeline statuses) always shows.
+// A status the dictionary marks as not customer-visible is hidden.
 const entries = computed(() =>
     [...props.history].reverse().filter(entry => entry.reference?.customerVisible !== false),
 );
 
 function label(entry: Entry): string {
-    if (entry.reference?.name) return entry.reference.name;
-    return te(`orders.statusLabel.${entry.status}`)
-        ? t(`orders.statusLabel.${entry.status}`)
-        : entry.status;
+    return entry.reference?.name ?? entry.status;
 }
 </script>
 

@@ -15,6 +15,11 @@ export interface OrderStatusRecord {
     terminal: boolean;
     customerVisible: boolean;
     description: string;
+    customerGroup: string;
+    warehouseStarted: boolean;
+    shipped: boolean;
+    delivered: boolean;
+    cancelled: boolean;
 }
 
 export interface WarehouseRecord extends WarehouseRecordInput {

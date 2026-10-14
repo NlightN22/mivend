@@ -1,3 +1,4 @@
+import { testOrderStatusDictionary } from '../../testing/order-status-fixture';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RequestContext } from '@vendure/core';
 import { ErpOrderService } from '../../erp-order.service';
@@ -38,6 +39,9 @@ const mockAdministratorService = { findOneByUserId: vi.fn() };
 const mockCounterpartyService = { getForCustomer: vi.fn() };
 
 const mockStatusHistory = { record: vi.fn() };
+const mockStatusReference = {
+    dictionary: vi.fn().mockResolvedValue(testOrderStatusDictionary()),
+};
 const mockCtx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
 describe('ErpOrderService', () => {
@@ -55,6 +59,7 @@ describe('ErpOrderService', () => {
             mockAdministratorService as never,
             mockCounterpartyService as never,
             mockStatusHistory as never,
+            mockStatusReference as never,
         );
     });
 

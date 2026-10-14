@@ -1,3 +1,4 @@
+import { testOrderStatusDictionary } from '@mivend/plugin-erp-order';
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -125,6 +126,7 @@ function makeBuilder(options: {
         outboundGateway as never,
         { isPackagesOnly: vi.fn(async () => options.packagesOnly === true) } as never,
         identityService(options.linesWithoutIdentity ?? []) as never,
+        { dictionary: async () => testOrderStatusDictionary() } as never,
     );
 }
 

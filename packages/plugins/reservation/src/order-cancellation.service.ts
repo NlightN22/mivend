@@ -10,11 +10,11 @@ import {
     TransactionalConnection,
     isGraphQlErrorResult,
 } from '@vendure/core';
-import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
+import { ErpOrderStatusEvent, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 import { NotificationService } from '@mivend/plugin-notification';
 import { withAggregateLock } from 'shared';
 
-import { decideCancellation } from './order-cancellation.decision';
+import { decideCancellation, erpStageFacts } from './order-cancellation.decision';
 import type { CancelDecision, CancelRefusal } from './order-cancellation.decision';
 import { OrderCancellationPortRegistry } from './order-cancellation.port';
 import { OrderNotEligibleError } from './reservation-errors';
@@ -47,6 +47,7 @@ export class OrderCancellationService {
         private notificationService: NotificationService,
         private eventBus: EventBus,
         private portRegistry: OrderCancellationPortRegistry,
+        private statuses: OrderStatusReferenceService,
     ) {}
 
     async cancel(
@@ -93,7 +94,8 @@ export class OrderCancellationService {
         await this.connection
             .getRepository(ctx, Order)
             .update(order.id, { customFields: { cancelReason: reason } });
-        this.eventBus.publish(new ErpOrderStatusEvent(ctx, order.code, 'CANCELLED'));
+        const cancelledStatus = (await this.statuses.dictionary(ctx)).codeWith('cancelled');
+        this.eventBus.publish(new ErpOrderStatusEvent(ctx, order.code, cancelledStatus));
         await this.notify(ctx, order, 'info', 'Order cancelled', `Order ${order.code}: ${reason}.`);
         if (payments.some(p => p.state === 'Settled')) {
             await this.notify(
@@ -132,9 +134,10 @@ export class OrderCancellationService {
             .getRepository(ctx, Payment)
             .find({ where: { order: { id: order.id } } });
         const fields = order.customFields;
+        const dictionary = await this.statuses.dictionary(ctx);
         const facts = {
             orderState: order.state,
-            erpStatus: fields.erpStatus ?? null,
+            erpStatus: erpStageFacts(dictionary, fields.erpStatus),
             erpOrderId: fields.erpOrderId ?? null,
             latestFulfillmentState: fields.latestFulfillmentState ?? null,
             hasSettledPayment: payments.some(p => p.state === 'Settled'),

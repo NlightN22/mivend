@@ -11,7 +11,6 @@ import { ApiBody, ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestj
 import type { Request } from 'express';
 import { EventBus, RequestContextService } from '@vendure/core';
 import { ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
-import type { ErpOrderStatus } from '@mivend/plugin-erp-order';
 import { ErpStatusUpdateDto } from './dto/erp-status-update.dto';
 import { ERP_PAYMENT_OUTCOMES, ErpPaymentReportedDto } from './dto/erp-payment-reported.dto';
 import { ErpPaymentReportedEvent } from './erp-payment.events';
@@ -41,12 +40,7 @@ export class ErpCallbackController {
     ): Promise<{ ok: boolean }> {
         const ctx = await this.requestContextService.create({ apiType: 'admin', req });
         this.eventBus.publish(
-            new ErpOrderStatusEvent(
-                ctx,
-                payload.orderCode,
-                payload.status as ErpOrderStatus,
-                payload.erpOrderId,
-            ),
+            new ErpOrderStatusEvent(ctx, payload.orderCode, payload.status, payload.erpOrderId),
         );
         return { ok: true };
     }

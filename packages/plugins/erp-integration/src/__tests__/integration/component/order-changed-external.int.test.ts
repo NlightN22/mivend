@@ -17,6 +17,7 @@ import {
     ExternalOrderService,
     OrderStatusReference,
     OrderStatusReferenceService,
+    seedTestOrderStatuses,
 } from '@mivend/plugin-erp-order';
 import {
     createTestSchema,
@@ -109,15 +110,6 @@ class TestCounterparty {
 
 const { schema, extra } = testSchemaOptions('order_changed_external');
 const ERP_ORDER = 'erp-order-1';
-const REFERENCE: Array<[string, number]> = [
-    ['UNDER_APPROVAL', 3],
-    ['APPROVED', 4],
-    ['PICKING', 5],
-    ['SHIPPING', 6],
-    ['DELIVERING', 7],
-    ['DELIVERED', 8],
-    ['CANCELLED', 0],
-];
 let dataSource: DataSource;
 let handler: OrderChangedStreamHandler;
 let externalOrders: ExternalOrderService;
@@ -147,6 +139,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
+    await seedTestOrderStatuses((sql, params) => dataSource.query(sql, params));
 
     const managerOf = (c: RequestContext): EntityManager | undefined =>
         (c as unknown as { __manager?: EntityManager }).__manager;
@@ -205,18 +198,7 @@ beforeEach(async () => {
     await dataSource.query(
         'TRUNCATE TABLE "order", order_line, product, product_variant, counterparty, order_status_reference RESTART IDENTITY CASCADE',
     );
-    await dataSource.getRepository(OrderStatusReference).save(
-        REFERENCE.map(([code, rank]) => ({
-            code,
-            name: code,
-            rank,
-            terminal: false,
-            customerVisible: true,
-            description: '',
-            isDeleted: false,
-            sourceVersion: '1',
-        })),
-    );
+    await seedTestOrderStatuses((sql, params) => dataSource.query(sql, params));
     const product = await dataSource.getRepository(TestProduct).save({ externalId: 'prod-1' });
     await dataSource.getRepository(TestVariant).save({ productId: product.id, taxCategoryId: 3 });
 });

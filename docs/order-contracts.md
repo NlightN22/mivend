@@ -218,54 +218,35 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   cannot be cancelled automatically returns to the confirmation queue.
 - `OpenDeferredExposureService` excludes `Cancelled` orders.
 
-### ERP order statuses (reference-driven, sp#200; event-contracts 0.69.0)
+### Order status dictionary (sp#200; event-contracts 0.70.0)
 
-The ERP side owns the status set, its ranks and its derivation; mivend defined the spec and consumes the result.
-Integration Service derives the status from its own facts and publishes it as `order-changed.status_code` (field 38,
-optional: absent when nothing is derivable), and publishes the status reference as its own compacted topic
-`company.orders.events.v1.order-status-changed` (stream `order-status`, key = `code`). A reference entry carries
-`code`, `name`, `rank`, `terminal`, `customer_visible`, `description` and an optional `is_deleted`; it lives in
-`order_status_reference` (owner `plugin-erp-order`, ERP's own `code` as key, no mivend uuid). Texts and ranks are edited
-in the Integration Service database and republished, never in mivend. The facts (`hasOrder`, `hasRealization`,
-`markedForDeletion`, `inDelivery`, `delivered`) and the raw `status` stay on the contract for other consumers; mivend no
-longer reads the facts. `erpOrderStatus` still stores the raw `status` as received.
+No code knows an order status by name. Statuses are rows of one table, `order_status_reference`; every
+business decision reads a row's **attributes**, never its code. `Order.customFields.erpStatus` is a plain
+string validated against the dictionary; `erpOrderStatus` stays the ERP's raw `status`.
 
-Derivation on the Integration Service side (first match wins, absent fact = not computed, never false):
-
-| `status_code` | ERP fact | rank |
-| --- | --- | --- |
-| CANCELLED | `markedForDeletion` = true (the deletion mark, not `isDeleted`) | 0, outside the line, terminal |
-| DELIVERED | `delivered` = true | 8, terminal |
-| DELIVERING | `inDelivery` = true | 7 |
-| SHIPPING | `hasRealization` = true (pickup stays here) | 6 |
-| PICKING | `hasOrder` = true, no sales document yet | 5 |
-| APPROVED | raw `status` = "Согласован" | 4 |
-| UNDER_APPROVAL | raw `status` = "НаСогласовании" | 3 |
-
-- Mivend-pipeline statuses PENDING (0), REJECTED (0), SENT_TO_ERP (1), RESERVED (2) and CONFIRMED (2) stay mivend-local:
-  they are stages of our own send/registration pipeline, not facts the ERP observes. Their ranks are the only ranks
-  in code (`erp-status-rank.ts`); every other rank comes from the reference.
-- Handling `status_code`: absent -> status untouched; a code this code does not know -> ignored with a warning; a known
-  code missing from the reference -> `MissingDependencyError` (retry with backoff, the reference topic is its own
-  stream), except CANCELLED, which never waits for the reference.
-- `erpStatus` only moves forward by reference rank (`canAdvanceErpStatus`): unposting a sales document in 1C drops
-  `hasRealization`, so the status code falls back and the guard is mandatory. CANCELLED is terminal on our side
-  (owner decision) even if the 1C deletion mark is later removed. A repeated event is a no-op. The write is a partial
-  update of `erpStatus`/`erpStatusAt` under the order's `reserve-order:<id>` lock.
-- `markedForDeletion` is not a plain status write: a not-yet-cancelled order goes through the same path as an
-  `order-cancel-result` "cancelled" answer (local cancel, reservations released, `CANCELLED` status event).
-- The reference version guard is `shouldApplyDocument` (newer wins, a tombstone wins a tie); an older or repeated
-  message is a recorded noop. An unknown `code` is stored as it comes.
-- The order status history (#232) shows the reference `name`/`description` per entry through the shop API field
-  `reference`, hides entries the reference marks not customer-visible, and falls back to the `orders.statusLabel` i18n
-  text for the mivend-pipeline statuses and for a reference entry without a description.
-- Cancellation rules (who may cancel and when) are in "Cancellability" and "Who may cancel" above. Code that decides by
-  status (`order-cancellation.decision.ts`, `externalOrderState`) still knows the fact statuses by code: a code
-  outside `ERP_ORDER_STATUSES` is ignored, so a new ERP status needs a code change before it takes effect.
-- Known edge: the ERP can unmark a deletion or unpost a sales document, so a status can move backwards in 1C; mivend
-  keeps the highest-ranked status and a cancelled order stays cancelled.
-- `reservedQuantity` is the ERP's current remaining reserve of the order, not a status signal; once a warehouse order
-  exists (PICKING or later) a zero reserve is not reported as a mismatch.
+- **ERP-owned rows** (`source = erp`) come from the `order-status` stream (`company.orders.events.v1.order-status-changed`,
+  compacted, key = code): `code`, `name`, `rank`, `terminal`, `customer_visible`, `description`, `warehouse_started`,
+  `shipped`, `delivered`, `cancelled`, `customer_group`, optional `is_deleted`. The ERP side owns the list and the
+  derivation: `order-changed.status_code` is the status it computed from its facts (the five facts stay on the
+  contract but mivend no longer reads them). A code missing from the dictionary retries like a missing dependency.
+- **mivend-owned rows** (`source = mivend`) are the stages of our own send/registration pipeline, which the ERP never
+  observes. They are provisioned at boot (`OrderStatusProvisioningService`, an atomic upsert) and the stream never
+  overwrites them. Their role is an attribute: `initial` (a new order starts here), `submitted` (the ERP got the order),
+  `rejected` (registration refused, non-terminal), `reservationConfirmed` (reserve confirmed by the ERP),
+  `externalDefault` (status of an external order whose status cannot be derived).
+- **Attributes decisions read:** `rank` (forward-only progression), `terminal`, `customerVisible`, `customerGroup`
+  (storefront filter bucket), `warehouseStarted` (cancel refused), `shipped` (cancel refused, debt is in the ERP
+  balance, an external order becomes `Shipped`), `delivered`, `cancelled` (terminal on our side whatever the ERP later
+  reports, even if 1C unmarks the deletion), plus the pipeline roles above.
+- **Forward-only:** `OrderStatusDictionary.canAdvance` moves an order only to a higher rank; a `cancelled` status never
+  moves; an unknown current status never blocks, an unknown next one does. The guard is mandatory: unposting a sales
+  document drops the ERP facts back.
+- **Consumers of attributes:** cancellation decision (`shipped`, `warehouseStarted`, `rejected`), write-off sync
+  (`warehouseStarted`), deferred exposure and credit flag (not `shipped`/`cancelled`/`rejected`), reservation expiry and
+  the health page (`rejected`), contract change (`initial`), external order state (`vendureState` from the flags).
+- **API:** Shop and Admin `orderStatuses` return the dictionary; storefront and manager build labels, badge variants
+  and filter groups from it. No per-status i18n keys.
+- **No backfill:** there is no compatibility layer; an order keeps whatever status string it has.
 
 ### Paid amount on the order
 

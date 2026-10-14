@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { MvStatusBadge, formatDocumentNumber, toast } from '@mivend/ui-kit';
 import { useRepeatOrder } from './useRepeatOrder';
 import type { OrderSummary } from './useOrders';
-import { STATUS_LABEL, STATUS_VARIANT, erpDocumentStatusLabel } from './useOrders';
+import { useOrderStatusesStore } from '../../stores/orderStatuses';
 
 const props = defineProps<{ order: OrderSummary }>();
 const { repeating, repeat } = useRepeatOrder();
@@ -19,9 +19,10 @@ const displayNumber = computed(() => {
     const erpNumber = props.order.customFields?.erpRegistrationDocumentNumber;
     return isExternal.value && erpNumber ? erpNumber : props.order.code;
 });
-const statusKey = computed(() => props.order.customFields?.erpStatus ?? 'PENDING');
-const statusLabel = computed(() => STATUS_LABEL[statusKey.value] ?? statusKey.value);
-const statusVariant = computed(() => STATUS_VARIANT[statusKey.value] ?? 'default');
+const statuses = useOrderStatusesStore();
+const statusKey = computed(() => props.order.customFields?.erpStatus);
+const statusLabel = computed(() => statuses.label(statusKey.value));
+const statusVariant = computed(() => statuses.variant(statusKey.value));
 
 const formattedTotal = computed(() => {
     return (
@@ -42,10 +43,7 @@ const meta = computed(() => {
     });
     const addr = props.order.shippingAddress?.streetLine1 ?? '';
     const count = props.order.lines.length;
-    const documentStatus = erpDocumentStatusLabel(props.order.customFields?.erpOrderStatus);
-    return [date, addr, `${count} item${count !== 1 ? 's' : ''}`, documentStatus]
-        .filter(Boolean)
-        .join(' · ');
+    return [date, addr, `${count} item${count !== 1 ? 's' : ''}`].filter(Boolean).join(' · ');
 });
 
 const preview = computed(() => {

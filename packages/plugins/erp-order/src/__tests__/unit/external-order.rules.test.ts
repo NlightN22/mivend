@@ -2,34 +2,17 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Order, OrderState, RequestContext } from '@vendure/core';
 
 import { ExternalOrderAccessStrategy } from '../../external-order-access.strategy';
-import { externalOrderState, nextExternalErpStatus } from '../../external-order-state';
+import { nextExternalErpStatus } from '../../external-order-state';
+import { testOrderStatusDictionary } from '../../testing/order-status-fixture';
 import { externalOrderProcess, EXTERNAL_ORDER_READONLY_MESSAGE } from '../../external-order.guard';
 import { computeExternalTotals } from '../../external-order.service';
 import type { ExternalOrderInput } from '../../external-order.types';
-import { ERP_ORDER_STATUSES } from '../../types';
 
 const transition = (isExternal: boolean | undefined): unknown =>
     externalOrderProcess.onTransitionStart!('PaymentAuthorized', 'Cancelled' as OrderState, {
         ctx: {} as RequestContext,
         order: { customFields: { isExternal } } as unknown as Order,
     });
-
-describe('externalOrderState', () => {
-    it.each([
-        ['CANCELLED', 'Cancelled'],
-        ['DELIVERED', 'Delivered'],
-        ['SHIPPING', 'Shipped'],
-        ['DELIVERING', 'Shipped'],
-        ['CONFIRMED', 'PaymentAuthorized'],
-        ['APPROVED', 'PaymentAuthorized'],
-    ] as const)('%s -> %s', (status, state) => {
-        expect(externalOrderState(status)).toBe(state);
-    });
-
-    it('maps every ERP status to a state', () => {
-        for (const status of ERP_ORDER_STATUSES) expect(externalOrderState(status)).toBeTruthy();
-    });
-});
 
 describe('externalOrderProcess', () => {
     it('rejects every transition of an external order', () => {
@@ -80,15 +63,6 @@ describe('computeExternalTotals', () => {
     });
 });
 
-const REFERENCE_RANKS = new Map([
-    ['UNDER_APPROVAL', 3],
-    ['APPROVED', 4],
-    ['PICKING', 5],
-    ['SHIPPING', 6],
-    ['DELIVERING', 7],
-    ['DELIVERED', 8],
-]);
-
 describe('nextExternalErpStatus', () => {
     it.each([
         ['CONFIRMED', 'DELIVERED', 'DELIVERED'],
@@ -101,7 +75,7 @@ describe('nextExternalErpStatus', () => {
         ['DELIVERED', null, null],
         ['CONFIRMED', 'PICKING', 'PICKING'],
     ] as const)('%s + %s -> %s', (current, derived, expected) => {
-        expect(nextExternalErpStatus(current, derived, REFERENCE_RANKS)).toBe(expected);
+        expect(nextExternalErpStatus(current, derived, testOrderStatusDictionary())).toBe(expected);
     });
 });
 

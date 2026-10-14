@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ERP_ORDER_STATUSES } from '@mivend/plugin-erp-order';
 
 export class ErpStatusUpdateDto {
     @ApiProperty({
@@ -9,7 +8,9 @@ export class ErpStatusUpdateDto {
     })
     orderCode!: string;
 
-    @ApiProperty({ enum: ERP_ORDER_STATUSES })
+    @ApiProperty({
+        description: 'A status code of the order status dictionary; an unknown code is ignored.',
+    })
     status!: string;
 
     @ApiProperty({

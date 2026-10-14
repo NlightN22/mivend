@@ -1,3 +1,4 @@
+import { testOrderStatusDictionary } from '@mivend/plugin-erp-order';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Order } from '@vendure/core';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
@@ -84,6 +85,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             reconciliationIssueService as unknown as ReservationReconciliationIssueService,
             eventBus as never,
             orderErpStatus as never,
+            { dictionary: async () => testOrderStatusDictionary() } as never,
         );
     });
 
@@ -1045,6 +1047,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             reconciliationIssueService as unknown as ReservationReconciliationIssueService,
             { publish: vi.fn() } as never,
             orderErpStatus as never,
+            { dictionary: async () => testOrderStatusDictionary() } as never,
         );
     });
 

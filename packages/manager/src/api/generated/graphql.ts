@@ -5416,6 +5416,8 @@ export type Order = Node & {
      * completed the checkout and the Order is no longer "active"
      */
     orderPlacedAt: Maybe<Scalars['DateTime']['output']>;
+    /** Legal names of the selling organizations of the order lines, in line order. */
+    organizations: Array<Scalars['String']['output']>;
     packagesOnlySales: Scalars['Boolean']['output'];
     payments: Maybe<Array<Payment>>;
     /** Promotions applied to the order. Only gets populated after the payment process has completed. */
@@ -5838,6 +5840,21 @@ export type OrderStateTransitionError = ErrorResult & {
     message: Scalars['String']['output'];
     toState: Scalars['String']['output'];
     transitionError: Scalars['String']['output'];
+};
+
+export type OrderStatusInfo = {
+    cancelled: Scalars['Boolean']['output'];
+    code: Scalars['String']['output'];
+    customerGroup: Scalars['String']['output'];
+    customerVisible: Scalars['Boolean']['output'];
+    delivered: Scalars['Boolean']['output'];
+    description: Scalars['String']['output'];
+    name: Scalars['String']['output'];
+    rank: Scalars['Int']['output'];
+    rejected: Scalars['Boolean']['output'];
+    shipped: Scalars['Boolean']['output'];
+    terminal: Scalars['Boolean']['output'];
+    warehouseStarted: Scalars['Boolean']['output'];
 };
 
 /**
@@ -7226,6 +7243,7 @@ export type Query = {
     /** Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet. */
     orderPaymentSummaries: Array<OrderPaymentSummary>;
     orderReservations: Array<Reservation>;
+    orderStatuses: Array<OrderStatusInfo>;
     orders: OrderList;
     organizationRequisites: Array<OrganizationRequisites>;
     /** Seed-script idempotency helper only — see seed-payment-refunds.mjs. */
@@ -11143,6 +11161,23 @@ export type WithdrawProformaInvoiceMutationVariables = Exact<{
 
 export type WithdrawProformaInvoiceMutation = { withdrawProformaInvoice: { id: string } };
 
+export type OrderStatusesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type OrderStatusesQuery = {
+    orderStatuses: Array<{
+        code: string;
+        name: string;
+        rank: number;
+        customerGroup: string;
+        terminal: boolean;
+        warehouseStarted: boolean;
+        shipped: boolean;
+        delivered: boolean;
+        cancelled: boolean;
+        rejected: boolean;
+    }>;
+};
+
 export type OrderListItemFieldsFragment = {
     id: string;
     code: string;
@@ -13997,6 +14032,22 @@ export const WithdrawProformaInvoiceDocument = new TypedDocumentString(`
     WithdrawProformaInvoiceMutation,
     WithdrawProformaInvoiceMutationVariables
 >;
+export const OrderStatusesDocument = new TypedDocumentString(`
+    query OrderStatuses {
+  orderStatuses {
+    code
+    name
+    rank
+    customerGroup
+    terminal
+    warehouseStarted
+    shipped
+    delivered
+    cancelled
+    rejected
+  }
+}
+    `) as unknown as TypedDocumentString<OrderStatusesQuery, OrderStatusesQueryVariables>;
 export const OrdersPageDocument = new TypedDocumentString(`
     query OrdersPage($options: OrderListOptions, $managerId: ID, $search: String) {
   visibleOrders(options: $options, managerId: $managerId, search: $search) {

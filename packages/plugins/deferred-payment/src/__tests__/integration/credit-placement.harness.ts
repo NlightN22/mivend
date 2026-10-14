@@ -1,3 +1,4 @@
+import { OrderStatusReference, seedTestOrderStatuses } from '@mivend/plugin-erp-order';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 import { DataSource } from 'typeorm';
 import { CreditLimitCheckService } from '@mivend/plugin-counterparty';
@@ -188,8 +189,11 @@ export function useCreditPlacementHarness(schemaName: string) {
             ...testDataSourceConnectionOptions(),
             schema,
             extra,
+            entities: [OrderStatusReference],
         });
         await dataSource.initialize();
+        await dataSource.synchronize();
+        await seedTestOrderStatuses((sql, params) => dataSource.query(sql, params));
         await run(`CREATE TABLE counterparty (
             id serial PRIMARY KEY, "erpId" varchar, "creditLimit" bigint NOT NULL DEFAULT 0,
             "creditBalance" bigint NOT NULL DEFAULT 0, "paymentDelayDays" integer NOT NULL DEFAULT 0)`);

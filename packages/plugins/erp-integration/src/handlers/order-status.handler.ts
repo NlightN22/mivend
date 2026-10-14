@@ -30,8 +30,16 @@ export class OrderStatusStreamHandler implements InboundStreamHandler {
             terminal: payload.terminal === true,
             customerVisible: payload.customerVisible === true,
             description: String(payload.description ?? ''),
+            customerGroup: String(payload.customerGroup ?? ''),
+            warehouseStarted: payload.warehouseStarted === true,
+            shipped: payload.shipped === true,
+            delivered: payload.delivered === true,
+            cancelled: payload.cancelled === true,
         });
         if (result === 'stale') return inboundNoop(`order-status ${code}: version not newer`);
+        if (result === 'protected') {
+            return inboundNoop(`order-status ${code}: a mivend-owned status is never overwritten`);
+        }
         if (result === 'unknown-deleted') {
             return inboundNoop(`order-status ${code}: deletion of an unknown status`);
         }

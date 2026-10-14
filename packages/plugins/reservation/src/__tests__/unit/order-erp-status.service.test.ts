@@ -1,3 +1,4 @@
+import { testOrderStatusDictionary } from '@mivend/plugin-erp-order';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
@@ -25,15 +26,7 @@ describe('OrderErpStatusService.apply', () => {
             connection as unknown as TransactionalConnection,
             cancelResult as never,
             statusHistory as never,
-            {
-                ranks: async () =>
-                    new Map([
-                        ['APPROVED', 4],
-                        ['PICKING', 5],
-                        ['SHIPPING', 6],
-                        ['DELIVERED', 8],
-                    ]),
-            } as never,
+            { dictionary: async () => testOrderStatusDictionary() } as never,
         );
     });
 
@@ -68,16 +61,16 @@ describe('OrderErpStatusService.apply', () => {
         },
     );
 
-    it('does not apply a status the reference has no rank for', async () => {
+    it('does not apply a status the dictionary does not have', async () => {
         orderRepo.findOne.mockResolvedValue({
             id: 'order-1',
             customFields: { erpStatus: 'SENT_TO_ERP' },
         });
-        await service.apply(ctx, order({}), 'DELIVERING');
+        await service.apply(ctx, order({}), 'NEW_ERP_STAGE');
         expect(statusWrites()).toHaveLength(0);
     });
 
-    it('routes CANCELLED through the cancel-result path instead of writing the status', async () => {
+    it('routes a cancelled status through the cancel-result path instead of writing the status', async () => {
         await service.apply(ctx, order({ uuid: 'u-1' }), 'CANCELLED');
         expect(cancelResult.apply).toHaveBeenCalledWith(ctx, {
             orderUuid: 'u-1',
@@ -88,7 +81,7 @@ describe('OrderErpStatusService.apply', () => {
         expect(statusWrites()).toHaveLength(0);
     });
 
-    it('skips CANCELLED for an order without a uuid', async () => {
+    it('skips a cancelled status for an order without a uuid', async () => {
         await service.apply(ctx, order({}), 'CANCELLED');
         expect(cancelResult.apply).not.toHaveBeenCalled();
     });

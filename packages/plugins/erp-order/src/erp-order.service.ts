@@ -10,8 +10,9 @@ import {
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { OrderReadyForErpEvent } from './erp-order.events';
 import { OrderStatusHistoryService } from './order-status-history.service';
+import { OrderStatusReferenceService } from './order-status-reference.service';
 import './types';
-import type { ErpOrderStatus, ErpStatusUpdatePayload, OrderErpStatusInfo } from './types';
+import type { ErpStatusUpdatePayload, OrderErpStatusInfo } from './types';
 
 @Injectable()
 export class ErpOrderService {
@@ -24,10 +25,12 @@ export class ErpOrderService {
         private readonly administratorService: AdministratorService,
         private readonly counterpartyService: CounterpartyService,
         private readonly statusHistory: OrderStatusHistoryService,
+        private readonly statusReference: OrderStatusReferenceService,
     ) {}
 
     async onOrderPlaced(ctx: RequestContext, order: Order): Promise<void> {
-        order.customFields.erpStatus = 'PENDING';
+        const initialStatus = (await this.statusReference.dictionary(ctx)).codeWith('initial');
+        order.customFields.erpStatus = initialStatus;
         order.customFields.erpStatusAt = new Date();
 
         // Denormalize the servicing branch onto the order at placement time — see
@@ -66,7 +69,7 @@ export class ErpOrderService {
         }
 
         await this.connection.getRepository(ctx, Order).save(order);
-        await this.statusHistory.record(ctx, order.id, 'PENDING');
+        await this.statusHistory.record(ctx, order.id, initialStatus);
         this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
     }
 
@@ -111,6 +114,10 @@ export class ErpOrderService {
             this.logger.warn(`updateStatus: order not found for code=${payload.orderCode}`);
             return;
         }
+        if (!(await this.statusReference.dictionary(ctx)).get(payload.status)) {
+            this.logger.warn(`updateStatus: unknown status ${payload.status}, ${order.code} kept`);
+            return;
+        }
 
         // Plain SQL UPDATE of only the changed keys, not save() of a full snapshot — save()
         // would also recompute calculated fields that require lines/surcharges joined (#209).
@@ -135,7 +142,7 @@ export class ErpOrderService {
 
         return {
             orderCode: order.code,
-            status: (order.customFields.erpStatus ?? null) as ErpOrderStatus | null,
+            status: (order.customFields.erpStatus ?? null) as string | null,
             erpOrderId: order.customFields.erpOrderId ?? null,
             updatedAt: order.customFields.erpStatusAt ?? null,
         };

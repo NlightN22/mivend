@@ -1,3 +1,4 @@
+import { OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
@@ -30,6 +31,7 @@ export class OrderSubmittedBuilder {
         private readonly outboundGateway: OutboundGateway,
         private readonly packagingPolicyService: PackagingPolicyService,
         private readonly orderLineIdentityService: OrderLineIdentityService,
+        private readonly statuses: OrderStatusReferenceService,
     ) {}
 
     async build(ctx: RequestContext, orderId: ID, orderCode: string): Promise<OutboundBuildResult> {
@@ -45,7 +47,7 @@ export class OrderSubmittedBuilder {
         const orderUuid = order.customFields?.uuid;
         if (!orderUuid) return outboundSkip(`order ${String(orderId)} has no uuid`);
 
-        const alreadySubmitted = await this.wasAlreadySubmitted(orderId, order);
+        const alreadySubmitted = await this.wasAlreadySubmitted(ctx, orderId, order);
         if (alreadySubmitted) {
             return outboundSkip(`order ${orderUuid} already submitted`);
         }
@@ -157,8 +159,13 @@ export class OrderSubmittedBuilder {
 
     // One external effect per order unless the ERP rejected the previous submission; see
     // docs/identifiers.md "Implementation status" (issue #199 guard).
-    private async wasAlreadySubmitted(orderId: ID, order: Order): Promise<boolean> {
-        if (order.customFields?.erpStatus === 'REJECTED') return false;
+    private async wasAlreadySubmitted(
+        ctx: RequestContext,
+        orderId: ID,
+        order: Order,
+    ): Promise<boolean> {
+        const dictionary = await this.statuses.dictionary(ctx);
+        if (dictionary.has(order.customFields?.erpStatus, 'rejected')) return false;
         return this.outboundGateway.hasActiveEntry('order.confirmed', String(orderId));
     }
 

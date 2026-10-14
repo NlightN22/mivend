@@ -5,7 +5,7 @@ import AccountSidebar from '../account/AccountSidebar.vue';
 import OrderCard from './OrderCard.vue';
 import OrdersAside from './OrdersAside.vue';
 import { useOrders } from './useOrders';
-import type { ErpStatus } from './useOrders';
+import { useOrderStatusesStore } from '../../stores/orderStatuses';
 
 const { orders, totalItems, loading, load } = useOrders();
 
@@ -19,13 +19,7 @@ const activeFilter = toRef(urlState, 'status');
 const activeSource = toRef(urlState, 'source');
 const searchQuery = toRef(urlState, 'q');
 
-const FILTER_GROUPS: Record<string, ErpStatus[]> = {
-    pending: ['PENDING', 'SENT_TO_ERP', 'RESERVED', 'UNDER_APPROVAL'],
-    confirmed: ['CONFIRMED', 'APPROVED', 'PICKING'],
-    in_transit: ['SHIPPING', 'DELIVERING'],
-    delivered: ['DELIVERED'],
-    cancelled: ['CANCELLED'],
-};
+const statuses = useOrderStatusesStore();
 
 const filters = [
     { key: 'all', label: 'All orders' },
@@ -44,19 +38,21 @@ const sources = [
 
 const SOURCE_EXTERNAL: Record<string, boolean | undefined> = { mivend: false, erp: true };
 
-function reload(): void {
+async function reload(): Promise<void> {
+    await statuses.load();
     void load({
         take: PAGE_SIZE,
         skip: (page.value - 1) * PAGE_SIZE,
         search: searchQuery.value.trim() || undefined,
-        erpStatuses: activeFilter.value === 'all' ? undefined : FILTER_GROUPS[activeFilter.value],
+        erpStatuses:
+            activeFilter.value === 'all' ? undefined : statuses.codesInGroup(activeFilter.value),
         isExternal: SOURCE_EXTERNAL[activeSource.value],
     });
 }
 
-watch([activeFilter, activeSource, searchQuery, page], reload);
+watch([activeFilter, activeSource, searchQuery, page], () => void reload());
 
-onMounted(reload);
+onMounted(() => void reload());
 </script>
 
 <template>

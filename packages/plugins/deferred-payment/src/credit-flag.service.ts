@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import { ID, Order, Payment, RequestContext, TransactionalConnection } from '@vendure/core';
 
-import { UNCONFIRMED_ERP_STATUSES } from './open-deferred-exposure.service';
+import { UNCONFIRMED_ERP_STATUSES_SQL } from './open-deferred-exposure.service';
 
 const MAX_SCANNED_ORDERS = 500;
 const FLAGGED_PAYMENT_SQL = `p.state IN ('Authorized', 'Settled')
@@ -33,9 +33,7 @@ export class CreditFlagService {
         const alias = `"${qb.alias}"`;
         const orders: Order[] = await qb
             .andWhere(`${alias}.state <> 'Cancelled'`)
-            .andWhere(`${alias}."customFieldsErpstatus" IN (:...erpStatuses)`, {
-                erpStatuses: UNCONFIRMED_ERP_STATUSES,
-            })
+            .andWhere(`${alias}."customFieldsErpstatus" IN (${UNCONFIRMED_ERP_STATUSES_SQL})`)
             .andWhere(
                 `EXISTS (SELECT 1 FROM payment p WHERE p."orderId" = ${alias}.id AND ${FLAGGED_PAYMENT_SQL})`,
             )

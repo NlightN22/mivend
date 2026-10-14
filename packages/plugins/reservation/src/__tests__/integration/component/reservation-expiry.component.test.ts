@@ -1,3 +1,4 @@
+import { OrderStatusReference, seedTestOrderStatuses } from '@mivend/plugin-erp-order';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, EntityManager, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { Order } from '@vendure/core';
@@ -109,10 +110,11 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestOrder, TestReservation],
+        entities: [TestOrder, TestReservation, OrderStatusReference],
         synchronize: true,
     });
     await realDataSource.initialize();
+    await seedTestOrderStatuses((sql, params) => realDataSource.query(sql, params));
 
     const dataSourceShim = {
         transaction: (work: (manager: EntityManager) => Promise<unknown>) =>

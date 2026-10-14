@@ -8,6 +8,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import { OrderStatusReference, seedTestOrderStatuses } from '@mivend/plugin-erp-order';
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import type { KafkaConsumerLagEntry } from '../../../entities/kafka-consumer-lag.entity';
 import { IntegrationInboxHealthService } from '../../../integration-inbox-health.service';
@@ -35,10 +36,11 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [IntegrationInboxEvent, IntegrationOutboxEntry],
+        entities: [IntegrationInboxEvent, IntegrationOutboxEntry, OrderStatusReference],
         synchronize: true,
     });
     await dataSource.initialize();
+    await seedTestOrderStatuses((sql, params) => dataSource.query(sql, params));
     inbox = new IntegrationInboxService(dataSource);
     const topics = Object.fromEntries(ALL_INBOUND_STREAMS.map(s => [s, `topic-${s}`]));
     resolver = new IntegrationStreamHealthResolver(

@@ -57,6 +57,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
             getRepository: vi.fn((entity: { name?: string }) =>
                 entity?.name === 'Order' ? txOrderRepo : txReservationRepo,
             ),
+            query: vi.fn(async () => [{ code: 'REJECTED' }]),
         };
         const dataSource = {
             transaction: vi.fn(async (work: (m: unknown) => unknown) => work(manager)),

@@ -1,17 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import {
-    OrderStatusHistoryService,
-    OrderStatusReferenceService,
-    canAdvanceErpStatus,
-} from '@mivend/plugin-erp-order';
-import type { ErpOrderStatus } from '@mivend/plugin-erp-order';
+import { OrderStatusHistoryService, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 import { withAggregateLock } from 'shared';
 
 import { OrderCancelResultService } from './order-cancel-result.service';
 import { loggerCtx } from './types';
 
-// Applies the ERP status code carried by order-changed. CANCELLED goes through the cancel-result
+// Applies the ERP status code carried by order-changed. A cancelled status goes through the cancel-result
 // path (local cancel + status event); any other status only moves erpStatus forward, decided on a
 // fresh read under the order lock and written as changed keys only.
 @Injectable()
@@ -23,9 +18,9 @@ export class OrderErpStatusService {
         private statusReference: OrderStatusReferenceService,
     ) {}
 
-    async apply(ctx: RequestContext, order: Order, derived: ErpOrderStatus | null): Promise<void> {
+    async apply(ctx: RequestContext, order: Order, derived: string | null): Promise<void> {
         if (derived === null) return;
-        if (derived === 'CANCELLED') {
+        if ((await this.statusReference.dictionary(ctx)).has(derived, 'cancelled')) {
             await this.cancel(ctx, order);
             return;
         }
@@ -33,8 +28,8 @@ export class OrderErpStatusService {
             const repo = this.connection.getRepository(txCtx, Order);
             const fresh = await repo.findOne({ where: { id: order.id } });
             if (!fresh || fresh.state === 'Cancelled') return;
-            const ranks = await this.statusReference.ranks(txCtx);
-            if (!canAdvanceErpStatus(fresh.customFields.erpStatus, derived, ranks)) return;
+            const dictionary = await this.statusReference.dictionary(txCtx);
+            if (!dictionary.canAdvance(fresh.customFields.erpStatus, derived)) return;
             await repo.update(order.id, {
                 customFields: { erpStatus: derived, erpStatusAt: new Date() },
             });

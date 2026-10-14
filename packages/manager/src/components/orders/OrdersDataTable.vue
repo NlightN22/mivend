@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import { computed, ref, watch, type Component } from 'vue';
 import { useRouter } from 'vue-router';
 import DataTable, { type DataTableFilterMeta } from 'primevue/datatable';
@@ -53,6 +54,8 @@ const emit = defineEmits<{
     'update:page-size': [value: number];
 }>();
 
+const statuses = useOrderStatusesStore();
+void statuses.load();
 const router = useRouter();
 
 function managerName(id: string | null | undefined): string {
@@ -99,7 +102,7 @@ const rows = computed<OrderRow[]>(() =>
             state: ORDER_STATE_LABEL[order.state] ?? order.state,
             stateVariant: ORDER_STATE_BADGE_VARIANT[order.state] ?? 'neutral',
             creditExceeded: order.creditLimitExceeded,
-            erpRejected: order.customFields?.erpStatus === 'REJECTED',
+            erpRejected: statuses.isRejected(order.customFields?.erpStatus),
             reservationFailed: Boolean(order.customFields?.reservationFailureReason),
             total: new Intl.NumberFormat('en-US', {
                 style: 'currency',

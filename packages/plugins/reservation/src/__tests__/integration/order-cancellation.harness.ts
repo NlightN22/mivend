@@ -1,3 +1,4 @@
+import { testOrderStatusDictionary } from '@mivend/plugin-erp-order';
 import { randomUUID } from 'crypto';
 import type { RequestContext } from '@vendure/core';
 
@@ -11,14 +12,7 @@ import { ReservationWriteOffSyncService } from '../../reservation-write-off-sync
 import { TestOrder, TestPayment, TestReservation } from './reserve-order.harness';
 import type { ReserveOrderHarness } from './reserve-order.harness';
 
-const FACT_STATUS_RANKS = new Map([
-    ['UNDER_APPROVAL', 3],
-    ['APPROVED', 4],
-    ['PICKING', 5],
-    ['SHIPPING', 6],
-    ['DELIVERING', 7],
-    ['DELIVERED', 8],
-]);
+const statuses = { dictionary: async () => testOrderStatusDictionary() } as never;
 
 export const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -110,6 +104,7 @@ export function buildCancellationFixture(h: ReserveOrderHarness): CancellationFi
         notificationService as never,
         eventBus as never,
         registry,
+        statuses,
     );
     fixture.results = new OrderCancelResultService(h.connection, fixture.service);
     fixture.writeOff = new ReservationWriteOffSyncService(
@@ -121,8 +116,9 @@ export function buildCancellationFixture(h: ReserveOrderHarness): CancellationFi
             h.connection,
             fixture.results,
             { record: async () => undefined } as never,
-            { ranks: async () => FACT_STATUS_RANKS } as never,
+            statuses,
         ),
+        statuses,
     );
     return fixture;
 }

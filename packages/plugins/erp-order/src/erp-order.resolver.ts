@@ -82,22 +82,7 @@ export class ErpOrderResolver {
         }
 
         if (erpStatuses && erpStatuses.length > 0) {
-            // PENDING has no real ERP status yet (customFieldsErpstatus IS NULL) — a plain `IN`
-            // filter never matches NULL in SQL, so this stays a manual Brackets clause rather
-            // than the generic StringOperators `in` alone.
-            const statusList = erpStatuses.includes('PENDING')
-                ? [...erpStatuses, 'null']
-                : erpStatuses;
-            qb.andWhere(
-                new Brackets((bqb: WhereExpressionBuilder) => {
-                    bqb.where('"order"."customFieldsErpstatus" IN (:...statusList)', {
-                        statusList,
-                    });
-                    if (statusList.includes('null')) {
-                        bqb.orWhere('"order"."customFieldsErpstatus" IS NULL');
-                    }
-                }),
-            );
+            qb.andWhere('"order"."customFieldsErpstatus" IN (:...erpStatuses)', { erpStatuses });
         }
 
         if (search) {

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-// Order.customFields.erpStatus (plugin-erp-order's ERP_ORDER_STATUSES) — issue #204 item 4.
+// Orders whose erpStatus is a rejected one in the status dictionary — issue #204 item 4.
 @Injectable()
 export class RejectedOrderHealthService {
     constructor(private readonly dataSource: DataSource) {}
@@ -10,7 +10,8 @@ export class RejectedOrderHealthService {
         const [row] = await this.dataSource.query(`
             SELECT COUNT(*)::int AS "rejected"
               FROM "order" o
-             WHERE o."customFieldsErpstatus" = 'REJECTED'
+             WHERE o."customFieldsErpstatus" IN (
+                   SELECT code FROM order_status_reference WHERE rejected AND NOT "isDeleted")
         `);
         return row.rejected;
     }

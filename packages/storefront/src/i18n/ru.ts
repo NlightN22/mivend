@@ -67,7 +67,6 @@ export default {
             shipping: 'Доставка',
             deliveryAddress: 'Адрес доставки',
             document: 'Документ',
-            documentStatus: 'Статус документа',
             documentNumber: 'Номер документа',
             proforma: {
                 title: 'Счета на оплату',
@@ -84,23 +83,6 @@ export default {
             paidInFull: 'Оплачено полностью (переплата {overpaid})',
             paidHint:
                 'Сумма может быть больше: часть документов в учётной системе проводится без привязки к заказу.',
-        },
-        statusLabel: {
-            PENDING: 'В обработке',
-            SENT_TO_ERP: 'Передан в учётную систему',
-            RESERVED: 'Зарезервирован / ожидает согласования',
-            CONFIRMED: 'Подтверждён',
-            UNDER_APPROVAL: 'На согласовании',
-            APPROVED: 'Согласован',
-            PICKING: 'Комплектуется',
-            SHIPPING: 'Отгружен',
-            DELIVERING: 'В доставке',
-            DELIVERED: 'Доставлен',
-            CANCELLED: 'Отменён',
-            REJECTED: 'Заказ не принят, свяжитесь с менеджером',
-        },
-        documentStatus: {
-            НаСогласовании: 'На согласовании',
         },
         cancel: {
             button: 'Отменить заказ',

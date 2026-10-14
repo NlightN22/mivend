@@ -44,14 +44,21 @@ export class ReservationExpiryService {
             const rejectionCutoff = new Date(
                 Date.now() - DEFAULT_RESERVATION_DAYS * 24 * 60 * 60 * 1000,
             );
-            const rejectedOrders = await manager.getRepository(Order).find({
-                where: {
-                    customFields: {
-                        erpStatus: 'REJECTED',
-                        erpStatusAt: LessThanOrEqual(rejectionCutoff),
-                    },
-                },
-            });
+            const rejectedCodes: string[] = (
+                await manager.query(
+                    `SELECT code FROM order_status_reference WHERE rejected AND NOT "isDeleted"`,
+                )
+            ).map((row: { code: string }) => row.code);
+            const rejectedOrders = rejectedCodes.length
+                ? await manager.getRepository(Order).find({
+                      where: {
+                          customFields: {
+                              erpStatus: In(rejectedCodes),
+                              erpStatusAt: LessThanOrEqual(rejectionCutoff),
+                          },
+                      },
+                  })
+                : [];
             const rejectedOrderIds = rejectedOrders.map(order => String(order.id));
             const rejectedDue = rejectedOrderIds.length
                 ? await manager

@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import { decideCancellation, isOrderCancellable } from '../../order-cancellation.decision';
+import { OrderStatusDictionary, testOrderStatusDictionary } from '@mivend/plugin-erp-order';
+
+import {
+    decideCancellation,
+    erpStageFacts,
+    isOrderCancellable,
+} from '../../order-cancellation.decision';
 import type { CancelFacts } from '../../order-cancellation.decision';
+
+const dictionary = testOrderStatusDictionary();
+const stage = (code: string) => erpStageFacts(dictionary, code);
 
 const base: CancelFacts = {
     orderState: 'PaymentAuthorized',
-    erpStatus: 'PENDING',
+    erpStatus: stage('PENDING'),
     erpOrderId: null,
     latestFulfillmentState: null,
     hasSettledPayment: false,
@@ -35,10 +44,10 @@ describe('decideCancellation', () => {
     });
 
     it.each([
-        ['in progress', { erpStatus: 'PICKING' }, 'in-progress'],
-        ['shipping by ERP status', { erpStatus: 'SHIPPING' }, 'shipped'],
-        ['delivering by ERP status', { erpStatus: 'DELIVERING' }, 'shipped'],
-        ['delivered by ERP status', { erpStatus: 'DELIVERED' }, 'shipped'],
+        ['in progress', { erpStatus: stage('PICKING') }, 'in-progress'],
+        ['shipping by ERP status', { erpStatus: stage('SHIPPING') }, 'shipped'],
+        ['delivering by ERP status', { erpStatus: stage('DELIVERING') }, 'shipped'],
+        ['delivered by ERP status', { erpStatus: stage('DELIVERED') }, 'shipped'],
         ['shipped by order state', { orderState: 'PartiallyShipped' }, 'shipped'],
         ['shipped by fulfillment', { latestFulfillmentState: 'Shipped' }, 'shipped'],
         ['settled payment', { hasSettledPayment: true }, 'paid'],
@@ -53,7 +62,8 @@ describe('decideCancellation', () => {
 
     it('shipped wins over a registered order that would otherwise be cancel-requested', () => {
         expect(
-            decideCancellation({ ...base, erpOrderId: 'erp-1', erpStatus: 'SHIPPING' }).action,
+            decideCancellation({ ...base, erpOrderId: 'erp-1', erpStatus: stage('SHIPPING') })
+                .action,
         ).toBe('refuse');
     });
 
@@ -71,7 +81,7 @@ describe('decideCancellation', () => {
                 decideCancellation({
                     ...base,
                     ...deadline,
-                    erpStatus: 'REJECTED',
+                    erpStatus: stage('REJECTED'),
                     submission: 'sent',
                 }),
             ).toEqual({ action: 'refuse', reason: 'registration-rejected' });
@@ -92,8 +102,12 @@ describe('decideCancellation', () => {
         ['with an ERP id', { erpOrderId: 'erp-1' }],
     ])('a rejected order is cancelled locally on request, %s', (_name, facts) => {
         expect(
-            decideCancellation({ ...base, ...facts, erpStatus: 'REJECTED', submission: 'sent' })
-                .action,
+            decideCancellation({
+                ...base,
+                ...facts,
+                erpStatus: stage('REJECTED'),
+                submission: 'sent',
+            }).action,
         ).toBe('cancel-rejected-locally');
     });
 });
@@ -102,9 +116,9 @@ describe('isOrderCancellable', () => {
     it.each([
         ['pending', {}, true],
         ['registered', { erpOrderId: 'erp-1' }, true],
-        ['rejected by the ERP', { erpStatus: 'REJECTED' }, true],
+        ['rejected by the ERP', { erpStatus: stage('REJECTED') }, true],
         ['paid', { hasSettledPayment: true }, false],
-        ['picking', { erpStatus: 'PICKING' }, false],
+        ['picking', { erpStatus: stage('PICKING') }, false],
         ['shipped', { orderState: 'Shipped' }, false],
         ['already cancelled', { orderState: 'Cancelled' }, false],
         ['cancel refused by the ERP', { cancelRequestStatus: 'REFUSED' }, false],
@@ -112,5 +126,21 @@ describe('isOrderCancellable', () => {
         ['active cart in checkout', { orderState: 'ArrangingPayment' }, false],
     ])('%s', (_name, facts, expected) => {
         expect(isOrderCancellable({ ...base, ...facts })).toBe(expected);
+    });
+});
+
+describe('decision follows dictionary attributes, not status names', () => {
+    it('refuses a status flagged warehouseStarted whatever its code', () => {
+        const custom = new OrderStatusDictionary([
+            ...dictionary.entries,
+            { ...dictionary.get('APPROVED')!, code: 'NEW_ERP_STAGE', warehouseStarted: true },
+        ]);
+        expect(
+            decideCancellation({ ...base, erpStatus: erpStageFacts(custom, 'NEW_ERP_STAGE') }),
+        ).toEqual({ action: 'refuse', reason: 'in-progress' });
+    });
+
+    it('knows nothing about a status that is not in the dictionary', () => {
+        expect(erpStageFacts(dictionary, 'UNKNOWN')).toBeNull();
     });
 });

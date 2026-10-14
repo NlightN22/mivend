@@ -7,7 +7,7 @@ import AccountSidebar from '../account/AccountSidebar.vue';
 import { useCancelOrder } from './useCancelOrder';
 import { useOrderDetail } from './useOrderDetail';
 import { useRepeatOrder } from './useRepeatOrder';
-import { STATUS_VARIANT } from './useOrders';
+import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import { formatAmount, formatDate } from './orderFormat';
 import OrderActionsCard from './OrderActionsCard.vue';
 import OrderDocumentCard from './OrderDocumentCard.vue';
@@ -19,6 +19,7 @@ import OrderTotalsCard from './OrderTotalsCard.vue';
 
 const route = useRoute();
 const { t } = useI18n();
+const statuses = useOrderStatusesStore();
 const { order, tradingPoints, loading, load } = useOrderDetail();
 const { repeating, repeat } = useRepeatOrder();
 
@@ -52,6 +53,7 @@ async function repeatOrder(): Promise<void> {
 }
 
 onMounted(() => {
+    void statuses.load();
     void load(route.params.id as string);
 });
 </script>
@@ -88,13 +90,9 @@ onMounted(() => {
                             />
                             <span
                                 class="od-status"
-                                :class="STATUS_VARIANT[order.customFields?.erpStatus ?? 'PENDING']"
+                                :class="statuses.variant(order.customFields?.erpStatus)"
                             >
-                                {{
-                                    t(
-                                        `orders.statusLabel.${order.customFields?.erpStatus ?? 'PENDING'}`,
-                                    )
-                                }}
+                                {{ statuses.label(order.customFields?.erpStatus) }}
                             </span>
                         </div>
                     </div>

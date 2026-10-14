@@ -1367,23 +1367,41 @@ async function main() {
         for (const e of positionResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
+    // [code, rank, name, description, customerGroup, warehouseStarted, shipped, delivered, cancelled]
     const orderStatuses = [
-        ['UNDER_APPROVAL', 3, 'Under approval', 'Waiting for approval'],
-        ['APPROVED', 4, 'Approved', 'Order approved by the manager'],
-        ['PICKING', 5, 'Picking', 'Order is being picked'],
-        ['SHIPPING', 6, 'Shipped', 'Order shipped from the warehouse'],
-        ['DELIVERING', 7, 'Delivering', 'Order is on its way'],
-        ['DELIVERED', 8, 'Delivered', 'Order delivered'],
-        ['CANCELLED', 0, 'Cancelled', 'Order cancelled'],
-    ].map(([code, rank, name, description]) => ({
-        code,
-        version: '1',
-        name,
-        rank,
-        terminal: code === 'DELIVERED' || code === 'CANCELLED',
-        customerVisible: true,
-        description,
-    }));
+        ['UNDER_APPROVAL', 3, 'Under approval', 'Waiting for approval', 'pending', 0, 0, 0, 0],
+        ['APPROVED', 4, 'Approved', 'Order approved by the manager', 'confirmed', 0, 0, 0, 0],
+        ['PICKING', 5, 'Picking', 'Order is being picked', 'confirmed', 1, 0, 0, 0],
+        ['SHIPPING', 6, 'Shipped', 'Order shipped from the warehouse', 'in_transit', 1, 1, 0, 0],
+        ['DELIVERING', 7, 'Delivering', 'Order is on its way', 'in_transit', 1, 1, 0, 0],
+        ['DELIVERED', 8, 'Delivered', 'Order delivered', 'delivered', 1, 1, 1, 0],
+        ['CANCELLED', 0, 'Cancelled', 'Order cancelled', 'cancelled', 0, 0, 0, 1],
+    ].map(
+        ([
+            code,
+            rank,
+            name,
+            description,
+            customerGroup,
+            started,
+            shipped,
+            delivered,
+            cancelled,
+        ]) => ({
+            code,
+            version: '1',
+            name,
+            rank,
+            terminal: delivered === 1 || cancelled === 1,
+            customerVisible: true,
+            description,
+            customerGroup,
+            warehouseStarted: started === 1,
+            shipped: shipped === 1,
+            delivered: delivered === 1,
+            cancelled: cancelled === 1,
+        }),
+    );
     console.log(`Sending ${orderStatuses.length} order statuses...`);
     const orderStatusResult = await postBatch(
         `seed-order-statuses-${run}`,

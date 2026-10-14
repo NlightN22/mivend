@@ -14,7 +14,7 @@ import {
     isSelectableContract,
 } from '@mivend/plugin-counterparty';
 import type { Contract, Counterparty } from '@mivend/plugin-counterparty';
-import { OrderVisibilityService } from '@mivend/plugin-erp-order';
+import { OrderStatusReferenceService, OrderVisibilityService } from '@mivend/plugin-erp-order';
 import { withAggregateLock } from 'shared';
 
 import { ReservationService } from './reservation.service';
@@ -29,8 +29,6 @@ export interface OrderContractOption {
     isSelected: boolean;
 }
 
-const CHANGEABLE_ERP_STATUSES = [null, undefined, 'PENDING'];
-
 // The contract an order is registered under in the ERP (#205). It can change until the order has
 // been reserved, because reservation is what publishes order.confirmed.
 @Injectable()
@@ -42,6 +40,7 @@ export class OrderContractService {
         private readonly visibility: OrderVisibilityService,
         private readonly reservationService: ReservationService,
         private readonly historyService: HistoryService,
+        private readonly statuses: OrderStatusReferenceService,
     ) {}
 
     async list(ctx: RequestContext, orderId: ID): Promise<OrderContractOption[]> {
@@ -63,7 +62,11 @@ export class OrderContractService {
             if (!isSelectableContract(contract, String(counterparty.id))) {
                 throw new UserInputError('This contract cannot be used for the order');
             }
-            if (!CHANGEABLE_ERP_STATUSES.includes(order.customFields?.erpStatus)) {
+            const erpStatus = order.customFields?.erpStatus;
+            if (
+                erpStatus != null &&
+                !(await this.statuses.dictionary(txCtx)).has(erpStatus, 'initial')
+            ) {
                 throw new UserInputError('The order is already registered in the ERP');
             }
             const reservations = await this.reservationService.findForOrder(txCtx, orderId);

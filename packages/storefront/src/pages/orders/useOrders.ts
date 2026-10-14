@@ -2,68 +2,14 @@ import { ref, type Ref } from 'vue';
 import { shopApi } from '../../api/client';
 import { MyOrdersDocument, type MyOrdersQuery } from '../../api/generated/graphql';
 
-export type ErpStatus =
-    | 'PENDING'
-    | 'SENT_TO_ERP'
-    | 'RESERVED'
-    | 'CONFIRMED'
-    | 'UNDER_APPROVAL'
-    | 'APPROVED'
-    | 'PICKING'
-    | 'SHIPPING'
-    | 'DELIVERING'
-    | 'DELIVERED'
-    | 'CANCELLED'
-    | 'REJECTED';
-
 export type OrderSummary = MyOrdersQuery['myOrders']['items'][number];
 
 export interface MyOrdersOptions {
     take: number;
     skip: number;
     search?: string;
-    erpStatuses?: ErpStatus[];
+    erpStatuses?: string[];
     isExternal?: boolean;
-}
-
-export const STATUS_LABEL: Record<string, string> = {
-    PENDING: 'Processing',
-    SENT_TO_ERP: 'Sent to ERP',
-    RESERVED: 'Reserved / Pending approval',
-    CONFIRMED: 'Confirmed',
-    UNDER_APPROVAL: 'Being approved',
-    APPROVED: 'Approved',
-    PICKING: 'Assembling',
-    SHIPPING: 'Shipped',
-    DELIVERING: 'In delivery',
-    DELIVERED: 'Delivered',
-    CANCELLED: 'Cancelled',
-    // Never show the internal ERP reason code/text here — customer-facing wording only (#204).
-    REJECTED: 'Order not accepted, please contact your manager',
-};
-
-export const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'muted' | 'error'> = {
-    PENDING: 'muted',
-    SENT_TO_ERP: 'warning',
-    RESERVED: 'warning',
-    CONFIRMED: 'default',
-    UNDER_APPROVAL: 'warning',
-    APPROVED: 'default',
-    PICKING: 'default',
-    SHIPPING: 'default',
-    DELIVERING: 'default',
-    DELIVERED: 'muted',
-    CANCELLED: 'error',
-    REJECTED: 'error',
-};
-
-// Raw ERP document statuses (order-changed) to customer wording; an unmapped value shows nothing.
-const ERP_DOCUMENT_STATUS_LABEL: Record<string, string> = {
-    НаСогласовании: 'Being approved',
-};
-
-export function erpDocumentStatusLabel(status: string | null | undefined): string | null {
-    return (status && ERP_DOCUMENT_STATUS_LABEL[status]) || null;
 }
 
 function orderFilter(options: MyOrdersOptions): Record<string, unknown> | undefined {

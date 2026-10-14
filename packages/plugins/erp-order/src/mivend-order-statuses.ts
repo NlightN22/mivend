@@ -1,0 +1,70 @@
+import type { OrderStatusEntry } from './order-status-dictionary';
+
+const NONE = {
+    terminal: false,
+    customerVisible: true,
+    warehouseStarted: false,
+    shipped: false,
+    delivered: false,
+    cancelled: false,
+    initial: false,
+    submitted: false,
+    rejected: false,
+    reservationConfirmed: false,
+    externalDefault: false,
+};
+
+// Stages of mivend's own send/registration pipeline, which the ERP never observes; provisioned at boot.
+export const MIVEND_ORDER_STATUSES: readonly OrderStatusEntry[] = [
+    {
+        ...NONE,
+        code: 'PENDING',
+        name: 'В обработке',
+        description: 'Заказ успешно создан',
+        rank: 0,
+        customerGroup: 'pending',
+        source: 'mivend',
+        initial: true,
+    },
+    {
+        ...NONE,
+        code: 'SENT_TO_ERP',
+        name: 'Передан в учётную систему',
+        description: 'Заказ передан в учётную систему',
+        rank: 1,
+        customerGroup: 'pending',
+        source: 'mivend',
+        submitted: true,
+    },
+    {
+        ...NONE,
+        code: 'RESERVED',
+        name: 'Зарезервирован / ожидает согласования',
+        description: 'Товар зарезервирован, заказ ожидает согласования',
+        rank: 2,
+        customerGroup: 'pending',
+        source: 'mivend',
+        reservationConfirmed: true,
+    },
+    {
+        ...NONE,
+        code: 'CONFIRMED',
+        name: 'Подтверждён',
+        description: 'Заказ подтверждён',
+        rank: 2,
+        customerGroup: 'confirmed',
+        source: 'mivend',
+        reservationConfirmed: true,
+        externalDefault: true,
+    },
+    {
+        ...NONE,
+        code: 'REJECTED',
+        name: 'Заказ не принят, свяжитесь с менеджером',
+        description: 'Заказ не принят в учётной системе',
+        rank: 0,
+        customerGroup: 'rejected',
+        source: 'mivend',
+        rejected: true,
+    },
+];

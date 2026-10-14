@@ -11,6 +11,8 @@ const wire = {
     terminal: false,
     customerVisible: true,
     description: 'Order is being picked',
+    customerGroup: 'confirmed',
+    warehouseStarted: true,
     version: '2026-10-14T10:00:00Z',
 };
 
@@ -38,6 +40,11 @@ describe('OrderStatusStreamHandler', () => {
             terminal: false,
             customerVisible: true,
             description: 'Order is being picked',
+            customerGroup: 'confirmed',
+            warehouseStarted: true,
+            shipped: false,
+            delivered: false,
+            cancelled: false,
         });
     });
 
@@ -51,6 +58,11 @@ describe('OrderStatusStreamHandler', () => {
             terminal: false,
             customerVisible: false,
             description: '',
+            customerGroup: '',
+            warehouseStarted: false,
+            shipped: false,
+            delivered: false,
+            cancelled: false,
             isDeleted: false,
         });
     });
@@ -84,9 +96,12 @@ describe('OrderStatusStreamHandler', () => {
         },
     );
 
-    it.each(['stale', 'unknown-deleted'])('records a noop for a %s result', async result => {
-        const { handler } = build(result);
+    it.each(['stale', 'unknown-deleted', 'protected'])(
+        'records a noop for a %s result',
+        async result => {
+            const { handler } = build(result);
 
-        expect((await handler.apply(ctx, 'PICKING', wire)).kind).toBe('noop');
-    });
+            expect((await handler.apply(ctx, 'PICKING', wire)).kind).toBe('noop');
+        },
+    );
 });

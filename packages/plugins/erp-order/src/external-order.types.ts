@@ -1,5 +1,3 @@
-import type { ErpOrderStatus } from './types';
-
 export interface ExternalOrderLineInput {
     productVariantId: string;
     quantity: number;
@@ -9,7 +7,7 @@ export interface ExternalOrderLineInput {
 export interface ExternalOrderInput {
     erpOrderId: string;
     counterpartyErpId: string | null;
-    erpStatus: ErpOrderStatus | null;
+    erpStatus: string | null;
     erpOrderStatus: string;
     documentNumber: string | null;
     contractId: string | null;

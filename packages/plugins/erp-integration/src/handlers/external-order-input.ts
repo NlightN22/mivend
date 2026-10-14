@@ -1,9 +1,5 @@
 import { Logger } from '@nestjs/common';
-import type {
-    ErpOrderStatus,
-    ExternalOrderInput,
-    ExternalOrderLineInput,
-} from '@mivend/plugin-erp-order';
+import type { ExternalOrderInput, ExternalOrderLineInput } from '@mivend/plugin-erp-order';
 
 export interface ResolvedOrderLine {
     productVariantId: string;
@@ -61,7 +57,7 @@ export function externalLine(line: ResolvedOrderLine): ExternalOrderLineInput {
 export function buildExternalOrderInput(
     entityId: string,
     payload: Record<string, unknown>,
-    derivedStatus: ErpOrderStatus | null,
+    derivedStatus: string | null,
     lines: ResolvedOrderLine[],
     skippedLineCount = 0,
 ): ExternalOrderInput {
