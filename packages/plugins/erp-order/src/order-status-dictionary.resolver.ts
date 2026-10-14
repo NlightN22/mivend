@@ -9,7 +9,7 @@ export class OrderStatusDictionaryResolver {
     constructor(private statuses: OrderStatusReferenceService) {}
 
     @Query()
-    @Allow(Permission.Authenticated)
+    @Allow(Permission.Public)
     async orderStatuses(@Ctx() ctx: RequestContext): Promise<readonly OrderStatusEntry[]> {
         return (await this.statuses.dictionary(ctx)).entries;
     }
