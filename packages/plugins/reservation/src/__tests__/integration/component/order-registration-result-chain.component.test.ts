@@ -121,6 +121,7 @@ beforeAll(async () => {
         eventBus as never,
         { apply: vi.fn() } as never,
         { dictionary: async () => testOrderStatusDictionary() } as never,
+        { record: vi.fn(async () => undefined) } as never,
     );
     flush = async () => {
         await Promise.all(pending.splice(0));
