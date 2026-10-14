@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { MvButton, MvModal, toast, formatDocumentNumber } from '@mivend/ui-kit';
+import { MvButton, MvCopyButton, MvModal, toast, formatDocumentNumber } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import { useAuthStore } from '../../stores/auth';
 import { useCancelOrder } from './useCancelOrder';
@@ -24,6 +24,10 @@ const { order, tradingPoints, loading, load } = useOrderDetail();
 const { repeating, repeat } = useRepeatOrder();
 
 const confirmOpen = ref(false);
+const pageUrl = (): string => window.location.href;
+const title = computed(() =>
+    order.value ? t('orders.detail.title', { number: formatDocumentNumber(order.value.code) }) : '',
+);
 const { cancelling, refusalReason, failed, canCancel, cancel } = useCancelOrder(
     () => order.value?.code,
     () => order.value?.cancellable,
@@ -69,24 +73,31 @@ onMounted(() => {
                     <div class="od-head">
                         <div>
                             <h1 class="od-title">
-                                {{
-                                    t('orders.detail.title', {
-                                        number: formatDocumentNumber(order.code),
-                                    })
-                                }}
+                                {{ title }}
+                                <MvCopyButton
+                                    :value="formatDocumentNumber(order.code)"
+                                    :label="t('orders.detail.copyNumber')"
+                                />
                             </h1>
                             <div class="od-meta">{{ formatDate(order.createdAt) }}</div>
                         </div>
-                        <span
-                            class="od-status"
-                            :class="STATUS_VARIANT[order.customFields?.erpStatus ?? 'PENDING']"
-                        >
-                            {{
-                                t(
-                                    `orders.statusLabel.${order.customFields?.erpStatus ?? 'PENDING'}`,
-                                )
-                            }}
-                        </span>
+                        <div class="od-head-side">
+                            <MvCopyButton
+                                :value="pageUrl"
+                                icon="link"
+                                :label="t('orders.detail.copyLink')"
+                            />
+                            <span
+                                class="od-status"
+                                :class="STATUS_VARIANT[order.customFields?.erpStatus ?? 'PENDING']"
+                            >
+                                {{
+                                    t(
+                                        `orders.statusLabel.${order.customFields?.erpStatus ?? 'PENDING'}`,
+                                    )
+                                }}
+                            </span>
+                        </div>
                     </div>
 
                     <OrderSummaryStrip
@@ -206,6 +217,12 @@ onMounted(() => {
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 24px;
+}
+
+.od-head-side {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .od-title {

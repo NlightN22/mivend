@@ -39,6 +39,7 @@ export type { ButtonVariant, ButtonSize } from './components/MvButton/MvButton.v
 export { default as MvStatusTag } from './components/MvStatusTag/MvStatusTag.vue';
 export type { StatusTagVariant } from './components/MvStatusTag/MvStatusTag.vue';
 
+export { default as MvCopyButton } from './components/MvCopyButton/MvCopyButton.vue';
 export { default as MvStatusBadge } from './components/MvStatusBadge/MvStatusBadge.vue';
 export type { StatusBadgeVariant } from './components/MvStatusBadge/MvStatusBadge.vue';
 

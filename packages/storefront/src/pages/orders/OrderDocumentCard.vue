@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import { MvCopyButton } from '@mivend/ui-kit';
 import type { OrderDetail } from './useOrderDetail';
 import { erpDocumentStatusLabel } from './useOrders';
 import { isNotRegisteredInErp } from './isNotRegisteredInErp';
@@ -26,7 +27,13 @@ const { t } = useI18n();
         <h2 class="odc-title">{{ t('orders.detail.document') }}</h2>
         <div v-if="order.customFields?.erpRegistrationDocumentNumber" class="odc-row">
             <span>{{ t('orders.detail.documentNumber') }}</span>
-            <span class="odc-val">{{ order.customFields.erpRegistrationDocumentNumber }}</span>
+            <span class="odc-val">
+                {{ order.customFields.erpRegistrationDocumentNumber }}
+                <MvCopyButton
+                    :value="order.customFields.erpRegistrationDocumentNumber"
+                    :label="t('orders.detail.copyDocumentNumber')"
+                />
+            </span>
         </div>
         <div v-if="erpDocumentStatusLabel(order.customFields?.erpOrderStatus)" class="odc-row">
             <span>{{ t('orders.detail.documentStatus') }}</span>
@@ -55,6 +62,7 @@ const { t } = useI18n();
     letter-spacing: -0.03em;
 }
 .odc-row {
+    align-items: center;
     display: flex;
     justify-content: space-between;
     padding: 3px 0;
@@ -62,6 +70,9 @@ const { t } = useI18n();
     color: #66736e;
 }
 .odc-val {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-weight: 850;
     color: #344640;
 }
