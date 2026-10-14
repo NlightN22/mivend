@@ -24,6 +24,11 @@ query OrderDetail($id: ID!) {
                 }
             }
         }
+        statusHistory {
+            uuid
+            status
+            createdAt
+        }
         shippingAddress {
             fullName
             streetLine1

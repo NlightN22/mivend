@@ -91,6 +91,7 @@ beforeAll(async () => {
         null as never,
         null as never,
         null as never,
+        { record: async () => undefined } as never,
     );
     const eventBus = {
         publish: (event: unknown) => {

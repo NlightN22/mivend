@@ -12,4 +12,15 @@ export const shopApiExtensions = gql`
     extend type Query {
         myOrders(options: OrderListOptions, search: String): OrderList!
     }
+
+    type OrderStatusHistoryEntry {
+        uuid: String!
+        previousStatus: String
+        status: String!
+        createdAt: DateTime!
+    }
+
+    extend type Order {
+        statusHistory: [OrderStatusHistoryEntry!]!
+    }
 `;

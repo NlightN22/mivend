@@ -44,6 +44,7 @@ export default {
             notFound: 'Заказ не найден.',
             title: 'Заказ {number}',
             actions: 'Действия по заказу',
+            history: 'История заказа',
             itemsCount: 'Количество позиций',
             organization: 'Организация',
             pickupPoint: 'Точка выдачи',

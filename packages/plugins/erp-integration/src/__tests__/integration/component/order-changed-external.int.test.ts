@@ -162,6 +162,7 @@ beforeAll(async () => {
         connection as never,
         config as never,
         counterparties as never,
+        { record: async () => undefined } as never,
     );
     handler = new OrderChangedStreamHandler(
         connection as never,

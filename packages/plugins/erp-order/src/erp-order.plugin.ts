@@ -23,6 +23,9 @@ import { createExternalOrderReconcileTask } from './external-order-reconcile.sch
 import { ExternalOrderService } from './external-order.service';
 import { ExternalOrderCounterpartyListener } from './external-order-counterparty.listener';
 import { externalOrderProcess } from './external-order.guard';
+import { OrderStatusHistoryEntry } from './entities/order-status-history-entry.entity';
+import { OrderStatusHistoryResolver } from './order-status-history.resolver';
+import { OrderStatusHistoryService } from './order-status-history.service';
 import { OrderVisibilityService } from './order-visibility.service';
 import { shopApiExtensions } from './api/shop.schema';
 
@@ -41,15 +44,22 @@ const adminApiSchema = gql`
     imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
     providers: [
         ErpOrderService,
+        OrderStatusHistoryService,
         OrderVisibilityService,
         ExternalOrderService,
         ExternalOrderCounterpartyListener,
         ExternalOrderReconcileService,
     ],
-    exports: [ErpOrderService, OrderVisibilityService, ExternalOrderService],
+    exports: [
+        ErpOrderService,
+        OrderStatusHistoryService,
+        OrderVisibilityService,
+        ExternalOrderService,
+    ],
+    entities: [OrderStatusHistoryEntry],
     shopApiExtensions: {
         schema: shopApiExtensions,
-        resolvers: [ErpOrderResolver],
+        resolvers: [ErpOrderResolver, OrderStatusHistoryResolver],
     },
     adminApiExtensions: {
         schema: adminApiSchema,

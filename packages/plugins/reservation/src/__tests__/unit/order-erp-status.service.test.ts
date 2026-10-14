@@ -7,6 +7,7 @@ describe('OrderErpStatusService.apply', () => {
     const ctx = {} as unknown as RequestContext;
     const orderRepo = { findOne: vi.fn(), update: vi.fn(async () => undefined) };
     const cancelResult = { apply: vi.fn(async () => 'cancelled') };
+    const statusHistory = { record: vi.fn(async () => undefined) };
     let service: OrderErpStatusService;
 
     const order = (customFields: Record<string, unknown>): never =>
@@ -23,6 +24,7 @@ describe('OrderErpStatusService.apply', () => {
         service = new OrderErpStatusService(
             connection as unknown as TransactionalConnection,
             cancelResult as never,
+            statusHistory as never,
         );
     });
 
@@ -41,6 +43,7 @@ describe('OrderErpStatusService.apply', () => {
         expect(orderRepo.update).toHaveBeenCalledWith('order-1', {
             customFields: { erpStatus: 'PICKING', erpStatusAt: expect.any(Date) },
         });
+        expect(statusHistory.record).toHaveBeenCalledWith(ctx, 'order-1', 'PICKING');
     });
 
     it.each(['PICKING', 'SHIPPING', 'CANCELLED'])(
@@ -52,6 +55,7 @@ describe('OrderErpStatusService.apply', () => {
             });
             await service.apply(ctx, order({}), 'PICKING');
             expect(statusWrites()).toHaveLength(0);
+            expect(statusHistory.record).not.toHaveBeenCalled();
         },
     );
 

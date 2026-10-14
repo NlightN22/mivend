@@ -2309,6 +2309,7 @@ export type Order = Node & {
     shippingLines: Array<ShippingLine>;
     shippingWithTax: Scalars['Money']['output'];
     state: Scalars['String']['output'];
+    statusHistory: Array<OrderStatusHistoryEntry>;
     /**
      * The subTotal is the total of all OrderLines in the Order. This figure also includes any Order-level
      * discounts which have been prorated (proportionally distributed) amongst the items of each OrderLine.
@@ -2627,6 +2628,13 @@ export type OrderStateTransitionError = ErrorResult & {
     message: Scalars['String']['output'];
     toState: Scalars['String']['output'];
     transitionError: Scalars['String']['output'];
+};
+
+export type OrderStatusHistoryEntry = {
+    createdAt: Scalars['DateTime']['output'];
+    previousStatus?: Maybe<Scalars['String']['output']>;
+    status: Scalars['String']['output'];
+    uuid: Scalars['String']['output'];
 };
 
 /**
@@ -4983,6 +4991,7 @@ export type OrderDetailQuery = {
                 product: { name: string; slug: string };
             };
         }>;
+        statusHistory: Array<{ uuid: string; status: string; createdAt: any }>;
         shippingAddress?: {
             fullName?: string | null;
             streetLine1?: string | null;
@@ -6156,6 +6165,11 @@ export const OrderDetailDocument = new TypedDocumentString(`
           slug
         }
       }
+    }
+    statusHistory {
+      uuid
+      status
+      createdAt
     }
     shippingAddress {
       fullName

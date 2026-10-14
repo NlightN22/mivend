@@ -21,3 +21,4 @@ export type {
     ExternalOrderLineInput,
     ExternalOrderResult,
 } from './src/external-order.types';
+export { OrderStatusHistoryService } from './src/order-status-history.service';

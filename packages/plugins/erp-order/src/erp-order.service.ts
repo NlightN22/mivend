@@ -9,6 +9,7 @@ import {
 } from '@vendure/core';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { OrderReadyForErpEvent } from './erp-order.events';
+import { OrderStatusHistoryService } from './order-status-history.service';
 import './types';
 import type { ErpOrderStatus, ErpStatusUpdatePayload, OrderErpStatusInfo } from './types';
 
@@ -22,6 +23,7 @@ export class ErpOrderService {
         private readonly tradingPointService: TradingPointService,
         private readonly administratorService: AdministratorService,
         private readonly counterpartyService: CounterpartyService,
+        private readonly statusHistory: OrderStatusHistoryService,
     ) {}
 
     async onOrderPlaced(ctx: RequestContext, order: Order): Promise<void> {
@@ -64,6 +66,7 @@ export class ErpOrderService {
         }
 
         await this.connection.getRepository(ctx, Order).save(order);
+        await this.statusHistory.record(ctx, order.id, 'PENDING');
         this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
     }
 
@@ -118,6 +121,7 @@ export class ErpOrderService {
                 ...(payload.erpOrderId ? { erpOrderId: payload.erpOrderId } : {}),
             },
         });
+        await this.statusHistory.record(ctx, order.id, payload.status);
         this.logger.log(`Order ${order.code} status → ${payload.status}`);
     }
 

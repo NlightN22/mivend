@@ -37,6 +37,7 @@ const mockTradingPointService = {
 const mockAdministratorService = { findOneByUserId: vi.fn() };
 const mockCounterpartyService = { getForCustomer: vi.fn() };
 
+const mockStatusHistory = { record: vi.fn() };
 const mockCtx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
 describe('ErpOrderService', () => {
@@ -53,6 +54,7 @@ describe('ErpOrderService', () => {
             mockTradingPointService as never,
             mockAdministratorService as never,
             mockCounterpartyService as never,
+            mockStatusHistory as never,
         );
     });
 
@@ -175,6 +177,7 @@ describe('ErpOrderService', () => {
 
             await service.updateStatus(mockCtx, { orderCode: 'ORD-1', status: 'CONFIRMED' });
 
+            expect(mockStatusHistory.record).toHaveBeenCalledWith(mockCtx, 'order-1', 'CONFIRMED');
             const [, update] = mockOrderRepo.update.mock.calls[0];
             expect(update.customFields).not.toHaveProperty('reservationState');
             expect(update.customFields).toEqual({

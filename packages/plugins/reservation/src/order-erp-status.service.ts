@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { canAdvanceErpStatus } from '@mivend/plugin-erp-order';
+import { OrderStatusHistoryService, canAdvanceErpStatus } from '@mivend/plugin-erp-order';
 import type { ErpOrderStatus } from '@mivend/plugin-erp-order';
 import { withAggregateLock } from 'shared';
 
@@ -15,6 +15,7 @@ export class OrderErpStatusService {
     constructor(
         private connection: TransactionalConnection,
         private orderCancelResult: OrderCancelResultService,
+        private statusHistory: OrderStatusHistoryService,
     ) {}
 
     async apply(ctx: RequestContext, order: Order, derived: ErpOrderStatus | null): Promise<void> {
@@ -31,6 +32,7 @@ export class OrderErpStatusService {
             await repo.update(order.id, {
                 customFields: { erpStatus: derived, erpStatusAt: new Date() },
             });
+            await this.statusHistory.record(txCtx, order.id, derived);
         });
     }
 

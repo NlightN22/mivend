@@ -1,3 +1,4 @@
+import { OrderStatusHistoryService } from './order-status-history.service';
 import { Injectable } from '@nestjs/common';
 import {
     ConfigService,
@@ -44,6 +45,7 @@ export class ExternalOrderService {
         private readonly connection: TransactionalConnection,
         private readonly configService: ConfigService,
         private readonly counterpartyService: CounterpartyService,
+        private readonly statusHistory: OrderStatusHistoryService,
     ) {}
 
     async findByErpOrderId(
@@ -159,6 +161,9 @@ export class ExternalOrderService {
                 ...totals,
                 customFields,
             });
+            if (nextStatus !== null) {
+                await this.statusHistory.record(ctx, existing.id, nextStatus);
+            }
             await this.replaceLinesIfChanged(ctx, existing.id, input, variants);
             return { kind: 'updated', orderId: existing.id, counterpartyPending };
         }
@@ -187,6 +192,7 @@ export class ExternalOrderService {
             }),
         );
         await this.insertLines(ctx, order, input, variants);
+        await this.statusHistory.record(ctx, order.id, nextStatus ?? DEFAULT_EXTERNAL_ERP_STATUS);
         return { kind: 'created', orderId: String(order.id), counterpartyPending };
     }
 

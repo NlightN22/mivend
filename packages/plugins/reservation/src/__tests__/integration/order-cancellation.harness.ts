@@ -108,7 +108,9 @@ export function buildCancellationFixture(h: ReserveOrderHarness): CancellationFi
         h.service,
         {} as never,
         eventBus as never,
-        new OrderErpStatusService(h.connection, fixture.results),
+        new OrderErpStatusService(h.connection, fixture.results, {
+            record: async () => undefined,
+        } as never),
     );
     return fixture;
 }

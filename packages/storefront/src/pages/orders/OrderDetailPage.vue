@@ -12,6 +12,7 @@ import { STATUS_VARIANT } from './useOrders';
 import { formatAmount, formatDate } from './orderFormat';
 import OrderActionsCard from './OrderActionsCard.vue';
 import OrderDocumentCard from './OrderDocumentCard.vue';
+import OrderHistory from './OrderHistory.vue';
 import OrderLinesTable from './OrderLinesTable.vue';
 import OrderProformaInvoices from './OrderProformaInvoices.vue';
 import OrderSummaryStrip from './OrderSummaryStrip.vue';
@@ -134,6 +135,7 @@ onMounted(() => {
                     </MvModal>
 
                     <OrderLinesTable :order="order" />
+                    <OrderHistory :history="order.statusHistory" />
                 </div>
 
                 <aside class="od-aside">
