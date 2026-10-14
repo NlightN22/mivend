@@ -368,7 +368,7 @@ export const config: VendureConfig = {
             {
                 // BusinessRejectionReason.message, same lifecycle as erpRejectionReasonCode above.
                 name: 'erpRejectionReasonText',
-                type: 'string',
+                type: 'text',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Rejection Reason Text' }],
             },
