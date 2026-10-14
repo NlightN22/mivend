@@ -17,7 +17,7 @@ import { IntegrationInboxHealthService } from './integration-inbox-health.servic
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
 import type { OutboxHealthByEventType } from './outbox-health';
 import { groupLagRowsByTopic } from './kafka-lag.resolver';
-import { buildStreamHealthRows } from './stream-health';
+import { buildStreamHealthRows, lagByConsumedStream } from './stream-health';
 import type { StreamHealthRow } from './stream-health';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
@@ -59,7 +59,7 @@ export class IntegrationStreamHealthResolver {
                 consumedStreams: Object.keys(topics),
                 ignoredStreams: IGNORED_CONTRACT_STREAMS,
                 topics,
-                lagByStream: new Map(groupLagRowsByTopic(lagRows).map(l => [l.stream, l])),
+                lagByStream: lagByConsumedStream(groupLagRowsByTopic(lagRows), topics),
                 backlogByStream: new Map(backlog.map(b => [b.stream, b])),
                 noopByStream: new Map(noops.map(n => [n.stream, n])),
             }),

@@ -11,10 +11,7 @@ import {
     DiscountRuleChangedSchema,
     GrantedDiscountChangedSchema,
     OfferChangedSchema,
-    OrderCancelResultSchema,
-    OrderChangedSchema,
     OrderStatusChangedSchema,
-    OrderRegistrationResultSchema,
     OrganizationChangedSchema,
     PointOfSaleChangedSchema,
     PositionChangedSchema,
@@ -46,9 +43,14 @@ import type { EachMessagePayload, SASLOptions } from 'kafkajs';
 
 import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 import { IntegrationInboxService } from './integration-inbox.service';
+import type { ClassifiedKafkaMessage } from './kafka-inbound-message';
 import { classifyInboundMessage } from './kafka-inbound-message';
+import { classifyOrderEventMessage, ORDER_EVENT_STREAMS } from './order-events-message';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ErpIntegrationPluginOptions, InboundStream } from './types';
+
+type OrderEventStream = 'order-registration-result' | 'order-changed' | 'order-cancel-result';
+const ORDER_EVENT_STREAM_SET: ReadonlySet<InboundStream> = new Set(ORDER_EVENT_STREAMS);
 
 // Fixed id for the single status row — KafkaConsumerService only ever runs in the worker
 // process, while KafkaStatusController is served by the main HTTP process (separate Node
@@ -91,7 +93,10 @@ const CONNECT_MAX_DELAY_MS = 60_000;
 const CRASH_RETRY_BASE_DELAY_MS = 1000;
 const CRASH_RETRY_MAX_DELAY_MS = 60_000;
 
-const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> = {
+const SCHEMA_BY_STREAM: Record<
+    Exclude<InboundStream, OrderEventStream>,
+    Parameters<typeof fromBinary>[0]
+> = {
     category: CategoryChangedSchema,
     organization: OrganizationChangedSchema,
     warehouse: WarehouseChangedSchema,
@@ -102,10 +107,7 @@ const SCHEMA_BY_STREAM: Record<InboundStream, Parameters<typeof fromBinary>[0]> 
     stock: StockChangedSchema,
     'storage-location': StorageLocationChangedSchema,
     'stock-organization': StockOrganizationChangedSchema,
-    'order-registration-result': OrderRegistrationResultSchema,
-    'order-changed': OrderChangedSchema,
     'order-status': OrderStatusChangedSchema,
-    'order-cancel-result': OrderCancelResultSchema,
     department: DepartmentChangedSchema,
     position: PositionChangedSchema,
     counterparty: CounterpartyChangedSchema,
@@ -222,8 +224,11 @@ export class KafkaConsumerService implements OnModuleDestroy {
         // one. streamByTopic is built incrementally, so only actually-subscribed topics are ever
         // routed to a handler in eachMessage below.
         const streamByTopic = new Map<string, InboundStream>();
+        const orderEventTopics = new Set<string>();
         for (const [stream, topic] of Object.entries(this.options.kafkaConsumer.topics)) {
-            if (!(stream in SCHEMA_BY_STREAM)) {
+            const isOrderEvent = ORDER_EVENT_STREAM_SET.has(stream as InboundStream);
+            if (isOrderEvent && orderEventTopics.has(topic)) continue;
+            if (!isOrderEvent && !(stream in SCHEMA_BY_STREAM)) {
                 Logger.error(
                     `No schema for stream=${stream}, not subscribing to topic=${topic}`,
                     loggerCtx,
@@ -232,7 +237,8 @@ export class KafkaConsumerService implements OnModuleDestroy {
             }
             try {
                 await this.consumer.subscribe({ topic, fromBeginning: true });
-                streamByTopic.set(topic, stream as InboundStream);
+                if (isOrderEvent) orderEventTopics.add(topic);
+                else streamByTopic.set(topic, stream as InboundStream);
             } catch (err) {
                 Logger.error(
                     `Failed to subscribe to topic=${topic} (stream=${stream}): ${
@@ -242,7 +248,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
                 );
             }
         }
-        if (streamByTopic.size === 0) {
+        if (streamByTopic.size === 0 && orderEventTopics.size === 0) {
             Logger.error(
                 'No topics could be subscribed to — this consumer will receive no messages until at least one succeeds',
                 loggerCtx,
@@ -251,6 +257,10 @@ export class KafkaConsumerService implements OnModuleDestroy {
 
         await this.consumer.run({
             eachMessage: async (payload: EachMessagePayload) => {
+                if (orderEventTopics.has(payload.topic)) {
+                    await this.handleOrderEvent(payload);
+                    return;
+                }
                 const stream = streamByTopic.get(payload.topic);
                 if (!stream) return;
                 await this.handleMessage(stream, payload);
@@ -294,13 +304,37 @@ export class KafkaConsumerService implements OnModuleDestroy {
         stream: InboundStream,
         { message, partition }: EachMessagePayload,
     ): Promise<void> {
-        const schema = SCHEMA_BY_STREAM[stream];
+        const schema = SCHEMA_BY_STREAM[stream as keyof typeof SCHEMA_BY_STREAM];
         if (!schema) throw new Error(`No schema registered for stream ${stream}`);
-        const classified = classifyInboundMessage(stream, schema, message, partition ?? 0);
+        await this.store(
+            classifyInboundMessage(stream, schema, message, partition ?? 0),
+            stream,
+            message.offset,
+        );
+    }
+
+    private async handleOrderEvent({ message, partition }: EachMessagePayload): Promise<void> {
+        const classified = classifyOrderEventMessage(message, partition ?? 0);
+        if (classified.kind === 'skipped') {
+            Logger.warn(
+                `Skipped order event type=${classified.type} (offset=${message.offset})`,
+                loggerCtx,
+            );
+            return;
+        }
+        const stream =
+            classified.kind === 'enqueue' ? classified.input.stream : classified.rejected.stream;
+        await this.store(classified, stream, message.offset);
+    }
+
+    private async store(
+        classified: ClassifiedKafkaMessage,
+        stream: InboundStream,
+        offset: string,
+    ): Promise<void> {
         if (classified.kind === 'rejected') {
-            const { reason } = classified.rejected;
             Logger.error(
-                `Rejected ${stream} message (offset=${message.offset}): ${reason}`,
+                `Rejected ${stream} message (offset=${offset}): ${classified.rejected.reason}`,
                 loggerCtx,
             );
             await this.inbox.enqueueRejected(classified.rejected);

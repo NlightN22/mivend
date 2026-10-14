@@ -10,7 +10,7 @@ function makeOptions(
     return {
         instanceType,
         kafkaEnabled,
-        kafka: { brokers: ['x'], clientId: 'x', topic: 'x' },
+        kafka: { brokers: ['x'], clientId: 'x' },
         kafkaConsumer: {
             brokers: ['x'],
             clientId: 'x',

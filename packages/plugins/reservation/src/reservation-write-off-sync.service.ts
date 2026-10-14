@@ -43,7 +43,7 @@ export interface OrderRegistrationResultInput {
     rejectionReasonText: string | null;
 }
 
-// Bridges company.orders.events.v1.order-changed (issue #110/#72) — the order's ongoing,
+// Bridges erp.order.events.v1 (type `changed`) (issue #110/#72) — the order's ongoing,
 // current-state view fired repeatedly over its lifetime, unlike OrderRegistrationResultInput's
 // one-shot registration outcome. Reuses handleOrderRegistrationResult's release-matching logic
 // (releaseMatchingReservations below) rather than duplicating it: that matching is already
@@ -73,7 +73,7 @@ export interface OrderChangedInput {
     reserveUntil?: Date | null;
 }
 
-// Bridges company.orders.events.v1.order-registration-result into the local reservation domain
+// Bridges erp.order.events.v1 (type `registration-result`) into the local reservation domain
 // (issue #75, the real release trigger ReservationErpSyncService's own doc comment defers to).
 // This event is emitted as a direct, same-transaction consequence of ERP actually posting the
 // order document — genuinely stronger evidence than the generic order-status callback's bare
@@ -230,7 +230,7 @@ export class ReservationWriteOffSyncService {
         );
     }
 
-    // Issue #110: bridges company.orders.events.v1.order-changed. Only the FK resolve (entityId
+    // Issue #110: bridges erp.order.events.v1 (type `changed`). Only the FK resolve (entityId
     // → productId, both handled by the caller, erp-integration's OrderChangedStreamHandler) and
     // the informational customFields differ from handleOrderRegistrationResult above — the actual
     // release-matching logic is shared via releaseMatchingReservations, see OrderChangedInput's

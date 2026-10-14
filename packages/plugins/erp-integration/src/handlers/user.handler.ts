@@ -7,7 +7,7 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 const loggerCtx = 'IntegrationUserHandler';
 
 // Applies Integration Service's `user` stream (UserChanged, the ERP's "Пользователи",
-// company.customers.events.v1.user-changed). Issue #109: enrichment-only, never creates an
+// erp.user.events.v1). Issue #109: enrichment-only, never creates an
 // Administrator — matches an existing one by email on first sight of an erpId, then persists
 // erpId for idempotent re-processing (see UserEnrichmentService.linkAndEnrich's own comment).
 // Issue #119 extends this with fullName/isActive/isDeleted: fullName seeds the ErpUser

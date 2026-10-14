@@ -1,8 +1,9 @@
+import { ORDER_COMMANDS_TOPIC } from '@nlightn22/event-contracts';
 import { describe, expect, it } from 'vitest';
 
 import { ORDER_SUBMITTED_SCHEMA } from '../../../schemas/order-submitted.schema';
 import type { OrderSubmittedPayload } from '../../../schemas/order-submitted.schema';
-import { ORDER_EVENTS_SCHEMA, ORDER_EVENTS_TOPIC } from '../../../schemas/order-events.schema';
+import { ORDER_EVENTS_SCHEMA } from '../../../schemas/order-events.schema';
 import { encodeConfluentMessage } from '../../../wire-format';
 
 // Contract-compatibility pattern (docs/testing-patterns.md) — this is the boundary MiVend owns
@@ -106,6 +107,6 @@ describe('order.confirmed contract (order-events topic)', () => {
             expect.arrayContaining([...ORDER_SUBMITTED_SCHEMA.required, 'type', 'reserveUntil']),
         );
         expect(cancel.properties.type).toEqual({ const: 'cancel-requested' });
-        expect(ORDER_EVENTS_TOPIC).toBe('mivend.orders.events.v1.order-events');
+        expect(ORDER_COMMANDS_TOPIC).toBe('mivend.order.commands.v1');
     });
 });

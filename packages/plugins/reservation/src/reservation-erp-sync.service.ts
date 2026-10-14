@@ -20,7 +20,7 @@ import { loggerCtx } from './types';
 // "subtract Reservation for its entire active lifetime" ATP rule (see
 // ReservationAvailabilityService) exists to close, with no backstop yet (issue #73's
 // reconciliation worker isn't built). The real release trigger needs to be
-// company.orders.events.v1.order-registration-result's per-line reservedLines (issue #72/#74) —
+// erp.order.events.v1 (type `registration-result`)'s per-line reservedLines (issue #72/#74) —
 // not implemented yet. Until then, only a genuine CANCELLED keeps releasing (that one really is
 // terminal and ERP-authoritative); RESERVED/CONFIRMED only record erpConfirmedAt for staff
 // visibility, same as before this whole release-on-status detour.

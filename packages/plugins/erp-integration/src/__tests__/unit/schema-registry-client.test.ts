@@ -5,7 +5,7 @@ import type { ErpIntegrationPluginOptions } from '../../types';
 
 const OPTIONS: ErpIntegrationPluginOptions = {
     instanceType: 'central',
-    kafka: { brokers: ['localhost:9092'], clientId: 'test', topic: 'topic' },
+    kafka: { brokers: ['localhost:9092'], clientId: 'test' },
     kafkaConsumer: {
         brokers: ['localhost:9092'],
         clientId: 'test-consumer',
@@ -70,12 +70,12 @@ describe('SchemaRegistryClient.resolveSchemaId', () => {
         vi.stubGlobal('fetch', fetchMock);
 
         const client = new SchemaRegistryClient(OPTIONS);
-        const id = await client.resolveSchemaId('mivend.orders.events.v1.order-submitted', {
+        const id = await client.resolveSchemaId('mivend.order.commands.v1', {
             type: 'object',
         });
         expect(id).toBe(7);
 
-        await client.resolveSchemaId('mivend.orders.events.v1.order-submitted', {
+        await client.resolveSchemaId('mivend.order.commands.v1', {
             type: 'object',
         });
         expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -88,7 +88,7 @@ describe('SchemaRegistryClient.resolveSchemaId', () => {
         );
         const client = new SchemaRegistryClient(OPTIONS);
         await expect(
-            client.resolveSchemaId('mivend.orders.events.v1.order-submitted', { type: 'object' }),
+            client.resolveSchemaId('mivend.order.commands.v1', { type: 'object' }),
         ).rejects.toThrow(/503/);
     });
 });

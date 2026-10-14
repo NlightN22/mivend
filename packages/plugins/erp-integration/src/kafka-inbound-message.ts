@@ -21,18 +21,7 @@ export function classifyInboundMessage(
     message: KafkaMessage,
     partition: number,
 ): ClassifiedKafkaMessage {
-    const rejected = (
-        reason: string,
-        payload: Record<string, unknown>,
-        ids: { entityId?: string; sourceEventId?: string; undecodable?: boolean } = {},
-    ): ClassifiedKafkaMessage => ({
-        kind: 'rejected',
-        rejected: { stream, partition, offset: message.offset, reason, payload, ...ids },
-    });
-
-    if (!message.value) {
-        return rejected('message has no value', { key: message.key?.toString() ?? null });
-    }
+    if (!message.value) return rejectedMessage(stream, message, partition, noValueReason(message));
     let record: Record<string, unknown>;
     try {
         record = toJson(schema, fromBinary(schema, new Uint8Array(message.value))) as Record<
@@ -40,18 +29,66 @@ export function classifyInboundMessage(
             unknown
         >;
     } catch (err) {
-        const reason = `${DECODE_FAILED_PREFIX} ${err instanceof Error ? err.message : String(err)}`;
-        return rejected(
-            reason,
-            { rawBase64: message.value.toString('base64') },
-            { undecodable: true },
-        );
+        return rejectedUndecodable(stream, message, partition, err);
     }
+    return classifyDecodedRecord(stream, record, message, partition);
+}
 
+export function noValueReason(message: KafkaMessage): {
+    reason: string;
+    payload: Record<string, unknown>;
+} {
+    return {
+        reason: 'message has no value',
+        payload: { key: message.key?.toString() ?? null },
+    };
+}
+
+export function rejectedMessage(
+    stream: InboundStream,
+    message: KafkaMessage,
+    partition: number,
+    { reason, payload }: { reason: string; payload: Record<string, unknown> },
+    ids: { entityId?: string; sourceEventId?: string; undecodable?: boolean } = {},
+): ClassifiedKafkaMessage {
+    return {
+        kind: 'rejected',
+        rejected: { stream, partition, offset: message.offset, reason, payload, ...ids },
+    };
+}
+
+export function rejectedUndecodable(
+    stream: InboundStream,
+    message: KafkaMessage,
+    partition: number,
+    err: unknown,
+): ClassifiedKafkaMessage {
+    const reason = `${DECODE_FAILED_PREFIX} ${err instanceof Error ? err.message : String(err)}`;
+    return rejectedMessage(
+        stream,
+        message,
+        partition,
+        { reason, payload: { rawBase64: message.value?.toString('base64') ?? '' } },
+        { undecodable: true },
+    );
+}
+
+export function classifyDecodedRecord(
+    stream: InboundStream,
+    record: Record<string, unknown>,
+    message: KafkaMessage,
+    partition: number,
+): ClassifiedKafkaMessage {
     const entityId = String(record.entityId ?? '');
     const sourceEventId = String(record.eventId ?? message.key?.toString() ?? '');
     if (!entityId || !sourceEventId) {
-        return rejected('missing entityId/eventId', record, { entityId, sourceEventId });
+        return rejectedMessage(
+            stream,
+            message,
+            partition,
+            { reason: 'missing entityId/eventId', payload: record },
+            { entityId, sourceEventId },
+        );
     }
     return {
         kind: 'enqueue',

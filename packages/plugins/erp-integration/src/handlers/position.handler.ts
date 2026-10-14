@@ -4,7 +4,7 @@ import { PositionService } from '@mivend/plugin-access-control';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
-// Applies the `position` stream (PositionChanged, company.customers.events.v1.position-changed).
+// Applies the `position` stream (PositionChanged, erp.position.events.v1).
 // Absent isActive means false (proto3 zero-value omission), same as DepartmentStreamHandler.
 @Injectable()
 export class PositionStreamHandler implements InboundStreamHandler {

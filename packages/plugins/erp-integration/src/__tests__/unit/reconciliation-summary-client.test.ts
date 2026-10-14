@@ -5,7 +5,7 @@ import type { ErpIntegrationPluginOptions } from '../../types';
 
 const OPTIONS: ErpIntegrationPluginOptions = {
     instanceType: 'central',
-    kafka: { brokers: ['x'], clientId: 'x', topic: 'x' },
+    kafka: { brokers: ['x'], clientId: 'x' },
     kafkaConsumer: {
         brokers: ['x'],
         clientId: 'x',

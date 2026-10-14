@@ -65,7 +65,7 @@ counterparty. It takes the same lock as `reserveOrder()`. The customer has no ch
   `organizationId`, and rejects the order otherwise.
 - Lines carry `productId`, `quantity`, `priceTypeId` and no organization.
 - The schema is owned by mivend and lives in the shared `@nlightn22/event-contracts` package
-  (subject `mivend.orders.events.v1.order-events-value`, compatibility `FORWARD`, Confluent wire format). Procedure:
+  (subject `mivend.order.commands.v1-value`, compatibility `FORWARD`, Confluent wire format). Procedure:
   change the schema in the package repository on a branch, review by the ERP side, publish by
   pushing to its `master`, bump the dependency here. See `docs/integration-health.md` for the
   contract drift indicator on the Outbound tab.
@@ -156,7 +156,7 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   any closure (live test). mivend must not wait for `order-changed` to learn that the ERP released or closed an
   order. The ERP side provides an explicit signal: a stream with the live reserve per order key, and the three
   base facts per order (warehouse order exists, sale exists, marked for deletion).
-- mivend asks for B with `cancel-requested` on the order-events topic (see below); the ERP answers
+- mivend asks for B with `cancel-requested` on the order commands topic (see below); the ERP answers
   explicitly with `order-cancel-result` (`cancelled`/`rejected` with a reason). The
   `order-change-requests` stream is not used.
 - A late `order.confirmed` after a cancel: a still-pending outbox row is marked `skipped`, and the ERP keeps a
@@ -170,10 +170,24 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   delivered, marked for deletion -> cancelled); a non-priority task.
 - The customer sees a simplified status, staff a detailed one; the ERP only supplies facts.
 
+### Kafka topic names (search-platform#201, mivend#234)
+
+- Names are `<writer>.<entity>.<kind>.<version>`. The ERP writes `erp.<entity>.events.v1` (one per stream, e.g.
+  `erp.product.events.v1`, `erp.order-status.events.v1`); mivend writes `mivend.order.commands.v1`.
+- All ERP order facts share ONE topic, `erp.order.events.v1`, key = order `uuid` (the ERP entity id for orders created in
+  the ERP). The message is the protobuf `OrderEvent` envelope with a oneof; the Kafka header `type` is
+  `registration-result | change-result | cancel-result | changed`. The consumer (`order-events-message.ts`) routes
+  `registration-result`, `cancel-result`, `changed` to the inbox streams `order-registration-result`, `order-cancel-result`,
+  `order-changed`, so the handlers are unchanged; `change-result` (no consumer yet) and any unknown type are skipped with a
+  warning; a header that disagrees with the oneof case is dead-lettered.
+- Replay from earliest is safe: the inbox is unique on `(stream, sourceEventId)`.
+- Topic env overrides: `INTEGRATION_KAFKA_TOPIC_<STREAM>` per stream, `INTEGRATION_KAFKA_TOPIC_ORDER_EVENTS` for the order topic.
+  The old topics and the `INTEGRATION_KAFKA_TOPIC` producer option no longer exist.
+
 ### Order events topic and warehouse semantics (decided with the ERP side; supersedes the earlier `order.cancelled` idea)
 
-- One topic `mivend.orders.events.v1.order-events`, message key = `orderUuid`, one subject
-  `mivend.orders.events.v1.order-events-value` (JSON Schema `oneOf` discriminated by the const `type`, also sent as
+- One topic `mivend.order.commands.v1`, message key = `orderUuid`, one subject
+  `mivend.order.commands.v1-value` (JSON Schema `oneOf` discriminated by the const `type`, also sent as
   the Kafka header `type`, FORWARD, Confluent wire format). Types: `confirmed` (today's `order.submitted` plus
   `type` and a mandatory `reserveUntil`) and `cancel-requested` (`eventId`, `orderUuid`, `requestedAt`). Schema:
   `order-events.ts` in `@nlightn22/event-contracts` (0.59.0). The old `order.submitted` topic is no longer
@@ -224,7 +238,7 @@ No code knows an order status by name. Statuses are rows of one table, `order_st
 business decision reads a row's **attributes**, never its code. `Order.customFields.erpStatus` is a plain
 string validated against the dictionary; `erpOrderStatus` stays the ERP's raw `status`.
 
-- **ERP-owned rows** (`source = erp`) come from the `order-status` stream (`company.orders.events.v1.order-status-changed`,
+- **ERP-owned rows** (`source = erp`) come from the `order-status` stream (`erp.order-status.events.v1`,
   compacted, key = code): `code`, `name`, `rank`, `terminal`, `customer_visible`, `description`, `warehouse_started`,
   `shipped`, `delivered`, `cancelled`, `customer_group`, optional `is_deleted`. The ERP side owns the list and the
   derivation: `order-changed.status_code` is the status it computed from its facts (the five facts stay on the
@@ -315,8 +329,8 @@ Today the consumer drops them as a `noop`. Decision: import them as real `Order`
 ## Settlement documents (receivables history, #224)
 
 Documents that form a customer's receivables (sales, payments, returns, corrections) arrive on two streams
-(event-contracts 0.65.0): `company.customers.events.v1.settlement-document-changed` and
-`company.customers.events.v1.settlement-balance-changed`. Contract source: search-platform#195.
+(event-contracts 0.65.0): `erp.settlement-document.events.v1` and
+`erp.settlement-balance.events.v1`. Contract source: search-platform#195.
 
 - **Entities (ERP-owned).** `SettlementDocument` (key: the document uuid, never the number) -> `SettlementEntry`
   (one per organization/counterparty/contract triple, signed amount) -> `SettlementOrderLink` (order uuid, amount).

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Logger } from '@vendure/core';
-import { DataSource } from 'typeorm';
+import { DataSource, In, Not } from 'typeorm';
 import { Kafka } from 'kafkajs';
 import type { Admin, SASLOptions } from 'kafkajs';
 
@@ -47,7 +47,12 @@ export class KafkaLagPollerService {
             // per-topic isolation the consumer's own subscribe loop uses (external-integration-
             // rules skill) — one topic Integration Service has denied/moved must never blank out
             // the lag figure for every OTHER, perfectly healthy topic.
-            for (const [stream, topic] of Object.entries(this.options.kafkaConsumer.topics)) {
+            const topics = this.options.kafkaConsumer.topics;
+            const streamByTopic = new Map<string, string>();
+            for (const [stream, topic] of Object.entries(topics)) {
+                if (!streamByTopic.has(topic)) streamByTopic.set(topic, stream);
+            }
+            for (const [topic, stream] of streamByTopic) {
                 try {
                     await this.pollTopic(admin, stream as InboundStream, topic);
                     polledTopics += 1;
@@ -63,6 +68,12 @@ export class KafkaLagPollerService {
             }
         } finally {
             await admin.disconnect();
+        }
+        const configuredTopics = [...new Set(Object.values(this.options.kafkaConsumer.topics))];
+        if (configuredTopics.length > 0) {
+            await this.dataSource
+                .getRepository(KafkaConsumerLagEntry)
+                .delete({ topic: Not(In(configuredTopics)) });
         }
         return { polledTopics, failedTopics };
     }

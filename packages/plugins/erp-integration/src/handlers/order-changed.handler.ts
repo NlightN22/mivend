@@ -15,7 +15,7 @@ import { parseTimestamp } from './settlement-payload';
 
 const loggerCtx = 'IntegrationOrderChangedHandler';
 
-// Applies Integration Service's company.orders.events.v1.order-changed stream (issue #110, the
+// Applies Integration Service's erp.order.events.v1 (type `changed`) stream (issue #110, the
 // real motivating need issue #72). Unlike order-registration-result (a one-shot registration
 // outcome), this reports the order's CURRENT state and fires repeatedly over its lifetime — same
 // "entity's current state, not a diff" convention every other stream in this plugin follows. Only

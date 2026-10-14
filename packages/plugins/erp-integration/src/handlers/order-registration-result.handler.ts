@@ -8,7 +8,7 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 
 const loggerCtx = 'IntegrationOrderRegistrationResultHandler';
 
-// Applies Integration Service's company.orders.events.v1.order-registration-result stream
+// Applies Integration Service's erp.order.events.v1 (type `registration-result`) stream
 // (issue #75, the real reservation-release trigger issue #72's release-on-status attempts
 // deferred to). Only decodes the payload shape, resolves reservedLines' ERP productId to a
 // Vendure ProductVariant id (same join StockStreamHandler already uses), and resolves

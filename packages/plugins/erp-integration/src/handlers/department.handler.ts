@@ -7,7 +7,7 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 const loggerCtx = 'IntegrationDepartmentHandler';
 
 // Applies Integration Service's `department` stream (DepartmentChanged — the ERP's "Подразделение",
-// company.customers.events.v1.department-changed). entityId is the ERP's own GUID
+// erp.department.events.v1). entityId is the ERP's own GUID
 // ("Подразделение_Key") — the same value WarehouseChanged.branchId refers to, though this
 // handler only upserts the Department record itself; it deliberately does not drive any
 // warehouse→branch linkage (see WarehouseStreamHandler/BranchStockLocationStrategy's own

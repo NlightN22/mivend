@@ -16,7 +16,7 @@ interface ManagerResolution {
 const loggerCtx = 'IntegrationCounterpartyHandler';
 
 // Applies Integration Service's `counterparty` stream (CounterpartyChanged, the ERP's "Контрагент",
-// company.customers.events.v1.counterparty-changed). Issue #104, re-verified live against
+// erp.counterparty.events.v1). Issue #104, re-verified live against
 // @nlightn22/event-contracts@0.39.0 (issue #131 — do not trust older issue comments claiming a
 // field is unavailable; check the current .d.ts fresh each time, per external-integration-rules).
 // Full current field-by-field accounting for this message (envelope fields event_id/occurred_at/

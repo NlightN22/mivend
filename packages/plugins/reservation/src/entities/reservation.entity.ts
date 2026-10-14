@@ -16,7 +16,7 @@ export type ReservationStatus = 'active' | 'released' | 'expired';
 // actually written off physical stock yet (see ReservationErpSyncService's own doc comment for
 // the full reasoning and the two abandoned approaches this settled on instead of). Only a real
 // CANCELLED releases it today; the actual "ERP really wrote this off" release trigger — the ERP's
-// per-line reservedLines on company.orders.events.v1.order-registration-result — is not consumed
+// per-line reservedLines on erp.order.events.v1 (type `registration-result`) — is not consumed
 // yet (issue #72/#74).
 //
 // At most one active reservation per (orderLineId, stockLocationId) — enforced by the partial

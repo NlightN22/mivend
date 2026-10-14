@@ -36,7 +36,7 @@ already recorded there from scratch.
 Integration Service, over Kafka exclusively — never a direct HTTP/REST call to Integration
 Service or to the ERP from this repo, in either direction.** No RPC channel of any kind (see
 `docs/sync.md`'s "Why Kafka both ways, not Kafka + RPC"). Inbound catalog/price/stock streams are
-consumed from Kafka topics (`company.catalog.events.v1.*`) into `IntegrationInboxEvent`; outbound
+consumed from Kafka topics (`erp.<entity>.events.v1`) into `IntegrationInboxEvent`; outbound
 business events (e.g. `OrderSubmitted`) are published via `IntegrationOutboxEntry`, both
 schema-decoded/encoded per `docs/ai/1c-integration-service-decision.md`. No other plugin imports
 from `plugin-erp-integration` or references Kafka/the Schema Registry directly.

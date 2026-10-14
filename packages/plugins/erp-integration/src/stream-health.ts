@@ -52,6 +52,20 @@ export interface StreamHealthRow {
     lastNoopReason: string | null;
 }
 
+// Streams that share a topic (the order streams) all show that topic's lag.
+export function lagByConsumedStream(
+    lags: readonly (StreamHealthLag & { stream: string })[],
+    topics: Readonly<Record<string, string>>,
+): Map<string, StreamHealthLag> {
+    const byTopic = new Map(lags.map(lag => [lag.topic, lag]));
+    const result = new Map<string, StreamHealthLag>();
+    for (const [stream, topic] of Object.entries(topics)) {
+        const lag = byTopic.get(topic);
+        if (lag) result.set(stream, lag);
+    }
+    return result;
+}
+
 function driftOf(
     inContract: boolean,
     consumed: boolean,

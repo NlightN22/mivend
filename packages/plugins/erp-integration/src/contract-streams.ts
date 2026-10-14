@@ -1,7 +1,9 @@
 import * as contracts from '@nlightn22/event-contracts';
 import { version } from '@nlightn22/event-contracts/package.json';
 
+// ErpOrderEventSchema is the envelope of erp.order.events.v1, split into the order-* streams.
 const NOT_EVENT_SCHEMAS = new Set([
+    'ErpOrderEventSchema',
     'OrderChangedLineSchema',
     'OrderChangedLinkedDocumentSchema',
     'OrganizationSignatorySchema',

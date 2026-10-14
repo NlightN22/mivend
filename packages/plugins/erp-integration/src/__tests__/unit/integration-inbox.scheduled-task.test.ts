@@ -21,7 +21,7 @@ import type { ErpIntegrationPluginOptions } from '../../types';
 function makeOptions(instanceType: 'central' | 'branch'): ErpIntegrationPluginOptions {
     return {
         instanceType,
-        kafka: { brokers: ['x'], clientId: 'x', topic: 'x' },
+        kafka: { brokers: ['x'], clientId: 'x' },
         kafkaConsumer: {
             brokers: ['x'],
             clientId: 'x',
@@ -44,9 +44,9 @@ function makeOptions(instanceType: 'central' | 'branch'): ErpIntegrationPluginOp
                 bank: 'bank',
                 'bank-account': 'bank-account',
                 'product-photo': 'product-photo',
-                'order-registration-result': 'orr',
-                'order-changed': 'oc',
-                'order-cancel-result': 'ocr',
+                'order-registration-result': 'erp.order.events.v1',
+                'order-changed': 'erp.order.events.v1',
+                'order-cancel-result': 'erp.order.events.v1',
                 department: 'dept',
                 counterparty: 'cp',
                 'counterparty-credit-balance': 'cpcb',

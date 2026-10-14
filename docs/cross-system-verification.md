@@ -22,7 +22,7 @@ ERP inbound/outbound handlers. Never from an automated suite: orders reach the r
 
 | Scenario | Expected |
 | --- | --- |
-| Auto-reserve on placement | `RESERVED`, exactly one published `order.confirmed` (type `confirmed` on the order-events topic), numeric order number, 1C registers one document, `erpStatus` SENT_TO_ERP, `erpOrderId` set |
+| Auto-reserve on placement | `RESERVED`, exactly one published `order.confirmed` (type `confirmed` on the order commands topic), numeric order number, 1C registers one document, `erpStatus` SENT_TO_ERP, `erpOrderId` set |
 | ERP reserves less than ours | Local reservation released, `QUANTITY_MISMATCH` issue recorded, `erpStatus` untouched |
 | Re-confirm a submitted order | Second `order.confirmed` row is `skipped`, nothing published |
 | Same `eventId` redelivered | One inbox row, one customer order, one ERP document |
@@ -45,7 +45,7 @@ Also exercised, with the ERP side run by the Integration Service owner:
 | Schema registry unreachable | Outbox row stays pending with growing retry delay, visible on the outbox health counts; published exactly once after recovery |
 | Manual confirm racing the placement auto-reserve | One winner, one active reservation, one `order.confirmed`, state RESERVED |
 | Cancel before the confirmed event left the outbox (#194) | The `order.confirmed` row is `skipped`, order `Cancelled`, reservations released, nothing published |
-| Cancel after sending, before the ERP registered it | One `cancel-requested` on the order-events topic and the order `Cancelled` at once; the ERP's `order-cancel-result` is recorded |
+| Cancel after sending, before the ERP registered it | One `cancel-requested` on the order commands topic and the order `Cancelled` at once; the ERP's `order-cancel-result` is recorded |
 | Cancel of a registered pending order | One `cancel-requested`, order stays until `order-cancel-result` `cancelled`; `rejected` keeps it and notifies staff |
 | Reserve deadline passes (#194) | Pending or unregistered order `Cancelled` (reservations released); registered, in-progress or shipped orders untouched, staff warned after one day |
 

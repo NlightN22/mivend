@@ -15,7 +15,7 @@ function makeOptions(
     return {
         instanceType: 'central',
         kafkaEnabled: true,
-        kafka: { brokers: ['x'], clientId: 'x', topic: 'x' },
+        kafka: { brokers: ['x'], clientId: 'x' },
         kafkaConsumer: {
             brokers: ['x'],
             clientId: 'x',
@@ -54,7 +54,7 @@ function makeDataSource() {
     return {
         rows,
         dataSource: {
-            getRepository: (_entity: unknown) => ({ upsert }),
+            getRepository: (_entity: unknown) => ({ upsert, delete: vi.fn(async () => undefined) }),
         } as never,
     };
 }

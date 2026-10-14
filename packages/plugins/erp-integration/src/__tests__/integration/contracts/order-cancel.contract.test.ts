@@ -1,17 +1,17 @@
 import { create, toBinary } from '@bufbuild/protobuf';
-import { OrderCancelResultSchema } from '@nlightn22/event-contracts';
+import { OrderCancelResultSchema, ORDER_COMMANDS_TOPIC } from '@nlightn22/event-contracts';
 import type { KafkaMessage } from 'kafkajs';
 import { describe, expect, it } from 'vitest';
 
 import { classifyInboundMessage } from '../../../kafka-inbound-message';
-import { ORDER_EVENTS_SCHEMA, ORDER_EVENTS_TOPIC } from '../../../schemas/order-events.schema';
+import { ORDER_EVENTS_SCHEMA } from '../../../schemas/order-events.schema';
 import { OUTBOUND_EVENT_SCHEMAS } from '../../../schemas/registry';
 import { buildCancelRequested } from '../../../order-cancel-requested.builder';
 
 // Both directions of the cancel exchange with synthetic messages, never a real broker.
 describe('order cancel contract', () => {
     it('cancel-requested is the second branch of the one order-events subject, on the same topic', () => {
-        expect(ORDER_EVENTS_TOPIC).toBe('mivend.orders.events.v1.order-events');
+        expect(ORDER_COMMANDS_TOPIC).toBe('mivend.order.commands.v1');
         expect(OUTBOUND_EVENT_SCHEMAS['order.cancel-requested'].schema).toBe(
             OUTBOUND_EVENT_SCHEMAS['order.confirmed'].schema,
         );

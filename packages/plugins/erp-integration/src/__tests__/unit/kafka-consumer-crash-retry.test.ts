@@ -58,7 +58,7 @@ function makeOptions(): ErpIntegrationPluginOptions {
     return {
         instanceType: 'central',
         kafkaEnabled: true,
-        kafka: { brokers: ['x'], clientId: 'x', topic: 'x' },
+        kafka: { brokers: ['x'], clientId: 'x' },
         kafkaConsumer: {
             brokers: ['x'],
             clientId: 'x',

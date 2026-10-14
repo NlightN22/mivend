@@ -60,7 +60,7 @@ Stages 5–6 are also done:
   and reverted same-day, issue #72, 2026-09-05) — those are bare status labels with no reliable
   guarantee the ERP has actually written off physical stock yet; releasing on an unverified status
   reopens an oversell window with no backstop (issue #73 isn't built). The real release trigger
-  needs `company.orders.events.v1.order-registration-result`'s per-line `reservedLines` (not
+  needs `erp.order.events.v1` (type `registration-result`)'s per-line `reservedLines` (not
   consumed yet — issue #72/#74), which is emitted as a direct, same-transaction consequence of
   ERP actually posting the document. Filed [#43](https://github.com/NlightN22/mivend/issues/43) — the general gap that
   most other `SyncEventSchema` event types still have no real outbound producer

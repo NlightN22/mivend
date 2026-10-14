@@ -6,7 +6,7 @@ export type ReservationReconciliationIssueType = 'QUANTITY_MISMATCH' | 'UNRESOLV
 export type ReservationReconciliationIssueStatus = 'open' | 'resolved';
 
 // A detected drift between mivend's own reservation state and the ERP's own confirmed write-off
-// (company.orders.events.v1.order-registration-result, issue #75) — for a human to resolve,
+// (erp.order.events.v1 (type `registration-result`), issue #75) — for a human to resolve,
 // never auto-picked one way or the other. Mirrors plugin-acquiring's PaymentReconciliationIssue
 // (same "escalate, don't guess" convention, see docs/testing-patterns.md's "Source ownership"
 // pattern). Two shapes share this table: QUANTITY_MISMATCH (productVariantId/localQuantity/

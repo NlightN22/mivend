@@ -31,7 +31,7 @@ describe('KafkaProducerService — producer idempotency', () => {
 
     it('constructs the underlying kafkajs producer with idempotent:true and its required companions', async () => {
         const options = {
-            kafka: { brokers: ['x'], clientId: 'x', topic: 'x' },
+            kafka: { brokers: ['x'], clientId: 'x' },
         } as unknown as ErpIntegrationPluginOptions;
         const schemaRegistry = { resolveSchemaId: vi.fn().mockResolvedValue(1) } as never;
         const service = new KafkaProducerService(options, schemaRegistry);
@@ -51,7 +51,7 @@ describe('KafkaProducerService — producer idempotency', () => {
 
     it('publishes to the order-events topic keyed by orderUuid with the type header and union subject', async () => {
         const options = {
-            kafka: { brokers: ['x'], clientId: 'x', topic: 'x' },
+            kafka: { brokers: ['x'], clientId: 'x' },
         } as unknown as ErpIntegrationPluginOptions;
         const resolveSchemaId = vi.fn().mockResolvedValue(1);
         const service = new KafkaProducerService(options, { resolveSchemaId } as never);
@@ -60,14 +60,11 @@ describe('KafkaProducerService — producer idempotency', () => {
         await service.publish('order.confirmed', payload);
         await service.publish('order.confirmed', payload);
 
-        expect(resolveSchemaId).toHaveBeenCalledWith(
-            'mivend.orders.events.v1.order-events',
-            expect.anything(),
-        );
+        expect(resolveSchemaId).toHaveBeenCalledWith('mivend.order.commands.v1', expect.anything());
         const sent = sendMock.mock.calls.map(call => call[0]);
         expect(sent).toHaveLength(2);
         for (const message of sent) {
-            expect(message.topic).toBe('mivend.orders.events.v1.order-events');
+            expect(message.topic).toBe('mivend.order.commands.v1');
             expect(message.messages[0].key).toBe('order-uuid-1');
             expect(message.messages[0].headers).toEqual({ type: 'confirmed' });
         }

@@ -75,6 +75,7 @@ const branchNames = (process.env.BOOTSTRAP_BRANCH_NAMES ?? 'Main')
     .map(name => name.trim())
     .filter(Boolean);
 const integrationKafkaEnabled = process.env.INTEGRATION_KAFKA_ENABLED === 'true';
+const orderEventsTopic = process.env.INTEGRATION_KAFKA_TOPIC_ORDER_EVENTS ?? 'erp.order.events.v1';
 // Issue #68 contour model: the legacy direct-REST ERP intake and the real Kafka/Integration
 // Service path are mutually exclusive per contour. Closed by default: only exactly 'true' mounts it.
 const erpImportEnabled = process.env.ERP_IMPORT_ENABLED === 'true';
@@ -321,7 +322,7 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Registration Status' }],
             },
             {
-                // Raw `status` string from company.orders.events.v1.order-changed (issue #110) —
+                // Raw `status` string from erp.order.events.v1 (type `changed`) (issue #110) —
                 // this stream's own current-state view, fired repeatedly over the order's
                 // lifetime, distinct from erpRegistrationStatus (order-registration-result's
                 // one-shot registration outcome, a different ERP fact with its own timing). Kept
@@ -757,9 +758,6 @@ export const config: VendureConfig = {
                               password: process.env.INTEGRATION_KAFKA_SASL_PASSWORD,
                           }
                         : undefined,
-                topic:
-                    process.env.INTEGRATION_KAFKA_TOPIC ??
-                    'mivend.orders.events.v1.order-submitted',
             },
             kafkaConsumer: {
                 brokers: (process.env.INTEGRATION_KAFKA_BROKERS ?? 'localhost:9094').split(','),
@@ -784,172 +782,126 @@ export const config: VendureConfig = {
                               password: process.env.INTEGRATION_KAFKA_SASL_PASSWORD,
                           }
                         : undefined,
-                // Real topic names, verified against Integration Service's own producer
-                // (outbox-event-mapper.ts) and search-service's own consumer
-                // (indexing.constants.ts's KAFKA_TOPIC_PREFIX/topicForStream): always
-                // "company.catalog.events.v1.<kebab-stream>-changed" — see
-                // docs/ai/1c-integration-service-decision.md's 2026-08-14 retraction.
+                // Topic names follow <writer>.<entity>.events.v1 (search-platform#201).
                 topics: {
                     category:
-                        process.env.INTEGRATION_KAFKA_TOPIC_CATEGORY ??
-                        'company.catalog.events.v1.category-changed',
+                        process.env.INTEGRATION_KAFKA_TOPIC_CATEGORY ?? 'erp.category.events.v1',
                     organization:
                         process.env.INTEGRATION_KAFKA_TOPIC_ORGANIZATION ??
-                        'company.catalog.events.v1.organization-changed',
+                        'erp.organization.events.v1',
                     warehouse:
-                        process.env.INTEGRATION_KAFKA_TOPIC_WAREHOUSE ??
-                        'company.catalog.events.v1.warehouse-changed',
+                        process.env.INTEGRATION_KAFKA_TOPIC_WAREHOUSE ?? 'erp.warehouse.events.v1',
                     'price-type':
                         process.env.INTEGRATION_KAFKA_TOPIC_PRICE_TYPE ??
-                        'company.catalog.events.v1.price-type-changed',
+                        'erp.price-type.events.v1',
                     'vat-rate':
-                        process.env.INTEGRATION_KAFKA_TOPIC_VAT_RATE ??
-                        'company.catalog.events.v1.vat-rate-changed',
-                    product:
-                        process.env.INTEGRATION_KAFKA_TOPIC_PRODUCT ??
-                        'company.catalog.events.v1.product-changed',
-                    offer:
-                        process.env.INTEGRATION_KAFKA_TOPIC_OFFER ??
-                        'company.catalog.events.v1.offer-changed',
-                    price:
-                        process.env.INTEGRATION_KAFKA_TOPIC_PRICE ??
-                        'company.catalog.events.v1.price-changed',
-                    stock:
-                        process.env.INTEGRATION_KAFKA_TOPIC_STOCK ??
-                        'company.catalog.events.v1.stock-changed',
+                        process.env.INTEGRATION_KAFKA_TOPIC_VAT_RATE ?? 'erp.vat-rate.events.v1',
+                    product: process.env.INTEGRATION_KAFKA_TOPIC_PRODUCT ?? 'erp.product.events.v1',
+                    offer: process.env.INTEGRATION_KAFKA_TOPIC_OFFER ?? 'erp.offer.events.v1',
+                    price: process.env.INTEGRATION_KAFKA_TOPIC_PRICE ?? 'erp.price.events.v1',
+                    stock: process.env.INTEGRATION_KAFKA_TOPIC_STOCK ?? 'erp.stock.events.v1',
                     // Issue #71: product+warehouse+organization storage-location assignment
                     // (the ERP's МестаХраненияНоменклатуры register) — the real source for
                     // ProductVariant.customFields.organizationId, see StorageLocationStreamHandler.
                     'storage-location':
                         process.env.INTEGRATION_KAFKA_TOPIC_STORAGE_LOCATION ??
-                        'company.catalog.events.v1.storage-location-changed',
+                        'erp.storage-location.events.v1',
                     // Organization-level stock split (the ERP's ТоварыОрганизаций register) — quantity
                     // dimension deliberately deferred to issue #72, not a second organizationId
                     // source (StorageLocationChanged is sole source of truth for that).
                     'stock-organization':
                         process.env.INTEGRATION_KAFKA_TOPIC_STOCK_ORGANIZATION ??
-                        'company.catalog.events.v1.stock-organization-changed',
-                    // Issue #75: the ERP's own, same-transaction confirmation that an order document
-                    // was posted and stock written off — the real reservation-release trigger.
-                    // Different domain from the 8 catalog streams above (company.orders, not
-                    // company.catalog) — see OrderRegistrationResultHandler/
-                    // ReservationWriteOffSyncService.
-                    'order-registration-result':
-                        process.env.INTEGRATION_KAFKA_TOPIC_ORDER_REGISTRATION_RESULT ??
-                        'company.orders.events.v1.order-registration-result',
-                    // Issue #110/#72: the order's ongoing current-state view (status,
-                    // reservedQuantity, contractId), fired repeatedly over the order's lifetime —
-                    // distinct from order-registration-result's one-shot registration outcome. See
-                    // OrderChangedStreamHandler/ReservationWriteOffSyncService.handleOrderChanged.
-                    'order-changed':
-                        process.env.INTEGRATION_KAFKA_TOPIC_ORDER_CHANGED ??
-                        'company.orders.events.v1.order-changed',
-                    // Issue #194: the ERP's answer to an order cancel request (cancelled | rejected).
-                    'order-cancel-result':
-                        process.env.INTEGRATION_KAFKA_TOPIC_ORDER_CANCEL_RESULT ??
-                        'company.orders.events.v1.order-cancel-result',
+                        'erp.stock-organization.events.v1',
+                    // All ERP order events (registration result, changed, cancel result) share one
+                    // topic, routed by the message header `type`; see kafka-consumer.service.ts.
+                    'order-registration-result': orderEventsTopic,
+                    'order-changed': orderEventsTopic,
+                    'order-cancel-result': orderEventsTopic,
                     // The ERP's "Подразделение" — feeds the Department entity in
-                    // @mivend/plugin-access-control. Different domain (company.customers) than
+                    // @mivend/plugin-access-control. Different domain than
                     // the catalog/orders streams above — see DepartmentStreamHandler.
                     department:
                         process.env.INTEGRATION_KAFKA_TOPIC_DEPARTMENT ??
-                        'company.customers.events.v1.department-changed',
+                        'erp.department.events.v1',
                     // The ERP's counterparty ("Контрагент") — feeds the Counterparty entity in
-                    // @mivend/plugin-counterparty. Same domain (company.customers) as department
+                    // @mivend/plugin-counterparty. Same domain as department
                     // above — see CounterpartyStreamHandler (issue #104).
                     counterparty:
                         process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY ??
-                        'company.customers.events.v1.counterparty-changed',
+                        'erp.counterparty.events.v1',
                     // search-platform#129: register-driven creditBalance, independent of
                     // counterparty above — see CounterpartyCreditBalanceStreamHandler.
                     'counterparty-credit-balance':
                         process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY_CREDIT_BALANCE ??
-                        'company.customers.events.v1.counterparty-credit-balance-changed',
+                        'erp.counterparty-credit-balance.events.v1',
                     // Issue #109: Administrator enrichment (erpId/departmentId), also the
                     // resolution target for CounterpartyChanged's manager_id/manager_ids.
-                    user:
-                        process.env.INTEGRATION_KAFKA_TOPIC_USER ??
-                        'company.customers.events.v1.user-changed',
-                    // Issue #107: per-product gift/percent promo rules, same company.customers
-                    // domain as department/counterparty/user above — see PromoRuleStreamHandler.
+                    user: process.env.INTEGRATION_KAFKA_TOPIC_USER ?? 'erp.user.events.v1',
+                    // Issue #107: per-product gift/percent promo rules — see PromoRuleStreamHandler.
                     'promo-rule':
                         process.env.INTEGRATION_KAFKA_TOPIC_PROMO_RULE ??
-                        'company.customers.events.v1.promo-rule-changed',
+                        'erp.promo-rule.events.v1',
                     // Issue #100: the ERP's "Точка продаж" (point of sale) — feeds TradingPoint
-                    // in @mivend/plugin-counterparty, same company.customers domain as
-                    // department/counterparty/user/promo-rule above. See PointOfSaleStreamHandler.
+                    // in @mivend/plugin-counterparty. See PointOfSaleStreamHandler.
                     'point-of-sale':
                         process.env.INTEGRATION_KAFKA_TOPIC_POINT_OF_SALE ??
-                        'company.customers.events.v1.point-of-sale-changed',
+                        'erp.point-of-sale.events.v1',
                     // Issue #105: the ERP's "Договор" (contract) — feeds Contract in
-                    // @mivend/plugin-counterparty, same company.customers domain as
-                    // department/counterparty/user/promo-rule/point-of-sale above. See
-                    // ContractStreamHandler.
+                    // @mivend/plugin-counterparty. See ContractStreamHandler.
                     contract:
-                        process.env.INTEGRATION_KAFKA_TOPIC_CONTRACT ??
-                        'company.customers.events.v1.contract-changed',
-                    // Issue #103: the ERP's packaging/sales-unit reference feed (UnitChanged) —
-                    // company.catalog domain, same as category/product/price/stock above. See
+                        process.env.INTEGRATION_KAFKA_TOPIC_CONTRACT ?? 'erp.contract.events.v1',
+                    // Issue #103: the ERP's packaging/sales-unit reference feed (UnitChanged). See
                     // UnitStreamHandler and docs/order-flow.md's mivend#103 section.
-                    unit:
-                        process.env.INTEGRATION_KAFKA_TOPIC_UNIT ??
-                        'company.catalog.events.v1.unit-changed',
+                    unit: process.env.INTEGRATION_KAFKA_TOPIC_UNIT ?? 'erp.unit.events.v1',
                     // Issue #164: manufacturer reference directory (names for the catalog facet).
                     manufacturer:
                         process.env.INTEGRATION_KAFKA_TOPIC_MANUFACTURER ??
-                        'company.catalog.events.v1.manufacturer-changed',
-                    region:
-                        process.env.INTEGRATION_KAFKA_TOPIC_REGION ??
-                        'company.customers.events.v1.region-changed',
+                        'erp.manufacturer.events.v1',
+                    region: process.env.INTEGRATION_KAFKA_TOPIC_REGION ?? 'erp.region.events.v1',
                     'legal-form':
                         process.env.INTEGRATION_KAFKA_TOPIC_LEGAL_FORM ??
-                        'company.customers.events.v1.legal-form-changed',
-                    bank:
-                        process.env.INTEGRATION_KAFKA_TOPIC_BANK ??
-                        'company.customers.events.v1.bank-changed',
+                        'erp.legal-form.events.v1',
+                    bank: process.env.INTEGRATION_KAFKA_TOPIC_BANK ?? 'erp.bank.events.v1',
                     'bank-account':
                         process.env.INTEGRATION_KAFKA_TOPIC_BANK_ACCOUNT ??
-                        'company.customers.events.v1.bank-account-changed',
+                        'erp.bank-account.events.v1',
                     // Issue #181: normalized product photos (metadata + pre-signed URL).
                     'product-photo':
                         process.env.INTEGRATION_KAFKA_TOPIC_PRODUCT_PHOTO ??
-                        'company.catalog.events.v1.product-photo-changed',
+                        'erp.product-photo.events.v1',
                     // Issue #108: the ERP's own per-counterparty/contract automatic discount
-                    // engine, same company.customers domain as department/counterparty/user/
-                    // promo-rule/point-of-sale/contract above. See DiscountRuleStreamHandler.
+                    // engine. See DiscountRuleStreamHandler.
                     'discount-rule':
                         process.env.INTEGRATION_KAFKA_TOPIC_DISCOUNT_RULE ??
-                        'company.customers.events.v1.discount-rule-changed',
+                        'erp.discount-rule.events.v1',
                     // Issue #101: shipment-time confirmed discount facts. See GrantedDiscountStreamHandler.
                     'granted-discount':
                         process.env.INTEGRATION_KAFKA_TOPIC_GRANTED_DISCOUNT ??
-                        'company.customers.events.v1.granted-discount-changed',
-                    // Issue #102: the ERP's retro-bonus terms log, same company.customers domain
-                    // as discount-rule/granted-discount above. See RetroBonusRuleStreamHandler.
+                        'erp.granted-discount.events.v1',
+                    // Issue #102: the ERP's retro-bonus terms log. See RetroBonusRuleStreamHandler.
                     'retro-bonus-rule':
                         process.env.INTEGRATION_KAFKA_TOPIC_RETRO_BONUS_RULE ??
-                        'company.customers.events.v1.retro-bonus-rule-changed',
+                        'erp.retro-bonus-rule.events.v1',
                     position:
-                        process.env.INTEGRATION_KAFKA_TOPIC_POSITION ??
-                        'company.customers.events.v1.position-changed',
+                        process.env.INTEGRATION_KAFKA_TOPIC_POSITION ?? 'erp.position.events.v1',
                     'granted-retro-bonus':
                         process.env.INTEGRATION_KAFKA_TOPIC_GRANTED_RETRO_BONUS ??
-                        'company.customers.events.v1.granted-retro-bonus-changed',
+                        'erp.granted-retro-bonus.events.v1',
                     // Issue #224: receivables history. See SettlementDocumentStreamHandler.
                     'settlement-document':
                         process.env.INTEGRATION_KAFKA_TOPIC_SETTLEMENT_DOCUMENT ??
-                        'company.customers.events.v1.settlement-document-changed',
+                        'erp.settlement-document.events.v1',
                     'settlement-balance':
                         process.env.INTEGRATION_KAFKA_TOPIC_SETTLEMENT_BALANCE ??
-                        'company.customers.events.v1.settlement-balance-changed',
+                        'erp.settlement-balance.events.v1',
                     // Issue #227: document type reference, see SettlementDocumentTypeStreamHandler.
                     'settlement-document-type':
                         process.env.INTEGRATION_KAFKA_TOPIC_SETTLEMENT_DOCUMENT_TYPE ??
-                        'company.customers.events.v1.settlement-document-type-changed',
+                        'erp.settlement-document-type.events.v1',
                     // sp#200: order status reference, see OrderStatusStreamHandler.
                     'order-status':
                         process.env.INTEGRATION_KAFKA_TOPIC_ORDER_STATUS ??
-                        'company.orders.events.v1.order-status-changed',
+                        'erp.order-status.events.v1',
                 },
             },
             schemaRegistry: {

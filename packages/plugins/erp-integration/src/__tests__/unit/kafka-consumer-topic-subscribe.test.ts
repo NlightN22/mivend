@@ -1,5 +1,7 @@
 import { EventEmitter } from 'events';
 
+import { create, toBinary } from '@bufbuild/protobuf';
+import { ErpOrderEventSchema, OrderChangedSchema } from '@nlightn22/event-contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const CONSUMER_EVENTS = {
@@ -39,7 +41,7 @@ function makeOptions(): ErpIntegrationPluginOptions {
     return {
         instanceType: 'central',
         kafkaEnabled: true,
-        kafka: { brokers: ['x'], clientId: 'x', topic: 'x' },
+        kafka: { brokers: ['x'], clientId: 'x' },
         kafkaConsumer: {
             brokers: ['x'],
             clientId: 'x',
@@ -62,9 +64,9 @@ function makeOptions(): ErpIntegrationPluginOptions {
                 bank: 'bank',
                 'bank-account': 'bank-account',
                 'product-photo': 'product-photo',
-                'order-registration-result': 'orr',
-                'order-changed': 'oc',
-                'order-cancel-result': 'ocr',
+                'order-registration-result': 'erp.order.events.v1',
+                'order-changed': 'erp.order.events.v1',
+                'order-cancel-result': 'erp.order.events.v1',
                 department: 'dept',
                 counterparty: 'cp',
                 'counterparty-credit-balance': 'cpcb',
@@ -101,7 +103,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(37);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(35);
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
 
@@ -115,7 +117,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         await service.start();
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(37);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(35);
         expect(createdConsumers[0].subscribe).not.toHaveBeenCalledWith(
             expect.objectContaining({ topic: 'orphan-topic' }),
         );
@@ -145,7 +147,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
 
         await consumerPromise;
 
-        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(37);
+        expect(createdConsumers[0].subscribe).toHaveBeenCalledTimes(35);
         // run() must still be reached even though one subscribe() rejected.
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
     });
@@ -165,5 +167,50 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
 
         await expect(consumerPromise).resolves.toBeUndefined();
         expect(createdConsumers[0].run).toHaveBeenCalledTimes(1);
+    });
+
+    it('subscribes to the shared order topic once and routes its messages by type', async () => {
+        const enqueue = vi.fn();
+        const enqueueRejected = vi.fn();
+        const service = new KafkaConsumerService(
+            makeOptions(),
+            { enqueue, enqueueRejected } as never,
+            { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+        );
+        await service.start();
+
+        const orderSubscriptions = createdConsumers[0].subscribe.mock.calls.filter(
+            ([args]) => args.topic === 'erp.order.events.v1',
+        );
+        expect(orderSubscriptions).toHaveLength(1);
+
+        const { eachMessage } = createdConsumers[0].run.mock.calls[0][0];
+        const event = toBinary(
+            ErpOrderEventSchema,
+            create(ErpOrderEventSchema, {
+                event: {
+                    case: 'changed',
+                    value: create(OrderChangedSchema, { entityId: 'e-1', eventId: 'ev-1' }),
+                },
+            }),
+        );
+        const kafkaMessage = (type: string, value: Uint8Array) => ({
+            topic: 'erp.order.events.v1',
+            partition: 0,
+            message: {
+                key: Buffer.from('o-1'),
+                value: Buffer.from(value),
+                offset: '1',
+                headers: { type: Buffer.from(type) },
+            },
+        });
+        await eachMessage(kafkaMessage('changed', event));
+        await eachMessage(kafkaMessage('future-type', Uint8Array.of(9)));
+
+        expect(enqueue).toHaveBeenCalledTimes(1);
+        expect(enqueue).toHaveBeenCalledWith(
+            expect.objectContaining({ stream: 'order-changed', entityId: 'e-1' }),
+        );
+        expect(enqueueRejected).not.toHaveBeenCalled();
     });
 });

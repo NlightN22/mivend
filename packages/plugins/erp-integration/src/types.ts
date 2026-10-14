@@ -72,7 +72,6 @@ export interface KafkaConfig {
         username: string;
         password: string;
     };
-    topic: string;
 }
 
 export interface SchemaRegistryConfig {

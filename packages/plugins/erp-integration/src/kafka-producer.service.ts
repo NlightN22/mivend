@@ -1,3 +1,4 @@
+import { ORDER_COMMANDS_TOPIC } from '@nlightn22/event-contracts';
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Kafka, Producer } from 'kafkajs';
 import type { SASLOptions } from 'kafkajs';
@@ -6,7 +7,6 @@ import { SchemaRegistryClient } from './schema-registry.client';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 import { encodeConfluentMessage } from './wire-format';
-import { ORDER_EVENTS_TOPIC } from './schemas/order-events.schema';
 import type { OutboundEventSchema } from './schemas/registry';
 import { OUTBOUND_EVENT_SCHEMAS } from './schemas/registry';
 
@@ -28,13 +28,13 @@ export class KafkaProducerService implements OnModuleDestroy {
         const schemaEntry = this.resolveSchema(eventType);
         // The registry client appends "-value", giving the topic's union subject.
         const schemaId = await this.schemaRegistry.resolveSchemaId(
-            ORDER_EVENTS_TOPIC,
+            ORDER_COMMANDS_TOPIC,
             schemaEntry.schema,
         );
         const producer = await this.getProducer();
 
         await producer.send({
-            topic: ORDER_EVENTS_TOPIC,
+            topic: ORDER_COMMANDS_TOPIC,
             // acks: -1 (all) — kafkajs requires this on every send() when the producer itself
             // was created with idempotent: true (see getProducer's own comment); it's a per-send
             // option in kafkajs's types, not part of ProducerConfig.
