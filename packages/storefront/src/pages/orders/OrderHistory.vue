@@ -8,10 +8,19 @@ import { formatDate } from './orderFormat';
 const props = defineProps<{ history: OrderDetail['statusHistory'] }>();
 const { t, te } = useI18n();
 
-const entries = computed(() => [...props.history].reverse());
+type Entry = OrderDetail['statusHistory'][number];
 
-function label(status: string): string {
-    return te(`orders.statusLabel.${status}`) ? t(`orders.statusLabel.${status}`) : status;
+// A status the ERP reference marks as not customer-visible is hidden; one it does not know
+// (the mivend-pipeline statuses) always shows.
+const entries = computed(() =>
+    [...props.history].reverse().filter(entry => entry.reference?.customerVisible !== false),
+);
+
+function label(entry: Entry): string {
+    if (entry.reference?.name) return entry.reference.name;
+    return te(`orders.statusLabel.${entry.status}`)
+        ? t(`orders.statusLabel.${entry.status}`)
+        : entry.status;
 }
 </script>
 
@@ -22,7 +31,10 @@ function label(status: string): string {
             <li v-for="entry in entries" :key="entry.uuid" class="oh-item">
                 <span class="oh-dot"><IconCheck :size="14" /></span>
                 <div>
-                    <div class="oh-status">{{ label(entry.status) }}</div>
+                    <div class="oh-status">{{ label(entry) }}</div>
+                    <div v-if="entry.reference?.description" class="oh-note">
+                        {{ entry.reference.description }}
+                    </div>
                     <div class="oh-date">{{ formatDate(entry.createdAt) }}</div>
                 </div>
             </li>
@@ -82,6 +94,11 @@ function label(status: string): string {
     font-size: 14px;
     font-weight: 950;
     color: #1b2d26;
+}
+.oh-note {
+    margin-top: 2px;
+    font-size: 13px;
+    color: #344640;
 }
 .oh-date {
     margin-top: 2px;

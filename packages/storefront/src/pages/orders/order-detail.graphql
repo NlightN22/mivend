@@ -29,6 +29,11 @@ query OrderDetail($id: ID!) {
             uuid
             status
             createdAt
+            reference {
+                name
+                description
+                customerVisible
+            }
         }
         shippingAddress {
             fullName

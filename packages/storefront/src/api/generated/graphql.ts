@@ -829,11 +829,6 @@ export type CustomFieldConfig =
     | StructCustomFieldConfig
     | TextCustomFieldConfig;
 
-export type CustomProductMappings = {
-    fullName?: Maybe<Scalars['String']['output']>;
-    oemCodes?: Maybe<Array<Scalars['String']['output']>>;
-};
-
 export type Customer = Node & {
     addresses?: Maybe<Array<Address>>;
     counterparty?: Maybe<Counterparty>;
@@ -2635,8 +2630,16 @@ export type OrderStateTransitionError = ErrorResult & {
 export type OrderStatusHistoryEntry = {
     createdAt: Scalars['DateTime']['output'];
     previousStatus?: Maybe<Scalars['String']['output']>;
+    reference?: Maybe<OrderStatusReferenceInfo>;
     status: Scalars['String']['output'];
     uuid: Scalars['String']['output'];
+};
+
+export type OrderStatusReferenceInfo = {
+    code: Scalars['String']['output'];
+    customerVisible: Scalars['Boolean']['output'];
+    description: Scalars['String']['output'];
+    name: Scalars['String']['output'];
 };
 
 /**
@@ -3108,11 +3111,6 @@ export enum Permission {
 export type PriceRange = {
     max: Scalars['Money']['output'];
     min: Scalars['Money']['output'];
-};
-
-export type PriceRangeBucket = {
-    count: Scalars['Int']['output'];
-    to: Scalars['Int']['output'];
 };
 
 export type PriceRangeInput = {
@@ -3817,9 +3815,7 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
-    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
     inStock?: InputMaybe<Scalars['Boolean']['input']>;
-    priceRange?: InputMaybe<PriceRangeInput>;
     priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
@@ -3835,15 +3831,7 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
-    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
-};
-
-export type SearchResponsePriceData = {
-    buckets: Array<PriceRangeBucket>;
-    bucketsWithTax: Array<PriceRangeBucket>;
-    range: PriceRange;
-    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -3851,9 +3839,6 @@ export type SearchResult = {
     collectionIds: Array<Scalars['ID']['output']>;
     compareAtPrice?: Maybe<Scalars['Int']['output']>;
     currencyCode: CurrencyCode;
-    /** @deprecated Use customProductMappings or customProductVariantMappings */
-    customMappings: CustomProductMappings;
-    customProductMappings: CustomProductMappings;
     customerPrice?: Maybe<Scalars['Int']['output']>;
     description: Scalars['String']['output'];
     discountTiers: Array<DiscountTier>;
@@ -3861,7 +3846,6 @@ export type SearchResult = {
     facetValueIds: Array<Scalars['ID']['output']>;
     /** Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels. */
     galleryPreviews: Array<Scalars['String']['output']>;
-    inStock?: Maybe<Scalars['Boolean']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
     /** Order quantity step of the variant, in base units. */
     multiplicity?: Maybe<Scalars['Int']['output']>;
@@ -4994,7 +4978,12 @@ export type OrderDetailQuery = {
                 product: { name: string; slug: string };
             };
         }>;
-        statusHistory: Array<{ uuid: string; status: string; createdAt: any }>;
+        statusHistory: Array<{
+            uuid: string;
+            status: string;
+            createdAt: any;
+            reference?: { name: string; description: string; customerVisible: boolean } | null;
+        }>;
         shippingAddress?: {
             fullName?: string | null;
             streetLine1?: string | null;
@@ -6174,6 +6163,11 @@ export const OrderDetailDocument = new TypedDocumentString(`
       uuid
       status
       createdAt
+      reference {
+        name
+        description
+        customerVisible
+      }
     }
     shippingAddress {
       fullName
