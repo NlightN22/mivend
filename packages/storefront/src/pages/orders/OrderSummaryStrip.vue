@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import { IconBox, IconBuilding, IconCoins, IconMapPin } from '@tabler/icons-vue';
+import { MvIconStat } from '@mivend/ui-kit';
 
 defineProps<{
     count: number;
@@ -21,29 +23,39 @@ function productsLabel(n: number): string {
 
 <template>
     <div class="oss">
-        <div class="oss-item">
-            <span class="oss-label">{{ t('orders.detail.itemsCount') }}</span>
-            <span class="oss-value">{{ productsLabel(count) }}</span>
-        </div>
-        <div class="oss-item">
-            <span class="oss-label">{{ t('orders.detail.orderTotal') }}</span>
-            <span class="oss-value">{{ total }}</span>
-        </div>
-        <div v-if="organization" class="oss-item">
-            <span class="oss-label">{{ t('orders.detail.organization') }}</span>
-            <span class="oss-value">{{ organization }}</span>
-        </div>
-        <div v-if="pickupPoint" class="oss-item">
-            <span class="oss-label">{{ t('orders.detail.pickupPoint') }}</span>
-            <span class="oss-value">{{ pickupPoint }}</span>
-        </div>
+        <MvIconStat
+            class="oss-item"
+            :icon="IconBox"
+            :label="t('orders.detail.itemsCount')"
+            :value="productsLabel(count)"
+        />
+        <MvIconStat
+            class="oss-item"
+            :icon="IconCoins"
+            :label="t('orders.detail.orderTotal')"
+            :value="total"
+        />
+        <MvIconStat
+            v-if="organization"
+            class="oss-item"
+            :icon="IconBuilding"
+            :label="t('orders.detail.organization')"
+            :value="organization"
+        />
+        <MvIconStat
+            v-if="pickupPoint"
+            class="oss-item"
+            :icon="IconMapPin"
+            :label="t('orders.detail.pickupPoint')"
+            :value="pickupPoint"
+        />
     </div>
 </template>
 
 <style scoped>
 .oss {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 1px;
     margin-bottom: 18px;
     background: #edf2ef;
@@ -52,19 +64,7 @@ function productsLabel(n: number): string {
     overflow: hidden;
 }
 .oss-item {
-    display: grid;
-    align-content: start;
-    gap: 6px;
     padding: 14px 18px;
     background: #fff;
-}
-.oss-label {
-    color: #66736e;
-    font-size: 12px;
-}
-.oss-value {
-    font-size: 14px;
-    font-weight: 950;
-    color: #1b2d26;
 }
 </style>
