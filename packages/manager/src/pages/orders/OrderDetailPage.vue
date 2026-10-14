@@ -27,6 +27,7 @@ import ProformaInvoicesPanel from '../../components/order-detail/ProformaInvoice
 import PaymentReceivedPanel from '../../components/order-detail/PaymentReceivedPanel.vue';
 import OrderContractPanel from '../../components/order-detail/OrderContractPanel.vue';
 import ReservationFailurePanel from '../../components/order-detail/ReservationFailurePanel.vue';
+import ReservationHolds from '../../components/order-detail/ReservationHolds.vue';
 import ReservationPanel from '../../components/order-detail/ReservationPanel.vue';
 
 const statuses = useOrderStatusesStore();
@@ -256,6 +257,7 @@ watch(() => route.params.code, load);
                         :default-reservation-days="defaultReservationDays"
                         @changed="reload"
                     />
+                    <ReservationHolds :order-id="order.id" :refresh-on="reservations" />
                 </MvPanel>
 
                 <MvPanel title="Contract">

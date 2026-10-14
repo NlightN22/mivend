@@ -11,6 +11,7 @@ import type { ResolvedOrderLine } from './external-order-input';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { decideOrderChangedRoute } from './order-changed-route';
+import { parseTimestamp } from './settlement-payload';
 
 const loggerCtx = 'IntegrationOrderChangedHandler';
 
@@ -168,6 +169,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             documentNumber,
             derivedStatus,
             paidAmountMinor: paidAmountMinor(payload),
+            reserveUntil: parseTimestamp(payload.reserveUntil),
         });
         await this.settlementPending.attachOrder(ctx, entityId);
         return linesWithoutProductId > 0

@@ -63,3 +63,27 @@ mutation SetOrderContract($orderId: ID!, $contractId: String!) {
         ...OrderContractOptionFields
     }
 }
+
+query OrderReservationDetails($orderId: ID!) {
+    orderReservationDetails(orderId: $orderId) {
+        orderLineId
+        productVariantId
+        sku
+        source
+        quantity
+        until
+        status
+    }
+}
+
+query VariantReservationHolders($productVariantId: ID!) {
+    variantReservationHolders(productVariantId: $productVariantId) {
+        orderId
+        orderCode
+        counterpartyName
+        managerName
+        source
+        quantity
+        until
+    }
+}

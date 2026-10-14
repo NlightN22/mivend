@@ -1,10 +1,17 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderDetail } from './useOrderDetail';
 import { formatAmount } from './orderFormat';
 
-defineProps<{ order: OrderDetail }>();
+const props = defineProps<{ order: OrderDetail }>();
 const { t } = useI18n();
+const anyReserved = computed(() => props.order.lines.some(line => line.reserved));
+
+function formatUntil(iso: string): string {
+    return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+}
 </script>
 
 <template>
@@ -15,6 +22,7 @@ const { t } = useI18n();
                 <tr>
                     <th>{{ t('orders.detail.sku') }}</th>
                     <th>{{ t('orders.detail.product') }}</th>
+                    <th v-if="anyReserved">{{ t('orders.detail.reserve') }}</th>
                     <th class="olt-num">{{ t('orders.detail.qty') }}</th>
                     <th class="olt-num">{{ t('orders.detail.price') }}</th>
                     <th class="olt-num">{{ t('orders.detail.total') }}</th>
@@ -24,6 +32,18 @@ const { t } = useI18n();
                 <tr v-for="line in order.lines" :key="line.id">
                     <td class="olt-sku">{{ line.productVariant.sku }}</td>
                     <td>{{ line.productVariant.product.name }}</td>
+                    <td v-if="anyReserved" class="olt-reserve">
+                        <template v-if="line.reserved">
+                            <MvStatusBadge variant="success">{{
+                                t('orders.detail.reserved')
+                            }}</MvStatusBadge>
+                            <span v-if="line.reservedUntil" class="olt-until">{{
+                                t('orders.detail.reservedUntil', {
+                                    date: formatUntil(line.reservedUntil),
+                                })
+                            }}</span>
+                        </template>
+                    </td>
                     <td class="olt-num">{{ line.quantity }}</td>
                     <td class="olt-num">
                         {{ formatAmount(line.unitPriceWithTax, order.currencyCode) }}
@@ -71,6 +91,14 @@ const { t } = useI18n();
 .olt-num {
     text-align: right;
     white-space: nowrap;
+}
+.olt-reserve {
+    white-space: nowrap;
+}
+.olt-until {
+    margin-left: 6px;
+    color: #66736e;
+    font-size: 12px;
 }
 .olt-sku {
     color: #66736e;

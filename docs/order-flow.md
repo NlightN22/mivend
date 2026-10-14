@@ -470,6 +470,23 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
   A and, for pending/unregistered orders, B. One `OrderCancellationService.cancel` serves every cancel
   path under the `reserve-order:<id>` lock; the registration result is applied under the same lock.
 
+### Who holds a reserve: what customers and staff see (#112)
+
+- **The ERP's reserve is stored, not subtracted.** `order-changed` (per-line `reservedQuantity`, order-level
+  `reserve_until`) and `order-registration-result` (`reservedLines`) upsert `erp_order_reserve`
+  (order, variant, quantity, until). One atomic upsert per variant, so replays and concurrent events leave one
+  row; a missing `reserve_until` never clears a known date. It is a display and audit fact: the availability
+  formula (`freeQuantity`) does not read it.
+- **Customer:** `OrderLine.reserved` / `reservedUntil` on the Shop API (own orders, through the order the
+  customer can already read). Reserved means an active local reservation or an ERP quantity above zero, on a
+  not-cancelled order; until is the earlier of the two dates. No source, no quantities.
+- **Staff:** Admin `orderReservationDetails(orderId)` (our reservation rows of every status plus the ERP's
+  quantity, shown on the first order line of that variant) and `variantReservationHolders(productVariantId)`
+  (orders holding that variant, earliest expiry first, limited to orders the staff member can see). The
+  order page lists them under the reservation panel; the manager product page lists the holders.
+- Not covered: reserves the ERP holds for orders mivend does not know, which only show as the ERP's
+  `availableQuantity` cap.
+
 ### Order contract (mivend#205)
 
 All contract and organization decisions are collected in `docs/order-contracts.md`.

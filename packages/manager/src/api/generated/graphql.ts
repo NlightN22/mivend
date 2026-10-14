@@ -5767,6 +5767,16 @@ export type OrderProcessState = {
     to: Array<Scalars['String']['output']>;
 };
 
+export type OrderReservationDetail = {
+    orderLineId: Scalars['ID']['output'];
+    productVariantId: Scalars['ID']['output'];
+    quantity: Scalars['Int']['output'];
+    sku: Scalars['String']['output'];
+    source: ReservationSource;
+    status: Scalars['String']['output'];
+    until: Maybe<Scalars['DateTime']['output']>;
+};
+
 export type OrderSortParameter = {
     aggregateOrderId?: InputMaybe<SortOrder>;
     branchId?: InputMaybe<SortOrder>;
@@ -7240,6 +7250,8 @@ export type Query = {
     orderContracts: Array<OrderContractOption>;
     /** Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet. */
     orderPaymentSummaries: Array<OrderPaymentSummary>;
+    /** Every hold behind an order's lines: our own reservation rows and what the ERP reports. */
+    orderReservationDetails: Array<OrderReservationDetail>;
     orderReservations: Array<Reservation>;
     orderStatuses: Array<OrderStatusInfo>;
     orders: OrderList;
@@ -7324,6 +7336,8 @@ export type Query = {
     unassignedCounterpartyCount: Scalars['Int']['output'];
     /** Enabled variants and how many have no organization (cannot be ordered). Integration health. */
     variantOrganizationHealth: VariantOrganizationHealth;
+    /** Visible orders that currently hold stock of this variant, earliest expiry first (#112). */
+    variantReservationHolders: Array<VariantReservationHolder>;
     /** How many variants reference a unit that has not arrived (soft link, issue #200). */
     variantUnitHealth: VariantUnitHealth;
     visibleOrders: OrderList;
@@ -7600,6 +7614,10 @@ export type QueryOrderPaymentSummariesArgs = {
     orderIds: Array<Scalars['ID']['input']>;
 };
 
+export type QueryOrderReservationDetailsArgs = {
+    orderId: Scalars['ID']['input'];
+};
+
 export type QueryOrderReservationsArgs = {
     orderId: Scalars['ID']['input'];
 };
@@ -7806,6 +7824,10 @@ export type QueryTestShippingMethodArgs = {
 
 export type QueryTradingPointArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QueryVariantReservationHoldersArgs = {
+    productVariantId: Scalars['ID']['input'];
 };
 
 export type QueryVisibleOrdersArgs = {
@@ -8064,6 +8086,8 @@ export type ReservationReconciliationIssueList = {
     items: Array<ReservationReconciliationIssue>;
     totalItems: Scalars['Int']['output'];
 };
+
+export type ReservationSource = 'ERP' | 'LOCAL';
 
 export type ResetAdministratorPasswordResult = {
     reason: Maybe<Scalars['String']['output']>;
@@ -9439,6 +9463,16 @@ export type VariantOrganizationHealth = {
 export type VariantPriceEntry = {
     price: Scalars['Int']['output'];
     variantId: Scalars['ID']['output'];
+};
+
+export type VariantReservationHolder = {
+    counterpartyName: Maybe<Scalars['String']['output']>;
+    managerName: Maybe<Scalars['String']['output']>;
+    orderCode: Scalars['String']['output'];
+    orderId: Scalars['ID']['output'];
+    quantity: Scalars['Int']['output'];
+    source: ReservationSource;
+    until: Maybe<Scalars['DateTime']['output']>;
 };
 
 export type VariantUnitHealth = {
@@ -11607,6 +11641,38 @@ export type SetOrderContractMutation = {
         paymentKind: string | null;
         isMain: boolean;
         isSelected: boolean;
+    }>;
+};
+
+export type OrderReservationDetailsQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type OrderReservationDetailsQuery = {
+    orderReservationDetails: Array<{
+        orderLineId: string;
+        productVariantId: string;
+        sku: string;
+        source: ReservationSource;
+        quantity: number;
+        until: any | null;
+        status: string;
+    }>;
+};
+
+export type VariantReservationHoldersQueryVariables = Exact<{
+    productVariantId: Scalars['ID']['input'];
+}>;
+
+export type VariantReservationHoldersQuery = {
+    variantReservationHolders: Array<{
+        orderId: string;
+        orderCode: string;
+        counterpartyName: string | null;
+        managerName: string | null;
+        source: ReservationSource;
+        quantity: number;
+        until: any | null;
     }>;
 };
 
@@ -14477,6 +14543,38 @@ export const SetOrderContractDocument = new TypedDocumentString(`
   isMain
   isSelected
 }`) as unknown as TypedDocumentString<SetOrderContractMutation, SetOrderContractMutationVariables>;
+export const OrderReservationDetailsDocument = new TypedDocumentString(`
+    query OrderReservationDetails($orderId: ID!) {
+  orderReservationDetails(orderId: $orderId) {
+    orderLineId
+    productVariantId
+    sku
+    source
+    quantity
+    until
+    status
+  }
+}
+    `) as unknown as TypedDocumentString<
+    OrderReservationDetailsQuery,
+    OrderReservationDetailsQueryVariables
+>;
+export const VariantReservationHoldersDocument = new TypedDocumentString(`
+    query VariantReservationHolders($productVariantId: ID!) {
+  variantReservationHolders(productVariantId: $productVariantId) {
+    orderId
+    orderCode
+    counterpartyName
+    managerName
+    source
+    quantity
+    until
+  }
+}
+    `) as unknown as TypedDocumentString<
+    VariantReservationHoldersQuery,
+    VariantReservationHoldersQueryVariables
+>;
 export const MySessionsDocument = new TypedDocumentString(`
     query MySessions {
   mySessions {

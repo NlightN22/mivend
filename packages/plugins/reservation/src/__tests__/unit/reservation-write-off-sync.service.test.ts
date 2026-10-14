@@ -26,6 +26,8 @@ function loadedOrder(id: string, customFields: Record<string, unknown>): Order {
     return entity;
 }
 
+let erpReserve: { record: ReturnType<typeof vi.fn> };
+
 describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     let orderRepo: {
         findOne: ReturnType<typeof vi.fn>;
@@ -79,6 +81,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             reportUnresolvedProductMapping: vi.fn(async () => undefined),
         };
         eventBus = { publish: vi.fn() };
+        erpReserve = { record: vi.fn(async () => undefined) };
         service = new ReservationWriteOffSyncService(
             connection as unknown as TransactionalConnection,
             reservationService as unknown as ReservationService,
@@ -86,6 +89,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             eventBus as never,
             orderErpStatus as never,
             { dictionary: async () => testOrderStatusDictionary() } as never,
+            erpReserve as never,
         );
     });
 
@@ -226,6 +230,25 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         });
         expect(reservationRepo.find).not.toHaveBeenCalled();
         expect(reservationRepo.save).not.toHaveBeenCalled();
+        expect(erpReserve.record).not.toHaveBeenCalled();
+    });
+
+    it('records the reserved lines of an accepted registration result', async () => {
+        const reservedLines = [{ productVariantId: 'v-1', reservedQuantity: 5 }];
+        await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
+            rejected: false,
+            reservedLines,
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', reservedLines, null);
     });
 
     // mivend.audit.72's HIGH finding: an unresolvable productId must be reported as its own
@@ -1041,6 +1064,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             reportQuantityMismatch: vi.fn(async () => undefined),
             reportUnresolvedProductMapping: vi.fn(async () => undefined),
         };
+        erpReserve = { record: vi.fn(async () => undefined) };
         service = new ReservationWriteOffSyncService(
             connection as unknown as TransactionalConnection,
             reservationService as unknown as ReservationService,
@@ -1048,6 +1072,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             { publish: vi.fn() } as never,
             orderErpStatus as never,
             { dictionary: async () => testOrderStatusDictionary() } as never,
+            erpReserve as never,
         );
     });
 
@@ -1067,6 +1092,33 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             }),
         ).rejects.toThrow(/no Order found/);
         expect(reservationRepo.find).not.toHaveBeenCalled();
+    });
+
+    it('records the ERP reserve per variant with the order-level reserve_until', async () => {
+        const reserveUntil = new Date('2026-11-01T00:00:00Z');
+        const reservedLines = [{ productVariantId: 'v-1', reservedQuantity: 3 }];
+        await service.handleOrderChanged(ctx, {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            status: '',
+            reservedLines,
+            contractId: null,
+            derivedStatus: null,
+            reserveUntil,
+        });
+        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', reservedLines, reserveUntil);
+    });
+
+    it('passes a null reserve_until when the event carried none', async () => {
+        await service.handleOrderChanged(ctx, {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            status: '',
+            reservedLines: [],
+            contractId: null,
+            derivedStatus: null,
+        });
+        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', [], null);
     });
 
     it('persists status onto Order.customFields.erpOrderStatus, never erpRegistrationStatus', async () => {

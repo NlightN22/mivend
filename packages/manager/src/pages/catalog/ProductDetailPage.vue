@@ -16,6 +16,7 @@ import {
     type PriceRow,
 } from '../../api/productDetail';
 import ManagerProductInfoPanel from '../../components/catalog/ManagerProductInfoPanel.vue';
+import VariantReservationHolders from '../../components/catalog/VariantReservationHolders.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -91,6 +92,11 @@ onMounted(async () => {
                     :stock-on-hand="stockOnHand"
                 />
             </div>
+
+            <VariantReservationHolders
+                v-if="primaryVariant"
+                :product-variant-id="primaryVariant.id"
+            />
 
             <div v-if="crossReferences.length" class="product-detail-page__cross-refs">
                 <h2 class="product-detail-page__section-title">Cross-references / applicability</h2>

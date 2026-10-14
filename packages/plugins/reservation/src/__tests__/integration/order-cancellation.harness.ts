@@ -119,6 +119,7 @@ export function buildCancellationFixture(h: ReserveOrderHarness): CancellationFi
             statuses,
         ),
         statuses,
+        { record: async () => undefined } as never,
     );
     return fixture;
 }

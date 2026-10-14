@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { EventBus, Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { ErpOrderStatusEvent, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 
+import { ErpOrderReserveService } from './erp-order-reserve.service';
 import { OrderErpStatusService } from './order-erp-status.service';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssueService } from './reservation-reconciliation-issue.service';
@@ -68,6 +69,8 @@ export interface OrderChangedInput {
     derivedStatus: string | null;
     // OrderChanged.paid_amount in minor units; null/absent means not computed and never overwrites.
     paidAmountMinor?: number | null;
+    // OrderChanged.reserve_until (field 32); null when not sent, never clears a known value.
+    reserveUntil?: Date | null;
 }
 
 // Bridges company.orders.events.v1.order-registration-result into the local reservation domain
@@ -90,6 +93,7 @@ export class ReservationWriteOffSyncService {
         private eventBus: EventBus,
         private orderErpStatus: OrderErpStatusService,
         private statuses: OrderStatusReferenceService,
+        private erpReserve: ErpOrderReserveService,
     ) {}
 
     async handleOrderRegistrationResult(
@@ -215,6 +219,7 @@ export class ReservationWriteOffSyncService {
             return;
         }
 
+        await this.erpReserve.record(ctx, orderId, input.reservedLines, null);
         await this.releaseMatchingReservations(
             ctx,
             orderId,
@@ -269,6 +274,7 @@ export class ReservationWriteOffSyncService {
 
         await this.orderErpStatus.apply(ctx, order, input.derivedStatus);
 
+        await this.erpReserve.record(ctx, orderId, input.reservedLines, input.reserveUntil ?? null);
         await this.releaseMatchingReservations(
             ctx,
             orderId,

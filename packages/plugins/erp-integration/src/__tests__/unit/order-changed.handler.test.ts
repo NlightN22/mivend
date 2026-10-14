@@ -124,7 +124,34 @@ describe('OrderChangedStreamHandler', () => {
             documentNumber: null,
             derivedStatus: null,
             paidAmountMinor: null,
+            reserveUntil: null,
         });
+    });
+
+    it('passes reserve_until (an RFC3339 string on the wire) as a Date', async () => {
+        const syncService = { handleOrderChanged: vi.fn() };
+        const handler = new OrderChangedStreamHandler(
+            createConnection([{ id: 'variant-1' }]) as never,
+            syncService as never,
+            { findByEntityId: vi.fn() } as never,
+            {
+                findByErpOrderId: vi.fn().mockResolvedValue({ id: '1', isExternal: false }),
+                upsert: vi.fn(),
+            } as never,
+            { attachOrder: vi.fn() } as never,
+            { findActive: vi.fn().mockResolvedValue({}) } as never,
+        );
+
+        await handler.apply(ctx, 'erp-order-1', {
+            status: '',
+            lines: [{ productId: 'prod-1', reservedQuantity: 1 }],
+            reserveUntil: '2026-11-01T00:00:00Z',
+        });
+
+        expect(syncService.handleOrderChanged).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ reserveUntil: new Date('2026-11-01T00:00:00Z') }),
+        );
     });
 
     it('converts a line quantity expressed in its unit to base units', async () => {
@@ -298,6 +325,7 @@ describe('OrderChangedStreamHandler', () => {
             documentNumber: null,
             derivedStatus: null,
             paidAmountMinor: null,
+            reserveUntil: null,
         });
     });
 
@@ -330,6 +358,7 @@ describe('OrderChangedStreamHandler', () => {
             documentNumber: null,
             derivedStatus: null,
             paidAmountMinor: null,
+            reserveUntil: null,
         });
     });
 

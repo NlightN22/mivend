@@ -4,13 +4,35 @@ import {
     ConfirmOrderDocument,
     ExtendOrderReservationDocument,
     OrderContractsDocument,
+    OrderReservationDetailsDocument,
     OrderReservationsDocument,
+    VariantReservationHoldersDocument,
     SetOrderContractDocument,
     ReleaseOrderReservationDocument,
     ReservationExtensionLimitDocument,
     type OrderContractOptionFieldsFragment,
+    type OrderReservationDetailsQuery,
     type OrderReservationFieldsFragment,
+    type VariantReservationHoldersQuery,
 } from './generated/graphql';
+
+export type OrderReservationDetail =
+    OrderReservationDetailsQuery['orderReservationDetails'][number];
+export type VariantReservationHolder =
+    VariantReservationHoldersQuery['variantReservationHolders'][number];
+
+export async function fetchOrderReservationDetails(
+    orderId: string,
+): Promise<OrderReservationDetail[]> {
+    return (await adminApi(OrderReservationDetailsDocument, { orderId })).orderReservationDetails;
+}
+
+export async function fetchVariantReservationHolders(
+    productVariantId: string,
+): Promise<VariantReservationHolder[]> {
+    return (await adminApi(VariantReservationHoldersDocument, { productVariantId }))
+        .variantReservationHolders;
+}
 
 export type ReservationStatus = 'active' | 'released' | 'expired';
 

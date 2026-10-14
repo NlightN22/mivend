@@ -2520,6 +2520,10 @@ export type OrderLine = Node & {
     proratedUnitPriceWithTax: Scalars['Money']['output'];
     /** The quantity of items purchased */
     quantity: Scalars['Int']['output'];
+    /** True while stock for this line is held for the customer, by us or by the ERP. */
+    reserved: Scalars['Boolean']['output'];
+    /** Earliest end of the hold, when known. */
+    reservedUntil?: Maybe<Scalars['DateTime']['output']>;
     taxLines: Array<TaxLine>;
     taxRate: Scalars['Float']['output'];
     tierProgress?: Maybe<TierProgress>;
@@ -5008,6 +5012,8 @@ export type OrderDetailQuery = {
             quantity: number;
             unitPriceWithTax: any;
             linePriceWithTax: any;
+            reserved: boolean;
+            reservedUntil?: any | null;
             productVariant: {
                 id: string;
                 sku: string;
@@ -6204,6 +6210,8 @@ export const OrderDetailDocument = new TypedDocumentString(`
       quantity
       unitPriceWithTax
       linePriceWithTax
+      reserved
+      reservedUntil
       productVariant {
         id
         sku

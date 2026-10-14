@@ -18,6 +18,7 @@ import { ErpOrderPlugin, ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
 import { MoqPlugin } from '@mivend/plugin-moq';
 import { NotificationPlugin } from '@mivend/plugin-notification';
 
+import { ErpOrderReserve } from './entities/erp-order-reserve.entity';
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
@@ -42,7 +43,11 @@ import { OrderCancellableResolver } from './order-cancellable.resolver';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
 import { ReservationExpiryService } from './reservation-expiry.service';
 import { createReservationExpiryTask } from './reservation-expiry.scheduled-task';
+import { ErpOrderReserveService } from './erp-order-reserve.service';
 import { ReservationExtensionLimitService } from './reservation-extension-limit.service';
+import { OrderLineReservationResolver, ReservationViewResolver } from './reservation-view.resolver';
+import { adminReservationViewSchema, shopReservationViewSchema } from './reservation-view.schema';
+import { ReservationViewService } from './reservation-view.service';
 import { ReservationExtensionService } from './reservation-extension.service';
 import { ReservationFailureService } from './reservation-failure.service';
 import { ReservationPaymentService } from './reservation-payment.service';
@@ -145,7 +150,12 @@ const adminApiSchema = gql`
         MoqPlugin,
         NotificationPlugin,
     ],
-    entities: [Reservation, ReservationExtensionLimit, ReservationReconciliationIssue],
+    entities: [
+        Reservation,
+        ReservationExtensionLimit,
+        ReservationReconciliationIssue,
+        ErpOrderReserve,
+    ],
     providers: [
         OrderContractService,
         ReservationService,
@@ -164,6 +174,8 @@ const adminApiSchema = gql`
         ReservationAvailabilityService,
         StockLevelService,
         ReservationExtensionLimitService,
+        ErpOrderReserveService,
+        ReservationViewService,
         {
             provide: RESERVATION_PLUGIN_OPTIONS,
             useFactory: (): ReservationPluginOptions => ReservationPlugin.options,
@@ -178,8 +190,12 @@ const adminApiSchema = gql`
         OrderCancelResultService,
     ],
     shopApiExtensions: {
-        schema: shopCancelOrderSchema,
+        schema: gql`
+            ${shopCancelOrderSchema}
+            ${shopReservationViewSchema}
+        `,
         resolvers: [
+            OrderLineReservationResolver,
             ProductVariantStockResolver,
             ShopCancelOrderResolver,
             OrderCancelResultResolver,
@@ -190,9 +206,11 @@ const adminApiSchema = gql`
         schema: gql`
             ${adminApiSchema}
             ${adminCancelOrderSchema}
+            ${adminReservationViewSchema}
         `,
         resolvers: [
             ReservationResolver,
+            ReservationViewResolver,
             AdminCancelOrderResolver,
             OrderCancelResultResolver,
             OrderCancellableResolver,
