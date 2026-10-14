@@ -1,6 +1,13 @@
 # Project Context
 
-Updated: 2026-10-13 20:26
+Updated: 2026-10-14 17:10
+
+## #234 Kafka topic rename (2026-10-14, pushed `606f5480`, closed; not audited in a separate session)
+
+- Names are `<writer>.<entity>.<kind>.<version>` (search-platform#201): ERP writes `erp.<entity>.events.v1`, mivend writes `mivend.order.commands.v1`. event-contracts `^0.71.0` (lockfile edited by hand).
+- ONE consumer for `erp.order.events.v1` (`order-events-message.ts`): protobuf `OrderEvent` oneof + header `type`, routed to the unchanged inbox streams `order-registration-result` / `order-changed` / `order-cancel-result`; `change-result` and unknown types skipped with a warning; header/oneof mismatch dead-lettered. The three streams share one topic, so the consumer subscribes once and lag polling/stream health dedupe by topic. `KafkaConfig.topic` and `INTEGRATION_KAFKA_TOPIC` are gone; `INTEGRATION_KAFKA_TOPIC_ORDER_EVENTS` overrides the order topic. Decisions in `docs/order-contracts.md` "Kafka topic names".
+- Verified live on staging-integration (35 topics, order topic lag 0, no errors; Integration health page shows the new names). Kafka lag was still "unknown" right after the restart (no committed offsets yet).
+- Seen on staging, not caused by this change: `offer` ~49.8k no-op/24h (not investigated), 12833 failed `stock` and 4 failed `product` (old), one pending `order-changed` for an order mivend does not have.
 
 ## #215 / #224 / #227 historical ERP orders and settlement documents (2026-10-13, closed, on main; follow-ups #228/#229/#226)
 
