@@ -1,13 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { OrderStatusHistoryService, canAdvanceErpStatus } from '@mivend/plugin-erp-order';
+import {
+    OrderStatusHistoryService,
+    OrderStatusReferenceService,
+    canAdvanceErpStatus,
+} from '@mivend/plugin-erp-order';
 import type { ErpOrderStatus } from '@mivend/plugin-erp-order';
 import { withAggregateLock } from 'shared';
 
 import { OrderCancelResultService } from './order-cancel-result.service';
 import { loggerCtx } from './types';
 
-// Applies the status derived from order-changed facts. CANCELLED goes through the cancel-result
+// Applies the ERP status code carried by order-changed. CANCELLED goes through the cancel-result
 // path (local cancel + status event); any other status only moves erpStatus forward, decided on a
 // fresh read under the order lock and written as changed keys only.
 @Injectable()
@@ -16,6 +20,7 @@ export class OrderErpStatusService {
         private connection: TransactionalConnection,
         private orderCancelResult: OrderCancelResultService,
         private statusHistory: OrderStatusHistoryService,
+        private statusReference: OrderStatusReferenceService,
     ) {}
 
     async apply(ctx: RequestContext, order: Order, derived: ErpOrderStatus | null): Promise<void> {
@@ -28,7 +33,8 @@ export class OrderErpStatusService {
             const repo = this.connection.getRepository(txCtx, Order);
             const fresh = await repo.findOne({ where: { id: order.id } });
             if (!fresh || fresh.state === 'Cancelled') return;
-            if (!canAdvanceErpStatus(fresh.customFields.erpStatus, derived)) return;
+            const ranks = await this.statusReference.ranks(txCtx);
+            if (!canAdvanceErpStatus(fresh.customFields.erpStatus, derived, ranks)) return;
             await repo.update(order.id, {
                 customFields: { erpStatus: derived, erpStatusAt: new Date() },
             });

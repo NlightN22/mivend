@@ -80,6 +80,15 @@ describe('computeExternalTotals', () => {
     });
 });
 
+const REFERENCE_RANKS = new Map([
+    ['UNDER_APPROVAL', 3],
+    ['APPROVED', 4],
+    ['PICKING', 5],
+    ['SHIPPING', 6],
+    ['DELIVERING', 7],
+    ['DELIVERED', 8],
+]);
+
 describe('nextExternalErpStatus', () => {
     it.each([
         ['CONFIRMED', 'DELIVERED', 'DELIVERED'],
@@ -90,8 +99,9 @@ describe('nextExternalErpStatus', () => {
         ['CANCELLED', 'DELIVERED', null],
         ['CANCELLED', 'CANCELLED', null],
         ['DELIVERED', null, null],
+        ['CONFIRMED', 'PICKING', 'PICKING'],
     ] as const)('%s + %s -> %s', (current, derived, expected) => {
-        expect(nextExternalErpStatus(current, derived)).toBe(expected);
+        expect(nextExternalErpStatus(current, derived, REFERENCE_RANKS)).toBe(expected);
     });
 });
 

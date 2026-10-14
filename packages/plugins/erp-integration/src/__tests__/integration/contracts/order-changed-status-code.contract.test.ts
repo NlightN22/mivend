@@ -6,11 +6,13 @@ import type { KafkaMessage } from 'kafkajs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OrderChangedStreamHandler } from '../../../handlers/order-changed.handler';
+import { MissingDependencyError } from '../../../types';
 import { classifyInboundMessage } from '../../../kafka-inbound-message';
 
 // Synthetic OrderChanged messages through the real decode + handler, never a real broker.
 async function derivedStatusFor(
     fields: MessageInitShape<typeof OrderChangedSchema>,
+    referenceKnown = true,
 ): Promise<unknown> {
     const message = create(OrderChangedSchema, {
         eventId: '11111111-1111-4111-8111-111111111111',
@@ -41,39 +43,45 @@ async function derivedStatusFor(
             upsert: vi.fn(),
         } as never,
         { attachOrder: vi.fn() } as never,
+        { findActive: vi.fn().mockResolvedValue(referenceKnown ? {} : null) } as never,
     );
     await handler.apply({} as RequestContext, 'erp-order-1', classified.input.payload);
     return sync.handleOrderChanged.mock.calls[0][1].derivedStatus;
 }
 
-describe('order-changed status facts contract (0.60.0)', () => {
+describe('order-changed status_code contract (0.69.0)', () => {
     it.each([
-        [{ markedForDeletion: true, delivered: true }, 'CANCELLED'],
-        [{ delivered: true, inDelivery: true }, 'DELIVERED'],
-        [{ inDelivery: true, hasRealization: true }, 'DELIVERING'],
-        [{ hasRealization: true, hasOrder: true }, 'SHIPPING'],
-        [{ hasOrder: true, hasRealization: false }, 'PICKING'],
-        [{ status: 'Согласован' }, 'APPROVED'],
-        [{ status: 'НаСогласовании' }, 'UNDER_APPROVAL'],
-    ])('decodes %j into %s', async (fields, expected) => {
-        expect(await derivedStatusFor(fields)).toBe(expected);
+        'CANCELLED',
+        'DELIVERED',
+        'DELIVERING',
+        'SHIPPING',
+        'PICKING',
+        'APPROVED',
+        'UNDER_APPROVAL',
+    ])('decodes status_code %s', async code => {
+        expect(await derivedStatusFor({ statusCode: code })).toBe(code);
     });
 
-    it('treats absent facts as not computed and an unknown status as no status', async () => {
-        expect(await derivedStatusFor({})).toBeNull();
-        expect(await derivedStatusFor({ status: 'SomeFutureValue' })).toBeNull();
-    });
-
-    it('treats explicit false facts as computed-false, not as absent', async () => {
+    it('derives nothing from the facts or the raw status alone', async () => {
         expect(
             await derivedStatusFor({
-                markedForDeletion: false,
-                delivered: false,
-                inDelivery: false,
-                hasRealization: false,
-                hasOrder: false,
+                markedForDeletion: true,
+                delivered: true,
+                hasOrder: true,
                 status: 'Согласован',
             }),
-        ).toBe('APPROVED');
+        ).toBeNull();
+        expect(await derivedStatusFor({})).toBeNull();
+    });
+
+    it('ignores a status_code this code does not know', async () => {
+        expect(await derivedStatusFor({ statusCode: 'SOME_FUTURE_CODE' })).toBeNull();
+    });
+
+    it('retries a code the reference does not carry yet, except CANCELLED', async () => {
+        await expect(derivedStatusFor({ statusCode: 'PICKING' }, false)).rejects.toBeInstanceOf(
+            MissingDependencyError,
+        );
+        expect(await derivedStatusFor({ statusCode: 'CANCELLED' }, false)).toBe('CANCELLED');
     });
 });

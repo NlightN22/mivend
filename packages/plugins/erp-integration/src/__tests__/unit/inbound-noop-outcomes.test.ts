@@ -119,6 +119,7 @@ describe.each([
                 upsert: vi.fn(),
             } as never,
             { attachOrder: vi.fn() } as never,
+            { findActive: vi.fn().mockResolvedValue({}) } as never,
         );
 
         const outcome = await handler.apply(ctx, 'o-1', {
@@ -150,6 +151,7 @@ describe.each([
                 upsert: vi.fn(),
             } as never,
             { attachOrder: vi.fn() } as never,
+            { findActive: vi.fn().mockResolvedValue({}) } as never,
         );
 
         const outcome = await handler.apply(ctx, 'o-1', {

@@ -1,4 +1,5 @@
 import { OrderStatusHistoryService } from './order-status-history.service';
+import { OrderStatusReferenceService } from './order-status-reference.service';
 import { Injectable } from '@nestjs/common';
 import {
     ConfigService,
@@ -46,6 +47,7 @@ export class ExternalOrderService {
         private readonly configService: ConfigService,
         private readonly counterpartyService: CounterpartyService,
         private readonly statusHistory: OrderStatusHistoryService,
+        private readonly statusReference: OrderStatusReferenceService,
     ) {}
 
     async findByErpOrderId(
@@ -132,7 +134,11 @@ export class ExternalOrderService {
             );
         }
         const nextStatus = existing
-            ? nextExternalErpStatus(existing.erpStatus, input.erpStatus)
+            ? nextExternalErpStatus(
+                  existing.erpStatus,
+                  input.erpStatus,
+                  await this.statusReference.ranks(ctx),
+              )
             : (input.erpStatus ?? DEFAULT_EXTERNAL_ERP_STATUS);
         const counterpartyFields = input.counterpartyErpId
             ? {

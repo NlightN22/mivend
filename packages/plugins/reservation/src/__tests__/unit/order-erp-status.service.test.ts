@@ -25,6 +25,15 @@ describe('OrderErpStatusService.apply', () => {
             connection as unknown as TransactionalConnection,
             cancelResult as never,
             statusHistory as never,
+            {
+                ranks: async () =>
+                    new Map([
+                        ['APPROVED', 4],
+                        ['PICKING', 5],
+                        ['SHIPPING', 6],
+                        ['DELIVERED', 8],
+                    ]),
+            } as never,
         );
     });
 
@@ -58,6 +67,15 @@ describe('OrderErpStatusService.apply', () => {
             expect(statusHistory.record).not.toHaveBeenCalled();
         },
     );
+
+    it('does not apply a status the reference has no rank for', async () => {
+        orderRepo.findOne.mockResolvedValue({
+            id: 'order-1',
+            customFields: { erpStatus: 'SENT_TO_ERP' },
+        });
+        await service.apply(ctx, order({}), 'DELIVERING');
+        expect(statusWrites()).toHaveLength(0);
+    });
 
     it('routes CANCELLED through the cancel-result path instead of writing the status', async () => {
         await service.apply(ctx, order({ uuid: 'u-1' }), 'CANCELLED');

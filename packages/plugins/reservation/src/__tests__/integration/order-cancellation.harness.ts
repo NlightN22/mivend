@@ -11,6 +11,15 @@ import { ReservationWriteOffSyncService } from '../../reservation-write-off-sync
 import { TestOrder, TestPayment, TestReservation } from './reserve-order.harness';
 import type { ReserveOrderHarness } from './reserve-order.harness';
 
+const FACT_STATUS_RANKS = new Map([
+    ['UNDER_APPROVAL', 3],
+    ['APPROVED', 4],
+    ['PICKING', 5],
+    ['SHIPPING', 6],
+    ['DELIVERING', 7],
+    ['DELIVERED', 8],
+]);
+
 export const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 export class FakePort implements OrderCancellationPort {
@@ -108,9 +117,12 @@ export function buildCancellationFixture(h: ReserveOrderHarness): CancellationFi
         h.service,
         {} as never,
         eventBus as never,
-        new OrderErpStatusService(h.connection, fixture.results, {
-            record: async () => undefined,
-        } as never),
+        new OrderErpStatusService(
+            h.connection,
+            fixture.results,
+            { record: async () => undefined } as never,
+            { ranks: async () => FACT_STATUS_RANKS } as never,
+        ),
     );
     return fixture;
 }

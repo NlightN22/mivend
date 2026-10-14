@@ -24,8 +24,9 @@ export function externalOrderState(erpStatus: ErpOrderStatus): OrderState {
 export function nextExternalErpStatus(
     current: string | null | undefined,
     derived: ErpOrderStatus | null,
+    referenceRanks: ReadonlyMap<string, number>,
 ): ErpOrderStatus | null {
     if (derived === null || current === 'CANCELLED') return null;
     if (derived === 'CANCELLED') return derived;
-    return canAdvanceErpStatus(current, derived) ? derived : null;
+    return canAdvanceErpStatus(current, derived, referenceRanks) ? derived : null;
 }

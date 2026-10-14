@@ -15,6 +15,8 @@ import {
     EXTERNAL_ORDER_OWNER_CLAUSE,
     ExternalOrderReconcileService,
     ExternalOrderService,
+    OrderStatusReference,
+    OrderStatusReferenceService,
 } from '@mivend/plugin-erp-order';
 import {
     createTestSchema,
@@ -107,6 +109,15 @@ class TestCounterparty {
 
 const { schema, extra } = testSchemaOptions('order_changed_external');
 const ERP_ORDER = 'erp-order-1';
+const REFERENCE: Array<[string, number]> = [
+    ['UNDER_APPROVAL', 3],
+    ['APPROVED', 4],
+    ['PICKING', 5],
+    ['SHIPPING', 6],
+    ['DELIVERING', 7],
+    ['DELIVERED', 8],
+    ['CANCELLED', 0],
+];
 let dataSource: DataSource;
 let handler: OrderChangedStreamHandler;
 let externalOrders: ExternalOrderService;
@@ -115,6 +126,7 @@ let ctx: RequestContext;
 const entityMap = new Map<unknown, unknown>([
     [Order, TestOrder],
     [OrderLine, TestOrderLine],
+    [OrderStatusReference, OrderStatusReference],
 ]);
 
 beforeAll(async () => {
@@ -124,7 +136,14 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestOrder, TestOrderLine, TestProduct, TestVariant, TestCounterparty],
+        entities: [
+            TestOrder,
+            TestOrderLine,
+            TestProduct,
+            TestVariant,
+            TestCounterparty,
+            OrderStatusReference,
+        ],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -158,11 +177,13 @@ beforeAll(async () => {
         findByErpId: (_c: RequestContext, erpId: string) =>
             dataSource.getRepository(TestCounterparty).findOne({ where: { erpId } }),
     };
+    const statusReference = new OrderStatusReferenceService(connection as never);
     externalOrders = new ExternalOrderService(
         connection as never,
         config as never,
         counterparties as never,
         { record: async () => undefined } as never,
+        statusReference,
     );
     handler = new OrderChangedStreamHandler(
         connection as never,
@@ -170,6 +191,7 @@ beforeAll(async () => {
         { findByEntityId: vi.fn() } as never,
         externalOrders,
         { attachOrder: vi.fn() } as never,
+        statusReference,
     );
     ctx = { channel: { defaultCurrencyCode: 'RUB' } } as unknown as RequestContext;
 });
@@ -181,7 +203,19 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query(
-        'TRUNCATE TABLE "order", order_line, product, product_variant, counterparty RESTART IDENTITY CASCADE',
+        'TRUNCATE TABLE "order", order_line, product, product_variant, counterparty, order_status_reference RESTART IDENTITY CASCADE',
+    );
+    await dataSource.getRepository(OrderStatusReference).save(
+        REFERENCE.map(([code, rank]) => ({
+            code,
+            name: code,
+            rank,
+            terminal: false,
+            customerVisible: true,
+            description: '',
+            isDeleted: false,
+            sourceVersion: '1',
+        })),
     );
     const product = await dataSource.getRepository(TestProduct).save({ externalId: 'prod-1' });
     await dataSource.getRepository(TestVariant).save({ productId: product.id, taxCategoryId: 3 });
@@ -237,9 +271,9 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
         expect(lines[0]).toMatchObject({ quantity: 2, listPrice: 12525 });
     });
 
-    it('maps the cancelled fact directly to the Cancelled state', async () => {
+    it('maps the CANCELLED status_code directly to the Cancelled state', async () => {
         await addCounterparty('cp-1');
-        await handler.apply(ctx, ERP_ORDER, payload({ markedForDeletion: true }));
+        await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'CANCELLED' }));
         expect((await orders())[0]).toMatchObject({ state: 'Cancelled' });
     });
 
@@ -270,8 +304,8 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
     it('redelivery updates the same row and does not duplicate lines', async () => {
         await addCounterparty('cp-1');
         await handler.apply(ctx, ERP_ORDER, payload());
-        await handler.apply(ctx, ERP_ORDER, payload({ delivered: true }));
-        await handler.apply(ctx, ERP_ORDER, payload({ delivered: true }));
+        await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'DELIVERED' }));
+        await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'DELIVERED' }));
 
         const rows = await orders();
         expect(rows).toHaveLength(1);
@@ -305,6 +339,7 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
             { findByEntityId: vi.fn() } as never,
             externalOrders,
             { attachOrder: vi.fn() } as never,
+            { findActive: vi.fn() } as never,
         );
 
         await mivendHandler.apply(ctx, ERP_ORDER, { lines: [] });
@@ -319,7 +354,7 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
         });
 
         it('keeps DELIVERED when a later event carries no facts, still refreshing raw fields', async () => {
-            await handler.apply(ctx, ERP_ORDER, payload({ delivered: true }));
+            await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'DELIVERED' }));
 
             await handler.apply(
                 ctx,
@@ -336,18 +371,18 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
             });
         });
 
-        it('keeps DELIVERED when a later fact derives an earlier status', async () => {
-            await handler.apply(ctx, ERP_ORDER, payload({ delivered: true }));
+        it('keeps DELIVERED when a later status_code is an earlier status', async () => {
+            await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'DELIVERED' }));
 
-            await handler.apply(ctx, ERP_ORDER, payload({ hasOrder: true }));
+            await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'PICKING' }));
 
             expect((await orders())[0]).toMatchObject({ state: 'Delivered' });
         });
 
         it('keeps CANCELLED terminal even when a later event says delivered', async () => {
-            await handler.apply(ctx, ERP_ORDER, payload({ markedForDeletion: true }));
+            await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'CANCELLED' }));
 
-            await handler.apply(ctx, ERP_ORDER, payload({ delivered: true }));
+            await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'DELIVERED' }));
             await handler.apply(ctx, ERP_ORDER, payload());
 
             const [order] = await orders();
@@ -356,10 +391,10 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
         });
 
         it('moves forward and may cancel from any non-cancelled status', async () => {
-            await handler.apply(ctx, ERP_ORDER, payload({ inDelivery: true }));
+            await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'DELIVERING' }));
             expect((await orders())[0]).toMatchObject({ state: 'Shipped' });
 
-            await handler.apply(ctx, ERP_ORDER, payload({ markedForDeletion: true }));
+            await handler.apply(ctx, ERP_ORDER, payload({ statusCode: 'CANCELLED' }));
 
             expect((await orders())[0]).toMatchObject({ state: 'Cancelled' });
         });

@@ -1,10 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ExternalOrderService } from '@mivend/plugin-erp-order';
+import {
+    ERP_ORDER_STATUSES,
+    ExternalOrderService,
+    OrderStatusReferenceService,
+} from '@mivend/plugin-erp-order';
+import type { ErpOrderStatus } from '@mivend/plugin-erp-order';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 import { SettlementPendingService } from '@mivend/plugin-settlement';
 
-import { deriveOrderErpStatus } from '../order-erp-status.derivation';
 import { MissingDependencyError } from '../types';
 import { UnitLookupService } from '../unit-lookup.service';
 import { buildExternalOrderInput, paidAmountMinor } from './external-order-input';
@@ -30,9 +34,11 @@ const loggerCtx = 'IntegrationOrderChangedHandler';
 // fabricating a use before one exists. comment is out of scope per the issue too. Revisit once
 // #101 lands a real consumer for these fields.
 //
-// Status facts (event-contracts 0.60.0, sp#189) hasOrder/hasRealization/markedForDeletion/
-// inDelivery/delivered are ALL consumed: deriveOrderErpStatus maps them (plus the raw status) to
-// mivend's own erpStatus; an absent fact means "not computed", never false. documentNumber (15)
+// status_code (field 38, event-contracts 0.69.0, sp#200) is the ERP-computed status and the only
+// status input: a code absent from the order-status reference retries as a missing dependency
+// (CANCELLED excepted), a code this code does not know is ignored. The facts hasOrder/hasRealization/
+// markedForDeletion/inDelivery/delivered stay on the contract for other consumers and are
+// deliberately NOT read here (status_code supersedes them, sp#200). documentNumber (15)
 // refreshes erpRegistrationDocumentNumber; stale events are dropped upstream by the inbox version check.
 //
 // Header-level customerId/organizationId/warehouseId, and per-line plain `quantity` (distinct
@@ -54,6 +60,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         private readonly unitLookupService: UnitLookupService,
         private readonly externalOrderService: ExternalOrderService,
         private readonly settlementPending: SettlementPendingService,
+        private readonly statusReference: OrderStatusReferenceService,
     ) {}
 
     async apply(
@@ -92,14 +99,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         );
         const isExternal = route !== 'apply-to-mivend-order';
 
-        const derivedStatus = deriveOrderErpStatus({
-            markedForDeletion: payload.markedForDeletion as boolean | undefined,
-            delivered: payload.delivered as boolean | undefined,
-            inDelivery: payload.inDelivery as boolean | undefined,
-            hasRealization: payload.hasRealization as boolean | undefined,
-            hasOrder: payload.hasOrder as boolean | undefined,
-            status,
-        });
+        const derivedStatus = await this.resolveStatusCode(ctx, entityId, payload.statusCode);
 
         const rawLines = Array.isArray(payload.lines) ? payload.lines : [];
         const resolvedLines: ResolvedOrderLine[] = [];
@@ -180,6 +180,26 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
                   `order-changed ${entityId}: applied without ${linesWithoutProductId} line(s) lacking a productId`,
               )
             : inboundApplied();
+    }
+
+    // status_code is a real `optional string`: absent means the producer derived nothing.
+    private async resolveStatusCode(
+        ctx: RequestContext,
+        entityId: string,
+        statusCode: unknown,
+    ): Promise<ErpOrderStatus | null> {
+        if (typeof statusCode !== 'string' || statusCode === '') return null;
+        const known = ERP_ORDER_STATUSES.find(code => code === statusCode);
+        if (!known) {
+            Logger.warn(`order-changed ${entityId}: unknown status_code ${statusCode}`, loggerCtx);
+            return null;
+        }
+        if (known !== 'CANCELLED' && !(await this.statusReference.findActive(ctx, known))) {
+            throw new MissingDependencyError(
+                `order-changed ${entityId}: status ${known} is not in the order-status reference yet`,
+            );
+        }
+        return known;
     }
 
     // Quantities of a line with a unit are in that unit (#214); local reservations are in base units.

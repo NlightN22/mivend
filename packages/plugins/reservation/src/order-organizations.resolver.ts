@@ -12,7 +12,10 @@ export class OrderOrganizationsResolver {
             .find({ where: { order: { id: order.id } }, order: { id: 'ASC' } });
         const ids = [
             ...new Set(
-                lines.map(l => l.customFields?.organizationId).filter((id): id is string => !!id),
+                lines
+                    .map(l => l.customFields?.organizationId)
+                    .filter(id => id != null)
+                    .map(String),
             ),
         ];
         if (ids.length === 0) return [];
