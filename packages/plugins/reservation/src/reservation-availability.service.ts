@@ -11,6 +11,7 @@ import {
 import { WarehouseService } from '@mivend/plugin-access-control';
 
 import { Reservation } from './entities/reservation.entity';
+import { freeQuantity } from './free-stock';
 
 // ATP (available-to-promise) read queries — split out of ReservationService to keep that file
 // under AGENTS.md's ~300-line guideline. Pure reads, no reservation writes.
@@ -67,6 +68,7 @@ export class ReservationAvailabilityService {
         ctx: RequestContext,
         productVariantIds: ID[],
         branchId?: string | null,
+        scope: 'sum' | 'max' = 'sum',
     ): Promise<Map<string, number>> {
         const variantIds = productVariantIds.map(String);
         const totals = new Map<string, number>(variantIds.map(id => [id, 0]));
@@ -94,17 +96,45 @@ export class ReservationAvailabilityService {
 
         for (const level of stockLevels) {
             const variantId = String(level.productVariantId);
-            const localFree =
-                level.stockOnHand -
-                level.stockAllocated -
-                (reservedByKey.get(`${variantId}:${level.stockLocationId}`) ?? 0);
-            const erpCap = level.customFields?.erpAvailableQuantity;
-            const capped = erpCap != null ? Math.min(localFree, erpCap) : localFree;
-            // Floored at 0 (mivend.audit.72 LOW): a malformed negative erpAvailableQuantity must
-            // not understate the branch's ATP once summed across locations.
-            totals.set(variantId, (totals.get(variantId) ?? 0) + Math.max(0, capped));
+            const free = freeQuantity(
+                level.stockOnHand,
+                level.stockAllocated,
+                reservedByKey.get(`${variantId}:${level.stockLocationId}`) ?? 0,
+                level.customFields?.erpAvailableQuantity,
+            );
+            totals.set(
+                variantId,
+                scope === 'max'
+                    ? Math.max(totals.get(variantId) ?? 0, free)
+                    : (totals.get(variantId) ?? 0) + free,
+            );
         }
         return totals;
+    }
+
+    // What one order line can actually reserve: reservation takes a single location per line, so
+    // this is the best location of the branch, not the sum the customer-facing tiers use.
+    async getReservableBatch(
+        ctx: RequestContext,
+        productVariantIds: ID[],
+        branchId: string | null,
+    ): Promise<Map<string, number>> {
+        return this.getAvailableToPromiseBatch(ctx, productVariantIds, branchId, 'max');
+    }
+
+    // includedInBranchAtp is the curated flag (#66); isActive is unreliable and deliberately unused.
+    // Strict: no default-location fallback — empty means the branch has no stock scope.
+    async findBranchStockLocationIds(ctx: RequestContext, branchId: string): Promise<string[]> {
+        const warehouses = (await this.warehouseService.findAll(ctx)).filter(
+            w => w.branchId === branchId && w.includedInBranchAtp,
+        );
+        if (warehouses.length === 0) return [];
+        const warehouseErpIds = new Set(warehouses.map(w => w.erpId));
+        const allLocations = await this.connection.getRepository(ctx, StockLocation).find();
+        return allLocations
+            .filter(l => warehouseErpIds.has(l.customFields?.warehouseErpId ?? ''))
+            .map(l => String(l.id))
+            .sort((a, b) => Number(a) - Number(b));
     }
 
     async getReservedQuantity(
@@ -153,25 +183,8 @@ export class ReservationAvailabilityService {
         if (!branchId) {
             return [await this.getDefaultStockLocationId(ctx)];
         }
-        // includedInBranchAtp is the human-curated flag (issue #66) — isActive is only the ERP's own
-        // suggested default and has been observed to be an unreliable "holds real stock" signal
-        // (a branch's largest-stock warehouse was flagged isActive=false in a real check), so it
-        // is deliberately not part of this filter.
-        const warehouses = (await this.warehouseService.findAll(ctx)).filter(
-            w => w.branchId === branchId && w.includedInBranchAtp,
-        );
-        if (warehouses.length === 0) {
-            return [await this.getDefaultStockLocationId(ctx)];
-        }
-        const warehouseErpIds = new Set(warehouses.map(w => w.erpId));
-        const allLocations = await this.connection.getRepository(ctx, StockLocation).find();
-        const locations = allLocations.filter(location =>
-            warehouseErpIds.has(location.customFields?.warehouseErpId ?? ''),
-        );
-        if (locations.length === 0) {
-            return [await this.getDefaultStockLocationId(ctx)];
-        }
-        return locations.map(l => String(l.id));
+        const ids = await this.findBranchStockLocationIds(ctx, branchId);
+        return ids.length > 0 ? ids : [await this.getDefaultStockLocationId(ctx)];
     }
 
     private async getDefaultStockLocationId(ctx: RequestContext): Promise<string> {

@@ -10,7 +10,7 @@ import {
     StockLocation,
 } from '@vendure/core';
 import { ID } from '@vendure/common/lib/shared-types';
-import { WarehouseService } from '@mivend/plugin-access-control';
+import { freeQuantity, ReservationAvailabilityService } from '@mivend/plugin-reservation';
 
 const loggerCtx = 'BranchStockLocationStrategy';
 
@@ -25,11 +25,11 @@ const loggerCtx = 'BranchStockLocationStrategy';
 // .branchId IS that resolution, already made once, and is what stays stable even if the trading
 // point's servicing branch is edited later.
 export class BranchStockLocationStrategy extends BaseStockLocationStrategy {
-    private warehouseService!: WarehouseService;
+    private availabilityService!: ReservationAvailabilityService;
 
     init(injector: Injector): void {
         super.init(injector);
-        this.warehouseService = injector.get(WarehouseService);
+        this.availabilityService = injector.get(ReservationAvailabilityService);
     }
 
     getAvailableStock(
@@ -37,13 +37,17 @@ export class BranchStockLocationStrategy extends BaseStockLocationStrategy {
         _productVariantId: ID,
         stockLevels: StockLevel[],
     ): AvailableStock {
-        let stockOnHand = 0;
-        let stockAllocated = 0;
+        // Same per-location formula as ATP; local reservations are not visible to this sync hook.
+        let free = 0;
         for (const stockLevel of stockLevels) {
-            stockOnHand += stockLevel.stockOnHand;
-            stockAllocated += stockLevel.stockAllocated;
+            free += freeQuantity(
+                stockLevel.stockOnHand,
+                stockLevel.stockAllocated,
+                0,
+                stockLevel.customFields?.erpAvailableQuantity,
+            );
         }
-        return { stockOnHand, stockAllocated };
+        return { stockOnHand: free, stockAllocated: 0 };
     }
 
     async forAllocation(
@@ -89,9 +93,7 @@ export class BranchStockLocationStrategy extends BaseStockLocationStrategy {
         if (!branchId) return [];
 
         const branchLocationIds = new Set(
-            (await this.warehouseService.findActiveStockLocationsForBranch(ctx, branchId)).map(l =>
-                String(l.id),
-            ),
+            await this.availabilityService.findBranchStockLocationIds(ctx, branchId),
         );
         if (branchLocationIds.size === 0) return [];
 
@@ -123,7 +125,12 @@ export class BranchStockLocationStrategy extends BaseStockLocationStrategy {
             const stockLevel = await this.connection
                 .getRepository(ctx, StockLevel)
                 .findOne({ where: { productVariantId, stockLocationId: location.id } });
-            const available = (stockLevel?.stockOnHand ?? 0) - (stockLevel?.stockAllocated ?? 0);
+            const available = freeQuantity(
+                stockLevel?.stockOnHand ?? 0,
+                stockLevel?.stockAllocated ?? 0,
+                0,
+                stockLevel?.customFields?.erpAvailableQuantity,
+            );
             if (available > bestAvailable) {
                 bestAvailable = available;
                 best = location;

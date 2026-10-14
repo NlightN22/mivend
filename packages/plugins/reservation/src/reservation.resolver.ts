@@ -1,6 +1,15 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import { Allow, Ctx, PaginatedList, Permission, RequestContext, Transaction } from '@vendure/core';
+import {
+    Allow,
+    Ctx,
+    Order,
+    PaginatedList,
+    Permission,
+    RequestContext,
+    Transaction,
+    TransactionalConnection,
+} from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
@@ -20,6 +29,7 @@ import { ReservationService } from './reservation.service';
 @Resolver()
 export class ReservationResolver {
     constructor(
+        private connection: TransactionalConnection,
         private reservationService: ReservationService,
         private availabilityService: ReservationAvailabilityService,
         private extensionService: ReservationExtensionService,
@@ -51,9 +61,20 @@ export class ReservationResolver {
     @Allow(Permission.ReadCatalog)
     async availableStock(
         @Ctx() ctx: RequestContext,
-        @Args() args: { productVariantId: ID },
+        @Args() args: { productVariantId: ID; orderId?: ID },
     ): Promise<number> {
-        return this.availabilityService.getAvailableToPromise(ctx, args.productVariantId);
+        if (args.orderId == null) {
+            return this.availabilityService.getAvailableToPromise(ctx, args.productVariantId);
+        }
+        const order = await this.connection
+            .getRepository(ctx, Order)
+            .findOne({ where: { id: args.orderId } });
+        const reservable = await this.availabilityService.getReservableBatch(
+            ctx,
+            [args.productVariantId],
+            order?.customFields.branchId ?? null,
+        );
+        return reservable.get(String(args.productVariantId)) ?? 0;
     }
 
     @Query()

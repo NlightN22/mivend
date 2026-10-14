@@ -249,7 +249,7 @@ export function useReserveOrderHarness(schemaKey: string): ReserveOrderHarness {
         h.service = new ReservationService(
             h.connection,
             eventBus,
-            { findActiveStockLocationsForBranch: async () => [h.location] } as never,
+            { findBranchStockLocationIds: async () => [String(h.location.id)] } as never,
             { getForCustomer: async () => ({ erpId: 'counterparty-x' }) } as never,
             { resolveOrderContract: async () => ({ erpId: 'contract-x' }) } as never,
             { requiredMultiple: async () => 1 } as never,

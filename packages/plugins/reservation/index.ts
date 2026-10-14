@@ -12,6 +12,7 @@ export type {
     ReservationReconciliationIssueStatus,
 } from './src/entities/reservation-reconciliation-issue.entity';
 export { ReservationExpiryService } from './src/reservation-expiry.service';
+export { freeQuantity } from './src/free-stock';
 export { ReservationAvailabilityService } from './src/reservation-availability.service';
 export { ReservationExtensionLimitService } from './src/reservation-extension-limit.service';
 export {

@@ -17,6 +17,7 @@ import {
 } from 'shared';
 
 import { andProductInStock } from '../../in-stock-filter';
+import { freeQuantity } from '../../free-stock';
 import { Reservation } from '../../entities/reservation.entity';
 import { ReservationAvailabilityService } from '../../reservation-availability.service';
 
@@ -87,12 +88,13 @@ class TReservation {
 }
 
 const { schema, extra } = testSchemaOptions('in_stock_filter');
-const viewerWarehouses = ['wh-viewer'];
+const viewerWarehouses = ['wh-viewer', 'wh-viewer-2'];
 let dataSource: DataSource;
 let service: ReservationAvailabilityService;
 let channelId: number;
 let viewerLocationId: number;
 let otherLocationId: number;
+let viewer2LocationId: number;
 const variantByCase = new Map<string, number>();
 const productByCase = new Map<string, number>();
 
@@ -100,6 +102,8 @@ interface Fixture {
     name: string;
     onHand?: number;
     erpCap?: number | null;
+    allocated?: number;
+    second?: { onHand: number; erpCap: number | null };
     otherWarehouse?: boolean;
     reservations?: Array<[number, string]>;
     variantEnabled?: boolean;
@@ -124,8 +128,17 @@ async function seed(f: Fixture): Promise<void> {
         productVariantId: variant.id,
         stockLocationId: locationId,
         stockOnHand: f.onHand ?? 10,
+        stockAllocated: f.allocated ?? 0,
         customFields: { erpAvailableQuantity: f.erpCap ?? null },
     });
+    if (f.second) {
+        await dataSource.getRepository(TLevel).save({
+            productVariantId: variant.id,
+            stockLocationId: viewer2LocationId,
+            stockOnHand: f.second.onHand,
+            customFields: { erpAvailableQuantity: f.second.erpCap },
+        });
+    }
     for (const [quantity, status] of f.reservations ?? []) {
         await dataSource.getRepository(TReservation).save({
             productVariantId: String(variant.id),
@@ -165,6 +178,8 @@ beforeAll(async () => {
     const locations = dataSource.getRepository(TLocation);
     viewerLocationId = (await locations.save({ customFields: { warehouseErpId: 'wh-viewer' } })).id;
     otherLocationId = (await locations.save({ customFields: { warehouseErpId: 'wh-other' } })).id;
+    viewer2LocationId = (await locations.save({ customFields: { warehouseErpId: 'wh-viewer-2' } }))
+        .id;
 
     await seed({ name: 'onHand' });
     await seed({ name: 'fullyReserved', onHand: 5, reservations: [[5, 'active']] });
@@ -180,6 +195,14 @@ beforeAll(async () => {
     await seed({ name: 'erpCapZero', erpCap: 0 });
     await seed({ name: 'erpCapThree', erpCap: 3 });
     await seed({ name: 'otherWarehouse', otherWarehouse: true });
+    await seed({
+        name: 'multiLocation',
+        onHand: 25,
+        allocated: 20,
+        erpCap: 25,
+        second: { onHand: 9, erpCap: 3 },
+        reservations: [[1, 'active']],
+    });
     await seed({ name: 'disabledVariant', variantEnabled: false });
     await seed({ name: 'deletedVariant', variantDeleted: true });
     await seed({ name: 'deletedProduct', productDeleted: true });
@@ -197,6 +220,7 @@ beforeAll(async () => {
         {
             findAll: async () => [
                 { branchId: 'branch-a', includedInBranchAtp: true, erpId: 'wh-viewer' },
+                { branchId: 'branch-a', includedInBranchAtp: true, erpId: 'wh-viewer-2' },
                 { branchId: 'branch-b', includedInBranchAtp: true, erpId: 'wh-other' },
             ],
         } as never,
@@ -211,7 +235,7 @@ afterAll(async () => {
 describe('in-stock SQL filter vs getAvailableToPromiseBatch (real Postgres)', () => {
     it('includes and excludes the expected products', async () => {
         const included = new Set(await inStockProductIds());
-        const expected = ['onHand', 'partlyReserved', 'erpCapThree'];
+        const expected = ['onHand', 'partlyReserved', 'erpCapThree', 'multiLocation'];
         const excluded = [
             'fullyReserved',
             'erpCapZero',
@@ -247,5 +271,32 @@ describe('in-stock SQL filter vs getAvailableToPromiseBatch (real Postgres)', ()
         expect(atp.get(String(variantByCase.get('partlyReserved')))).toBe(2);
         expect(atp.get(String(variantByCase.get('erpCapThree')))).toBe(3);
         expect(atp.get(String(variantByCase.get('fullyReserved')))).toBe(0);
+    });
+
+    it('one fixture, one number: ATP, reservable, reserve-path formula and the SQL filter agree', async () => {
+        const id = variantByCase.get('multiLocation')!;
+        const ctx = {} as RequestContext;
+        const atp = await service.getAvailableToPromiseBatch(ctx, [id], 'branch-a');
+        const reservable = await service.getReservableBatch(ctx, [id], 'branch-a');
+        const locationIds = await service.findBranchStockLocationIds(ctx, 'branch-a');
+        const levels = await dataSource.getRepository(TLevel).find({
+            where: { productVariantId: id },
+        });
+        const reserved = new Map([[String(viewerLocationId), 1]]);
+        const perLocation = locationIds.map(loc => {
+            const level = levels.find(l => String(l.stockLocationId) === loc)!;
+            return freeQuantity(
+                level.stockOnHand,
+                level.stockAllocated,
+                reserved.get(loc) ?? 0,
+                level.customFields.erpAvailableQuantity,
+            );
+        });
+        expect(perLocation).toEqual([4, 3]);
+        expect(atp.get(String(id))).toBe(7);
+        expect(reservable.get(String(id))).toBe(Math.max(...perLocation));
+        expect(new Set(await inStockProductIds()).has(productByCase.get('multiLocation')!)).toBe(
+            true,
+        );
     });
 });

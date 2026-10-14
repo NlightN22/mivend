@@ -325,6 +325,37 @@ describe('ReservationAvailabilityService', () => {
         expect(available).toBe(12);
     });
 
+    it('reservable is the best single location of the branch (ERP cap included), ATP is the sum; no branch scope never leaks the default location', async () => {
+        const service = createService({
+            warehouses: [
+                { branchId: 'branch-a', erpId: 'wh-1', isActive: true, includedInBranchAtp: true },
+                { branchId: 'branch-a', erpId: 'wh-2', isActive: false, includedInBranchAtp: true },
+            ],
+            stockLocations: [
+                { id: 'loc-1', customFields: { warehouseErpId: 'wh-1' } },
+                { id: 'loc-2', customFields: { warehouseErpId: 'wh-2' } },
+            ],
+            stockLevels: [
+                { stockLocationId: 'loc-1', stockOnHand: 25, stockAllocated: 20 },
+                {
+                    stockLocationId: 'loc-2',
+                    stockOnHand: 9,
+                    stockAllocated: 0,
+                    customFields: { erpAvailableQuantity: 3 },
+                },
+            ],
+        });
+        const reservable = await service.getReservableBatch(ctx, ['variant-1'], 'branch-a');
+        const atp = await service.getAvailableToPromiseBatch(ctx, ['variant-1'], 'branch-a');
+        expect(reservable.get('variant-1')).toBe(5);
+        expect(atp.get('variant-1')).toBe(8);
+        expect(await service.findBranchStockLocationIds(ctx, 'branch-a')).toEqual([
+            'loc-1',
+            'loc-2',
+        ]);
+        expect(await service.findBranchStockLocationIds(ctx, 'branch-none')).toEqual([]);
+    });
+
     it('batch: returns 0 for a variant with no stock rows and an empty map for no variants', async () => {
         const service = createService({
             stockLevels: [{ stockLocationId: 'location-1', stockOnHand: 4, stockAllocated: 0 }],

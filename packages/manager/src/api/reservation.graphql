@@ -38,8 +38,8 @@ query ReservationExtensionLimit($roleCode: String!) {
     }
 }
 
-query AvailableStock($productVariantId: ID!) {
-    availableStock(productVariantId: $productVariantId)
+query AvailableStock($productVariantId: ID!, $orderId: ID) {
+    availableStock(productVariantId: $productVariantId, orderId: $orderId)
 }
 
 fragment OrderContractOptionFields on OrderContractOption {

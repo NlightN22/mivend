@@ -119,7 +119,7 @@ const adminApiSchema = gql`
         "Active contracts of the order's counterparty; the one the order is registered under is marked (#205)."
         orderContracts(orderId: ID!): [OrderContractOption!]!
         orderReservations(orderId: ID!): [Reservation!]!
-        availableStock(productVariantId: ID!): Int!
+        availableStock(productVariantId: ID!, orderId: ID): Int!
         reservationExtensionLimit(roleCode: String!): ReservationExtensionLimit
         "Open reservation/ERP drift issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76)."
         openReservationReconciliationIssues(

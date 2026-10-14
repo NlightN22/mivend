@@ -137,6 +137,7 @@ describe('setOrderContract through the resolver', () => {
             {} as never,
             {} as never,
             {} as never,
+            {} as never,
             service,
             {} as never,
         );

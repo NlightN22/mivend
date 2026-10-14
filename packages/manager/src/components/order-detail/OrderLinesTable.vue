@@ -22,7 +22,7 @@ const availableByVariantId = ref<Map<string, number>>(new Map());
 async function loadAvailableStock(): Promise<void> {
     const variantIds = [...new Set(props.lines.map(l => l.productVariant.id))];
     const entries = await Promise.all(
-        variantIds.map(async id => [id, await fetchAvailableStock(id)] as const),
+        variantIds.map(async id => [id, await fetchAvailableStock(id, props.orderId)] as const),
     );
     availableByVariantId.value = new Map(entries);
 }

@@ -6,16 +6,21 @@ import { BranchStockLocationStrategy } from '../../branch-stock-location.strateg
 function makeStrategy(options: {
     branchId: string | null;
     // Ids of the StockLocations that belong to this branch's active warehouses — mirrors what
-    // WarehouseService.findActiveStockLocationsForBranch (packages/plugins/access-control) now
+    // ReservationAvailabilityService.findBranchStockLocationIds (includedInBranchAtp scope) now
     // resolves; the strategy just intersects this against the given stockLocations candidates.
     activeLocationIds: string[];
-    stockLevels: Record<string, { stockOnHand: number; stockAllocated: number }>;
+    stockLevels: Record<
+        string,
+        {
+            stockOnHand: number;
+            stockAllocated: number;
+            customFields?: { erpAvailableQuantity: number | null };
+        }
+    >;
 }): BranchStockLocationStrategy {
     const strategy = new BranchStockLocationStrategy();
-    const warehouseService = {
-        findActiveStockLocationsForBranch: vi
-            .fn()
-            .mockResolvedValue(options.activeLocationIds.map(id => ({ id }))),
+    const availabilityService = {
+        findBranchStockLocationIds: vi.fn().mockResolvedValue(options.activeLocationIds),
     };
     const connection = {
         rawConnection: {
@@ -44,7 +49,7 @@ function makeStrategy(options: {
             }),
         }),
     };
-    Object.assign(strategy, { warehouseService, connection });
+    Object.assign(strategy, { availabilityService, connection });
     return strategy;
 }
 
@@ -117,5 +122,16 @@ describe('BranchStockLocationStrategy', () => {
         await expect(strategy.forAllocation(ctx, [], orderLine, 1)).rejects.toThrow(
             /no StockLocation exists at all/,
         );
+    });
+});
+
+describe('BranchStockLocationStrategy.getAvailableStock', () => {
+    it('applies the shared per-location formula incl. the ERP cap', () => {
+        const strategy = makeStrategy({ branchId: 'b', activeLocationIds: [], stockLevels: {} });
+        const result = strategy.getAvailableStock({} as RequestContext, 1, [
+            { stockOnHand: 25, stockAllocated: 20, customFields: { erpAvailableQuantity: 25 } },
+            { stockOnHand: 9, stockAllocated: 0, customFields: { erpAvailableQuantity: 3 } },
+        ] as never);
+        expect(result).toEqual({ stockOnHand: 8, stockAllocated: 0 });
     });
 });

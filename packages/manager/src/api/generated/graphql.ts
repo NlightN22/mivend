@@ -5416,8 +5416,6 @@ export type Order = Node & {
      * completed the checkout and the Order is no longer "active"
      */
     orderPlacedAt: Maybe<Scalars['DateTime']['output']>;
-    /** Legal names of the selling organizations of the order lines, in line order. */
-    organizations: Array<Scalars['String']['output']>;
     packagesOnlySales: Scalars['Boolean']['output'];
     payments: Maybe<Array<Payment>>;
     /** Promotions applied to the order. Only gets populated after the payment process has completed. */
@@ -7376,6 +7374,7 @@ export type QueryAssetsArgs = {
 };
 
 export type QueryAvailableStockArgs = {
+    orderId?: InputMaybe<Scalars['ID']['input']>;
     productVariantId: Scalars['ID']['input'];
 };
 
@@ -11563,6 +11562,7 @@ export type ReservationExtensionLimitQuery = {
 
 export type AvailableStockQueryVariables = Exact<{
     productVariantId: Scalars['ID']['input'];
+    orderId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 export type AvailableStockQuery = { availableStock: number };
@@ -14443,8 +14443,8 @@ export const ReservationExtensionLimitDocument = new TypedDocumentString(`
     ReservationExtensionLimitQueryVariables
 >;
 export const AvailableStockDocument = new TypedDocumentString(`
-    query AvailableStock($productVariantId: ID!) {
-  availableStock(productVariantId: $productVariantId)
+    query AvailableStock($productVariantId: ID!, $orderId: ID) {
+  availableStock(productVariantId: $productVariantId, orderId: $orderId)
 }
     `) as unknown as TypedDocumentString<AvailableStockQuery, AvailableStockQueryVariables>;
 export const OrderContractsDocument = new TypedDocumentString(`

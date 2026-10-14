@@ -433,6 +433,17 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
 - Not modeled: a per-warehouse organization check. Reservation picks the warehouse by branch stock,
   the organization comes from the product's storage location; they are not cross-checked.
 
+### One availability formula (#72, #66)
+
+- Per location: `freeQuantity` (`packages/plugins/reservation/src/free-stock.ts`) = `stockOnHand - stockAllocated -
+  active reservations`, capped by `erpAvailableQuantity` when known, floored at 0. Scope of a branch =
+  warehouses with `includedInBranchAtp` (`ReservationAvailabilityService.findBranchStockLocationIds`), never `isActive`.
+- Consumers: ATP sum (storefront tiers, `getAvailableToPromiseBatch`), the raw-SQL `IN_STOCK_SQL` twin (pinned by
+  `in-stock-filter.int.test.ts`), the reserve check and its failure detail, the manager order-line column
+  (`availableStock(productVariantId, orderId)`, the best single location of the order's branch), and the native
+  stock checks/allocation (`BranchStockLocationStrategy`: same scope and cap, local reservations not visible there).
+- Tiers show the sum over the branch; a line reserves from one location, so the reservable number is the max.
+
 ### Failed automatic reserve and the ERP's reserved quantity (#199)
 
 - **A failed automatic reserve is visible to staff.** Both auto paths (non-prepaid at placement,

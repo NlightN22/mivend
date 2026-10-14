@@ -94,7 +94,7 @@ describe('ReservationService', () => {
         };
     };
     let eventBus: { publish: ReturnType<typeof vi.fn> };
-    let warehouseService: { findActiveStockLocationsForBranch: ReturnType<typeof vi.fn> };
+    let warehouseService: { findBranchStockLocationIds: ReturnType<typeof vi.fn> };
     let counterpartyService: { getForCustomer: ReturnType<typeof vi.fn> };
     let contractService: { resolveOrderContract: ReturnType<typeof vi.fn> };
     let service: ReservationService;
@@ -132,7 +132,7 @@ describe('ReservationService', () => {
         stockLevelRepo = createMockStockLevelRepo(20);
         eventBus = { publish: vi.fn() };
         warehouseService = {
-            findActiveStockLocationsForBranch: vi.fn(async () => [{ id: 'location-1' }]),
+            findBranchStockLocationIds: vi.fn(async () => ['location-1']),
         };
         counterpartyService = {
             getForCustomer: vi.fn(async () => ({ erpId: 'counterparty-erp-1' })),
@@ -456,7 +456,7 @@ describe('ReservationService', () => {
         });
 
         it('rejects every line as missing warehouseId when the branch has no active StockLocation', async () => {
-            warehouseService.findActiveStockLocationsForBranch.mockResolvedValue([]);
+            warehouseService.findBranchStockLocationIds.mockResolvedValue([]);
 
             const error = await service
                 .confirmOrder(ctx, 'order-1', 3)
@@ -514,9 +514,9 @@ describe('ReservationService', () => {
         });
 
         it('picks the candidate StockLocation with the most available stock per line', async () => {
-            warehouseService.findActiveStockLocationsForBranch.mockResolvedValue([
-                { id: 'location-a' },
-                { id: 'location-b' },
+            warehouseService.findBranchStockLocationIds.mockResolvedValue([
+                'location-a',
+                'location-b',
             ]);
             const availableByLocation: Record<string, number> = {
                 'location-a': 3,

@@ -9,10 +9,11 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { WarehouseService } from '@mivend/plugin-access-control';
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 import { PackagingPolicyService } from '@mivend/plugin-moq';
 
+import { freeQuantity } from './free-stock';
+import { ReservationAvailabilityService } from './reservation-availability.service';
 import { Reservation } from './entities/reservation.entity';
 import {
     OrderReservedEvent,
@@ -42,7 +43,7 @@ export class ReservationService {
     constructor(
         private connection: TransactionalConnection,
         private eventBus: EventBus,
-        private warehouseService: WarehouseService,
+        private availabilityService: ReservationAvailabilityService,
         private counterpartyService: CounterpartyService,
         private contractService: ContractService,
         private packagingPolicyService: PackagingPolicyService,
@@ -145,11 +146,8 @@ export class ReservationService {
                     // *before* writing any Reservation, rather than allowing a reservation that can
                     // never be reported to the ERP. Full-order-only, same as the stock/multiplicity checks.
                     const branchId = order.customFields.branchId ?? null;
-                    const candidateLocations = branchId
-                        ? await this.warehouseService.findActiveStockLocationsForBranch(
-                              txCtx,
-                              branchId,
-                          )
+                    const candidateLocationIds = branchId
+                        ? await this.availabilityService.findBranchStockLocationIds(txCtx, branchId)
                         : [];
 
                     let missingCustomerId = false;
@@ -210,7 +208,7 @@ export class ReservationService {
                               )
                             : false;
                         if (!hasProductId) missing.push('productId');
-                        if (candidateLocations.length === 0) missing.push('warehouseId');
+                        if (candidateLocationIds.length === 0) missing.push('warehouseId');
                         if (line.customFields?.organizationId == null) {
                             missing.push('organizationId');
                         }
@@ -248,8 +246,7 @@ export class ReservationService {
                     for (const line of order.lines) {
                         let bestLocationId: string | undefined;
                         let bestAvailable = -Infinity;
-                        for (const location of candidateLocations) {
-                            const locationId = String(location.id);
+                        for (const locationId of candidateLocationIds) {
                             const stockLevel = await stockLevelRepo
                                 .createQueryBuilder('stockLevel')
                                 .setLock('pessimistic_write')
@@ -261,14 +258,17 @@ export class ReservationService {
                                 })
                                 .getOne();
 
-                            const stockOnHand = stockLevel?.stockOnHand ?? 0;
-                            const stockAllocated = stockLevel?.stockAllocated ?? 0;
                             const activeReserved = await this.sumActiveReservations(
                                 txCtx,
                                 line.productVariantId,
                                 locationId,
                             );
-                            const available = stockOnHand - stockAllocated - activeReserved;
+                            const available = freeQuantity(
+                                stockLevel?.stockOnHand ?? 0,
+                                stockLevel?.stockAllocated ?? 0,
+                                activeReserved,
+                                stockLevel?.customFields?.erpAvailableQuantity,
+                            );
                             if (available > bestAvailable) {
                                 bestAvailable = available;
                                 bestLocationId = locationId;
@@ -276,7 +276,7 @@ export class ReservationService {
                         }
 
                         // bestLocationId is always set here: the ERP-export gate above already
-                        // rejected the whole order if candidateLocations was empty.
+                        // rejected the whole order if candidateLocationIds was empty.
                         const stockLocationId = bestLocationId as string;
 
                         if (bestAvailable < line.quantity) {

@@ -59,8 +59,11 @@ export async function fetchReservationExtensionLimit(
     return result.reservationExtensionLimit ?? null;
 }
 
-export async function fetchAvailableStock(productVariantId: string): Promise<number> {
-    const result = await adminApi(AvailableStockDocument, { productVariantId });
+export async function fetchAvailableStock(
+    productVariantId: string,
+    orderId?: string,
+): Promise<number> {
+    const result = await adminApi(AvailableStockDocument, { productVariantId, orderId });
     return result.availableStock;
 }
 
