@@ -75,19 +75,21 @@ onMounted(() => {
                         <div>
                             <h1 class="od-title">
                                 {{ title }}
+                            </h1>
+                            <div class="od-meta-row">
+                                <span class="od-meta">{{ formatDate(order.createdAt) }}</span>
                                 <MvCopyButton
                                     :value="formatDocumentNumber(order.code)"
                                     :label="t('orders.detail.copyNumber')"
                                 />
-                            </h1>
-                            <div class="od-meta">{{ formatDate(order.createdAt) }}</div>
+                                <MvCopyButton
+                                    :value="pageUrl"
+                                    icon="share"
+                                    :label="t('orders.detail.copyLink')"
+                                />
+                            </div>
                         </div>
                         <div class="od-head-side">
-                            <MvCopyButton
-                                :value="pageUrl"
-                                icon="link"
-                                :label="t('orders.detail.copyLink')"
-                            />
                             <span
                                 class="od-status"
                                 :class="statuses.variant(order.customFields?.erpStatus)"
@@ -214,6 +216,12 @@ onMounted(() => {
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 24px;
+}
+
+.od-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .od-head-side {

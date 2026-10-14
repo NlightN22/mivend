@@ -12,4 +12,4 @@ export default meta;
 type Story = StoryObj<typeof MvCopyButton>;
 
 export const Default: Story = {};
-export const Link: Story = { args: { icon: 'link', label: 'Copy link' } };
+export const Share: Story = { args: { icon: 'share', label: 'Copy link' } };

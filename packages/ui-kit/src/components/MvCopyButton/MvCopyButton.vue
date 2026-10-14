@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { IconCheck, IconCopy, IconLink } from '@tabler/icons-vue';
+import { IconCheck, IconCopy, IconShare } from '@tabler/icons-vue';
 import { useCopyToClipboard } from '../../composables/useCopyToClipboard';
 
 const props = withDefaults(
-    defineProps<{ value: string | (() => string); label: string; icon?: 'copy' | 'link' }>(),
+    defineProps<{ value: string | (() => string); label: string; icon?: 'copy' | 'share' }>(),
     { icon: 'copy' },
 );
 const { copied, copy } = useCopyToClipboard();
@@ -22,9 +22,9 @@ function onClick(): void {
         :aria-label="label"
         @click="onClick"
     >
-        <IconCheck v-if="copied" :size="16" />
-        <IconLink v-else-if="icon === 'link'" :size="16" />
-        <IconCopy v-else :size="16" />
+        <IconCheck v-if="copied" :size="18" stroke="2" />
+        <IconShare v-else-if="icon === 'share'" :size="18" stroke="2" />
+        <IconCopy v-else :size="18" stroke="2" />
     </button>
 </template>
 
@@ -33,20 +33,22 @@ function onClick(): void {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     padding: 0;
-    border: 0;
-    border-radius: var(--app-radius-sm, 8px);
-    background: transparent;
-    color: #66736e;
+    border: 1px solid #dde7e2;
+    border-radius: 10px;
+    background: #fff;
+    color: #344640;
     cursor: pointer;
 }
 .mv-copy-button:hover {
-    background: #eef4f1;
-    color: #00a878;
+    background: #e2f8ef;
+    border-color: #00a878;
+    color: #008a64;
 }
 .mv-copy-button--done {
-    color: #00a878;
+    border-color: #00a878;
+    color: #008a64;
 }
 </style>

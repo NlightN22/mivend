@@ -55,7 +55,7 @@ for a colored icon+label chip keyed off free-text business data with a neutral f
 
 Every detail view of a document (order, proforma invoice, payment document, anything people quote)
 shows `MvCopyButton` next to each human number it displays (document number, and the ERP
-registration number when present) and one `MvCopyButton icon="link"` that copies the page URL.
+registration number when present) and one `MvCopyButton icon="share"` that copies the page URL.
 Copy the number exactly as displayed. Never hand-roll clipboard code — use `MvCopyButton`.
 
 ## Colors and button states
