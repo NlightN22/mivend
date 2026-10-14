@@ -4,7 +4,6 @@ import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { MvButton, MvCopyButton, MvModal, toast, formatDocumentNumber } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
-import { useAuthStore } from '../../stores/auth';
 import { useCancelOrder } from './useCancelOrder';
 import { useOrderDetail } from './useOrderDetail';
 import { useRepeatOrder } from './useRepeatOrder';
@@ -20,7 +19,6 @@ import OrderTotalsCard from './OrderTotalsCard.vue';
 
 const route = useRoute();
 const { t } = useI18n();
-const auth = useAuthStore();
 const { order, tradingPoints, loading, load } = useOrderDetail();
 const { repeating, repeat } = useRepeatOrder();
 
@@ -104,7 +102,7 @@ onMounted(() => {
                     <OrderSummaryStrip
                         :count="order.lines.length"
                         :total="formatAmount(order.totalWithTax, order.currencyCode)"
-                        :organization="auth.counterparty?.fullName ?? null"
+                        :organization="order.organizations.join(', ') || null"
                         :pickup-point="pickupPoint"
                     />
 

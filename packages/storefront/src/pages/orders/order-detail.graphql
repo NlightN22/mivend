@@ -4,6 +4,7 @@ query OrderDetail($id: ID!) {
         code
         state
         cancellable
+        organizations
         createdAt
         totalWithTax
         subTotalWithTax

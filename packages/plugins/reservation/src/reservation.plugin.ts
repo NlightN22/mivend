@@ -38,6 +38,7 @@ import {
     ShopCancelOrderResolver,
 } from './order-cancel.resolver';
 import { OrderCancellableResolver } from './order-cancellable.resolver';
+import { OrderOrganizationsResolver } from './order-organizations.resolver';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
 import { ReservationExpiryService } from './reservation-expiry.service';
 import { createReservationExpiryTask } from './reservation-expiry.scheduled-task';
@@ -188,6 +189,7 @@ const adminApiSchema = gql`
             ShopCancelOrderResolver,
             OrderCancelResultResolver,
             OrderCancellableResolver,
+            OrderOrganizationsResolver,
         ],
     },
     adminApiExtensions: {
@@ -200,6 +202,7 @@ const adminApiSchema = gql`
             AdminCancelOrderResolver,
             OrderCancelResultResolver,
             OrderCancellableResolver,
+            OrderOrganizationsResolver,
         ],
     },
     configuration: (config: RuntimeVendureConfig) => {
