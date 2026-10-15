@@ -63,15 +63,8 @@ export class ErpOrderResolver {
                     }
                 }),
             )
-            // 'Draft' is an admin-side work-in-progress state (manager portal's /orders/new,
-            // or any admin `createDraftOrder` call) — the customer was attached
-            // (`setCustomerForDraftOrder`) but the order was never actually placed/handed to
-            // them, same category as an in-progress 'AddingItems' cart. Real incident this
-            // fixes: an abandoned admin draft order (created, customer attached, then never
-            // completed — e.g. a manager started "+ New order" and never finished, or an
-            // automation like e2e's createConfirmedOrder helper failed partway through) showed
-            // up in that customer's storefront "My Orders" as a permanent $0/0-item ghost order,
-            // because 'Draft' was missing from this exclusion list.
+            // 'Draft' is admin work-in-progress: customer attached, but the order was never placed.
+            // Excluding it here keeps abandoned admin drafts out of the customer's storefront order list.
             .andWhere("order.state NOT IN ('AddingItems', 'Draft')")
             .orderBy('order.createdAt', 'DESC')
             .take(take)
@@ -88,9 +81,8 @@ export class ErpOrderResolver {
         if (search) {
             const term = `%${search}%`;
             const codeTerm = documentNumberSearchTerm(search);
-            // Product.name is translatable — not a real column on `product`, only on the
-            // joined `product_translation` table (see the backend-plugin-rules skill's raw-SQL-in-Brackets gotcha:
-            // this was never actually exercised until now, hence never caught).
+            // Product.name is translatable and lives only on the joined product_translation table, not product.
+            // Raw SQL must join product_translation to read the name.
             qb.andWhere(
                 new Brackets((bqb: WhereExpressionBuilder) => {
                     bqb.where('"order".code ILIKE :codeTerm', { codeTerm }).orWhere(

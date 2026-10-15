@@ -36,12 +36,8 @@ describe('ErpOrderResolver.myOrders', () => {
         );
     });
 
-    // Real incident this guards against: an admin-created Draft order (manager portal's
-    // "+ New order", or any admin `createDraftOrder` call) that has a customer attached via
-    // setCustomerForDraftOrder but was abandoned before ever being placed (0 lines, never
-    // transitioned out of Draft) showed up permanently in that customer's storefront "My
-    // Orders" list — a $0/0-item ghost order — because 'Draft' was missing from the state
-    // exclusion list alongside 'AddingItems'.
+    // 'Draft' must be excluded with 'AddingItems': abandoned admin drafts with a customer attached
+    // otherwise show up in the storefront My Orders as $0 ghost orders.
     it("excludes 'Draft' (admin work-in-progress) alongside 'AddingItems', keeps 'Cancelled'", async () => {
         await resolver.myOrders(mockCtx, {});
 

@@ -61,9 +61,8 @@ export class OrderStatusReference {
     @Column({ type: 'boolean', default: false })
     cancelled!: boolean;
 
-    // Mivend pipeline roles (set only on source 'mivend' rows): the status a new order starts in,
-    // the one after the ERP got the order, a registration rejected by the ERP, a reserve confirmed
-    // by the ERP, and the status given to an external order whose status cannot be derived.
+    // Populated only on source 'mivend' rows: initial, post-ERP, ERP-rejected, ERP-reserved,
+    // and fallback status for external orders whose status cannot be derived.
     @Column({ type: 'boolean', default: false })
     initial!: boolean;
 

@@ -159,26 +159,8 @@ export class ErpOrderPlugin implements OnApplicationBootstrap {
     ) {}
 
     onApplicationBootstrap(): void {
-        // Branches must see "their" customers' orders regardless of payment status (decided
-        // 2026-07-16, see docs/architecture.md) — Vendure's own `OrderPlacedEvent` only fires
-        // once a payment has already been authorized/settled
-        // (`DefaultOrderPlacedStrategy.shouldSetAsPlaced` requires
-        // `ArrangingPayment→PaymentAuthorized/PaymentSettled`), which is too late for that. This
-        // now ALSO fires on the earlier, payment-independent `AddingItems→*` transition (the
-        // first time an order leaves the cart), which is when a customer/address/trading-point
-        // are normally already attached. `OrderPlacedEvent` is kept as a second, later trigger —
-        // `onOrderPlaced` is idempotent-safe to call twice (denormalizes the same fields, and
-        // downstream `order.created` sync absorbs a duplicate via its own sourceOrderId check),
-        // and covers stragglers (e.g. a guest customer only attached to the order later in
-        // checkout than `ArrangingPayment`).
-        //
-        // `Draft` must trigger the same denormalization as `AddingItems`: an admin-created draft
-        // order (manager portal's /orders/new, or any admin API `createDraftOrder` flow) never
-        // passes through `AddingItems` at all — it starts in `Draft` and transitions straight to
-        // `ArrangingPayment`. Missing this meant every admin-created order left
-        // `customFields.branchId` null forever, silently hiding it from every department-scoped
-        // viewer (confirmed real incident: e2e's `createConfirmedOrder` helper, which uses this
-        // exact admin draft-order path, produced orders invisible to department-scoped roles).
+        // Branch visibility must not wait for payment: OrderPlacedEvent fires only after payment is settled.
+        // AddingItems and Draft both denormalize branchId; admin-created orders skip AddingItems entirely.
         subscribeAndLog(
             this.eventBus,
             OrderStateTransitionEvent,

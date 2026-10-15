@@ -8,9 +8,8 @@ import { OrderVisibilityService } from './order-visibility.service';
 export class AdminOrderVisibilityResolver {
     constructor(private orderVisibilityService: OrderVisibilityService) {}
 
-    // Scoped equivalent of Vendure's built-in `orders` query for the manager portal (see
-    // docs/ai/manager-portal-pages/02-orders-list.md) — the built-in `orders` query returns
-    // every order in the company regardless of caller role, which is not safe to expose there.
+    // Built-in Vendure `orders` query returns all company orders regardless of caller role;
+    // not safe to expose in the manager portal, so this scoped query replaces it.
     @Query()
     @Allow(Permission.ReadOrder)
     async visibleOrders(

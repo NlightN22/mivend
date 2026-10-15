@@ -73,12 +73,8 @@ describe('OrderVisibilityService', () => {
 
         await service.findVisible(mockCtx);
 
-        // Filters by the order's own denormalized branchId (customFieldsBranchid), not
-        // Counterparty.branchId — a chain account's orders can be serviced by a different
-        // branch than the customer's nominal "home" branch, see order-visibility.service.ts.
-        // departmentId is never compared — Department (ERP org data) is pure display
-        // information, never an access-scope gate. The `OR ... IS NULL` clause is required,
-        // not optional — see the next test.
+        // Scope by the order's own customFieldsBranchid, not Counterparty.branchId: chain accounts' orders
+        // may be serviced by another branch. departmentId is display-only; the NULL clause is required.
         expect(qb.andWhere).toHaveBeenCalledWith(
             '("order"."customFieldsBranchid" = :branchId OR "order"."customFieldsBranchid" IS NULL)',
             { branchId: 'branch-1' },
@@ -86,14 +82,8 @@ describe('OrderVisibilityService', () => {
     });
 
     it('does not exclude a branch-less order (customFieldsBranchid IS NULL) from department scope', async () => {
-        // Real bug this guards against: `column = :branchId` evaluates to NULL (not false) in
-        // Postgres when the column itself is NULL, so a plain `AND branchId = :branchId` with no
-        // explicit `OR ... IS NULL` silently drops every branch-less order from every
-        // department-scoped viewer's results, regardless of department match — confirmed against
-        // live seeded data, not just this unit test. A customer can have real trading points and
-        // place real orders without ever setting `preferredTradingPointId` (optional field), so
-        // `Order.customFields.branchId` staying null is an expected, common state, not an
-        // exceptional one — see ErpOrderService.onOrderPlaced's own doc comment.
+        // Without the explicit OR ... IS NULL, `column = :branchId` yields NULL for null columns and drops
+        // branch-less orders for all scoped viewers; null branchId is normal (optional field).
         accessScopeService.resolveOrderScope.mockResolvedValue({
             kind: 'department',
             departmentId: 'dept-1',

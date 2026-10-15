@@ -15,17 +15,12 @@ declare module '@vendure/core' {
         latestFulfillmentState?: string | null;
         // Denormalized at placement time — see ErpOrderService.onOrderPlaced.
         placedByAdministratorId?: string | null;
-        // Set by plugin-reservation's ReservationWriteOffSyncService from Integration Service's
-        // company.orders.events.v1.OrderRegistrationResult — staff-facing informational fields,
-        // never read by any reservation/order-state decision. See vendure-config.ts's own doc
-        // comment on these two customFields for the proto3 optional-vs-plain distinction.
+        // Staff-facing informational only; no reservation or order-state decision reads these fields.
+        // proto3 optional vs plain field semantics: see vendure-config.ts customFields docs.
         erpRegistrationDocumentNumber?: string | null;
         erpRegistrationStatus?: string | null;
-        // Set by plugin-reservation's ReservationWriteOffSyncService.handleOrderChanged from
-        // Integration Service's company.orders.events.v1.OrderChanged (issue #110) — the order's
-        // ongoing current-state view, kept separate from erpRegistrationStatus (the one-shot
-        // order-registration-result outcome) since the two streams report at different times with
-        // no guaranteed relationship between their values.
+        // Kept separate from erpRegistrationStatus: the two event streams arrive at different times
+        // with no guaranteed relationship, so their values must not be merged or inferred from each other.
         erpOrderStatus?: string | null;
         // OrderChanged.contract_id (issue #110) — a flat GUID ref to an ERP contract, real optional
         // presence. Purely informational until a Contract entity exists (#50/#105).

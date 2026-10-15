@@ -33,11 +33,8 @@ export class ErpOrderService {
         order.customFields.erpStatus = initialStatus;
         order.customFields.erpStatusAt = new Date();
 
-        // Denormalize the servicing branch onto the order at placement time — see
-        // docs/access-control.md's branch-scope axis. A missing preferred trading point (no
-        // trading points yet, or a placement path that never went through checkout's selector)
-        // is not an error: the order simply has no branch scope, same as any other optional
-        // custom field.
+        // Denormalized at placement time; see docs/access-control.md (branch-scope axis).
+        // A missing preferred trading point is not an error; the order just gets no branch scope.
         if (order.customerId) {
             if (!order.customFields.counterpartyId) {
                 const counterparty = await this.counterpartyService.getForCustomer(
@@ -57,10 +54,8 @@ export class ErpOrderService {
             }
         }
 
-        // Denormalized once, here, rather than derived per-request from the order's first
-        // HistoryEntry (see the backend-plugin-rules skill's Pagination section) — null
-        // stays null for a storefront customer's own checkout (ctx.activeUserId won't resolve
-        // to an Administrator in that case), matching the old client-side "(customer)" fallback.
+        // Stored once at creation, not derived per request from the first HistoryEntry (pagination).
+        // Stays null for storefront checkout: ctx.activeUserId doesn't resolve to an Administrator there.
         if (ctx.activeUserId !== undefined) {
             const admin = await this.administratorService.findOneByUserId(ctx, ctx.activeUserId);
             if (admin) {
@@ -73,10 +68,8 @@ export class ErpOrderService {
         this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
     }
 
-    // Keeps Order.customFields.latestFulfillmentState in sync whenever a Fulfillment is added or
-    // transitions — see vendure-config.ts's doc comment on that field for why this exists
-    // (sortable/filterable server-side instead of computed per-request from the fulfillments
-    // relation). A Fulfillment can in principle cover multiple orders, so this updates each one.
+    // Kept server-side so orders can be sorted and filtered without computing it per request.
+    // A Fulfillment can cover multiple orders, so every one of them is updated.
     async onFulfillmentStateChanged(ctx: RequestContext, fulfillment: Fulfillment): Promise<void> {
         const full = await this.connection
             .getRepository(ctx, Fulfillment)

@@ -6,11 +6,7 @@ import { documentNumberSearchTerm } from 'shared';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
 
-/**
- * Row-level visibility for the manager portal's order list — mirrors
- * CounterpartyService.findVisible (see docs/access-control.md, layer 3). Scope is resolved by
- * joining Order.counterpartyId to Counterparty, which carries assignedManagerId/departmentId/branchId.
- */
+// Must stay in sync with CounterpartyService.findVisible (access-control layer 3).
 @Injectable()
 export class OrderVisibilityService {
     constructor(
@@ -18,14 +14,8 @@ export class OrderVisibilityService {
         private accessScopeService: AccessScopeService,
     ) {}
 
-    // Exposed separately from findVisible() so plugin-acquiring can extend this same scoped
-    // query with its own real payment-status subquery filter before executing — see
-    // AdminPaymentOrderResolver.visibleOrdersByPaymentView in plugin-acquiring for why this
-    // can't just live here: erp-order can't depend on plugin-acquiring's PaymentAttempt entity
-    // (plugin-acquiring already depends on plugin-erp-order transitively via plugin-sync, so the
-    // reverse edge would be a circular package dependency — confirmed via a real `tsc -b`
-    // "Project references may not form a circular graph" error when this was tried the other
-    // way). plugin-acquiring depending on plugin-erp-order instead has no such cycle.
+    // Split out so plugin-acquiring can add its payment-status filter before executing.
+    // Can't move it there: plugin-erp-order can't depend on plugin-acquiring (circular package refs).
     async buildVisibleOrdersQuery(
         ctx: RequestContext,
         options?: OrderListOptions,
@@ -34,11 +24,7 @@ export class OrderVisibilityService {
         search?: string,
     ): Promise<SelectQueryBuilder<Order>> {
         const scope = await this.accessScopeService.resolveOrderScope(ctx);
-        // `lines` and `fulfillments` aren't joined by ListQueryBuilder by default — without
-        // them, Vendure's own Order.totalQuantity field resolver throws ("requires the
-        // Order.lines relation to be joined") the moment a caller asks for it, e.g.
-        // CustomerOrdersTab.vue's Items/Fulfillment columns (see api/customers.ts's
-        // CUSTOMER_ORDER_ITEM_FIELDS).
+        // Vendure's Order.totalQuantity resolver throws unless lines and fulfillments are joined here.
         const qb = this.listQueryBuilder.build(Order, options, {
             ctx,
             relations: ['lines', 'fulfillments'],
@@ -75,12 +61,8 @@ export class OrderVisibilityService {
 
         switch (scope.kind) {
             case 'own':
-                // No branch restriction here — this is the key-account-manager read exception
-                // from docs/access-control.md: an administrator scoped to their own assigned
-                // accounts must see every order for those accounts regardless of which branch
-                // actually serviced it (a chain customer's locations can span branches). Adding
-                // `AND order.branchId = mine` here would silently hide a manager's own orders
-                // placed against an out-of-branch trading point — don't add it.
+                // Deliberately no branch restriction: key-account managers must see all orders for their accounts,
+                // even those serviced at another branch (chain customers span branches).
                 this.accessScopeService.applyOwnCounterpartyFilter(
                     qb,
                     'counterparty',
@@ -88,34 +70,8 @@ export class OrderVisibilityService {
                 );
                 break;
             case 'department':
-                // Filtered by the order's own denormalized servicing branch
-                // (`${qb.alias}."customFieldsBranchid"`, set at placement time from the
-                // customer's preferred TradingPoint — see ErpOrderService.onOrderPlaced), not
-                // Counterparty.branchId. A chain account's "home" branch and the branch that
-                // actually services a given order can differ. `departmentId` is deliberately
-                // never compared — Department (ERP org data) is pure display information, never
-                // an access-scope gate; only Branch (mivend's own entity) is (2026-09-20
-                // correction, see docs/access-control.md's "Branch vs Department" section).
-                // `order` is a reserved SQL keyword — TypeORM's alias.property auto-quoting
-                // only fires for a bare `alias.propertyName` it can resolve against entity
-                // metadata; mixing the raw alias with an already-quoted raw column name here
-                // bypasses that pass entirely, so the alias itself must be quoted explicitly or
-                // this becomes `syntax error at or near "order"` at query time (same class of
-                // bug as the backend-plugin-rules skill's documented Brackets-alias gotcha, but here it hit even
-                // outside a Brackets callback because of the raw-column mixing).
-                //
-                // `OR ... IS NULL`: a branch-less order is a legitimate, expected state, not an
-                // edge case to exclude — ErpOrderService.onOrderPlaced only denormalizes
-                // branchId when the customer has a `preferredTradingPointId` set, which is
-                // optional (a customer can have trading points and place real orders without
-                // ever marking one preferred). Without this OR, `column = :branchId` is `NULL`
-                // (neither true nor false) for every such order in Postgres, so a plain
-                // comparison silently hides it from every branch-scoped viewer — a real bug
-                // confirmed against live seeded data, not just a test artifact. TEMPORARY: this
-                // carve-out currently makes every branch-less order visible to every
-                // branch-scoped viewer, rather than routing it to a dedicated triage list — see
-                // issue #123 for the real "unsorted, needs manual triage" workflow this should
-                // become once designed.
+                // Filter by the order's denormalized branch, not Counterparty.branchId; never by departmentId.
+                // Quote "order" alias (reserved word); the IS NULL branch keeps branch-less orders visible.
                 qb.andWhere(
                     `("${qb.alias}"."customFieldsBranchid" = :branchId OR "${qb.alias}"."customFieldsBranchid" IS NULL)`,
                     { branchId: scope.branchId ?? null },
@@ -131,18 +87,12 @@ export class OrderVisibilityService {
     async findVisible(
         ctx: RequestContext,
         options?: OrderListOptions,
-        // Filters by the assigned manager on the customer's counterparty — not expressible via
-        // the generic OrderListOptions.filter object since it's a joined column, not a plain
-        // Order field. Used by the Orders list's "Manager" filter (Operator/Dept Head only).
+        // Manager is a joined Counterparty column, so it can't use generic OrderListOptions.filter.
         managerId?: string,
-        // Order has no plain-column customerId exposed via OrderFilterParameter (only
-        // customerLastName, a contains filter) — used by the customer detail page's Orders tab
-        // to show only that customer's orders.
+        // OrderFilterParameter exposes no customerId filter (only a customerLastName contains match).
         customerId?: string,
-        // Free-text search across order code + counterparty company name/INN + customer phone —
-        // deliberately server-side, not expressible via OrderFilterParameter._or (see #38):
-        // company name/INN/phone all live on the joined Counterparty/Customer rows, not on
-        // Order itself.
+        // Must be server-side: company name, INN and phone live on joined Counterparty/Customer rows.
+        // OrderFilterParameter._or can only reach Order's own columns.
         search?: string,
     ): Promise<PaginatedList<Order>> {
         const qb = await this.buildVisibleOrdersQuery(ctx, options, managerId, customerId, search);
