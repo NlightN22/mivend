@@ -262,6 +262,25 @@ string validated against the dictionary; `erpOrderStatus` stays the ERP's raw `s
   and filter groups from it. No per-status i18n keys.
 - **No backfill:** there is no compatibility layer; an order keeps whatever status string it has.
 
+### ERP status derivation by receiving method (owner-approved; the ERP computes it, we only read `status_code`)
+
+The ERP picks the first match in this order: CANCELLED (marked for deletion) > DELIVERED > DELIVERING (`inDelivery`)
+> SHIPPING (`hasRealization`) > PICKING (`hasOrder`) > APPROVED > UNDER_APPROVAL. The receiving method is decided only
+by `pointOfSaleId` (the shipping address): set = delivery, null = pickup. `deliveryAddress` is printed-document text
+and never decides it (#238). The ERP source of truth is its ingestion API design doc, section "Order statuses on the ERP side".
+
+| Status | Delivery (`pointOfSaleId` set) | Pickup (`pointOfSaleId` null) |
+|---|---|---|
+| UNDER_APPROVAL | under approval, no warehouse order | same |
+| PICKING | warehouse order exists, no sale document | same |
+| SHIPPING | sale document posted, trip not started | only a partial handover: posted, some line `shippedQuantity < quantity` |
+| DELIVERING | trip sheet "in transit" (`inDelivery`) | never (`inDelivery` is always false) |
+| DELIVERED | trip sheet "returned" (`delivered`) | sale posted and every line `shippedQuantity >= quantity` |
+
+`APPROVED` does not appear when approval and the warehouse order are created in one posting (the ERP goes straight to
+PICKING); history from UNDER_APPROVAL to PICKING is correct. For pickup, DELIVERED means "handed over to the customer";
+there is no separate "collected" fact. Verified end to end for delivery on a real staging order (#238).
+
 ### Paid amount on the order
 
 `order-changed.paidAmount` (optional; absent = not computed) is stored as `Order.customFields.erpPaidAmount` in minor
