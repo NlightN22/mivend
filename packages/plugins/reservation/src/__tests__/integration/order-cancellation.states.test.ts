@@ -203,10 +203,18 @@ describe('OrderCancelResultService.apply (real Postgres)', () => {
             cancelRefusalReason: 'IN_PROGRESS warehouse order exists',
         });
         expect(f.notifications).toEqual([expect.objectContaining({ kind: 'error' })]);
+    });
+
+    it('rejected: a repeated cancel sends a new request flagged as a repeat', async () => {
+        const f = buildCancellationFixture(h);
+        const order = await requestedOrder(f);
+        await f.results.apply(mockCtx, answer(order.uuid, 'rejected'));
+
         expect(await f.service.cancel(mockCtx, order.id, 'customer-request')).toEqual({
-            kind: 'not-cancellable',
-            reason: 'refused-by-erp',
+            kind: 'cancel-requested',
         });
+        expect(f.port.requested.map(r => r.repeat)).toEqual([false, true]);
+        expect((await loadOrder(h, order.id)).customFields.cancelRequestStatus).toBe('REQUESTED');
     });
 
     it('rejected after a local cancel (sent but unregistered) is reported as an error to staff', async () => {

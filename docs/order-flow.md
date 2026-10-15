@@ -586,5 +586,5 @@ the above is stable.
   `cancelOrderAsStaff(orderId)` (permission `CancelOrder`, order scope as for the order list) both call
   `OrderCancellationService.cancel` with reason `customer-request` / `staff-request`.
 - The result is a union: `OrderCancelSuccess { outcome }` or `OrderCancelRefused { reason, message }`
-  with reason SHIPPED | IN_PROGRESS | PAID | REFUSED_BY_ERP | REGISTRATION_REJECTED (outcomes: CANCELLED | CANCEL_REQUESTED | ALREADY_CANCELLED; `LEFT_TO_ERP` stays internal to the deadline path). A refusal is
+  with reason SHIPPED | IN_PROGRESS | PAID | REGISTRATION_REJECTED (outcomes: CANCELLED | CANCEL_REQUESTED | ALREADY_CANCELLED; `LEFT_TO_ERP` stays internal to the deadline path). A refusal is
   a result, not an exception. Rules: `docs/order-contracts.md`, "Cancellability" and "Who may cancel".

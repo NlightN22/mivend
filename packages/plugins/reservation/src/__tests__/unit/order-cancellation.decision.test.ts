@@ -51,13 +51,14 @@ describe('decideCancellation', () => {
         ['shipped by order state', { orderState: 'PartiallyShipped' }, 'shipped'],
         ['shipped by fulfillment', { latestFulfillmentState: 'Shipped' }, 'shipped'],
         ['settled payment', { hasSettledPayment: true }, 'paid'],
-        [
-            'refused by the ERP before',
-            { cancelRequestStatus: 'REFUSED', erpOrderId: 'erp-1' },
-            'refused-by-erp',
-        ],
     ])('refuses: %s', (_name, facts, reason) => {
         expect(decideCancellation({ ...base, ...facts })).toEqual({ action: 'refuse', reason });
+    });
+
+    it('asks the ERP again after an earlier refusal', () => {
+        expect(
+            decideCancellation({ ...base, cancelRequestStatus: 'REFUSED', erpOrderId: 'erp-1' }),
+        ).toEqual({ action: 'request-only' });
     });
 
     it('shipped wins over a registered order that would otherwise be cancel-requested', () => {
@@ -121,7 +122,11 @@ describe('isOrderCancellable', () => {
         ['picking', { erpStatus: stage('PICKING') }, false],
         ['shipped', { orderState: 'Shipped' }, false],
         ['already cancelled', { orderState: 'Cancelled' }, false],
-        ['cancel refused by the ERP', { cancelRequestStatus: 'REFUSED' }, false],
+        [
+            'cancel refused by the ERP earlier',
+            { cancelRequestStatus: 'REFUSED', erpOrderId: 'erp-1' },
+            true,
+        ],
         ['active cart', { orderState: 'AddingItems' }, false],
         ['active cart in checkout', { orderState: 'ArrangingPayment' }, false],
     ])('%s', (_name, facts, expected) => {

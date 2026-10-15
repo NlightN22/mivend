@@ -2,12 +2,7 @@ import type { OrderStatusDictionary } from '@mivend/plugin-erp-order';
 
 export type CancelSubmission = 'none' | 'pending' | 'sent';
 
-export type CancelRefusal =
-    | 'shipped'
-    | 'in-progress'
-    | 'paid'
-    | 'refused-by-erp'
-    | 'registration-rejected';
+export type CancelRefusal = 'shipped' | 'in-progress' | 'paid' | 'registration-rejected';
 
 // Attributes of the order's erpStatus in the status dictionary; null when it has none yet.
 export interface ErpStageFacts {
@@ -65,10 +60,8 @@ export function decideCancellation(facts: CancelFacts): CancelDecision {
     // The ERP never created a rejected order, so there is nothing to ask it to cancel.
     if (facts.erpStatus?.rejected === true) return { action: 'cancel-rejected-locally' };
 
+    // A refused request (REFUSED) does not block: the customer or staff may ask again.
     if (facts.cancelRequestStatus === 'REQUESTED') return { action: 'already-requested' };
-    if (facts.cancelRequestStatus === 'REFUSED') {
-        return { action: 'refuse', reason: 'refused-by-erp' };
-    }
 
     if (facts.erpOrderId) {
         return facts.requestRegistered ? { action: 'request-only' } : { action: 'leave-to-erp' };

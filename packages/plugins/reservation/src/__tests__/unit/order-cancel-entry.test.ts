@@ -14,7 +14,6 @@ describe('toOrderCancelResult', () => {
         ['shipped', 'SHIPPED'],
         ['in-progress', 'IN_PROGRESS'],
         ['paid', 'PAID'],
-        ['refused-by-erp', 'REFUSED_BY_ERP'],
         ['registration-rejected', 'REGISTRATION_REJECTED'],
     ] as const)('maps refusal %s to a typed refused result', (reason, code) => {
         const result = toOrderCancelResult({ kind: 'not-cancellable', reason });

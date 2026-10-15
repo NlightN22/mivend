@@ -129,7 +129,12 @@ describe('skipPendingSubmission', () => {
 });
 
 describe('requestCancel', () => {
-    const subject = { orderId: 'order-1', orderUuid: randomUUID(), orderCode: 'ORD-1' };
+    const subject = {
+        orderId: 'order-1',
+        orderUuid: randomUUID(),
+        orderCode: 'ORD-1',
+        repeat: false,
+    };
 
     it('publishing twice leaves exactly one cancel-requested row, keyed by the order uuid', async () => {
         await adapter.requestCancel(ctx, subject);
@@ -143,6 +148,15 @@ describe('requestCancel', () => {
             orderUuid: subject.orderUuid,
             eventId: rows[0].eventId,
         });
+    });
+
+    it('a repeat after a refusal enqueues a second request with a new event id', async () => {
+        await adapter.requestCancel(ctx, subject);
+        await adapter.requestCancel(ctx, { ...subject, repeat: true });
+
+        const rows = await repo().find({ where: { eventType: 'order.cancel-requested' } });
+        expect(rows).toHaveLength(2);
+        expect(new Set(rows.map(r => r.eventId)).size).toBe(2);
     });
 
     it('a different order gets its own request', async () => {

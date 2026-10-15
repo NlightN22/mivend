@@ -7,6 +7,8 @@ export interface CancelRequestSubject {
     orderId: string;
     orderUuid: string;
     orderCode: string;
+    // True when the ERP refused an earlier request: a new one must be sent.
+    repeat: boolean;
 }
 
 // What plugin-reservation needs from the ERP integration without importing it (erp-integration
@@ -16,7 +18,7 @@ export interface OrderCancellationPort {
     submissionState(ctx: RequestContext, orderId: string): Promise<CancelSubmission>;
     // Conditional on the row still waiting: false means the publisher got there first.
     skipPendingSubmission(ctx: RequestContext, orderId: string, reason: string): Promise<boolean>;
-    // At most one external effect per orderUuid; a repeat is a no-op.
+    // One external effect per orderUuid while a request is open; after a refusal a new one is sent.
     requestCancel(ctx: RequestContext, subject: CancelRequestSubject): Promise<void>;
 }
 

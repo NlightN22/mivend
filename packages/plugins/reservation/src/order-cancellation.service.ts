@@ -202,8 +202,11 @@ export class OrderCancellationService {
     private async requestCancel(ctx: RequestContext, order: Order): Promise<void> {
         const orderUuid = order.customFields.uuid;
         if (!orderUuid) throw new OrderNotEligibleError(`Order ${order.code} has no uuid`);
-        await this.portRegistry
-            .get()
-            .requestCancel(ctx, { orderId: String(order.id), orderUuid, orderCode: order.code });
+        await this.portRegistry.get().requestCancel(ctx, {
+            orderId: String(order.id),
+            orderUuid,
+            orderCode: order.code,
+            repeat: order.customFields.cancelRequestStatus === 'REFUSED',
+        });
     }
 }

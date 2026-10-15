@@ -39,7 +39,11 @@ export class OrderCancellationAdapter implements OrderCancellationPort, OnApplic
     }
 
     async requestCancel(_ctx: RequestContext, subject: CancelRequestSubject): Promise<void> {
-        if (await this.gateway.hasActiveEntry('order.cancel-requested', subject.orderUuid)) return;
+        if (
+            !subject.repeat &&
+            (await this.gateway.hasActiveEntry('order.cancel-requested', subject.orderUuid))
+        )
+            return;
         await this.gateway.enqueue({
             eventType: 'order.cancel-requested',
             subject: { orderUuid: subject.orderUuid, orderId: subject.orderId },
