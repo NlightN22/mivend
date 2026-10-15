@@ -104,9 +104,8 @@ export const onlineStubPaymentHandler = new PaymentMethodHandler({
         }
 
         if (metadata?.status === 'fail') {
-            // Record the failed attempt against each proforma invoice for the /payments ledger — left as
-            // 'pending' (not 'cancelled') by PaymentAttemptService: the customer can still retry
-            // payment on the same order, so the proforma invoice's payment obligation still stands.
+            // Stays 'pending', not 'cancelled': the customer can retry payment on the same order,
+            // so the proforma invoice's payment obligation still stands.
             for (const proformaInvoice of proformaInvoices) {
                 await paymentAttemptService.payProformaInvoice(
                     ctx,

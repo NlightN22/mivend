@@ -13,9 +13,8 @@ import {
 import { ONLINE_STUB_METHOD_CODE } from './online-stub-handler';
 import { loggerCtx } from './constants';
 
-// Idempotent, safe to run on every boot, on both instance types — no ERP/Kafka dependency, and a
-// branch instance can run checkout locally too (see docs/sync.md). Same pattern as
-// plugin-deferred-payment's DeferredPaymentBootstrapService.
+// Runs on every boot of every instance type, so it must be idempotent and avoid ERP/Kafka.
+// Branch instances run it locally without ERP/Kafka, so no remote dependency is allowed.
 @Injectable()
 export class OnlineStubBootstrapService implements OnApplicationBootstrap {
     constructor(
