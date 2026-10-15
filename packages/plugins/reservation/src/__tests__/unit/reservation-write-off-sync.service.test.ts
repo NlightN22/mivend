@@ -379,6 +379,45 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         expect(reservationService.setOrderReservationState).not.toHaveBeenCalled();
     });
 
+    it('a row released by cancel or expiry (not handed over) does not count against the ERP quantity', async () => {
+        reservationRepo.find.mockResolvedValue([
+            {
+                id: 'res-1',
+                orderId: 'order-1',
+                productVariantId: 'v-1',
+                quantity: 3,
+                status: 'released',
+                erpHandedOverAt: null,
+            },
+            {
+                id: 'res-2',
+                orderId: 'order-1',
+                productVariantId: 'v-1',
+                quantity: 2,
+                status: 'active',
+            },
+        ]);
+
+        await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
+            rejected: false,
+            reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 2 }],
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+
+        expect(reservationRepo.save.mock.calls[0][0][0]).toEqual(
+            expect.objectContaining({ id: 'res-2', status: 'released' }),
+        );
+        expect(reconciliationIssueService.reportQuantityMismatch).not.toHaveBeenCalled();
+    });
+
     it('a repeated partial event does not release the remainder (already handed-over part counts)', async () => {
         reservationRepo.find.mockResolvedValue([
             {
@@ -387,6 +426,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
                 productVariantId: 'v-1',
                 quantity: 3,
                 status: 'released',
+                erpHandedOverAt: new Date(),
             },
             {
                 id: 'res-2',

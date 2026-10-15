@@ -164,15 +164,28 @@ export class ReservationWriteOffSyncService {
         const orderId = input.orderUuid
             ? await this.findOrderIdByUuid(input.orderUuid)
             : await this.findOrderIdByErpId(input.orderEntityId);
-        const order = orderId
-            ? await this.connection.getRepository(ctx, Order).findOne({ where: { id: orderId } })
-            : null;
-        if (!orderId || !order) {
+        if (!orderId) {
             // Same retryable error as handleOrderRegistrationResult (#211).
             throw new UnknownOrderUuidError(
                 `order-changed: no Order found via orderUuid=${input.orderUuid ?? ''} or ` +
                     `orderEntityId=${input.orderEntityId}`,
             );
+        }
+        await withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, txCtx =>
+            this.applyOrderChanged(txCtx, orderId, input),
+        );
+    }
+
+    private async applyOrderChanged(
+        ctx: RequestContext,
+        orderId: string,
+        input: OrderChangedInput,
+    ): Promise<void> {
+        const order = await this.connection
+            .getRepository(ctx, Order)
+            .findOne({ where: { id: orderId } });
+        if (!order) {
+            throw new UnknownOrderUuidError(`order-changed: Order ${orderId} not found`);
         }
 
         const customFields: Partial<typeof order.customFields> = {
@@ -246,7 +259,7 @@ export class ReservationWriteOffSyncService {
         }
 
         const handedOver = new Map<string, number>();
-        for (const reservation of held.filter(r => r.status === 'released')) {
+        for (const reservation of held.filter(r => r.erpHandedOverAt != null)) {
             handedOver.set(
                 reservation.productVariantId,
                 (handedOver.get(reservation.productVariantId) ?? 0) + reservation.quantity,
@@ -294,6 +307,7 @@ export class ReservationWriteOffSyncService {
                     covered -= row.quantity;
                     row.status = 'released';
                     row.releasedAt = releasedAt;
+                    row.erpHandedOverAt = releasedAt;
                     row.erpReleaseOperationId = randomUUID();
                     toRelease.push(row);
                 } else {
@@ -311,6 +325,7 @@ export class ReservationWriteOffSyncService {
                             quantity: covered,
                             status: 'released',
                             releasedAt,
+                            erpHandedOverAt: releasedAt,
                             erpOperationId: randomUUID(),
                             erpReleaseOperationId: randomUUID(),
                         }),

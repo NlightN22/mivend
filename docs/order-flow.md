@@ -466,7 +466,10 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
   releases the local reserve; `0 < erp < local` releases only the covered part (the row is split, the
   remainder stays active); zero keeps it active and reports a discrepancy, except when a warehouse
   order exists (`warehouseStarted`, the ERP closed the reserve by the order scheme). A variant the ERP
-  does not mention keeps its reservation; a rejected result changes nothing (see #204). The local
+  does not mention keeps its reservation (also one that vanishes from a later answer after a partial
+  hand-over: it stays active until its own expiry); a rejected result changes nothing (see #204).
+  Handed-over quantity is marked by `Reservation.erpHandedOverAt`, never by plain `released`.
+  `order-changed` and the registration result both run under `reserve-order:<id>`. The local
   reserve keeps its own expiry, so `reservationState` is `RELEASED` only when nothing remains active.
 - **Expiry and cancel** (#194, `docs/order-contracts.md`): cancelling the reserve (A) and cancelling the
   order (B, which includes A) are different operations; at the shared deadline 1C does A and mivend does

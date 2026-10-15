@@ -76,6 +76,10 @@ export class Reservation extends UuidEntity {
     @Column({ type: 'varchar', nullable: true })
     erpReleaseOperationId!: string | null;
 
+    // Set only when the ERP's reported reserve took this quantity over (not on cancel/expiry release).
+    @Column({ type: 'timestamp', nullable: true })
+    erpHandedOverAt!: Date | null;
+
     @Column({ type: 'timestamp', nullable: true })
     erpConfirmedAt!: Date | null;
 }
