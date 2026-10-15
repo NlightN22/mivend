@@ -36,6 +36,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         if (!productId) {
             return inboundNoop(`storage-location ${entityId}: missing productId, skipping`);
         }
+        const warehouseId = String(payload.warehouseId ?? '');
         const organizationErpId =
             payload.organizationId != null ? String(payload.organizationId) : '';
         // `priority` is a plain proto3 int32: an absent key means 0, the most preferred value.
@@ -49,9 +50,10 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
             async txCtx => {
                 const repo = this.connection.getRepository(txCtx, StorageLocationAssignment);
                 if (hasOrganization) {
-                    await repo.upsert({ entityId, productId, organizationErpId, priority }, [
-                        'entityId',
-                    ]);
+                    await repo.upsert(
+                        { entityId, productId, organizationErpId, priority, warehouseId },
+                        ['entityId'],
+                    );
                 } else {
                     const { affected } = await repo.delete({ entityId, productId });
                     if (!affected) {

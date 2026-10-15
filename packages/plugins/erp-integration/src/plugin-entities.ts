@@ -1,3 +1,4 @@
+import { StockOrganization } from './entities/stock-organization.entity';
 import { StorageLocationAssignment } from './entities/storage-location-assignment.entity';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
@@ -20,6 +21,7 @@ import { BankAccountRecord } from './entities/bank-account-record.entity';
 // Entities registered by ErpIntegrationPlugin.
 export const PLUGIN_ENTITIES = [
     StorageLocationAssignment,
+    StockOrganization,
     IntegrationOutboxEntry,
     IntegrationInboxEvent,
     KafkaConsumerStatus,

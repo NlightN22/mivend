@@ -21,6 +21,10 @@ export class StorageLocationAssignment extends VendureEntity {
     @Column({ type: 'varchar' })
     organizationErpId!: string;
 
+    // Empty when the event carries no warehouse (a location row without one).
+    @Column({ type: 'varchar', default: '' })
+    warehouseId!: string;
+
     @Column({ type: 'int', default: 0 })
     priority!: number;
 }

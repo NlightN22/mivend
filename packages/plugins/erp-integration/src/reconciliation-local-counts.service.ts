@@ -11,7 +11,7 @@ import { WarehouseService } from '@mivend/plugin-access-control';
 import { DocumentsService } from '@mivend/plugin-documents';
 import { ProductVariantPriceEntry } from '@mivend/plugin-price-entry';
 
-// offer, stockOrganization, unit, storageLocation have no local entity to count; excluded.
+// offer, unit, storageLocation, stockOrganization are not compared (no 1:1 local count); excluded.
 // price/stock are plain row counts; StockLevel exists for every variant, not per received fact.
 export const COMPARED_AGGREGATE_TYPES = [
     'category',

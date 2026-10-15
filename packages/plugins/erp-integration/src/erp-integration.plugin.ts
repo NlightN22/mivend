@@ -17,6 +17,7 @@ import { createProductPhotoRecoveryTask } from './product-photo-recovery.schedul
 import { ProductPhotoResolver } from './product-photo.resolver';
 import { ResyncReplayClient } from './resync-replay.client';
 import { ProductTaxCodeFlagService } from './product-tax-code-flag.service';
+import { StockOrganizationReadService } from './stock-organization-read.service';
 import { ProductCategoryFlagService } from './product-category-flag.service';
 import { CharacteristicFacetService } from './characteristic-facet.service';
 import { ManufacturerFacetService } from './manufacturer-facet.service';
@@ -119,6 +120,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         NotificationPlugin,
     ],
     entities: PLUGIN_ENTITIES,
+    exports: [StockOrganizationReadService],
     controllers: isRestSurfaceEnabled('ERP_CALLBACK_ENABLED', 'ERP_CALLBACK_API_KEY', {
         rejectValues: productionRejectValues(ERP_CALLBACK_DEV_PLACEHOLDER_KEY),
     })
@@ -149,6 +151,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         OrderCancellationAdapter,
         CategoryOverrideRecomputeListener,
         ProductTaxCodeFlagService,
+        StockOrganizationReadService,
         ProductManufacturerService,
         ProductGalleryService,
         ProductCategoryFlagService,

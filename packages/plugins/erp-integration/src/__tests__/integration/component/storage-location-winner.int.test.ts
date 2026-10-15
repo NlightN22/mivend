@@ -19,6 +19,7 @@ class TestAssignment {
     @Column({ type: 'varchar', unique: true }) entityId!: string;
     @Column({ type: 'varchar' }) productId!: string;
     @Column({ type: 'varchar' }) organizationErpId!: string;
+    @Column({ type: 'varchar', default: '' }) warehouseId!: string;
     @Column({ type: 'int', default: 0 }) priority!: number;
 }
 
@@ -127,6 +128,20 @@ describe('StorageLocationStreamHandler winner election (real Postgres)', () => {
 
         await apply('loc-c', 'org-c', 9);
         expect(await variant()).toEqual({ org: 1, source: 'loc-a' });
+    });
+
+    it('stores the ERP warehouse id and refreshes it on a later event', async () => {
+        await apply('loc-a', 'org-a', 1, { warehouseId: 'wh-1' });
+        await apply('loc-b', 'org-b', 5);
+        await apply('loc-a', 'org-a', 1, { warehouseId: 'wh-2' });
+
+        const rows = await dataSource.query(
+            `SELECT "entityId", "warehouseId" FROM "StorageLocationAssignment" ORDER BY "entityId"`,
+        );
+        expect(rows).toEqual([
+            { entityId: 'loc-a', warehouseId: 'wh-2' },
+            { entityId: 'loc-b', warehouseId: '' },
+        ]);
     });
 
     it('breaks an equal priority by the lower entityId', async () => {

@@ -5,6 +5,7 @@ export { IntegrationInboxProcessorService } from './src/integration-inbox-proces
 export { KafkaConsumerService } from './src/kafka-consumer.service';
 export { SchemaRegistryClient } from './src/schema-registry.client';
 export { IntegrationInboxEvent } from './src/entities/integration-inbox-event.entity';
+export { StockOrganizationReadService } from './src/stock-organization-read.service';
 export { Manufacturer } from './src/entities/manufacturer.entity';
 export type { IntegrationInboxEventStatus } from './src/entities/integration-inbox-event.entity';
 export { encodeConfluentMessage } from './src/wire-format';

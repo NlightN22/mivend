@@ -28,6 +28,7 @@ import { PriceStreamHandler } from './handlers/price.handler';
 import { PriceTypeStreamHandler } from './handlers/price-type.handler';
 import { ProductStreamHandler } from './handlers/product.handler';
 import { StockStreamHandler } from './handlers/stock.handler';
+import { StockOrganizationStreamHandler } from './handlers/stock-organization.handler';
 import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
 import { ManufacturerStreamHandler } from './handlers/manufacturer.handler';
 import { ProductPhotoStreamHandler } from './handlers/product-photo.handler';
@@ -92,6 +93,7 @@ export class IntegrationInboxProcessorService {
         settlementBalanceHandler: SettlementBalanceStreamHandler,
         settlementDocumentTypeHandler: SettlementDocumentTypeStreamHandler,
         orderStatusHandler: OrderStatusStreamHandler,
+        stockOrganizationHandler: StockOrganizationStreamHandler,
     ) {
         this.handlers = {
             product: productHandler,
@@ -130,9 +132,7 @@ export class IntegrationInboxProcessorService {
             'settlement-balance': settlementBalanceHandler,
             'settlement-document-type': settlementDocumentTypeHandler,
             'order-status': orderStatusHandler,
-            // organization_id here is not authoritative: StorageLocationChanged is the sole source for
-            // ProductVariant.customFields.organizationId, so this stream is a logged no-op (like offer).
-            'stock-organization': new DeferredStreamHandler('stock-organization'),
+            'stock-organization': stockOrganizationHandler,
         };
     }
 

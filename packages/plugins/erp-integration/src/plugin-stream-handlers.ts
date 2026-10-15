@@ -9,6 +9,7 @@ import { DepartmentStreamHandler } from './handlers/department.handler';
 import { PositionStreamHandler } from './handlers/position.handler';
 import { CounterpartyStreamHandler } from './handlers/counterparty.handler';
 import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-credit-balance.handler';
+import { StockOrganizationStreamHandler } from './handlers/stock-organization.handler';
 import { StorageLocationStreamHandler } from './handlers/storage-location.handler';
 import { UserStreamHandler } from './handlers/user.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
@@ -48,6 +49,7 @@ export const STREAM_HANDLERS = [
     CounterpartyStreamHandler,
     CounterpartyCreditBalanceStreamHandler,
     StorageLocationStreamHandler,
+    StockOrganizationStreamHandler,
     UserStreamHandler,
     OrderRegistrationResultHandler,
     OrderChangedStreamHandler,
