@@ -5,9 +5,8 @@ import { AuthenticatedSession, RequestContext, TransactionalConnection, User } f
 export class SessionLoginListenerService {
     constructor(private connection: TransactionalConnection) {}
 
-    // Called from LoginEvent — the AuthenticatedSession row was already created
-    // synchronously just before the event publishes, so the most-recently-created
-    // session for this user is the one we just need to tag with its user agent.
+    // Relies on the AuthenticatedSession row being created synchronously before LoginEvent publishes,
+    // so the most recently created session for the user is the one to tag.
     async tagLatestSessionWithUserAgent(ctx: RequestContext, user: User): Promise<void> {
         const userAgent = ctx.req?.headers['user-agent'];
         if (!userAgent) {

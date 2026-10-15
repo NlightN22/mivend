@@ -15,9 +15,8 @@ import {
 } from 'shared';
 import { SessionManagementService } from '../../session-management.service';
 
-// Same hand-rolled-table approach as packages/plugins/documents' integration test
-// (Vendure's real Session/AuthenticatedSession entities need a bootstrap-registered
-// EntityIdStrategy to get a primary column, which a standalone DataSource doesn't have).
+// Hand-rolled table: Vendure's Session/AuthenticatedSession need a bootstrap-registered
+// EntityIdStrategy for a primary column, which a standalone DataSource lacks.
 @Entity('authenticated_session')
 class TestAuthenticatedSession {
     @PrimaryGeneratedColumn('uuid')
@@ -60,9 +59,8 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
 
-    // The service queries with `{ user: { id: userId } }`, which TypeORM's real
-    // AuthenticatedSession resolves via its `user` relation. Our flat test table has
-    // no relation, so the shim rewrites that filter shape to the flat `userId` column.
+    // The test table has no `user` relation, so the shim rewrites the `{ user: { id } }`
+    // filter from TypeORM's AuthenticatedSession into a flat `userId` column filter.
     const repo = dataSource.getRepository(TestAuthenticatedSession);
     const shimRepo = {
         find: (opts: { where?: Record<string, unknown>; order?: unknown }) =>
@@ -91,12 +89,8 @@ beforeAll(async () => {
     userService = { getUserById: vi.fn() };
     sessionService = { deleteSessionsByUser: vi.fn() };
 
-    // deleteExpiredSessions() queries the real `Session` entity from @vendure/core directly
-    // (not through the shimmed TransactionalConnection above), which needs a bootstrap-time
-    // EntityIdStrategy this standalone DataSource doesn't have — the same constraint documented
-    // at the top of this file. It's covered by a unit test with a mocked DataSource instead
-    // (matching reservation.service.ts's expireDueReservations(), which has no integration test
-    // for the same reason). Not exercised here.
+    // Queries the real Session entity directly, bypassing the shim, which needs a bootstrap-time
+    // EntityIdStrategy absent here; covered by a unit test with a mocked DataSource instead.
     service = new SessionManagementService(
         connectionShim,
         configService,

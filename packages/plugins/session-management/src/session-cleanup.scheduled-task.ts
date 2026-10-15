@@ -5,10 +5,8 @@ import { SessionManagementService } from './session-management.service';
 import { CLEANUP_POLL_INTERVAL_DEFAULT, loggerCtx } from './session.types';
 import type { SessionManagementPluginOptions } from './session.types';
 
-// Issue #80: standard for recurring/periodic plugin work is Vendure's own ScheduledTask
-// (DefaultSchedulerPlugin, registered in apps/server/src/vendure-config.ts) — worker-process-only
-// and DB-locked out of the box, plus enable/disable + run-now via the admin API, replacing the
-// previous raw BullMQ Queue+Worker (session-cleanup.worker.ts).
+// Use Vendure's ScheduledTask, not BullMQ: it runs in the worker only and is DB-locked by default.
+// Requires DefaultSchedulerPlugin in vendure-config.ts; admin API gives enable/disable and run-now.
 export function createSessionCleanupTask(options: SessionManagementPluginOptions): ScheduledTask {
     const everyMs = options.cleanupPollIntervalMs ?? CLEANUP_POLL_INTERVAL_DEFAULT;
     return new ScheduledTask({

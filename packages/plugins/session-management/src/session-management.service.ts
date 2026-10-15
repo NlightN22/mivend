@@ -66,9 +66,8 @@ export class SessionManagementService {
         return true;
     }
 
-    // "Sign out everywhere" — ends every session for the user, including the one
-    // making this request, matching the existing frontend button copy/behaviour
-    // (issue #40's open question, resolved this way).
+    // Intentionally ends the caller's own session too, to match the frontend's
+    // "Sign out everywhere" button behaviour.
     async endAllSessions(ctx: RequestContext): Promise<boolean> {
         const userId = ctx.activeUserId;
         if (!userId) {
@@ -82,11 +81,8 @@ export class SessionManagementService {
         return true;
     }
 
-    // DB hygiene, not a security control — runs outside any request, so there's no ctx to
-    // build; hits the raw DataSource directly (same pattern as
-    // reservation.service.ts's expireDueReservations()). Targets the base `Session` entity
-    // (not just AuthenticatedSession) so expired anonymous cart sessions are swept too — both
-    // subtypes share the same `session` table via TypeORM single-table inheritance.
+    // Not a security control: runs outside any request, so no ctx is built.
+    // Targets base Session so anonymous cart sessions are swept too (STI shares one table).
     async deleteExpiredSessions(): Promise<number> {
         const result = await this.dataSource
             .getRepository(Session)
