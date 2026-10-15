@@ -147,6 +147,7 @@ export class TestReservation {
     @Column({ type: 'varchar' }) erpOperationId!: string;
     @Column({ type: 'varchar', nullable: true }) erpReleaseOperationId!: string | null;
     @Column({ type: 'timestamp', nullable: true }) erpConfirmedAt!: Date | null;
+    @Column({ type: 'timestamp', nullable: true }) erpHandedOverAt!: Date | null;
 }
 
 const entityMap = {
