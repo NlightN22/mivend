@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { In } from 'typeorm';
 import { EventBus, Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { ErpOrderStatusEvent, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 
@@ -219,7 +220,10 @@ export class ReservationWriteOffSyncService {
         warehouseOrderExists = false,
     ): Promise<void> {
         const reservationRepo = this.connection.getRepository(ctx, Reservation);
-        const active = await reservationRepo.find({ where: { orderId, status: 'active' } });
+        const held = await reservationRepo.find({
+            where: { orderId, status: In(['active', 'released']) },
+        });
+        const active = held.filter(r => r.status === 'active');
         if (active.length === 0) {
             return;
         }
@@ -241,47 +245,93 @@ export class ReservationWriteOffSyncService {
             );
         }
 
+        const handedOver = new Map<string, number>();
+        for (const reservation of held.filter(r => r.status === 'released')) {
+            handedOver.set(
+                reservation.productVariantId,
+                (handedOver.get(reservation.productVariantId) ?? 0) + reservation.quantity,
+            );
+        }
+
+        const releasedAt = new Date();
         const toRelease: Reservation[] = [];
+        let partialCount = 0;
         for (const [variantId, localQuantity] of localQuantityByVariant) {
             const erpQuantity = erpQuantityByVariant.get(variantId);
             if (erpQuantity === undefined) {
                 // Not confirmed in this result — leave active, may arrive in a later document.
                 continue;
             }
+            const alreadyHandedOver = handedOver.get(variantId) ?? 0;
+            const required = localQuantity + alreadyHandedOver;
             // Once a warehouse order exists the ERP may have closed the reserve; zero is normal.
             const closedByOrderScheme = warehouseOrderExists && erpQuantity === 0;
-            if (erpQuantity !== localQuantity && !closedByOrderScheme) {
-                // The ERP is the source of truth (#199): release anyway, record the difference.
+            if (erpQuantity !== required && !closedByOrderScheme) {
                 await this.reconciliationIssueService.reportQuantityMismatch(ctx, {
                     orderId,
                     productVariantId: variantId,
-                    localQuantity,
+                    localQuantity: required,
                     erpQuantity,
                     orderEntityId,
                 });
                 Logger.warn(
-                    `${source}: quantity mismatch for order ${orderId} variant ` +
-                        `${variantId} (local=${localQuantity}, erp=${erpQuantity}) — ERP wins, ` +
-                        'local reservation released, difference reported',
+                    `${source}: quantity mismatch for order ${orderId} variant ${variantId} ` +
+                        `(local=${required}, erp=${erpQuantity}) — local reserve kept for the ` +
+                        'part the ERP does not hold',
                     loggerCtx,
                 );
             }
-            toRelease.push(...active.filter(r => r.productVariantId === variantId));
+            const rows = active.filter(r => r.productVariantId === variantId);
+            let covered =
+                closedByOrderScheme || erpQuantity >= required
+                    ? localQuantity
+                    : Math.max(0, erpQuantity - alreadyHandedOver);
+            for (const row of rows) {
+                if (covered <= 0) {
+                    break;
+                }
+                if (row.quantity <= covered) {
+                    covered -= row.quantity;
+                    row.status = 'released';
+                    row.releasedAt = releasedAt;
+                    row.erpReleaseOperationId = randomUUID();
+                    toRelease.push(row);
+                } else {
+                    await reservationRepo.save(
+                        new Reservation({
+                            orderId: row.orderId,
+                            orderLineId: row.orderLineId,
+                            productVariantId: row.productVariantId,
+                            stockLocationId: row.stockLocationId,
+                            branchId: row.branchId,
+                            reservedAt: row.reservedAt,
+                            expiresAt: row.expiresAt,
+                            reservationGeneration: row.reservationGeneration,
+                            creationMethod: row.creationMethod,
+                            quantity: covered,
+                            status: 'released',
+                            releasedAt,
+                            erpOperationId: randomUUID(),
+                            erpReleaseOperationId: randomUUID(),
+                        }),
+                    );
+                    row.quantity -= covered;
+                    covered = 0;
+                    await reservationRepo.save(row);
+                    partialCount++;
+                }
+            }
         }
 
-        if (toRelease.length === 0) {
+        if (toRelease.length > 0) {
+            await reservationRepo.save(toRelease);
+        }
+        const releasedCount = toRelease.length + partialCount;
+        if (releasedCount === 0) {
             return;
         }
-
-        const releasedAt = new Date();
-        for (const reservation of toRelease) {
-            reservation.status = 'released';
-            reservation.releasedAt = releasedAt;
-            reservation.erpReleaseOperationId = randomUUID();
-        }
-        await reservationRepo.save(toRelease);
         Logger.log(
-            `${source}: released ${toRelease.length} reservation(s) for order ` +
+            `${source}: released ${releasedCount} reservation(s) for order ` +
                 `${orderId} — the ERP holds the stock now (no outbound event, ERP-driven)`,
             loggerCtx,
         );

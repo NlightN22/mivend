@@ -64,6 +64,6 @@ Late registration result after a local release: the order registers, the release
 - A background tier refresh saving stale lines can erase an `ArrangingPayment` organization stamp;
   the stamp and the refresh now take the same order row lock.
 - The ERP reports `reservedQuantity` 0 for products with an empty storage unit in 1C (about 16%);
-  mivend treats that as "ERP wins", releases its hold and records the difference.
+  mivend releases only the part the ERP holds and records the difference (#236).
 - A failed ERP request to break on purpose: start the contour with a shell override such as
   `INTEGRATION_SCHEMA_REGISTRY_URL=http://127.0.0.1:9 make dev-staging-integration`.

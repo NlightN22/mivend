@@ -461,11 +461,13 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
   lines. The customer sees nothing new.
 - **The placement handler decides on the stored state**, not on the event's Order copy: a repeated or
   racing placement event cannot roll a `RESERVED` order back to `AWAITING_CONFIRMATION`.
-- **The ERP is the source of truth for quantities.** When an `order-registration-result` or
-  `order-changed` reports a reserved quantity that differs from ours (less, more, zero), the local
-  reservation for that variant is released like a matching one (the ERP holds the stock now) and the
-  difference is recorded as a reconciliation issue for staff. A variant the ERP does not mention keeps
-  its local reservation; a rejected result changes nothing here (see #204).
+- **The local reserve is handed over only for what the ERP holds (#236).** Per variant, the ERP's
+  reported quantity is compared with local active + already handed-over quantity: covered or more
+  releases the local reserve; `0 < erp < local` releases only the covered part (the row is split, the
+  remainder stays active); zero keeps it active and reports a discrepancy, except when a warehouse
+  order exists (`warehouseStarted`, the ERP closed the reserve by the order scheme). A variant the ERP
+  does not mention keeps its reservation; a rejected result changes nothing (see #204). The local
+  reserve keeps its own expiry, so `reservationState` is `RELEASED` only when nothing remains active.
 - **Expiry and cancel** (#194, `docs/order-contracts.md`): cancelling the reserve (A) and cancelling the
   order (B, which includes A) are different operations; at the shared deadline 1C does A and mivend does
   A and, for pending/unregistered orders, B. One `OrderCancellationService.cancel` serves every cancel

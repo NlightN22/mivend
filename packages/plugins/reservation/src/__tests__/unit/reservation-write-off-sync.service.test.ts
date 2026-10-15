@@ -336,13 +336,63 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         );
     });
 
-    it('follows the ERP on a quantity mismatch: releases the local reservation and reports the difference', async () => {
+    it('releases only the part the ERP covers on a partial reserve and keeps the remainder active', async () => {
         reservationRepo.find.mockResolvedValue([
             {
                 id: 'res-1',
                 orderId: 'order-1',
                 productVariantId: 'v-1',
                 quantity: 5,
+                status: 'active',
+            },
+        ]);
+
+        reservationRepo.count.mockResolvedValue(1);
+
+        await service.handleOrderRegistrationResult(ctx, {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            requestEntityId: null,
+            localOrderId: null,
+            rejected: false,
+            reservedLines: [{ productVariantId: 'v-1', reservedQuantity: 3 }],
+            unresolvedProductIds: [],
+            documentNumber: null,
+            status: '',
+            rejectionReasonCode: null,
+            rejectionReasonText: null,
+        });
+
+        const saved = reservationRepo.save.mock.calls.map(c => c[0]);
+        expect(saved).toContainEqual(expect.objectContaining({ status: 'active', quantity: 2 }));
+        expect(saved).toContainEqual(expect.objectContaining({ status: 'released', quantity: 3 }));
+        expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                orderId: 'order-1',
+                productVariantId: 'v-1',
+                localQuantity: 5,
+                erpQuantity: 3,
+                orderEntityId: 'erp-order-1',
+            }),
+        );
+        expect(reservationService.setOrderReservationState).not.toHaveBeenCalled();
+    });
+
+    it('a repeated partial event does not release the remainder (already handed-over part counts)', async () => {
+        reservationRepo.find.mockResolvedValue([
+            {
+                id: 'res-1',
+                orderId: 'order-1',
+                productVariantId: 'v-1',
+                quantity: 3,
+                status: 'released',
+            },
+            {
+                id: 'res-2',
+                orderId: 'order-1',
+                productVariantId: 'v-1',
+                quantity: 2,
                 status: 'active',
             },
         ]);
@@ -361,28 +411,10 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejectionReasonText: null,
         });
 
-        expect(reservationRepo.save).toHaveBeenCalledTimes(1);
-        expect(reservationRepo.save.mock.calls[0][0][0]).toEqual(
-            expect.objectContaining({ status: 'released', releasedAt: expect.any(Date) }),
-        );
-        expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({
-                orderId: 'order-1',
-                productVariantId: 'v-1',
-                localQuantity: 5,
-                erpQuantity: 3,
-                orderEntityId: 'erp-order-1',
-            }),
-        );
-        expect(reservationService.setOrderReservationState).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({ id: 'order-1' }),
-            'RELEASED',
-        );
+        expect(reservationRepo.save).not.toHaveBeenCalled();
     });
 
-    it('follows the ERP when it reserved more than we did', async () => {
+    it('releases the whole local reserve when the ERP holds more than we did', async () => {
         reservationRepo.find.mockResolvedValue([
             {
                 id: 'res-1',
@@ -416,7 +448,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         );
     });
 
-    it('follows the ERP when it reserved nothing for a line it reports (quantity absent = 0)', async () => {
+    it('keeps the local reserve active and reports when the ERP holds nothing for a reported line', async () => {
         reservationRepo.find.mockResolvedValue([
             {
                 id: 'res-1',
@@ -441,9 +473,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejectionReasonText: null,
         });
 
-        expect(reservationRepo.save.mock.calls[0][0][0]).toEqual(
-            expect.objectContaining({ status: 'released' }),
-        );
+        expect(reservationRepo.save).not.toHaveBeenCalled();
         expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({ localQuantity: 2, erpQuantity: 0 }),
@@ -485,7 +515,16 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejectionReasonText: null,
         });
 
-        expect(reservationRepo.save.mock.calls[0][0]).toHaveLength(2);
+        const saved = reservationRepo.save.mock.calls.map(c => c[0]);
+        expect(saved).toContainEqual(
+            expect.objectContaining({ productVariantId: 'v-2', quantity: 3, status: 'active' }),
+        );
+        expect(saved).toContainEqual(
+            expect.objectContaining({ productVariantId: 'v-2', quantity: 1, status: 'released' }),
+        );
+        expect(saved).toContainEqual([
+            expect.objectContaining({ productVariantId: 'v-1', status: 'released' }),
+        ]);
         expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledTimes(1);
         expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledWith(
             ctx,
@@ -1138,7 +1177,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         ['PICKING', false],
         ['APPROVED', true],
     ])(
-        'with derived status %s a zero ERP reserve reports a mismatch: %s',
+        'with derived status %s a zero ERP reserve reports a mismatch and releases only by the order scheme: %s',
         async (derivedStatus, reported) => {
             reservationRepo.find.mockResolvedValue([
                 {
@@ -1159,9 +1198,13 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
                 derivedStatus: derivedStatus as never,
             });
 
-            expect(reservationRepo.save.mock.calls[0][0][0]).toEqual(
-                expect.objectContaining({ status: 'released' }),
-            );
+            if (reported) {
+                expect(reservationRepo.save).not.toHaveBeenCalled();
+            } else {
+                expect(reservationRepo.save.mock.calls[0][0][0]).toEqual(
+                    expect.objectContaining({ status: 'released' }),
+                );
+            }
             expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledTimes(
                 reported ? 1 : 0,
             );
@@ -1315,7 +1358,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         );
     });
 
-    it('follows the ERP on a quantity mismatch: releases the local reservation and reports the difference', async () => {
+    it('releases only the covered part on a partial reserve and reports the difference', async () => {
         reservationRepo.find.mockResolvedValue([
             {
                 id: 'res-1',
@@ -1335,10 +1378,9 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             derivedStatus: null,
         });
 
-        expect(reservationRepo.save).toHaveBeenCalledTimes(1);
-        expect(reservationRepo.save.mock.calls[0][0][0]).toEqual(
-            expect.objectContaining({ status: 'released' }),
-        );
+        const saved = reservationRepo.save.mock.calls.map(c => c[0]);
+        expect(saved).toContainEqual(expect.objectContaining({ quantity: 2, status: 'active' }));
+        expect(saved).toContainEqual(expect.objectContaining({ quantity: 3, status: 'released' }));
         expect(reconciliationIssueService.reportQuantityMismatch).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({

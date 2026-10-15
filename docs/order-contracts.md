@@ -162,7 +162,7 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   `order-change-requests` stream is not used.
 - A late `order.confirmed` after a cancel: a still-pending outbox row is marked `skipped`, and the ERP keeps a
   cancelled-`orderId` tombstone and rejects a late submit.
-- If the ERP reports a different reserved quantity than ours, the ERP wins (#199).
+- If the ERP reports less than our reserve, only the covered part is handed over and the remainder stays active; zero keeps it all (#236, `docs/order-flow.md`).
 
 ### Statuses
 
