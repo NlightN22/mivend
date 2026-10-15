@@ -28,12 +28,8 @@ function parseAccessScopeConfig(row: RoleAccessScope): AccessScopeConfig | null 
     }
 }
 
-/**
- * Role -> max-scope-per-resource is data (a dedicated table keyed by Role.code — Vendure's
- * Role entity does not support customFields), not a Permission — this is what replaces the
- * old ReadOwnX/ReadDepartmentX/ReadAllX permission triplets. See docs/access-control.md,
- * layer 2/3.
- */
+// Scope lives in a side table keyed by Role.code: Vendure's Role entity has no customFields.
+// Not a Permission, so it replaces the ReadOwnX/ReadDepartmentX/ReadAllX permission triplets.
 @Injectable()
 export class RoleScopeConfigService {
     constructor(private connection: TransactionalConnection) {}
@@ -58,9 +54,7 @@ export class RoleScopeConfigService {
         return best;
     }
 
-    // Read-back for the Settings > Roles & Access UI — the config is written blindly via
-    // setScopeFor today; this closes the matching read gap. Reuses parseAccessScopeConfig
-    // (invalid-JSON logging + null-safety already handled there).
+    // setScopeFor writes config unvalidated, so reads must go through parseAccessScopeConfig.
     async getScopeFor(ctx: RequestContext, roleCode: string): Promise<AccessScopeConfig | null> {
         const row = await this.connection
             .getRepository(ctx, RoleAccessScope)
@@ -68,11 +62,8 @@ export class RoleScopeConfigService {
         return row ? parseAccessScopeConfig(row) : null;
     }
 
-    // Issue #134 Part 2 — defense in depth for RoleProvisioningService's bootstrap-time
-    // self-provisioning: detects a RoleAccessScope row later deleted/corrupted (e.g. a manual
-    // truncate), or a role added to DEFAULT_ROLES with no reboot yet to provision it. Compares
-    // the hardcoded DEFAULT_ROLES list against what's actually stored right now — does not
-    // re-run provisioning itself, just reports drift for the health-check alert to surface.
+    // Detects rows deleted/corrupted after bootstrap, or roles added to DEFAULT_ROLES since last boot.
+    // Report-only: does not re-provision, the health-check alert surfaces the drift.
     async getProvisioningStatus(
         ctx: RequestContext,
     ): Promise<Array<{ roleCode: string; missing: boolean }>> {

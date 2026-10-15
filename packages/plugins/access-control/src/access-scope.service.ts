@@ -6,12 +6,8 @@ import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { RoleScopeConfigService } from './role-scope-config.service';
 import { AccessScope } from './types';
 
-/**
- * Single, reusable row-level visibility resolver — never copy-pasted role checks in resolvers
- * or domain services. Every resource-specific `resolve<Resource>Scope` method here does the
- * same two things: find the caller's max scope for that resource, then attach the identifiers
- * needed to filter by it. See docs/access-control.md, layer 3.
- */
+// Single row-level visibility resolver; do not copy role checks into resolvers or services.
+// See docs/access-control.md, layer 3.
 interface CounterpartyScopeFields {
     assignedManagerId: string | null;
     departmentId: string | null;
@@ -37,19 +33,14 @@ export class AccessScopeService {
         return this.resolveScope(ctx, 'teamVisibility');
     }
 
-    // ProformaInvoice's own resource — PaymentAttempt (plugin-acquiring) is a resource *derived* from
-    // ProformaInvoice (joined via proformaInvoiceId), so it reuses this same scope rather than getting its own
-    // resolvePaymentScope, per docs/access-control.md's "derived resource" rule (same pattern as
-    // documents inheriting counterparty scope).
+    // PaymentAttempt (plugin-acquiring) is derived from ProformaInvoice via proformaInvoiceId,
+    // so it reuses this scope instead of having its own resolvePaymentScope.
     async resolveProformaInvoiceScope(ctx: RequestContext): Promise<AccessScope> {
         return this.resolveScope(ctx, 'proformaInvoice');
     }
 
-    // The caller's own departmentId, independent of any resource's scope resolution — needed
-    // by teamMembers() to decide "same department as me" even when the caller's teamVisibility
-    // scope is 'all' (resolveScope's 'all' branch doesn't carry a departmentId, since scope
-    // 'all' means "no filtering needed", but the Team page still needs to know the viewer's own
-    // department to always show real names for colleagues in it).
+    // Kept separate from resource scope: scope 'all' has no departmentId, but teamMembers()
+    // needs it to always show real names for same-department colleagues.
     async getOwnDepartmentId(ctx: RequestContext): Promise<string | null> {
         const admin = await this.getAdministrator(ctx);
         const customFields = admin?.customFields as { departmentId?: string | null } | undefined;
@@ -94,15 +85,8 @@ export class AccessScopeService {
         }
     }
 
-    // Shared "own" scope condition for any query joined against a Counterparty-aliased row —
-    // used by CounterpartyService, OrderVisibilityService and ProformaInvoiceVisibilityService instead
-    // of each repeating `counterparty.assignedManagerId = :id`. A counterparty is "own" for the
-    // caller if they are either the Owner (assignedManagerId) OR a CounterpartyTeamMember
-    // (backup/observer) — see `packages/plugins/counterparty/src/entities/
-    // counterparty-team-member.entity.ts`. access-control cannot import that entity
-    // (counterparty plugin depends on access-control, not the reverse), so the join is a raw
-    // SQL EXISTS against the table/column names TypeORM's default naming strategy produces for
-    // that entity (`counterparty_team_member`, camelCase columns) rather than an entity import.
+    // Raw SQL EXISTS, not an entity import: access-control cannot depend on the counterparty plugin.
+    // 'Own' = assignedManagerId OR a counterparty_team_member row; names match TypeORM defaults.
     applyOwnCounterpartyFilter<T extends ObjectLiteral>(
         qb: SelectQueryBuilder<T>,
         counterpartyAlias: string,

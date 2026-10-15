@@ -79,12 +79,8 @@ export class BranchSettingsService {
         return saved;
     }
 
-    // Fallback per issue #66: a counterparty/manager with no branchId (or a branchId with no
-    // BranchSettings configured yet) resolves to the global default Branch's settings, never a
-    // hard error — the "graceful empty-system bootstrap" acceptance criterion. Returns null only
-    // when neither the requested branch nor the global default branch has settings configured
-    // yet (a genuinely empty, pre-bootstrap system) — callers must degrade gracefully (no price,
-    // ATP 0), never fabricate a value.
+    // Falls back to global default Branch settings; returns null only if neither is configured.
+    // Callers must degrade gracefully (no price, ATP 0) and never fabricate a value.
     async resolveEffective(
         ctx: RequestContext,
         branchId?: string | null,

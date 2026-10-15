@@ -5,9 +5,7 @@ import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Branch } from './entities/branch.entity';
 import { loggerCtx } from './types';
 
-// Prefix distinguishes a mivend-created Branch from a real ERP GUID at a glance (e.g. in an
-// admin list or a support query) — never collides with a real ERP erpId, which is always a plain
-// GUID with no prefix.
+// Keeps mivend-created Branch ids distinct from ERP erpIds, which are always unprefixed GUIDs.
 const MANUAL_ERP_ID_PREFIX = 'mivend-manual:';
 
 export interface BranchRecordInput {
@@ -36,13 +34,8 @@ export class BranchService {
         return this.connection.getRepository(ctx, Branch).find({ order: { name: 'ASC' } });
     }
 
-    // Own-consolidation escape hatch (issue #80 follow-up): Branch has historically been
-    // ERP-only master data (see the entity's own comment), populated via erp-import's
-    // BranchRecord — but that REST sync has never run on Kafka-only contours, leaving Branch
-    // permanently empty there and blocking WarehouseCurationTable's branch picker entirely.
-    // mivend's own warehouse→branch grouping is deliberately independent of whatever org unit
-    // the ERP's Kafka streams represent (see WarehouseStreamHandler's own comment) — staff need to be
-    // able to define their own branches without waiting on ERP data at all.
+    // Kafka-only contours never run erp-import's REST sync, leaving Branch empty and the picker blocked.
+    // Warehouse->branch grouping ignores ERP org units, so staff must define branches without ERP data.
     async createManual(ctx: RequestContext, name: string): Promise<Branch> {
         const repo = this.connection.getRepository(ctx, Branch);
         const branch = repo.create({ erpId: `${MANUAL_ERP_ID_PREFIX}${randomUUID()}`, name });

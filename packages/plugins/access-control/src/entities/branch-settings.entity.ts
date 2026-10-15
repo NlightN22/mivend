@@ -2,12 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Business configuration, 1:1 with Branch — deliberately separate from AccessScopeService's
-// RoleAccessScope (who-sees-what for RBAC); this is what a branch's client/manager portals
-// default and restrict to (issue #66). branchId is a raw column (this plugin's established
-// pattern for Branch/Warehouse relations — see Warehouse.branchId) rather than a TypeORM
-// relation. visible*Ids are JSON arrays of ids (manager-portal-only restriction, unset = no
-// restriction); the client portal only ever reads default*Id.
+// Not RBAC: RoleAccessScope governs access; this only sets portal defaults and restrictions.
+// branchId is a raw column (not a relation) like Warehouse.branchId; client reads only default*Id.
 @Entity()
 export class BranchSettings extends VendureEntity {
     constructor(input?: DeepPartial<BranchSettings>) {

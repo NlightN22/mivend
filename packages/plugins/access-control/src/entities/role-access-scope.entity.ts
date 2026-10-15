@@ -2,9 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Vendure's Role entity does not support customFields (unlike Administrator/Customer) —
-// role -> max-scope-per-resource config lives in this dedicated table instead, keyed by
-// Role.code. See docs/access-control.md, layer 3.
+// Vendure's Role entity has no customFields (unlike Administrator/Customer), so role config
+// lives in a dedicated table keyed by Role.code instead.
 @Entity()
 export class RoleAccessScope extends VendureEntity {
     constructor(input?: DeepPartial<RoleAccessScope>) {

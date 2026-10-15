@@ -66,15 +66,8 @@ export class AccessControlResolver {
         private administratorActivationService: AdministratorActivationService,
     ) {}
 
-    // Names + role codes only — used to label the "Manager" filter/column on the Orders and
-    // Customers lists (see docs/ai/manager-portal-pages/02-orders-list.md,
-    // 04-customers-list.md) and to populate the "Escalate to..." picker on the approval detail
-    // page (see 11-approval-detail.md). These are all picker/assignment use cases where the
-    // caller already has (or is choosing) a working relationship with the named administrator
-    // — real names are required for the picker to be usable, so this query is deliberately NOT
-    // subject to the teamVisibility anonymization that `teamDirectory` below applies. No
-    // dedicated permission — view-only org-structure data, same as `departments` below; role
-    // codes are already shown everywhere as badges, not sensitive.
+    // Not subject to teamVisibility anonymization: pickers need real names to be usable.
+    // View-only org-structure data, so no dedicated permission (like departments).
     @Query()
     @Allow(Permission.Authenticated)
     async teamMembers(@Ctx() ctx: RequestContext): Promise<TeamMember[]> {
@@ -88,14 +81,8 @@ export class AccessControlResolver {
         }));
     }
 
-    // Powers the /team org-structure directory (docs/ai/manager-portal-pages/13-team.md) only
-    // — unlike `teamMembers` above, `firstName`/`lastName` are anonymized to null for members
-    // outside the caller's own department when the caller's 'teamVisibility' access scope isn't
-    // 'all' (see AccessScopeService.resolveTeamVisibilityScope). This is the one field pair on
-    // this query that IS sensitive (an employee not wanting to be identified by name
-    // company-wide) — kept as a separate query from `teamMembers` so picker/assignment call
-    // sites (Orders/Customers manager filter, approval escalation) always get real names
-    // regardless of the viewer's teamVisibility scope.
+    // firstName/lastName are anonymized outside the caller's department unless teamVisibility is 'all'.
+    // Separate from teamMembers so picker call sites always get real names.
     @Query()
     @Allow(Permission.Authenticated)
     async teamDirectory(@Ctx() ctx: RequestContext): Promise<TeamDirectoryMember[]> {
@@ -151,15 +138,8 @@ export class AccessControlResolver {
         return this.branchService.findAll(ctx);
     }
 
-    // mivend's own branch consolidation, independent of any ERP-provided org unit — see
-    // BranchService.createManual's own comment. Deliberately SuperAdmin, NOT the broader
-    // ManageAccessControl this file's other mutations use (setCreditTermLimit,
-    // setRoleAccessScopeConfig, updateWarehouseBranchAssignment) — those are legitimate
-    // day-to-day manager-portal business settings that portal-admin/general-director roles hold;
-    // this one is the org-structure precondition that blocks warehouse ingestion for the entire
-    // system if misused, so it's restricted to a real superadmin and only ever exposed through
-    // the native Dashboard (src/dashboard/branch-consolidation/branches-page.tsx), never the
-    // manager portal.
+    // Blocks warehouse ingestion system-wide if misused, so SuperAdmin only.
+    // Exposed only in the native Dashboard, never the manager portal.
     @Transaction()
     @Mutation()
     @Allow(Permission.SuperAdmin)
@@ -301,9 +281,7 @@ export class AccessControlResolver {
         return this.erpUserService.findAllPaginated(ctx, args.options);
     }
 
-    // Issue #119 Phase 1: soft-deleted (deactivated) Administrators — invisible to the native
-    // `administrators` query/page, see AdministratorActivationService.findDeactivated's own
-    // comment for why this can't just be a filter on that query.
+    // Soft-deleted: hidden from the native administrators query, so not a filter on it.
     @Query()
     @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
     async deactivatedAdministrators(
@@ -325,9 +303,6 @@ export class AccessControlResolver {
         return this.administratorProvisioningService.createFromPending(ctx, args.erpId);
     }
 
-    // Issue #119: no "resend" action existed anywhere — createFromPending only ever sent the
-    // link once, at creation time. Reuses the same token/event mechanism for an existing
-    // Administrator.
     @Transaction()
     @Mutation()
     @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
@@ -371,10 +346,8 @@ export class AccessControlResolver {
         );
     }
 
-    // Issue #119 Phase 2: completes the emailed password-reset link from
-    // AdministratorProvisioningService.createFromPending. Deliberately Public — the person
-    // opening this link has no session yet; possession of a valid, unexpired, single-use token
-    // is the only security boundary here, same as the shop-api's own public resetPassword.
+    // Public: the caller has no session yet, so the token is the only security boundary.
+    // Must be valid, unexpired and single-use.
     @Transaction()
     @Mutation()
     @Allow(Permission.Public)
@@ -392,9 +365,7 @@ export class AccessControlResolver {
             : { success: false, reason: result.reason };
     }
 
-    // Issue #119 Phase 2: lets /set-password show whose account it's about to change, before and
-    // after submission. Deliberately Public, same reasoning as resetAdministratorPassword above —
-    // read-only, does not consume the token.
+    // Public because the caller has no session; read-only, so it does not consume the token.
     @Query()
     @Allow(Permission.Public)
     async administratorForPasswordResetToken(
@@ -405,9 +376,8 @@ export class AccessControlResolver {
     }
 }
 
-// Issue #119 Phase 2: `isActive` isn't a native Administrator field (Vendure core exposes only
-// `deletedAt` internally, not on the GraphQL type) — resolved here from the same entity instance
-// `portalUsers`/`deactivatedAdministrators` already load, not a second query.
+// isActive is not a native Administrator GraphQL field; Vendure exposes only deletedAt.
+// Resolved from the already-loaded entity, not a second query.
 @Resolver('Administrator')
 export class AdministratorStatusResolver {
     @ResolveField()

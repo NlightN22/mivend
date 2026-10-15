@@ -13,25 +13,8 @@ import { DEFAULT_ROLES, DefaultRoleDefinition } from './default-roles';
 import { RoleScopeConfigService } from './role-scope-config.service';
 import { loggerCtx } from './types';
 
-// Issue #134: on a fresh contour, neither the 6 manager-portal roles nor their RoleAccessScope
-// rows exist until infrastructure/scripts/seed-access-roles.mjs is run by hand — confirmed live
-// on staging-integration. RoleScopeConfigService.maxScopeFor then silently falls back to 'own'
-// for everyone, with nothing indicating this is a config problem (see that service's own
-// comment). This makes DEFAULT_ROLES the actual source of truth, applied idempotently at every
-// real server boot.
-//
-// Runs against the DB directly via TransactionalConnection rather than RoleService.create/
-// update — those methods gate on `activeUserHasPermissionsOnChannelsOf`, which requires an
-// authenticated ctx.activeUserId and returns false for any Role, `own` (RequestContext.empty()
-// has none) before any HTTP client can log in. Provisioning is system configuration applied
-// before any request exists, not an administrator action, so it bypasses that user-privilege
-// gate the same way `RoleService.initRoles()`'s own SuperAdmin/Customer role bootstrapping does
-// internally.
-//
-// Gated on `!processContext.isWorker` (opposite of KafkaConsumerBootstrapService's own gate —
-// see that file's comment) so this runs exactly once from the server process (apps/server/src/
-// main.ts's bootstrap()), never duplicated from worker.ts/worker-email.ts's bootstrapWorker()
-// which also load this plugin.
+// Direct DB writes: RoleService.create/update require an authenticated active user, absent at boot.
+// Server process only (!isWorker); on fresh contours missing roles silently fall back to 'own'.
 @Injectable()
 export class RoleProvisioningService implements OnApplicationBootstrap {
     constructor(
@@ -50,9 +33,7 @@ export class RoleProvisioningService implements OnApplicationBootstrap {
         }
     }
 
-    // One role's failure must not stop the rest from provisioning — each iteration gets its own
-    // error boundary instead of one try/catch around the whole loop, which previously aborted
-    // provisioning of every role after the first one to throw.
+    // Per-role error boundary: one role throwing must not abort provisioning of the rest.
     private async provisionRoleSafely(
         ctx: RequestContext,
         definition: DefaultRoleDefinition,

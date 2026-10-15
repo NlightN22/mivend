@@ -133,10 +133,8 @@ describe('UserEnrichmentService', () => {
             });
         });
 
-        // Issue #119 follow-up: a deleted/inactive ERP user must never show a "Create
-        // Administrator" action — confirmed live against real staging data. mivend.audit.common
-        // (2026-09-20): the row itself is now kept, not deleted, just flagged active:false so
-        // ErpUserService.findAllPaginated excludes it from the Pending list.
+        // Inactive ERP users must never offer "Create Administrator": keep the row, don't delete it.
+        // active:false is what excludes it from ErpUserService.findAllPaginated's Pending list.
         it('upserts the ErpUser with active:false, never as a create-candidate, when isActive is false and unlinked', async () => {
             repo.findOne.mockResolvedValueOnce(null); // findByErpId
 

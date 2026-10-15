@@ -293,21 +293,12 @@ const adminApiSchema = gql`
         resolvers: [AccessControlResolver, AdministratorStatusResolver],
     },
     configuration: (config: RuntimeVendureConfig) => {
-        // All five fields below are system-managed, never hand-entered: `readonly: true` strips
-        // each from the GraphQL Update/CreateAdministratorCustomFieldsInput the Dashboard and
-        // manager portal forms are generated from, so neither surface renders an editable
-        // control for them — editing any of these by hand would silently break the
-        // correlation/sync mechanism that owns it (see each field's own comment for which one).
-        // `readonly` only affects the GraphQL input schema, not direct TS service calls — every
-        // writer below (EmployeeService, UserEnrichmentService, AdministratorProvisioningService,
-        // plugin-sync) calls AdministratorService.update/create() directly, bypassing that input
-        // type entirely, so none of them are affected by this.
+        // System-managed: hand edits break the correlation/sync that owns each field.
+        // readonly only filters the GraphQL input; direct AdministratorService.update/create() bypasses it.
         config.customFields.Administrator = [
             ...(config.customFields.Administrator ?? []),
             {
-                // Set by EmployeeService from the ERP org-structure import (EmployeeRecordInput) —
-                // see employee.service.ts. Purely informational (never a scope gate — see
-                // docs/access-control.md's "departmentId must never gate visibility").
+                // Informational only; must never gate visibility (see docs/access-control.md).
                 name: 'departmentId',
                 type: 'string' as const,
                 nullable: true,
@@ -315,9 +306,7 @@ const adminApiSchema = gql`
                 label: [{ languageCode: LanguageCode.en, value: 'Department ID' }],
             },
             {
-                // Set by EmployeeService, resolved from the ERP's department/division id to a real
-                // mivend Branch.id (see employee.service.ts's own comment on that resolution) —
-                // the real access-scope filter axis, per docs/access-control.md.
+                // Resolved from the ERP department id to a Branch.id; the real access-scope filter axis.
                 name: 'branchId',
                 type: 'string' as const,
                 nullable: true,
@@ -334,12 +323,8 @@ const adminApiSchema = gql`
                 label: [{ languageCode: LanguageCode.en, value: 'Position ID' }],
             },
             {
-                // Owned by @mivend/plugin-sync (registered here since this is where
-                // Administrator's customFields array already lives — see the backend-plugin-rules skill's
-                // declaration-merging precedent for reading a field without a package
-                // dependency). Branch-only: correlates a branch's read-only Administrator
-                // replica with its Central source record. Always null on Central itself.
-                // See docs/architecture.md's "User identity: Central is master, not federated".
+                // Owned by @mivend/plugin-sync; declared here so it can be read without a package dependency.
+                // Branch-only: correlates the replica with its Central record; always null on Central.
                 name: 'sourceAdministratorId',
                 type: 'string' as const,
                 nullable: true,
@@ -347,14 +332,8 @@ const adminApiSchema = gql`
                 label: [{ languageCode: LanguageCode.en, value: 'Source Administrator ID' }],
             },
             {
-                // Issue #119, Decision 5: anchored once at Administrator creation
-                // (AdministratorProvisioningService.createFromPending) — never re-derived or
-                // hand-edited afterwards, that's the whole point of anchoring on erpId instead of
-                // re-matching by email. Also correlates with the ERP's own "Пользователи" GUID
-                // (UserChanged.entity_id) for #109's enrichment-only path — see
-                // UserEnrichmentService.linkAndEnrich. `unique: true` gets Vendure's real
-                // DB-level unique constraint (CustomFieldConfig supports this natively — verified
-                // against @vendure/core source), not just an application-level check.
+                // Anchored once at creation, never re-derived or hand-edited; erpId is the identity, not email.
+                // unique: true is a real DB-level constraint (CustomFieldConfig), not just an app-level check.
                 name: 'erpId',
                 type: 'string' as const,
                 nullable: true,
@@ -366,10 +345,8 @@ const adminApiSchema = gql`
         config.customFields.GlobalSettings = [
             ...(config.customFields.GlobalSettings ?? []),
             {
-                // Issue #66 fallback: any counterparty/manager with no branchId (or a branchId
-                // with no BranchSettings configured yet) resolves to this branch's settings —
-                // see BranchSettingsService.resolveEffective. Deliberately just an id pointing at
-                // a real Branch row, not a duplicated settings blob.
+                // Fallback for managers/counterparties with no branchId or no BranchSettings configured yet.
+                // Deliberately a bare id, not a copied settings blob, so settings have one source of truth.
                 name: 'defaultBranchId',
                 type: 'string' as const,
                 nullable: true,

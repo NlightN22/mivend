@@ -92,11 +92,8 @@ describe('AccessScopeService', () => {
     });
 
     describe('assertCounterpartyWritable', () => {
-        // departmentId is pure display information (ERP org data), never a scope gate; branchId
-        // IS the real gate for "department" scope (security-first correction, 2026-09-20 round
-        // 3) — deny-by-default, so a departmentId mismatch alone must not reject as long as
-        // branchId matches, and a branchId mismatch (including a null Counterparty.branchId)
-        // must reject.
+        // departmentId is display-only (ERP org data); branchId is the real gate for department scope.
+        // Deny-by-default: a null Counterparty.branchId must reject; departmentId alone never does.
         it('"department" scope ignores a departmentId mismatch when branchId matches', async () => {
             administratorService.findOneByUserId.mockResolvedValue(
                 mockAdmin('admin-6', { departmentId: 'dept-1', branchId: 'branch-a' }),

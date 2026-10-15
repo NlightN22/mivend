@@ -28,9 +28,7 @@ export class ErpUserService {
         private listQueryBuilder: ListQueryBuilder,
     ) {}
 
-    // Called on every UserChanged event — idempotent, keeps the row's fields/lastSeenAt current
-    // for whoever reviews the Pending list, and after linking too (see this method's own note in
-    // findAllPaginated on why post-link updates still matter).
+    // Idempotent. Also runs after linking: post-link updates still matter (see findAllPaginated).
     async upsert(ctx: RequestContext, input: ErpUserUpsertInput): Promise<ErpUser> {
         const repo = this.connection.getRepository(ctx, ErpUser);
         const now = new Date();
@@ -57,15 +55,8 @@ export class ErpUserService {
         return repo.save(user);
     }
 
-    // Issue #119 / mivend.audit.common (2026-09-20): the moment an erpId gets linked to an
-    // Administrator, by either path (auto email-match or manual creation) — flips this row to
-    // `linked` in place instead of deleting it, upserting one first if none exists yet (the
-    // immediate-email-match path can link an erpId that was never `upsert()`-ed as a candidate
-    // first). The row must survive: it is the single source `counterparty.handler.ts` (and any
-    // future manager-erpId-dependent handler) consults to tell "never seen this erpId, real
-    // race, retry" apart from "know about it, unlinked, will not retry" apart from "linked, here
-    // is the Administrator" — deleting it on link collapsed the second and third cases back into
-    // the first indistinguishably.
+    // Keep the row on link: counterparty.handler.ts distinguishes unseen erpId (retry) from unlinked
+    // and linked erpIds, so upsert first: email-match can link an erpId never seen as a candidate.
     async markLinked(ctx: RequestContext, erpId: string, administratorId: ID): Promise<void> {
         const repo = this.connection.getRepository(ctx, ErpUser);
         const now = new Date();
@@ -92,14 +83,8 @@ export class ErpUserService {
         );
     }
 
-    // Real server-side pagination (AGENTS.md's pagination rule) — this list accumulates over
-    // every ERP "user" ever seen. Backs the Dashboard "ERP users" > Pending screen and the
-    // manager-portal Settings > Users > Pending tab's ListPage/table — both must only ever see
-    // rows still worth a human's decision: `status: 'unlinked'` (a `linked` row has already been
-    // decided, and would otherwise reappear here forever now that rows are never deleted) AND
-    // not known-inactive (an ERP user already reported inactive/deleted will never sensibly become
-    // an Administrator — same UX guard issue #119's own follow-up fix established before this
-    // table stopped deleting rows on link, see `active`'s own doc comment on ErpUser).
+    // Filter out linked rows: they are never deleted, so they would reappear here forever.
+    // Also exclude known-inactive ERP users; they can never become Administrators (see ErpUser.active).
     async findAllPaginated(
         ctx: RequestContext,
         options?: ListQueryOptions<ErpUser>,

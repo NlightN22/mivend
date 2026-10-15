@@ -121,9 +121,8 @@ describe('RoleProvisioningService', () => {
         repo.findOne.mockResolvedValue(null);
         await service.onApplicationBootstrap();
 
-        // The service has no dependency capable of touching Administrator/User rows at all —
-        // its only collaborators are the Role repository (via connection), ChannelService, and
-        // RoleScopeConfigService.
+        // Invariant: must not read or write Administrator/User rows, so it takes no dependency
+        // that could (only Role repository, ChannelService, RoleScopeConfigService).
         expect(Object.keys(service)).not.toContain('administratorService');
     });
 

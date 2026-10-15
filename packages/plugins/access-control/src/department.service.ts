@@ -37,11 +37,8 @@ export class DepartmentService {
         return saved;
     }
 
-    // mivend.issue.88 follow-up: Integration Service's `department` deletion tombstones never
-    // carry a name (confirmed against real staging-integration payloads, same shape as
-    // organization/warehouse) — lets a caller update isActive on an already-known department
-    // without fabricating a name. Deliberate no-op (returns false) when no Department matches
-    // erpId yet.
+    // Integration Service department deletion tombstones carry no name, so isActive is updated
+    // without fabricating one; returns false as a no-op when no Department matches erpId yet.
     async setActiveStateIfExists(
         ctx: RequestContext,
         erpId: string,

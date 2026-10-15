@@ -14,11 +14,8 @@ import {
 
 import { loggerCtx } from './types';
 
-// Issue #119, Decision 1/2: `deletedAt` (Vendure's native soft-delete) is the deactivation
-// mechanism — a real login block (UserService.getUserByEmailAddress filters
-// `WHERE user.deletedAt IS NULL`), not a custom isActive flag. ERP is trusted as master for this
-// state and applied automatically, no human confirmation step (same "ERP is master" principle as
-// Counterparty.assignedManagerId/departmentId elsewhere in this plugin).
+// Uses Vendure's native soft-delete (deletedAt) so deactivation is a real login block,
+// not a custom flag; ERP is master for this state, applied without human confirmation.
 @Injectable()
 export class AdministratorActivationService {
     constructor(
@@ -27,20 +24,8 @@ export class AdministratorActivationService {
         private listQueryBuilder: ListQueryBuilder,
     ) {}
 
-    // Backs the Dashboard "ERP users" > Deactivated screen's ListPage. Structurally distinct
-    // from the native `administrators` query, not a filter on top of it: AdministratorService.
-    // findAll/findOne hard-filter `deletedAt IS NULL` in @vendure/core itself, so a soft-deleted
-    // Administrator is invisible there no matter what options are passed — see Decision 1/Phase 1
-    // of issue #119. TypeORM's QueryBuilder (unlike its Repository.find methods) does not
-    // auto-exclude soft-deleted rows, so `.withDeleted()` here is a no-op safety net; the real
-    // work is the explicit `deletedAt IS NOT NULL` filter, which is what actually restricts this
-    // to deactivated accounts.
-    //
-    // Deliberately not scoped to erpId-linked accounts (dropped that filter after a real report:
-    // an old, never-ERP-linked seed Administrator was soft-deleted but invisible here while still
-    // showing on the manager-portal's own Settings > Users list, which never had that scoping —
-    // this screen should show every deactivated Administrator, same as that one, not just ones
-    // that came from the ERP sync).
+    // AdministratorService.findAll/findOne hide soft-deleted rows, so this needs its own query.
+    // QueryBuilder won't auto-exclude soft-deleted rows; the explicit deletedAt filter does the work.
     async findDeactivated(
         ctx: RequestContext,
         options?: AdministratorListOptions,
@@ -51,12 +36,8 @@ export class AdministratorActivationService {
         return { items, totalItems };
     }
 
-    // Backs the manager-portal "Settings > Users" screen (issue #119 Phase 2) — every
-    // Administrator (not just erpId-linked ones, unlike findDeactivated above, which is scoped
-    // to the Dashboard's own "ERP users > Deactivated" tab), filterable by status. Same
-    // `.withDeleted()` + explicit `deletedAt` predicate approach as findDeactivated, for the
-    // same reason: AdministratorService.findAll hard-filters deletedAt IS NULL, so a status
-    // filter can't be built on top of it.
+    // AdministratorService.findAll hard-filters deletedAt IS NULL, so a status filter can't use it.
+    // Hence QueryBuilder with an explicit deletedAt predicate; not erpId-scoped, unlike findDeactivated.
     async findAllWithStatus(
         ctx: RequestContext,
         options: AdministratorListOptions | undefined,
@@ -113,10 +94,8 @@ export class AdministratorActivationService {
         }
     }
 
-    // No public Vendure API for this (only an internal superadmin-recovery code path exists) —
-    // a direct repo write clearing deletedAt on both Administrator and its linked User, same
-    // "raw repo write when Vendure's own service API doesn't cover an operation" convention as
-    // DepartmentService/CounterpartyService.upsertActiveState.
+    // No public Vendure API clears deletedAt (only an internal superadmin-recovery path exists),
+    // so this is a raw repo write on Administrator and its linked User, as in upsertActiveState.
     private async reactivate(ctx: RequestContext, administratorId: ID): Promise<void> {
         const adminRepo = this.connection.getRepository(ctx, Administrator);
         const admin = await adminRepo.findOne({

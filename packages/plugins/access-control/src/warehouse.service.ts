@@ -23,16 +23,8 @@ export class WarehouseNotFoundError extends Error {
 export class WarehouseService {
     constructor(private connection: TransactionalConnection) {}
 
-    // Out-of-order delivery guard, relaxed (issue #80 follow-up): a Warehouse's owning Branch
-    // may not have been synced yet (branch/warehouse are independent Kafka streams — no
-    // delivery-order guarantee across streams), or mivend's own Branch consolidation may be
-    // entirely independent of whatever branch id the ERP sends (a manually-created Branch's
-    // erpId never matches a real ERP GUID at all — see BranchService.createManual). Either way,
-    // the Warehouse itself must still be created/updated — leaving branchId null rather than
-    // skipping the whole row is what lets staff assign it manually afterwards (manager portal's
-    // WarehouseCurationTable). Previously this returned null and created nothing, which meant a
-    // warehouse could never appear at all until a matching ERP-sourced Branch existed — a real,
-    // live-found dead end for any Branch created manually instead.
+    // Branch and warehouse arrive on independent Kafka streams, so the Branch may not exist yet.
+    // Always upsert with branchId null instead of skipping, so staff can assign the branch manually.
     async upsert(ctx: RequestContext, record: WarehouseRecordInput): Promise<Warehouse> {
         const branch = await this.connection
             .getRepository(ctx, Branch)
@@ -75,11 +67,8 @@ export class WarehouseService {
         return this.connection.getRepository(ctx, Warehouse).findOne({ where: { erpId } });
     }
 
-    // mivend.issue.84.88 follow-up: Integration Service's `warehouse` deletion tombstones never
-    // carry a name (confirmed against real staging-integration payloads) — this lets a caller
-    // update isActive on an already-known warehouse without fabricating a name. A deliberate
-    // no-op (returns false) when no Warehouse matches erpId yet — a deletion tombstone must
-    // never create a brand-new row.
+    // Deletion tombstones from Integration Service carry no name, so only isActive is updated.
+    // No-op when no Warehouse matches erpId: a tombstone must never create a row.
     async setActiveStateIfExists(
         ctx: RequestContext,
         erpId: string,
@@ -93,13 +82,8 @@ export class WarehouseService {
         return true;
     }
 
-    // Shared branch->StockLocation join, extracted so every caller that needs "which
-    // StockLocations belong to this order's branch" (erp-integration's
-    // BranchStockLocationStrategy, plugin-reservation's ReservationService) resolves it the same
-    // way instead of each re-deriving it — a branch can have several warehouses/StockLocations,
-    // never exactly one. Reads StockLocation.customFields.warehouseErpId via raw SQL, same as
-    // every other cross-plugin customField read in this codebase (that field isn't declared in
-    // this package's own TS project, so the typed entity doesn't expose it here).
+    // Raw SQL: StockLocation.customFields.warehouseErpId is not declared in this package's TS project.
+    // A branch can map to several StockLocations, so callers must not assume exactly one.
     async findActiveStockLocationsForBranch(
         ctx: RequestContext,
         branchId: string,
@@ -118,21 +102,15 @@ export class WarehouseService {
             .getRawMany<{ id: string }>();
         if (rows.length === 0) return [];
 
-        // Ordered by id: ReservationService.reserveOrder() takes a `FOR UPDATE` lock on every
-        // candidate location's StockLevel row per line (mivend#85 audit finding) — without a
-        // stable order here, two concurrent reserveOrder() calls could lock the same two
-        // candidate locations in opposite order and Postgres-deadlock (40P01). BranchStockLocationStrategy
-        // doesn't lock, but a stable order here costs nothing and keeps this shared join's output
-        // deterministic for every caller.
+        // Stable id order prevents deadlock: reserveOrder() FOR UPDATE-locks candidate StockLevel rows,
+        // and concurrent calls locking in opposite order would hit Postgres 40P01.
         return this.connection
             .getRepository(ctx, StockLocation)
             .find({ where: { id: In(rows.map(r => r.id)) }, order: { id: 'ASC' } });
     }
 
-    // Manager-portal curation (issue #66) — staff confirm/override the branch a Warehouse
-    // belongs to and whether it counts toward that branch's ATP aggregation. the ERP's own
-    // branchId/isActive (set by upsert above) stay untouched as the read-only suggested default;
-    // this is the only place that ever changes includedInBranchAtp.
+    // Staff overrides live here; ERP branchId/isActive from upsert stay untouched as defaults.
+    // This is the only place includedInBranchAtp is ever changed.
     async setBranchAssignment(
         ctx: RequestContext,
         warehouseId: string,

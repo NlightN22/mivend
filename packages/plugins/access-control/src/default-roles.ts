@@ -7,13 +7,8 @@ export interface DefaultRoleDefinition {
     accessScopeConfig: AccessScopeConfig;
 }
 
-// Single source of truth for the 6 manager-portal roles — hardcoded here (per AGENTS.md's
-// "Do not hardcode business enums" rule this is RBAC configuration, not business data) and
-// self-provisioned at server bootstrap by RoleProvisioningService. Previously only lived in
-// infrastructure/scripts/seed-access-roles.mjs (a manual dev script) — see issue #134. Role ->
-// max-scope-per-resource matches the persona matrix in docs/ai/manager-portal-concept.md
-// §2/§3.3. Every role must set both "counterparty" and "order" keys — a resource missing a key
-// silently falls back to 'own' (RoleScopeConfigService.maxScopeFor's default).
+// Hardcoded on purpose: RBAC config, not business data, so AGENTS.md's enum rule does not apply.
+// Every role must set both "counterparty" and "order"; a missing key silently falls back to 'own'.
 export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
     {
         code: 'operator',

@@ -26,40 +26,11 @@ import { AdministratorActivationService } from '../../../administrator-activatio
 import { ErpUserService } from '../../../erp-user.service';
 import { UserEnrichmentService } from '../../../user-enrichment.service';
 
-// Real end-to-end chain for issue #119's own scenario request: an ERP user arrives (active or
-// inactive), gets queued as an ErpUser candidate (or not), and — once linked — gets
-// deactivated/reactivated for real. `user-enrichment.service.test.ts`/`administrator-activation.
-// service.test.ts` already prove the *decision logic* against a fully mocked repo; this file
-// proves what mocks can't: the real Postgres writes (ErpUser's unique-erpId-backed upsert,
-// Administrator.customFields.erpId's embedded-column write, deletedAt actually landing on both
-// Administrator and User rows). mivend.audit.common (2026-09-20) extends this with real
-// evidence that a linked ErpUser row survives (is never deleted), which is the whole fix for
-// issue #104's `counterparty` stream inbox backlog.
-//
-// Administrator/User are real @vendure/core VendureEntity classes — they rely on an
-// EntityIdStrategy registered during a full Vendure bootstrap() to generate their primary column,
-// so (same constraint as counterparty.access-scope.test.ts/documents.service.int.test.ts) this
-// hand-rolls TypeORM entities mirroring their production shape and shims TransactionalConnection
-// to route the REAL classes (used by import identity, not by structural TypeORM metadata) to
-// these mirror tables — the real service code under test is otherwise untouched.
-//
-// AdministratorService.softDelete (the real mechanism AdministratorActivationService.syncFromErp/
-// setActive delegates to for the *deactivate* half) is a heavy Vendure-core service with its own
-// deep DI graph (password hashing, native auth methods) that this repo has no precedent for
-// constructing outside a full app bootstrap anywhere — substituted here with a stub that performs
-// the same real DB write softDelete is documented (backend-plugin-rules skill, Decision 1 of
-// issue #119) to perform, so the *observable* DB state our own downstream code reacts to is still
-// real. The *reactivate* half needs no such stub — AdministratorActivationService's own
-// `reactivate` private method writes directly via the shimmed repos, exercised unmodified.
-// Deliberately NOT covered here: AdministratorProvisioningService.createFromPending (needs real
-// AdministratorService.create + UserService.setPasswordResetToken, the same class of heavy,
-// no-precedent dependency) and the real Vendure login/password-reset mechanics themselves — see
-// this session's own test-design report for the full reasoning.
+// Vendure's real Administrator/User need bootstrap()'s EntityIdStrategy; use mirror tables.
+// AdministratorService.softDelete is stubbed (heavy DI graph); the stub does the same DB write.
 
-// A real TypeORM embedded column (not a plain getter/setter) — the real service code both
-// mutates `admin.customFields.erpId` as a plain property AND queries `where: { customFields: {
-// erpId } }` through TypeORM's own query builder, which requires genuine embedded-column
-// metadata to resolve, not just a same-shaped JS object.
+// Must be a real TypeORM embedded column, not a getter/setter: the query builder needs
+// its metadata to resolve `where: { customFields: { erpId } }`.
 class TestAdminCustomFields {
     @Column({ name: 'customFieldsErpid', type: 'varchar', nullable: true, unique: true })
     erpId!: string | null;
@@ -152,9 +123,8 @@ afterAll(async () => {
 });
 
 afterEach(async () => {
-    // Plain DELETE, not `.clear()` (TRUNCATE) — Postgres refuses to TRUNCATE a table referenced
-    // by a FK unless every referencing table is truncated in the same statement. FK order:
-    // administrator references user, so it's deleted first.
+    // Plain DELETE, not TRUNCATE: Postgres rejects truncating a FK-referenced table alone.
+    // Delete order matters: administrator references user, so it goes first.
     await dataSource.getRepository(TestErpUser).createQueryBuilder().delete().execute();
     await dataSource.getRepository(TestAdministrator).createQueryBuilder().delete().execute();
     await dataSource.getRepository(TestUser).createQueryBuilder().delete().execute();
@@ -197,10 +167,8 @@ describe('UserEnrichmentService.linkAndEnrich (real DB)', () => {
         });
     });
 
-    // mivend.audit.common (2026-09-20): the row is still created/kept (never deleted — that's
-    // the whole point of this fix), just flagged active:false so it's excluded from the
-    // Pending list (ErpUserService.findAllPaginated) and never offered a "Create Administrator"
-    // action.
+    // Row must be kept, never deleted; active:false excludes it from the Pending list
+    // and from the 'Create Administrator' action.
     it('creates the ErpUser row flagged active:false for an inactive/deleted, unlinked user — never surfaced as a create-candidate', async () => {
         const result = await service.linkAndEnrich(mockCtx, {
             erpId: 'user-inactive-1',
@@ -306,9 +274,8 @@ describe('AdministratorActivationService.setActive (real DB)', () => {
 
     beforeAll(() => {
         const connection = makeConnectionShim();
-        // Stands in for the real AdministratorService.softDelete (see file header) — performs
-        // the same real write it's documented to perform, so downstream reads through this same
-        // shimmed connection observe genuine DB state.
+        // Stub for AdministratorService.softDelete: performs the same real DB write,
+        // so reads through the shimmed connection observe genuine state.
         softDelete = vi.fn(async (_ctx: unknown, id: number) => {
             const admin = await dataSource
                 .getRepository(TestAdministrator)

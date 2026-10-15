@@ -4,21 +4,8 @@ import { Column, Entity, Index } from 'typeorm';
 
 export type ErpUserStatus = 'unlinked' | 'linked';
 
-// Issue #119: an ERP "user" (UserChanged) mirrored into mivend, in one of two states — `unlinked`
-// (a candidate, no Vendure Administrator login exists yet) or `linked` (a human has created one,
-// see AdministratorProvisioningService.createFromPending, or UserEnrichmentService matched one
-// by email). Surfaced to a human while `unlinked` so they can decide whether it becomes a real
-// Administrator login.
-//
-// One row per erpId for the user's entire lifetime — never deleted on link (see
-// ErpUserService.markLinked's own comment for why: this row is the only place
-// `counterparty.handler.ts` and any other manager-erpId-dependent handler can distinguish "no
-// info yet, real race, retry" from "known, will never link, do not retry" — deleting it on link
-// made every consumer of this table indistinguishable from a row that had simply never been
-// seen). Previously named `PendingErpUser`; renamed because "pending" stopped describing what
-// the row means once linked rows stick around too — see the mivend.audit.common cross-session
-// diagnosis of issue #104's `counterparty` stream inbox backlog (2026-09-20) for the incident
-// this fixes.
+// Never deleted on link: this row is the only way consumers distinguish "no info yet, retry"
+// from "known, will never link, do not retry".
 @Entity()
 export class ErpUser extends VendureEntity {
     constructor(input?: DeepPartial<ErpUser>) {
@@ -52,12 +39,8 @@ export class ErpUser extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     administratorId!: ID | null;
 
-    // Last known the ERP isActive/isDeleted signal for this user, distinct from `status` (which only
-    // tracks the Administrator link, not the ERP-side lifecycle). `null` means "never told either
-    // way". Used only to keep an inactive/deleted ERP user from showing a "Create administrator"
-    // action while `unlinked` — see ErpUserService.findAllPaginated's own comment. Never itself
-    // drives the counterparty.handler.ts manager-resolution decision, which only looks at
-    // `status`/`administratorId`.
+    // null = never told either way. Only hides the "Create administrator" action for inactive or
+    // deleted ERP users while unlinked; must not drive manager resolution (status/administratorId only).
     @Column({ type: 'boolean', nullable: true })
     active!: boolean | null;
 }

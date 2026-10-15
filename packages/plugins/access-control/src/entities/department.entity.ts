@@ -20,10 +20,7 @@ export class Department extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     parentErpId!: string | null;
 
-    // mivend.issue.88 follow-up (2026-09-15): DepartmentStreamHandler never read isActive/
-    // isDeleted despite the Kafka contract carrying both — a department deactivated/deleted in
-    // ERP had no way to reflect that locally at all. erp-import's own DepartmentRecordDto never
-    // carried this either, so this defaults true for any row created via that path.
+    // erp-import's DepartmentRecordDto lacks isActive/isDeleted, so rows it creates default to true.
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
 }

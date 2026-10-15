@@ -21,24 +21,16 @@ export interface EmployeeRecordInput {
     erpId: string;
     email: string;
     departmentErpId: string;
-    // The ERP's own branch/point code (Branch.erpId) — NOT a mivend Branch.id. Resolved against
-    // Branch the same way WarehouseService.upsert resolves WarehouseChanged.branchId, before
-    // ever being written to Administrator.customFields.branchId — see docs/access-control.md's
-    // "Branch vs Department" section for why this resolution step is mandatory (a raw, unresolved
-    // ERP id here is a different value space than the mivend Branch.id every other branchId
-    // consumer — AccessScopeService, BranchSettingsService, Warehouse.branchId — expects).
+    // ERP branch code (Branch.erpId), not a mivend Branch.id: must be resolved to Branch.id first
+    // Raw ERP ids are a different value space; every branchId consumer expects Branch.id.
     branchErpId?: string | null;
     roleCode?: string | null;
     // Position.erpId, stored as-is (name resolved from the Position entity on read).
     positionErpId?: string | null;
 }
 
-// Binds ERP org-structure data (department/branch/role) onto an existing Administrator,
-// matched by email. Never creates an Administrator — account provisioning (login/password)
-// is Vendure system configuration, out of erp-import's scope, same carve-out as tax
-// zones/channels in the backend-plugin-rules skill's "Dev seed rules". If no matching
-// Administrator exists yet,
-// the record is skipped with a warning, not silently dropped.
+// Binds org data onto an existing Administrator matched by email; never creates one.
+// Account provisioning is out of scope; a missing Administrator is skipped with a warning.
 @Injectable()
 export class EmployeeService {
     constructor(
@@ -81,11 +73,8 @@ export class EmployeeService {
             updateInput.roleIds = [role.id];
         }
 
-        // The erp-import controller builds an unauthenticated RequestContext (no session/user)
-        // — fine for plugin-owned entities, but AdministratorService.update() enforces Vendure's
-        // own RBAC internally and rejects it with "insufficient permissions". Elevate to a
-        // system-level context (the bootstrap SuperAdmin user) only for this one privileged
-        // call, not for the rest of the import batch.
+        // AdministratorService.update() enforces RBAC and rejects the unauthenticated import context.
+        // Elevate to the bootstrap SuperAdmin only for this call, not the whole batch.
         const systemCtx = await this.getSystemContext(ctx);
         await this.administratorService.update(systemCtx, updateInput);
         Logger.verbose(
@@ -94,12 +83,8 @@ export class EmployeeService {
         );
     }
 
-    // Mirrors WarehouseService.upsert's resolution of an ERP-side branch/point code into the
-    // mivend Branch.id every other branchId consumer (AccessScopeService, BranchSettingsService,
-    // Warehouse.branchId) expects — see EmployeeRecordInput.branchErpId's own comment. Leaves
-    // branchId null (never fabricated) rather than skipping the whole record when the code
-    // doesn't resolve to a known Branch yet — same "assign manually later" fallback Warehouse
-    // uses, since org-structure import for other fields must still proceed.
+    // Resolves the ERP branch code to Branch.id the same way WarehouseService.upsert does.
+    // Unresolved codes leave branchId null instead of skipping, so other org fields still import.
     private async resolveBranchId(
         ctx: RequestContext,
         record: EmployeeRecordInput,

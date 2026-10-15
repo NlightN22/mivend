@@ -1,8 +1,7 @@
 import { PermissionDefinition } from '@vendure/core';
 
-// A Permission name encodes an action only, never a scope — see docs/access-control.md, layer 2.
-// Row-level visibility ("own"/"department"/"all") is resolved by AccessScopeService, not by a
-// permission triplet like ReadOwnX/ReadDepartmentX/ReadAllX.
+// Permission names encode an action only, never a scope.
+// Row-level scope (own/department/all) is resolved by AccessScopeService, not by permission names.
 export const CustomPermission = {
     ReadCounterparty: new PermissionDefinition({
         name: 'ReadCounterparty',

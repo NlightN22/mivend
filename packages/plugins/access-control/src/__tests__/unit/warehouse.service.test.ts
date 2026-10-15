@@ -163,10 +163,8 @@ describe('WarehouseService', () => {
     });
 
     describe('findActiveStockLocationsForBranch', () => {
-        // mivend#85 audit finding: ReservationService.reserveOrder() takes a FOR UPDATE lock on
-        // every candidate location returned here, per order line — an unordered result risks two
-        // concurrent transactions locking the same two locations in opposite order (Postgres
-        // deadlock 40P01). Must always query in a stable order.
+        // reserveOrder() takes FOR UPDATE locks on these rows per order line; unordered results
+        // can make two transactions lock the same pair in opposite order (Postgres 40P01).
         it('queries StockLocation ordered by id, not in whatever order Postgres happens to return', async () => {
             warehouseRepo.find.mockResolvedValue([
                 { erpId: 'wh-a', branchId: 'branch-1', isActive: true },
