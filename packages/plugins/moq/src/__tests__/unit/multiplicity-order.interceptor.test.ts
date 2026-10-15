@@ -27,9 +27,8 @@ describe('MultiplicityOrderInterceptor', () => {
         // No customer on the order by default (guest cart) — falls through to
         // order.customFields.branchId, same as before this fix existed.
         getPreferredForCustomer = vi.fn(async () => null);
-        // init() only needs injector.get() to resolve some object with hydrate()/translate()/
-        // resolveEffective/getPreferredForCustomer — exact token matching isn't under test here,
-        // just that valid/invalid quantities are judged correctly.
+        // Stub only needs the methods init() calls; exact token matching is not under test here.
+        // Only valid/invalid quantity judgment is checked.
         interceptor.init({
             get: (token: unknown) => {
                 if (typeof token === 'function' && token.name === 'PackagingPolicyService') {
@@ -139,9 +138,8 @@ describe('MultiplicityOrderInterceptor', () => {
         expect(resolveEffective).not.toHaveBeenCalled();
     });
 
-    // Audit finding (mivend#103): branchId must come from the customer's preferred TradingPoint,
-    // not order.customFields.branchId — that field is unset until placement, so before this fix
-    // this check silently fell back to the global default branch's settings during cart editing.
+    // branchId must come from the customer's preferred TradingPoint, not order.customFields.branchId.
+    // It is unset until placement, so cart editing silently falls back to the default branch.
     it('resolves the branch from the preferred TradingPoint, not order.customFields.branchId', async () => {
         getPreferredForCustomer.mockResolvedValue({ servicingBranchId: 'branch-wholesale' });
         resolveEffective.mockImplementation(async (_ctx: unknown, branchId: string | null) =>
