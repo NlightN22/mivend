@@ -14,21 +14,8 @@ import { ImportRunService } from '../../../import-run.service';
 import { ErpImportService } from '../../../erp-import.service';
 import type { BatchImportBody } from '../../../types';
 
-// Component test for the actual createPending → process each record → persist errors → complete
-// chain `make seed` (the only sanctioned way to load dev/test data, per the backend-plugin-rules
-// skill's "Dev seed
-// rules") drives via POST /erp/import/batch. erp-import.service.test.ts already covers per-record-
-// type dispatch and basic error recording with a fully mocked ImportRunService (no DB at all) —
-// this file targets what mocks can't prove: idempotency by exchangeId backed by ImportRun's real
-// unique constraint, a genuine concurrent duplicate-batch race, and a partial-failure batch's
-// error rows actually persisted with the right FK and counts.
-//
-// ImportRun/ImportRunError are plain TypeORM entities (not VendureEntity), so — unlike Order/
-// Reservation elsewhere in this codebase — they need no bootstrap-time EntityIdStrategy and can
-// be exercised directly against a real Postgres DataSource. The individual catalog handlers
-// (ProductHandler, PriceHandler, etc.) DO touch real Vendure entities requiring full bootstrap,
-// so they're mocked here — exactly the same "external boundary" substitution reserve-order/
-// reservation-expiry's tests use for services outside plugin-erp-import's own ownership.
+// Catalog handlers are mocked: they need full Vendure bootstrap. ImportRun is plain TypeORM,
+// so it hits real Postgres, the only way to prove the exchangeId unique constraint holds.
 const mockCtx = {} as RequestContext;
 
 let dataSource: DataSource;
@@ -50,9 +37,7 @@ function mockHandler(behavior: 'succeed' | 'throw' = 'succeed'): {
     };
 }
 
-// ErpImportService's constructor takes importRunService + exactly 15 handlers, in this order:
-// product, price, stock, customer, counterparty, customerCounterparty, tradingPoint, category,
-// crossReference, discountRule, document, organizationRequisites, department, branch, employee.
+// Constructor arguments are positional, so the 15 handlers must be passed in exactly this order.
 const HANDLER_COUNT = 15;
 const STOCK_HANDLER_INDEX = 2; // 0-based position of `stock` among the 15 handler args
 
@@ -162,11 +147,8 @@ describe('ErpImportService + ImportRunService (component, real Postgres)', () =>
             serviceB.processBatch(mockCtx, batch('exchange-4', 1)),
         ]);
 
-        // findByExchangeId's own check races here (this is a plain find-then-create, not a
-        // unique-violation-caught insert like InboxService.enqueue/PaymentAttempt) — the DB's
-        // real unique constraint on exchangeId is the actual guard; a loser either errors or
-        // (if it reads after the winner commits) returns the winner's row. Either way, exactly
-        // one ImportRun for this exchangeId must exist afterward — no silent duplicate.
+        // The find is non-atomic; the unique constraint on exchangeId is the real guard.
+        // A losing insert may error or read the winner's row; exactly one ImportRun must remain.
         const runs = await dataSource
             .getRepository(ImportRun)
             .find({ where: { exchangeId: 'exchange-4' } });

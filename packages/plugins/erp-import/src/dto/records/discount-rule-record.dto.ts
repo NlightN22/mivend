@@ -1,8 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-// Mirrors DiscountRuleRecord in ../../types.ts. discountRule seeding via ERP
-// import is a dev/test convenience only — in production these come from the
-// manager portal's Admin API mutations (see AGENTS.md's planned next work).
+// Mirrors DiscountRuleRecord in ../../types.ts; keep the fields in sync with it.
+// ERP import seeding is dev/test only; production rules come from the Admin API.
 export class DiscountRuleRecordDto {
     @ApiProperty({ description: 'ERP identifier, used as the idempotency key.' })
     erpId!: string;

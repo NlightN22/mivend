@@ -41,10 +41,8 @@ export interface ProductRecord {
     enabled?: boolean;
     weight?: number;
     multiplicity?: number;
-    // Which of our own legal entities (OrganizationRequisites.id) owns the stock this product
-    // is fulfilled from — driven by the ERP's warehouse storage-location assignment. See
-    // docs/payments.md "Organizations". Not yet sourced from a real ERP export — seeded directly
-    // for now (infrastructure/scripts/seed-erp.mjs).
+    // Seeded placeholder: not yet sourced from a real ERP export (see seed-erp.mjs).
+    // Real source is the ERP warehouse storage-location assignment; see docs/payments.md.
     organizationId?: number;
 }
 
@@ -86,14 +84,11 @@ export interface CounterpartyRecord {
     // departmentId: erpId of the ERP Department this counterparty belongs to — pure ERP org data,
     // mirrored as-is (informational; see docs/access-control.md's "Branch vs Department" note).
     departmentId?: string | null;
-    // branchId: accepted on the wire but deliberately never written anywhere yet — see
-    // CounterpartyHandler.upsert's own comment. No automatic branch-assignment rule exists
-    // (tracked in issue #65); a future value here must resolve to a mivend Branch.id, never be
-    // passed through raw.
+    // Accepted on the wire but intentionally never written: no branch-assignment rule exists yet.
+    // Any future value must be resolved to a Branch.id first, never passed through raw.
     branchId?: string | null;
-    // Free-text group/segment label from the ERP — display and filtering only, never used for
-    // access control or business rules (the ERP's own grouping concept is inconsistent). See
-    // Counterparty.erpGroupLabel's doc comment.
+    // Display and filtering only; never use for access control or business rules.
+    // The ERP's grouping concept is inconsistent, so the label is not a reliable category.
     erpGroupLabel?: string | null;
 }
 

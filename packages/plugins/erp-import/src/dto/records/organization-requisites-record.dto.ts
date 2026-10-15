@@ -1,10 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-// Mirrors OrganizationRequisitesRecord (defined in
-// @mivend/plugin-documents/src/types.ts). Used to fill in the letterhead
-// fields on generated proforma invoice/contract PDFs — never admin-entered, ERP is
-// master for this data. The logo is the one exception: set only via the
-// Admin API's setOrganizationLogo mutation, never pushed via this record.
+// Must stay in sync with OrganizationRequisitesRecord in @mivend/plugin-documents/src/types.ts.
+// ERP is master: fields are never admin-entered. Logo is set only via setOrganizationLogo.
 export class OrganizationRequisitesRecordDto {
     @ApiProperty({
         description:

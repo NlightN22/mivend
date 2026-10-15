@@ -154,14 +154,8 @@ export class ErpImportService {
                 await this.orderStatusHandler.upsert(ctx, record.data);
                 break;
             default:
-                // No global ValidationPipe/class-validator is wired in this project, so an
-                // unrecognized `type` value from the wire (a producer typo, a record type this
-                // version doesn't know about yet) was never actually rejected — the switch just
-                // fell through with no case matched, `processRecord` returned normally, and the
-                // caller's `processed++` counted it as a success. A record that was never applied
-                // must be a per-record error (still visible in the run's `errors[]`), never
-                // silently counted as processed — see docs/testing-patterns.md's "Contract
-                // compatibility" pattern, "allowed values enforced".
+                // No global ValidationPipe validates `type`; an unknown type falls through the switch silently.
+                // Unapplied records must be per-record errors in errors[], never counted as processed.
                 throw new Error(`Unrecognized record type: "${(record as { type: string }).type}"`);
         }
     }

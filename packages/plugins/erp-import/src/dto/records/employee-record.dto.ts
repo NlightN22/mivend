@@ -1,8 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-// Mirrors EmployeeRecordInput in @mivend/plugin-access-control. Binds org-structure data
-// onto an existing Administrator, matched by email — never creates the Administrator account
-// itself (see EmployeeService for the reasoning).
+// Must stay in sync with EmployeeRecordInput in @mivend/plugin-access-control.
+// Only binds to an existing Administrator matched by email; never creates one (see EmployeeService).
 export class EmployeeRecordDto {
     @ApiProperty({
         description: 'ERP identifier for this employee record, used as the idempotency key.',

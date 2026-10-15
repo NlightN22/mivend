@@ -48,11 +48,8 @@ export class ErpImportController {
         @Req() req: Request,
         @Body() body: BatchImportRequestDto,
     ): Promise<ImportRunResult> {
-        // No global ValidationPipe is wired (this project doesn't use class-validator), so
-        // @ApiProperty()'s "required" is Swagger documentation only, not runtime enforcement —
-        // check the envelope explicitly. exchangeId is the idempotency key this whole endpoint's
-        // dedup contract depends on (docs/testing-strategy.md); records must be present so a
-        // malformed/empty submission fails loudly instead of creating a vacuous "done" run.
+        // No global ValidationPipe: @ApiProperty "required" is docs only, so check the envelope here.
+        // exchangeId is the dedup idempotency key; empty records must fail, not create a vacuous done run.
         if (!body.exchangeId) {
             throw new BadRequestException('exchangeId is required');
         }
@@ -60,10 +57,8 @@ export class ErpImportController {
             throw new BadRequestException('records must be an array');
         }
         const ctx = await this.requestContextService.create({ apiType: 'admin', req });
-        // BatchImportRequestDto documents the envelope shape for Swagger; each record's exact
-        // `data` shape is validated per-type inside the corresponding handler. An unrecognized
-        // `type` value is rejected as a per-record error by ErpImportService.processRecord's
-        // switch default — never silently counted as processed.
+        // BatchImportRequestDto is Swagger-only; each record's data is validated in its type's handler.
+        // Unknown types hit processRecord's switch default: rejected per record, never counted processed.
         return this.erpImportService.processBatch(ctx, body as unknown as BatchImportBody);
     }
 

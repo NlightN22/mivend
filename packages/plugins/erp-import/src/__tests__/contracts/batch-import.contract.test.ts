@@ -5,14 +5,8 @@ import { TYPE_TO_SCHEMA } from '../../dto/batch-import.dto';
 import type { BatchImportBody } from '../../types';
 import type { ImportRun } from '../../entities/import-run.entity';
 
-// Contract test for the ERP -> platform REST boundary (POST /erp/import/batch). Unlike
-// erp-import.service.test.ts (per-type dispatch behavior) and
-// erp-import-run.component.test.ts (real DB accept->process->persist chain), this file targets
-// the boundary's own stability guarantees: required envelope fields, every type the DTO
-// (batch-import.dto.ts's TYPE_TO_SCHEMA — the Swagger-documented, producer-facing contract)
-// declares supported is actually handled by the consumer (ErpImportService.processRecord's
-// switch), and an unrecognized type is rejected as a real per-record error rather than silently
-// treated as processed (see docs/testing-patterns.md's "Contract compatibility" pattern).
+// Every TYPE_TO_SCHEMA type is the producer-facing contract: processRecord must handle each.
+// Unknown types must fail as per-record errors, never be silently counted as processed.
 const ctx = {} as RequestContext;
 
 function makeRun(overrides: Partial<ImportRun> = {}): ImportRun {
@@ -121,9 +115,7 @@ describe('ERP import batch contract: TYPE_TO_SCHEMA <-> ErpImportService agreeme
                 records: [{ type, data: {} }],
             } as unknown as BatchImportBody);
 
-            // processBatch itself is fully mocked here (importRunService.complete is a spy, not
-            // real persistence) — assert on what the spy was called with, the same technique
-            // erp-import.service.test.ts's "records error" test uses.
+            // processBatch is fully mocked, so complete is a spy: assert on its call arguments, not stored state.
             const completeMock = (
                 service as unknown as {
                     importRunService: { complete: ReturnType<typeof vi.fn> };

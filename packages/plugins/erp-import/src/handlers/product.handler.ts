@@ -27,9 +27,8 @@ export class ProductHandler {
     ) {}
 
     async upsert(ctx: RequestContext, record: ProductRecord): Promise<void> {
-        // See docs/payments.md "Organizations" — once the admin-controlled
-        // organizationSplitEnabled toggle is on, every product must carry a real
-        // organizationId; a missing one is a rejected import record, not a silent null.
+        // Once organizationSplitEnabled is on, every product must have a real organizationId;
+        // a missing one makes the import record rejected instead of silently null.
         const settings = await this.globalSettingsService.getSettings(ctx);
         if (settings.customFields?.organizationSplitEnabled && record.organizationId == null) {
             throw new Error(
