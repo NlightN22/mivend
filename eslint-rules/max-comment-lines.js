@@ -6,11 +6,13 @@ const MAX_LINES = 2;
 // Tool directives are not prose, so they don't count toward the cap.
 const DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore)/;
 
-function groupLineComments(comments) {
+function groupLineComments(comments, lines) {
     const groups = [];
     let current = null;
     for (const comment of comments) {
-        if (comment.type !== 'Line' || DIRECTIVE.test(comment.value)) {
+        const standalone =
+            lines[comment.loc.start.line - 1].slice(0, comment.loc.start.column).trim() === '';
+        if (comment.type !== 'Line' || !standalone || DIRECTIVE.test(comment.value)) {
             if (current) groups.push(current);
             current = null;
             continue;
@@ -53,7 +55,7 @@ export default {
                     }
                 }
 
-                for (const group of groupLineComments(comments)) {
+                for (const group of groupLineComments(comments, sourceCode.lines)) {
                     if (group.comments.length > MAX_LINES) {
                         context.report({
                             loc: {
