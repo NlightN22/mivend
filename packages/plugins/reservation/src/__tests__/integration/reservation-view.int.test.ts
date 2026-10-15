@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataSource } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
@@ -37,7 +37,7 @@ beforeAll(async () => {
     await dataSource.initialize();
     for (const ddl of [
         `CREATE TABLE "order" (id int PRIMARY KEY, code varchar, state varchar, "customerId" int)`,
-        `CREATE TABLE order_line (id int PRIMARY KEY, "orderId" int, "productVariantId" int)`,
+        `CREATE TABLE order_line (id int PRIMARY KEY, "orderId" int, "productVariantId" int, quantity int)`,
         `CREATE TABLE product_variant (id int PRIMARY KEY, sku varchar)`,
         `CREATE TABLE customer (id int PRIMARY KEY, "customFieldsCounterpartyid" int)`,
         `CREATE TABLE counterparty (id int PRIMARY KEY, "shortName" varchar, "assignedManagerId" varchar)`,
@@ -103,7 +103,7 @@ beforeEach(async () => {
          INSERT INTO customer VALUES (3, 5);
          INSERT INTO "order" VALUES (1, 'O-1', 'PaymentAuthorized', 3), (2, 'O-2', 'PaymentAuthorized', 3),
             (3, 'O-3', 'Cancelled', 3);
-         INSERT INTO order_line VALUES (100, 1, 10), (101, 1, 20), (200, 2, 10), (300, 3, 10)`,
+         INSERT INTO order_line VALUES (100, 1, 10, 5), (101, 1, 20, 5), (200, 2, 10, 5), (300, 3, 10, 5)`,
     );
 });
 
@@ -202,7 +202,7 @@ describe('ReservationViewService', () => {
         expect((await view.lineFlag(freshCtx(), 200)).reserved).toBe(false);
     });
 
-    it('details list local and ERP holds, the ERP one on the first line of the variant', async () => {
+    it('details list local and ERP holds', async () => {
         await addLocal(1, 100, 10, soon);
         await erpReserve.record(ctx, 1, [{ productVariantId: '20', reservedQuantity: 3 }], later);
         const details = await view.details(ctx, 1);
@@ -210,6 +210,53 @@ describe('ReservationViewService', () => {
             ['LOCAL', 'SKU-A', '100', 2],
             ['ERP', 'SKU-B', '101', 3],
         ]);
+    });
+
+    it('splits the ERP hold of a variant across its lines by line quantity', async () => {
+        await dataSource.query(`INSERT INTO order_line VALUES (102, 1, 20, 2)`);
+        await erpReserve.record(ctx, 1, [{ productVariantId: '20', reservedQuantity: 6 }], later);
+        const details = await view.details(ctx, 1);
+        expect(details.map(d => [d.orderLineId, d.quantity])).toEqual([
+            ['101', 5],
+            ['102', 1],
+        ]);
+        expect((await view.lineFlag(freshCtx(), 101)).reserved).toBe(true);
+        expect((await view.lineFlag(freshCtx(), 102)).reserved).toBe(true);
+    });
+
+    it('resolves many lines of one request with the same number of queries', async () => {
+        await addLocal(1, 100, 10, soon);
+        const counted = { n: 0 };
+        const original = dataSource.query.bind(dataSource);
+        const spy = vi.spyOn(dataSource, 'query').mockImplementation(((...a: unknown[]) => {
+            counted.n += 1;
+            return (original as (...x: unknown[]) => unknown)(...a);
+        }) as never);
+        const requestCtx = freshCtx();
+        await Promise.all([100, 101, 200, 300].map(id => view.lineFlag(requestCtx, id)));
+        spy.mockRestore();
+        expect(counted.n).toBeLessThanOrEqual(3);
+    });
+
+    it("another counterparty's staff see neither the details nor the holders of an order", async () => {
+        await addLocal(1, 100, 10, soon);
+        visibleOrderIds.clear();
+        expect(await view.details(ctx, 1)).toEqual([]);
+        expect(await view.holders(ctx, 10)).toEqual([]);
+    });
+
+    it('holders still lists a visible order behind more than a page of foreign ones', async () => {
+        const foreign = Array.from({ length: 250 }, (_, i) => 1000 + i);
+        for (const id of foreign) {
+            await dataSource.query(`INSERT INTO "order" VALUES ($1, $2, 'PaymentAuthorized', 3)`, [
+                id,
+                `F-${id}`,
+            ]);
+            await addLocal(id, id, 10, soon);
+        }
+        await addLocal(1, 100, 10, later);
+        const holders = await view.holders(ctx, 10);
+        expect(holders.map(h => h.orderCode)).toEqual(['O-1']);
     });
 
     it('details of an order the staff member cannot see are empty', async () => {

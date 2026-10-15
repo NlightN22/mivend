@@ -52,15 +52,17 @@ export const loggerCtx = 'ReservationPlugin';
 
 export const RESERVATION_PLUGIN_OPTIONS = Symbol('RESERVATION_PLUGIN_OPTIONS');
 
-// Non-prepaid default, overridable via ReservationPlugin.init({ defaultReservationDays });
-// read it through defaultReservationDays(), never this constant (docs/order-flow.md "TTL").
+// Option defaults; read them through ReservationSettings, never these constants (docs/order-flow.md "TTL").
 export const DEFAULT_RESERVATION_DAYS = 3;
+export const DEFAULT_REJECTED_ORDER_RELEASE_DAYS = 3;
 export const DEFAULT_PREPAID_RESERVATION_TTL_DAYS = 30;
 export const EXPIRY_POLL_INTERVAL_DEFAULT = 60_000;
 
 export interface ReservationPluginOptions {
     // Staff-facing default shown when confirming an order — see Order.customFields.reservationDays.
     defaultReservationDays?: number;
+    // How long an ERP-rejected order keeps its reserve before it is released (docs/order-contracts.md).
+    rejectedOrderReleaseDays?: number;
     expiryPollIntervalMs?: number;
 }
 

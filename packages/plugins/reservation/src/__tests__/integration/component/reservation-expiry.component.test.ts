@@ -11,6 +11,7 @@ import {
 
 import { Reservation } from '../../../entities/reservation.entity';
 import { ReservationExpiryService } from '../../../reservation-expiry.service';
+import { ReservationSettings } from '../../../reservation-settings';
 
 // Component test for the actual sweep→expire→release chain the reservation-expiry ScheduledTask
 // triggers on a timer (packages/plugins/reservation/src/reservation-expiry.scheduled-task.ts) —
@@ -134,6 +135,7 @@ beforeAll(async () => {
         notificationServiceShim as never,
         eventBusShim as never,
         cancellationShim as never,
+        new ReservationSettings({}),
     );
 });
 

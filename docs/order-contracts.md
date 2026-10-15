@@ -148,7 +148,8 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   reserve is already used up, and mivend follows what the ERP reports.
 - Not confirmed/unregistered order: mivend cancels it locally and, if `order.confirmed` was already sent, tells
   the ERP. It no longer returns to the confirmation queue.
-- Prepaid orders and the ERP-rejected reserves (#204) keep their own rules (manual intervention / their deadline).
+- Prepaid orders and the ERP-rejected reserves (#204) keep their own rules (manual intervention / their deadline: the `rejectedOrderReleaseDays` plugin option, default 3,
+  independent of `defaultReservationDays`).
 
 ### Signals from the ERP
 

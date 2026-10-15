@@ -5,14 +5,13 @@ import {
     EventBus,
     Order,
     RequestContext,
-    StockLevel,
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 import { PackagingPolicyService } from '@mivend/plugin-moq';
 
-import { freeQuantity } from './free-stock';
+import { pickLocationWithMostFreeStock } from './reservation-location-picker';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { Reservation } from './entities/reservation.entity';
 import {
@@ -22,21 +21,15 @@ import {
 } from './reservation.events';
 import {
     ErpExportDataMissingError,
-    ErpExportDataMissingLine,
     InsufficientStockError,
     InsufficientStockLine,
     InvalidMultiplicityError,
-    InvalidMultiplicityLine,
     OrderNotEligibleError,
 } from './reservation-errors';
 import { OrderReservationState, ReservationCreationMethod } from './types';
 import { withAggregateLock } from 'shared';
-
-const CLEARED_FAILURE = {
-    reservationFailureReason: null,
-    reservationFailureDetail: null,
-    reservationFailedAt: null,
-} as const;
+import { findErpExportGaps, findMultiplicityViolations } from './reservation-preflight';
+import { writeOrderReservationState } from './reservation-order-state';
 
 @Injectable()
 export class ReservationService {
@@ -49,8 +42,6 @@ export class ReservationService {
         private packagingPolicyService: PackagingPolicyService,
     ) {}
 
-    // Thin wrapper over reserveOrder() for the manual-confirm mutation (see docs/order-flow.md
-    // "Single reservation service, two triggers"), gated on the ConfirmOrder permission.
     async confirmOrder(
         ctx: RequestContext,
         orderId: ID,
@@ -65,14 +56,8 @@ export class ReservationService {
         );
     }
 
-    // The single transactional stock-check + reservation-write path for every trigger (manual
-    // confirm, auto-prepaid). Concurrency-safe: locks the order's StockLevel rows FOR UPDATE
-    // before computing ATP, so two concurrent reservations against the same variant+location
-    // serialize on that lock rather than both reading stale free stock. Idempotent: a second
-    // call for an order that already has an active reservation set is a no-op that returns the
-    // existing rows. Full-order-only: if any line is short (or violates multiplicity), nothing
-    // is written and the caller gets every offending line back in one error (see
-    // docs/order-flow.md "Full-order-only reservation").
+    // Single transactional stock-check + write path for every trigger; idempotent per order and
+    // full-order-only (docs/order-flow.md "Full-order-only reservation").
     async reserveOrder(
         ctx: RequestContext,
         orderId: ID,
@@ -117,125 +102,37 @@ export class ReservationService {
                     }
 
                     // Defense in depth: same step as the moq OrderInterceptor (docs/order-flow.md).
-                    const multiplicityViolations: InvalidMultiplicityLine[] = [];
-                    for (const line of order.lines) {
-                        const effective = line.productVariant
-                            ? await this.packagingPolicyService.requiredMultiple(
-                                  txCtx,
-                                  line.productVariant,
-                                  order.customerId,
-                                  order.customFields?.branchId ?? null,
-                              )
-                            : 1;
-                        if (line.quantity % effective !== 0) {
-                            multiplicityViolations.push({
-                                orderLineId: String(line.id),
-                                productVariantId: String(line.productVariantId),
-                                quantity: line.quantity,
-                                multiplicity: effective,
-                            });
-                        }
-                    }
+                    const multiplicityViolations = await findMultiplicityViolations(
+                        this.packagingPolicyService,
+                        txCtx,
+                        order,
+                    );
                     if (multiplicityViolations.length > 0) {
                         throw new InvalidMultiplicityError(multiplicityViolations);
                     }
 
-                    // mivend#85: this order's stock/warehouse facts are about to become final (see
-                    // ErpExportDataMissingError's doc comment) — verify every piece of data
-                    // erp-integration's order.confirmed event will need is already resolvable
-                    // *before* writing any Reservation, rather than allowing a reservation that can
-                    // never be reported to the ERP. Full-order-only, same as the stock/multiplicity checks.
                     const branchId = order.customFields.branchId ?? null;
                     const candidateLocationIds = branchId
                         ? await this.availabilityService.findBranchStockLocationIds(txCtx, branchId)
                         : [];
-
-                    let missingCustomerId = false;
-                    let missingContract = false;
-                    if (!order.customerId) {
-                        missingCustomerId = true;
-                    } else {
-                        const counterparty = await this.counterpartyService.getForCustomer(
-                            txCtx,
-                            order.customerId,
-                        );
-                        if (!counterparty) {
-                            missingCustomerId = true;
-                        } else {
-                            const contract = await this.contractService.resolveOrderContract(
-                                txCtx,
-                                counterparty,
-                                order.customFields?.selectedContractId,
-                                order.customerId,
-                            );
-                            missingContract = !contract;
-                        }
-                    }
-
-                    // Product.customFields.externalId isn't visible on the typed entity from this
-                    // plugin's own TS project — read via raw SQL, same as every other cross-plugin
-                    // customField read in this codebase (see erp-integration's
-                    // order-submitted.listener.ts for the identical query).
-                    const productIds = [
-                        ...new Set(
-                            order.lines
-                                .map(line => line.productVariant?.productId)
-                                .filter((id): id is ID => id != null),
-                        ),
-                    ];
-                    const productExternalIdByProductId = new Map<string, string>();
-                    if (productIds.length > 0) {
-                        const productRows = await this.connection.rawConnection
-                            .createQueryBuilder()
-                            .select('p.id', 'id')
-                            .addSelect('p."customFieldsExternalid"', 'externalId')
-                            .from('product', 'p')
-                            .where('p.id IN (:...ids)', { ids: productIds })
-                            .getRawMany<{ id: string; externalId: string | null }>();
-                        for (const row of productRows) {
-                            if (row.externalId) {
-                                productExternalIdByProductId.set(String(row.id), row.externalId);
-                            }
-                        }
-                    }
-
-                    const erpExportMissingLines: ErpExportDataMissingLine[] = [];
-                    for (const line of order.lines) {
-                        const missing: ErpExportDataMissingLine['missing'] = [];
-                        const hasProductId = line.productVariant?.productId
-                            ? productExternalIdByProductId.has(
-                                  String(line.productVariant.productId),
-                              )
-                            : false;
-                        if (!hasProductId) missing.push('productId');
-                        if (candidateLocationIds.length === 0) missing.push('warehouseId');
-                        if (line.customFields?.organizationId == null) {
-                            missing.push('organizationId');
-                        }
-                        if (missing.length > 0) {
-                            erpExportMissingLines.push({
-                                orderLineId: String(line.id),
-                                productVariantId: String(line.productVariantId),
-                                missing,
-                            });
-                        }
-                    }
-                    if (missingCustomerId || missingContract || erpExportMissingLines.length > 0) {
+                    const gaps = await findErpExportGaps(
+                        {
+                            connection: this.connection,
+                            counterpartyService: this.counterpartyService,
+                            contractService: this.contractService,
+                        },
+                        txCtx,
+                        order,
+                        candidateLocationIds,
+                    );
+                    if (gaps.missingCustomerId || gaps.missingContract || gaps.lines.length > 0) {
                         throw new ErpExportDataMissingError(
-                            missingCustomerId,
-                            erpExportMissingLines,
-                            missingContract,
+                            gaps.missingCustomerId,
+                            gaps.lines,
+                            gaps.missingContract,
                         );
                     }
 
-                    // Branch-aware, multi-location stock check (mivend#85) — a branch can have
-                    // several warehouses/StockLocations (see WarehouseService
-                    // .findActiveStockLocationsForBranch's doc comment), so pick the one with the
-                    // most available stock per line, mirroring erp-integration's
-                    // BranchStockLocationStrategy.pickLocationWithMostAvailableStock. Locks every
-                    // candidate location's StockLevel row FOR UPDATE, same concurrency-safety
-                    // guarantee as the previous single-location version.
-                    const stockLevelRepo = this.connection.getRepository(txCtx, StockLevel);
                     const shortfalls: InsufficientStockLine[] = [];
                     const now = new Date();
                     const expiresAt = new Date(
@@ -244,40 +141,13 @@ export class ReservationService {
                     const rows: Reservation[] = [];
 
                     for (const line of order.lines) {
-                        let bestLocationId: string | undefined;
-                        let bestAvailable = -Infinity;
-                        for (const locationId of candidateLocationIds) {
-                            const stockLevel = await stockLevelRepo
-                                .createQueryBuilder('stockLevel')
-                                .setLock('pessimistic_write')
-                                .where('stockLevel.productVariantId = :variantId', {
-                                    variantId: line.productVariantId,
-                                })
-                                .andWhere('stockLevel.stockLocationId = :stockLocationId', {
-                                    stockLocationId: locationId,
-                                })
-                                .getOne();
-
-                            const activeReserved = await this.sumActiveReservations(
+                        const { stockLocationId, available: bestAvailable } =
+                            await pickLocationWithMostFreeStock(
+                                this.connection,
                                 txCtx,
                                 line.productVariantId,
-                                locationId,
+                                candidateLocationIds,
                             );
-                            const available = freeQuantity(
-                                stockLevel?.stockOnHand ?? 0,
-                                stockLevel?.stockAllocated ?? 0,
-                                activeReserved,
-                                stockLevel?.customFields?.erpAvailableQuantity,
-                            );
-                            if (available > bestAvailable) {
-                                bestAvailable = available;
-                                bestLocationId = locationId;
-                            }
-                        }
-
-                        // bestLocationId is always set here: the ERP-export gate above already
-                        // rejected the whole order if candidateLocationIds was empty.
-                        const stockLocationId = bestLocationId as string;
 
                         if (bestAvailable < line.quantity) {
                             shortfalls.push({
@@ -367,10 +237,6 @@ export class ReservationService {
                 new ReservationReleasedEvent(ctx, reservation, order?.code ?? String(orderId)),
             );
         }
-        // Real bug fixed here: this method used to only flip the Reservation rows to 'released'
-        // and never touched Order.customFields.reservationState, so a released order stayed stuck
-        // showing 'RESERVED' forever — RELEASED is a declared OrderReservationState (types.ts) and
-        // a real manager-portal filter option, but was structurally unreachable before this fix.
         if (order) {
             await this.setOrderReservationState(ctx, order, 'RELEASED');
         }
@@ -388,63 +254,7 @@ export class ReservationService {
         order: Order,
         state: OrderReservationState,
     ): Promise<void> {
-        // `repo.update()`, not `.save(order)` — same gotcha as ErpOrderService.updateStatus:
-        // `order` here is frequently loaded with a narrow relation set (e.g. reserveOrder()'s own
-        // `['lines', 'lines.productVariant']`), and `.save()` recomputes calculated fields
-        // (discounts, taxSummary) that require `lines`/`surcharges` to be joined — throwing
-        // "The property 'taxSummary' ... requires the Order.surcharges relation to be joined"
-        // and, because every caller of this method is itself fire-and-forget from an EventBus
-        // subscriber, silently swallowing the whole reservation write with no reservation ever
-        // created. Found live 2026-07-15: a real PREPAID order stayed `reservationState:
-        // 'NOT_REQUIRED'` with no error visible anywhere until a temporary debug log surfaced
-        // this exact GraphQLError.
-        const repo = this.connection.getRepository(ctx, Order);
-        const stateFields = {
-            reservationState: state,
-            ...(state === 'RESERVED' ? CLEARED_FAILURE : {}),
-        };
-        await repo.update(order.id, { customFields: stateFields });
-
-        // Second real bug found live 2026-07-15, alongside the one above: when this method is
-        // called from the auto-prepaid path (an OrderStateTransitionEvent subscriber, see
-        // reservation.plugin.ts), the update above can still get silently clobbered back to its
-        // old value — @vendure/core's OrderService.transitionToState() does one more
-        // unconditional `.save(order, {reload: false})` of its OWN stale in-memory `order` object
-        // *after* publishing the event that triggers this call (see
-        // reservation.plugin.ts's subscriber comment for the full mechanism). That trailing save
-        // isn't visible or awaitable from here, so instead of guessing a "safe" delay, verify the
-        // write actually stuck and retry a bounded number of times if it didn't — self-corrects
-        // regardless of how long the clobbering save takes, at the cost of a real subsequent
-        // reservationState no-op update also (harmlessly) recovering, e.g., a manual-confirm race.
-        for (let attempt = 0; attempt < 3; attempt++) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            // Re-reads through the same repo (real Order entity, or whatever a test's connection
-            // shim maps it to) rather than a raw SQL string hardcoding the production table/
-            // flattened-customField column name — a raw `"order"`/`"customFieldsReservationstate"`
-            // string bypasses TypeORM's entity resolution entirely, so it can never resolve
-            // against a test's differently-named/differently-shaped fixture table, making this
-            // retry-verification path structurally untestable at the integration level. This is
-            // otherwise the exact same check: `customFields.reservationState` on the freshly
-            // reloaded row.
-            const current = await repo.findOne({ where: { id: order.id } });
-            if (current?.customFields?.reservationState === state) return;
-            await repo.update(order.id, { customFields: stateFields });
-        }
-    }
-
-    private async sumActiveReservations(
-        ctx: RequestContext,
-        productVariantId: ID,
-        stockLocationId: string,
-    ): Promise<number> {
-        const rows = await this.connection.getRepository(ctx, Reservation).find({
-            where: {
-                productVariantId: String(productVariantId),
-                stockLocationId,
-                status: 'active',
-            },
-        });
-        return rows.reduce((sum, r) => sum + r.quantity, 0);
+        await writeOrderReservationState(this.connection, ctx, order, state);
     }
 
     private async nextGeneration(

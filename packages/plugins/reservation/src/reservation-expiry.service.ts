@@ -8,7 +8,7 @@ import { Reservation } from './entities/reservation.entity';
 import { OrderCancellationService } from './order-cancellation.service';
 import type { CancelOutcome } from './order-cancellation.service';
 import { ReservationReleasedEvent } from './reservation.events';
-import { defaultReservationDays } from './reservation-days';
+import { ReservationSettings } from './reservation-settings';
 import { loggerCtx } from './types';
 
 // A registered/in-progress order is left to the ERP's own release job; staff hear about it only
@@ -25,148 +25,181 @@ export class ReservationExpiryService {
         private notificationService: NotificationService,
         private eventBus: EventBus,
         private cancellation: OrderCancellationService,
+        private settings: ReservationSettings,
     ) {}
 
     // Branches by creationMethod and REJECTED-order deadline — see docs/order-flow.md
     // "On expiry" and issue #204's own notify-then-release timeout for ERP rejections.
     async expireDueReservations(): Promise<number> {
-        const { handled, nonPrepaidDue } = await this.dataSource.transaction(async manager => {
-            // SKIP LOCKED: a concurrent sweep must skip rows another sweep already holds, not
-            // block on or re-read them, or both fire the same notification/event side effects.
-            const dueRows = await manager
-                .getRepository(Reservation)
-                .createQueryBuilder('reservation')
-                .setLock('pessimistic_write')
-                .setOnLocked('skip_locked')
-                .where('reservation.status = :status', { status: 'active' })
-                .andWhere('reservation.expiresAt <= :now', { now: new Date() })
-                .getMany();
-
-            const rejectionCutoff = new Date(
-                Date.now() - defaultReservationDays() * 24 * 60 * 60 * 1000,
-            );
-            const rejectedCodes: string[] = (
-                await manager.query(
-                    `SELECT code FROM order_status_reference WHERE rejected AND NOT "isDeleted"`,
-                )
-            ).map((row: { code: string }) => row.code);
-            const rejectedOrders = rejectedCodes.length
-                ? await manager.getRepository(Order).find({
-                      where: {
-                          customFields: {
-                              erpStatus: In(rejectedCodes),
-                              erpStatusAt: LessThanOrEqual(rejectionCutoff),
-                          },
-                      },
-                  })
-                : [];
-            const rejectedOrderIds = rejectedOrders.map(order => String(order.id));
-            const rejectedDue = rejectedOrderIds.length
-                ? await manager
-                      .getRepository(Reservation)
-                      .createQueryBuilder('reservation')
-                      .setLock('pessimistic_write')
-                      .setOnLocked('skip_locked')
-                      .where('reservation.status = :status', { status: 'active' })
-                      .andWhere('reservation.orderId IN (:...orderIds)', {
-                          orderIds: rejectedOrderIds,
-                      })
-                      .getMany()
-                : [];
-            const rejectedDueIds = new Set(rejectedDue.map(row => row.id));
-            const expiryDueRows = dueRows.filter(row => !rejectedDueIds.has(row.id));
-
-            if (expiryDueRows.length === 0 && rejectedDue.length === 0) {
-                return { handled: 0, nonPrepaidDue: [] };
-            }
-
-            const nonPrepaidDue = expiryDueRows.filter(
-                row => row.creationMethod !== 'auto-prepaid' && !row.interventionFlaggedAt,
-            );
-            const prepaidDue = expiryDueRows.filter(
-                row => row.creationMethod === 'auto-prepaid' && !row.interventionFlaggedAt,
-            );
-
-            // issue #42/#87 Part 2: no signed-in administrator on this timer sweep — broadcast
-            // instead of guessing a recipient. Shared by both notification branches below.
-            const ctx =
-                prepaidDue.length > 0 || rejectedDue.length > 0
-                    ? await this.requestContextService.create({ apiType: 'admin' })
-                    : null;
-
-            if (prepaidDue.length > 0) {
-                const flaggedAt = new Date();
-                await manager
+        const { handled, nonPrepaidDue, notifications, notifyCtx } =
+            await this.dataSource.transaction(async manager => {
+                // SKIP LOCKED: a concurrent sweep must skip rows another sweep already holds, not
+                // block on or re-read them, or both fire the same notification/event side effects.
+                const dueRows = await manager
                     .getRepository(Reservation)
-                    .update(
-                        { id: In(prepaidDue.map(row => row.id)) },
-                        { interventionFlaggedAt: flaggedAt },
-                    );
-                for (const row of prepaidDue) {
-                    Logger.warn(
-                        `Prepaid reservation ${String(row.id)} (order ${row.orderId}) expired at ` +
-                            `${row.expiresAt.toISOString()} without release — needs manual intervention.`,
-                        loggerCtx,
-                    );
-                    await this.notificationService.create(ctx!, {
-                        recipientType: 'administrator-broadcast',
-                        kind: 'error',
-                        sourceType: 'reservation-intervention',
-                        sourceId: String(row.id),
-                        title: 'Prepaid reservation needs manual intervention',
-                        message: `Reservation ${String(row.id)} (order ${row.orderId}) expired at ${row.expiresAt.toISOString()} without release.`,
-                    });
-                }
-            }
+                    .createQueryBuilder('reservation')
+                    .setLock('pessimistic_write')
+                    .setOnLocked('skip_locked')
+                    .where('reservation.status = :status', { status: 'active' })
+                    .andWhere('reservation.expiresAt <= :now', { now: new Date() })
+                    .getMany();
 
-            if (rejectedDue.length > 0) {
-                const releasedAt = new Date();
-                const rejectedOrdersById = new Map(
-                    rejectedOrders.map(order => [String(order.id), order]),
+                const rejectionCutoff = new Date(
+                    Date.now() - this.settings.rejectedOrderReleaseDays() * 24 * 60 * 60 * 1000,
+                );
+                const rejectedCodes: string[] = (
+                    await manager.query(
+                        `SELECT code FROM order_status_reference WHERE rejected AND NOT "isDeleted"`,
+                    )
+                ).map((row: { code: string }) => row.code);
+                const rejectedOrders = rejectedCodes.length
+                    ? await manager.getRepository(Order).find({
+                          where: {
+                              customFields: {
+                                  erpStatus: In(rejectedCodes),
+                                  erpStatusAt: LessThanOrEqual(rejectionCutoff),
+                              },
+                          },
+                      })
+                    : [];
+                const rejectedOrderIds = rejectedOrders.map(order => String(order.id));
+                const rejectedDue = rejectedOrderIds.length
+                    ? await manager
+                          .getRepository(Reservation)
+                          .createQueryBuilder('reservation')
+                          .setLock('pessimistic_write')
+                          .setOnLocked('skip_locked')
+                          .where('reservation.status = :status', { status: 'active' })
+                          .andWhere('reservation.orderId IN (:...orderIds)', {
+                              orderIds: rejectedOrderIds,
+                          })
+                          .getMany()
+                    : [];
+                const rejectedDueIds = new Set(rejectedDue.map(row => row.id));
+                const expiryDueRows = dueRows.filter(row => !rejectedDueIds.has(row.id));
+
+                if (expiryDueRows.length === 0 && rejectedDue.length === 0) {
+                    return { handled: 0, nonPrepaidDue: [], notifications: [], notifyCtx: null };
+                }
+
+                const nonPrepaidDue = expiryDueRows.filter(
+                    row => row.creationMethod !== 'auto-prepaid' && !row.interventionFlaggedAt,
+                );
+                const prepaidDue = expiryDueRows.filter(
+                    row => row.creationMethod === 'auto-prepaid' && !row.interventionFlaggedAt,
                 );
 
-                for (const row of rejectedDue) {
-                    await this.notificationService.create(ctx!, {
-                        recipientType: 'administrator-broadcast',
-                        kind: 'error',
-                        sourceType: 'reservation-rejected-release',
-                        sourceId: String(row.id),
-                        title: 'Reservation released after ERP rejection timeout',
-                        message: `Reservation ${String(row.id)} (order ${row.orderId}) was released after its order stayed REJECTED by the ERP for over ${defaultReservationDays()} day(s).`,
-                    });
+                // issue #42/#87 Part 2: no signed-in administrator on this timer sweep — broadcast
+                // instead of guessing a recipient. Shared by both notification branches below.
+                const ctx =
+                    prepaidDue.length > 0 || rejectedDue.length > 0
+                        ? await this.requestContextService.create({ apiType: 'admin' })
+                        : null;
 
-                    const erpReleaseOperationId = randomUUID();
+                const notifications: Parameters<NotificationService['create']>[1][] = [];
+
+                if (prepaidDue.length > 0) {
+                    const flaggedAt = new Date();
                     await manager
                         .getRepository(Reservation)
-                        .update(row.id, { status: 'released', releasedAt, erpReleaseOperationId });
-
-                    const order = rejectedOrdersById.get(String(row.orderId));
-                    if (order) {
-                        // Same `repo.update()`-not-`.save()` gotcha as the non-prepaid branch above.
-                        await manager.getRepository(Order).update(order.id, {
-                            customFields: { reservationState: 'RELEASED' },
+                        .update(
+                            { id: In(prepaidDue.map(row => row.id)) },
+                            { interventionFlaggedAt: flaggedAt },
+                        );
+                    for (const row of prepaidDue) {
+                        Logger.warn(
+                            `Prepaid reservation ${String(row.id)} (order ${row.orderId}) expired at ` +
+                                `${row.expiresAt.toISOString()} without release — needs manual intervention.`,
+                            loggerCtx,
+                        );
+                        notifications.push({
+                            recipientType: 'administrator-broadcast',
+                            kind: 'error',
+                            sourceType: 'reservation-intervention',
+                            sourceId: String(row.id),
+                            title: 'Prepaid reservation needs manual intervention',
+                            message: `Reservation ${String(row.id)} (order ${row.orderId}) expired at ${row.expiresAt.toISOString()} without release.`,
                         });
                     }
-
-                    this.eventBus.publish(
-                        new ReservationReleasedEvent(
-                            ctx!,
-                            Object.assign(new Reservation(), row, {
-                                status: 'released',
-                                releasedAt,
-                                erpReleaseOperationId,
-                            }),
-                            String(row.orderId),
-                        ),
-                    );
                 }
-            }
 
-            return { handled: prepaidDue.length + rejectedDue.length, nonPrepaidDue };
-        });
-        // Outside the sweep transaction: cancelling takes the order lock and writes the same
-        // reservation rows this sweep holds locked.
-        return handled + (await this.expireNonPrepaid(nonPrepaidDue));
+                if (rejectedDue.length > 0) {
+                    const releasedAt = new Date();
+                    const rejectedOrdersById = new Map(
+                        rejectedOrders.map(order => [String(order.id), order]),
+                    );
+
+                    for (const row of rejectedDue) {
+                        notifications.push({
+                            recipientType: 'administrator-broadcast',
+                            kind: 'error',
+                            sourceType: 'reservation-rejected-release',
+                            sourceId: String(row.id),
+                            title: 'Reservation released after ERP rejection timeout',
+                            message: `Reservation ${String(row.id)} (order ${row.orderId}) was released after its order stayed REJECTED by the ERP for over ${this.settings.rejectedOrderReleaseDays()} day(s).`,
+                        });
+
+                        const erpReleaseOperationId = randomUUID();
+                        await manager.getRepository(Reservation).update(row.id, {
+                            status: 'released',
+                            releasedAt,
+                            erpReleaseOperationId,
+                        });
+
+                        const order = rejectedOrdersById.get(String(row.orderId));
+                        if (order) {
+                            // Same `repo.update()`-not-`.save()` gotcha as the non-prepaid branch above.
+                            await manager.getRepository(Order).update(order.id, {
+                                customFields: { reservationState: 'RELEASED' },
+                            });
+                        }
+
+                        this.eventBus.publish(
+                            new ReservationReleasedEvent(
+                                ctx!,
+                                Object.assign(new Reservation(), row, {
+                                    status: 'released',
+                                    releasedAt,
+                                    erpReleaseOperationId,
+                                }),
+                                String(row.orderId),
+                            ),
+                        );
+                    }
+                }
+
+                return {
+                    handled: prepaidDue.length + rejectedDue.length,
+                    nonPrepaidDue,
+                    notifications,
+                    notifyCtx: ctx,
+                };
+            });
+        // Outside the sweep transaction: a failing notification must not roll back the marks, and
+        // cancelling takes the order lock and writes the same reservation rows this sweep locked.
+        const notifyError = await this.sendNotifications(notifyCtx, notifications);
+        const total = handled + (await this.expireNonPrepaid(nonPrepaidDue));
+        if (notifyError !== undefined) throw notifyError;
+        return total;
+    }
+
+    private async sendNotifications(
+        ctx: RequestContext | null,
+        notifications: Parameters<NotificationService['create']>[1][],
+    ): Promise<unknown> {
+        let firstError: unknown;
+        for (const input of notifications) {
+            try {
+                await this.notificationService.create(ctx!, input);
+            } catch (error) {
+                Logger.error(
+                    `Notification ${input.sourceType}/${input.sourceId} failed: ${String(error)}`,
+                    loggerCtx,
+                );
+                firstError ??= error;
+            }
+        }
+        return firstError;
     }
 
     // Pending/unregistered orders are cancelled; a registered or in-progress one is left to the ERP.

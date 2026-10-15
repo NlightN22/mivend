@@ -18,7 +18,7 @@ import {
     loggerCtx,
     type ReservationCreationMethod,
 } from './types';
-import { defaultReservationDays } from './reservation-days';
+import { ReservationSettings } from './reservation-settings';
 
 const INACTIVE_PAYMENT_STATES: string[] = ['Cancelled', 'Declined', 'Error'];
 
@@ -30,6 +30,7 @@ export class ReservationPaymentService {
         private reservationService: ReservationService,
         private globalSettingsService: GlobalSettingsService,
         private failureService: ReservationFailureService,
+        private settings: ReservationSettings,
     ) {}
 
     // OrderPlacedEvent: the stored placement route decides (docs/payments.md); a replay is guarded by the stored state.
@@ -51,7 +52,7 @@ export class ReservationPaymentService {
             await this.reserveOrRecord(
                 ctx,
                 order.id,
-                placement.reserveDays ?? defaultReservationDays(),
+                placement.reserveDays ?? this.settings.defaultReservationDays(),
                 'auto-trust-rule',
             );
             return;
@@ -87,7 +88,12 @@ export class ReservationPaymentService {
         // An over-limit order always waits for a manager (#188).
         const payments = await this.loadPayments(ctx, order);
         if (payments.some(p => p.metadata?.public?.creditLimitExceeded === true)) return;
-        await this.reserveOrRecord(ctx, order.id, defaultReservationDays(), 'auto-trust-rule');
+        await this.reserveOrRecord(
+            ctx,
+            order.id,
+            this.settings.defaultReservationDays(),
+            'auto-trust-rule',
+        );
     }
 
     private async reserveOrRecord(

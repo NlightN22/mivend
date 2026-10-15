@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import type { DataSource } from 'typeorm';
 
 import { ReservationExpiryService } from '../../reservation-expiry.service';
+import type { ReservationPluginOptions } from '../../types';
+import { ReservationSettings } from '../../reservation-settings';
 
 describe('ReservationExpiryService.expireDueReservations', () => {
     function createService(
@@ -9,6 +11,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         orderRows: unknown[] = [],
         rejectedOrders: unknown[] = [],
         rejectedReservations: unknown[] = [],
+        settings: ReservationPluginOptions = {},
     ): {
         service: ReservationExpiryService;
         txReservationRepo: {
@@ -76,6 +79,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
                 notificationService as never,
                 eventBus as never,
                 cancellation as never,
+                new ReservationSettings(settings),
             ),
             txReservationRepo,
             txOrderRepo,
@@ -317,6 +321,41 @@ describe('ReservationExpiryService.expireDueReservations', () => {
             customFields: { reservationState: 'RELEASED' },
         });
         expect(eventBus.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the intervention marks and still tries every notification when one fails, then fails the sweep', async () => {
+        const base = { creationMethod: 'auto-prepaid', interventionFlaggedAt: null };
+        const dueRows = [
+            { ...base, id: 'res-1', orderId: 'order-1', expiresAt: new Date('2026-01-01') },
+            { ...base, id: 'res-2', orderId: 'order-2', expiresAt: new Date('2026-01-01') },
+        ];
+        const { service, txReservationRepo, notificationService } = createService(dueRows);
+        notificationService.create.mockRejectedValueOnce(new Error('notify down'));
+
+        await expect(service.expireDueReservations()).rejects.toThrow('notify down');
+
+        expect(txReservationRepo.update).toHaveBeenCalledWith(
+            { id: expect.anything() },
+            expect.objectContaining({ interventionFlaggedAt: expect.any(Date) }),
+        );
+        expect(notificationService.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('uses rejectedOrderReleaseDays, not the reservation default, for the REJECTED deadline', async () => {
+        const { service, txOrderRepo } = createService([], [], [], [], {
+            defaultReservationDays: 30,
+            rejectedOrderReleaseDays: 1,
+        });
+        const before = Date.now();
+
+        await service.expireDueReservations();
+
+        const where = txOrderRepo.find.mock.calls[0][0] as {
+            where: { customFields: { erpStatusAt: { value: Date } } };
+        };
+        const cutoff = where.where.customFields.erpStatusAt.value.getTime();
+        expect(before - cutoff).toBeLessThan(2 * 24 * 60 * 60 * 1000);
+        expect(before - cutoff).toBeGreaterThanOrEqual(24 * 60 * 60 * 1000 - 1000);
     });
 
     it('leaves a REJECTED order alone before its own deadline (no due reservation returned)', async () => {

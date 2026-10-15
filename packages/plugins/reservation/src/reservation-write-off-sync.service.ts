@@ -10,80 +10,19 @@ import { ReservationReconciliationIssueService } from './reservation-reconciliat
 import { ReservationService } from './reservation.service';
 import { UnknownOrderUuidError } from './reservation-errors';
 import { loggerCtx } from './types';
+import type {
+    OrderChangedInput,
+    OrderRegistrationResultInput,
+} from './reservation-write-off-sync.types';
+
+export type {
+    OrderChangedInput,
+    OrderRegistrationResultInput,
+} from './reservation-write-off-sync.types';
 import { withAggregateLock } from 'shared';
 
-export interface OrderRegistrationResultInput {
-    // MiVend's own order uuid (mivend#207), echoed back by the ERP. Preferred correlation key
-    // over localOrderId/orderEntityId below; null only for results predating this field.
-    orderUuid: string | null;
-    // ERP-side order id — absent on a rejected result. Fallback correlation key only.
-    orderEntityId: string | null;
-    // Original order.confirmed request id, echoed back by the ERP — kept for error/log context.
-    requestEntityId: string | null;
-    // Local Order id, resolved by the caller from requestEntityId via integration_outbox
-    // (issue #204 follow-up). Preferred over orderEntityId whenever present.
-    localOrderId: string | null;
-    rejected: boolean;
-    // Already resolved from the ERP's productId to a Vendure ProductVariant id by the caller
-    // (erp-integration's OrderRegistrationResultHandler) — this service stays free of the
-    // Kafka/protobuf decode concern, same split as ReservationErpSyncService.
-    reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>;
-    // ERP productIds from reservedLines that the caller could NOT resolve to a ProductVariant at
-    // all — reported as a distinct ReservationReconciliationIssue (mivend.audit.72's HIGH
-    // finding), never silently folded into "not confirmed in this result yet."
-    unresolvedProductIds: string[];
-    // Staff-facing informational fields, persisted onto Order.customFields — never used in any
-    // release/quantity-match decision below. documentNumber is a real proto `optional string`
-    // (null means genuinely absent); status is a plain proto3 string ('' means absent, per the
-    // zero-value-omission rule — see external-integration-rules skill).
-    documentNumber: string | null;
-    status: string;
-    // BusinessRejectionReason.code/message (issue #204), non-null only when `rejected` is true.
-    rejectionReasonCode: string | null;
-    rejectionReasonText: string | null;
-}
-
-// Bridges erp.order.events.v1 (type `changed`) (issue #110/#72) — the order's ongoing,
-// current-state view fired repeatedly over its lifetime, unlike OrderRegistrationResultInput's
-// one-shot registration outcome. Reuses handleOrderRegistrationResult's release-matching logic
-// (releaseMatchingReservations below) rather than duplicating it: that matching is already
-// naturally idempotent/re-callable — it only ever acts on Reservation rows still `status:
-// 'active'` and only releases when local vs ERP quantity fully matches per variant, so a repeat
-// call with the same reservedQuantity is a safe no-op, and a later call with an updated quantity
-// is just a fresh comparison. There is no `rejected` concept on this stream (only
-// order-registration-result carries a business-rejection reason), so it is fixed at false for this
-// caller rather than exposed on this input shape.
-export interface OrderChangedInput {
-    // Real optional presence (mivend#207): absent for orders not registered through our
-    // integration. Preferred correlation key over orderEntityId below when present.
-    orderUuid: string | null;
-    orderEntityId: string;
-    // Plain proto3 string — '' means absent (zero-value-omission rule), passed through verbatim.
-    status: string;
-    reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>;
-    // Real proto `optional string` — null means genuinely not sent, not a zero-value.
-    contractId: string | null;
-    // Real proto `optional string` (field 15), sent on every emission; null/'' never clears a known number.
-    documentNumber?: string | null;
-    // mivend's own status derived from the stream's facts; null when none could be derived.
-    derivedStatus: string | null;
-    // OrderChanged.paid_amount in minor units; null/absent means not computed and never overwrites.
-    paidAmountMinor?: number | null;
-    // OrderChanged.reserve_until (field 32); null when not sent, never clears a known value.
-    reserveUntil?: Date | null;
-}
-
-// Bridges erp.order.events.v1 (type `registration-result`) into the local reservation domain
-// (issue #75, the real release trigger ReservationErpSyncService's own doc comment defers to).
-// This event is emitted as a direct, same-transaction consequence of ERP actually posting the
-// order document — genuinely stronger evidence than the generic order-status callback's bare
-// RESERVED/CONFIRMED labels, so this is the one place allowed to release a reservation before a
-// terminal CANCELLED.
-//
-// Deliberately never publishes ReservationReleasedEvent: that event drives an outbound "please
-// release" command back to the ERP (see plugin-sync's ReservationConsumer) — sending it right after
-// ERP itself just confirmed the write-off would be backwards, same reasoning as the abandoned
-// stockAllocated-bridge attempt this issue's history already worked through.
+// Bridges erp.order.events.v1 `registration-result` and `changed` into the reservation domain (#75).
+// Never publishes ReservationReleasedEvent: that would send a release command back to the ERP that just wrote off.
 @Injectable()
 export class ReservationWriteOffSyncService {
     constructor(
@@ -100,8 +39,7 @@ export class ReservationWriteOffSyncService {
         ctx: RequestContext,
         input: OrderRegistrationResultInput,
     ): Promise<void> {
-        // orderUuid first (mivend#207), then localOrderId, then orderEntityId as the last
-        // fallback for results that predate orderUuid.
+        // Correlation order: orderUuid (mivend#207), localOrderId, then orderEntityId.
         const orderId = input.orderUuid
             ? await this.findOrderIdByUuid(input.orderUuid)
             : input.localOrderId
@@ -110,8 +48,7 @@ export class ReservationWriteOffSyncService {
                 ? await this.findOrderIdByErpId(input.orderEntityId)
                 : null;
         if (!orderId) {
-            // mivend.audit.72 + issue #204 follow-up + issue #211: never a silent, permanent skip
-            // — throw a distinguishable type (see its own doc comment) and let the inbox retry.
+            // Never a silent skip: a distinguishable error lets the inbox retry (#211).
             throw new UnknownOrderUuidError(
                 `order-registration-result: no Order found via orderUuid=${input.orderUuid ?? ''}, ` +
                     `requestEntityId=${input.requestEntityId ?? ''} or orderEntityId=${input.orderEntityId ?? ''}`,
@@ -138,8 +75,7 @@ export class ReservationWriteOffSyncService {
             );
         }
 
-        // REJECTED is non-terminal (issue #204): captured here so a later, non-rejected result
-        // for the same order can clear both the reason fields and erpStatus back to SENT_TO_ERP.
+        // REJECTED is non-terminal (#204): a later non-rejected result clears the reason fields.
         const dictionary = await this.statuses.dictionary(ctx);
         const wasRejected = dictionary.has(order.customFields.erpStatus, 'rejected');
         const wasPending =
@@ -147,7 +83,6 @@ export class ReservationWriteOffSyncService {
             dictionary.has(order.customFields.erpStatus, 'initial');
         const missingErpOrderId = !order.customFields.erpOrderId && !!input.orderEntityId;
 
-        // Purely informational for staff — never read by the release/quantity-match logic below.
         const customFields: Partial<typeof order.customFields> = {
             erpRegistrationStatus: input.status,
         };
@@ -164,21 +99,17 @@ export class ReservationWriteOffSyncService {
             customFields.erpRejectionReasonCode = null;
             customFields.erpRejectionReasonText = null;
         }
-        // `repo.update()`, not `.save(order)` — see docs/concurrency.md; same gotcha as
-        // ReservationService.setOrderReservationState (unhydrated Order, calculated getters throw).
-        // Changed fields only: a full snapshot would erase a concurrent erpStatus/erpOrderId write.
+        // Changed fields only via repo.update(): a full snapshot would erase a concurrent write.
         await this.connection.getRepository(ctx, Order).update(order.id, { customFields });
         order.customFields = { ...order.customFields, ...customFields };
 
-        // erpStatus is owned by plugin-erp-order's ErpOrderService.updateStatus — never written
-        // directly here, same separation as ErpCallbackController's own order-status path.
+        // erpStatus is owned by plugin-erp-order's ErpOrderService.updateStatus.
         if (input.rejected) {
             this.eventBus.publish(
                 new ErpOrderStatusEvent(ctx, order.code, dictionary.codeWith('rejected')),
             );
         } else if (wasRejected || wasPending || missingErpOrderId) {
-            // Carries orderEntityId so ErpOrderService.updateStatus stores erpOrderId, the key later
-            // order-changed events correlate on; nothing else sets it in this flow.
+            // Carries orderEntityId so updateStatus stores erpOrderId, the later correlation key.
             this.eventBus.publish(
                 new ErpOrderStatusEvent(
                     ctx,
@@ -194,8 +125,6 @@ export class ReservationWriteOffSyncService {
                 await this.reconciliationIssueService.reportUnresolvedProductMapping(ctx, {
                     orderId,
                     externalProductId,
-                    // orderEntityId is absent on a rejected result; '' is purely informational
-                    // here, never a correlation key (that already happened above).
                     orderEntityId: input.orderEntityId ?? '',
                 });
             }
@@ -208,9 +137,7 @@ export class ReservationWriteOffSyncService {
         }
 
         if (input.rejected) {
-            // Never release on a rejection — per the user's own framing, ERP will eventually
-            // resolve the underlying document one way or the other (re-post, manual correction,
-            // or a genuine CANCELLED, which ReservationErpSyncService already handles).
+            // Never release on a rejection: the ERP resolves it (re-post, correction or CANCELLED).
             Logger.warn(
                 `order-registration-result: order ${orderId} (erp ${input.orderEntityId ?? ''}) was ` +
                     'rejected by the ERP — leaving reservations active',
@@ -230,14 +157,9 @@ export class ReservationWriteOffSyncService {
         );
     }
 
-    // Issue #110: bridges erp.order.events.v1 (type `changed`). Only the FK resolve (entityId
-    // → productId, both handled by the caller, erp-integration's OrderChangedStreamHandler) and
-    // the informational customFields differ from handleOrderRegistrationResult above — the actual
-    // release-matching logic is shared via releaseMatchingReservations, see OrderChangedInput's
-    // own doc comment for why reuse is safe here.
+    // #110: release matching is shared with the registration result via releaseMatchingReservations.
     async handleOrderChanged(ctx: RequestContext, input: OrderChangedInput): Promise<void> {
-        // orderUuid first (mivend#207/search-platform#180) when present; orderEntityId otherwise
-        // (orders not registered through our integration carry no orderUuid at all).
+        // Orders not registered through our integration carry no orderUuid.
         const orderId = input.orderUuid
             ? await this.findOrderIdByUuid(input.orderUuid)
             : await this.findOrderIdByErpId(input.orderEntityId);
@@ -245,8 +167,7 @@ export class ReservationWriteOffSyncService {
             ? await this.connection.getRepository(ctx, Order).findOne({ where: { id: orderId } })
             : null;
         if (!orderId || !order) {
-            // Same cross-entity-dependency retry rule as handleOrderRegistrationResult above
-            // (external-integration-rules skill) — issue #211: same distinguishable error type.
+            // Same retryable error as handleOrderRegistrationResult (#211).
             throw new UnknownOrderUuidError(
                 `order-changed: no Order found via orderUuid=${input.orderUuid ?? ''} or ` +
                     `orderEntityId=${input.orderEntityId}`,
@@ -257,8 +178,7 @@ export class ReservationWriteOffSyncService {
             erpOrderStatus: input.status,
         };
         if (input.contractId !== null) {
-            // Real optional presence: an absent contractId on a later event does not mean the
-            // order lost its contract — never overwrite an already-known value with null.
+            // An absent contractId on a later event never overwrites a known one.
             customFields.erpContractId = input.contractId;
         }
         if (input.documentNumber) {
@@ -267,12 +187,15 @@ export class ReservationWriteOffSyncService {
         if (input.paidAmountMinor != null) {
             customFields.erpPaidAmount = input.paidAmountMinor;
         }
-        // `repo.update()`, not `.save(order)` — same calculated-getter gotcha as
-        // handleOrderRegistrationResult above.
         await this.connection.getRepository(ctx, Order).update(order.id, { customFields });
         order.customFields = { ...order.customFields, ...customFields };
 
-        await this.orderErpStatus.apply(ctx, order, input.derivedStatus);
+        await this.orderErpStatus.apply(
+            ctx,
+            order,
+            input.derivedStatus,
+            input.derivedStatusAt ?? null,
+        );
 
         await this.erpReserve.record(ctx, orderId, input.reservedLines, input.reserveUntil ?? null);
         await this.releaseMatchingReservations(
@@ -301,9 +224,7 @@ export class ReservationWriteOffSyncService {
             return;
         }
 
-        // Aggregated by variant, not per reservation row: an order can have two active
-        // reservations for the same variant (two order lines), while the ERP reports one confirmed
-        // quantity per product — variant-level is the only shape actually comparable to that.
+        // Per variant, not per row: the ERP reports one quantity per product, an order may have two lines of it.
         const erpQuantityByVariant = new Map<string, number>();
         for (const line of reservedLines) {
             erpQuantityByVariant.set(
@@ -330,8 +251,7 @@ export class ReservationWriteOffSyncService {
             // Once a warehouse order exists the ERP may have closed the reserve; zero is normal.
             const closedByOrderScheme = warehouseOrderExists && erpQuantity === 0;
             if (erpQuantity !== localQuantity && !closedByOrderScheme) {
-                // The ERP is the source of truth (#199): it holds whatever it reserved, so our hold
-                // is released like a matching one; the difference is only recorded for staff.
+                // The ERP is the source of truth (#199): release anyway, record the difference.
                 await this.reconciliationIssueService.reportQuantityMismatch(ctx, {
                     orderId,
                     productVariantId: variantId,
@@ -372,9 +292,7 @@ export class ReservationWriteOffSyncService {
         }
     }
 
-    // Order.customFields.erpOrderId is declared by plugin-erp-order's module augmentation — raw
-    // SQL sidesteps any doubt about whether that augmentation is visible through this plugin's
-    // own tsc build, same established pattern as plugin-documents' findOrderIdByErpId.
+    // Raw SQL: plugin-erp-order's customField augmentation is not visible to this plugin's tsc build.
     private async findOrderIdByErpId(orderEntityId: string): Promise<string | null> {
         const result = await this.connection.rawConnection.query(
             `SELECT id FROM "order" WHERE "customFieldsErporderid" = $1 LIMIT 1`,
@@ -383,8 +301,6 @@ export class ReservationWriteOffSyncService {
         return result[0]?.id ? String(result[0].id) : null;
     }
 
-    // Order.customFieldsUuid (mivend#207, unique-indexed) — same raw-SQL pattern as
-    // findOrderIdByErpId above, for the same module-augmentation-visibility reason.
     private async findOrderIdByUuid(orderUuid: string): Promise<string | null> {
         const result = await this.connection.rawConnection.query(
             `SELECT id FROM "order" WHERE "customFieldsUuid" = $1 LIMIT 1`,

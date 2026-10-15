@@ -18,7 +18,12 @@ export class OrderErpStatusService {
         private statusReference: OrderStatusReferenceService,
     ) {}
 
-    async apply(ctx: RequestContext, order: Order, derived: string | null): Promise<void> {
+    async apply(
+        ctx: RequestContext,
+        order: Order,
+        derived: string | null,
+        occurredAt: Date | null = null,
+    ): Promise<void> {
         if (derived === null) return;
         if ((await this.statusReference.dictionary(ctx)).has(derived, 'cancelled')) {
             await this.cancel(ctx, order);
@@ -33,7 +38,7 @@ export class OrderErpStatusService {
             await repo.update(order.id, {
                 customFields: { erpStatus: derived, erpStatusAt: new Date() },
             });
-            await this.statusHistory.record(txCtx, order.id, derived);
+            await this.statusHistory.record(txCtx, order.id, derived, occurredAt);
         });
     }
 

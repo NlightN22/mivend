@@ -13,6 +13,7 @@ import {
     TestStockLevel,
     useReserveOrderHarness,
 } from './reserve-order.harness';
+import { ReservationSettings } from '../../reservation-settings';
 
 const h = useReserveOrderHarness('reserve_order_placement_race');
 
@@ -29,6 +30,7 @@ describe('auto-reserve on placement vs manual confirm (real Postgres)', () => {
                 getSettings: async () => ({ customFields: { autoReserveOnPlacement: true } }),
             } as never,
             failures as unknown as ReservationFailureService,
+            new ReservationSettings({}),
         );
     }
 

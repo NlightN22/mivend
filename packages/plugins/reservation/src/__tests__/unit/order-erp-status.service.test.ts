@@ -45,7 +45,7 @@ describe('OrderErpStatusService.apply', () => {
         expect(orderRepo.update).toHaveBeenCalledWith('order-1', {
             customFields: { erpStatus: 'PICKING', erpStatusAt: expect.any(Date) },
         });
-        expect(statusHistory.record).toHaveBeenCalledWith(ctx, 'order-1', 'PICKING');
+        expect(statusHistory.record).toHaveBeenCalledWith(ctx, 'order-1', 'PICKING', null);
     });
 
     it.each(['PICKING', 'SHIPPING', 'CANCELLED'])(

@@ -1459,6 +1459,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             ctx,
             expect.objectContaining({ id: 'order-1' }),
             'PICKING',
+            null,
         );
     });
 });

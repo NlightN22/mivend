@@ -24,35 +24,8 @@ export class ReservationAvailabilityService {
         private warehouseService: WarehouseService,
     ) {}
 
-    // ATP = stockOnHand - stockAllocated - activeReservations, capped per-location at the ERP's own
-    // availableQuantity where known (issue #72's revised formula) — ERP is the sole source of
-    // truth for reservations, since it receives holds from other channels that never reach
-    // mivend as events at all, so its own number is the only defense against those.
-    //
-    // A local Reservation is subtracted for as long as it stays `status: 'active'` — REGARDLESS
-    // of erpConfirmedAt. An earlier revision of this method stopped subtracting a reservation
-    // once ERP confirmed it, reasoning that the ERP's own availableQuantity would already reflect the
-    // hold by then and double-subtracting would understate ATP. That reasoning solved a minor,
-    // harmless problem (a slightly-too-conservative number) by creating a real one: if the ERP's own
-    // StockChanged confirming the hold was itself delayed or dropped, NEITHER number reflected
-    // the held unit for that whole window — a genuine oversell risk (mivend.audit.72 HIGH).
-    // Reverted per the same reasoning that makes the cap below safe in the first place: min() by
-    // definition never double-subtracts, it only ever picks the more conservative of the two
-    // numbers — so there was never anything to protect against. Keeping the local subtraction
-    // permanent for the reservation's whole active lifetime closes that window entirely: the
-    // held unit is accounted for locally from the moment it's created until it's actually
-    // released (today: only a real CANCELLED does that — see ReservationErpSyncService, which
-    // deliberately does NOT release on RESERVED/CONFIRMED/SHIPPED/DELIVERED either, for the same
-    // "don't trust an unverified status" reasoning), with the ERP's own number only ever tightening
-    // the cap further (for holds from OTHER channels mivend has no reservation row for at all),
-    // never being the sole thing standing between "held" and "shown as free".
-    //
-    // The cap is applied PER StockLocation, not after summing across locations — the ERP's
-    // availableQuantity is itself location-scoped (StockChanged is per warehouse), so capping
-    // after summing would mix numbers from different scopes. No cap is applied for a location ERP
-    // has never reported a StockChanged for (erpAvailableQuantity still null) — falls back to the
-    // local-only number for that location, same bootstrap behavior as every other ERP-sourced
-    // field in this codebase.
+    // ATP = onHand - allocated - active reservations, capped per location at the ERP's availableQuantity.
+    // Decision history: docs/order-flow.md "Available-to-promise formula".
     async getAvailableToPromise(
         ctx: RequestContext,
         productVariantId: ID,
@@ -173,9 +146,7 @@ export class ReservationAvailabilityService {
         return byLocation;
     }
 
-    // No branchId (or no Warehouse resolves for it — e.g. not yet synced): fall back to the
-    // single default StockLocation, matching this service's pre-multi-warehouse behavior exactly
-    // — a deliberate no-regression guarantee for callers that don't pass a branch.
+    // Without a branch (or a resolvable Warehouse) the single default StockLocation is used.
     private async resolveStockLocationIds(
         ctx: RequestContext,
         branchId?: string | null,

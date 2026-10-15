@@ -5,6 +5,7 @@ import { ReservationPaymentService } from '../../reservation-payment.service';
 import { ReservationService } from '../../reservation.service';
 import { ReservationFailureService } from '../../reservation-failure.service';
 import { ErpExportDataMissingError, InsufficientStockError } from '../../reservation-errors';
+import { ReservationSettings } from '../../reservation-settings';
 
 function createMockOrderRepo(order: unknown): {
     findOne: ReturnType<typeof vi.fn>;
@@ -82,6 +83,7 @@ describe('ReservationPaymentService', () => {
             reservationService as unknown as ReservationService,
             { getSettings: async () => ({ customFields: { autoReserveOnPlacement } }) } as never,
             failureService as unknown as ReservationFailureService,
+            new ReservationSettings({}),
         );
     });
 

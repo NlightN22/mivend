@@ -254,8 +254,9 @@ a confirmed business need for it.
 Defaults: **30 days for prepaid** (card, `after-payment` route), **3 days for non-prepaid** (credit
 terms, manual confirmation, auto-reserve), `BranchSettings.prepaymentReserveDays` for prepayment orders.
 The non-prepaid default is the `ReservationPlugin.init({ defaultReservationDays })` option (read through
-`defaultReservationDays()`, never the constant); it also seeds `Order.customFields.reservationDays`, which
-staff can change per order before confirming. The ERP-rejection release timeout reuses the same value.
+`ReservationSettings.defaultReservationDays()`, never the constant); it also seeds `Order.customFields.reservationDays`, which
+staff can change per order before confirming. The ERP-rejection release timeout is a separate option,
+`rejectedOrderReleaseDays` (default 3), read through `ReservationSettings.rejectedOrderReleaseDays()`.
 Per-channel/per-customer-segment overrides are not needed for stage 1.
 
 **On expiry**:
@@ -588,3 +589,30 @@ the above is stable.
 - The result is a union: `OrderCancelSuccess { outcome }` or `OrderCancelRefused { reason, message }`
   with reason SHIPPED | IN_PROGRESS | PAID | REGISTRATION_REJECTED (outcomes: CANCELLED | CANCEL_REQUESTED | ALREADY_CANCELLED; `LEFT_TO_ERP` stays internal to the deadline path). A refusal is
   a result, not an exception. Rules: `docs/order-contracts.md`, "Cancellability" and "Who may cancel".
+
+## Available-to-promise formula
+
+ATP = `stockOnHand` - `stockAllocated` - active local reservations, capped per StockLocation at the
+ERP's own `availableQuantity` where known (issue #72). The ERP is the only source that sees holds from
+other channels, so its number is the defense against those.
+
+- A local reservation is subtracted for its whole `active` lifetime, regardless of `erpConfirmedAt`. Stopping
+  at ERP confirmation (an earlier revision) left a window where neither number reflected the hold if the ERP's
+  confirming stock event was delayed or dropped, an oversell risk (audit 72). The `min()` cap never
+  double-subtracts, so there was nothing to protect against.
+- A reservation is released locally only on a real `CANCELLED`; `RESERVED`/`CONFIRMED`/`SHIPPED`/`DELIVERED`
+  statuses deliberately do not release it (an unverified status is not trusted).
+- The cap is per StockLocation because the ERP's `availableQuantity` is per warehouse; capping after summing
+  would mix scopes. A location the ERP never reported a stock change for has no cap (local number only).
+- Without a branch, or when no Warehouse resolves for it, the default StockLocation is used.
+
+## Event subscribers and the stale order save
+
+The reservation plugin's event subscribers use `subscribeAndLog` (a bare fire-and-forget `.subscribe()` hid
+failures) and a fresh `RequestContext`, never `event.ctx`. `event.ctx` is the still-open transaction of the
+`OrderService.transitionToState()` call that published the event, and that call saves its own stale in-memory
+order after publishing. A subscriber write on that shared connection can land before the trailing save and be
+silently reverted (`reservationState` kept going back to `NOT_REQUIRED`). A fresh context runs on its own
+connection, and `writeOrderReservationState` re-verifies the write and retries a bounded number of times.
+It writes with `repo.update()` of the changed keys only, because `.save(order)` recomputes calculated fields
+(`taxSummary`) that need relations a narrow load does not have.
