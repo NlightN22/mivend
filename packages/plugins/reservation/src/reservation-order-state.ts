@@ -8,9 +8,8 @@ const CLEARED_FAILURE = {
     reservationFailedAt: null,
 } as const;
 
-// Writes only the changed keys via repo.update(): .save(order) recomputes calculated fields and needs
-// relations a narrow load lacks. The write is re-verified because Vendure's transitionToState()
-// saves its own stale order object after publishing the event (docs/order-flow.md "Order state write").
+// Not save(): it recomputes calculated fields and needs relations a narrow load lacks.
+// Re-read after writing: transitionToState() saves its own stale order after publishing the event.
 export async function writeOrderReservationState(
     connection: TransactionalConnection,
     ctx: RequestContext,

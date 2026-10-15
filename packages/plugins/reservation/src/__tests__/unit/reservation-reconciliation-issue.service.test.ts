@@ -32,9 +32,8 @@ describe('ReservationReconciliationIssueService', () => {
         );
     });
 
-    // mivend.audit.72's second-pass MEDIUM finding: handleOrderRegistrationResult isn't atomic —
-    // a retry after a partial failure re-runs the whole handler, so report() must not insert a
-    // second row for the same still-open drift.
+    // Handler is not atomic: a retry after partial failure re-runs it, so report() must not insert
+    // a second row for the same still-open drift.
     it('reportQuantityMismatch returns the existing open issue instead of inserting a duplicate', async () => {
         const existing = { id: 'issue-1' };
         repo.findOne.mockResolvedValue(existing);
@@ -71,9 +70,7 @@ describe('ReservationReconciliationIssueService', () => {
         );
     });
 
-    // handleOrderRegistrationResult runs from an inbox handler with no signed-in administrator —
-    // rather than skip notifying (the old behavior), this now broadcasts to every administrator
-    // (issue #87 Part 2).
+    // Runs from an inbox handler with no signed-in admin, so it broadcasts to all admins.
     it('creates an administrator-broadcast Notification when a new issue is recorded (no signed-in administrator)', async () => {
         await service.reportQuantityMismatch(ctx, {
             orderId: 'order-1',
@@ -129,18 +126,13 @@ describe('ReservationReconciliationIssueService', () => {
         expect(repo.save).not.toHaveBeenCalled();
     });
 
-    // mivend.audit.common's HIGH finding on issue #76: findOpen had no branch/counterparty
-    // scoping at all, so a branch-scoped manager saw reconciliation issues company-wide. Mirrors
-    // OrderVisibilityService's own mock-query-builder unit test style (see
-    // order-visibility.service.test.ts) since this joins the same order/customer/counterparty
-    // shape the real query does.
+    // findOpen must be scoped by branch and counterparty; unscoped, branch managers see company-wide issues.
+    // The mock query builder must mirror the real order/customer/counterparty join shape.
     describe('findOpen scope filtering', () => {
         function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
             const qb: Record<string, ReturnType<typeof vi.fn>> = {};
-            // .mockReturnThis() (not `vi.fn(() => qb)`) avoids a self-referential generic that
-            // `tsc -b`'s stricter project-build typecheck rejects (not caught by `make test`'s
-            // plain vitest run — surfaced only when packages/dashboard's Docker build ran
-            // `pnpm build:plugins`, issue #115).
+            // Use .mockReturnThis(), not vi.fn(() => qb): tsc -b rejects the self-referential generic.
+            // Plain vitest does not catch this; only the stricter project-build typecheck does.
             qb.where = vi.fn().mockReturnThis();
             qb.leftJoin = vi.fn().mockReturnThis();
             qb.andWhere = vi.fn().mockReturnThis();

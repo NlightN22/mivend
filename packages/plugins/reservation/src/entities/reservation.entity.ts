@@ -6,22 +6,8 @@ import type { ReservationCreationMethod } from '../types';
 
 export type ReservationStatus = 'active' | 'released' | 'expired';
 
-// One row per order line — created by ReservationService.reserveOrder() (manual confirm today,
-// auto-prepaid/auto-trust-rule later — see docs/order-flow.md). Soft reservation only: reduces
-// ATP (stockOnHand - stockAllocated - active reservations) for other orders/catalog, never
-// touches stockOnHand/stockAllocated itself.
-//
-// Stays `active` (and keeps being subtracted from ATP) through RESERVED/CONFIRMED — those are
-// bare status labels on the generic order-status callback with no reliable guarantee that the ERP has
-// actually written off physical stock yet (see ReservationErpSyncService's own doc comment for
-// the full reasoning and the two abandoned approaches this settled on instead of). Only a real
-// CANCELLED releases it today; the actual "ERP really wrote this off" release trigger — the ERP's
-// per-line reservedLines on erp.order.events.v1 (type `registration-result`) — is not consumed
-// yet (issue #72/#74).
-//
-// At most one active reservation per (orderLineId, stockLocationId) — enforced by the partial
-// unique index below, the DB-level safety net docs/order-flow.md's "Idempotency" section calls
-// for (same idiom as plugin-sync's sync_outbox unique-eventId index).
+// Stays active through RESERVED/CONFIRMED: those callbacks don't guarantee ERP wrote off stock.
+// Only CANCELLED releases it until the ERP registration-result release is consumed.
 @Index('idx_reservation_active_line_location', ['orderLineId', 'stockLocationId'], {
     unique: true,
     where: `"status" = 'active'`,
@@ -63,16 +49,11 @@ export class Reservation extends UuidEntity {
     @Column({ type: 'varchar' })
     stockLocationId!: string;
 
-    // Denormalized from the order's customFields.branchId at reserveOrder() time (itself
-    // denormalized from the customer's preferred TradingPoint — see ErpOrderService and
-    // docs/access-control.md's branch-scope axis). Nullable: an order with no resolved trading
-    // point simply has no branch scope, same as any other optional custom field.
+    // Copied at reserveOrder() time. Null means the order has no branch scope, not an error.
     @Column({ type: 'varchar', nullable: true })
     branchId!: string | null;
 
-    // Bumped each time a line is re-reserved after a prior hold on it was released/expired —
-    // part of the idempotency key docs/order-flow.md describes
-    // (orderId + orderLineId + stockLocationId + reservationGeneration).
+    // Bumped on re-reserve after a release/expiry; keeps the new hold's idempotency key distinct.
     @Column({ type: 'int', default: 1 })
     reservationGeneration!: number;
 
@@ -82,30 +63,19 @@ export class Reservation extends UuidEntity {
     @Column({ type: 'varchar', nullable: true })
     confirmedByAdministratorId!: string | null;
 
-    // Set once when an auto-prepaid reservation is found past-due (see
-    // ReservationService.expireDueReservations) — guards against re-logging the same
-    // needs-intervention warning on every worker poll. Prepaid reservations are never silently
-    // released, so this is the only state change that happens on their expiry today (see
-    // docs/order-flow.md "On expiry"); a real staff notification is tracked separately.
+    // Guards against re-logging the needs-intervention warning on every worker poll.
+    // Prepaid reservations are never silently released on expiry, so this is their only expiry change.
     @Column({ type: 'timestamp', nullable: true })
     interventionFlaggedAt!: Date | null;
 
-    // Stable idempotency key for the ERP outbox "confirmed" command (see docs/order-flow.md "ERP
-    // integration" — "Each command needs a stable reservationOperationId so ERP can safely
-    // receive the same command twice without creating a duplicate document/reservation").
-    // Generated once at reserveOrder() write time; used as sync_outbox's eventId by
-    // plugin-sync's ReservationConsumer. A separate id is used for the "released" command (see
-    // erpReleaseOperationId) — sync_outbox's eventId is unique, so confirm and release can never
-    // share one without colliding.
+    // Stable so ERP can receive the same confirm command twice without a duplicate document.
+    // Must differ from erpReleaseOperationId: sync_outbox eventId is unique, so the two would collide.
     @Column({ type: 'varchar' })
     erpOperationId!: string;
 
     @Column({ type: 'varchar', nullable: true })
     erpReleaseOperationId!: string | null;
 
-    // Set once when the ERP's own order-status callback reports RESERVED/CONFIRMED for this
-    // reservation's order — closes the loop for staff visibility that ERP actually picked up
-    // the command (see ReservationService.handleErpOrderStatus).
     @Column({ type: 'timestamp', nullable: true })
     erpConfirmedAt!: Date | null;
 }

@@ -95,9 +95,8 @@ export class ReservationResolver {
         return this.reconciliationIssueService.findOpen(ctx, args.options);
     }
 
-    // ConfirmOrder covers both confirm and release — one staff action from the operator's
-    // perspective (see docs/order-flow.md "Permissions"). Extend stays on UpdateOrder — the
-    // doc only scopes ConfirmOrder to "confirm + release".
+    // Confirm and release share one permission: one staff action from the operator's view.
+    // Extend stays under UpdateOrder; the permissions doc scopes ConfirmOrder to confirm+release only.
     @Transaction()
     @Mutation()
     @Allow(CustomPermission.ConfirmOrder.Permission)

@@ -13,31 +13,8 @@ import { Reservation } from '../../../entities/reservation.entity';
 import { ReservationExpiryService } from '../../../reservation-expiry.service';
 import { ReservationSettings } from '../../../reservation-settings';
 
-// Component test for the actual sweep→expire→release chain the reservation-expiry ScheduledTask
-// triggers on a timer (packages/plugins/reservation/src/reservation-expiry.scheduled-task.ts) —
-// the task itself is thin Vendure ScheduledTask wiring around
-// ReservationExpiryService.expireDueReservations(), so this file calls that method directly
-// against real Postgres (no scheduler wiring needed — see docs/testing-strategy.md's "Worker
-// testing": the scheduler wiring gets one separate, minimal integration check, not exercised by
-// every component test). Unit tests already cover the
-// manual/auto-trust-rule/auto-prepaid/already-flagged branching with mocks
-// (reservation-expiry.service.test.ts) — this file only proves the real-DB transaction and
-// concurrency behavior, which mocks can't.
-//
-// Unlike ReservationService (see reserve-order.concurrency.test.ts), ReservationExpiryService
-// intentionally takes a raw DataSource, not a TransactionalConnection (documented in that file:
-// it runs outside any HTTP request, same pattern as SyncService.processOutbox) — so there is no
-// connectionShim seam to substitute test entities through. It also calls
-// `manager.getRepository(Reservation)` / `manager.getRepository(Order)` using the *real* Vendure
-// entity classes directly; those need a bootstrap-time EntityIdStrategy Order in particular has
-// far too many relations (customer, channels, shipping, etc.) to isolate in a standalone
-// DataSource. Instead of changing the service (an intentional, documented design — not something
-// to alter just for testability) or bootstrapping full Vendure, this file passes the real
-// ReservationExpiryService a `DataSource`-shaped object whose `.transaction()` wraps the real
-// transaction and hands the service an EntityManager proxy that redirects
-// `getRepository(Reservation|Order)` to hand-rolled tables mirroring production schema — the same
-// substitution idea `reserve-order.concurrency.test.ts`'s connectionShim uses, just applied at
-// the DataSource/EntityManager boundary instead of TransactionalConnection.
+// Service takes a raw DataSource and real Vendure entity classes; Order is too heavy to
+// isolate standalone, so the fake sits at the DataSource/EntityManager boundary, not the service.
 
 // Embedded type (flattened columns), not jsonb — mirrors Vendure's own CustomOrderFields
 // storage, needed for the REJECTED-deadline query's `where: { customFields: { ... } }` below.

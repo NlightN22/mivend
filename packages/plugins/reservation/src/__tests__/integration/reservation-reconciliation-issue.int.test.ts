@@ -10,9 +10,8 @@ import {
 
 import { ReservationReconciliationIssueService } from '../../reservation-reconciliation-issue.service';
 
-// Same approach as plugin-acquiring's proforma invoice.service.int.test.ts: ReservationReconciliationIssue
-// extends VendureEntity, which needs a bootstrapped EntityIdStrategy — mirror the production
-// table with a standalone TypeORM entity against real Postgres instead of using the real class.
+// The real class extends VendureEntity, which requires a bootstrapped EntityIdStrategy;
+// so this test mirrors the production table with a standalone entity on real Postgres.
 @Entity('reservation_reconciliation_issue')
 @Index(['orderId'])
 class TestReservationReconciliationIssue {

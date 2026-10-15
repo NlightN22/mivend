@@ -6,9 +6,8 @@ import { withAggregateLock } from 'shared';
 import { OrderCancelResultService } from './order-cancel-result.service';
 import { loggerCtx } from './types';
 
-// Applies the ERP status code carried by order-changed. A cancelled status goes through the cancel-result
-// path (local cancel + status event); any other status only moves erpStatus forward, decided on a
-// fresh read under the order lock and written as changed keys only.
+// Fresh read under the order lock; write only changed keys so concurrent updates aren't clobbered.
+// Cancelled must use the cancel-result path (local cancel + event), not a plain erpStatus write.
 @Injectable()
 export class OrderErpStatusService {
     constructor(

@@ -27,9 +27,8 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         eventBus: { publish: ReturnType<typeof vi.fn> };
         cancellation: { cancel: ReturnType<typeof vi.fn> };
     } {
-        // expireDueReservations reads the TTL-due rows and (only when REJECTED orders were
-        // found) the REJECTED-due rows via createQueryBuilder().setLock(...).getMany() — see
-        // reservation-expiry.service.ts's SKIP LOCKED comment — not repo.find().
+        // Lock must be taken via createQueryBuilder().setLock(); repo.find() would not lock the rows.
+        // See the SKIP LOCKED note in reservation-expiry.service.ts for why rows are locked this way.
         let reservationQueryCall = 0;
         const reservationQueryBuilder = {
             setLock: vi.fn().mockReturnThis(),

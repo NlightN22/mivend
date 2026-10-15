@@ -21,9 +21,8 @@ import { freeQuantity } from '../../free-stock';
 import { Reservation } from '../../entities/reservation.entity';
 import { ReservationAvailabilityService } from '../../reservation-availability.service';
 
-// Schema-faithful replicas of the Vendure tables the raw SQL touches (the real entities need a
-// bootstrapped EntityIdStrategy). Drift guard: the SQL filter and getAvailableToPromiseBatch
-// run over the same fixtures and must agree.
+// Replicas of the Vendure tables: real entities need a bootstrapped EntityIdStrategy to load.
+// Drift guard: the SQL filter and getAvailableToPromiseBatch must run over the same fixtures.
 @Entity('channel')
 class TChannel {
     @PrimaryGeneratedColumn() id!: number;

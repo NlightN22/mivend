@@ -7,23 +7,8 @@ import { Reservation } from './entities/reservation.entity';
 import { ReservationService } from './reservation.service';
 import { loggerCtx } from './types';
 
-// Bridges the ERP's own order-status callback into the local reservation domain — see
-// docs/order-flow.md "ERP integration" and this project's explicit decision that the ERP wins in
-// conflicts. Split out of ReservationService to keep that file under AGENTS.md's ~300-line
-// guideline.
-//
-// Deliberately does NOT release a reservation on RESERVED/CONFIRMED/SHIPPED/DELIVERED (reverted
-// 2026-09-05, same day it was added): those are bare status labels on the generic order-status
-// callback, with no reliable guarantee that the ERP has actually written off the physical stock at
-// that point — RESERVED in particular may just mean "the ERP acknowledged/queued the document," not
-// "posted it." Releasing on an unverified status reopens exactly the oversell window the
-// "subtract Reservation for its entire active lifetime" ATP rule (see
-// ReservationAvailabilityService) exists to close, with no backstop yet (issue #73's
-// reconciliation worker isn't built). The real release trigger needs to be
-// erp.order.events.v1 (type `registration-result`)'s per-line reservedLines (issue #72/#74) —
-// not implemented yet. Until then, only a genuine CANCELLED keeps releasing (that one really is
-// terminal and ERP-authoritative); RESERVED/CONFIRMED only record erpConfirmedAt for staff
-// visibility, same as before this whole release-on-status detour.
+// Only CANCELLED releases a reservation: it is terminal and ERP-authoritative.
+// RESERVED/CONFIRMED may only mean 'queued', so releasing on them reopens oversell.
 @Injectable()
 export class ReservationErpSyncService {
     constructor(

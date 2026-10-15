@@ -65,10 +65,8 @@ describe('ReservationErpSyncService.handleErpOrderStatus', () => {
         expect(reservationService.releaseReservations).toHaveBeenCalledWith(ctx, 'order-1');
     });
 
-    // RESERVED/CONFIRMED being unconfirmed status labels rather than a proven write-off, and
-    // SHIPPED/DELIVERED not being a proven release trigger either without consuming
-    // order-registration-result's reservedLines (issue #72/#74) — see this service's own doc
-    // comment for the two abandoned attempts that tried to release earlier.
+    // RESERVED/CONFIRMED are unconfirmed status labels, not a proven write-off.
+    // SHIPPED/DELIVERED don't release either until order-registration-result consumes reservedLines.
     it('ignores statuses outside the reservation domain (PENDING/SENT_TO_ERP/PICKING/SHIPPING/DELIVERED)', async () => {
         for (const status of ['PENDING', 'SENT_TO_ERP', 'PICKING', 'SHIPPING', 'DELIVERED']) {
             await service.handleErpOrderStatus(ctx, 'ORD-1', status);

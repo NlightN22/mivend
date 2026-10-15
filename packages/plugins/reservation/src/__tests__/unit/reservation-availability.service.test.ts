@@ -231,9 +231,8 @@ describe('ReservationAvailabilityService', () => {
             ],
         });
         const available = await service.getAvailableToPromise(ctx, 'variant-1');
-        // 15 - 3 - 4 = 8, regardless of confirm state — closes the oversell window that existed
-        // when a confirmed reservation stopped being subtracted locally while waiting for the ERP's
-        // own StockChanged to catch up.
+        // Confirmed reservations must stay subtracted: releasing them early opens an oversell window
+        // until the ERP's StockChanged event has caught up with the local count.
         expect(available).toBe(8);
     });
 

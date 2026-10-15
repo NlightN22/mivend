@@ -21,11 +21,8 @@ export class ReservationExtensionService {
         private extensionLimitService: ReservationExtensionLimitService,
     ) {}
 
-    // "managers can extend up to a configured maximum without additional approval" (see
-    // docs/architecture.md) — the caller's role must have a ReservationExtensionLimit row, and
-    // additionalDays must not exceed it. No row configured means no self-service extension is
-    // allowed for that role (safe default, mirrors CreditTermLimitService's absence-is-strict
-    // convention).
+    // A missing ReservationExtensionLimit row for the role denies self-service extension (fail closed).
+    // additionalDays is capped by the row's value; absence is strict, as in CreditTermLimitService.
     async extendReservation(
         ctx: RequestContext,
         orderId: ID,

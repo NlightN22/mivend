@@ -63,10 +63,8 @@ function createMockStockLevelRepo(
     };
 }
 
-// mivend#85's ERP-export-readiness gate reads Product.customFields.externalId via raw SQL
-// (select/addSelect/from/where/getRawMany) — this mock defaults to resolving every productId to
-// its own `ext-<productId>` externalId; tests that need a missing productId override
-// getRawMany to omit that row.
+// Stands in for the raw-SQL Product.customFields.externalId lookup the ERP export gate runs;
+// tests needing a missing externalId must override getRawMany to omit that row.
 function createMockRawQueryBuilder(
     productExternalIds: Record<string, string>,
 ): ReturnType<typeof vi.fn> {
@@ -156,9 +154,8 @@ describe('ReservationService', () => {
                 work(txCtx),
             ),
             rawConnection: {
-                // setOrderReservationState's self-verifying retry loop reads this back — echo the
-                // most recent update() call's target state so it always matches on the first
-                // attempt and the test doesn't pay the real setTimeout delay.
+                // setOrderReservationState's retry loop reads back state: echo the last update() target
+                // so the first attempt matches and the real setTimeout delay is skipped.
                 query: vi.fn(async () => {
                     const lastCall = orderRepo.update.mock.calls.at(-1) as
                         | [unknown, { customFields?: { reservationState?: string } }]
@@ -387,10 +384,8 @@ describe('ReservationService', () => {
             await expect(service.confirmOrder(ctx, 'order-1', 3)).resolves.toBeDefined();
         });
 
-        // mivend#85: ReservationService.reserveOrder() gates on the same data
-        // erp-integration's order.confirmed event needs, so a reservation the outbound event
-        // could never report never gets written in the first place (see
-        // ErpExportDataMissingError's doc comment).
+        // reserveOrder() checks the same data the order.confirmed event needs; a reservation
+        // that event could never report is never written (see ErpExportDataMissingError).
         it('rejects the whole order when the customer has no Counterparty', async () => {
             counterpartyService.getForCustomer.mockResolvedValue(null);
 

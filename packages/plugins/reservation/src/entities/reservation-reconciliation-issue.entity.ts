@@ -5,17 +5,8 @@ import { Column, Entity, Index } from 'typeorm';
 export type ReservationReconciliationIssueType = 'QUANTITY_MISMATCH' | 'UNRESOLVED_PRODUCT_MAPPING';
 export type ReservationReconciliationIssueStatus = 'open' | 'resolved';
 
-// A detected drift between mivend's own reservation state and the ERP's own confirmed write-off
-// (erp.order.events.v1 (type `registration-result`), issue #75) — for a human to resolve,
-// never auto-picked one way or the other. Mirrors plugin-acquiring's PaymentReconciliationIssue
-// (same "escalate, don't guess" convention, see docs/testing-patterns.md's "Source ownership"
-// pattern). Two shapes share this table: QUANTITY_MISMATCH (productVariantId/localQuantity/
-// erpQuantity all set — a matched variant whose confirmed quantity disagrees with the local
-// reservation) and UNRESOLVED_PRODUCT_MAPPING (externalProductId set instead — ERP confirmed a
-// productId this instance has no ProductVariant.customFields.externalId mapping for at all, so
-// it can never be matched/released; mivend.audit.72's HIGH finding on the first version of this
-// service: an unresolvable mapping was previously indistinguishable from "the ERP hasn't confirmed
-// this line yet," silently blocking release forever with no escalation).
+// Escalate, never auto-pick a side: local reservation vs ERP confirmed write-off is a human call.
+// Unmapped externalProductId must escalate, else it looks unconfirmed and blocks release forever.
 @Entity()
 export class ReservationReconciliationIssue extends VendureEntity {
     constructor(input?: DeepPartial<ReservationReconciliationIssue>) {

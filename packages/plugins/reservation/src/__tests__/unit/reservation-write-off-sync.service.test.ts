@@ -191,9 +191,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         ]);
     });
 
-    // mivend.audit.72's LOW finding: previously this silently swallowed a plausible race (the
-    // event arriving before Order.customFields.erpOrderId is set) with no retry — now it must
-    // throw so the inbox's own retry/dead-letter path (not a silent, permanent skip) handles it.
+    // Event can race ahead of Order.customFields.erpOrderId being set, so throw to let the inbox retry
+    // and dead-letter it, never a silent permanent skip.
     it('throws when no Order is found for orderEntityId, instead of silently skipping', async () => {
         rawQuery.mockResolvedValue([]);
         await expect(
@@ -251,9 +250,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', reservedLines, null);
     });
 
-    // mivend.audit.72's HIGH finding: an unresolvable productId must be reported as its own
-    // discrepancy, never treated as "not confirmed yet" (which would silently block release
-    // forever with no escalation).
+    // An unresolvable productId is its own discrepancy, not 'not confirmed yet': that would block
+    // release forever with no escalation.
     it('reports an unresolved product mapping as its own discrepancy, distinct from a mismatch', async () => {
         await service.handleOrderRegistrationResult(ctx, {
             orderUuid: null,
@@ -762,10 +760,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         );
     });
 
-    // Out-of-order/stale-event guard: a result that is NOT rejected, arriving while the order is
-    // NOT currently REJECTED, must never touch the reason fields or publish a status event — a
-    // repeat/stale non-reject result is a safe no-op on this axis, same idempotency rule as the
-    // release-matching logic above.
+    // A non-reject result arriving while the order is not REJECTED is a stale or repeat no-op:
+    // it must never touch reason fields or publish a status event.
     it('does not touch the rejection reason or publish a status event when the order is already SENT_TO_ERP', async () => {
         orderRepo.findOne.mockResolvedValue({
             id: 'order-1',
@@ -939,9 +935,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         );
     });
 
-    // mivend#207/search-platform#180: orderUuid is now live and takes precedence over
-    // localOrderId/orderEntityId — rawQuery (findOrderIdByErpId) must never be invoked when it
-    // resolves the order.
+    // orderUuid takes precedence over localOrderId/orderEntityId, so rawQuery must not run when
+    // it resolves the order.
     it('resolves the order via orderUuid, never touching findOrderIdByErpId', async () => {
         await service.handleOrderRegistrationResult(ctx, {
             orderUuid: 'order-uuid-1',
@@ -967,9 +962,8 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         expect(orderRepo.findOne).toHaveBeenCalledWith({ where: { id: 'order-1' } });
     });
 
-    // orderUuid present but unresolvable (bad/ stale data) must throw and retry, never silently
-    // fall back to localOrderId/orderEntityId — same "never a silent, permanent skip" rule as the
-    // existing correlation-failure test above.
+    // An orderUuid that doesn't resolve (stale data) must throw and retry, never fall back silently
+    // to localOrderId/orderEntityId.
     it('throws when orderUuid is present but resolves to no Order, even if localOrderId would have worked', async () => {
         rawQuery.mockResolvedValue([]);
         await expect(
@@ -1076,9 +1070,8 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         );
     });
 
-    // Cross-entity dependency rule (external-integration-rules skill): an order-changed event can
-    // race ahead of local order creation — must retry, never a silent, permanent skip, same as
-    // handleOrderRegistrationResult's own identical check.
+    // An order-changed event can race ahead of local order creation, so it must retry;
+    // never a silent, permanent skip.
     it('throws when no Order is found for orderEntityId, instead of silently skipping', async () => {
         rawQuery.mockResolvedValue([]);
         await expect(
@@ -1358,9 +1351,8 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         );
     });
 
-    // The whole point of this stream over order-registration-result: it fires repeatedly, and a
-    // repeat call with the same reservedQuantity (nothing left active) must stay a safe no-op —
-    // the release-matching logic already only acts on `status: 'active'` rows.
+    // The stream fires repeatedly; a repeat with the same reservedQuantity must stay a no-op.
+    // Release matching only acts on status 'active' rows, which keeps repeats safe.
     it('is idempotent: a repeat with no remaining active reservations is a no-op', async () => {
         reservationRepo.find.mockResolvedValue([]);
 
@@ -1407,9 +1399,8 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         );
     });
 
-    // mivend#207/search-platform#180: order_uuid is a real optional field on OrderChanged —
-    // present only for orders registered through our integration. Preferred correlation key,
-    // findOrderIdByErpId never invoked when it resolves the order.
+    // order_uuid is present only for orders registered through our integration; it is the
+    // preferred correlation key, so findOrderIdByErpId must not run when it resolves the order.
     it('resolves the order via orderUuid when present, never touching findOrderIdByErpId', async () => {
         await service.handleOrderChanged(ctx, {
             orderUuid: 'order-uuid-1',

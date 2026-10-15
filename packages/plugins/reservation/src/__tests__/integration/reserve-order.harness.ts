@@ -22,11 +22,8 @@ import {
 
 import { ReservationService } from '../../reservation.service';
 
-// Same constraint as approval-workflow's integration tests (VendureEntity needs a bootstrap-time
-// EntityIdStrategy for its primary column) — hand-rolled tables matching production schema,
-// against real Postgres, no DB mocking. entityMap below maps the real Vendure entity classes the
-// service imports (Order, Reservation, StockLevel, StockLocation) to these test tables, so
-// ReservationService itself is exercised unmodified.
+// VendureEntity needs a bootstrap-time EntityIdStrategy, so tables are hand-rolled to match prod.
+// entityMap maps real Vendure entities to these tables, so ReservationService runs unmodified.
 
 // Flattened columns like Vendure's custom fields, so `update(id, { customFields: { key } })` merges
 // instead of replacing the whole object.
@@ -87,11 +84,8 @@ export class TestPayment {
 @Entity('reservation_test_product_variant')
 export class TestProductVariant {
     @PrimaryGeneratedColumn('uuid') id!: string;
-    // Fixed to a single value across every test row — mivend#85's ERP-export-readiness gate
-    // (Counterparty/Product.externalId/warehouse resolution) is already covered by
-    // reservation.service.test.ts's unit tests; this integration suite is only about real-
-    // Postgres StockLevel locking/concurrency, so warehouseService/counterpartyService/the raw
-    // product-externalId query are all shimmed below to unconditionally pass that gate.
+    // Gate checks (warehouse, counterparty, product externalId) are shimmed to always pass: this suite
+    // only tests real-Postgres StockLevel locking; the gate is covered by unit tests.
     @Column({ type: 'varchar', default: 'product-x' }) productId!: string;
     @Column({ type: 'jsonb', default: {} }) customFields!: Record<string, unknown>;
 }

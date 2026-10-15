@@ -11,9 +11,8 @@ declare module '@vendure/core' {
         cancelReason?: string | null;
         cancelRequestStatus?: string | null;
         cancelRefusalReason?: string | null;
-        // Owned by @mivend/plugin-erp-order (declaration merging) — reserveOrder() reads this to
-        // denormalize onto Reservation.branchId without taking a package dependency on
-        // erp-order, see docs/access-control.md's branch-scope axis.
+        // Declared via declaration merging by @mivend/plugin-erp-order; reserveOrder() reads it
+        // to denormalize onto Reservation.branchId without a package dependency on erp-order.
         branchId?: string | null;
     }
     interface CustomGlobalSettingsFields {
@@ -25,24 +24,20 @@ declare module '@vendure/core' {
     interface CustomOrderLineFields {
         organizationId?: number | null;
     }
-    // Owned by @mivend/plugin-moq (declaration merging) — reserveOrder()'s defense-in-depth
-    // multiplicity guard reads this without taking a package dependency on plugin-moq, see
-    // docs/order-flow.md "Pack-size / MOQ".
+    // Declared via declaration merging by @mivend/plugin-moq; reserveOrder()'s multiplicity guard
+    // reads it to avoid a package dependency on plugin-moq.
     interface CustomProductVariantFields {
         multiplicity?: number | null;
         // Owned by @mivend/plugin-acquiring's declaration; reserveOrder() gates on it being set.
         organizationId?: number | null;
     }
-    // Owned by @mivend/plugin-erp-integration (declaration merging) — ReservationAvailabilityService
-    // reads this to resolve a branch's Warehouses to their StockLocations without taking a
-    // package dependency on erp-integration, see BranchStockLocationStrategy for the sibling
-    // resolution this mirrors.
+    // Declared via declaration merging by @mivend/plugin-erp-integration; resolves branch
+    // Warehouses to StockLocations without a package dependency on erp-integration.
     interface CustomStockLocationFields {
         warehouseErpId?: string | null;
     }
-    // Owned by @mivend/plugin-erp-integration (declaration merging) — ReservationAvailabilityService
-    // reads this to cap its ATP formula at the ERP's own availableQuantity, see issue #72 and
-    // StockStreamHandler, without taking a package dependency on erp-integration.
+    // Declared via declaration merging by @mivend/plugin-erp-integration; caps the ATP formula
+    // at the ERP's availableQuantity without a package dependency on erp-integration.
     interface CustomStockLevelFields {
         erpAvailableQuantity?: number | null;
     }
@@ -66,16 +61,12 @@ export interface ReservationPluginOptions {
     expiryPollIntervalMs?: number;
 }
 
-// Which path triggered reserveOrder() — see docs/order-flow.md "Single reservation service,
-// two triggers". Only 'manual' has a real caller today; 'auto-prepaid'/'auto-trust-rule' are
-// kept open for stages 4 and the deferred trusted-customer rule so the signature doesn't need
-// to change later.
+// Only 'manual' has a real caller today; 'auto-prepaid' and 'auto-trust-rule' are reserved
+// so the reserveOrder() signature does not have to change when those triggers are added.
 export type ReservationCreationMethod = 'manual' | 'auto-prepaid' | 'auto-trust-rule';
 
-// Order.customFields.reservationState — an internal technical enum fixed by app logic, not
-// ERP business data (see the backend-plugin-rules skill's "Business data must live in
-// the database"). See
-// docs/order-flow.md "Reservation state (separate from Order.state)".
+// Internal technical enum set by app logic, not ERP business data; kept separate from
+// Order.state.
 export type OrderReservationState =
     | 'NOT_REQUIRED'
     | 'AWAITING_CONFIRMATION'

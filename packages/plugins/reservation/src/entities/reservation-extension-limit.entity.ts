@@ -2,10 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// How many extra days a role may add to a reservation on their own authority — mirrors
-// CreditTermLimit (@mivend/plugin-access-control) exactly: data, not code, one row per role
-// code, no default limit until an admin sets one (see docs/architecture.md "managers can
-// extend up to a configured maximum without additional approval").
+// Mirrors CreditTermLimit (@mivend/plugin-access-control): keep in sync; it is data, not code.
+// One row per role code; no limit applies until an admin sets one (no default).
 @Entity()
 export class ReservationExtensionLimit extends VendureEntity {
     constructor(input?: DeepPartial<ReservationExtensionLimit>) {

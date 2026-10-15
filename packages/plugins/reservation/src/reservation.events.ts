@@ -3,9 +3,8 @@ import { RequestContext, VendureEvent } from '@vendure/core';
 
 import { Reservation } from './entities/reservation.entity';
 
-// Consumed by plugin-sync's ReservationConsumer, which writes these to sync_outbox for
-// delivery to the ERP — see docs/order-flow.md "ERP integration — outbox, not a shared transaction".
-// plugin-reservation never touches RabbitMQ/the outbox directly (see the internal-sync-rules skill's ownership rule).
+// Delivered to the ERP via plugin-sync's ReservationConsumer -> sync_outbox, not a shared transaction.
+// plugin-reservation must never publish to RabbitMQ or the outbox directly (ownership rule).
 export class ReservationConfirmedEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,
@@ -16,13 +15,8 @@ export class ReservationConfirmedEvent extends VendureEvent {
     }
 }
 
-// mivend#85: one signal per ORDER (unlike ReservationConfirmedEvent above, published once per
-// Reservation/line) — erp-integration's OrderSubmittedListener needs to react once per order,
-// re-derive the whole order's lines/warehouses itself, and fan out from there. Published once,
-// after every line's Reservation row for the order is written — this is this project's real
-// "the order's warehouse/stock facts are now fixed" moment (see docs/order-flow.md's two-stage
-// reservation model), replacing plugin-erp-order's OrderReadyForErpEvent as this listener's
-// trigger since that fired before any warehouse could be known at all.
+// Once per order, after all line Reservation rows are written: warehouse/stock facts are fixed.
+// Listeners re-derive the order's lines and warehouses themselves; do not publish per line.
 export class OrderReservedEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,

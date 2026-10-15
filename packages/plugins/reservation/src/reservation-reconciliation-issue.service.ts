@@ -14,9 +14,7 @@ export interface OpenReservationReconciliationIssueListOptions {
     skip?: number;
 }
 
-// Reports a detected reservation/ERP drift for a human to resolve — kept intentionally minimal
-// (report only), same as plugin-acquiring's PaymentReconciliationIssueService.
-// Resolution/triage tooling is future scope, not part of detecting the issue.
+// Report only: a human resolves the drift, so no automatic resolution happens here.
 @Injectable()
 export class ReservationReconciliationIssueService {
     constructor(
@@ -46,9 +44,8 @@ export class ReservationReconciliationIssueService {
         });
     }
 
-    // mivend.audit.72's HIGH finding: an unresolvable productId->ProductVariant mapping used to
-    // be silently indistinguishable from "the ERP hasn't confirmed this line yet" and blocked release
-    // forever with no escalation. Reported as its own issue type instead.
+    // An unresolvable productId->ProductVariant mapping must not look like 'ERP not confirmed yet';
+    // otherwise release blocks forever with no escalation, so it gets its own issue type.
     async reportUnresolvedProductMapping(
         ctx: RequestContext,
         details: {
@@ -68,14 +65,8 @@ export class ReservationReconciliationIssueService {
         });
     }
 
-    // Dashboard/ops read model (issue #76) — open issues need a human to resolve; never
-    // auto-resolved from this query. mivend.audit.common's HIGH finding on the first version of
-    // this method: it had no branch/counterparty scoping at all, so a branch-scoped manager saw
-    // reconciliation issues for every branch's orders. Scoped the same way
-    // OrderVisibilityService.buildVisibleOrdersQuery scopes Order itself (own = key-account
-    // read exception via applyOwnCounterpartyFilter, department = order's own denormalized
-    // branch, OR NULL for a legitimately branch-less order) — joined via the raw `order`
-    // table's counterpartyId since ReservationReconciliationIssue only carries orderId, not a real relation.
+    // Must mirror OrderVisibilityService.buildVisibleOrdersQuery or branch managers see every branch.
+    // Joins raw `order` table for counterpartyId: ReservationReconciliationIssue has no Order relation.
     async findOpen(
         ctx: RequestContext,
         options?: OpenReservationReconciliationIssueListOptions,
@@ -134,13 +125,8 @@ export class ReservationReconciliationIssueService {
     ): Promise<ReservationReconciliationIssue> {
         const repo = this.connection.getRepository(ctx, ReservationReconciliationIssue);
 
-        // mivend.audit.72's MEDIUM finding: handleOrderRegistrationResult isn't atomic — a
-        // partial failure after this report already landed but before the inbox row is marked
-        // processed causes a retry to re-run the whole handler from scratch (same shape as any
-        // other inbox handler, see integration-inbox-processor.service.ts). Without this check,
-        // that retry would insert a second, duplicate issue for the exact same drift. Scoped to
-        // still-open issues only: a resolved one for the same keys is a genuinely new, distinct
-        // occurrence worth its own row.
+        // Handler is not atomic: a retry after a partial failure re-runs it and would duplicate the issue.
+        // Dedupe only against open issues; a resolved match is a new, distinct occurrence.
         const existing = await repo.findOne({
             where: {
                 issueType: fields.issueType,
@@ -163,17 +149,14 @@ export class ReservationReconciliationIssueService {
             }),
         );
 
-        // handleOrderRegistrationResult (reservation-write-off-sync.service.ts) runs from an
-        // inbox handler, i.e. no signed-in administrator — ctx.activeUserId is unset there, so
-        // getCurrentAdministrator resolves to null. Broadcast to every administrator instead
-        // (issue #87 Part 2) rather than skip notifying entirely.
+        // Runs from an inbox handler with no signed-in admin, so getCurrentAdministrator returns null.
+        // Hence broadcast to every administrator rather than skipping the notification.
         await this.notificationService.create(ctx, {
             recipientType: 'administrator-broadcast',
             kind: 'warning',
             sourceType: 'reservation-reconciliation',
-            // Same dedupe key as `save()`'s own `existing` lookup above, not `saved.id` — a
-            // repeated occurrence of the same drift must update the one open notification,
-            // not spawn a new one per row.
+            // Dedupe on the same key as save()'s `existing` lookup, not saved.id: a repeat must update
+            // the one open notification, not create another.
             sourceId: `${fields.issueType}:${fields.orderId}:${fields.productVariantId ?? ''}:${fields.externalProductId ?? ''}`,
             title: 'Reservation/ERP drift detected',
             message: `${fields.issueType} for order ${fields.orderId}`,
