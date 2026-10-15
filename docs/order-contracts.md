@@ -226,6 +226,10 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   local cancel is an error notification). One `cancel-requested` per `orderUuid` while a request is open; after a
   refusal the customer or staff may cancel again and a new `cancel-requested` (new `eventId`) is sent, which the
   integration side treats as a fresh command.
+  - A repeat is a new operation: fresh `eventId`, same `orderUuid`; the integration side resets its earlier command
+    for that order. A redelivery of the same message keeps the same `eventId` and is deduplicated, not a repeat.
+  - Retry policy: the contract carries no attempt counter; the integration side is the authority on retries.
+  - Known gap: repeat cancels are not rate-limited yet, and each refusal notifies staff as an error.
 - Local cancel: release reservations, void the authorized payment, Vendure `Cancelled` with the reason in the
   history, `ErpOrderStatusEvent` CANCELLED, staff notification (a settled payment adds a manual-refund warning).
 - Reserve deadline (`ReservationExpiryService`): the same service with `requestRegistered=false`: pending or
@@ -346,6 +350,12 @@ Today the consumer drops them as a `noop`. Decision: import them as real `Order`
 - **Open for later.** Writing a mivend `orderUuid`/number back to the ERP needs a new event type
   (`confirmed` would register a duplicate) and an ERP-side change; not required for showing history.
 - **Migration.** Backfill `counterpartyId` on existing orders from their customer's counterparty.
+
+## Known approximations
+
+- Migration `1791509000000` backfills the history entry of the current status with the order placement time, so it
+  is approximate for old orders.
+- #238 (delivery point) reads the point address at confirmation time; it is not a snapshot of the address at placement.
 
 ## Settlement documents (receivables history, #224)
 

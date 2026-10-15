@@ -23,6 +23,9 @@ Handler: `packages/plugins/erp-integration/src/handlers/order-changed.handler.ts
   `failed` after 24 hours from its first failure. Failed rows are what the Integration health page and its
   alert count, and they can be replayed or dismissed (#212). Other events are not blocked meanwhile.
 - The ERP time of a status change is `updated_at` (fallback `occurred_at`); stored as `occurredAt` for external orders. Mivend orders still use the write time (reservation plugin follow-up).
+- The order's `erpStatusAt` custom field takes the same event time (write time only when the event has none).
+  History is listed by `occurredAt`, but `previousStatus` is the status written just before in write (id) order, so
+  an out-of-order event shows a previous status that is newer in time.
 - `documentNumber` (15) refreshes `erpRegistrationDocumentNumber`; stale events are dropped upstream by the inbox
   version check.
 
