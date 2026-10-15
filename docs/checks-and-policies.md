@@ -27,7 +27,7 @@ Stages are defined per subject type. For `order`: `cart`, `checkout`, `pre-reser
 
 ## Check (provider)
 
-- Registered in a registry (multi-provider); `code` is a stable dotted key
+- Registered in the `CheckRegistry` (see Implementation); `code` is a stable dotted key
   (`erp.contract-with-storage-org`, `erp.organization-stock`, `credit.limit`) and is never reused.
 - Declares `subjectType`, `stages`, a one-line `description` (the list in the manager UI is
   generated from the registry, not maintained by hand).
@@ -69,3 +69,30 @@ change. End customers see at most a soft, generic note, never internals.
 Use the `checks-policy` skill. Rule text of a concrete check lives in its domain doc (for ERP order
 requirements: `docs/order-contracts.md`) with a reference to the `code`; this file holds only
 the framework.
+
+## Implementation (`packages/plugins/checks`, `@mivend/plugin-checks`)
+
+Subject-agnostic: it depends only on `shared` and `access-control` (permissions); subject types
+and checks are registered by the plugins that own them.
+
+- **Registration.** A plugin imports `ChecksPlugin`, injects `CheckRegistry` and calls
+  `registerSubjectType({ type, stages, allowedConsequences, loadSubject, lockKey, dataVersion? })` and
+  `registerCheck({ code, subjectType, stages, description, defaultConsequence?, evaluate })` from
+  `onModuleInit`. Plugin init order is not assumed: stage names and the default consequence are
+  validated whenever both sides are known; duplicate codes/types throw at startup.
+- **Policies.** `check_policy` is unique on (`checkCode`, `stage`) and created lazily on first run
+  (or first list) from the provider's `defaultConsequence`, `warn` when omitted. `enabled=false`
+  skips the provider and clears its stored findings. `updateCheckPolicy` rejects a consequence the
+  subject type does not allow and appends `check_policy_history` (before/after, user id).
+- **Run.** `ChecksService.runChecks(ctx, subjectType, subjectRef, stage)` takes the subject's
+  advisory lock (`lockKey`), loads the subject under it, evaluates providers of the stage, replaces
+  that subject+stage rows of `check_result` and returns `{ findings, strongestConsequence }`.
+  Strength order: `info < warn < require-approval < hold < block`.
+- **Provider errors are never swallowed.** A throwing provider is logged at error level and the
+  run rethrows; the transaction rolls back, so the previous stored results stay and a broken check
+  never reads as "no findings".
+- **Stale.** `markStale(ctx, subjectType, subjectId)` (under the same lock) flags stored rows; a
+  subject with no stored findings has nothing to flag, callers needing freshness re-run.
+- **Admin API.** `checkResults(subjectType, subjectId)` and `checkDefinitions(subjectType?)` need
+  `ReadCheckResults`; `checkPolicies(subjectType?)` and `updateCheckPolicy(input)` need
+  `ManageCheckPolicies`.

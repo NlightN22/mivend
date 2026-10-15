@@ -52,6 +52,15 @@ export const CustomPermission = {
         name: 'ManageApprovalWorkflows',
         description: 'Create/edit WorkflowDefinition chains (layer 5, /settings)',
     }),
+    ReadCheckResults: new PermissionDefinition({
+        name: 'ReadCheckResults',
+        description: 'Read stored check results and the registered check definitions',
+    }),
+    ManageCheckPolicies: new PermissionDefinition({
+        name: 'ManageCheckPolicies',
+        description:
+            'Read and change the consequence policy of each check (docs/checks-and-policies.md)',
+    }),
     ReassignCounterpartyManager: new PermissionDefinition({
         name: 'ReassignCounterpartyManager',
         description:

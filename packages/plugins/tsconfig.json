@@ -28,6 +28,7 @@
         { "path": "./moq" },
         { "path": "./versioning" },
         { "path": "./session-management" },
-        { "path": "./saved-views" }
+        { "path": "./saved-views" },
+        { "path": "./checks" }
     ]
 }

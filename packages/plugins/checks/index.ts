@@ -1,0 +1,10 @@
+export { ChecksPlugin } from './src/checks.plugin';
+export { CheckRegistry } from './src/check-registry';
+export { ChecksService, strongestConsequence } from './src/checks.service';
+export { CheckPolicyService } from './src/check-policy.service';
+export type { UpdateCheckPolicyInput } from './src/check-policy.service';
+export { CheckPolicy } from './src/entities/check-policy.entity';
+export { CheckPolicyHistory } from './src/entities/check-policy-history.entity';
+export { CheckResult } from './src/entities/check-result.entity';
+export type { CheckContext, CheckProvider, SubjectTypeDefinition } from './src/registry-types';
+export * from './src/types';
