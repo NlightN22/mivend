@@ -43,9 +43,8 @@ export const Default: Story = {
     }),
 };
 
-// A dedicated sidebar entry pinned to the mobile viewport (see the manager-portal-rules skill's
-// tab-overflow pattern), seeded with enough departments to actually trigger the "More"
-// collapse — Default's single department never exercises it.
+// Pinned to the mobile viewport; needs several departments to trigger the "More" tab collapse.
+// Default's single department never exercises that overflow path.
 export const Mobile: Story = {
     loaders: [
         async () => {

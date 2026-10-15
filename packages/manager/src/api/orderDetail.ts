@@ -20,10 +20,8 @@ export type OrderDetail = Omit<RawOrderDetail, 'customFields' | 'lines'> & {
     lines: OrderDetailLine[];
 };
 
-// Order.customFields/OrderLine.customFields are nullable at the wrapper-object level per the
-// GraphQL schema, but Vendure always populates them in practice (custom fields default to null
-// values, never a missing object) — normalized here once, same pattern as
-// api/customers.ts's normalizeOrderItem.
+// GraphQL schema marks customFields wrappers nullable, but Vendure always returns them in practice.
+// Custom fields default to null values, never a missing object, so one normalization is enough.
 function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
     return {
         ...order,
@@ -56,9 +54,8 @@ function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
     };
 }
 
-// States past which a line-level price can no longer be adjusted from this page (see
-// docs/ai/manager-portal-pages/03-order-detail.md, "для уже отгруженных заказов эта колонка
-// не показывается вообще, только исторические факты корректировок").
+// Line prices are locked once the order passes these states; this page cannot adjust them.
+// Shipped orders hide the price column entirely and show only historical adjustment records.
 export const NON_EDITABLE_ORDER_STATES = [
     'Shipped',
     'PartiallyShipped',

@@ -8,9 +8,8 @@ import {
 
 export type CounterpartyTeamMemberRole = 'backup' | 'observer' | 'accounting-contact';
 
-// The `role` field is a plain String in the GraphQL schema (see backend-plugin-rules' "business
-// data must live in the database" rule — never a hardcoded enum type), but this portal only ever
-// sets/reads the fixed set above — narrowed here rather than in every consumer.
+// GraphQL types role as a plain String, since business data must live in the DB, not enums.
+// This portal only uses the fixed set above, so the narrowing lives here, not in each consumer.
 export type CounterpartyTeamMember = Omit<CounterpartyTeamMemberFieldsFragment, 'role'> & {
     role: CounterpartyTeamMemberRole;
 };

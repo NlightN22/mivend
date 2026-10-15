@@ -52,10 +52,8 @@ export interface TeamMember {
     roleCode: string | null;
 }
 
-// The 6 manager-portal roles this app manages — distinct from Vendure's own built-in
-// `__customer_role__`/`__super_admin_role__`, which the native `roles` query also returns and
-// which must never be editable from here. Single source of truth for both the role-list query
-// filter and the `/settings/roles/:code` route param validation.
+// Excludes Vendure's built-in __customer_role__/__super_admin_role__, which must never be editable here.
+// Single source for the role-list filter and the /settings/roles/:code param validation.
 export const KNOWN_ROLE_CODES = [
     'operator',
     'manager',
@@ -65,9 +63,8 @@ export const KNOWN_ROLE_CODES = [
     'portal-admin',
 ] as const;
 
-// Curated, UI-only grouping of the permissions this app's 6 roles actually use — mirrors
-// infrastructure/scripts/seed-access-roles.mjs's per-role permission arrays. `Authenticated` is
-// Vendure's own baseline permission auto-injected on every role — never shown as a checkbox.
+// Mirrors the per-role permission arrays in seed-access-roles.mjs; keep the two in sync.
+// Vendure's auto-injected 'Authenticated' baseline permission is never shown as a checkbox.
 export const PERMISSION_CATEGORIES: { key: string; label: string; permissionNames: string[] }[] = [
     {
         key: 'orders',
@@ -117,11 +114,7 @@ export const SCOPE_OPTIONS: SelectOption[] = [
     { value: 'all', label: 'All' },
 ];
 
-// The resources RoleScopeConfigService/AccessScopeService currently resolve scope for (see
-// packages/plugins/access-control/src/access-scope.service.ts). 'teamVisibility' controls
-// whether the /team directory shows colleagues' real names outside the viewer's own
-// department ('own'/'department' = anonymized, 'all' = always shown) — it reuses this same
-// generic resource-scope mechanism rather than a dedicated permission/flag.
+// 'teamVisibility' is a scope resource, not a dedicated permission or flag, so it resolves via AccessScopeService.
 export const SCOPE_RESOURCES = ['counterparty', 'order', 'teamVisibility'] as const;
 
 export const SCOPE_RESOURCE_LABELS: Record<(typeof SCOPE_RESOURCES)[number], string> = {
@@ -168,9 +161,7 @@ export async function setCreditTermLimit(
     await adminApi(SetCreditTermLimitDocument, { code, maxExtraDays, maxAmount });
 }
 
-// Who holds which of the 6 seeded roles — the other half of Roles & Access ("what a role can
-// do" vs "who has it"). Excludes the bootstrap superadmin account (__super_admin_role__) and
-// any administrator not on one of KNOWN_ROLE_CODES, same curation rationale as fetchRoles().
+// Excludes the bootstrap __super_admin_role__ and any admin not in KNOWN_ROLE_CODES, curated like fetchRoles().
 export async function fetchTeamMembers(): Promise<TeamMember[]> {
     const result = await adminApi(SecurityAdministratorsDocument);
     const known = new Set<string>(KNOWN_ROLE_CODES);
@@ -192,9 +183,7 @@ export async function updateAdministratorRole(
     await adminApi(UpdateAdministratorRoleDocument, { id: administratorId, roleIds: [roleId] });
 }
 
-// Sourced from Vendure's own permission registry (native + custom, via globalSettings) rather
-// than hardcoded descriptions — filtered to only the names this app curates in
-// PERMISSION_CATEGORIES, since Vendure ships ~40 native CRUD permissions irrelevant to this app.
+// Filtered to PERMISSION_CATEGORIES because Vendure ships ~40 native CRUD permissions irrelevant to this app.
 export async function fetchPermissionCatalog(): Promise<PermissionInfo[]> {
     const result = await adminApi(PermissionCatalogDocument);
     const known = new Set(PERMISSION_CATEGORIES.flatMap(c => c.permissionNames));

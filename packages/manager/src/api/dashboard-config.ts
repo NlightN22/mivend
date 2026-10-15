@@ -9,9 +9,8 @@ export interface KpiCardConfig {
     caption?: (data: DashboardData) => string;
 }
 
-// visibleOrders/counterparties are already scoped by the caller's access scope on the backend
-// (own/department/all — see OrderVisibilityService.findVisible, CounterpartyService.findVisible),
-// so these counts are department-wide for non-manager roles without any extra query.
+// visibleOrders/counterparties are already scoped by the backend access scope (own/department/all).
+// so these counts need no extra query to be department-wide for non-manager roles.
 const MANAGER_CARDS: KpiCardConfig[] = [
     {
         key: 'active-orders',
@@ -43,11 +42,8 @@ const MANAGER_CARDS: KpiCardConfig[] = [
     },
 ];
 
-// Operator has no approval-related permissions at all (see infrastructure/scripts/
-// seed-access-roles.mjs — no RequestDiscountGrantApproval, no ApproveDiscountRequest), so unlike
-// Manager it shows no approvals card; unlike Department Head it shows no approval-queue card
-// either. Its scope is department-wide (accessScopeConfig.counterparty = 'department'), same
-// visibleOrders/counterparties queries as everyone else, just no approvals angle.
+// Operator holds no approval permissions (see seed-access-roles.mjs), so no approvals cards are shown.
+// Its counterparty scope is 'department', so the shared visibleOrders/counterparties queries apply.
 const OPERATOR_CARDS: KpiCardConfig[] = [
     {
         key: 'department-orders',
@@ -110,11 +106,8 @@ const APPROVER_CARDS: KpiCardConfig[] = [
     },
 ];
 
-// Roles that hold ApproveDiscountRequest (or an equivalent approval permission) per
-// seed-access-roles.mjs — department-head, general-director, security-officer, portal-admin.
-// Mirrors the existing `roleCode !== 'manager'`-style role checks elsewhere in the manager
-// portal (e.g. OrdersPage.vue, CustomersPage.vue) rather than a hardcoded business enum: these
-// are technical UI-composition keys, not domain data, and role codes themselves stay DB-driven.
+// UI-only keys (not domain data), mirroring existing roleCode checks; role codes stay DB-driven.
+// Keep in sync with seed-access-roles.mjs when ApproveDiscountRequest holders change.
 const APPROVER_ROLE_CODES = new Set([
     'department-head',
     'general-director',

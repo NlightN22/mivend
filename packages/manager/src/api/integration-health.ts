@@ -4,15 +4,8 @@ import {
     RunErpReconciliationDocument,
 } from './generated/graphql';
 
-// Dashboard "system health" panel for the failed-inbox-events widget (issue #76) — kept in one
-// file per the task's own file-size guidance. The reservation/payment/ERP reconciliation issue
-// queries this file used to hand-roll were migrated to the generic notifications(status:) query
-// (see api/notifications.ts) once plugin-notification started producing a Notification row for
-// each of these issue types (issue #87) — see ReservationReconciliationPanel.vue,
-// PaymentReconciliationPanel.vue and ErpReconciliationPanel.vue.
-//
-// runErpReconciliation (issue #84) is a manual-trigger mutation, out of scope for #87 (read/notify
-// side only) — kept here untouched.
+// Issues are read via notifications(status:): plugin-notification writes one row per issue type.
+// runErpReconciliation is a manual-trigger mutation outside the read/notify scope; leave it.
 
 export interface FailedIntegrationInboxEvent {
     id: string;

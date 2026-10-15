@@ -33,21 +33,15 @@ export interface CustomerCredit {
     creditBalance: number;
 }
 
-// One list fetch for the whole scoped book of clients — bounded at 500 (see issue #39; a real
-// fix would be a search-as-you-type picker querying `counterparties(options:{search})` instead
-// of fetching everything, same stopgap as `fetchAllCustomersCapped` in api/customers.ts).
+// Bounded at 500 as a stopgap; the real fix is a search-as-you-type picker
+// using counterparties(options:{search}) instead of fetching everything.
 export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
     const result = await adminApi(OrderCreateCounterpartiesDocument);
-    // Counterparty -> Customer is the reverse of Customer.counterparty (see
-    // CounterpartyService.getForCustomer) — there's no direct reverse field on Counterparty, so
-    // it's resolved via one batched lookup filtered to exactly the counterparty ids just fetched
-    // above (not a separate, untracked flat cap — that silently dropped customers from this
-    // picker once the customer book passed 200 rows, a real incident, see the
-    // backend-plugin-rules skill's Pagination section).
+    // Batched lookup filtered to exactly the fetched counterparty ids, not a flat cap:
+    // a flat cap silently dropped customers once the customer book passed 200 rows.
     const counterpartyIds = result.counterparties.items.map(c => c.id);
-    // counterpartyId is a customField, filterable as a flat StringOperators field (not
-    // IDOperators, even though it holds an id) — see fetchCustomerIdForCounterparty's comment in
-    // api/customers.ts for the same gotcha.
+    // counterpartyId is a customField: filter it with StringOperators, not IDOperators,
+    // even though it holds an id.
     const customersResult = await adminApi(OrderCreateCustomersDocument, {
         counterpartyIds,
         take: counterpartyIds.length,
@@ -71,12 +65,8 @@ export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
         }));
 }
 
-// Isolated from the main customer list on purpose: creditLimit/creditBalance require
-// ReadCounterpartyCredit (Operator/Manager don't have it, only Dept Head/Director/SB/Portal
-// Admin do — see docs/access-control.md layer 4). A ForbiddenError on a non-null field nulls
-// the entire GraphQL response, so this must never share a request with data the page can't do
-// without. Delegates to the shared single-counterparty lookup (api/customers.ts) instead of
-// duplicating it.
+// Kept separate: a ForbiddenError on a non-null field (creditLimit/creditBalance need
+// ReadCounterpartyCredit) nulls the whole GraphQL response, so don't share a request.
 export { fetchCreditForCounterparty as fetchCustomerCredit } from './customers';
 
 export interface ProductSearchResult {

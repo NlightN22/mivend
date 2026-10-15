@@ -1,6 +1,5 @@
-// Slices/filters an in-memory dataset the same way the real server-side paginated resolvers do
-// (see the backend-plugin-rules skill's Pagination section), so changing filters/search/pagination in a Storybook
-// canvas actually changes what renders instead of always returning the same static page.
+// Mirrors the server-side paginated resolvers so Storybook filter/search/page changes alter output
+// instead of always returning the same static page.
 export interface ListOptions {
     skip?: number;
     take?: number;

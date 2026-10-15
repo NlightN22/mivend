@@ -71,9 +71,8 @@ export interface ReservationExtensionLimit {
     maxExtraDays: number;
 }
 
-// Returns null when the caller's role has no configured limit — the UI should hide the extend
-// action entirely rather than show a form that will always be rejected (see
-// ReservationService.extendReservation's "absence-is-strict" convention).
+// Null means no limit for the role, so the UI must hide extend rather than show a form
+// that is always rejected; absence is strict in ReservationService.extendReservation.
 export async function fetchReservationExtensionLimit(
     roleCode: string,
 ): Promise<ReservationExtensionLimit | null> {

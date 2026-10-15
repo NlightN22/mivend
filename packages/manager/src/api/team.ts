@@ -26,11 +26,8 @@ export async function fetchDepartments(): Promise<DepartmentOption[]> {
 export { fetchBranchOptions };
 export type { BranchOption };
 
-// firstName/lastName come back null for members outside the caller's own department when
-// their role's 'teamVisibility' access scope isn't 'all' — see
-// packages/plugins/access-control/src/access-control.resolver.ts's teamDirectory resolver.
-// Deliberately a separate query from teamMembers (used by manager pickers/filters elsewhere,
-// e.g. Orders/Customers), which always returns real names — see that resolver's doc comment.
+// firstName/lastName are null outside the caller's department unless 'teamVisibility' is 'all'.
+// Separate from teamMembers, which must keep returning real names for manager pickers and filters.
 export async function fetchTeamDirectory(): Promise<TeamDirectoryMember[]> {
     const result = await adminApi(TeamDirectoryDocument);
     return result.teamDirectory;

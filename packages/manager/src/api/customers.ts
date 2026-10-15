@@ -87,10 +87,8 @@ export interface HighUsageCustomer extends CustomerListItem {
     creditBalance: number;
 }
 
-// Includes creditLimit/creditBalance inline — unlike the main list, this is already its own
-// isolated request (small, ReadCounterpartyCredit-gated, top-N only), so it doesn't risk nulling
-// out unrelated page data the way sharing a request with the main list would (see
-// fetchCreditByCounterpartyId's comment). Wrapped in try/catch for callers without the permission.
+// Isolated request: a permission-gated credit failure must not null unrelated page data
+// Wrapped in try/catch because callers without ReadCounterpartyCredit would otherwise throw
 export async function fetchHighUsageCustomers(limit: number): Promise<HighUsageCustomer[]> {
     try {
         const result = await adminApi(HighUsageCustomersDocument, { limit });
@@ -113,13 +111,8 @@ export async function fetchCreditLimitExceededCounterpartyIds(): Promise<string[
     }
 }
 
-// Bounded stopgap for callers that need a name-lookup/picker over "all" customers (discount
-// grant form, discounts-page name join) rather than a paginated display list — same accepted
-// pattern as `visibleOrders(options: { take: 500 })` elsewhere in this codebase (see
-// api/orders.ts's fetchLastOrderDatesByCounterpartyId). Not a true fix for issue #39's concern
-// (still silently truncates past 500), but replaces a literal fetch-everything call with an
-// explicit bound; a real fix would need a search-as-you-type picker querying `counterparties`
-// with `search`, not a full list.
+// Stopgap: silently truncates past 500 rows
+// A real fix needs a search-as-you-type picker over counterparties
 export async function fetchAllCustomersCapped(): Promise<CustomerListItem[]> {
     const { items } = await fetchCustomersPage({ take: 500 });
     return items;
@@ -132,11 +125,7 @@ export async function fetchCustomerById(counterpartyId: string): Promise<Custome
     return result.counterparty ? toCustomerListItem(result.counterparty) : null;
 }
 
-// Lightweight name-only lookup for rendering a "Customer" column against a bounded set of ids
-// (one page of ProformaInvoices/Payments, never the full counterparty table) — shared by
-// pages/proforma-invoices/ProformaInvoicesPage.vue and pages/payments/PaymentsPage.vue instead of each
-// duplicating this fetch-per-id pattern (mirrors OrdersTable's managerName/branchName lookup
-// shape, but resolved per-page here since counterparties aren't a small preloadable set).
+// Counterparties aren't a small preloadable set, so names are fetched per page by id
 export async function fetchCounterpartyNames(ids: string[]): Promise<Map<string, string>> {
     const uniqueIds = [...new Set(ids)];
     const results = await Promise.all(
@@ -149,9 +138,8 @@ export async function fetchCounterpartyNames(ids: string[]): Promise<Map<string,
     );
 }
 
-// Gated on CustomPermission.ReassignCounterpartyManager (department-head within their own
-// department, portal-admin unrestricted) — throws for any other caller, see
-// CounterpartyService.reassignManager.
+// Dept-heads are limited to their own department; portal-admin is unrestricted
+// Throws for any other caller; the rule itself lives in CounterpartyService.reassignManager
 export async function reassignCounterpartyManager(
     counterpartyId: string,
     administratorId: string,
@@ -172,9 +160,7 @@ export interface TradingPointDetailsPatch {
     }[];
 }
 
-// Staff patch, distinct from ERP sync — gated on "can see this counterparty" (see
-// TradingPointAdminResolver.updateTradingPointDetails). Every successful call is recorded by
-// VersioningService for the customer's History tab.
+// Distinct from ERP sync. Every successful call is recorded by VersioningService (History tab)
 export async function updateTradingPointDetails(
     id: string,
     input: TradingPointDetailsPatch,
@@ -188,16 +174,12 @@ export async function setTradingPointActive(id: string, isActive: boolean): Prom
     await adminApi(SetTradingPointActiveDocument, { id, isActive });
 }
 
-// Vendure's Customer.id (needed to filter orders/create draft orders) is a different id than
-// the Counterparty.id this whole page is keyed by — see CounterpartyService.getForCustomer for
-// the reverse direction of this same lookup.
+// Vendure's Customer.id is a different id from Counterparty.id, which this page is keyed by
 export async function fetchCustomerIdForCounterparty(
     counterpartyId: string,
 ): Promise<string | null> {
-    // counterpartyId is a customField, filterable as a flat StringOperators field (not
-    // IDOperators, even though it holds an id) — the same gotcha the backend-plugin-rules skill
-    // documents for Shop API custom field filters being flat; here it's also typed as plain
-    // String, not ID.
+    // counterpartyId holds an id but is a plain String customField
+    // Filter it with StringOperators, not IDOperators (customFields filters are flat)
     const result = await adminApi(CustomerIdForCounterpartyDocument, { counterpartyId });
     return result.customers.items[0]?.id ?? null;
 }
@@ -206,10 +188,7 @@ export type CustomerOrderItem = Omit<CustomerOrderItemFieldsFragment, 'customFie
     customFields: NonNullable<CustomerOrderItemFieldsFragment['customFields']>;
 };
 
-// Order.customFields is nullable at the wrapper-object level per the GraphQL schema, but Vendure
-// always populates it in practice (custom fields default to null values, never a missing
-// object) — normalized here once so every caller downstream can keep assuming it's present, as
-// this file's own consumers always have.
+// Schema says nullable, but Vendure always populates it, so callers may assume it's present
 function normalizeOrderItem(item: CustomerOrderItemFieldsFragment): CustomerOrderItem {
     return {
         ...item,
@@ -229,39 +208,22 @@ export async function fetchOrdersForCustomer(
     return result.visibleOrders.items.map(normalizeOrderItem);
 }
 
-// CustomerOrdersTab's "view chips" (All/Unpaid/Partially paid/Cancelled) — real, DB-level
-// filtered + paginated per view, not a client-side filter over one loaded page (that was the
-// actual bug: counts changed as you paginated) and not a full-list-in-memory fetch either (real
-// memory/bandwidth cost for a customer with a large order history). "Cancelled" uses the same
-// visibleOrders query with a plain state filter (already a real Order column). Unpaid/Partially
-// paid go through plugin-acquiring's customerOrdersByPaymentView — a correlated SQL subquery
-// against PaymentAttempt, executed with real skip/take server-side. That query lives in
-// plugin-acquiring rather than here because plugin-erp-order (which owns visibleOrders) can't
-// depend on plugin-acquiring's PaymentAttempt entity: plugin-acquiring already depends on
-// plugin-erp-order transitively via plugin-sync, so the reverse edge would be a circular package
-// dependency (confirmed via a real `tsc -b` "Project references may not form a circular graph"
-// error when tried the other way around). See AdminOrderPaymentViewResolver in plugin-acquiring.
+// Payment-status views live in plugin-acquiring: the reverse edge would be a circular dependency
+// Chips must filter and paginate in the DB; client-side filtering made counts change across pages
 export type CustomerOrdersView = 'all' | 'unpaid' | 'partial' | 'cancelled';
 
-// Sentinel for the Placed-by filter's "Customer (self)" option — customFields.
-// placedByAdministratorId is null for an order the customer placed directly via the storefront,
-// so this can't just be a real administrator id. Shared with CustomerOrdersDataTable.vue, which
-// is the only other place this must match.
+// Can't be a real admin id: placedByAdministratorId is null for storefront-placed orders
+// Must match the value in CustomerOrdersDataTable.vue
 export const PLACED_BY_CUSTOMER_VALUE = '__customer__';
 
 export interface CustomerOrdersExtraFilters {
-    // Order.state — a different axis from `view` (payment status): a user can narrow "All" down
-    // to e.g. just "Awaiting shipment" while still seeing unpaid+paid orders together. Ignored
-    // when `view === 'cancelled'`, which already pins state itself. Multi-select (the Commercial
-    // state column filter — see CustomerOrdersDataTable.vue), so `eq` for one value, `in` for
-    // several.
+    // Independent of `view`; ignored when view === 'cancelled', which already pins state
+    // Multi-select: eq for one value, in for several
     state?: string[];
     // plugin-reservation's customFields.reservationState — same field OrdersFilterBar's
     // "Reservation" filter uses on the main Orders page.
     reservationState?: string;
-    // ISO dates (yyyy-mm-dd), inclusive on both ends — the `date-range` filter type in
-    // CustomerOrdersDataTable.vue (presets like "Last 7 days"/"This month" plus a custom range).
-    // Either can be open-ended.
+    // Inclusive on both ends; either bound may be open-ended
     dateFrom?: string;
     dateTo?: string;
     // Order.code contains — real StringOperators filter, no denormalization needed.
@@ -300,15 +262,8 @@ export async function fetchOrdersPageForCustomer(
     }
     if (extraFilters.code) filter.code = { contains: extraFilters.code };
     if (extraFilters.dateFrom || extraFilters.dateTo) {
-        // Filters on createdAt, not orderPlacedAt — matches what the "Date created" column
-        // actually displays (see CustomerOrdersDataTable.vue). orderPlacedAt stays reserved for
-        // KPI/overdue semantics elsewhere (dashboard.ts) where "only orders that were actually
-        // placed" is the correct meaning; this column/filter is purely informational and must
-        // cover every order, including ones never placed (abandoned carts, cancelled-before-
-        // placement) — see seed-customer-detail.mjs's spreadOrderPlacedDates for the real incident
-        // that surfaced this (orders showing "—" in this column despite genuinely existing).
-        // Inclusive on both ends, local time — `before` is the day *after* dateTo's start, so a
-        // range ending "today" still includes every order created today regardless of time of day.
+        // Filters on createdAt, not orderPlacedAt: unplaced orders (abandoned carts) must still show
+        // `before` is the day after dateTo, so a range ending today includes all of today's orders
         const createdAt: Record<string, string> = {};
         if (extraFilters.dateFrom)
             createdAt.after = new Date(`${extraFilters.dateFrom}T00:00:00`).toISOString();
@@ -324,21 +279,13 @@ export async function fetchOrdersPageForCustomer(
             ...(extraFilters.totalMax !== undefined ? { lte: extraFilters.totalMax } : {}),
         };
     }
-    // Custom fields in Shop/Admin API filters are flat, not nested under a `customFields` key —
-    // see the backend-plugin-rules skill's Vendure gotcha. Real incident this fixes: `filter.customFields = {...}`
-    // isn't a valid `OrderFilterParameter` shape at all — every query using it (reservationState,
-    // fulfillmentState, placedByAdministratorId) threw a GraphQL validation error
-    // ('Field "customFields" is not defined by type "OrderFilterParameter"') on every request
-    // that set any of these, so picking any value in that column's funnel filter just broke the
-    // whole table (no rows, not "no matches" — a real fetch failure).
+    // Custom fields in Shop/Admin API filters are flat, not nested under a customFields key
+    // Nested form fails GraphQL validation (OrderFilterParameter), breaking the whole table
     if (extraFilters.reservationState)
         filter.reservationState = { eq: extraFilters.reservationState };
     if (extraFilters.fulfillmentState?.length) {
-        // 'Not started' is this UI's synthetic label for "no fulfillment yet" — the real column
-        // value is a null customField, not a literal string, so it needs `isNull` instead of
-        // `eq`/`in` (see FULFILLMENT_STATE_OPTIONS in api/orders.ts). Multi-select can mix
-        // 'Not started' with real values at once, which needs an `_or` across both shapes — a
-        // single `in` can't express "isNull OR one of these strings".
+        // 'Not started' is a synthetic label for a null customField, so it needs isNull, not eq/in
+        // Mixing it with real values needs an _or across isNull and in; one `in` can't express that
         const hasNotStarted = extraFilters.fulfillmentState.includes('Not started');
         const realValues = extraFilters.fulfillmentState.filter(v => v !== 'Not started');
         if (hasNotStarted && realValues.length) {
@@ -396,9 +343,7 @@ export interface CustomerOrderViewCounts {
     cancelled: number;
 }
 
-// Lean counts for the view chips — `options: { take: 0 }` returns totalItems (a real COUNT)
-// without fetching any row data, same shape as fetchOrdersSummary's own chip counts
-// (api/orders.ts). One round trip via GraphQL aliases, not four separate requests.
+// take: 0 returns totalItems as a COUNT without row data; aliases batch all chips in one request
 export async function fetchCustomerOrderViewCounts(
     customerId: string,
 ): Promise<CustomerOrderViewCounts> {
@@ -411,11 +356,8 @@ export async function fetchCustomerOrderViewCounts(
     };
 }
 
-// Real per-order captured-payment total (plugin-acquiring's PaymentAttempt, our actual payment
-// source of truth per the external-integration-rules skill — not Vendure's own `Order.payments`). Batched: one
-// query for every order id a table page needs, not one per row. See
-// PaymentAttemptService.sumCapturedAmountsByOrderIds for what "captured" means and what's
-// deliberately not netted out (refunds/disputes/chargebacks).
+// Source of truth is PaymentAttempt, not Vendure's Order.payments
+// Batched by order id: one query per table page, not one per row
 export async function fetchOrderPaymentSummaries(orderIds: string[]): Promise<Map<string, number>> {
     const map = new Map<string, number>();
     if (!orderIds.length) return map;
@@ -434,16 +376,8 @@ export interface CustomerDocument {
     issueDate: string;
 }
 
-// Document.status is a fixed internal technical state (the document-generation pipeline's own
-// lifecycle — see plugin-documents/src/entities/document.entity.ts), not ERP-sourced business
-// data — same carve-out as api/orders.ts's ORDER_STATE_OPTIONS. Document.type, unlike status, is
-// real ERP/business-sourced data (proforma-invoice/contract/return/reconciliation/anything else the ERP
-// pushes — see the entity's own doc comment) and must NOT be a hardcoded dropdown (the backend-plugin-rules skill's
-// "Business data must live in the database") — but that doesn't rule out a checklist filter, only
-// a *hardcoded* one: fetchDocumentTypes below pulls the real, currently-visible distinct type
-// values from the backend (plugin-documents' new `documentTypes` query, a real bounded DISTINCT,
-// not a hardcoded list) and CustomerDocumentsDataTable.vue renders those as checkboxes, same
-// shape as any other checklist filter, just backend-driven rather than a source-code enum.
+// Document.status is an internal pipeline state, so a hardcoded dropdown is fine
+// Document.type is ERP-sourced, so it must come from the backend, never be hardcoded
 export const DOCUMENT_STATUS_OPTIONS = [
     { value: '', label: 'All statuses' },
     { value: 'pending', label: 'Pending' },
@@ -452,9 +386,6 @@ export const DOCUMENT_STATUS_OPTIONS = [
     { value: 'failed', label: 'Failed' },
 ] as const;
 
-// Single source of truth for the status badge color (the frontend-rules skill's ui-kit rule) — mirrors
-// PAYMENT_STATUS_BADGE_VARIANT/PROFORMA_INVOICE_STATUS_BADGE_VARIANT. Previously an inline variant()
-// function local to CustomerDocumentsTab.vue.
 export const DOCUMENT_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
     pending: 'neutral',
     generating: 'warning',
@@ -478,12 +409,7 @@ export const DEFAULT_CUSTOMER_DOCUMENT_FILTERS: CustomerDocumentFilters = {
     search: '',
 };
 
-// Real server-side pagination (the backend-plugin-rules skill's "Pagination" rule — documents accumulate over a
-// customer's lifetime just like orders/proforma-invoices/payments, and aren't exempt just because the
-// tab is small on screen). Replaces an earlier flat `take: 100` fetch with no pagination at all,
-// which silently dropped a long-lived customer's older documents past the 100th row with no way
-// for the user to see more (found in the same pagination-antipattern audit as
-// CustomerOrdersTab.vue's view-chip fix).
+// Documents accumulate over a customer's lifetime, so this list must paginate server-side
 export async function fetchDocumentsPageForCounterparty(
     counterpartyId: string,
     page: number,
@@ -503,9 +429,7 @@ export async function fetchDocumentsPageForCounterparty(
     return result.documents;
 }
 
-// Real distinct Document.type values within this counterparty's visible documents — backs the
-// Type column's checklist filter (see DOCUMENT_STATUS_OPTIONS' own doc comment). A small, bounded
-// aggregate (plugin-documents' DocumentsService.findVisibleTypes), not a hardcoded list.
+// Distinct types come from the backend, since Document.type is ERP-sourced and not hardcoded
 export async function fetchDocumentTypes(counterpartyId: string): Promise<string[]> {
     const result = await adminApi(CustomerDocumentTypesDocument, { counterpartyId });
     return result.documentTypes;
@@ -517,12 +441,8 @@ export interface CustomerCredit {
     paymentDelayDays: number;
 }
 
-// Isolated on purpose — see api/orderCreate.ts's fetchCustomerCredit for why creditLimit/
-// creditBalance must never share a request with data the page can't do without
-// (ReadCounterpartyCredit is Dept-Head/Director/SB/Portal-Admin only). Scoped to the same
-// `options` as the paginated list query it's enriching (see issue #39) — this used to fetch
-// credit info for every visible counterparty unbounded, which is exactly the antipattern that
-// prompted the audit.
+// Isolated: creditLimit/creditBalance are permission-gated and must not share a request
+// Scoped to the same options as the list query it enriches, so it stays bounded
 export async function fetchCreditByCounterpartyId(
     options: CustomersListOptions,
 ): Promise<Map<string, CustomerCredit>> {
@@ -562,22 +482,15 @@ export async function fetchCreditForCounterparty(
     }
 }
 
-// Genuinely per-customer — uses discountGrantsForCounterparty (company-wide OR scoped to this
-// counterparty, see DiscountGrantService.findForCounterparty), not the per-price-type
-// discountRules query. The previous implementation counted discountRules by priceTypeCode and
-// bound the result to every customer sharing that price type, which showed the identical number
-// for every row whenever customers shared a price type (real bug, fixed here — see
-// docs/ai/manager-portal-pages/04-customers-list.md's "Active discounts" column spec, which
-// calls for a per-customer, click-through-to-/discounts count).
+// Counts grants for this counterparty only; discountRules(priceTypeCode) is shared by price type
+// so customers sharing a price type would show identical counts
 export async function fetchActiveDiscountCountsByCustomer(
     counterpartyIds: string[],
 ): Promise<Map<string, number>> {
     const entries = await Promise.all(
         [...new Set(counterpartyIds)].map(async counterpartyId => {
-            // take: 0 — only totalItems is needed, mirrors DiscountRegistryService's own
-            // countByStatus helper (findAllPaginated(ctx, { take: 0, status })). status: 'active'
-            // is computed server-side (DiscountGrantService.computeGrantStatus), the single
-            // source of truth this used to duplicate client-side via a raw validTo comparison.
+            // take: 0 fetches only totalItems; status is computed server-side
+            // Don't recompute 'active' from validTo client-side; computeGrantStatus is the source of truth
             const result = await adminApi(ActiveDiscountCountForCounterpartyDocument, {
                 counterpartyId,
                 options: { take: 0, status: 'active' },
@@ -631,10 +544,7 @@ export interface DiscountGrantViewCounts {
     expired: number;
 }
 
-// Lean counts for the view chips (`options: { take: 0 }` returns totalItems, a real COUNT, with
-// no row data) — same shape as fetchCustomerOrderViewCounts/fetchProformaInvoiceViewCounts above, one
-// round trip via GraphQL aliases (aliased `expiringSoon` since GraphQL alias names can't contain
-// a hyphen like the `expiring-soon` status value itself).
+// Aliased expiringSoon: GraphQL alias names can't contain the hyphen of 'expiring-soon'
 export async function fetchDiscountGrantViewCounts(
     counterpartyId: string,
 ): Promise<DiscountGrantViewCounts> {
@@ -647,12 +557,8 @@ export async function fetchDiscountGrantViewCounts(
     };
 }
 
-// Only grants that actually apply to this counterparty (company-wide or scoped to it) — see
-// DiscountGrantService.findForCounterparty. Using discountRules(priceTypeCode) here would leak
-// grants scoped to a *different* customer that happens to share the same price type. Real
-// server-side pagination (the backend-plugin-rules skill's "Pagination" rule) — this list is not genuinely bounded, it
-// accumulates one row per approved renewal over the customer's whole lifetime (nothing removes an
-// expired grant).
+// Not discountRules(priceTypeCode): it leaks grants scoped to other customers on that price type
+// Unbounded: one row per approved renewal over the customer's lifetime, so paginate
 export async function fetchDiscountGrantsPage(
     counterpartyId: string,
     filters: DiscountGrantFilters,
@@ -674,9 +580,7 @@ export async function fetchDiscountGrantsPage(
     };
 }
 
-// Keyed by counterparty id (the "customer" this whole page means) — capped at 500 rows, same
-// tradeoff as OrdersSummary's "total amount": there is no per-customer MAX(orderPlacedAt)
-// aggregate query yet.
+// Capped at 500 rows: there is no per-customer MAX(orderPlacedAt) aggregate query yet
 export async function fetchLastOrderDatesByCounterpartyId(): Promise<Map<string, string>> {
     const result = await adminApi(LastOrderDatesDocument);
     const map = new Map<string, string>();

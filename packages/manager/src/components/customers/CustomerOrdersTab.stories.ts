@@ -19,10 +19,8 @@ const ADMINS = [
     { id: 'admin-2', firstName: 'Elena', lastName: 'Sales' },
 ];
 
-// 34 orders — enough to exercise real pagination (PAGE_SIZE=20 in CustomerOrdersTab.vue), unlike
-// the previous single-page mock that made "no pagination controls ever show up" invisible.
-// Every 3rd order has no administrator on its first history entry — placed by the storefront
-// customer directly, not an operator/manager (see placedByLabel() in CustomerOrdersTab.vue).
+// 34 orders so pagination spans more than one page (PAGE_SIZE=20 in CustomerOrdersTab.vue)
+// Every 3rd order has no administrator on its first history entry: storefront-placed, not manager
 const ORDERS: CustomerOrderItem[] = Array.from({ length: 34 }, (_, i) => ({
     id: String(100 + i),
     code: `ORD-202607-${(1000 + i).toString(16).toUpperCase()}`,
@@ -63,9 +61,7 @@ interface PaymentViewVariables extends PageVariables {
 }
 
 function mockCustomerOrders(orders: CustomerOrderItem[]): void {
-    // Feeds placedByLabel()'s manager-name lookup (CustomerOrdersTab.vue) — resolves
-    // customFields.placedByAdministratorId to a display name, same query fetchManagerOptions
-    // uses on the main Orders page.
+    // Mirrors fetchManagerOptions (Orders page) so placedByAdministratorId resolves to the same names
     registerMock('TeamMembers', () => ({
         teamMembers: ADMINS.map(a => ({
             id: a.id,
@@ -74,10 +70,8 @@ function mockCustomerOrders(orders: CustomerOrderItem[]): void {
             roleCodes: ['manager'],
         })),
     }));
-    // Mirrors fetchOrdersPageForCustomer's two real backend queries — visibleOrders (All/
-    // Cancelled, via a plain state filter) and customerOrdersByPaymentView (Unpaid/Partially
-    // paid, via plugin-acquiring's real subquery) — see api/customers.ts's comment for why
-    // these are two separate GraphQL fields.
+    // Mirrors fetchOrdersPageForCustomer's two fields: visibleOrders (All/Cancelled) and
+    // customerOrdersByPaymentView (Unpaid/Partially paid, needs plugin-acquiring's subquery)
     registerMock('CustomerOrdersPage', (variables: PageVariables) => {
         const filtered =
             variables.options?.filter?.state?.eq === 'Cancelled'
@@ -122,10 +116,8 @@ export const Empty: Story = {
     loaders: [async () => mockCustomerOrders([])],
 };
 
-// See the manager-portal-rules skill's tab-overflow pattern discussion — this tab is the
-// current baseline being redesigned against tasks/design/b2b_portal/
-// mivend_customer_orders_concept_v5.html; keep a mobile bookmark to compare against the
-// concept's mobile card layout as the redesign lands.
+// Baseline being redesigned toward tasks/design/b2b_portal/mivend_customer_orders_concept_v5.html;
+// compare the mobile layout against that concept's mobile card layout as the redesign lands
 export const Mobile: Story = {
     loaders: [async () => mockCustomerOrders(ORDERS)],
     parameters: { viewport: { defaultViewport: 'mvMobile' } },

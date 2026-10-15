@@ -24,10 +24,8 @@ export interface ApprovalsInbox {
     allInvolved: ApprovalRequestPage;
 }
 
-// requestType is fixed by the workflow engine, not ERP business data (see
-// docs/access-control.md) — this dispatch table is the documented carve-out, mirroring the
-// CREATE_PERMISSION_BY_REQUEST_TYPE map in approval-workflow.resolver.ts. creditTermApproval and
-// its escalated variant share one mutation — see CreditTermService.decideAndApply.
+// requestType is set by the workflow engine, not ERP data — this table is the documented carve-out
+// creditTermApproval and escalated variant share one mutation; see CreditTermService.decideAndApply
 export const REQUEST_TYPE_LABEL: Record<string, string> = {
     priceAdjustmentApproval: 'Price adjustment',
     discountGrantApproval: 'Discount grant',
@@ -35,9 +33,8 @@ export const REQUEST_TYPE_LABEL: Record<string, string> = {
     creditTermApprovalEscalated: 'Payment term extension (escalated)',
 };
 
-// Each requestType's decide mutation is a distinct, statically-named GraphQL operation (codegen
-// requires this — no dynamic mutation-name string interpolation) — dispatch by generated
-// Document instead of by mutation-name string.
+// Decide mutations must be distinct, statically-named operations: codegen rejects dynamic names
+// so dispatch by generated Document, not by a mutation-name string
 const DECIDE_DOCUMENT_BY_REQUEST_TYPE = {
     priceAdjustmentApproval: DecidePriceAdjustmentRequestDocument,
     discountGrantApproval: DecideDiscountGrantRequestDocument,
@@ -45,10 +42,8 @@ const DECIDE_DOCUMENT_BY_REQUEST_TYPE = {
     creditTermApprovalEscalated: DecideCreditTermRequestDocument,
 } as const;
 
-// Mirrors the backend's ApprovalListOptions (packages/plugins/approval-workflow/src/types.ts) —
-// eligibility/pagination/filtering now all happen server-side, see approval-request.service.ts's
-// "Approvals inbox: real server-side pagination" for why the old fetch-everything-then-filter
-// version was rejected.
+// Mirrors backend ApprovalListOptions; eligibility, pagination and filtering all run server-side
+// Client-side fetch-all-then-filter was rejected (see approval-request.service.ts)
 export interface ApprovalListOptions {
     take?: number;
     skip?: number;
@@ -57,9 +52,8 @@ export interface ApprovalListOptions {
     status?: string;
 }
 
-// One request returns both tabs so the "Awaiting my decision" badge count stays accurate no
-// matter which tab is active — pass { take: 0 } for whichever tab isn't currently displayed to
-// fetch only its totalItems, not a page of rows nobody's looking at.
+// One request returns both tabs so the "Awaiting my decision" badge stays accurate on either tab
+// Pass { take: 0 } for the inactive tab to fetch only its totalItems, not a page of unseen rows
 export async function fetchApprovalsInbox(
     awaitingOptions: ApprovalListOptions,
     allInvolvedOptions: ApprovalListOptions,
@@ -101,10 +95,8 @@ export interface OrderReference {
     lines: OrderReferenceLine[];
 }
 
-// Batch lookup for priceAdjustmentApproval payloads (the only requestType whose payload
-// references an orderId — see PriceAdjustmentPayload) — used to show "Order ORD-... · Customer"
-// in the inbox table, and (via `lines`) the actual product/SKU/original-price context on the
-// detail page instead of a bare orderLineId.
+// Only priceAdjustmentApproval payloads carry orderId (see PriceAdjustmentPayload); batch-fetched
+// Resolves lines too, so the detail page shows SKU and original price, not a bare orderLineId
 export async function fetchOrderReferences(
     orderIds: string[],
 ): Promise<Map<string, OrderReference>> {
@@ -134,10 +126,8 @@ export interface CounterpartyReference {
     shortName: string;
 }
 
-// creditTermApproval payloads reference a counterparty by ERP id, not the portal's internal id
-// (see CreditTermRequestInput) — matched against the caller's own already-scoped counterparties
-// list. Bounded at 500 (see issue #39) — same stopgap as fetchAllCustomersCapped in
-// api/customers.ts, not a true fix.
+// creditTermApproval payloads carry the ERP id, not the portal id (see CreditTermRequestInput),
+// matched against caller's scoped counterparties; capped at 500 as a stopgap, not a true fix
 export async function fetchCounterpartyReferencesByErpId(): Promise<
     Map<string, CounterpartyReference>
 > {

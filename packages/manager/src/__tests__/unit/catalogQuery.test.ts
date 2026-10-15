@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { parseCatalogQuery, buildCatalogQuery } from '../../composables/catalogQuery';
 
-// Test plan: pure query<->state mapping for the catalog URL sync (manager-portal-rules #1).
-// Invariants: round trip is lossless; defaults are omitted; unrelated keys survive. Tree/panel logic is covered by
-// packages/shared's collectionTree tests. Unit level only; no transport involved.
+// Unit only. Query<->state mapping: lossless round trip, defaults omitted, unrelated keys preserved.
+// Tree/panel logic is covered by collectionTree tests in packages/shared; don't duplicate it here.
 describe('catalogQuery', () => {
     it('parses an empty query to defaults', () => {
         expect(parseCatalogQuery({})).toEqual({

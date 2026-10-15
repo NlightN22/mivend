@@ -39,10 +39,8 @@ export interface DiscountRegistryEntryRow {
     counterpartyIds: string[] | null;
 }
 
-// Real single-source server-side pagination + filtering for the /discounts registry (issue #39
-// follow-up) — one unified list backed by DiscountRegistryEntry (a CQRS-style read-model
-// projection, see DiscountRegistryService on the backend), matching the design concept's single
-// "Grant registry" table instead of the earlier two-table split.
+// Single list backed by DiscountRegistryEntry (CQRS read-model projection), not two tables;
+// matches the design's single 'Grant registry' table.
 export async function fetchDiscountRegistryPage(
     options: DiscountRegistryListOptions,
 ): Promise<{ items: DiscountRegistryEntryRow[]; totalItems: number }> {
@@ -91,11 +89,8 @@ function customerLabel(
     return counterpartyIds.map(id => namesById.get(id) ?? id).join(', ');
 }
 
-// See docs/ai/manager-portal-concept.md §8.2 — no exact "expiring soon" threshold has been
-// decided; 14 days is the same placeholder used on Dashboard/Customers. Mirrors the backend's
-// own EXPIRING_SOON_DAYS in DiscountRegistryService — kept in sync by hand, one lives in SQL,
-// this one only in a purely-cosmetic status label (the backend already filtered by status when
-// `status` was set; this is only used for display when browsing "All statuses").
+// 14 days is a placeholder; keep in sync by hand with EXPIRING_SOON_DAYS (backend, SQL-side copy).
+// Display-only: the backend does not filter by it when browsing 'All statuses'.
 const EXPIRING_SOON_DAYS = 14;
 
 function materializedStatus(validTo: string): 'active' | 'expiring-soon' | 'expired' {
@@ -106,11 +101,8 @@ function materializedStatus(validTo: string): 'active' | 'expiring-soon' | 'expi
     return 'active';
 }
 
-// A portal-created DiscountRule's erpId is always `portal-${approvalRequestId}` (see
-// DiscountGrantService.decideAndApply) — reconstructed here instead of fetched, since
-// DiscountRegistryEntry.approvalRequestId already gives us everything needed. ERP-pushed rules
-// have no approvalRequestId at all — never portal-renewable, so ruleErpId stays null for them
-// (the renewal form only makes sense for portal-originated grants).
+// Portal rules' erpId is portal-${approvalRequestId} (DiscountGrantService.decideAndApply).
+// ERP-pushed rules lack approvalRequestId, so ruleErpId stays null (not portal-renewable).
 export function buildDiscountRegistryRows(
     entries: DiscountRegistryEntryRow[],
     namesById: Map<string, string>,

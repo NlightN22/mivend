@@ -51,18 +51,14 @@ export function describeCategoryVisibility(
     return info;
 }
 
-// null clears the override. The server recomputes the category tree after any override change
-// (CategoryOverrideRecomputeListener), so descendants and a cleared override resolve there;
-// isPrivate is also sent for 'hidden'/'visible' so the returned row is already correct (#90).
+// Server recomputes the category tree on any override change, so descendants resolve there.
+// isPrivate is sent for 'hidden'/'visible' so the returned row is already correct.
 export async function setCategoryVisibilityOverride(
     id: string,
     visibilityOverride: string | null,
 ): Promise<CategoryVisibilityCollection> {
-    // Collection.isPrivate is a non-nullable boolean column — Vendure's patchEntity treats an
-    // explicit `null` variable as "set this field to null" (distinct from `undefined`, which it
-    // leaves untouched), so clearing the override (visibilityOverride: null) must OMIT isPrivate
-    // from the variables entirely rather than send null, or the save fails against the non-
-    // nullable column instead of leaving isPrivate alone for the next feed event to set.
+    // Vendure's patchEntity sets a field to null on explicit null; isPrivate is non-nullable,
+    // so omit isPrivate from the variables when clearing the override instead of sending null.
     const isPrivate =
         visibilityOverride === 'hidden'
             ? true

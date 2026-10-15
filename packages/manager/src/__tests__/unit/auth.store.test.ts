@@ -148,9 +148,8 @@ describe('useAuthStore', () => {
 
     it('a non-network error (e.g. a transient GraphQL/DB error) also stays "unknown", never "unauthenticated"', async () => {
         const { useAuthStore } = await import('../../stores/auth');
-        // Vendure's activeAdministrator query never throws for "not logged in" — a genuine
-        // logout always comes back as a clean, successful `null`. Any thrown error, even one
-        // that isn't ApiNetworkError, is therefore ambiguous and must not force a logout.
+        // Vendure's activeAdministrator returns null (not an error) on a real logout.
+        // So any thrown error is ambiguous and must not force a logout, even non-network ones.
         adminApiMock.mockRejectedValueOnce(new Error('Internal server error'));
 
         const store = useAuthStore();

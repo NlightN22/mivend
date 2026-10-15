@@ -22,16 +22,8 @@ import {
 export interface CatalogFilters {
     search: string;
     facetValueIds: string[];
-    // mivend#86: kept on the filter shape for UI/state-shape compatibility, but NOT actually
-    // sent to the search query below — Admin API's own SearchInput type has no `inStock`/
-    // `priceRangeWithTax` field at all (confirmed live: the pre-migration raw query string sent
-    // both unconditionally and every single fetchCatalogPage() call was failing GraphQL
-    // validation — "Field 'inStock' is not defined by type 'SearchInput'" /
-    // "Unknown type 'PriceRangeInput'" — the whole Catalog page was broken before this fix, not
-    // just these two filters). Restoring real stock/price-range filtering needs its own design
-    // (Admin API's search genuinely has no such field; Shop API's does) — left in the filter
-    // shape so the UI controls keep compiling, but they are currently inert. Follow-up issue
-    // needed before re-wiring them.
+    // Kept in the filter shape only for UI/state compatibility; NOT sent to the search query.
+    // Admin API SearchInput has no such fields (Shop API does), so these filters are inert for now.
     inStock: boolean;
     priceMin: number | null;
     priceMax: number | null;
@@ -117,9 +109,8 @@ export async function fetchStockForVariants(variantIds: string[]): Promise<Map<s
     );
 }
 
-// Returns null (rather than an empty map) when the caller lacks permission for this
-// priceTypeCode (e.g. FLOOR for a Manager/Operator) — see PriceEntryAdminResolver
-// .priceEntriesForVariants — so callers can distinguish "no prices set" from "not allowed".
+// Returns null (not an empty map) when the caller lacks permission for priceTypeCode,
+// so callers can tell 'no prices set' apart from 'not allowed'.
 export async function fetchPriceEntriesForVariants(
     variantIds: string[],
     priceTypeCode: string,

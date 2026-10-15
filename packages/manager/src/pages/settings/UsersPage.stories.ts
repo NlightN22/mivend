@@ -54,11 +54,8 @@ const PENDING_USER_ITEMS = [
     },
 ];
 
-// Registers every operation both dataset views can call — a story only ever renders one view at
-// a time, but the counts query (PortalUserCounts) always fires regardless of which is active.
-// Overrides the default-mocks.ts ActiveAdministrator (its stock role has no
-// ManageAdministratorLifecycle) so this story renders the real page instead of the "Not
-// authorized" gate.
+// Register both dataset views: PortalUserCounts always fires, even when only one view renders.
+// Overrides the default ActiveAdministrator mock, whose role lacks ManageAdministratorLifecycle.
 function registerCommonMocks(): void {
     registerMock('ActiveAdministrator', () => ({
         activeAdministrator: {

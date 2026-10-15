@@ -17,9 +17,8 @@ const REQUEST_TYPE_LABEL: Record<string, string> = {
     creditTermApproval: 'Payment term request',
 };
 
-// Built client-side from data the dashboard already fetches (recent orders + recent approval
-// requests) — there is no unified activity/event log yet (see manager-portal-concept.md §8.1,
-// "общий Центр уведомлений" was deferred), so this is a best-effort merge, not a real feed.
+// No unified activity/event log exists yet, so this is a best-effort merge of recent orders
+// and approval requests, not a real feed.
 export function buildActivityFeed(
     orders: RecentOrder[],
     approvals: SubmittedApproval[],
@@ -67,9 +66,8 @@ export interface DashboardData {
     awaitingMyDecisionCount: number;
 }
 
-// Vendure ships no dedicated "overdue" order state or SLA field yet — "awaiting shipment" is
-// approximated as paid-but-not-fulfilled (state PaymentSettled), and "overdue" as such an order
-// placed more than 3 days ago. Revisit once erp-order exposes a real SLA/overdue signal.
+// Vendure has no overdue state or SLA field: awaiting shipment is approximated as PaymentSettled
+// and overdue as such orders placed more than 3 days ago.
 const IN_PROGRESS_STATES_EXCLUDED = ['AddingItems', 'Draft', 'Cancelled', 'Delivered'];
 const OVERDUE_AFTER_DAYS = 3;
 

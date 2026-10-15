@@ -38,10 +38,8 @@ export const PROFORMA_INVOICE_STATUS_LABEL: Record<string, string> = Object.from
     PROFORMA_INVOICE_STATUS_OPTIONS.filter(o => o.value).map(o => [o.value, o.label]),
 );
 
-// Single source of truth for the ProformaInvoice status badge color (the frontend-rules skill's ui-kit "single source of
-// truth" rule) — mirrors api/orders.ts's ORDER_STATE_BADGE_VARIANT. Real incident this fixes:
-// ProformaInvoicesTable.vue rendered every status badge with no variant at all (always the default
-// gray), found in the same table-consistency audit that flagged PaymentsTable.vue's identical bug.
+// Mirrors ORDER_STATE_BADGE_VARIANT in api/orders.ts; keep the two maps in sync.
+// Without an explicit variant, status badges fall back to the default gray.
 export const PROFORMA_INVOICE_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
     current: 'success',
     superseded: 'neutral',
@@ -72,9 +70,8 @@ export interface ProformaInvoiceViewCounts {
     cancelled: number;
 }
 
-// Real COUNT per status chip (take: 0 — no row data) — mirrors
-// api/customers.ts's fetchCustomerOrderViewCounts, so chip counts reflect the whole visible set,
-// not just the currently-loaded page.
+// Counts come from a separate query with take: 0, so chips reflect the whole visible set,
+// not one page. Do not derive them from loaded rows.
 export async function fetchProformaInvoiceViewCounts(
     counterpartyId: string,
 ): Promise<ProformaInvoiceViewCounts> {

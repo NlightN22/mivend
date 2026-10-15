@@ -44,9 +44,8 @@ export async function fetchPortalUsers(
     };
 }
 
-// No confirmation needed to re-enable a previously-deactivated account (issue #119 Phase 2
-// concept notes) — only deactivation (isActive=false) needs the caller to confirm first, which
-// UsersDataTable.vue's own modal handles before calling this.
+// Deactivation (isActive=false) must be confirmed by the caller first; UsersDataTable.vue's modal
+// does that, so re-enabling skips confirmation.
 export async function setAdministratorActive(id: string, isActive: boolean): Promise<void> {
     await adminApi(SetAdministratorActiveDocument, { id, isActive });
 }

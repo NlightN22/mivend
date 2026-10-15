@@ -39,11 +39,8 @@ export interface BranchSettingsInput {
     proformaPaymentTermDays: number;
 }
 
-// Warehouses are ERP org-structure master data (see access-control's Warehouse entity) — one
-// row per physical/logical warehouse across all branches, expected to be a few dozen at most.
-// No pagination/server-side filter is wired here, mirroring `branches`/`departments` above it in
-// AccessControlResolver: a genuinely bounded org-structure list, not a row that accumulates over
-// the business's lifetime (the backend-plugin-rules skill's Pagination section exemption test).
+// Unpaginated on purpose: warehouses are bounded org-structure master data (a few dozen rows),
+// not a growing table, so no pagination or server-side filter; same as branches/departments.
 export async function fetchWarehouses(): Promise<Warehouse[]> {
     const result = await adminApi(WarehousesDocument);
     return result.warehouses;

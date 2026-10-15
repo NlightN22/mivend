@@ -25,10 +25,8 @@ function wsUrl(): string {
     return `${protocol}//${window.location.host}${SUBSCRIPTIONS_PATH}`;
 }
 
-// Lazily created — a fresh admin bearer token (captured from the HTTP transport's own
-// vendure-auth-token response header, see client.ts) is only available once the manager portal
-// has made at least one authenticated request, which always happens before any page that shows
-// the notification bell mounts.
+// Admin token is only captured from the vendure-auth-token response header after the first
+// authenticated request; the bell mounts after that, so creation must stay lazy.
 let wsClient: Client | null = null;
 
 function getWsClient(): Client {

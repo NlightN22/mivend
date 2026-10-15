@@ -8,13 +8,8 @@ import {
 } from '../../api/approvals';
 import type { ManagerOption } from '../../api/orders';
 
-// Filtering/pagination moved server-side (see api/approvals.ts's ApprovalListOptions and
-// ApprovalRequestService.findAwaitingMyDecision/findAllInvolving) — so unlike a fully
-// client-loaded table, the filter list here is capped to exactly what the backend can push into
-// SQL: request id (substring), requestType (exact), status (exact). Columns that only exist
-// after resolving other entities client-side (reference/requestedBy/currentStep) are shown in
-// ApprovalsTable but are NOT filterable — filtering them would need the backend to also resolve
-// order/counterparty/manager names, which it doesn't do today (see PROJECT_CONTEXT.md).
+// Filters are capped to what the backend can push into SQL (id substring, exact type/status).
+// Backend doesn't resolve reference/requestedBy/currentStep names, so those can't be filtered.
 export const APPROVAL_FILTER_FIELDS: TableFilterFieldDef[] = [
     { key: 'id', label: 'Request #', type: 'search', placeholder: 'e.g. 8' },
     {
@@ -87,9 +82,8 @@ export function buildApprovalRows(
 ): TableRow[] {
     return requests.map(request => ({
         id: request.id,
-        // Kept as the raw requestType code (not the label) so the Type select filter — whose
-        // options are keyed by code, see APPROVAL_FILTER_FIELDS above — matches directly;
-        // ApprovalsTable's cellRenderer looks up the label for display.
+        // Kept as the raw requestType code so the Type filter, keyed by code, matches directly.
+        // The label is looked up in ApprovalsTable's cellRenderer for display.
         type: request.requestType,
         reference: referenceText(request, orderReferences, counterpartyReferences),
         requestedBy: requesterName(managers, request.requestedByAdministratorId),

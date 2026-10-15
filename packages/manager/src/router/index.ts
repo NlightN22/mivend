@@ -10,9 +10,7 @@ export const router = createRouter({
             meta: { layout: 'auth' },
         },
         {
-            // Issue #119 Phase 2 — reached from the emailed password-reset link, no session yet
-            // (see AdministratorProvisioningService.createFromPending), so it lives outside
-            // DefaultLayout the same way /login does.
+            // Reached from the emailed reset link with no session yet, so this route must sit outside DefaultLayout, like /login
             path: '/set-password',
             component: () => import('../pages/auth/SetPasswordPage.vue'),
             meta: { layout: 'auth' },
@@ -164,9 +162,7 @@ export const router = createRouter({
                     meta: { requiresAuth: true, title: 'Team' },
                 },
                 {
-                    // "Обработки" (Bulk Operations) nav section — issue #120, thin shell: one
-                    // tab (Counterparty Activation) today, per the carried-over decision not to
-                    // build a generic bulk-operations framework preemptively.
+                    // Intentionally a thin shell: a generic bulk-operations framework is deferred until more tabs need it.
                     path: 'bulk-operations/counterparty-activation',
                     name: 'bulk-operations-counterparty-activation',
                     component: () =>
@@ -193,9 +189,8 @@ export const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
     const authStore = useAuthStore();
     await authStore.init();
-    // Only a *confirmed* 'unauthenticated' redirects to /login — 'unknown' (still checking, or
-    // retrying after a network blip that outlasted the bounded retry) lets navigation proceed,
-    // so a prolonged server outage never bounces a still-valid session to the login screen.
+    // Only a confirmed 'unauthenticated' redirects to /login; 'unknown' (checking, or network retries
+    // exhausted) proceeds so a prolonged outage never bounces a valid session to login.
     if (to.meta.requiresAuth && authStore.authStatus === 'unauthenticated') {
         next({ path: '/login', query: { redirect: to.fullPath } });
     } else {

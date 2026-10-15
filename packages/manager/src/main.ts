@@ -43,10 +43,8 @@ app.component('MvBreadcrumbs', MvBreadcrumbs);
 app.use(createPinia());
 app.use(router);
 app.use(ElementPlus);
-// PrimeVue only powers the new PrimeVue-based Orders desktop table for now (see
-// OrdersDataTable.vue) — not yet a project-wide replacement of element-plus/ui-kit. Themed via
-// mivendPrimeVuePreset so it matches the portal's own design tokens (tokens.css) instead of
-// PrimeVue's default Aura look.
+// PrimeVue is scoped to the Orders desktop table only; element-plus/ui-kit remain the rest of the app.
+// mivendPrimeVuePreset maps it to tokens.css so it doesn't show PrimeVue's default Aura theme.
 app.use(PrimeVue, {
     theme: { preset: mivendPrimeVuePreset, options: { darkModeSelector: '.mv-never-dark' } },
 });

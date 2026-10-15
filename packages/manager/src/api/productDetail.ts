@@ -50,9 +50,8 @@ export interface PriceRow {
     price: number | null;
 }
 
-// One row per known price type (Retail, Wholesale, ...) plus, if the caller has
-// ReadFloorPrice, one for the confidential floor price — driven entirely by real
-// data (priceTypeCodes), never a hardcoded business list (see AGENTS.md).
+// One row per price type from priceTypeCodes; never hardcode the list (see AGENTS.md).
+// Floor price row is added only if the caller has ReadFloorPrice (confidential).
 export async function fetchPricesForVariant(variantId: string): Promise<PriceRow[]> {
     const codes = await fetchPriceTypeCodes();
     const rows: PriceRow[] = [];

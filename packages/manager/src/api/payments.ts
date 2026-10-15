@@ -40,11 +40,8 @@ export const PAYMENT_STATUS_OPTIONS = [
     { value: 'chargeback', label: 'Chargeback' },
 ] as const;
 
-// Single source of truth for the PaymentAttempt status badge color (the frontend-rules skill's ui-kit "single
-// source of truth" rule) — mirrors api/orders.ts's ORDER_STATE_BADGE_VARIANT. Real incident this
-// fixes: PaymentsTable.vue rendered every status badge with no variant at all (always the
-// default gray), found in the same table-consistency audit that flagged ProformaInvoicesTable.vue's
-// identical bug.
+// Single source of truth for PaymentAttempt status badge variants; mirrors
+// ORDER_STATE_BADGE_VARIANT in api/orders.ts. Keep the two in sync.
 export const PAYMENT_STATUS_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
     pending: 'warning',
     authorized: 'info',
@@ -72,14 +69,8 @@ export interface PaymentViewCounts {
     refunded: number;
 }
 
-// Lean counts for the view chips (`options: { take: 0 }` returns totalItems, a real COUNT, with
-// no row data) — same shape as api/proforma-invoices.ts's fetchProformaInvoiceViewCounts/api/customers.ts's
-// fetchCustomerOrderViewCounts, one round trip via GraphQL aliases. Curated to the 5 most
-// operationally relevant statuses (a manager checking a customer's payments cares about
-// Captured/Pending/Failed/Refunded first) rather than all 10 PAYMENT_STATUS_OPTIONS values —
-// the rest (authorized/canceled/partiallyRefunded/disputed/chargeback) stay reachable through the
-// table's own status column filter. If a future need justifies more chips, add them here (and to
-// CustomerPaymentsTab.vue's VIEWS) rather than switching to the full enum by default.
+// Counts use take: 0 (real COUNT, no rows), batched in one round trip via GraphQL aliases.
+// Only 5 chips on purpose; the rest use the column filter. Sync CustomerPaymentsTab.vue VIEWS.
 export async function fetchPaymentViewCounts(counterpartyId: string): Promise<PaymentViewCounts> {
     const result = await adminApi(PaymentViewCountsDocument, { counterpartyId });
     return {

@@ -30,9 +30,7 @@ const ORDER_STATES = [
 const FULFILLMENT_STATES = ['Pending', 'Shipped', 'Delivered'];
 const RESERVATION_STATES = ['AWAITING_CONFIRMATION', 'RESERVED', 'EXPIRED', 'RELEASED', 'FAILED'];
 
-// 27 orders with varied statuses/dates — enough to show a real paginated table (PAGE_SIZE=20 in
-// CustomerOrdersTab.vue) instead of a single flat row, matching what a real active customer
-// (e.g. "E2E Co" on the live site, 111 orders) actually looks like.
+// 27 rows, more than CustomerOrdersTab's PAGE_SIZE (20), so the table actually paginates
 const CUSTOMER_ORDERS: CustomerOrderItem[] = Array.from({ length: 27 }, (_, i) => ({
     id: String(200 + i),
     code: `ORD-202607-${(2000 + i).toString(16).toUpperCase()}`,
@@ -135,9 +133,7 @@ function mockCustomerDetailData(): void {
     registerMock('CustomerOrders', () => ({
         visibleOrders: { items: CUSTOMER_ORDERS.slice(0, 20) },
     }));
-    // Feeds CustomerOrdersTab (the "Orders" tab), which paginates each view chip independently
-    // from the Overview KPI fetch above (CustomerOrders) — see fetchOrdersPageForCustomer's
-    // comment in api/customers.ts for why these are separate queries.
+    // Pages independently of the CustomerOrders KPI fetch; see fetchOrdersPageForCustomer in api/customers.ts
     registerMock('CustomerOrdersPage', (variables: PageVariables) => {
         const filtered =
             variables.options?.filter?.state?.eq === 'Cancelled'
@@ -162,9 +158,7 @@ function mockCustomerDetailData(): void {
             totalItems: CUSTOMER_ORDERS.filter((_, i) => paymentBucket(i) === 'partial').length,
         },
     }));
-    // Cycles Unpaid (0) / Partially paid (half) / Paid (full) across the mocked orders so all
-    // three Payment badge states are visible — see CustomerOrdersTab.stories.ts's
-    // capturedAmountFor for the same pattern.
+    // Same pattern as capturedAmountFor in CustomerOrdersTab.stories.ts, keep the two in step
     registerMock('OrderPaymentSummaries', () => ({
         orderPaymentSummaries: CUSTOMER_ORDERS.map((order, i) => ({
             orderId: order.id,
@@ -238,9 +232,8 @@ export const Default: Story = {
     }),
 };
 
-// A dedicated sidebar entry pinned to the mobile viewport (see the manager-portal-rules
-// skill's tab-overflow pattern) — click straight into this story to see the mobile "3 tabs +
-// More" layout without going through the viewport dropdown first.
+// Pinned to mobile viewport so the "3 tabs + More" overflow shows without the viewport dropdown
+// Follows the tab-overflow pattern in the manager-portal-rules skill
 export const Mobile: Story = {
     ...Default,
     parameters: { viewport: { defaultViewport: 'mvMobile' } },

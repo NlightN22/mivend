@@ -37,9 +37,8 @@ describe('adminApi', () => {
         vi.stubGlobal('fetch', fetchMock);
 
         const promise = adminApi('{ ok }');
-        // Attach the assertion before advancing fake timers, so the rejection is always
-        // "handled" from the consumer's perspective — avoids a spurious unhandled-rejection
-        // warning from the gap between the promise rejecting and being awaited.
+        // Must attach the rejection handler before advancing fake timers;
+        // otherwise the rejection is unhandled during the gap and triggers a warning.
         await Promise.all([
             expect(promise).rejects.toBeInstanceOf(ApiNetworkError),
             vi.runAllTimersAsync(),
@@ -60,10 +59,8 @@ describe('adminApi', () => {
         expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
-    // Issue #115's own live remote-network finding: a hung connection with no response (not a
-    // thrown error) used to rely on the browser's own default TCP timeout, which can run into
-    // the tens of seconds. Simulates that by never resolving/rejecting fetch() and asserting the
-    // request aborts (and retries) on our own 5s timeout instead of hanging indefinitely.
+    // Simulates a hung fetch that never settles: browser TCP timeouts can take tens of seconds,
+    // so this asserts our own 5s timeout aborts and retries instead.
     it('aborts and retries a request that hangs with no response, instead of waiting forever', async () => {
         const fetchMock = vi.fn().mockImplementation(
             (_url: string, init?: RequestInit) =>

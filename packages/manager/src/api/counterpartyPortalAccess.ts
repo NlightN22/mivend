@@ -1,31 +1,7 @@
 import { adminApi } from './client';
 
-// Issue #120 — Counterparty portal-access bulk activation ("Активация клиентов") + the
-// Portal Users tab on the Counterparty detail page.
-//
-// Written as raw query strings (adminApi's pre-codegen escape hatch, see client.ts's own doc
-// comment on issue #86) rather than through packages/manager/codegen.ts's generated
-// TypedDocumentNode pipeline. Reconciled against the backend's actual shipped schema
-// (packages/plugins/counterparty/src/counterparty-portal-access.resolver.ts) after both the
-// backend and frontend halves of #120 landed in parallel:
-// - There is no plural `activateCounterpartyPortalAccess(counterpartyIds: [ID!]!)` — the real
-//   bulk path is the single `applyCounterpartyPortalAccessChanges(changes: [...])` batch mutation,
-//   one item per row with an independent per-row result.
-// - There is no separate `deactivateCounterpartyPortalUser` — the Portal Users tab's per-row
-//   deactivate reuses the same `deactivateCounterpartyPortalAccess(customerId: ID!): Customer!`
-//   the bulk table's batch path uses internally.
-// - Batch result fields are `{ counterpartyId, success, error, customerId }`, not `{ ..., message }`.
-// This file should still migrate into customers.graphql + real codegen'd documents, same as every
-// other api/*.ts file in this package — left as raw strings here only because that migration is
-// unrelated to the reconciliation itself.
-//
-// `phone`/`officialEmail`/`linkedCustomerId` themselves are NOT assumed — they already exist on
-// the admin schema's Counterparty type, ERP-sourced and read-only since issue #131 (see
-// apps/server/src/dashboard/counterparty/counterparty.graphql.ts's CounterpartyItem fragment,
-// shipped with #133). Issue #120's own Decision 6 ("phone/email entered manually on the detail
-// page") predates #131 and is stale — #133's own body flags this exact correction as a follow-up
-// still owed on #120's issue text. This page treats phone/officialEmail as already
-// ERP-sourced, matching current reality, not Decision 6's original text.
+// Raw strings until codegen migration; backend only has batch applyCounterpartyPortalAccessChanges.
+// phone/officialEmail are ERP-sourced and read-only, not manually entered.
 
 export interface ActivationCandidate {
     id: string;
@@ -40,9 +16,7 @@ export interface ActivationCandidate {
     linkedCustomerId: string | null;
 }
 
-// Mirrors the GraphQL `CounterpartySortParameter` input (counterparty.plugin.ts) — only real,
-// server-sortable Counterparty columns, see that input's own doc comment for what's deliberately
-// excluded (issue #138 tracks the remaining manager-portal tables' own sort audit).
+// Must match server's CounterpartySortParameter; unsortable columns are left out on purpose.
 export interface CounterpartySortParameter {
     shortName?: 'ASC' | 'DESC';
     inn?: 'ASC' | 'DESC';
@@ -88,10 +62,7 @@ const ACTIVATION_CANDIDATES_QUERY = /* GraphQL */ `
 export async function fetchActivationCandidates(
     options: ActivationCandidatesOptions,
 ): Promise<{ items: ActivationCandidate[]; totalItems: number }> {
-    // portalAccess/status/managerErpId/branchId/erpGroupLabel/search all map onto
-    // CounterpartyListOptions' own real fields (same shape customers.ts already uses) — the
-    // readiness/portalAccess split itself has no single backend column, so it's computed
-    // client-side per row below rather than sent as a filter arg the backend doesn't have.
+    // Readiness has no backend column, so it is computed per row client-side, not sent as a filter.
     const result = await adminApi<{
         counterparties: { items: ActivationCandidate[]; totalItems: number };
     }>(ACTIVATION_CANDIDATES_QUERY, {
@@ -145,9 +116,8 @@ export interface PortalAccessChange {
     action: PortalAccessAction;
 }
 
-// One real batch mutation, not N sequential calls — per #120's own carried-over bulk-edit
-// decision. Both Activate and Deactivate go through this same mutation, distinguished by each
-// change's own `action` field, matching the backend's actual single-mutation shape.
+// One batch mutation on purpose, not N calls; activate and deactivate both use it.
+// Direction is set by each change's own `action` field, the backend's only shape.
 export async function applyCounterpartyPortalAccessChanges(
     changes: PortalAccessChange[],
 ): Promise<PortalAccessBatchResult[]> {
@@ -157,10 +127,8 @@ export async function applyCounterpartyPortalAccessChanges(
     return result.applyCounterpartyPortalAccessChanges;
 }
 
-// Manager-name resolution for the managerErpId column — same two-source fallback dashboard's
-// counterparty-display.ts's formatManager already uses (a linked Administrator's customFields.
-// erpId, else an unlinked ErpUser's fullName, else the raw id) — duplicated here in raw-string
-// form for the same "backend not ready yet" reason as the rest of this file.
+// Duplicate of dashboard's formatManager (counterparty-display.ts); keep both in sync.
+// Fallback: linked Administrator's customFields.erpId, then unlinked ErpUser fullName, then raw id.
 const MANAGER_LOOKUP_QUERY = /* GraphQL */ `
     query CounterpartyActivationManagerLookup {
         administrators(options: { take: 999 }) {
@@ -282,9 +250,8 @@ const DEACTIVATE_PORTAL_ACCESS_MUTATION = /* GraphQL */ `
     }
 `;
 
-// Same mutation the bulk table's batch path uses internally for a 'deactivate' change — there is
-// no separate single-customer variant. Throws on failure (e.g. no linked Customer); the caller
-// shows the thrown message, there is no {success, message} result shape here.
+// Same mutation as the bulk path's 'deactivate' change; there is no single-customer variant.
+// Throws on failure (e.g. no linked Customer); callers show the thrown message, no result object.
 export async function deactivateCounterpartyPortalUser(
     customerId: string,
 ): Promise<{ id: string }> {

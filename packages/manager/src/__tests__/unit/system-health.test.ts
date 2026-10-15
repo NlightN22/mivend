@@ -1,28 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildSystemHealthChecklist, type SystemHealthQueryResult } from '../../api/system-health';
 
-// Test plan (see .claude/skills/test-design/SKILL.md):
-//
-// - Changed behavior: buildSystemHealthChecklist, the pure derivation of the fixed 6-item
-//   "store setup" checklist (issue #76) from a raw SystemHealthCheckData query result.
-// - Business invariants: each of the 6 checks is independent of the other 5 — one entity type
-//   being present/absent never flips another item's status. The literal incident this issue was
-//   filed about is invariant #4: Zone + TaxCategory + TaxRate can all exist while
-//   Channel.defaultTaxZone is still null, and only that one item must report missing.
-// - Data ownership and scope: none — pure client-side derivation over an already-fetched
-//   read-only query result, no backend boundary of its own.
-// - Failure modes: an empty/all-missing result, an all-present result, and the specific
-//   partial-incident shape (5 of 6 present, only defaultTaxZone missing).
-// - Applicable patterns: none of docs/testing-patterns.md's backend risk patterns apply (no
-//   CQRS/inbox/outbox/idempotency/concurrency) — this is a pure function over a plain object.
-// - Test placement: unit only, on the pure function directly — no need for a component/E2E test
-//   for a derivation with no DOM or async behavior of its own (SystemHealthPage.vue's own fetch
-//   wiring is a thin, low-risk wrapper around this function and fetchSystemHealthData).
-// - Existing coverage reused: none — first test for this new api/system-health.ts module.
-// - Deliberate omissions: no test for fetchSystemHealthData itself (a thin adminApi query
-//   wrapper, same shape as every other fetch* function in packages/manager/src/api that has no
-//   dedicated test); no E2E test — this is a settings page assembled from already-tested
-//   ui-kit/auth-store pieces, not a new business flow.
+// Each of the 6 checks must be independent: one entity type's presence never flips another item.
+// Channel.defaultTaxZone may be null while Zone/TaxCategory/TaxRate exist; only it is missing.
 
 function fullyHealthyResult(): SystemHealthQueryResult {
     return {

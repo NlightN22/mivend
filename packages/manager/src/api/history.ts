@@ -7,10 +7,8 @@ import {
 
 export type EntityVersionRow = EntityVersionRowFieldsFragment;
 
-// Gated on CustomPermission.ReadEntityHistory (leadership roles only — department-head,
-// general-director, security-officer, portal-admin) — see infrastructure/scripts/
-// seed-access-roles.mjs. Generic across entity types by design (see plugin-versioning) —
-// entityName/entityId is the only thing that varies per caller.
+// Requires CustomPermission.ReadEntityHistory (leadership roles, seeded in seed-access-roles.mjs).
+// Generic across entity types: entityName/entityId is the only per-caller variable.
 export async function fetchEntityVersions(
     entityName: string,
     entityId: string,
@@ -24,10 +22,8 @@ export interface EntityRef {
     entityId: string;
 }
 
-// Mirrors the backend's EntityVersionListOptions (plugin-versioning) — action/entityName/
-// administratorId/createdAfter are real columns, pushed into SQL. Free-text search is NOT here —
-// EntityHistoryPanel.vue's search field only matches within the currently-loaded page, same
-// documented limitation as Approvals' search (see issue #39).
+// Mirrors the backend EntityVersionListOptions; these filters are pushed into SQL columns.
+// Free-text search is intentionally absent: EntityHistoryPanel.vue only filters the loaded page.
 export interface EntityVersionListOptions {
     take?: number;
     skip?: number;
@@ -43,11 +39,8 @@ export interface EntityVersionPage {
     totalItems: number;
 }
 
-// Batch variant of fetchEntityVersions — one request for a whole object graph's audit trail
-// (e.g. a Counterparty plus all of its TradingPoints) instead of one call per ref, so the
-// History widget scales to any entity/relation shape without an N+1 waterfall on load.
-// Server-side paginated + filtered (issue #39) — see EntityHistoryPanel.vue for how filter state
-// drives a refetch instead of filtering a fully-loaded array in memory.
+// Batched to fetch a whole object graph in one request, avoiding an N+1 load waterfall.
+// Paginated and filtered server-side; filter changes refetch rather than filter in memory.
 export async function fetchEntityVersionsForRefs(
     refs: EntityRef[],
     options: EntityVersionListOptions = {},

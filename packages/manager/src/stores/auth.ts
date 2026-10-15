@@ -9,9 +9,8 @@ import {
     type ActiveAdministratorFieldsFragment,
 } from '../api/generated/graphql';
 
-// Administrator.customFields is nullable at the wrapper-object level per the GraphQL schema, but
-// Vendure always populates it in practice — normalized once here, same pattern as
-// api/customers.ts's normalizeOrderItem.
+// Schema says customFields is nullable, but Vendure always populates it; normalize once here.
+//
 type ActiveAdministrator = Omit<ActiveAdministratorFieldsFragment, 'customFields'> & {
     customFields: NonNullable<ActiveAdministratorFieldsFragment['customFields']>;
 };
@@ -25,18 +24,14 @@ function normalizeActiveAdministrator(
     };
 }
 
-// The identifier every contour ships with (SUPERADMIN_USERNAME, same literal value in every
-// apps/server/.env.* — see docs/environments.md) — used only to warn that this session is still
-// on the built-in account, never to gate any actual permission (that stays permission-based, see
-// hasPermission below).
+// Built-in account name, identical in every contour: used only to warn, never to gate permissions.
+// Permission checks stay in hasPermission below.
 const DEFAULT_SUPERADMIN_IDENTIFIER = 'superadmin';
 
 type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 
-// Background retry tuning for a network outage that outlasts adminApi's own bounded ~4.2s
-// retry (see api/client.ts) — capped exponential backoff, retried indefinitely rather than
-// ever concluding "logged out" from a network failure alone. See the backend-plugin-rules skill's "A fetch()
-// network failure is not the same as 'logged out'" gotcha.
+// Outlasts adminApi's bounded retry: capped backoff, retry indefinitely.
+// A network failure alone must never be treated as logged out.
 const BACKGROUND_RETRY_INITIAL_MS = 2_000;
 const BACKGROUND_RETRY_MAX_MS = 20_000;
 // Lets a session dying server-side surface while the user sits on a page, not only on their
@@ -46,10 +41,8 @@ const HEARTBEAT_INTERVAL_MS = 60_000;
 export const useAuthStore = defineStore('auth', () => {
     const administrator = ref<ActiveAdministrator | null>(null);
     const initialized = ref(false);
-    // Tri-state, distinct from `administrator`/`isLoggedIn`: 'unknown' covers both "not yet
-    // checked" and "currently retrying after a network failure" — the router guard only
-    // redirects to /login on a *confirmed* 'unauthenticated', never on 'unknown', so a prolonged
-    // outage never force-logs-out a still-valid session.
+    // 'unknown' covers both not-yet-checked and retrying after a network failure.
+    // Router redirects to /login only on confirmed 'unauthenticated', never on 'unknown'.
     const authStatus = ref<AuthStatus>('unknown');
     const isReconnecting = ref(false);
     // Set the moment isReconnecting flips true, cleared when it flips false — lets the UI (the
@@ -73,10 +66,8 @@ export const useAuthStore = defineStore('auth', () => {
     // First role is authoritative for the portal role badge — portal roles are configured
     // as one Vendure Role per Administrator (see docs/access-control.md), not combined.
     const roleCode = computed(() => administrator.value?.user.roles[0]?.code ?? null);
-    // Role.description (seed-access-roles.mjs) is a full sentence meant for admin config UI
-    // ("General director — final approval step, full company-wide visibility"), not a topbar/
-    // badge label — derive a short label from the code instead (e.g. "general-director" ->
-    // "General Director").
+    // Role.description is a full sentence for admin config UI, not a badge label.
+    // Derive the short label from the role code instead.
     const roleLabel = computed(() =>
         roleCode.value
             ? roleCode.value
@@ -86,28 +77,20 @@ export const useAuthStore = defineStore('auth', () => {
             : null,
     );
 
-    // Union across roles defensively, even though roleCode's comment above notes the current
-    // convention is one Vendure Role per Administrator. This is the ground truth for "can this
-    // user do X" UI gates — check permissions directly (mirrors the backend's own @Allow(...)
-    // checks), never a role-code allowlist duplicated per component, which drifts from what the
-    // native Vendure admin UI actually grants a role.
+    // Union across roles defensively, though each Administrator normally has one role.
+    // Check permissions directly, not role-code allowlists, which drift from Vendure's own grants.
     const permissions = computed(
         () => administrator.value?.user.roles.flatMap(r => r.permissions) ?? [],
     );
 
     function hasPermission(name: string): boolean {
-        // Permission is a real GraphQL enum (Vendure's fixed native+custom permission set), but
-        // this app's own permission checks (this function's callers, PERMISSION_CATEGORIES in
-        // api/settings.ts) work with plain strings throughout — narrowing isn't meaningful here.
+        // Permission is a GraphQL enum, but this app's checks use plain strings throughout.
+        // Narrowing the type here would not be meaningful.
         return (permissions.value as string[]).includes(name);
     }
 
-    // Real incident (2026-09-12): a fresh contour's only administrator is the built-in
-    // superadmin/superadmin account (SUPERADMIN_USERNAME/PASSWORD env vars, identical literal
-    // value across every apps/server/.env.* file) — nothing in this codebase ever prompts anyone
-    // to change it. Surfaced as a dashboard warning (DefaultLayout.vue) linking to
-    // /settings/security's new "Change password" panel, never blocking — see that panel's own
-    // doc comment for why a stricter, forced-change gate isn't implemented here.
+    // Built-in superadmin credentials ship identical in every contour and nothing forces a change.
+    // Warning only, never blocking; see the panel's doc comment for why no forced gate.
     const isDefaultSuperadminAccount = computed(
         () => administrator.value?.user.identifier === DEFAULT_SUPERADMIN_IDENTIFIER,
     );
@@ -143,11 +126,8 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (e) {
             console.warn('[auth] logout mutation failed:', e);
         }
-        // Clears this administrator's own persisted table/column UI state (order/width/
-        // visibility/sort/pageSize/filters) — never lets a stale preference from an earlier
-        // session silently resurface next time they (or someone else, on a shared machine) log
-        // in. Scoped to this one administrator's keys only (see clearPersonalUiState's own doc
-        // comment) — must run before clearing `administrator.value` below, since it needs the id.
+        // Clear this admin's persisted table UI state so a shared machine never shows stale prefs.
+        // Must run before administrator.value is cleared, since it needs the id.
         if (administrator.value) clearPersonalUiState(administrator.value.id);
         generation++;
         stopBackgroundRetry();
@@ -201,10 +181,8 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    // Keeps retrying indefinitely (capped backoff) after adminApi's own bounded ~4.2s retry is
-    // exhausted — a prolonged outage must never be mistaken for "logged out". Only a real HTTP
-    // response (success or a confirmed-null activeAdministrator) ends the loop; a superseded
-    // generation (login/logout/a fresh fetchActiveAdministrator call) also stops it silently.
+    // Retry indefinitely past adminApi's bounded retry: an outage must never look like logout.
+    // Only a real HTTP response ends the loop; a superseded generation stops it silently.
     function scheduleBackgroundRetry(myGeneration: number, delayMs: number): void {
         backgroundRetryTimer = setTimeout(() => {
             if (myGeneration !== generation) return;
@@ -215,11 +193,8 @@ export const useAuthStore = defineStore('auth', () => {
                 })
                 .catch(() => {
                     if (myGeneration !== generation) return;
-                    // Vendure's activeAdministrator query never throws for "not logged in" — it
-                    // returns a clean `null`, handled by applyResult above. ANY thrown error here
-                    // (network failure, a transient GraphQL/DB error, anything) is therefore
-                    // ambiguous, not a confirmed logout — keep retrying rather than assuming the
-                    // caller is unauthenticated just because this one attempt errored.
+                    // activeAdministrator returns a clean null for logged-out, so any thrown error is ambiguous.
+                    // Keep retrying rather than assuming the caller is unauthenticated.
                     scheduleBackgroundRetry(
                         myGeneration,
                         Math.min(delayMs * 2, BACKGROUND_RETRY_MAX_MS),
@@ -242,17 +217,8 @@ export const useAuthStore = defineStore('auth', () => {
             const result = await adminApi(ActiveAdministratorDocument);
             applyResult(myGeneration, result);
         } catch {
-            // Vendure's activeAdministrator query never throws for "not logged in" — a genuine
-            // logout always comes back as a clean, successful `null` response, handled by
-            // applyResult above. ANY thrown error here — a network failure (adminApi already
-            // retried a couple of times, see ApiNetworkError's doc comment), a transient
-            // GraphQL/DB error, anything — means we simply don't know the session's real state,
-            // not that the user is logged out. Vendure sessions last a year by default, so the
-            // cookie is almost certainly still valid — clearing `administrator` here would force
-            // a real, logged-in user back to the login screen just because one request errored
-            // (e.g. a dev restart, or a DB hiccup right as the server resumes from one). Status
-            // stays 'unknown' and hands off to an indefinite background retry rather than
-            // blocking this call (and whatever awaits it, e.g. the router guard).
+            // A thrown error means unknown session state, not logout: Vendure sessions last a year.
+            // Clearing administrator here would wrongly force a logged-in user to the login screen.
             isReconnecting.value = true;
             reconnectingSince.value = Date.now();
             scheduleBackgroundRetry(myGeneration, BACKGROUND_RETRY_INITIAL_MS);

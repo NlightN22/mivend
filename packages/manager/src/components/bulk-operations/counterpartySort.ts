@@ -1,16 +1,8 @@
 import type { DataTableSortMeta, AdvancedDataTableColumn } from '@mivend/ui-kit';
 import type { CounterpartySortParameter } from '../../api/counterpartyPortalAccess';
 
-// Extracted from CounterpartyActivationDataTable.vue for direct unit testing (this package has
-// no jsdom/happy-dom, so a real @vue/test-utils `mount()` isn't available — see
-// useTabSync.test.ts's own doc comment for the same constraint/pattern).
-//
-// Real bug this guards against: tableState.sort's `field` is the table COLUMN's own key (e.g.
-// 'manager'), never the backend sort key — those two only happen to be spelled the same for
-// shortName/inn/phone/officialEmail. The "manager" column's `sortField` is 'managerErpId', so
-// sending `entry.field` directly sent `{ manager: 'DESC' }`, a field CounterpartySortParameter
-// doesn't have — GraphQL then rejected the whole query, wiping every column's data, not just
-// Manager's.
+// Column key differs from backend sort key (manager -> managerErpId).
+// An unknown sort field makes GraphQL reject the whole query, not just that column.
 export function mapSortToApi(
     meta: DataTableSortMeta[],
     columns: AdvancedDataTableColumn[],

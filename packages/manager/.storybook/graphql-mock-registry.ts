@@ -1,7 +1,5 @@
-// Generic GraphQL operation-name -> mock resolver registry, used by the MSW handler in
-// preview.ts. Each page's story registers only the operations it actually calls; an
-// unregistered operation resolves to `{}` so an unrelated background query never crashes
-// the whole page render.
+// Unregistered operations resolve to {} (see preview.ts MSW handler), so a stray background
+// query can't crash the page render; stories register only the ops they actually call.
 type MockResolver = (variables: Record<string, unknown>) => unknown;
 
 const registry = new Map<string, MockResolver>();

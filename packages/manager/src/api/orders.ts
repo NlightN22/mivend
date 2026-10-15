@@ -14,9 +14,8 @@ import {
 export type OrderListItem = OrderListItemFieldsFragment;
 
 export interface OrdersFilters {
-    // Index signature lets OrdersFilters satisfy useUrlSyncedState's generic Record<string,
-    // string> constraint — all fields here are already flat strings, this doesn't loosen
-    // anything real.
+    // Index signature so OrdersFilters satisfies useUrlSyncedState's Record<string, string> constraint.
+    // All fields are flat strings, so this loosens nothing.
     [key: string]: string;
     search: string;
     state: string;
@@ -67,15 +66,12 @@ export const RESERVATION_FAILURE_LABEL: Record<string, string> = {
     UNEXPECTED: 'Unexpected error',
 };
 
-// Order states are Vendure's own OrderProcess state machine — fixed by application logic, not
-// ERP-sourced business data, so a const list is the documented carve-out in the backend-plugin-rules skill ("internal
-// technical states"), not a hardcoded business enum.
+// Vendure's own OrderProcess states, not ERP business data; a const list is intentional here.
+// Documented carve-out for internal technical states in backend-plugin-rules.
 export const ORDER_STATE_OPTIONS = [
     { value: '', label: 'All statuses' },
     { value: 'AddingItems', label: 'Draft (storefront cart)' },
-    // "Draft" (capitalized) is Vendure's distinct state for orders created via the admin
-    // draft-order flow — see /orders/new (createDraftOrder) — not the same state as a
-    // customer's own in-progress cart (AddingItems).
+    // 'Draft' (capitalized) is the admin draft-order state, distinct from a customer's AddingItems cart.
     { value: 'Draft', label: 'Draft (order entry)' },
     { value: 'ArrangingPayment', label: 'Arranging payment' },
     { value: 'PaymentAuthorized', label: 'Processing' },
@@ -114,9 +110,8 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
     };
     if (filters.state) filter.state = { eq: filters.state };
     if (filters.reservationState) {
-        // Flat, not nested under `customFields` — see the backend-plugin-rules skill's Vendure gotcha and
-        // api/customers.ts's identical fix (same bug, same root cause: `filter.customFields`
-        // isn't a valid `OrderFilterParameter` shape, so this silently matched nothing).
+        // Must be flat, not under customFields: filter.customFields is not a valid OrderFilterParameter
+        // shape and silently matches nothing.
         filter.reservationState = { eq: filters.reservationState };
     }
     if (filters.erpStatus) {
@@ -128,18 +123,15 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
     return filter;
 }
 
-// Real Vendure OrderSortParameter keys only — the PrimeVue DataTable's own column `field` names
-// (see OrdersDataTable.vue) don't all match 1:1 (e.g. its 'total'/'date' columns sort by
-// totalWithTax/orderPlacedAt), so callers map through this before building the `sort` object.
+// Must use real Vendure OrderSortParameter keys: DataTable column fields don't map 1:1
+// (e.g. 'total' -> totalWithTax), so callers map through this before building sort.
 export type OrderSortField = 'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt';
 
 export async function fetchOrdersPage(
     filters: OrdersFilters,
     page: number,
     pageSize: number,
-    // Object insertion order = ORDER BY clause order — supports Vendure's own multi-field sort
-    // (see OrdersDataTable.vue's sortMode="multiple"). Defaults to the original single-field
-    // "newest first" behavior when omitted.
+    // Key insertion order is the ORDER BY clause order; multi-field sort relies on it.
     sort: Partial<Record<OrderSortField, 'ASC' | 'DESC'>> = { createdAt: 'DESC' },
 ): Promise<{ items: OrderListItem[]; totalItems: number }> {
     const result = await adminApi(OrdersPageDocument, {
@@ -233,14 +225,8 @@ export const ORDER_STATE_LABEL: Record<string, string> = {
     Cancelled: 'Cancelled',
 };
 
-// Single source of truth for Commercial-state badge color — keyed by the raw Order.state
-// (not the label above), so relabeling ORDER_STATE_LABEL never silently breaks this map.
-// Any manager-portal component rendering a Commercial state badge must use this, not its own
-// ad hoc variant — see the frontend-rules skill's ui-kit "single source of truth" rule and the real incident
-// this fixes: OrdersTable.vue/CustomerOrdersTab.vue were each rendering this badge with no
-// variant at all (always the default gray), and Fulfillment separately hardcoded 'info' for
-// every state regardless of value — neither read as intended, and the two tables didn't even
-// agree with each other since Fulfillment's map lived nowhere.
+// Keyed by raw Order.state, not the label, so relabeling ORDER_STATE_LABEL can't break colors.
+// All Commercial-state badges must use this map, not a local variant.
 export const ORDER_STATE_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
     AddingItems: 'neutral',
     Draft: 'neutral',
@@ -254,9 +240,7 @@ export const ORDER_STATE_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
     Cancelled: 'danger',
 };
 
-// Single source of truth for the Fulfillment badge color — keyed by the real Vendure
-// Fulfillment.state value, plus the synthetic 'Not started' CustomerOrdersTab.vue/OrdersTable.vue
-// use when an order has no fulfillment yet at all.
+// Keyed by Fulfillment.state plus the synthetic 'Not started', which has no Fulfillment record.
 export const FULFILLMENT_STATE_BADGE_VARIANT: Record<string, StatusBadgeVariant> = {
     'Not started': 'neutral',
     Pending: 'warning',
@@ -265,9 +249,7 @@ export const FULFILLMENT_STATE_BADGE_VARIANT: Record<string, StatusBadgeVariant>
     Cancelled: 'danger',
 };
 
-// Mirrors the keys above — real Fulfillment.state values (Vendure's own default fulfillment
-// process) plus the synthetic 'Not started' — used as the Fulfillment column's filter options
-// (see customFields.latestFulfillmentState in api/customers.ts).
+// Must stay in sync with the badge map keys above; 'Not started' is synthetic, not a Vendure state.
 export const FULFILLMENT_STATE_OPTIONS = [
     { value: 'Not started', label: 'Not started' },
     { value: 'Pending', label: 'Pending' },
@@ -276,16 +258,8 @@ export const FULFILLMENT_STATE_OPTIONS = [
     { value: 'Cancelled', label: 'Cancelled' },
 ] as const;
 
-// Single source of truth for "how far along" a fulfillment stage is — a *sequence position*
-// (Not started -> Pending -> Shipped -> Delivered), not a quantity-fulfilled ratio. Real bug this
-// fixes: CustomerOrdersTab.vue's fulfillmentProgress() previously computed
-// fulfilledQuantity/totalQuantity, which is 100% the moment a single Fulfillment record exists
-// covering all lines regardless of that fulfillment's own state — so Pending, Shipped, and
-// Delivered orders all rendered a fully-filled progress bar, indistinguishable from each other
-// (the seed data's typical one-fulfillment-per-order shape made this especially obvious).
-// 'Cancelled' has no defined stage — it's a terminal state off the normal progression, not a
-// percentage of it; callers should branch on it separately (e.g. render the bar as empty/hidden)
-// rather than looking it up here.
+// Not a quantity ratio: one fulfillment covering all lines reads 100% whatever its state.
+// 'Cancelled' is off the sequence; callers must branch on it before looking up here.
 export const FULFILLMENT_STAGE_INDEX: Record<string, number> = {
     'Not started': 0,
     Pending: 1,
@@ -312,21 +286,11 @@ export async function fetchManagerOptions(): Promise<ManagerOption[]> {
 }
 
 export interface BranchOption {
-    // The mivend Branch.id (DB primary key) — NOT the same value space as `erpId` below. Branch
-    // is a purely mivend-internal entity (ERP/the ERP has no "branch" concept at all, only
-    // Department/"Подразделение" — see docs/access-control.md's "Branch vs Department" section);
-    // `Counterparty.branchId`/`Administrator.customFields.branchId`/every other real branchId
-    // consumer (AccessScopeService, Warehouse.branchId) store and compare THIS value, never
-    // `erpId`. A previous version of this comment claimed the opposite (confusing Branch with
-    // Department, which really is ERP-sourced) — that was wrong and caused a real, live bug:
-    // TeamDirectoryTable.vue's/OrdersTable.vue's/CustomersTable.vue's own branch-name lookups
-    // compared this field's `erpId` against a real `Branch.id` value and never matched, silently
-    // showing "—"/the raw id for every row with an actually-assigned branch.
+    // Branch.id (DB primary key), never erpId: branchId fields and comparisons all use this value.
+    // Branch is mivend-internal with no ERP counterpart; ERP's Department is a different entity.
     id: string;
-    // `Branch.erpId` — only meaningful for a Branch that was resolved from an ERP-side branch/
-    // point code (`BranchService.upsert`); a manually-created Branch (`BranchService.
-    // createManual`) has no real ERP link. Display-only; never compare this against a
-    // `branchId` field.
+    // Only set by BranchService.upsert from an ERP point code; createManual Branches have none.
+    // Display-only; never compare against a branchId field.
     erpId: string;
     name: string;
 }

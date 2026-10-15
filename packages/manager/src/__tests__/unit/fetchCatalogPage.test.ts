@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fetchCatalogPage, DEFAULT_CATALOG_FILTERS } from '../../api/catalog';
 
-// Test plan: the selected category must reach the search as collectionSlug (subtree match done by
-// the server), never as a client-resolved facet value, which is missing for categories whose
-// products are all absent from the facet aggregation and silently lists the whole catalog.
-// Unit level: asserts the wire shape of the request body, same fetch mock style as client.test.ts.
+// Send the category as collectionSlug (server-side subtree match), not a facet value.
+// Missing facet values for empty-aggregation categories silently list the whole catalog.
 function mockSearch(): { body: () => { variables: Record<string, unknown> } } {
     const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
