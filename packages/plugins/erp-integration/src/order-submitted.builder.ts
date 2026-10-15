@@ -1,5 +1,5 @@
 import { OrderStatusReferenceService } from '@mivend/plugin-erp-order';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { ID } from '@vendure/common/lib/shared-types';
@@ -27,6 +27,8 @@ interface ActiveReservations {
 // or not at all: a partial order cannot be completed in the ERP later, a skipped one can be rebuilt.
 @Injectable()
 export class OrderSubmittedBuilder {
+    private readonly logger = new Logger(OrderSubmittedBuilder.name);
+
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly counterpartyService: CounterpartyService,
@@ -182,7 +184,13 @@ export class OrderSubmittedBuilder {
         const tradingPointId = order.customFields?.tradingPointId;
         if (!isDelivery || !tradingPointId) return {};
         const point = await this.tradingPointService.findById(ctx, tradingPointId);
-        if (!point || point.customerOwned) return {};
+        if (!point) return {};
+        if (point.customerOwned) {
+            this.logger.warn(
+                `Order ${order.code}: delivery to a customer-owned point is submitted as pickup`,
+            );
+            return {};
+        }
         return {
             pointOfSaleId: point.erpId,
             ...(point.address ? { deliveryAddress: point.address } : {}),
