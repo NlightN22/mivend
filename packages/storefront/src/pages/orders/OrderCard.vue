@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useStatusGroupLabel } from './useStatusGroupLabel';
 import { computed } from 'vue';
 import { MvStatusBadge, formatDocumentNumber, toast } from '@mivend/ui-kit';
 import { useRepeatOrder } from './useRepeatOrder';
@@ -21,7 +22,8 @@ const displayNumber = computed(() => {
 });
 const statuses = useOrderStatusesStore();
 const statusKey = computed(() => props.order.customFields?.erpStatus);
-const statusLabel = computed(() => statuses.label(statusKey.value));
+const statusName = computed(() => statuses.label(statusKey.value));
+const statusLabel = useStatusGroupLabel(() => statusKey.value);
 const statusVariant = computed(() => statuses.variant(statusKey.value));
 
 const formattedTotal = computed(() => {
@@ -66,7 +68,7 @@ const preview = computed(() => {
             <span
                 class="status-pill"
                 :class="statusVariant !== 'default' ? statusVariant : ''"
-                :title="statusLabel"
+                :title="statusName"
             >
                 {{ statusLabel }}
             </span>

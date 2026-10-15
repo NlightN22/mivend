@@ -222,8 +222,9 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   recorded, no local cancel until the ERP answers.
 - `order-cancel-result` (applied under the same lock): `cancelled` -> local cancel, `CANCELLED`; `rejected` ->
   `cancelRequestStatus=REFUSED`, `cancelRefusalReason`, staff notification, the order stays (a refusal after a
-  local cancel is an error notification). One `cancel-requested` per `orderUuid`: after a refusal there is no
-  automatic second request.
+  local cancel is an error notification). One `cancel-requested` per `orderUuid` while a request is open; after a
+  refusal the customer or staff may cancel again and a new `cancel-requested` (new `eventId`) is sent, which the
+  integration side treats as a fresh command.
 - Local cancel: release reservations, void the authorized payment, Vendure `Cancelled` with the reason in the
   history, `ErpOrderStatusEvent` CANCELLED, staff notification (a settled payment adds a manual-refund warning).
 - Reserve deadline (`ReservationExpiryService`): the same service with `requestRegistered=false`: pending or
@@ -259,7 +260,7 @@ string validated against the dictionary; `erpOrderStatus` stays the ERP's raw `s
   (`warehouseStarted`), deferred exposure and credit flag (not `shipped`/`cancelled`/`rejected`), reservation expiry and
   the health page (`rejected`), contract change (`initial`), external order state (`vendureState` from the flags).
 - **API:** Shop and Admin `orderStatuses` return the dictionary; storefront and manager build labels, badge variants
-  and filter groups from it. No per-status i18n keys.
+  and filter groups from it. Customer-facing labels are per `customerGroup` (i18n keys per group, none per status); the exact status name stays in the badge tooltip and the history, and an unknown group falls back to the status name.
 - **No backfill:** there is no compatibility layer; an order keeps whatever status string it has.
 
 ### ERP status derivation by receiving method (owner-approved; the ERP computes it, we only read `status_code`)

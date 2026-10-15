@@ -39,9 +39,15 @@ export const useOrderStatusesStore = defineStore('orderStatuses', () => {
         return status.customerGroup === 'pending' ? 'warning' : 'default';
     }
 
-    function codesInGroup(group: string): string[] {
-        return statuses.value.filter(s => s.customerGroup === group).map(s => s.code);
+    function groupOf(code: string | null | undefined): string | null {
+        return (code && byCode.value.get(code)?.customerGroup) || null;
     }
 
-    return { statuses, loaded, load, label, variant, codesInGroup };
+    function codesInGroups(groups: string[]): string[] {
+        return statuses.value
+            .filter(s => s.customerGroup && groups.includes(s.customerGroup))
+            .map(s => s.code);
+    }
+
+    return { statuses, loaded, load, label, groupOf, variant, codesInGroups };
 });

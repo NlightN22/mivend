@@ -5,6 +5,15 @@ import AccountSidebar from '../account/AccountSidebar.vue';
 import OrderCard from './OrderCard.vue';
 import OrdersAside from './OrdersAside.vue';
 import { useOrders } from './useOrders';
+import { useI18n } from 'vue-i18n';
+import {
+    DEFAULT_SOURCE,
+    DEFAULT_STATUS,
+    SOURCE_FILTERS,
+    STATUS_FILTERS,
+    sourceIsExternal,
+    statusGroups,
+} from './orderFilters';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
 
 const { orders, totalItems, loading, load } = useOrders();
@@ -12,7 +21,7 @@ const { orders, totalItems, loading, load } = useOrders();
 const PAGE_SIZE = 20;
 
 const { filters: urlState, page } = useUrlState(
-    { status: 'all', source: 'all', q: '' },
+    { status: DEFAULT_STATUS, source: DEFAULT_SOURCE, q: '' },
     { typingKeys: ['q'] },
 );
 const activeFilter = toRef(urlState, 'status');
@@ -21,32 +30,17 @@ const searchQuery = toRef(urlState, 'q');
 
 const statuses = useOrderStatusesStore();
 
-const filters = [
-    { key: 'all', label: 'All orders' },
-    { key: 'pending', label: 'In progress' },
-    { key: 'confirmed', label: 'Confirmed' },
-    { key: 'in_transit', label: 'Shipped' },
-    { key: 'delivered', label: 'Delivered' },
-    { key: 'cancelled', label: 'Cancelled' },
-];
-
-const sources = [
-    { key: 'all', label: 'All sources' },
-    { key: 'mivend', label: 'Placed here' },
-    { key: 'erp', label: 'From ERP' },
-];
-
-const SOURCE_EXTERNAL: Record<string, boolean | undefined> = { mivend: false, erp: true };
+const { t } = useI18n();
 
 async function reload(): Promise<void> {
     await statuses.load();
+    const groups = statusGroups(activeFilter.value);
     void load({
         take: PAGE_SIZE,
         skip: (page.value - 1) * PAGE_SIZE,
         search: searchQuery.value.trim() || undefined,
-        erpStatuses:
-            activeFilter.value === 'all' ? undefined : statuses.codesInGroup(activeFilter.value),
-        isExternal: SOURCE_EXTERNAL[activeSource.value],
+        erpStatuses: groups ? statuses.codesInGroups(groups) : undefined,
+        isExternal: sourceIsExternal(activeSource.value),
     });
 }
 
@@ -76,25 +70,25 @@ onMounted(() => void reload());
 
             <div class="filter-chips">
                 <button
-                    v-for="f in filters"
+                    v-for="f in STATUS_FILTERS"
                     :key="f.key"
                     class="chip"
                     :class="{ active: activeFilter === f.key }"
                     @click="activeFilter = f.key"
                 >
-                    {{ f.label }}
+                    {{ t(f.labelKey) }}
                 </button>
             </div>
 
             <div class="filter-chips">
                 <button
-                    v-for="s in sources"
+                    v-for="s in SOURCE_FILTERS"
                     :key="s.key"
                     class="chip"
                     :class="{ active: activeSource === s.key }"
                     @click="activeSource = s.key"
                 >
-                    {{ s.label }}
+                    {{ t(s.labelKey) }}
                 </button>
             </div>
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useStatusGroupLabel } from './useStatusGroupLabel';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -20,6 +21,7 @@ import OrderTotalsCard from './OrderTotalsCard.vue';
 const route = useRoute();
 const { t } = useI18n();
 const statuses = useOrderStatusesStore();
+const statusLabel = useStatusGroupLabel(() => order.value?.customFields?.erpStatus);
 const { order, tradingPoints, loading, load } = useOrderDetail();
 const { repeating, repeat } = useRepeatOrder();
 
@@ -93,8 +95,9 @@ onMounted(() => {
                             <span
                                 class="od-status"
                                 :class="statuses.variant(order.customFields?.erpStatus)"
+                                :title="statuses.label(order.customFields?.erpStatus)"
                             >
-                                {{ statuses.label(order.customFields?.erpStatus) }}
+                                {{ statusLabel }}
                             </span>
                         </div>
                     </div>

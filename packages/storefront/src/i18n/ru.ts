@@ -33,6 +33,28 @@ export default {
     },
     orders: {
         title: 'Заказы',
+        filters: {
+            active: 'Активные',
+            pending: 'На согласовании',
+            confirmed: 'Готовятся',
+            inTransit: 'В пути',
+            delivered: 'Выполнены',
+            cancelled: 'Отменены',
+            all: 'Все',
+        },
+        groupLabels: {
+            pending: 'На согласовании',
+            confirmed: 'Готовится',
+            in_transit: 'В пути',
+            delivered: 'Выполнен',
+            cancelled: 'Отменён',
+            rejected: 'Не принят',
+        },
+        sources: {
+            mivend: 'Оформлены здесь',
+            erp: 'Из ERP',
+            all: 'Все источники',
+        },
         orderNumber: '№ заказа',
         date: 'Дата',
         status: 'Статус',

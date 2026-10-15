@@ -14,8 +14,8 @@ test.describe('Orders page', () => {
 
     test('orders page shows filter chips', async ({ page }) => {
         await goToOrders(page);
-        await expect(page.getByRole('button', { name: 'All orders' })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'In progress' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Все' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Активные' })).toBeVisible();
     });
 
     test('placed order appears in orders list', async ({ page }) => {
