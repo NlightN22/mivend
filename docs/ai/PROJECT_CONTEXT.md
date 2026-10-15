@@ -1,6 +1,12 @@
 # Project Context
 
-Updated: 2026-10-15 21:30
+Updated: 2026-10-15 20:00
+
+## #197 concurrency HIGH findings (2026-10-15, DONE: audited 3 rounds, pushed `c9bd24a1`, closed)
+
+- Findings 1/2/5 had been fixed by #204/#209. Fixed now: tier rebalance re-reads the sibling quantity under the order lock, logs and rethrows adjust errors after finishing passes and refreshing totals (`be66c862`, `1b1364f4`); `releaseReservations` = `UPDATE ... WHERE status='active' RETURNING` under `reserve-order:<id>`; `markReservationFailed` under the same lock, skipped when active rows exist (`55bf899c`).
+- `payProformaInvoice`: non-capture outcomes lock and re-read the proforma invoice (`ProformaInvoiceService.findOneForUpdate`) inside the transaction; **a capture must not take that early lock** — `allocate()` locks the counterparty's open documents in FIFO (`createdAt`) order and an earlier single-row lock deadlocks two captures (`c9bd24a1`, test `payment-pending-race.int.test.ts`).
+- Accepted LOW: no int tests for two concurrent pending payments / withdraw vs payment; currency/organization from the pre-transaction snapshot (immutable). Tier rebalance has only unit tests; #196 (its replacement) must ship a real-Postgres concurrent test (comment on #196). 17 MEDIUM audit findings still to triage.
 
 ## #175 / #232 / #112 / #238 + ERP status cycle (2026-10-14..15, DONE: audited twice, pushed `d5e365b8`, closed; leftovers #239)
 
@@ -267,8 +273,8 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 `make dev` · `make dev-staging-integration` · `make dev-branch` · `make up` (never recreates
 running containers; `make up-rebuild` does — interrupts every contour) · `make seed-all` ·
 `make lint` · `make test` (293 files / 2208 tests as of 2026-10-10) · `make ci` (full CI replay in
-a clean worktree — catches prettier/type issues `make lint`/`make test` miss, mandatory before any
-push) · `make test-int` (never run
+a clean worktree — catches prettier/type issues; run only by the audit session, ~once per 3 issues,
+never before every push) · `make test-int` (never run
 vitest directly) · `pnpm build:plugins` (mandatory alongside lint/test for any
 `packages/plugins/**` change) · `make preview-build`/`preview-up`/`preview-down`. `make dev-reset
 FORCE=1` wipes the **shared** Postgres volume for every contour — never run without checking
@@ -370,9 +376,7 @@ Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
   script) backfill
   existing rows, THEN `ALTER COLUMN ... SET NOT NULL` — never ship a migration that assumes it will
   actually execute against a real local/staging-integration database.
-- **Always run `make ci` before pushing**, not just `make lint`/`make test`/`pnpm build:plugins` —
-  it replays CI in a clean worktree with its own `prettier --check`, which caught real formatting
-  drift this session that the warm working copy's own lint-staged hook had missed.
+- **`make ci` is not a pre-push step** (user decision 2026-10-15): slow, competes with other sessions on this box; the audit session (`mivend.audit`) runs it about once per three issues.
 - **Never derive a durable "what kind of row is this" fact from a mutable column like `lastError`**
   (string-prefix matching) — a later, unrelated write to that same column (e.g. a failed replay
   attempt) silently erases the fact. Use a dedicated column set once at insert and never touched
