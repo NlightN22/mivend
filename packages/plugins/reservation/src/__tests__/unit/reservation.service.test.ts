@@ -18,12 +18,14 @@ import {
 
 function createMockReservationRepo(): {
     find: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
     save: ReturnType<typeof vi.fn>;
     createQueryBuilder: ReturnType<typeof vi.fn>;
 } {
     return {
         find: vi.fn(async () => [] as unknown[]),
+        count: vi.fn(async () => 0),
         create: vi.fn((x: unknown) => x),
         save: vi.fn(async (x: unknown) => x),
         createQueryBuilder: vi.fn(() => ({
@@ -554,25 +556,36 @@ describe('ReservationService', () => {
     });
 
     describe('releaseReservations', () => {
-        it('releases active reservations, assigns a release operation id, and publishes ReservationReleasedEvent', async () => {
-            const activeRow = { id: 'res-1', status: 'active', expiresAt: new Date() };
-            reservationRepo.find.mockResolvedValue([activeRow]);
+        function mockReleasedRows(rows: unknown[]): { set: ReturnType<typeof vi.fn> } {
+            const builder = {
+                update: vi.fn().mockReturnThis(),
+                set: vi.fn().mockReturnThis(),
+                where: vi.fn().mockReturnThis(),
+                returning: vi.fn().mockReturnThis(),
+                execute: vi.fn(async () => ({ raw: rows })),
+            };
+            reservationRepo.createQueryBuilder.mockReturnValue(builder);
+            return builder;
+        }
+
+        it('releases only rows still active, assigns a release operation id, and publishes ReservationReleasedEvent', async () => {
+            const builder = mockReleasedRows([{ id: 'res-1', status: 'released' }]);
 
             const count = await service.releaseReservations(ctx, 'order-1');
 
             expect(count).toBe(1);
-            expect(reservationRepo.save).toHaveBeenCalledWith([
+            expect(builder.set).toHaveBeenCalledWith(
                 expect.objectContaining({
                     status: 'released',
-                    erpReleaseOperationId: expect.any(String),
+                    erpReleaseOperationId: expect.any(Function),
                 }),
-            ]);
+            );
             expect(eventBus.publish).toHaveBeenCalledTimes(1);
             expect(eventBus.publish.mock.calls[0][0]).toBeInstanceOf(ReservationReleasedEvent);
         });
 
         it('is a no-op when there is nothing active to release', async () => {
-            reservationRepo.find.mockResolvedValue([]);
+            mockReleasedRows([]);
             const count = await service.releaseReservations(ctx, 'order-1');
             expect(count).toBe(0);
             expect(eventBus.publish).not.toHaveBeenCalled();

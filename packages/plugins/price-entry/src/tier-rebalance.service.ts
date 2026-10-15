@@ -122,13 +122,14 @@ export class TierRebalanceService implements OnApplicationBootstrap {
         this.ownContexts.add(ownCtx);
         try {
             let lineId: ID | null = firstLineId;
+            let firstError: unknown;
             for (let pass = 0; lineId !== null && pass < MAX_PASSES; pass++) {
                 state.dirtyLineId = null;
-                const passError = await this.rebalancePass(ownCtx, orderId, lineId);
+                firstError ??= await this.rebalancePass(ownCtx, orderId, lineId);
                 await this.refreshTotals(ownCtx, orderId);
-                if (passError !== undefined) throw passError;
                 lineId = state.dirtyLineId;
             }
+            if (firstError !== undefined) throw firstError;
         } finally {
             const key = String(orderId);
             this.running.delete(key);

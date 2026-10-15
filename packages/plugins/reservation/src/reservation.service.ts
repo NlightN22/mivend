@@ -215,24 +215,34 @@ export class ReservationService {
     }
 
     async releaseReservations(ctx: RequestContext, orderId: ID): Promise<number> {
-        const repo = this.connection.getRepository(ctx, Reservation);
-        const active = await repo.find({ where: { orderId: String(orderId), status: 'active' } });
-        if (active.length === 0) {
+        const releasedAt = new Date();
+        // Conditional UPDATE ... RETURNING: concurrent releases each get only the rows they flipped.
+        const result = await this.connection
+            .getRepository(ctx, Reservation)
+            .createQueryBuilder()
+            .update()
+            .set({
+                status: 'released',
+                releasedAt,
+                erpReleaseOperationId: () => 'gen_random_uuid()::text',
+            })
+            .where('orderId = :orderId AND status = :status', {
+                orderId: String(orderId),
+                status: 'active',
+            })
+            .returning('*')
+            .execute();
+        const released = (result.raw as Array<Partial<Reservation>>).map(row =>
+            Object.assign(new Reservation(), row),
+        );
+        if (released.length === 0) {
             return 0;
         }
-
-        const releasedAt = new Date();
-        for (const reservation of active) {
-            reservation.status = 'released';
-            reservation.releasedAt = releasedAt;
-            reservation.erpReleaseOperationId = randomUUID();
-        }
-        await repo.save(active);
 
         const order = await this.connection
             .getRepository(ctx, Order)
             .findOne({ where: { id: orderId } });
-        for (const reservation of active) {
+        for (const reservation of released) {
             this.eventBus.publish(
                 new ReservationReleasedEvent(ctx, reservation, order?.code ?? String(orderId)),
             );
@@ -240,7 +250,7 @@ export class ReservationService {
         if (order) {
             await this.setOrderReservationState(ctx, order, 'RELEASED');
         }
-        return active.length;
+        return released.length;
     }
 
     async findForOrder(ctx: RequestContext, orderId: ID): Promise<Reservation[]> {
@@ -272,13 +282,19 @@ export class ReservationService {
         return (result?.max ?? 0) + 1;
     }
 
+    // Same lock as reserveOrder, so a concurrent successful reserve is not overwritten with FAILED.
     private async markReservationFailed(ctx: RequestContext, orderId: ID): Promise<void> {
-        const order = await this.connection
-            .getRepository(ctx, Order)
-            .findOne({ where: { id: orderId } });
-        if (!order) {
-            return;
-        }
-        await this.setOrderReservationState(ctx, order, 'FAILED');
+        await withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, async txCtx => {
+            const active = await this.connection
+                .getRepository(txCtx, Reservation)
+                .count({ where: { orderId: String(orderId), status: 'active' } });
+            const order = await this.connection
+                .getRepository(txCtx, Order)
+                .findOne({ where: { id: orderId } });
+            if (!order || active > 0) {
+                return;
+            }
+            await this.setOrderReservationState(txCtx, order, 'FAILED');
+        });
     }
 }

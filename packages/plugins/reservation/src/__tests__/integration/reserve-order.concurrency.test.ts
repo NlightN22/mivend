@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { InsufficientStockError } from '../../reservation-errors';
+import { ReservationReleasedEvent } from '../../reservation.events';
 import {
     mockCtx,
     TestOrder,
@@ -115,5 +116,38 @@ describe('ReservationService.reserveOrder (integration, real Postgres, concurren
             where: { orderId: order.id, status: 'active' },
         });
         expect(active).toHaveLength(1);
+    });
+
+    it('two concurrent releaseReservations() calls release each row once and publish one event per row (#197)', async () => {
+        await h.dataSource.getRepository(TestStockLevel).save({
+            productVariantId: 'variant-4',
+            stockLocationId: h.location.id,
+            stockOnHand: 100,
+            stockAllocated: 0,
+        });
+        const order = await h.dataSource
+            .getRepository(TestOrder)
+            .save({ customerId: 'customer-1', customFields: { branchId: 'branch-1' } });
+        await h.dataSource.getRepository(TestOrderLine).save({
+            orderId: order.id,
+            productVariantId: 'variant-4',
+            productVariantEntityId: h.productVariant.id,
+            quantity: 4,
+        });
+        await h.service.reserveOrder(mockCtx, order.id, 7, 'manual');
+        h.published.length = 0;
+
+        const counts = await Promise.all([
+            h.service.releaseReservations(mockCtx, order.id),
+            h.service.releaseReservations(mockCtx, order.id),
+        ]);
+
+        expect(counts.reduce((a, b) => a + b, 0)).toBe(1);
+        expect(h.published.filter(e => e instanceof ReservationReleasedEvent)).toHaveLength(1);
+        const released = await h.dataSource
+            .getRepository(TestReservation)
+            .find({ where: { orderId: order.id, status: 'released' } });
+        expect(released).toHaveLength(1);
+        expect(released[0].erpReleaseOperationId).toEqual(expect.any(String));
     });
 });
