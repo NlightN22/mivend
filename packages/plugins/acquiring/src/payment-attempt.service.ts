@@ -172,11 +172,15 @@ export class PaymentAttemptService {
         // On throw, the caller can safely call again; there is never partial state to reconcile.
         try {
             await this.connection.withTransaction(ctx, async transactionCtx => {
-                // Re-read under the row lock: the checks above ran on a snapshot outside this transaction.
-                const current = await this.proformaInvoiceService.findOneForUpdate(
-                    transactionCtx,
-                    Number(proformaInvoice.id),
-                );
+                // Re-read under the row lock: the checks above ran on a snapshot. A capture skips it, since
+                // allocate() locks the counterparty's open documents in FIFO order and an earlier lock would invert it.
+                const current =
+                    paymentStatus === 'captured'
+                        ? proformaInvoice
+                        : await this.proformaInvoiceService.findOneForUpdate(
+                              transactionCtx,
+                              Number(proformaInvoice.id),
+                          );
                 if (expectedOrganizationId === undefined && current.status === 'cancelled') {
                     throw new UserInputError(
                         `ProformaInvoice ${proformaInvoiceId} is cancelled and cannot be paid`,

@@ -126,10 +126,21 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
             makeProformaInvoice({ status: 'cancelled' }),
         );
 
-        await expect(service.payProformaInvoice(mockCtx, 1, 'success')).rejects.toThrow(
+        await expect(service.payProformaInvoice(mockCtx, 1, 'pending')).rejects.toThrow(
             /cancelled/,
         );
         expect(mockPaymentAttemptRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('leaves locking to allocate on a capture, so document locks stay in FIFO order', async () => {
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'issued' }),
+        );
+
+        await service.payProformaInvoice(mockCtx, 1, 'success');
+
+        expect(mockProformaInvoiceService.findOneForUpdate).not.toHaveBeenCalled();
+        expect(mockSettlementEntryService.allocate).toHaveBeenCalledTimes(1);
     });
 
     it('does not regress a proforma invoice the locked re-read finds paid', async () => {

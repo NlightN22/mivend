@@ -12,6 +12,8 @@ import { ProformaInvoice } from '../../entities/proforma-invoice.entity';
 import { PaymentAttempt } from '../../entities/payment-attempt.entity';
 import { ProformaInvoiceService } from '../../proforma-invoice.service';
 import { PaymentAttemptService } from '../../payment-attempt.service';
+import { SettlementEntry } from '../../entities/settlement-entry.entity';
+import { SettlementEntryService } from '../../settlement-entry.service';
 
 @Entity('proforma_invoice')
 class TestProformaInvoice {
@@ -22,6 +24,24 @@ class TestProformaInvoice {
     @Column({ type: 'int' }) amount!: number;
     @Column({ type: 'varchar' }) currencyCode!: string;
     @Column({ type: 'varchar', default: 'pending' }) status!: string;
+    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }) createdAt!: Date;
+}
+
+@Entity('settlement_entry')
+class TestSettlementEntry {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'int' }) counterpartyId!: number;
+    @Column({ type: 'int', nullable: true }) proformaInvoiceId!: number | null;
+    @Column({ type: 'int', nullable: true }) organizationId!: number | null;
+    @Column({ type: 'varchar' }) sourceType!: string;
+    @Column({ type: 'int', nullable: true }) sourcePaymentId!: number | null;
+    @Column({ type: 'int', nullable: true }) sourceRefundId!: number | null;
+    @Column({ type: 'int' }) amount!: number;
+    @Column({ type: 'varchar' }) currencyCode!: string;
+    @Column({ type: 'boolean', default: false }) reconciled!: boolean;
+    @Column({ type: 'int', nullable: true }) allocatedOrderId!: number | null;
+    @Column({ type: 'int', nullable: true }) allocationAmount!: number | null;
+    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }) createdAt!: Date;
 }
 
 @Entity('payment_attempt')
@@ -43,9 +63,12 @@ let service: PaymentAttemptService;
 let beforeTransaction: () => Promise<void>;
 const ctx = {} as RequestContext;
 
-function mapEntity(entity: unknown): typeof TestProformaInvoice | typeof TestPaymentAttempt {
+function mapEntity(
+    entity: unknown,
+): typeof TestProformaInvoice | typeof TestPaymentAttempt | typeof TestSettlementEntry {
     if (entity === ProformaInvoice) return TestProformaInvoice;
     if (entity === PaymentAttempt) return TestPaymentAttempt;
+    if (entity === SettlementEntry) return TestSettlementEntry;
     throw new Error(`Unmapped entity: ${String(entity)}`);
 }
 
@@ -58,7 +81,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestProformaInvoice, TestPaymentAttempt],
+        entities: [TestProformaInvoice, TestPaymentAttempt, TestSettlementEntry],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -75,10 +98,11 @@ beforeAll(async () => {
             return `n-${Math.random()}`;
         },
     };
+    const proformaInvoiceService = new ProformaInvoiceService(connection);
     service = new PaymentAttemptService(
         connection,
-        new ProformaInvoiceService(connection),
-        {} as never,
+        proformaInvoiceService,
+        new SettlementEntryService(connection, proformaInvoiceService),
         { report: async () => ({ id: 1 }) } as never,
         numbering as never,
     );
@@ -90,6 +114,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+    await dataSource.getRepository(TestSettlementEntry).clear();
     await dataSource.getRepository(TestPaymentAttempt).clear();
     await dataSource.getRepository(TestProformaInvoice).clear();
     beforeTransaction = async () => undefined;
@@ -134,5 +159,35 @@ describe('payProformaInvoice pending outcome (#197)', () => {
             .getRepository(TestProformaInvoice)
             .findOneByOrFail({ id: invoice.id });
         expect(stored.status).toBe('issued');
+    });
+
+    it('two concurrent captures on two documents of one counterparty both succeed without deadlock', async () => {
+        const [first, second] = await dataSource.getRepository(TestProformaInvoice).save([
+            {
+                orderId: 1,
+                organizationId: 1,
+                counterpartyId: 1,
+                amount: 1000,
+                currencyCode: 'USD',
+                status: 'issued',
+            },
+            {
+                orderId: 2,
+                organizationId: 1,
+                counterpartyId: 1,
+                amount: 1000,
+                currencyCode: 'USD',
+                status: 'issued',
+            },
+        ]);
+
+        const results = await Promise.allSettled([
+            service.payProformaInvoice(ctx, second.id, 'success', 'online-acquiring', 'cap-2'),
+            service.payProformaInvoice(ctx, first.id, 'success', 'online-acquiring', 'cap-1'),
+        ]);
+
+        expect(results.map(r => r.status)).toEqual(['fulfilled', 'fulfilled']);
+        const stored = await dataSource.getRepository(TestProformaInvoice).find();
+        expect(stored.map(row => row.status)).toEqual(['paid', 'paid']);
     });
 });
