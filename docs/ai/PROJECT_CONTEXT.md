@@ -6,7 +6,7 @@ Updated: 2026-10-15 20:00
 
 - Findings 1/2/5 had been fixed by #204/#209. Fixed now: tier rebalance re-reads the sibling quantity under the order lock, logs and rethrows adjust errors after finishing passes and refreshing totals (`be66c862`, `1b1364f4`); `releaseReservations` = `UPDATE ... WHERE status='active' RETURNING` under `reserve-order:<id>`; `markReservationFailed` under the same lock, skipped when active rows exist (`55bf899c`).
 - `payProformaInvoice`: non-capture outcomes lock and re-read the proforma invoice (`ProformaInvoiceService.findOneForUpdate`) inside the transaction; **a capture must not take that early lock** — `allocate()` locks the counterparty's open documents in FIFO (`createdAt`) order and an earlier single-row lock deadlocks two captures (`c9bd24a1`, test `payment-pending-race.int.test.ts`).
-- Accepted LOW: no int tests for two concurrent pending payments / withdraw vs payment; currency/organization from the pre-transaction snapshot (immutable). Tier rebalance has only unit tests; #196 (its replacement) must ship a real-Postgres concurrent test (comment on #196). 17 MEDIUM audit findings still to triage.
+- Accepted LOW: no int tests for two concurrent pending payments / withdraw vs payment; currency/organization from the pre-transaction snapshot (immutable). Tier rebalance has only unit tests; #196 (its replacement) must ship a real-Postgres concurrent test (comment on #196). 17 MEDIUM findings (#7-#23 in `docs/ai/concurrency-audit-2026-10.md`) have no issue yet; #10 (releaseReservations) is already fixed.
 
 ## #175 / #232 / #112 / #238 + ERP status cycle (2026-10-14..15, DONE: audited twice, pushed `d5e365b8`, closed; leftovers #239)
 
@@ -18,7 +18,7 @@ Updated: 2026-10-15 20:00
 - **Short mivend status names** ("Not accepted", "Passed", "Reserved"; explanations in `description`); provisioning upsert updates name/description on boot.
 - **Credit limit of the staging test customer** was blocked by old open test orders; cancelled (5 local, 2 closed by the integration side, 15 via 1C). Only the fresh test orders 43/44/45/48/55 remain.
 - **Test lesson:** a nested `withTransaction` in the reserve-order test harness must join the ctx's open transaction (like Vendure), otherwise a lock taken twice hangs cancel suites; unit tests do not catch it, `make test-int` does. Fixtures must mirror real column types (a varchar custom field vs int id hid a production query failure).
-- **Open:** #236 (release the local reserve only when the ERP holds the quantity; decision written in the issue, implement in a new session), #237 and #233 (other sessions), #239 (non-blocking audit leftovers), reserve shown on delivered orders (proposal: hide for terminal statuses, not decided). `make ci` is no longer a pre-push step (run by the audit session about once per three issues).
+- **Open:** #236 (release the local reserve only when the ERP holds the quantity; in progress in another session), #237 and #233 (other sessions), #239 (non-blocking audit leftovers), reserve shown on delivered orders (proposal: hide for terminal statuses, not decided). `make ci` is no longer a pre-push step (run by the audit session about once per three issues).
 
 ## #234 Kafka topic rename (2026-10-14, closed)
 
