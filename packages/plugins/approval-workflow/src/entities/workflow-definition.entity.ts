@@ -2,9 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Chain definitions are data, not code — one row per requestType, edited via
-// upsertWorkflowDefinition (gated by ManageApprovalWorkflows), never hardcoded in the plugin.
-// See docs/ai/manager-portal-concept.md §4.4.
+// Chain definitions live as data, one row per requestType, never hardcoded in the plugin.
+// Edit only via upsertWorkflowDefinition, which is gated by ManageApprovalWorkflows.
 @Entity()
 export class WorkflowDefinition extends VendureEntity {
     constructor(input?: DeepPartial<WorkflowDefinition>) {

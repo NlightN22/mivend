@@ -60,9 +60,8 @@ export class ApprovalRequestService {
         return saved;
     }
 
-    // Rehydrates a fresh actor from the persisted snapshot on every call — never keeps a
-    // long-lived actor across requests. The ApprovalRequest row is the single source of
-    // truth; the XState actor is a stateless transition function invoked once per decision.
+    // Actor is rehydrated from the persisted ApprovalRequest row on each call; never reused.
+    // The row is the only source of truth; the XState actor is a stateless transition function.
     async decide(
         ctx: RequestContext,
         requestId: ID,
@@ -107,11 +106,8 @@ export class ApprovalRequestService {
             nextValue === 'approved' || nextValue === 'rejected' ? nextValue : 'pending';
         const nextDecidedAt = nextStatus !== 'pending' ? new Date() : null;
 
-        // This guarded UPDATE is what actually enforces optimistic locking. TypeORM's
-        // @VersionColumn does NOT reject a plain repo.save() of a stale in-memory entity by
-        // itself — only an explicit `WHERE version = :expected` guard does (verified against
-        // this project's actual TypeORM version via the concurrency integration test; a
-        // bare repo.save() let two concurrent decide() calls both succeed).
+        // @VersionColumn does not reject a stale repo.save() by itself;
+        // only an explicit `WHERE version = :expected` guard in the UPDATE enforces optimistic locking.
         const updateResult = await repo
             .createQueryBuilder()
             .update()
@@ -258,10 +254,8 @@ export class ApprovalRequestService {
         return { pendingCount, recent };
     }
 
-    // Used by the manager portal orders list to flag "waiting approval" orders (see
-    // docs/ai/manager-portal-pages/02-orders-list.md). priceAdjustmentApproval is the only
-    // requestType whose payload references a specific order (see PriceAdjustmentPayload) —
-    // discountGrantApproval/creditTermApproval are standing-policy requests, not per-order.
+    // Only priceAdjustmentApproval payloads reference a specific order;
+    // discountGrantApproval and creditTermApproval are standing-policy requests, not per-order.
     async findPendingPriceAdjustmentOrderIds(ctx: RequestContext): Promise<string[]> {
         const repo = this.connection.getRepository(ctx, ApprovalRequest);
         const rows = await repo.find({
@@ -279,10 +273,8 @@ export class ApprovalRequestService {
         return [...orderIds];
     }
 
-    // Order detail page (docs/ai/manager-portal-pages/03-order-detail.md, "Price adjustment
-    // history") — all statuses, not just pending, since the page shows history not just what's
-    // outstanding. Not scoped by department/branch: the caller only ever calls this for an
-    // order they've already loaded through their own scoped `visibleOrders` result.
+    // Returns all statuses, not just pending: the page shows history, not outstanding items.
+    // Not scoped by department/branch: callers only pass orders already loaded via visibleOrders.
     async findPriceAdjustmentRequestsForOrder(
         ctx: RequestContext,
         orderId: ID,
@@ -303,11 +295,8 @@ export class ApprovalRequestService {
         });
     }
 
-    // Manager portal /discounts (docs/ai/manager-portal-pages/09-discounts.md) — DiscountRule
-    // rows only exist once a discountGrantApproval request is approved (see
-    // DiscountGrantService.decideAndApply), so "Pending approval"/"Rejected" rows in that list
-    // come from here, not from DiscountRule. Not scoped by department/branch: discount grants
-    // are company-wide policy by price type, same visibility as `discountRules` itself.
+    // DiscountRule rows exist only after approval, so pending/rejected entries must come from here.
+    // Not scoped by department/branch: discount grants are company-wide policy by price type.
     async findByRequestType(
         ctx: RequestContext,
         requestType: string,
@@ -328,15 +317,8 @@ export class ApprovalRequestService {
         return { items, totalItems };
     }
 
-    // "Which requestType+stepIndex combinations can the CALLING admin decide" — computed once
-    // from the (small, fixed) set of WorkflowDefinitions, not from the (unbounded, growing) set
-    // of ApprovalRequest rows. canDecideStep()'s core check (ctx.userHasPermissions) only ever
-    // depends on the *caller* and the step's requiredPermission, never on anything belonging to
-    // another admin or to the request's payload — so it's safe to precompute this list ahead of
-    // the query and push it into SQL as a plain OR of (requestType, stepIndex) equality checks,
-    // instead of loading every pending request and evaluating each one in application code (see
-    // docs/ai/PROJECT_CONTEXT.md, "Approvals inbox: real server-side pagination", for why the
-    // naive fetch-then-filter version was rejected).
+    // canDecideStep() depends only on the caller and the step's permission, so the eligible pairs
+    // come from the small fixed workflow set and go into SQL, not an in-code filter over all rows.
     private async getEligibleStepPairs(
         ctx: RequestContext,
     ): Promise<{ requestType: string; stepIndex: number }[]> {
@@ -352,10 +334,8 @@ export class ApprovalRequestService {
         return pairs;
     }
 
-    // Mirrors canDecideStep()'s two ways in: current-step permission (via getEligibleStepPairs,
-    // pushed into SQL as requestType+stepIndex pairs) OR escalated-to-me on the current step
-    // (a correlated subquery against ApprovalStep) — so "can I see it in my inbox" and "can I
-    // actually decide it" can never drift apart, same guarantee the old in-memory version made.
+    // Must match canDecideStep(): inbox visibility and decide() eligibility can never drift apart.
+    // Current-step permission pairs OR an escalated-to-me correlated subquery on ApprovalStep.
     private buildAwaitingDecisionBracket(
         ctx: RequestContext,
         pairs: { requestType: string; stepIndex: number }[],
@@ -377,12 +357,8 @@ export class ApprovalRequestService {
                         hasAny = true;
                     });
                     if (adminId) {
-                        // Goes through connection.getRepository(), same as everywhere else in
-                        // this service — NOT qb.subQuery().from(ApprovalStep, ...), which
-                        // references the real (VendureEntity-based) ApprovalStep class directly
-                        // and therefore cannot be swapped for a test double the way
-                        // TransactionalConnection.getRepository() can (see
-                        // approval-request.pagination.test.ts's connectionShim).
+                        // Must use connection.getRepository(), not qb.subQuery().from(ApprovalStep): that class is
+                        // hard-wired to the real entity, so tests cannot swap in the connectionShim double.
                         const escalatedToMeSubQuery = this.connection
                             .getRepository(ctx, ApprovalStep)
                             .createQueryBuilder('step')
@@ -424,10 +400,8 @@ export class ApprovalRequestService {
         }
     }
 
-    // Approvals inbox (docs/ai/manager-portal-pages/10-approvals-inbox.md, "Awaiting my
-    // decision") — reuses the exact same eligibility rule decide() itself enforces (see
-    // getEligibleStepPairs/buildAwaitingDecisionBracket above), now pushed into SQL so the query
-    // cost no longer grows with the total number of pending requests company-wide.
+    // Same eligibility rule decide() enforces, pushed into SQL so cost does not grow with the
+    // total number of pending requests company-wide.
     async findAwaitingMyDecision(
         ctx: RequestContext,
         options: ApprovalListOptions = {},
@@ -449,10 +423,8 @@ export class ApprovalRequestService {
         return { items, totalItems };
     }
 
-    // "All requests I'm involved in" tab — union of: requests I submitted, requests where I
-    // decided or was escalated to on any step, and requests currently awaiting my decision.
-    // History, not a to-do list — every status is included. Same SQL-pushdown reasoning as
-    // findAwaitingMyDecision above.
+    // History, not a to-do list: every status is included, so no status filter is applied.
+    // Union of submitted, decided or escalated-on, and awaiting-my-decision requests.
     async findAllInvolving(
         ctx: RequestContext,
         options: ApprovalListOptions = {},
@@ -479,12 +451,8 @@ export class ApprovalRequestService {
                 outer.orWhere(`CAST(request.id AS TEXT) IN (${decidedByMeSubQuery})`, {
                     involvedAdminId: adminId,
                 });
-                // Escalated TO me on ANY step, regardless of the request's current status or
-                // stepIndex — matches the original in-memory semantics exactly (a request I was
-                // once escalated stays visible in "All requests I'm involved in" even after it's
-                // since been decided and moved past that step). Not the same as
-                // buildAwaitingDecisionBracket's escalation check below, which is scoped to the
-                // CURRENT pending step only.
+                // Escalated-to-me on ANY step, regardless of status or stepIndex, so past escalations stay visible.
+                // Deliberately broader than buildAwaitingDecisionBracket, which checks only the current step.
                 const escalatedToMeAnyStepSubQuery = stepRepo
                     .createQueryBuilder('step')
                     .select('step.approvalRequestId')

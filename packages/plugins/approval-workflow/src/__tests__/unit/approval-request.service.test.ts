@@ -276,10 +276,8 @@ describe('ApprovalRequestService', () => {
         expect(result).toEqual([]);
     });
 
-    // findAwaitingMyDecision/findAllInvolving now build real SQL (correlated subqueries via
-    // TypeORM QueryBuilder — see approval-request.service.ts) rather than filtering in-memory,
-    // so a mocked repository can't meaningfully exercise them — see the real-Postgres coverage in
-    // __tests__/integration/approval-request.pagination.test.ts instead.
+    // Builds SQL via correlated subqueries; a mocked repository cannot exercise it meaningfully.
+    // Real-Postgres coverage lives in __tests__/integration/approval-request.pagination.test.ts.
 
     // findByRequestType also moved to createQueryBuilder (paginated, see issue #39) — real
     // coverage in __tests__/integration/approval-request.pagination.test.ts.

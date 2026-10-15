@@ -11,11 +11,7 @@ import {
 import { ApprovalRequestService } from '../../approval-request.service';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
 
-// Same hand-rolled-schema pattern as approval-request.concurrency.test.ts — real Postgres, no
-// mocking. findAwaitingMyDecision/findAllInvolving now build correlated-subquery SQL directly
-// (see approval-request.service.ts, "Approvals inbox: real server-side pagination" in
-// docs/ai/PROJECT_CONTEXT.md for why), which a mocked repository cannot meaningfully exercise —
-// only a real query planner can catch a broken JOIN/subquery/parameter-name collision.
+// Real Postgres, not mocked: a mocked repo can't catch broken JOIN/subquery/param-name collisions
 @Entity('approval_request')
 class TestApprovalRequest {
     @PrimaryGeneratedColumn('uuid')
@@ -265,10 +261,8 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
                 approverAdministratorId: 'admin-1',
                 decision: 'approved',
             });
-            // Escalated to me on step 0, but the request has since moved on to step 1 and is no
-            // longer pending — must still show up (matches the old in-memory semantics exactly;
-            // this is the case that a naive "current step only" rewrite would have silently
-            // dropped).
+            // Escalated to me on step 0 but no longer pending (now at step 1): must still be listed.
+            // A "current step only" filter would silently drop this case.
             const escalatedToMePastStep = await createRequest({
                 status: 'approved',
                 currentStepIndex: 1,
@@ -284,11 +278,8 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
                 status: 'pending',
                 currentStepIndex: 0,
             });
-            // Not involved AND not eligible to decide it either (step 0 of discountGrantApproval
-            // requires ApproveSecurityLimit, which this caller doesn't hold) — must be excluded.
-            // A pending request the caller CAN decide would correctly appear via the
-            // awaiting-my-decision branch regardless of who submitted it — that's not a bug, see
-            // findAwaitingMyDecision's own tests above for that exact case.
+            // Caller is neither involved nor eligible to decide (step 0 needs ApproveSecurityLimit): exclude.
+            // Eligible pending requests show up via the awaiting-my-decision branch regardless of submitter.
             await createRequest({
                 requestType: 'discountGrantApproval',
                 status: 'pending',

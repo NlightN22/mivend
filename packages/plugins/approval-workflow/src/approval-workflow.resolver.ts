@@ -19,12 +19,8 @@ import { WorkflowDefinitionService, ParsedWorkflowDefinition } from './workflow-
 import { ApprovalListOptions, ApprovalStepDecision, WorkflowStepDefinition } from './types';
 import { ApprovalStepService } from './approval-step.service';
 
-// A requestType is an internal technical identifier fixed by the workflow engine, not
-// swappable business data — mapping it to the permission required to *create* that kind of
-// request is therefore code, not a DB table, per the backend-plugin-rules skill's "internal
-// technical states" carve-out. The chain of *who approves* each step, by contrast, is fully
-// data-driven
-// (WorkflowDefinition.stepsJson).
+// requestType is a fixed engine identifier, so its create permission is code, not a DB table.
+// Approval chains are data-driven instead (WorkflowDefinition.stepsJson).
 const CREATE_PERMISSION_BY_REQUEST_TYPE: Record<string, string> = {
     priceAdjustmentApproval: CustomPermission.RequestPriceAdjustmentApproval.Permission,
     discountGrantApproval: CustomPermission.RequestDiscountGrantApproval.Permission,
@@ -54,12 +50,8 @@ export class ApprovalRequestResolver {
         return this.approvalStepService.findRequest(ctx, args.id);
     }
 
-    // Manager portal dashboard — see docs/ai/manager-portal-pages/01-dashboard.md, "My approval
-    // requests status" — one aggregated call instead of a count query plus a list query.
-    // Gated on Authenticated only (like `departments`): the result is inherently scoped to
-    // `requestedByAdministratorId = caller` inside the service, so a role that never submits
-    // approval requests (e.g. Operator) safely gets back an empty summary rather than a
-    // ForbiddenError that would crash the shared dashboard page for that role.
+    // Gated on Authenticated only: the service scopes results to the caller, so roles that never submit
+    // requests get an empty summary instead of a ForbiddenError that would crash the shared dashboard.
     @Query()
     @Allow(Permission.Authenticated)
     async myApprovalRequestsSummary(
@@ -69,12 +61,8 @@ export class ApprovalRequestResolver {
         return this.approvalRequestService.getMySummary(ctx, args.recentLimit ?? 5);
     }
 
-    // Manager portal orders list — see docs/ai/manager-portal-pages/02-orders-list.md,
-    // "waiting approval" flag. Gated on Permission.ReadOrder (same as `visibleOrders`) rather
-    // than an approval-specific permission: any role that can see the order list needs this to
-    // flag orders in it, not just roles that can create/approve requests. No department/branch
-    // scoping here — the caller only ever cross-references these ids against their own
-    // already-scoped `visibleOrders` result.
+    // Gated on ReadOrder, not an approval permission: any role that sees the order list needs the flag.
+    // No department/branch scoping: callers only match these ids against their already-scoped orders.
     @Query()
     @Allow(Permission.ReadOrder)
     async pendingPriceAdjustmentOrderIds(@Ctx() ctx: RequestContext): Promise<string[]> {
@@ -92,9 +80,7 @@ export class ApprovalRequestResolver {
         return this.approvalRequestService.findPriceAdjustmentRequestsForOrder(ctx, args.orderId);
     }
 
-    // Manager portal /discounts (docs/ai/manager-portal-pages/09-discounts.md) — gated on
-    // ReadCatalog, same visibility as `discountRules` (company-wide policy, not scoped by
-    // department/branch).
+    // Gated on ReadCatalog to match discountRules: discount policy is company-wide, not per-branch.
     @Query()
     @Allow(Permission.ReadCatalog)
     async approvalRequestsByType(
@@ -135,9 +121,7 @@ export class ApprovalRequestResolver {
         return this.approvalStepService.findSteps(ctx, request.id);
     }
 
-    // Human-readable label for the role the request is currently waiting on, e.g. "Purchasing
-    // Dept Head" — null once the request is no longer pending (currentStepIndex is meaningless
-    // after approved/rejected).
+    // Null once no longer pending: currentStepIndex is meaningless after approved/rejected.
     @ResolveField()
     async currentStepRole(
         @Ctx() ctx: RequestContext,
@@ -158,10 +142,7 @@ export class ApprovalRequestResolver {
         return definition.steps[request.currentStepIndex]?.role ?? null;
     }
 
-    // Role label for every step in this request's chain, in order — the approval detail page's
-    // ApprovalStepper (see 11-approval-detail.md) needs to render future/not-yet-reached steps
-    // too, which have no ApprovalStep audit row yet and so aren't covered by `steps` or
-    // `currentStepRole` (current-step-only).
+    // Covers future steps too: they have no ApprovalStep audit row, so steps/currentStepRole miss them.
     @ResolveField()
     async stepRoles(
         @Ctx() ctx: RequestContext,
@@ -192,9 +173,7 @@ export class ApprovalRequestResolver {
         return totalSteps;
     }
 
-    // The current step's escalatesTo role list — powers the "Escalate to..." select on
-    // 11-approval-detail.md, which must only offer roles from this fixed list, never a free
-    // choice of administrator.
+    // Escalation options must come only from this fixed list, never a free choice of administrator.
     @ResolveField()
     async escalatesTo(
         @Ctx() ctx: RequestContext,

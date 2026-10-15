@@ -7,10 +7,8 @@ export interface WorkflowStepDefinition {
 
 export type ApprovalStepDecision = 'approved' | 'rejected';
 
-// Pushed all the way into the SQL query in ApprovalRequestService — see getEligibleStepPairs().
-// `search` only matches the request id (no server-side text index over resolved customer/order
-// names exists yet — those are resolved client-side by joining orders/counterparties, so cannot
-// be filtered server-side without a further join here too).
+// Search matches only the request id: customer/order names are resolved client-side, so there is
+// no server-side text index to filter them without an extra join.
 export interface ApprovalListOptions {
     take?: number;
     skip?: number;
@@ -24,9 +22,8 @@ export interface ApprovalListOptions {
 
 export const loggerCtx = 'ApprovalWorkflowPlugin';
 
-// Thrown when a decide() call loses the race against a concurrent decision on the same
-// ApprovalRequest — the caller should surface this as "someone else already decided this
-// step, refresh and check the outcome" rather than a generic 500.
+// Concurrent decide() on the same ApprovalRequest is an expected race, not a server fault;
+// callers must map it to a conflict response instead of a generic 500.
 export class ApprovalConcurrencyError extends Error {
     constructor(requestId: string) {
         super(

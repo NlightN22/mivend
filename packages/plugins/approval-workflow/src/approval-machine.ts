@@ -2,10 +2,8 @@ import { createMachine, type AnyStateMachine } from 'xstate';
 
 import { WorkflowStepDefinition } from './types';
 
-// Pure builder: WorkflowDefinition.steps -> XState machine. Sequential steps only, no
-// automatic parallelism (see docs/ai/manager-portal-concept.md §4.3). Escalation does not
-// create a transition here — it only changes who is authorized to decide the current step
-// (see ApprovalRequestService.canDecideStep), so it has no representation in the machine.
+// Strictly sequential: no automatic parallelism is derived (docs/ai/manager-portal-concept.md §4.3).
+// Escalation adds no transition, only changes who may decide (ApprovalRequestService.canDecideStep).
 export function buildApprovalMachine(steps: WorkflowStepDefinition[]): AnyStateMachine {
     if (steps.length === 0) {
         throw new Error('WorkflowDefinition must have at least one step');

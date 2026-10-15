@@ -33,10 +33,8 @@ export class WorkflowDefinitionService {
         };
     }
 
-    // Used by ApprovalRequestService.getEligibleStepPairs() to push "which requestType+stepIndex
-    // combinations can this caller decide" into a SQL WHERE clause instead of loading every
-    // pending ApprovalRequest and checking permissions row by row — see approval-request.service.ts.
-    // Cheap: there are only a handful of requestTypes, never one per approval request.
+    // Pushes eligibility into SQL WHERE instead of checking each pending request row by row.
+    // Stays cheap because requestTypes are few; the pair set is never per approval request.
     async getAllDefinitions(ctx: RequestContext): Promise<ParsedWorkflowDefinition[]> {
         const rows = await this.connection.getRepository(ctx, WorkflowDefinition).find();
         return rows.map(row => ({

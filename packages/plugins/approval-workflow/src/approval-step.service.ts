@@ -5,9 +5,8 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ApprovalRequest } from './entities/approval-request.entity';
 import { ApprovalStep } from './entities/approval-step.entity';
 
-// Read-only queries for the ApprovalRequest/ApprovalStep audit trail — kept separate from
-// ApprovalRequestService (which owns the create/decide/escalate transitions) so that
-// resolver field lookups don't pull in the XState transition logic.
+// Kept separate from ApprovalRequestService so resolver field lookups don't import XState
+// transition logic; keep transitions out of this module.
 @Injectable()
 export class ApprovalStepService {
     constructor(private connection: TransactionalConnection) {}

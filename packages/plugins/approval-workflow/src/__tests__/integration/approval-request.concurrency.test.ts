@@ -11,18 +11,8 @@ import {
 import { ApprovalRequestService } from '../../approval-request.service';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
 
-// `decide()`'s real race window is between its initial read (`repo.findOneOrFail`) and its
-// guarded UPDATE — but `Promise.allSettled([service.decide(...), service.decide(...)])` alone
-// does not reliably force both reads to land before either write, especially against a fast
-// local Postgres: the first call's whole read->write chain can complete before the second call's
-// read even starts, which is genuinely sequential processing, not a race — and trivially "both
-// succeed" with no conflict, which is correct behavior for that case, not a bug. That produced a
-// real, consistently-reproducing false failure in this test (verified separately: a
-// forced-simultaneous-read harness proves the guarded UPDATE's optimistic lock is correct — the
-// loser gets `affected: 0` — every time real overlap actually happens). This barrier makes the
-// overlap real instead of hoping for it: it holds each `findOneOrFail` call until N calls have
-// all completed their own read, so every caller's write phase starts from a genuinely
-// concurrent, same-version read.
+// Promise.allSettled alone doesn't reliably overlap the reads on a fast local Postgres;
+// the barrier holds each findOneOrFail until all N reads land, so writes race on the same version.
 let readRaceBarrier: (() => Promise<void>) | null = null;
 
 function armReadRaceBarrier(expectedArrivals: number): void {
@@ -42,9 +32,8 @@ function disarmReadRaceBarrier(): void {
     readRaceBarrier = null;
 }
 
-// Same constraint as documents/sync's integration tests (VendureEntity needs a bootstrap-time
-// EntityIdStrategy for its primary column) — hand-rolled tables matching production schema,
-// against real Postgres, no DB mocking.
+// VendureEntity's primary column needs a bootstrap-time EntityIdStrategy, so tables are hand-rolled
+// to match the production schema and run against real Postgres, not mocked.
 @Entity('approval_request')
 class TestApprovalRequest {
     @PrimaryGeneratedColumn('uuid')
