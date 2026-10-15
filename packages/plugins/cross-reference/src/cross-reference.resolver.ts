@@ -9,9 +9,8 @@ import { ProductCrossReference } from './entities/product-cross-reference.entity
 export class CrossReferenceAdminResolver {
     constructor(private crossReferenceService: CrossReferenceService) {}
 
-    // Gated the same as browsing the catalog itself — anyone who can see a product can see
-    // which OEM codes it's interchangeable with (see docs/ai/manager-portal-pages/
-    // 07-product-detail.md "Cross-references / applicability").
+    // Gated the same as the catalog: anyone who can see a product can also see its OEM cross-references.
+    // Keep these access rules in sync with catalog visibility; stricter gating here alone would be inconsistent.
     @Query()
     @Allow(Permission.ReadCatalog)
     async productCrossReferences(
