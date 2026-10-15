@@ -35,24 +35,14 @@ export interface FailedInboxEventListOptions {
     skip?: number;
 }
 
-// The durable inbox for inbound Kafka events from Integration Service (issue #62 Milestone 1).
-// Mirrors plugin-acquiring's InboxService shape (enqueue/claimBatch/markProcessed/markFailed with
-// SELECT ... FOR UPDATE SKIP LOCKED) — same architectural pattern, different entity/dedup key.
+// Same claim/ack pattern as plugin-acquiring's InboxService (SKIP LOCKED claims);
+// only the entity and dedup key differ, so keep the two in step.
 @Injectable()
 export class IntegrationInboxService {
     constructor(private readonly dataSource: DataSource) {}
 
-    // Called from the Kafka consumer only — never processes anything itself. Returns the
-    // existing row (a no-op) on a duplicate (stream, sourceEventId), so the consumer can ack the
-    // Kafka message unconditionally after this resolves without throwing.
-    //
-    // Issue #89: dedup key is (stream, sourceEventId), not (stream, entityId, version) — `version`
-    // is Integration Service's own entity-level timestamp, not a per-message id, and two distinct
-    // events for the same entity can legitimately share a version value (confirmed live: a
-    // backfilled deactivation event collided with an earlier, unrelated update's version — the old
-    // key silently discarded the newer message). `sourceEventId` is the real per-message identity;
-    // `version` stays the separate out-of-order/regression guard used by
-    // isSupersededByNewerVersion (integration-inbox-processor.service.ts), untouched by this key.
+    // Dedup on (stream, sourceEventId), not version: versions can collide across distinct events.
+    // Duplicates return the existing row, so the consumer can ack unconditionally.
     async enqueue(input: EnqueueInboxEventInput): Promise<IntegrationInboxEvent> {
         const repo = this.dataSource.getRepository(IntegrationInboxEvent);
         const existing = await repo.findOne({
@@ -97,9 +87,8 @@ export class IntegrationInboxService {
         await insertRejectedInboxRow(this.dataSource, message);
     }
 
-    // Terminal human resolution for a `failed` row that can never be replayed (#212) — e.g. an
-    // undecodable message with no entity id. Conditional UPDATE: only a still-`failed` row moves,
-    // so a double click or a race with another sweep cannot dismiss a row twice.
+    // Conditional UPDATE: only a still-failed row moves, so a double click or sweep race
+    // cannot dismiss the same row twice.
     async dismissFailed(id: number, reason: string): Promise<boolean> {
         const result = await this.dataSource.getRepository(IntegrationInboxEvent).update(
             { id, status: 'failed' },
@@ -144,9 +133,8 @@ export class IntegrationInboxService {
         });
     }
 
-    // #148: one branch per stream for the `pending` half (each a plain equality lookup, not an
-    // IN-list — see docs/environments.md's #148 note for why) plus one for stale-`processing`.
-    // Only ids: claimBatch's own recheck+lock does the real work against this small set.
+    // One equality lookup per stream, not an IN-list; the reason is in docs/environments.md.
+    // claimBatch rechecks and locks, so this set only needs ids.
     private async findClaimCandidateIds(
         manager: EntityManager,
         limit: number,
@@ -218,10 +206,8 @@ export class IntegrationInboxService {
             .update({ id: In(ids), status: 'processing' }, { status: 'pending' });
     }
 
-    // Every failure retries with backoff (nextRetryAt) and dead-letters only once 24h have passed
-    // since its first failure — one policy for all streams and error kinds (#145), except
-    // NonRetryableInboundError, which fails at once. Issue #211:
-    // `onBudgetExhausted` lets one error kind resolve to a noop instead, once that budget runs out.
+    // Failures retry with backoff and dead-letter only after 24h from the first failure;
+    // NonRetryableInboundError fails at once. onBudgetExhausted can turn a kind into a noop instead.
     async markFailed(
         id: number,
         error: Error,

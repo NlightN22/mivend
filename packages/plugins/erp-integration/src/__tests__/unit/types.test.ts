@@ -8,10 +8,8 @@ import {
     isEmailOnlyWorker,
 } from '../../types';
 
-// Issue #127: regression coverage for the real incident this fixes — a 'counterparty' backlog
-// (bulk lane) starved 'user' of claim slots for hours because they shared one claimBatch query.
-// 'user' must now be claimed by its own dedicated lane, disjoint from both the bulk lane and the
-// order-registration-result lane, so neither can ever again starve it (or be starved by it).
+// 'user' has a dedicated claim lane disjoint from the bulk and order-result lanes;
+// otherwise a backlog in either lane can starve 'user' of claim slots.
 describe('inbox lane stream membership', () => {
     it('keeps user out of the bulk lane', () => {
         expect(INBOX_BULK_STREAMS).not.toContain('user');
@@ -62,9 +60,8 @@ describe('isEmailOnlyWorker', () => {
         expect(isEmailOnlyWorker([])).toBe(false);
     });
 
-    // #149 audit MEDIUM: a future dedicated worker, or a change to worker.ts's own list, must
-    // never be silently treated as email-only just because it happens to omit
-    // 'apply-collection-filters' — only an exact, positive match on ['send-email'] counts.
+    // Only an exact match on ['send-email'] counts as email-only; a worker that merely
+    // omits 'apply-collection-filters' must not be inferred as email-only.
     it('is false for a hypothetical future dedicated worker with its own unrelated queue', () => {
         expect(isEmailOnlyWorker(['generate-document'])).toBe(false);
     });

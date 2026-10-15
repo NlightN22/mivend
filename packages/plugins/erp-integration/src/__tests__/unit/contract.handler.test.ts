@@ -76,9 +76,8 @@ describe('ContractStreamHandler', () => {
         expect(contractService.upsertActiveState).not.toHaveBeenCalled();
     });
 
-    // A tombstone never carries a name — must deactivate-only by erpId, never look up the
-    // counterparty or touch upsertActiveState (mivend.audit.common finding, same class of bug
-    // as the point-of-sale #100 tombstone fix).
+    // A tombstone has no name: deactivate by erpId only, never look up the counterparty
+    // and never call upsertActiveState, since a tombstone has no data to upsert with.
     it('deactivates by erpId only on a tombstone, without any counterparty lookup or field write', async () => {
         const { handler, contractService, counterpartyService } = makeHandler();
 

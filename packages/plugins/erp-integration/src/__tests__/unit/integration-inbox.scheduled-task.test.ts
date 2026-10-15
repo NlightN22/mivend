@@ -107,10 +107,8 @@ describe('createIntegrationInboxCriticalTask', () => {
     });
 });
 
-// Issue #127: 'user' moved out of the bulk lane into its own dedicated lane (not merged into
-// createIntegrationInboxCriticalTask above) so a large 'user' backlog can never starve
-// order-registration-result the way 'counterparty' once starved 'user' in the bulk lane — see
-// integration-inbox.scheduled-task.ts's own comment for the reasoning.
+// Own lane for 'user', not merged into the bulk lane: a large 'user' backlog must not starve
+// order-registration-result, as 'counterparty' did to 'user' when they shared the bulk lane
 describe('createIntegrationInboxUserTask', () => {
     it('skips on a branch instance', async () => {
         const processPendingBatch = vi.fn();
@@ -216,10 +214,8 @@ describe('createIntegrationInboxBulkTask', () => {
         expect(firstDeadline).toBe(secondDeadline);
     });
 
-    // mivend.audit.90's review of issue #93 (MEDIUM-HIGH): the reclaim loop must bound itself by
-    // wall-clock even when every batch keeps coming back full, so one execution can never run
-    // long enough to hit the scheduler's own task timeout (a timed-out task's execute() promise
-    // keeps running orphaned in the background — see the scheduled-task file's own comment).
+    // Bound the reclaim loop by wall-clock even when every batch comes back full: a task that
+    // hits the scheduler timeout leaves execute() running orphaned in the background
     it('stops reclaiming once the wall-clock budget is spent, even if the batch is still full', async () => {
         let now = 0;
         vi.spyOn(Date, 'now').mockImplementation(() => now);

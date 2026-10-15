@@ -6,12 +6,8 @@ import { KafkaStatusDto } from './dto/kafka-status.dto';
 import { KafkaStatusApiKeyGuard } from './kafka-status-api-key.guard';
 import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 
-// Reads the status row KafkaConsumerService persists on CONNECT/DISCONNECT/CRASH — this
-// controller is served by the main HTTP process, while the Kafka consumer only ever runs in the
-// worker process (separate Node processes, no shared memory), so reading isConnected() directly
-// would always report this process's own, permanently-unconnected instance. See
-// kafka-consumer-status.entity.ts's own doc comment. No row yet (consumer never started) reads
-// as connected: false — the same safe default as "not connected".
+// The consumer runs in the worker process, not here, so isConnected() would always report false;
+// the persisted status row is the only shared state. No row yet means connected: false.
 @ApiTags('ERP Callback')
 @ApiSecurity('erp-callback-api-key')
 @UseGuards(KafkaStatusApiKeyGuard)

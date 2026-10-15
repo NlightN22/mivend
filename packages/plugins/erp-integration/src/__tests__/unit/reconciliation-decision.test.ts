@@ -45,9 +45,8 @@ describe('classifyDiscrepancy', () => {
     });
 
     it('is never called when counts match (caller only invokes on a real mismatch)', () => {
-        // classifyDiscrepancy itself has no equal-counts branch — ReconciliationService only
-        // calls it once ourCount !== theirCount is already established. Documented here so a
-        // future change to that guard doesn't silently start persisting no-op issues.
+        // classifyDiscrepancy has no equal-counts branch; the caller guarantees ourCount !== theirCount.
+        // Keep this guard in place: without it, a no-op issue would be persisted silently.
         expect(classifyDiscrepancy(5, 5)).toBe('upstream-higher');
     });
 });

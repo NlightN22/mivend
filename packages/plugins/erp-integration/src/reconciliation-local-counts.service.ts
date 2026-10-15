@@ -11,40 +11,8 @@ import { WarehouseService } from '@mivend/plugin-access-control';
 import { DocumentsService } from '@mivend/plugin-documents';
 import { ProductVariantPriceEntry } from '@mivend/plugin-price-entry';
 
-// Which of the 11 aggregateType values the summary endpoint supports have a meaningful,
-// countable local equivalent — decided per issue #84's "Comparison scope" and revisited per the
-// user's request that reconciliation cover "everything mivend actually loads and uses," even in
-// simplified form. Confirmed by reading the actual inbound stream wiring rather than assumed:
-//
-// - 'offer' / 'stockOrganization': IntegrationInboxProcessorService registers both as
-//   DeferredStreamHandler (see integration-inbox-processor.service.ts) — recorded, logged no-ops,
-//   no local entity is EVER created/updated from either stream. There is genuinely nothing to
-//   count locally — "simplify the comparison" can't manufacture an entity that doesn't exist.
-//   Making these comparable is a real feature (build real handling for these two streams first),
-//   not a reconciliation tweak — track separately if/when that's prioritized.
-// - 'unit': no InboundStream member for it at all (types.ts's InboundStream union has no 'unit'
-//   entry) — mivend never receives or stores unit-of-measure data as its own countable entity.
-//   Same as above: nothing exists yet to count.
-// - 'storageLocation': StorageLocationStreamHandler's own doc comment states no per-location
-//   table is kept locally — every row folds into ProductVariant.customFields.organizationId
-//   (last-priority-wins), so there is no local "storage location count" to compare against
-//   Integration Service's count at all, independent of the activeCount-is-null special case.
-//
-// The remaining 7 (of the 11 Integration Service supports today) DO have a real, already-owned
-// local entity to count — including 'price'/'stock', simplified per the user's request rather
-// than deferred: a plain row count, not the fuller "which local rows count as the same fact
-// upstream counts" aggregation design originally sketched (that fuller design stays a possible
-// future refinement, not a blocker for a first, useful signal now):
-// - category → Collection (one per category minus the root)
-// - organization → OrganizationRequisites
-// - warehouse → Warehouse
-// - priceType → PriceType
-// - product → Product
-// - price → ProductVariantPriceEntry (a plain row count — this doesn't yet reconcile "the same
-//   (product, priceType) fact", just how many price rows mivend holds vs Integration Service's
-//   own price record count; still a real, useful signal for a gross mismatch)
-// - stock → StockLevel (same simplification: total row count, not netted against zero-quantity
-//   rows or matched per (product, warehouse) pair)
+// offer, stockOrganization, unit, storageLocation have no local entity to count; excluded.
+// price/stock are plain row counts; StockLevel exists for every variant, not per received fact.
 export const COMPARED_AGGREGATE_TYPES = [
     'category',
     'organization',
@@ -89,16 +57,8 @@ export class ReconciliationLocalCountsService {
         }
     }
 
-    // A plain StockLevel row count (the original simplified metric) is structurally wrong, not
-    // just approximate: Vendure auto-creates a zero-quantity StockLevel for every
-    // (ProductVariant, StockLocation) pair at variant-creation time, regardless of whether a real
-    // `stock` Kafka event was ever received for it — so that count mostly measures "how many
-    // variants exist," not "how many stock facts we hold" (confirmed live: local count stayed
-    // ~51834, matching product count almost exactly, while only 1305 stock events had ever been
-    // received). `customFields.erpAvailableQuantity` (StockStreamHandler's own idempotency/data
-    // marker, set only when a real event was applied) is the source-agnostic signal for "we
-    // actually have a received stock fact here" — works regardless of whether the source stays
-    // Kafka or changes later, unlike counting inbox events directly.
+    // Plain StockLevel count is wrong: Vendure auto-creates zero-quantity rows per variant/location.
+    // Use customFields.erpAvailableQuantity as the marker of a really received stock event.
     private async countReceivedStockLevels(ctx: RequestContext): Promise<number> {
         return this.connection
             .getRepository(ctx, StockLevel)
@@ -108,17 +68,8 @@ export class ReconciliationLocalCountsService {
     }
 
     private async countCategories(ctx: RequestContext): Promise<number> {
-        // CategoryStreamHandler creates one Collection per category. isPrivate:false filters out
-        // categories CategoryStreamHandler has hidden on deactivation (issue #90) — without this
-        // filter a deactivated category still counted as present, defeating #90's own
-        // reconciliation fix (mivend.audit.85 HIGH finding).
-        //
-        // No "-1 for the root Collection" here: root's own isPrivate defaults to true in this
-        // instance, so the isPrivate:false filter above already excludes it on its own — an
-        // earlier version of this method subtracted 1 unconditionally regardless of the filter,
-        // silently discarding one real category every run (confirmed live: isPrivate:false
-        // returned exactly Integration Service's own active count, 452, with no root present
-        // among the results at all — mivend.issue.84.88, 2026-09-15).
+        // isPrivate:false drops deactivated categories and the root; do not subtract 1 for root.
+        // The root's isPrivate defaults to true here, so the filter alone excludes it.
         const { totalItems } = await this.collectionService.findAll(ctx, {
             take: 1,
             filter: { isPrivate: { eq: false } },

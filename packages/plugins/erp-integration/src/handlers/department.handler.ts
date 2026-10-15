@@ -6,13 +6,8 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 
 const loggerCtx = 'IntegrationDepartmentHandler';
 
-// Applies Integration Service's `department` stream (DepartmentChanged — the ERP's "Подразделение",
-// erp.department.events.v1). entityId is the ERP's own GUID
-// ("Подразделение_Key") — the same value WarehouseChanged.branchId refers to, though this
-// handler only upserts the Department record itself; it deliberately does not drive any
-// warehouse→branch linkage (see WarehouseStreamHandler/BranchStockLocationStrategy's own
-// comments — mivend's branch assignment is its own, staff-managed concept, independent of
-// whatever org unit ERP calls a "division" for its own purposes).
+// entityId is the ERP GUID shared with WarehouseChanged.branchId; never link warehouses here.
+// Branch assignment is staff-managed in mivend, independent of the ERP's department concept.
 @Injectable()
 export class DepartmentStreamHandler implements InboundStreamHandler {
     constructor(private readonly departmentService: DepartmentService) {}
@@ -22,18 +17,14 @@ export class DepartmentStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
-        // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
-        // bool zero-value omission). isDeleted folds in the same way every sibling handler does
-        // (mivend.issue.88 follow-up, 2026-09-15) — this handler previously never read either
-        // field at all, despite DepartmentChanged carrying both; a deactivated/deleted ERP
-        // department had no way to reflect that locally (Department had no isActive column).
+        // Absent isActive means false: proto3 omits bool zero values, so do not default it to true.
+        // Handle isDeleted the same way as the sibling handlers.
         const isActive = payload.isActive === true && payload.isDeleted !== true;
 
         const name = payload.name ? String(payload.name) : null;
         if (!name) {
-            // A deletion tombstone never carries a name (confirmed for organization/warehouse/
-            // category — same shape here). Still update isActive on an already-known
-            // department; never fabricate a brand-new one with a blank name.
+            // Deletion tombstones carry no name, so only update isActive on an already-known department.
+            // Never create a new Department from a tombstone; it would get a blank name.
             const updated = await this.departmentService.setActiveStateIfExists(
                 ctx,
                 entityId,

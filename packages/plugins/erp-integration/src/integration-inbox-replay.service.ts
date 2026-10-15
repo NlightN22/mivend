@@ -30,9 +30,8 @@ interface ClaimedRow {
     entityId: string;
 }
 
-// Asks Integration Service to re-publish dead-lettered entities; the new event arrives through the
-// normal consumer. A replayed row only becomes replay_requested: it closes when the new event is
-// processed (IntegrationInboxService.markProcessed) and returns to failed otherwise.
+// A replayed row stays replay_requested until the re-published event is processed (markProcessed);
+// otherwise it reverts to failed.
 @Injectable()
 export class IntegrationInboxReplayService {
     constructor(

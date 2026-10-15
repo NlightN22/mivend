@@ -3,25 +3,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
-// A producer-authoritative client for this plugin's OWN outbound `OrderSubmitted` event only:
-// registers its schema with Integration Service's Confluent-compatible Schema Registry and
-// resolves the returned schema id, per issue #62's decision to use the Registry (not a generated
-// npm package) as the contract distribution point for that direction — see docs/sync.md's "Why
-// Kafka both ways, not Kafka + RPC".
-//
-// This is NOT used for the 8 inbound catalog/price/stock streams: those are plain protobuf
-// `toBinary()`/`fromBinary()` with no Confluent wire-format header and no Registry involvement at
-// all (verified against Integration Service's real producer/consumer code — see
-// docs/ai/1c-integration-service-decision.md's 2026-08-14 retraction and
-// kafka-consumer.service.ts's own comment). An earlier version of this file had a
-// Registry-dynamic `getSchemaById` consumer-side lookup for inbound decode; it was removed
-// because those messages were never encoded that way to begin with and it could never
-// successfully decode a real message.
+// Outbound OrderSubmitted only. Inbound streams are plain protobuf with no Confluent header,
+// so they must not go through this Registry-based path.
 @Injectable()
 export class SchemaRegistryClient {
-    // Registration is idempotent on the Registry side for byte-identical schemas, but caching
-    // avoids a network round trip on every single outbox row for the (overwhelmingly common)
-    // case of publishing the same event type repeatedly.
+    // Registry registration is idempotent, so the cache only saves a network round trip per outbox row
     private readonly schemaIdCache = new Map<string, number>();
 
     constructor(

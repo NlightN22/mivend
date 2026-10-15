@@ -15,11 +15,8 @@ describe('PriceTypeStreamHandler', () => {
         expect(customerPricingService.upsertPriceTypeByExternalId).not.toHaveBeenCalled();
     });
 
-    // Integration Service encodes isActive/isDeleted as plain proto3 bool (not optional) — proto3
-    // JSON encoding omits a scalar field when it equals its zero-value, so `isActive:false` is
-    // NEVER sent as an explicit false, only as an absent key (confirmed live with Search Platform,
-    // see mivend#89's follow-up investigation). Absent must be read as false, not true — the
-    // previous `!== false` check could never detect a real deactivation at all.
+    // Proto3 JSON omits zero-value scalars: isActive:false arrives as an absent key, not false.
+    // Treat absent as false; an '!== false' check can never detect a real deactivation.
     it('defaults isActive to false when absent (proto3 omits the false zero-value)', async () => {
         const customerPricingService = {
             upsertPriceTypeByExternalId: vi.fn().mockResolvedValue({}),

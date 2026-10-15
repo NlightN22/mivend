@@ -2,10 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// ProductChanged's `manufacturer_codes` (repeated ManufacturerCode) — real cross-manufacturer OEM
-// codes only; Search Platform's own mapper already filters out the entry matching the product's
-// own manufacturer (that one goes to their internal manufacturerPartNumber, never published on
-// this stream) — confirmed 0-5 rows per product in practice, issue #116.
+// Excludes the product's own manufacturer's code: Search Platform routes it to an internal field
+// so this stream only carries cross-manufacturer OEM codes, typically 0-5 per product.
 @Entity()
 export class ProductManufacturerCode extends VendureEntity {
     constructor(input?: DeepPartial<ProductManufacturerCode>) {
@@ -22,10 +20,8 @@ export class ProductManufacturerCode extends VendureEntity {
     @Column({ type: 'varchar' })
     code!: string;
 
-    // Stored as-is (raw string), NOT resolved to a Manufacturer entity — Search Platform has not
-    // confirmed this is the same GUID shape as the top-level ProductChanged.manufacturer field
-    // (issue #116's own "verify against a real multi-code fixture during implementation, not a
-    // blocker" note). Revisit once that's confirmed.
+    // Kept as a raw string, not resolved to a Manufacturer entity: Search Platform has not confirmed
+    // its GUID shape matches top-level ProductChanged.manufacturer. Revisit once confirmed.
     @Column({ type: 'varchar' })
     manufacturer!: string;
 }

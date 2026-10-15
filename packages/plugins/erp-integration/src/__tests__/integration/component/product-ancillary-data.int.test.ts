@@ -19,12 +19,8 @@ import {
 import { ManufacturerService } from '../../../manufacturer.service';
 import { ProductAncillaryDataService } from '../../../product-ancillary-data.service';
 
-// The mapping logic (payload -> rows) is already covered at the unit level
-// (product-characteristics-mapper.test.ts, product-ancillary-fields.test.ts) per test-design's
-// "minimum sufficient level" rule. What's genuinely unproven there is whether these services'
-// real TypeORM delete-then-insert round-trips correctly against Postgres, and — for
-// ManufacturerService specifically — the non-destructive name-backfill behavior (issue #116).
-// Same schema-per-file bootstrap as product-tax-code-flag.int.test.ts.
+// Mapping is unit-tested elsewhere; this checks TypeORM delete-then-insert against real Postgres.
+// ManufacturerService name backfill must stay non-destructive. Each file bootstraps its own schema.
 @Entity('anc_test_manufacturer')
 class TestManufacturer {
     @PrimaryGeneratedColumn()

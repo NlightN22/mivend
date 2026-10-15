@@ -19,9 +19,8 @@ import { loggerCtx } from './types';
 export const MANUFACTURER_FACET_CODE = 'manufacturer';
 const KNOWN_TTL_MS = 10 * 60_000;
 
-// Mirrors each Manufacturer as a FacetValue (code = ERP GUID) so the storefront filter sidebar
-// can render it through the standard SearchResponse.facetValues. Not assigned to variants:
-// membership is answered by the external search backend, not by Vendure's own index.
+// Not assigned to variants: facet membership is answered by the external search backend,
+// not by Vendure's own index.
 @Injectable()
 export class ManufacturerFacetService implements OnApplicationBootstrap {
     // Loading every manufacturer value per product event dominated the inbox's CPU time.

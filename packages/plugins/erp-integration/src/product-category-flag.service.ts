@@ -4,10 +4,8 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ProductCategoryFlag } from './entities/product-category-flag.entity';
 import type { CategoryFlag } from './category-resolver';
 
-// Persists ProductStreamHandler's non-blocking category-resolution review flags (issue #116).
-// Report-only — mirrors ProductTaxCodeFlagService exactly (no dedupe-on-still-open check: unlike
-// the reservation/payment reconciliation issues, each occurrence is its own row, same as the VAT
-// flag's own precedent).
+// No dedupe against still-open flags: each occurrence is its own row (non-blocking report)
+// Intentionally differs from reservation/payment reconciliation; matches ProductTaxCodeFlagService
 @Injectable()
 export class ProductCategoryFlagService {
     constructor(private connection: TransactionalConnection) {}

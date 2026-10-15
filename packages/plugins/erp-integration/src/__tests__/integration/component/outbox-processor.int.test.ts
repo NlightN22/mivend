@@ -12,11 +12,8 @@ import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-ent
 import { IntegrationOutboxRecoveryService } from '../../../integration-outbox-recovery.service';
 import { IntegrationOutboxProcessorService } from '../../../integration-outbox-processor.service';
 
-// Component chain: pending row -> sweep -> publish -> published / retry / dead-letter. Invoked
-// directly (processPendingBatch), never waiting on a real BullMQ scheduler interval, per
-// docs/testing-strategy.md's "Worker testing". KafkaProducerService.publish is mocked — this
-// suite proves the outbox lifecycle transitions, not real Kafka connectivity (see this plugin's
-// test plan's "Deliberate omissions": no live broker in this repo's test infra).
+// Invoked directly via processPendingBatch: the BullMQ scheduler interval is never awaited.
+// KafkaProducerService.publish is mocked, so this proves outbox transitions, not Kafka connectivity.
 let dataSource: DataSource;
 const publish = vi.fn();
 

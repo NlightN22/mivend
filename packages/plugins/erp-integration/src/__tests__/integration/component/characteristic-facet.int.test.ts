@@ -9,9 +9,8 @@ import {
 
 import { CharacteristicFacetService } from '../../../characteristic-facet.service';
 
-// No full Vendure bootstrap here (same as product-category-facet-value.int.test.ts): the facet
-// services are replicas of Vendure's check-then-insert-with-suffix behavior (FacetService.create
-// renames a clashing code to "<code>-2"), run against real Postgres so the advisory lock is real.
+// No Vendure bootstrap: facet services replicate FacetService.create's check-then-insert suffixing.
+// Real Postgres makes the advisory lock real.
 const { schema, extra } = testSchemaOptions('characteristic_facet');
 let dataSource: DataSource;
 

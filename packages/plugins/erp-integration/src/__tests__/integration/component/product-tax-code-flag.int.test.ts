@@ -10,15 +10,8 @@ import {
 
 import { ProductTaxCodeFlagService } from '../../../product-tax-code-flag.service';
 
-// The business logic (which raw VAT code produces which flag) is already covered at the unit
-// level (vat-code-resolver.test.ts, product.handler.test.ts with mocked services) per
-// test-design's "minimum sufficient level" rule. What's genuinely untested there is whether
-// ProductTaxCodeFlagService's TypeORM mapping/query actually round-trips against real Postgres.
-//
-// Same approach as plugin-reservation's reservation-reconciliation-issue.int.test.ts:
-// ProductTaxCodeFlag extends VendureEntity, which needs a bootstrapped EntityIdStrategy — mirror
-// the production table with a standalone TypeORM entity against real Postgres instead of using
-// the real class.
+// ProductTaxCodeFlag extends VendureEntity, which needs a bootstrapped EntityIdStrategy;
+// so this test mirrors the table with a standalone TypeORM entity on real Postgres.
 @Entity('product_tax_code_flag')
 class TestProductTaxCodeFlag {
     @PrimaryGeneratedColumn()

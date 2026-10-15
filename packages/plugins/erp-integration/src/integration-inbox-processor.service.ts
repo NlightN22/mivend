@@ -47,9 +47,8 @@ import { MissingDependencyError, loggerCtx } from './types';
 import type { InboundStream } from './types';
 import { isVersionNewer } from './version-compare';
 
-// Split from the BullMQ scheduling wiring (integration-inbox.worker.ts) so tests can invoke
-// processPendingBatch directly, mirroring IntegrationOutboxProcessorService's own split
-// (docs/testing-strategy.md's "Worker testing").
+// Kept apart from the BullMQ wiring so tests can call processPendingBatch directly.
+// Same split as IntegrationOutboxProcessorService (see docs/testing-strategy.md).
 @Injectable()
 export class IntegrationInboxProcessorService {
     private readonly handlers: Record<InboundStream, InboundStreamHandler>;
@@ -131,20 +130,14 @@ export class IntegrationInboxProcessorService {
             'settlement-balance': settlementBalanceHandler,
             'settlement-document-type': settlementDocumentTypeHandler,
             'order-status': orderStatusHandler,
-            // Quantity dimension deliberately deferred to issue #72 (ATP/reservation-drift
-            // source-of-truth); organization_id here is not authoritative — StorageLocationChanged
-            // above is the sole source for ProductVariant.customFields.organizationId, so this
-            // stream stays a recorded, logged no-op for now, same as `offer`.
+            // organization_id here is not authoritative: StorageLocationChanged is the sole source for
+            // ProductVariant.customFields.organizationId, so this stream is a logged no-op (like offer).
             'stock-organization': new DeferredStreamHandler('stock-organization'),
         };
     }
 
-    // `streams`/`batchSize` implement the priority-lane split (issue #93): the critical lane
-    // (order-registration-result) and the bulk lane (everything else) each pass their own
-    // disjoint stream set and batch size, so a large bulk backlog can never delay a critical row
-    // — see integration-inbox.scheduled-task.ts, which owns the two lanes' schedules and the bulk
-    // lane's immediate-reclaim-while-full loop.
-    // `deadlineMs` bounds this batch's own loop (#149); unreached rows are released to `pending`.
+    // Lanes use disjoint stream sets and batch sizes so a bulk backlog cannot delay critical rows.
+    // deadlineMs bounds the loop; rows not reached are released back to pending.
     async processPendingBatch(
         streams?: InboundStream[],
         batchSize = 20,
@@ -159,11 +152,8 @@ export class IntegrationInboxProcessorService {
         let failed = 0;
         if (rows.length === 0) return { processed, failed, claimed: 0 };
 
-        // claimBatch orders by createdAt (claim fairness), not by (stream, entityId, version) —
-        // two versions of the same entity landing in one batch have no guaranteed relative order
-        // otherwise. Sorting here before the sequential loop below is what makes the in-batch
-        // "already applied a newer version" check in processOne correct, not just the
-        // cross-batch/cross-restart DB check (issue #62 review, MEDIUM #1).
+        // claimBatch orders by createdAt, so two versions of one entity in a batch have no guaranteed order.
+        // Sorting here makes the in-batch version check in processOne correct, not just the DB check.
         const sorted = [...rows].sort((a, b) => {
             if (a.stream !== b.stream) return a.stream < b.stream ? -1 : 1;
             if (a.entityId !== b.entityId) return a.entityId < b.entityId ? -1 : 1;
@@ -196,10 +186,8 @@ export class IntegrationInboxProcessorService {
 
     private async processOne(ctx: RequestContext, row: IntegrationInboxEvent): Promise<boolean> {
         try {
-            // Out-of-order guard (issue #62 risk: a lower version arriving after a higher one
-            // must not regress state): skip applying (but still mark processed, since this row
-            // is not itself invalid — a later duplicate/replay of stale data is expected, not an
-            // error) if a newer version for this (stream, entityId) was already processed.
+            // A lower version arriving after a higher one must not regress state.
+            // Such rows are still marked processed: stale replays are expected, not errors.
             const isStale = await this.isSupersededByNewerVersion(row);
             if (isStale) {
                 Logger.verbose(

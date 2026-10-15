@@ -17,14 +17,8 @@ import {
 } from './types';
 import { toErpVatCode } from './vat-code-resolver';
 
-// Issue #141: persistence-only counterpart to vat-code-resolver.ts's pure 'auto-create'
-// resolution — a recognized-but-unmapped or never-seen-before VAT code gets its own TaxCategory
-// on the spot, plus a placeholder 0% TaxRate on the default Zone. Safe specifically because
-// pricesIncludeTax is enforced true (see kafka-consumer-bootstrap.service.ts) — an unresolved
-// rate only skews internal reporting, never what the customer pays. Find-or-create is idempotent
-// by design: two ProductChanged events for the same never-seen code racing each other both land
-// on the same TaxCategory row (unique-by-erpVatCode lookup, no upsert-on-conflict needed since
-// this plugin's inbox processes one stream serially — see integration-inbox-processor.service.ts).
+// Safe only if pricesIncludeTax is true: a placeholder 0% rate skews reporting, not prices.
+// Idempotent without upsert: the inbox processes events serially, so lookup by erpVatCode suffices.
 @Injectable()
 export class TaxCategoryAutoCreateService {
     constructor(

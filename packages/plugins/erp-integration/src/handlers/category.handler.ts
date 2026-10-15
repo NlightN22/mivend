@@ -32,9 +32,7 @@ interface CollectionInput {
     facetValueIdByCode: ReadonlyMap<string, string>;
 }
 
-// CategoryChanged: entity_id (FacetValue code, Collection slug), name, parent_id, is_active and
-// is_deleted are consumed; version drives the inbox guard; event_id/occurred_at/updated_at are
-// envelope-only. Design: docs/category-hierarchy.md; status row: docs/ai/erp-streams-map.md.
+// version drives the inbox guard; event_id, occurred_at and updated_at are envelope-only
 @Injectable()
 export class CategoryStreamHandler implements InboundStreamHandler {
     constructor(

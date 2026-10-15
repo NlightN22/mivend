@@ -20,25 +20,8 @@ import {
 } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
-// Central-hub-only, mirroring the outbox task. Issue #80: standard for recurring/periodic
-// plugin work is Vendure's own ScheduledTask (DefaultSchedulerPlugin, registered in
-// apps/server/src/vendure-config.ts) — worker-process-only and DB-locked out of the box, plus
-// enable/disable + run-now via the admin API, replacing the previous raw BullMQ Queue+Worker
-// (integration-inbox.worker.ts).
-//
-// Issue #93: split into independent lanes so a large bulk backlog (a full price/stock resync,
-// hundreds of thousands of rows) can never starve order-registration-result, which reservation
-// release depends on (OrderRegistrationResultHandler). Every lane claims from the same
-// IntegrationInboxEvent table but with disjoint `stream` filters, so a row is claimed by exactly
-// one lane.
-//
-// Issue #127: this used to be a single "critical" lane shared with 'user' (added to fix a
-// separate head-of-line-blocking incident — see INBOX_USER_STREAMS' own comment in types.ts).
-// Sharing one lane/one claimBatch query between the two would have just relocated the original
-// #93 problem: a large 'user' backlog could then starve order-registration-result the exact same
-// way 'counterparty' once starved 'user'. Kept as two fully independent, single-stream lanes
-// instead (see createIntegrationInboxUserTask below) — order-registration-result's own claim
-// query never has to share a batch, or an ORDER BY, with any other stream, critical or bulk.
+// Disjoint stream lanes: a bulk backlog must not starve order-registration-result
+// 'user' has its own lane so its claim query never shares a batch or ORDER BY with other streams
 export function createIntegrationInboxCriticalTask(
     options: ErpIntegrationPluginOptions,
 ): ScheduledTask {
@@ -68,11 +51,8 @@ export function createIntegrationInboxCriticalTask(
     });
 }
 
-// Issue #127: 'user' gets its own lane, deliberately not merged into the order-registration-result
-// lane above (see that function's own comment for why) and not left in the bulk lane (the original
-// starvation incident this fixes). No reclaim-while-full loop here, same as the
-// order-registration-result lane — 'user' is expected to stay low-volume; if it ever needs one,
-// add it the same way the bulk lane has it, budget-bounded.
+// Kept separate from the order-registration-result lane: merging them would re-create starvation
+// No reclaim loop: expected low volume; if needed, add one with a wall-clock budget
 export function createIntegrationInboxUserTask(
     options: ErpIntegrationPluginOptions,
 ): ScheduledTask {
@@ -108,14 +88,8 @@ export function createIntegrationInboxBulkTask(
         description:
             'Processes pending catalog/price/stock/etc. inbox records in adaptive-size batches (central hub only).',
         schedule: cronEveryMs(everyMs),
-        // DefaultSchedulerStrategy.runTask races task.execute() against this timeout and marks
-        // the task 'failed' + releases its lock if it's exceeded — but a JS Promise can't
-        // actually be cancelled, so the reclaim loop below would keep running "orphaned" in the
-        // background, invisible to the scheduler, while the next tick's now-unlocked run starts a
-        // second one alongside it (mivend.audit.90's review of issue #93, MEDIUM-HIGH finding).
-        // INBOX_BULK_WALL_CLOCK_BUDGET_MS below keeps the loop itself well under this timeout
-        // regardless of backlog size — this override just documents the intent and adds margin
-        // rather than relying on the 60s default alone.
+        // Promise can't be cancelled: a timed-out run would keep looping while the next tick starts another
+        // Keep the loop under this timeout via INBOX_BULK_WALL_CLOCK_BUDGET_MS, not by raising it
         timeout: INBOX_BULK_TASK_TIMEOUT_MS,
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
@@ -126,12 +100,8 @@ export function createIntegrationInboxBulkTask(
             const startedAt = Date.now();
             // Also passed into processPendingBatch to bound one slow batch's own loop (#149).
             const deadlineMs = startedAt + INBOX_BULK_WALL_CLOCK_BUDGET_MS;
-            // Immediate reclaim while a batch comes back full (queue likely still has more
-            // pending) instead of waiting out the fixed poll interval — only falls back to the
-            // normal interval once a batch comes back partial/empty or the wall-clock budget is
-            // spent. Bounding by wall-clock (not just "batch not full") guarantees this execution
-            // finishes within its own scheduler timeout no matter how large the backlog is —
-            // an unbounded backlog just means more ticks, not a stuck/orphaned task.
+            // Wall-clock bound, not just 'batch not full', keeps this run within its scheduler timeout
+            // Backlog size only adds ticks; the run never gets stuck or orphaned
             for (;;) {
                 const { processed, failed, claimed } = await processor.processPendingBatch(
                     [...INBOX_BULK_STREAMS],
@@ -154,9 +124,8 @@ export function createIntegrationInboxBulkTask(
     });
 }
 
-// Retention (#147): a separate, low-frequency lane that only tombstones `processed` rows, never
-// touching `pending`/`processing`, so it can't compete with a claim. Loops within one tick, same
-// wall-clock-bounded shape as the bulk claim lane, so a resync-sized backlog just means more ticks.
+// Touches only 'processed' rows so it can never compete with a pending/processing claim
+// Wall-clock bounded like the bulk lane: a large backlog just means more ticks
 export function createIntegrationInboxRetentionTask(
     options: ErpIntegrationPluginOptions,
 ): ScheduledTask {

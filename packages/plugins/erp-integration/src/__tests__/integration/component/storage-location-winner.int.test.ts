@@ -11,9 +11,8 @@ import {
 import { StorageLocationStreamHandler } from '../../../handlers/storage-location.handler';
 import { MissingDependencyError } from '../../../types';
 
-// Real Postgres: the winner election is an ORDER BY over persisted rows under a per-product
-// advisory lock, which a mock cannot prove. Hand-rolled tables (VendureEntity needs bootstrap),
-// same shim shape as reserve-order.concurrency.test.ts.
+// Real Postgres required: winner election is an ORDER BY under a per-product advisory lock
+// Tables are hand-rolled because VendureEntity needs bootstrap; a mock cannot prove the lock.
 @Entity('StorageLocationAssignment')
 class TestAssignment {
     @PrimaryGeneratedColumn() id!: number;

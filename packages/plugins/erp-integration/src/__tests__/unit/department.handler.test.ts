@@ -19,9 +19,8 @@ describe('DepartmentStreamHandler', () => {
         expect(departmentService.setActiveStateIfExists).toHaveBeenCalledWith(ctx, 'dept-1', false);
     });
 
-    // A deletion tombstone never carries a name (confirmed against real staging-integration
-    // payloads for organization/warehouse/category, mivend.issue.88 follow-up) — must still
-    // deactivate an already-known department instead of silently skipping the event.
+    // Deletion tombstones never carry a name, so they must not be skipped for a missing name.
+    // Otherwise an already-known department would never be deactivated.
     it('updates isActive only, via setActiveStateIfExists, when name is missing but the department already exists', async () => {
         const departmentService = {
             upsert: vi.fn(),

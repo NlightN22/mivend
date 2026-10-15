@@ -7,24 +7,8 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-// issue #116's own concrete regression: a product imported via Kafka must actually become a
-// member of its category's Collection. The resolution logic (category_id -> FacetValue, applied
-// to the VARIANT) is already proven at the unit level (category-resolver.test.ts,
-// product.handler.test.ts with mocked services) per test-design's "minimum sufficient level"
-// rule — what's genuinely unproven there is whether Vendure's own `facet-value-filter` Collection
-// filter actually matches a variant once our code assigns that facet value to it.
-//
-// This plugin (like plugin-search's own product-lookup-query.int.test.ts, the direct model for
-// this file) has no @vendure/testing full-app-bootstrap component-test infra — faithfully
-// replicating Vendure's whole Product/ProductVariant/Facet/FacetValue relation graph to construct
-// one would be its own large undertaking, out of proportion to this issue. Instead: a
-// schema-faithful replica of the exact relation (ProductVariant <-> FacetValue, many-to-many) and
-// the exact query shape Vendure's real `facet-value-filter` issues against it (confirmed by
-// reading @vendure/core's own default-collection-filters.js: a variant matches if it's in
-// `product_variant.facetValues` OR its parent product's `facetValues` — a UNION of both, joined
-// on `facet_value.id IN (:ids)`, `HAVING COUNT(*) >= :count` for containsAny/all semantics) run
-// against real Postgres — proving the actual DB mechanism this issue's fix depends on, not
-// Vendure's own already-tested filter code.
+// No full Vendure bootstrap here: this proves the DB query facet-value-filter runs, not its code.
+// The filter matches a variant via its own facetValues OR its parent product's facetValues (UNION).
 @Entity('cat_fv_test_facet_value')
 class TestFacetValue {
     @PrimaryGeneratedColumn()
@@ -94,10 +78,7 @@ describe('ProductVariant <-> FacetValue Collection membership (integration, real
         );
         const otherFacetValue = await facetValueRepo.save(facetValueRepo.create({ code: 'cat-2' }));
 
-        // The exact write shape ProductStreamHandler performs via
-        // productVariantService.create/update's `facetValueIds` — assigning the resolved category
-        // facet value directly onto the variant, per issue #60/#116's documented Vendure footgun
-        // (the parent Product's own facetValues is a separate, independent relation).
+        // Assign the facet value to the variant itself: Product.facetValues is a separate relation
         const matchingVariant = await variantRepo.save(
             variantRepo.create({ sku: 'SKU-MATCH', facetValues: [categoryFacetValue] }),
         );

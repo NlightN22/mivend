@@ -17,18 +17,8 @@ export interface KafkaLagPollResult {
     failedTopics: string[];
 }
 
-// Issue #91: exposes the one signal `KafkaConsumerStatus`'s boolean connected/disconnected flag
-// cannot — a consumer that is "connected" can still be falling behind indefinitely (a stuck
-// downstream processor, a slow inbox write, a partition rebalance storm) with zero observable
-// trace until someone notices stale data in mivend. See the consumer-resilience-audit skill's
-// must-have #4 ("lag == 0 is never treated as proof of successful processing") for the general
-// pattern this closes.
-//
-// Persisted (KafkaConsumerLagEntry rows), never an in-memory-only gauge — same bridging reason as
-// KafkaConsumerStatus: this poller runs in the worker process (ScheduledTask), while anything
-// reading the result (the admin GraphQL query, the dashboard page) is served by the main HTTP
-// process. Uses its own short-lived Admin client, entirely separate from KafkaConsumerService's
-// long-lived Consumer — an Admin connection is only needed for the duration of one poll.
+// Persisted, not in-memory: the poller runs in the worker, readers in the main HTTP process.
+// Own short-lived Admin client; a connected consumer can still lag indefinitely.
 @Injectable()
 export class KafkaLagPollerService {
     constructor(
@@ -43,10 +33,7 @@ export class KafkaLagPollerService {
         let polledTopics = 0;
         await admin.connect();
         try {
-            // Each topic is polled independently and a failure is isolated to that topic — same
-            // per-topic isolation the consumer's own subscribe loop uses (external-integration-
-            // rules skill) — one topic Integration Service has denied/moved must never blank out
-            // the lag figure for every OTHER, perfectly healthy topic.
+            // Each topic is polled in isolation: one denied or moved topic must not blank lag for the rest.
             const topics = this.options.kafkaConsumer.topics;
             const streamByTopic = new Map<string, string>();
             for (const [stream, topic] of Object.entries(topics)) {
@@ -96,9 +83,8 @@ export class KafkaLagPollerService {
         const committedByPartition = new Map<number, string>();
         for (const group of groupOffsets) {
             for (const p of group.partitions) {
-                // kafkajs reports -1 for a partition the consumer group has never committed an
-                // offset for — that is "unknown", not "zero lag", and must not be treated as a
-                // real offset (see KafkaConsumerLagEntry's own doc comment).
+                // kafkajs returns -1 for a partition with no committed offset: unknown, not zero lag.
+                // Do not treat it as a real offset.
                 if (p.offset !== '-1') committedByPartition.set(p.partition, p.offset);
             }
         }

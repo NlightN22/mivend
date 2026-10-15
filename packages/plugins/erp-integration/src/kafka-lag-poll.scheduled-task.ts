@@ -5,10 +5,8 @@ import { KafkaLagPollerService } from './kafka-lag-poller.service';
 import { KAFKA_ENABLED_DEFAULT, KAFKA_LAG_POLL_INTERVAL_DEFAULT } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
-// Central-hub-only and kafkaEnabled-gated, mirroring createReconciliationTask/
-// createIntegrationOutboxTask exactly — this talks to the same external broker the
-// consumer/producer do, so the same "is this contour allowed to reach Integration Service at
-// all" gate applies (issue #91).
+// Same gate as createReconciliationTask/createIntegrationOutboxTask: this task also reaches
+// the external broker used by consumer/producer, so it must be central-hub and kafkaEnabled.
 export function createKafkaLagPollTask(options: ErpIntegrationPluginOptions): ScheduledTask {
     const everyMs = options.kafkaLagPollIntervalMs ?? KAFKA_LAG_POLL_INTERVAL_DEFAULT;
     return new ScheduledTask({

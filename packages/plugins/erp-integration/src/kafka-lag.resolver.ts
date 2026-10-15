@@ -20,9 +20,7 @@ export interface KafkaTopicLag {
     partitions: KafkaTopicLagPartition[];
 }
 
-// Groups the flat per-(topic, partition) rows KafkaLagPollerService persists into one entry per
-// topic — kept as a plain, independently-testable function per AGENTS.md's "clean separation"
-// (resolvers do not contain business logic).
+// Plain pure function, testable alone: resolvers must not contain business logic.
 export function groupLagRowsByTopic(rows: KafkaConsumerLagEntry[]): KafkaTopicLag[] {
     const byTopic = new Map<string, KafkaConsumerLagEntry[]>();
     for (const row of rows) {
@@ -32,10 +30,8 @@ export function groupLagRowsByTopic(rows: KafkaConsumerLagEntry[]): KafkaTopicLa
     }
 
     return [...byTopic.entries()].map(([topic, topicRows]) => {
-        // Unknown (null) lag on any partition makes the topic total unknown too — summing a
-        // missing figure as 0 would understate a topic that has a genuinely-never-committed
-        // partition, silently hiding exactly the "no signal yet" case this whole feature exists
-        // to surface.
+        // Null lag on any partition makes the topic total null; summing it as 0 hides a
+        // never-committed partition, the exact "no signal yet" case this feature surfaces.
         const totalLag = topicRows.some(r => r.lag === null)
             ? null
             : String(topicRows.reduce((sum, r) => sum + BigInt(r.lag as string), 0n));

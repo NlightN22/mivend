@@ -85,10 +85,8 @@ function makeConfigService(activeQueues: string[] | undefined = ['apply-collecti
     return { jobQueueOptions: { activeQueues } };
 }
 
-// Central-hub-only guard (the external-integration-rules skill / issue #62 design point 1) — a branch instance
-// must never start a Kafka connection to Integration Service. Also worker-process-only (issue
-// #67) — running in both `main.ts` and `worker.ts` joined the same Kafka consumer group twice,
-// triggering a rebalance that silently stalled consumption for the reassigned partitions.
+// Branch instances must never open a Kafka connection to Integration Service.
+// Worker-only: running in both main.ts and worker.ts joins the consumer group twice and stalls it.
 describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
     it('starts the Kafka consumer on a central worker process', async () => {
         const start = vi.fn().mockResolvedValue(undefined);
@@ -135,9 +133,8 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
         expect(start).not.toHaveBeenCalled();
     });
 
-    // Issue #68: a plain `make dev` (local contour) must never reach a real Integration Service
-    // broker just because instanceType === 'central' and this happens to be the worker process —
-    // kafkaEnabled must be explicitly opted into per contour.
+    // kafkaEnabled must be explicitly opted into per contour; instanceType alone is not enough.
+    // Otherwise a local `make dev` on the central worker would reach a real Integration Service broker.
     it('never starts the Kafka consumer when kafkaEnabled is false, even on a central worker', async () => {
         const start = vi.fn().mockResolvedValue(undefined);
         const service = new KafkaConsumerBootstrapService(
@@ -170,11 +167,8 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
         expect(start).not.toHaveBeenCalled();
     });
 
-    // Real incident: the default per-ProductEvent recompute (50ms debounce, one
-    // apply-collection-filters job per event, each recomputing every Collection) enqueued tens
-    // of thousands of jobs once real Kafka product traffic flowed at scale — see
-    // collection-filters-recompute.scheduled-task.ts for the batched replacement this disables in
-    // favour of.
+    // Per-ProductEvent recompute enqueued tens of thousands of jobs under real Kafka traffic.
+    // Disabled in favor of the batched collection-filters-recompute.scheduled-task.ts.
     it('disables CollectionService.applyAllFiltersOnProductUpdates on a central worker with Kafka enabled', async () => {
         const collectionService = makeCollectionService();
         const service = new KafkaConsumerBootstrapService(
@@ -235,9 +229,8 @@ describe('KafkaConsumerBootstrapService.onApplicationBootstrap', () => {
         expect(collectionService.setApplyAllFiltersOnProductUpdates).not.toHaveBeenCalled();
     });
 
-    // #149: worker-email.ts is ALSO ProcessContext.isWorker=true, but must never join the Kafka
-    // consumer group (same rebalance-stall risk as running two worker.ts instances) — identified
-    // by its own distinct activeQueues (['send-email'] only, no 'apply-collection-filters').
+    // worker-email.ts has isWorker=true but must never join the Kafka consumer group (rebalance stall).
+    // Tell it apart by activeQueues: ['send-email'] only, with no 'apply-collection-filters'.
     it('never starts the Kafka consumer on the email-only worker, even with kafkaEnabled central', async () => {
         const start = vi.fn().mockResolvedValue(undefined);
         const service = new KafkaConsumerBootstrapService(

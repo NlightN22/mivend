@@ -8,13 +8,8 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 
 const loggerCtx = 'IntegrationOrderRegistrationResultHandler';
 
-// Applies Integration Service's erp.order.events.v1 (type `registration-result`) stream
-// (issue #75, the real reservation-release trigger issue #72's release-on-status attempts
-// deferred to). Only decodes the payload shape, resolves reservedLines' ERP productId to a
-// Vendure ProductVariant id (same join StockStreamHandler already uses), and resolves
-// requestEntityId to a local orderId via integration_outbox — the actual order-correlation
-// decision (which key to trust), release, and discrepancy logic live in
-// ReservationWriteOffSyncService, kept plugin-reservation's own concern.
+// Only decodes the payload and resolves ids; order correlation (which key to trust), release,
+// and discrepancy logic live in ReservationWriteOffSyncService.
 @Injectable()
 export class OrderRegistrationResultHandler implements InboundStreamHandler {
     constructor(
@@ -70,12 +65,8 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
         for (const rawLine of rawLines) {
             const line = rawLine as Record<string, unknown>;
             const productId = line.productId != null ? String(line.productId) : '';
-            // `reservedQuantity` is a plain (non-optional) proto3 double — same zero-value-
-            // omission shape as stock.handler.ts's quantity/availableQuantity (mivend.issue.84.88,
-            // external-integration-rules skill's "Non-optional proto3 scalar fields"). An absent
-            // key means reservedQuantity=0 (e.g. a fully-cancelled/zeroed line), not a malformed
-            // line — only productId (a string field, genuinely invalid when empty) is a real
-            // malformed-payload check here.
+            // reservedQuantity is a non-optional proto3 double: zero is omitted, so an absent key means 0,
+            // not a malformed line. Only productId (empty string) is a real malformed-payload check.
             const reservedQuantity = Number(line.reservedQuantity ?? 0);
             if (!productId) {
                 Logger.warn(
@@ -107,11 +98,8 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
             localOrderId,
             rejected,
             reservedLines,
-            // Issue #96: an unresolved variant now throws MissingDependencyError above instead of
-            // being collected here — always empty from this caller. The field itself stays on
-            // OrderRegistrationResultInput (reservation-write-off-sync.service.ts) as defensive
-            // input shape for any other future caller, unrelated to this plugin's own retry
-            // mechanism.
+            // Always empty from this caller: unresolved variants throw MissingDependencyError above.
+            // Kept as defensive input shape for future callers.
             unresolvedProductIds: [],
             documentNumber,
             status,

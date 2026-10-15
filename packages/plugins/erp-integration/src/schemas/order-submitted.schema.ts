@@ -1,13 +1,5 @@
-// MiVend-owned outbound event contract. Schema evolution rule (mirrors Integration Service's own
-// §18 Protobuf rules, adapted for JSON Schema): additive-only — new fields must be optional, an
-// existing field is never renamed or repurposed, a removed field's name is never reused for
-// something else.
-//
-// Mirrors ORDER_SUBMITTED_JSON_SCHEMA in @nlightn22/event-contracts 0.54.0 (organizationId is the
-// contract's organization, contractId is required); the package wins once it carries it (#203).
-// mivend's own mirror is ahead of the currently-published npm version for orderUuid/orderNumber/
-// lineUuid (issue #207): prepared, unpublished on a /opt/search-platform-wt-order-uuid branch
-// (feat/order-submitted-uuid, 0.55.0), pending that side's review/release.
+// Additive-only schema: new fields optional; never rename, repurpose, or reuse a removed field name.
+// Mirrors @nlightn22/event-contracts (package wins); orderUuid/orderNumber/lineUuid lead until 0.55.0.
 export const ORDER_SUBMITTED_SCHEMA = {
     $schema: 'http://json-schema.org/draft-07/schema#',
     title: 'OrderSubmitted',

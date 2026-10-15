@@ -4,9 +4,8 @@ import { Column, Entity, Index } from 'typeorm';
 
 import type { CategoryFlagReason } from '../category-resolver';
 
-// A non-blocking "succeeded but worth reviewing" signal for a product's category link (issue
-// #116) — mirrors ProductTaxCodeFlag (issue #79) exactly: a bare, readable record, no status/
-// resolution workflow (out of scope per issue #116, same reasoning as #79).
+// Non-blocking review signal, deliberately a bare record: no status or resolution workflow.
+// Mirrors ProductTaxCodeFlag; keep the two in sync.
 @Entity()
 export class ProductCategoryFlag extends VendureEntity {
     constructor(input?: DeepPartial<ProductCategoryFlag>) {

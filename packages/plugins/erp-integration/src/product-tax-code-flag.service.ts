@@ -11,9 +11,8 @@ export interface ProductTaxCodeFlagListOptions {
     skip?: number;
 }
 
-// Persists ProductStreamHandler's non-blocking VAT-code review flags (issue #79). Report-only —
-// no resolution workflow, same minimal shape as ReservationReconciliationIssueService's own
-// "detecting the issue is the whole job" scope.
+// VAT-code review flags are non-blocking and report-only; there is no resolution workflow.
+// Scope matches ReservationReconciliationIssueService: detecting the issue is the whole job.
 @Injectable()
 export class ProductTaxCodeFlagService {
     constructor(private connection: TransactionalConnection) {}

@@ -9,9 +9,7 @@ import {
     withAggregateLock,
 } from 'shared';
 
-// The product -> unit soft link: product import and unit import follow the same protocol as
-// ProductStreamHandler / UnitStreamHandler (lock `unit:<id>`, product reads the unit then writes the
-// variant, unit upserts then refreshes variants), on replica tables and the real withAggregateLock.
+// Lock unit:<id> and read/write order must stay in sync with ProductStreamHandler/UnitStreamHandler
 @Entity('unit_backfill_unit')
 class TestUnit {
     @PrimaryGeneratedColumn() id!: number;

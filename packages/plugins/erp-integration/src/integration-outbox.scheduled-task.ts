@@ -5,15 +5,8 @@ import { IntegrationOutboxProcessorService } from './integration-outbox-processo
 import { KAFKA_ENABLED_DEFAULT, OUTBOX_POLL_INTERVAL_DEFAULT } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
-// Central-hub-only, unlike plugin-sync's OutboxWorker (which drains on every instance) — a
-// branch never publishes directly to Integration Service, per the external-integration-rules
-// skill. Also gated on kafkaEnabled (issue #68) — a plain `make dev` (local contour) must never
-// publish to a real Integration Service broker.
-//
-// Issue #80: standard for recurring/periodic plugin work is Vendure's own ScheduledTask
-// (DefaultSchedulerPlugin, registered in apps/server/src/vendure-config.ts) — worker-process-only
-// and DB-locked out of the box, plus enable/disable + run-now via the admin API, replacing the
-// previous raw BullMQ Queue+Worker (integration-outbox.worker.ts).
+// Central hub only; branches never publish to Integration Service directly.
+// Also gated on kafkaEnabled so a plain make dev never publishes to a real broker.
 export function createIntegrationOutboxTask(options: ErpIntegrationPluginOptions): ScheduledTask {
     const everyMs = options.outboxPollIntervalMs ?? OUTBOX_POLL_INTERVAL_DEFAULT;
     return new ScheduledTask({

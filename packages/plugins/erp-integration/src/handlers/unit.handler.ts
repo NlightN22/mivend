@@ -82,9 +82,8 @@ export class UnitStreamHandler implements InboundStreamHandler {
         return inboundApplied();
     }
 
-    // Bounded, values-changed-only UPDATE (see docs/ai/erp-streams-map.md's `unit` row) — via the
-    // ctx-scoped repository, not rawConnection, so it stays inside the inbox row's transaction
-    // (audit finding: rawConnection would commit independently of a later failure in apply()).
+    // Use the ctx-scoped repository, not rawConnection: it must stay in the inbox row's transaction
+    // rawConnection would commit independently and survive a later failure in apply().
     private async refreshVariants(
         ctx: RequestContext,
         defaultSalesUnitId: string,

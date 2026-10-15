@@ -4,12 +4,8 @@ import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
-// Applies Integration Service's `counterparty-credit-balance` stream
-// (CounterpartyCreditBalanceChanged, search-platform#129) — a register-driven stream
-// (AccumulationRegister_ВзаиморасчетыСКонтрагентами) independent of CounterpartyChanged's own
-// catalog-change trigger; creditBalance can change without any other Counterparty field changing,
-// and vice versa. entityId is the register entry's own key, not the counterparty's erpId — the
-// join key to Counterparty is payload.counterpartyId.
+// Register-driven: creditBalance can change without Counterparty fields changing, and vice versa.
+// entityId is the register entry's key, not counterparty erpId; join via payload.counterpartyId.
 @Injectable()
 export class CounterpartyCreditBalanceStreamHandler implements InboundStreamHandler {
     constructor(private readonly counterpartyService: CounterpartyService) {}
@@ -25,9 +21,8 @@ export class CounterpartyCreditBalanceStreamHandler implements InboundStreamHand
                 `counterparty-credit-balance ${entityId}: missing counterpartyId, skipping`,
             );
         }
-        // A deleted register entry is not the same as "balance is now zero" — the ERP's own retraction
-        // of a settlement entry doesn't imply the counterparty's real balance became zero, so this
-        // stays a logged no-op rather than fabricating a zero balance.
+        // A deleted register entry does not mean the balance is zero; ERP retraction is not a balance change.
+        // So it stays a logged no-op, not a fabricated zero creditBalance.
         if (payload.isDeleted === true) {
             return inboundNoop(
                 `counterparty-credit-balance ${entityId}: deleted register entry, skipping`,
@@ -40,15 +35,8 @@ export class CounterpartyCreditBalanceStreamHandler implements InboundStreamHand
                 `counterparty-credit-balance ${entityId}: missing/invalid balance, skipping`,
             );
         }
-        // Counterparty.creditBalance/creditLimit are both `bigint` columns storing whole rubles,
-        // not fractional minor units (see Counterparty.creditLimit's own GraphQL `Int` type and
-        // erp-import's counterparty-record.dto.ts, which already sends creditLimit as a plain
-        // integer) — this register-driven stream is the only balance source that ever sends a
-        // fractional value (e.g. -20906.8), which previously reached `bigint` as-is and failed
-        // with "invalid input syntax for type bigint" (766 dead-lettered rows in staging,
-        // mivend.audit.common, 2026-09-20). Rounded to match the existing whole-ruble convention
-        // — not truncated, so a balance like 100.6 doesn't silently become a materially
-        // different 100.
+        // creditBalance/creditLimit are whole-ruble bigint columns; this stream alone sends fractional values.
+        // Round (not truncate) to whole rubles before writing, or bigint insert fails on e.g. -20906.8.
         const balance = Math.round(rawBalance);
         await this.counterpartyService.updateCreditBalance(ctx, counterpartyId, balance);
         return inboundApplied();

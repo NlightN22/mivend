@@ -4,9 +4,8 @@ import type { RequestContext } from '@vendure/core';
 import { OrderRegistrationResultHandler } from '../../handlers/order-registration-result.handler';
 import { MissingDependencyError } from '../../types';
 
-// Each call to createQueryBuilder() routes by table name (variant lookup uses 'product_variant',
-// the requestEntityId->orderId lookup uses 'integration_outbox') so tests can set up either/both
-// independently of call order.
+// Routes each createQueryBuilder() call by table name, not call order, so tests may set up
+// 'product_variant' and 'integration_outbox' lookups independently of each other.
 function createConnection(options: {
     variantRows?: Array<Record<string, unknown> | undefined>;
     outboxOrderId?: string | null;
@@ -141,12 +140,8 @@ describe('OrderRegistrationResultHandler', () => {
         );
     });
 
-    // Issue #96: a productId that doesn't resolve yet is an ordinary eventual-consistency race
-    // (the product stream may simply not have been consumed yet) — this now throws
-    // MissingDependencyError so processOne() retries with backoff instead of the previous
-    // behavior (mivend.audit.72) of reporting it immediately as a permanent reconciliation issue
-    // on the very first attempt. A genuinely stale mapping still surfaces visibly once the 24h
-    // wall-clock retry budget is exhausted (inbox 'failed', not silent).
+    // An unresolved productId is an eventual-consistency race, so throw MissingDependencyError
+    // to retry with backoff; a truly stale mapping surfaces as inbox 'failed' after the 24h budget.
     it('throws MissingDependencyError for a line whose productId does not resolve to a known variant', async () => {
         const syncService = { handleOrderRegistrationResult: vi.fn() };
         const handler = new OrderRegistrationResultHandler(
@@ -163,9 +158,8 @@ describe('OrderRegistrationResultHandler', () => {
         expect(syncService.handleOrderRegistrationResult).not.toHaveBeenCalled();
     });
 
-    // mivend.issue.84.88: `reservedQuantity` is a plain (non-optional) proto3 double — an absent
-    // key means reservedQuantity=0 (a fully-cancelled/zeroed line), not a malformed line. A prior
-    // revision defaulted the missing key to NaN and dropped the whole line.
+    // reservedQuantity is a non-optional proto3 double, so an absent key means 0 (a zeroed line),
+    // not a malformed line; do not default it to NaN and drop the line.
     it('applies a line with an absent reservedQuantity as an explicit 0, not a dropped line', async () => {
         const syncService = { handleOrderRegistrationResult: vi.fn() };
         const handler = new OrderRegistrationResultHandler(

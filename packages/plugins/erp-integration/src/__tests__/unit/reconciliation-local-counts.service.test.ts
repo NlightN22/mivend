@@ -50,17 +50,15 @@ describe('ReconciliationLocalCountsService', () => {
         return { service, collectionService, stockQueryBuilder };
     }
 
-    // mivend.issue.84.88: root's own isPrivate defaults to true, so the isPrivate:false filter
-    // below already excludes it from totalItems on its own — no separate "-1" needed (an earlier
-    // version subtracted 1 unconditionally and silently undercounted every real category by one).
+    // root's isPrivate defaults to true, so the isPrivate:false filter already excludes it.
+    // Do not subtract 1 for root here; that would undercount every real category.
     it('uses the isPrivate:false totalItems directly, with no root adjustment', async () => {
         const { service } = makeService({ collectionTotalItems: 6 });
         expect(await service.getLocalActiveCount({} as never, 'category')).toBe(6);
     });
 
-    // mivend.audit.85 HIGH finding: issue #90 hides a deactivated category's Collection via
-    // isPrivate:true, but this count must exclude those hidden rows too, or a deactivated
-    // category still counts as present and the reconciliation gap never actually closes.
+    // Deactivated categories are hidden via isPrivate:true, so exclude them from this count too.
+    // Otherwise a deactivated category still counts as present and the gap never closes.
     it('only counts public (non-hidden) categories', async () => {
         const { service, collectionService } = makeService({ collectionTotalItems: 6 });
         await service.getLocalActiveCount({} as never, 'category');
@@ -101,9 +99,8 @@ describe('ReconciliationLocalCountsService', () => {
         expect(await service.getLocalActiveCount({} as never, 'price')).toBe(456);
     });
 
-    // A plain StockLevel row count is structurally wrong (Vendure auto-creates a zero-quantity
-    // row per variant regardless of whether any real stock event was ever received) — must be
-    // filtered to rows StockStreamHandler actually wrote real data into.
+    // Vendure auto-creates a zero-quantity StockLevel row per variant, so a plain row count is wrong.
+    // Filter to rows StockStreamHandler actually wrote to.
     it('counts only StockLevel rows with a real received erpAvailableQuantity, not every row', async () => {
         const { service, stockQueryBuilder } = makeService({ stockLevelCount: 789 });
         expect(await service.getLocalActiveCount({} as never, 'stock')).toBe(789);

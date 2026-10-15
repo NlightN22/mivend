@@ -48,15 +48,8 @@ const CATEGORY_FACET_CODE = 'category';
 
 const EMPTY_ERP_REF = '00000000-0000-0000-0000-000000000000';
 
-// Applies Integration Service's `product` stream (ProductChanged). Deliberately reuses the same
-// lookup shape as erp-import's ProductHandler (match by `customFieldsExternalid`) rather than a
-// second, competing external-id scheme — both are "the ERP's product id", just arriving over two
-// different transports during the migration window (issue #62's own framing: erp-import's fate
-// is a separate, deferred decision, not something this plugin needs to resolve).
-//
-// ProductChanged has no `organizationId` field at all (issue #63) — the customFields.organizationId
-// shortcut (issue #62 design point 5) is populated by a different, unrelated path and is left
-// untouched here.
+// Same customFieldsExternalid lookup as erp-import's ProductHandler (same ERP id, migration window).
+// ProductChanged has no organizationId; customFields.organizationId is set elsewhere, don't touch.
 @Injectable()
 export class ProductStreamHandler implements InboundStreamHandler {
     constructor(
@@ -114,12 +107,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3
         // bool zero-value omission).
         const isActive = payload.isActive === true;
-        // `vatCode` isn't in @nlightn22/event-contracts' ProductChangedSchema yet (verified
-        // against 0.13.0's product_changed_pb.d.ts — no VAT field at all; tracked as issue #113).
-        // Reading it here anyway, defensively: until that contract is extended this always
-        // resolves via the 'unset' branch below, which is exactly the intended non-blocking
-        // fallback (issue #79), not a bug — the moment the contract gains the field, real codes
-        // flow through with no further changes needed here.
+        // vatCode is not in ProductChangedSchema yet, so this always takes the 'unset' fallback for now.
+        // Read defensively; real codes start flowing once the contract adds the field, no change needed.
         const rawVatCode = String(payload.vatCode ?? '');
         const taxCategoryId = await this.resolveTaxCategoryId(ctx, entityId, rawVatCode);
 
@@ -175,9 +164,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 id: productId,
                 enabled: isActive,
                 translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
-                // Omit unset fields (never clear an already-resolved relation or stored value).
-                // `${field.name}Id` is the input key CustomFieldRelationService reads; the "not
-                // found" warning comes from CustomFieldsValidationSubscriber and is harmless.
+                // Omit unset fields so an already-resolved relation or stored value is never cleared.
+                // Key must be ${field.name}Id for CustomFieldRelationService; its 'not found' warning is harmless.
                 ...(Object.keys(optionalCustomFields).length > 0
                     ? { customFields: optionalCustomFields }
                     : {}),
@@ -276,9 +264,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return taxCategories.items;
     }
 
-    // Resolves the raw VAT code to a TaxCategory id via the pure resolveVatCode function,
-    // persisting a non-blocking review flag when the resolution isn't a clean match (issue #79).
-    // Only unset/legacy codes need the default TaxCategory (#144).
+    // Only unset/legacy codes need the default TaxCategory; everything else goes through resolveVatCode.
+    // Unclean resolutions set a non-blocking review flag instead of failing the product write.
     private async resolveTaxCategoryId(
         ctx: RequestContext,
         entityId: string,
@@ -310,10 +297,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         }
 
         if (resolution.kind === 'auto-create') {
-            // Issue #141: replaces the old default-category-plus-review-flag fallback — an
-            // unmapped-but-real code is auto-created on the spot rather than flagged for a human.
-            // Bust the short-lived TaxCategory cache so a second product with the same new code in
-            // the same batch sees the row just created instead of racing to create it twice.
+            // Unmapped but valid codes are created on the spot, not flagged for review.
+            // Invalidate the TaxCategory cache after create, or a same-batch duplicate code is created twice.
             const created = await this.taxCategoryAutoCreateService.findOrCreate(
                 ctx,
                 resolution.erpVatCode,
@@ -379,11 +364,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return { facetId: facet?.id, valueIdByCode };
     }
 
-    // Resolves category_id to the 'category' facet's FacetValue id via the pure
-    // resolveCategoryFacetValueId function, persisting a non-blocking review flag when
-    // unresolved (absent, or not synced yet — issue #116). Returns undefined in both flagged
-    // cases; the caller omits the category facet value entirely rather than blocking product
-    // create/update — same non-blocking philosophy as resolveTaxCategoryId/issue #79.
+    // Returns undefined when absent or not yet synced; the caller omits the facet instead of blocking.
+    // The flag is non-blocking, so product create/update never fails on a missing category facet value.
     private async resolveCategoryFacetValueIdForProduct(
         ctx: RequestContext,
         entityId: string,
@@ -422,11 +404,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return resolution.facetValueId;
     }
 
-    // On update, replaces only the variant's own category-facet slot — every other facet value
-    // already on the variant (any future non-category use) survives untouched. Returns undefined
-    // when there's nothing to change (no new category resolved AND the variant already has none),
-    // so the caller can omit facetValueIds from the update input entirely rather than sending a
-    // no-op empty array.
+    // Replaces only the category-facet slot; other facet values on the variant are preserved.
+    // Returns undefined on no-op so the caller omits facetValueIds instead of sending an empty array.
     private async mergeCategoryFacetValueId(
         ctx: RequestContext,
         variantId: ID,
@@ -455,12 +434,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
             : nonCategoryFacetValueIds;
     }
 
-    // A Product with zero variants can't be priced/stocked/ordered — one default variant per
-    // product is this plugin's simplification until real multi-variant mapping is designed
-    // (out of scope for issue #63). PriceStreamHandler/StockStreamHandler resolve the target
-    // variant by productId -> this variant, since there is no ProductVariant.externalId
-    // customField yet (single-variant-per-product assumption, matching erp-import's own).
-    // Returns the created variant's id (needed by the caller to attach barcodes, issue #116).
+    // Price/Stock handlers look up the variant by productId; no ProductVariant.externalId exists yet.
+    // One variant per product is a temporary simplification until multi-variant mapping is designed.
     private async createDefaultVariant(
         ctx: RequestContext,
         productId: string,
@@ -490,9 +465,8 @@ export class ProductStreamHandler implements InboundStreamHandler {
         return String(variant.id);
     }
 
-    // Soft link: null when defaultSalesUnitId is absent or the ERP's empty reference. When the unit
-    // has not arrived yet the id is kept as the join key with null unit fields; UnitStreamHandler
-    // fills them when the unit arrives (docs/ai/erp-streams-map.md's `unit` row).
+    // The id is kept as a join key even when the unit has not arrived yet; unit fields stay null.
+    // UnitStreamHandler fills the unit fields later when the unit arrives.
     private async resolveUnitFields(
         ctx: RequestContext,
         payload: Record<string, unknown>,

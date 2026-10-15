@@ -6,21 +6,8 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 
 const loggerCtx = 'IntegrationWarehouseHandler';
 
-// Applies Integration Service's `warehouse` stream (WarehouseChanged: name/departmentId/isActive/
-// isFolder — entityId is the warehouse's own ERP GUID, departmentId is the owning division's ERP
-// GUID ("Подразделение_Key"), matched against Branch.erpId here — same id space as Department's
-// own erpId (event-contracts@0.40.0 renamed this field from branch_id for clarity, see that
-// package's issue #140), but mivend's Branch stays its own independent, staff-managed concept
-// (see DepartmentStreamHandler's own comment) — an unresolved match here is expected, not a bug.
-// Confirmed architecture (issue #63 plan): warehouse-level stock uses Vendure's
-// native StockLocation, one per Warehouse — not Channel, since a branch is a soft staff-grouping
-// tag here, not a hard catalog/pricing partition. StockLocation has no native external-id field,
-// so StockLocation.customFields.warehouseErpId is this handler's own idempotency key.
-//
-// The ERP's warehouse hierarchy has folder/group nodes as well as real leaf warehouses (issue #94).
-// isFolder === true skips the row entirely — no Warehouse, no StockLocation. Vendure has no
-// native hierarchy concept for StockLocation, and Branch already covers the organizational
-// grouping need, so no synthetic folder representation is introduced.
+// Unresolved departmentId->Branch match is expected: Branch is independent, staff-managed.
+// StockLocation has no external-id field, so customFields.warehouseErpId is the idempotency key.
 @Injectable()
 export class WarehouseStreamHandler implements InboundStreamHandler {
     constructor(
@@ -38,9 +25,8 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         // zero-value omission).
         const isActive = payload.isActive === true;
         const isDeleted = payload.isDeleted === true;
-        // The ERP's warehouse hierarchy includes folder/group nodes, not just real leaf warehouses
-        // (issue #94) — Vendure has no StockLocation/Warehouse hierarchy concept, and Branch
-        // already covers the organizational grouping need, so folders are skipped entirely.
+        // Vendure has no StockLocation hierarchy, and Branch already covers grouping,
+        // so ERP folder nodes are skipped rather than mirrored as synthetic locations.
         const isFolder = payload.isFolder === true;
         if (isFolder) {
             return inboundNoop(`Skipping folder warehouse node erpId=${entityId}`);
@@ -48,10 +34,8 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
 
         const name = payload.name ? String(payload.name) : null;
         if (!name) {
-            // A deletion tombstone (isDeleted:true) never carries a name — confirmed against
-            // real staging-integration payloads (mivend.issue.84.88 follow-up). Still update
-            // isActive on an already-known warehouse; never fabricate a brand-new one with a
-            // blank name.
+            // A deletion tombstone (isDeleted) has no name, so it must never create a new Warehouse.
+            // It may still update isActive on an existing one.
             const updated = await this.warehouseService.setActiveStateIfExists(
                 ctx,
                 entityId,
@@ -62,9 +46,8 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
                 : inboundNoop(`warehouse ${entityId}: missing name and no existing row, skipping`);
         }
 
-        // An empty/missing departmentId (malformed payload) is handled the same as an unresolvable
-        // one — WarehouseService.upsert leaves branchId null either way, never a reason to skip
-        // creating the Warehouse itself.
+        // An empty or missing departmentId is treated like an unresolvable one: branchId stays null,
+        // and the Warehouse is still created, so a bad payload never skips it.
         const departmentId = String(payload.departmentId ?? '');
 
         await this.warehouseService.upsert(ctx, {

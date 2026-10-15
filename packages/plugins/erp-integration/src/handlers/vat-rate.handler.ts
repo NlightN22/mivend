@@ -10,29 +10,8 @@ import { loggerCtx } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
-// Applies Integration Service's `vat-rate` stream (VatRateChanged, issue #141) — a small,
-// low-cardinality reference feed (code -> zone -> percent), never product-keyed. Upserts
-// TaxRate.value by (erpVatCode, zone); never touches a Product/ProductVariant.
-//
-// Field-by-field outcome (see docs/ai/erp-streams-map.md's `vat-rate` row and this issue's body
-// for the same three-place record):
-// - event_id/occurred_at/updated_at: envelope-only, no current consumer (same as every other
-//   stream in this plugin).
-// - entity_id: read generically by KafkaConsumerService/IntegrationInboxService for inbox
-//   dedup/versioning, not read here directly.
-// - version: drives the inbox's own out-of-order guard centrally (see inbound-stream-handler.ts),
-//   not read here directly.
-// - code: consumed — mapped via toErpVatCode (same Cyrillic->Latin table product.handler.ts
-//   uses) to the TaxCategory.customFields.erpVatCode key.
-// - zone: consumed only to confirm today's single-zone assumption in the log line; the actual
-//   Zone row is always TaxZoneService's single default ("Russia") — no multi-zone support until a
-//   real second zone exists (deliberately not built speculatively, see AGENTS.md).
-// - percent: consumed when present; ABSENT is a real signal ("auto-registered, not confirmed
-//   yet") and is never coerced to 0 — this handler logs and returns instead of upserting.
-// - is_deleted: consumed only to log a warning. Deliberately does NOT delete/disable the
-//   TaxRate/TaxCategory — deleting live tax config from an upstream flag is a decision a human
-//   should make deliberately, not something to auto-apply blindly (same "never destructive on a
-//   soft signal" reasoning as this plugin's non-blocking VAT-code review flags elsewhere).
+// Percent absent means auto-registered, not confirmed: never coerce it to 0, just log and return.
+// is_deleted only logs: a soft upstream flag must not auto-delete live tax config.
 @Injectable()
 export class VatRateStreamHandler implements InboundStreamHandler {
     constructor(
@@ -69,9 +48,8 @@ export class VatRateStreamHandler implements InboundStreamHandler {
         }
 
         const erpVatCode = toErpVatCode(rawCode);
-        // Code-keyed, not product-keyed — a vat-rate row arriving before any product references
-        // this code is not a missing-dependency race (no cross-entity lookup here), it just
-        // proceeds independently and creates its own TaxCategory if needed.
+        // Keyed by VAT code, not product: arriving before any product uses the code is not a race.
+        // No cross-entity lookup, so it creates its own TaxCategory if missing and proceeds.
         const taxCategory = await this.taxCategoryAutoCreateService.findOrCreate(
             ctx,
             erpVatCode,

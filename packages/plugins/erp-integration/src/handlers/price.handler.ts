@@ -9,9 +9,8 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 
 const loggerCtx = 'IntegrationPriceHandler';
 
-// Applies Integration Service's `price` stream (PriceChanged: productId/priceTypeId/value).
-// priceTypeId is the ERP's own GUID for the price type — resolved to a local PriceType via
-// PriceType.externalId (see PriceTypeStreamHandler/issue #63's now-closed mapping gap).
+// priceTypeId is the ERP's GUID, not a local id: resolve it via PriceType.externalId.
+// Mapping lives in PriceTypeStreamHandler.
 @Injectable()
 export class PriceStreamHandler implements InboundStreamHandler {
     constructor(

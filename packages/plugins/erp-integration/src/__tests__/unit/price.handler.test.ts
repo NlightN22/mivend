@@ -60,10 +60,8 @@ describe('PriceStreamHandler', () => {
         expect(priceEntryService.upsert).not.toHaveBeenCalled();
     });
 
-    // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON
-    // encoding omits a scalar field equal to its zero-value, so `isActive:false` is NEVER sent
-    // explicitly, only as an absent key (confirmed live with Search Platform, mivend#89's
-    // follow-up). Absent must read as false (inactive), not true.
+    // proto3 JSON omits zero-value scalars, so isActive:false is never sent, only absent.
+    // Absent isActive must be read as false (inactive), not true.
     it('skips a price with isActive absent from the payload (proto3 omits the false zero-value)', async () => {
         const connection = makeConnection('variant-1');
         const customerPricingService = { findPriceTypeByExternalId: vi.fn() };

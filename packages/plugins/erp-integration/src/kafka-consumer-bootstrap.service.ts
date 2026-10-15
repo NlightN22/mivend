@@ -19,21 +19,8 @@ import {
 } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
-// Central-hub-only bootstrap for the Kafka consumer (issue #62 design point 1 / the
-// external-integration-rules skill's "Branches never call the ERP or Integration Service"
-// rule) — mirrors plugin-sync's ProductConsumer.onModuleInit
-// (`if (this.options.instanceType !== 'branch') return;`), inverted for this central-only
-// direction. A branch instance never starts a Kafka connection to Integration Service.
-//
-// Also gated on ProcessContext.isWorker (issue #67): both `main.ts` (bootstrap) and `worker.ts`
-// (bootstrapWorker) load this plugin, and a Kafka *consumer group* — unlike plugin-sync's
-// RabbitMQ competing-consumers queue — cannot tolerate two independent instances joining the
-// same group (`mivend-central-hub`): joining triggers a partition rebalance, and the runner for
-// reassigned partitions silently never resumed fetching after it, stalling consumption entirely
-// with no error logged. Only the worker process starts the consumer, matching this same plugin's
-// own IntegrationInboxWorker/IntegrationOutboxWorker (BullMQ workers, worker-process convention).
-//
-// `isWorker` alone isn't enough — worker-email.ts is also isWorker=true (#149, isEmailOnlyWorker).
+// ProcessContext.isWorker alone is not enough (worker-email is also isWorker). Branches never connect.
+// Only the worker process may start the Kafka consumer: a second group member triggers a rebalance that silently stalls fetching.
 @Injectable()
 export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
     constructor(
@@ -50,9 +37,8 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
     async onApplicationBootstrap(): Promise<void> {
         if (this.options.instanceType !== 'central') return;
 
-        // Issue #141: independent of kafkaEnabled/isWorker below — this is a plain Vendure
-        // Channel setting, not a Kafka connection, so it must apply on every central-instance
-        // process (main + worker) and every contour, not gated behind the broker opt-in.
+        // Plain Vendure Channel setting, not a Kafka connection: must apply on every central process
+        // regardless of the broker opt-in, so it must not sit behind kafkaEnabled or isWorker.
         await this.ensurePricesIncludeTax();
         await this.taxZoneService.ensureChannelDefaultsForExistingZone(RequestContext.empty());
 
@@ -60,21 +46,8 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
         if (!this.processContext.isWorker) return;
         if (isEmailOnlyWorker(this.configService.jobQueueOptions?.activeQueues)) return;
 
-        // Real incident: Vendure's default 50ms-debounced per-ProductEvent recompute enqueued
-        // tens of thousands of individual apply-collection-filters jobs (one per product,
-        // each recomputing every Collection) once real Kafka product traffic started flowing at
-        // scale — the job queue could never drain. Disabled here (worker process only, matching
-        // where ProductStreamHandler's Kafka-driven product creates/updates actually happen) and
-        // replaced by createCollectionFiltersRecomputeTask's own batched, periodic recompute.
-        //
-        // DO NOT remove this call without also removing/replacing
-        // createCollectionFiltersRecomputeTask (collection-filters-recompute.scheduled-task.ts)
-        // — the two exist as one pair, not independently. Confirmed still present and working
-        // during a 2026-09-20 incident where it was briefly, mistakenly suspected of having been
-        // removed (it was not — see that file's own doc comment for the full account and the
-        // *actual* bug found that day).
-        // Manual admin/manager-portal product edits are unaffected — those run in the SERVER
-        // process, which has its own separate CollectionService instance with this still enabled.
+        // Per-product recompute floods the job queue at scale; disabled here in favor of the batched task.
+        // Do not remove without also removing createCollectionFiltersRecomputeTask: they are one pair.
         this.collectionService.setApplyAllFiltersOnProductUpdates(false);
 
         try {
@@ -90,10 +63,8 @@ export class KafkaConsumerBootstrapService implements OnApplicationBootstrap {
         }
     }
 
-    // Issue #141: replaces infrastructure/scripts/seed-erp.mjs's one-off
-    // `updateChannel({ pricesIncludeTax: true })` step — the ERP always sends gross/tax-inclusive
-    // prices, so this is a property of the integration itself, not a manual setup step. Idempotent:
-    // a no-op update every run once the channel already matches.
+    // ERP always sends gross (tax-inclusive) prices, so this is a property of the integration,
+    // not a manual seed step. Idempotent: no-op on every run once the channel matches.
     private async ensurePricesIncludeTax(): Promise<void> {
         const desired = this.options.pricesIncludeTax ?? PRICES_INCLUDE_TAX_DEFAULT;
         const ctx = RequestContext.empty();

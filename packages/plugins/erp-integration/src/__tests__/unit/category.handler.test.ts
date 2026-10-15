@@ -62,11 +62,8 @@ describe('CategoryStreamHandler', () => {
         );
     });
 
-    // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON
-    // encoding omits a scalar field equal to its zero-value, so `isActive:false` is NEVER sent
-    // explicitly, only as an absent key (see types.ts's InboundStream comment, mivend#89's
-    // follow-up). A category arriving already-deactivated must never be created publicly visible
-    // even briefly.
+    // proto3 JSON omits isActive when false, so an absent key here means deactivated,
+    // and a category arriving deactivated must never be created publicly visible, even briefly.
     it('creates an already-deactivated category as hidden (isActive absent from payload)', async () => {
         const { facetService, facetValueService, collectionService } = createServices(undefined);
         const handler = new CategoryStreamHandler(
@@ -199,10 +196,8 @@ describe('CategoryStreamHandler', () => {
         );
     });
 
-    // A deletion tombstone (isDeleted:true) never carries a name — confirmed against real
-    // staging-integration payloads (mivend.issue.84.88 follow-up). Must still hide an
-    // already-known category rather than silently skip the event (the previous behavior), and
-    // must never blank its existing name translation while doing so.
+    // A deletion tombstone (isDeleted:true) carries no name, so it must still hide a known category
+    // and must not overwrite its existing name translations.
     it('hides an existing Collection on a nameless deletion tombstone, never touching its name', async () => {
         const { facetService, facetValueService, collectionService } = createServices(
             { id: 'col-1', name: 'Beverages' },

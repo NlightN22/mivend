@@ -13,10 +13,8 @@ import { IntegrationInboxRetentionService } from '../../../integration-inbox-ret
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { NonRetryableInboundError } from '../../../non-retryable-inbound-error';
 
-// Inbox idempotency/concurrency pattern (docs/testing-patterns.md, the external-integration-rules skill) — mirrors
-// plugin-acquiring's InboxService fix for the real claimBatch race (two concurrent sweeps
-// claiming the same row before either committed 'processing'). Real Postgres, not mocked, because
-// SELECT ... FOR UPDATE SKIP LOCKED semantics only exist at the DB level.
+// Real Postgres, not mocked: SELECT ... FOR UPDATE SKIP LOCKED semantics exist only at the DB level.
+// Concurrent sweeps can claim the same row before either commits 'processing'.
 let dataSource: DataSource;
 let inboxService: IntegrationInboxService;
 let retention: IntegrationInboxRetentionService;
@@ -94,10 +92,8 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(rows).toHaveLength(1);
     });
 
-    // Issue #89: this is the actual regression test for the live bug — a Search Platform backfill
-    // event collided on `version` with an earlier, unrelated event for the same entity, and the
-    // old (stream, entityId, version) dedup key silently discarded it. Two distinct sourceEventIds
-    // sharing the same version must both persist.
+    // Dedup must not key on (stream, entityId, version): distinct sourceEventIds may share a version.
+    // Backfill events can collide on version with unrelated earlier events for the same entity.
     it('does not conflate two distinct events for the same entity that happen to share a version', async () => {
         const first = await inboxService.enqueue({
             stream: 'product',
@@ -591,12 +587,8 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             expect(claimed.length).toBe(2);
         });
 
-        // Issue #127 regression: mirrors the real incident shape — an older, larger backlog on
-        // one bulk-lane stream ('counterparty') must never delay a newer row on a stream that now
-        // claims from its own dedicated lane ('user'). Before the fix, both streams shared the
-        // bulk lane's single global `ORDER BY event.createdAt ASC` claim query, so the older
-        // counterparty rows always won every claim slot. 'user' now has its own disjoint stream
-        // filter, so its row is claimed immediately regardless of counterparty's backlog age/size.
+        // Streams need disjoint lane filters: a shared claim ordered by createdAt ASC starves newer rows.
+        // Older backlog on one stream must not delay rows on a stream with its own dedicated lane.
         it('claims a newer user row promptly even with a much older counterparty backlog present', async () => {
             for (let i = 0; i < 5; i++) {
                 await inboxService.enqueue({
@@ -625,10 +617,8 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         });
     });
 
-    // Issue #91's "integration health" page — a different number from Kafka lag (already
-    // consumed/committed rows waiting on mivend's own processor, not broker-side lag). Real
-    // Postgres because the GROUP BY/aggregate shape is exactly what a mocked query builder
-    // wouldn't meaningfully exercise.
+    // Counts consumed rows awaiting the processor, not broker-side Kafka lag.
+    // Real Postgres: a mocked query builder would not exercise the GROUP BY/aggregate shape.
     describe('getBacklogByStream', () => {
         it('counts pending/processing/failed rows per stream, ignoring processed rows', async () => {
             await inboxService.enqueue({
@@ -700,11 +690,8 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         });
     });
 
-    // #147: only the latest processed version per (stream, entityId) is still read (the
-    // superseded-version check) — every older processed duplicate's payload is safe to clear.
-    // mivend.audit.common's HIGH finding: the row itself, and its (stream, sourceEventId) dedup
-    // key, must never be deleted — only tombstoned (payload cleared) — or a redelivered Kafka
-    // message with a purged sourceEventId would pass enqueue's dedup as if new and get reapplied.
+    // Never delete the row or its (stream, sourceEventId) dedup key: only clear the payload.
+    // A redelivered Kafka message with a purged sourceEventId would otherwise pass enqueue dedup.
     describe('purgeSupersededProcessedRows', () => {
         async function enqueueProcessed(
             entityId: string,
@@ -740,9 +727,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             expect(byId.get(newest)!.payload).toEqual({ real: 'data' });
         });
 
-        // The HIGH regression this fixes: a purged row's dedup key (stream, sourceEventId) must
-        // survive so a genuine Kafka redelivery of that exact message is still recognized as a
-        // duplicate, not reprocessed as new.
+        // Keep the (stream, sourceEventId) key on purge so a Kafka redelivery still counts as duplicate.
         it('does not create a new pending row when a tombstoned sourceEventId is redelivered', async () => {
             const older = await enqueueProcessed('pr-redelivered', '1');
             await enqueueProcessed('pr-redelivered', '2');

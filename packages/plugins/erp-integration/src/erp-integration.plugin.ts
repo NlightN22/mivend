@@ -100,22 +100,8 @@ import { IntegrationOutboxRecoveryService } from './integration-outbox-recovery.
 import { IntegrationOutboxRecoveryResolver } from './integration-outbox-recovery.resolver';
 import { OrderSubmittedBuilder } from './order-submitted.builder';
 
-// Central-hub-only, per the external-integration-rules skill ("Branches never call the ERP [or Integration
-// Service]"). The guard can't live in the providers array itself: @VendurePlugin's decorator body
-// runs at module-import time, before `ErpIntegrationPlugin.options` is set by the static `init()`
-// call in vendure-config.ts — so `options.instanceType` isn't known yet at that point. Instead
-// every service/task that does real work (ScheduledTask, listener) checks `instanceType` at its
-// own runtime, same as plugin-sync's `ProductConsumer.onModuleInit`'s
-// `if (this.options.instanceType !== 'branch') return;`. On a branch instance the providers are
-// still constructed (cheap, no I/O in their constructors), but never start a Kafka connection,
-// the ScheduledTasks skip their own work, and it never subscribes to the order-submitted
-// EventBus stream.
-//
-// Separately (issue #68), `options.kafkaEnabled` gates the same Kafka-touching services even on
-// a central instance — `instanceType === 'central'` says "this instance is allowed to talk to
-// Integration Service", not "this specific run should". A plain `make dev` (local contour) must
-// never reach a real broker just because it happens to run as central; only a deliberately
-// launched staging-integration/production contour sets `kafkaEnabled: true`. See docs/environments.md.
+// Instance guards are runtime checks: the decorator runs before init() sets options.instanceType.
+// kafkaEnabled gates Kafka even on central: 'central' permits Integration Service, not every run.
 @VendurePlugin({
     imports: [
         PluginCommonModule,

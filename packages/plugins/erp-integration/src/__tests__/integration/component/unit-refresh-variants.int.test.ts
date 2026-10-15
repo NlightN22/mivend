@@ -7,11 +7,8 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-// Audit finding (mivend#103, MEDIUM): UnitStreamHandler.refreshVariants issues a raw UPDATE with
-// an IS DISTINCT FROM guard so a repeated, unchanged UnitChanged is a 0-row no-op — proven here
-// against real Postgres (a mocked unit test can only prove the SQL string was built, not that
-// Postgres actually treats it as a no-op), same pattern as this plugin's own
-// product-category-facet-value.int.test.ts.
+// IS DISTINCT FROM guard makes a repeated, unchanged UnitChanged a 0-row no-op in Postgres.
+// A mocked unit test can't prove that, so this runs against real Postgres.
 @Entity('unit_refresh_test_product_variant')
 class TestProductVariant {
     @PrimaryGeneratedColumn()

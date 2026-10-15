@@ -4,9 +4,8 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { IntegrationInboxEventResolver } from '../../integration-inbox-event.resolver';
 
-// #212: dismissFailedIntegrationInbox is a write action on an inbox row, so it needs
-// RecoverIntegrationEvents, the same permission replayFailedIntegrationInbox uses — not the
-// read-only ManageAccessControl/ManageErpIntegration the queries on this resolver use.
+// Write action: must use RecoverIntegrationEvents (as replayFailedIntegrationInbox does),
+// not the read-only ManageAccessControl/ManageErpIntegration used by this resolver's queries.
 describe('IntegrationInboxEventResolver.dismissFailedIntegrationInbox', () => {
     it('requires RecoverIntegrationEvents', () => {
         const permissions = Reflect.getMetadata(

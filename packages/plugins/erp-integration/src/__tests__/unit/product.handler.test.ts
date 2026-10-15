@@ -220,11 +220,8 @@ describe('ProductStreamHandler', () => {
         ]);
     });
 
-    // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON
-    // encoding omits a scalar field equal to its zero-value, so `isActive:false` is NEVER sent
-    // explicitly, only as an absent key (confirmed live with Search Platform, mivend#89's
-    // follow-up — a real production/staging incident, not a hypothetical). Absent must read as
-    // false (disabled), not true.
+    // proto3 JSON omits zero-value scalars, so isActive:false arrives as an absent key.
+    // Absent must mean false (disabled); defaulting to true would enable deactivated items.
     it('treats isActive absent from the payload as disabled (proto3 omits the false zero-value)', async () => {
         const { handler, productService } = makeHandler();
 
@@ -481,9 +478,8 @@ describe('ProductStreamHandler', () => {
             expect(productVariantService.create).toHaveBeenCalledWith(ctx, [
                 expect.objectContaining({ facetValueIds: ['fv-cat-1'] }),
             ]);
-            // Vendure's facet-value-filter Collection matches on the VARIANT's facet values, not
-            // the parent Product's (issue #60's documented footgun) — the product create call
-            // must never carry facetValueIds itself.
+            // Vendure's facet-value-filter Collection matches variant facet values, not the parent Product's.
+            // So the product create call must never carry facetValueIds.
             expect(productService.create).toHaveBeenCalledWith(
                 ctx,
                 expect.not.objectContaining({ facetValueIds: expect.anything() }),
@@ -685,9 +681,8 @@ describe('ProductStreamHandler', () => {
         });
     });
 
-    // #149: findByCode/findByFacetId (loading every category FacetValue) was called on every
-    // single apply() — confirmed live as a dominant per-product cost during a resync. Cached
-    // behind a short TTL (CATEGORY_FACET_CACHE_TTL_MS).
+    // Loading every category FacetValue per apply() dominated resync cost, so it is cached briefly.
+    // Staleness is bounded by CATEGORY_FACET_CACHE_TTL_MS; new categories appear after it expires.
     describe('category facet caching', () => {
         it('reuses the cached category facet across apply() calls within the TTL', async () => {
             const { facetService, facetValueService } = makeFacetServices([
@@ -736,9 +731,8 @@ describe('ProductStreamHandler', () => {
             }
         });
 
-        // #149 audit LOW: a cache miss for a real category id might just mean the category
-        // synced after the cache filled — one forced re-read should resolve it immediately
-        // instead of waiting out the full TTL and flagging for review.
+        // A cache miss for a real category can mean it synced after the cache filled.
+        // Force one re-read on miss before flagging, instead of waiting out the TTL.
         it('forces a fresh read on a cache miss for a real category id, resolving it without waiting for TTL', async () => {
             const facetService = {
                 findByCode: vi.fn().mockResolvedValue({ id: 'facet-category' }),

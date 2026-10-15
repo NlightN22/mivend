@@ -20,10 +20,8 @@ export class KafkaProducerService implements OnModuleDestroy {
         private readonly schemaRegistry: SchemaRegistryClient,
     ) {}
 
-    // Publishes one outbox row's payload. Throws on any failure (broker unreachable, Registry
-    // unreachable, send rejected) — the caller (IntegrationOutboxWorker) is responsible for
-    // catching this and applying the retry/dead-letter policy; this method never swallows an
-    // error itself (the no-silent-drops messaging invariant — no silent drops).
+    // Never swallow errors here: the caller (IntegrationOutboxWorker) applies retry/dead-letter policy,
+    // so a swallowed error would be a silent message drop.
     async publish(eventType: string, payload: Record<string, unknown>): Promise<void> {
         const schemaEntry = this.resolveSchema(eventType);
         // The registry client appends "-value", giving the topic's union subject.
@@ -35,9 +33,8 @@ export class KafkaProducerService implements OnModuleDestroy {
 
         await producer.send({
             topic: ORDER_COMMANDS_TOPIC,
-            // acks: -1 (all) — kafkajs requires this on every send() when the producer itself
-            // was created with idempotent: true (see getProducer's own comment); it's a per-send
-            // option in kafkajs's types, not part of ProducerConfig.
+            // kafkajs requires acks: -1 on every send() when the producer is idempotent; it is a per-send
+            // option, not part of ProducerConfig, so it cannot be set once at producer creation.
             acks: -1,
             messages: [
                 {
@@ -68,15 +65,8 @@ export class KafkaProducerService implements OnModuleDestroy {
             ssl: this.options.kafka.ssl,
             sasl: this.options.kafka.sasl as SASLOptions | undefined,
         });
-        // idempotent: true — without it, kafkajs's own internal retry on a transient
-        // send failure (broker timeout, leader-not-available, etc.) can duplicate a message on
-        // the broker even though outboxService/the outbox row's own eventId already gives every
-        // payload a stable, de-dupeable key. This closes the gap at the producer/broker level
-        // instead of relying solely on the consumer-side dedup key downstream (see
-        // external-integration-rules skill's "Producer idempotency" section). kafkajs requires
-        // maxInFlightRequests <= 5 and acks: -1 (all) whenever idempotent is true — both are
-        // kafkajs's own enforced defaults for an idempotent producer, set explicitly here so this
-        // doesn't silently break if kafkajs's defaults ever change.
+        // Prevents kafkajs's internal send retries from duplicating messages on the broker.
+        // kafkajs requires maxInFlightRequests <= 5 and acks: -1; pinned explicitly in case defaults change.
         this.producer = kafka.producer({
             idempotent: true,
             maxInFlightRequests: 5,

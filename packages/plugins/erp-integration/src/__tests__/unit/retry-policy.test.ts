@@ -24,9 +24,8 @@ describe('decideOutboxFailure', () => {
     });
 });
 
-// Issue #96: MissingDependencyError's own backoff shape — base 30s, doubling per attempt, capped
-// at 30 minutes, ±20% jitter. `random` is pinned to 0.5 (jitterFactor === 1) below to assert the
-// exact un-jittered sequence; the jitter bounds are asserted separately.
+// `random` is pinned to 0.5 so jitterFactor === 1, giving the exact un-jittered backoff sequence.
+// Jitter bounds are asserted in a separate test.
 describe('computeRetryBackoffMs', () => {
     const noJitter = (): number => 0.5;
 

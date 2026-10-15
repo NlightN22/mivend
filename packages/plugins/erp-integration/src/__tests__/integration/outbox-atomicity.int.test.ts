@@ -10,11 +10,8 @@ import {
 import { IntegrationOutboxEntry } from '../../entities/integration-outbox-entry.entity';
 import { IntegrationOutboxService } from '../../integration-outbox.service';
 
-// Outbox atomicity pattern (docs/testing-patterns.md) — mirrors plugin-sync's
-// outbox-atomicity.int.test.ts. IntegrationOutboxEntry writes go through a caller-supplied
-// EntityManager (see integration-outbox.service.ts's doc comment) so they can participate in an
-// existing transaction; this file proves a rollback leaves no orphan row and that the unique
-// eventId index enforces dedup at the DB level (the external-integration-rules skill's dedup-key requirement).
+// Outbox writes take a caller-supplied EntityManager to join the caller's transaction.
+// Dedup relies on the unique eventId index, not on application-level checks.
 let dataSource: DataSource;
 let outboxService: IntegrationOutboxService;
 

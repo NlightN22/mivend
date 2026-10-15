@@ -5,9 +5,8 @@ import { BranchStockLocationStrategy } from '../../branch-stock-location.strateg
 
 function makeStrategy(options: {
     branchId: string | null;
-    // Ids of the StockLocations that belong to this branch's active warehouses — mirrors what
-    // ReservationAvailabilityService.findBranchStockLocationIds (includedInBranchAtp scope) now
-    // resolves; the strategy just intersects this against the given stockLocations candidates.
+    // Must match ReservationAvailabilityService.findBranchStockLocationIds (includedInBranchAtp).
+    // Strategy only intersects these with the given candidates; never adds locations.
     activeLocationIds: string[];
     stockLevels: Record<
         string,

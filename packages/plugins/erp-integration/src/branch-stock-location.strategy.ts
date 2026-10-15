@@ -14,16 +14,8 @@ import { freeQuantity, ReservationAvailabilityService } from '@mivend/plugin-res
 
 const loggerCtx = 'BranchStockLocationStrategy';
 
-// Confirmed architecture (issue #63): a "branch" is a soft staff/counterparty grouping tag, not
-// a hard catalog/pricing partition, so Vendure's own MultiChannelStockLocationStrategy (which
-// filters by active Channel) does not fit — one branch has multiple warehouses/StockLocations,
-// with no Channel involved at all. This strategy instead resolves the order's own already-
-// denormalized customFields.branchId (set once at OrderPlacedEvent time from the customer's
-// TradingPoint.servicingBranchId — see ErpOrderService.onOrderPlaced) and restricts allocation to
-// that branch's StockLocations (via Warehouse.branchId -> StockLocation.customFields
-// .warehouseErpId). Never re-derives branch from TradingPoint itself — Order.customFields
-// .branchId IS that resolution, already made once, and is what stays stable even if the trading
-// point's servicing branch is edited later.
+// Branch is a soft grouping, not a Channel partition: MultiChannelStockLocationStrategy doesn't fit.
+// Uses order.customFields.branchId, resolved once at order time; stable if the trading point changes.
 export class BranchStockLocationStrategy extends BaseStockLocationStrategy {
     private availabilityService!: ReservationAvailabilityService;
 
@@ -56,12 +48,8 @@ export class BranchStockLocationStrategy extends BaseStockLocationStrategy {
         orderLine: OrderLine,
         quantity: number,
     ): Promise<LocationWithQuantity[]> {
-        // Fail loudly instead of guessing (issue #95). By the time native allocation runs, every
-        // real order should already have passed ReservationService's ErpExportDataMissingError
-        // gate (issue #85) — so an empty stockLocations, or a non-empty stockLocations with zero
-        // branch-scoped matches, both mean something is actually broken (a manually-created
-        // order, a data race, or a genuine bug elsewhere), not a normal case to paper over by
-        // allocating onto an arbitrary, non-branch-scoped StockLocation.
+        // Upstream ReservationService already rejects incomplete orders, so reaching here means a real bug.
+        // Never fall back to a non-branch-scoped StockLocation; throw instead.
         if (stockLocations.length === 0) {
             const message = `orderLine ${orderLine.id}: cannot allocate stock, no StockLocation exists at all`;
             Logger.error(message, loggerCtx);

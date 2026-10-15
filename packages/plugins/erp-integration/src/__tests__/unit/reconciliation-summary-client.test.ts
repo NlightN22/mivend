@@ -59,9 +59,8 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-// A transient failure here must never look like "0 discrepancies" to a caller — this client
-// throws after exhausting retries, it never returns an empty/zeroed summary as a fallback (see
-// external-integration-rules skill's no-silent-drops rule).
+// Never return an empty or zeroed summary on failure: callers would read it as 0 discrepancies.
+// The client throws after exhausting retries instead of returning a fallback.
 describe('ReconciliationSummaryClient.fetchSummaries', () => {
     it('sends the X-Api-Key header and the aggregateType query param', async () => {
         const fetchMock = vi.fn().mockResolvedValue({

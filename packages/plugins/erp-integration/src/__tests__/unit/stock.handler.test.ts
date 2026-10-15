@@ -51,11 +51,8 @@ describe('StockStreamHandler', () => {
         expect(warehouseService.findByErpId).not.toHaveBeenCalled();
     });
 
-    // mivend.issue.84.88: `quantity` is a plain (non-optional) proto3 double, same zero-value
-    // omission shape as `availableQuantity` — an absent key means the reported quantity is 0, not
-    // a malformed payload. Confirmed live: 4 processed stock events with no `quantity` key were
-    // being silently dropped in full (not even stockOnHand applied) by a prior revision that
-    // defaulted the missing key to NaN and treated NaN as "missing, skip".
+    // Proto3 double: an absent `quantity` key means 0, not malformed; do not treat it as missing.
+    // Treating it as NaN/missing silently dropped whole stock events.
     it('applies a stock event with an absent quantity as an explicit 0, not a malformed-payload skip', async () => {
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
         const stockLevelService = {
@@ -275,11 +272,8 @@ describe('StockStreamHandler', () => {
         expect(stockLevelSave).not.toHaveBeenCalled();
     });
 
-    // mivend.issue.84.88: Integration Service's contract declares available_quantity as a plain
-    // (non-optional) proto3 double — its zero-value (0) is OMITTED from the decoded JSON payload,
-    // same shape as isActive/isDeleted's own documented zero-value omission (types.ts). An absent
-    // key here means "the ERP reports zero available," not "no data" — confirmed live as a real
-    // production gap (68 stock rows silently never got an ATP cap written at all).
+    // Proto3 non-optional double: zero is omitted from the payload.
+    // Absent available_quantity means zero available, not missing data.
     it('treats an absent availableQuantity as an explicit 0, not "no data" (proto3 zero-value omission)', async () => {
         const warehouseService = { findByErpId: vi.fn().mockResolvedValue({ id: 'w1' }) };
         const stockLevelService = {

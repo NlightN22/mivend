@@ -1,13 +1,5 @@
-// Pure resolution of a product's `category_id` (ProductChanged) to the 'category' facet's
-// FacetValue id, plus an optional non-blocking review flag — same shape as vat-code-resolver.ts
-// (issue #79's precedent). No I/O here; the caller (ProductStreamHandler) looks up the facet
-// value map beforehand.
-//
-// Deliberately NOT routed through MissingDependencyError's retry-with-backoff path (see
-// external-integration-rules skill / types.ts) even though "category not synced yet" is exactly
-// the cross-topic-ordering race that error exists for — issue #116's own explicit decision:
-// category resolution must never block product creation, and a later ProductChanged event (or a
-// manual resync) is what corrects it, not a blocking retry loop.
+// Not via MissingDependencyError retry: a missing category must never block product creation.
+// A later ProductChanged event or a manual resync corrects it, not a blocking retry loop.
 import type { ID } from '@vendure/common/lib/shared-types';
 
 export type CategoryFlagReason = 'absent' | 'not-found';

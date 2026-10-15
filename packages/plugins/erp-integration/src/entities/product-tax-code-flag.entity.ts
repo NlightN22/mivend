@@ -4,20 +4,16 @@ import { Column, Entity, Index } from 'typeorm';
 
 import type { VatFlagReason } from '../vat-code-resolver';
 
-// A non-blocking "succeeded but worth reviewing" signal for a product's VAT code (issue #79) —
-// categorically different from IntegrationInboxEvent.status = 'failed', which is for actual
-// processing failures. Mirrors ReservationReconciliationIssue/PaymentReconciliationIssue's shape,
-// but deliberately has no status/resolution workflow: a first pass only needs a bare, readable
-// record, not a triage flow (out of scope per issue #79).
+// Non-blocking review signal, distinct from IntegrationInboxEvent.status = 'failed' (real failures).
+// No status/resolution workflow by design: a bare record for a first pass, no triage flow.
 @Entity()
 export class ProductTaxCodeFlag extends VendureEntity {
     constructor(input?: DeepPartial<ProductTaxCodeFlag>) {
         super(input);
     }
 
-    // Integration Service's own product entity id (ProductStreamHandler's `entityId`), not
-    // Vendure's Product.id — traceability back to the source event, same convention as
-    // ReservationReconciliationIssue.orderEntityId.
+    // Integration Service's entity id (ProductStreamHandler's entityId), not Vendure's Product.id.
+    // Kept to trace back to the source event, as in ReservationReconciliationIssue.orderEntityId.
     @Index()
     @Column({ type: 'varchar' })
     externalProductId!: string;

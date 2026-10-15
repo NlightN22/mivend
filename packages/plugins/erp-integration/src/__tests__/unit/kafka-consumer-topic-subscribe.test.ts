@@ -123,9 +123,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
     });
 
-    // Regression case for the live incident: an ACL denial on storage-location/stock-organization
-    // used to throw out of the whole subscribe loop before consumer.run() was ever reached,
-    // silently halting consumption of every other, perfectly healthy topic too.
+    // Guards against one topic's ACL denial aborting the subscribe loop and starving the other topics.
     it('skips a topic whose subscribe() rejects (e.g. ACL denial) and still consumes the rest', async () => {
         const service = new KafkaConsumerService(
             makeOptions(),
@@ -134,10 +132,8 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
         );
         const consumerPromise = service.start();
 
-        // subscribeImpl is only assigned once the fake Consumer exists — start() awaits connect()
-        // first (a resolved mock), so by the time subscribe() is actually called the consumer is
-        // already in createdConsumers. Set it synchronously before awaiting, since connect()
-        // resolves on the same microtask queue turn.
+        // subscribeImpl must be set synchronously before the await: connect() resolves on the same
+        // microtask turn, so the consumer is already in createdConsumers when subscribe() is called.
         await Promise.resolve();
         createdConsumers[0].subscribeImpl = async ({ topic }) => {
             if (topic === 'sl') {

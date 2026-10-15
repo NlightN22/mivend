@@ -52,44 +52,18 @@ import type { ErpIntegrationPluginOptions, InboundStream } from './types';
 type OrderEventStream = 'order-registration-result' | 'order-changed' | 'order-cancel-result';
 const ORDER_EVENT_STREAM_SET: ReadonlySet<InboundStream> = new Set(ORDER_EVENT_STREAMS);
 
-// Fixed id for the single status row — KafkaConsumerService only ever runs in the worker
-// process, while KafkaStatusController is served by the main HTTP process (separate Node
-// processes, no shared memory) — this row is what actually bridges isConnected()'s in-memory
-// flag across that boundary. See kafka-consumer-status.entity.ts's own doc comment.
+// Worker and HTTP controller run in separate Node processes; this row is the only shared state.
+// isConnected() is in-memory, so the status controller reads it through this row.
 const STATUS_KEY = 'default';
 
-// Reference shape: Integration Service's own search-service kafka-consumer.service.ts (issue
-// #62's "Researched" section) — one Consumer, one groupId, subscribed to every configured topic,
-// fromBeginning: true, with an outer capped-backoff retry loop around the initial connect()
-// (kafkajs's own internal retry gives up and throws after a bounded number of attempts; without
-// an outer loop a broker outage longer than that leaves the consumer dead until a restart).
-//
-// Decode: these 8 topics are plain protobuf `toBinary()`, never a Confluent wire-format
-// header/Registry lookup — verified against Integration Service's real producer
-// (outbox-event-mapper.ts, `toBinary(<Schema>, message)`, no magic byte/schema id) and
-// search-service's own consumer, which decodes with a static, compile-time-known
-// `fromBinary(SCHEMA_BY_STREAM[stream], ...)`. This mirrors that exactly — a Registry-dynamic
-// decode would fail on every message from these topics, since they were never encoded that way.
-// The Registry stays legitimate for this plugin's own OUTBOUND `OrderSubmitted` producer only
-// (see schema-registry.client.ts / kafka-producer.service.ts) — that direction is
-// producer-authoritative and MiVend's own choice, unrelated to how Integration Service encodes
-// its own outbound streams. See docs/ai/1c-integration-service-decision.md's 2026-08-14
-// retraction for the full reasoning.
-//
-// Message handling never processes an event inline — it only decodes the protobuf payload and
-// writes it to the inbox (the external-integration-rules skill). The Kafka offset is only committed (by returning
-// from eachMessage without throwing) once that inbox write has resolved, so ack happens strictly
-// after the durable write — never before.
+// Plain protobuf toBinary() payloads, no Confluent header: decode statically, not via Registry.
+// Offset is committed only after the inbox write resolves, so ack never precedes the durable write.
 const CONNECT_MAX_ATTEMPTS = 8;
 const CONNECT_BASE_DELAY_MS = 1000;
 const CONNECT_MAX_DELAY_MS = 60_000;
 
-// Issue #71: kafkajs's own Runner only auto-restarts a crashed consumer.run() for a *retriable*
-// error (see kafkajs's onCrash/isErrorRetriable) — a non-retriable crash (e.g.
-// KafkaJSGroupCoordinatorNotFound from a Kafka ACL rejecting the consumer group) is left
-// permanently dead with no further attempts, even after the external cause is fixed. This mirrors
-// connectWithBackoff's own capped-backoff shape so recovery from a fixed-externally condition
-// doesn't require a full app process restart.
+// kafkajs auto-restarts only retriable crashes; a non-retriable one (e.g. ACL denial) stays dead.
+// Supervisor retries with capped backoff so recovery needs no process restart.
 const CRASH_RETRY_BASE_DELAY_MS = 1000;
 const CRASH_RETRY_MAX_DELAY_MS = 60_000;
 
@@ -166,11 +140,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
         });
     }
 
-    // A start() failure (e.g. connectWithBackoff exhausting CONNECT_MAX_ATTEMPTS against a
-    // broker that's down at boot) must not leave the consumer permanently dead — it schedules
-    // the same self-perpetuating crash-retry loop as a later runtime CRASH before rethrowing, so
-    // KafkaConsumerBootstrapService's own log ("Kafka consumer failed to start") stays accurate
-    // for this first attempt while recovery keeps happening in the background regardless.
+    // A failed start() must still schedule crash-retry before rethrowing, or the consumer stays dead.
     async start(): Promise<void> {
         try {
             await this.runOnce();
@@ -180,10 +150,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
         }
     }
 
-    // One full connect+subscribe+run cycle against a fresh Kafka/Consumer instance. Called once
-    // by start(), and again by the crash supervisor below whenever kafkajs itself gives up on a
-    // non-retriable crash — a crashed Consumer instance is never reused, matching kafkajs's own
-    // internal restart behavior (it always tears down and recreates on restart too).
+    // Crashed Consumer instances are never reused; each retry builds a fresh Kafka and Consumer.
     private async runOnce(): Promise<void> {
         const kafka = new Kafka({
             clientId: this.options.kafkaConsumer.clientId,
@@ -202,10 +169,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
             this.connected = false;
             this.persistStatus(false);
         });
-        // e.restart is kafkajs's own decision (isErrorRetriable — see kafkajs's onCrash): true
-        // means kafkajs is already restarting the same Consumer instance itself, so scheduling a
-        // second, competing reconnect here would join the consumer group twice (issue #67's
-        // rebalance-stall bug). Only step in when kafkajs decided restart:false.
+        // Only step in when restart is false: kafkajs already restarts; a second reconnect double-joins.
         this.consumer.on(this.consumer.events.CRASH, ({ payload }) => {
             this.connected = false;
             this.persistStatus(false);
@@ -215,14 +179,8 @@ export class KafkaConsumerService implements OnModuleDestroy {
 
         await this.connectWithBackoff();
 
-        // Each topic is subscribed independently and a failure (e.g. a Kafka ACL denial for one
-        // topic — observed live against the real Integration Service broker for
-        // storage-location-changed/stock-organization-changed) is isolated to that topic: logged
-        // and skipped, never thrown out of this loop. Before this fix, one bad topic's subscribe()
-        // rejection propagated out of runOnce() before consumer.run() was ever reached, silently
-        // stopping consumption of every OTHER, perfectly healthy topic too — not just the denied
-        // one. streamByTopic is built incrementally, so only actually-subscribed topics are ever
-        // routed to a handler in eachMessage below.
+        // A failed subscribe for one topic is logged and skipped so the others still consume.
+        // Throwing here would stop consumption of every healthy topic, since run() is never reached.
         const streamByTopic = new Map<string, InboundStream>();
         const orderEventTopics = new Set<string>();
         for (const [stream, topic] of Object.entries(this.options.kafkaConsumer.topics)) {
@@ -288,11 +246,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
                     }`,
                     loggerCtx,
                 );
-                // Self-perpetuating: a retry that itself fails (broker still unreachable) must
-                // schedule the NEXT retry, not go silent — this used to be a one-shot attempt,
-                // so a broker outage longer than a single backoff window left the consumer
-                // permanently dead until a full process restart, no different from never having
-                // this crash-retry supervisor at all.
+                // A failing retry must schedule the next attempt; a one-shot retry would leave the consumer dead.
                 this.scheduleCrashRetry();
             });
         }, delay);

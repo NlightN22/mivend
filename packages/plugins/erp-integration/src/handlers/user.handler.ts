@@ -6,16 +6,8 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 
 const loggerCtx = 'IntegrationUserHandler';
 
-// Applies Integration Service's `user` stream (UserChanged, the ERP's "Пользователи",
-// erp.user.events.v1). Issue #109: enrichment-only, never creates an
-// Administrator — matches an existing one by email on first sight of an erpId, then persists
-// erpId for idempotent re-processing (see UserEnrichmentService.linkAndEnrich's own comment).
-// Issue #119 extends this with fullName/isActive/isDeleted: fullName seeds the ErpUser
-// candidate row's display name; isActive/isDeleted drive automatic deactivate/reactivate of an
-// already-linked Administrator (UserEnrichmentService delegates to
-// AdministratorActivationService.syncFromErp) — never used to create/keep an ErpUser row.
-// positionId is the Position.erpId (same Ref_Key as PositionChanged.entity_id), issue #117; `role`
-// is deliberately still not consumed.
+// Never creates Administrator; links by email, then persists erpId so reprocessing is idempotent.
+// isActive/isDeleted only sync a linked Administrator, never ErpUser; role is intentionally unused.
 @Injectable()
 export class UserStreamHandler implements InboundStreamHandler {
     constructor(private readonly userEnrichmentService: UserEnrichmentService) {}

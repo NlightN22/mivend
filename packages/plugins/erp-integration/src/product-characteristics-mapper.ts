@@ -1,11 +1,5 @@
-// Pure mapping of ProductChanged's three CharacteristicValue maps (attributes, specifications,
-// technicalRequirements) into flat rows for the ProductCharacteristic entity — issue #116.
-//
-// proto3's canonical JSON mapping omits an empty map field entirely (same zero-value-omission
-// discipline as isActive/Tier-1 fields elsewhere in this plugin) — an absent key means "no rows
-// for that group," never an explicit empty object. Field names below (raw/normalized/
-// structuredJson) are confirmed against the actual installed @nlightn22/event-contracts@0.14.0's
-// real toJson() output, not assumed from the .d.ts alone.
+// proto3 canonical JSON omits empty map fields: an absent key means no rows for that group,
+// raw/normalized/structuredJson verified against event-contracts@0.14.0 toJson(), not the .d.ts.
 import type { ProductCharacteristicGroup } from './entities/product-characteristic.entity';
 
 export interface ProductCharacteristicRow {

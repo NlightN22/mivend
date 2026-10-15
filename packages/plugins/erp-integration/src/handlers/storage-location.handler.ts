@@ -17,17 +17,8 @@ interface VariantOrganization {
     organizationSourceEntityId: string | null;
 }
 
-// Applies Integration Service's `storage-location` stream (StorageLocationChanged, the ERP's
-// storage-location register) — the real source for ProductVariant.customFields.organizationId
-// (docs/payments.md "Organizations": one storage location = one product = one organization).
-// Address-only rows (no organization_id, the common case) carry nothing to apply; the physical
-// address fields have no target entity and are not modeled.
-//
-// A product can have several storage-location rows, each its own Kafka entity with its own
-// version history, so each organization-bearing row is persisted (StorageLocationAssignment) and
-// the winner — lowest priority, then lowest entityId — is recomputed from all of them under a
-// per-product lock. A deleted or organization-less row simply leaves the set, so the next best
-// row takes over instead of the product being cleared.
+// A product has several storage-location rows, each its own entity, so the winner is recomputed
+// from all persisted rows under a per-product lock; removing a row lets the next best take over.
 @Injectable()
 export class StorageLocationStreamHandler implements InboundStreamHandler {
     constructor(

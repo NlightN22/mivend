@@ -3,11 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { KafkaProducerService } from '../../kafka-producer.service';
 import type { ErpIntegrationPluginOptions } from '../../types';
 
-// A real transient send failure (broker timeout, leader-not-available) can make kafkajs's own
-// internal retry resend a message — without idempotent:true (and its required acks:-1 /
-// maxInFlightRequests<=5 companions) that resend can duplicate the message on the broker. See
-// this project's earlier gap (mivend audit): the consumer side already dedupes on a stable
-// sourceEventId, but the producer/broker side had no equivalent guarantee at all.
+// Retries after a transient send failure can duplicate messages; idempotent:true prevents this.
+// It requires acks:-1 and maxInFlightRequests<=5, so those must stay set alongside it.
 const sendMock = vi.fn().mockResolvedValue(undefined);
 const producerFactory = vi.fn((_config: unknown) => ({
     connect: vi.fn().mockResolvedValue(undefined),

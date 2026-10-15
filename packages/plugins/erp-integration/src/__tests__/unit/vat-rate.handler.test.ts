@@ -142,9 +142,8 @@ describe('VatRateStreamHandler', () => {
         expect(taxRateService.create).not.toHaveBeenCalled();
     });
 
-    // vat-rate is code-keyed, not product-keyed: no cross-entity lookup happens here, so a
-    // VatRateChanged arriving before any product references this code is not a
-    // MissingDependencyError case — it proceeds independently and creates its own TaxCategory.
+    // vat-rate is keyed by code, not product: no cross-entity lookup, so no MissingDependencyError
+    // A VatRateChanged may arrive before any product uses the code; it creates its own TaxCategory.
     it('proceeds independently (auto-creates its own TaxCategory) even if no product has synced this code yet', async () => {
         const { handler, taxCategoryAutoCreateService } = makeHandler();
 

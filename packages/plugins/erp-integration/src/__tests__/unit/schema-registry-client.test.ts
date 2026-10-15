@@ -57,10 +57,8 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-// This client is now producer-side only, for the OUTBOUND OrderSubmitted event — see
-// schema-registry.client.ts's class comment. Registry unavailability (issue #62 test-design risk)
-// must throw (never crash the process, never silently invent a schema id) so the outbox processor
-// treats it as retryable, not as "this event is invalid".
+// Registry unavailability must throw, not invent a schema id: the outbox must retry, not drop.
+// Producer-side only (OUTBOUND OrderSubmitted); never crash the process on registry errors.
 describe('SchemaRegistryClient.resolveSchemaId', () => {
     it('resolves and caches the schema id for a given subject', async () => {
         const fetchMock = vi.fn().mockResolvedValue({

@@ -1,9 +1,7 @@
 declare module '@vendure/core' {
     interface CustomProductFields {
-        // Owned by apps/server/src/vendure-config.ts's customFields config. A relation to the
-        // Manufacturer entity (issue #116) — ProductChanged's `manufacturer` is an ERP directory
-        // GUID, not a display name, so this is a real relation, not a plain string field. See
-        // manufacturer.entity.ts / manufacturer.service.ts.
+        // Owned by apps/server/src/vendure-config.ts customFields config. ProductChanged.manufacturer is an ERP directory GUID,
+        // not a display name, so this is a real relation to Manufacturer, not a plain string field.
         manufacturer?: import('./entities/manufacturer.entity').Manufacturer | null;
     }
 
@@ -13,14 +11,8 @@ declare module '@vendure/core' {
     }
 
     interface CustomProductVariantFields {
-        // Owned by apps/server/src/vendure-config.ts's customFields config (ERP-sourced storage-
-        // location assignment, see the external-integration-rules skill and
-        // @mivend/plugin-acquiring's offline-terms-handler.ts's organization-split comment) —
-        // read here without taking a package dependency on
-        // whichever plugin ends up owning it, same established pattern as plugin-sync/types.ts.
-        // Lives on ProductVariant, NOT Order — an order can span multiple organizations (see
-        // GlobalSettings.organizationSplitEnabled / ProformaInvoiceIssuingService.issueForOrder), so
-        // there is no single per-Order organizationId to read.
+        // Lives on ProductVariant, not Order: an order can span multiple organizations, so no single
+        // per-Order organizationId exists. Read here without a package dependency on the owning plugin.
         organizationId?: number | null;
         // The StorageLocationChanged.priority that last won organizationId above — see
         // StorageLocationStreamHandler and vendure-config.ts's own doc comment on this field.
@@ -28,12 +20,8 @@ declare module '@vendure/core' {
         // The StorageLocationChanged entityId that currently owns organizationId/
         // organizationPriority — see vendure-config.ts's own doc comment on this field.
         organizationSourceEntityId?: string | null;
-        // Issue #103: resolved from UnitChanged via ProductChanged.defaultSalesUnitId — see
-        // ProductStreamHandler and docs/order-flow.md's mivend#103 section. Purely informational
-        // when read alone (order weight/volume display is a later, storefront-side task); the
-        // moq plugin's MultiplicityOrderInterceptor is the only consumer that turns this into an
-        // enforced constraint, and only when BranchSettings.packagesOnly is true for the
-        // order's branch. Null when defaultSalesUnitId is unset (sold in base/piece unit).
+        // Enforced only by MultiplicityOrderInterceptor, and only when BranchSettings.packagesOnly is true.
+        // Null when ProductChanged.defaultSalesUnitId is unset (sold in base/piece unit).
         defaultSalesUnitId?: string | null;
         unitName?: string | null;
         unitRatioToBase?: number | null;
@@ -42,23 +30,20 @@ declare module '@vendure/core' {
     }
 
     interface CustomStockLevelFields {
-        // Owned by apps/server/src/vendure-config.ts's customFields config. the ERP's own
-        // availableQuantity (StockChanged) for this (productVariant, stockLocation) — issue #72's
-        // ATP cap. See StockStreamHandler and ReservationAvailabilityService.
+        // Owned by vendure-config.ts customFields. This is the ERP's own availableQuantity (StockChanged),
+        // used as the ATP cap, not the local stock level. See ReservationAvailabilityService.
         erpAvailableQuantity?: number | null;
     }
 
     interface CustomTaxCategoryFields {
-        // Owned by apps/server/src/vendure-config.ts's customFields config. Stable ERP-side VAT
-        // code (issue #79) — ProductStreamHandler resolves the TaxCategory to assign by this
-        // field, never by name.
+        // Owned by vendure-config.ts customFields. Stable ERP-side VAT code: the TaxCategory is resolved
+        // by this field, never by name, since names are not a stable key.
         erpVatCode?: string | null;
     }
 
     interface CustomStockLocationFields {
-        // Owned by apps/server/src/vendure-config.ts's customFields config. StockLocation has no
-        // native external-id field — this is WarehouseStreamHandler's idempotency key
-        // (Warehouse.erpId) and BranchStockLocationStrategy's join key back to Warehouse.
+        // Owned by vendure-config.ts customFields. StockLocation has no native external-id field, so this
+        // is the idempotency key for Warehouse.erpId and the join key back to Warehouse.
         warehouseErpId?: string | null;
     }
 }
@@ -90,10 +75,8 @@ export interface KafkaConsumerConfig {
         username: string;
         password: string;
     };
-    // Integration Service's own inbound topics for the Milestone-1 streams — one topic per
-    // entity type (issue #62's design section 2). Keyed by INBOUND_STREAMS in inbox-event.ts so
-    // adding a stream later means adding one entry here + one handler, not touching consumer
-    // wiring itself.
+    // One topic per entity type. Keyed by INBOUND_STREAMS in inbox-event.ts, so adding a stream
+    // needs one entry here and one handler, with no change to consumer wiring.
     topics: Record<InboundStream, string>;
 }
 
@@ -109,72 +92,38 @@ export type InboundStream =
     | 'storage-location'
     | 'stock-organization'
     | 'order-registration-result'
-    // The ERP's order-changed stream (issue #110/#72) — the order's ongoing, current-state view
-    // (status/reservedQuantity/contractId), fired repeatedly over the order's lifetime, distinct
-    // from order-registration-result's one-shot registration outcome. Bulk lane, not critical:
-    // unlike order-registration-result this is not the sole reservation-release trigger, so a
-    // backlog behind catalog/price/stock does not block the release-latency-sensitive path.
+    // Bulk lane on purpose: unlike order-registration-result this is not the sole reservation-release
+    // trigger, so its backlog must not delay the release-latency-sensitive path.
     | 'order-changed'
     // The ERP's answer to an order cancel request (#194): cancelled | rejected per orderUuid.
     | 'order-cancel-result'
-    // The ERP's "Подразделение" (org-structure division) — feeds the existing, previously-unfed
-    // Department entity in @mivend/plugin-access-control. Different domain than the 10 streams
-    // above (company.customers, not company.catalog/orders) — see DepartmentStreamHandler.
+    // Feeds Department in @mivend/plugin-access-control; sourced from company.customers, not catalog/orders.
     | 'department'
     // Job-position master data (company.customers) — feeds Position in @mivend/plugin-access-control.
     | 'position'
-    // The ERP's "Контрагент" (counterparty) — feeds @mivend/plugin-counterparty's Counterparty entity.
-    // Same company.customers domain as department above. Issue #104: partial-create of name/
-    // isActive/inn/erpGroupLabel/departmentId (verified live against
-    // @nlightn22/event-contracts@0.38.0, search-platform#92/#118) — creditLimit/paymentDelayDays/
-    // priceType/branchId stay erp-import/REST-only fields, never fabricated here (see
-    // CounterpartyStreamHandler). manager_id/manager_ids now consumed too, resolved to an
-    // Administrator via the 'user' stream below (issue #109 unblocked). creditBalance lives on
-    // its own separate stream, see 'counterparty-credit-balance' below.
+    // Partial create only: creditLimit/paymentDelayDays/priceType/branchId are erp-import/REST-only and
+    // never fabricated here. creditBalance arrives on its own stream (counterparty-credit-balance).
     | 'counterparty'
-    // The ERP's "Пользователи" (user) — enrichment-only correlation of an Administrator with the ERP's own
-    // user GUID, matched by email once (see UserEnrichmentService). Issue #109. Feeds
-    // Administrator.customFields.erpId/departmentId — never creates an Administrator. Also the
-    // resolution target for CounterpartyChanged's manager_id/manager_ids above. role/positionId
-    // deliberately not consumed yet — mivend#117's Position-entity design isn't finalized.
+    // Enrichment only: never creates an Administrator, just matches by email to set erpId/departmentId.
+    // role/positionId deliberately not consumed yet; the Position entity design is not finalized.
     | 'user'
-    // search-platform#129: register-driven creditBalance for Counterparty
-    // (AccumulationRegister_ВзаиморасчетыСКонтрагентами), independent of CounterpartyChanged's own
-    // catalog-change trigger. See CounterpartyCreditBalanceStreamHandler.
+    // creditBalance comes from the accumulation register, independent of CounterpartyChanged's own
+    // trigger, so balance updates do not depend on the counterparty catalog stream.
     | 'counterparty-credit-balance'
-    // Issue #107: the ERP's promo-rule ("Скидка/Наценка" гиft/percent promotions keyed by a trigger
-    // product), company.customers.events.v1.PromoRuleChanged. Feeds the same
-    // @mivend/plugin-price-entry DiscountRule entity as the existing facet/priceType-threshold
-    // rules — see PromoRuleStreamHandler and DiscountRule's own doc comment for the two-shape
-    // invariant.
+    // Feeds the same DiscountRule entity as the facet/priceType-threshold rules. See DiscountRule's
+    // doc comment for the two-shape invariant that both sources must respect.
     | 'promo-rule'
-    // Issue #141: reference-data feed for VAT code -> zone -> percent, company.catalog.events.v1.
-    // VatRateChanged. Not product-keyed — upserts TaxRate.value by (erpVatCode, zone), independent
-    // of ProductChanged arrival order. See VatRateStreamHandler and vat-code-resolver.ts.
+    // Not product-keyed: upserts TaxRate.value by (erpVatCode, zone), so it is independent of
+    // ProductChanged arrival order.
     | 'vat-rate'
-    // Issue #100: the ERP's "Точка продаж" (point of sale) — feeds @mivend/plugin-counterparty's
-    // TradingPoint entity, keyed by counterparty_id. Verified live against
-    // @nlightn22/event-contracts@0.42.0 (search-platform#121): name/code/counterparty_id always
-    // present; is_active/is_deleted/address/latitude/longitude/contact_phone are real optional
-    // fields. code is never consumed (no matching TradingPoint field); contact_phone is consumed
-    // only onto an already-existing ContactPerson (this stream never carries a contact name, and
-    // ContactPerson.name is non-nullable — see PointOfSaleStreamHandler). contactName/
-    // workingHours stay REST/portal-only, same as before this stream existed. See
-    // PointOfSaleStreamHandler and docs/ai/erp-streams-map.md's `point-of-sale` row.
+    // code is never consumed. contact_phone only updates an existing ContactPerson: this stream has no
+    // contact name, and ContactPerson.name is non-nullable.
     | 'point-of-sale'
-    // Issue #105: the ERP's "Договор" (contract) — feeds @mivend/plugin-counterparty's Contract
-    // entity, keyed by counterparty_id. Verified live against @nlightn22/event-contracts@0.42.0:
-    // counterpartyId/organizationId/priceTypeId/contractKind/contractType always present;
-    // creditLimit/currency/controlledIndividually/debtDaysLimit/paymentKind/paymentDelayDays/
-    // brandManufacturerId are real optional fields. Not order-critical, bulk lane. See
-    // ContractStreamHandler and docs/ai/erp-streams-map.md's `contract` row / "Per-contract
-    // credit limits" section for #50's downstream credit-gate model.
+    // Not order-critical, so it runs in the bulk lane. Optional fields such as creditLimit and
+    // debtDaysLimit may be absent in the payload, so read them as optional.
     | 'contract'
-    // Issue #103: the ERP's packaging/sales-unit reference feed (UnitChanged), keyed by the
-    // unit's own entity id — resolved against by ProductStreamHandler via
-    // ProductChanged.defaultSalesUnitId. Not product-keyed itself (a shared classifier unit has
-    // ownerId=null), so a `unit` row arriving before any product references it is not a missing-
-    // dependency race. See UnitStreamHandler and docs/order-flow.md's mivend#103 section.
+    // A shared classifier unit has ownerId=null, so a unit row arriving before any product that
+    // references it is not a missing-dependency race and needs no ordering.
     | 'unit'
     // Issue #164: the ERP's manufacturer reference directory; the only reliable source of names.
     | 'manufacturer'
@@ -186,18 +135,13 @@ export type InboundStream =
     | 'bank-account'
     // Issue #181: normalized product photos (ProductPhotoChanged); metadata + pre-signed download URL.
     | 'product-photo'
-    // Issue #108: the ERP's own per-counterparty/contract, optionally per-product automatic
-    // discount engine (DiscountRuleChanged), company.customers.events.v1. Feeds the same
-    // @mivend/plugin-price-entry DiscountRule entity as the existing facet/priceType-threshold and
-    // #107 promo rules — see DiscountRuleStreamHandler and DiscountRule's own doc comment for the
-    // three-shape invariant.
+    // Feeds the same DiscountRule entity as the facet/priceType-threshold and promo rules.
+    // Its three-shape invariant is documented on DiscountRule's own doc comment.
     | 'discount-rule'
     // Issue #101: shipment-time confirmed discount fact (GrantedDiscountChanged),
     // company.customers.events.v1. See GrantedDiscountStreamHandler.
     | 'granted-discount'
-    // Issue #102: the ERP's retro-bonus terms log (RetroBonusRuleChanged), company.customers.
-    // events.v1. Read-only, manager-portal-only — see @mivend/plugin-retro-bonus's own doc
-    // comments and RetroBonusRuleStreamHandler.
+    // Read-only; surfaced only in the manager portal, see @mivend/plugin-retro-bonus.
     | 'retro-bonus-rule'
     // Issue #106: credited-bonus facts (GrantedRetroBonusChanged), see
     // GrantedRetroBonusStreamHandler.
@@ -210,32 +154,19 @@ export type InboundStream =
     // sp#200: the ERP-owned order status reference (rank, visibility, description).
     | 'order-status';
 
-// Every stream handler that reads a payload's `isActive` field must treat an ABSENT key as
-// false, never as true. Root cause (confirmed live with Search Platform during mivend#89's
-// follow-up investigation): Integration Service's published contracts declare isActive/isDeleted
-// as plain (non-optional) proto3 bool fields. Under proto3, `false` is a scalar field's
-// zero-value, and the @bufbuild/protobuf JSON encoder they use OMITS any non-optional scalar
-// field equal to its zero-value — `isActive:false` is therefore NEVER sent as an explicit
-// `false`, only as an absent key, for every stream using this contract shape. A handler reading
-// `payload.isActive !== false` (defaulting an absent key to "active") can never detect a real
-// deactivation at all — this was a live, silent bug affecting product/warehouse/price/priceType/
-// organization since inception, not something introduced by any one incident. The correct read is
-// `payload.isActive === true`. isDeleted is unaffected (its own zero-value is false too, so an
-// explicit `true` is always sent) — only isActive-style "defaults to true" flags need this fix.
+// proto3 omits false-valued bool fields from the JSON, so an absent isActive means inactive:
+// read payload.isActive === true, never !== false. isDeleted is unaffected.
 
 export interface ErpIntegrationPluginOptions {
     instanceType: 'central' | 'branch';
-    // Issue #141: the ERP always sends gross/tax-inclusive prices. Enforced idempotently on the
-    // active channel at bootstrap (KafkaConsumerBootstrapService), replacing the old one-off
-    // seed-erp.mjs step. Defaults to true.
+    // The ERP always sends gross (tax-inclusive) prices, so the channel setting is enforced at bootstrap.
+    // Idempotent: KafkaConsumerBootstrapService re-applies it on every start; defaults to true.
     pricesIncludeTax?: boolean;
     // #144: raw ERP VAT code (e.g. from INTEGRATION_DEFAULT_VAT_CODE) made the default
     // TaxCategory when none exists; products with an unset/legacy code fall back to it.
     defaultVatCode?: string;
-    // Issue #68: separate axis from `instanceType`. A plain `make dev` must never reach a real
-    // Integration Service broker just because `instanceType === 'central'` — this must be
-    // explicitly opted into per contour (see docs/environments.md). Defaults to `false` when
-    // unset (KAFKA_ENABLED_DEFAULT) so any config site that forgets to set it fails safe.
+    // Separate from instanceType: a plain dev run must never reach a real broker just because
+    // instanceType is central. Opt in explicitly per contour; defaults to false when unset.
     kafkaEnabled?: boolean;
     kafka: KafkaConfig;
     kafkaConsumer: KafkaConsumerConfig;
@@ -245,23 +176,14 @@ export interface ErpIntegrationPluginOptions {
     // How often the retention lane sweeps `processed` rows (#147). Defaults to
     // INBOX_RETENTION_INTERVAL_DEFAULT.
     inboxRetentionIntervalMs?: number;
-    // How often the batched Collection-filter recompute runs (see
-    // collection-filters-recompute.scheduled-task.ts) — compensates for
-    // setApplyAllFiltersOnProductUpdates(false), which KafkaConsumerBootstrapService disables so
-    // the Kafka-driven product stream doesn't enqueue its own apply-collection-filters job per
-    // event (a real incident: tens of thousands of individual jobs, one per product, each
-    // recomputing every Collection).
+    // Compensates for setApplyAllFiltersOnProductUpdates(false), which stops the Kafka product stream
+    // from enqueuing one apply-collection-filters job per event, so recompute must be batched here.
     collectionFiltersRecomputeIntervalMs?: number;
     categoryTreeRecomputeIntervalMs?: number;
     // Defaults to CREDIT_LIMIT_RECOMPUTE_INTERVAL_DEFAULT.
     creditLimitRecomputeIntervalMs?: number;
-    // Issue #84: Integration Service's reconciliation summary API base URL (e.g.
-    // https://is.komponent-m.ru) and its X-Api-Key. Reused for both the daily ScheduledTask and
-    // the manual-trigger mutation — never hardcoded, never logged. Optional (like
-    // schemaRegistry.url) so every other existing plugin config fixture doesn't need updating;
-    // ReconciliationSummaryClient falls back to RECONCILIATION_API_URL_DEFAULT/an empty key,
-    // which only matters on a contour that actually enables kafkaEnabled+central (see the
-    // ScheduledTask's own gate) — a plain `make dev` never reaches this code path at all.
+    // Never hardcoded or logged. Optional so existing plugin config fixtures need no update; the client
+    // falls back to defaults, which only matter on a kafkaEnabled+central contour.
     reconciliationApiUrl?: string;
     reconciliationApiKey?: string;
     // Read-only GitHub Packages token used only to look up the latest published event-contracts version.
@@ -272,18 +194,12 @@ export interface ErpIntegrationPluginOptions {
     // Issue #91: how often KafkaLagPollerService recomputes per-partition consumer lag for every
     // inbound topic. Defaults to KAFKA_LAG_POLL_INTERVAL_DEFAULT.
     kafkaLagPollIntervalMs?: number;
-    // Issue #91: a partition's lag above this value gets a Logger.warn from the poller — the
-    // "at minimum a log line above a threshold" half of the issue's suggested scope. Defaults to
-    // KAFKA_LAG_WARN_THRESHOLD_DEFAULT.
+    // Lag above this value triggers a Logger.warn from the poller; only a log line, no hard failure.
     kafkaLagWarnThreshold?: number;
 }
 
-// Every InboundStream, kept in sync by hand with the union type above — used only to derive the
-// bulk lane's stream set below (INBOX_CRITICAL_STREAMS is exhaustively subtracted from it).
-// `satisfies Record<InboundStream, true>` (not a plain array, unlike a first pass at this) makes
-// forgetting a stream here a compile error the moment a new InboundStream is added to the union
-// — without it, a forgotten stream would silently land in neither lane and never get processed
-// again (mivend.audit.90's review of issue #93, MEDIUM finding).
+// Kept in sync by hand with InboundStream. satisfies Record<InboundStream, true> makes a
+// forgotten stream a compile error; without it, the stream would silently land in neither lane.
 const ALL_INBOUND_STREAMS_MAP = {
     category: true,
     organization: true,
@@ -327,26 +243,16 @@ export const ALL_INBOUND_STREAMS: readonly InboundStream[] = Object.keys(
     ALL_INBOUND_STREAMS_MAP,
 ) as InboundStream[];
 
-// Issue #93: order-registration-result is reservation-release-blocking (see
-// OrderRegistrationResultHandler) and must never sit behind a bulk catalog/price/stock backlog —
-// it gets its own claim/process lane, exclusively its own (see
-// INBOX_ORDER_REGISTRATION_RESULT_STREAMS below): no other stream, including 'user', ever shares
-// its claim query, so a backlog on any other stream can never delay it.
+// Reservation-release-blocking, so it gets an exclusive claim/process lane that no other stream
+// shares; a backlog on any other stream can never delay it.
 export const INBOX_ORDER_REGISTRATION_RESULT_STREAMS: readonly InboundStream[] = [
     'order-registration-result',
 ];
-// Issue #127: 'user' gets its own dedicated lane for a completely different reason than
-// order-registration-result above — not reservation urgency, but a real head-of-line-blocking
-// incident. claimBatch's single global `ORDER BY createdAt ASC` inside the bulk lane let an
-// older, much larger `counterparty` backlog starve `user` of any claim slots for hours, even
-// though UserStreamHandler itself was healthy and had nothing wrong with it. A third, disjoint
-// lane guarantees `user` a claim slot regardless of any other bulk-lane stream's backlog
-// size/age — and, symmetrically, guarantees a future `user` backlog can never delay
-// order-registration-result either, since they no longer share a claim query.
+// Dedicated lane because a larger, older counterparty backlog starved it: claimBatch's global
+// ORDER BY createdAt ASC shared one query. Disjoint lanes keep backlogs from delaying each other.
 export const INBOX_USER_STREAMS: readonly InboundStream[] = ['user'];
-// The union of both non-bulk lanes — used only to derive INBOX_BULK_STREAMS below (every other
-// InboundStream). Each lane still claims independently via its own stream set above; this union
-// is not itself passed to claimBatch anywhere.
+// Derives INBOX_BULK_STREAMS only. Each lane claims via its own set; this union is never passed
+// to claimBatch.
 export const INBOX_CRITICAL_STREAMS: readonly InboundStream[] = [
     ...INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
     ...INBOX_USER_STREAMS,
@@ -355,14 +261,8 @@ export const INBOX_BULK_STREAMS: readonly InboundStream[] = ALL_INBOUND_STREAMS.
     stream => !INBOX_CRITICAL_STREAMS.includes(stream),
 );
 
-// Vendure's DefaultSchedulerStrategy default task timeout is 60_000ms (DEFAULT_TIMEOUT,
-// @vendure/core) and marks a task 'failed' + releases its lock past that — but the task's own
-// execute() promise keeps running in the background regardless (a Promise can't be cancelled),
-// so a bulk-lane run that exceeded a 60s timeout would silently keep going while the next tick
-// starts a second one alongside it. The wall-clock budget below keeps the reclaim loop
-// (integration-inbox.scheduled-task.ts) comfortably inside this explicit timeout regardless of
-// backlog size, so an unbounded backlog just means more scheduled ticks, never an orphaned/
-// duplicated in-flight run (mivend.audit.90's review of issue #93, MEDIUM-HIGH finding).
+// Vendure marks a task failed past its 60s timeout, but execute() keeps running regardless, so an
+// overlong bulk run would overlap the next tick. The wall-clock budget keeps the loop under 60s.
 export const INBOX_BULK_TASK_TIMEOUT_MS = 120_000;
 export const INBOX_BULK_WALL_CLOCK_BUDGET_MS = 90_000;
 
@@ -388,23 +288,17 @@ export class MissingDependencyError extends Error {
 export const ERP_INTEGRATION_PLUGIN_OPTIONS = Symbol('ERP_INTEGRATION_PLUGIN_OPTIONS');
 export const KAFKA_ENABLED_DEFAULT = false;
 export const PRICES_INCLUDE_TAX_DEFAULT = true;
-// Issue #141: placeholder TaxRate.value written only by the product-side auto-create path when a
-// real, unmapped VAT code first arrives — never written by VatRateStreamHandler for an absent
-// `percent` (absence there means "skip the upsert", see vat-rate.handler.ts).
+// Placeholder value written only by the product-side auto-create path for a new, unmapped VAT code.
+// VatRateStreamHandler never writes it when percent is absent; that skips the upsert instead.
 export const VAT_PLACEHOLDER_RATE_VALUE = 0;
-// Issue #141: single default zone key ("Russia") — Zone has no natural external-id field in
-// Vendure core, so this finds-or-creates by name (the ERP's own `zone` field, e.g. "RU", is only
-// used to look up the *stable* zone name below, not stored as a key itself — a name is the only
-// stable, human-visible handle Vendure's Zone entity offers).
+// Zone has no external-id field in Vendure core, so this finds or creates by name; the ERP's zone
+// code (e.g. RU) only selects this stable name and is never stored as the key.
 export const DEFAULT_TAX_ZONE_NAME = 'Russia';
 export const OUTBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_POLL_INTERVAL_DEFAULT = 5000;
 export const INBOX_CRITICAL_BATCH_SIZE_DEFAULT = 20;
-// Issue #127: the 'user' lane's own batch size, deliberately the same default as the
-// order-registration-result lane's above — both are now small, low-volume, latency-sensitive
-// lanes with no reclaim-while-full loop (see integration-inbox.scheduled-task.ts). Kept as its
-// own named constant, not a reused reference, so the two lanes can be tuned independently later
-// without one change silently affecting the other.
+// Same default as the order-registration-result lane, but its own constant so the two lanes can
+// be tuned independently without one change affecting the other.
 export const INBOX_USER_BATCH_SIZE_DEFAULT = 20;
 // One retry policy for inbox and outbox failures (#96, #200): exponential backoff 30s -> 30min
 // cap, ±20% jitter, dead-lettered only after 24h wall-clock since the first failure.
@@ -420,9 +314,8 @@ export const INBOX_RETENTION_INTERVAL_DEFAULT = 10 * 60_000;
 // Bounds the retention task's own reclaim loop, same shape as INBOX_BULK_WALL_CLOCK_BUDGET_MS —
 // a resync-sized backlog just means more ticks, never a run that risks the scheduler's timeout.
 export const INBOX_RETENTION_WALL_CLOCK_BUDGET_MS = 60_000;
-// Bigger than the critical lane's batch for bulk throughput, but not jumped straight to
-// 200-500 — keeps the SELECT ... FOR UPDATE SKIP LOCKED transaction size reasonable (issue #93
-// decision). Tune based on real measurement if still insufficient.
+// Larger than the critical lane's batch for throughput, but kept small so the SELECT ... FOR UPDATE
+// SKIP LOCKED transaction stays reasonably sized; tune by measurement if still insufficient.
 export const INBOX_BULK_BATCH_SIZE_DEFAULT = 100;
 export const COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 180_000;
 export const CATEGORY_TREE_RECOMPUTE_INTERVAL_DEFAULT = 3_600_000;

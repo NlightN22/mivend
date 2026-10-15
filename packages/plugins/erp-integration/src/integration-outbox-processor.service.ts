@@ -7,9 +7,8 @@ import { decideOutboxFailure } from './retry-policy';
 
 const BATCH_SIZE = 50;
 
-// Split from the BullMQ scheduling wiring (integration-outbox.worker.ts) so tests can invoke
-// `processPendingBatch` directly — never waiting on a real scheduler interval, per
-// docs/testing-strategy.md's "Worker testing".
+// Kept apart from the BullMQ scheduler wiring so tests call processPendingBatch directly,
+// without waiting on a real scheduler interval. See docs/testing-strategy.md, Worker testing.
 @Injectable()
 export class IntegrationOutboxProcessorService {
     constructor(

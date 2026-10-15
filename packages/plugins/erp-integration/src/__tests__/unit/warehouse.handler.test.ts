@@ -42,9 +42,8 @@ describe('WarehouseStreamHandler', () => {
         expect(warehouseService.setActiveStateIfExists).toHaveBeenCalledWith(ctx, 'wh-1', false);
     });
 
-    // A deletion tombstone never carries a name (confirmed against real staging-integration
-    // payloads, mivend.issue.84.88 follow-up) — must still deactivate an already-known warehouse
-    // instead of silently skipping the event entirely (the previous behavior).
+    // Deletion tombstones carry no name, so the warehouse must still be deactivated by id
+    // rather than skipping the event, which would leave it active.
     it('updates isActive only, via setActiveStateIfExists, when name is missing but the warehouse already exists', async () => {
         const warehouseService = {
             upsert: vi.fn(),
@@ -65,11 +64,8 @@ describe('WarehouseStreamHandler', () => {
         expect(stockLocationService.update).not.toHaveBeenCalled();
     });
 
-    // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON
-    // encoding omits a scalar field equal to its zero-value, so `isActive:false` is NEVER sent
-    // explicitly, only as an absent key (confirmed live with Search Platform, mivend#89's
-    // follow-up). Absent must read as false, not true — this test previously asserted the
-    // opposite (the actual bug).
+    // proto3 omits zero-value scalars, so isActive:false is never sent explicitly.
+    // An absent isActive key must be read as false, not true.
     it('creates a new StockLocation when the warehouse upserts and no location exists yet', async () => {
         const warehouseService = { upsert: vi.fn().mockResolvedValue({ id: 'w1' }) };
         const stockLocationService = { create: vi.fn(), update: vi.fn() };
@@ -119,11 +115,8 @@ describe('WarehouseStreamHandler', () => {
         expect(stockLocationService.create).not.toHaveBeenCalled();
     });
 
-    // Integration Service encodes isActive as a plain (non-optional) proto3 bool — proto3 JSON
-    // encoding omits a scalar field equal to its zero-value, so `isActive:false` is NEVER sent
-    // explicitly, only as an absent key (confirmed live with Search Platform, mivend#89's
-    // follow-up — a real incident: a business-db deactivation backfill's replayed events had no
-    // isActive key at all, and the old `!== false` check silently kept treating them as active).
+    // proto3 omits zero-value scalars, so isActive:false is never sent explicitly.
+    // An absent isActive key must read as false; a `!== false` check would treat it as active.
     it('treats isActive absent from the payload as inactive (proto3 omits the false zero-value)', async () => {
         const warehouseService = { upsert: vi.fn().mockResolvedValue({ id: 'w1' }) };
         const stockLocationService = { create: vi.fn(), update: vi.fn() };

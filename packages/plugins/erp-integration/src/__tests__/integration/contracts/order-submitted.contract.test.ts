@@ -6,11 +6,8 @@ import type { OrderSubmittedPayload } from '../../../schemas/order-submitted.sch
 import { ORDER_EVENTS_SCHEMA } from '../../../schemas/order-events.schema';
 import { encodeConfluentMessage } from '../../../wire-format';
 
-// Contract-compatibility pattern (docs/testing-patterns.md) — this is the boundary MiVend owns
-// and is producer-authoritative for (issue #62's Schema Registry decision). No live Registry
-// needed: this checks the schema's own required-field/shape stability and the wire-format
-// envelope layout against a fixed fixture, same shape as plugin-sync's
-// sync-event-envelope.contract.test.ts.
+// Runs offline: checks required fields and wire envelope layout against a fixed fixture.
+// MiVend owns this boundary and is producer-authoritative for its schema.
 describe('order.confirmed contract (order-events topic)', () => {
     const FIXTURE: OrderSubmittedPayload = {
         eventId: '11111111-1111-1111-1111-111111111111',

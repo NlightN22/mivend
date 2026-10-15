@@ -6,10 +6,8 @@ import type { ErpIntegrationPluginOptions } from './types';
 export interface ReconciliationSummary {
     aggregateType: string;
     count: number;
-    // null (not 0) means this aggregate type has no active/inactive concept upstream at all —
-    // currently only true for storageLocation, per Integration Service's own contract (issue
-    // #84's Step 0). Reconcile against activeCount everywhere it isn't null; against count where
-    // it is.
+    // null (not 0) means this type has no active/inactive concept upstream (only storageLocation).
+    // Reconcile against activeCount when non-null; against count when null.
     activeCount: number | null;
     lastModifiedMax: string | null;
 }
@@ -18,12 +16,8 @@ const FETCH_TIMEOUT_MS = 10_000;
 const MAX_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 500;
 
-// The only outbound caller of Integration Service's reconciliation summary API (issue #84's Step
-// 0: GET /api/reconciliation/v1/summary, X-Api-Key auth). A transient failure here must never
-// read as "zero discrepancies" — ReconciliationService treats a thrown error as "skip this type
-// for this run", never as "0 upstream, so 0 discrepancies" (see external-integration-rules skill:
-// no silent drops). Retries a bounded number of times with backoff for a transient failure before
-// giving up; a non-2xx/non-network response after that still throws, it is never swallowed here.
+// Failures must never read as zero discrepancies; ReconciliationService skips the type on a throw.
+// Retries are bounded; a non-2xx or network error after retries still throws, never swallowed.
 @Injectable()
 export class ReconciliationSummaryClient {
     constructor(
@@ -37,11 +31,8 @@ export class ReconciliationSummaryClient {
             this.options.reconciliationApiUrl ?? RECONCILIATION_API_URL_DEFAULT,
         );
         if (aggregateType) url.searchParams.set('aggregateType', aggregateType);
-        // Issue #90's follow-up: Integration Service's own `stock` activeCount counted stock tied
-        // to a since-deleted warehouse, while mivend structurally can't track stock for a
-        // warehouse it doesn't keep a local row for — search-platform#111 added this filter so
-        // both sides compare the same definition of "active" stock, rather than mivend carrying a
-        // permanent, never-resolvable open reconciliation issue for a definition mismatch.
+        // Upstream activeCount includes stock tied to deleted warehouses, which mivend cannot track locally.
+        // Filter aligns both sides on one definition of active stock to avoid an unresolvable mismatch.
         if (aggregateType === 'stock') url.searchParams.set('excludeDeletedWarehouse', 'true');
 
         let lastError: Error | undefined;

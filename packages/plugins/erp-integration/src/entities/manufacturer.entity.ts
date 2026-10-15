@@ -2,21 +2,16 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// ProductChanged's top-level `manufacturer` field is an ERP directory GUID, NOT a display name —
-// confirmed live with Search Platform (issue #116): the field's OpenAPI description
-// ("Manufacturer/brand name") is misleading, and the same GUID also appears as the `valueRef`...
-// no — as the value of `attributes['Производитель'].raw` alongside the human-readable name,
-// which is what backfills `name` below opportunistically (see ManufacturerService.upsert).
-// `name` is nullable and never cleared back to null just because a later event omits it.
+// ProductChanged.manufacturer is an ERP directory GUID, not the display name (OpenAPI doc is wrong).
+// Name backfills from attributes['Производитель'].raw; never cleared to null by later events.
 @Entity()
 export class Manufacturer extends VendureEntity {
     constructor(input?: DeepPartial<Manufacturer>) {
         super(input);
     }
 
-    // The ERP directory GUID (ProductChanged.manufacturer) — stable identity, never the display
-    // name. Same "own Vendure id + separate indexed ERP id" convention as every other entity in
-    // this plugin (Warehouse.erpId, ProductTaxCodeFlag.externalProductId, ...).
+    // ERP directory GUID is the stable identity; the display name can change, so never key on it.
+    // Same own-id plus indexed erpId pattern as Warehouse and ProductTaxCodeFlag.
     @Index({ unique: true })
     @Column({ type: 'varchar' })
     externalId!: string;

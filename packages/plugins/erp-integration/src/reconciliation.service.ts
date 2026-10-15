@@ -36,10 +36,8 @@ export interface OpenErpReconciliationIssueListOptions {
 
 const OPEN_ISSUES_MAX_TAKE = 100;
 
-// Single comparison entry point shared by the daily ScheduledTask and the manual admin mutation
-// (issue #84) — one service method, two callers, per the issue's own explicit requirement. Never
-// auto-resolves a discrepancy: every mismatch becomes a persisted, open ErpReconciliationIssue for
-// a human to act on.
+// Shared by the scheduled task and manual admin mutation; must never auto-resolve a discrepancy.
+// Every mismatch is persisted as an open ErpReconciliationIssue for a human to act on.
 @Injectable()
 export class ReconciliationService {
     constructor(
@@ -138,11 +136,8 @@ export class ReconciliationService {
         return saved;
     }
 
-    // Without this, a stale open issue lingers forever showing outdated counts once the
-    // underlying drift is actually gone — recordIssue only ever runs when a mismatch is
-    // detected, never when one disappears. Auto-closing here isn't "guessing which number is
-    // right" (the thing this service's design otherwise refuses to do) — both counts have just
-    // been independently re-verified to agree, so there is nothing left to guess.
+    // recordIssue only runs on mismatch, so a resolved drift would leave a stale open issue forever.
+    // Safe to auto-close here: both counts were just re-verified equal, so nothing is guessed.
     private async autoResolveIfOpen(ctx: RequestContext, aggregateType: string): Promise<void> {
         const repo = this.connection.getRepository(ctx, ErpReconciliationIssue);
         const existing = await repo.findOne({ where: { aggregateType, status: 'open' } });
@@ -158,12 +153,8 @@ export class ReconciliationService {
         );
     }
 
-    // Without this dedupe, a persistent drift (the exact scenario this issue was written for —
-    // see the commit message) would insert a brand-new open row every single day forever, since
-    // runComparison re-detects the same drift on every scheduled run (mivend.audit.85 HIGH
-    // finding). Update the existing open issue for this aggregateType in place instead of
-    // inserting a duplicate; a genuinely new occurrence only gets its own row once the previous
-    // one has been resolved.
+    // Persistent drift is re-detected on every scheduled run; update the open issue per aggregateType
+    // in place instead of adding a row daily; a new row only after the prior one is resolved.
     private async recordIssue(
         ctx: RequestContext,
         params: {
@@ -197,11 +188,8 @@ export class ReconciliationService {
             await repo.save(new ErpReconciliationIssue(fields));
         }
 
-        // Unlike the reservation/payment reconciliation issues, a manual re-run
-        // (triggeredBy: 'manual') always carries the administrator who requested it — the one
-        // case among these four call sites where a real recipient is known without inventing a
-        // broadcast model. A 'scheduled' run has no administrator to notify, so it stays a
-        // detected-but-unnotified issue, same as the other reconciliation plugins today.
+        // A manual run always has the requesting administrator to notify; scheduled runs have none.
+        // So scheduled issues stay detected-but-unnotified, as in the other reconciliation plugins.
         if (params.triggeredByAdministratorId) {
             await this.notificationService.create(ctx, {
                 recipientType: 'administrator',

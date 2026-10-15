@@ -5,9 +5,8 @@ import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity
 import type { InboundStream } from './types';
 import { isVersionNewer } from './version-compare';
 
-// Retention (#147): each purge tick only looks at this many (stream, entityId) groups with more
-// than one `processed` row, so a huge backlog of duplicates can't turn one purge tick into a
-// single unbounded DELETE — the scheduled task just takes more ticks instead.
+// Caps each purge tick to a fixed number of (stream, entityId) duplicate groups so a large backlog
+// cannot become one unbounded DELETE; the remainder is taken on later ticks.
 const PURGE_SUPERSEDED_GROUP_BATCH_SIZE = 200;
 
 // Retention of processed inbox rows, split from IntegrationInboxService (claim/retry code).
@@ -15,10 +14,8 @@ const PURGE_SUPERSEDED_GROUP_BATCH_SIZE = 200;
 export class IntegrationInboxRetentionService {
     constructor(private readonly dataSource: DataSource) {}
 
-    // Retention (#147): only the latest processed version per (stream, entityId) is read
-    // (isSupersededByNewerVersion) — tombstones (payload={}) every older duplicate's payload but
-    // keeps the row, since it's the enqueue dedup key and deleting it would let a real Kafka
-    // redelivery pass dedup as new and reapply stale data (audit HIGH finding).
+    // Older duplicates keep their row but get payload={}: the row is the enqueue dedup key.
+    // Deleting it would let a Kafka redelivery pass dedup as new and reapply stale data.
     async purgeSupersededProcessedRows(): Promise<number> {
         const repo = this.dataSource.getRepository(IntegrationInboxEvent);
         const tombstone = {};
@@ -47,9 +44,8 @@ export class IntegrationInboxRetentionService {
                 .andWhere('event.status = :status', { status: 'processed' })
                 .andWhere(`event.payload <> '{}'::jsonb`)
                 .getMany();
-            // isVersionNewer, not a SQL/lexicographic MAX(version) — version is not guaranteed
-            // fixed-width (see the entity's own column comment), same rule as
-            // IntegrationInboxProcessorService.isSupersededByNewerVersion.
+            // Compare with isVersionNewer, not SQL/lexicographic MAX(version): version is not fixed-width.
+            // Same ordering rule as IntegrationInboxProcessorService.isSupersededByNewerVersion.
             let newest = rows[0];
             for (const row of rows.slice(1)) {
                 if (isVersionNewer(row.version, newest.version)) newest = row;

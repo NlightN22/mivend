@@ -1,15 +1,5 @@
-// Pure resolution of the ERP's per-product `СтавкаНДС` enum string to either an existing
-// TaxCategory to assign, or an instruction to auto-create one. Issue #79/#141: tax classification
-// must never block product import (ERP sends gross/tax-inclusive prices, so a wrong/missing
-// TaxCategory only skews internal tax reporting, not what the customer pays).
-//
-// `unset` (empty code) and `legacy` (НДС18, predates the 2019 rate change — stale ERP data, not a
-// rate to support) are genuinely different from an unmapped-but-real code: they fall back to the
-// default TaxCategory and get a non-blocking review flag, same as before issue #141. Any other
-// code — recognized-but-not-yet-configured, or never seen before — is no longer "unknown", it's
-// auto-created on the spot (see product.handler.ts's resolveTaxCategoryId /
-// TaxCategoryAutoCreateService), keyed by the same erpVatCode both this stream and
-// VatRateStreamHandler use. No I/O here; the caller does the actual TaxCategory lookup/creation.
+// Tax classification must never block product import: a wrong TaxCategory only skews internal
+// tax reporting, since ERP prices are tax-inclusive. Unknown codes are auto-created by erpVatCode.
 
 export type VatFlagReason = 'unset' | 'legacy';
 
@@ -24,10 +14,8 @@ export interface VatCodeResolved {
     flag?: VatCodeFlag;
 }
 
-// erpVatCode is always populated (mapped Latin code for a known enum member, or the raw code
-// itself for a never-seen-before one — see RAW_CODE_TO_ERP_VAT_CODE's fallback below) — it's the
-// stable key the caller uses to find-or-create the TaxCategory and, later, VatRateStreamHandler
-// uses to upsert its TaxRate.
+// Shared key: VatRateStreamHandler upserts the TaxRate under this same erpVatCode,
+// so it must always be populated, falling back to the raw ERP code for unknown members.
 export interface VatCodeAutoCreate {
     kind: 'auto-create';
     erpVatCode: string;
@@ -50,18 +38,12 @@ const RAW_CODE_TO_ERP_VAT_CODE: Readonly<Record<string, string>> = {
     БезНДС: 'BezNDS',
 };
 
-// НДС18 predates the 2019 20% VAT rate change — per the developer, seeing it on a product today
-// almost certainly means stale/unsynced ERP data, not a rate mivend needs to support going
-// forward. Flagged distinctly from a fully unrecognized code so it routes to "review in the ERP", not
-// "review the mapping".
+// Legacy НДС18 predates the 2019 VAT change: it means stale ERP data, not a rate to support.
+// Flagged separately from unknown codes so it routes to 'review in ERP', not 'review mapping'.
 const LEGACY_RAW_CODE = 'НДС18';
 
-// Shared with VatRateStreamHandler (vat-rate.handler.ts) so both this stream and the reference-
-// data stream derive the exact same TaxCategory.customFields.erpVatCode key from the ERP's raw
-// enum member name — falls back to the raw code itself when it's not one of the known
-// Cyrillic->Latin members (a never-seen-before code is auto-registered under its own name, not
-// dropped — see this file's own doc comment and VatRateChangedSchema's doc comment for the same
-// policy on the reference-data side).
+// Both streams must derive the same TaxCategory.customFields.erpVatCode key, so this is shared.
+// Unknown enum members fall back to the raw code and are auto-registered, never dropped.
 export function toErpVatCode(rawCode: string): string {
     return RAW_CODE_TO_ERP_VAT_CODE[rawCode] ?? rawCode;
 }

@@ -13,11 +13,8 @@ import { makeInboxProcessor } from './inbox-processor-helpers';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { MissingDependencyError } from '../../../types';
 
-// Component chain: pending row -> claim -> handler.apply -> processed / retry / dead-letter, plus
-// the out-of-order guard. Handlers are stubbed (never real ProductService/etc.) — this suite
-// proves the inbox lifecycle and dispatch/guard logic, not real Vendure catalog writes (those are
-// exercised in erp-import's own existing handler tests, whose upsert logic this plugin's
-// handlers deliberately mirror).
+// Handlers are stubbed on purpose: this suite tests inbox lifecycle and dispatch/guard logic only.
+// Real catalog writes are tested in erp-import; these handlers mirror its upsert logic.
 let dataSource: DataSource;
 let inboxService: IntegrationInboxService;
 const makeProcessor = (apply: ReturnType<typeof vi.fn>): ReturnType<typeof makeInboxProcessor> =>
@@ -147,9 +144,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
             applied.push(payload);
         });
 
-        // Enqueued in reverse order so claimBatch's createdAt-ASC ordering would hand the
-        // processor [v9, v10] if it didn't re-sort by version (issue #62 review, MEDIUM #1) —
-        // both land in the same claimBatch() call, both still 'pending' at claim time.
+        // Reversed enqueue: createdAt order alone yields [v9, v10]; claimBatch must re-sort by version.
         await inboxService.enqueue({
             stream: 'stock',
             entityId: 's-order',
@@ -168,19 +163,14 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         const { processed } = await makeProcessor(apply).processPendingBatch();
         expect(processed).toBe(2);
         expect(apply).toHaveBeenCalledTimes(2);
-        // Both versions started 'pending' (neither is stale relative to an already-*processed*
-        // row yet), so both are genuinely applied — but the in-batch sort (MEDIUM #1 fix) must
-        // apply them in ascending version order, '9' then '10', so '10' is the final state
-        // instead of a lower version clobbering a higher one applied first.
+        // Both rows are pending at claim, so both apply; ascending in-batch sort leaves v10 as final state.
         expect(applied).toEqual([
             { sku: 'SKU-ORDER', stockOnHand: 9 },
             { sku: 'SKU-ORDER', stockOnHand: 10 },
         ]);
     });
 
-    // Issue #93: the critical lane's stream filter must claim/process order-registration-result
-    // promptly regardless of how large the bulk-stream backlog is — this is the actual incident
-    // (a 275k-row price/stock resync starving reservation-release-blocking messages).
+    // Bulk backlog must never delay critical-lane claims; a large resync otherwise starves releases.
     it("processes only the requested lane's streams even with a large backlog of other streams pending", async () => {
         const apply = vi.fn().mockResolvedValue(undefined);
         for (let i = 0; i < 25; i++) {
@@ -215,9 +205,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         expect(pendingBulk.every(row => row.status === 'pending')).toBe(true);
     });
 
-    // Issue #93: the bulk lane's scheduled task loops processPendingBatch while `claimed` comes
-    // back equal to the requested batch size, draining more than one batch worth of backlog
-    // within a single tick instead of waiting for the next poll interval.
+    // Large backlogs must drain within one tick, not one poll interval per batch.
     it("reports claimed === batchSize when more pending rows remain, enabling the bulk lane's immediate-reclaim loop", async () => {
         const apply = vi.fn().mockResolvedValue(undefined);
         for (let i = 0; i < 5; i++) {
@@ -243,13 +231,8 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         expect(third.claimed).toBe(0);
     });
 
-    // #149: a single claimed batch's own processing loop must respect deadlineMs too, not just
-    // the reclaim loop between batches — otherwise one slow-stream batch alone can run past the
-    // scheduler's task timeout. Rows claimed but not yet reached when the deadline hits stay
-    // `processing`, picked up by the existing stale-processing reclaim on a later sweep.
-    // #149 audit MEDIUM: rows not reached by the deadline must be immediately re-claimable, not
-    // stuck `processing` until the 5-minute stale reclaim — under a saturated backlog the deadline
-    // fires on nearly every tick, so waiting 5 minutes for the leftover rows breaks FIFO.
+    // Batch loop must honor deadlineMs too, or one slow batch overruns the task timeout.
+    // Unreached rows must be re-claimable at once; a 5-min stale wait would break FIFO under backlog.
     it('stops processing a batch once deadlineMs is reached, releasing the rest back to pending', async () => {
         const apply = vi.fn().mockResolvedValue(undefined);
         for (let i = 0; i < 3; i++) {

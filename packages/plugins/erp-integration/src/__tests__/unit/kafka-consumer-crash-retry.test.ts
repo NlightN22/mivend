@@ -8,12 +8,8 @@ const CONSUMER_EVENTS = {
     CRASH: 'consumer.crash',
 };
 
-// A fake kafkajs Consumer just real enough to drive KafkaConsumerService's supervisor: connect()/
-// subscribe()/run() are spies, and emitCrash()/emitConnect() let a test author drive its
-// lifecycle without a real broker (docs/testing-strategy.md's "mock only real external
-// dependencies" — kafkajs's own network client is exactly that boundary). connectImpl is
-// overridable per created instance (via nextConnectImpl below) so a test can simulate a broker
-// that's still down for connectWithBackoff's own internal retries.
+// connectImpl is overridable per instance (via nextConnectImpl) so a test can simulate
+// a broker still down during connectWithBackoff's internal retries.
 class FakeConsumer extends EventEmitter {
     events = CONSUMER_EVENTS;
     connectImpl: () => Promise<void> = async () => undefined;
@@ -34,9 +30,8 @@ class FakeConsumer extends EventEmitter {
 }
 
 const createdConsumers: FakeConsumer[] = [];
-// Applied to the NEXT consumer created (Kafka.consumer() runs synchronously, so this is set
-// right before the call that will create it) — undefined means "use FakeConsumer's own default
-// (resolves immediately)".
+// Consumed by the next Kafka.consumer() call, which runs synchronously, so it must be set
+// immediately before that call.
 let nextConnectImpl: (() => Promise<void>) | undefined;
 
 vi.mock('kafkajs', () => ({
@@ -155,10 +150,8 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
         expect(createdConsumers).toHaveLength(1);
     });
 
-    // Regression test: a broker down at boot (connectWithBackoff exhausts its own internal
-    // CONNECT_MAX_ATTEMPTS) used to leave the consumer permanently dead — start() just rethrew
-    // and nothing else ever retried, since the CRASH-event supervisor only attaches to a
-    // consumer that reached consumer.run(), which connectWithBackoff failing never reaches.
+    // The CRASH supervisor only attaches after consumer.run(), which a failed connectWithBackoff
+    // never reaches, so a boot-time broker outage needs start()'s own retry path.
     it('schedules a retry when start() itself fails to connect (broker down at boot)', async () => {
         nextConnectImpl = async () => {
             throw new Error('broker down');
@@ -171,9 +164,8 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
 
         const startPromise = service.start();
         startPromise.catch(() => undefined);
-        // Exhausts connectWithBackoff's own internal 8-attempt capped backoff (delays sum to
-        // exactly 123s: 1+2+4+8+16+32+60), at which point it throws and start()'s own catch
-        // schedules the crash-retry — but that retry's own 1s delay hasn't elapsed yet.
+        // Burns through connectWithBackoff's 8 attempts (delays total 123s), so start()'s catch
+        // schedules the crash-retry while its 1s delay is still pending.
         await vi.advanceTimersByTimeAsync(123_000);
         await expect(startPromise).rejects.toThrow('broker down');
         expect(createdConsumers).toHaveLength(1);
@@ -186,10 +178,8 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
         expect(createdConsumers[1].connect).toHaveBeenCalledTimes(1);
     });
 
-    // The actual bug fixed here: before this fix, scheduleCrashRetry's own setTimeout callback
-    // only logged on failure and never rescheduled — a single failed retry attempt was a
-    // permanent, silent death (identical to having no crash-retry supervisor at all) rather than
-    // a transient setback. This proves the loop keeps going past one failed retry.
+    // The timer callback in scheduleCrashRetry must reschedule itself on failure; logging only
+    // made a single failed retry a permanent silent death.
     it('keeps retrying indefinitely — a retry that itself fails schedules another retry, not silence', async () => {
         const service = new KafkaConsumerService(
             makeOptions(),
@@ -203,9 +193,8 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
         nextConnectImpl = async () => {
             throw new Error('still down');
         };
-        // Retry #1 fires (creates consumer #2), whose own connectWithBackoff then exhausts
-        // (123s, see the previous test) and throws — that failure must schedule retry #2 (delay
-        // now 2000ms, attempt count 2), not go quiet.
+        // A failure during retry #1 (connectWithBackoff exhausts) must schedule retry #2
+        // with the doubled 2000ms delay, not go quiet.
         await vi.advanceTimersByTimeAsync(1000);
         expect(createdConsumers).toHaveLength(2);
         await vi.advanceTimersByTimeAsync(123_000);
@@ -218,9 +207,8 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
         expect(createdConsumers[2].connect).toHaveBeenCalledTimes(1);
     });
 
-    // KafkaStatusController (served by the main HTTP process) reads this row instead of
-    // isConnected()'s in-memory flag, which is invisible from that separate process — see
-    // kafka-consumer-status.entity.ts's own doc comment.
+    // Read from the DB row, not isConnected(): the in-memory flag is invisible to the
+    // separate HTTP process that serves KafkaStatusController.
     it('persists connected: true on CONNECT and connected: false on CRASH', async () => {
         const upsert = vi.fn().mockResolvedValue(undefined);
         const dataSource = { getRepository: () => ({ upsert }) };

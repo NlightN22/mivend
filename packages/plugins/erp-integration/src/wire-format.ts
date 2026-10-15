@@ -1,11 +1,5 @@
-// Confluent wire format: 1 magic byte (always 0) + 4-byte big-endian schema id + payload bytes.
-// Used by both JSON Schema and Avro serdes on the Confluent Schema Registry — encoding this
-// header is what lets Integration Service's consumer resolve our OrderSubmitted schema id before
-// parsing the payload. This is the encode side ONLY: this plugin's own outbound `OrderSubmitted`
-// producer is the sole user of this wire format. The 8 inbound catalog/price/stock streams do NOT
-// use it — they are plain protobuf `toBinary()`/`fromBinary()` with no Confluent header at all
-// (see kafka-consumer.service.ts's comment and docs/ai/1c-integration-service-decision.md's
-// 2026-08-14 retraction) — a decode counterpart was removed for that reason.
+// Integration Service needs this header to resolve the OrderSubmitted schema id before parsing.
+// Encode side only: inbound streams are plain protobuf with no Confluent header.
 const MAGIC_BYTE = 0;
 
 export function encodeConfluentMessage(schemaId: number, payload: unknown): Buffer {

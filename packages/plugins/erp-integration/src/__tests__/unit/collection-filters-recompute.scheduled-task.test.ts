@@ -85,9 +85,8 @@ function makeOptions(
     };
 }
 
-// Exercises the task's own config.execute() directly rather than the real ScheduledTask.execute()
-// wrapper (which builds scheduledContext itself via RequestContextService/ChannelService — that's
-// Vendure core's own already-tested plumbing, not ours to re-verify here).
+// Calls config.execute() directly, skipping ScheduledTask.execute(), which builds scheduledContext
+// itself; that wrapper's context setup is Vendure core's own, already tested.
 describe('createCollectionFiltersRecomputeTask', () => {
     it('skips on a branch instance', async () => {
         const triggerApplyFiltersJob = vi.fn();
@@ -136,11 +135,8 @@ describe('createCollectionFiltersRecomputeTask', () => {
         expect(result).toEqual({ triggered: true });
     });
 
-    // Real incident, 2026-09-20: apply-collection-filters has no idempotency of its own
-    // (upstream Vendure gap, vendurehq/vendure#5280 — concurrent runs silently collide on the
-    // Collection<->ProductVariant junction table). Several full sweeps piled up because this
-    // task fired every 3 minutes regardless of whether the previous sweep (sometimes ~44 minutes
-    // for this project's real catalog) had finished.
+    // apply-collection-filters is not idempotent: overlapping runs collide on the junction table
+    // Sweeps can outlast the interval (~44 min vs 3 min), so runs must never overlap.
     it('skips triggering a new sweep while a previous one has not settled yet', async () => {
         const triggerApplyFiltersJob = vi.fn();
         const findMany = vi.fn().mockResolvedValue({ items: [{ id: 'job-1' }], totalItems: 1 });

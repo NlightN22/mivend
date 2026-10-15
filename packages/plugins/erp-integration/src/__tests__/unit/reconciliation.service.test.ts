@@ -8,9 +8,7 @@ function makeSummary(aggregateType: string, activeCount: number): Reconciliation
     return { aggregateType, count: activeCount, activeCount, lastModifiedMax: null };
 }
 
-// runComparison is the one method both the scheduled task and the manual mutation call — these
-// tests exercise it directly, not through either caller, mirroring this plugin's own
-// integration-inbox-processor "invoke the processing method directly" convention.
+// runComparison is shared by the scheduled task and the manual mutation, so tests call it directly
 describe('ReconciliationService.runComparison', () => {
     function makeService(overrides?: {
         fetchSummaries?: (aggregateType?: string) => Promise<ReconciliationSummary[]>;

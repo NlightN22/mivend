@@ -24,10 +24,8 @@ function makeHandler(
 describe('CounterpartyStreamHandler', () => {
     const ctx = {} as RequestContext;
 
-    // A deletion tombstone never carries a name — same convention as organization/department.
-    // The handler must still forward the update so an already-known counterparty can be
-    // deactivated; CounterpartyService.upsertActiveState is what refuses to fabricate a
-    // brand-new row from a null name, not this handler.
+    // Deletion tombstones carry no name, same as organization/department.
+    // Forward it so a known counterparty can be deactivated; upsertActiveState refuses null-name inserts.
     it('passes name:null through when the payload has no name (deletion tombstone)', async () => {
         const { handler, counterpartyService } = makeHandler();
 
@@ -123,9 +121,8 @@ describe('CounterpartyStreamHandler', () => {
         );
     });
 
-    // Issue #104 follow-up, verified live against @nlightn22/event-contracts@0.39.0
-    // (search-platform#92/#118): inn/erpGroupLabel/departmentId are real fields on this stream
-    // today — do not skip them just because an older issue comment claimed they were missing.
+    // inn, erpGroupLabel and departmentId are real fields in @nlightn22/event-contracts 0.39.0.
+    // Do not skip them based on older notes claiming they are absent.
     it('passes through inn/erpGroupLabel/departmentId when present', async () => {
         const { handler, counterpartyService } = makeHandler();
 
@@ -192,9 +189,8 @@ describe('CounterpartyStreamHandler', () => {
         });
     });
 
-    // Issue #131 — factualAddress/phone/officialEmail (new in 0.39.0) and legalAddress
-    // (pre-existing, field 15) are real optional-scalar fields with the same
-    // presence-vs-absence semantics as inn/erpGroupLabel/departmentId above.
+    // factualAddress, phone and officialEmail are optional scalars added in 0.39.0; legalAddress is field 15.
+    // Presence and absence are distinct, as with inn/erpGroupLabel/departmentId.
     it('passes through legalAddress/factualAddress/phone/officialEmail when present', async () => {
         const { handler, counterpartyService } = makeHandler();
 
@@ -270,11 +266,7 @@ describe('CounterpartyStreamHandler', () => {
         expect(call.notificationPhone).toBeUndefined();
     });
 
-    // Issue #109 unblocked this — managerId is now resolved to a Vendure Administrator.id via
-    // UserEnrichmentService.findManagerLink. mivend.audit.common (2026-09-20) replaced the old
-    // two-outcome findAdministratorIdByErpId (found/not-found) with a three-outcome resolution —
-    // see that method's own doc comment for why "known, unlinked" must not be retried the same
-    // way as "never seen" (the actual fix for issue #104's inbox backlog).
+    // findManagerLink has three outcomes: known-but-unlinked must not be retried like never-seen.
     describe('manager_id/manager_ids resolution (issue #109 unblocked, mivend.audit.common fix)', () => {
         it('resolves managerId to an Administrator.id when linked', async () => {
             const findManagerLink = vi
@@ -371,10 +363,8 @@ describe('CounterpartyStreamHandler', () => {
             });
         });
 
-        // The actual bug this fix addresses: a manager erpId that's known but still unlinked
-        // (a human hasn't decided yet, can take days) must NOT be retried like a race — it must
-        // save with no manager and move on. AdministratorLinkedListener (plugin-counterparty)
-        // backfills this later if/when the erpId actually links.
+        // A known but unlinked manager erpId must save with no manager, not be retried as a race.
+        // AdministratorLinkedListener (plugin-counterparty) backfills managerId once the erpId links.
         it('does not throw, and saves with assignedManagerId:null, when the manager erpId is known but still unlinked', async () => {
             const findManagerLink = vi
                 .fn()

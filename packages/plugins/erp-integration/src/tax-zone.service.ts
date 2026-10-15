@@ -3,9 +3,8 @@ import { ChannelService, RequestContext, TransactionalConnection, Zone } from '@
 
 import { DEFAULT_TAX_ZONE_NAME, loggerCtx } from './types';
 
-// Issue #141: find-or-create for the single default tax Zone. Zone has no natural external-id
-// field in Vendure core, so this keys by name — the only stable, human-visible handle it offers.
-// Shared by the product-side auto-create path and VatRateStreamHandler.
+// Zone has no external-id field in Vendure core, so it is looked up by name (the only stable handle).
+// Shared by the product auto-create path and VatRateStreamHandler, so both must match on name.
 @Injectable()
 export class TaxZoneService {
     constructor(
