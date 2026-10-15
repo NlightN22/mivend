@@ -29,7 +29,7 @@ export const MIVEND_ORDER_STATUSES: readonly OrderStatusEntry[] = [
     {
         ...NONE,
         code: 'SENT_TO_ERP',
-        name: 'Передан в учётную систему',
+        name: 'Передан',
         description: 'Заказ передан в учётную систему',
         rank: 1,
         customerGroup: 'pending',
@@ -39,7 +39,7 @@ export const MIVEND_ORDER_STATUSES: readonly OrderStatusEntry[] = [
     {
         ...NONE,
         code: 'RESERVED',
-        name: 'Зарезервирован / ожидает согласования',
+        name: 'Зарезервирован',
         description: 'Товар зарезервирован, заказ ожидает согласования',
         rank: 2,
         customerGroup: 'pending',
@@ -60,8 +60,8 @@ export const MIVEND_ORDER_STATUSES: readonly OrderStatusEntry[] = [
     {
         ...NONE,
         code: 'REJECTED',
-        name: 'Заказ не принят, свяжитесь с менеджером',
-        description: 'Заказ не принят в учётной системе',
+        name: 'Не принят',
+        description: 'Заказ не принят в учётной системе, свяжитесь с менеджером',
         rank: 0,
         customerGroup: 'rejected',
         source: 'mivend',

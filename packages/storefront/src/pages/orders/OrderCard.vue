@@ -63,7 +63,11 @@ const preview = computed(() => {
                 </div>
                 <div class="order-meta">{{ meta }}</div>
             </div>
-            <span class="status-pill" :class="statusVariant !== 'default' ? statusVariant : ''">
+            <span
+                class="status-pill"
+                :class="statusVariant !== 'default' ? statusVariant : ''"
+                :title="statusLabel"
+            >
                 {{ statusLabel }}
             </span>
             <div class="order-pay">
@@ -143,6 +147,10 @@ const preview = computed(() => {
     font-size: 13px;
     font-weight: 950;
     white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .status-pill.muted {
