@@ -14,9 +14,8 @@ import {
 import { freightEligibilityChecker } from '../../freight-eligibility-checker';
 import { freightOrderGuard, FREIGHT_NO_TRADING_POINT_MESSAGE } from '../../freight-order-guard';
 
-// Real SQL and the real TradingPointService/checker/guard over hand-rolled tables (Vendure
-// entities need bootstrap-time id strategy). Only CounterpartyService (another plugin) is replaced
-// by its own join query, copied from counterparty.service.ts getForCustomer.
+// Vendure entities need the bootstrap-time id strategy, so tables can't be hand-rolled here.
+// CounterpartyService is stubbed by a join copied from counterparty.service.ts getForCustomer.
 @Entity('contact_person')
 class TestContact {
     @PrimaryGeneratedColumn() id!: number;
