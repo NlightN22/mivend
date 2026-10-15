@@ -40,7 +40,7 @@ class TestPaymentAttempt {
 
 let dataSource: DataSource;
 let service: PaymentAttemptService;
-let insideTransaction: () => Promise<void>;
+let beforeTransaction: () => Promise<void>;
 const ctx = {} as RequestContext;
 
 function mapEntity(entity: unknown): typeof TestProformaInvoice | typeof TestPaymentAttempt {
@@ -65,12 +65,13 @@ beforeAll(async () => {
     const connection = {
         getRepository: (c: { __manager?: EntityManager }, entity: unknown) =>
             (c.__manager ?? dataSource.manager).getRepository(mapEntity(entity)),
-        withTransaction: <T>(c: RequestContext, work: (tx: RequestContext) => Promise<T>) =>
-            dataSource.transaction(manager => work({ ...c, __manager: manager } as never)),
+        withTransaction: async <T>(c: RequestContext, work: (tx: RequestContext) => Promise<T>) => {
+            await beforeTransaction();
+            return dataSource.transaction(manager => work({ ...c, __manager: manager } as never));
+        },
     } as unknown as TransactionalConnection;
     const numbering = {
         next: async () => {
-            await insideTransaction();
             return `n-${Math.random()}`;
         },
     };
@@ -91,7 +92,7 @@ afterAll(async () => {
 beforeEach(async () => {
     await dataSource.getRepository(TestPaymentAttempt).clear();
     await dataSource.getRepository(TestProformaInvoice).clear();
-    insideTransaction = async () => undefined;
+    beforeTransaction = async () => undefined;
 });
 
 describe('payProformaInvoice pending outcome (#197)', () => {
@@ -108,8 +109,8 @@ describe('payProformaInvoice pending outcome (#197)', () => {
 
     it('does not regress a proforma invoice paid by a concurrent capture to issued', async () => {
         const invoice = await seed();
-        // Second connection commits `paid` after the pending call read `pending`, before its update.
-        insideTransaction = async () => {
+        // Second connection commits `paid` after the pending call's snapshot read, before its transaction.
+        beforeTransaction = async () => {
             await dataSource.query(
                 `UPDATE "${schema}".proforma_invoice SET status = 'paid' WHERE id = $1`,
                 [invoice.id],

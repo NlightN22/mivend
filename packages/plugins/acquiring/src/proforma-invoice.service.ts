@@ -41,14 +41,22 @@ export class ProformaInvoiceService {
         ctx: RequestContext,
         proformaInvoiceId: number,
         status: ProformaInvoiceStatus,
-        fromStatus?: ProformaInvoiceStatus,
     ): Promise<void> {
         await this.connection
             .getRepository(ctx, ProformaInvoice)
-            .update(
-                { id: proformaInvoiceId, ...(fromStatus ? { status: fromStatus } : {}) },
-                { status },
-            );
+            .update({ id: proformaInvoiceId }, { status });
+    }
+
+    async findOneForUpdate(
+        ctx: RequestContext,
+        proformaInvoiceId: number,
+    ): Promise<ProformaInvoice> {
+        return this.connection
+            .getRepository(ctx, ProformaInvoice)
+            .createQueryBuilder('proformaInvoice')
+            .setLock('pessimistic_write')
+            .where('proformaInvoice.id = :id', { id: proformaInvoiceId })
+            .getOneOrFail();
     }
 
     async findOne(ctx: RequestContext, proformaInvoiceId: number): Promise<ProformaInvoice | null> {

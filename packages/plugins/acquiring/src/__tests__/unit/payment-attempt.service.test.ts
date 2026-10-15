@@ -32,7 +32,13 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
 
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
     function createMockProformaInvoiceService() {
-        return { findOne: vi.fn(), updateStatus: vi.fn() };
+        const findOne = vi.fn();
+        // The locked re-read returns whatever the outside read returned last, unless a test overrides it.
+        const findOneForUpdate = vi.fn(async () => {
+            const results = findOne.mock.results;
+            return results.length ? await results[results.length - 1].value : null;
+        });
+        return { findOne, findOneForUpdate, updateStatus: vi.fn() };
     }
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
     function createMockSettlementEntryService() {
@@ -108,13 +114,35 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
 
         await service.payProformaInvoice(mockCtx, 1, 'pending');
 
-        expect(mockProformaInvoiceService.updateStatus).toHaveBeenCalledWith(
-            mockCtx,
-            1,
-            'issued',
-            'pending',
-        );
+        expect(mockProformaInvoiceService.updateStatus).toHaveBeenCalledWith(mockCtx, 1, 'issued');
         expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
+    });
+
+    it('rejects a direct payment when the locked re-read finds the proforma invoice cancelled', async () => {
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'issued' }),
+        );
+        mockProformaInvoiceService.findOneForUpdate.mockResolvedValueOnce(
+            makeProformaInvoice({ status: 'cancelled' }),
+        );
+
+        await expect(service.payProformaInvoice(mockCtx, 1, 'success')).rejects.toThrow(
+            /cancelled/,
+        );
+        expect(mockPaymentAttemptRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('does not regress a proforma invoice the locked re-read finds paid', async () => {
+        mockProformaInvoiceService.findOne.mockResolvedValue(
+            makeProformaInvoice({ status: 'pending' }),
+        );
+        mockProformaInvoiceService.findOneForUpdate.mockResolvedValueOnce(
+            makeProformaInvoice({ status: 'paid' }),
+        );
+
+        await service.payProformaInvoice(mockCtx, 1, 'pending');
+
+        expect(mockProformaInvoiceService.updateStatus).not.toHaveBeenCalled();
     });
 
     it('is a no-op when a PaymentAttempt already exists for the same (channel, externalReference) — level 3 idempotency, the external-integration-rules skill', async () => {

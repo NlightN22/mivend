@@ -214,43 +214,50 @@ export class ReservationService {
         }
     }
 
+    // Same lock as reserveOrder, so a release cannot slip between its active check and its insert.
     async releaseReservations(ctx: RequestContext, orderId: ID): Promise<number> {
-        const releasedAt = new Date();
-        // Conditional UPDATE ... RETURNING: concurrent releases each get only the rows they flipped.
-        const result = await this.connection
-            .getRepository(ctx, Reservation)
-            .createQueryBuilder()
-            .update()
-            .set({
-                status: 'released',
-                releasedAt,
-                erpReleaseOperationId: () => 'gen_random_uuid()::text',
-            })
-            .where('orderId = :orderId AND status = :status', {
-                orderId: String(orderId),
-                status: 'active',
-            })
-            .returning('*')
-            .execute();
-        const released = (result.raw as Array<Partial<Reservation>>).map(row =>
-            Object.assign(new Reservation(), row),
-        );
-        if (released.length === 0) {
-            return 0;
-        }
-
-        const order = await this.connection
-            .getRepository(ctx, Order)
-            .findOne({ where: { id: orderId } });
-        for (const reservation of released) {
-            this.eventBus.publish(
-                new ReservationReleasedEvent(ctx, reservation, order?.code ?? String(orderId)),
+        return withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, async txCtx => {
+            const releasedAt = new Date();
+            // Conditional UPDATE ... RETURNING: concurrent releases each get only the rows they flipped.
+            const result = await this.connection
+                .getRepository(txCtx, Reservation)
+                .createQueryBuilder()
+                .update()
+                .set({
+                    status: 'released',
+                    releasedAt,
+                    erpReleaseOperationId: () => 'gen_random_uuid()::text',
+                })
+                .where('orderId = :orderId AND status = :status', {
+                    orderId: String(orderId),
+                    status: 'active',
+                })
+                .returning('*')
+                .execute();
+            const released = (result.raw as Array<Partial<Reservation>>).map(row =>
+                Object.assign(new Reservation(), row),
             );
-        }
-        if (order) {
-            await this.setOrderReservationState(ctx, order, 'RELEASED');
-        }
-        return released.length;
+            if (released.length === 0) {
+                return 0;
+            }
+
+            const order = await this.connection
+                .getRepository(txCtx, Order)
+                .findOne({ where: { id: orderId } });
+            for (const reservation of released) {
+                this.eventBus.publish(
+                    new ReservationReleasedEvent(
+                        txCtx,
+                        reservation,
+                        order?.code ?? String(orderId),
+                    ),
+                );
+            }
+            if (order) {
+                await this.setOrderReservationState(txCtx, order, 'RELEASED');
+            }
+            return released.length;
+        });
     }
 
     async findForOrder(ctx: RequestContext, orderId: ID): Promise<Reservation[]> {

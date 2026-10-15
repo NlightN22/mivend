@@ -172,6 +172,16 @@ export class PaymentAttemptService {
         // On throw, the caller can safely call again; there is never partial state to reconcile.
         try {
             await this.connection.withTransaction(ctx, async transactionCtx => {
+                // Re-read under the row lock: the checks above ran on a snapshot outside this transaction.
+                const current = await this.proformaInvoiceService.findOneForUpdate(
+                    transactionCtx,
+                    Number(proformaInvoice.id),
+                );
+                if (expectedOrganizationId === undefined && current.status === 'cancelled') {
+                    throw new UserInputError(
+                        `ProformaInvoice ${proformaInvoiceId} is cancelled and cannot be paid`,
+                    );
+                }
                 const repo = this.connection.getRepository(transactionCtx, PaymentAttempt);
                 const paymentAttempt = await repo.save(
                     repo.create({
@@ -181,7 +191,7 @@ export class PaymentAttemptService {
                         channel,
                         proformaInvoiceId: Number(proformaInvoice.id),
                         orderId: proformaInvoice.orderId,
-                        amount: fact?.amount ?? proformaInvoice.amount,
+                        amount: fact?.amount ?? current.amount,
                         currencyCode: proformaInvoice.currencyCode,
                         paymentStatus,
                         providerPaymentId: externalReference,
@@ -190,13 +200,11 @@ export class PaymentAttemptService {
 
                 if (paymentStatus === 'captured') {
                     await this.settlementEntryService.allocate(transactionCtx, paymentAttempt);
-                } else if (paymentStatus === 'pending' && proformaInvoice.status === 'pending') {
+                } else if (paymentStatus === 'pending' && current.status === 'pending') {
                     await this.proformaInvoiceService.updateStatus(
                         transactionCtx,
                         Number(proformaInvoice.id),
                         'issued',
-                        // Conditional: the status read above is stale; a concurrent capture may have set `paid`.
-                        'pending',
                     );
                 }
                 // failed/canceled leave ProformaInvoice.status untouched so the payment stays retryable.
