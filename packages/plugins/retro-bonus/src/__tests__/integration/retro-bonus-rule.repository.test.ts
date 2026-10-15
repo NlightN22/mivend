@@ -7,9 +7,8 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-// Same "hand-rolled table matching production schema, real Postgres, no DB mocking" convention
-// as plugin-counterparty's own contract.service.int.test.ts — VendureEntity's primary column
-// needs a real bootstrap()ped EntityIdStrategy, unavailable against a standalone DataSource.
+// Table is hand-rolled on real Postgres, not mocked: VendureEntity's primary column needs
+// a bootstrap()ped EntityIdStrategy, which a standalone DataSource does not provide.
 @Entity('retro_bonus_rule')
 @Index(['erpId'], { unique: true })
 class TestRetroBonusRule {

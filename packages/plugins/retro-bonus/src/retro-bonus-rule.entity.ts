@@ -10,10 +10,8 @@ export type RetroBonusAccrualKind =
     | 'ПоПоступлениюДССБК'
     | 'ПоПродажам';
 
-// Issue #102: read-only, manager-portal-only feed of the ERP's retro-bonus terms log — pure
-// upsert-only, no deactivation/conflict logic (see RetroBonusRuleService). Known accepted gap:
-// an unused 1C rule marked for deletion never rewrites the register, so validTo can go stale
-// until natural expiry — not worth speculative handling (AGENTS.md "no excess code").
+// Read-only, upsert-only feed: deactivation and conflict handling live in RetroBonusRuleService.
+// Known gap: unused 1C rules marked for deletion never rewrite the register; validTo may go stale.
 @Entity()
 @Index(['erpId'], { unique: true })
 @Index(['counterpartyErpId', 'recipientContractErpId'])
