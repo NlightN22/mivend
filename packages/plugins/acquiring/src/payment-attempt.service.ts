@@ -229,6 +229,8 @@ export class PaymentAttemptService {
                         transactionCtx,
                         Number(proformaInvoice.id),
                         'issued',
+                        // Conditional: the status read above is stale; a concurrent capture may have set `paid`.
+                        'pending',
                     );
                 }
                 // 'failed'/'canceled' leave ProformaInvoice.status untouched — retryable, same semantics

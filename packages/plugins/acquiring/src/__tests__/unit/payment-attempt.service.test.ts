@@ -47,10 +47,8 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
         return {
             create: vi.fn(input => input),
             save: vi.fn(async entity => entity),
-            // payProformaInvoice's level-3 idempotency check (the external-integration-rules skill) — defaults to "no
-            // existing attempt for this (channel, externalReference)" so these tests exercise the
-            // normal create path; tests specifically for the idempotent-retry behavior override
-            // this per-test.
+            // Default: no prior attempt for (channel, externalReference), so tests take the create path.
+            // Idempotent-retry tests override this per test.
             findOne: vi.fn(async () => null),
         };
     }
@@ -59,9 +57,8 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
         mockPaymentAttemptRepo = createMockPaymentAttemptRepo();
         mockConnection = {
             getRepository: vi.fn(() => mockPaymentAttemptRepo),
-            // Mirrors Vendure's real withTransaction just enough for these unit tests: runs the
-            // work with the same ctx (no real transaction/rollback semantics — that can only be
-            // verified against a real Postgres, see the plugin's integration tests).
+            // Stubs Vendure's withTransaction: runs work with the same ctx, no real transaction or rollback.
+            // Rollback semantics are only verifiable in the plugin's integration tests against Postgres.
             withTransaction: vi.fn(async (ctx: unknown, work: (ctx: unknown) => Promise<unknown>) =>
                 work(ctx),
             ),
@@ -111,7 +108,12 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
 
         await service.payProformaInvoice(mockCtx, 1, 'pending');
 
-        expect(mockProformaInvoiceService.updateStatus).toHaveBeenCalledWith(mockCtx, 1, 'issued');
+        expect(mockProformaInvoiceService.updateStatus).toHaveBeenCalledWith(
+            mockCtx,
+            1,
+            'issued',
+            'pending',
+        );
         expect(mockSettlementEntryService.allocate).not.toHaveBeenCalled();
     });
 
@@ -591,9 +593,8 @@ describe('PaymentAttemptService queries', () => {
             });
             expect(result.get(10)).toBe(5000);
             expect(result.get(11)).toBe(1250);
-            // Order 12 had no captured rows at all — absent from the map, not zero-with-a-key;
-            // the resolver (AdminPaymentVisibilityResolver.orderPaymentSummaries) is the layer
-            // that turns "absent" into a displayed 0.
+            // Absent key means no captured rows, not a zero entry; callers must not assume the key exists.
+            // AdminPaymentVisibilityResolver.orderPaymentSummaries converts absent to a displayed 0.
             expect(result.has(12)).toBe(false);
         });
     });

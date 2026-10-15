@@ -42,10 +42,14 @@ export class ProformaInvoiceService {
         ctx: RequestContext,
         proformaInvoiceId: number,
         status: ProformaInvoiceStatus,
+        fromStatus?: ProformaInvoiceStatus,
     ): Promise<void> {
         await this.connection
             .getRepository(ctx, ProformaInvoice)
-            .update({ id: proformaInvoiceId }, { status });
+            .update(
+                { id: proformaInvoiceId, ...(fromStatus ? { status: fromStatus } : {}) },
+                { status },
+            );
     }
 
     async findOne(ctx: RequestContext, proformaInvoiceId: number): Promise<ProformaInvoice | null> {

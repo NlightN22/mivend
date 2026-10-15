@@ -2,7 +2,9 @@ import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import {
     EventBus,
     ID,
+    Logger,
     Order,
+    OrderLine,
     OrderLineEvent,
     OrderService,
     RequestContext,
@@ -125,8 +127,9 @@ export class TierRebalanceService implements OnApplicationBootstrap {
             let lineId: ID | null = firstLineId;
             for (let pass = 0; lineId !== null && pass < MAX_PASSES; pass++) {
                 state.dirtyLineId = null;
-                await this.rebalancePass(ownCtx, orderId, lineId);
+                const passError = await this.rebalancePass(ownCtx, orderId, lineId);
                 await this.refreshTotals(ownCtx, orderId);
+                if (passError !== undefined) throw passError;
                 lineId = state.dirtyLineId;
             }
         } finally {
@@ -140,24 +143,35 @@ export class TierRebalanceService implements OnApplicationBootstrap {
         ctx: RequestContext,
         orderId: ID,
         changedLineId: ID,
-    ): Promise<void> {
+    ): Promise<unknown> {
         const freshOrder = await this.connection.getRepository(ctx, Order).findOne({
             where: { id: orderId },
             relations: ['lines'],
         });
-        if (!freshOrder) return;
-        for (const line of freshOrder.lines) {
-            if (String(line.id) === String(changedLineId)) continue;
-            // Same quantity: only forces calculateUnitPrice() against the current aggregate.
-            // Under the order row lock so its line save cannot overwrite a concurrent stamp (#208).
-            await this.connection
-                .withTransaction(ctx, async txCtx => {
+        if (!freshOrder) return undefined;
+        let firstError: unknown;
+        for (const { id: lineId } of freshOrder.lines) {
+            if (String(lineId) === String(changedLineId)) continue;
+            try {
+                // Quantity is re-read under the order lock: the snapshot above may predate a concurrent change.
+                await this.connection.withTransaction(ctx, async txCtx => {
                     this.ownContexts.add(txCtx);
                     await this.lockOrder(txCtx, orderId);
+                    const line = await this.connection
+                        .getRepository(txCtx, OrderLine)
+                        .findOne({ where: { id: lineId } });
+                    if (!line) return;
                     await this.orderService.adjustOrderLine(txCtx, orderId, line.id, line.quantity);
-                })
-                .catch(() => undefined);
+                });
+            } catch (error) {
+                Logger.error(
+                    `Rebalance of line ${String(lineId)} in order ${String(orderId)} failed: ${String(error)}`,
+                    loggerCtx,
+                );
+                firstError ??= error;
+            }
         }
+        return firstError;
     }
 
     // Row lock first: a concurrent mutation's commit must be visible before totals are recomputed,

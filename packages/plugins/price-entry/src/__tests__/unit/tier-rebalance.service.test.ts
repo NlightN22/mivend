@@ -18,6 +18,7 @@ describe('TierRebalanceService', () => {
     let applyPrices: ReturnType<typeof vi.fn>;
     let findOneOrder: ReturnType<typeof vi.fn>;
     let order: string[];
+    let lockHook: () => void;
     let service: TierRebalanceService;
 
     const fire = (orderId: number, lineId: number, ctx = makeCtx()): Promise<void> =>
@@ -40,6 +41,7 @@ describe('TierRebalanceService', () => {
             ],
         };
         order = [];
+        lockHook = () => undefined;
         findOneOrder = vi.fn().mockResolvedValue({ id: 1, lines: [] });
         adjust = vi.fn().mockResolvedValue({});
         applyPrices = vi.fn(async () => {
@@ -70,15 +72,25 @@ describe('TierRebalanceService', () => {
             select: vi.fn(() => queryBuilder),
             getOne: vi.fn(async () => {
                 order.push('lock');
+                lockHook();
                 return { id: 1 };
             }),
         };
         const connection = {
             withTransaction: (_ctx: unknown, work: (c: unknown) => Promise<unknown>) => work({}),
-            getRepository: () => ({
+            getRepository: (_ctx: unknown, entity: { name: string }) => ({
                 createQueryBuilder: () => queryBuilder,
                 findOne: ({ where }: { where: { id: number } }) =>
-                    Promise.resolve({ id: where.id, lines: lines[String(where.id)] }),
+                    Promise.resolve(
+                        entity.name === 'OrderLine'
+                            ? (Object.values(lines)
+                                  .flat()
+                                  .find(line => line.id === where.id) ?? null)
+                            : {
+                                  id: where.id,
+                                  lines: lines[String(where.id)].map(line => ({ ...line })),
+                              },
+                    ),
             }),
         };
         service = new TierRebalanceService(
@@ -113,6 +125,23 @@ describe('TierRebalanceService', () => {
     it('still refreshes totals when a sibling line adjustment fails', async () => {
         adjust.mockRejectedValue(new Error('order-does-not-contain-line-with-id'));
         await fire(1, 10);
+        expect(applyPrices).toHaveBeenCalledTimes(1);
+    });
+
+    it('adjusts a sibling with its quantity re-read under the lock, not the pass snapshot', async () => {
+        lockHook = () => {
+            lines['1'][1].quantity = 7;
+        };
+        await fire(1, 10);
+        expect(adjust.mock.calls[0].slice(1)).toEqual([1, 11, 7]);
+    });
+
+    it('skips a sibling line removed before its adjustment', async () => {
+        lockHook = () => {
+            lines['1'] = lines['1'].filter(line => line.id !== 11);
+        };
+        await fire(1, 10);
+        expect(adjust).not.toHaveBeenCalled();
         expect(applyPrices).toHaveBeenCalledTimes(1);
     });
 
