@@ -6,7 +6,7 @@ Updated: 2026-10-15 20:00
 
 - Findings 1/2/5 had been fixed by #204/#209. Fixed now: tier rebalance re-reads the sibling quantity under the order lock, logs and rethrows adjust errors after finishing passes and refreshing totals (`be66c862`, `1b1364f4`); `releaseReservations` = `UPDATE ... WHERE status='active' RETURNING` under `reserve-order:<id>`; `markReservationFailed` under the same lock, skipped when active rows exist (`55bf899c`).
 - `payProformaInvoice`: non-capture outcomes lock and re-read the proforma invoice (`ProformaInvoiceService.findOneForUpdate`) inside the transaction; **a capture must not take that early lock** — `allocate()` locks the counterparty's open documents in FIFO (`createdAt`) order and an earlier single-row lock deadlocks two captures (`c9bd24a1`, test `payment-pending-race.int.test.ts`).
-- Accepted LOW: no int tests for two concurrent pending payments / withdraw vs payment; currency/organization from the pre-transaction snapshot (immutable). Tier rebalance has only unit tests; #196 (its replacement) must ship a real-Postgres concurrent test (comment on #196). 17 MEDIUM findings (#7-#23 in `docs/ai/concurrency-audit-2026-10.md`) have no issue yet; #10 (releaseReservations) is already fixed.
+- Accepted LOW: no int tests for two concurrent pending payments / withdraw vs payment; currency/organization from the pre-transaction snapshot (immutable). Tier rebalance has only unit tests; #196 (its replacement) must ship a real-Postgres concurrent test (comment on #196). All remaining findings (17 MEDIUM, 6 LOW) are tracked in #240.
 
 ## #175 / #232 / #112 / #238 + ERP status cycle (2026-10-14..15, DONE: audited twice, pushed `d5e365b8`, closed; leftovers #239)
 
