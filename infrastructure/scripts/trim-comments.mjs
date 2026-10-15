@@ -20,7 +20,7 @@ const dirty = new Set(
     git('status', '--porcelain')
         .split('\n')
         .filter(Boolean)
-        .map((l) => l.slice(3)),
+        .map(l => l.slice(3)),
 );
 
 function flagged() {
@@ -55,8 +55,8 @@ function ask(prompt) {
             { cwd: tmpdir() },
         );
         let out = '';
-        p.stdout.on('data', (d) => (out += d));
-        p.on('close', (c) => (c === 0 ? res(out) : rej(new Error(`claude exit ${c}`))));
+        p.stdout.on('data', d => (out += d));
+        p.on('close', c => (c === 0 ? res(out) : rej(new Error(`claude exit ${c}`))));
         p.stdin.end(prompt);
     });
 }
@@ -73,7 +73,7 @@ Output ONLY raw JSON: {"<n>": ["line1","line2"], ...} with every number present.
 async function processFile(rel, ranges) {
     const path = resolve(root, rel);
     const lines = readFileSync(path, 'utf8').split('\n');
-    const items = ranges.filter((r) => /^\s*(\/\/|\/\*)/.test(lines[r.start - 1] ?? ''));
+    const items = ranges.filter(r => /^\s*(\/\/|\/\*)/.test(lines[r.start - 1] ?? ''));
     if (!items.length) return 0;
     const body = items
         .map((r, i) => `#${i}\n${lines.slice(r.start - 1, r.end).join('\n')}`)
@@ -82,11 +82,11 @@ async function processFile(rel, ranges) {
     const json = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
     const edits = items
         .map((r, i) => ({ r, rep: json[i] }))
-        .filter((e) => Array.isArray(e.rep) && e.rep.length <= 2)
+        .filter(e => Array.isArray(e.rep) && e.rep.length <= 2)
         .sort((a, b) => b.r.start - a.r.start);
     for (const { r, rep } of edits) {
         const indent = lines[r.start - 1].match(/^\s*/)[0];
-        const clean = rep.map((t) => `${indent}// ${String(t).replace(/^\s*(\/\/|\/?\*+)\s?/, '')}`);
+        const clean = rep.map(t => `${indent}// ${String(t).replace(/^\s*(\/\/|\/?\*+)\s?/, '')}`);
         lines.splice(r.start - 1, r.end - r.start + 1, ...clean);
     }
     if (apply && edits.length) writeFileSync(path, lines.join('\n'));
