@@ -4,13 +4,8 @@ import { Column, Entity, Index } from 'typeorm';
 
 export type EntityVersionAction = 'create' | 'update' | 'deactivate' | 'reactivate';
 
-// One row per write to a versioned entity, appended by the owning plugin's service via
-// VersioningService.recordChange — never by a TypeORM subscriber (no subscriber exists
-// anywhere in this codebase; every "who did what" record is written explicitly in the
-// service layer, e.g. ApprovalStep in plugin-approval-workflow). entityName/entityId is a
-// generic (not foreign-keyed) pointer so this table stays reusable across plugins without a
-// dependency from plugin-versioning back onto them. Timestamp is VendureEntity's own
-// createdAt — no separate occurredAt column.
+// Written explicitly by the owning service via recordChange; no TypeORM subscriber exists for this.
+// entityName/entityId is a generic, non-foreign-keyed pointer to keep plugin-versioning independent.
 @Entity()
 export class EntityVersion extends VendureEntity {
     constructor(input?: DeepPartial<EntityVersion>) {

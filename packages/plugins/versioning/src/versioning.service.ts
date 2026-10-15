@@ -51,14 +51,8 @@ export class VersioningService {
         return repo.save(row);
     }
 
-    // Bounded at 300 by default (issue #39) — this was the actual root cause of the
-    // "History-tab virtualization e2e flakiness" note in docs/ai/PROJECT_CONTEXT.md: a long dev
-    // session accumulates hundreds of EntityVersion rows for a shared e2e counterparty, and an
-    // unbounded fetch here meant the row count (and therefore the flakiness) grew forever. A
-    // bound is a real fix for THAT specific problem even though it's still a client-side-filtered
-    // widget (see EntityHistoryPanel.vue's 5 filter dimensions, several of which are derived from
-    // parsed JSON/joined admin names and can't trivially be pushed into SQL — a full
-    // server-side-filtered redesign of this generic widget wasn't attempted this session).
+    // Cap prevents e2e flakiness: a shared counterparty accumulates EntityVersion rows without bound.
+    // Filters stay client-side; several are derived from parsed JSON/joined names, not pushable to SQL.
     async findForEntity(
         ctx: RequestContext,
         entityName: string,
@@ -72,18 +66,8 @@ export class VersioningService {
         });
     }
 
-    // Batch variant of findForEntity — lets a single "History" widget fetch the trail for a
-    // whole object graph (e.g. a Counterparty plus all of its TradingPoints) in one round trip
-    // instead of one request per ref. Refs are grouped by entityName so each distinct entity
-    // type becomes a single `entityId IN (...)` clause rather than one OR branch per ref.
-    //
-    // Real server-side pagination + filtering (issue #39, follow-up to the earlier bounded-only
-    // fix) — action/entityName/administratorId/createdAt are plain columns on EntityVersion, so
-    // they're pushed into SQL directly, unlike Discounts' 3-way merge or Approvals' resolved
-    // customer/order names. Free-text `search` (over the JS-derived changed-fields summary,
-    // comment, and joined admin/entity display names) is NOT pushed down — it stays a
-    // page-scoped-only filter in EntityHistoryPanel.vue, same documented limitation as
-    // Approvals' search.
+    // Refs grouped by entityName: one `entityId IN (...)` clause per entity type, not one OR per ref.
+    // Free-text search can't go to SQL (JS-derived summary, joined names); it filters only the page.
     async findForEntities(
         ctx: RequestContext,
         refs: EntityRef[],
@@ -145,9 +129,7 @@ export class VersioningService {
         return { items, totalItems };
     }
 
-    // Mirrors ReservationService.getCallerRoleCode's pattern (see
-    // packages/plugins/reservation/src/reservation.service.ts) — resolves the acting
-    // Administrator from the request's active user rather than trusting a client-supplied id.
+    // Admin is resolved from the active request user, never a client-supplied id (spoofing guard).
     private async getCallerAdministratorId(ctx: RequestContext): Promise<string | null> {
         if (!ctx.activeUserId) return null;
         const admin = await this.administratorService.findOneByUserId(ctx, ctx.activeUserId);
