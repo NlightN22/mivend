@@ -36,9 +36,8 @@ export function buildContractTemplateData(
     };
 }
 
-// Generic placeholder contract body — a real deployment replaces this with its
-// own legal terms template; this demo keeps it deliberately jurisdiction-neutral
-// (see proforma-invoice-template.ts for the same convention).
+// Placeholder legal terms: deployments replace this, so keep it jurisdiction-neutral.
+// Same convention as proforma-invoice-template.ts.
 export function renderContractHtml(data: ContractTemplateData): string {
     return `
     <!doctype html>

@@ -35,11 +35,8 @@ interface GenerateDocumentJobData {
     documentId: string;
 }
 
-// Orchestrates: fetch data -> build HTML (pure, unit-testable) -> print via
-// Puppeteer -> save as a Vendure Asset. Runs inside the existing worker process
-// via JobQueueService — see apps/server/src/worker.ts, which already calls
-// startJobQueue() generically, so this queue rides on the already-configured
-// DefaultJobQueuePlugin (issue #128) with no further wiring.
+// Runs in the existing worker process: worker.ts already calls startJobQueue() generically,
+// so this queue needs no extra wiring beyond DefaultJobQueuePlugin.
 @Injectable()
 export class PdfGeneratorService implements OnModuleInit {
     private queue!: JobQueue<GenerateDocumentJobData>;
@@ -151,10 +148,8 @@ export class PdfGeneratorService implements OnModuleInit {
         );
     }
 
-    // Embeds the logo as a base64 data URI rather than a URL — Puppeteer runs
-    // server-side with no reliable public hostname to resolve, and reading the
-    // asset's bytes directly avoids that entirely. Returns null when no logo
-    // has been set via setOrganizationLogo (falls back to the letter badge).
+    // Embedded as a base64 data URI: Puppeteer runs server-side with no reliable hostname to resolve.
+    // Reading the asset bytes directly avoids that lookup entirely.
     private async getLogoDataUri(
         ctx: RequestContext,
         requisites: { logoAssetId: string | null },
@@ -188,10 +183,8 @@ export class PdfGeneratorService implements OnModuleInit {
             throw new Error(`Order ${document.orderId} not found for document ${document.id}`);
         }
 
-        // One document per organization-split ProformaInvoice (docs/payments.md "Organizations") —
-        // render only that organization's lines/requisites/total, not the whole order. Legacy
-        // documents with no proformaInvoiceId (predate splitting) fall back to the whole order against
-        // the single "active" organization, same as before.
+        // Legacy documents with no proformaInvoiceId predate invoice splitting: they render the whole
+        // order against the single active organization.
         let requisites;
         let source: ProformaInvoiceSource;
         if (document.proformaInvoiceId) {

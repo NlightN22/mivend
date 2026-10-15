@@ -36,13 +36,8 @@ import { adminApiExtensions } from './api/admin.schema';
 import { PdfBrowserService } from './pdf/pdf-browser.service';
 import { PdfGeneratorService } from './pdf/pdf-generator.service';
 
-// Offline-terms (proforma invoice/deferred) payments settle straight to `Authorized`
-// (see @mivend/plugin-acquiring's offline-terms-handler.ts), which Vendure's default
-// order process transitions to `PaymentAuthorized` — confirmed empirically
-// against a real deferred-payment checkout in dev (see docs/ai/PROJECT_CONTEXT.md
-// "checkout never actually placed orders"). Online-stub payments settle straight
-// to `PaymentSettled` and are excluded here — only offline-terms orders need an
-// proforma invoice document generated automatically.
+// Offline-terms payments settle to Authorized, which Vendure maps to PaymentAuthorized;
+// online-stub payments settle to PaymentSettled and must be excluded from proforma generation.
 const OFFLINE_TERMS_METHOD = 'offline-terms';
 const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
 

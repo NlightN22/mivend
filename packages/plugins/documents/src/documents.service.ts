@@ -25,11 +25,8 @@ export interface DocumentListOptions {
     take?: number;
     skip?: number;
     type?: string;
-    // Exact-match multi-select, unlike `type` (ILike substring) — populated from real distinct
-    // values returned by findVisibleTypes, never a hardcoded list (the backend-plugin-rules skill's "Business data must
-    // live in the database"), so an exact match is correct here: the manager portal's Type
-    // column filter is a checklist of real values, not a free-text search box. If both `type`
-    // and `types` are given, `types` wins (see findVisible).
+    // Exact match, unlike `type` (ILike): options come from a checklist of real DB values,
+    // not free text, so exact match is correct. If `type` and `types` are both set, `types` wins.
     types?: string[];
     status?: string;
     search?: string;
@@ -73,11 +70,8 @@ export class DocumentsService {
         return { items, totalItems };
     }
 
-    // Admin-facing document visibility is derived entirely from counterparty visibility — no
-    // dedicated scope resolution here, per docs/access-control.md ("resources whose visibility
-    // is derived from another resource... reuse the owning resource's scope resolution, do not
-    // duplicate resolve<Resource>Scope logic"). Reuses CounterpartyService.findVisible()'s
-    // already-scoped result directly rather than re-deriving own/department/all filtering.
+    // Document visibility derives entirely from counterparty visibility: reuse the already-scoped
+    // CounterpartyService.findVisible() result instead of duplicating scope resolution here.
     async findVisible(
         ctx: RequestContext,
         options?: DocumentListOptions,
@@ -102,12 +96,8 @@ export class DocumentsService {
                 where: {
                     counterpartyId: In(counterpartyIds),
                     ...(orderId !== undefined ? { orderId: String(orderId) } : {}),
-                    // ILike, not an exact equals — `type` is free-text ERP business data with no
-                    // fixed value set (see DocumentListOptions' doc comment / the backend-plugin-rules skill's "Business
-                    // data must live in the database"), rendered in the manager portal as a text
-                    // filter box. An exact-match filter behind a text box that looks like search
-                    // is a real UX mismatch (typing "inv" would silently match nothing even
-                    // though "proforma invoice" documents exist) — same reasoning as `search` below.
+                    // ILike, not exact: `type` is free-text ERP data with no fixed value set, and the portal
+                    // shows a text box, so an exact match would make partial input like "inv" match nothing.
                     ...(options?.types?.length
                         ? { type: In(options.types) }
                         : options?.type
@@ -127,10 +117,8 @@ export class DocumentsService {
         return { items, totalItems };
     }
 
-    // Real, bounded server-side aggregate (a small DISTINCT over an already-scoped set of rows,
-    // never "fetch everything and dedupe in JS" — the backend-plugin-rules skill's pagination rule) that backs the
-    // manager portal's Type column checklist filter. Reusing CounterpartyService.findVisible()
-    // scoping mirrors findVisible above — same reasoning, don't re-derive visibility here.
+    // Bounded server-side DISTINCT over the already-scoped rows (not fetch-all and dedupe in JS);
+    // visibility reuses CounterpartyService.findVisible() scoping, as in findVisible above.
     async findVisibleTypes(ctx: RequestContext, counterpartyId?: ID): Promise<string[]> {
         const visibleCounterparties = await this.counterpartyService.findVisible(ctx);
         let counterpartyIds = visibleCounterparties.map(c => String(c.id));
@@ -231,16 +219,14 @@ export class DocumentsService {
         return repo.save(entity);
     }
 
-    // Used by seed scripts/admin tooling to resolve an ERP-side org erpId to the platform's
-    // own auto-increment id — e.g. to populate ProductVariant.customFields.organizationId
-    // before the real ERP export exists (see docs/payments.md "Organizations").
+    // Seed/admin-only: maps an ERP org erpId to the platform's auto-increment id, e.g. to fill
+    // ProductVariant.customFields.organizationId before a real ERP export exists.
     async findAllRequisites(ctx: RequestContext): Promise<OrganizationRequisites[]> {
         return this.connection.getRepository(ctx, OrganizationRequisites).find();
     }
 
-    // Resolves the ERP's own organization GUID (erpId) to this platform's auto-increment id — used by
-    // erp-integration's StorageLocationStreamHandler to populate ProductVariant.customFields
-    // .organizationId from a real StorageLocationChanged event.
+    // Takes the ERP's GUID (erpId), not the platform's auto-increment id; the two are not
+    // interchangeable.
     async findRequisitesIdByErpId(ctx: RequestContext, erpId: string): Promise<number | null> {
         const entity = await this.connection
             .getRepository(ctx, OrganizationRequisites)
@@ -248,10 +234,8 @@ export class DocumentsService {
         return entity ? Number(entity.id) : null;
     }
 
-    // Used to render a proforma invoice for one specific organization (plugin-acquiring's ProformaInvoice
-    // .organizationId) — as opposed to getActiveRequisites(), which is a single-organization
-    // fallback for documents that predate per-organization splitting (contracts, legacy
-    // whole-order proforma invoices). See docs/payments.md "Organizations".
+    // Per-organization requisites for one proforma invoice. getActiveRequisites() is only the
+    // single-organization fallback for documents that predate per-organization splitting.
     async getRequisitesById(
         ctx: RequestContext,
         organizationId: number,
@@ -275,9 +259,8 @@ export class DocumentsService {
         return requisites;
     }
 
-    // Creates the placeholder row synchronously (customer sees "generating" right away); PDF rendering
-    // is enqueued by the caller via PdfGeneratorService.enqueue (avoids a DocumentsService <-> PdfGeneratorService cycle).
-    // One document per proforma invoice snapshot: a repeat returns the existing row with created=false.
+    // Placeholder row is written synchronously so the customer sees "generating" at once;
+    // PDF enqueue stays with the caller to avoid a DocumentsService <-> PdfGeneratorService cycle.
     async createProformaInvoicePlaceholder(
         ctx: RequestContext,
         proformaInvoice: ProformaInvoice,
@@ -366,10 +349,8 @@ export class DocumentsService {
         return this.connection.getRepository(ctx, Document).findOne({ where: { id: documentId } });
     }
 
-    // Order.customFields.erpOrderId is declared by plugin-erp-order's module
-    // augmentation, which isn't visible to this plugin's own tsc build — mirrors
-    // the existing raw-customFields-join pattern in
-    // packages/plugins/counterparty/src/counterparty.service.ts's getForCustomer().
+    // Order.customFields.erpOrderId comes from plugin-erp-order's module augmentation, which this
+    // plugin's tsc build cannot see, so it is read via raw customFields (as in getForCustomer()).
     private async findOrderIdByErpId(erpOrderId: string): Promise<string | null> {
         const result = await this.connection.rawConnection.query(
             `SELECT id FROM "order" WHERE "customFieldsErporderid" = $1 LIMIT 1`,

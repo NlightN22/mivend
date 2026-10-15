@@ -21,10 +21,8 @@ export class Document extends UuidEntity {
     @Column({ type: 'varchar', nullable: true })
     orderId!: string | null;
 
-    // Which plugin-acquiring ProformaInvoice (one per organization within the order) this document
-    // is for — see docs/payments.md "Organizations". Null for documents that predate
-    // per-organization proforma invoice splitting (ERP-pushed/legacy) or aren't proforma invoices at all
-    // (contracts).
+    // Null for legacy/ERP-pushed documents that predate per-organization proforma splitting,
+    // and for non-proforma documents such as contracts.
     @Column({ type: 'varchar', nullable: true })
     proformaInvoiceId!: string | null;
 

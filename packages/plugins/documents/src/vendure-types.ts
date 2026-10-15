@@ -1,8 +1,4 @@
-// Re-declares ProductVariant.customFields.organizationId (owned/registered by
-// apps/server/src/vendure-config.ts) for read-only use here — TS module augmentation merges
-// cleanly across plugins, see the backend-plugin-rules skill's inter-plugin-communication pattern for "A
-// ProductVariant/Order customField owned by one plugin can be safely
-// re-declared..." note.
+// Type-only augmentation: the field is registered in vendure-config.ts, do not register it here.
 declare module '@vendure/core' {
     interface CustomProductVariantFields {
         organizationId?: number | null;

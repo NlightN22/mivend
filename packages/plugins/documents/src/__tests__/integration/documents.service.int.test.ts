@@ -10,14 +10,8 @@ import {
 import { DocumentsService } from '../../documents.service';
 import { OrganizationEventService } from '../../organization-event.service';
 
-// Vendure's VendureEntity relies on an EntityIdStrategy registered during
-// bootstrap() to generate its primary column — using the real Document/
-// OrganizationRequisites classes against a standalone DataSource fails with
-// "Entity does not have a primary column" (confirmed empirically). This repo's
-// one existing integration test (packages/plugins/sync/src/__tests__/integration/
-// sync-cycle.test.ts) works around the same constraint with hand-rolled tables
-// matching production schema instead of the real Vendure entity classes — same
-// approach here, against real Postgres, no DB mocking.
+// Real Vendure entities need EntityIdStrategy from bootstrap() or they lack a primary column.
+// So tests hand-roll tables matching prod schema and run against real Postgres, not mocks.
 
 @Entity('document')
 @Index(['counterpartyId', 'issueDate'])

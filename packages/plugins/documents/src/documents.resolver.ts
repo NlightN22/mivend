@@ -113,11 +113,8 @@ export class DocumentsAdminResolver {
 export class DocumentFieldResolver {
     constructor(private assetService: AssetService) {}
 
-    // Returning the real Asset type (not a manually-built URL string) lets
-    // GraphQL resolve Asset.source/preview through Vendure's own resolver chain
-    // (registered by AssetServerPlugin), which prefixes the storage path with the
-    // correct protocol/host — building the URL manually here would bypass that
-    // and return a bare relative path.
+    // Return the real Asset type, not a hand-built URL: Vendure's resolver chain (AssetServerPlugin)
+    // it prefixes source/preview paths with protocol/host; a manual URL stays a bare relative path.
     @ResolveField()
     async asset(@Ctx() ctx: RequestContext, @Parent() doc: Document): Promise<Asset | undefined> {
         if (!doc.assetId) return undefined;
@@ -127,9 +124,8 @@ export class DocumentFieldResolver {
 
 @Resolver('OrganizationRequisites')
 export class OrganizationFieldResolver {
-    // Derived, never stored — inn/legalAddress themselves are deliberately not exposed on
-    // this GraphQL type (issue #88 v1 scope: manager UI only needs the completeness flag,
-    // not the partial legal fields).
+    // Derived, not stored; inn/legalAddress are intentionally not exposed on this type.
+    // v1 manager UI only needs the completeness flag, so the partial legal fields stay out of scope.
     @ResolveField()
     hasCompleteRequisites(@Parent() requisites: OrganizationRequisites): boolean {
         return hasRequiredRequisites(requisites);

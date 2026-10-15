@@ -1,6 +1,5 @@
-// Record shapes pushed from erp-import's `document`/`organizationRequisites`
-// handlers (packages/plugins/erp-import/src/handlers/) — single source of truth,
-// imported there rather than redefined.
+// Single source of truth for record shapes pushed by erp-import's document and organizationRequisites handlers.
+// Those handlers import these types; do not redefine them there.
 
 export interface DocumentRecord {
     erpId: string;

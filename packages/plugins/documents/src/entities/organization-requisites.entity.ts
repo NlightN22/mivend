@@ -63,10 +63,8 @@ export class OrganizationRequisites extends VendureEntity {
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
 
-    // Set via the Admin API (setOrganizationLogo), never via ERP push — a logo
-    // is a design/branding asset, not transactional ERP data. Deliberately not
-    // part of the ERP-pushed record shape so a routine requisites upsert from
-    // ERP can never clobber it.
+    // Set only via the Admin API, never by ERP push: the logo is branding, not ERP data.
+    // Kept out of the ERP-pushed shape so a routine requisites upsert cannot overwrite it.
     @Column({ type: 'varchar', nullable: true })
     logoAssetId!: string | null;
 }
