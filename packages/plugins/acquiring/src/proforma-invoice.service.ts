@@ -35,9 +35,8 @@ export class ProformaInvoiceService {
             .update({ orderId, status: 'pending' }, { status });
     }
 
-    // Used by PaymentAttemptService.payProformaInvoice — paying a single proforma invoice must never touch the
-    // status of any *other* proforma invoice for the same order (unlike updateStatusForOrder, which is
-    // for the checkout-time, whole-order payment path).
+    // Paying one proforma invoice must never change the status of sibling proformas of the same order.
+    // Unlike updateStatusForOrder, which is only for whole-order payment at checkout.
     async updateStatus(
         ctx: RequestContext,
         proformaInvoiceId: number,
@@ -77,11 +76,8 @@ export class ProformaInvoiceService {
                 counterpartyId: Number(counterpartyId),
             })
             .orderBy('proformaInvoice.createdAt', 'DESC')
-            // Tiebreaker: multiple proforma invoices from the same order split are created in the same
-            // transaction and can share an identical createdAt timestamp — without a secondary
-            // sort key, their relative order across two separate queries is undefined (real
-            // flakiness observed in e2e: refetching "the same" list after paying one proforma invoice
-            // returned them in a different order).
+            // Proformas split from one order share createdAt when created in one transaction;
+            // without a secondary sort key their order across separate queries is undefined.
             .addOrderBy('proformaInvoice.id', 'DESC')
             .take(take)
             .skip(skip);

@@ -29,10 +29,7 @@ function isUniqueViolation(err: unknown): boolean {
     );
 }
 
-// Thrown when a payment event's declared organization doesn't match the target proforma invoice's real
-// one. Distinct from UserInputError so callers (PaymentInboxProcessorService) can dead-letter
-// immediately instead of retrying — a mismatch won't fix itself on the next sweep, the same
-// reasoning as InboxService.rejectAsInvalid for a missing external reference.
+// Not a UserInputError: callers must dead-letter it, since a mismatch won't fix itself on retry
 export class PaymentOrganizationMismatchError extends Error {
     constructor(proformaInvoiceId: number, expected: number, actual: number) {
         super(
@@ -59,9 +56,8 @@ export interface PaymentFact {
     currencyCode: string;
 }
 
-// Until a real acquirer (Robokassa, per docs/payments.md) is wired in, online-acquiring payments
-// still need a mandatory, reconcilable external reference — this stub is deliberately shaped so
-// it can never be mistaken for a real acquirer transaction id once one exists.
+// Until a real acquirer is wired in, online payments need a mandatory external reference.
+// The stub's shape must never be mistaken for a real acquirer transaction id.
 export function generateStubExternalReference(
     channel: PaymentChannel,
     proformaInvoiceId: number,
@@ -76,10 +72,8 @@ const OUTCOME_TO_PAYMENT_STATUS: Record<PayProformaInvoiceOutcome, PaymentStatus
     cancel: 'canceled',
 };
 
-// Field is named "status" (not "paymentStatus") to match the GraphQL PaymentListOptions input
-// type exactly (shop.schema.ts) — args.options is passed straight through from the resolver, so
-// a name mismatch here silently drops the filter instead of erroring (real bug caught by e2e:
-// the status filter chips did nothing at all).
+// Must match the GraphQL PaymentListOptions field name exactly: args.options is passed through,
+// and a mismatch silently drops the filter instead of erroring.
 export interface PaymentListOptions {
     take?: number;
     skip?: number;
@@ -97,18 +91,8 @@ export interface PaymentAllocation {
     proformaInvoice: ProformaInvoice | null;
 }
 
-// Pays a single ProformaInvoice directly — independent of Vendure's Order/Payment/activeOrder
-// machinery entirely. A proforma invoice must stay payable at any time, regardless of whether its
-// order is still "active" in some browser session (deferred/offline-terms proforma invoices are the
-// common case: the order was placed and shipped, payment happens later, on the customer's own
-// schedule). This is the demo-stub equivalent of the online-stub payment method handler
-// (apps/server/src/payment-method-handlers.ts), but scoped to one proforma invoice, callable any time.
-//
-// Deliberately does NOT reject a "success" outcome against an already-`paid` proforma invoice — a second
-// capture referencing the same proforma invoice (e.g. the customer paid online *and* a bank transfer for
-// the same debt is later reported by the ERP) must not error. SettlementEntryService.allocate
-// finds no remaining balance on that proforma invoice and cascades the amount to the counterparty's next
-// open proforma invoice, or records it as an advance — see docs/payments.md "Cash application".
+// Independent of Vendure's Order/Payment machinery: the proforma must stay payable at any time.
+// Never rejects success on an already-paid proforma; allocate() cascades the surplus instead.
 @Injectable()
 export class PaymentAttemptService {
     constructor(
@@ -119,13 +103,8 @@ export class PaymentAttemptService {
         private numberingService: NumberingService,
     ) {}
 
-    // expectedOrganizationId is only ever passed by the inbox processor (an event-reported
-    // payment claims which organization it's for) — a direct "pay now" GraphQL call has no
-    // externally-claimed scope to validate against, since the caller IS the request context's own
-    // organization/counterparty already. Payment allocation is scoped by organization only, never
-    // by branch (branch governs staff visibility — see the external-integration-rules skill, docs/payments.md
-    // "Organizations") — a payment can apply to any proforma invoice within the correct organization
-    // regardless of which branch reported it.
+    // Only the inbox processor passes expectedOrganizationId; a direct pay call has no external claim.
+    // Allocation is scoped by organization only, never branch; branch only governs staff visibility.
     async payProformaInvoice(
         ctx: RequestContext,
         proformaInvoiceId: number,
@@ -143,9 +122,7 @@ export class PaymentAttemptService {
             expectedOrganizationId !== undefined &&
             expectedOrganizationId !== proformaInvoice.organizationId
         ) {
-            // Not necessarily bad data from the reporting side — the ERP/branch may simply hold
-            // a stale/wrong proformaInvoiceId reference. A human needs to reconcile which proforma invoice was
-            // actually meant, so this is a PaymentReconciliationIssue, not a silent rejection.
+            // A stale proformaInvoiceId is likely, so a human must reconcile it rather than silently reject.
             await this.reconciliationIssueService.report(ctx, 'ORGANIZATION_MISMATCH', {
                 proformaInvoiceId,
                 organizationId: expectedOrganizationId,
@@ -182,14 +159,8 @@ export class PaymentAttemptService {
 
         const paymentStatus = OUTCOME_TO_PAYMENT_STATUS[outcome];
 
-        // Level 3 idempotency (the external-integration-rules skill): the same (channel, externalReference) must
-        // apply at most once, even across separate payProformaInvoice calls — e.g. the inbox processor
-        // retrying an event whose business write already succeeded but whose markProcessed then
-        // failed (a genuine partial-failure gap found in this exact method: nothing previously
-        // stopped a retried event from creating a second PaymentAttempt for the same real-world
-        // payment). Checked *and* enforced: the find-first check handles the common retry case
-        // without a wasted failed insert, the unique index + catch below is the hard safety net
-        // for a genuine concurrent race (same pattern as InboxService.enqueue).
+        // The same (channel, externalReference) must apply at most once, even across retries of an event.
+        // Find-first covers retries; the unique index plus catch covers a concurrent race.
         const existing = await this.connection
             .getRepository(ctx, PaymentAttempt)
             .findOne({ where: { channel, providerPaymentId: externalReference } });
@@ -197,13 +168,8 @@ export class PaymentAttemptService {
             return (await this.proformaInvoiceService.findOne(ctx, Number(proformaInvoice.id)))!;
         }
 
-        // Atomic: the PaymentAttempt row and everything allocate() writes (SettlementEntry rows,
-        // proforma invoice status flips) commit together or not at all. Without this, a crash between
-        // "PaymentAttempt saved" and "allocation finished" would leave an orphaned PaymentAttempt
-        // that no SettlementEntry ever references — money recorded as captured but reflected
-        // nowhere, with no way to resume automatically. With the transaction, that state can
-        // never exist on disk: the caller either sees the whole operation succeed, or sees it
-        // throw and can safely call payProformaInvoice again — nothing partial to reconcile.
+        // Must commit atomically with allocate(): a crash between them would leave an orphaned capture.
+        // On throw, the caller can safely call again; there is never partial state to reconcile.
         try {
             await this.connection.withTransaction(ctx, async transactionCtx => {
                 const repo = this.connection.getRepository(transactionCtx, PaymentAttempt);
@@ -233,17 +199,12 @@ export class PaymentAttemptService {
                         'pending',
                     );
                 }
-                // 'failed'/'canceled' leave ProformaInvoice.status untouched — retryable, same semantics
-                // as a Declined order-level payment (updateStatusForOrder's decline branch never
-                // runs either). A cancellation means the attempt never actually completed —
-                // nothing to reverse financially (docs/payments.md: "Cancellation ... Nothing to
-                // reverse financially; the attempt simply never completed").
+                // failed/canceled leave ProformaInvoice.status untouched so the payment stays retryable.
+                // A canceled attempt never completed, so there is nothing to reverse financially.
             });
         } catch (err) {
             if (!isUniqueViolation(err)) throw err;
-            // Lost a race with a concurrent payProformaInvoice call for the same (channel,
-            // externalReference) — the row it created is the real, already-applied payment;
-            // nothing left to do here.
+            // A concurrent call with the same (channel, externalReference) won; its row is the applied payment.
         }
 
         return (await this.proformaInvoiceService.findOne(ctx, Number(proformaInvoice.id)))!;
@@ -253,16 +214,8 @@ export class PaymentAttemptService {
         return this.connection.getRepository(ctx, PaymentAttempt).findOne({ where: { id } });
     }
 
-    // Real per-order "how much has actually been captured" for the manager portal's order
-    // lists (see CustomerOrdersTab.vue's Payment column) — sums only `paymentStatus = 'captured'`
-    // rows, never 'authorized'/'pending' (money not yet actually received) or 'failed'/'canceled'
-    // (never received at all). Deliberately does NOT net out refunds/disputes/chargebacks here —
-    // this is a simple list-badge read, not a reconciliation feature; a fully-refunded order
-    // will still sum as fully captured. If this ever backs a real accounting decision instead of
-    // a badge, that gap needs closing first (see the external-integration-rules skill on refunds/disputes being
-    // their own lifecycle, never netted against a payment record).
-    // Batched (one query for every orderId a table page needs) rather than per-row, to avoid
-    // N+1 queries against a list of ~20 orders.
+    // Badge-only: sums captured rows, without netting refunds or disputes; not for accounting decisions.
+    // Batched into one query per page to avoid N+1 queries on order lists.
     async sumCapturedAmountsByOrderIds(
         ctx: RequestContext,
         orderIds: number[],
@@ -300,9 +253,7 @@ export class PaymentAttemptService {
         return proformaInvoice?.counterpartyId === Number(counterpartyId);
     }
 
-    // Scoped to a counterparty via a join through ProformaInvoice — PaymentAttempt itself carries no
-    // counterpartyId (only proformaInvoiceId/orderId), ProformaInvoice is the single source of truth for which
-    // counterparty/organization a payment belongs to (same reasoning as ProformaInvoice.organizationId).
+    // PaymentAttempt has no counterpartyId; ProformaInvoice is the source of truth, so join through it.
     async findForCounterparty(
         ctx: RequestContext,
         counterpartyId: ID,
@@ -345,9 +296,7 @@ export class PaymentAttemptService {
         return { items, totalItems };
     }
 
-    // What a given payment was actually applied to — one row per SettlementEntry it produced
-    // (the target proforma invoice first, then any FIFO overflow, then a final advance row with no
-    // proforma invoice). Reused by the payment detail page's "Proforma invoice allocation" table.
+    // One row per SettlementEntry: target proforma invoice first, then FIFO overflow, then advance last.
     async getAllocationsForPayment(
         ctx: RequestContext,
         paymentAttemptId: number,

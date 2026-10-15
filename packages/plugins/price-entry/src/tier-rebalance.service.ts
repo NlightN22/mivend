@@ -22,11 +22,8 @@ interface Marker {
     release: () => void;
 }
 
-/**
- * Re-runs sibling lines' price calculation after a line mutation so shared tier/brand
- * ladders stay consistent. Non-blocking on purpose: a blocking handler nests in the
- * mutation's transaction and corrupts price resolution; details in docs/pricing.md.
- */
+// Must stay non-blocking: a blocking handler nests in the mutation's transaction
+// and corrupts price resolution.
 @Injectable()
 export class TierRebalanceService implements OnApplicationBootstrap {
     private running = new Map<string, { dirtyLineId: ID | null }>();
