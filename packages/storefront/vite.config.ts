@@ -2,26 +2,14 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { fileURLToPath, URL } from 'node:url';
 
-// Issue #68 follow-up: the proxy target used to be hardcoded to the local contour's server
-// (localhost:3000), so a storefront instance started against any other contour (e.g.
-// staging-integration) would still silently talk to local's backend. VITE_API_TARGET/VITE_PORT
-// are plain env vars (set inline by the root package.json's per-contour dev scripts, see
-// docs/environments.md's port scheme) — not Vite's own `.env.<mode>` file convention, since
-// `.env.*` is repo-wide gitignored (AGENTS.md sync rule territory: no real secrets here, but no
-// reason to fight the ignore pattern for two plain URLs). `--mode staging-integration` is still
-// passed on the CLI for those contours purely so the process shows up distinguishably in `ps` —
-// see infrastructure/scripts/dev-kill-staging-integration.sh.
+// Target comes from VITE_API_TARGET/VITE_PORT env vars: .env.<mode> is gitignored repo-wide.
+// Hardcoding localhost:3000 would silently send other contours to local's backend.
 export default defineConfig(() => {
     const apiTarget = process.env.VITE_API_TARGET ?? 'http://localhost:3000';
 
     return {
-        // Vite's default cacheDir (node_modules/.vite) is per-package, not per dev-server
-        // instance — this package is started twice concurrently on this box under different
-        // VITE_PORT/mode (local contour's `make dev` on 5173, staging-integration's `make
-        // dev-staging-integration` on 5183, see docs/environments.md). Without this, both
-        // processes race on the same optimizeDeps cache directory, corrupting each other's
-        // pre-bundled chunks — same anti-pattern already found and fixed for packages/dashboard
-        // (issue #134 follow-up) and packages/manager, just never ported here.
+        // Two dev servers run concurrently on this box; a shared cacheDir races on optimizeDeps.
+        // Each instance (different VITE_PORT/mode) needs its own cache dir.
         cacheDir: `node_modules/.vite-${process.env.VITE_PORT ?? '5173'}`,
         plugins: [vue()],
         resolve: {
@@ -30,17 +18,10 @@ export default defineConfig(() => {
             },
         },
         build: {
-            // Vite's default build output dir is `assets/`, which collides with the `/assets`
-            // proxy rule below (Vendure's own product-image assetUrlPrefix) — in `vite preview`
-            // (and any future production static-serving setup reusing this same proxy pattern),
-            // the proxy middleware intercepts the built JS/CSS before static serving ever runs,
-            // 404ing the app's own bundle (found and confirmed during issue #115's investigation).
-            // A distinct output dir keeps the two `/assets` meanings from ever overlapping.
+            // The default outDir `assets/` collides with the `/assets` proxy rule, which intercepts
+            // built bundles in vite preview and 404s the app's JS/CSS. A distinct outDir avoids this.
             assetsDir: '_app',
-            // Splits the single 1.4 MB/420 KB-gzip monolithic chunk Vite otherwise produces
-            // (flagged by its own chunkSizeWarningLimit warning, issue #115) into independently
-            // cacheable vendor bundles — element-plus rarely changes between our own deploys, so
-            // splitting it out means a real app-code deploy doesn't force re-downloading it.
+            // Keeps element-plus in a separate vendor chunk so app-code deploys don't re-download it.
             rollupOptions: {
                 output: {
                     manualChunks: {
@@ -66,10 +47,8 @@ export default defineConfig(() => {
                     changeOrigin: true,
                     ws: true,
                 },
-                // Assets are served with a root-relative assetUrlPrefix (see
-                // apps/server/src/vendure-config.ts) specifically so they resolve
-                // against whatever origin the browser is on — this proxy is what
-                // makes that origin the storefront's own, in dev.
+                // Assets use a root-relative assetUrlPrefix so they resolve against the browser's origin.
+                // This proxy makes that origin the storefront's own in dev.
                 '/assets': {
                     target: apiTarget,
                     changeOrigin: true,

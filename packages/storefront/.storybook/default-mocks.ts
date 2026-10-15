@@ -1,8 +1,7 @@
 import { registerMock } from './graphql-mock-registry';
 
-// Registered on every story so pages behind the auth-gated layout render without extra setup —
-// individual stories can call registerMock('ActiveCustomerForAuth', ...) again to override
-// (e.g. to render a logged-out state).
+// Global default so pages behind the auth-gated layout render in every story without setup.
+// Stories can override it by calling registerMock again with the same key, e.g. for logged-out state.
 export function registerDefaultMocks(): void {
     registerMock('ActiveCustomerForAuth', () => ({
         activeCustomer: {

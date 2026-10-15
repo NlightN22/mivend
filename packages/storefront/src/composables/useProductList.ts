@@ -12,12 +12,8 @@ import {
     type CatalogProductsQuery,
 } from '../api/generated/graphql';
 import { useViewMode } from './useViewMode';
-// Imports the TS source directly (not the 'shared' package's compiled CJS output): Vite/Rollup
-// couldn't reliably interop either the aggregator (`export *` compiled to a runtime
-// __exportStar loop) or the compiled catalogFacets.js directly — importing the source lets
-// esbuild/Vite include it as plain ESM in the same module graph, with no CJS boundary at all.
-// sync.ts (shared's other export) is only ever consumed by ts-node/Node backend code via the
-// compiled 'shared' package, so this never surfaced before.
+// Imports TS source, not compiled 'shared' CJS: Vite/Rollup can't interop its __exportStar
+// aggregator, so it stays plain ESM in the same module graph with no CJS boundary.
 import {
     buildFacetValueFilters,
     buildFacetGroups,
@@ -35,9 +31,8 @@ export interface DiscountTierVM {
 interface ProductVariant {
     id: string;
     sku: string;
-    // undefined, not 0, when unresolved (audit finding, mivend.audit.70: `?? 0` made an
-    // unresolved price look identical to a genuinely free product) — real "no price" state
-    // should only ever be a pre-bootstrap/misconfigured system per docs/pricing.md's #70 fallback.
+    // Undefined, not 0: a 0 would make an unresolved price look like a genuinely free product.
+    // A real 'no price' state only occurs before bootstrap or on misconfiguration.
     price: number | undefined;
     customerPrice: number | null;
     compareAtPrice: number | null;
@@ -96,11 +91,8 @@ function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): Pro
             {
                 id: item.productVariantId,
                 sku: item.sku,
-                // Never the raw search-index price (`priceWithTax`) — it's a placeholder under
-                // SEARCH_BACKEND=external and, even on the internal backend, is customer-agnostic.
-                // The resolver always returns a real price now: the customer's own, or the
-                // branch default-price-type fallback (see docs/pricing.md, issue #70) — so
-                // `customerPrice` is the only field this should ever read.
+                // Never use priceWithTax: a placeholder under SEARCH_BACKEND=external, and customer-agnostic.
+                // Only customerPrice is valid: the resolver always supplies it, with the branch fallback.
                 price: item.customerPrice ?? undefined,
                 customerPrice: item.customerPrice ?? null,
                 compareAtPrice: item.compareAtPrice ?? null,
@@ -250,10 +242,8 @@ export function useProductList(options: UseProductListOptions = {}): {
     }
 
     async function loadMore(): Promise<void> {
-        // While a fresh load() is in flight, currentSkip/hasMore reflect the previous
-        // filter state — appending here would race the replacement in load() and
-        // duplicate rows once both resolve (seen when a narrow filter's IntersectionObserver
-        // sentinel is already in view before the first load() response lands).
+        // While load() is in flight, currentSkip/hasMore are stale; appending would duplicate rows.
+        // The IntersectionObserver sentinel can fire before the first load() response lands.
         if (loading.value || loadingMore.value || !hasMore.value) return;
         const seq = loadSeq;
         loadingMore.value = true;

@@ -3,10 +3,8 @@ import { router } from '../../router';
 import { registerDefaultMocks } from '../../../.storybook/default-mocks';
 import PaymentResultPage from './PaymentResultPage.vue';
 
-// No 'autodocs': the combined Docs page renders every story's canvas at once, and each
-// story's loader pushes a different route on the shared router singleton — the pushes
-// collide and every canvas ends up on whichever route won last (see individual story
-// canvases instead).
+// Combined docs render all stories at once; their loaders push routes on a shared router singleton,
+// so the pushes collide and every canvas lands on the last route; use per-story canvases instead.
 const meta: Meta<typeof PaymentResultPage> = {
     title: 'Pages/Checkout/PaymentResultPage',
     component: PaymentResultPage,

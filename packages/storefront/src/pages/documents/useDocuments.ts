@@ -12,10 +12,8 @@ export interface MyDocumentsOptions {
     search?: string;
 }
 
-// ERP-pushed documents (return/reconciliation) carry a direct fileUrl (ERP
-// already hosts the file). Self-generated documents (proforma-invoice/contract) carry
-// `asset` instead, whose `source` is already a full absolute URL built by
-// Vendure's own Asset resolver — never construct download URLs client-side.
+// ERP-pushed docs set fileUrl directly; self-generated docs set asset instead.
+// Asset source is already an absolute URL from Vendure's resolver; never build URLs client-side.
 function downloadUrlOf(doc: DocumentSummary): string | null {
     return doc.fileUrl ?? doc.asset?.source ?? null;
 }

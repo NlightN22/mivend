@@ -19,9 +19,8 @@ export function useCartActions(): {
 
     async function onAddToCart(variantId: string | undefined, qty = 1): Promise<void> {
         if (!variantId) return;
-        // Toast reflects the *actual* applied discount (from the mutation response),
-        // not a catalog-level guess — the real price can differ once a weight/amount
-        // tier this add crosses (or falls out of) is accounted for.
+        // Show the discount from the mutation response: the catalog price is wrong once this add
+        // crosses into or out of a weight/amount tier.
         const discount = await cartStore.addItem(variantId, qty);
         if (discount) {
             toast(discountAddToCartHint(discount.percent, discount.brand), 'success');

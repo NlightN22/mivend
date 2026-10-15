@@ -1,6 +1,5 @@
-// Plain English copy, matching the rest of the storefront's hardcoded-English
-// convention (cart/catalog chrome isn't wired through vue-i18n — only the login
-// screen currently is). Centralized here instead of repeating literals per call site.
+// Hardcoded English on purpose: cart/catalog UI isn't wired through vue-i18n (only login is).
+// Centralized here so the literals aren't repeated per call site.
 
 export function discountAddToCartHint(percent: number, brand: string): string {
     return `${percent}% discount on ${brand}`;

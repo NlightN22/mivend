@@ -1,9 +1,7 @@
 const SHOP_API_URL = '/shop-api';
 
-// Storefront auth is cookie-based (see the shop-api response's set-cookie), but the WS
-// subscriptions transport (graphql-ws) has no cookie jar of its own and authenticates via
-// connectionParams.authorization instead (see apps/server/src/subscriptions.ts) — captured here
-// from the same vendure-auth-token response header Vendure sends regardless of tokenMethod.
+// WS subscriptions (graphql-ws) have no cookie jar, so auth goes via connectionParams.authorization
+// Token is taken from the vendure-auth-token header, which Vendure sends regardless of tokenMethod
 const AUTH_TOKEN_HEADER = 'vendure-auth-token';
 let capturedAuthToken: string | null = null;
 
@@ -11,11 +9,8 @@ export function getCapturedAuthToken(): string | null {
     return capturedAuthToken;
 }
 
-// Thrown only when the request never reached the server at all (connection refused, DNS
-// failure, etc. — the browser's fetch() implementation throws a TypeError for these, distinct
-// from a real HTTP/GraphQL error response). Callers (notably the auth store) use this to avoid
-// treating a transient blip — e.g. the dev server mid-restart — as "the user is logged out".
-// See the backend-plugin-rules skill's Vendure gotcha on this.
+// Lets callers tell a transient outage (e.g. dev server restarting) from a real logout
+// Only fires when the request never reached the server, not on HTTP/GraphQL errors
 export class ApiNetworkError extends Error {
     name = 'ApiNetworkError';
 }
@@ -23,21 +18,16 @@ export class ApiNetworkError extends Error {
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 600;
 
-// Without this, a hung connection (no reset, just no response — the real-world case on a lossy
-// VPN, confirmed live during issue #115's remote benchmark, same client shape as
-// packages/manager/src/api/client.ts) relies on the browser's own default TCP timeout to ever
-// throw and trigger a retry, which can run into the tens of seconds — the user just sees a stuck
-// page with no feedback. Aborting explicitly caps that wait and lets the retry loop below
-// actually do its job promptly instead of waiting on the OS.
+// Browser's default TCP timeout can take tens of seconds on a hung connection (lossy VPN)
+// Explicit abort caps the wait so the retry loop below fires promptly, not after OS timeout
 const REQUEST_TIMEOUT_MS = 5000;
 
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Retries only on a genuine network failure (fetch() itself throwing, including our own
-// timeout-triggered abort below) — never on a real HTTP response, even an error one, since that
-// means the server was reachable and responded.
+// Retry only when fetch() itself throws, including our own timeout abort
+// An HTTP response, even an error one, proves the server was reachable, so never retry it
 async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
     let lastError: unknown;
     for (let attempt = 0; attempt <= RETRY_ATTEMPTS; attempt++) {
@@ -57,10 +47,8 @@ async function fetchWithRetry(url: string, init: RequestInit): Promise<Response>
     throw new ApiNetworkError(lastError instanceof Error ? lastError.message : 'Network error');
 }
 
-// Structurally matches the `TypedDocumentString` class emitted by @graphql-codegen/typed-document-node
-// (documentMode: 'string') into src/api/generated/graphql.ts — kept as a local structural type so
-// this module doesn't need to import the generated file. `__apiType` only exists to carry
-// TResult/TVariables at the type level; it's never assigned or read at runtime.
+// Local structural copy of codegen's TypedDocumentString, to avoid importing the generated file
+// __apiType carries TResult/TVariables at type level only; never assigned or read at runtime
 interface TypedDocumentLike<TResult, TVariables> {
     toString(): string;
     __apiType?: (variables: TVariables) => TResult;

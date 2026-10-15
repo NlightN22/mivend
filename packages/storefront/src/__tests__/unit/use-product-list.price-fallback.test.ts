@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 
-// Issue #70: ProductVariant.price must never surface the raw search-index price
-// (`priceWithTax`) — it's a customer-agnostic placeholder under SEARCH_BACKEND=external and,
-// even on the internal backend, is not the resolved price PriceResolutionService computes.
-// The `search` resolver now always returns a real `customerPrice` (the customer's own, or the
-// branch default-price-type fallback — see docs/pricing.md) except for a genuinely
-// unconfigured/pre-bootstrap system, so mapItems() must read customerPrice, never priceWithTax.
+// priceWithTax is a customer-agnostic placeholder (external backend), not the resolved price.
+// customerPrice is the resolved value; null only before system bootstrap.
 
 function makeSearchItem(
     sku: string,
@@ -72,9 +68,7 @@ describe('useProductList mapItems — issue #70 raw price fallback', () => {
                 : Promise.resolve({
                       search: {
                           totalItems: 1,
-                          // priceWithTax is 0 (the external-backend placeholder value, or simply
-                          // stale relative to the resolved price) — customerPrice is the real
-                          // resolved value and must be what's displayed.
+                          // priceWithTax can be a 0 placeholder or stale; customerPrice is the value to display.
                           items: [
                               makeSearchItem('SKU-A', {
                                   priceWithTaxValue: 0,
@@ -119,9 +113,7 @@ describe('useProductList mapItems — issue #70 raw price fallback', () => {
         expect(items.value[0].variants[0].price).not.toBe(9999);
     });
 
-    // Audit finding, mivend.audit.70: `?? 0` made an unresolved (null) customerPrice display as
-    // 0, indistinguishable from a genuinely free product — must surface as undefined instead, so
-    // downstream UI can render "no price" rather than "free".
+    // Keep null as undefined: a 0 fallback would render an unresolved price as a free product.
     it('maps a null (unresolved) customerPrice to undefined, never 0', async () => {
         const { useProductList } = await import('../../composables/useProductList');
         const filters = ref({ facetValueIds: [], inStock: false, priceMin: null, priceMax: null });

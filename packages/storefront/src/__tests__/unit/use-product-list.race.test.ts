@@ -1,11 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 
-// This test exists because the load()/loadMore() race in useProductList.ts has
-// recurred more than once (loadSeq was already added for load()'s own races
-// before loadMore() needed the same guard) — an e2e test alone can't reliably
-// catch a timing-dependent race, so this deterministically controls resolution
-// order via manual promise resolvers instead of hoping a real network race lands.
+// Load/loadMore races in useProductList.ts recur, and e2e can't reliably hit timing races;
+// so resolve promises manually to force the out-of-order completion.
 
 interface Deferred<T> {
     promise: Promise<T>;

@@ -147,9 +147,8 @@ describe('useAuthStore (storefront)', () => {
 
     it('a non-network error (e.g. a transient GraphQL/DB error) also stays "unknown", never "unauthenticated"', async () => {
         const { useAuthStore } = await import('../../stores/auth');
-        // Vendure's activeCustomer query never throws for "not logged in" — a genuine logout
-        // always comes back as a clean, successful `null`. Any thrown error, even one that
-        // isn't ApiNetworkError, is therefore ambiguous and must not force a logout.
+        // Vendure's activeCustomer returns null (never throws) for a real logout, so errors are ambiguous.
+        // Only a clean null may trigger logout; any thrown error, even non-ApiNetworkError, must not.
         shopApiMock.mockRejectedValueOnce(new Error('Internal server error'));
 
         const store = useAuthStore();

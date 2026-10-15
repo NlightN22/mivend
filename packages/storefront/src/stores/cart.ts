@@ -46,9 +46,8 @@ interface MutationResult {
     quantityAvailable?: number;
 }
 
-// Vendure's InsufficientStockError.message is a full server-composed sentence
-// ("Only N items were added to the order due to insufficient stock") — replace it
-// with a short message; quantityAvailable lets us say how many, when known.
+// Vendure's InsufficientStockError.message is a long server-composed sentence;
+// replace it with a short one, using quantityAvailable when it is known.
 function mutationErrorMessage(result: MutationResult, fallback: string): string {
     if (result.errorCode === 'INSUFFICIENT_STOCK_ERROR') {
         return result.quantityAvailable != null
@@ -146,10 +145,8 @@ export const useCartStore = defineStore('cart', () => {
         await enqueue(async () => {
             let realLineId: string | undefined;
             try {
-                // Request real lineId + the real applied price in the response so the
-                // caller can show an accurate discount toast — not a pre-add guess from
-                // catalog-level flat compareAtPrice, which can't see a tier this add just
-                // unlocked (or a tier this add crosses out of, once other lines shrink).
+                // Return the real lineId and applied price from the server, not a client guess:
+                // catalog-level compareAtPrice can't see tiers this add unlocks or crosses out of.
                 const addToCart = (): ReturnType<
                     typeof shopApi<AddToCartMutation, AddToCartMutationVariables>
                 > => shopApi(AddToCartDocument, { variantId, qty });
@@ -158,11 +155,8 @@ export const useCartStore = defineStore('cart', () => {
                     result.addItemToOrder.__typename !== 'Order' &&
                     result.addItemToOrder.errorCode === 'ORDER_MODIFICATION_ERROR'
                 ) {
-                    // The customer's active order was left mid-checkout (transitioned to
-                    // ArrangingPayment but never settled — e.g. they backed out of payment).
-                    // Vendure forbids adding items outside AddingItems; since this order was
-                    // never actually paid, bringing it back to AddingItems is safe and lets
-                    // the customer keep shopping instead of being permanently blocked.
+                    // Vendure forbids adding items outside AddingItems; an order stuck in ArrangingPayment
+                    // was never paid, so reverting it to AddingItems is safe.
                     await shopApi(ResumeAddingItemsDocument);
                     result = await addToCart();
                 }
@@ -200,10 +194,8 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     function adjustItem(lineId: string, qty: number): Promise<void> {
-        // Optimistic update — reflect change immediately, sync with server after.
-        // Scale the displayed line total by the same ratio so it doesn't sit stale
-        // (wrong digit count for the new quantity) until fetchCart() resolves, which
-        // reads as the price "jumping" a moment later.
+        // Scale the displayed line total by the same ratio, otherwise it shows a stale digit
+        // count until fetchCart() resolves and the price visibly jumps.
         if (order.value) {
             order.value = {
                 ...order.value,
@@ -307,9 +299,8 @@ export const useCartStore = defineStore('cart', () => {
         await fetchCart();
     }
 
-    // Moves the order from AddingItems to ArrangingPayment — required before any
-    // addPaymentToOrder call. Vendure refuses this transition without a shipping
-    // method attached, so set the one matching the selected delivery type first.
+    // Vendure refuses the AddingItems -> ArrangingPayment transition without a shipping method,
+    // so the method matching the delivery type must be set first.
     async function beginCheckout(): Promise<boolean> {
         // A previous attempt (declined payment, closed tab) can leave the order in ArrangingPayment.
         if (order.value?.state === 'ArrangingPayment') await shopApi(ResumeAddingItemsDocument);
@@ -359,9 +350,8 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     async function removeItems(lineIds: string[]): Promise<void> {
-        // No batch "remove these N lines" mutation on the Shop API (only single-line
-        // removeOrderLine or all-lines removeAllOrderLines) — this is an unavoidable
-        // loop, unlike clearCart() above. One fetchCart() at the end, not per line.
+        // The Shop API has no batch line-removal mutation, so this loop is unavoidable;
+        // fetch the cart once at the end, not per line.
         if (order.value) {
             const idSet = new Set(lineIds);
             order.value = {

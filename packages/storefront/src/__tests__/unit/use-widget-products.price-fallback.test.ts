@@ -3,11 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { withResolvedPrice } from '../../composables/useWidgetProducts';
 import type { ProductItem } from '../../composables/useProductList';
 
-// Issue #70/mivend.audit.70: useWidgetProducts.ts's withResolvedPrice() has the same class of
-// bug useProductList.ts had — `?? 0` made an unresolved (null) customerPrice display as 0,
-// indistinguishable from a genuinely free product. Fixed alongside useProductList.ts's own fix;
-// this file covers the widget composable's own copy of the same logic, which the audit flagged
-// as untested.
+// Unresolved (null) customerPrice must not fall back to 0: that would look like a free product.
 
 function makeItem(customerPrice: number | null): ProductItem {
     return {

@@ -16,11 +16,8 @@ import {
     NotificationStatus as GeneratedNotificationStatus,
 } from './generated/graphql';
 
-// Codegen's generated NotificationStatus/NotificationKind are branded string enums, not plain
-// string-literal unions, and its optional (`?:`) nullable fields can come back as `undefined`
-// where ui-kit's transport-agnostic NotificationItem (deliberately GraphQL-client-free) requires
-// `null` — this mapping normalizes the wire shape into that shape once, at the transport
-// boundary, rather than loosening NotificationItem's own types for every consumer.
+// Codegen emits branded enums and optional fields that can be undefined; ui-kit's NotificationItem
+// is client-free and needs plain literals and null, so normalize here, not loosen its types.
 function toNotificationItem(fragment: NotificationFieldsFragment): NotificationItem {
     return {
         id: fragment.id,

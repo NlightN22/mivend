@@ -47,10 +47,8 @@ describe('shopApi', () => {
         expect(fetchMock).toHaveBeenCalledTimes(4);
     });
 
-    // Issue #115's own live remote-network finding: a hung connection with no response (not a
-    // thrown error) used to rely on the browser's own default TCP timeout, which can run into
-    // the tens of seconds. Simulates that by never resolving/rejecting fetch() and asserting the
-    // request aborts (and retries) on our own 5s timeout instead of hanging indefinitely.
+    // The browser's default TCP timeout can run to tens of seconds, so a hung fetch() that never settles
+    // must be aborted by our own 5s timeout and retried; the fetch mock never resolves or rejects.
     it('aborts and retries a request that hangs with no response, instead of waiting forever', async () => {
         const fetchMock = vi.fn().mockImplementation(
             (_url: string, init?: RequestInit) =>

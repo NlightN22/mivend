@@ -10,13 +10,8 @@ import type { ProductItem } from './useProductList';
 
 export type WidgetMode = 'new-arrivals' | 'sales' | 'popular';
 
-// The `products` query's `variant.price` is Vendure's raw listPrice (ERP import price,
-// price-type-agnostic) — never a value to display (issue #70, same class of bug as
-// useProductList.ts's raw `priceWithTax`). Widget cards only ever read `customerPrice`/
-// `compareAtPrice` (populated by ProductVariantPriceResolver via PriceResolutionService,
-// which now always resolves a real price — the customer's own, or the branch default-price-type
-// fallback — never null except a genuinely unconfigured/pre-bootstrap system), so overwrite
-// `price` with that here instead of trusting the raw field.
+// Overwrite price with customerPrice: variant.price is the raw ERP listPrice, not price-type-aware.
+// Widget cards must never show the raw field, so the resolved customer price replaces it here.
 export function withResolvedPrice(items: ProductItem[]): ProductItem[] {
     return items.map(item => ({
         ...item,
@@ -48,11 +43,8 @@ export function useWidgetProducts(mode: WidgetMode): {
                 const result = await shopApi(SaleProductsDocument);
                 items.value = withResolvedPrice(result.products.items as ProductItem[]);
             } else {
-                // Ranked by real order-line quantity (plugin-popular-products), not
-                // by ES relevance/filters — fetch the ranked ids first, then the
-                // display data via the same `products` query the other widgets use,
-                // and reorder client-side since `filter: { id: { in: ... } }` does
-                // not preserve the requested id order.
+                // Ranking is by real order-line quantity from plugin-popular-products, not ES relevance.
+                // The products `in` filter drops the requested id order, so reorder client-side.
                 const idsResult = await shopApi(PopularProductIdsDocument);
                 const ids = idsResult.popularProductIds;
                 if (ids.length === 0) {

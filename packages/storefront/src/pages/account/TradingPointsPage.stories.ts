@@ -12,9 +12,8 @@ const meta: Meta<typeof TradingPointsPage> = {
 export default meta;
 type Story = StoryObj<typeof TradingPointsPage>;
 
-// useTradingPoints.ts fetches via a raw, unnamed GraphQL query (bypasses codegen — pre-existing
-// tech debt), so the operation-name-keyed mock registry can't intercept it; the page always
-// renders with empty trading-point lists in Storybook until that file adopts codegen.
+// Unnamed raw GraphQL query skips codegen, so the name-keyed mock registry can't intercept it.
+// Storybook renders empty trading-point lists until useTradingPoints.ts adopts codegen.
 export const Default: Story = {
     loaders: [
         async () => {

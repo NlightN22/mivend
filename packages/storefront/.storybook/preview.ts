@@ -35,9 +35,8 @@ import { registerDefaultMocks } from './default-mocks';
 
 initialize({ onUnhandledRequest: 'bypass' });
 
-// Created at module scope (not inside setup()) so router navigation guards can call
-// useAuthStore() from a story `loaders` function, which runs before the Vue app that owns
-// the router is even mounted. See packages/manager/.storybook/preview.ts for the same fix.
+// Module scope, not setup(): router guards call useAuthStore() from story loaders,
+// which run before the Vue app and its router are mounted.
 const pinia = createPinia();
 setActivePinia(pinia);
 

@@ -11,9 +11,8 @@ function wsUrl(): string {
     return `${protocol}//${window.location.host}${SUBSCRIPTIONS_PATH}`;
 }
 
-// Lazily created — a captured auth token (see client.ts) is only available once the storefront
-// has made at least one authenticated request, which always happens before any page that shows
-// the notification bell mounts.
+// Created lazily: the auth token from client.ts is only set after the first authenticated
+// request, which always precedes mounting the notification bell.
 let wsClient: Client | null = null;
 
 export function getNotificationsWsClient(): Client {

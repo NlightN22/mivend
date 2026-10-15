@@ -12,10 +12,7 @@ type ActiveCustomer = NonNullable<ActiveCustomerForAuthQuery['activeCustomer']>;
 
 type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 
-// Background retry tuning for a network outage that outlasts shopApi's own bounded ~4.2s
-// retry (see api/client.ts) — capped exponential backoff, retried indefinitely rather than
-// ever concluding "logged out" from a network failure alone. See the backend-plugin-rules skill's "A fetch()
-// network failure is not the same as 'logged out'" gotcha.
+// Outages can outlast shopApi's ~4.2s retry; a network failure is not a logged-out signal.
 const BACKGROUND_RETRY_INITIAL_MS = 2_000;
 const BACKGROUND_RETRY_MAX_MS = 20_000;
 const HEARTBEAT_INTERVAL_MS = 60_000;
@@ -23,10 +20,8 @@ const HEARTBEAT_INTERVAL_MS = 60_000;
 export const useAuthStore = defineStore('auth', () => {
     const customer = ref<ActiveCustomer | null>(null);
     const initialized = ref(false);
-    // Tri-state, distinct from `customer`/`isLoggedIn`: 'unknown' covers both "not yet checked"
-    // and "currently retrying after a network failure" — callers (route guard, App.vue's DEV
-    // auto-relogin fallback) only treat a *confirmed* 'unauthenticated' as "not logged in",
-    // never 'unknown', so a prolonged outage never force-logs-out a still-valid session.
+    // 'unknown' also covers retrying after a network failure: only a confirmed 'unauthenticated'
+    // counts as logged out, so an outage never force-logs-out a still-valid session.
     const authStatus = ref<AuthStatus>('unknown');
     const isReconnecting = ref(false);
     const reconnectingSince = ref<number | null>(null);
@@ -121,10 +116,8 @@ export const useAuthStore = defineStore('auth', () => {
         else stopHeartbeat();
     }
 
-    // Keeps retrying indefinitely (capped backoff) after shopApi's own bounded ~4.2s retry is
-    // exhausted — a prolonged outage must never be mistaken for "logged out". Only a real HTTP
-    // response (success or a confirmed-null activeCustomer) ends the loop; a superseded
-    // generation (login/logout/a fresh fetchCurrentCustomer call) also stops it silently.
+    // Only a real HTTP response ends the loop; a prolonged outage must never look like logged out.
+    // A superseded generation (login/logout/new fetch) also stops it silently.
     function scheduleBackgroundRetry(myGeneration: number, delayMs: number): void {
         backgroundRetryTimer = setTimeout(() => {
             if (myGeneration !== generation) return;
@@ -135,11 +128,8 @@ export const useAuthStore = defineStore('auth', () => {
                 })
                 .catch(() => {
                     if (myGeneration !== generation) return;
-                    // Vendure's activeCustomer query never throws for "not logged in" — it
-                    // returns a clean `null`, handled by applyResult above. ANY thrown error here
-                    // (network failure, a transient GraphQL/DB error, anything) is therefore
-                    // ambiguous, not a confirmed logout — keep retrying rather than assuming the
-                    // caller is unauthenticated just because this one attempt errored.
+                    // Vendure's activeCustomer returns null (not an error) when logged out, so any thrown error
+                    // is ambiguous: retry rather than treat it as unauthenticated.
                     scheduleBackgroundRetry(
                         myGeneration,
                         Math.min(delayMs * 2, BACKGROUND_RETRY_MAX_MS),
@@ -163,14 +153,8 @@ export const useAuthStore = defineStore('auth', () => {
             const result = await shopApi(ActiveCustomerForAuthDocument);
             applyResult(myGeneration, result);
         } catch {
-            // See the manager portal's identical fetchActiveAdministrator comment — Vendure's
-            // activeCustomer query never throws for "not logged in", it comes back as a clean
-            // successful `null`, handled by applyResult above. ANY thrown error here — a network
-            // failure (shopApi already retried), a transient GraphQL/DB error, anything — means
-            // we simply couldn't confirm the session's state either way, not that the customer is
-            // logged out. Vendure sessions last a year by default. Status stays 'unknown' and
-            // hands off to an indefinite background retry rather than blocking this call (and
-            // whatever awaits it, e.g. App.vue/the route guard).
+            // A thrown error means the session state is unconfirmed, not that the customer is logged out.
+            // Status stays 'unknown' and retries in the background instead of blocking the route guard.
             isReconnecting.value = true;
             reconnectingSince.value = Date.now();
             scheduleBackgroundRetry(myGeneration, BACKGROUND_RETRY_INITIAL_MS);
