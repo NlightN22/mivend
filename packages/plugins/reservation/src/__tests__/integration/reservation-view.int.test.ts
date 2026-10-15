@@ -39,7 +39,7 @@ beforeAll(async () => {
         `CREATE TABLE "order" (id int PRIMARY KEY, code varchar, state varchar, "customerId" int)`,
         `CREATE TABLE order_line (id int PRIMARY KEY, "orderId" int, "productVariantId" int, quantity int)`,
         `CREATE TABLE product_variant (id int PRIMARY KEY, sku varchar)`,
-        `CREATE TABLE customer (id int PRIMARY KEY, "customFieldsCounterpartyid" int)`,
+        `CREATE TABLE customer (id int PRIMARY KEY, "customFieldsCounterpartyid" varchar)`,
         `CREATE TABLE counterparty (id int PRIMARY KEY, "shortName" varchar, "assignedManagerId" varchar)`,
         `CREATE TABLE administrator (id int PRIMARY KEY, "firstName" varchar, "lastName" varchar)`,
         `CREATE TABLE reservation ("orderId" varchar, "orderLineId" varchar, "productVariantId" varchar,
@@ -109,8 +109,17 @@ beforeEach(async () => {
 });
 
 describe('ErpOrderReserveService.record', () => {
-    const rows = (): Promise<Array<{ quantity: number; reserveUntil: Date | null }>> =>
-        dataSource.query(`SELECT quantity, "reserveUntil" FROM erp_order_reserve`);
+    const rows = (): Promise<
+        Array<{
+            orderId: string;
+            productVariantId: string;
+            quantity: number;
+            reserveUntil: Date | null;
+        }>
+    > =>
+        dataSource.query(
+            `SELECT "orderId", "productVariantId", quantity, "reserveUntil" FROM erp_order_reserve`,
+        );
 
     it('replaying the same event keeps one row with the same values', async () => {
         const lines = [{ productVariantId: '10', reservedQuantity: 4 }];

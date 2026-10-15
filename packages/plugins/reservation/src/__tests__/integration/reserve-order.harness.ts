@@ -232,7 +232,12 @@ export function useReserveOrderHarness(schemaKey: string): ReserveOrderHarness {
             withTransaction: async (
                 ctx: RequestContext,
                 work: (txCtx: RequestContext) => Promise<unknown>,
-            ) => h.dataSource.transaction(manager => work(withManager(ctx, manager))),
+            ) => {
+                // Like Vendure: a nested withTransaction joins the ctx's open transaction.
+                const open = (ctx as unknown as { __manager?: EntityManager }).__manager;
+                if (open) return work(ctx);
+                return h.dataSource.transaction(manager => work(withManager(ctx, manager)));
+            },
         } as unknown as TransactionalConnection;
 
         const eventBus = {

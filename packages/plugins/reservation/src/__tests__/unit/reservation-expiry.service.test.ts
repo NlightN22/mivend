@@ -46,6 +46,10 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         };
         const txReservationRepo = {
             createQueryBuilder: vi.fn(() => reservationQueryBuilder),
+            find: vi.fn(async () => [
+                ...rejectedOrders.map(order => ({ orderId: String(order.id) })),
+                ...rejectedReservations.map(row => ({ orderId: String(row.orderId) })),
+            ]),
             update: vi.fn(async () => ({ affected: dueRows.length })),
         };
         // Order.find is called once for REJECTED orders past the deadline, then (only when a
@@ -340,7 +344,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         const { service, txReservationRepo, notificationService } = createService(dueRows);
         notificationService.create.mockRejectedValueOnce(new Error('notify down'));
 
-        await expect(service.expireDueReservations()).rejects.toThrow('notify down');
+        await service.expireDueReservations();
         expect(txReservationRepo.update).not.toHaveBeenCalled();
 
         await service.expireDueReservations();
@@ -370,7 +374,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
     });
 
     it('uses rejectedOrderReleaseDays, not the reservation default, for the REJECTED deadline', async () => {
-        const { service, txOrderRepo } = createService([], [], [], [], {
+        const { service, txOrderRepo } = createService([], [], [{ id: 'order-1' }], [], {
             defaultReservationDays: 30,
             rejectedOrderReleaseDays: 1,
         });

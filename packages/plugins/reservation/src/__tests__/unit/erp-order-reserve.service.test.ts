@@ -23,18 +23,19 @@ describe('ErpOrderReserveService.record', () => {
 
         expect(connection.withTransaction).toHaveBeenCalledTimes(1);
         const calls = query.mock.calls as unknown as Array<[string, unknown[]]>;
-        expect(calls[0][0]).toContain('INSERT INTO erp_order_reserve');
-        expect(calls[1][0]).toContain('DELETE FROM erp_order_reserve');
-        expect(calls[1][1]).toEqual(['7', ['10']]);
+        expect(calls[0][0]).toContain('pg_advisory_xact_lock');
+        expect(calls[0][1]).toEqual(['erp-reserve:7']);
+        expect(calls[1][0]).toContain('INSERT INTO erp_order_reserve');
+        expect(calls[2][0]).toContain('DELETE FROM erp_order_reserve');
+        expect(calls[2][1]).toEqual(['7', ['10']]);
     });
 
-    it('removes every row of the order when the ERP reports no lines', async () => {
-        const { service, query } = create();
+    it('an event without reserved lines carries no information and changes nothing', async () => {
+        const { service, query, connection } = create();
 
         await service.record(ctx, 7, [], null);
 
-        const calls = query.mock.calls as unknown as Array<[string, unknown[]]>;
-        expect(calls).toHaveLength(1);
-        expect(calls[0][1]).toEqual(['7', []]);
+        expect(connection.withTransaction).not.toHaveBeenCalled();
+        expect(query).not.toHaveBeenCalled();
     });
 });

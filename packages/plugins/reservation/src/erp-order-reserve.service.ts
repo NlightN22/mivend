@@ -1,3 +1,4 @@
+import { withAggregateLock } from 'shared';
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
@@ -28,26 +29,32 @@ export class ErpOrderReserveService {
                 (byVariant.get(line.productVariantId) ?? 0) + line.reservedQuantity,
             );
         }
-        await this.connection.withTransaction(ctx, async txCtx => {
-            const repo = this.connection.getRepository(txCtx, ErpOrderReserve);
-            for (const [productVariantId, quantity] of byVariant) {
-                await repo.query(
-                    `INSERT INTO erp_order_reserve
+        if (byVariant.size === 0) return;
+        await withAggregateLock(
+            this.connection,
+            ctx,
+            `erp-reserve:${String(orderId)}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, ErpOrderReserve);
+                for (const [productVariantId, quantity] of byVariant) {
+                    await repo.query(
+                        `INSERT INTO erp_order_reserve
                        ("uuid", "orderId", "productVariantId", "quantity", "reserveUntil")
                      VALUES (gen_random_uuid(), $1, $2, $3, $4)
                      ON CONFLICT ("orderId", "productVariantId") DO UPDATE SET
                        "quantity" = EXCLUDED."quantity",
                        "reserveUntil" = COALESCE(EXCLUDED."reserveUntil", erp_order_reserve."reserveUntil"),
                        "updatedAt" = now()`,
-                    [String(orderId), productVariantId, quantity, reserveUntil],
-                );
-            }
-            await repo.query(
-                `DELETE FROM erp_order_reserve
+                        [String(orderId), productVariantId, quantity, reserveUntil],
+                    );
+                }
+                await repo.query(
+                    `DELETE FROM erp_order_reserve
                   WHERE "orderId" = $1 AND NOT ("productVariantId" = ANY($2::text[]))`,
-                [String(orderId), [...byVariant.keys()]],
-            );
-        });
+                    [String(orderId), [...byVariant.keys()]],
+                );
+            },
+        );
     }
 
     findForOrder(ctx: RequestContext, orderId: ID): Promise<ErpOrderReserve[]> {

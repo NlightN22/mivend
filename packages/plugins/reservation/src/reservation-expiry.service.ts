@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { EventBus, Order, RequestContext, RequestContextService } from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
-import { DataSource, In, LessThanOrEqual, Raw } from 'typeorm';
+import { DataSource, In, LessThanOrEqual } from 'typeorm';
 
 import { Reservation } from './entities/reservation.entity';
 import { OrderCancellationService } from './order-cancellation.service';
@@ -51,22 +51,26 @@ export class ReservationExpiryService {
                     `SELECT code FROM order_status_reference WHERE rejected AND NOT "isDeleted"`,
                 )
             ).map((row: { code: string }) => row.code);
-            const rejectedOrders = rejectedCodes.length
+            const activeOrderIds = rejectedCodes.length
+                ? (
+                      await manager
+                          .getRepository(Reservation)
+                          .find({ where: { status: 'active' }, select: { orderId: true } })
+                  ).map(row => row.orderId)
+                : [];
+            const rejectedOrders = activeOrderIds.length
                 ? await manager.getRepository(Order).find({
                       where: {
                           customFields: {
                               erpStatus: In(rejectedCodes),
                               erpStatusAt: LessThanOrEqual(rejectionCutoff),
                           },
-                          id: Raw(
-                              alias =>
-                                  `${alias} IN (SELECT "orderId"::int FROM reservation WHERE status = 'active')`,
-                          ),
+                          id: In([...new Set(activeOrderIds)]),
                       },
                   })
                 : [];
             const rejectedOrderIds = rejectedOrders.map(order => String(order.id));
-            const rejectedDue = rejectedOrderIds.length
+            let rejectedDue = rejectedOrderIds.length
                 ? await manager
                       .getRepository(Reservation)
                       .createQueryBuilder('reservation')
@@ -88,7 +92,7 @@ export class ReservationExpiryService {
             const nonPrepaidDue = expiryDueRows.filter(
                 row => row.creationMethod !== 'auto-prepaid' && !row.interventionFlaggedAt,
             );
-            const prepaidDue = expiryDueRows.filter(
+            let prepaidDue = expiryDueRows.filter(
                 row => row.creationMethod === 'auto-prepaid' && !row.interventionFlaggedAt,
             );
 
@@ -99,29 +103,49 @@ export class ReservationExpiryService {
                     ? await this.requestContextService.create({ apiType: 'admin' })
                     : null;
 
-            const notifications: Parameters<NotificationService['create']>[1][] = [
+            const notifications: Array<{
+                key: string;
+                input: Parameters<NotificationService['create']>[1];
+            }> = [
                 ...prepaidDue.map(row => ({
-                    recipientType: 'administrator-broadcast' as const,
-                    kind: 'error' as const,
-                    sourceType: 'reservation-intervention',
-                    sourceId: String(row.id),
-                    title: 'Prepaid reservation needs manual intervention',
-                    message: `Reservation ${String(row.id)} (order ${row.orderId}) expired at ${row.expiresAt.toISOString()} without release.`,
+                    key: `prepaid:${String(row.id)}`,
+                    input: {
+                        recipientType: 'administrator-broadcast' as const,
+                        kind: 'error' as const,
+                        sourceType: 'reservation-intervention',
+                        sourceId: String(row.id),
+                        title: 'Prepaid reservation needs manual intervention',
+                        message: `Reservation ${String(row.id)} (order ${row.orderId}) expired at ${row.expiresAt.toISOString()} without release.`,
+                    },
                 })),
                 ...rejectedDue.map(row => ({
-                    recipientType: 'administrator-broadcast' as const,
-                    kind: 'error' as const,
-                    sourceType: 'reservation-rejected-release',
-                    sourceId: String(row.id),
-                    title: 'Reservation released after ERP rejection timeout',
-                    message: `Reservation ${String(row.id)} (order ${row.orderId}) was released after its order stayed REJECTED by the ERP for over ${this.settings.rejectedOrderReleaseDays()} day(s).`,
+                    key: `rejected:${String(row.id)}`,
+                    input: {
+                        recipientType: 'administrator-broadcast' as const,
+                        kind: 'error' as const,
+                        sourceType: 'reservation-rejected-release',
+                        sourceId: String(row.id),
+                        title: 'Reservation released after ERP rejection timeout',
+                        message: `Reservation ${String(row.id)} (order ${row.orderId}) was released after its order stayed REJECTED by the ERP for over ${this.settings.rejectedOrderReleaseDays()} day(s).`,
+                    },
                 })),
             ];
-            // Notify before marking: a failure throws and rolls the transaction back, so the
-            // next sweep finds the rows unmarked and retries (at-least-once).
-            for (const input of notifications) {
-                await this.notificationService.create(ctx!, input);
+            // Notify before marking, per row: a row whose notification failed stays unmarked and is
+            // retried by the next sweep, without blocking the others (at-least-once).
+            const notified = new Set<string>();
+            for (const { key, input } of notifications) {
+                try {
+                    await this.notificationService.create(ctx!, input);
+                    notified.add(key);
+                } catch (error) {
+                    Logger.error(
+                        `Reservation notification ${key} failed: ${(error as Error).message}`,
+                        loggerCtx,
+                    );
+                }
             }
+            prepaidDue = prepaidDue.filter(row => notified.has(`prepaid:${String(row.id)}`));
+            rejectedDue = rejectedDue.filter(row => notified.has(`rejected:${String(row.id)}`));
 
             if (prepaidDue.length > 0) {
                 await manager
@@ -264,12 +288,14 @@ export class ReservationExpiryService {
                     title: 'Reservation past its deadline, order is in the ERP',
                     message: `Reservation ${String(row.id)} (order ${row.orderId}) is still active after its deadline; the order is registered or in progress in the ERP.`,
                 });
-                await this.dataSource
-                    .getRepository(Reservation)
-                    .update(
-                        { id: row.id, status: 'active' },
-                        { interventionFlaggedAt: new Date() },
-                    );
+                await this.dataSource.transaction(manager =>
+                    manager
+                        .getRepository(Reservation)
+                        .update(
+                            { id: row.id, status: 'active' },
+                            { interventionFlaggedAt: new Date() },
+                        ),
+                );
             } catch (error) {
                 Logger.error(
                     `ERP-owned flag of reservation ${String(row.id)} failed: ${String(error)}`,

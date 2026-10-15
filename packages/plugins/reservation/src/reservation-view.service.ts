@@ -100,7 +100,7 @@ export class ReservationViewService {
                       trim(concat(a."firstName", ' ', a."lastName")) AS "managerName"
                  FROM reservation r JOIN "order" o ON o.id = r."orderId"::int
                  LEFT JOIN customer cu ON cu.id = o."customerId"
-                 LEFT JOIN counterparty c ON c.id = cu."customFieldsCounterpartyid"
+                 LEFT JOIN counterparty c ON c.id::text = cu."customFieldsCounterpartyid"
                  LEFT JOIN administrator a ON a.id::text = c."assignedManagerId"
                 WHERE r."productVariantId" = $1 AND r.status = 'active'
                UNION ALL
@@ -108,7 +108,7 @@ export class ReservationViewService {
                       trim(concat(a."firstName", ' ', a."lastName"))
                  FROM erp_order_reserve e JOIN "order" o ON o.id = e."orderId"::int
                  LEFT JOIN customer cu ON cu.id = o."customerId"
-                 LEFT JOIN counterparty c ON c.id = cu."customFieldsCounterpartyid"
+                 LEFT JOIN counterparty c ON c.id::text = cu."customFieldsCounterpartyid"
                  LEFT JOIN administrator a ON a.id::text = c."assignedManagerId"
                 WHERE e."productVariantId" = $1 AND e.quantity > 0 AND o.state <> 'Cancelled'
              ) h ORDER BY until ASC NULLS LAST, "orderId", source, rid LIMIT ${HOLDERS_LIMIT} OFFSET $2`,
