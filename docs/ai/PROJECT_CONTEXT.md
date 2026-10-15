@@ -1,6 +1,13 @@
 # Project Context
 
-Updated: 2026-10-15 20:00
+Updated: 2026-10-15 21:30
+
+## #236 local reserve handed over to the ERP only for what it holds (2026-10-15, DONE: audited twice, pushed `91238d9c`, closed)
+
+- `ReservationWriteOffSyncService.releaseMatchingReservations`, per variant: `erp >= local+handedOver` releases all; `0 < erp < that` releases only the covered part (row split, remainder stays active, mismatch reported); `erp = 0` keeps it active and reports, except `warehouseStarted` (zero is normal); a variant absent from the answer is untouched (stays active until its own expiry). Rules in `docs/order-flow.md`.
+- Handed-over quantity = rows with `Reservation.erpHandedOverAt` of the CURRENT `reservationGeneration` (never plain `released`: cancel/expiry also set it). Migration `1791511000000`, applied by hand on the three dev DBs (synchronize contours do not run migrations).
+- `handleOrderChanged` now runs under `reserve-order:<id>` like the registration result (split + release in one transaction). `ErpOrderStatusEvent` published inside the lock is safe: subscribers use `eventBus.ofType`, which waits for commit.
+- Tests: unit + `reserve-handover.int.test.ts` (real Postgres: split, zero, repeat, concurrent, cancel-released row). Reserve is still shown on delivered orders (hide for terminal statuses: undecided).
 
 ## #197 concurrency HIGH findings (2026-10-15, DONE: audited 3 rounds, pushed `c9bd24a1`, closed)
 
