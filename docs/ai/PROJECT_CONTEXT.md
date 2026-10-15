@@ -1,6 +1,6 @@
 # Project Context
 
-Updated: 2026-10-14 17:10
+Updated: 2026-10-15 16:22
 
 ## #234 Kafka topic rename (2026-10-14, pushed `606f5480`, closed; not audited in a separate session)
 
@@ -20,11 +20,14 @@ Updated: 2026-10-14 17:10
 - **Contour facts**: ERP seeds only a debt-covering window (+12 months) per triple, so old paid contracts have no documents (verified with search-platform). 12.8k failed `stock` rows on staging-integration came from a hidden warehouse tombstone (fixed, rows stay failed). `ts-node-dev` children can spin at 90% CPU and never listen: kill the children by PID, `touch` a file to respawn; never `pkill -f` with a pattern that matches your own shell.
 
 
-## Payment allocation (#206)
+## #206 proforma invoices + #222 form of payment vs terms (2026-10-12..15, done, audited 3 rounds, pushed `865ed997`, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-15-206-222-sections-full.md`)
 
-An ERP payment fact is applied to the named document, or to the current head of its version chain when that is
-superseded, then FIFO over the counterparty's open documents in the same organization; a remainder becomes an advance.
-The ERP payment fact carries its own amount/currency (allocation uses it, not the document's); the paid snapshot is never rewritten. Rules: `docs/payments.md`, "Payment allocation".
+- **Model (docs/payments.md "Proforma invoice: concept, versions, statuses")**: a proforma is INFORMATIONAL, never closed; the only source of debt is the ERP sales invoice (realization; ingestion + a "by shipment" version are NOT built, fields `kind`/`salesInvoiceNumber` are prepared). One document per (order, organization), many versions; number `<order>-<NN>-<version>`; per-version `issuedAt`/`dueDate` (`BranchSettings.proformaPaymentTermDays` 1..90, default 3; re-issue resets the term by design). Statuses shown: Current / Superseded (newer version exists, still payable) / Cancelled (withdraw action, refused with allocations or an active attempt); "paid" is not shown on a proforma, order level shows `Order.erpPaidAmount` (lower bound from `order-changed.paidAmount`).
+- **Snapshots**: lines (with `taxRate`/`taxAmount`), content hash decides reuse/new version under `proformaInvoices-for-order:<id>` lock; paid snapshots never rewritten (difference settled via the ERP). Print form follows the 1C payment-request layout on one A4 page, VAT as one total line, payment QR GOST R 56042-2014 ST00012 (own module, `qrcode` for drawing; required: name, account, bank, BIC, corr. account, sum, purpose, payee INN). Required requisites: legal name + INN + bank; address/KPP/phone/signatories optional (organization stream, contract 0.66).
+- **Form of payment vs terms (#222)**: forms `cash` / `offline-terms` (bank transfer) / `online-stub` (card); limit control is a policy for every form (`CreditPlacementService`, lock `credit-exposure:<counterparty>`), route in `Payment.metadata.placement`; over limit waits for a manager unless the branch allows exceeding and the customer acknowledged; card amount = excess + total and cures the order; prepayment orders reserve with `prepaymentReserveDays` (default 3); manager action `confirmPaymentReceived` (`ConfirmPaymentReceived`). `deferred-payment` method removed.
+- **Payments**: FIFO allocation module (`SettlementEntry`) is FROZEN, not extended, not used for display; owner idea for later: the customer allocates a payment across orders in our system (needs an ERP contract). The ERP REST callbacks are a TEST tool (docs/environments.md), off by default, key-protected; the payment fact carries amount + currency + required `proformaInvoiceUuid`.
+- **Open**: realization ingestion and "by shipment" version (#224 stream), customer-driven allocation, e2e sets `storefront/checkout-credit` and `proforma-organizations` written but not confirmed green on a stable contour (PDF specs need a worker; they fail on CI without one), dashboard GraphQL types regeneration, withdraw vs concurrent payment lock, integration-side proforma contract (search-platform#198), #230 (storefront connection bar), shop API 500 on proforma/order lists for a session without customer.
+- **Owner preferences**: no production, destructive/no-compat changes are fine (staging-integration DB holds real integration data: plain UPDATE/RENAME only, never reseed); the owner's 1C sample PDF/xlsx are private, never copy real data into the repo.
 
 ## #223 legacy-name rename (2026-10-12, done)
 
@@ -38,15 +41,6 @@ The ERP payment fact carries its own amount/currency (allocation uses it, not th
 - **Live-verified with search-platform** (no new staging orders): unit with ratio 10 and quantity 2 round-trips unchanged; empty `unit_id` = base unit; `documentNumber` stable across emissions; foreign-unit rejection = `rejected`, `PROCESSING_ERROR`, null `orderEntityId`/`documentNumber`/`reservedLines`, text carries a 1C trace prefix `{...Модуль(242)}:` which we store and show as-is.
 - **Caution**: the integration `outbound_command` queue is shared by production and dev 1C bases — never create test commands there without the owner confirming which base will pick them up.
 - **Open**: live check of a package-only order with the 1C line (needs the Integration Service owner); a unit field on `order-registration-result`; pack display in catalog cards; dataloader for `packagingLevels`; the 1C trace prefix is shown to managers as-is.
-
-## #222 stage 2a: placement policy for every payment form (2026-10-12, backend done, not yet audited)
-- `deferred-payment` method removed; forms are `cash` / `offline-terms` (bank transfer) / `online-stub` (card). One pure matrix `decidePlacement` + `CreditPlacementService.place` (lock `credit-exposure:<counterparty>`) store `Payment.metadata.placement` (route, countsAgainstLimit, reserveDays); reservation reads the route (`paymentClassification` and `reservationTtlDays` removed). Details and decisions: `docs/payments.md` "Stage 2a done".
-- New: `BranchSettings.prepaymentReserveDays` (default 3), mutation `confirmPaymentReceived` + permission `ConfirmPaymentReceived`, shop `deferredCreditPreview` extended. Migrations 1791492000000/1791493000000 (synchronize contours: apply the data SQL by hand).
-- Stage 2b (storefront checkout, done): forms from `availableForms`, acknowledgement for cash/bank transfer, card shows `payableCardAmount`, bank transfer opens a print tab per proforma invoice (`?print=1`), cash shows a waiting-for-confirmation state. Over-limit card orders are cured by payment (route `after-payment`). Not yet audited; visual check pending. Details: `docs/payments.md` "Stage 2b done".
-
-## #222 stage 1: limit exposure by payment fact (2026-10-12, done, not yet audited; stages 2+ open)
-- `OpenDeferredExposureService` counts any unpaid unconfirmed order (any method); a Settled non-`deferred-payment` payment frees it; legacy deferred keeps counting. Details: `docs/payments.md` "Target model".
-- `BranchSettings.allowExceedingCreditLimit` (default off, migration 1791489000000, manager Branch settings "Credit" section) is returned by `DeferredCreditAssessmentService.assess`; checkout does not act on it yet (stage 2). Manager and storefront `generated/graphql.ts` were regenerated against the live server in stage 2b.
 
 ## #194 reserve deadline / order cancel (2026-10-11, DONE: audited, pushed, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-13-sections-full.md`)
 
@@ -65,7 +59,7 @@ The ERP payment fact carries its own amount/currency (allocation uses it, not th
 - **Known gaps (audit):** with `packagesOnly` the pack rule replaces multiplicity (variant multiplicity 10 and pack ratio 6 sells by 6, the 1C MOQ is lost silently); catalog and favorites show units but the widgets and `ProductScrollRow` do not. Deploy: migration `1791486000000` set `enforceMultiplicity=false` on every existing branch (owner decision).
 - **Staging data touched (allowed by the owner):** `unitName` backfilled by SQL; `branch_settings.packagesOnly` flipped to false and back to true for screenshots (both branches are packages-only).
 
-## Orders, contracts, organizations, reserve model (2026-10-08/09; #201/#202/#203/#205/#199 shipped/audited/closed; #194/#206/#208 filed) — decisions in `docs/order-contracts.md`
+## Orders, contracts, organizations, reserve model (2026-10-08/09; #201/#202/#203/#205/#199 shipped/audited/closed; #194/#208 done) — decisions in `docs/order-contracts.md`
 
 - **Organization**: `ProductVariant.organizationId` comes from `storage-location` (winner per product from `storage_location_assignment`, any row with an organization). A variant without one is not sellable: hidden for customers, checkout gate (`organizationOrderGuard`, re-checked in `reserveOrder` and the `order.submitted` listener), the external search gets `requireOrganization` (post-filter stays). Line organization is stamped at `ArrangingPayment`; proforma invoices per line organization only for pay-by-proforma-invoice/online payment, none for deferred terms (the ERP holds accounting documents); proforma snapshots and versions are #206 (done: immutable `lines`, `version`/`superseded`, on-demand request, `ProformaInvoiceIssuingService`; see `docs/order-contracts.md`).
 - **Contract**: `selectedContractId` set at `ArrangingPayment` (stored valid, else main active, else another active by price type/recency/`erpId`, else blocked); manager `setOrderContract` (ConfirmOrder, lock `reserve-order:<id>`, only before reservation/ERP receipt). `order.submitted` is per warehouse, header organization = the contract's organization + `contractId`; schema from `@nlightn22/event-contracts` (producer-owned, subject FORWARD, Confluent wire format); the ERP rejects a contract/organization mismatch.
@@ -73,14 +67,6 @@ The ERP payment fact carries its own amount/currency (allocation uses it, not th
 - **Reserve/cancel model (#194, spec in the issue body, NOT implemented, separate session)**: A = cancel the reserve (1C closing document, scheduled job at `РезервДо`), B = cancel the order (mark for deletion, includes A); B only for pending orders (automatic), in progress = a request to a person, shipped = never; mivend must send `reserveUntil` (else the 1C job picks orders after ~4 months); the closing document exports no `order-changed` (live test), so explicit ERP signals are required (search-platform#179/#180). Today the expiry task still returns the order to AWAITING_CONFIRMATION.
 - **Do not redo**: closing is not a cancellation; deferred-terms orders get no automatic proforma invoices; ERP-owned masters keep the ERP id.
 - **Contour hazards**: `make dev` (local) can kill the staging-integration contour (start staging last); `ts-node-dev` can hang at ~90% CPU after a plugin dist rebuild (restart via `make`). Staging holds orders registered in 1C during tests (one of them had its 1C reserve closed by a test).
-- **Proforma print form (#206)**: `plugin-documents` renders a payment-request style PDF (notice, bank block with the payment QR box, Russian title/date/amount in words, parties, items, signatures); required requisites are legal name, INN, bank name/BIK/settlement account (`requisites-completeness.ts`, also drives the failed-document requeue), the rest is optional. See `docs/payments.md`.
-- Organization stream (event-contracts 0.66.0) also maps `phone` and `signatories[]` (JSON column) into `OrganizationRequisites`; print form uses them for the supplier phone and signature lines. Proforma `amount` is now net of line discounts (equals the printed line totals).
-- Proforma (#206 follow-up): number `<order>-<NN>-<version>`, per-version issue/due dates (branch setting `proformaPaymentTermDays`), statuses Current/Superseded/Cancelled via `displayStatus` (no "paid"), superseded stays payable with its QR, manager withdraw action, `kind`/`salesInvoiceNumber` ready for a by-shipment version; "Paid X of Y" on the order page comes from stored `Order.customFields.erpPaidAmount` (order-changed `paidAmount`, lower bound, float minor units, migration 1791502000000). See `docs/payments.md`.
-- Proforma print form shows one "В том числе НДС" total (#206). Snapshot lines store taxRate/taxCategoryName/taxAmount (VAT extracted from the net line amount, not hashed); unconfirmed rate (placeholder 0 / no tax line) fails generation, old snapshots print "не указан".
-- Proforma payment QR (#206): own module `plugin-documents/src/qr-payment/` (GOST R 56042-2014 ST00012, UTF-8, Sum in kopecks; SVG via `qrcode`). Stricter than the standard (Sum, Purpose, PayeeINN required; correspondent account too); invalid data or a superseded version prints no QR and logs a warning, the PDF still generates. Details in `docs/payments.md`.
-- vat-rate handler renames the auto TaxRate on confirmation; failed documents are not requeued on that, regenerate manually.
-- Print form gaps: no VAT line (snapshots carry no tax), no manufacturer-code column, payment QR not generated yet; unit name is read live from the variant.
-- **Next**: #208 cross-system manual verification pass (positive/negative/duplicate scenarios), #194 implementation, #206 follow-up: live codegen for both portals (generated files were patched by hand, rerun codegen).
 
 ## #221 OrderLine uuid in its own table (2026-10-12)
 
