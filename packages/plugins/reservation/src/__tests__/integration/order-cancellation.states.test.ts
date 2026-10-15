@@ -53,7 +53,7 @@ describe('OrderCancellationService.cancel (real Postgres)', () => {
 
         expect(outcome).toEqual({ kind: 'cancelled', eventSent: true });
         expect(f.port.requested).toEqual([
-            { orderId: order.id, orderUuid: order.uuid, orderCode: 'ORD-1' },
+            { orderId: order.id, orderUuid: order.uuid, orderCode: 'ORD-1', repeat: false },
         ]);
         const reloaded = await loadOrder(h, order.id);
         expect(reloaded.state).toBe('Cancelled');
