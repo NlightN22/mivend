@@ -20,9 +20,8 @@ export class PriceType extends VendureEntity {
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
 
-    // The ERP's own GUID for this price type (PriceTypeChanged.entityId, the same value
-    // PriceChanged.priceTypeId refers back to). Nullable + unique-when-present so
-    // manager-created price types (never seen from the ERP) coexist with ERP-originated ones.
+    // Nullable and unique-when-present: manager-created price types never get an ERP id.
+    // The value must match PriceChanged.priceTypeId, which references it.
     @Index({ unique: true })
     @Column({ type: 'varchar', nullable: true })
     externalId?: string | null;

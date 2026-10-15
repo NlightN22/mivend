@@ -133,9 +133,8 @@ export class CustomerPricingService {
         return this.connection.getRepository(ctx, PriceType).findOne({ where: { externalId } });
     }
 
-    // Used by erp-integration's PriceTypeStreamHandler (issue #63). `code` is never touched on
-    // update — an admin may have already renamed it via the admin-facing upsertPriceType
-    // mutation, and the ERP's name is not the source of truth for the business code after creation.
+    // `code` is never updated: admins may rename it via upsertPriceType, so the ERP name
+    // is not the source of truth for the business code after creation.
     async upsertPriceTypeByExternalId(
         ctx: RequestContext,
         externalId: string,
