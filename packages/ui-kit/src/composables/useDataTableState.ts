@@ -5,12 +5,8 @@ export interface DataTableSortMeta {
     order: 1 | -1;
 }
 
-// Everything a rich data-grid (column order/width/visibility, sort, filters, page size) needs
-// persisted per admin, per table — one storage blob instead of useColumnVisibility's
-// hidden-keys-only Set, for tables that need the fuller PrimeVue DataTable feature set (see
-// OrdersDataTable.vue, the first adopter). Same "personal display preference, not business
-// data" reasoning as useColumnVisibility (backend-plugin-rules skill) — no backend entity,
-// localStorage only.
+// One blob for the full table state (layout, sort, filters, page size) per table.
+// localStorage only: a personal display preference, not business data, so no backend entity.
 export interface DataTableState<
     FiltersT extends Record<string, unknown> = Record<string, unknown>,
 > {
@@ -22,9 +18,7 @@ export interface DataTableState<
     pageSize: number;
 }
 
-// The minimum a saved-state normalization pass needs to know about a table's current columns —
-// deliberately thinner than a full column-def type (header/filterConfig aren't its concern), so
-// this composable stays independent of MvAdvancedDataTable's richer column type.
+// Kept thin on purpose so this composable doesn't depend on MvAdvancedDataTable's column type.
 export interface DataTableColumnMeta {
     field: string;
     width: number;
@@ -34,28 +28,14 @@ export interface DataTableColumnMeta {
 
 export interface UseDataTableStateOptions {
     columns: DataTableColumnMeta[];
-    // Which `filters` keys are legitimate for this table right now — driven by the table's own
-    // column/search config (a column's filterConfig.type !== 'none', plus a search filterKey if
-    // any), never by `Object.keys(defaults.filters)`: not every valid filter key needs a default
-    // value, so `defaults` alone would under-report what's actually allowed.
+    // Derive valid keys from column filterConfig and the search filterKey, not from defaults:
+    // not every valid filter key has a default value, so defaults under-reports allowed keys.
     allowedFilterKeys: Iterable<string>;
-    // Bump only for a genuinely incompatible *structural* change to DataTableState itself (a
-    // field renamed/removed/reshaped at the DataTableState level) — ordinary column-list or
-    // filter-key changes are handled by normalization below and no longer need a manual bump.
+    // Bump only for a structural DataTableState change (field renamed, removed, or reshaped).
+    // Column-list and filter-key changes are handled by normalization, not a bump.
     schemaVersion?: number;
-    // Real incident this exists to prevent structurally, not just by convention: `pageSize` and
-    // some `filters` keys are sometimes not this table's own concern at all — they're actually
-    // driven by a parent page that owns the real data fetch (e.g. a customer-detail tab's own
-    // `page`/`pageSize` refs, or a view-chip bar writing a `status` filter from outside the
-    // table entirely). If localStorage holds a *stale* value for one of those (saved by an
-    // earlier session with a different pageSize/filter selection), naively restoring it produces
-    // a table whose internal state disagrees with what the parent is actually fetching from the
-    // moment it mounts — not just after some future change. A parent-side `watch(prop, ...,
-    // { immediate: true })` reconciling this is easy to forget (real incident: it was, twice, in
-    // this project). Declaring the externally-owned fields here instead means `useDataTableState`
-    // itself always seeds them from `defaults` — the caller's own current prop values — never
-    // from whatever localStorage happened to have, no watcher required to get the *initial* value
-    // right.
+    // pageSize and some filter keys may be owned by a parent page; a stale saved value would
+    // disagree with what the parent fetches. Declared here, they always seed from defaults.
     externallyOwned?: {
         pageSize?: boolean;
         filterKeys?: string[];
@@ -73,14 +53,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-// Reconciles a saved (possibly stale, partial, or corrupted) state blob against the table's
-// *current* column/filter configuration. Replaces the old "bump the storage key by hand whenever
-// columns or filter shapes change" workaround — real, repeated incident that fix worked around:
-// this table's filter *shapes* changed more than once (a field gaining a real object shape, a
-// single string becoming a multi-select string[]), and a stale blob's field of the wrong runtime
-// shape either crashed downstream code or silently misbehaved. Normalizing on load means an
-// ordinary column/filter change just works; only a structural DataTableState change still needs
-// `schemaVersion` bumped.
+// Normalize on load so stale, partial, or corrupted blobs with a wrong field shape can't
+// crash or misbehave. Only a structural DataTableState change needs a schemaVersion bump.
 export function normalizeDataTableState<FiltersT extends Record<string, unknown>>(
     saved: unknown,
     defaults: DataTableState<FiltersT>,
@@ -195,9 +169,8 @@ export function useDataTableState<FiltersT extends Record<string, unknown>>(
                     } satisfies PersistedBlob<FiltersT>),
                 );
             } catch {
-                // Personal display preference only — a full/unavailable localStorage just means
-                // the table doesn't remember its layout across reloads this session, nothing
-                // else breaks (same tradeoff as useColumnVisibility).
+                // localStorage may be full or unavailable; the table then just won't persist its layout
+                // this session. Nothing else depends on it.
             }
         },
         { deep: true },

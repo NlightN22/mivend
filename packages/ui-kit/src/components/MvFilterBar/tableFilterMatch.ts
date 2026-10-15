@@ -1,16 +1,8 @@
 import type { TableRow } from '../MvTable/MvTable.vue';
 import type { TableFilterFieldDef } from './MvTableFilters.vue';
 
-// Generic client-side matcher for a row already shaped for display (i.e. the same TableRow
-// passed to MvTable) against a MvTableFilters value record — 'search' fields do a
-// case-insensitive substring match, 'select' fields require an exact match. Only meaningful for
-// pages that hold their full row set in memory (see ApprovalsInboxPage.vue); server-paginated
-// lists (e.g. Orders) must keep filtering in their GraphQL query instead.
-// Autocomplete suggestions for 'search' fields, derived from whatever rows are actually in
-// memory — accurate and complete for pages that load their full dataset up front (Approvals);
-// for a future server-paginated table this would only ever suggest values from the currently
-// loaded page, not the full remote list, so it's not a fit there without a dedicated
-// suggest/autocomplete backend query. Capped per field to keep the native <datalist> usable.
+// Filters in memory only: server-paginated lists must filter in their GraphQL query.
+// Suggestions come from loaded rows only, so they are complete only for fully loaded datasets.
 const MAX_SUGGESTIONS_PER_FIELD = 25;
 
 export function deriveFilterSuggestions(

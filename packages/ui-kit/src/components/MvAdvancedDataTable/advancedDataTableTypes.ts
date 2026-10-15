@@ -1,20 +1,13 @@
 import type { ColumnFilterConfig } from '../MvColumnFilter/columnFilterTypes';
 
-// `TRow` types what Vue tooling can actually check for a consumer: the `rows` array, the
-// `row-click` payload, and scoped-slot payloads as far as Vue supports — it is deliberately NOT
-// used to force `field` to be `keyof TRow`. A column id is a stable string contract (used as a
-// key into filter/column state and as the `#cell-<field>`/`#filter-<field>` slot-name suffix),
-// independent of whatever shape the row object happens to have — nested/computed values (e.g.
-// `order.code`) always go through a `#cell-<field>` slot rather than a dotted `field`.
+// `field` is a stable string id, not checked against TRow; it keys column state and slot names.
+// Nested values (e.g. `order.code`) must use a `#cell-<field>` slot, not a dotted `field`.
 export interface AdvancedDataTableColumn {
     field: string;
     header: string;
     width: number;
-    // Optional floor/ceiling on this column's rendered width — the table itself renders with
-    // `table-layout: fixed` (see MvAdvancedDataTable's own doc comment on why), so `width` alone
-    // is already a hard cap by default; these only matter for a column a page wants to let the
-    // user resize within a bounded range, or that should never shrink below a legibility floor
-    // (e.g. a status badge column). Omit either for "no extra constraint beyond `width` itself."
+    // `width` is already a hard cap (table-layout: fixed); min/max matter only for resizable columns.
+    // Or a legibility floor, such as a status badge that must not shrink.
     minWidth?: number;
     maxWidth?: number;
     // Never hideable via the column toggle.
@@ -22,10 +15,7 @@ export interface AdvancedDataTableColumn {
     // Omit entirely for a column with no server-side sort support — no sort UI renders for it.
     sortField?: string;
     filterConfig: ColumnFilterConfig;
-    // Layout hints for the mobile card view (see MvAdvancedMobileCardList.vue) — mirrors
-    // MvTable's own MvMobileColumnMeta (MvMobileCardList.vue) minus `actions`/`highlight`, which
-    // no current consumer of this component needs; add them here if one does, following the same
-    // pattern. Omit entirely for a column that should just render as a normal label/value pair.
+    // Mirrors MvMobileColumnMeta minus `actions`/`highlight`; add them here if a consumer needs them.
     mobile?: {
         // Card title — at most one column should set this.
         primary?: boolean;

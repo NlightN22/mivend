@@ -5,16 +5,8 @@ export interface PagedScrollHeightOptions {
     headerHeightPx: number;
 }
 
-/**
- * Fits a paginated table's scroll area to exactly the selected page size, instead of a fixed
- * viewport-relative height that either wastes space (small page size) or clips rows (large page
- * size) regardless of how many rows are actually on screen.
- *
- * `rowHeightPx` must be the row's real minimum rendered height (padding + tallest cell content +
- * border), not a guessed constant — a `<td>`'s `height` in table layout is only a minimum, so if
- * any column's content needs more room than assumed, every row silently grows past this value and
- * the computed scroll area falls short again.
- */
+// rowHeightPx must be the real rendered row height, not a constant: a <td> height is only a minimum,
+// so any taller cell content makes rows grow and the computed scroll area comes up short.
 export function usePagedScrollHeight(
     pageSize: MaybeRefOrGetter<number>,
     options: PagedScrollHeightOptions,

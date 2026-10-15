@@ -9,12 +9,8 @@ import MvColumnFilterDateRange from './MvColumnFilterDateRange.vue';
 import MvColumnFilterAmountRange from './MvColumnFilterAmountRange.vue';
 import type { ColumnFilterType } from './columnFilterTypes';
 
-// `custom` is slot-rendered by the consuming table (its whole point is to not go through this
-// registry) and `none` never renders a filter at all — both are deliberately excluded from the
-// mapped type below, so adding a new standard filterType to ColumnFilterType without adding it
-// here is a TypeScript error (a missing key on a mapped type over a union), not a silent runtime
-// fallback to some generic/default filter (see AGENTS.md "no implicit universal filter" — this
-// is the mechanism that guarantees it).
+// custom (slot-rendered by the table) and none (never filters) are left out of the mapped type.
+// A new standard filterType missing here is a TS error, not a silent fallback to a generic filter.
 export const COLUMN_FILTER_REGISTRY: Record<
     Exclude<ColumnFilterType, 'custom' | 'none'>,
     Component

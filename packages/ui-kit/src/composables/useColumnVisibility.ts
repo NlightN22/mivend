@@ -3,17 +3,13 @@ import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
 export interface ColumnVisibilityDef {
     key: string;
     label: string;
-    // Required columns never appear in the toggle list and can never be hidden (e.g. the row's
-    // primary identifier / action column) — omit from the hideable set entirely, not just
-    // pre-checked, so a user can't accidentally hide the one column they need to navigate.
+    // Omit required columns from the hideable set entirely (not just pre-checked), so users
+    // cannot hide the column they need to navigate, e.g. the row's primary identifier.
     required?: boolean;
 }
 
-// Per-admin, per-table column visibility, persisted to localStorage — this is personal UI
-// preference (which columns *I* want to see), not business data, so it doesn't need a backend
-// entity (see the backend-plugin-rules skill's "business data must live in the database" — that rule is about domain
-// facts, not per-user display preference). storageKey should be unique per table+admin, e.g.
-// `orders-columns:${administratorId}`.
+// Per-admin UI preference, not domain data, so it lives in localStorage with no backend entity.
+// storageKey must be unique per table and admin, e.g. `orders-columns:${administratorId}`.
 export function useColumnVisibility(
     storageKey: string,
     columns: ColumnVisibilityDef[],

@@ -27,9 +27,8 @@ function makeItem(overrides: Partial<NotificationItem> = {}): NotificationItem {
     };
 }
 
-// unreadTotal comes from a SEPARATE `status:'unread', take:0` request (issue #92), distinct from
-// the recent-page fetch — the fake here tracks both, driven by `unreadItems`, so tests can assert
-// unreadCount reflects that dedicated count, not `notifications.value`'s own length/filtering.
+// unreadCount must reflect a dedicated unread count request, not the recent page's length/filter.
+// The fake serves both from unreadItems so tests can tell the two sources apart.
 function makeTransport(
     initial: NotificationItem[],
     unreadItems: NotificationItem[] = initial.filter(n => n.status === 'unread'),

@@ -3,17 +3,14 @@ import type { ComputedRef, Ref } from 'vue';
 import { useToast } from './useToast';
 import type { NotificationItem, NotificationTransport } from './notificationTypes';
 
-// The bell dropdown only ever shows a handful of the most recent notifications — the full,
-// filterable, paginated list lives on each portal's own /notifications page (issue #92). Keeping
-// this small also bounds how much the panel grows from live WS pushes (see upsert() below).
+// Dropdown shows only a few recent items; the full filterable list lives on each portal's page.
+// Small size also bounds panel growth from live WebSocket pushes (see upsert()).
 const PANEL_TAKE = 8;
 
 export interface UseNotifications {
     notifications: Ref<NotificationItem[]>;
-    // Accurate count of ALL unread notifications visible to this recipient, from a dedicated
-    // lightweight `status:'unread', take:0` request — NOT derived from `notifications` (issue
-    // #92: the old `notifications.value.filter(unread).length` silently undercounted once a
-    // recipient had more unread items than fit in the fetched page).
+    // Unread count must come from a dedicated status:'unread', take:0 request, not from the list.
+    // The fetched page is capped, so counting it locally silently undercounts.
     unreadCount: ComputedRef<number>;
     loading: Ref<boolean>;
     markRead: (id: string) => Promise<void>;

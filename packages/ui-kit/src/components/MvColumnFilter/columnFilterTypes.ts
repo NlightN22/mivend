@@ -1,12 +1,7 @@
 import type { StatusBadgeVariant } from '../MvStatusBadge/MvStatusBadge.vue';
 
-// Every data-table column filter in the app must declare one of these types explicitly — no
-// implicit/generic fallback (see the manager-portal-rules skill: a filter's shape must be
-// known statically, not guessed at render time). `custom` is the one sanctioned escape hatch for
-// a filter that genuinely isn't one of the standard patterns (e.g. Payment's paymentView chips,
-// which drive an entirely different GraphQL query, not a plain OrderFilterParameter field) —
-// callers render their own content for it via a slot, but must still declare it, so a column can
-// never silently end up with no filter config at all.
+// Every column must declare its filter type explicitly, so no column silently has no filter config.
+// `custom` is the only escape hatch for non-standard filters; callers supply content via a slot.
 export const COLUMN_FILTER_TYPES = [
     'text',
     'select',
@@ -48,9 +43,8 @@ export interface BooleanFilterConfig {
 export interface StatusFilterConfig {
     type: 'status';
     options: ColumnFilterStatusOption[];
-    // Defaults to false (single-select) — deliberately kept single for existing columns
-    // (Commercial state) since the backend filter today takes `eq`, not `in`; a column can opt
-    // into multi once its backend query supports an `in` list.
+    // Single-select by default: the backend filter accepts only `eq`, not an `in` list.
+    // Enable multi only after the column's backend query supports `in`.
     multiple?: boolean;
     placeholder?: string;
 }
@@ -68,13 +62,8 @@ export interface DateRangePreset {
     key: string;
     label: string;
 }
-// A named preset (Today/Last 7 days/This month/…) resolved to an actual {from,to} span at
-// selection time, plus an always-available 'custom' escape hatch — see DATE_RANGE_PRESETS in
-// MvColumnFilterDateRange.vue for the default set and their resolution logic. Deliberately a
-// simpler first pass (see this type's own file for the fuller design this is standing in for
-// right now) — presets list is overridable per column but the resolution logic itself
-// (today/yesterday/last-N-days/this-month/previous-month) lives in the component, not the config,
-// since it's calendar math, not column-specific data.
+// Presets resolve to a concrete {from,to} at selection time; 'custom' is always available.
+// Calendar resolution lives in the component, not the config, because it is not column-specific.
 export interface DateRangeFilterConfig {
     type: 'date-range';
     presets?: DateRangePreset[];
@@ -93,9 +82,7 @@ export interface AmountRangeFilterConfig {
 export interface CustomFilterConfig {
     type: 'custom';
 }
-// The explicit opt-out for a column with no meaningful filter (e.g. a plain quantity count) —
-// distinct from omitting the field entirely, which TypeScript now catches (see ColumnDef.filter
-// being a required, not optional, property wherever this type is used).
+// ColumnDef.filter is required, so omitting it is a compile error rather than a silent gap.
 export interface NoFilterConfig {
     type: 'none';
 }
@@ -114,28 +101,22 @@ export type ColumnFilterConfig =
 
 export type BooleanFilterValue = 'any' | 'yes' | 'no';
 export interface DateRangeFilterValue {
-    // 'custom' means the user typed their own from/to; any other value is a preset key from
-    // DATE_RANGE_PRESETS (or the column's own override list) — kept alongside the resolved
-    // from/to so the UI can re-highlight which preset is active without re-deriving it from the
-    // dates themselves.
+    // The preset key is stored alongside the resolved from/to so the UI can highlight the active preset.
+    // It cannot be re-derived from the dates alone; 'custom' marks a user-typed range.
     preset: string;
     from: string; // ISO date (yyyy-mm-dd), '' = open start
     to: string; // ISO date (yyyy-mm-dd), '' = open end
 }
 export interface AmountRangeFilterValue {
     mode: 'range' | 'equal' | 'more' | 'less';
-    // Always major currency units (e.g. dollars, not cents) — minor-unit conversion for the wire
-    // format happens at the API-mapping boundary, never inside the filter component itself (see
-    // CustomerOrdersDataTable.vue's toMinorUnits/toMajorUnits — that's a table/API concern, not a
-    // UI-component concern).
+    // Always major currency units (dollars, not cents); minor-unit conversion happens only at the API boundary.
+    // Never convert inside the filter component, so the table layer owns the wire format.
     min: number | undefined;
     max: number | undefined;
 }
 
-// The normalized value shape for each filter type — this is what gets stored in the table's own
-// filter state (DataTableState.filters) and what a server-request mapper reads from. UI
-// components never leak their own internal widget state (a Select's open/closed flag, a
-// DatePicker's currently-displayed month, etc.) into this — only the committed value.
+// Normalized value stored in DataTableState.filters and read by the server-request mapper.
+// Only committed values belong here; widget state (open flags, displayed month) must not leak in.
 export interface ColumnFilterValueMap {
     text: string;
     select: string;

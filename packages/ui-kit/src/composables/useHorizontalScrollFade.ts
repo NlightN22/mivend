@@ -7,13 +7,8 @@ export interface HorizontalScrollFade {
     recompute: () => void;
 }
 
-/**
- * Drives "more content this way" edge-fade + arrow-button affordance for a horizontally
- * scrollable element that this composable does not own the markup of (e.g. a third-party
- * component's own internal scroll container, like PrimeVue DataTable's `.p-datatable-table-
- * container` — the composable is handed the live element, not asked to render it). Pass a getter
- * so the element can resolve after the owning component mounts/re-mounts.
- */
+// Element belongs to a third-party component, so it is handed in live, not rendered here.
+// Takes a getter because the element may not exist yet or re-mount with its owning component.
 export function useHorizontalScrollFade(
     getEl: () => HTMLElement | null | undefined,
 ): HorizontalScrollFade {

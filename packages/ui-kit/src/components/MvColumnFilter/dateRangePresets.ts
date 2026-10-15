@@ -1,9 +1,7 @@
 import type { DateRangePreset } from './columnFilterTypes';
 
-// Shared between MvColumnFilterDateRange (renders/resolves them) and any consumer needing to
-// describe an already-applied date-range filter by its preset label (e.g. an "Active filters"
-// chip) — kept in one place so the two can never drift (a chip showing the raw key "last7"
-// instead of "Last 7 days" is exactly the bug this avoids).
+// Shared by the filter UI and any consumer showing an applied preset as its label;
+// a single source keeps the two from drifting, so no chip shows a raw key like "last7"
 export const DATE_RANGE_PRESETS: DateRangePreset[] = [
     { key: 'today', label: 'Today' },
     { key: 'yesterday', label: 'Yesterday' },

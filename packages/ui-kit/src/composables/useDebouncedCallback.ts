@@ -1,14 +1,7 @@
 import { onUnmounted } from 'vue';
 
-// Debounces any callback that shouldn't fire on every keystroke/tick — e.g. committing a text or
-// number filter that triggers a server round-trip. Firing on every input event both hammers the
-// backend with one request per keystroke and, for PrimeVue-driven filters specifically, causes a
-// re-render of the filter control itself mid-word, which steals input focus (real incident:
-// CustomerOrdersDataTable.vue's Order # and Total filters — see the manager-portal-rules skill's
-// rules). Extracted here after the same hand-rolled setTimeout pattern showed up a third time
-// (MvCatalogFacets.vue's price range, then CustomerOrdersDataTable's code and total filters) —
-// see the manager-portal-rules skill's tab-overflow-pattern precedent for the "two instances: note it, third instance:
-// extract" rule this follows.
+// Firing on every keystroke spams the backend and, with PrimeVue filters, re-renders the input
+// mid-word and steals focus, so callers must not commit on each input event.
 export function useDebouncedCallback<Args extends unknown[]>(
     fn: (...args: Args) => void,
     delayMs = 400,

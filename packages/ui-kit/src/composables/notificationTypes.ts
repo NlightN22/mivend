@@ -1,7 +1,5 @@
-// Backend-agnostic notification shapes (issue #87 part 4) — mirror the GraphQL `Notification`
-// type shared by admin.schema.ts and shop.schema.ts. Kept transport-agnostic on purpose: neither
-// portal's GraphQL client/codegen types are imported here, so ui-kit stays free of a WS/Apollo
-// dependency. A portal's own transport implementation adapts its generated types to this shape.
+// Transport-agnostic on purpose: no portal GraphQL/codegen imports, so ui-kit has no WS/Apollo dep.
+// Each portal's transport adapts its generated types to this shape.
 
 export type NotificationKind = 'info' | 'success' | 'warning' | 'error';
 
@@ -21,9 +19,7 @@ export interface NotificationItem {
     createdAt: string;
 }
 
-// issue #92: fetch() now takes real pagination/search options and returns totalItems alongside
-// the page, instead of always returning "the first 50, whatever that is" with no way to know
-// there's more or to get an accurate unread count once a recipient has more than one page.
+// Returns totalItems with the page: one page can't show more results or the true unread count.
 export interface NotificationFetchOptions {
     status?: NotificationStatus;
     search?: string;

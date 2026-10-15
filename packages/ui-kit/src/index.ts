@@ -164,9 +164,8 @@ export { default as MvScrollFadeOverlay } from './components/MvScrollFadeOverlay
 
 export { default as MvDatePicker } from './components/MvDatePicker/MvDatePicker.vue';
 
-// Typed column-filter system (see the manager-portal-rules skill) — every filterable data-table
-// column declares one of these types explicitly; the table resolves the matching component via
-// COLUMN_FILTER_REGISTRY instead of building its own popover/input/select per column.
+// Every filterable column must declare its filter type explicitly; the table looks up the
+// component in COLUMN_FILTER_REGISTRY instead of building its own popover/input/select.
 export * from './components/MvColumnFilter/columnFilterTypes';
 export {
     COLUMN_FILTER_REGISTRY,
