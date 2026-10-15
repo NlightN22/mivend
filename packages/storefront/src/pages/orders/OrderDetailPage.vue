@@ -169,12 +169,6 @@ onMounted(() => {
     text-align: center;
 }
 
-
-
-
-
-
-
 .od-cancel {
     display: flex;
     gap: 12px;
@@ -199,13 +193,10 @@ onMounted(() => {
     align-items: start;
 }
 
-
 .od-aside {
     display: grid;
     gap: 14px;
 }
-
-
 
 @media (max-width: 1100px) {
     .od-body {
