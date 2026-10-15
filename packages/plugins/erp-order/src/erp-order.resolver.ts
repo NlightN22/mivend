@@ -37,8 +37,11 @@ export class ErpOrderResolver {
         const search = args.search?.trim();
         // erpStatus already exists on the real, Vendure-generated OrderFilterParameter (Order
         // customFields are exposed flat, per the backend-plugin-rules skill) — no custom filter/options type needed.
-        const erpStatuses = (args.options?.filter as { erpStatus?: { in?: string[] } } | undefined)
-            ?.erpStatus?.in;
+        const statusFilter = (
+            args.options?.filter as { erpStatus?: { in?: string[]; notIn?: string[] } } | undefined
+        )?.erpStatus;
+        const erpStatuses = statusFilter?.in;
+        const excludedStatuses = statusFilter?.notIn;
 
         const isExternal = (args.options?.filter as { isExternal?: { eq?: boolean } } | undefined)
             ?.isExternal?.eq;
@@ -74,8 +77,17 @@ export class ErpOrderResolver {
             qb.andWhere('"order"."customFieldsIsexternal" = :isExternal', { isExternal });
         }
 
-        if (erpStatuses && erpStatuses.length > 0) {
+        if (erpStatuses) {
+            // An empty set matches nothing; it never means "no filter".
+            if (erpStatuses.length === 0) return { items: [], totalItems: 0 };
             qb.andWhere('"order"."customFieldsErpstatus" IN (:...erpStatuses)', { erpStatuses });
+        }
+
+        if (excludedStatuses && excludedStatuses.length > 0) {
+            qb.andWhere(
+                '("order"."customFieldsErpstatus" IS NULL OR "order"."customFieldsErpstatus" NOT IN (:...excludedStatuses))',
+                { excludedStatuses },
+            );
         }
 
         if (search) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { toRef, watch, onMounted } from 'vue';
+import { computed, toRef, watch, onMounted } from 'vue';
 import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import OrderCard from './OrderCard.vue';
@@ -10,9 +10,9 @@ import {
     DEFAULT_SOURCE,
     DEFAULT_STATUS,
     SOURCE_FILTERS,
-    STATUS_FILTERS,
+    buildStatusFilters,
+    resolveStatusFilter,
     sourceIsExternal,
-    statusGroups,
 } from './orderFilters';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
 
@@ -32,14 +32,19 @@ const statuses = useOrderStatusesStore();
 
 const { t } = useI18n();
 
+const statusFilters = computed(() => buildStatusFilters(statuses.groups));
+
 async function reload(): Promise<void> {
     await statuses.load();
-    const groups = statusGroups(activeFilter.value);
+    const filter = resolveStatusFilter(statusFilters.value, activeFilter.value);
     void load({
         take: PAGE_SIZE,
         skip: (page.value - 1) * PAGE_SIZE,
         search: searchQuery.value.trim() || undefined,
-        erpStatuses: groups ? statuses.codesInGroups(groups) : undefined,
+        erpStatuses: filter.groups ? statuses.codesInGroups(filter.groups) : undefined,
+        excludeErpStatuses: filter.excludeGroups
+            ? statuses.codesInGroups(filter.excludeGroups)
+            : undefined,
         isExternal: sourceIsExternal(activeSource.value),
     });
 }
@@ -70,13 +75,13 @@ onMounted(() => void reload());
 
             <div class="filter-chips">
                 <button
-                    v-for="f in STATUS_FILTERS"
+                    v-for="f in statusFilters"
                     :key="f.key"
                     class="chip"
                     :class="{ active: activeFilter === f.key }"
                     @click="activeFilter = f.key"
                 >
-                    {{ t(f.labelKey) }}
+                    {{ f.labelKey ? t(f.labelKey) : f.label }}
                 </button>
             </div>
 

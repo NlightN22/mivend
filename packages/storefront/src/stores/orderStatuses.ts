@@ -49,5 +49,9 @@ export const useOrderStatusesStore = defineStore('orderStatuses', () => {
             .map(s => s.code);
     }
 
-    return { statuses, loaded, load, label, groupOf, variant, codesInGroups };
+    const groups = computed(() => [
+        ...new Set(statuses.value.map(s => s.customerGroup).filter((g): g is string => !!g)),
+    ]);
+
+    return { statuses, loaded, load, label, groupOf, variant, codesInGroups, groups };
 });

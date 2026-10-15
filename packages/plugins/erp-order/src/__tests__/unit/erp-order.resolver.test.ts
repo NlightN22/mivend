@@ -44,6 +44,23 @@ describe('ErpOrderResolver.myOrders', () => {
         expect(qb.andWhere).toHaveBeenCalledWith("order.state NOT IN ('AddingItems', 'Draft')");
     });
 
+    it('an empty erpStatus.in set returns nothing instead of dropping the filter', async () => {
+        const result = await resolver.myOrders(mockCtx, {
+            options: { filter: { erpStatus: { in: [] } } } as never,
+        });
+        expect(result).toEqual({ items: [], totalItems: 0 });
+        expect(qb.getManyAndCount).not.toHaveBeenCalled();
+    });
+
+    it('erpStatus.notIn keeps null-status orders and excludes the listed codes', async () => {
+        await resolver.myOrders(mockCtx, {
+            options: { filter: { erpStatus: { notIn: ['DELIVERED'] } } } as never,
+        });
+        expect(qb.andWhere).toHaveBeenCalledWith(expect.stringContaining('IS NULL OR'), {
+            excludedStatuses: ['DELIVERED'],
+        });
+    });
+
     it('returns no rows without querying when there is no active user', async () => {
         const result = await resolver.myOrders(
             { activeUserId: undefined } as unknown as RequestContext,

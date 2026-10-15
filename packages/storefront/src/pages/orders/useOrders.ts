@@ -9,14 +9,16 @@ export interface MyOrdersOptions {
     skip: number;
     search?: string;
     erpStatuses?: string[];
+    excludeErpStatuses?: string[];
     isExternal?: boolean;
 }
 
 function orderFilter(options: MyOrdersOptions): Record<string, unknown> | undefined {
     const filter: Record<string, unknown> = {};
-    if (options.erpStatuses && options.erpStatuses.length > 0) {
-        filter.erpStatus = { in: options.erpStatuses };
-    }
+    const status: Record<string, string[]> = {};
+    if (options.erpStatuses) status.in = options.erpStatuses;
+    if (options.excludeErpStatuses?.length) status.notIn = options.excludeErpStatuses;
+    if (Object.keys(status).length > 0) filter.erpStatus = status;
     if (options.isExternal !== undefined) filter.isExternal = { eq: options.isExternal };
     return Object.keys(filter).length > 0 ? filter : undefined;
 }
