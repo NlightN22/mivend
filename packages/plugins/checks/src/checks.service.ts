@@ -108,11 +108,18 @@ export class ChecksService {
         );
     }
 
-    findResults(
+    async findResults(
         ctx: RequestContext,
         subjectType: string,
         subjectId: string,
     ): Promise<CheckResult[]> {
+        const definition = this.registry.findSubjectType(subjectType);
+        if (definition?.visibleSubjectIds) {
+            const ids = await definition.visibleSubjectIds(ctx, [subjectId]);
+            if (!ids.has(subjectId)) {
+                return [];
+            }
+        }
         return this.connection.getRepository(ctx, CheckResult).find({
             where: { subjectType, subjectId },
             order: { id: 'ASC' },

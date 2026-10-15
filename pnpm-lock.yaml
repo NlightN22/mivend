@@ -854,6 +854,9 @@ importers:
             '@mivend/plugin-access-control':
                 specifier: workspace:*
                 version: link:../access-control
+            '@mivend/plugin-checks':
+                specifier: workspace:*
+                version: link:../checks
             '@mivend/plugin-counterparty':
                 specifier: workspace:*
                 version: link:../counterparty
@@ -1250,6 +1253,9 @@ importers:
             '@mivend/plugin-access-control':
                 specifier: workspace:*
                 version: link:../access-control
+            '@mivend/plugin-checks':
+                specifier: workspace:*
+                version: link:../checks
             '@mivend/plugin-counterparty':
                 specifier: workspace:*
                 version: link:../counterparty

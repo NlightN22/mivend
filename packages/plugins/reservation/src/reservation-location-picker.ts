@@ -9,13 +9,13 @@ export async function pickLocationWithMostFreeStock(
     ctx: RequestContext,
     productVariantId: ID,
     candidateLocationIds: string[],
+    options: { lock: boolean } = { lock: true },
 ): Promise<{ stockLocationId: string; available: number }> {
     let best = { stockLocationId: candidateLocationIds[0], available: -Infinity };
     for (const locationId of candidateLocationIds) {
-        const stockLevel = await connection
-            .getRepository(ctx, StockLevel)
-            .createQueryBuilder('stockLevel')
-            .setLock('pessimistic_write')
+        const query = connection.getRepository(ctx, StockLevel).createQueryBuilder('stockLevel');
+        if (options.lock) query.setLock('pessimistic_write');
+        const stockLevel = await query
             .where('stockLevel.productVariantId = :variantId', { variantId: productVariantId })
             .andWhere('stockLevel.stockLocationId = :stockLocationId', {
                 stockLocationId: locationId,

@@ -103,6 +103,7 @@ beforeAll(async () => {
         connection,
         productVariantService as never,
         documentsService as never,
+        { markForProducts: async () => 0 } as never,
     );
 });
 

@@ -39,3 +39,9 @@ export type {
 export { OrderCancellationPortRegistry } from './src/order-cancellation.port';
 export type { OrderCancellationPort, CancelRequestSubject } from './src/order-cancellation.port';
 export type { CancelSubmission } from './src/order-cancellation.decision';
+export { OrderChecksService } from './src/order-checks.service';
+export { OrderCheckStaleService } from './src/order-check-stale.service';
+export { ORDER_SUBJECT_TYPE, pickOrderWarehouse } from './src/order-check-subject';
+export type { OrderCheckLine, OrderCheckSubject, OrderCheckStage } from './src/order-check-subject';
+export { OrderCheckSubjectLoader } from './src/order-check-subject-loader.service';
+export { OrderCheckSubjectRegistrar } from './src/order-check-subject.registrar';

@@ -80,6 +80,7 @@ beforeAll(async () => {
         null as never,
         null as never,
         null as never,
+        null as never,
     );
     variantId = (await dataSource.getRepository(TestVariant).save({ sku: '574726' })).id;
 });

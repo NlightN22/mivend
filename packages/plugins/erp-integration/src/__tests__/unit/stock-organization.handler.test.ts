@@ -4,14 +4,24 @@ import type { RequestContext } from '@vendure/core';
 import { StockOrganizationStreamHandler } from '../../handlers/stock-organization.handler';
 
 function setup(affected = 1) {
-    const repo = { upsert: vi.fn(), delete: vi.fn().mockResolvedValue({ affected }) };
+    const repo = {
+        upsert: vi.fn(),
+        delete: vi.fn().mockResolvedValue({ affected }),
+        findOne: vi.fn().mockResolvedValue(affected ? { productId: 'p-1' } : null),
+    };
     const connection = {
         withTransaction: vi.fn((ctx: RequestContext, work: (c: RequestContext) => unknown) =>
             work(ctx),
         ),
         getRepository: vi.fn(() => ({ ...repo, query: vi.fn() })),
     };
-    return { repo, connection, handler: new StockOrganizationStreamHandler(connection as never) };
+    const stale = { markForProducts: vi.fn().mockResolvedValue(0) };
+    return {
+        repo,
+        connection,
+        stale,
+        handler: new StockOrganizationStreamHandler(connection as never, stale as never),
+    };
 }
 const ctx = {} as RequestContext;
 
@@ -58,6 +68,20 @@ describe('StockOrganizationStreamHandler', () => {
         expect(outcome).toMatchObject({ kind: 'applied' });
         expect(repo.delete).toHaveBeenCalledWith({ entityId: 'e-1' });
         expect(repo.upsert).not.toHaveBeenCalled();
+    });
+
+    it('flags the orders of the product after a change and after a tombstone, not after a noop', async () => {
+        const first = setup();
+        await first.handler.apply(ctx, 'e-1', { productId: 'p-2', organizationId: 'o-1' });
+        expect(first.stale.markForProducts).toHaveBeenCalledWith(ctx, ['p-2']);
+
+        const tombstone = setup();
+        await tombstone.handler.apply(ctx, 'e-1', { isDeleted: true });
+        expect(tombstone.stale.markForProducts).toHaveBeenCalledWith(ctx, ['p-1']);
+
+        const unknown = setup(0);
+        await unknown.handler.apply(ctx, 'e-1', { isDeleted: true });
+        expect(unknown.stale.markForProducts).not.toHaveBeenCalled();
     });
 
     it('is a noop for a tombstone of an unknown row', async () => {

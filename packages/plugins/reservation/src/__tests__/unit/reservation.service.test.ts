@@ -97,6 +97,7 @@ describe('ReservationService', () => {
     let warehouseService: { findBranchStockLocationIds: ReturnType<typeof vi.fn> };
     let counterpartyService: { getForCustomer: ReturnType<typeof vi.fn> };
     let contractService: { resolveOrderContract: ReturnType<typeof vi.fn> };
+    let orderChecks: { isHeld: ReturnType<typeof vi.fn> };
     let service: ReservationService;
     const ctx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
@@ -170,6 +171,7 @@ describe('ReservationService', () => {
                 }),
             },
         };
+        orderChecks = { isHeld: vi.fn(async () => false) };
         service = new ReservationService(
             connection as unknown as TransactionalConnection,
             eventBus as unknown as EventBus,
@@ -180,6 +182,7 @@ describe('ReservationService', () => {
                 { resolveEffective: async () => branchSettings } as never,
                 { getPreferredForCustomer: async () => null } as never,
             ),
+            orderChecks as never,
         );
     });
 
@@ -242,6 +245,33 @@ describe('ReservationService', () => {
             expect(customFields.reservationFailureReason).toBeNull();
             expect(customFields.reservationFailureDetail).toBeNull();
             expect(customFields.reservationFailedAt).toBeNull();
+        });
+
+        it('leaves the order in the confirmation queue without reserving when an order check holds it (#237)', async () => {
+            orderChecks.isHeld.mockResolvedValue(true);
+
+            const result = await service.reserveOrder(ctx, 'order-1', 3, 'auto-trust-rule');
+
+            expect(result).toEqual([]);
+            expect(orderChecks.isHeld).toHaveBeenCalledWith(
+                expect.anything(),
+                'order-1',
+                'auto-trust-rule',
+            );
+            expect(reservationRepo.save).not.toHaveBeenCalled();
+            expect(eventBus.publish).not.toHaveBeenCalled();
+            const [, { customFields }] = orderRepo.update.mock.calls.at(-1) as [
+                unknown,
+                { customFields: Record<string, unknown> },
+            ];
+            expect(customFields.reservationState).toBe('AWAITING_CONFIRMATION');
+        });
+
+        it('asks the order checks with the manual trigger so staff confirmation is the release', async () => {
+            await service.confirmOrder(ctx, 'order-1', 3);
+
+            expect(orderChecks.isHeld).toHaveBeenCalledWith(expect.anything(), 'order-1', 'manual');
+            expect(reservationRepo.save).toHaveBeenCalled();
         });
 
         it('is idempotent — a second call while an active reservation already exists is a no-op', async () => {

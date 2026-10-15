@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ProductVariantService, RequestContext, TransactionalConnection } from '@vendure/core';
 import { DocumentsService } from '@mivend/plugin-documents';
+import { OrderCheckStaleService } from '@mivend/plugin-reservation';
 import { withAggregateLock } from 'shared';
 
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -25,6 +26,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         private readonly connection: TransactionalConnection,
         private readonly productVariantService: ProductVariantService,
         private readonly documentsService: DocumentsService,
+        private readonly orderCheckStale: OrderCheckStaleService,
     ) {}
 
     async apply(
@@ -43,7 +45,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         const priority = Number(payload.priority ?? 0);
         const hasOrganization = payload.isDeleted !== true && organizationErpId !== '';
 
-        return withAggregateLock(
+        const outcome = await withAggregateLock(
             this.connection,
             ctx,
             `storage-location-product:${productId}`,
@@ -66,6 +68,10 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
                 return inboundApplied();
             },
         );
+        if (outcome.kind === 'applied') {
+            await this.orderCheckStale.markForProducts(ctx, [productId]);
+        }
+        return outcome;
     }
 
     private async applyWinner(ctx: RequestContext, productId: string): Promise<void> {

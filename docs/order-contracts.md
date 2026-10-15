@@ -1,7 +1,7 @@
 # Order contracts and organizations
 
 Decisions for how an order is tied to a customer contract and to the selling organizations.
-Issues: #201, #202, #203, #205 (ERP rejection handling is #204, tracked separately).
+Issues: #201, #202, #203, #205, #237 (ERP rejection handling is #204, tracked separately).
 
 ## Two different organization concepts
 
@@ -55,6 +55,68 @@ Staff can change the contract before confirmation (`setOrderContract`, permissio
 order visibility scope as for the order, history entry). Allowed only while there is no active
 reservation and the ERP has not received the order, and only to an active contract of the same
 counterparty. It takes the same lock as `reserveOrder()`. The customer has no choice for now.
+
+## ERP-mandated order controls (#237)
+
+The ERP refuses to post an approved order unless two controls pass (its check
+`ПроверитьВозможностьОтгрузкиОтваровПоОрганизациям`). They are **ERP requirements, not mivend business
+rules**: mivend computes the same rules early so staff see the reason before the ERP rejects the order. Both
+are providers of the checks framework (`docs/checks-and-policies.md`) on the subject type `order`.
+
+| Code                                      | Reasons in `facts.reason`                                                       |
+| ----------------------------------------- | ------------------------------------------------------------------------------- |
+| `erp.contract-with-storage-organization`  | `no-contract-with-storage-organization`                                         |
+| `erp.organization-stock`                  | `storage-organizations-short`, `contract-organizations-short`                   |
+
+**Inputs, per order line** (product P by its ERP id, order warehouse W, buyer counterparty C):
+
+- **W** is the ERP warehouse of the order: of its active reservations when there are any, otherwise of the
+  stock location with most free stock per line; the warehouse holding most quantity wins, ties by id (the same
+  rule as the `order.confirmed` warehouse). Unknown W means no finding.
+- **Storage organizations** = organizations of the `storage_location_assignment` rows of P with
+  `warehouseId = W`. Rows without a warehouse or without an organization are not stored and not counted: a
+  storage location without an organization is *unknown*, never a finding. The line's own stamped organization
+  (`OrderLine.customFields.organizationId`) is the election winner of the same rows and is not an extra input.
+- **Contract organizations** = `organizationId` of C's contracts with `isActive` and `isCustomerContract = true`,
+  matched on the buyer's own counterparty id (the flag alone also covers employees' contracts).
+- **Stock** = `stock_organization` rows (`isActive`), summed per organization as the ERP does, negative
+  balances included, in the product storage unit.
+
+**Check 1 `erp.contract-with-storage-organization`:** the line fails when storage organizations and contract
+organizations do not intersect. The finding lists both sets (ids and names).
+
+**Check 2 `erp.organization-stock`:** `needed = line quantity / storage-unit ratio to base`; `available` = stock summed
+over storage organizations that also have a contract with the buyer. The line fails when `needed > available`.
+Two reasons are told apart: `storage-organizations-short` (the organizations holding the storage place hold less
+than needed) and `contract-organizations-short` (they hold enough, but the ones with a contract with the buyer
+do not, or there are none). A product without any stock row has `available = 0`, as in the ERP.
+
+**Consequences are policy rows**, not code: default `warn` at every stage; `hold` is allowed at `pre-reserve` and
+`pre-send-to-erp`; `block` and `require-approval` are not allowed for orders (the customer's order is always
+accepted). Under `hold` an automatic trigger leaves the order in the manual confirmation queue
+(`AWAITING_CONFIRMATION`, nothing reserved or sent); a manual staff confirmation is the release. A failing
+provider is logged and the flow continues, never read as "no findings" in stored results.
+
+**Stages wired:** `checkout` (after the transition to `ArrangingPayment`, after commit, never on the customer's
+path), `pre-reserve` (inside `reserveOrder()`, under its lock), `pre-send-to-erp` (the `order.confirmed` builder),
+`on-edit` (staff recompute `recomputeOrderChecks`). One result set per order: the newest run replaces the rows of
+older stages. `Order.customFields.hasCheckFindings` is the list filter flag.
+
+**Freshness.** A change of a contract, `stock_organization` row, storage location assignment or the order's lines
+marks the stored results of affected non-cancelled orders stale (`needs recompute`); the panel recomputes on read.
+An order with no stored findings has nothing to flag, so a *new* failure of a clean order appears at its next
+recompute point (reserve, send, edit or panel read).
+
+**Message keys.** Findings store facts and a key, never prose; every rendering must say these are ERP
+requirements: `erp.contract-with-storage-organization.missing` ("No contract with <organizations> for <product>;
+create a contract with that organization (ERP requirement)"), `erp.organization-stock.storage-organizations-short`
+and `erp.organization-stock.contract-organizations-short` ("... needed N, available M (ERP requirement)").
+End customers see at most a soft generic note, never these.
+
+**Known gaps (ERP side).** The ERP skips check 2 for organizations flagged "do not control stock" and under a
+global switch; neither is published, so mivend can be stricter than the ERP, hence a warning and not a block. The
+product storage unit is not published either: stock is taken as kept in the base unit
+(`storageUnitRatioToBase = 1`); the conversion is one place in the order subject loader.
 
 ## `order.confirmed` contents
 

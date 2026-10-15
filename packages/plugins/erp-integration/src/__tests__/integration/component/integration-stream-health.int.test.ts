@@ -14,6 +14,7 @@ import type { KafkaConsumerLagEntry } from '../../../entities/kafka-consumer-lag
 import { IntegrationInboxHealthService } from '../../../integration-inbox-health.service';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { VariantUnitHealthService } from '../../../variant-unit-health.service';
+import { OrderCheckHealthService } from '../../../order-checks/order-check-health.service';
 import { RejectedOrderHealthService } from '../../../rejected-order-health.service';
 import { IntegrationOutboxHealthService } from '../../../integration-outbox-health.service';
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
@@ -51,6 +52,7 @@ beforeAll(async () => {
         { getLatestVersion: async () => '99.0.0' } as unknown as ContractVersionClient,
         new VariantUnitHealthService(dataSource),
         new RejectedOrderHealthService(dataSource),
+        new OrderCheckHealthService(dataSource),
     );
 });
 

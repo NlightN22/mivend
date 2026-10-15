@@ -12,6 +12,7 @@ import {
 import gql from 'graphql-tag';
 import { subscribeAndLog } from 'shared';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { ChecksPlugin } from '@mivend/plugin-checks';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ErpOrderPlugin, ErpOrderStatusEvent } from '@mivend/plugin-erp-order';
 import { MoqPlugin } from '@mivend/plugin-moq';
@@ -21,6 +22,13 @@ import { ErpOrderReserve } from './entities/erp-order-reserve.entity';
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
+import { OrderCheckStaleService } from './order-check-stale.service';
+import { OrderCheckSubjectLoader } from './order-check-subject-loader.service';
+import { OrderCheckSubjectRegistrar } from './order-check-subject.registrar';
+import { OrderChecksListener } from './order-checks.listener';
+import { OrderChecksResolver } from './order-checks.resolver';
+import { adminOrderChecksSchema } from './order-checks.schema';
+import { OrderChecksService } from './order-checks.service';
 import { OrderContractService } from './order-contract.service';
 import { addReservationCustomFields } from './reservation-custom-fields';
 import { adminApiSchema } from './reservation.schema';
@@ -62,6 +70,7 @@ import type { ReservationPluginOptions } from './types';
     imports: [
         PluginCommonModule,
         AccessControlPlugin,
+        ChecksPlugin,
         CounterpartyPlugin,
         ErpOrderPlugin,
         MoqPlugin,
@@ -75,6 +84,11 @@ import type { ReservationPluginOptions } from './types';
     ],
     providers: [
         OrderContractService,
+        OrderCheckSubjectLoader,
+        OrderCheckSubjectRegistrar,
+        OrderChecksService,
+        OrderCheckStaleService,
+        OrderChecksListener,
         ReservationService,
         ReservationFailureService,
         ReservationPaymentService,
@@ -101,6 +115,8 @@ import type { ReservationPluginOptions } from './types';
     ],
     exports: [
         ReservationService,
+        OrderChecksService,
+        OrderCheckStaleService,
         ReservationWriteOffSyncService,
         StockLevelService,
         OrderCancellationPortRegistry,
@@ -125,9 +141,11 @@ import type { ReservationPluginOptions } from './types';
             ${adminApiSchema}
             ${adminCancelOrderSchema}
             ${adminReservationViewSchema}
+            ${adminOrderChecksSchema}
         `,
         resolvers: [
             ReservationResolver,
+            OrderChecksResolver,
             ReservationViewResolver,
             AdminCancelOrderResolver,
             OrderCancelResultResolver,

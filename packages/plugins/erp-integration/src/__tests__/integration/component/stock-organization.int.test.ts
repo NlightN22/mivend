@@ -65,7 +65,9 @@ beforeAll(async () => {
         withTransaction: async (c: RequestContext, work: (t: RequestContext) => Promise<unknown>) =>
             dataSource.transaction(manager => work(withManager(c, manager))),
     } as unknown as TransactionalConnection;
-    handler = new StockOrganizationStreamHandler(connection);
+    handler = new StockOrganizationStreamHandler(connection, {
+        markForProducts: async () => 0,
+    } as never);
     reader = new StockOrganizationReadService(connection);
 });
 

@@ -26,6 +26,7 @@ function makeHandler(
         contractService as never,
         counterpartyService as never,
         { attachContract: vi.fn() } as never,
+        { markForContract: vi.fn().mockResolvedValue(0) } as never,
     );
     return { handler, contractService, counterpartyService };
 }

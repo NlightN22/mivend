@@ -12,6 +12,7 @@ import { ContractService, CounterpartyService } from '@mivend/plugin-counterpart
 import { PackagingPolicyService } from '@mivend/plugin-moq';
 
 import { pickLocationWithMostFreeStock } from './reservation-location-picker';
+import { OrderChecksService } from './order-checks.service';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { Reservation } from './entities/reservation.entity';
 import {
@@ -40,6 +41,7 @@ export class ReservationService {
         private counterpartyService: CounterpartyService,
         private contractService: ContractService,
         private packagingPolicyService: PackagingPolicyService,
+        private orderChecks: OrderChecksService,
     ) {}
 
     async confirmOrder(
@@ -131,6 +133,11 @@ export class ReservationService {
                             gaps.lines,
                             gaps.missingContract,
                         );
+                    }
+
+                    if (await this.orderChecks.isHeld(txCtx, String(order.id), trigger)) {
+                        await this.setOrderReservationState(txCtx, order, 'AWAITING_CONFIRMATION');
+                        return [];
                     }
 
                     const shortfalls: InsufficientStockLine[] = [];

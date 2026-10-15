@@ -6,6 +6,7 @@ declare module '@vendure/core' {
         reservationFailureReason?: ReservationFailureReason | null;
         reservationFailureDetail?: string | null;
         reservationFailedAt?: Date | null;
+        hasCheckFindings?: boolean;
         // Order cancel request to the ERP (#194): REQUESTED | REFUSED | CANCELLED, null when none.
         cancelRequestedAt?: Date | null;
         cancelReason?: string | null;

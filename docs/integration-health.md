@@ -80,6 +80,14 @@ the owner alone; breaking changes need the consumer's agreement and a version bu
   mivend's side does not prove the receiver processed the event.
 - The Schema column is the only schema-drift indicator planned for this page.
 
+### Order check counters (#237)
+
+Query `orderCheckHealth` (permission `ManageErpIntegration`): one row per ERP-requirement check code and reason
+over non-cancelled orders with a stored failing finding, `{ checkCode, reason, orderCount, staleOrderCount }`
+(`staleOrderCount` = orders whose stored result needs a recompute). Codes and reasons:
+`docs/order-contracts.md` "ERP-mandated order controls". Orders are listed with the order list filter
+`hasCheckFindings` (custom field on `Order`).
+
 ## Failed rows: what they are and what to do
 
 ### Inbound (`integration_inbox_event`, status `failed`)

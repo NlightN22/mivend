@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
+import { OrderCheckStaleService } from '@mivend/plugin-reservation';
 import { SettlementPendingService } from '@mivend/plugin-settlement';
 
 import { MissingDependencyError } from '../types';
@@ -17,6 +18,7 @@ export class ContractStreamHandler implements InboundStreamHandler {
         private readonly contractService: ContractService,
         private readonly counterpartyService: CounterpartyService,
         private readonly settlementPending: SettlementPendingService,
+        private readonly orderCheckStale: OrderCheckStaleService,
     ) {}
 
     async apply(
@@ -30,6 +32,7 @@ export class ContractStreamHandler implements InboundStreamHandler {
         // write (docs/ai/erp-streams-map.md's `contract` field accounting).
         if (!name) {
             const matched = await this.contractService.deactivateTombstone(ctx, entityId);
+            if (matched) await this.orderCheckStale.markForContract(ctx, entityId);
             Logger.verbose(
                 `contract ${entityId}: tombstone — deactivated if a row existed`,
                 loggerCtx,
@@ -86,6 +89,7 @@ export class ContractStreamHandler implements InboundStreamHandler {
         });
         const stored = await this.contractService.findByErpId(ctx, entityId);
         if (stored) await this.settlementPending.attachContract(ctx, entityId, String(stored.id));
+        await this.orderCheckStale.markForContract(ctx, entityId);
         Logger.verbose(`Upserted contract erpId=${entityId}`, loggerCtx);
         return inboundApplied();
     }

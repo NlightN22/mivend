@@ -50,5 +50,6 @@ export function makeInboxProcessor(
         stubHandler as never,
         stubHandler as never,
         stubHandler as never,
+        stubHandler as never,
     );
 }

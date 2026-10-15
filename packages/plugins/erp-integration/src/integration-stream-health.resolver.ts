@@ -12,6 +12,8 @@ import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
 import { IGNORED_CONTRACT_STREAMS } from './ignored-contract-streams';
 import { VariantUnitHealthService } from './variant-unit-health.service';
 import type { VariantUnitHealth } from './variant-unit-health.service';
+import { OrderCheckHealthService } from './order-checks/order-check-health.service';
+import type { OrderCheckHealthRow } from './order-checks/order-check-health.service';
 import { RejectedOrderHealthService } from './rejected-order-health.service';
 import { IntegrationInboxHealthService } from './integration-inbox-health.service';
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
@@ -39,6 +41,7 @@ export class IntegrationStreamHealthResolver {
         private readonly contractVersions: ContractVersionClient,
         private readonly variantUnits: VariantUnitHealthService,
         private readonly rejectedOrders: RejectedOrderHealthService,
+        private readonly orderChecks: OrderCheckHealthService,
     ) {}
 
     @Query()
@@ -82,5 +85,11 @@ export class IntegrationStreamHealthResolver {
     @Allow(CustomPermission.ManageErpIntegration.Permission)
     async rejectedOrderCount(): Promise<number> {
         return this.rejectedOrders.getRejectedCount();
+    }
+
+    @Query()
+    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    async orderCheckHealth(): Promise<OrderCheckHealthRow[]> {
+        return this.orderChecks.getHealth();
     }
 }

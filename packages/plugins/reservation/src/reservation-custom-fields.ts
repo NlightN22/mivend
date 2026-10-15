@@ -68,6 +68,20 @@ export function addReservationCustomFields(
             label: [{ languageCode: LanguageCode.en, value: 'Reservation failed at' }],
         },
         {
+            name: 'hasCheckFindings',
+            type: 'boolean' as const,
+            nullable: false,
+            defaultValue: false,
+            public: false,
+            label: [{ languageCode: LanguageCode.en, value: 'Has check findings' }],
+            description: [
+                {
+                    languageCode: LanguageCode.en,
+                    value: 'Denormalized from the stored order check results, for the order list filter (#237).',
+                },
+            ],
+        },
+        {
             name: 'cancelRequestedAt',
             type: 'datetime' as const,
             nullable: true,

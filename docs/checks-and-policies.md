@@ -93,6 +93,11 @@ and checks are registered by the plugins that own them.
   never reads as "no findings".
 - **Stale.** `markStale(ctx, subjectType, subjectId)` (under the same lock) flags stored rows; a
   subject with no stored findings has nothing to flag, callers needing freshness re-run.
+- **Visibility.** A subject type may declare `visibleSubjectIds(ctx, ids)`; `findResults` (and so the Admin
+  `checkResults`) returns nothing for a subject outside it, so stored findings never cross the actor's scope.
+  The `order` subject type is registered by `plugin-reservation` (loader, lock `reserve-order:<id>`,
+  stages, `info|warn|hold`); its ERP providers by `plugin-erp-integration`. Order callers use
+  `OrderChecksService.run`, the only caller of `runChecks` for orders.
 - **Admin API.** `checkResults(subjectType, subjectId)` and `checkDefinitions(subjectType?)` need
   `ReadCheckResults`; `checkPolicies(subjectType?)` and `updateCheckPolicy(input)` need
   `ManageCheckPolicies`.

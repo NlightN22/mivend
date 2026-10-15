@@ -139,6 +139,7 @@ function makeBuilder(options: {
         identityService(options.linesWithoutIdentity ?? []) as never,
         { dictionary: async () => testOrderStatusDictionary() } as never,
         { findById: vi.fn().mockResolvedValue(options.tradingPoint ?? null) } as never,
+        { isHeld: vi.fn().mockResolvedValue(false) } as never,
     );
 }
 

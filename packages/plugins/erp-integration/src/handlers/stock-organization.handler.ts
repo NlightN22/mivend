@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { OrderCheckStaleService } from '@mivend/plugin-reservation';
 import { withAggregateLock } from 'shared';
 
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -10,7 +11,10 @@ import { StockOrganization } from '../entities/stock-organization.entity';
 // Rows reference product/organization by ERP id only, so an unknown one is stored, never retried.
 @Injectable()
 export class StockOrganizationStreamHandler implements InboundStreamHandler {
-    constructor(private readonly connection: TransactionalConnection) {}
+    constructor(
+        private readonly connection: TransactionalConnection,
+        private readonly orderCheckStale: OrderCheckStaleService,
+    ) {}
 
     async apply(
         ctx: RequestContext,
@@ -26,19 +30,23 @@ export class StockOrganizationStreamHandler implements InboundStreamHandler {
         const isActive = payload.isActive !== false;
 
         if (isDeleted) {
-            return withAggregateLock(
+            const removedProductId = await withAggregateLock(
                 this.connection,
                 ctx,
                 `stock-organization:${entityId}`,
                 async txCtx => {
-                    const { affected } = await this.connection
-                        .getRepository(txCtx, StockOrganization)
-                        .delete({ entityId });
-                    return affected
-                        ? inboundApplied()
-                        : inboundNoop(`stock-organization ${entityId}: deleted, nothing stored`);
+                    const repo = this.connection.getRepository(txCtx, StockOrganization);
+                    const row = await repo.findOne({ where: { entityId } });
+                    if (!row) return null;
+                    await repo.delete({ entityId });
+                    return row.productId;
                 },
             );
+            if (removedProductId === null) {
+                return inboundNoop(`stock-organization ${entityId}: deleted, nothing stored`);
+            }
+            await this.orderCheckStale.markForProducts(ctx, [removedProductId]);
+            return inboundApplied();
         }
         if (!productId || !organizationErpId || !Number.isFinite(quantity)) {
             return inboundNoop(
@@ -46,19 +54,15 @@ export class StockOrganizationStreamHandler implements InboundStreamHandler {
             );
         }
 
-        return withAggregateLock(
-            this.connection,
-            ctx,
-            `stock-organization:${entityId}`,
-            async txCtx => {
-                await this.connection
-                    .getRepository(txCtx, StockOrganization)
-                    .upsert({ entityId, productId, organizationErpId, quantity, isActive }, [
-                        'productId',
-                        'organizationErpId',
-                    ]);
-                return inboundApplied();
-            },
+        await withAggregateLock(this.connection, ctx, `stock-organization:${entityId}`, txCtx =>
+            this.connection
+                .getRepository(txCtx, StockOrganization)
+                .upsert({ entityId, productId, organizationErpId, quantity, isActive }, [
+                    'productId',
+                    'organizationErpId',
+                ]),
         );
+        await this.orderCheckStale.markForProducts(ctx, [productId]);
+        return inboundApplied();
     }
 }

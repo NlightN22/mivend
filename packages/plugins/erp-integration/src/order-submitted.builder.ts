@@ -14,6 +14,7 @@ import {
 import { FREIGHT_SHIPPING_METHOD_CODE } from '@mivend/plugin-freight-shipping';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 
+import { OrderSendHoldService } from './order-checks/order-send-hold.service';
 import { outboundSend, outboundSkip, OutboundGateway } from './outbound-gateway';
 import type { OutboundBuildResult } from './outbound-gateway';
 import type { OrderSubmittedLine, OrderSubmittedPayload } from './schemas/order-submitted.schema';
@@ -40,6 +41,7 @@ export class OrderSubmittedBuilder {
         private readonly orderLineIdentityService: OrderLineIdentityService,
         private readonly statuses: OrderStatusReferenceService,
         private readonly tradingPointService: TradingPointService,
+        private readonly sendHold: OrderSendHoldService,
     ) {}
 
     async build(ctx: RequestContext, orderId: ID, orderCode: string): Promise<OutboundBuildResult> {
@@ -90,6 +92,9 @@ export class OrderSubmittedBuilder {
             orderId,
         );
         if (!reserveUntil) return outboundSkip('order has no active reservation');
+        if (await this.sendHold.isHeld(ctx, String(orderId))) {
+            return outboundSkip('held by an order check policy (pre-send-to-erp)');
+        }
         const productExternalIdByProductId = await this.loadProductExternalIds(
             order.lines.map(line => line.productVariant?.productId),
         );

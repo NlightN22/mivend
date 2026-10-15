@@ -25,6 +25,8 @@ export const operations = `
         variantUnitHealth: VariantUnitHealth!
         "Orders currently refused by the ERP (Order.customFields.erpStatus = REJECTED), issue #204."
         rejectedOrderCount: Int!
+        "Orders with a failing ERP-requirement check, per check code and reason (issue #237)."
+        orderCheckHealth: [OrderCheckHealthRow!]!
         "Failed and no-op inbox rows, newest first, server-side filtered/sorted/paginated (issue #200)."
         integrationInboxIssues(
             options: IntegrationInboxIssueListOptions

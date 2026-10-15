@@ -51,6 +51,10 @@ export class CheckRegistry {
         return definition;
     }
 
+    findSubjectType(type: string): SubjectTypeDefinition | undefined {
+        return this.subjectTypes.get(type);
+    }
+
     getCheck(code: string): CheckProvider | undefined {
         return this.providers.get(code);
     }

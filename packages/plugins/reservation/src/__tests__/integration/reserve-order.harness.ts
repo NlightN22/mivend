@@ -253,6 +253,7 @@ export function useReserveOrderHarness(schemaKey: string): ReserveOrderHarness {
             { getForCustomer: async () => ({ erpId: 'counterparty-x' }) } as never,
             { resolveOrderContract: async () => ({ erpId: 'contract-x' }) } as never,
             { requiredMultiple: async () => 1 } as never,
+            { isHeld: async () => false } as never,
         );
         h.location = await h.dataSource.getRepository(TestStockLocation).save({});
         h.productVariant = await h.dataSource
