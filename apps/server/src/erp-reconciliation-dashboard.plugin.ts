@@ -1,9 +1,7 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 
-// Mirrors system-health-dashboard.plugin.ts exactly (see its own comment) — a tiny, logic-free
-// plugin whose only job is pointing @vendure/dashboard at src/dashboard/erp-reconciliation/
-// index.ts, which registers the /erp-reconciliation route (issue #97) — its own page rather than
-// a third section on integration-health, per that issue's own correction.
+// Must stay identical to system-health-dashboard.plugin.ts; it contains no logic of its own.
+// Its only job is pointing @vendure/dashboard at the index that registers this route.
 @VendurePlugin({
     imports: [PluginCommonModule],
     dashboard: './dashboard/erp-reconciliation/index.ts',

@@ -1,8 +1,7 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 
-// Issue #76 follow-up (see vendure-config.ts's registration comment for why this lives here,
-// not under packages/plugins/*): a tiny, logic-free plugin whose only job is pointing
-// @vendure/dashboard at src/dashboard/system-health/index.ts, which registers the alert.
+// Kept outside packages/plugins/*: vendure-config.ts registers it by this path.
+// Keep logic-free: it only points @vendure/dashboard at system-health/index.ts.
 @VendurePlugin({
     imports: [PluginCommonModule],
     dashboard: './dashboard/system-health/index.ts',

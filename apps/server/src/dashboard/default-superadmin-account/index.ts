@@ -5,16 +5,8 @@ import {
     graphql,
 } from '@vendure/dashboard';
 
-// See ../system-health/index.ts's own doc comment for why this file lives directly under
-// apps/server/src rather than in a packages/plugins/* package (the same pnpm-workspace-symlink
-// dashboard-discovery limitation applies here) — mirrors that same shape exactly.
-//
-// Native @vendure/dashboard counterpart of the manager portal's own warning (packages/manager's
-// DefaultLayout.vue/auth.ts isDefaultSuperadminAccount) — every contour ships with only one
-// administrator (superadmin/superadmin, SUPERADMIN_USERNAME/PASSWORD, identical literal value in
-// every apps/server/.env.* file), and this is the very first login on a fresh instance (before
-// any manager-portal account exists), so the native dashboard needs its own copy of the same
-// warning rather than relying on the manager portal ever being visited at all.
+// Lives under apps/server/src, not packages/plugins/*: pnpm symlinks break dashboard discovery.
+// First login on a fresh instance: superadmin/superadmin is shared by every env, so warn here too.
 const activeAdministratorIdentifierDocument = graphql(`
     query ActiveAdministratorIdentifierForDefaultAccountAlert {
         activeAdministrator {

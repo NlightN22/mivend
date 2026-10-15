@@ -1,8 +1,6 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 
-// Same shape/reasoning as system-health-dashboard.plugin.ts (issue #134 Part 2) — a tiny,
-// logic-free plugin whose only job is pointing @vendure/dashboard at
-// src/dashboard/role-provisioning/index.ts, which registers the alert.
+// Keep this file logic-free: it exists only to point @vendure/dashboard at the alert registration entry.
 @VendurePlugin({
     imports: [PluginCommonModule],
     dashboard: './dashboard/role-provisioning/index.ts',

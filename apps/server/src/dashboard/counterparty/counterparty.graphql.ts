@@ -1,9 +1,7 @@
 import { graphql } from '@vendure/dashboard';
 
-// Issue #133 Phase 2 — Dashboard Counterparty list/detail pages. Field selection intentionally
-// mirrors the admin schema fields added in Phase 1 (managerErpId, linkedCustomerId) plus the
-// pre-existing fields the list/detail concepts need; no new backend fields required beyond
-// Phase 1's.
+// Field selection mirrors the admin schema fields from Phase 1 (managerErpId, linkedCustomerId).
+// Needs no backend fields beyond Phase 1's.
 export const counterpartyItemFragment = graphql(`
     fragment CounterpartyItem on Counterparty {
         id
@@ -71,12 +69,8 @@ export const counterpartyDetailDocument = graphql(`
     }
 `);
 
-// Lightweight administrator lookup, used two ways: (1) resolving the ERP Manager column's
-// managerErpId to a name via customFields.erpId — the unique link UserEnrichmentService writes
-// when an ERP user becomes a real login, see counterparty-display.ts's formatManager — and
-// (2) the Assign Manager bulk-action dialog's own administrator picker (by id). This is the same
-// native `administrators` query the Administrators screen itself uses, just with a narrower
-// field selection.
+// managerErpId resolves via customFields.erpId, the unique link UserEnrichmentService writes
+// when an ERP user becomes a login; the same administrators query as the Administrators screen.
 export const administratorNamesForCounterpartyDocument = graphql(`
     query AdministratorNamesForCounterparty($options: AdministratorListOptions) {
         administrators(options: $options) {
@@ -93,12 +87,8 @@ export const administratorNamesForCounterpartyDocument = graphql(`
     }
 `);
 
-// Resolves managerErpId to a real name for managers who have no Administrator account at all yet
-// (access-control's ErpUser, populated straight from the ERP's UserChanged stream regardless of
-// linking status — see counterparty-display.ts's formatManager for why this fallback level
-// exists). `pendingErpUsers` already filters to `status: 'unlinked'`, which is exactly this
-// page's use case: an already-linked erpId's name comes from the administrators query above
-// instead (a linked ErpUser would just be redundant with what that query already returns).
+// Fallback for managers without an Administrator account: ErpUser comes from the UserChanged
+// stream regardless of linking; this filter keeps only unlinked ones, linked names come from above.
 export const pendingErpUsersForCounterpartyDocument = graphql(`
     query PendingErpUsersForCounterparty($options: ErpUserListOptions) {
         pendingErpUsers(options: $options) {
@@ -137,9 +127,8 @@ export const reassignCounterpartyManagerByFilterDocument = graphql(`
     }
 `);
 
-// Bulk Link/Unlink to Customer — issue #120's own batch portal-access mutation, one item per
-// selected row, each reported independently so one bad row (missing phone/officialEmail, already
-// linked, out of scope) never blocks the rest of the selection.
+// One mutation per selected row, each result reported independently:
+// a bad row (missing phone/officialEmail, already linked, out of scope) never blocks the rest.
 export const applyCounterpartyPortalAccessChangesDocument = graphql(`
     mutation ApplyCounterpartyPortalAccessChangesFromDashboard(
         $changes: [CounterpartyPortalAccessChangeInput!]!

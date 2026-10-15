@@ -18,29 +18,8 @@ import { withFilter } from 'graphql-subscriptions';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/use/ws';
 
-// Vendure's own ApiOptions has no subscriptions/WS transport setting (see
-// configure-graphql-module.js: it hands Apollo a fixed option set with no `subscriptions` key,
-// and Apollo Server 4 dropped built-in subscription support entirely) — the recommended
-// replacement, graphql-ws, has to be wired up by hand against a raw `ws` server sitting next to
-// the two HTTP GraphQL endpoints.
-//
-// IMPORTANT — do not "just" grab Vendure's real Admin/Shop API GraphQLSchema for this (an earlier
-// version of this file did, via `app.select(AdminApiModule).get(GraphQLSchemaHost)`, deep-
-// importing `@vendure/core/dist/api/api-internal-modules`). That deep import alone — even with
-// the imported classes never called or referenced beyond a `void` reference — silently broke
-// EVERY other plugin's custom "extend type Query"/"extend type Mutation" resolver across the
-// whole app: they all started resolving to null with zero server-side error logged. Confirmed by
-// bisection: importing AdminApiModule/ShopApiModule from that internal path, with no other code
-// from this file executing, was reproducible and sufficient on its own to break e.g.
-// `departments`/`priceTypes`/`notifications`. Root cause not fully diagnosed (suspected dual-
-// module-instance/decorator-metadata clash from loading a Vendure-internal compiled module a
-// second time outside its own module graph) — the fix is to never reach into `@vendure/core`'s
-// internals for this. Instead, this file builds its OWN small, fully independent executable
-// schema containing just the `Notification` type and `notificationReceived` subscription field,
-// and mounts a graphql-ws server against THAT — completely decoupled from Vendure's real
-// Admin/Shop schemas. Queries and mutations for notifications still go through the normal HTTP
-// Admin/Shop API (packages/plugins/notification's own resolvers, unaffected by any of this); only
-// the `notificationReceived` subscription operation is served over these WS endpoints.
+// Apollo Server 4 dropped subscriptions and ApiOptions has no WS setting: wire graphql-ws by hand.
+// Don't deep-import @vendure/core internals: it silently nulls other plugins' extend resolvers.
 const notificationSubscriptionSDL = `
     scalar DateTime
 
@@ -77,11 +56,8 @@ function buildNotificationSubscriptionSchema(
                 notificationReceived: {
                     subscribe: withFilter(
                         () => notificationService.subscribeToReceived(),
-                        // graphql-subscriptions' FilterFn types payload as possibly undefined
-                        // (an async iterator can yield no value at stream end) — filter() itself
-                        // assumes a real event, so short-circuit here rather than loosen its
-                        // signature for a case that only happens after the stream is already
-                        // done.
+                        // Stream end yields no payload; graphql-subscriptions' FilterFn types it as possibly undefined.
+                        // filter() assumes a real event, so guard here instead of loosening its signature.
                         (
                             payload: NotificationReceivedEvent | undefined,
                             variables: unknown,
@@ -128,13 +104,8 @@ export function mountNotificationSubscriptions(app: INestApplication): void {
                     const session = await sessionService.getSessionFromToken(token);
                     const user = (session as { user?: { id: string } } | undefined)?.user;
                     if (!user || !session) return {};
-                    // A real RequestContext built from the session (rather than
-                    // requestContextService.create({ apiType }) with no user) so
-                    // ctx.userHasPermissions() below reflects this connection's ACTUAL
-                    // administrator, not an anonymous/permission-less context — required for
-                    // resolveBroadcastVisibility() to gate broadcast sourceTypes correctly
-                    // (issue #87 audit, mivend.audit.85). See RequestContext's own constructor
-                    // signature: it accepts a CachedSession directly for exactly this case.
+                    // Build from the session so userHasPermissions() sees the real admin, not an anonymous context.
+                    // resolveBroadcastVisibility() depends on that to gate broadcast sourceTypes.
                     const channel = await channelService.getDefaultChannel();
                     const requestContext = new RequestContext({
                         apiType,

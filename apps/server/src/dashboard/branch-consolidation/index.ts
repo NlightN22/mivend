@@ -7,17 +7,8 @@ import {
 
 import { BranchesPage } from './branches-page';
 
-// See ../system-health/index.ts's own doc comment for why this file sits under
-// apps/server/src instead of a packages/plugins/* package (pnpm-workspace-symlink
-// dashboard-discovery limitation).
-//
-// Real gap this surfaces (issue #80 follow-up): `Branch` (packages/plugins/access-control) has
-// no rows until either erp-import's REST full sync runs (never happens on a Kafka-only contour)
-// or staff use the manager portal's new "Add branch" panel (BranchSettingsPage.vue) — until
-// then, WarehouseStreamHandler silently skips every incoming warehouse event with no
-// queryable/persisted trace of the skip (only a Logger.warn), so a genuinely useful alert can't
-// count "how many warehouses are stuck" — only "is the one precondition (at least one Branch
-// exists) even met yet."
+// Not in packages/plugins/*: pnpm workspace symlinks break dashboard discovery.
+// No Branch rows = every warehouse event silently skipped; only a Logger.warn, nothing queryable.
 const branchCountDocument = graphql(`
     query BranchCountForConsolidationAlert {
         branches {
@@ -66,11 +57,8 @@ defineDashboardExtension({
             path: '/branches',
             component: BranchesPage,
             navMenuItem: {
-                // Issue #126: Branch is a precondition for warehouse-event processing to work
-                // at all (see branchConsolidationAlert above), so this sits near the top of
-                // "settings" rather than buried at the bottom of "system". Native "Sellers" is
-                // order: 100, "Channels" is order: 200 (@vendure/dashboard's own defaults.ts) —
-                // 150 places Branches directly between them.
+                // Branch gates warehouse-event processing, so it sits near the top of settings.
+                // Order 150 keeps it between Vendure's native Sellers (100) and Channels (200).
                 sectionId: 'settings',
                 id: 'branches',
                 title: 'Branches',

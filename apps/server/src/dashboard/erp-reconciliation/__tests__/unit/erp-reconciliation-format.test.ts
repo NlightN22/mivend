@@ -1,25 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { formatIssueTypeLabel, formatRunSummary } from '../../erp-reconciliation-format';
 
-// Test plan (see .claude/skills/test-design/SKILL.md):
-//
-// - Changed behavior: formatIssueTypeLabel/formatRunSummary, the Dashboard-page-side display
-//   formatting for issue #97 (native Dashboard ERP reconciliation page) — reuses #84's existing
-//   ErpReconciliationIssue.issueType/ErpReconciliationRunResult shapes, no new backend field.
-// - Business invariants: the two known issue types ('upstream-higher'/'local-higher') each map to
-//   a fixed, distinct human-readable label; an unrecognized value passes through unchanged rather
-//   than throwing (this is display-only formatting, not a validator — a schema field could add a
-//   third type before this file's next update, and the page must not crash on it).
-// - Data ownership and scope: none — pure derivation over an already-fetched read-only query/
-//   mutation result, no backend boundary of its own.
-// - Failure modes: unknown issueType string; empty skipped list vs a populated one.
-// - Applicable patterns: none of docs/testing-patterns.md's backend risk patterns apply — pure
-//   string formatting, no CQRS/inbox/outbox/concurrency involved.
-// - Test placement: unit only, same reasoning as system-health-check.ts's own test file — thin
-//   React/api.query plumbing in erp-reconciliation-page.tsx is verified by manual browser
-//   verification instead (see PR/commit notes), not by a test harness that doesn't exist here yet.
-// - Existing coverage reused: none — this is a new module, no prior formatting logic for this data.
-// - Deliberate omissions: no test of the React page component or api.query call itself.
+// Display-only: unknown issueType passes through unchanged, not thrown, because the backend
+// schema may add a type before this map is updated and the page must not crash on it.
 
 describe('formatIssueTypeLabel', () => {
     it('labels upstream-higher as Integration Service having more', () => {

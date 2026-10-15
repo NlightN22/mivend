@@ -3,10 +3,8 @@ import path from 'path';
 
 import { config } from './vendure-config';
 
-// Onboarding migrations after `synchronize: true`-only development (issue #147: production has
-// no migration tooling yet). Usage: `pnpm migration:generate <name>` / `pnpm migration:run` /
-// `pnpm migration:revert`, always against the target contour's own env file (see
-// apps/server/package.json's scripts and docs/environments.md).
+// Dev used synchronize: true; production has no migration tooling yet, so schema changes go here.
+// Run them only against the target contour's own env file (see apps/server/package.json scripts).
 const migrationsDir = path.join(__dirname, 'migrations');
 
 async function main(): Promise<void> {

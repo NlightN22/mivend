@@ -1,8 +1,7 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 
-// Mirrors system-health-dashboard.plugin.ts exactly (see its own comment) — a tiny, logic-free
-// plugin whose only job is pointing @vendure/dashboard at src/dashboard/organizations/index.ts,
-// which registers the /organizations route (issue #88 part 2 continuation).
+// Must mirror system-health-dashboard.plugin.ts exactly; keep the two files in sync.
+// Logic-free: exists only so @vendure/dashboard loads src/dashboard/organizations/index.ts.
 @VendurePlugin({
     imports: [PluginCommonModule],
     dashboard: './dashboard/organizations/index.ts',

@@ -1,8 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Issue #108: counterparty/contract-scoped ERP discount rules (DiscountRuleChanged) — a third
-// trigger shape on the existing discount_rule table. See DiscountRule's own doc comment and
-// docs/ai/erp-streams-map.md's "Discount rules" section.
 export class AddDiscountRuleCounterpartyScope1790741701469 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(

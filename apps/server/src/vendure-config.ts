@@ -80,11 +80,8 @@ const orderEventsTopic = process.env.INTEGRATION_KAFKA_TOPIC_ORDER_EVENTS ?? 'er
 // Service path are mutually exclusive per contour. Closed by default: only exactly 'true' mounts it.
 const erpImportEnabled = process.env.ERP_IMPORT_ENABLED === 'true';
 
-// Issue #68 follow-up: a bare `?? 'mivend-central-hub-local'` fallback would silently apply the
-// *local* contour's Kafka identity to staging-integration/production too if one of these env vars
-// is ever left unset there — exactly the kind of silent cross-contour identity collision this
-// suffixing exists to prevent. Once Kafka is actually enabled, every id must be explicit; only the
-// disabled (local) case gets a safe default.
+// A bare fallback would silently apply the local contour's Kafka identity to other contours
+// Once Kafka is enabled every id must be explicit; only the disabled (local) case may default.
 function requiredKafkaId(envVar: string): string {
     const value = process.env[envVar];
     if (value) return value;
@@ -107,11 +104,8 @@ if (
     throw new Error('COOKIE_SECRET must be a real secret in production (same for every process)');
 }
 
-// DocumentsPlugin (always loaded, every instance) already imports AcquiringPlugin as a NestJS
-// module dependency, so AcquiringPlugin's entities/services/resolvers run on every instance
-// regardless of this array — confirmed empirically (cash/offline-terms/online-stub
-// all exist on a branch instance's own DB). `.init({})` is called unconditionally here only so
-// AcquiringPluginOptions is actually set on every instance too, not left undefined on branch.
+// AcquiringPlugin already runs on every instance via DocumentsPlugin's module import.
+// Unconditional .init({}) keeps AcquiringPluginOptions defined even where the array omits it.
 const instancePlugins = [AcquiringPlugin.init({})];
 
 // Issue #121: until a real transport exists, emails (real token/link) are written to disk instead
@@ -120,13 +114,8 @@ const emailDevMailboxEnabled = process.env.EMAIL_DEV_MAILBOX_ENABLED === 'true';
 const emailTransportConfigured = Boolean(process.env.EMAIL_TRANSPORT);
 const emailOutputPath = path.join(__dirname, '../static/email/test-mailbox');
 
-// Issue #119: password-reset links (Administrator lifecycle) point at the manager portal's
-// /set-password page, not at this server itself — Vendure core has no concept of "my frontend's
-// public URL" (there are three frontends here, each with its own port per contour, see
-// docs/environments.md's port table), so this can only come from an explicit, per-contour env
-// var, same convention as INTEGRATION_SERVICE_BASE_URL/SEARCH_SERVICE_URL. Left unset, the
-// resulting link has no host at all (`?token=...`) rather than crashing the server — this is a
-// broken link, not a broken boot, and a missing env var shouldn't take down the whole server.
+// Vendure core cannot know the manager portal's public URL, so it comes from a per-contour env var.
+// Unset yields a host-less link, not a boot failure: a missing var must not take the server down.
 const managerPublicUrl = process.env.MANAGER_PUBLIC_URL ?? '';
 
 const emailCommonOptions = {
@@ -170,11 +159,8 @@ export const config: VendureConfig = {
             password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
         },
         customPermissions: Object.values(CustomPermission),
-        // Issue #119: the manager-portal /set-password page tells the person "use at least 8
-        // characters" — this is what actually enforces that, otherwise Vendure's own default
-        // (minLength: 4) would let the copy on that page lie. No regexp/complexity requirement —
-        // the page's own copy only promises a length floor, so the policy shouldn't demand more
-        // than what's advertised.
+        // Enforces the 8-char minimum promised on the set-password page; Vendure's default is 4.
+        // No complexity rules: that page promises only a length floor, so don't demand more.
         passwordValidationStrategy: new DefaultPasswordValidationStrategy({ minLength: 8 }),
     },
     dbConnectionOptions: {
@@ -193,10 +179,7 @@ export const config: VendureConfig = {
     customFields: {
         TaxCategory: [
             {
-                // Stable ERP-side code (see the ERP's Catalog_Номенклатура.СтавкаНДС enum) that
-                // packages/plugins/erp-integration's product handler resolves against — never
-                // matched by `name`, which is free text an admin can rename/localize at will.
-                // See issue #79.
+                // Matched by stable ERP code, never by name: names are free text an admin can rename.
                 name: 'erpVatCode',
                 type: 'string',
                 nullable: true,
@@ -236,10 +219,7 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Status Updated At' }],
             },
             {
-                // Denormalized at OrderPlacedEvent time from the customer's preferred
-                // TradingPoint (see ErpOrderService.onOrderPlaced) — same pattern as
-                // Reservation.stockLocationId, filtering without a join. See
-                // docs/access-control.md "Branch scope is a separate axis".
+                // Denormalized at order placement so branch filtering needs no join (see Reservation.stockLocationId).
                 name: 'tradingPointId',
                 type: 'string',
                 nullable: true,
@@ -252,97 +232,59 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'Servicing Branch' }],
             },
             {
-                // Correlates a synced order's local copy with its origin instance's native
-                // Order id — set only on the RECEIVING side (the instance this order was
-                // replicated onto), never on the originating instance itself. See
-                // docs/architecture.md's "receiving instance gets a full local Order copy".
+                // Native Order id of the origin instance; set only on the receiving side, never on the origin.
                 name: 'sourceOrderId',
                 type: 'string',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Source Order ID' }],
             },
             {
-                // Informational projection of a `payment.recorded` sync fact — set only on an
-                // instance that does NOT own this order (a replica); the owning instance's real
-                // payment status lives on its actual `Payment` records instead. See
-                // docs/architecture.md's "Order as a read-model: independent event streams per
-                // concern (CQRS)".
+                // Projection of payment.recorded on replicas only; the owning instance uses its real Payment records.
                 name: 'paymentStatus',
                 type: 'string',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Payment Status (synced)' }],
             },
             {
-                // Denormalized from the order's own Fulfillments (most recently created one's
-                // state) whenever a Fulfillment is added or transitions — see
-                // ErpOrderService.onFulfillmentStateChanged. Exists so the manager portal's
-                // Orders tables can sort/filter by fulfillment status server-side instead of
-                // fetching every order's fulfillments relation and computing this per-request on
-                // the frontend (real incident this fixes — see CustomerOrdersTab.vue's git
-                // history: fulfillment status/placed-by were being derived client-side from
-                // nested relations on every page load, un-filterable/un-sortable as a result).
-                // Null means "no fulfillment yet" (same as the frontend's previous "Not started"
-                // fallback).
+                // Denormalized so Orders tables can sort/filter by fulfillment status server-side, not per request.
+                // Null means no fulfillment yet. Kept in sync on every Fulfillment add or state transition.
                 name: 'latestFulfillmentState',
                 type: 'string',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Latest Fulfillment State' }],
             },
             {
-                // The Administrator who placed this order via the manager portal, denormalized
-                // once at the same AddingItems/Draft → * transition as branchId/tradingPointId
-                // (see ErpOrderService.onOrderPlaced) — null when a storefront customer placed
-                // it themselves. Same reasoning as latestFulfillmentState: makes "Placed by"
-                // sortable/filterable server-side instead of derived from the order's first
-                // HistoryEntry on every request.
+                // Null when a storefront customer placed the order; denormalized so it sorts server-side.
                 name: 'placedByAdministratorId',
                 type: 'string',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Placed By (Administrator)' }],
             },
             {
-                // The ERP's own document number for this order's registration (Document.Номер) — set
-                // from company.orders.events.v1.OrderRegistrationResult.document_number, a real
-                // proto `optional string` (genuinely absent, not a zero-value-omission case).
-                // Staff need this to cross-reference the order against ERP directly. See #74's
-                // order-registration-result follow-up.
+                // Proto `optional` field: absent means genuinely no ERP document number, not an empty value.
                 name: 'erpRegistrationDocumentNumber',
                 type: 'string',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Registration Document #' }],
             },
             {
-                // Raw `status` string from the same event — the ERP's own label, passed through
-                // verbatim, never mapped to a mivend enum (no fixed value set is documented by
-                // Integration Service yet). Empty string means the field was absent (plain,
-                // non-optional proto3 string — zero-value-omission rule applies, not `optional`).
+                // Passed through verbatim, never mapped to an enum: no fixed value set is documented yet.
+                // Empty string means absent: plain proto3 string, so zero-value omission applies.
                 name: 'erpRegistrationStatus',
                 type: 'string',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Registration Status' }],
             },
             {
-                // Raw `status` string from erp.order.events.v1 (type `changed`) (issue #110) —
-                // this stream's own current-state view, fired repeatedly over the order's
-                // lifetime, distinct from erpRegistrationStatus (order-registration-result's
-                // one-shot registration outcome, a different ERP fact with its own timing). Kept
-                // as a separate field rather than reused, since order-changed can report a
-                // different value/timing than the one-time registration result and overwriting
-                // that field would lose the registration-time fact. Passed through verbatim,
-                // never mapped to a mivend enum. Empty string means the field was absent (plain,
-                // non-optional proto3 string — zero-value-omission rule).
+                // Separate from erpRegistrationStatus, which must keep the one-time registration fact.
+                // Passed through verbatim, never mapped to an enum. Empty string means absent (zero-value omission).
                 name: 'erpOrderStatus',
                 type: 'string',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'ERP Order Status' }],
             },
             {
-                // Flat GUID ref to an ERP "Договор" (contract) — OrderChanged.contract_id (issue
-                // #110/#123), a real proto `optional string` (genuinely absent, not a zero-value-
-                // omission case). Purely informational for now: no Contract entity exists yet in
-                // this repo, this just persists the source system's own identifier (see the
-                // external-integration-rules skill's "External reference id" rule) for #50/#105's
-                // future per-contract credit-limit attribution once that entity exists.
+                // Informational only until a Contract entity exists; holds the ERP's own id for later use.
                 name: 'erpContractId',
                 type: 'string',
                 nullable: true,
@@ -413,22 +355,15 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'Weight (kg)' }],
             },
             {
-                // Which of our own legal entities (OrganizationRequisites, plugin-documents)
-                // owns the stock this variant is fulfilled from — driven by the ERP's warehouse
-                // storage-location assignment (one storage location = one product = one
-                // organization). See docs/payments.md "Organizations".
+                // Driven by the ERP storage-location assignment: one location, one product, one organization.
                 name: 'organizationId',
                 type: 'int',
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Organization' }],
             },
             {
-                // The priority of the StorageLocationChanged row that last set organizationId
-                // above — a product can have several storage-location rows (issue #71), each its
-                // own Kafka entity with its own independent version history, so the inbox's
-                // per-entityId ordering guard doesn't by itself pick a winner across them. Lowest
-                // priority wins (see StorageLocationStreamHandler); storing it here lets a later
-                // arrival compare against the current winner instead of last-message-wins.
+                // Needed because a product can have several storage-location rows, each with its own version history.
+                // The per-entityId ordering guard can't pick a winner across rows; lowest priority wins.
                 name: 'organizationPriority',
                 type: 'int',
                 nullable: true,
@@ -438,12 +373,7 @@ export const config: VendureConfig = {
                 ],
             },
             {
-                // The StorageLocationChanged entityId (storage_location_id) that currently owns
-                // organizationId/organizationPriority above. Needed for two things a bare priority
-                // number can't do alone: (1) a deterministic tiebreak when two different
-                // storage-location rows arrive with equal priority, and (2) recognizing a delete
-                // of the CURRENT winner so it can be cleared instead of staying permanently
-                // pinned to a now-deleted row (mivend.audit.71 findings).
+                // Deterministic tiebreak on equal priority, and clears the value when the winner row is deleted.
                 name: 'organizationSourceEntityId',
                 type: 'string',
                 nullable: true,
@@ -451,10 +381,7 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'Organization assignment source' }],
             },
             {
-                // Issue #103: resolved from UnitChanged.ratioToBase via
-                // ProductChanged.defaultSalesUnitId — see ProductStreamHandler. Backend-owned
-                // (ERP-sourced), so readonly: true (backend-plugin-rules skill's customFields
-                // gotcha) — never hand-edited from the Dashboard.
+                // Backend-owned, ERP-sourced: readonly, so the Dashboard never hand-edits it.
                 name: 'unitRatioToBase',
                 type: 'float',
                 nullable: true,
@@ -495,9 +422,7 @@ export const config: VendureConfig = {
         ],
         StockLocation: [
             {
-                // Idempotency key for erp-integration's WarehouseStreamHandler: correlates this
-                // StockLocation with the Warehouse it was created for (Warehouse.erpId, the
-                // warehouse's own ERP GUID) — StockLocation has no native external-id field.
+                // StockLocation has no native external-id field, so this links it to Warehouse.erpId for idempotency.
                 name: 'warehouseErpId',
                 type: 'string',
                 nullable: true,
@@ -507,11 +432,8 @@ export const config: VendureConfig = {
         ],
         StockLevel: [
             {
-                // The ERP's own availableQuantity for this (productVariant, stockLocation) — from
-                // StockChanged (issue #72). Caps ReservationAvailabilityService's own ATP
-                // formula: ERP receives reservations from other channels that never reach mivend
-                // as events, so mivend's own local ledger alone cannot be trusted as the ceiling.
-                // Previously decoded and discarded entirely — see StockStreamHandler.
+                // Caps ATP because ERP takes reservations from channels mivend never sees as events.
+                // The local ledger alone cannot be trusted as the ceiling.
                 name: 'erpAvailableQuantity',
                 type: 'int',
                 nullable: true,
@@ -530,12 +452,8 @@ export const config: VendureConfig = {
                 internal: true,
             },
             {
-                // Issue #90: manual visibility decision that must survive the next Kafka
-                // isActive/isDeleted recompute (CategoryStreamHandler.ensureCollection reads
-                // this before applying the feed). Null = no override, feed drives isPrivate as
-                // before. A nullable boolean would render as an unreadable three-way checkbox in
-                // Vendure's auto-generated custom-field admin form, so this is a string enum
-                // instead (Auto/Hidden/Visible).
+                // Must survive the Kafka isActive/isDeleted recompute, which reads it before applying the feed.
+                // String enum, not nullable boolean: that renders as an unreadable three-way checkbox in admin.
                 name: 'visibilityOverride',
                 type: 'string',
                 nullable: true,
@@ -554,12 +472,8 @@ export const config: VendureConfig = {
         ],
         GlobalSettings: [
             {
-                // Admin-controlled toggle (Settings screen in Admin UI — customFields on
-                // GlobalSettings show up there automatically) for docs/payments.md
-                // "Organizations": once enabled, every product/variant MUST carry
-                // organizationId (erp-import rejects records without one) and online payment
-                // MUST compute a real per-organization split (no silent single-payment
-                // fallback) — see ProductHandler and payment-method-handlers.ts.
+                // Once enabled, every variant must carry organizationId and online payment must split per organization.
+                // No silent single-payment fallback: erp-import rejects records without organizationId.
                 name: 'organizationSplitEnabled',
                 type: 'boolean',
                 defaultValue: true,
@@ -581,9 +495,8 @@ export const config: VendureConfig = {
         orderItemPriceCalculationStrategy: new CustomerPriceCalculationStrategy(),
     },
     catalogOptions: {
-        // Not MultiChannelStockLocationStrategy — a branch here is a soft staff-grouping tag,
-        // not a Channel-shaped catalog/pricing partition (see BranchStockLocationStrategy's own
-        // comment and issue #63's confirmed architecture decision).
+        // A branch is a soft staff-grouping tag, not a Channel-shaped catalog or pricing partition.
+        // So it deliberately does not use MultiChannelStockLocationStrategy.
         stockLocationStrategy: new BranchStockLocationStrategy(),
     },
     paymentOptions: {
@@ -597,15 +510,8 @@ export const config: VendureConfig = {
         AssetServerPlugin.init({
             route: 'assets',
             assetUploadDir: path.join(__dirname, '../static/assets'),
-            // Root-relative by default (not an absolute http://host:port URL) so
-            // asset links resolve against whatever origin the browser is actually
-            // on. The alternative — Vendure's default behind-a-proxy detection via
-            // the request's Host header — breaks when the storefront's dev proxy
-            // (or any reverse proxy) rewrites Host to the backend's internal
-            // address (e.g. Vite's `changeOrigin: true` on /shop-api), baking a
-            // non-public hostname (localhost:3000) into every asset URL. Requires
-            // /assets to be proxied to this server under the same public origin
-            // the storefront is served from (see storefront/vite.config.ts).
+            // Root-relative: Host-header detection bakes internal hosts into asset URLs behind a rewriting proxy.
+            // Requires /assets proxied under the storefront's own origin (see storefront/vite.config.ts).
             assetUrlPrefix: process.env.ASSET_URL_PREFIX ?? '/assets/',
             // S3-compatible storage (Garage in dev) when S3_ENDPOINT is set, else the local dir.
             ...(process.env.S3_ENDPOINT
@@ -626,75 +532,35 @@ export const config: VendureConfig = {
                 : {}),
         }),
         emailPlugin,
-        // Issue #128: migrated off BullMQJobQueuePlugin (Redis-backed) to Vendure's own
-        // DB-backed SqlJobQueueStrategy — no separate per-queue-type Redis dependency, and
-        // (unlike BullMQ, where every process's Worker pulls indiscriminately off one shared
-        // underlying queue) `activeQueues` is a real `WHERE queueName = ...` filter at the
-        // query level, so worker.ts/worker-email.ts's existing activeQueues split now gives
-        // genuine per-process isolation. See the vendure-workers skill.
+        // Unlike BullMQ's shared queue, activeQueues filters in SQL, giving real per-process isolation.
+        // worker.ts and worker-email.ts rely on this split for isolation.
         DefaultJobQueuePlugin.init({}),
-        // Issue #80: the standard for all recurring/periodic plugin work (sweeps, cleanups,
-        // polling) — see the backend-plugin-rules skill's "Recurring/periodic work" section.
-        // Runs worker-process-only and DB-locked out of the box (DefaultSchedulerStrategy), and
-        // gives enable/disable + run-now via the admin API without any custom code.
+        // Recurring plugin work must use this: worker-only and DB-locked (DefaultSchedulerStrategy).
         DefaultSchedulerPlugin.init({}),
-        // No .init() — the dashboard is served as its own standalone app (packages/dashboard),
-        // not mounted here. This plugin is only registered to expose the `metricSummary` GraphQL
-        // query the dashboard's Insights page needs, per @vendure/dashboard's own documented
-        // standalone-deployment pattern.
+        // Dashboard is a standalone app, so no .init(): this registers only to expose the metricSummary query.
         DashboardPlugin,
-        // Issue #76 follow-up, unblocked by #77: surfaces the same 6-item system-config
-        // checklist as packages/manager's Settings → System health page, but as a
-        // @vendure/dashboard alert (see src/dashboard/system-health/index.ts) — the first login
-        // on a fresh instance (native `superadmin`, no manager-portal accounts yet) happens
-        // here, not in the manager portal.
-        //
-        // Not a packages/plugins/* package despite backend-plugin-rules' usual "one package per
-        // plugin" convention: this plugin has zero business logic (no entities/resolvers/
-        // services), and @vendure/dashboard's static plugin-discovery step (which globs
-        // node_modules for a compiled `dashboard: '...'` decorator property) cannot see a
-        // pnpm-workspace-symlinked package's dashboard extension at all — it classifies any
-        // symlinked local package as a "local plugin" and only ever registers its dashboard
-        // extension when that plugin's *compiled* JS also lands inside the dashboard's own
-        // introspection temp dir, which only happens for files reachable via a genuine relative
-        // import from vendure-config.ts. Verified directly (fast-glob probes + a manual acorn
-        // AST-walk against the compiled output) while debugging why the alert never appeared
-        // (`Analyzed plugins and found 0 dashboard extensions`) — see the alert file's own
-        // comment for the confirmed detection mechanism this relies on instead.
+        // Not in packages/plugins: @vendure/dashboard can't find extensions in pnpm-symlinked packages.
+        // Discovery only works through a relative import reachable from vendure-config.ts.
         SystemHealthDashboardPlugin,
-        // Same shape/reasoning as SystemHealthDashboardPlugin just above (issue #76's own
-        // pnpm-workspace-symlink discovery limitation) — see
-        // src/dashboard/default-superadmin-account/index.ts.
+        // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
         DefaultSuperadminAlertDashboardPlugin,
         // Same shape/reasoning as SystemHealthDashboardPlugin above — see
         // src/dashboard/branch-consolidation/index.ts.
         BranchConsolidationAlertDashboardPlugin,
-        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #91) — Kafka lag and
-        // inbox backlog together, as two sections of one page — see
-        // src/dashboard/integration-health/index.ts.
+        // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
         IntegrationHealthDashboardPlugin,
-        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #97) — its own page
-        // rather than a third section on integration-health, since that page is already dense —
-        // see src/dashboard/erp-reconciliation/index.ts.
+        // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
+        // Own page, not a section on integration-health, which is already dense.
         ErpReconciliationDashboardPlugin,
-        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #88) — native
-        // Dashboard companion to packages/manager's Settings → Organizations page, same
-        // read-only organizationRequisites query — see src/dashboard/organizations/index.ts.
+        // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
         OrganizationsDashboardPlugin,
-        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #119 Phase 1) —
-        // "ERP users" Pending/Deactivated screens, the sysadmin entry point onto
-        // AccessControlPlugin's Administrator-lifecycle backend — see
-        // src/dashboard/erp-users/index.ts.
+        // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
         ErpUsersDashboardPlugin,
         ProductPhotosDashboardPlugin,
-        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #133 Phase 2) —
-        // read-only Counterparty list+detail pages under the native "customers" section — see
-        // src/dashboard/counterparty/index.ts.
+        // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
         CounterpartyDashboardPlugin,
-        // Same shape/reasoning as SystemHealthDashboardPlugin above (issue #134 Part 2) —
-        // manager-portal role/scope-config provisioning drift, defense in depth for
-        // AccessControlPlugin's own bootstrap-time self-provisioning — see
-        // src/dashboard/role-provisioning/index.ts.
+        // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
+        // Defense in depth: backstops AccessControlPlugin's bootstrap-time self-provisioning.
         RoleProvisioningDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode }),
         AccessControlPlugin.init({ branchNames, defaultPriceTypeCode, defaultCurrencyCode }),
@@ -731,9 +597,7 @@ export const config: VendureConfig = {
         }),
         ErpIntegrationPlugin.init({
             instanceType,
-            // Issue #68: separate axis from instanceType — a real Integration Service broker
-            // connection must be explicitly opted into per contour (local/staging-integration/prod), never
-            // implied by instanceType === 'central' alone. See docs/environments.md.
+            // Separate from instanceType: a real broker connection is opted into per contour, never implied.
             kafkaEnabled: integrationKafkaEnabled,
             defaultVatCode: process.env.INTEGRATION_DEFAULT_VAT_CODE || undefined,
             kafka: {
@@ -800,15 +664,11 @@ export const config: VendureConfig = {
                     offer: process.env.INTEGRATION_KAFKA_TOPIC_OFFER ?? 'erp.offer.events.v1',
                     price: process.env.INTEGRATION_KAFKA_TOPIC_PRICE ?? 'erp.price.events.v1',
                     stock: process.env.INTEGRATION_KAFKA_TOPIC_STOCK ?? 'erp.stock.events.v1',
-                    // Issue #71: product+warehouse+organization storage-location assignment
-                    // (the ERP's МестаХраненияНоменклатуры register) — the real source for
-                    // ProductVariant.customFields.organizationId, see StorageLocationStreamHandler.
+                    // Sole source of ProductVariant.customFields.organizationId (ERP storage-location register).
                     'storage-location':
                         process.env.INTEGRATION_KAFKA_TOPIC_STORAGE_LOCATION ??
                         'erp.storage-location.events.v1',
-                    // Organization-level stock split (the ERP's ТоварыОрганизаций register) — quantity
-                    // dimension deliberately deferred to issue #72, not a second organizationId
-                    // source (StorageLocationChanged is sole source of truth for that).
+                    // Quantity dimension deliberately deferred; not a second organizationId source.
                     'stock-organization':
                         process.env.INTEGRATION_KAFKA_TOPIC_STOCK_ORGANIZATION ??
                         'erp.stock-organization.events.v1',
@@ -817,15 +677,9 @@ export const config: VendureConfig = {
                     'order-registration-result': orderEventsTopic,
                     'order-changed': orderEventsTopic,
                     'order-cancel-result': orderEventsTopic,
-                    // The ERP's "Подразделение" — feeds the Department entity in
-                    // @mivend/plugin-access-control. Different domain than
-                    // the catalog/orders streams above — see DepartmentStreamHandler.
                     department:
                         process.env.INTEGRATION_KAFKA_TOPIC_DEPARTMENT ??
                         'erp.department.events.v1',
-                    // The ERP's counterparty ("Контрагент") — feeds the Counterparty entity in
-                    // @mivend/plugin-counterparty. Same domain as department
-                    // above — see CounterpartyStreamHandler (issue #104).
                     counterparty:
                         process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY ??
                         'erp.counterparty.events.v1',
@@ -921,10 +775,3 @@ export const config: VendureConfig = {
         SavedViewsPlugin,
     ],
 };
-// force restart 1784646839
-// force restart 1784647603
-// force restart 1784648415
-// force restart 1784652831
-// force restart2 1784652875
-// force restart3 1784653316
-// hard restart 1784653421

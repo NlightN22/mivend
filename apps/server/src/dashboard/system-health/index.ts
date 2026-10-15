@@ -14,20 +14,8 @@ import {
     isPaymentMethodMissing,
 } from './system-health-check.js';
 
-// This file is the ../../system-health-dashboard.plugin.ts's `dashboard` entry point.
-// @vendure/dashboard's static plugin-discovery step only registers a plugin's dashboard
-// extension when it can find that plugin's *compiled* `@VendurePlugin({ dashboard: '...' })`
-// decorator via an AST scan of either (a) node_modules (for a real npm-installed plugin) or
-// (b) its own dashboard-config-loader's TS-introspection temp dir (for a plugin reached via a
-// genuine relative import from vendure-config.ts). A pnpm-workspace-symlinked package (e.g. one
-// under packages/plugins/*) fails both: its compiled JS lives outside the temp dir, and the
-// scanner's own "is this a symlinked local package" check reclassifies it as (b) without ever
-// actually feeding it through (b)'s compile step — so its dashboard extension is silently never
-// discovered. Confirmed empirically while building this (a manual acorn AST-walk found the
-// decorator's `dashboard` property fine directly against packages/plugins/system-health's
-// compiled dist/, but the dashboard's own vite plugin logged "found 0 dashboard extensions"
-// regardless of node_modules-root overrides) — hence this file sits under apps/server/src
-// instead, a real relative import from vendure-config.ts.
+// Vendure dashboard plugin discovery silently skips pnpm-workspace symlinked packages,
+// so this entry point must be a real relative import from vendure-config.ts.
 
 // Issue #140: one standalone DashboardAlertDefinition per entity, each linking to the settings
 // page that fixes it — see the dashboard-extension-rules skill's "one actionable alert per action" rule.

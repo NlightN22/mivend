@@ -1,9 +1,7 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
 
-// Mirrors system-health-dashboard.plugin.ts exactly (see its own comment, and
-// src/dashboard/system-health/index.ts's, for why this lives here rather than under
-// packages/plugins/* — a pnpm-workspace-symlinked package's dashboard extension is never
-// discovered by @vendure/dashboard's static plugin-discovery step).
+// Must stay identical to system-health-dashboard.plugin.ts; edit both together.
+// Not under packages/plugins/*: @vendure/dashboard's static discovery skips pnpm-symlinked packages.
 @VendurePlugin({
     imports: [PluginCommonModule],
     dashboard: './dashboard/default-superadmin-account/index.ts',

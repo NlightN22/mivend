@@ -22,9 +22,8 @@ export class CustomerPriceCalculationStrategy implements OrderItemPriceCalculati
         order: Order,
         quantity: number,
     ): Promise<PriceCalculationResult> {
-        // A manager-adjusted price (PriceAdjustmentService, gated by the floor-price approval
-        // workflow — see docs/access-control.md layer 5) takes precedence over the normal
-        // resolution path. Set only by that service, never by the customer or ERP import.
+        // Only PriceAdjustmentService sets this, after floor-price approval; customer and ERP input never do.
+        // Gated by the floor-price workflow; see docs/access-control.md layer 5.
         const manualUnitPrice = orderLineCustomFields.manualUnitPrice;
         if (typeof manualUnitPrice === 'number') {
             return {

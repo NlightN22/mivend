@@ -1,16 +1,9 @@
-// Pure display-derivation logic for issue #133's Dashboard Counterparty pages — no React/
-// @vendure/dashboard imports, per the dashboard-extension-rules skill's "separate pure logic"
-// rule. Kept deliberately tiny: the only real decisions this page makes client-side are the
-// three "what do we show when the real value is missing/unresolved" fallbacks the issue's
-// corrections call out explicitly.
+// No React or @vendure/dashboard imports: this pure logic stays separate per the
+// dashboard-extension-rules skill. The real decisions are the missing-value fallbacks.
 
 export const UNASSIGNED_LABEL = 'Unassigned';
 
-/**
- * Branch display per issue #133 correction 4: branchId is empty for most rows today (not
- * populated until #65/#123/#124/#125 land) — render the same "Unassigned" fallback the Manager
- * column already used in the concept, never assume it's populated.
- */
+// branchId is often empty until upstream populates it; always fall back to "Unassigned"
 export function formatBranch(branchId: string | null | undefined): string {
     return branchId && branchId.trim() ? branchId : UNASSIGNED_LABEL;
 }
@@ -25,24 +18,8 @@ export interface ResolvedAdministratorByErpId {
     name: string;
 }
 
-/**
- * ERP Manager display, per an explicit product decision: this column is entirely about the
- * ERP-side assignment (managerErpId) — never Counterparty.assignedManagerId, which is a
- * different, operational concept (mivend's own current owner, changeable by
- * reassignCounterpartyManager, deliberately independent of whatever ERP last reported) and has no
- * place in resolving this column at all. Resolution is keyed on managerErpId alone, matched
- * against Administrator.customFields.erpId (the unique link UserEnrichmentService writes when an
- * ERP user becomes a real login) — no join through assignedManagerId needed:
- * 1. managerErpId matches a known Administrator's own erpId customField → that Administrator's
- *    current name (more likely up to date than whatever ERP last reported).
- * 2. Otherwise, managerErpId matches an unlinked ErpUser (access-control's own table, populated
- *    straight from the ERP's UserChanged stream) → its ERP-reported fullName — a real person mivend
- *    already knows the name of, just not yet a mivend login (#127's three-way resolution). This
- *    is the common case today — a live incident showed a manager with 254 real counterparties
- *    rendering as a raw GUID everywhere before this fallback existed.
- * 3. Neither resolves → the raw managerErpId, so staff can still see *something* ERP sent.
- * No managerErpId at all → the counterparty genuinely has no ERP manager assigned.
- */
+// Key on managerErpId only; assignedManagerId is a separate operational owner, not ERP.
+// Order: Administrator by customFields.erpId, then unlinked ErpUser fullName, then raw id.
 export function formatManager(
     managerErpId: string | null | undefined,
     resolvedAdministrators: ReadonlyArray<ResolvedAdministratorByErpId>,
@@ -62,11 +39,7 @@ export function formatManager(
     return managerErpId;
 }
 
-/**
- * Status column per issue #133: Linked/Unlinked derives from the new linkedCustomerId resolver,
- * not from isActive — ERP-inactive is a separate, orthogonal signal (see the list concept's own
- * "ERP inactive" badge variant), not folded into this same derivation.
- */
+// Derive Linked/Unlinked from linkedCustomerId, not isActive: ERP-inactive is a separate signal.
 export function formatLinkStatus(
     linkedCustomerId: string | null | undefined,
     isActive: boolean,

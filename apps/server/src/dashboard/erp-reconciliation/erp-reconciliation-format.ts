@@ -1,7 +1,5 @@
-// Pure derivation logic, deliberately separated from the React/Dashboard page plumbing in
-// erp-reconciliation-page.tsx so it can be unit-tested — same split as
-// ../system-health/system-health-check.ts and ../integration-health/integration-health-page.tsx's
-// own isLagOverThreshold.
+// Keep this free of React/Dashboard page code; the split exists so it can be unit-tested.
+// Page-level imports here would pull the rendering dependencies into the unit tests.
 
 export function formatIssueTypeLabel(issueType: string): string {
     switch (issueType) {
