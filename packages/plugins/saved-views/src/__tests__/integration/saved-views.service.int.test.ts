@@ -16,9 +16,8 @@ import {
 } from 'shared';
 import { SavedViewsService } from '../../saved-views.service';
 
-// Mirrors plugin-acquiring/plugin-documents' integration test approach: VendureEntity needs a
-// bootstrapped EntityIdStrategy, so we stand in with a plain TypeORM entity against the real
-// production table shape rather than instantiating the real SavedTableView class.
+// VendureEntity needs a bootstrapped EntityIdStrategy, so tests use a plain TypeORM entity
+// on the real production table shape instead of instantiating SavedTableView.
 @Entity('saved_table_view')
 @Index(['administratorId', 'pageKey'])
 class TestSavedTableView {

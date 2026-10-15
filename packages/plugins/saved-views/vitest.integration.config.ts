@@ -6,11 +6,7 @@ export default defineConfig({
         environment: 'node',
         include: ['src/__tests__/integration/**/*.test.ts'],
         testTimeout: 30_000,
-        // Each file creates its own Postgres schema via shared's testSchemaOptions/
-        // createTestSchema instead of `dropSchema: true` against the shared `public` schema —
-        // see docs/testing-strategy.md's "Database isolation". This also isolates this plugin's
-        // suite from any OTHER plugin's integration tests running concurrently against the same
-        // `mivend_test` database (`pnpm --filter "{packages/**}" test:integration` runs plugins
-        // in parallel by default) — not just from other files within this same plugin.
+        // Own Postgres schema per file: dropSchema on shared `public` would clash with parallel test runs
+        // Also isolates from other plugins' suites on mivend_test (test:integration runs them in parallel).
     },
 });

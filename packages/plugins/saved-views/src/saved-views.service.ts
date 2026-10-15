@@ -40,14 +40,12 @@ export class SavedViewsService {
         return this.connection.getRepository(ctx, SavedTableView).save(view);
     }
 
-    // Scoped by administratorId in the delete condition itself (not a separate ownership
-    // check) so another admin's deleteTableView call is a silent no-op, never an error that
-    // would leak whether the id exists.
+    // Admin scoping is in the delete WHERE clause, not a separate check, so a foreign admin's id
+    // is a silent no-op; throwing would leak whether the id exists.
     async delete(ctx: RequestContext, id: string): Promise<boolean> {
         const administratorId = await this.requireAdministratorId(ctx);
-        // Id from GraphQL input args is already coerced to the entity id strategy's native
-        // type (number, under this project's default strategy) — String() it explicitly
-        // before comparing/persisting, per the backend-plugin-rules skill's ID-coercion gotcha.
+        // GraphQL input ids arrive as the entity id strategy's native type (number here), not string;
+        // String() them before comparing or persisting.
         const result = await this.connection
             .getRepository(ctx, SavedTableView)
             .delete({ id: String(id) as unknown as number, administratorId });
