@@ -28,10 +28,10 @@ If integration/component tests were added or changed (per AGENTS.md's testing re
 
 ## Before pushing
 
-Run `make ci` before any push (including from the `finish-task` skill). It replays `.github/workflows/ci.yml`
-on the committed HEAD in a fresh worktree with an empty pnpm store — format check, type checks of
-server/storefront/manager/dashboard and a clean install — which `make lint`/`make test` on the warm
-working copy do not catch. Commit first: uncommitted changes are not checked.
+Do not run `make ci` before a push, from `finish-task` or otherwise: it is slow and competes with
+other sessions on this box. It runs only in the separate audit session, about once per three
+issues. It replays `.github/workflows/ci.yml` on the committed HEAD in a fresh worktree (format
+check, type checks of every app, clean install), which `make lint`/`make test` do not catch.
 
 ## When checks may be skipped
 

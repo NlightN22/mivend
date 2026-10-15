@@ -334,7 +334,8 @@ The default final checks are:
 
 Do not claim the task is complete until these checks are run successfully or explicitly skipped with a reason.
 
-Before pushing, also run `make ci` (CI's own steps on a clean checkout of HEAD) — see the final-check skill.
+`make ci` (CI's own steps on a clean checkout of HEAD) is not a pre-push step: it runs only in the separate
+audit session, about once per three issues — see the final-check skill.
 
 ## Final audit — separate session, after implementation
 
