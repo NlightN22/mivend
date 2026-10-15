@@ -10,10 +10,7 @@ const { t } = useI18n();
 
 type Entry = OrderDetail['statusHistory'][number];
 
-// A status the dictionary marks as not customer-visible is hidden.
-const entries = computed(() =>
-    [...props.history].reverse().filter(entry => entry.reference?.customerVisible !== false),
-);
+const entries = computed(() => [...props.history].reverse());
 
 function label(entry: Entry): string {
     return entry.reference?.name ?? entry.status;
