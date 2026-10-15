@@ -290,7 +290,7 @@ void loadAll();
 .catalog-page__backdrop {
     position: fixed;
     inset: 0;
-    z-index: 9;
+    z-index: calc(var(--mv-z-sticky) - 1);
 }
 
 .catalog-page__breadcrumb {

@@ -24,6 +24,7 @@ import {
     MvCard,
     MvBreadcrumbs,
     MvCatalogDropdown,
+    layers,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
@@ -58,6 +59,6 @@ app.component('MvCatalogDropdown', MvCatalogDropdown);
 app.use(createPinia());
 app.use(router);
 app.use(i18n);
-app.use(ElementPlus);
+app.use(ElementPlus, { zIndex: layers.popover });
 
 app.mount('#app');

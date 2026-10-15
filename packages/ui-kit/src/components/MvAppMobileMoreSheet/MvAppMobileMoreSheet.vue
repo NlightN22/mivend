@@ -94,7 +94,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         display: block;
         position: fixed;
         inset: 0;
-        z-index: 58;
+        z-index: var(--mv-z-overlay);
         background: rgba(12, 24, 36, 0.42);
     }
 
@@ -104,7 +104,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         left: 0;
         right: 0;
         bottom: 0;
-        z-index: 60;
+        z-index: calc(var(--mv-z-overlay) + 1);
         max-height: min(72vh, 620px);
         padding: 9px 14px calc(18px + env(safe-area-inset-bottom));
         background: #fff;

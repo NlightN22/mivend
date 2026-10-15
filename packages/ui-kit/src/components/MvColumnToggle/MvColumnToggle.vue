@@ -164,7 +164,7 @@ function onRowClick(col: ColumnVisibilityDef & { visible: boolean }): void {
     position: absolute;
     right: 0;
     top: calc(100% + 6px);
-    z-index: 30;
+    z-index: var(--mv-z-dropdown);
     width: 260px;
     padding: 12px;
     background: white;

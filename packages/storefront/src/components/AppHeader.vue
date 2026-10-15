@@ -362,7 +362,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 .app-header-wrap {
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: var(--mv-z-sticky);
 }
 
 .app-header__strip {
@@ -639,7 +639,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     position: fixed;
     top: 72px;
     right: 24px;
-    z-index: 1200;
+    z-index: var(--mv-z-overlay);
     width: 360px;
     max-width: calc(100vw - 32px);
 }
@@ -652,7 +652,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 }
 
 .app-header__backdrop--nav {
-    z-index: 55;
+    z-index: var(--mv-z-overlay);
     background: rgba(20, 35, 31, 0.28);
 }
 
@@ -705,7 +705,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         transform: translateX(100%);
         transition: transform 0.22s ease;
         box-shadow: -12px 0 32px rgba(20, 35, 31, 0.14);
-        z-index: 60;
+        z-index: calc(var(--mv-z-overlay) + 1);
         overflow-y: auto;
     }
 

@@ -18,6 +18,7 @@ import {
     MvLogo,
     MvCard,
     MvBreadcrumbs,
+    layers,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
@@ -42,11 +43,17 @@ app.component('MvBreadcrumbs', MvBreadcrumbs);
 
 app.use(createPinia());
 app.use(router);
-app.use(ElementPlus);
+app.use(ElementPlus, { zIndex: layers.popover });
 // PrimeVue is scoped to the Orders desktop table only; element-plus/ui-kit remain the rest of the app.
 // mivendPrimeVuePreset maps it to tokens.css so it doesn't show PrimeVue's default Aura theme.
 app.use(PrimeVue, {
     theme: { preset: mivendPrimeVuePreset, options: { darkModeSelector: '.mv-never-dark' } },
+    zIndex: {
+        modal: layers.modal,
+        overlay: layers.popover,
+        menu: layers.popover,
+        tooltip: layers.popover,
+    },
 });
 
 app.mount('#app');

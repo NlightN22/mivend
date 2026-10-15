@@ -142,7 +142,7 @@ function categoryLink(slug: string): { path: string; query: { collection: string
     border-bottom: 1px solid var(--app-nav-border-strong);
     box-shadow: 0 26px 60px rgba(20, 35, 31, 0.16);
     backdrop-filter: blur(18px);
-    z-index: 10;
+    z-index: var(--mv-z-dropdown);
     max-height: calc(100vh - 140px);
     overflow-y: auto;
 }

@@ -103,7 +103,7 @@ watch(search, () => {
 
 .customer-picker__results {
     position: absolute;
-    z-index: 10;
+    z-index: var(--mv-z-dropdown);
     top: 44px;
     left: 0;
     right: 0;

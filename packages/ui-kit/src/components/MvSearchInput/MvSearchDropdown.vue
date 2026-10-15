@@ -45,7 +45,7 @@ const emit = defineEmits<{
     border: 1px solid #e4e7ec;
     border-radius: 16px;
     box-shadow: 0 10px 28px rgba(16, 24, 40, 0.08);
-    z-index: 100;
+    z-index: var(--mv-z-dropdown);
     overflow: hidden;
     max-height: 420px;
     overflow-y: auto;

@@ -24,7 +24,7 @@ const { toasts, dismissToast } = useToast();
     position: fixed;
     top: 16px;
     right: 16px;
-    z-index: 2000;
+    z-index: var(--mv-z-toast);
     display: flex;
     flex-direction: column;
     gap: 10px;

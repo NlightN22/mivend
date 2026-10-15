@@ -60,8 +60,15 @@
     --app-font-size-search: 16px;
     --app-font-size-title: 20px;
 
-    /* Above both portals' headers and dropdowns (up to 1200), below toasts (2000). */
-    --mv-z-connection-bar: 1500;
+    /* Page-level layers, mirrored in tokens/layers.ts. Never use a raw z-index between components. */
+    --mv-z-sticky: 100;
+    --mv-z-dropdown: 200;
+    --mv-z-floating: 300;
+    --mv-z-overlay: 400;
+    --mv-z-modal: 500;
+    --mv-z-popover: 600;
+    --mv-z-connection-bar: 700;
+    --mv-z-toast: 800;
 }
 
 *,

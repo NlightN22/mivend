@@ -79,7 +79,7 @@ onBeforeUnmount(() => {
     position: fixed;
     left: 16px;
     bottom: calc(78px + env(safe-area-inset-bottom));
-    z-index: 47;
+    z-index: calc(var(--mv-z-floating) - 1);
     display: flex;
     flex-direction: column;
     gap: 10px;

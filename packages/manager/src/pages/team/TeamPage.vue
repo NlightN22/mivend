@@ -194,7 +194,7 @@ onBeforeUnmount(() => {
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
-    z-index: 30;
+    z-index: var(--mv-z-dropdown);
     display: flex;
     flex-direction: column;
     min-width: 160px;

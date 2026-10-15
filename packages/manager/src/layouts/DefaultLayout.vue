@@ -259,7 +259,7 @@ function handleRelogin(): void {
     position: fixed;
     top: 64px;
     right: 24px;
-    z-index: 1200;
+    z-index: var(--mv-z-overlay);
     width: 360px;
     max-width: calc(100vw - 32px);
 }

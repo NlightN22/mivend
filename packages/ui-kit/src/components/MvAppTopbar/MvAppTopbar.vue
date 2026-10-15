@@ -65,7 +65,7 @@ const emit = defineEmits<{ logout: [] }>();
     border-bottom: 1px solid var(--el-border-color, #e4e7ec);
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: var(--mv-z-sticky);
 }
 
 .mv-app-topbar__brand {

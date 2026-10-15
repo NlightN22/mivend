@@ -103,7 +103,7 @@ function select(value: string): void {
     top: calc(100% + 4px);
     left: 0;
     right: 0;
-    z-index: 30;
+    z-index: var(--mv-z-dropdown);
     max-height: 220px;
     overflow-y: auto;
     background: white;

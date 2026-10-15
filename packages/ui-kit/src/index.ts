@@ -232,6 +232,8 @@ export { spacing, radius, shadows } from './tokens/spacing';
 export type { SpacingToken, RadiusToken, ShadowToken } from './tokens/spacing';
 
 export { typography } from './tokens/typography';
+export { layers } from './tokens/layers';
+export type { LayerToken } from './tokens/layers';
 export type { FontSizeToken } from './tokens/typography';
 
 export { formatDocumentNumber } from './utils/documentNumber';
