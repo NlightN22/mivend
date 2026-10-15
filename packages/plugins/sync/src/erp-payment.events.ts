@@ -26,25 +26,19 @@ export class ErpPaymentReportedEvent extends VendureEvent {
     }
 }
 
-// The branch-kassa counterpart of ErpPaymentReportedEvent — a cash payment for a ProformaInvoice,
-// witnessed at a branch till and reported up to Central via the existing
-// recordWitnessedPayment/payment.recorded outbox path (see order-sync.service.ts,
-// central.consumer.ts). Same rule #12 constraint: only enqueues, never processes.
+// Enqueue-only (rule #12): Central applies it via the payment.recorded outbox, never here.
+// Branch-side cash counterpart of ErpPaymentReportedEvent, reported via recordWitnessedPayment.
 export class BranchKassaPaymentEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,
         public readonly proformaInvoiceId: number,
-        // Same organization-scope validation as ErpPaymentReportedEvent — the branch reporting
-        // this cash payment already knows its own organization context; this is validated
-        // against the target ProformaInvoice's real organizationId, never used to restrict which
-        // branch may pay which proforma invoice (branch governs staff visibility, not allocation scope).
+        // Validate against the target ProformaInvoice's real organizationId, not the reporting branch's.
+        // Branch scopes staff visibility only; it must never restrict which branch may pay which proforma.
         public readonly organizationId: number,
         public readonly outcome: ErpPaymentOutcome,
         public readonly sourceEventId: string,
-        // RRN (Retrieval Reference Number) — the standard 12-digit reference printed on a card
-        // terminal/kassa receipt, used to identify the transaction with the acquiring bank. Not
-        // every branch-kassa fact carries one (e.g. a pure cash payment has no card network
-        // involved), hence optional.
+        // RRN: 12-digit acquiring-bank reference from the card terminal receipt.
+        // Optional: pure cash payments involve no card network, so they have none.
         public readonly rrn?: string,
     ) {
         super();

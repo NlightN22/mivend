@@ -1,15 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { SyncEventSchema } from 'shared';
 
-// Contract test for plugin-sync's RabbitMQ envelope — the single highest-risk external boundary
-// per the internal-sync-rules skill (central <-> branch, and the only wire format `plugin-sync` owns).
-// SyncEventSchema (packages/shared/src/sync.ts) IS the contract: every producer validates against
-// it before publish (SyncService.publishEntry), every consumer validates against it on receipt
-// (RabbitMQService.subscribe). sync-cycle.test.ts already proves the end-to-end behavior (an
-// invalid message goes to dead-letters without requeue) — this file targets the schema's own
-// boundary guarantees in isolation: required fields, allowed values, unknown-field tolerance,
-// optional/nullable semantics, and the routing-key format. No DB/RabbitMQ needed — the schema
-// itself is the contract, so this is pure Zod-schema validation.
+// SyncEventSchema is the contract: producers validate before publish, consumers on receipt.
+// Pure Zod checks, no DB/RabbitMQ; end-to-end dead-lettering lives in sync-cycle.test.ts.
 function validEnvelope(): {
     eventId: string;
     sourceInstanceId: string;
@@ -162,10 +155,8 @@ describe('SyncEventSchema (contract)', () => {
 
     describe('unknown extra fields — forward compatibility', () => {
         it('tolerates (silently strips) an unknown extra field on the payload rather than rejecting the whole event', () => {
-            // Zod's default z.object() mode is "strip", not "strict" — a producer on a newer
-            // version adding a field a consumer doesn't know about yet must not break that
-            // consumer. If this ever changes to `.strict()`, this test documents the behavior
-            // change so it's a deliberate decision, not a silent regression.
+            // z.object() strips unknown keys: newer producers may add fields older consumers lack.
+            // Switching to .strict() would break older consumers during rollout; this test pins it.
             const result = SyncEventSchema.safeParse({
                 ...validEnvelope(),
                 eventType: 'product.created',
@@ -265,11 +256,8 @@ describe('SyncEventSchema (contract)', () => {
             expect(result.success).toBe(false);
         });
 
-        // This wire-format layer intentionally leaves proformaInvoiceId/organizationId/outcome/rrn all
-        // optional (see PaymentRecordedPayload's own comment) — the mandatory-together
-        // requirement (a proformaInvoiceId with no rrn is invalid) is enforced downstream by
-        // PaymentEventListener, not here. This test documents that boundary explicitly, so it
-        // reads as a deliberate design decision rather than a gap this contract suite missed.
+        // Schema leaves proformaInvoiceId/organizationId/outcome/rrn optional on purpose.
+        // Co-requirement (e.g. proformaInvoiceId needs rrn) is enforced by PaymentEventListener, not here.
         it('does NOT reject proformaInvoiceId present without rrn at the schema level — that combination is rejected by PaymentEventListener instead, not this schema', () => {
             const result = SyncEventSchema.safeParse({
                 ...validEnvelope(),
@@ -281,11 +269,8 @@ describe('SyncEventSchema (contract)', () => {
     });
 
     describe('routing key format — <eventType>.<target>', () => {
-        // SyncService.publishEntry builds this inline (`${entry.eventType}.${entry.target}`),
-        // and every consumer's binding key depends on it (RabbitMQService.subscribe's callers use
-        // patterns like '#.central', '#.branch-a', '#.all-branches') — pinning the format here
-        // means a change to the separator or field order is a visible, intentional diff, not a
-        // silent break of every consumer's binding.
+        // Routing key is built inline in SyncService.publishEntry; consumer bindings match on it.
+        // Separator and field order are load-bearing: changing them silently breaks every binding.
         it.each([
             ['product.updated', 'branch-a', 'product.updated.branch-a'],
             ['administrator.created', 'all-branches', 'administrator.created.all-branches'],

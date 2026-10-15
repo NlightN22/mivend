@@ -59,11 +59,8 @@ export class ErpCallbackController {
         @Req() req: Request,
         @Body() payload: ErpPaymentReportedDto,
     ): Promise<{ ok: boolean }> {
-        // No global ValidationPipe is wired (this project doesn't use class-validator), so
-        // @ApiProperty()'s "required" is Swagger-schema documentation only, not runtime
-        // enforcement — check explicitly. erpEventId is the mandatory reconciliation requisite
-        // (docs/payments.md); a payment fact without one is invalid input, rejected here rather
-        // than silently accepted with a missing reference.
+        // No global ValidationPipe is wired, so @ApiProperty's "required" is docs-only; check explicitly.
+        // erpEventId is required for reconciliation (docs/payments.md); reject facts without it here.
         if (!payload.erpEventId) {
             throw new BadRequestException('erpEventId is required');
         }

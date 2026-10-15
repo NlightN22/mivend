@@ -15,12 +15,8 @@ export interface OutboxEntry {
     target: string;
 }
 
-// Shared plumbing for every plugin-sync producer: subscribe (via `subscribeAndLog`, so a
-// failure here is never silently swallowed — see that helper's doc comment) to a Vendure/plugin
-// EventBus event, let the caller decide (via toOutboxEntry) whether it's sync-worthy and what
-// it maps to, then write it to the outbox in its own transaction — same shape as
-// ReservationConsumer's two handlers, generalized so a new entity's sync rule is just a mapping
-// function, not a new provider with its own constructor/subscribe/transaction boilerplate.
+// Subscribes via subscribeAndLog so subscription failures are never swallowed silently.
+// Each entity supplies only a toOutboxEntry mapping; each write runs in its own transaction.
 export function registerOutboxProducer<E extends VendureEvent>(
     eventBus: EventBus,
     dataSource: DataSource,

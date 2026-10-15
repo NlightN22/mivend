@@ -11,17 +11,8 @@ import { SyncOutboxEntry } from '../../entities/sync-outbox.entity';
 import { SyncService } from '../../sync.service';
 import type { SyncPluginOptions } from '../../types';
 
-// The outbox-pattern messaging invariant: an outbox write must be atomic with the transaction it participates
-// in — a rollback must never leave a partial outbox state. plugin-sync's actual write paths
-// (order-sync.service.ts, producer-registry.ts, sync.service.processErpChanges) never pair a
-// business-entity write with an outbox write in the same EntityManager — every business write
-// plugin-sync reacts to already committed via Vendure core or another plugin before plugin-sync's
-// own subscriber runs. The atomicity risk that DOES exist in this plugin's own code is
-// processErpChanges's multi-event batch: it writes several outbox rows inside one
-// `dataSource.transaction`, so a failure partway through must roll back the whole batch, not
-// leave the first N events persisted. sync-cycle.test.ts already covers publish/retry/DLQ/
-// idempotency/ordering against RabbitMQ — this file only covers the DB-transaction boundary,
-// which currently has zero coverage (processErpChanges has no test at all).
+// Outbox rows for a processErpChanges batch share one dataSource.transaction: a partial failure
+// must roll back all of them, never leave the first N events persisted.
 const HUB_OPTIONS: SyncPluginOptions = {
     instanceType: 'central',
     instanceId: 'hub',

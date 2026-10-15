@@ -6,9 +6,7 @@ import { ErpOrderService } from '@mivend/plugin-erp-order';
 import { OrderErpStatusDto } from './dto/order-erp-status.dto';
 import { ErpCallbackApiKeyGuard } from './erp-callback-api-key.guard';
 
-// Complements ErpCallbackController's push path (POST order-status) — lets
-// the ERP re-query current status on demand (e.g. after a missed callback,
-// or for reconciliation) instead of relying solely on us pushing updates.
+// Pull counterpart to ErpCallbackController's push path, for missed callbacks and reconciliation
 @ApiTags('ERP Callback')
 @ApiSecurity('erp-callback-api-key')
 @UseGuards(ErpCallbackApiKeyGuard)

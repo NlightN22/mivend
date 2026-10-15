@@ -3,17 +3,8 @@ import { Administrator, NativeAuthenticationMethod, Role, User } from '@vendure/
 import { EntityManager } from 'typeorm';
 import type { SyncEventByType } from 'shared';
 
-// Branch-side apply logic for the Central-is-master Administrator replica — see
-// docs/architecture.md's "User identity: Central is master, not federated" and
-// AdministratorSyncProducer (the Central-side counterpart). Applied from within
-// ProductConsumer's switch (the sole RabbitMQ subscriber for a branch's queue — see
-// product.consumer.ts), inside the same transaction as its idempotency check.
-//
-// Correlation key: `Administrator.customFields.sourceAdministratorId` — NOT the native
-// auto-increment `Administrator.id`, which is per-instance and meaningless across databases
-// (see the backend-plugin-rules skill's ID-coercion gotcha). Looked up via raw SQL against the flattened customFields
-// column, matching this codebase's established convention (see TradingPointService) rather than
-// TypeORM's embedded-object `where` syntax, which has no precedent here.
+// Correlate by customFields.sourceAdministratorId; native Administrator.id differs per database.
+// Runs inside ProductConsumer's transaction, so the idempotency check and apply commit atomically.
 @Injectable()
 export class AdministratorSyncService {
     async applyUpsert(

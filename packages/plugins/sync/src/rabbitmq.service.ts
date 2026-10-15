@@ -17,22 +17,11 @@ export class RabbitMQService implements OnModuleDestroy {
     private channel: amqplib.Channel | null = null;
     private readonly exchange: string;
     private readonly dlx: string;
-    // Started eagerly in the constructor — i.e. before any provider's onModuleInit hook runs —
-    // and awaited by publish()/subscribe() rather than relying on onModuleInit ordering. Nest
-    // runs onModuleInit hooks within a module concurrently, not sequentially by provider array
-    // order; a consumer's onModuleInit calling subscribe() while this service's own
-    // onModuleInit was still mid-connect() raced and threw "RabbitMQ channel not initialized".
-    // This only ever surfaced on a branch instance (ProductConsumer/OrderConsumer/
-    // ReservationConsumer.onModuleInit no-ops on central), so it stayed latent until the first
-    // real branch boot.
+    // Nest runs onModuleInit hooks concurrently within a module, so consumers must not rely on
+    // this service's onModuleInit having finished connecting; subscribe() raced and threw.
     private readonly ready: Promise<void>;
-    // In-memory, per-process retry counter keyed by eventId — not durable across a restart,
-    // but that's an acceptable gap here: its only job is to stop a still-failing message from
-    // being nack(requeue=true)'d in a tight, delay-free loop. A real incident traced to exactly
-    // that: a poison message (see erp-adapter.stub.ts's productId fix) with no retry cap and no
-    // backoff generated an unbounded flood of redeliveries fast enough to OOM the whole host.
-    // the no-silent-drops messaging invariant already requires "retried with backoff and eventually routed to a
-    // dead-letter queue" — this was never actually implemented, only documented.
+    // Per-process only, not durable across restarts: it just stops tight nack(requeue=true) loops
+    // that, with no cap or backoff, can flood the process and exhaust host memory.
     private readonly retryCounts = new Map<string, number>();
 
     constructor(
@@ -72,18 +61,8 @@ export class RabbitMQService implements OnModuleDestroy {
         ch.publish(this.exchange, routingKey, content, { persistent: true });
     }
 
-    // bindingKeys: one or more topic patterns (e.g. `#.branch-a`, `#.all-branches`) — a leading
-    // `#` (zero-or-more words), not `*` (exactly one word): eventType itself already contains a
-    // dot (e.g. `order.created`), so the full routing key `<eventType>.<target>` (see
-    // SyncService.publishEntry) has a variable number of segments before the target suffix.
-    // Never a bare `#` on its own — each queue binds only to the target patterns it actually
-    // cares about. This is deliberate:
-    // "bind everything with # and filter in application code" is a recognized RabbitMQ
-    // anti-pattern (the broker should do the filtering it's designed for), and at this scale
-    // the real cost isn't throughput — it's every consumer needing a hand-maintained "skip if
-    // not for me" branch for event types it was never meant to receive, including its own
-    // self-published broadcasts (a central instance binding `#` would receive back every event
-    // it just published to its branches).
+    // Leading # (zero-or-more words), not *: eventType has dots, so the routing key has a
+    // variable segment count. Never bare #: it would echo a central instance's own broadcasts.
     async subscribe(
         queueName: string,
         bindingKeys: string | string[],
@@ -138,10 +117,8 @@ export class RabbitMQService implements OnModuleDestroy {
                 }
                 this.retryCounts.set(key, attempts);
 
-                // Exponential backoff before requeueing — never nack(requeue=true) instantly.
-                // A still-failing message redelivered with zero delay is a tight loop, not a
-                // retry: it can flood the process fast enough to exhaust host memory (this is
-                // exactly what happened before this fix existed).
+                // Back off exponentially before requeueing: nack(requeue=true) with zero delay becomes a
+                // tight redelivery loop that can exhaust host memory.
                 const baseDelayMs = this.options.retryBaseDelayMs ?? RETRY_BASE_DELAY_DEFAULT;
                 const delayMs = Math.min(baseDelayMs * 2 ** (attempts - 1), 10_000);
                 setTimeout(() => {

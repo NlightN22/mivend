@@ -15,12 +15,8 @@ import { SyncService } from '../sync.service';
 import { SYNC_PLUGIN_OPTIONS } from '../types';
 import type { SyncPluginOptions } from '../types';
 
-// Central is the master for Administrator identity — see docs/architecture.md's "User identity:
-// Central is master, not federated". This listens to Vendure's own AdministratorEvent (fired on
-// create/update/delete) and writes the replicated record — including the password hash, so a
-// branch can authenticate a login fully offline — to sync_outbox for every branch. Central-only:
-// AdministratorSyncService (branch-side, see product.consumer.ts's switch) is what actually
-// applies these on a branch.
+// Central is the master for Administrator identity (not federated); this runs on Central only.
+// The password hash is included so a branch can authenticate logins fully offline.
 @Injectable()
 export class AdministratorSyncProducer implements OnApplicationBootstrap {
     constructor(
@@ -58,13 +54,8 @@ export class AdministratorSyncProducer implements OnApplicationBootstrap {
         });
         if (!admin) return null;
 
-        // NativeAuthenticationMethod.passwordHash is declared `select: false` in Vendure core
-        // (never returned by a normal find/relation load, for good reason) — must be fetched
-        // explicitly via addSelect. Loading it through `admin.user.authenticationMethods`
-        // instead would silently come back with passwordHash === undefined, which then
-        // vanishes entirely on JSON serialization into the outbox row (not stored as null,
-        // just absent) — this is exactly the bug that shipped here initially, caught by
-        // SyncEventSchema rejecting the payload as missing a required field before publish.
+        // passwordHash is select:false in Vendure core; it must be fetched with addSelect.
+        // Other loads leave it undefined, and JSON.stringify silently drops it from the outbox payload.
         const native = await this.dataSource
             .getRepository(NativeAuthenticationMethod)
             .createQueryBuilder('nam')

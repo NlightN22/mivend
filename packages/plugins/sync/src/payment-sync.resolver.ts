@@ -3,11 +3,8 @@ import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/co
 
 import { OrderSyncService } from './order-sync.service';
 
-// Placeholder entry point for a branch till/kassa integration (no real hardware yet) — an
-// operator (or, once built, an automated kassa client) reports a payment they witnessed. See
-// OrderSyncService.recordWitnessedPayment for what happens next: applied for real if this
-// instance owns the order, reported onward as a fact otherwise — never a direct mutation of
-// another instance's order. See docs/architecture.md's "Order as a read-model" section.
+// Orders owned by another instance get the payment reported onward, never mutated here.
+// Placeholder until kassa hardware exists; see OrderSyncService.recordWitnessedPayment.
 @Resolver()
 export class PaymentSyncResolver {
     constructor(private readonly orderSyncService: OrderSyncService) {}

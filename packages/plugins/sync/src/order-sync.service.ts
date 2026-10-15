@@ -19,15 +19,8 @@ import type { SyncPluginOptions } from './types';
 
 const loggerCtx = 'OrderSyncService';
 
-// Applies a synced order.created/.updated event on the receiving instance — see
-// docs/architecture.md's "receiving instance gets a full local Order copy". Goes through
-// Vendure's real OrderService (create + addItemToOrder + transitionToState) rather than raw
-// entity inserts: OrderLine has several Vendure-computed fields (taxLines, adjustments, prices)
-// that only its own pricing/tax pipeline can populate correctly — a raw INSERT would either
-// violate NOT NULL constraints or silently produce a line with no real price/tax calculation.
-// Customer and ProductVariant are resolved by their existing stable, ERP-sourced identifiers
-// (emailAddress, sku) — see shared/src/sync.ts's OrderCreatedPayload comment for why no new
-// correlation field was needed for either.
+// Uses OrderService, not raw entity inserts: OrderLine's taxLines/adjustments/prices are only
+// populated by Vendure's pricing/tax pipeline. Customer/ProductVariant match on emailAddress/sku.
 @Injectable()
 export class OrderSyncService {
     constructor(
@@ -85,22 +78,8 @@ export class OrderSyncService {
             customFields: { sourceOrderId: payload.sourceOrderId, branchId: payload.branchId },
         });
 
-        // Bring the replica to the same state the source order was in when it was queued for
-        // sync (e.g. 'ArrangingPayment'/'PaymentAuthorized') — without this it would stay stuck
-        // in 'AddingItems' forever, since order.created never transitions the order itself, only
-        // creates it. Best-effort: a failed transition is logged, not fatal — the replica still
-        // exists and can be inspected/corrected manually.
-        // Known live-verified limitation: Vendure's own state-machine guards reject a direct
-        // jump into a payment-gated state (e.g. 'PaymentAuthorized' requires an actual
-        // `Payment` entity with state 'Authorized' attached to the order — see
-        // default-order-process.js's checkPaymentsCoverTotal guard) or a shipping-gated one
-        // ('ArrangingPayment' requires shippingLines). Payments and shipping lines are not
-        // synced today, so replaying a payment/shipping-gated target state on the replica will
-        // reliably fail this check and log a warning, leaving the replica one step behind
-        // ('AddingItems' or whatever earlier state it could legally reach). Not designed around
-        // yet — would need either syncing Payment/ShippingLine records too, or treating the
-        // origin's state as informational metadata rather than driving the replica's own real
-        // Vendure order FSM.
+        // Replica can't reach payment/shipping-gated states (Payment/ShippingLine not synced), so it stalls
+        // one step behind; a failed transition is logged, not fatal.
         if (payload.state && payload.state !== 'AddingItems') {
             const result = await this.orderService.transitionToState(
                 ctx,
@@ -129,15 +108,8 @@ export class OrderSyncService {
         );
         const orderId = rows[0]?.id;
         if (!orderId) {
-            // Thrown, not swallowed: order.updated for the very first post-placement transition
-            // can race its own order.created to this instance (see order.consumer.ts's producer
-            // comment on why) — the replica this update targets may simply not exist *yet*, not
-            // never. Throwing routes this through RabbitMQService.subscribe's existing
-            // backoff-then-DLQ retry (the no-silent-drops messaging invariant): a few retries
-            // give order.created's slower delivery chain time to land; if the replica genuinely
-            // never gets created (e.g. order.created itself failed to resolve a customer/variant
-            // — see applyCreate above), this correctly ends up in the DLQ for inspection instead
-            // of vanishing silently, which is what the old warn-and-return did.
+            // Must throw: order.updated can race ahead of order.created, so the replica may not exist yet.
+            // Throw routes it to backoff-then-DLQ retry, so a replica that never appears is kept, not lost.
             throw new Error(
                 `Cannot apply order.updated [${payload.sourceOrderId}] — no local replica found (yet)`,
             );
@@ -157,11 +129,8 @@ export class OrderSyncService {
         }
     }
 
-    // Applies a `payment.recorded` fact — see docs/architecture.md's "Order as a read-model:
-    // independent event streams per concern (CQRS)" and the internal-sync-rules skill. Two cases,
-    // never a third: either this instance holds only a replica of the order (apply as an
-    // informational projection, never touch the real Vendure order), or this instance owns the
-    // order for real (apply it as a genuine payment through the normal Vendure API).
+    // Two cases only: a replica gets an informational projection (real Vendure order untouched);
+    // the owning instance applies it as a real payment via the normal Vendure API.
     async applyPaymentRecorded(event: SyncEventByType<'payment.recorded'>): Promise<void> {
         const { payload } = event;
 
@@ -186,19 +155,16 @@ export class OrderSyncService {
         );
         const orderId = ownRows[0]?.id;
         if (!orderId) {
-            // Same reasoning as applyUpdate's throw above — the replica this fact is about may
-            // simply not have landed yet (order.created racing ahead of it), so retry via the
-            // existing backoff-then-DLQ machinery rather than dropping it silently.
+            // Throw for the same race as applyUpdate: the replica may not have landed yet.
+            // Retry via backoff-then-DLQ rather than dropping silently.
             throw new Error(
                 `Cannot apply payment.recorded [${payload.sourceOrderId}] — no matching local order (replica or origin) found (yet)`,
             );
         }
 
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
-        // OrderService.addPaymentToOrder requires an open transaction (asserted internally) —
-        // unlike create/addItemToOrder/transitionToState above, which don't. Found live
-        // 2026-07-15: without this, every payment.recorded lands in the DLQ with
-        // "must be called within a transaction".
+        // addPaymentToOrder asserts an open transaction, unlike create/addItemToOrder/transitionToState.
+        // Without it, every payment.recorded fails with 'must be called within a transaction'.
         await this.connection.withTransaction(ctx, async txCtx => {
             const result = await this.orderService.addPaymentToOrder(txCtx, orderId, {
                 method: payload.method,
@@ -218,13 +184,8 @@ export class OrderSyncService {
         });
     }
 
-    // The entry point for a payment witnessed *locally* on an order this instance may or may not
-    // own — e.g. a branch till/kassa integration reporting cash paid for a Central-origin
-    // replica it's servicing. Never mutates a replica's real Vendure order directly (blocked by
-    // ReplicaOrderProcess anyway, see replica-order.guard.ts) — only ever writes the fact to the
-    // outbox for the true owner to apply. If this instance IS the owner, applies it immediately
-    // for real; the existing PaymentStateTransitionEvent producer (order.consumer.ts) then
-    // reports it onward to the other side automatically.
+    // Never mutates a replica's Vendure order (blocked by ReplicaOrderProcess); only writes to outbox.
+    // The owner applies it at once; the PaymentStateTransitionEvent producer reports it onward.
     async recordWitnessedPayment(
         ctx: RequestContext,
         orderId: ID,

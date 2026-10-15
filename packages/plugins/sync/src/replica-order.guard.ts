@@ -10,19 +10,8 @@ import type {
     WillAdjustOrderLineInput,
 } from '@vendure/core';
 
-// Order conflict rule (decided 2026-07-15, see docs/ai/PROJECT_CONTEXT.md): the instance that
-// originated an order is the sole source of truth for it — a replica (any order with
-// `customFields.sourceOrderId` set, see OrderSyncService.applyCreate) is read-only for anything
-// a real human could trigger. This isn't "last write wins" (rejected: RabbitMQ delivery delay —
-// seconds to tens of seconds with backoff, see OrderConsumer's producer-side race comment —
-// means "arrived last" and "happened last" routinely disagree; also Order.state is an FSM, not
-// an independently-mergeable field, so a naive timestamp comparison can silently produce a
-// state that's businesses-nonsensical, e.g. Shipped + Cancelled both "won" different fields).
-// Instead the conflict is made structurally impossible: only the sync path itself
-// (OrderSyncService, which always uses a fresh system RequestContext with no activeUserId — see
-// its `requestContextService.create({ apiType: 'admin' })` calls) may ever write to a replica;
-// any request from a real logged-in actor (`ctx.activeUserId` set — an admin operator or the
-// customer themselves) is rejected with a clear error instead of silently diverging.
+// Replicas (sourceOrderId set) are read-only for humans; only the sync path may write to them.
+// Not last-write-wins: RabbitMQ delays reorder events; Order.state is an FSM, not mergeable fields.
 const REPLICA_READONLY_MESSAGE =
     'This order originated on another instance and is managed there — changes must be made at the source.';
 

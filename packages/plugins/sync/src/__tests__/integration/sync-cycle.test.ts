@@ -90,10 +90,8 @@ beforeAll(async () => {
     await branchRabbitMQ.connect();
 
     syncService = new SyncService(dataSource, hubRabbitMQ, HUB_OPTIONS, mockLogger as never);
-    // Publishes as if from branch-a (sourceInstanceId='branch-a') — used to simulate a
-    // branch-originated event reaching Central. Using `syncService` (sourceInstanceId='hub')
-    // for that would make the event look like Central's own echo of itself, since
-    // CentralConsumer's self-echo guard compares sourceInstanceId against its own instanceId.
+    // Must not use syncService (sourceInstanceId='hub'): CentralConsumer's self-echo guard
+    // would drop it as Central's own echo, since the guard compares sourceInstanceId to its instanceId.
     branchSyncService = new SyncService(
         dataSource,
         branchRabbitMQ,
@@ -225,14 +223,8 @@ describe('outbox publishing', () => {
 // ─── sync-outbox ScheduledTask (drains the outbox above) ─────────
 
 describe('createSyncOutboxTask', () => {
-    // Regression test for a real, previously-live bug (found 2026-07-15): the outbox-draining
-    // job was gated on `if (instanceType !== 'central') return`, so no branch instance ever
-    // drained its own outbox at all — every branch→central sync event sat at status='pending'
-    // forever, silently (see docs/ai/PROJECT_CONTEXT.md). Since issue #80's migration to
-    // Vendure's ScheduledTask, createSyncOutboxTask itself carries no instanceType branch at all
-    // (unlike createSyncErpPollTask, which is deliberately central-only) — this exercises the
-    // task's `execute` the same way DefaultSchedulerStrategy would (via a minimal injector stub),
-    // for both instance types, so it can never silently regress back to being central-only.
+    // Guards against regressing to a central-only outbox drain, where branch events stay pending forever.
+    // Keep createSyncOutboxTask free of instanceType gating (unlike the central-only ERP poll task).
     it.each([['central'], ['branch']] as const)(
         'drains the outbox for instanceType=%s',
         async instanceType => {
@@ -345,11 +337,8 @@ describe('branch consumer', () => {
         expect(mainQ.messageCount).toBe(0);
     });
 
-    // Real incident this test guards against: a schema-valid message whose business logic
-    // keeps failing (see erp-adapter.stub.ts's productId fix) was nack(requeue=true)'d
-    // instantly and indefinitely — a tight loop with no delay and no cap, fast enough to
-    // exhaust host memory. Retries must be backed off and capped at maxRetry, landing in
-    // dead-letters afterward — never looping forever.
+    // Persistently failing messages must not be requeued instantly: that spins a tight, uncapped loop.
+    // Retries need a delay and a cap at maxRetry, after which the message goes to dead-letters.
     it('a still-failing (non-schema) message retries with backoff, then lands in dead-letters — never loops forever', async () => {
         // Tiny retryBaseDelayMs avoids racing the production 500ms backoff against a fixed
         // wall-clock wait, which flaked under `make test-int`'s full parallel run (issue #213).
@@ -440,11 +429,8 @@ describe('batch processing', () => {
     });
 });
 
-// ─── Central consumer (Branch → Central) ─────────────────────────────────────
-// Central previously never subscribed to RabbitMQ at all (only published) — a branch-originated
-// event had nowhere to land. These tests exercise the routing-key redesign this was built on:
-// each queue binds only to the target patterns it actually needs, not a bare `#` — see
-// RabbitMQService.subscribe's comment for why "bind everything and filter in code" was rejected.
+// Each queue binds only to the routing patterns it needs, never a bare `#`:
+// filtering in code after a catch-all bind was rejected (see RabbitMQService.subscribe).
 describe('central consumer', () => {
     it('applies an order.created event targeted at "central" (a branch-originated order)', async () => {
         const eventId = randomUUID();

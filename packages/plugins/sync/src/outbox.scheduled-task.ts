@@ -6,17 +6,8 @@ import { SyncService } from './sync.service';
 import { ERP_POLL_INTERVAL_DEFAULT, POLL_INTERVAL_DEFAULT } from './types';
 import type { SyncPluginOptions } from './types';
 
-// Issue #80: standard for recurring/periodic plugin work is Vendure's own ScheduledTask
-// (DefaultSchedulerPlugin, registered in apps/server/src/vendure-config.ts) — worker-process-only
-// and DB-locked out of the box, plus enable/disable + run-now via the admin API, replacing the
-// previous raw BullMQ Queue+Worker (outbox.worker.ts).
-//
-// Draining `sync_outbox` → RabbitMQ must run on EVERY instance, not just central — a
-// branch-placed order's `order.created` (target: 'central', see OrderConsumer) is written to the
-// *branch's own* outbox and needs the branch's own drain to publish it. This was previously
-// gated on `instanceType === 'central'` entirely (a real, live-verified bug found 2026-07-15:
-// every branch-origin outbox entry sat at status='pending' forever, since nothing ever drained
-// it).
+// Must drain on every instance: branch orders' outbox rows are only published by the branch's drain.
+// ScheduledTask, not BullMQ: DB-locked and worker-only by default, with admin enable/disable.
 export function createSyncOutboxTask(options: SyncPluginOptions): ScheduledTask {
     const everyMs = options.outboxPollIntervalMs ?? POLL_INTERVAL_DEFAULT;
     return new ScheduledTask({

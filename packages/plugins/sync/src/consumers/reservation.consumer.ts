@@ -8,12 +8,8 @@ import { SyncService } from '../sync.service';
 import { SYNC_PLUGIN_OPTIONS } from '../types';
 import type { SyncPluginOptions } from '../types';
 
-// The real implementation of the pattern order.consumer.ts's OrderReadyForErpEvent subscriber
-// still stubs (see that file's TODO) — writes reservation confirm/release commands to
-// sync_outbox for delivery to the ERP. See docs/order-flow.md "ERP integration — outbox, not a
-// shared transaction". plugin-reservation never touches RabbitMQ/the outbox directly (see
-// the internal-sync-rules skill's ownership rule) — it only publishes these two EventBus events, this consumer (owned by
-// plugin-sync) does the actual outbox write.
+// plugin-reservation must not write the outbox or touch RabbitMQ; it only publishes EventBus events
+// ERP delivery is outbox-based, not a shared transaction, so this write happens in plugin-sync.
 @Injectable()
 export class ReservationConsumer implements OnApplicationBootstrap {
     constructor(

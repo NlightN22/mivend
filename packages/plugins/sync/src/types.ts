@@ -2,17 +2,14 @@ import type { ErpAdapter } from './erp-adapter.interface';
 
 declare module '@vendure/core' {
     interface CustomOrderFields {
-        // Owned by @mivend/plugin-erp-order (declaration merging) — read here without taking a
-        // package dependency on erp-order, same established pattern as plugin-moq's
-        // multiplicity field (see plugin-reservation/src/types.ts).
+        // Field is owned by @mivend/plugin-erp-order via declaration merging; declared here to avoid
+        // a package dependency on it (same pattern as plugin-moq's multiplicity field).
         branchId?: string | null;
-        // Owned by this plugin — see order.consumer.ts / administrator-sync.service.ts's
-        // sibling pattern (sourceAdministratorId) and docs/architecture.md's "receiving instance
-        // gets a full local Order copy".
+        // Owned by this plugin. A receiving instance keeps a full local Order copy,
+        // see docs/architecture.md.
         sourceOrderId?: string | null;
-        // Owned by this plugin — informational projection of a `payment.recorded` fact on a
-        // non-owning instance, see OrderSyncService.applyPaymentRecorded and
-        // docs/architecture.md's "Order as a read-model" section.
+        // Owned by this plugin. On non-owning instances this is an informational projection of the
+        // payment.recorded fact (Order as read-model, see docs/architecture.md).
         paymentStatus?: string | null;
     }
 }

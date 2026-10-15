@@ -47,9 +47,8 @@ describe('AdministratorSyncProducer', () => {
         adminFindOne = vi.fn();
         nativeGetOne = vi.fn();
 
-        // NativeAuthenticationMethod.passwordHash is `select: false` in Vendure core, so it's
-        // read via an explicit addSelect query builder, never a plain findOne — see the
-        // producer's comment on why this must be mocked as a query builder chain, not findOne.
+        // NativeAuthenticationMethod.passwordHash is select: false in Vendure core, so it is only loaded
+        // via an explicit addSelect on the query builder; a plain findOne would silently omit it.
         const nativeQueryBuilder = {
             addSelect: vi.fn(function (this: unknown) {
                 return this;

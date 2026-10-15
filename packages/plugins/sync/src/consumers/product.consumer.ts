@@ -38,10 +38,8 @@ export class ProductConsumer implements OnModuleInit {
     private async handleRaw(raw: unknown): Promise<void> {
         const event = SyncEventSchema.parse(raw);
 
-        // Defense-in-depth, not load-bearing: correct routing-key binding already makes this
-        // instance receiving its own published event structurally impossible for every event
-        // type today. Kept as a cheap guard in case a future event type's target ever equals
-        // the publishing instance's own id.
+        // Defensive guard: routing-key binding already prevents self-delivery for all current event types.
+        // Kept in case a future event type's target ever equals the publishing instance's own id.
         if (event.sourceInstanceId === this.options.instanceId) return;
 
         switch (event.eventType) {
@@ -95,9 +93,8 @@ export class ProductConsumer implements OnModuleInit {
         return result.identifiers.length > 0;
     }
 
-    // Order handlers check-then-apply-then-mark (see handleOrderCreated/handleOrderUpdated)
-    // rather than the mark-then-apply pattern used everywhere else in this file, so this is a
-    // plain existence check, not the atomic insert tryMarkProcessed does.
+    // Check-then-apply-then-mark, unlike the mark-then-apply used elsewhere in this file.
+    // So this is a plain existence check, not the atomic insert tryMarkProcessed does.
     private async isAlreadyProcessed(eventId: string): Promise<boolean> {
         const existing = await this.dataSource
             .getRepository(SyncProcessedEvent)
@@ -159,18 +156,8 @@ export class ProductConsumer implements OnModuleInit {
         this.logger.info(`Applied administrator.deactivated [${event.payload.administratorId}]`);
     }
 
-    // OrderSyncService goes through Vendure's real OrderService (create/addItemToOrder/
-    // transitionToState), which manages its own persistence via the RequestContext it builds —
-    // it does not participate in the raw `em` used elsewhere in this file. The idempotency
-    // marker still gets its own small transaction first, same guarantee as every other handler.
-    // Apply-then-mark, not mark-then-apply: OrderSyncService.applyCreate/applyUpdate can throw
-    // deliberately (see applyUpdate's "no local replica found" case) to get a real
-    // backoff-then-retry from RabbitMQService.subscribe's consume loop, on the assumption that
-    // order.created just hasn't landed yet (see order.consumer.ts's producer-side race note).
-    // Marking the eventId processed *before* the apply — as every other handler in this file
-    // does, safely, because their apply and mark happen in the same transaction — would make
-    // that retry a no-op: the redelivered message would see isAlreadyProcessed()=true and skip
-    // straight past the very work the retry exists to attempt again.
+    // Apply-then-mark: applyCreate/applyUpdate throw on purpose to trigger consumer retry/backoff.
+    // Marking first would make the redelivered message skip the work the retry is meant to redo.
     private async handleOrderCreated(event: SyncEventByType<'order.created'>): Promise<void> {
         if (await this.isAlreadyProcessed(event.eventId)) return;
         await this.orderSyncService.applyCreate(event);

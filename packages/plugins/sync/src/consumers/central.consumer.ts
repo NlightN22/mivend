@@ -12,14 +12,8 @@ import { SYNC_PLUGIN_OPTIONS } from '../types';
 import type { SyncPluginOptions } from '../types';
 import { BranchKassaPaymentEvent } from '../erp-payment.events';
 
-// The Central-side counterpart to ProductConsumer (the sole RabbitMQ subscriber for a branch's
-// queue) — Central previously only ever published, never subscribed, so a branch-originated
-// event (a branch-local operator's order, target='central') had nowhere to land. Binds only to
-// `#.central` — never a bare `#` alone (see RabbitMQService.subscribe's comment on why); Central
-// never legitimately receives administrator.*/product.* etc. from a branch (branches don't
-// produce them), so this only ever needs to handle order + payment events (the latter e.g. a
-// branch till/kassa witnessing cash paid for a Central-origin order it only holds a replica of
-// — see docs/architecture.md's "Order as a read-model" section).
+// Only order and payment events reach Central from branches; branches never publish admin/product.
+// Payment may come from a branch that holds only a replica of the order (see architecture.md).
 @Injectable()
 export class CentralConsumer implements OnModuleInit {
     constructor(
@@ -35,10 +29,8 @@ export class CentralConsumer implements OnModuleInit {
     async onModuleInit(): Promise<void> {
         if (this.options.instanceType !== 'central') return;
         const queueName = `sync.${this.options.instanceId}`;
-        // Bound to the literal 'central' target, not this instance's own configured
-        // `instanceId` (which may differ, e.g. 'hub' in dev/test configs) — there is exactly
-        // one hub, so branches address it by the fixed well-known token 'central'
-        // (OrderConsumer's producer hardcodes this same literal for a branch-originated order).
+        // Bind to the literal 'central', not instanceId, which may differ (e.g. 'hub' in dev/test).
+        // Branches hardcode the same 'central' token when addressing the single hub.
         await this.rabbitmq.subscribe(queueName, '#.central', raw => this.handleRaw(raw));
         this.logger.info(`CentralConsumer subscribed to ${queueName}`);
     }
@@ -99,9 +91,8 @@ export class CentralConsumer implements OnModuleInit {
         return !!existing;
     }
 
-    // Apply-then-mark — see ProductConsumer's identical pair for why: applyUpdate can throw
-    // deliberately on "no local replica found yet" to get a real backoff-then-retry instead of
-    // silently dropping an update that raced order.created's delivery.
+    // applyUpdate throws on a missing local replica so the message is retried with backoff,
+    // not dropped when it races order.created delivery. Mark only after a successful apply.
     private async handleOrderCreated(event: SyncEventByType<'order.created'>): Promise<void> {
         if (await this.isAlreadyProcessed(event.eventId)) return;
         await this.orderSyncService.applyCreate(event);
