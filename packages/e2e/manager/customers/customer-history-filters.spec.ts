@@ -1,24 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-// Real, confirmed regression (reported by the user against the History tab's Object/Changed by
-// filters, reproduced live via Playwright before the fix): PrimeVue's `filter-display="menu"`
-// column filter overlay tracks a `selfClick` flag to distinguish "click landed inside my own
-// overlay" from "click was genuinely outside", set whenever *any* click bubbles through the
-// overlay's DOM and only cleared at the end of the *next* document click. That silently swallows
-// exactly one subsequent outside click — a different column's filter icon included — after any
-// interaction inside an open filter overlay (opening MvColumnFilterSelect's own inner dropdown,
-// typing into a text filter, ticking a checkbox), so two overlays could end up stacked open at
-// once. Fixed generically in MvAdvancedDataTable via
-// installFilterOverlayClickFix/columnFilterDispatch.ts (ui-kit) — this is the regression test:
-// browser-level Popover/event-bubbling behavior that jsdom can't faithfully reproduce, so E2E is
-// the minimum sufficient level (not a unit/component duplicate — see AGENTS.md's testing-strategy
-// "minimum sufficient level" rule). History is a good target because both `When` and `Changed by`
-// are always-enabled `select`-type filters (unlike `Object`, which is conditionally disabled when
-// a customer's history spans only one entity type) — deterministic regardless of seeded data.
-//
-// Restricted to one role project: this is a UI-kit-level interaction bug, not something that
-// varies per role, and ReadEntityHistory (which gates the History tab) is leadership-only anyway
-// (see infrastructure/scripts/seed-access-roles.mjs) — portal-admin has it.
+// Regression guard: PrimeVue's menu filter overlay swallows the next outside click after inner use.
+// E2E only: needs browser popover/event bubbling; History tab has always-enabled select filters.
 test.describe('customer History tab — column filter overlays', () => {
     async function openHistoryTab(page: import('@playwright/test').Page): Promise<void> {
         await page.goto('/customers');
@@ -30,10 +13,8 @@ test.describe('customer History tab — column filter overlays', () => {
         await expect(page.locator('.p-datatable-column-filter-button').first()).toBeVisible({
             timeout: 15000,
         });
-        // The tab's own load() replaces `rows` asynchronously on mount — give the table a moment
-        // to finish its initial re-render before touching a filter overlay, or PrimeVue's own
-        // popover can fail to open reliably mid-remount (confirmed live: same flake exists on the
-        // pre-fix code too, unrelated to this test's actual regression).
+        // The tab's load() replaces rows asynchronously on mount.
+        // PrimeVue's filter popover can fail to open reliably mid-remount, so wait for it to settle.
         await page.waitForTimeout(1000);
     }
 

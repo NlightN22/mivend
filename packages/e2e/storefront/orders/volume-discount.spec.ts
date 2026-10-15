@@ -8,10 +8,8 @@ interface OrderLine {
 }
 
 async function findVariantId(page: import('@playwright/test').Page, sku: string): Promise<string> {
-    // A bare `take: 30` with no `term` relied on the target SKU landing within the catalog's
-    // first 30 results — broke once the total product count (main seed + e2e fixtures) passed
-    // 30 (31 today: 24 + 7), since which SKUs land in an untargeted first page isn't guaranteed.
-    // Search by the exact SKU instead — bounded by the real search capability, not catalog size.
+    // A bare take: 30 without a term is unreliable: which SKUs land in the first page isn't guaranteed.
+    // Search by exact SKU instead; it is bounded by search capability, not by catalog size.
     const result = await gql(
         page,
         `query($term: String!) { search(input: { term: $term, take: 5 }) { items { sku productVariantId } } }`,

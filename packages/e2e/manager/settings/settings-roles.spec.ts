@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-// page.request shares the browser context's session cookie (manager portal's admin API client
-// uses credentials:'include', not a bearer token) — same helper pattern as
-// manager/customers/customers.spec.ts's adminApiViaPage.
+// page.request reuses the browser context's session cookie; the admin API client
+// sends credentials:'include' instead of a bearer token.
 async function adminApiViaPage<T>(
     page: import('@playwright/test').Page,
     query: string,
@@ -14,9 +13,8 @@ async function adminApiViaPage<T>(
     return json.data;
 }
 
-// security-officer has no e2e login account of its own — safe to mutate without affecting any
-// other spec's seeded login identity (matches the rationale customers.spec.ts's Counterparty
-// history tests use for picking a mutation target).
+// security-officer has no e2e login account of its own, so mutating it cannot
+// affect the seeded login identity of any other spec.
 const TARGET_ROLE = 'security-officer';
 
 function fieldSelect(

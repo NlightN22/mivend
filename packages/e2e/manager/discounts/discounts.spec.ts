@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-// Real server-side pagination + filtering for the /discounts registry (issue #39 follow-up) — a
-// single unified list backed by DiscountRegistryEntry (a CQRS-style read-model projection, see
-// DiscountRegistryService on the backend), matching the design concept's single "Grant registry"
-// table instead of the earlier two-table split (discountRulesPage + approvalRequestsByType).
+// Reads from the DiscountRegistryEntry CQRS read-model projection, not the rule/approval tables.
+// The projection is maintained by DiscountRegistryService on the backend.
 test('discounts page loads the grant registry and at least one seeded row', async ({ page }) => {
     await page.goto('/discounts');
     await expect(page.getByRole('heading', { name: 'Discount Grants' })).toBeVisible({

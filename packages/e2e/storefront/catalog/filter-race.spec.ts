@@ -2,14 +2,8 @@ import { test, expect } from '@playwright/test';
 
 const COUNT = '.plv-toolbar__count';
 
-// Regression test for: useProductList.ts's loadMore() had no guard against a
-// concurrent load() — a narrow filtered result (few rows, fits above the fold)
-// made the IntersectionObserver sentinel intersect immediately on mount, before
-// the first load() resolved, firing loadMore() with a stale currentSkip=0 and
-// appending a second copy of the same rows once both requests resolved. See
-// docs/ai/PROJECT_CONTEXT.md for the live repro (collection=cat-cat-engine&fv=20,
-// Castrol brand facet — facetValueId 20 in this seed). Direct navigation (not a
-// UI filter click) reproduces it best since it's the cold-mount race that mattered.
+// Cold-mount race: a short result fills the viewport, so the IntersectionObserver sentinel
+// fires loadMore() before the first load() resolves, duplicating rows (stale currentSkip=0).
 test.describe('Catalog filtered list has no duplicate rows on cold navigation', () => {
     test('collection + facet filter via URL shows each SKU exactly once', async ({ page }) => {
         await page.goto('/catalog?collection=cat-cat-engine&fv=20');

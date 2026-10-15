@@ -19,10 +19,8 @@ async function postStatus(
 }
 
 test.describe('ERP order status flow', () => {
-    // Vendure keeps a single active order per session across repeated checkouts
-    // (OrderPlacedEvent fires only once per order id), so the order's erpStatus
-    // may carry over a leftover value from a previous run. Two callbacks with
-    // distinct statuses verify the update mechanism without assuming a baseline.
+    // Order may carry a leftover erpStatus from a prior run (Vendure reuses the session's active order).
+    // Two distinct statuses per callback verify the update without assuming a baseline value.
     test('order status badge updates after ERP callback', async ({ page }) => {
         const { id: orderId, code } = await placeTestOrder(page);
         expect(code).toBeTruthy();

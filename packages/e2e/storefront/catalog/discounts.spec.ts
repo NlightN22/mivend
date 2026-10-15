@@ -50,14 +50,8 @@ test.describe('Discount rules — compareAtPrice', () => {
         await expect(row.locator('.mv-product-row__old-price')).toBeVisible({ timeout: 10000 });
     });
 
-    // E2E-FLT-001 has no brand facet, so no *brand* discount rule matches it — but the e2e
-    // customer (e2e-cnt-001) has a real, intentionally facet-less DiscountGrant (8% off,
-    // see global-setup.ts's grantInput) that applies account-wide, to every WHOLESALE product
-    // they buy, this one included. So the correct expectation is a discounted final price
-    // (compareAtPrice=290 struck through, customerPrice=290*0.92=266.8 -> rounds to 267), not
-    // "no discount at all" — that assumption predates DiscountRuleService.getBestPercent's
-    // counterparty-grant scoping fix (see docs/payments.md history / commit fixing the
-    // cross-counterparty discount-grant leak).
+    // Expect a discount, not none: the e2e customer's facet-less 8% DiscountGrant applies to every
+    // wholesale product, even though E2E-FLT-001 matches no brand rule. Expected final: 290*0.92 -> 267.
     test('a product with no brand-specific rule still gets the customer-level account-wide grant', async ({
         page,
     }) => {

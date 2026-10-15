@@ -5,15 +5,8 @@ interface ActiveOrderState {
     activeOrder: { id: string; state: string } | null;
 }
 
-// Regression test for: a customer whose activeOrder was left in ArrangingPayment
-// (transitioned mid-checkout but never settled — e.g. they backed out of payment,
-// or a payment-stub "fail" click) was permanently blocked from adding anything new
-// to the cart. Vendure's addItemToOrder rejects with ORDER_MODIFICATION_ERROR
-// outside AddingItems, and the storefront just showed a generic "Could not add
-// item to cart" toast with no recovery. Fixed in stores/cart.ts's addItem(): on
-// ORDER_MODIFICATION_ERROR it now transitions the order back to AddingItems (safe,
-// since it was never actually paid) and retries once. See
-// docs/ai/PROJECT_CONTEXT.md, live repro via ivan@autoservice-nord.example.
+// Vendure rejects addItemToOrder outside AddingItems, so the order is moved back before the retry.
+// Safe only because an order stuck in ArrangingPayment has never been paid.
 test.describe('Cart recovers from an order stuck in ArrangingPayment', () => {
     test('add-to-cart succeeds without an error toast after a prior abandoned checkout', async ({
         page,

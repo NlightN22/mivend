@@ -25,9 +25,8 @@ function lineFor(lines: OrderLine[], sku: string): OrderLine {
     return line;
 }
 
-// TierRebalanceService runs as an async EventBus subscriber (after the triggering
-// mutation's transaction commits), not inline with the mutation response — poll for
-// the sibling line to catch up rather than asserting on a single immediate read.
+// Runs as an async EventBus subscriber after the mutation's transaction commits,
+// so the sibling line may lag: poll for it instead of asserting on one immediate read.
 async function waitForUnitPrice(
     page: import('@playwright/test').Page,
     sku: string,
@@ -59,10 +58,8 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
         const brk1 = await findVariantId(page, 'E2E-BRK-001'); // 1080₽
         const brk2 = await findVariantId(page, 'E2E-BRK-002'); // 720₽
 
-        // brk1 alone: 1080₽ spent — below the 2000₽ amount-tier threshold, so the brand-specific
-        // amount rule doesn't apply yet. The e2e customer's own account-wide 8% grant
-        // (facet-less by design, see global-setup.ts's grantInput) still does, though — expect
-        // the final discounted price, not the undiscounted base.
+        // brk1 alone (1080₽) is under the 2000₽ brand amount tier, so that rule is off here.
+        // The facet-less account-wide 8% grant still applies, so expect the discounted price.
         const add1 = await gql(
             page,
             `mutation($id: ID!) {

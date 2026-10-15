@@ -6,10 +6,8 @@ const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:3000';
 const OPERATOR = { username: 'ivan.operator@mivend.dev', password: 'Password123!' };
 const OPERATOR_AUTH_FILE = path.join(__dirname, '..', '..', '.auth', 'manager-operator.json');
 
-// Same rationale as storefront/account/settings-sessions.spec.ts: talk to /admin-api directly
-// with hand-managed session cookies for the multi-session assertions, so the shared per-role
-// storageState files (.auth/manager-*.json) used by every other manager spec are never touched
-// (docs/e2e-testing.md gotcha #6/#7 — this repo's manager equivalent).
+// Hits /admin-api directly with hand-managed session cookies so the shared per-role
+// storageState files (.auth/manager-*.json) used by other manager specs are not touched.
 async function adminApiRequest<T>(
     cookie: string,
     query: string,
@@ -36,10 +34,8 @@ async function loginViaApi(): Promise<string> {
             variables: { u: OPERATOR.username, p: OPERATOR.password },
         }),
     });
-    // Vendure's cookie session is signed — it sets two cookies (`session` + `session.sig`).
-    // `res.headers.get('set-cookie')` only returns the first one (undici/WHATWG fetch
-    // combines multiple Set-Cookie headers under `get`), so the signature cookie is silently
-    // dropped and the server treats the session as invalid. `getSetCookie()` returns all of them.
+    // Vendure's session is signed with two Set-Cookie headers (session + session.sig);
+    // headers.get('set-cookie') returns only the first, so use getSetCookie() to get both.
     const cookies = res.headers
         .getSetCookie()
         .map(c => c.split(';')[0])
@@ -56,10 +52,8 @@ async function isSessionAlive(cookie: string): Promise<boolean> {
     return data.activeAdministrator !== null;
 }
 
-// Any test that calls endAllSessions for the operator account also kills the session baked
-// into the shared `.auth/manager-operator.json` storageState that every other manager-operator
-// spec relies on. Re-login and overwrite that file's cookies so later specs in the same run
-// (not just this segmented one) aren't left with a dead session.
+// endAllSessions also kills the session in shared .auth/manager-operator.json;
+// re-login and overwrite that file so later specs in the run keep a live session.
 async function restoreOperatorAuthFile(): Promise<void> {
     const cookies = await loginViaApi();
     const [sessionValue, sigValue] = cookies.split('; ').map(c => c.split('=').slice(1).join('='));
@@ -77,9 +71,8 @@ test.describe('Session management API (admin-api)', () => {
     test('a second concurrent login shows up in mySessions and can be ended from the first (positive)', async ({
         browserName: _browserName,
     }, testInfo) => {
-        // Runs once is enough — this hits the admin-api directly, independent of which
-        // seeded role project executes it. Skip in every project but one to avoid 5x
-        // redundant runs against the same operator account.
+        // Hits admin-api directly, independent of the role project, so run it in only one project
+        // to avoid redundant runs against the same operator account.
         test.skip(testInfo.project.name !== 'manager-operator', 'API-level test, runs once');
 
         const cookieA = await loginViaApi();
@@ -147,12 +140,8 @@ test.describe('Settings > Security page — UI', () => {
     }, testInfo) => {
         test.skip(testInfo.project.name !== 'manager-operator', 'UI test, runs once');
 
-        // Clear any sessions left over from a prior (possibly interrupted) run of this same
-        // operator account — including the shared storageState session, which is always live
-        // going into this test — to establish a known-clean baseline of zero sessions before
-        // creating exactly the two this test needs. The file is only restored at the very end
-        // (not right after cleanup) — restoring earlier would itself create a third live
-        // session and break the "exactly 2 rows" assertion below.
+        // Ends the shared storageState session too, so the baseline is zero. Restore that file only at the end:
+        // restoring earlier would add a third live session and break the exactly-2-rows assertion.
         const cleanupCookie = await loginViaApi();
         await adminApiRequest<{ endAllSessions: boolean }>(
             cleanupCookie,
@@ -186,11 +175,8 @@ test.describe('Settings > Security page — UI', () => {
         await restoreOperatorAuthFile();
     });
 
-    // Runs before "Sign out everywhere" below: that test's endAllSessions-based mutation ends
-    // every session for the operator account, including the one baked into the shared
-    // `.auth/manager-operator.json` storageState this test (and every other manager-operator
-    // spec) relies on. Ordering this one first keeps the shared auth file valid for the rest
-    // of the suite.
+    // Must run before 'Sign out everywhere': that test ends every operator session, including
+    // the one in shared .auth/manager-operator.json that other manager specs depend on.
     test('/settings/security is reachable directly and shows the Security sub-nav tab as active (positive)', async ({
         page,
     }) => {
@@ -223,10 +209,8 @@ test.describe('Settings > Security page — UI', () => {
             await context.close();
         }
 
-        // endAllSessions terminates every session for the operator account, including the one
-        // baked into the shared `.auth/manager-operator.json` storageState that every other
-        // manager-operator spec depends on. Re-login and overwrite that file so a full-suite
-        // run (not just this segmented spec) doesn't leave later specs with a dead session.
+        // endAllSessions ends the session in shared .auth/manager-operator.json too;
+        // re-login and overwrite that file so later specs in a full-suite run aren't left dead.
         const cookies = await loginViaApi();
         const [sessionValue, sigValue] = cookies
             .split('; ')

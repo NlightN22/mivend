@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-// Focused check for the mobile app-shell (bottom nav + "More" sheet + FAB) added this session —
-// not a full per-role/per-page sweep, just proof the shell itself works at the concept's own
-// 800px breakpoint. Runs against whichever role project executes it (see playwright.config.ts).
+// Smoke test only: the mobile shell at the 800px breakpoint, not a per-role or per-page sweep.
+// Runs under whichever role project executes it, so it must not assume a specific role.
 test.use({ viewport: { width: 390, height: 844 } });
 
 test('mobile bottom nav navigates and the sidebar is hidden', async ({ page }) => {

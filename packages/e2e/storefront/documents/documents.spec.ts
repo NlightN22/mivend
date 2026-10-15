@@ -8,12 +8,8 @@ const SUPERADMIN = {
     password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
 };
 
-// superadmin has no RoleAccessScope config (never seeded for Vendure's built-in SuperAdmin role
-// — see docs/ai/PROJECT_CONTEXT.md's "Issue #39" writeup), so it resolves to the most restrictive
-// 'own' scope and sees zero counterparties via the scoped `counterparties` query — same reason
-// global-setup.ts deliberately uses department-head's token, not superadmin's, for this exact
-// lookup. `generateContract` itself still needs superadmin (requires Permission.UpdateCustomer,
-// which no custom role has), so only the counterparty-id lookup below switches tokens.
+// superadmin has no RoleAccessScope, so the scoped counterparties query returns zero rows.
+// Only the lookup switches token: generateContract needs superadmin (UpdateCustomer).
 const DEPARTMENT_HEAD = { identifier: 'olga.depthead@mivend.dev', password: 'Password123!' };
 
 interface DocumentListItem {
@@ -45,13 +41,8 @@ async function waitForDocumentReady(
     throw new Error('Document did not reach a terminal status in time');
 }
 
-// Regression coverage for the /documents storefront page — previously fully
-// mocked (hardcoded UPD/ProformaInvoice/Waybill array), now backed by the real
-// `myDocuments` Shop API query in plugin-documents. Covers all 4 document
-// types and both real data sources: ERP push (return/reconciliation, seeded
-// directly via the erp-import REST endpoint) and Vendure-generated
-// (proforma invoice via a real bank-transfer checkout, contract via the Admin
-// mutation) — see docs/ai/PROJECT_CONTEXT.md "Documents Phase 1".
+// ERP-sourced documents can only be seeded via the erp-import REST endpoint;
+// Vendure-generated ones need a real checkout or the Admin contract mutation.
 test.describe('Documents page — all document types', () => {
     test('ERP-pushed return and reconciliation documents render with the correct type, number and a working download link', async ({
         page,

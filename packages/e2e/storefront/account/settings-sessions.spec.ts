@@ -6,10 +6,8 @@ import { E2E_CUSTOMER } from '../../fixtures/seed';
 const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:3000';
 const CUSTOMER_AUTH_FILE = path.join(__dirname, '..', '..', '.auth', 'storefront-user.json');
 
-// Session-management coverage (issue #40) talks to /shop-api directly with hand-managed
-// session cookies — this sidesteps App.vue's DEV-only auto-relogin (see App.vue's
-// `authStore.login('ivan@autoservice-nord.example', ...)` fallback), which would otherwise
-// mask a genuinely-invalidated session behind a fresh demo login on the next page navigation.
+// Bypasses App.vue's DEV-only auto-relogin, which would mask an invalidated session
+// by silently logging in again on the next navigation, so cookies are managed by hand.
 async function shopApiRequest<T>(
     cookie: string,
     query: string,
@@ -36,10 +34,8 @@ async function loginViaApi(): Promise<string> {
             variables: { u: E2E_CUSTOMER.email, p: E2E_CUSTOMER.password },
         }),
     });
-    // Vendure's cookie session is signed — it sets two cookies (`session` + `session.sig`).
-    // `res.headers.get('set-cookie')` only returns the first one (undici/WHATWG fetch
-    // combines multiple Set-Cookie headers under `get`), so the signature cookie is silently
-    // dropped and the server treats the session as invalid. `getSetCookie()` returns all of them.
+    // Vendure's session is signed: two Set-Cookie headers (`session` + `session.sig`).
+    // headers.get('set-cookie') returns only the first; use getSetCookie() to keep both.
     const cookies = res.headers
         .getSetCookie()
         .map(c => c.split(';')[0])
@@ -56,10 +52,8 @@ async function isSessionAlive(cookie: string): Promise<boolean> {
     return data.activeCustomer !== null;
 }
 
-// Any test that calls endAllSessions for E2E_CUSTOMER also kills the session baked into the
-// shared `.auth/storefront-user.json` storageState that every other storefront spec relies on
-// (docs/e2e-testing.md gotcha #6/#7). Re-login and overwrite that file's cookies afterward so
-// later specs in the same run (not just this segmented one) aren't left with a dead session.
+// endAllSessions for E2E_CUSTOMER also kills the session in the shared storageState file
+// that other storefront specs use; re-login and rewrite its cookies afterward.
 async function restoreCustomerAuthFile(): Promise<void> {
     const cookies = await loginViaApi();
     const [sessionValue, sigValue] = cookies.split('; ').map(c => c.split('=').slice(1).join('='));
@@ -125,16 +119,12 @@ test.describe('Session management API (shop-api)', () => {
 });
 
 test.describe('Settings page — Security UI', () => {
-    // Fresh, isolated context (not the shared storefront-user.json storageState) so ending
-    // this session can't invalidate the auth file every other storefront spec relies on
-    // (docs/e2e-testing.md gotcha #6/#7).
+    // Isolated context so ending this session can't invalidate the shared storefront-user.json
     test('lists a second session and "End session" removes it from the list (positive)', async ({
         browser,
     }) => {
-        // Establish a known-clean baseline of zero sessions first — the shared storageState
-        // session is always live going into this test. The file is only restored at the very
-        // end; restoring earlier would itself create a third live session and break the
-        // "exactly 2 rows" assertion below.
+        // Shared storageState session is always live, so start from zero sessions.
+        // Restoring the file earlier adds a third live session and breaks the 'exactly 2 rows' check.
         const cleanupCookie = await loginViaApi();
         await shopApiRequest<{ endAllSessions: boolean }>(
             cleanupCookie,

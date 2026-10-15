@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-// Settlement rows can only arrive through the Kafka ingestion path, which e2e does not run, so
-// this covers the navigation and the fail-closed empty state; the visibility matrix and the
-// isolation between counterparties live in plugins/settlement integration tests.
+// Settlement rows arrive only via the Kafka ingestion path, which e2e does not run.
+// Covers navigation and fail-closed empty state; visibility and isolation tests: plugins/settlement.
 test.describe('Account statement section', () => {
     test('the documents group collapses and opens, and the statement page is reachable', async ({
         page,

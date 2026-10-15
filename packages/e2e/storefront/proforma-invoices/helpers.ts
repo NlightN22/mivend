@@ -23,9 +23,8 @@ export interface ProformaInvoiceSummary {
     order: { code: string };
 }
 
-// Picks two in-stock variants whose products were assigned to two *different* organizations
-// (global-setup.ts round-robins organizationId across seed fixtures) — this is what actually
-// forces ProformaInvoiceIssuingService.issueForOrder to produce more than one ProformaInvoice for a single order.
+// Variants must belong to different organizations (seed fixtures assign organizationId round-robin)
+// so issueForOrder produces more than one ProformaInvoice for a single order.
 export async function pickTwoVariantsFromDifferentOrganizations(
     page: Page,
 ): Promise<[string, string]> {
@@ -149,11 +148,8 @@ export async function myAdvanceBalance(
     return result.myAdvanceBalance as { amount: number; currencyCode: string }[];
 }
 
-// The dev database is shared across test runs (no per-test DB reset), so "nothing else open"
-// scenarios need a real clean slate rather than an assumption. Pays each proforma invoice against
-// *itself* (payProformaInvoice always uses the target proforma invoice's own amount) — this always fully covers
-// that proforma invoice with zero remainder, so a single pass over every currently-open proforma invoice reliably
-// clears all of them; no partial-coverage/overflow can occur from a self-payment.
+// The dev DB is shared across test runs with no reset, so open invoices must be cleared explicitly.
+// Self-payment fully covers each invoice with zero remainder, so one pass clears all of them.
 export async function payAllOpenProformaInvoices(page: Page): Promise<void> {
     const result = await gql(
         page,
@@ -162,9 +158,8 @@ export async function payAllOpenProformaInvoices(page: Page): Promise<void> {
     const open = (
         result.myProformaInvoices as { items: { id: string; status: string }[] }
     ).items.filter(inv => inv.status === 'pending' || inv.status === 'issued');
-    // Run with bounded concurrency rather than one request at a time — this dev DB accumulates
-    // proforma invoices across an entire long-running test session (thousands by now), and a fully
-    // sequential drain here was timing out tests that need a genuine clean slate.
+    // The dev DB accumulates thousands of proforma invoices across a long test session.
+    // A sequential drain timed out, so run with bounded concurrency.
     const CONCURRENCY = 10;
     for (let i = 0; i < open.length; i += CONCURRENCY) {
         const batch = open.slice(i, i + CONCURRENCY);

@@ -1,11 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-// Regression coverage for the scroll-collapse bug fixed once, at the shared layer, in
-// MvPagination.vue (defensive blur() on Next/Previous) + every MvTable-based list sizing its
-// height off `pageSize` instead of the current page's row count (see git history:
-// orders-pagination.spec.ts's comment for the original root-cause writeup). This test proves
-// the shared fix actually holds across every page that renders MvPagination, not just the one
-// page it was originally diagnosed on.
+// Covers every page using MvPagination: the blur() on Next/Previous and MvTable height from the
+// current page's row count (not pageSize) must hold everywhere, not only on the original page.
 const PAGES = [
     '/orders',
     '/proforma-invoices',

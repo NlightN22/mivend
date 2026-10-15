@@ -1,10 +1,5 @@
-/**
- * Stepper behaviour tests shared across list and grid view modes.
- *
- * Both modes wrap the same MvQtyStepper component and go through
- * the same cart store (adjustItem / removeItem). Running the same
- * scenarios in both modes ensures neither view breaks the contract.
- */
+// Runs the same scenarios in list and grid modes: both wrap MvQtyStepper and the same cart store,
+// so a regression in either view's wiring would otherwise go unnoticed.
 import { test, expect, type Page } from '@playwright/test';
 
 const BADGE = '.app-header__cart-badge';

@@ -9,9 +9,8 @@ async function openE2eCustomerDetail(page: import('@playwright/test').Page): Pro
     await expect(page).toHaveURL(/\/customers\/.+/);
 }
 
-// page.request shares the browser context's session cookie (manager portal's admin API client
-// uses credentials:'include', not a bearer token — see api/client.ts), so this hits the real
-// admin-api as the currently-logged-in user, authenticated exactly like the page's own fetches.
+// page.request reuses the browser context's session cookie, not a bearer token.
+// The admin API client uses credentials:'include', so this call is authenticated the same way.
 async function adminApiViaPage<T>(
     page: import('@playwright/test').Page,
     query: string,
@@ -23,10 +22,8 @@ async function adminApiViaPage<T>(
     return json.data;
 }
 
-// This spec file runs against 3 role-based projects sharing the same backend — force the
-// trading point back to isActive:false before the reactivate test so its assertions don't
-// depend on which project happens to run first (see also global-setup.ts's idempotency guard
-// for the same "shared backend across projects" issue with discount grants).
+// Projects share one backend, so reset the trading point to isActive:false first.
+// Otherwise the assertions depend on which project happens to run first.
 async function forceInactiveTradingPoint(page: import('@playwright/test').Page): Promise<void> {
     const data = await adminApiViaPage<{
         counterparties: { items: { tradingPoints: { id: string; erpId: string }[] }[] };
@@ -101,9 +98,8 @@ test('customer detail Discounts tab shows a grant scoped to this customer (posit
     await openE2eCustomerDetail(page);
 
     await page.getByRole('button', { name: 'Discounts' }).click();
-    // global-setup.ts seeds an approved DiscountGrant scoped to the e2e counterparty at 8% —
-    // via the real requestDiscountGrant -> decideDiscountGrantRequest workflow, not a DB
-    // bypass — see DiscountGrantService.decideAndApply.
+    // The 8% grant goes through the real request/decide workflow, not a DB bypass.
+    // That workflow's side effects are needed; see DiscountGrantService.decideAndApply.
     await expect(page.getByText('8%')).toBeVisible({ timeout: 15000 });
 });
 
@@ -114,9 +110,8 @@ test('customer detail Discounts tab does not leak a grant scoped to another cust
 
     await page.getByRole('button', { name: 'Discounts' }).click();
     await expect(page.getByText('8%')).toBeVisible({ timeout: 15000 });
-    // global-setup.ts also seeds an approved DiscountGrant at 99%, but scoped only to
-    // E2E_OTHER_COUNTERPARTY_ID — DiscountGrantService.findForCounterparty must exclude it
-    // from this customer's tab (the bug this whole query was written to fix).
+    // The 99% grant is scoped to another counterparty and must not leak into this tab.
+    // This test guards the findForCounterparty query fix.
     await expect(page.getByText('99%')).not.toBeVisible();
 });
 
@@ -124,9 +119,8 @@ test('customer detail Documents tab shows the customer document list', async ({ 
     await openE2eCustomerDetail(page);
 
     await page.getByRole('button', { name: 'Documents' }).click();
-    // Documents are seeded independently of this spec (see other e2e specs' document fixtures) —
-    // assert on the tab rendering real rows rather than a specific count, which would make this
-    // test brittle against unrelated seed changes.
+    // Document seeds live in other specs, so the row count here is not stable.
+    // Assert that real rows render instead of matching a specific count.
     await expect(page.getByText('contract').first()).toBeVisible({ timeout: 15000 });
 });
 
@@ -161,10 +155,8 @@ test('reactivating the seeded inactive trading point flips its badge to Active (
     await expect(row.getByRole('button', { name: 'Reactivate' })).toHaveCount(0);
 });
 
-// CustomPermission.ReadEntityHistory is leadership-only (department-head/general-director/
-// security-officer/portal-admin) — see infrastructure/scripts/seed-access-roles.mjs. Only
-// manager-department-head is pre-authenticated among this spec's three projects (see
-// playwright.config.ts), so the positive case runs there and the negative case on the other two.
+// ReadEntityHistory is leadership-only; see seed-access-roles.mjs for role grants.
+// Only manager-department-head is pre-authenticated here, so the positive case runs only there.
 test('History tab is visible for department-head and lists the edit/reactivate entries (positive)', async ({
     page,
 }, testInfo) => {
@@ -185,9 +177,8 @@ test('History tab is visible for department-head and lists the edit/reactivate e
 });
 
 test('History tab is absent for non-leadership roles (negative)', async ({ page }, testInfo) => {
-    // department-head and portal-admin both hold ReadEntityHistory (leadership roles) — see
-    // seed-access-roles.mjs — so the History tab correctly appears for them; this negative case
-    // only applies to operator/manager.
+    // Leadership roles (department-head, portal-admin) hold ReadEntityHistory, so they see the tab.
+    // This negative case therefore applies only to operator and manager.
     test.skip(
         ['manager-department-head', 'manager-portal-admin'].includes(testInfo.project.name),
         'Covered by the positive case',
@@ -199,12 +190,8 @@ test('History tab is absent for non-leadership roles (negative)', async ({ page 
     await expect(page.getByRole('button', { name: 'History' })).toHaveCount(0);
 });
 
-// TradingPointService.updateDetails logs real contact values (name/phone/email), not just a
-// count — previously "contacts: 0 -> 0" showed up as a no-op diff on every save because the
-// edit form always resubmits the full contacts array. These two cases cover both halves: an
-// actual contact change must show up with the contact's name, and an address-only save must
-// NOT produce a spurious "contacts" row. Only department-head can open the detail modal
-// (ReadEntityHistory), so both run there.
+// The edit form always resubmits the full contacts array, so an unchanged contacts list
+// must not produce a spurious 'contacts' diff row. Only department-head can open this modal.
 test('editing a trading point contact records a readable contacts diff (positive)', async ({
     page,
 }, testInfo) => {
@@ -264,12 +251,8 @@ test('editing only the trading point address does not record a spurious contacts
     await expect(modal.getByText('contacts', { exact: true })).toHaveCount(0);
 });
 
-// Counterparty-level edits (CounterpartyService.reassignManager) must also produce
-// EntityVersion rows — the History tab already fetches entityVersions('Counterparty', id),
-// but reassignManager only started calling VersioningService.recordChange recently, so this is
-// its own positive/negative pair rather than folded into the TradingPoint History test above.
-// Only department-head holds both ReassignCounterpartyManager and ReadEntityHistory, so both
-// cases run there.
+// reassignManager must call VersioningService.recordChange so EntityVersion rows exist.
+// Only department-head holds both needed permissions, so both cases run there.
 test('reassigning the counterparty manager records a Counterparty version entry (positive)', async ({
     page,
 }, testInfo) => {
@@ -355,9 +338,8 @@ test('a rejected out-of-department reassignment records no Counterparty version 
         { entityId: counterparty.id },
     );
 
-    // "999999" resolves to no administrator, so CounterpartyService.reassignManager's
-    // department-scope check (target must share the caller's department) always rejects it —
-    // no need to seed a real cross-department administrator for this.
+    // 999999 matches no administrator, so the department-scope check always rejects it.
+    // No real cross-department administrator needs to be seeded for this case.
     await expect(
         adminApiViaPage(
             page,

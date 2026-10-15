@@ -6,9 +6,8 @@ export const E2E_CUSTOMER = {
 };
 
 export const E2E_COUNTERPARTY_ID = 'e2e-cnt-001';
-// A second, unrelated counterparty used only as the target of a discount grant that must
-// NOT be visible on E2E_COUNTERPARTY_ID's Customer Detail page — see
-// DiscountGrantService.findForCounterparty's customer-scope leak test.
+// Decoy counterparty: a discount grant targets it, and it must NOT leak onto
+// E2E_COUNTERPARTY_ID's Customer Detail page (customer-scope leak test).
 export const E2E_OTHER_COUNTERPARTY_ID = 'e2e-cnt-002';
 
 export const seedRecords = [
@@ -32,11 +31,8 @@ export const seedRecords = [
             paymentDelayDays: 30,
             priceType: 'WHOLESALE',
             isActive: true,
-            // Must match the seeded manager-portal org structure (infrastructure/scripts/
-            // seed-erp.mjs's departments/branches + default-roles.ts's department-scoped
-            // roles) or department-scoped test accounts (operator, department-head) won't see
-            // this counterparty at all — see AccessScopeService's 'department' scope, which
-            // requires an exact match, not just "any department set".
+            // Must exactly match the seeded department/branch and department-scoped roles, or scoped test
+            // accounts won't see it: AccessScopeService 'department' scope needs an exact match.
             departmentId: 'dept-sales',
             branchId: 'branch-central',
         },
@@ -98,9 +94,8 @@ export const seedRecords = [
             brandCode: 'e2e-amount-brand',
         },
     },
-    // Second product sharing e2e-discount-brand — exists to test that a weight-tier
-    // discount unlocked by one order line correctly rebalances onto a *different*
-    // pre-existing line of the same brand (cross-line tier-rebalance coverage).
+    // Second product of the same brand, so a weight-tier discount triggered by one line
+    // is verified to rebalance onto a different existing line.
     {
         type: 'product' as const,
         data: {
@@ -216,12 +211,8 @@ export const seedRecords = [
         type: 'price' as const,
         data: { sku: 'E2E-AIR-001', priceTypeCode: 'WHOLESALE', price: 252 },
     },
-    // `product` records only set stockOnHand on first create (ErpImportService.product.handler.ts
-    // never touches it on update) — every order placed by e2e specs across repeated global-setup
-    // runs permanently drains it, eventually causing InsufficientStockError. `stock` records
-    // (StockHandler) update by SKU unconditionally, so re-running global-setup always resets
-    // these back to their intended fixture value — the idempotency guarantee every other fixture
-    // type here already has.
+    // product.stockOnHand is set only on create, never on update, so repeated e2e runs drain it;
+    // stock records update by SKU on every run, keeping global-setup idempotent.
     {
         type: 'stock' as const,
         data: { sku: 'E2E-OIL-001', stockOnHand: 100 },
@@ -294,16 +285,8 @@ export const seedRecords = [
         },
     },
     {
-        // customers.spec.ts's Documents tab test asserts on this — no 'contract'-type document
-        // was ever seeded for E2E_COUNTERPARTY_ID (seed-erp.mjs only seeds 'return'/
-        // 'reconciliation' docs for the unrelated 'cnt-001'), so the assertion had nothing real
-        // to find. Not an accumulation/pagination bug — a plain seed gap.
-        // issueDate is re-stamped to "now" on every seed run (upsert by erpId) rather than a
-        // fixed past date: the Documents tab's server-side query has no type filter, only
-        // take/skip sorted by issueDate DESC, and this counterparty accumulates real proforma invoice
-        // documents from every e2e run with no cleanup (documents are immutable financial
-        // records, never deleted) — a stale issueDate would eventually sort behind however many
-        // proforma invoice documents piled up across all past sessions, not just this run's.
+        // Re-stamp issueDate to now each seed: Documents tab has no type filter; sorts issueDate DESC
+        // with take/skip, and proforma invoices pile up across runs, so an old date sorts out of view.
         type: 'document' as const,
         data: {
             erpId: 'e2e-doc-contract-001',

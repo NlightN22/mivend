@@ -15,10 +15,8 @@ const SUPERADMIN = {
     password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
 };
 
-// Roles self-provisioned at server boot (packages/plugins/access-control/src/default-roles.ts,
-// issue #134); administrators seeded by seed-erp.mjs (run via `make seed`,
-// a prerequisite for e2e per docs/e2e-testing.md) — same accounts as .tests/accounts.md. Not
-// re-seeded here, only logged in, one per manager-portal dashboard KPI variant we test.
+// Not re-seeded here: relies on `make seed` having run first (prerequisite for e2e).
+// Logs in only; accounts match .tests/accounts.md, one per manager-portal KPI variant.
 const MANAGER_ACCOUNTS = {
     operator: { username: 'ivan.operator@mivend.dev', password: 'Password123!' },
     manager: { username: 'petr.manager@mivend.dev', password: 'Password123!' },
@@ -84,10 +82,8 @@ export default async function globalSetup(): Promise<void> {
         await ensureShippingMethod(adminToken);
     }
 
-    // GlobalSettings.organizationSplitEnabled is on (make seed turns it on before this runs —
-    // see docs/payments.md "Organizations") — erp-import rejects any product record without an
-    // organizationId. Reuse the organizations `make seed` already created (queried, not
-    // hardcoded/duplicated) rather than seeding e2e's own — e2e runs against the same dev stack.
+    // erp-import rejects products without organizationId, which requires organizationSplitEnabled
+    // (turned on by `make seed`). Query the seeded organizations instead of creating duplicates.
     const organizationsResult = await adminGql<{
         organizationRequisites: { id: string }[];
     }>(`query { organizationRequisites { id } }`, undefined, adminToken);
@@ -111,11 +107,8 @@ export default async function globalSetup(): Promise<void> {
     await postBatch(exchangeId, seedRecordsWithOrganization);
     await waitForRun(exchangeId);
 
-    // erp-import's `tradingPoint` record type has no `servicingBranchId` field (staff-managed
-    // only, never overwritten by upserts), and the counterparty's branchId is not written by
-    // erp-import either, so the e2e trading points start with `servicingBranchId: null`. Order
-    // visibility and stock allocation both key on the Branch row id (Warehouse.branchId,
-    // Administrator.branchId), not the ERP id, so patch it once via the real staff-editing mutation.
+    // erp-import never writes servicingBranchId, so e2e trading points start null. Order visibility and
+    // stock allocation key on the Branch row id, so patch it through the staff-editing mutation.
     const branchesResult = await adminGql<{ branches: { id: string; erpId: string }[] }>(
         `query { branches { id erpId } }`,
         undefined,
@@ -168,10 +161,8 @@ export default async function globalSetup(): Promise<void> {
     )?.id;
     if (!preferredTradingPointId) throw new Error('Seeded trading point e2e-tp-001 not found');
 
-    // A real, deterministic order for the manager-portal Orders/Order Detail specs — operator
-    // has department-wide visibility (see packages/plugins/access-control/src/default-roles.ts), so an
-    // order for the e2e counterparty's customer is visible to all three manager-portal test
-    // roles. Written to a JSON file since the order code is server-generated, not fixed.
+    // Operator has department-wide visibility, so this order is visible to all three manager-portal
+    // test roles. Saved to JSON because the order code is server-generated, not fixed.
     const operatorLogin = await adminGql<{
         login: { __typename: string };
     }>(
@@ -203,23 +194,12 @@ export default async function globalSetup(): Promise<void> {
     const productVariantId = variantsResult.data.productVariants.items[0]?.id;
     if (!productVariantId) throw new Error('Could not find product variant E2E-OIL-001');
 
-    // Every global-setup run creates a fresh confirmed order for this customer but never
-    // cancels the previous run's — stock the seed `stock` records reset is only stockOnHand,
-    // never stockAllocated (Vendure tracks that as derived from real order state, not directly
-    // settable), so allocated stock from old e2e orders accumulates run over run until
-    // addItemToOrder starts failing with InsufficientStockError. Cancelling prior orders here
-    // is the actual idempotent fix — it's the real Vendure mechanism that releases allocated
-    // stock, not a stock-table workaround.
-    // `take: 100` alone silently only ever covered this customer's OLDEST 100 orders (Vendure's
-    // default order-list sort) — once this customer accumulated more than 100 orders across a
-    // long session, every order past that first page was never reached, so its allocated stock
-    // was never released and stockAllocated silently crept up to stockOnHand run over run. Filter
-    // server-side to non-cancelled orders and page through ALL of them, not just the first 100.
+    // Cancelling prior runs' orders is what releases allocated stock: seed resets only stockOnHand,
+    // so stockAllocated creeps up. Page through all non-cancelled orders, not just the first 100.
     const pageSize = 100;
     for (;;) {
-        // Always re-query from skip: 0 — cancelling an order removes it from this
-        // state-filtered result set, so the next page of "still not cancelled" orders
-        // naturally shifts into view; advancing skip here would skip over them instead.
+        // Keep skip at 0: cancelling removes orders from the state-filtered set, so the next page
+        // shifts into view. Advancing skip would skip over them.
         const priorOrdersResult = await adminGql<{
             customer: { orders: { items: { id: string; state: string }[] } } | null;
         }>(
@@ -257,10 +237,8 @@ export default async function globalSetup(): Promise<void> {
     const order = await createConfirmedOrder(operatorToken, customerId, productVariantId);
     fs.writeFileSync(path.join(AUTH_DIR, 'e2e-order.json'), JSON.stringify(order));
 
-    // Assigns the e2e counterparty to petr.manager@mivend.dev so manager-manager's "own" scope
-    // (see #37) has real, deterministic data too — done via the actual reassignCounterpartyManager
-    // mutation (department-head has ReassignCounterpartyManager within their own department,
-    // matching the e2e counterparty's dept-sales — see fixtures/seed.ts), not a DB bypass.
+    // department-head may run reassignCounterpartyManager only within their own department, and the
+    // e2e counterparty is in dept-sales, so this goes through the real mutation, not a DB write.
     const deptHeadLogin = await adminGql<{ login: { __typename: string } }>(
         `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { __typename ... on CurrentUser { id } } }`,
         {
@@ -272,9 +250,8 @@ export default async function globalSetup(): Promise<void> {
     if (!deptHeadToken)
         throw new Error('Could not log in as department-head to assign the e2e manager');
 
-    // `counterparties` returns a paginated { items, totalItems } shape (see issue #39) —
-    // take:200 here is a deliberate bound matching the same stopgap used elsewhere in the app
-    // (fetchAllCustomersCapped etc.), not a real pagination need for this one-off setup lookup.
+    // counterparties returns { items, totalItems }; take:200 is a bound matching the stopgap used
+    // elsewhere (fetchAllCustomersCapped), not a real pagination need for this one-off lookup.
     const counterpartiesResult = await adminGql<{
         counterparties: { items: { id: string; erpId: string }[] };
     }>(
@@ -303,12 +280,8 @@ export default async function globalSetup(): Promise<void> {
         );
     }
 
-    // Seeds two approved DiscountGrant rows through the real requestDiscountGrant ->
-    // decideDiscountGrantRequest flow (DiscountGrant is materialized only on approval —
-    // see DiscountGrantService.decideAndApply, there is no erp-import record type for it) —
-    // one scoped to the e2e counterparty (positive case for the Customer Detail Discounts
-    // tab) and one scoped to an unrelated counterparty (negative case: must never leak onto
-    // e2e counterparty's tab, see DiscountGrantService.findForCounterparty).
+    // DiscountGrant is materialized only on approval and has no erp-import record type, so seed
+    // through requestDiscountGrant -> decideDiscountGrantRequest. Second grant must not leak onto e2e.
     if (adminToken) {
         await adminGql(
             `mutation($requestType: String!, $displayName: String!, $steps: [WorkflowStepInput!]!) {
@@ -341,11 +314,8 @@ export default async function globalSetup(): Promise<void> {
     )?.id;
 
     if (managerToken && deptHeadToken && e2eCounterpartyId && otherCounterpartyId) {
-        // requestDiscountGrant always creates a new ApprovalRequest — unlike the
-        // erp-import-backed records above, it has no natural key to upsert on. Guard by
-        // checking the grant already exists so re-running global-setup locally (outside a
-        // fresh CI DB) doesn't pile up duplicates and break the specs' strict-mode text
-        // locators.
+        // requestDiscountGrant has no natural key to upsert on and always creates a new ApprovalRequest,
+        // so check for an existing grant first; duplicates break the specs' strict-mode text locators.
         const existingGrants = await adminGql<{
             discountGrantsForCounterparty: { items: { percent: number }[] };
         }>(

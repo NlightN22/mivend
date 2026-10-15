@@ -25,9 +25,8 @@ test.describe('Proforma invoices page', () => {
     test('status filter chip narrows the list to matching proforma invoices only', async ({
         page,
     }) => {
-        // Guarantee at least one 'current' proforma invoice exists for this test, rather than assuming
-        // ambient DB state left by other tests — a declined online-stub payment is the one
-        // reliable way to produce 'pending' (see proforma-invoice-lifecycle.spec.ts).
+        // Do not rely on DB state left by other tests; create a 'current' proforma invoice here.
+        // A declined online-stub payment is the only reliable way to produce 'pending'.
         await buildOrderAcrossOrganizations(page);
         await gql(
             page,

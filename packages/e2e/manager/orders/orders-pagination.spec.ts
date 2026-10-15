@@ -3,23 +3,16 @@ import { adminGql } from '../../helpers/api';
 import { createConfirmedOrder } from '../../helpers/manager-order';
 import { E2E_CUSTOMER } from '../../fixtures/seed';
 
-// Regression test for a real bug: OrdersTable sized its MvTable height off the *current page's*
-// row count (`rows.length * 52 + 40`). The last, partial page renders far fewer rows than a full
-// page, so the table — and the whole document — shrinks drastically the moment you paginate to
-// it. The browser then clamps window.scrollY to the new (shorter) max scroll height, which reads
-// as "the page snaps to the top" even though nothing asked it to scroll. Fixed by sizing the
-// table off `pageSize` instead of the actual row count (see OrdersTable.vue's `pageSize` prop).
-// Runs only against manager-operator — this is a UI-mechanics regression, not a role-visibility
-// concern, so one project is enough.
+// Page height must come from pageSize, not the current page's row count: a short last page
+// shrinks the document and the browser clamps scrollY to 0, looking like a spontaneous snap.
 test('orders list pagination does not collapse the page to the top', async ({ page }, testInfo) => {
     test.skip(
         testInfo.project.name !== 'manager-operator',
         'UI-mechanics test, one project is enough',
     );
 
-    // A short viewport guarantees the page is actually scrollable — on a tall default desktop
-    // viewport the whole Orders page can fit without scrolling at all, which would make the
-    // "does the page snap back to scrollY 0" assertion meaningless (it'd already be 0).
+    // Short viewport so the page is guaranteed scrollable; on a tall viewport scrollY stays 0
+    // and the 'snaps back to 0' assertion would pass vacuously.
     await page.setViewportSize({ width: 1280, height: 500 });
 
     const PAGE_SIZE = 10;
@@ -51,12 +44,8 @@ test('orders list pagination does not collapse the page to the top', async ({ pa
     const productVariantId = variantsResult.data.productVariants.items[0]?.id;
     if (!productVariantId) throw new Error('Could not find product variant E2E-OIL-001');
 
-    // Make sure there are at least PAGE_SIZE + 1 orders so a partial last page exists at all.
-    // Orders created here are cancelled in the `finally` block below — this test must not grow
-    // the e2e customer's order count run over run (real incident: an earlier version of this
-    // test intentionally "topped up" without ever cancelling, which was the actual root cause of
-    // both a stockAllocated exhaustion bug and a dashboard "last 20 recent orders" flake, since
-    // every local rerun left its fixture orders behind for later tests/runs to trip over).
+    // Ensure at least PAGE_SIZE + 1 orders so a partial last page exists.
+    // Cancel created orders in finally so the shared customer's order count doesn't grow per run.
     const existingResult = await adminGql<{
         customer: { orders: { totalItems: number } } | null;
     }>(
@@ -75,17 +64,12 @@ test('orders list pagination does not collapse the page to the top', async ({ pa
     try {
         await page.goto('/orders');
         const rows = page.locator('.el-table-v2__row');
-        // "Saved views" is static chrome, always present — it does not mean the async orders
-        // fetch has resolved. Wait for a full first page of rows before reading totalItems
-        // below, or the read would race the loading state.
+        // 'Saved views' is static chrome and does not mean orders have loaded.
+        // Wait for a full first page of rows before reading totalItems, or the read races loading.
         await expect(rows).toHaveCount(PAGE_SIZE, { timeout: 15000 });
 
-        // Read the real current total (this test cancels every order it creates in `finally`,
-        // but other e2e specs sharing this customer may have added a few of their own within
-        // this same run) so the last page reached below is computed against reality, not an
-        // assumed from-scratch count. If the current total happens to be an exact multiple of
-        // PAGE_SIZE, the "last" page would be full, which wouldn't exercise the fix — top up by
-        // one more order (also cancelled in `finally`) and reload in that case.
+        // Read the live total: other specs sharing this customer may add orders during the run.
+        // If it is an exact multiple of PAGE_SIZE the last page is full, so top up one order and reload.
         const totalText = await page.getByText(/orders across your accessible scope/).textContent();
         let totalItems = Number(totalText?.match(/(\d+)/)?.[1] ?? 0);
         if (totalItems > 0 && totalItems % PAGE_SIZE === 0) {

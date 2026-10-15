@@ -9,13 +9,8 @@ import {
     payProformaInvoice,
 } from './helpers';
 
-// Cash application (docs/payments.md "Cash application and payment allocation"): a captured
-// payment settles its own target proforma invoice first, then FIFOs any remainder across the same
-// counterparty+organization's other open proforma invoices, oldest first, and whatever still can't be
-// allocated becomes an advance. These specs exercise that against the real backend — including
-// the specific scenario that prompted it: the customer paid the same debt twice through two
-// different channels (e.g. online acquiring, then a bank transfer reported by the ERP for the
-// same proforma invoice) — the second capture must not error and must not double-count, it must cascade.
+// Duplicate capture of the same proforma invoice (e.g. acquiring plus ERP bank transfer) must not error or double-count;
+// its remainder must cascade to other open invoices (see docs/payments.md).
 test.describe('Proforma invoice payment: pay-any-time, independent of order/session state', () => {
     test('payProformaInvoice settles a proforma invoice directly via GraphQL, with no dependency on activeOrder/session', async ({
         page,
@@ -79,9 +74,7 @@ test.describe('Proforma invoice payment: pay-any-time, independent of order/sess
         );
         expect(refetchedB.status).toBe('issued');
 
-        // The duplicate's amount must show up as an advance for proformaInvoiceA's own organization
-        // (nothing else was left open there after the clean-slate drain above), never silently
-        // vanish and never cross into proformaInvoiceB's organization.
+        // Guards against the duplicate's amount vanishing or leaking into proformaInvoiceB's organization.
         const balanceAfterA = await myAdvanceBalance(page);
         const before =
             balanceBeforeA.find(b => b.currencyCode === proformaInvoiceA.currencyCode)?.amount ?? 0;
@@ -93,9 +86,7 @@ test.describe('Proforma invoice payment: pay-any-time, independent of order/sess
     test('a duplicate payment with nothing else open in that organization becomes an advance credit, visible via myAdvanceBalance', async ({
         page,
     }) => {
-        // Clean slate first — otherwise a leftover open proforma invoice from an earlier test/run in the
-        // same organization would legitimately (and silently) absorb the duplicate instead of it
-        // becoming a pure advance, which would make this test flaky rather than wrong.
+        // Leftover open proforma invoices in the same org would absorb the duplicate, making the test flaky.
         test.setTimeout(TEST_TIMEOUT_MS.slow);
         await payAllOpenProformaInvoices(page);
 

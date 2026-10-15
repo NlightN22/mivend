@@ -18,9 +18,8 @@ async function addOneItemToCart(page: Page): Promise<void> {
 }
 
 async function latestOrderState(page: Page): Promise<string | undefined> {
-    // myOrders(options: OrderListOptions) — Vendure's own generated type (see
-    // packages/plugins/erp-order/src/api/shop.schema.ts). No `sort` needed: ErpOrderResolver
-    // always orders by createdAt DESC internally regardless.
+    // Vendure-generated type (see shop.schema.ts); no `sort` needed.
+    // ErpOrderResolver always orders by createdAt DESC server-side.
     const result = (await gql(
         page,
         `{ myOrders(options: { take: 1 }) { items { code state } } }`,
@@ -28,14 +27,8 @@ async function latestOrderState(page: Page): Promise<string | undefined> {
     return result.myOrders.items[0]?.state;
 }
 
-// Regression coverage for: checkout never transitioned the Vendure order out of
-// AddingItems for ANY payment method — CheckoutSummary.vue/PaymentStubPage.vue just
-// did a client-side router.push() with no mutation at all. myOrders correctly excludes
-// AddingItems/Cancelled, so a placed order silently never showed up in /orders despite
-// the UI claiming success. Fixed via cartStore.beginCheckout()/the order placement composable/
-// completeOnlinePayment() — see docs/ai/PROJECT_CONTEXT.md "checkout never actually
-// placed orders". These tests click the real checkout/payment-stub buttons (not gql())
-// so they exercise the exact code path that was broken.
+// Drives the real checkout/payment-stub buttons, not gql(): the bug was in the click path,
+// which skipped the order transition that myOrders needs (AddingItems orders are hidden).
 test.describe('Checkout places a real order (regression)', () => {
     test('cash payment moves the order out of AddingItems and it appears in /orders @smoke', async ({
         page,

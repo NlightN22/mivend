@@ -12,11 +12,8 @@ test.describe('Proforma invoice lifecycle: order split, payment, status, filters
         const orderCode = (orderData.activeOrder as { code: string } | null)?.code;
         expect(orderCode).toBeTruthy();
 
-        // ProformaInvoices are only materialized by the payment-method handler's createPayment
-        // (@mivend/plugin-online-payment's online-stub-handler.ts), not at ArrangingPayment
-        // itself — trigger
-        // it via addPaymentToOrder with the 'pending' stub status, which Authorizes without
-        // settling, so we can assert the pre-payment 'issued' state distinctly from 'paid' below.
+        // ProformaInvoices are created by the payment handler's createPayment, not at ArrangingPayment.
+        // The 'pending' stub status authorizes without settling, so 'issued' is asserted before 'paid'.
         await gql(
             page,
             `mutation { addPaymentToOrder(input: { method: "online-stub", metadata: { status: "pending" } }) { __typename } }`,
@@ -91,9 +88,8 @@ test.describe('Proforma invoice lifecycle: order split, payment, status, filters
             page,
             `mutation { addPaymentToOrder(input: { method: "online-stub", metadata: { status: "fail" } }) { __typename } }`,
         ).catch(() => {
-            // addPaymentToOrder on a Declined payment attempt can itself surface as a GraphQL
-            // ErrorResult depending on Vendure version/config — either way, the proforma invoices below
-            // are what we actually assert on.
+            // addPaymentToOrder on Declined may return an ErrorResult, depending on Vendure version/config.
+            // So assert on the proforma invoices, not on this call's result.
         });
 
         const proformaInvoices = await myProformaInvoicesForOrder(page, orderCode);
@@ -106,9 +102,8 @@ test.describe('Proforma invoice lifecycle: order split, payment, status, filters
     test('the /proforma-invoices page status filters match each lifecycle status produced above', async ({
         page,
     }) => {
-        // By this point in the suite, prior tests in this file have created proforma invoices in every
-        // status this project's ProformaInvoice model supports (current/superseded/cancelled) — verify each
-        // filter chip only ever shows proforma invoices in its own status.
+        // Relies on earlier tests in this file having created invoices in every status,
+        // otherwise the per-chip check proves nothing.
         await page.goto('/proforma-invoices');
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.proforma-invoice-row').first()).toBeVisible({ timeout: 10000 });
@@ -127,9 +122,8 @@ test.describe('Proforma invoice lifecycle: order split, payment, status, filters
             await expect(page.locator('.proforma-invoice-row').first()).toBeVisible({
                 timeout: 10000,
             });
-            // Read all row texts in one shot instead of asserting index-by-index — the list can
-            // still be settling (pagination re-render) right after the filter click, and a
-            // stale `.count()` read followed by per-index `.nth(i)` assertions races that.
+            // The list can still be re-rendering after the filter click (pagination),
+            // so a stale count() plus per-index nth(i) reads race; read all texts at once.
             const rowTexts = await page.locator('.proforma-invoice-row').allTextContents();
             for (const text of rowTexts) {
                 expect(text).toContain(expectedText);

@@ -23,11 +23,8 @@ test('confirming an order creates a reservation and shows the expiry', async ({ 
     await expect(page.getByRole('heading', { name: 'Order lines' })).toBeVisible({
         timeout: 15000,
     });
-    // OrderDetailPage renders the Reservation panel with its default empty reservations list
-    // (showing "Confirm order") the instant `order` loads, then re-renders once its own
-    // fetchOrderReservations call resolves. Wait for that second fetch to land before deciding
-    // whether to click, or a page-load-time flash of "Confirm order" can vanish out from under
-    // confirmBtn.click() once the real "already reserved" state arrives.
+    // Default empty reservations render first (showing "Confirm order"); wait for the real list
+    // before clicking, or the button can disappear mid-click once "already reserved" arrives.
     await page.waitForLoadState('networkidle');
 
     const panel = page.locator('.order-detail__right-stack');

@@ -13,9 +13,8 @@ async function adminApiViaPage<T>(
     return json.data;
 }
 
-// nikolai.director (general-director) has no e2e Playwright project logging in as this
-// identity (only operator/manager/department-head/portal-admin do) — safe to reassign its
-// role without breaking any other spec's login session or permission assumptions.
+// No e2e Playwright project logs in as this user (only operator/manager/department-head/
+// portal-admin do), so reassigning its role breaks no other spec's session or permissions.
 const TARGET_NAME = 'Nikolai Director';
 const TARGET_EMAIL = 'nikolai.director@mivend.dev';
 
@@ -26,9 +25,8 @@ function userRow(
     return page.getByRole('row', { name: new RegExp(name) }).first();
 }
 
-// Issue #119 Phase 2: /settings/team (li-based TeamPage.vue) was replaced by /settings/users
-// (UsersDataTable.vue, on ManageAdministratorLifecycle rather than ManageAccessControl — see
-// AGENTS.md's manager-table-standard skill for the table shape this now follows).
+// Built on ManageAdministratorLifecycle, not ManageAccessControl; table shape follows
+// the manager-table-standard skill in AGENTS.md.
 test('portal-admin can reach /settings/users and see the seeded administrators (positive)', async ({
     page,
 }, testInfo) => {

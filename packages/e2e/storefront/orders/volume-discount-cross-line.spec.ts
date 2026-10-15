@@ -25,9 +25,8 @@ function lineFor(lines: OrderLine[], sku: string): OrderLine {
     return line;
 }
 
-// TierRebalanceService runs as an async EventBus subscriber (after the triggering
-// mutation's transaction commits), not inline with the mutation response — poll for
-// the sibling line to catch up rather than asserting on a single immediate read.
+// Runs as an async EventBus subscriber after the mutation's transaction commits,
+// so the sibling line may lag: poll instead of asserting on a single read.
 async function waitForUnitPrice(
     page: import('@playwright/test').Page,
     sku: string,
@@ -49,10 +48,8 @@ async function waitForUnitPrice(
     throw new Error(`Timed out waiting for ${sku} unitPrice=${expected}, last seen ${last}`);
 }
 
-// Regression coverage for: two different SKUs of the same brand ('e2e-discount-brand')
-// in the same order — Vendure only recalculates the OrderLine that was actually
-// mutated, so without TierRebalanceService the sibling line would keep a stale price
-// even after the shared facet's aggregate weight crosses a tier threshold.
+// Vendure only recalculates the mutated OrderLine; without TierRebalanceService,
+// a sibling line of the same brand keeps a stale price after a facet tier change.
 test.describe('Volume-tiered discount — cross-line rebalance', () => {
     test('crossing the tier threshold on one line also rebalances a different pre-existing line of the same brand', async ({
         page,
@@ -93,9 +90,7 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
         expect(lineFor(lines, 'E2E-OIL-002').unitPrice).toBe(Math.round(49500 * 0.9));
         expect(lineFor(lines, 'E2E-OIL-001').unitPrice).toBe(Math.round(76500 * 0.9));
 
-        // Bump oil2 to qty 3: aggregate weight 100 + 50*3 = 250kg — crosses the 200kg
-        // tier (25%). oil2's own line recalculates normally; the assertion that matters
-        // is that oil1 — untouched by this mutation — ALSO jumps to the 25% tier.
+        // oil1 is not touched by this mutation but must still move to the 25% tier.
         const oil2LineId = lineFor(lines, 'E2E-OIL-002').id;
         const adjust = await gql(
             page,

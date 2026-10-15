@@ -1,9 +1,7 @@
 import { adminGql } from './api';
 
-// Places a real order end-to-end via the same admin-api mutations the manager portal's
-// /orders/new page uses (see packages/manager/src/api/orderCreate.ts), landing in
-// PaymentSettled. Used to give the Orders list / Order Detail e2e specs a deterministic,
-// visible order instead of depending on whatever orders happen to already exist in the dev DB.
+// Mirrors the portal's /orders/new mutations so the order takes the real path to PaymentSettled.
+// Gives e2e specs a deterministic order instead of relying on pre-existing dev DB orders.
 export async function createConfirmedOrder(
     token: string,
     customerId: string,

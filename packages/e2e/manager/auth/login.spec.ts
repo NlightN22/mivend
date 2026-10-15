@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-// Runs unauthenticated (manager-noauth project, no storageState) — every other manager project
-// logs in programmatically via global-setup.ts and never actually exercises this page. First
-// real UI coverage of the manager portal's login form (mirrors storefront/auth/login.spec.ts).
+// Runs unauthenticated (manager-noauth project): other projects log in via global-setup.ts
+// and never reach this page, so this is the only spec covering the manager login form.
 test.describe('Manager login page', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/login');
@@ -49,9 +48,8 @@ test.describe('Manager login page', () => {
         expect(sessionCookie?.expires).toBeGreaterThan(0); // persistent, not session-only (-1)
     });
 
-    // See the backend-plugin-rules skill's "A fetch() network failure is not the same as 'logged out'" — regression
-    // coverage for the incident that prompted that fix: a real, still-logged-in session must
-    // survive a transient admin-api outage instead of being bounced back to /login.
+    // Network failures from fetch() must not be read as 'logged out': a valid session survives
+    // a transient admin-api outage instead of being redirected to /login.
     test('a transient admin-api outage after login does not force a re-login', async ({ page }) => {
         await page.locator('input').first().fill('ivan.operator@mivend.dev');
         await page.locator('input[type="password"]').fill('Password123!');
@@ -76,11 +74,8 @@ test.describe('Manager login page', () => {
         await expect(page.getByText('Welcome back,')).toBeVisible();
     });
 
-    // Regression coverage for the tri-state auth-status fix: an outage that OUTLASTS adminApi's
-    // own bounded ~4.2s retry must never be misclassified as "logged out" — the router guard
-    // only redirects on a *confirmed* 'unauthenticated', never on 'unknown' (still retrying in
-    // the background). Failing requests for ~6s exhausts the bounded retry and forces at least
-    // one background-retry attempt (2s initial interval) before the outage ends.
+    // Router guard redirects only on a confirmed 'unauthenticated', never on 'unknown' (retrying).
+    // An outage outlasting adminApi's ~4.2s bounded retry must not be treated as logged out.
     test('an outage longer than the bounded retry never redirects to /login and recovers on its own', async ({
         page,
     }) => {

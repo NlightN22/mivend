@@ -1,11 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-// Smoke coverage for the REST API docs (issue #28) — not a storefront feature,
-// hits the server directly by absolute URL (bypasses this project's
-// storefront baseURL). Deliberately simple: "does it work at all", not a
-// full schema diff — the real regression risk here is the whole route being
-// silently 404 (see docs/ai/PROJECT_CONTEXT.md's onBeforeAppListen gotcha),
-// which this would have caught immediately.
+// Absolute URL bypasses the storefront baseURL, so this runs against the server directly.
+// Only checks the route responds: docs can build with correct schemas while the route 404s.
 const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:3000';
 
 test.describe('REST API docs (Swagger)', () => {
@@ -20,9 +16,8 @@ test.describe('REST API docs (Swagger)', () => {
         expect(doc.paths).toHaveProperty('/erp/import/runs/{exchangeId}');
         expect(doc.paths).toHaveProperty('/erp/callback/order-status');
 
-        // Guards against the exact regression hit during implementation: the
-        // document can build with correct schemas while the route itself is
-        // dead (404) if SwaggerModule is mounted at the wrong bootstrap phase.
+        // A correct document doesn't prove the route is served: SwaggerModule mounted at the
+        // wrong bootstrap phase yields a 404 with a valid schema.
         const batchImportSchema = doc.components.schemas.BatchImportRequestDto;
         expect(Object.keys(batchImportSchema.properties)).toEqual(
             expect.arrayContaining(['exchangeId', 'records']),

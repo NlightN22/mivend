@@ -21,9 +21,8 @@ async function searchInStockWithProductId(
     return { variantId: items[0].productVariantId, productId: items[0].productId };
 }
 
-// Mirrors orders/helpers.ts's placeTestOrder, but for a caller-chosen variant
-// instead of an arbitrary in-stock one — needed here so the order line and the
-// `popularProductIds` assertion are guaranteed to be about the same product.
+// Caller-chosen variant, not an arbitrary in-stock one: the order line and the
+// popularProductIds assertion must refer to the same product.
 async function placeOrderForVariant(
     page: Page,
     variantId: string,
@@ -50,14 +49,8 @@ async function placeOrderForVariant(
     );
 }
 
-// Regression coverage for plugin-popular-products' `popularProductIds` query —
-// see docs/ai/PROJECT_CONTEXT.md "plugin-popular-products, #23". The ranking
-// aggregates real OrderLine quantity across all customers, so exact position
-// can't be asserted deterministically against a shared dev DB with unknown
-// prior activity — these tests instead assert the two invariants that matter:
-// (1) an order still in AddingItems must never affect the ranking, and
-// (2) completing a real order for a product can only improve (never worsen)
-// its rank.
+// Exact rank can't be asserted: popularProductIds sums OrderLine quantities across all
+// customers on a shared dev DB with unknown prior activity, so only invariants are checked.
 test.describe('Popular products ranking reflects real orders', () => {
     test('an order left in AddingItems does not affect the popularity ranking', async ({
         page,
@@ -86,9 +79,8 @@ test.describe('Popular products ranking reflects real orders', () => {
         const rankBefore = before.indexOf(productId);
         const positionBefore = rankBefore === -1 ? Infinity : rankBefore;
 
-        // ArrangingPayment already counts as a real sale for ranking purposes
-        // (same exclusion list as myOrders: only AddingItems/Cancelled are
-        // excluded) — no need to complete payment for this test.
+        // ArrangingPayment already counts as a sale for ranking (only AddingItems/Cancelled are
+        // excluded, same as myOrders), so payment does not need to be completed.
         await placeOrderForVariant(page, variantId, 5);
 
         const after = await popularProductIds(page);

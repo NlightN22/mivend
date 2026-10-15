@@ -3,10 +3,8 @@ import { adminGql } from '../../helpers/api';
 import { createConfirmedOrder } from '../../helpers/manager-order';
 import { E2E_CUSTOMER } from '../../fixtures/seed';
 
-// One spec file runs against three Playwright projects (manager-operator, manager-manager,
-// manager-department-head — see playwright.config.ts), each pre-authenticated as a different
-// seeded role (.tests/accounts.md / infrastructure/scripts/seed-access-roles.mjs). Cards shown
-// per role must match packages/manager/src/api/dashboard-config.ts.
+// One spec runs under three role projects, each pre-authenticated as a different seeded role.
+// Expected cards per role must match api/dashboard-config.ts, not be hardcoded here.
 const CARDS_BY_ROLE: Record<string, { visible: string[]; hidden: string[] }> = {
     'manager-operator': {
         visible: ['Department orders', 'Department clients'],
@@ -53,9 +51,8 @@ async function gotoDashboardWithOrdersLoaded(page: import('@playwright/test').Pa
     await page.waitForLoadState('networkidle');
 }
 
-// The order code also appears (as a text substring) in the Activity feed's "Order X placed by…"
-// entry — scope to the Recent orders table's cell text specifically to avoid a strict-mode
-// match across both panels.
+// Order code also appears in the Activity feed text; scope to the table cell to avoid
+// a Playwright strict-mode match across both panels.
 function orderCellLocator(
     page: import('@playwright/test').Page,
     code: string,
@@ -64,18 +61,8 @@ function orderCellLocator(
 }
 
 test.describe('Recent orders filter chips', () => {
-    // `recentOrdersList` (packages/manager/src/api/dashboard.ts) is a real, unfiltered-by-
-    // customer `take: 20, sort: orderPlacedAt DESC` window over the viewer's visible orders —
-    // by product design, not a bug (it's "recent across my scope", not "recent for one
-    // customer"). Depending on global-setup.ts's single order (created once, at the very start
-    // of the whole e2e run) to still be within the last 20 by the time this describe block runs
-    // is inherently fragile once ANY other spec creates more than 20 newer orders in the same
-    // scope first — which is exactly what happened (real incident: orders-pagination.spec.ts
-    // used to leave its fixture orders behind forever, see its own history). Rather than
-    // asserting a position in a widget window that will always eventually be violated by
-    // accumulation, create a fresh order right before these specific tests run — since e2e runs
-    // single-worker/non-parallel (see playwright.config.ts), this guarantees it is THE most
-    // recent order in the system at assertion time, not merely "hopefully in the top 20".
+    // recentOrdersList is a take:20 window, so the global-setup order can age out of it.
+    // Create a fresh order right before these tests; single-worker runs make it the newest.
     let orderId: string;
     let orderCode: string;
 
@@ -112,15 +99,8 @@ test.describe('Recent orders filter chips', () => {
         orderId = order.id;
         orderCode = order.code;
 
-        // erp-order's branch-denormalization (Order.customFields.branchId, used by
-        // department-scoped visibleOrders) runs in a fire-and-forget EventBus subscriber —
-        // EventBus.publish() does not await non-blocking subscribers, so the
-        // transitionOrderToState/addManualPaymentToOrder mutations above can return before
-        // that handler finishes. Querying visibleOrders immediately afterward (as every test
-        // below does on page load) can race it and see branchId still null for a
-        // department-scoped viewer. Poll until it settles instead of assuming any fixed delay
-        // is long enough — this is the real fix for a flake that looked like "some tests pass,
-        // some don't" depending on how much wall-clock time happened to elapse beforehand.
+        // EventBus.publish() does not await fire-and-forget subscribers, so branchId may still be null.
+        // Poll visibleOrders until it settles; a fixed delay is not a reliable fix.
         for (let attempt = 0; attempt < 20; attempt++) {
             const check = await adminGql<{
                 visibleOrders: { items: { customFields: { branchId: string | null } }[] };

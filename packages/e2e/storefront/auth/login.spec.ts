@@ -48,9 +48,8 @@ test.describe('Login page', () => {
         expect(sessionCookie?.expires).toBeGreaterThan(0); // persistent, not session-only (-1)
     });
 
-    // See the backend-plugin-rules skill's "A fetch() network failure is not the same as 'logged out'" — regression
-    // coverage for the incident that prompted that fix: a real, still-logged-in session must
-    // survive a transient shop-api outage instead of being bounced back to /login.
+    // Regression: a fetch() network failure must not be treated as logged out
+    // A logged-in session must survive a transient shop-api outage instead of redirecting to /login
     test('a transient shop-api outage after login does not force a re-login', async ({ page }) => {
         await page.locator('input[type="email"]').fill(E2E_CUSTOMER.email);
         await page.locator('input[type="password"]').fill(E2E_CUSTOMER.password);
@@ -75,12 +74,8 @@ test.describe('Login page', () => {
         await expect(page.getByRole('link', { name: 'Account' })).toBeVisible();
     });
 
-    // Regression coverage for the tri-state auth-status fix: an outage that OUTLASTS shopApi's
-    // own bounded ~4.2s retry must never be misclassified as "logged out" — the route guard
-    // (and App.vue's DEV auto-relogin fallback) only treat a *confirmed* 'unauthenticated' as
-    // logged-out, never 'unknown' (still retrying in the background). Failing requests for ~6s
-    // exhausts the bounded retry and forces at least one background-retry attempt (2s initial
-    // interval) before the outage ends.
+    // A ~6s outage that outlasts shopApi's ~4.2s retry must stay 'unknown', not 'unauthenticated'.
+    // Only a confirmed 'unauthenticated' may count as logged out (route guard, DEV auto-relogin).
     test('an outage longer than the bounded retry never redirects to /login and recovers on its own', async ({
         page,
     }) => {
