@@ -70,16 +70,13 @@ const message = computed(() => {
 </template>
 
 <style scoped>
-/* Fixed to the viewport, not the page flow — a background reconnect must stay visible no matter
-   how far the user has scrolled, and must never push page content down (a static in-page notice
-   both fails to do). Sits above the topbar's own sticky z-index (20, MvAppTopbar) so it's never
-   hidden behind it. */
+/* Fixed to the viewport so it stays visible on scroll and never pushes page content down. */
 .mv-connection-bar {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    z-index: 30;
+    z-index: var(--mv-z-connection-bar);
     display: flex;
     flex-direction: column;
     align-items: center;

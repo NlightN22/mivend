@@ -59,6 +59,9 @@
     --app-font-size-button: 14px;
     --app-font-size-search: 16px;
     --app-font-size-title: 20px;
+
+    /* Above both portals' headers and dropdowns (up to 1200), below toasts (2000). */
+    --mv-z-connection-bar: 1500;
 }
 
 *,
