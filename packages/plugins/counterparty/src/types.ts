@@ -24,16 +24,8 @@ export interface CounterpartyUpsertPayload {
     priceType: string;
     isActive: boolean;
     mainContractId?: string | null;
-    // departmentId is the ERP's own id (Department.erpId) — pure ERP org-structure data, display/
-    // informational, mirrored as-is (see docs/access-control.md's "Branch vs Department" note).
-    //
-    // branchId is NOT an ERP id despite the stale convention this comment used to describe —
-    // Branch is mivend's own entity, and every real consumer of `branchId` (AccessScopeService,
-    // BranchSettingsService, Warehouse.branchId) expects a resolved mivend `Branch.id`, never a
-    // raw ERP-sourced value. No caller sets this field today (see CounterpartyHandler.upsert's
-    // own comment) — issue #65 ("Counterparty→Branch auto-assignment worker") is the intended
-    // single place that will ever populate it, and must resolve to `Branch.id` when it does,
-    // mirroring WarehouseService.upsert's pattern — never pass an ERP id through raw again.
+    // departmentId is the raw ERP id (display only). branchId is mivend's Branch.id, never an ERP id;
+    // Resolve branchId to Branch.id like WarehouseService.upsert; never pass ERP values through raw.
     departmentId?: string | null;
     branchId?: string | null;
     // Free-text group/segment label from the ERP — display and filtering only, see

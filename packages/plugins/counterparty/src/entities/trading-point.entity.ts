@@ -51,11 +51,8 @@ export class TradingPoint extends VendureEntity {
     @Column({ type: 'boolean', default: false })
     customerOwned!: boolean;
 
-    // Which branch/subdivision physically services this location (visits, logistics,
-    // fulfillment) — the "territory" axis, separate from Counterparty.branchId's "home/reporting
-    // branch" (key-account/commission axis). See docs/access-control.md "Branch scope is a
-    // separate axis from own/department/all". Null falls back to the Counterparty's branchId, then
-    // the default branch (TradingPointService.resolveServicingBranchId); override per point for chains.
+    // Servicing branch is separate from Counterparty.branchId, which is the commission/key-account axis.
+    // Null falls back to Counterparty.branchId, then the default branch; override per point for chains.
     @Column({ type: 'varchar', nullable: true })
     servicingBranchId!: string | null;
 

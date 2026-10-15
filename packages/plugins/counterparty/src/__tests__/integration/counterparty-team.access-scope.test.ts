@@ -9,10 +9,8 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-// Real Postgres, no mocking — verifies AccessScopeService.applyOwnCounterpartyFilter's EXISTS
-// subquery against a real counterparty_team_member table, mirroring
-// counterparty.access-scope.test.ts's approach of a hand-rolled table matching production schema
-// (VendureEntity's id column needs a bootstrap-time EntityIdStrategy that isn't available here).
+// Hand-rolled counterparty_team_member table mirrors prod schema: VendureEntity's id column
+// needs a bootstrap-time EntityIdStrategy that isn't available in this test setup.
 @Entity('counterparty')
 class TestCounterparty {
     @PrimaryGeneratedColumn('uuid')

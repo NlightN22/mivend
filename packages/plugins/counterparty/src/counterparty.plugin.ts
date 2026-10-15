@@ -130,9 +130,8 @@ export const shopApiSchema = gql`
     }
 `;
 
-// Exported so counterparty-admin-schema.test.ts can assert on the real SDL directly — the
-// mivend.audit.common finding on issue #131 was exactly a field written to the entity/DB with
-// no corresponding SDL field, undetected until a human read the schema by eye.
+// Exported so tests can assert on the real SDL, catching fields written to the entity/DB
+// that have no matching SDL field.
 export const adminApiSchema = gql`
     ${tradingPointFields}
 

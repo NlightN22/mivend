@@ -12,11 +12,8 @@ import {
 import { CounterpartyManagerAssignmentService } from '../../counterparty-manager-assignment.service';
 import { CounterpartyService } from '../../counterparty.service';
 
-// Vendure's VendureEntity relies on an EntityIdStrategy registered during bootstrap() to
-// generate its primary column — using the real Counterparty class against a standalone
-// DataSource fails with "Entity does not have a primary column" (see documents/sync
-// integration tests for the same constraint). Hand-rolled table matching production schema
-// instead, against real Postgres, no DB mocking.
+// Vendure's VendureEntity needs an EntityIdStrategy from bootstrap() for its primary column,
+// so the real Counterparty class can't run on a standalone DataSource; use a hand-rolled table.
 @Entity('counterparty')
 class TestCounterparty {
     @PrimaryGeneratedColumn('uuid')
@@ -37,9 +34,8 @@ class TestCounterparty {
     @Column({ type: 'varchar', nullable: true }) erpGroupLabel!: string | null;
 }
 
-// Referenced by the EXISTS subquery inside applyOwnCounterpartyFilter's mocked implementation
-// below — must exist as a real table even though no test row is ever inserted here (team
-// membership itself is exercised in counterparty-team.access-scope.test.ts).
+// Required by the EXISTS subquery in the mocked applyOwnCounterpartyFilter; must be a real table
+// even though no rows are inserted here.
 @Entity('counterparty_team_member')
 class TestCounterpartyTeamMember {
     @PrimaryGeneratedColumn('uuid')
@@ -168,10 +164,8 @@ describe('CounterpartyService.findVisible (integration, real Postgres)', () => {
         expect(result.map(c => c.erpId)).not.toContain('cp-own-other');
     });
 
-    // Per e251388/docs/access-control.md "Branch vs Department": departmentId must never gate
-    // Counterparty visibility. `branchId` IS the real gate for 'department'-kind scope
-    // (security-first correction, 2026-09-20 round 3) — a branch-scoped caller sees only
-    // counterparties whose branchId matches its own, never another branch's.
+    // departmentId must never gate Counterparty visibility; branchId is the real gate for
+    // 'department'-kind scope, so a branch-scoped caller sees only its own branch's counterparties.
     it('"department" scope sees only counterparties in its own branch, not another branch', async () => {
         await seedCounterparties();
         mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
@@ -186,9 +180,8 @@ describe('CounterpartyService.findVisible (integration, real Postgres)', () => {
         expect(result.map(c => c.erpId)).not.toContain('cp-other-dept');
     });
 
-    // Deny-by-default: an unassigned Counterparty.branchId (no automatic-assignment worker yet,
-    // issue #65/#123) must be invisible to every branch-scoped role, not shown to all of them —
-    // no `OR branchId IS NULL` carve-out, unlike Order/ProformaInvoice's own denormalized-branch filter.
+    // Unassigned Counterparty.branchId must stay hidden from all branch-scoped roles, so no
+    // `OR branchId IS NULL` carve-out, unlike Order/ProformaInvoice's denormalized-branch filter.
     it('"department" scope never sees a Counterparty with no branchId assigned', async () => {
         await dataSource.getRepository(TestCounterparty).save([
             {
@@ -225,9 +218,8 @@ describe('CounterpartyService.findVisible (integration, real Postgres)', () => {
     });
 });
 
-// New for issue #39 (Customers list pagination) — same scope resolution as findVisible above,
-// exercised against real Postgres since applyVisibilityScope's SQL (andWhere/ILIKE/aggregates)
-// can't be meaningfully verified with a mocked repository.
+// applyVisibilityScope's SQL (andWhere, ILIKE, aggregates) can't be meaningfully verified
+// with a mocked repository, so this runs against real Postgres.
 describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHighUsage (integration, real Postgres)', () => {
     beforeEach(() => {
         mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({ kind: 'all' });
@@ -266,9 +258,8 @@ describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHigh
         expect(result.totalItems).toBe(1);
     });
 
-    // 'department'-kind scope filters by branchId (see the identical comment on the findVisible
-    // describe block above, and docs/access-control.md) — a caller only "in scope" for a
-    // counterparty whose branchId matches its own.
+    // 'department'-kind scope filters by branchId: a caller is in scope only for counterparties
+    // whose branchId matches its own.
     it('findOneVisible returns the entity when in scope, null when outside scope', async () => {
         await seedCounterparties();
         const all = await dataSource.getRepository(TestCounterparty).find();
@@ -412,10 +403,8 @@ describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHigh
         expect(result.totalItems).toBe(2);
     });
 
-    // Per docs/access-control.md "Branch scope is the only real filtering axis": departmentId
-    // must never gate Counterparty visibility, but branchId IS the real gate for 'department'
-    // scope (security-first correction, 2026-09-20 round 3) — unassignedOnly must still respect
-    // it, same as any other listing.
+    // unassignedOnly must still apply the branchId scope gate, as any listing does;
+    // departmentId never gates Counterparty visibility.
     it('findVisiblePage unassignedOnly still respects the access scope (department sees only its own branch orphans)', async () => {
         await dataSource.getRepository(TestCounterparty).save([
             {

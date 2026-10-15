@@ -19,9 +19,8 @@ import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyErpDetails, definedErpDetails } from './counterparty-erp-details';
 import { CounterpartySortParameter, CounterpartyUpsertPayload, loggerCtx } from './types';
 
-// Whitelisted against CounterpartySortParameter's own fields — never derive a column name from
-// caller input directly, that's SQL-injection-shaped even though it'd currently only ever come
-// from GraphQL's own validated enum keys.
+// Column name must come from a whitelist of CounterpartySortParameter fields, never caller input
+// Today only GraphQL-validated enum keys arrive, but the whitelist must hold regardless
 const SORTABLE_COLUMNS: Record<keyof CounterpartySortParameter, string> = {
     shortName: 'c.shortName',
     inn: 'c.inn',
@@ -55,33 +54,8 @@ export class CounterpartyService {
         return saved;
     }
 
-    // Issue #104: Integration Service's `counterparty` Kafka stream (verified live against
-    // @nlightn22/event-contracts@0.38.0, search-platform#118/#92) carries name/isActive/
-    // isDeleted/managerId(s)/inn/erpGroupLabel/departmentId — never creditLimit/paymentDelayDays/
-    // priceType/branchId, which stay erp-import/REST-only fields (same shape as #88's
-    // OrganizationChanged vs. OrganizationRequisitesRecord gap). creditBalance moved to its own
-    // register-driven stream (search-platform#129 — see updateCreditBalance below), not part of
-    // this event. `assignedManagerId` here is an already-resolved Vendure Administrator.id (see
-    // CounterpartyStreamHandler/UserEnrichmentService, issue #109) — this method itself never
-    // does ERP-erpId↔Administrator resolution, only writes whatever id the caller already
-    // resolved. Distinct from upsert() above, which expects the full REST payload shape and must
-    // not be reused here. Always creates/updates a row so a counterparty mivend only knows about
-    // via Kafka (e.g. the staging-integration contour, which never runs erp-import — issue #68)
-    // is not permanently absent; creditLimit/paymentDelayDays/priceType/branchId stay at their
-    // existing value or entity default until erp-import's own record arrives, if it ever does in
-    // this contour — never fabricated here.
-    //
-    // `fields.name: null` (deletion tombstone): the stream's deletion events never carry a name,
-    // only entityId/isDeleted — same convention confirmed for organization/department. Updates
-    // isActive on an already-known counterparty without touching legalName/shortName, and is a
-    // deliberate no-op (never creates a row) when no existing row matches erpId — a deletion
-    // tombstone must never fabricate a brand-new counterparty with a blank name.
-    //
-    // `fields.inn`/`erpGroupLabel`/`departmentId`/`assignedManagerId` are `undefined` when the
-    // event omits them (real optional-scalar presence, not the proto3 zero-value-omission
-    // ambiguity — see #135) and `null` when ERP explicitly cleared them (or, for
-    // `assignedManagerId`, when the caller found no manager assigned at all) — only `undefined`
-    // is treated as "leave unchanged"; `null` is applied like any other real value.
+    // Never reuse upsert() here: the stream omits creditLimit/paymentDelayDays/priceType/branchId
+    // Tombstone (name null) only updates isActive, never creates a row. undefined = keep, null = clear.
     async upsertActiveState(
         ctx: RequestContext,
         erpId: string,
@@ -92,10 +66,8 @@ export class CounterpartyService {
             erpGroupLabel?: string | null;
             departmentId?: string | null;
             assignedManagerId?: string | null;
-            // The raw erpId assignedManagerId was (or would be) resolved from — always passed
-            // together with assignedManagerId by CounterpartyStreamHandler, even when
-            // assignedManagerId itself is undefined/null. See Counterparty.managerErpId's own
-            // doc comment.
+            // Raw erpId assignedManagerId was resolved from; always passed alongside it, even when that is null
+            //
             managerErpId?: string | null;
             legalAddress?: string | null;
             factualAddress?: string | null;
@@ -158,13 +130,8 @@ export class CounterpartyService {
         );
     }
 
-    // mivend.audit.common (2026-09-20): called from AdministratorLinkedListener once an erpId
-    // links to an Administrator — resolves every Counterparty that was left with no manager
-    // because its `counterparty` event was processed while that erpId was still `unlinked` (see
-    // CounterpartyStreamHandler.resolveAssignedManagerId's "known, not a race" branch). Bounded,
-    // indexed lookup (Counterparty.managerErpId has its own index) — never touches a row whose
-    // assignedManagerId is already set, so a later manual reassignment (portal
-    // reassignManager) is never clobbered by a backfill running late.
+    // Backfill for rows left managerless when their erpId was still unlinked at event time
+    // Skips rows already assigned, so a late backfill never overwrites a manual reassignment
     async backfillAssignedManager(
         ctx: RequestContext,
         managerErpId: string,
@@ -188,12 +155,8 @@ export class CounterpartyService {
         return affected;
     }
 
-    // search-platform#129: CounterpartyCreditBalanceChanged is a separate, register-driven stream
-    // (AccumulationRegister_ВзаиморасчетыСКонтрагентами), independent of CounterpartyChanged's own
-    // catalog-change trigger — creditBalance can change without any other Counterparty field
-    // changing, and vice versa. Deliberate no-op when no row exists yet for this erpId — same
-    // never-fabricate-a-new-row rule as upsertActiveState (a balance update is meaningless without
-    // the counterparty itself already existing, and this stream carries no name to create one).
+    // Register-driven stream: creditBalance can change without other fields, and vice versa
+    // No-op when no row exists for erpId: a balance alone cannot create a counterparty (no name)
     async updateCreditBalance(
         ctx: RequestContext,
         erpId: string,
@@ -238,24 +201,14 @@ export class CounterpartyService {
             .find({ order: { shortName: 'ASC' } });
     }
 
-    /**
-     * Row-level visibility for the admin `counterparties` query — resolves the caller's scope
-     * via AccessScopeService and filters accordingly. See docs/access-control.md, layer 3.
-     */
-    // Full scoped id-set — used internally by callers that need the complete visible-counterparty
-    // set to scope a DIFFERENT query (e.g. DocumentsService.findVisible()'s `IN (ids)` filter,
-    // see docs/access-control.md "resources whose visibility is derived from another resource").
-    // Not for direct display/pagination — see findVisiblePage() below for the manager-portal
-    // Customers list, which is the one that actually needs take/skip (see issue #39).
+    // Complete visible set, for scoping a different query (e.g. DocumentsService's IN filter)
+    // Never for display or pagination: returns unbounded results, use findVisiblePage() instead
     async findVisible(ctx: RequestContext): Promise<Counterparty[]> {
         return this.applyVisibilityScope(ctx, this.baseVisibleQb(ctx)).then(qb => qb.getMany());
     }
 
-    // Manager portal Customers list (docs/ai/manager-portal-pages/05-customers.md) — same scope
-    // resolution as findVisible() above, but paginated for direct display instead of returning
-    // every visible counterparty unbounded. See issue #39 ("Audit: unbounded/unpaginated list
-    // queries...") — this was flagged as company-wide unbounded for portal-admin/general-director
-    // (scope 'all').
+    // Paginated variant for direct display; findVisible() is unbounded, which is wrong for scope 'all'
+    // Scope 'all' roles would otherwise get an unbounded list of every counterparty
     async findVisiblePage(
         ctx: RequestContext,
         options: CounterpartyListFilter & {
@@ -282,20 +235,16 @@ export class CounterpartyService {
         return applyCounterpartyListFilter(qb, filter);
     }
 
-    // Single counterparty, visibility-checked the same way as the list — returns null (not
-    // ForbiddenError) if the id exists but is outside the caller's scope, same "hide, don't leak
-    // existence" convention as Vendure's own entity resolvers.
+    // Returns null, not ForbiddenError, for out-of-scope ids: don't leak that the id exists
+    //
     async findOneVisible(ctx: RequestContext, id: ID): Promise<Counterparty | null> {
         let qb = this.baseVisibleQb(ctx).andWhere('c.id = :id', { id: String(id) });
         qb = await this.applyVisibilityScope(ctx, qb);
         return qb.getOne();
     }
 
-    // Manager portal Customers list KPI cards (activeCount/totalCreditBalance/highUsageCount) —
-    // real SQL aggregates over the scoped set, not "load everything and reduce() in JS" (which
-    // was the original antipattern this whole audit started from, see issue #39). Mirrors the
-    // reference pattern in `fetchOrdersSummary` (packages/manager/src/api/orders.ts) of one
-    // dedicated summary query alongside the paginated list query.
+    // KPIs are SQL aggregates over the scoped set, never load-all-and-reduce in JS
+    // Separate summary query alongside the paginated list, as in fetchOrdersSummary
     async getSummary(ctx: RequestContext): Promise<{
         totalCount: number;
         activeCount: number;
@@ -312,11 +261,8 @@ export class CounterpartyService {
             .addSelect('COUNT(*) FILTER (WHERE c.isActive)', 'activeCount')
             .addSelect('COALESCE(SUM(c.creditBalance), 0)', 'totalCreditBalance')
             .addSelect(
-                // Explicit double-quoted column names, not TypeORM's `c.creditBalance` alias
-                // syntax — its regex-based alias replacement silently fails to rewrite
-                // `c.creditBalance::float` (the `::` cast breaks the match), sending the raw
-                // unquoted `c.creditbalance` to Postgres, which then 42703s (camelCase columns
-                // need quoting). Caught by the integration test below, not by any mock.
+                // TypeORM's alias replacement silently skips c.creditBalance::float, so camelCase columns need quotes
+                // Without quotes Postgres fails with 42703; mocks don't catch this, integration tests do
                 'COUNT(*) FILTER (WHERE c."creditLimit" > 0 AND c."creditBalance"::float / c."creditLimit" >= 0.8)',
                 'highUsageCount',
             )
@@ -342,16 +288,13 @@ export class CounterpartyService {
         return qb.orderBy().andWhere('c.assignedManagerId IS NULL').getCount();
     }
 
-    // "Needs attention" panel on the Customers list (docs/ai/manager-portal-pages/05-customers.md)
-    // — a small, explicitly bounded top-N query (LIMIT, not an unbounded fetch-everything-then-
-    // slice(0,5) in JS, which was the original antipattern). Same shape as
-    // `popularProductIds(take)` elsewhere in this codebase.
+    // Explicit LIMIT top-N, not fetching everything then slice(0,5) in JS
+    // Same bounded pattern as popularProductIds(take)
     async findHighUsage(ctx: RequestContext, limit: number): Promise<Counterparty[]> {
         let qb = this.baseVisibleQb(ctx);
         qb = await this.applyVisibilityScope(ctx, qb);
-        // Explicit double-quoted column names — see getSummary()'s comment for why
-        // `c.creditBalance::float` (unquoted alias syntax) silently breaks TypeORM's column
-        // replacement here.
+        // Quoted column names: TypeORM's alias replacement silently breaks on c.creditBalance::float
+        // Unquoted camelCase columns fail in Postgres (42703).
         return qb
             .orderBy()
             .andWhere('c."creditLimit" > 0')
@@ -368,9 +311,8 @@ export class CounterpartyService {
             .orderBy('c.shortName', 'ASC');
     }
 
-    // Only the first non-null sort key is applied — same "single active sort" convention as the
-    // manager portal's own MvAdvancedDataTable (one column at a time, see its toggleSort). Falls
-    // back to baseVisibleQb's own default (shortName ASC) when no sort is requested at all.
+    // Only the first non-null sort key applies: one active sort, matching MvAdvancedDataTable
+    // Falls back to baseVisibleQb's default (shortName ASC) when no sort is requested
     private applySort(
         qb: SelectQueryBuilder<Counterparty>,
         sort?: CounterpartySortParameter,
@@ -395,23 +337,8 @@ export class CounterpartyService {
                 this.accessScopeService.applyOwnCounterpartyFilter(qb, 'c', scope.administratorId);
                 break;
             case 'department':
-                // Corrected direction (2026-09-20, per an explicit product decision): `Department`
-                // (the ERP's own org unit) is pure display/informational data and must NEVER gate
-                // visibility of anything — only `Branch` (mivend's own entity) is a real
-                // access-scope dimension. `departmentId` is deliberately never compared here.
-                //
-                // Security-first correction (2026-09-20, same day, per an explicit product
-                // decision overriding the temporary no-op this replaces): a branch-scoped
-                // manager must never see a Counterparty that isn't theirs, full stop — including
-                // one with no `branchId` assigned yet. `Counterparty.branchId` has no automatic
-                // assignment worker yet (issue #65/#123, "unsorted, needs manual triage"), so
-                // until it ships, unassigned rows are invisible to every branch-scoped role, not
-                // shown to all of them — deny-by-default, not permissive-by-default. Only
-                // 'all'-scope roles (general-director, portal-admin) see unassigned rows, same as
-                // every other counterparty. There is deliberately no `OR c.branchId IS NULL`
-                // carve-out here (unlike Order/ProformaInvoice's own denormalized-branch filter) — see
-                // docs/access-control.md's "Branch scope" section for why Counterparty's
-                // no-carve-out rule differs from Order/ProformaInvoice's.
+                // Only Branch gates visibility; Department is display-only and departmentId is never compared
+                // Null branchId hides the row from branch-scoped roles (deny-by-default); no IS NULL carve-out
                 qb.andWhere('c.branchId = :scopeBranch', { scopeBranch: scope.branchId ?? null });
                 break;
             case 'all':
@@ -430,9 +357,8 @@ export class CounterpartyService {
         return result[0] ?? null;
     }
 
-    // Reverse direction of getForCustomer, for issue #133's Dashboard "Customer binding" card —
-    // read-only visibility of whatever link already exists, independent of #120's activation
-    // mutation (which is what would create that link in the first place).
+    // Read-only: shows an existing link only; creating it is the separate activation mutation
+    //
     async getLinkedCustomerId(ctx: RequestContext, counterpartyId: ID): Promise<ID | null> {
         const result = await this.connection.rawConnection.query(
             `SELECT cu.id AS id FROM customer cu

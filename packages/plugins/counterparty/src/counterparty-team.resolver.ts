@@ -6,9 +6,8 @@ import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyTeamMember } from './entities/counterparty-team-member.entity';
 import { CounterpartyTeamService } from './counterparty-team.service';
 
-// A counterparty's team is a structurally small/bounded list (Owner + a handful of
-// backup/observer members) — no pagination needed here, see the backend-plugin-rules
-// skill's pagination-rule exemption for genuinely bounded lists.
+// A counterparty's team is structurally bounded (Owner + a few backup/observer members),
+// so no pagination; see the backend-plugin-rules pagination exemption for bounded lists.
 @Resolver('Counterparty')
 export class CounterpartyTeamFieldResolver {
     constructor(private counterpartyTeamService: CounterpartyTeamService) {}

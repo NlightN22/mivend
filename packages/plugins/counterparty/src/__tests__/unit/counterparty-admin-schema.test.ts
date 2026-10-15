@@ -3,16 +3,8 @@ import { Kind, type FieldDefinitionNode, type ObjectTypeDefinitionNode } from 'g
 
 import { adminApiSchema } from '../../counterparty.plugin';
 
-// mivend.audit.common (issue #131): Counterparty.phone/officialEmail/factualAddress/legalAddress
-// were written to the entity/DB by CounterpartyStreamHandler but never added to the admin API
-// SDL — the data was correctly persisted but no client (manager portal, Dashboard, #120's
-// activation UI) could read it via GraphQL at all. This test reads the real adminApiSchema AST
-// directly (not buildASTSchema — adminApiSchema `extend`s Vendure's own Query/Mutation/Customer
-// types and references scalars/types that only exist once merged into the full server schema,
-// so it isn't independently buildable) and asserts the field actually exists on the
-// `Counterparty` type definition, so a future field added to the entity/service without a
-// matching SDL field fails a fast unit test instead of only being caught by a human reading the
-// schema.
+// Reads the raw adminApiSchema AST: it extends Vendure's types and uses scalars that exist only
+// after merge, so buildASTSchema can't build it. Entity fields missing from SDL must fail here.
 describe('counterparty admin API schema', () => {
     const counterpartyType = adminApiSchema.definitions.find(
         (def): def is ObjectTypeDefinitionNode =>

@@ -1,12 +1,7 @@
 import { RequestContext, VendureEvent } from '@vendure/core';
 
-// Published once an approved creditTermApproval(Escalated) request has been applied to
-// Counterparty.creditTermOverrideExtraDays. plugin-sync (the only plugin allowed to touch
-// RabbitMQ/the ERP adapter, per the backend-plugin-rules skill's "Inter-plugin communication"
-// section) can subscribe
-// to this and push the extension to the ERP via the outbox — not wired yet, this event exists so
-// that integration can be added without any change here, same pattern as
-// OrderReadyForErpEvent in plugin-erp-order.
+// Only plugin-sync may touch RabbitMQ/the ERP adapter; it subscribes and pushes via outbox.
+// Not wired yet; ERP sync can subscribe later without changes here (same as OrderReadyForErpEvent).
 export class CreditTermApprovedEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,

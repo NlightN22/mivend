@@ -27,13 +27,8 @@ describe('CounterpartyCreditResolver', () => {
     });
 });
 
-// Regression coverage for the credit-visibility bypass found while adding pagination for issue
-// #39: counterpartySummary/highUsageCounterparties compute their credit-derived values via a
-// plain SQL aggregate (CounterpartyService.getSummary/findHighUsage), which does NOT go through
-// CounterpartyCreditResolver's field-level @ResolveField gate — a caller lacking
-// ReadCounterpartyCredit could otherwise read the company-wide credit total even though every
-// single customer's own creditLimit/creditBalance field is hidden from them. The resolver must
-// gate this explicitly itself.
+// SQL aggregates in getSummary/findHighUsage bypass the @ResolveField credit gate,
+// so the resolver must enforce ReadCounterpartyCredit explicitly on these fields.
 describe('CounterpartyResolver credit-derived aggregate gating', () => {
     const summary = {
         totalCount: 10,

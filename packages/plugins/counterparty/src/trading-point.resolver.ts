@@ -177,11 +177,8 @@ export class TradingPointAdminResolver {
         return this.tradingPointService.upsert(ctx, args);
     }
 
-    // Staff patch mutations, distinct from the ERP-sync upsertTradingPoint above — gated by
-    // "can this caller see the counterparty" (same permission pair as the `counterparties`
-    // query) rather than Permission.UpdateCustomer; the actual own/department/all scope check
-    // happens inside TradingPointService.updateDetails/setActive via
-    // AccessScopeService.assertCounterpartyWritable.
+    // Gated by the same permission pair as the counterparties query, not Permission.UpdateCustomer;
+    // Scope is enforced in TradingPointService via AccessScopeService.assertCounterpartyWritable.
     @Transaction()
     @Mutation()
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)

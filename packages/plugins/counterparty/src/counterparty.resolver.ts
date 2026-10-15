@@ -32,18 +32,8 @@ export class CustomerCounterpartyResolver {
 
 // tradingPoints field is resolved by CounterpartyTradingPointResolver in trading-point.resolver.ts
 
-// creditLimit/creditBalance are plain plugin-schema fields, not Vendure customFields, so
-// declarative requiresPermission doesn't apply — this is the documented fallback (see
-// docs/access-control.md, layer 4): a dedicated field resolver, registered only for the admin
-// API, that never lets the value leave the service layer for an unauthorized caller.
-//
-// @Allow() alone does NOT reliably gate a @ResolveField in this Vendure version — verified
-// live against a running dev server: a "manager" administrator (lacking
-// ReadCounterpartyCredit) still received the real creditLimit/creditBalance values with only
-// @Allow() attached, no ForbiddenError. Vendure's field-resolver auth path
-// (DefaultEntityAccessControlStrategy, @since 3.6.0, marked @experimental) evidently isn't
-// wired through the same guard pipeline as root Query/Mutation resolvers here — so the
-// permission check is done explicitly in the resolver body instead of relying on the guard.
+// creditLimit/creditBalance are plain schema fields, so requiresPermission doesn't apply here.
+// @Allow() alone doesn't gate @ResolveField in this Vendure version, so check permission in the body.
 @Resolver('Counterparty')
 export class CounterpartyCreditResolver {
     @ResolveField()
@@ -65,9 +55,8 @@ export class CounterpartyCreditResolver {
     }
 }
 
-// Read-only reverse-link visibility for issue #133's Dashboard Counterparty detail page. This
-// does not require #120's activation feature to exist yet — it just reports whatever link
-// already exists (e.g. a legacy email-matched Customer), returning null otherwise.
+// Works without the activation feature: reports any existing link (e.g. legacy email-matched Customer),
+// otherwise returns null.
 @Resolver('Counterparty')
 export class CounterpartyCustomerLinkResolver {
     constructor(private counterpartyService: CounterpartyService) {}
@@ -118,9 +107,7 @@ export class CounterpartyResolver {
         return this.counterpartyService.countUnassigned(ctx);
     }
 
-    // Customer Detail page (docs/ai/manager-portal-pages/06-customer-detail.md) — a dedicated
-    // single-entity lookup so the detail page no longer depends on fetching the full (now
-    // paginated) `counterparties` list and filtering client-side by id, see issue #39.
+    // The list is paginated, so a client-side id filter over it would miss entities beyond page one.
     @Query()
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
     async counterparty(
@@ -130,14 +117,8 @@ export class CounterpartyResolver {
         return this.counterpartyService.findOneVisible(ctx, args.id);
     }
 
-    // totalCount/activeCount are visible to any caller with ReadCounterparty (same as the list
-    // itself); totalCreditBalance/highUsageCount are credit-derived and must stay behind
-    // ReadCounterpartyCredit — same field-gating convention as CounterpartyCreditResolver above.
-    // Computing them via a plain SQL aggregate here (instead of the Counterparty.creditLimit/
-    // creditBalance @ResolveField) would otherwise silently bypass that gate entirely: a caller
-    // without ReadCounterpartyCredit could read the company-wide credit total even though they
-    // can't read any single customer's credit fields. Caught by
-    // counterparty.access-scope.test.ts's permission test, not by any type-level check.
+    // Computing credit totals via plain SQL aggregate would bypass the ReadCounterpartyCredit gate.
+    // Keep totalCreditBalance/highUsageCount behind ReadCounterpartyCredit, as in the field resolver.
     @Query()
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
     async counterpartySummary(@Ctx() ctx: RequestContext): Promise<{
@@ -158,10 +139,7 @@ export class CounterpartyResolver {
         };
     }
 
-    // Membership in this list is itself credit-derived information ("this named customer is at
-    // high credit risk") even without exposing the numeric creditLimit/creditBalance fields — so
-    // the whole query is gated, not just those two fields, same "hide, don't leak" reasoning as
-    // findOneVisible.
+    // Membership in this list leaks credit risk even without the numeric fields, so gate the whole query.
     @Query()
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
     async highUsageCounterparties(

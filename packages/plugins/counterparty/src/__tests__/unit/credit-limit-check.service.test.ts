@@ -4,9 +4,8 @@ import { CreditLimitCheckService } from '../../credit-limit-check.service';
 import { Counterparty } from '../../entities/counterparty.entity';
 import { Contract } from '../../entities/contract.entity';
 
-// Pure decision-function coverage (issue #50's "facility + sublimits" model) — no
-// RequestContext/DB needed, see decide()'s own doc comment. check()'s thin DB-loading wrapper is
-// covered by the ContractStreamHandler/ContractService integration tests instead.
+// Tests the pure decide() function directly, so no RequestContext or DB is needed.
+// check()'s DB wrapper is covered by ContractStreamHandler/ContractService integration tests.
 describe('CreditLimitCheckService.decide', () => {
     const service = new CreditLimitCheckService(null as never, null as never);
 

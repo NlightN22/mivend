@@ -36,12 +36,7 @@ interface CreditTermPayload {
     justification: string;
 }
 
-// Manager initiates; a department head may approve within their own configured limit
-// (a single-step chain, requestType "creditTermApproval") or, once the requested extension
-// exceeds it, the request instead goes through security review then the general director
-// (a two-step chain, requestType "creditTermApprovalEscalated") — two different
-// WorkflowDefinition rows selected by CreditTermGateService, not a branch inside one chain.
-// See docs/access-control.md layer 5.
+// Two separate WorkflowDefinition rows, chosen by CreditTermGateService; not one branching chain.
 @Injectable()
 export class CreditTermService {
     constructor(
@@ -97,9 +92,8 @@ export class CreditTermService {
         );
     }
 
-    // Composes the generic engine with the counterparty domain effect — same pattern as
-    // PriceAdjustmentService/DiscountGrantService in plugin-price-entry. The engine itself
-    // never learns what "creditTermApproval(Escalated)" means.
+    // The engine stays domain-agnostic: this service composes the counterparty effect on top of it.
+    // Keep requestType names out of the engine; they are interpreted only here.
     async decideAndApply(
         ctx: RequestContext,
         requestId: ID,

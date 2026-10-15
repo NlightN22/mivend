@@ -101,9 +101,8 @@ describe('CounterpartyService', () => {
     });
 
     describe('upsertActiveState', () => {
-        // Issue #104: partial-create from the `counterparty` Kafka stream — creditLimit/
-        // paymentDelayDays/priceType/branchId must never be fabricated here, same as #88's
-        // organization precedent. creditBalance lives on its own stream — see updateCreditBalance.
+        // Partial create from the counterparty stream: creditLimit, paymentDelayDays, priceType, branchId
+        // must never be fabricated here; creditBalance comes on its own stream (updateCreditBalance).
         it('creates a partial row when no counterparty exists for that erpId, never fabricating REST-only fields', async () => {
             mockRepo.findOne.mockResolvedValue(null);
             mockRepo.create.mockImplementation((input: unknown) => input);
@@ -136,10 +135,7 @@ describe('CounterpartyService', () => {
             );
         });
 
-        // Issue #104 follow-up, verified live against @nlightn22/event-contracts@0.39.0
-        // (search-platform#92/#118): inn/erpGroupLabel/departmentId are real fields on this
-        // stream today — a stale earlier read of the issue's own comments had wrongly treated
-        // them as unavailable.
+        // inn, erpGroupLabel and departmentId are real counterparty-stream fields; do not treat as absent.
         it('creates a partial row with inn/erpGroupLabel/departmentId when the payload carries them', async () => {
             mockRepo.findOne.mockResolvedValue(null);
             mockRepo.create.mockImplementation((input: unknown) => input);
@@ -375,9 +371,8 @@ describe('CounterpartyService', () => {
             expect(mockRepo.save).not.toHaveBeenCalled();
         });
 
-        // Issue #109 unblocked this — assignedManagerId is now an already-resolved Administrator
-        // id passed in by the caller (CounterpartyStreamHandler), not something this method
-        // resolves itself.
+        // assignedManagerId is an already-resolved Administrator id from the caller;
+        // do not resolve it again here.
         it('applies an already-resolved assignedManagerId on an existing row', async () => {
             const entity = {
                 id: '1',
@@ -398,9 +393,8 @@ describe('CounterpartyService', () => {
             );
         });
 
-        // `undefined` (the caller found no manager assigned at all — see
-        // CounterpartyStreamHandler's own fallback logic) must leave an existing REST/portal-
-        // assigned manager untouched, never clear it to null.
+        // undefined means the caller found no manager: keep an existing REST/portal-assigned manager
+        // untouched, never write null over it.
         it('leaves assignedManagerId untouched when omitted from fields', async () => {
             const entity = {
                 id: '1',
@@ -469,9 +463,8 @@ describe('CounterpartyService', () => {
             return qb;
         }
 
-        // mivend.audit.common (2026-09-20): called from AdministratorLinkedListener once an
-        // erpId links — resolves every Counterparty left with assignedManagerId:null because its
-        // `counterparty` event was processed while that erpId was still unlinked.
+        // Backfills Counterparties left with null assignedManagerId because their counterparty event
+        // was processed before this erpId was linked.
         it('updates only rows matching managerErpId with assignedManagerId still null', async () => {
             const qb = mockUpdateQueryBuilder(2);
             mockConnection.getRepository.mockReturnValueOnce({
@@ -540,12 +533,8 @@ describe('CounterpartyService', () => {
             );
         });
 
-        // departmentId (ERP org data) is pure display information, never an access-scope gate —
-        // see docs/access-control.md's "Branch vs Department" section. branchId IS the real gate
-        // for "department"-kind scope (security-first correction, 2026-09-20 round 3) — a
-        // branch-scoped manager must never see a Counterparty that isn't theirs, including one
-        // with no branchId assigned yet (deny-by-default: `c.branchId = :scopeBranch` has no
-        // `OR IS NULL` carve-out, unlike Order/ProformaInvoice).
+        // departmentId is display-only, never an access gate (see docs/access-control.md).
+        // branchId gates department scope; null branchId is denied, unlike Order (no OR IS NULL).
         it('filters by branchId only for "department" scope, ignoring departmentId entirely', async () => {
             const qb = mockQueryBuilder();
             (

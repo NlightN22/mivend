@@ -5,10 +5,8 @@ import { AdministratorLinkedEvent } from '@mivend/plugin-access-control';
 import { AdministratorLinkedListener } from '../../administrator-linked.listener';
 import type { CounterpartyService } from '../../counterparty.service';
 
-// mivend.audit.common (2026-09-20): the missing revisit for a Counterparty left with
-// assignedManagerId:null while its manager's erpId was still unlinked (see
-// CounterpartyStreamHandler.resolveAssignedManagerId's "known, not a race" branch) — this
-// listener is what backfills it once the link actually happens.
+// Backfills Counterparties saved with assignedManagerId null while the manager's erpId was unlinked
+// (the stream handler treats that as expected and never revisits them)
 describe('AdministratorLinkedListener', () => {
     const ctx = {} as RequestContext;
 

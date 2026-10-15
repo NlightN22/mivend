@@ -7,11 +7,8 @@ import { CounterpartyService } from './counterparty.service';
 
 const loggerCtx = 'AdministratorLinkedListener';
 
-// mivend.audit.common (2026-09-20): a Counterparty whose `counterparty` event arrived while its
-// manager's erpId was still `unlinked` gets saved with assignedManagerId=null and no retry (see
-// CounterpartyStreamHandler.resolveAssignedManagerId) — nothing else would ever revisit it once
-// that erpId finally links, unless ERP happens to send another counterparty update. This listener
-// is that missing revisit, triggered the moment the link actually happens.
+// Counterparties saved before the manager's erpId links get no retry, so nothing else revisits them;
+// This listener is the only revisit, fired when the erpId link happens.
 @Injectable()
 export class AdministratorLinkedListener implements OnApplicationBootstrap {
     constructor(

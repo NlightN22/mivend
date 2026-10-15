@@ -78,11 +78,8 @@ export class TradingPointService {
         private branchSettingsService: BranchSettingsService,
     ) {}
 
-    // Shared by updateDetails/setActive — resolves the owning Counterparty and asserts the
-    // caller's counterparty scope covers it (own/department/all, see
-    // AccessScopeService.assertCounterpartyWritable). Distinct from the customerAdd/Edit/
-    // Delete/Restore methods below, which are shop-API self-service and scoped by ownership
-    // (counterpartyId equality) rather than a staff role's visibility scope.
+    // Staff role visibility scope is enforced here, not ownership; customer* shop-API methods differ.
+    //
     private async assertStaffCanEdit(
         ctx: RequestContext,
         tradingPoint: TradingPoint,
@@ -94,11 +91,8 @@ export class TradingPointService {
         await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);
     }
 
-    // Staff-initiated patch (manager portal), distinct from the ERP-sync `upsert` above: keyed
-    // by id (not erpId), partial (only provided fields change), and gated by the caller's
-    // counterparty visibility scope rather than Permission.UpdateCustomer — "if you can see the
-    // customer, you can fix their trading point data" (see docs/ai plan for this feature).
-    // Every successful patch is recorded via VersioningService for the History tab.
+    // Gated by counterparty visibility scope, not Permission.UpdateCustomer, by design.
+    // Each successful patch must be recorded via VersioningService; the History tab depends on it.
     async updateDetails(
         ctx: RequestContext,
         id: ID,
@@ -145,12 +139,8 @@ export class TradingPointService {
             record.servicingBranchId = patch.servicingBranchId;
         }
         if (patch.contacts !== undefined) {
-            // Compare actual contact values, not just counts — the edit form always submits
-            // the full contacts array (even when the caller only touched the address), so a
-            // presence check alone produced a spurious "contacts: 0 → 0" version entry on every
-            // save and an unnecessary delete+recreate. Logging real values (not counts) is also
-            // what makes it possible to tell who actually put in a wrong phone/name, not just
-            // that "something" about contacts changed.
+            // Compare contact values, not counts: the edit form always sends the full contacts array.
+            // A count or presence check logs spurious 'contacts: 0 -> 0' versions and needless delete+recreate.
             const before = record.contacts.map(c => ({
                 name: c.name,
                 phone: c.phone,
@@ -183,10 +173,8 @@ export class TradingPointService {
         return saved;
     }
 
-    // Sets both isActive and customerStatus together — mirrors customerRestore's existing
-    // precedent (line below) rather than exposing the two overlapping flags separately, so
-    // staff has one "Reactivate"/"Deactivate" action regardless of whether the trading point
-    // went inactive via ERP (isActive) or customer self-service (customerStatus).
+    // Sets isActive and customerStatus together, as customerRestore does, so one action covers both.
+    // Deactivation may come from ERP (isActive) or customer self-service (customerStatus).
     async setActive(ctx: RequestContext, id: ID, isActive: boolean): Promise<TradingPoint> {
         const repo = this.connection.getRepository(ctx, TradingPoint);
         const record = await repo.findOne({ where: { id: String(id) } });
@@ -233,9 +221,8 @@ export class TradingPointService {
             record.workingHours = payload.workingHours ?? null;
             record.isActive = payload.isActive;
             record.counterpartyId = counterpartyId;
-            // servicingBranchId is intentionally left untouched on re-sync — ERP doesn't know
-            // about this concept, and a staff override (chain account split across branches)
-            // must survive repeated ERP upserts of the same point.
+            // ERP has no notion of servicingBranchId; a staff override must survive repeated ERP upserts.
+            //
         } else {
             record = repo.create({
                 erpId: payload.erpId,
@@ -284,9 +271,8 @@ export class TradingPointService {
         return rows[0] ? { id: rows[0].id, branchId: rows[0].branchId ?? null } : null;
     }
 
-    // Issue #100: partial-create/update from the `point-of-sale` Kafka stream, distinct from
-    // upsert() above. Missing name/address on a brand-new erpId means "don't create yet", not an
-    // error — same rule as organization/counterparty's null-name tombstone.
+    // Missing name/address for a new erpId means 'don't create yet', not an error.
+    // Same rule as the organization/counterparty null-name tombstones.
     async upsertFromStream(
         ctx: RequestContext,
         erpId: string,

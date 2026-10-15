@@ -10,9 +10,8 @@ import {
 
 import { ContractService } from '../../contract.service';
 
-// Same "hand-rolled table matching production schema, real Postgres, no DB mocking" convention as
-// counterparty.access-scope.test.ts — VendureEntity's primary column needs a real bootstrap()ped
-// EntityIdStrategy, unavailable against a standalone DataSource.
+// Hand-rolled table mirrors the production schema on real Postgres (no DB mocking).
+// VendureEntity's primary column needs a bootstrapped EntityIdStrategy; a bare DataSource has none.
 @Entity('contract')
 class TestContract {
     @PrimaryGeneratedColumn('uuid')
@@ -122,9 +121,8 @@ describe('ContractService.upsertActiveState (real Postgres)', () => {
         expect(row?.controlledIndividually).toBe(false);
     });
 
-    // A deletion tombstone never carries a name — a brand-new erpId with no name must be
-    // deferred, never fabricated with a blank name (same convention as
-    // CounterpartyService.upsertActiveState).
+    // A deletion tombstone carries no name, so a new erpId with no name must be deferred,
+    // never created with a blank name (see CounterpartyService.upsertActiveState).
     it('defers creation (does not create) when a tombstone arrives for an erpId never seen before', async () => {
         await service.upsertActiveState(ctx, 'erp-contract-unseen', {
             ...baseFields,

@@ -27,12 +27,8 @@ export interface PortalAccessChangeResult {
     customerId: ID | null;
 }
 
-// Issue #120, Decisions 1/2/5/7. Note the fields this validates (phone/officialEmail) are
-// ERP-sourced (event-contracts@0.39.0's CounterpartyChanged via CounterpartyStreamHandler,
-// issue #131) — NOT manually entered on the detail page as #120's own Decision 6 originally
-// said. That decision is stale; #133 already flagged the same correction for its own read-only
-// display of these fields. Nothing here writes phone/officialEmail — only reads them as the
-// activation gate.
+// phone/officialEmail are sourced from the ERP (CounterpartyChanged), never entered here.
+// Read-only here: they only gate activation, and nothing in this code writes them.
 @Injectable()
 export class CounterpartyPortalAccessService {
     constructor(
@@ -45,9 +41,8 @@ export class CounterpartyPortalAccessService {
         const counterparty = await this.findCounterpartyOrFail(ctx, counterpartyId);
         await this.accessScopeService.assertCounterpartyWritable(ctx, counterparty);
 
-        // Raw SQL for the same reason CounterpartyService.getForCustomer/getLinkedCustomerId
-        // use it: a JSONB custom-field column, not a real TypeORM-mapped relation you can
-        // filter through QueryBuilder's dot-path syntax.
+        // Raw SQL: the link lives in a JSONB custom-field column, not a TypeORM-mapped relation.
+        // QueryBuilder dot-path filters can't traverse it.
         const rows: Array<{ id: ID }> = await this.connection.rawConnection.query(
             `SELECT cu.id AS id FROM customer cu
              WHERE cu."customFieldsCounterpartyid"::text = $1
@@ -89,9 +84,7 @@ export class CounterpartyPortalAccessService {
         return this.doDeactivate(ctx, customerId);
     }
 
-    // Decision "one real batch mutation (not N sequential calls)" — each change is applied and
-    // reported independently so one bad row (missing data, already linked, out of scope) never
-    // blocks the rest of the batch, matching the concept's per-row pending-state UI.
+    // Each change is applied and reported independently: one bad row must not block the batch.
     async applyBatch(
         ctx: RequestContext,
         changes: PortalAccessChangeInput[],
@@ -158,10 +151,8 @@ export class CounterpartyPortalAccessService {
             );
         }
 
-        // Password omitted on purpose (issue #120 Decision 7) — Customer.create publishes
-        // AccountRegistrationEvent instead of immediately verifying, so the counterparty sets
-        // their own password later via the storefront-side reset-link flow. No plaintext
-        // password is ever generated, seen, or set by staff.
+        // Password is omitted on purpose: Customer.create publishes AccountRegistrationEvent instead.
+        // The counterparty sets their own password later via the storefront reset-link flow.
         const result = await this.customerService.create(ctx, {
             emailAddress: counterparty.officialEmail,
             firstName: counterparty.fullName ?? '',
