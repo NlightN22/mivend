@@ -45,26 +45,20 @@ export class DiscountRegistryResolver {
         return this.discountRegistryService.findAllPaginated(ctx, args.options ?? {});
     }
 
-    // One-off, idempotent backfill — see DiscountRegistryService.backfill's comment. Reconstructs
-    // one registry entry per DiscountRule (status 'materialized' — portal-origin rules keep their
-    // real approvalRequestId, ERP-pushed ones get none) and one per discountGrantApproval
-    // ApprovalRequest still pending/rejected — approved requests are already covered by their
-    // materialized DiscountRule, so they're skipped here to avoid a duplicate entry.
+    // Idempotent: re-running is safe.
+    // Approved requests are skipped because their materialized DiscountRule already has an entry.
     @Transaction()
     @Mutation()
     @Allow(CustomPermission.ManageApprovalWorkflows.Permission)
     async backfillDiscountRegistry(@Ctx() ctx: RequestContext): Promise<number> {
-        // Issue #108: counterparty/contract-scoped rules carry no priceTypeCode and a nullable
-        // validTo — excluded here the same way they're excluded from findByPriceType, this
-        // registry is priceType-scoped only.
+        // Excluded: rules with no priceTypeCode (counterparty/contract-scoped) or a nullable validTo.
+        // This registry is priceType-scoped only, matching findByPriceType.
         const rules = (await this.connection.getRepository(ctx, DiscountRule).find()).filter(
             rule => rule.recipientType === null,
         );
 
-        // Fetched once, used both to recover justification/counterpartyIds for portal-origin
-        // materialized rules below (DiscountRule itself doesn't store either — only the
-        // originating request's payload does) and to build the pending/rejected entries further
-        // down.
+        // DiscountRule does not store justification or counterpartyIds; only the originating request payload does.
+        // Fetch once and reuse it for the pending/rejected entries below.
         const { items: requests } = await this.approvalRequestService.findByRequestType(
             ctx,
             DISCOUNT_GRANT_REQUEST_TYPE,
@@ -91,9 +85,7 @@ export class DiscountRegistryResolver {
                 discountRuleId: rule.id,
                 status: 'materialized' as const,
                 input: {
-                    // Promo-type rules (issue's promo-rule feature) have a null priceTypeCode —
-                    // same '' sentinel fallback as the pending/rejected branch below, since the
-                    // registry entry's own DB column is non-null.
+                    // Promo rules have a null priceTypeCode; fall back to '' because the registry column is non-null.
                     priceTypeCode: rule.priceTypeCode ?? '',
                     facetCode: rule.facetCode,
                     facetValueCode: rule.facetValueCode,

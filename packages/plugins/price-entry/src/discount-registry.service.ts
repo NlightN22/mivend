@@ -45,12 +45,8 @@ export interface DiscountRuleForRegistry {
     validTo: Date;
 }
 
-// Exported — DiscountGrantService.findForCounterparty (Customer Detail page's Discounts tab)
-// reuses this exact threshold for its own active/expiring-soon/expired computation, so the two
-// independent "is this discount expiring soon" answers (registry list, customer-facing list)
-// can't silently drift apart. No exact threshold has been decided yet (see
-// manager-portal-concept.md §8.2, "N не определено") — 14 days is a placeholder, same one the
-// Dashboard already uses.
+// Shared with DiscountGrantService.findForCounterparty so the two expiring-soon checks can't drift.
+// 14 days is a placeholder; the threshold is not decided yet (see manager-portal-concept.md §8.2).
 export const EXPIRING_SOON_DAYS = 14;
 
 // The only file in the codebase allowed to touch DiscountRegistryEntry directly (see the backend-plugin-rules skill's
@@ -94,12 +90,8 @@ export class DiscountRegistryService {
         await repo.save(entry);
     }
 
-    // Called by DiscountRuleService.upsert/bulkUpsert for rules that were never approval-driven
-    // (ERP-pushed via bulkUpsertDiscountRules / upsertDiscountRule) — these have no
-    // ApprovalRequest at all, so they go straight to 'materialized' with no approvalRequestId.
-    // Portal-origin rules (erpId `portal-<requestId>`) must NOT go through this path — their
-    // registry entry already exists from createFromRequest/markDecided; the caller is
-    // responsible for skipping those (see DiscountRuleService).
+    // No ApprovalRequest exists for ERP-pushed rules, so they go straight to 'materialized'.
+    // Callers must skip portal-origin rules (erpId portal-<requestId>); their entry already exists.
     async upsertFromRule(ctx: RequestContext, rule: DiscountRuleForRegistry): Promise<void> {
         const repo = this.connection.getRepository(ctx, DiscountRegistryEntry);
         let entry = await repo.findOne({ where: { discountRuleId: String(rule.id) } });
@@ -116,9 +108,7 @@ export class DiscountRegistryService {
         await repo.save(entry);
     }
 
-    // Called by DiscountGrantService.decideAndApply once a decision lands — approved entries
-    // transition to 'materialized' (validTo-driven active/expiring/expired classification takes
-    // over from here); rejected entries are a final state.
+    // Rejected entries are final; approved ones become 'materialized' and validTo drives their status.
     async markDecided(
         ctx: RequestContext,
         approvalRequestId: ID,
@@ -193,9 +183,7 @@ export class DiscountRegistryService {
         return totalItems;
     }
 
-    // One-off backfill for DiscountRule/ApprovalRequest rows that existed before this table did.
-    // Idempotent (upserts by approvalRequestId if set, else by discountRuleId) — safe to call
-    // more than once. See `backfillDiscountRegistry` admin mutation.
+    // Idempotent: upserts by approvalRequestId when set, otherwise by discountRuleId, so reruns are safe.
     async backfill(
         ctx: RequestContext,
         entries: Array<{

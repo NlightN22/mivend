@@ -72,10 +72,8 @@ export class PriceResolutionService {
         variantId: string,
         orderContext?: OrderPricingContext,
     ): Promise<ResolvedPrice> {
-        // When pricing a line on a real order, the order's own customer is authoritative — not
-        // the caller. This is what makes admin-created orders (manager portal /orders/new) price
-        // at the selected customer's rate instead of falling back to list price: ctx.activeUserId
-        // there is the administrator, who has no customer_price_type row of their own.
+        // Order's customer, not the caller, sets the price type: admin-created orders have an admin
+        // as activeUserId, who has no customer_price_type row.
         const priceTypeCode = orderContext?.order.customerId
             ? await this.priceEntryService.getPriceTypeCodeForCustomer(
                   ctx,
@@ -83,11 +81,8 @@ export class PriceResolutionService {
               )
             : await this.priceEntryService.getPriceTypeCodeForUser(ctx);
 
-        // A customer-scoped DiscountGrant (approval-workflow) must only ever discount the
-        // counterparties it was actually granted to — see DiscountRuleService.getBestPercent's
-        // grant-scope filter. Resolved the same way `priceTypeCode` is above: order.customerId
-        // is authoritative when pricing a real order line, ctx.activeUserId otherwise (catalog
-        // display).
+        // Customer-scoped grants must only discount their granted counterparties. order.customerId is
+        // authoritative on real order lines, as for priceTypeCode.
         const counterparty = await this.resolveCounterparty(ctx, orderContext);
         const counterpartyId = counterparty ? String(counterparty.id) : null;
 
@@ -102,11 +97,8 @@ export class PriceResolutionService {
             }
         }
 
-        // Issue #70: no logged-in/resolvable customer price (guest, no CustomerPriceType, or no
-        // PriceEntry for their price type) must fall back to the branch's default price type
-        // (BranchSettings.defaultPriceTypeId, issue #66) — NEVER a raw search-index price and
-        // NEVER zero. Only general (non-counterparty-scoped) discounts apply on top, so
-        // effectiveCounterpartyId stays null here.
+        // Fallback must be the branch default price type, never a raw search-index price or zero.
+        // Only general discounts apply here, so effectiveCounterpartyId stays null.
         if (effectivePriceTypeCode === null) {
             const branchId = counterparty?.branchId ?? undefined;
             const branchSettings = await this.branchSettingsService.resolveEffective(ctx, branchId);
@@ -157,12 +149,8 @@ export class PriceResolutionService {
             effectiveCounterpartyId,
         );
 
-        // Issue #107: per-product promo rules (PromoRuleChanged) are evaluated independently of
-        // the facet/priceType-threshold percent above and only apply with real order context —
-        // no order line quantities means no promo can ever qualify (catalog display never
-        // triggers a promo, same as the tier ladder's own order-context requirement elsewhere in
-        // this file). Issue #108's counterparty/contract-scoped rules share the same order-context
-        // requirement and the same per-order product-erpId quantity map, computed once here.
+        // Promo rules need real order context; with no line quantities no promo can qualify.
+        // Counterparty-scoped rules share this requirement and the same product quantity map.
         const productErpQuantities = orderContext
             ? await buildProductErpQuantities(
                   this.connection,
@@ -193,9 +181,7 @@ export class PriceResolutionService {
               )
             : null;
 
-        // Issue #108 (locked project-owner decision): max-wins across all three sources, never
-        // additive — same pattern already used between the facet/tier percent and #107's promo
-        // percent above.
+        // Sources combine by max, never additively: discounts from different rules must not stack.
         const bestPercent = [percent, promoPercent, counterpartyRulePercent]
             .filter((p): p is number => p !== null)
             .reduce((max, p) => Math.max(max, p), -Infinity);
@@ -207,10 +193,8 @@ export class PriceResolutionService {
         };
     }
 
-    // Resolved the same way `priceTypeCode` is above: order.customerId is authoritative when
-    // pricing a real order line, ctx.activeUserId otherwise (catalog display). Returns the full
-    // Counterparty (not just its id) so the fallback-default path (issue #70) can also read its
-    // branchId without a second lookup.
+    // order.customerId wins on real order lines; activeUserId is used for catalog display.
+    // Returns the full Counterparty so the fallback path reads branchId without a second lookup.
     private async resolveCounterparty(
         ctx: RequestContext,
         orderContext?: OrderPricingContext,
@@ -226,13 +210,8 @@ export class PriceResolutionService {
         return this.counterpartyService.getForCustomer(ctx, customerId);
     }
 
-    /**
-     * Sums, per facet value, both the weight (kg) and the spend (base price × quantity)
-     * across the variant being priced and every other line already in the order that
-     * shares a facet value with it. Skips the priced variant's own pre-existing line to
-     * avoid double-counting on `adjustOrderLine`, where `orderContext.quantity` is
-     * already the final post-change quantity.
-     */
+    // Skips the variant's own existing line: on adjustOrderLine orderContext.quantity is already
+    // the post-change value, so counting that line too would double-count it.
     private async buildAggregates(
         ctx: RequestContext,
         variantId: string,
@@ -256,9 +235,7 @@ export class PriceResolutionService {
             }
         };
 
-        // orderContext.quantity is the final quantity for this line (Vendure passes the
-        // post-change value for both addItemToOrder and adjustOrderLine) — skip this
-        // variant's own existing line below to avoid double-counting on adjustOrderLine.
+        // orderContext.quantity is already the post-change value for both addItemToOrder and adjustOrderLine.
         addContribution(
             thisFacetValues,
             thisWeight * orderContext.quantity,
@@ -282,9 +259,8 @@ export class PriceResolutionService {
         ctx: RequestContext,
         variantId: string,
     ): Promise<VariantFacetsAndWeight> {
-        // Facet values (e.g. category) are assigned at the Product level by erp-import,
-        // not the variant — merge both so a rule matches regardless of which level
-        // the facet was actually assigned to.
+        // erp-import assigns facet values at the Product level, not the variant, so merge both levels
+        // or a rule would miss facets assigned to either one.
         const variant = await this.connection.getRepository(ctx, ProductVariant).findOne({
             where: { id: variantId },
             relations: [
@@ -308,10 +284,7 @@ export class PriceResolutionService {
         };
     }
 
-    /**
-     * Ladder rungs available for a variant's facets — no order context, for catalog
-     * display. Informational only; never implies a price the customer hasn't earned.
-     */
+    // No order context here: rungs are informational and must not imply a price not yet earned.
     async resolveTiers(ctx: RequestContext, variantId: string): Promise<DiscountTierVM[]> {
         const priceTypeCode = await this.priceEntryService.getPriceTypeCodeForUser(ctx);
         if (!priceTypeCode) return [];
@@ -323,11 +296,7 @@ export class PriceResolutionService {
         return this.discountRuleService.getTiers(ctx, priceTypeCode, facetValues, new Date());
     }
 
-    /**
-     * Progress toward the next unreached tier for a variant's facet, given the current
-     * order context — reuses the same aggregates `resolve()` computes for pricing, just
-     * exposes them instead of discarding them after `getBestPercent()`.
-     */
+    // Uses the same aggregates resolve() computes for pricing, so progress matches the applied tier.
     async resolveTierProgress(
         ctx: RequestContext,
         variantId: string,

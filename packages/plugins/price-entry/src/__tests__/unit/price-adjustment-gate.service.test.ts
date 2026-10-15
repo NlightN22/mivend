@@ -36,10 +36,8 @@ describe('PriceAdjustmentGateService', () => {
         expect(await gate.evaluate(ctx, 'variant-1', 1)).toBe('requires-approval');
     });
 
-    // The gate's evaluation must never leak the protected threshold value to the caller —
-    // its return type is a plain decision string, structurally incapable of carrying the
-    // floor price. Assert this holds even for the boundary/no-floor cases above by checking
-    // the actual return values contain no trace of the mocked floor value (10000).
+    // Gate returns a plain decision string, so it structurally cannot leak the protected floor price.
+    // Tests check the actual return values, not just types, for the mocked floor (10000), including boundary cases.
     it('never returns the floor price value itself under any evaluated path', async () => {
         priceEntryService.getForVariant.mockResolvedValue(10000);
         const results = await Promise.all([

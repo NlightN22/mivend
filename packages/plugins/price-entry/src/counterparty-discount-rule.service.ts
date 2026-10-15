@@ -49,9 +49,7 @@ function tryParseBigInt(value: string): bigint | undefined {
     }
 }
 
-// Issue #108: counterparty/contract + optional product-scoped ERP discount rules
-// (DiscountRuleChanged) — split out of DiscountRuleService the same way #107's
-// PromoDiscountRuleService was, a different write/read shape sharing only the DiscountRule table.
+// Separate from DiscountRuleService: different write/read shape; shares only the DiscountRule table.
 @Injectable()
 export class CounterpartyDiscountRuleService {
     constructor(private connection: TransactionalConnection) {}
@@ -144,10 +142,8 @@ export class CounterpartyDiscountRuleService {
         return repo.save(record);
     }
 
-    // Tombstone (is_deleted=true) — deactivate by erpId only, never touch other fields, same
-    // convention ContractService.deactivateTombstone/PointOfSaleService use for their own streams.
-    // Cancellation always wins regardless of version; stores it for upsertCounterpartyRule's own
-    // reactivation guard above — see docs/ai/erp-streams-map.md.
+    // Tombstone: deactivate by erpId only; cancellation wins regardless of version.
+    // Stored so upsertCounterpartyRule's reactivation guard can see it.
     async deactivateTombstone(
         ctx: RequestContext,
         erpId: string,
@@ -183,9 +179,8 @@ export class CounterpartyDiscountRuleService {
         return qb.getMany();
     }
 
-    // Null with no order context, same invariant #107's promo rules use. byQuantity compares
-    // quantityByProductErpId (reused from promo-product-lookup.ts) for productErpId, or its sum
-    // across all products when the rule has none; byDocumentAmount always compares documentAmount.
+    // Returns null without order context (same invariant as promo rules).
+    // byQuantity sums quantityByProductErpId across all products when productErpId is unset.
     async getBestPercent(
         ctx: RequestContext,
         order: Order | undefined,

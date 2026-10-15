@@ -15,11 +15,8 @@ export class PriceAdjustmentResolver {
         private priceEntryService: PriceEntryService,
     ) {}
 
-    // Only the gate (PriceAdjustmentGateService) reads this for its own decision — this query
-    // is the one place a human (purchasing/leadership) can see the raw number, per
-    // manager-portal-concept.md §3.3 ("предельная цена ... видна только отделу закупок и
-    // руководству"). Root Query @Allow() is reliable (unlike @ResolveField(), see
-    // docs/ai/access-control-implementation-notes.md antipattern #2).
+    // The only place a human can see the raw limit price; the gate reads it for its own decision.
+    // Root Query @Allow() is reliable, unlike @ResolveField() (access-control antipattern #2).
     @Query()
     @Allow(CustomPermission.ReadFloorPrice.Permission)
     async floorPrice(

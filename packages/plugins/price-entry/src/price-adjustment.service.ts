@@ -34,11 +34,8 @@ interface PriceAdjustmentPayload {
     justification: string | null;
 }
 
-// Orchestrates the gate + approval-workflow + real order mutation for a one-off price
-// adjustment (docs/ai/manager-portal-concept.md §4.1 "priceAdjustmentApproval"). The generic
-// approval-workflow engine stays request-type-agnostic — it doesn't know about pricing;
-// this service is what composes the two layers, applying the price only once a request for
-// this specific requestType reaches "approved".
+// The generic approval engine is requestType-agnostic; this service adds the pricing effect.
+// The order is mutated only after this requestType reaches "approved".
 @Injectable()
 export class PriceAdjustmentService {
     constructor(
@@ -98,9 +95,8 @@ export class PriceAdjustmentService {
         return { decision, approvalRequestId: request.id };
     }
 
-    // Wraps ApprovalRequestService.decide() — the generic engine only tracks state, it never
-    // applies a business effect. Once (and only once) this specific requestType reaches
-    // "approved", the price is actually applied to the order line.
+    // decide() only tracks workflow state and never applies business effects, so this wrapper does.
+    // The price must be applied exactly once, and only on the transition to "approved".
     async decideAndApply(
         ctx: RequestContext,
         requestId: ID,

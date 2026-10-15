@@ -8,18 +8,13 @@ import { DiscountRegistryService } from './discount-registry.service';
 
 const loggerCtx = 'DiscountRulePlugin';
 
-// Portal-created rules (erpId `portal-<requestId>`) are approval-driven — their registry entry
-// already exists via DiscountGrantService.requestGrant/decideAndApply, so upsert()/bulkUpsert()
-// below must not also sync them via DiscountRegistryService.upsertFromRule (would create a
-// duplicate, approvalRequestId-less entry alongside the real one).
+// Portal-created rules get their registry entry from DiscountGrantService (approval flow).
+// upsert/bulkUpsert must skip upsertFromRule, or it creates a duplicate with no approvalRequestId.
 function isPortalOrigin(erpId: string): boolean {
     return erpId.startsWith('portal-');
 }
 
-// Issue #107: promo rules (PromoRuleChanged) carry no priceTypeCode at all — they are never
-// priceType-scoped, so they never belong in the priceType-scoped /discounts registry
-// (DiscountRegistryEntry.priceTypeCode is a required column). Same skip mechanism as
-// isPortalOrigin above, different reason.
+// Promo rules have no priceTypeCode and the registry column is required, so they are skipped.
 function isPromoRuleOrigin(rule: Pick<DiscountRule, 'triggerProductErpId'>): boolean {
     return rule.triggerProductErpId != null;
 }
@@ -45,9 +40,8 @@ export interface DiscountTierVM {
     percent: number;
     minWeightKg: number | null;
     minAmount: number | null;
-    // Not part of the GraphQL `DiscountTier` shape (resolvers only read the three
-    // fields above) — kept here so PriceResolutionService can match a tier back to the
-    // facet value it aggregates against, without a second query.
+    // Not in the GraphQL DiscountTier shape; kept so PriceResolutionService can map a tier to its facet
+    // value without a second query.
     facetCode: string;
     facetValueCode: string;
 }
@@ -73,10 +67,8 @@ export class DiscountRuleService {
         }
         const saved = await repo.save(record);
         if (!isPortalOrigin(saved.erpId) && !isPromoRuleOrigin(saved)) {
-            // DiscountRuleInput never sets validTo to null — this branch only ever sees a
-            // facet/priceType-threshold rule (isPromoRuleOrigin/recipientType both excluded
-            // above), so priceTypeCode/validTo are guaranteed non-null here despite the entity
-            // column's nullable type (issue #108 needs null only for its own trigger shape).
+            // DiscountRuleInput never sets validTo; this branch only sees facet/priceType-threshold rules,
+            // so priceTypeCode and validTo are non-null despite the nullable entity columns.
             await this.discountRegistryService.upsertFromRule(ctx, {
                 ...saved,
                 priceTypeCode: saved.priceTypeCode as string,
@@ -86,17 +78,8 @@ export class DiscountRuleService {
         return saved;
     }
 
-    // Discounts are scoped by price type, not by an individual customer (see DiscountRule —
-    // no customerId column). Used by the manager portal's Customers page ("Active discounts"
-    // count/list) via the customer's own priceType, and by DiscountGrantForm's renewal lookup.
-    // priceTypeCode omitted lists every discount rule across all price types, bounded at 200 —
-    // the /discounts registry itself no longer calls this unfiltered (see
-    // DiscountRegistryService.findAllPaginated), so the 200 cap only bounds this method's other,
-    // narrower callers now.
-    // Promo rules (issue #107, triggerProductErpId set) are excluded here — they carry no
-    // priceTypeCode at all and don't belong in a "rules for this price type"/"every facet-scoped
-    // rule" listing; the manager portal has no promo-rule display surface yet (deliberately out
-    // of scope for issue #107, see its own issue body).
+    // Promo rules (triggerProductErpId set) are excluded: they have no priceTypeCode to list under.
+    // Unfiltered calls (no priceTypeCode) are capped at 200; /discounts no longer calls them that way.
     async findByPriceType(
         ctx: RequestContext,
         priceTypeCode?: string,
@@ -106,9 +89,8 @@ export class DiscountRuleService {
         if (priceTypeCode) {
             return repo.find({ where: { priceTypeCode }, order: { validTo: 'DESC' } });
         }
-        // Issue #108: counterparty/contract-scoped rules (recipientType set) carry no
-        // triggerProductErpId either — excluded here the same way promo rules already are, same
-        // reasoning (this listing only shows facet/priceType-threshold rules).
+        // Counterparty/contract rules (recipientType set) are excluded like promo rules: this listing
+        // only shows facet/priceType-threshold rules.
         return repo
             .createQueryBuilder('dr')
             .where('dr.triggerProductErpId IS NULL')
@@ -141,17 +123,14 @@ export class DiscountRuleService {
             )
             .execute();
 
-        // `INSERT ... ON CONFLICT` doesn't return the affected rows in a driver-portable way
-        // through the query builder, so re-fetch by erpId to sync the registry — bulkUpsert is
-        // only called from erp-import batches (moderate size, not a hot path), so the extra
-        // query is cheap relative to correctness.
+        // INSERT ... ON CONFLICT does not return affected rows portably via the query builder, so re-fetch
+        // by erpId to sync the registry; the extra query is cheap at erp-import batch sizes.
         const nonPortalErpIds = entries.map(e => e.erpId).filter(erpId => !isPortalOrigin(erpId));
         if (nonPortalErpIds.length > 0) {
             const saved = await repo.find({ where: { erpId: In(nonPortalErpIds) } });
             for (const rule of saved) {
-                // bulkUpsert only ever writes facet/priceType-threshold rows (DiscountRuleInput
-                // has no recipientType field) — validTo is guaranteed non-null here, same
-                // reasoning as upsert() above.
+                // bulkUpsert only writes facet/priceType-threshold rows (no recipientType field), so validTo
+                // is guaranteed non-null, as in upsert().
                 await this.discountRegistryService.upsertFromRule(ctx, {
                     ...rule,
                     validTo: rule.validTo as Date,
@@ -163,15 +142,8 @@ export class DiscountRuleService {
         return entries.length;
     }
 
-    /**
-     * Returns the highest matching discount percent, or null if none match.
-     *
-     * `weightByFacet`/`amountByFacet` map `facetCode:valueCode` -> aggregated kg/money
-     * purchased for that facet value in the current order (both empty for catalog
-     * display, where quantity is unknown). A rule with `minWeightKg` or `minAmount` set
-     * only qualifies once that threshold is reached; flat rules (both null) qualify as
-     * soon as the facet matches. A rule never sets both metrics at once.
-     */
+    // Threshold rules qualify only once the order's aggregate reaches minWeightKg/minAmount;
+    // catalog display passes empty maps (quantity unknown), and a rule never sets both metrics.
     async getBestPercent(
         ctx: RequestContext,
         priceTypeCode: string,
@@ -210,15 +182,8 @@ export class DiscountRuleService {
         return Math.max(...scoped.map(r => r.percent));
     }
 
-    // A DiscountRule materialized from a counterparty-scoped DiscountGrant (see
-    // DiscountGrantService.decideAndApply) must only ever discount the counterparties it was
-    // actually granted to. Real incident: DiscountRule itself carries no counterparty column
-    // (it's priceType/facet-scoped ERP-style policy) — the DiscountGrant/counterparties join was
-    // materialized purely for display (dashboard/Customer Detail tab) and never consulted here,
-    // so a 99%-off grant made to one counterparty (e.g. a discount-grant-leak *display* test
-    // fixture) silently discounted every other customer sharing the same price type. Rules with
-    // no associated grant (plain ERP-sourced DiscountRule rows) or scopeType 'all' remain global,
-    // matching prior behavior exactly.
+    // DiscountRule has no counterparty column, so a grant-materialized rule must filter by the grant's
+    // counterparties; the grant join was display-only and once applied to every customer on the price type.
     private async filterByGrantScope(
         ctx: RequestContext,
         rules: DiscountRule[],
@@ -242,12 +207,7 @@ export class DiscountRuleService {
         });
     }
 
-    /**
-     * Returns the ladder rungs (rules with a threshold set) for a variant's facets,
-     * sorted ascending by threshold — for display only, no order context involved.
-     * Flat rules (both thresholds null) are excluded; they already surface via
-     * `compareAtPrice`/`customerPrice`, not the tier badge.
-     */
+    // Flat rules are excluded: they already show via compareAtPrice/customerPrice, not the tier badge.
     async getTiers(
         ctx: RequestContext,
         priceTypeCode: string,

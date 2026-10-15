@@ -2,9 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Shipment-time confirmed discount fact from the ERP (GrantedDiscountChanged, issue #101) — one
-// row per shipment document line. Read-only record: never feeds price resolution. See
-// docs/ai/erp-streams-map.md's "Order-time discount confirmation" section.
+// Shipment-time ERP fact, one row per shipment document line. Read-only.
+// Never feed this into price resolution.
 @Entity()
 export class GrantedDiscount extends VendureEntity {
     constructor(input?: DeepPartial<GrantedDiscount>) {

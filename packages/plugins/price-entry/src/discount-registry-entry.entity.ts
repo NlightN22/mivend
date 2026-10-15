@@ -4,28 +4,16 @@ import { Column, Entity, Index } from 'typeorm';
 
 export type DiscountRegistryStatus = 'pending' | 'rejected' | 'materialized';
 
-// CQRS-style read-model projection for the /discounts registry — one row per discount-grant
-// *attempt*, tracked through its whole lifecycle, instead of the page joining two differently-
-// shaped write-side sources (DiscountRule, whose rows only exist once approved, and
-// ApprovalRequest, whose business fields live inside a plain-text JSON payload) at read time.
-//
-// Kept in sync by DiscountRegistryService, called from the same two places that already mutate
-// the write-side state (DiscountGrantService.requestGrant/decideAndApply) — never written to
-// independently. DiscountRule remains the source of truth for pricing (PriceResolutionService
-// reads it directly, never this table) and DiscountGrant remains the source of truth for
-// "which grants apply to counterparty X" (Customer Detail's Discounts tab) — this table exists
-// purely to make the admin list page fast and simple to query, not to replace either.
+// Read model for /discounts list only; synced by DiscountRegistryService, never written alone.
+// Not a source of truth: pricing reads DiscountRule, grant applicability reads DiscountGrant.
 @Entity()
 export class DiscountRegistryEntry extends VendureEntity {
     constructor(input?: DeepPartial<DiscountRegistryEntry>) {
         super(input);
     }
 
-    // Stable for the entry's whole lifecycle — the "View request" link target never changes,
-    // even after the request is approved and discountRuleId gets filled in. Null for
-    // DiscountRule rows that were never approval-driven (ERP-pushed via bulkUpsertDiscountRules
-    // / upsertDiscountRule) — those have no request, no "View request" link, and start life
-    // already 'materialized'. At least one of approvalRequestId/discountRuleId is always set.
+    // Stable for the entry's lifecycle: the request link never changes after approval.
+    // Null for ERP-pushed rules (no request, start 'materialized'); one id is always set.
     @Index()
     @Column({ type: 'varchar', nullable: true })
     approvalRequestId!: string | null;
@@ -36,10 +24,8 @@ export class DiscountRegistryEntry extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     discountRuleId!: string | null;
 
-    // 'active' / 'expiring-soon' / 'expired' are deliberately NOT stored here — those are
-    // derived from validTo at query time (same threshold logic as before), so they never need
-    // a background job to stay correct as time passes. This column only tracks the part of the
-    // lifecycle that's driven by real events (a decision being made).
+    // active/expiring-soon/expired are derived from validTo at query time, not stored.
+    // So no background job is needed to keep them correct as time passes.
     @Column({ type: 'varchar' })
     status!: DiscountRegistryStatus;
 
@@ -64,19 +50,13 @@ export class DiscountRegistryEntry extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     justification!: string | null;
 
-    // Denormalized copy of the request/grant's counterpartyIds — the source of truth for WHO
-    // this applies to remains DiscountGrant.counterparties (materialized) / the ApprovalRequest
-    // payload (pending/rejected); this copy exists so the registry list can resolve display
-    // names without a second query per row. `null` = company-wide.
+    // Denormalized copy of counterpartyIds so the list can resolve names without a per-row query.
+    // Source of truth stays in DiscountGrant / ApprovalRequest payload; null means company-wide.
     @Column({ type: 'simple-json', nullable: true })
     counterpartyIds!: string[] | null;
 
-    // Denormalized, search-only — a snapshot of counterparty legal/short names at write time,
-    // used purely so `search` can match by customer name via a plain ILIKE on this table,
-    // without joining out to Counterparty. Accepted staleness: if a counterparty is renamed
-    // later, old registry entries keep matching their old name until next written — the same
-    // "read model can lag the write model" tradeoff CQRS read models always make. The *display*
-    // name shown in the UI is always resolved live (via namesById), never read from this column.
+    // Search-only snapshot of names, so search can ILIKE this table without joining Counterparty.
+    // Accepted staleness after renames; UI display names are always resolved live, never from here.
     @Column({ type: 'varchar', nullable: true })
     customerNamesForSearch!: string | null;
 }

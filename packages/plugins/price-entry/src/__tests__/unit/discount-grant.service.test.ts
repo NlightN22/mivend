@@ -13,9 +13,9 @@ function mockCtx(permissions: string[]): RequestContext {
     } as unknown as RequestContext;
 }
 
-// Deliberately un-annotated (see payment-visibility.service.test.ts's identical comment) — an
-// explicit annotation defeats TS's inference of each mock's real call signature.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
+// Left un-annotated on purpose: an explicit return type would defeat TS inference of the mock's
+// real call signature.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest Mock<> return type is awkward to spell out
 function mockQueryBuilder(getManyResult: unknown[] = [], count = 0) {
     const qb = {
         leftJoinAndSelect: vi.fn(),
@@ -135,9 +135,8 @@ describe('DiscountGrantService', () => {
 
         it("stores counterpartyIds as strings even if Vendure's ID scalar coerced them to numbers", async () => {
             const ctx = mockCtx(['RequestDiscountGrantApproval']);
-            // Vendure's ID scalar coerces `[ID!]` GraphQL input to the entity id strategy's
-            // native type (a number, under the default auto-increment strategy) — this simulates
-            // what actually arrives at the resolver, not what the TS type declares.
+            // Vendure's ID scalar coerces [ID!] input to the id strategy's native type (number by default);
+            // this mimics what the resolver receives, not what the TS type declares.
             await service.requestGrant(ctx, {
                 ...validInput,
                 counterpartyIds: [1, 2] as unknown as string[],
@@ -250,14 +249,8 @@ describe('DiscountGrantService', () => {
     });
 
     describe('findForCounterparty', () => {
-        // Test plan (test-design skill): changed behavior is real server-side pagination +
-        // search/status filtering on a list previously (wrongly) treated as bounded — see
-        // findForCounterparty's own doc comment. Invariant under test: the SQL-side status
-        // filter and computeGrantStatus()'s per-row label must agree (same `now`); scope
-        // (company-wide vs counterparty) logic is unchanged and already covered by existing
-        // decideAndApply tests above, not re-tested here. No CQRS/inbox/outbox/idempotency risk
-        // applies — a plain paginated read, same level (unit, mocked query builder) as
-        // PaymentVisibilityService/ProformaInvoiceVisibilityService's own tests.
+        // The SQL-side status filter and computeGrantStatus()'s row label must agree, so both use the
+        // same `now`.
         const ctx = mockCtx([]);
 
         it('applies search as a substring match against the grant number', async () => {

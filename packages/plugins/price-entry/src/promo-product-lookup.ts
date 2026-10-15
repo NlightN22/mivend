@@ -1,9 +1,7 @@
 import { Order, ProductVariant, RequestContext, TransactionalConnection } from '@vendure/core';
 
-// Issue #107: split out of PriceResolutionService (which was already over AGENTS.md's 200-300
-// line limit) — this is a self-contained lookup (ERP product erpId + per-order quantities by
-// erpId) that PromoDiscountRuleService.getBestPromoPercent needs, unrelated to that file's own
-// facet/weight/amount aggregation logic.
+// Separate from PriceResolutionService to respect AGENTS.md file size limits;
+// the erpId lookup is unrelated to its facet/weight/amount aggregation.
 
 export async function getProductErpId(
     connection: TransactionalConnection,
@@ -17,10 +15,8 @@ export async function getProductErpId(
     return variant?.product?.customFields?.externalId ?? '';
 }
 
-// Sums order-line quantities per product erpId — a promo rule's triggerQuantity is checked
-// against the whole order, not the single line being priced (buy N of product A anywhere in the
-// cart, get product B's line discounted). Mirrors PriceResolutionService.buildAggregates' own
-// "this line's final post-change quantity, plus every other existing line" shape.
+// triggerQuantity counts across the whole order, not just the line being priced:
+// the quantity of this line after the change, plus all other lines for the same erpId.
 export async function buildProductErpQuantities(
     connection: TransactionalConnection,
     ctx: RequestContext,

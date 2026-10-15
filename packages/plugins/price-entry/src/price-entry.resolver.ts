@@ -54,9 +54,7 @@ export class OrderLineDiscountResolver {
         private connection: TransactionalConnection,
     ) {}
 
-    // Re-exposes what CustomerPriceCalculationStrategy already computed for this line's
-    // unitPrice — for display only, so the cart can show whether (and how much of) a
-    // discount, including a weight/amount tier, is currently active.
+    // Display only: unitPrice already has the discount applied; do not re-derive it here.
     @ResolveField()
     async compareAtPrice(
         @Ctx() ctx: RequestContext,
@@ -104,9 +102,8 @@ export class PriceEntryAdminResolver {
         return this.priceEntryService.listPriceTypeCodes(ctx);
     }
 
-    // A caller with only ReadCatalog must not be able to read the floor price by simply
-    // passing priceTypeCode: FLOOR_PRICE_TYPE_CODE — see docs/access-control.md §3.3 and
-    // PriceAdjustmentResolver.floorPrice, which this mirrors for the batch case.
+    // Blocks ReadCatalog callers from reading floor prices via FLOOR_PRICE_TYPE_CODE.
+    // Must mirror PriceAdjustmentResolver.floorPrice; see docs/access-control.md §3.3.
     @Query()
     @Allow(Permission.ReadCatalog, CustomPermission.ReadFloorPrice.Permission)
     async priceEntriesForVariants(
@@ -152,10 +149,7 @@ export class PriceEntryAdminResolver {
 export class DiscountRuleAdminResolver {
     constructor(private discountRuleService: DiscountRuleService) {}
 
-    // Manager portal Customers page ("Active discounts") and future /discounts — see
-    // DiscountRuleService.findByPriceType. Gated on ReadCatalog (same as catalog browsing),
-    // not UpdateCatalog — every role that can see a customer's price type should be able to
-    // see which discounts apply to it.
+    // ReadCatalog, not UpdateCatalog: anyone who can see a customer's price type can see its discounts.
     @Query()
     @Allow(Permission.ReadCatalog)
     async discountRules(

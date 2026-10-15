@@ -82,11 +82,8 @@ export class PriceEntryService {
         return map;
     }
 
-    // Price types are ERP master data (see AGENTS.md — "no hardcoded business enums") with no
-    // dedicated list query until now — needed by the manager portal's "New discount grant" form
-    // (docs/ai/manager-portal-pages/09-discounts.md) so its price-type select isn't limited by
-    // the caller's own counterparty scope (which would leave a Manager with no assigned clients
-    // unable to pick any price type at all).
+    // Deliberately not scoped by the caller's counterparties: a Manager with no assigned clients
+    // would otherwise get an empty price-type select in the discount grant form.
     async listPriceTypeCodes(_ctx: RequestContext): Promise<string[]> {
         const rows = await this.connection.rawConnection.query(
             `SELECT code FROM price_type ORDER BY code`,
@@ -110,11 +107,8 @@ export class PriceEntryService {
         return rows?.[0]?.code ?? null;
     }
 
-    // Used when an order's customer is known but isn't the caller (an administrator building
-    // an order on a customer's behalf via the manager portal — see docs/ai/manager-portal-pages/
-    // 02b-order-create.md). ctx.activeUserId is the ADMIN's user in that case, not the
-    // customer's, so getPriceTypeCodeForUser would resolve nothing and silently fall back to
-    // list price. See PriceResolutionService.resolve().
+    // ctx.activeUserId is the admin here, not the customer, so getPriceTypeCodeForUser would
+    // resolve nothing and silently fall back to list price.
     async getPriceTypeCodeForCustomer(
         ctx: RequestContext,
         customerId: string,
@@ -131,9 +125,8 @@ export class PriceEntryService {
         return rows?.[0]?.code ?? null;
     }
 
-    // Used by PriceResolutionService's fallback-default path (issue #70) — BranchSettings.
-    // defaultPriceTypeId stores a PriceType id, not a code, so the price-entry lookups above
-    // (keyed by code) need this one extra hop.
+    // BranchSettings.defaultPriceTypeId stores a PriceType id, not a code, while the price-entry
+    // lookups above are keyed by code, so this needs an extra resolution step.
     async getPriceTypeCodeById(_ctx: RequestContext, priceTypeId: string): Promise<string | null> {
         const rows = await this.connection.rawConnection.query(
             `SELECT code FROM price_type WHERE id::varchar = $1 LIMIT 1`,

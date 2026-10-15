@@ -23,9 +23,8 @@ import { DiscountGrant, DiscountGrantScopeType } from './discount-grant.entity';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountRegistryService, EXPIRING_SOON_DAYS } from './discount-registry.service';
 
-// Distinct from DiscountRegistryFilterStatus (discount-registry.service.ts) — this endpoint only
-// ever returns already-materialized DiscountGrant rows, never a pending/rejected approval
-// request, so there's no 'pending'/'rejected' state to filter by here.
+// Returns only materialized DiscountGrant rows, never pending or rejected approval requests.
+// So there is no pending/rejected state to filter by (unlike DiscountRegistryFilterStatus).
 export type DiscountGrantFilterStatus = 'active' | 'expiring-soon' | 'expired';
 
 export interface DiscountGrantForCustomer {
@@ -36,11 +35,8 @@ export interface DiscountGrantForCustomer {
     percent: number;
     validTo: Date;
     scopeType: DiscountGrantScopeType;
-    // Computed server-side (see findForCounterparty) so the manager portal never re-derives this
-    // client-side against its own clock — a real bug class this avoids: a client-computed
-    // "expiring soon" using the browser's local time can disagree with what the server-side
-    // status filter (below) actually matched against, showing a badge that contradicts the
-    // active view/filter chip it's sitting under.
+    // Computed server-side so the client never re-derives it with its own clock.
+    // Browser time can disagree with the SQL status filter, mismatching the active filter chip.
     status: DiscountGrantFilterStatus;
 }
 
@@ -54,12 +50,8 @@ export interface DiscountGrantsForCounterpartyOptions {
 
 const DISCOUNT_GRANT_REQUEST_TYPE = 'discountGrantApproval';
 
-// Single source of truth for "is this discount grant active / expiring soon / expired" — mirrors
-// DiscountRegistryService.findAllPaginated's identical SQL-side computation, kept in sync via the
-// shared EXPIRING_SOON_DAYS constant. Callers must pass the same `now` used for any SQL-side
-// status filter in the same request (see findForCounterparty) rather than letting this default
-// to a fresh `Date.now()`, so a grant can't land on the wrong side of the threshold between the
-// filter query and the label attached to its own row.
+// Mirrors findAllPaginated's SQL status logic; keep EXPIRING_SOON_DAYS shared.
+// Pass the same `now` as the SQL filter; a default Date.now() can flip the status between them.
 function computeGrantStatus(validTo: Date, now: Date = new Date()): DiscountGrantFilterStatus {
     if (validTo.getTime() < now.getTime()) return 'expired';
     const soon = now.getTime() + EXPIRING_SOON_DAYS * 24 * 60 * 60 * 1000;
@@ -80,9 +72,8 @@ export interface DiscountGrantInput {
     // Links a renewal to the DiscountRule it extends — the approver sees the full renewal
     // chain via this field, per docs/ai/manager-portal-concept.md §4.1.1.
     supersedesDiscountRuleId?: string | null;
-    // Omitted/empty means the grant applies company-wide (DiscountGrant.scopeType = 'all');
-    // provided means it applies only to these counterparties (scopeType = 'customer'), all
-    // sharing the same validTo — see DiscountGrant entity doc comment.
+    // Omitted/empty means company-wide (scopeType 'all'); otherwise scopeType 'customer'.
+    // All scoped counterparties share the same validTo.
     counterpartyIds?: string[] | null;
 }
 
@@ -90,9 +81,8 @@ interface DiscountGrantPayload extends DiscountGrantInput {
     requestedByJustification: string;
 }
 
-// Unlike priceAdjustmentApproval (gated by a floor-price threshold), a discount *grant* is
-// always a standing policy change — it always requires approval, there is no "apply
-// directly within limit" tier here. See docs/ai/manager-portal-concept.md §4.1, item 2.
+// Unlike priceAdjustmentApproval, a discount grant always needs approval; no direct-apply tier.
+// See docs/ai/manager-portal-concept.md §4.1, item 2.
 @Injectable()
 export class DiscountGrantService {
     constructor(
@@ -107,19 +97,14 @@ export class DiscountGrantService {
         if (!ctx.userHasPermissions([CustomPermission.RequestDiscountGrantApproval.Permission])) {
             throw new ForbiddenError();
         }
-        // §4.1.1 rule #2: a renewal must carry its own justification — pre-filled from the
-        // prior rule is fine, but it cannot be empty. Deliberately NOT attempting to detect
-        // "unchanged from last time" algorithmically (the concept doc explicitly rejects that
-        // as unreliable for free text) — the approver reviewing old vs. new text is the
-        // control, not code.
+        // A renewal must carry its own non-empty justification; pre-filling from the prior one is fine.
+        // No algorithmic 'unchanged' check (unreliable for free text); the approver's review is the control.
         if (!input.justification || input.justification.trim().length === 0) {
             throw new UserInputError('justification is required to request a discount grant');
         }
 
-        // Vendure's ID scalar coerces GraphQL `[ID!]` input to the entity id strategy's native
-        // type (a number, under the default auto-increment strategy) — stringified explicitly
-        // so it always matches what `counterparties()` returns (real string ids). See the backend-plugin-rules skill's
-        // Vendure-specific gotchas.
+        // Vendure's ID scalar coerces [ID!] input to a number under the default id strategy.
+        // Stringify explicitly so it matches the string ids returned by counterparties().
         const counterpartyIds = input.counterpartyIds?.map(String) ?? null;
 
         const payload: DiscountGrantPayload = {
@@ -153,10 +138,8 @@ export class DiscountGrantService {
         return request;
     }
 
-    // Once approved, materializes the DiscountRule (the price-type/facet policy) and a
-    // DiscountGrant (the customer-facing record the dashboard's "expiring soon" banner reads) —
-    // the generic approval-workflow engine never knows this requestType means "create these",
-    // same composition pattern as PriceAdjustmentService.decideAndApply().
+    // The generic approval engine doesn't know this requestType creates rules/grants.
+    // Same composition pattern as PriceAdjustmentService.decideAndApply().
     async decideAndApply(
         ctx: RequestContext,
         requestId: ID,
@@ -212,16 +195,8 @@ export class DiscountGrantService {
         return request;
     }
 
-    // Powers the Customer Detail page's Discounts tab — a customer must only see grants that
-    // actually apply to them: company-wide (scopeType 'all') or explicitly scoped to their
-    // counterparty id. Without this filter, the tab previously showed every DiscountRule
-    // matching the customer's price type, including grants scoped to a *different* customer.
-    //
-    // Real, server-side paginated + filtered (the backend-plugin-rules skill's "Pagination" rule) — this list is NOT
-    // genuinely bounded despite an earlier comment here claiming otherwise: nothing ever removes
-    // an expired grant, so it accumulates over the customer's whole lifetime the same way orders/
-    // proforma invoices/payments do, one row per approved renewal. `search`/`status` mirror
-    // PaymentVisibilityService/ProformaInvoiceVisibilityService's shape.
+    // Must filter to grants applying to this customer: scopeType 'all' or matching counterparty id.
+    // Server-side paginated: expired grants are never deleted, so the list grows unbounded.
     async findForCounterparty(
         ctx: RequestContext,
         counterpartyId: ID,
@@ -229,9 +204,8 @@ export class DiscountGrantService {
     ): Promise<PaginatedList<DiscountGrantForCustomer>> {
         const take = options.take ?? 50;
         const skip = options.skip ?? 0;
-        // One `now` for the whole call — reused by both the SQL status filter below and
-        // computeGrantStatus() per returned row, so a grant can never fall on the wrong side of
-        // the threshold between the filter query and the label attached to its own row.
+        // Reuse one `now` for both the SQL status filter and computeGrantStatus() per row.
+        // Otherwise a grant can flip sides of the threshold between the filter query and its label.
         const now = new Date();
 
         const qb = this.connection
@@ -263,11 +237,8 @@ export class DiscountGrantService {
             }
         }
 
-        // No row-multiplication risk from the counterparty left-join here worth guarding against
-        // with a DISTINCT count: a company-wide grant carries no attached counterparties (the
-        // join preserves it as a single NULL-counterparty row), and the WHERE above narrows a
-        // customer-scoped grant down to at most the one row matching this specific
-        // counterpartyId — plain getCount() is accurate either way.
+        // Plain getCount() is safe: the counterparty left-join never multiplies rows here.
+        // Company-wide grants join as one NULL row; the WHERE narrows scoped grants to one counterparty.
         const totalItems = await qb.getCount();
 
         const grants = await qb
@@ -304,10 +275,8 @@ export class DiscountGrantService {
         return { items, totalItems };
     }
 
-    // Feeds the manager portal dashboard's "discount grants expiring soon" banner — only
-    // customer-scoped grants are meaningful there (a company-wide grant expiring isn't
-    // "renewal review for a specific customer", it's a catalog-wide policy change, already
-    // visible on /discounts).
+    // Only customer-scoped grants: a company-wide expiry is a catalog-wide policy change.
+    // Those are already visible on /discounts.
     async findExpiringSoon(ctx: RequestContext, withinDays: number): Promise<DiscountGrant[]> {
         const now = new Date();
         const horizon = new Date(now.getTime() + withinDays * 24 * 60 * 60 * 1000);
