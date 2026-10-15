@@ -5,16 +5,17 @@ import { layers } from '../../tokens/layers';
 
 const SRC = resolve(__dirname, '../..');
 const PACKAGES = resolve(SRC, '../..');
+const SKIP_DIRS = new Set(['node_modules', '__tests__', 'generated']);
 
 function kebab(name: string): string {
     return name.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`);
 }
 
-function vueFiles(dir: string): string[] {
+function styleFiles(dir: string): string[] {
     return readdirSync(dir).flatMap(entry => {
         const path = join(dir, entry);
-        if (statSync(path).isDirectory()) return entry === 'node_modules' ? [] : vueFiles(path);
-        return path.endsWith('.vue') ? [path] : [];
+        if (statSync(path).isDirectory()) return SKIP_DIRS.has(entry) ? [] : styleFiles(path);
+        return /\.(vue|ts|css)$/.test(path) && !path.endsWith('tokens/layers.ts') ? [path] : [];
     });
 }
 
@@ -32,9 +33,13 @@ describe('layer tokens', () => {
     it('no component in either portal or the ui-kit uses a raw page-level z-index', () => {
         const dirs = ['ui-kit/src', 'storefront/src', 'manager/src'].map(d => join(PACKAGES, d));
         const offenders = dirs
-            .flatMap(vueFiles)
+            .flatMap(styleFiles)
             .flatMap(file =>
-                [...readFileSync(file, 'utf8').matchAll(/z-index:\s*(-?\d+)/g)]
+                [
+                    ...readFileSync(file, 'utf8').matchAll(
+                        /(?:z-index|zIndex)['"]?\s*:\s*['"]?(-?\d+)/g,
+                    ),
+                ]
                     .filter(m => Math.abs(Number(m[1])) > 10)
                     .map(m => `${file}: ${m[0]}`),
             );
