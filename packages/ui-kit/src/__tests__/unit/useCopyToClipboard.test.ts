@@ -26,9 +26,24 @@ describe('useCopyToClipboard', () => {
 
     it('reports failure without marking copied', async () => {
         writeText.mockRejectedValue(new Error('denied'));
-        vi.spyOn(console, 'error').mockImplementation(() => undefined);
-        const { copied, copy } = useCopyToClipboard();
+        const { copied, failed, copy } = useCopyToClipboard();
         expect(await copy('x')).toBe(false);
         expect(copied.value).toBe(false);
+        expect(failed.value).toBe(true);
+    });
+
+    it('falls back to execCommand when the clipboard API is missing', async () => {
+        vi.stubGlobal('navigator', {});
+        const execCommand = vi.fn().mockReturnValue(true);
+        const area = { setAttribute: vi.fn(), select: vi.fn(), style: {}, value: '' };
+        vi.stubGlobal('document', {
+            createElement: () => area,
+            body: { appendChild: vi.fn(), removeChild: vi.fn() },
+            execCommand,
+        });
+        const { copied, copy } = useCopyToClipboard();
+        expect(await copy('x')).toBe(true);
+        expect(execCommand).toHaveBeenCalledWith('copy');
+        expect(copied.value).toBe(true);
     });
 });

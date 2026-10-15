@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { useStatusGroupLabel } from './useStatusGroupLabel';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { MvButton, MvCopyButton, MvModal, toast, formatDocumentNumber } from '@mivend/ui-kit';
+import { MvButton, MvModal, toast, formatDocumentNumber } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import { useCancelOrder } from './useCancelOrder';
 import { useOrderDetail } from './useOrderDetail';
 import { useRepeatOrder } from './useRepeatOrder';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
-import { formatAmount, formatDate } from './orderFormat';
+import { formatAmount } from './orderFormat';
+import OrderAddressCard from './OrderAddressCard.vue';
+import OrderDetailHead from './OrderDetailHead.vue';
 import OrderActionsCard from './OrderActionsCard.vue';
 import OrderDocumentCard from './OrderDocumentCard.vue';
 import OrderHistory from './OrderHistory.vue';
@@ -21,12 +22,10 @@ import OrderTotalsCard from './OrderTotalsCard.vue';
 const route = useRoute();
 const { t } = useI18n();
 const statuses = useOrderStatusesStore();
-const statusLabel = useStatusGroupLabel(() => order.value?.customFields?.erpStatus);
 const { order, tradingPoints, loading, load } = useOrderDetail();
 const { repeating, repeat } = useRepeatOrder();
 
 const confirmOpen = ref(false);
-const pageUrl = (): string => window.location.href;
 const title = computed(() =>
     order.value ? t('orders.detail.title', { number: formatDocumentNumber(order.value.code) }) : '',
 );
@@ -73,34 +72,12 @@ onMounted(() => {
 
             <div v-else class="od-body">
                 <div class="od-main">
-                    <div class="od-head">
-                        <div>
-                            <h1 class="od-title">
-                                {{ title }}
-                            </h1>
-                            <div class="od-meta-row">
-                                <span class="od-meta">{{ formatDate(order.createdAt) }}</span>
-                                <MvCopyButton
-                                    :value="formatDocumentNumber(order.code)"
-                                    :label="t('orders.detail.copyNumber')"
-                                />
-                                <MvCopyButton
-                                    :value="pageUrl"
-                                    icon="share"
-                                    :label="t('orders.detail.copyLink')"
-                                />
-                            </div>
-                        </div>
-                        <div class="od-head-side">
-                            <span
-                                class="od-status"
-                                :class="statuses.variant(order.customFields?.erpStatus)"
-                                :title="statuses.label(order.customFields?.erpStatus)"
-                            >
-                                {{ statusLabel }}
-                            </span>
-                        </div>
-                    </div>
+                    <OrderDetailHead
+                        :title="title"
+                        :created-at="order.createdAt"
+                        :code="order.code"
+                        :status-code="order.customFields?.erpStatus"
+                    />
 
                     <OrderSummaryStrip
                         :count="order.lines.length"
@@ -150,28 +127,7 @@ onMounted(() => {
                         :order-code="order.code"
                         :cancelled="order.state === 'Cancelled'"
                     />
-                    <div
-                        v-if="order.shippingAddress?.streetLine1 || order.shippingAddress?.fullName"
-                        class="od-address-card"
-                    >
-                        <h2 class="od-section-title">
-                            {{ t('orders.detail.deliveryAddress') }}
-                        </h2>
-                        <div class="od-address-line">{{ order.shippingAddress.fullName }}</div>
-                        <div class="od-address-line">
-                            {{ order.shippingAddress.streetLine1 }}
-                        </div>
-                        <div v-if="order.shippingAddress.streetLine2" class="od-address-line">
-                            {{ order.shippingAddress.streetLine2 }}
-                        </div>
-                        <div class="od-address-line">
-                            {{
-                                [order.shippingAddress.city, order.shippingAddress.postalCode]
-                                    .filter(Boolean)
-                                    .join(', ')
-                            }}
-                        </div>
-                    </div>
+                    <OrderAddressCard :address="order.shippingAddress" />
                     <OrderDocumentCard :order="order" />
                 </aside>
             </div>
@@ -213,63 +169,11 @@ onMounted(() => {
     text-align: center;
 }
 
-.od-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 24px;
-}
 
-.od-meta-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
 
-.od-head-side {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
 
-.od-title {
-    margin: 0 0 4px;
-    font-size: clamp(24px, 2.5vw, 36px);
-    font-weight: 950;
-    letter-spacing: -0.045em;
-}
 
-.od-meta {
-    color: #66736e;
-    font-size: 13px;
-}
 
-.od-status {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    min-height: 32px;
-    padding: 0 12px;
-    border-radius: 999px;
-    background: #e2f8ef;
-    color: #008a64;
-    font-size: 13px;
-    font-weight: 950;
-    white-space: nowrap;
-}
-.od-status.muted {
-    background: #eef4f1;
-    color: #5f6e68;
-}
-.od-status.warning {
-    background: #fff4e3;
-    color: #a45e00;
-}
-.od-status.error {
-    background: #ffeeed;
-    color: #c0362c;
-}
 
 .od-cancel {
     display: flex;
@@ -295,30 +199,13 @@ onMounted(() => {
     align-items: start;
 }
 
-.od-section-title {
-    margin: 0 0 14px;
-    font-size: 16px;
-    font-weight: 950;
-    letter-spacing: -0.03em;
-}
 
 .od-aside {
     display: grid;
     gap: 14px;
 }
 
-.od-address-card {
-    background: #fff;
-    border: 1px solid #edf2ef;
-    border-radius: 20px;
-    padding: 18px 20px;
-}
 
-.od-address-line {
-    font-size: 13px;
-    color: #344640;
-    line-height: 1.55;
-}
 
 @media (max-width: 1100px) {
     .od-body {
@@ -336,10 +223,6 @@ onMounted(() => {
     .od-layout {
         padding-left: 16px;
         padding-right: 16px;
-    }
-    .od-head {
-        flex-direction: column;
-        align-items: flex-start;
     }
 }
 </style>

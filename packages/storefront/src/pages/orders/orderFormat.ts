@@ -1,10 +1,4 @@
-export function formatAmount(cents: number, currency: string): string {
-    return (
-        new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100) +
-        ' ' +
-        (currency === 'RUB' ? '₽' : currency)
-    );
-}
+export { formatMoney as formatAmount } from '../proforma-invoices/formatMoney';
 
 export function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString('ru-RU', {

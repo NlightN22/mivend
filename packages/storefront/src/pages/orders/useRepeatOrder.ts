@@ -9,6 +9,7 @@ export interface RepeatableLine {
 export interface RepeatResult {
     added: number;
     skipped: number;
+    failedVariantIds: string[];
 }
 
 export interface UseRepeatOrder {
@@ -32,13 +33,20 @@ export function useRepeatOrder(): UseRepeatOrder {
                 wanted.set(id, (wanted.get(id) ?? 0) + line.quantity);
             }
             const before = new Map(cart.lines.map(l => [l.productVariant.id, l.quantity]));
-            for (const [variantId, qty] of wanted) await cart.addItem(variantId, qty);
+            const failedVariantIds: string[] = [];
+            for (const [variantId, qty] of wanted) {
+                try {
+                    await cart.addItem(variantId, qty);
+                } catch {
+                    failedVariantIds.push(variantId);
+                }
+            }
             const after = new Map(cart.lines.map(l => [l.productVariant.id, l.quantity]));
             let added = 0;
             for (const [variantId, qty] of wanted) {
                 if ((after.get(variantId) ?? 0) >= (before.get(variantId) ?? 0) + qty) added++;
             }
-            result.value = { added, skipped: wanted.size - added };
+            result.value = { added, skipped: wanted.size - added, failedVariantIds };
             return result.value;
         } finally {
             repeating.value = false;

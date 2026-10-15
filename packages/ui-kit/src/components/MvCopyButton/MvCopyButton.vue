@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { IconCheck, IconCopy, IconShare } from '@tabler/icons-vue';
+import { IconAlertTriangle, IconCheck, IconCopy, IconShare } from '@tabler/icons-vue';
 import { useCopyToClipboard } from '../../composables/useCopyToClipboard';
 
 const props = withDefaults(
     defineProps<{ value: string | (() => string); label: string; icon?: 'copy' | 'share' }>(),
     { icon: 'copy' },
 );
-const { copied, copy } = useCopyToClipboard();
+const { copied, failed, copy } = useCopyToClipboard();
 
 function onClick(): void {
     void copy(typeof props.value === 'function' ? props.value() : props.value);
@@ -17,12 +17,13 @@ function onClick(): void {
     <button
         type="button"
         class="mv-copy-button"
-        :class="{ 'mv-copy-button--done': copied }"
+        :class="{ 'mv-copy-button--done': copied, 'mv-copy-button--failed': failed }"
         :title="label"
         :aria-label="label"
         @click="onClick"
     >
         <IconCheck v-if="copied" :size="18" stroke="2" />
+        <IconAlertTriangle v-else-if="failed" :size="18" stroke="2" />
         <IconShare v-else-if="icon === 'share'" :size="18" stroke="2" />
         <IconCopy v-else :size="18" stroke="2" />
     </button>
@@ -50,5 +51,9 @@ function onClick(): void {
 .mv-copy-button--done {
     border-color: #00a878;
     color: #008a64;
+}
+.mv-copy-button--failed {
+    border-color: #d64545;
+    color: #d64545;
 }
 </style>

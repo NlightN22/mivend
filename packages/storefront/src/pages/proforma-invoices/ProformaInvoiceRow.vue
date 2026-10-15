@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMoney } from './formatMoney';
 import { useRouter } from 'vue-router';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import ProformaInvoiceVersionBadge from './ProformaInvoiceVersionBadge.vue';
@@ -13,13 +14,7 @@ import {
 const props = defineProps<{ proformaInvoice: ProformaInvoiceSummary }>();
 const router = useRouter();
 
-function formatAmount(cents: number, currency: string): string {
-    return (
-        new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100) +
-        ' ' +
-        (currency === 'RUB' ? '₽' : currency)
-    );
-}
+const formatAmount = formatMoney;
 
 function openOrder(): void {
     void router.push(`/orders/${props.proformaInvoice.order.id}`);

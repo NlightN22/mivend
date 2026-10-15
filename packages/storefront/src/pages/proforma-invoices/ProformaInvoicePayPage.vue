@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMoney } from './formatMoney';
 import { onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useProformaInvoiceDetail } from './useProformaInvoiceDetail';
@@ -15,13 +16,7 @@ onMounted(() => {
     void load(proformaInvoiceId);
 });
 
-function formatAmount(cents: number, currency: string): string {
-    return (
-        new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100) +
-        ' ' +
-        (currency === 'RUB' ? '₽' : currency)
-    );
-}
+const formatAmount = formatMoney;
 
 async function choose(outcome: PayProformaInvoiceOutcome): Promise<void> {
     await payProformaInvoice(proformaInvoiceId, outcome);

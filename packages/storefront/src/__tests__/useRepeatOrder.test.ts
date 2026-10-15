@@ -33,7 +33,7 @@ describe('useRepeatOrder', () => {
             return null;
         });
         const { repeat } = useRepeatOrder();
-        expect(await repeat(lines)).toEqual({ added: 2, skipped: 0 });
+        expect(await repeat(lines)).toEqual({ added: 2, skipped: 0, failedVariantIds: [] });
         expect(add).toHaveBeenCalledWith('v1', 2);
         expect(add).toHaveBeenCalledWith('v2', 1);
     });
@@ -50,7 +50,7 @@ describe('useRepeatOrder', () => {
             return null;
         });
         const { repeat, repeating } = useRepeatOrder();
-        expect(await repeat(lines)).toEqual({ added: 1, skipped: 1 });
+        expect(await repeat(lines)).toEqual({ added: 1, skipped: 1, failedVariantIds: [] });
         expect(repeating.value).toBe(false);
     });
 
@@ -65,6 +65,6 @@ describe('useRepeatOrder', () => {
             return null;
         });
         const { repeat } = useRepeatOrder();
-        expect(await repeat([lines[0]])).toEqual({ added: 1, skipped: 0 });
+        expect(await repeat([lines[0]])).toEqual({ added: 1, skipped: 0, failedVariantIds: [] });
     });
 });
