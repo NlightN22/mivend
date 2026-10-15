@@ -29,15 +29,19 @@ describe('ReservationExpiryService.expireDueReservations', () => {
     } {
         // Lock must be taken via createQueryBuilder().setLock(); repo.find() would not lock the rows.
         // See the SKIP LOCKED note in reservation-expiry.service.ts for why rows are locked this way.
-        let reservationQueryCall = 0;
+        let isRejectedQuery = false;
         const reservationQueryBuilder = {
             setLock: vi.fn().mockReturnThis(),
             setOnLocked: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
-            andWhere: vi.fn().mockReturnThis(),
+            andWhere: vi.fn(function (this: unknown, sql: string) {
+                if (sql.includes('orderId IN')) isRejectedQuery = true;
+                return this;
+            }),
             getMany: vi.fn(async () => {
-                reservationQueryCall += 1;
-                return reservationQueryCall === 1 ? dueRows : rejectedReservations;
+                const rejected = isRejectedQuery;
+                isRejectedQuery = false;
+                return rejected ? rejectedReservations : dueRows;
             }),
         };
         const txReservationRepo = {
@@ -178,9 +182,10 @@ describe('ReservationExpiryService.expireDueReservations', () => {
 
         expect(count).toBe(0);
         expect(txReservationRepo.update).toHaveBeenCalledTimes(1);
-        expect(txReservationRepo.update).toHaveBeenCalledWith('res-2', {
-            interventionFlaggedAt: expect.any(Date),
-        });
+        expect(txReservationRepo.update).toHaveBeenCalledWith(
+            { id: 'res-2', status: 'active' },
+            { interventionFlaggedAt: expect.any(Date) },
+        );
         expect(notificationService.create).toHaveBeenCalledWith(
             expect.anything(),
             expect.objectContaining({ sourceType: 'reservation-erp-owned', sourceId: 'res-2' }),
@@ -322,22 +327,46 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         expect(eventBus.publish).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps the intervention marks and still tries every notification when one fails, then fails the sweep', async () => {
-        const base = { creationMethod: 'auto-prepaid', interventionFlaggedAt: null };
+    it('marks nothing when a notification fails, and the next sweep sends it', async () => {
         const dueRows = [
-            { ...base, id: 'res-1', orderId: 'order-1', expiresAt: new Date('2026-01-01') },
-            { ...base, id: 'res-2', orderId: 'order-2', expiresAt: new Date('2026-01-01') },
+            {
+                id: 'res-1',
+                orderId: 'order-1',
+                creationMethod: 'auto-prepaid',
+                interventionFlaggedAt: null,
+                expiresAt: new Date('2026-01-01'),
+            },
         ];
         const { service, txReservationRepo, notificationService } = createService(dueRows);
         notificationService.create.mockRejectedValueOnce(new Error('notify down'));
 
         await expect(service.expireDueReservations()).rejects.toThrow('notify down');
+        expect(txReservationRepo.update).not.toHaveBeenCalled();
 
-        expect(txReservationRepo.update).toHaveBeenCalledWith(
-            { id: expect.anything() },
-            expect.objectContaining({ interventionFlaggedAt: expect.any(Date) }),
-        );
+        await service.expireDueReservations();
         expect(notificationService.create).toHaveBeenCalledTimes(2);
+        expect(txReservationRepo.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps flagging other ERP-owned reservations when one notification fails', async () => {
+        const old = new Date(Date.now() - 2 * 86_400_000);
+        const dueRows = [
+            { id: 'res-1', orderId: 'order-1', creationMethod: 'manual', expiresAt: old },
+            { id: 'res-2', orderId: 'order-2', creationMethod: 'manual', expiresAt: old },
+        ];
+        const { service, cancellation, txReservationRepo, notificationService } =
+            createService(dueRows);
+        cancellation.cancel.mockResolvedValue({ kind: 'left-to-erp' });
+        notificationService.create.mockRejectedValueOnce(new Error('notify down'));
+
+        await expect(service.expireDueReservations()).resolves.toBe(0);
+
+        expect(notificationService.create).toHaveBeenCalledTimes(2);
+        expect(txReservationRepo.update).toHaveBeenCalledTimes(1);
+        expect(txReservationRepo.update).toHaveBeenCalledWith(
+            { id: 'res-2', status: 'active' },
+            expect.anything(),
+        );
     });
 
     it('uses rejectedOrderReleaseDays, not the reservation default, for the REJECTED deadline', async () => {

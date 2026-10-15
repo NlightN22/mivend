@@ -43,7 +43,7 @@ beforeAll(async () => {
         `CREATE TABLE counterparty (id int PRIMARY KEY, "shortName" varchar, "assignedManagerId" varchar)`,
         `CREATE TABLE administrator (id int PRIMARY KEY, "firstName" varchar, "lastName" varchar)`,
         `CREATE TABLE reservation ("orderId" varchar, "orderLineId" varchar, "productVariantId" varchar,
-            quantity int, status varchar, "reservedAt" timestamp, "expiresAt" timestamp)`,
+            quantity int, status varchar, "reservedAt" timestamp, "expiresAt" timestamp, id SERIAL PRIMARY KEY)`,
         `CREATE TABLE erp_order_reserve (
             "createdAt" timestamp NOT NULL DEFAULT now(), "updatedAt" timestamp NOT NULL DEFAULT now(),
             uuid uuid NOT NULL, "orderId" varchar NOT NULL, "productVariantId" varchar NOT NULL,
@@ -55,6 +55,7 @@ beforeAll(async () => {
     const connection = {
         getRepository: () => ({ query: dataSource.query.bind(dataSource) }),
         rawConnection: dataSource,
+        withTransaction: async (c: unknown, fn: (c: unknown) => Promise<void>) => fn(c),
     } as unknown as TransactionalConnection;
     const visibility = {
         buildVisibleOrdersQuery: async () => {
@@ -146,6 +147,19 @@ describe('ErpOrderReserveService.record', () => {
             { productVariantId: '10', quantity: 5 },
             { productVariantId: '20', quantity: 1 },
         ]);
+    });
+
+    it('a variant missing from the next event is removed, other orders are untouched', async () => {
+        const both = [
+            { productVariantId: '10', reservedQuantity: 2 },
+            { productVariantId: '20', reservedQuantity: 1 },
+        ];
+        await erpReserve.record(ctx, 1, both, null);
+        await erpReserve.record(ctx, 2, both, null);
+        await erpReserve.record(ctx, 1, [{ productVariantId: '10', reservedQuantity: 2 }], null);
+        const stored = await rows();
+        expect(stored.filter(r => r.orderId === '1').map(r => r.productVariantId)).toEqual(['10']);
+        expect(stored.filter(r => r.orderId === '2')).toHaveLength(2);
     });
 
     it('eight concurrent writers leave exactly one row per order and variant', async () => {

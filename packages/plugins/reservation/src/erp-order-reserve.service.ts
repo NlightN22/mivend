@@ -13,8 +13,8 @@ export interface ErpReservedLine {
 export class ErpOrderReserveService {
     constructor(private connection: TransactionalConnection) {}
 
-    // One atomic upsert per variant, so a replayed or concurrent event cannot lose a write; a
-    // missing reserveUntil never clears a known one (the field is optional on the stream).
+    // Replaces the order's set in one transaction: upsert per variant, delete variants the ERP no
+    // longer reports. A missing reserveUntil never clears a known one (optional on the stream).
     async record(
         ctx: RequestContext,
         orderId: ID,
@@ -28,18 +28,26 @@ export class ErpOrderReserveService {
                 (byVariant.get(line.productVariantId) ?? 0) + line.reservedQuantity,
             );
         }
-        for (const [productVariantId, quantity] of byVariant) {
-            await this.connection.getRepository(ctx, ErpOrderReserve).query(
-                `INSERT INTO erp_order_reserve
-                   ("uuid", "orderId", "productVariantId", "quantity", "reserveUntil")
-                 VALUES (gen_random_uuid(), $1, $2, $3, $4)
-                 ON CONFLICT ("orderId", "productVariantId") DO UPDATE SET
-                   "quantity" = EXCLUDED."quantity",
-                   "reserveUntil" = COALESCE(EXCLUDED."reserveUntil", erp_order_reserve."reserveUntil"),
-                   "updatedAt" = now()`,
-                [String(orderId), productVariantId, quantity, reserveUntil],
+        await this.connection.withTransaction(ctx, async txCtx => {
+            const repo = this.connection.getRepository(txCtx, ErpOrderReserve);
+            for (const [productVariantId, quantity] of byVariant) {
+                await repo.query(
+                    `INSERT INTO erp_order_reserve
+                       ("uuid", "orderId", "productVariantId", "quantity", "reserveUntil")
+                     VALUES (gen_random_uuid(), $1, $2, $3, $4)
+                     ON CONFLICT ("orderId", "productVariantId") DO UPDATE SET
+                       "quantity" = EXCLUDED."quantity",
+                       "reserveUntil" = COALESCE(EXCLUDED."reserveUntil", erp_order_reserve."reserveUntil"),
+                       "updatedAt" = now()`,
+                    [String(orderId), productVariantId, quantity, reserveUntil],
+                );
+            }
+            await repo.query(
+                `DELETE FROM erp_order_reserve
+                  WHERE "orderId" = $1 AND NOT ("productVariantId" = ANY($2::text[]))`,
+                [String(orderId), [...byVariant.keys()]],
             );
-        }
+        });
     }
 
     findForOrder(ctx: RequestContext, orderId: ID): Promise<ErpOrderReserve[]> {

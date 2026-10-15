@@ -32,6 +32,7 @@ export interface VariantReservationHolder {
 }
 
 const HOLDERS_LIMIT = 200;
+const HOLDERS_MAX_PAGES = 25;
 
 @Injectable()
 export class ReservationViewService {
@@ -77,7 +78,9 @@ export class ReservationViewService {
     // Visibility is applied per page of rows, so foreign reservations never crowd out visible ones.
     async holders(ctx: RequestContext, variantId: ID): Promise<VariantReservationHolder[]> {
         const result: VariantReservationHolder[] = [];
-        for (let offset = 0; result.length < HOLDERS_LIMIT; offset += HOLDERS_LIMIT) {
+        let page = 0;
+        for (let offset = 0; result.length < HOLDERS_LIMIT; offset += HOLDERS_LIMIT, page += 1) {
+            if (page >= HOLDERS_MAX_PAGES) break;
             const rows = await this.holderPage(String(variantId), offset);
             const visible = await this.visibleIds(
                 ctx,
@@ -92,23 +95,23 @@ export class ReservationViewService {
     private holderPage(variantId: string, offset: number): Promise<Row[]> {
         return this.rawQuery()(
             `SELECT * FROM (
-               SELECT o.id::text AS "orderId", o.code AS "orderCode", 'LOCAL' AS source,
+               SELECT o.id::text AS "orderId", o.code AS "orderCode", 'LOCAL' AS source, r.id::text AS rid,
                       r.quantity, r."expiresAt" AS until, c."shortName" AS "counterpartyName",
                       trim(concat(a."firstName", ' ', a."lastName")) AS "managerName"
                  FROM reservation r JOIN "order" o ON o.id = r."orderId"::int
                  LEFT JOIN customer cu ON cu.id = o."customerId"
-                 LEFT JOIN counterparty c ON cu."customFieldsCounterpartyid"::text = c.id::text
+                 LEFT JOIN counterparty c ON c.id = cu."customFieldsCounterpartyid"
                  LEFT JOIN administrator a ON a.id::text = c."assignedManagerId"
                 WHERE r."productVariantId" = $1 AND r.status = 'active'
                UNION ALL
-               SELECT o.id::text, o.code, 'ERP', e.quantity, e."reserveUntil", c."shortName",
+               SELECT o.id::text, o.code, 'ERP', e.id::text, e.quantity, e."reserveUntil", c."shortName",
                       trim(concat(a."firstName", ' ', a."lastName"))
                  FROM erp_order_reserve e JOIN "order" o ON o.id = e."orderId"::int
                  LEFT JOIN customer cu ON cu.id = o."customerId"
-                 LEFT JOIN counterparty c ON cu."customFieldsCounterpartyid"::text = c.id::text
+                 LEFT JOIN counterparty c ON c.id = cu."customFieldsCounterpartyid"
                  LEFT JOIN administrator a ON a.id::text = c."assignedManagerId"
                 WHERE e."productVariantId" = $1 AND e.quantity > 0 AND o.state <> 'Cancelled'
-             ) h ORDER BY until ASC NULLS LAST, "orderId", source LIMIT ${HOLDERS_LIMIT} OFFSET $2`,
+             ) h ORDER BY until ASC NULLS LAST, "orderId", source, rid LIMIT ${HOLDERS_LIMIT} OFFSET $2`,
             [variantId, offset],
         );
     }
