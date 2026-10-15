@@ -23,15 +23,23 @@ function makeOrder(
         selectedContractId: string | null;
         erpStatus?: string | null;
         uuid?: string;
+        tradingPointId?: string;
     } = {
         selectedContractId: 'contract-1',
     },
+    shippingCode = 'pickup',
 ): {
     id: string;
     customerId: string;
     totalWithTax: number;
     currencyCode: string;
-    customFields: { selectedContractId: string | null; erpStatus?: string | null; uuid: string };
+    customFields: {
+        selectedContractId: string | null;
+        erpStatus?: string | null;
+        uuid: string;
+        tradingPointId?: string;
+    };
+    shippingLines: Array<{ shippingMethod: { code: string } }>;
     lines: TestLine[];
 } {
     return {
@@ -40,6 +48,7 @@ function makeOrder(
         totalWithTax: 10000,
         currencyCode: 'RUB',
         customFields: { uuid: 'order-uuid-1', ...customFields },
+        shippingLines: [{ shippingMethod: { code: shippingCode } }],
         lines,
     };
 }
@@ -60,6 +69,7 @@ function makeBuilder(options: {
     packagesOnly?: boolean;
     priorOutboxEntries?: Array<{ payload: { orderId?: string }; status: string }>;
     linesWithoutIdentity?: string[];
+    tradingPoint?: { erpId: string; address: string; customerOwned: boolean } | null;
 }): OrderSubmittedBuilder {
     const orderRepo = { findOne: vi.fn().mockResolvedValue(options.order) };
     const connection = {
@@ -127,6 +137,7 @@ function makeBuilder(options: {
         { isPackagesOnly: vi.fn(async () => options.packagesOnly === true) } as never,
         identityService(options.linesWithoutIdentity ?? []) as never,
         { dictionary: async () => testOrderStatusDictionary() } as never,
+        { findById: vi.fn().mockResolvedValue(options.tradingPoint ?? null) } as never,
     );
 }
 
@@ -614,6 +625,59 @@ describe('OrderSubmittedBuilder', () => {
         expect(await build(builder)).toEqual({
             kind: 'skip',
             reason: expect.stringContaining('not found'),
+        });
+    });
+
+    describe('delivery fields', () => {
+        const buildDelivery = async (
+            shippingCode: string,
+            tradingPoint: { erpId: string; address: string; customerOwned: boolean } | null,
+        ): Promise<Record<string, unknown>> => {
+            const result = await build(
+                makeBuilder({
+                    order: makeOrder(
+                        [packLine()],
+                        { selectedContractId: 'contract-1', tradingPointId: 'tp-1' },
+                        shippingCode,
+                    ),
+                    reservations: [reservation('line-1', 'location-1')],
+                    warehouseErpIdByLocationId: { 'location-1': 'wh-1' },
+                    productExternalIds: { 'v-1': 'product-1' },
+                    counterparty: { erpId: 'counterparty-1' },
+                    priceType: null,
+                    tradingPoint,
+                }),
+            );
+            if (result.kind !== 'send') throw new Error('expected send');
+            return result.events[0].payload;
+        };
+        const point = { erpId: 'pos-1', address: 'Street 1', customerOwned: false };
+
+        it('sends the ERP point id and the address text for a delivery to an ERP-known point', async () => {
+            const payload = await buildDelivery('freight-delivery', point);
+            expect(payload.pointOfSaleId).toBe('pos-1');
+            expect(payload.deliveryAddress).toBe('Street 1');
+        });
+
+        it('sends neither field for a customer-added point, which has no ERP id', async () => {
+            const payload = await buildDelivery('freight-delivery', {
+                ...point,
+                customerOwned: true,
+            });
+            expect(payload).not.toHaveProperty('deliveryAddress');
+            expect(payload).not.toHaveProperty('pointOfSaleId');
+        });
+
+        it('sends neither field for pickup', async () => {
+            const payload = await buildDelivery('pickup', point);
+            expect(payload).not.toHaveProperty('pointOfSaleId');
+            expect(payload).not.toHaveProperty('deliveryAddress');
+        });
+
+        it('sends neither field when the point is unknown', async () => {
+            const payload = await buildDelivery('freight-delivery', null);
+            expect(payload).not.toHaveProperty('pointOfSaleId');
+            expect(payload).not.toHaveProperty('deliveryAddress');
         });
     });
 });

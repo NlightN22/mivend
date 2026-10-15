@@ -43,6 +43,8 @@ export const ORDER_SUBMITTED_SCHEMA = {
         totalWithTax: { type: 'integer' },
         currencyCode: { type: 'string' },
         departmentId: { type: ['string', 'null'] },
+        pointOfSaleId: { type: ['string', 'null'], minLength: 1 },
+        deliveryAddress: { type: ['string', 'null'], minLength: 1 },
         // Counterparty.erpId for the order's customer — see CounterpartyService.getForCustomer.
         customerId: { type: 'string' },
         // The ERP warehouse (StockLocation.customFields.warehouseErpId) this payload's lines were
@@ -91,6 +93,8 @@ export interface OrderSubmittedPayload {
     currencyCode?: string;
     customerId: string;
     warehouseId: string;
+    pointOfSaleId?: string | null;
+    deliveryAddress?: string | null;
     lines: OrderSubmittedLine[];
     type: 'confirmed';
     reserveUntil: string;

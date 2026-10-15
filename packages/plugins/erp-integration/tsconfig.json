@@ -16,6 +16,7 @@
         { "path": "../access-control" },
         { "path": "../counterparty" },
         { "path": "../notification" },
-        { "path": "../order-identity" }
+        { "path": "../order-identity" },
+        { "path": "../freight-shipping" }
     ]
 }

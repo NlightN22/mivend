@@ -6,7 +6,12 @@ import type { ID } from '@vendure/common/lib/shared-types';
 import { PackagingPolicyService, wholePacks } from '@mivend/plugin-moq';
 import { OrderLineIdentityService } from '@mivend/plugin-order-identity';
 import { ReservationService } from '@mivend/plugin-reservation';
-import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
+import {
+    ContractService,
+    CounterpartyService,
+    TradingPointService,
+} from '@mivend/plugin-counterparty';
+import { FREIGHT_SHIPPING_METHOD_CODE } from '@mivend/plugin-freight-shipping';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 
 import { outboundSend, outboundSkip, OutboundGateway } from './outbound-gateway';
@@ -32,12 +37,18 @@ export class OrderSubmittedBuilder {
         private readonly packagingPolicyService: PackagingPolicyService,
         private readonly orderLineIdentityService: OrderLineIdentityService,
         private readonly statuses: OrderStatusReferenceService,
+        private readonly tradingPointService: TradingPointService,
     ) {}
 
     async build(ctx: RequestContext, orderId: ID, orderCode: string): Promise<OutboundBuildResult> {
         const order = await this.connection.getRepository(ctx, Order).findOne({
             where: { id: orderId },
-            relations: ['lines', 'lines.productVariant'],
+            relations: [
+                'lines',
+                'lines.productVariant',
+                'shippingLines',
+                'shippingLines.shippingMethod',
+            ],
         });
         if (!order) return outboundSkip(`order ${String(orderId)} not found`);
         if (order.state === 'Cancelled')
@@ -135,6 +146,7 @@ export class OrderSubmittedBuilder {
         const [warehouseId] = [...quantityByWarehouse.entries()].sort(
             ([idA, qtyA], [idB, qtyB]) => qtyB - qtyA || (idA < idB ? -1 : 1),
         )[0];
+        const delivery = await this.resolveDelivery(ctx, order);
         const payload: OrderSubmittedPayload = {
             eventId: randomUUID(),
             orderId: String(orderId),
@@ -145,6 +157,7 @@ export class OrderSubmittedBuilder {
             contractId: contract.erpId,
             customerId: counterparty.erpId,
             warehouseId,
+            ...delivery,
             lines,
             submittedAt: new Date().toISOString(),
             totalWithTax: order.totalWithTax,
@@ -155,6 +168,25 @@ export class OrderSubmittedBuilder {
         return outboundSend([
             { eventId: payload.eventId, payload: payload as unknown as Record<string, unknown> },
         ]);
+    }
+
+    // Only pointOfSaleId makes it a delivery; the address text is for printed documents. A
+    // customer-added point has no ERP id, so its order is registered as pickup.
+    private async resolveDelivery(
+        ctx: RequestContext,
+        order: Order,
+    ): Promise<Pick<OrderSubmittedPayload, 'pointOfSaleId' | 'deliveryAddress'>> {
+        const isDelivery = order.shippingLines?.some(
+            line => line.shippingMethod?.code === FREIGHT_SHIPPING_METHOD_CODE,
+        );
+        const tradingPointId = order.customFields?.tradingPointId;
+        if (!isDelivery || !tradingPointId) return {};
+        const point = await this.tradingPointService.findById(ctx, tradingPointId);
+        if (!point || point.customerOwned) return {};
+        return {
+            pointOfSaleId: point.erpId,
+            ...(point.address ? { deliveryAddress: point.address } : {}),
+        };
     }
 
     // One external effect per order unless the ERP rejected the previous submission; see
