@@ -3,12 +3,14 @@
 // catches the "multi-paragraph real-incident narrative" pattern this rule was added to stop,
 // which a human reviewer has to notice by eye otherwise.
 const MAX_LINES = 2;
+// Tool directives are not prose, so they don't count toward the cap.
+const DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore)/;
 
 function groupLineComments(comments) {
     const groups = [];
     let current = null;
     for (const comment of comments) {
-        if (comment.type !== 'Line') {
+        if (comment.type !== 'Line' || DIRECTIVE.test(comment.value)) {
             if (current) groups.push(current);
             current = null;
             continue;
