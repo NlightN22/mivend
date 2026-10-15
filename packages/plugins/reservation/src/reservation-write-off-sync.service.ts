@@ -259,7 +259,11 @@ export class ReservationWriteOffSyncService {
         }
 
         const handedOver = new Map<string, number>();
-        for (const reservation of held.filter(r => r.erpHandedOverAt != null)) {
+        const currentGeneration = Math.max(0, ...active.map(r => r.reservationGeneration ?? 1));
+        // A hand-over from an earlier cycle (cancelled, then re-reserved) is not part of this one.
+        for (const reservation of held.filter(
+            r => r.erpHandedOverAt != null && (r.reservationGeneration ?? 1) === currentGeneration,
+        )) {
             handedOver.set(
                 reservation.productVariantId,
                 (handedOver.get(reservation.productVariantId) ?? 0) + reservation.quantity,
