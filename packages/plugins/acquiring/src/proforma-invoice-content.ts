@@ -107,9 +107,8 @@ export function hashOf(head: VersionHead): string {
     return contentHash(head.organizationId, head.currencyCode, head.amount, head.lines);
 }
 
-// A cancelled head is never reused: the organization returned, so a new document is issued.
-// Same content reuses the head; changed content makes a new version unless the head is paid
-// (a paid snapshot is never rewritten or replaced, the difference is settled through the ERP).
+// Cancelled heads are never reused: the organization already returned them.
+// Paid snapshots are never rewritten; changed content is settled via the ERP instead.
 export function decideVersion(
     head: VersionHead | undefined,
     current: OrganizationContent,

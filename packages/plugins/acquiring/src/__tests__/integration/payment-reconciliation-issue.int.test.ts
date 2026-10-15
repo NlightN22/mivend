@@ -10,9 +10,8 @@ import {
 
 import { PaymentReconciliationIssueService } from '../../payment-reconciliation-issue.service';
 
-// Same approach as proforma-invoice.service.int.test.ts: PaymentReconciliationIssue extends VendureEntity,
-// which needs a bootstrapped EntityIdStrategy — mirror the production table with a standalone
-// TypeORM entity against real Postgres instead of using the real class.
+// Standalone TypeORM entity instead of the real class: VendureEntity needs a bootstrapped
+// EntityIdStrategy, so mirror the production table against real Postgres.
 @Entity('payment_reconciliation_issue')
 class TestPaymentReconciliationIssue {
     @PrimaryGeneratedColumn()

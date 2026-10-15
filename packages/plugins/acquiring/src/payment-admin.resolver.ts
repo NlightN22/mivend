@@ -7,11 +7,8 @@ import { PaymentRefund, PaymentRefundStatus } from './entities/payment-refund.en
 import { DisputeService } from './dispute.service';
 import { PaymentRefundService } from './payment-refund.service';
 
-// Ops/seed-only surface: lets `infrastructure/scripts/seed-payment-refunds.mjs` attach
-// realistic-looking refund/dispute rows to existing captured online-acquiring payments, the
-// same way `seed-approvals.mjs` creates ApprovalRequest rows through real Admin mutations
-// instead of a database bypass (the backend-plugin-rules skill's "Dev seed rules" exception clause — refunds/disputes
-// are payment-provider-reported workflow state, not ERP master data).
+// Seed-only: attaches refund/dispute rows through real Admin mutations, not a DB bypass.
+// Refunds and disputes are provider-reported workflow state, not ERP master data.
 @Resolver()
 export class PaymentAdminResolver {
     constructor(
@@ -33,10 +30,7 @@ export class PaymentAdminResolver {
         });
     }
 
-    // Seed-script idempotency helper only — see seed-payment-refunds.mjs's rerun-without-
-    // duplicating check. providerRefundId is the natural dedup key for a refund (real incident:
-    // reruns of the seed script previously duplicated every refund/dispute row because nothing
-    // checked for a prior run).
+    // providerRefundId is the dedup key; without checking it, seed reruns duplicate refund rows.
     @Query()
     @Allow(Permission.SuperAdmin)
     async paymentRefundExists(

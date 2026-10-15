@@ -128,9 +128,7 @@ import type { AcquiringPluginOptions } from './types';
             PaymentReconciliationIssueResolver,
             VariantOrganizationHealthResolver,
             PaymentReceivedResolver,
-            // Field resolver for ProformaInvoice.order (admin.schema.ts) — previously only registered
-            // for shopApiExtensions, so the admin API's ProformaInvoice.order was a dead schema field
-            // with no resolver wired to it at all (see admin.schema.ts's comment on ProformaInvoice.order).
+            // Must be registered for both admin and shop API extensions; otherwise the field has no resolver.
             ProformaInvoiceFieldResolver,
         ],
     },

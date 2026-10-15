@@ -15,11 +15,7 @@ type ClaimResult =
 export class IdempotencyService {
     constructor(private connection: TransactionalConnection) {}
 
-    /**
-     * Runs `fn` at most once per (callerId, idempotencyKey, requestHash). A retry with the same
-     * key and hash returns the stored result instead of re-executing; a retry with the same key
-     * but a different hash is a hard conflict (per docs/payments.md's command idempotency level).
-     */
+    // Same key with a different requestHash is a hard conflict, not a replay; never re-executes fn.
     async withIdempotency<T>(
         ctx: RequestContext,
         callerId: string,
@@ -60,16 +56,8 @@ export class IdempotencyService {
         }
     }
 
-    // Two callers can race on the exact same (callerId, idempotencyKey) — a retried command that
-    // crosses a real network delay/timeout, or an operator manually re-triggering the same
-    // action. A plain findOne()-then-save() has a TOCTOU window where both callers see "no
-    // existing row" and both proceed to call fn(), defeating the entire point of command
-    // idempotency (docs/payments.md level 1 — the guard against e.g. double-charging a payment
-    // provider). This claims the row atomically instead, in two steps that only ever let one
-    // caller "win": an INSERT that lives or dies on the unique index (mirrors
-    // InboxService.enqueue's own already-correct pattern), then — only for a key that already
-    // exists — a conditional UPDATE that only flips a row out of 'failed' if it's still 'failed'
-    // with a matching hash, so two concurrent retries of the same failed key can't both proceed.
+    // Check-then-save races: two concurrent callers can both see no row and both run fn().
+    // INSERT claims the key via the unique index; a 'failed' row is re-claimed by a conditional UPDATE.
     private async claim(
         repo: Repository<IdempotencyKey>,
         callerId: string,
@@ -110,9 +98,7 @@ export class IdempotencyService {
         const existing = await repo.findOneOrFail({ where: { callerId, idempotencyKey } });
         if (existing.requestHash !== requestHash) return { outcome: 'conflict', record: existing };
         if (existing.status === 'completed') return { outcome: 'completed', record: existing };
-        // 'inProgress' (a real concurrent call), or 'failed' again (lost the conditional UPDATE
-        // race to a concurrent retry that claimed it first) — either way, this caller does not
-        // own the row right now.
+        // 'inProgress' or 'failed' means another caller owns the row; this caller must not run fn().
         return { outcome: 'in-progress', record: existing };
     }
 

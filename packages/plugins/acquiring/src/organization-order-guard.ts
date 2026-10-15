@@ -28,9 +28,8 @@ export const organizationOrderGuard: OrderProcess<OrderState> = {
         if (skus.length === 0) return;
         return ORGANIZATION_MISSING_MESSAGE + skus.join(', ');
     },
-    // Re-stamped on every entry to ArrangingPayment, so later steps never re-read the variant. One
-    // statement stamps only organizations read now; a variant cleared since onTransitionStart
-    // leaves its line unstamped and fails the transition (the invariant must hold at stamp time).
+    // Re-stamped on each ArrangingPayment entry so later steps never re-read the variant.
+    // Variant must be set at stamp time; one cleared after onTransitionStart fails the transition.
     async onTransitionEnd(_fromState, toState, { ctx, order }) {
         if (toState !== 'ArrangingPayment') return;
         // Order row lock first: a tier-rebalance refresh holding stale lines must commit before this stamp.

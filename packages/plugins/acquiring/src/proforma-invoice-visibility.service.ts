@@ -9,10 +9,8 @@ import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { applyStatusFilter } from './proforma-invoice-display';
 import { ProformaInvoiceListOptions } from './proforma-invoice.service';
 
-// Row-level visibility for the manager portal's proforma invoice list — mirrors
-// packages/plugins/erp-order/src/order-visibility.service.ts. ProformaInvoice already carries
-// counterpartyId directly (no join-through-Customer needed like Order does), and its own
-// denormalized branchId (set at creation time — see ProformaInvoiceIssuingService.issueForOrder).
+// Mirrors erp-order's order visibility; no Customer join needed since counterpartyId is direct.
+// branchId is denormalized onto the invoice at issue time, so it is filtered directly.
 @Injectable()
 export class ProformaInvoiceVisibilityService {
     constructor(
@@ -42,12 +40,8 @@ export class ProformaInvoiceVisibilityService {
         return { items, totalItems };
     }
 
-    // Real aggregate for the Customer detail page's "Outstanding balance" KPI — sums unpaid
-    // proforma invoices (pending/issued) for one counterparty, scoped the same way findVisible is so a
-    // department-scoped manager can't probe balances outside their own branch. Assumes one
-    // currency per counterparty (true for this project's current single-currency-per-org model);
-    // returns the first currency encountered if that assumption is ever violated, rather than
-    // silently summing across currencies.
+    // Scoped like findVisible so a department manager cannot probe balances outside their branch.
+    // Assumes one currency per counterparty; takes the first currency rather than summing mixed ones.
     async getOutstandingBalance(
         ctx: RequestContext,
         counterpartyId: string,
@@ -86,9 +80,7 @@ export class ProformaInvoiceVisibilityService {
         return this.accessScopeService.resolveProformaInvoiceScope(ctx);
     }
 
-    // Generic over the query builder's entity type so PaymentVisibilityService can reuse this
-    // against its own PaymentAttempt-rooted query (joined to the same aliased proforma invoice/
-    // counterparty rows) without a cast.
+    // Generic over the entity type so PaymentVisibilityService can reuse it on a PaymentAttempt query.
     applyScope<T extends ObjectLiteral>(
         qb: SelectQueryBuilder<T>,
         scope: AccessScope,
@@ -97,9 +89,8 @@ export class ProformaInvoiceVisibilityService {
     ): void {
         switch (scope.kind) {
             case 'own':
-                // No branch restriction — key-account-manager read exception (see
-                // docs/access-control.md): a manager sees every proforma invoice for their own assigned
-                // accounts regardless of which branch actually serviced the underlying order.
+                // Intentional exception: key account managers read all invoices for their assigned accounts,
+                // regardless of which branch serviced the order (see docs/access-control.md).
                 this.accessScopeService.applyOwnCounterpartyFilter(
                     qb,
                     counterpartyAlias,
@@ -107,12 +98,8 @@ export class ProformaInvoiceVisibilityService {
                 );
                 break;
             case 'department':
-                // Filtered by the proforma invoice's own denormalized branch, not Counterparty.branchId
-                // (a chain account's "home" branch and the branch actually servicing a given
-                // proforma invoice can differ) — see docs/access-control.md. `departmentId` is
-                // deliberately never compared — Department (ERP org data) is pure display
-                // information, never an access-scope gate; only Branch (mivend's own entity) is
-                // (2026-09-20 correction, see docs/access-control.md).
+                // Filter by the invoice's own branchId, not Counterparty.branchId (chain accounts can differ).
+                // departmentId is display-only, never an access gate; only Branch is (docs/access-control.md).
                 qb.andWhere(`${proformaInvoiceAlias}.branchId = :branchId`, {
                     branchId: scope.branchId ?? null,
                 });
@@ -133,11 +120,8 @@ export class ProformaInvoiceVisibilityService {
             .leftJoin(
                 Counterparty,
                 'counterparty',
-                // Raw ON-clause string, not .where()/.andWhere() — TypeORM's alias.property
-                // auto-quoting replacement doesn't run here (only inside actual where clauses),
-                // so the camelCase column must be quoted by hand or Postgres lowercases it to
-                // the nonexistent "counterpartyid" (real bug, caught by a live query — the mock-
-                // based unit tests for this service never exercise real SQL).
+                // Raw ON-clause: TypeORM only auto-quotes alias.property inside where clauses, not here.
+                // Quote the camelCase column by hand, or Postgres lowercases it and the query fails.
                 'counterparty.id::text = proformaInvoice."counterpartyId"::text',
             );
         if (options?.status) {

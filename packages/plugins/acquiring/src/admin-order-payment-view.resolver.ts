@@ -16,15 +16,8 @@ import { PaymentAttempt } from './entities/payment-attempt.entity';
 export type PaymentView = 'unpaid' | 'partial' | 'paid';
 const PAYMENT_VIEWS: PaymentView[] = ['unpaid', 'partial', 'paid'];
 
-// Real, DB-level filtered + paginated order list for the manager portal's payment-status view
-// chips (CustomerOrdersTab.vue's Unpaid/Partially paid/Paid) — lives here, not in
-// plugin-erp-order, because plugin-erp-order can't depend on this plugin's PaymentAttempt entity
-// (plugin-acquiring already depends on plugin-erp-order transitively via plugin-sync; the
-// reverse edge would be a circular package dependency — confirmed via a real `tsc -b` "Project
-// references may not form a circular graph" error when tried the other way). Extends the same
-// scoped query OrderVisibilityService.findVisible uses (access-control-filtered, customerId
-// pre-applied) with a correlated PaymentAttempt subquery, then executes with real skip/take —
-// never loads the full order list into memory to filter/paginate client-side.
+// Lives here, not in plugin-erp-order: that plugin can't depend on PaymentAttempt (circular dep).
+// Must filter and paginate in the DB; in-memory paging would load every order.
 @Resolver()
 export class AdminOrderPaymentViewResolver {
     constructor(private orderVisibilityService: OrderVisibilityService) {}
@@ -59,9 +52,8 @@ export class AdminOrderPaymentViewResolver {
             .andWhere(`payment_attempt."paymentStatus" = 'captured'`)
             .getQuery();
 
-        // Order.totalWithTax is a TS getter (subTotalWithTax + shippingWithTax), not a real
-        // column — matches Vendure core's own internal raw-SQL usage of this exact expression
-        // (see @vendure/core's OrderService aggregate queries).
+        // totalWithTax is a TS getter, not a column, so SQL must sum subTotalWithTax and shippingWithTax.
+        // Same expression Vendure core uses in its own raw-SQL aggregates.
         const totalWithTax = `("${qb.alias}"."subTotalWithTax" + "${qb.alias}"."shippingWithTax")`;
         if (paymentView === 'unpaid') {
             qb.andWhere(`(${capturedAmount}) <= 0`);

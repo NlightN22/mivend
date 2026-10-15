@@ -4,10 +4,8 @@ import { NumberingService } from '@mivend/plugin-numbering';
 
 import { PaymentRefund, PaymentRefundStatus } from './entities/payment-refund.entity';
 
-// Modeled on Robokassa's refund API (docs.robokassa.ru/partner-api/MethodDescription/RefundOperation):
-// a refund is its own operation with its own id (OpKey -> providerRefundId) and its own status,
-// never a negative PaymentAttempt row (the external-integration-rules skill). Only online-acquiring can
-// realistically produce one today — see docs/payments.md's refund-feasibility note.
+// Refund is a separate operation (OpKey -> providerRefundId, own status), not a negative attempt.
+// Only online acquiring can produce refunds today; see docs/payments.md (refund feasibility).
 @Injectable()
 export class PaymentRefundService {
     constructor(

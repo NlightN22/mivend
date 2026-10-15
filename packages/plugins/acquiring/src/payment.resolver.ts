@@ -38,9 +38,8 @@ const CHANNEL_TO_INBOX_PROVIDER: Partial<Record<PaymentChannel, string>> = {
     'bank-transfer-erp': 'erp',
 };
 
-// GraphQL "status" aliases the entity's paymentStatus column — kept as a distinct resolver
-// field (rather than renaming the DB column) since paymentStatus is the name used throughout
-// docs/payments.md and the rest of this plugin.
+// GraphQL "status" aliases the paymentStatus column; the DB column is not renamed,
+// since paymentStatus is the name used across docs/payments.md and this plugin.
 @Resolver('PaymentAttempt')
 export class PaymentFieldResolver {
     constructor(

@@ -29,9 +29,8 @@ export class AdminPaymentVisibilityResolver {
         return this.paymentVisibilityService.findVisible(ctx, args.options, args.counterpartyId);
     }
 
-    // Batched per-order captured-amount lookup backing the manager portal's order-list Payment
-    // badge (CustomerOrdersTab.vue) — see PaymentAttemptService.sumCapturedAmountsByOrderIds for
-    // what "captured" means and what's deliberately not netted out (refunds/disputes).
+    // Refunds and disputes are deliberately not netted out of the captured amount.
+    // See PaymentAttemptService.sumCapturedAmountsByOrderIds for the definition of "captured".
     @Query()
     @Allow(CustomPermission.ReadPayment.Permission)
     async orderPaymentSummaries(

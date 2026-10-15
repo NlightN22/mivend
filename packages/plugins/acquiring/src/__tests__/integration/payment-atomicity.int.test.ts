@@ -15,9 +15,8 @@ import { ProformaInvoiceService } from '../../proforma-invoice.service';
 import { PaymentAttemptService } from '../../payment-attempt.service';
 import { SettlementEntryService } from '../../settlement-entry.service';
 
-// Mirrors the real proforma invoice/payment_attempt/settlement_entry tables against a real Postgres
-// (same approach as proforma-invoice.service.int.test.ts) — real transaction/rollback/row-locking
-// semantics can't be observed against a mocked TransactionalConnection, only a real DB.
+// Real Postgres is required: mocked TransactionalConnection can't show transaction, rollback,
+// or row-locking behavior.
 @Entity('proforma_invoice')
 @Index(['counterpartyId', 'organizationId', 'status'])
 class TestProformaInvoice {
@@ -75,10 +74,8 @@ let settlementEntryService: SettlementEntryService;
 let paymentAttemptService: PaymentAttemptService;
 const mockCtx = {} as RequestContext;
 
-// Maps the real entity classes the services import (ProformaInvoice/PaymentAttempt/SettlementEntry)
-// onto this file's standalone Test* mirrors, keyed by object identity — the real service code
-// does `entity === ProformaInvoice` style lookups, so the shim must recognize the *actual* imported
-// classes, not just any class with the right shape.
+// Service code compares entities by identity (`entity === ProformaInvoice`), so the shim must
+// receive the real imported classes, not look-alike classes with the same shape.
 function mapEntity(
     entity: unknown,
 ): typeof TestProformaInvoice | typeof TestPaymentAttempt | typeof TestSettlementEntry {
@@ -92,11 +89,8 @@ interface TxCtx {
     __manager?: import('typeorm').EntityManager;
 }
 
-// Set by failNthSettlementSave() below to simulate a crash partway through allocate()'s loop.
-// Applied inside getRepository (the single choke point every repo access goes through,
-// transactional or not) — spying on `dataSource.manager` directly doesn't work here because the
-// transactional EntityManager passed into `dataSource.transaction(async manager => ...)` is a
-// *different* object each call, not `dataSource.manager` itself.
+// Hook lives in getRepository: the transactional EntityManager is a new object on each
+// dataSource.transaction() call, so spying on dataSource.manager would miss it.
 let forcedSettlementSaveFailureAtCall: number | null = null;
 let settlementSaveCallCount = 0;
 
@@ -219,10 +213,8 @@ async function seedProformaInvoicePair(): Promise<[TestProformaInvoice, TestProf
 }
 
 describe('Payment atomicity and recovery (integration, real Postgres)', () => {
-    // proformaInvoiceA is already paid (simulating "a duplicate payment arrives from another channel")
-    // so this payProformaInvoice call's whole amount cascades to proformaInvoiceB, then the remainder becomes
-    // an advance — two separate SettlementEntry writes in one call, which is what lets us
-    // observe a forced failure *between* them.
+    // Two SettlementEntry writes in one call (cascade to B, then advance) leave a gap where a
+    // forced failure can land between them.
     it('a failure partway through allocation rolls back everything — no orphaned PaymentAttempt, no partial SettlementEntry, no partial proforma invoice status change', async () => {
         const [proformaInvoiceA, proformaInvoiceB] = await seedProformaInvoicePair();
         failNthSettlementSave(2);
@@ -237,9 +229,8 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
 
         clearForcedFailure();
 
-        // Nothing partial left behind: the PaymentAttempt insert and both SettlementEntry writes
-        // (including the one that "succeeded" before the throw) were all in the same
-        // transaction, so all of it rolled back together.
+        // All writes share one transaction, so a failure rolls back the PaymentAttempt and
+        // both SettlementEntry writes together, including the first one that succeeded.
         const paymentAttempts = await dataSource
             .getRepository(TestPaymentAttempt)
             .find({ where: { proformaInvoiceId: Number(proformaInvoiceA.id) } });
@@ -266,9 +257,8 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
             ),
         ).rejects.toThrow(/simulated crash mid-allocation/);
 
-        // Central "recovers" — the caller (branch/ERP redelivery, or the customer retrying)
-        // simply calls payProformaInvoice again. Nothing partial existed to reconcile (see the previous
-        // test), so this is a clean run.
+        // Retry is a plain second call: the failed attempt rolled back fully, so nothing partial
+        // exists to reconcile.
         clearForcedFailure();
 
         const result = await paymentAttemptService.payProformaInvoice(
@@ -300,12 +290,8 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
         expect(paymentAttempts).toHaveLength(1); // exactly one — the failed attempt left nothing behind
     });
 
-    // Level 3 idempotency (the external-integration-rules skill). Mirrors a real partial-failure gap: the inbox
-    // processor calls payProformaInvoice with an *explicit* externalReference (not the auto-generated
-    // stub), then calls markProcessed — if payProformaInvoice already committed but markProcessed itself
-    // then fails, the inbox row is left retryable and the next sweep calls payProformaInvoice again with
-    // the exact same externalReference. Before the (channel, providerPaymentId) uniqueness guard,
-    // this created a second PaymentAttempt for the same real-world payment.
+    // Inbox retry: payProformaInvoice can commit before markProcessed fails, so the same explicit
+    // externalReference is replayed; the (channel, providerPaymentId) unique guard blocks a duplicate.
     it('retrying payProformaInvoice with the exact same (channel, externalReference) is a safe no-op — no duplicate PaymentAttempt, no double allocation', async () => {
         const [proformaInvoiceA, proformaInvoiceB] = await seedProformaInvoicePair();
         const sameReference = 'RRN-fixed-reference-for-retry-test';
@@ -319,9 +305,6 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
         );
         expect(first.status).toBe('paid');
 
-        // Simulates the inbox processor's retry: same channel, same externalReference, as if the
-        // previous call's business write succeeded but its own bookkeeping (markProcessed) failed
-        // and the event became retryable again.
         const second = await paymentAttemptService.payProformaInvoice(
             mockCtx,
             Number(proformaInvoiceA.id),
@@ -367,9 +350,8 @@ describe('Payment atomicity and recovery (integration, real Postgres)', () => {
             ),
         ]);
 
-        // Both calls resolve (the loser recognizes the unique-constraint race and treats it as a
-        // safe no-op, per payProformaInvoice's catch(isUniqueViolation) branch) — real concurrency, not
-        // two sequential calls, exercising the DB-level guard the find-first check alone can't.
+        // Must run concurrently: a find-first check alone can't stop the race, so only the DB unique
+        // constraint makes the losing call a safe no-op.
         expect(results.every(r => r.status === 'fulfilled')).toBe(true);
 
         const paymentAttempts = await dataSource

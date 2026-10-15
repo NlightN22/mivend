@@ -3,9 +3,8 @@ import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { PaymentReconciliationIssueService } from '../../payment-reconciliation-issue.service';
 
-// issue #87 Part 2: report() now also emits a unified Notification, additive to the existing
-// PaymentReconciliationIssue row (system-of-record, unchanged) — see
-// ReservationReconciliationIssueService's own test file for the same pattern.
+// The PaymentReconciliationIssue row stays the system of record; this Notification is additive.
+// report() emits both, so the existing issue row is never replaced.
 describe('PaymentReconciliationIssueService.report — Notification wiring', () => {
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
     function createMockRepo() {
@@ -35,9 +34,8 @@ describe('PaymentReconciliationIssueService.report — Notification wiring', () 
         );
     });
 
-    // PaymentAttemptService (the only caller) runs from webhook/inbox processing with no
-    // signed-in administrator — rather than skip notifying, this broadcasts to every
-    // administrator instead (issue #87 Part 2).
+    // Called from webhook/inbox processing with no signed-in admin, so notify all administrators.
+    //
     it('creates an administrator-broadcast Notification (webhook/inbox-triggered path, no signed-in administrator)', async () => {
         await service.report(ctx, 'AMOUNT_MISMATCH', { proformaInvoiceId: 1 });
 
@@ -52,17 +50,13 @@ describe('PaymentReconciliationIssueService.report — Notification wiring', () 
     });
 });
 
-// mivend.audit.common's HIGH finding on issue #76: findOpen had no branch/counterparty scoping
-// at all, so a branch-scoped manager saw payment reconciliation issues company-wide. Mirrors
-// ProformaInvoiceVisibilityService's own consuming pattern (PaymentVisibilityService) — this reuses
-// ProformaInvoiceVisibilityService.applyScope against a proforma invoice/counterparty join.
+// findOpen had no branch/counterparty scoping, exposing issues company-wide to branch managers.
+// Reuses ProformaInvoiceVisibilityService.applyScope via a proforma invoice/counterparty join.
 describe('PaymentReconciliationIssueService.findOpen — scope filtering', () => {
     function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
         const qb: Record<string, ReturnType<typeof vi.fn>> = {};
-        // .mockReturnThis() (not `vi.fn(() => qb)`) avoids a self-referential generic that
-        // `tsc -b`'s stricter project-build typecheck rejects (not caught by `make test`'s
-        // plain vitest run — surfaced only when packages/dashboard's Docker build ran
-        // `pnpm build:plugins`, issue #115).
+        // Use mockReturnThis, not vi.fn(() => qb): the self-referential generic fails tsc -b typecheck.
+        // Plain vitest does not catch this; only the stricter project build does.
         qb.where = vi.fn().mockReturnThis();
         qb.innerJoin = vi.fn().mockReturnThis();
         qb.leftJoin = vi.fn().mockReturnThis();

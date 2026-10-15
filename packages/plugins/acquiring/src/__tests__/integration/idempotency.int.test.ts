@@ -11,12 +11,8 @@ import {
 import { IdempotencyService } from '../../idempotency.service';
 import { IdempotencyConflictError } from '../../types';
 
-// Level 1 idempotency (docs/payments.md: command idempotency, the guard against e.g.
-// double-charging a payment provider on a retried command). IdempotencyService.claim()'s real
-// risk is concurrency — a plain findOne()-then-save() has a TOCTOU window where two callers
-// racing on the same (callerId, idempotencyKey) both see "no existing row" and both execute fn()
-// — this suite exercises the atomic claim (INSERT-wins-the-unique-index, then a conditional
-// UPDATE for a 'failed' retry) for real against Postgres, not mocked.
+// Real risk is concurrency: findOne()-then-save() has a TOCTOU window, so both callers may run fn().
+// Atomic claim tested on real Postgres: unique-index INSERT, then conditional UPDATE on 'failed'.
 @Entity('idempotency_key')
 @Index(['callerId', 'idempotencyKey'], { unique: true })
 class TestIdempotencyKey {
@@ -143,13 +139,8 @@ describe('IdempotencyService.withIdempotency (integration, real Postgres)', () =
             service.withIdempotency(mockCtx, 'payment-service', 'p:concurrent:capture', 'hash', fn),
         ]);
 
-        // The one invariant this suite actually exists to prove: fn (the risky, non-idempotent
-        // side effect — "charge the payment provider") ran exactly once, never twice. Whether the
-        // loser sees an 'in-progress' conflict or the winner's already-'completed' cached
-        // response depends on real scheduling — under load, the winner can legitimately finish
-        // before the loser's fallback query runs — and both are correct outcomes; asserting a
-        // fixed 1-rejected/1-fulfilled split here would make this test flaky on real timing
-        // variance while proving nothing extra about the actual risk.
+        // Timing decides whether the loser sees 'in-progress' or the cached 'completed'; both are valid.
+        // Don't assert a fixed 1-rejected/1-fulfilled split; it would be flaky under load.
         expect(fn.calls).toBe(1);
         for (const result of results) {
             if (result.status === 'rejected') {
@@ -192,9 +183,7 @@ describe('IdempotencyService.withIdempotency (integration, real Postgres)', () =
     });
 });
 
-// A tiny call-counting wrapper — vitest's vi.fn() spy state isn't safely readable mid-flight
-// across genuinely concurrent invocations in the same way a plain counter is; this only needs to
-// prove call count and pass through the wrapped implementation.
+// Plain counter instead of vi.fn(): spy state isn't safely readable across concurrent calls.
 function countingFn<T>(impl: () => Promise<T>): (() => Promise<T>) & { calls: number } {
     let calls = 0;
     const wrapped = async (): Promise<T> => {

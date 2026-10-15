@@ -19,10 +19,8 @@ export class SettlementEntry extends UuidEntity {
     @Column({ type: 'int' })
     counterpartyId!: number;
 
-    // See PaymentAttempt.proformaInvoiceId — same source-of-truth-on-ProformaInvoice reasoning. Once real
-    // ProformaInvoice splitting lands, cash-application FIFO (docs/payments.md "Cash application") must
-    // scope "open obligations" by (counterpartyId, organizationId) together — a debt owed to
-    // our organization A must never be offset by a payment made to organization B.
+    // Once ProformaInvoice splitting lands, FIFO cash application must scope open obligations
+    // by (counterpartyId, organizationId) jointly: org A debt must never be offset by org B payment.
     @Index()
     @Column({ type: 'int', nullable: true })
     proformaInvoiceId!: number | null;

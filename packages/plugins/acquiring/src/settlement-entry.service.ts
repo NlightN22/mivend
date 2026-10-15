@@ -11,19 +11,8 @@ export interface MoneyAmount {
     currencyCode: string;
 }
 
-// Cash application (docs/payments.md "Cash application and payment allocation"): a captured
-// payment settles its own target proforma invoice first, then FIFOs any remainder across the same
-// counterparty+organization's other open proforma invoices (oldest first), and whatever still can't be
-// allocated becomes an advance — a credit on the counterparty, never forced onto any proforma invoice.
-// This is what makes an accidental/duplicate payment (e.g. paid online *and* a bank transfer for
-// the same proforma invoice lands from the ERP) a non-event: the second capture simply finds no
-// remaining balance on that proforma invoice and flows through to the next open one, or to the advance.
-//
-// Must run inside a transaction (see PaymentAttemptService.payProformaInvoice, which wraps the
-// PaymentAttempt insert + this whole call in one `connection.withTransaction`) — the pessimistic
-// row lock taken in getOpenProformaInvoicesFifo below only has an effect inside a transaction, and
-// without one, two concurrent allocate() calls for the same counterparty+organization could both
-// read the same "open" proforma invoice before either commits, double-settling it (a lost-update race).
+// Must run inside a transaction: the pessimistic row lock below only works within one.
+// Without it, concurrent calls can both read the same open proforma invoice and double-settle it.
 @Injectable()
 export class SettlementEntryService {
     constructor(
@@ -148,10 +137,8 @@ export class SettlementEntryService {
         return new Map(rows.map(r => [Number(r.id), Number(r.paid)]));
     }
 
-    // Running total of unallocated advance credit for a counterparty, grouped by currency. Note:
-    // nothing yet automatically draws an existing advance down against a newly created proforma invoice
-    // (that consumption step is not implemented — see docs/payments.md's cash-application
-    // section; this method only reports the advance that has accumulated so far).
+    // Nothing yet draws advances down against new proforma invoices; this only reports the balance.
+    //
     async getAdvanceBalance(ctx: RequestContext, counterpartyId: number): Promise<MoneyAmount[]> {
         const rows = await this.connection
             .getRepository(ctx, SettlementEntry)
@@ -165,15 +152,8 @@ export class SettlementEntryService {
         return rows.map(row => ({ currencyCode: row.currencyCode, amount: Number(row.amount) }));
     }
 
-    // Bounded, not "fetch every open proforma invoice this counterparty+organization has ever
-    // accumulated" — a real payment amount only ever needs to walk a handful of open
-    // obligations before it's exhausted. FIFO_SCAN_LIMIT open proforma invoices is far more than any
-    // realistic payment will need to cover; if a payment's amount is somehow large enough to
-    // reach past it, the remainder is recorded as an advance instead of matching an older
-    // obligation — money is never lost, just parked as credit that can be manually
-    // re-associated later (docs/payments.md "Cash application" already allows for that), rather
-    // than the whole allocation loop degrading as the counterparty's proforma invoice history grows
-    // without bound.
+    // Scan is bounded by FIFO_SCAN_LIMIT; any remainder past it becomes an advance, not a match.
+    // Keeps the allocation loop from degrading as a counterparty's invoice history grows.
     private static readonly FIFO_SCAN_LIMIT = 200;
 
     private async getOpenProformaInvoicesFifo(
@@ -183,10 +163,8 @@ export class SettlementEntryService {
         currencyCode: string,
         preferredProformaInvoiceId: number,
     ): Promise<ProformaInvoice[]> {
-        // Row-locked (pessimistic_write) so two concurrent allocate() calls for the same
-        // counterparty+organization can't both read the same proforma invoice as "open" before either
-        // commits — the second call blocks until the first's transaction finishes, then sees
-        // the now-updated status. Only has an effect inside a transaction (see class doc above).
+        // pessimistic_write blocks concurrent allocate() calls from reading the same invoice as open.
+        // Only takes effect inside a transaction.
         const open = await this.connection
             .getRepository(ctx, ProformaInvoice)
             .createQueryBuilder('proformaInvoice')

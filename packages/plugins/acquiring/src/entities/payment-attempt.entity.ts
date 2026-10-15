@@ -23,12 +23,8 @@ export type ErpPostingStatus =
     | 'retrying'
     | 'reconciliationRequired';
 
-// (channel, providerPaymentId) is the business-level uniqueness scope for a payment fact — not
-// providerPaymentId alone, since the reference format/values are chosen independently by each
-// channel's own system (acquirer RRN, branch kassa receipt number, ERP payment-document id) and
-// could coincidentally collide across channels. This is the DB-level last line of defense for
-// the external-integration-rules skill's three-level idempotency requirement (see PaymentAttemptService.payProformaInvoice
-// for level 3's application-level check, which this index backs against a race).
+// Not providerPaymentId alone: channels pick their own reference formats and may collide.
+// DB-level backstop for the app-level check in PaymentAttemptService.payProformaInvoice (race).
 @Entity()
 @Index(['channel', 'providerPaymentId'], { unique: true })
 export class PaymentAttempt extends UuidEntity {
@@ -36,12 +32,8 @@ export class PaymentAttempt extends UuidEntity {
         super(input);
     }
 
-    // The payment's own internal, human-facing business number — a flat NumberingService
-    // sequence (PaymentAttemptService.payProformaInvoice), not order-scoped. Deliberately
-    // distinct from `providerPaymentId` below: per the external-integration-rules skill, an internally-generated
-    // identity and an external system's own reference serve two different purposes (this
-    // project's own document numbering vs. reconciling against the acquirer/kassa/ERP) and must
-    // never be conflated into one field, even though both are "a number for this payment."
+    // Internal document number from a flat NumberingService sequence; never the same field as
+    // providerPaymentId, which is the external system's reference for reconciliation.
     @Index()
     @Column({ type: 'varchar' })
     number!: string;
@@ -49,12 +41,8 @@ export class PaymentAttempt extends UuidEntity {
     @Column({ type: 'varchar' })
     channel!: PaymentChannel;
 
-    // The ProformaInvoice this payment settles — one per our own legal entity (organizationId lives on
-    // ProformaInvoice, not here, to keep a single source of truth). For online-acquiring, the ProformaInvoice
-    // must exist *before* this PaymentAttempt is created — split-payment acquirers need the
-    // full organization/amount breakdown upfront (see ProformaInvoice's own doc comment). Nullable only
-    // for channels/flows that predate real ProformaInvoice splitting (see docs/payments.md
-    // "Organizations" open question, issue TBD).
+    // Must exist before the attempt for online acquiring; split-payment needs the breakdown upfront.
+    // Nullable only for legacy channels that predate proforma splitting.
     @Index()
     @Column({ type: 'int', nullable: true })
     proformaInvoiceId!: number | null;
@@ -69,11 +57,8 @@ export class PaymentAttempt extends UuidEntity {
     @Column({ type: 'varchar' })
     currencyCode!: string;
 
-    // Mandatory for every channel — an RRN from a card terminal, a branch kassa's own fiscal
-    // receipt/cheque number, an ERP payment-document id, or (until a real acquirer is wired in)
-    // a clearly-marked stub value generated server-side. Without this, a payment can never be
-    // reconciled against the external system that actually witnessed it (the acquirer, the
-    // branch kassa, or ERP) — see docs/payments.md.
+    // Mandatory for every channel: without it the payment can't be reconciled with the external system.
+    // Until an acquirer is wired, a server-generated stub is allowed if clearly marked.
     @Index()
     @Column({ type: 'varchar' })
     providerPaymentId!: string;

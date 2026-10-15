@@ -27,10 +27,7 @@ import { PaymentEventListener } from '../../payment-event.listener';
 import { PaymentInboxProcessorService } from '../../payment-inbox-processor.service';
 import { SettlementEntryService } from '../../settlement-entry.service';
 
-// A minimal real EventBus double — just enough of Vendure's ofType/publish contract for
-// PaymentEventListener to subscribe and receive events for real, without booting the full
-// Vendure DI/app (consistent with this file's existing style of shimming only what's needed
-// around real Postgres + real service instances).
+// Minimal EventBus stub: only Vendure's ofType/publish contract, avoiding the full DI/app boot
 class FakeEventBus {
     private subscribersByType = new Map<unknown, Array<(event: unknown) => Promise<void> | void>>();
 
@@ -53,14 +50,8 @@ class FakeEventBus {
     }
 }
 
-// Models the scenario this test suite exists for: a payment event is reported exactly once by
-// an external source (a real acquirer webhook once Robokassa/issue #46 lands, or — exercised
-// here — the ERP exchange reporting a bank transfer) via InboxService.enqueue, completely
-// independent of whether PaymentInboxProcessorService.processPendingEvents (the periodic sweep,
-// PaymentInboxWorker in production) succeeds on its first attempt. If Central fails to finish
-// processing for its own reasons (the scenario that prompted this test), the event is durably
-// recorded and the *next* sweep resumes it automatically — nothing is lost, and redelivery of
-// the same event is a safe no-op (level 2 idempotency, docs/payments.md).
+// Event is recorded once by the external source; a failed sweep leaves it durably in the inbox
+// so the next sweep resumes it, and redelivery is a safe no-op (level 2 idempotency).
 @Entity('proforma_invoice')
 @Index(['counterpartyId', 'organizationId', 'status'])
 class TestProformaInvoice {
@@ -166,11 +157,7 @@ interface TxCtx {
     __manager?: import('typeorm').EntityManager;
 }
 
-// Forces processPendingEvents' underlying payProformaInvoice call to fail on its Nth SettlementEntry
-// write — simulating "Central could not complete the transaction for its own reasons" without
-// needing a real crash. Applied at the single getRepository choke point so it works whether or
-// not the call happens to be inside a transaction at the time (same technique as
-// payment-atomicity.int.test.ts).
+// Fails at the single getRepository choke point, so it works inside or outside a transaction
 let forcedSettlementSaveFailureAtCall: number | null = null;
 let settlementSaveCallCount = 0;
 
@@ -332,9 +319,6 @@ describe('Payment inbox: webhook/ERP event arrives once, processing recovers on 
         expect(eventAfterFailure.attempts).toBe(1);
         expect(eventAfterFailure.lastError).toContain('simulated processing failure');
 
-        // Central "recovers" — the next scheduled sweep (PaymentInboxWorker, once a minute in
-        // production) picks the same event back up automatically. No special resume code path,
-        // no manual intervention: just the next ordinary sweep.
         const secondSweep = await processorService.processPendingEvents(mockCtx);
         expect(secondSweep).toEqual({ processed: 1, failed: 0 });
 
@@ -827,12 +811,8 @@ describe('Payment inbox: declared number vs versioned proforma number (integrati
 });
 
 describe('Payment inbox: organization data isolation within a single sweep batch (integration, real Postgres)', () => {
-    // AGENTS.md's scope-isolation pattern: two proforma invoices in different organizations, processed in
-    // the SAME sweep batch (claimBatch's default limit is 20 — both events land in one call), one
-    // with a coincidentally identical externalReference value to prove the isolation is by
-    // organization scope, not by accidentally-unique reference strings. Asserting only "org A's
-    // proforma invoice got paid" is not enough — this also asserts org B's proforma invoice, PaymentAttempt count,
-    // and SettlementEntry are byte-for-byte the same before and after processing org A's event.
+    // Same sweep batch and identical externalReference prove isolation is by organization scope,
+    // not by unique reference strings; org B must stay byte-for-byte unchanged.
     it("processing organization A's event in the same batch as organization B's event never touches organization B's data", async () => {
         const proformaInvoiceA = await dataSource.getRepository(TestProformaInvoice).save({
             orderId: 20,
@@ -858,9 +838,7 @@ describe('Payment inbox: organization data isolation within a single sweep batch
             channel: 'bank-transfer-erp',
             externalReference: 'shared-ref-001',
         });
-        // Same externalReference string as org A's event, deliberately — this is a different
-        // provider+providerEventId row (level 2 dedup scope), so it must not collide with or
-        // affect org A's processing despite the coincidentally identical reference value.
+        // Different provider+providerEventId means a separate dedup row, so no collision with org A
         await inboxService.enqueue(mockCtx, 'branch-kassa', 'shared-ref-001', 'hash-b', {
             proformaInvoiceId: Number(proformaInvoiceB.id),
             organizationId: 2,

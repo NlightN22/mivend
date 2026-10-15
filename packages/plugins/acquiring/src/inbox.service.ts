@@ -6,28 +6,20 @@ import { IncomingPaymentEvent } from './entities/incoming-payment-event.entity';
 
 const POSTGRES_UNIQUE_VIOLATION = '23505';
 
-// After this many failed attempts, an event stops being retried automatically and is
-// dead-lettered ('failed', terminal) for manual inspection (the no-silent-drops messaging invariant — "no silent
-// drops... eventually routed to a dead-letter queue"). Chosen to tolerate several sweep cycles
-// of a transient issue (e.g. a brief DB blip) without either giving up too early or retrying a
-// truly broken event forever.
+// Retry budget spans several sweep cycles so a transient blip (e.g. brief DB outage) is survived,
+// but a truly broken event is not retried forever; it ends in terminal 'failed' for manual review.
 const MAX_ATTEMPTS = 5;
 
-// A row stuck in 'processing' this long was almost certainly abandoned by a worker that crashed
-// or was killed mid-processPendingEvents (it advances to 'processed'/'pending'/'failed' well
-// under a second in the normal case) — reclaim it on the next sweep instead of leaving it stuck
-// forever, since claimBatch only ever selected 'pending' rows otherwise.
+// Normal processing leaves 'processing' within a second; older rows are from a crashed worker.
+// claimBatch selects only 'pending', so without this reclaim such rows would stay stuck forever.
 const STUCK_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class InboxService {
     constructor(private connection: TransactionalConnection) {}
 
-    // Level 2 idempotency (docs/payments.md): durably records that this (provider,
-    // providerEventId) was received, *before* any processing is attempted — this is what lets a
-    // provider's webhook redelivery (or a re-sent ERP exchange record) be acknowledged
-    // immediately without re-enqueuing a duplicate. Returns the existing row if this event was
-    // already seen; the caller should treat either outcome as "safe to ack".
+    // Recorded before any processing so redeliveries are acked without enqueuing a duplicate.
+    // Returns the existing row on a repeat; both outcomes are safe to ack.
     async enqueue(
         ctx: RequestContext,
         provider: string,
@@ -60,28 +52,16 @@ export class InboxService {
         }
     }
 
-    // Claims a batch of pending rows (plus any row stuck in 'processing' past
-    // STUCK_PROCESSING_THRESHOLD_MS — a crashed worker's abandoned claim) for the periodic sweep
-    // (PaymentInboxProcessorService). SELECT ... FOR UPDATE SKIP LOCKED inside a single
-    // transaction, not a separate find()+save(), is what actually prevents two concurrent
-    // callers (the scheduled BullMQ sweep and the admin-triggered "run sweep now" mutation can
-    // run at the same time) from both selecting the same row before either commits its
-    // 'processing' status — a plain find-then-save has a real TOCTOU race window between the
-    // two calls.
+    // Must be one SELECT ... FOR UPDATE SKIP LOCKED transaction: a find()+save() pair has a TOCTOU race
+    // between the scheduled sweep and the admin-triggered run, both could select the same row.
     async claimBatch(ctx: RequestContext, limit = 20): Promise<IncomingPaymentEvent[]> {
-        // Transact off the same repo's manager (repo.target, not a re-imported entity class) so
-        // this still resolves correctly through TransactionalConnection's own repository
-        // resolution (channel/ctx scoping in production, entity-mapping test shims in
-        // integration tests) rather than assuming a bare rawConnection.getRepository(Entity)
-        // lookup — see AGENTS.md "What not to do" on bypassing the service layer.
+        // Use repo.target, not a re-imported entity class, so the transaction resolves through
+        // TransactionalConnection (channel scoping, test entity-mapping shims), not a raw connection.
         const outerRepo = this.connection.getRepository(ctx, IncomingPaymentEvent);
         return outerRepo.manager.transaction(async manager => {
             const repo = manager.getRepository(outerRepo.target);
-            // Compares against the database's own now() rather than an app-side `Date`
-            // threshold — a fixed interval computed DB-side is immune to any clock skew between
-            // the app process and the Postgres server (real, observed in this test suite: the
-            // two clocks differed by hours in the dev container), and updatedAt was written by
-            // this same DB clock in the first place.
+            // Compare against Postgres now(), not an app-side Date: app and DB clocks can differ by hours
+            // (observed in the dev container), and updatedAt is also written by the DB clock.
             const rows = await repo
                 .createQueryBuilder('event')
                 .where(
@@ -112,9 +92,7 @@ export class InboxService {
             .update({ id }, { status: 'processed', processedAt: new Date() });
     }
 
-    // Failure -> back to 'pending' for the next sweep (this IS the retry-with-backoff — the
-    // backoff comes from the sweep's own interval, not a separate delay mechanism), or 'failed'
-    // (dead-letter) once MAX_ATTEMPTS is exhausted.
+    // Retry backoff is the sweep interval itself; there is no separate delay mechanism.
     async markFailed(ctx: RequestContext, id: number, error: Error): Promise<void> {
         const repo = this.connection.getRepository(ctx, IncomingPaymentEvent);
         const row = await repo.findOneOrFail({ where: { id } });
@@ -129,11 +107,8 @@ export class InboxService {
         );
     }
 
-    // For a payload that is structurally invalid (e.g. missing a mandatory external reference) —
-    // dead-letters immediately instead of retrying, since retrying won't fix data the producer
-    // never sent (the no-silent-drops messaging invariant: still durably recorded via enqueue() first, never
-    // silently dropped, just skipped straight to the terminal state instead of wasting sweep
-    // cycles on a message that can never become valid on its own).
+    // Retrying cannot fix data the producer never sent, so skip straight to the terminal state.
+    // Still enqueued first, so nothing is silently dropped; it just skips the sweep retries.
     async rejectAsInvalid(ctx: RequestContext, id: number, reason: string): Promise<void> {
         await this.connection
             .getRepository(ctx, IncomingPaymentEvent)

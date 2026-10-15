@@ -3,12 +3,9 @@ import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { PaymentVisibilityService } from '../../payment-visibility.service';
 import { ProformaInvoiceVisibilityService } from '../../proforma-invoice-visibility.service';
 
-// Deliberately un-annotated object literal (not `Record<string, ReturnType<typeof vi.fn>>`) — an
-// explicit annotation defeats TS's inference of each mock's real call signature and produces
-// spurious "Mock<...> not assignable to Mock<any[], unknown>" errors (same fix as this session's
-// other query-builder mocks). getRawAndEntities is typed loosely (Record<string, unknown>[])
-// since individual tests reassign it with differently-shaped raw/entity rows.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
+// Left un-annotated on purpose: an explicit Mock type breaks TS's inference of each mock's signature
+// getRawAndEntities is loosely typed: tests reassign it with rows of different shapes.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest Mock<> return type is awkward to spell out
 function mockQueryBuilder() {
     const qb = {
         innerJoin: vi.fn(),

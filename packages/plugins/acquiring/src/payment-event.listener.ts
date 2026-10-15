@@ -10,9 +10,8 @@ import { IncomingPaymentPayload } from './payment-inbox-processor.service';
 
 const loggerCtx = 'PaymentEventListener';
 
-// Storage shape only, distinct from IncomingPaymentPayload — externalReference may be absent
-// here (a payload that's about to be rejected as invalid), but is always durably recorded as
-// received (the no-silent-drops messaging invariant), never silently omitted from the row.
+// Distinct from IncomingPaymentPayload: externalReference may be absent for rejected payloads,
+// but it must always be stored as received (no-silent-drops invariant), never omitted.
 interface StoredPaymentPayload {
     proformaInvoiceId?: number;
     proformaInvoiceUuid?: string;
@@ -31,9 +30,8 @@ function hashPayload(payload: StoredPaymentPayload): string {
     return createHash('sha256').update(JSON.stringify(identity)).digest('hex');
 }
 
-// Subscribes only — never calls PaymentAttemptService.payProformaInvoice directly (the
-// external-integration-rules skill's async-inbox rule). Each event is durably enqueued into IncomingPaymentEvent; PaymentInboxWorker's periodic
-// sweep does the actual, risky processing.
+// Must not call PaymentAttemptService.payProformaInvoice directly (async-inbox rule):
+// events are durably enqueued, and PaymentInboxWorker's sweep does the risky processing.
 @Injectable()
 export class PaymentEventListener implements OnModuleInit {
     constructor(
@@ -87,10 +85,8 @@ export class PaymentEventListener implements OnModuleInit {
                     payload,
                 );
                 if (!event.rrn) {
-                    // Mandatory requisite (RRN for a card-processed kassa payment, or the
-                    // kassa's own fiscal receipt number for cash) — without it this payment can
-                    // never be reconciled against the branch's kassa system. Reject rather than
-                    // silently processing it with no reference.
+                    // Required to reconcile with the branch kassa system (RRN for card, fiscal receipt no. for cash).
+                    // Reject rather than process a payment with no reference.
                     await this.inboxService.rejectAsInvalid(
                         event.ctx,
                         Number(row.id),

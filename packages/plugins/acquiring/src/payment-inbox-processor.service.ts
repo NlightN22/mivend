@@ -33,34 +33,18 @@ export interface IncomingPaymentPayload {
     // fall back to the named document's amount.
     amount?: number;
     currencyCode?: string;
-    // The organization the reporting side (ERP/branch) believes this payment belongs to.
-    // PaymentAttemptService.payProformaInvoice validates this against the target ProformaInvoice's real
-    // organizationId before applying — a mismatch is a genuine cross-system discrepancy
-    // (PaymentReconciliationIssue), not a rejected/dead-lettered event, since the ERP/branch
-    // isn't necessarily lying — its own proformaInvoiceId reference may simply be stale or wrong, and a
-    // human needs to reconcile which proforma invoice was actually meant (the external-integration-rules skill).
+    // Mismatch is a cross-system discrepancy for human reconciliation, not a rejected event:
+    // the sender's proformaInvoiceId reference may be stale, so the sender isn't necessarily lying.
     organizationId: number;
     outcome: PayProformaInvoiceOutcome;
     channel: PaymentChannel;
-    // The originating system's own reference for this payment fact — an ERP payment-document id
-    // for bank-transfer-erp, or an RRN (Retrieval Reference Number, the standard 12-digit
-    // card/terminal transaction reference) for branch-kassa. Stored on PaymentAttempt.
-    // providerPaymentId and surfaced to the customer as "External reference". Mandatory — a
-    // producer missing this must reject/dead-letter the event itself (PaymentEventListener),
-    // never enqueue a row that would reach this processor without one.
+    // Mandatory: rows without it must be rejected upstream in PaymentEventListener, never enqueued.
+    // Shown to the customer as 'External reference', so it must be the originating system's own id.
     externalReference: string;
 }
 
-// The periodic sweep half of the inbox pattern — called by PaymentInboxWorker on a timer (once a
-// minute by default). Claims whatever is currently 'pending' and, for each row, does the actual
-// work (PaymentAttemptService.payProformaInvoice, same atomic/transactional path used everywhere else in
-// this plugin) — never the enqueue side, which must stay fast and separate (see InboxService).
-//
-// If Central was unreachable when the event was first enqueued, that's moot — enqueue() already
-// wrote the row durably before this service ever runs. If processing itself fails partway (the
-// scenario docs/payments.md and this session's earlier work addressed with a DB transaction),
-// the row is left 'pending' again (via markFailed) and the *next* sweep picks it up — recovery
-// is "try again next minute", not a special code path.
+// Enqueue already wrote the row durably, so an unreachable Central at enqueue time is moot.
+// Failures leave the row 'pending' for the next sweep; retry is the recovery path, by design.
 @Injectable()
 export class PaymentInboxProcessorService {
     constructor(
@@ -112,10 +96,8 @@ export class PaymentInboxProcessorService {
             try {
                 const payload = JSON.parse(event.payload) as IncomingPaymentPayload;
                 if (!payload.externalReference) {
-                    // Defense in depth: PaymentEventListener should already have rejected this
-                    // before it ever became a 'pending' row — a missing reference here means a
-                    // producer skipped that validation. Dead-letter, don't let payProformaInvoice's
-                    // stub-reference default silently paper over invalid inbound data.
+                    // Backstop for producers that skip listener validation; a missing reference must not reach
+                    // payProformaInvoice, whose stub-reference default would silently mask the invalid input.
                     throw new Error('Inbox event is missing its mandatory externalReference');
                 }
                 const documentId = await this.resolveProformaInvoiceId(ctx, payload);

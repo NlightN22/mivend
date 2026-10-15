@@ -3,11 +3,9 @@ import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
 import { ProformaInvoiceVisibilityService } from '../../proforma-invoice-visibility.service';
 
-// Deliberately un-annotated (not `Record<string, ReturnType<typeof vi.fn>>`) — an explicit
-// annotation here defeats TS's own inference of each mock's real call signature and produces
-// spurious "Mock<...> not assignable to Mock<any[], unknown>" errors (same fix as this
-// session's other query-builder mocks).
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
+// Don't annotate: an explicit type defeats TS's inference of each mock's real call signature
+// and causes spurious 'Mock<...> not assignable to Mock<any[], unknown>' errors.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest Mock<> return type is awkward to spell out
 function mockQueryBuilder() {
     const qb = {
         leftJoin: vi.fn(),
@@ -29,14 +27,9 @@ function mockQueryBuilder() {
 
 const mockCtx = {} as unknown as RequestContext;
 
-// Same "let inference do the work" fix as mockQueryBuilder above — pre-declaring
-// accessScopeService's type as `{ applyOwnCounterpartyFilter: ReturnType<typeof vi.fn> }`
-// (no generic args, so it widens to `Mock<any[], unknown>`) is what produced the
-// "Mock<[builder,alias,administratorId], void> not assignable to Mock<any[], unknown>"
-// build error — a concretely-typed callback's inferred Mock type doesn't downcast to that
-// wider annotation. Extracting the factory lets accessScopeService's declared type come from
-// `ReturnType<typeof mockAccessScopeService>` instead, matching each mock's real signature.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
+// Don't annotate as ReturnType<typeof vi.fn>: it widens to Mock<any[], unknown> and fails to
+// accept the concrete callback's Mock. Derive the type from the factory's ReturnType instead.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest Mock<> return type is awkward to spell out
 function mockAccessScopeService() {
     return {
         resolveProformaInvoiceScope: vi.fn(),

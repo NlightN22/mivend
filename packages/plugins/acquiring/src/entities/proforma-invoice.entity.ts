@@ -20,19 +20,8 @@ export interface ProformaInvoiceLineSnapshot {
     taxAmount?: number;
 }
 
-// One aggregate storefront Order can split into several ProformaInvoices — one per our own legal
-// entity (OrganizationRequisites, plugin-documents) that owns the stock the order lines are
-// fulfilled from. This split must be known and materialized *before* an online payment is
-// requested — split-payment acquirers (ЮKassa "сплитование", Т-Банк "Мультирасчёты") require
-// the full recipient/amount breakdown (`transfers`) at payment-creation time; there is no
-// documented way to add or restructure recipients after the payment is created. See
-// docs/payments.md "Organizations" for the full reasoning and open questions (issue TBD).
-//
-// Composite index on (counterpartyId, organizationId, status): this is exactly the filter shape
-// SettlementEntryService.getOpenProformaInvoicesFifo runs on every successful payment (find open
-// obligations for one counterparty within one organization) — the three separate single-column
-// indexes below don't cover that combination efficiently once a counterparty accumulates many
-// proforma invoices.
+// Split must be known before payment creation: split-payment acquirers need full transfers up front.
+// Composite index matches the per-counterparty, per-organization FIFO lookup run on every payment.
 @Entity()
 @Index(['counterpartyId', 'organizationId', 'status'])
 @Index('UQ_proforma_invoice_number', ['number'], { unique: true })
@@ -69,12 +58,8 @@ export class ProformaInvoice extends UuidEntity {
     @Column({ type: 'varchar', default: 'pending' })
     status!: ProformaInvoiceStatus;
 
-    // Denormalized servicing branch, set at creation time from the customer's preferred
-    // TradingPoint (mirrors Order.customFields.branchId in plugin-erp-order) — see
-    // docs/access-control.md's "Branch scope is a separate axis" section. This is the real
-    // access-scope filter for the manager portal, never Counterparty.branchId (a chain
-    // customer's locations can span branches; filtering the parent record would be wrong).
-    // Nullable: a customer with no trading point yet has no branch scope, same as Order's.
+    // Real access-scope filter for the manager portal. Not Counterparty.branchId: chain customers
+    // span branches, so the parent record's branch would be wrong. Null when no trading point.
     @Index()
     @Column({ type: 'varchar', nullable: true })
     branchId!: string | null;

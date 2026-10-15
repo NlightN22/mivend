@@ -4,18 +4,8 @@ import { Column, Entity, Index } from 'typeorm';
 
 export type IncomingPaymentEventStatus = 'pending' | 'processing' | 'processed' | 'failed';
 
-// The durable "inbox" half of the inbox/outbox pattern (the outbox-pattern messaging invariant, docs/payments.md
-// idempotency levels 2-3) for payment events reported by an external source — a real acquirer
-// webhook (once Robokassa/issue #46 lands), a branch till, or an ERP-reported bank transfer.
-//
-// Deliberately NOT the same shape as a bare "have we seen this event" marker: `status` tracks
-// the event through its own lifecycle (pending -> processing -> processed, or -> failed after
-// exhausting retries), separate from whether it was merely *received*. This is what makes
-// recovery possible — if the process crashes after receiving an event but before finishing
-// PaymentInboxProcessorService.processPendingEvents' work on it, the row is left in
-// 'processing'/'pending' (never advanced to 'processed'), so the next periodic sweep picks it
-// back up automatically. A row is only ever marked 'processed' *after* the real work
-// (PaymentAttemptService.payProformaInvoice) actually completes.
+// Status lifecycle is separate from receipt so a crash mid-processing leaves the row unprocessed,
+// and the periodic sweep retries it. Mark 'processed' only after the real work completes.
 @Entity()
 @Index(['provider', 'providerEventId'], { unique: true })
 export class IncomingPaymentEvent extends VendureEntity {

@@ -17,12 +17,8 @@ import {
 
 import { InboxService } from '../../inbox.service';
 
-// InboxService.claimBatch's real risk is concurrency, not lifecycle logic (that's covered by the
-// unit test's mocked-repo scenarios) — two independent callers (the scheduled BullMQ sweep and
-// the admin-triggered "run sweep now" mutation, see proforma-invoice.resolver.ts) can call it at the same
-// moment. This suite exercises that for real against Postgres: real concurrent claimBatch calls
-// (not two sequential ones — see docs/testing-strategy.md's concurrency pattern), plus recovery
-// of a row abandoned mid-'processing' by a crashed worker.
+// claimBatch's real risk is concurrency: the scheduled sweep and admin trigger can overlap.
+// Tests use real parallel calls against Postgres, not sequential ones, to exercise the race.
 @Entity('incoming_payment_event')
 @Index(['provider', 'providerEventId'], { unique: true })
 class TestIncomingPaymentEvent {
@@ -138,13 +134,8 @@ describe('InboxService.claimBatch: stuck "processing" recovery (integration, rea
                 attempts: 0,
             }),
         );
-        // Simulate a worker that claimed this row 10 minutes ago and then crashed — backdate
-        // updatedAt via a DB-relative expression (past the 5-minute STUCK_PROCESSING_THRESHOLD_MS
-        // in inbox.service.ts), not an app-side `new Date(Date.now() - ...)`: the app process and
-        // the test Postgres container's clocks are not guaranteed to agree (real skew observed
-        // while writing this test), and claimBatch's own staleness check is entirely DB-side
-        // (`now() - interval`) for exactly that reason — so the test must set up its fixture the
-        // same way to stay meaningful.
+        // Backdate updatedAt with a DB-side expression, not an app-side Date: app and DB clocks can skew.
+        // claimBatch's staleness check runs on the DB clock (now() - interval), so the fixture must match.
         await dataSource.query(
             `UPDATE "${schema}"."incoming_payment_event" SET "updatedAt" = now() - interval '10 minutes' WHERE id = $1`,
             [stuck.id],

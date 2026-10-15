@@ -17,9 +17,8 @@ export interface OpenPaymentReconciliationIssueListOptions {
     skip?: number;
 }
 
-// A detected cross-system discrepancy, for a human to resolve (the external-integration-rules skill) — never
-// an automatic pick of whichever number/organization looks right. Kept intentionally minimal
-// (report + list) — resolution/triage tooling is future scope, not part of detecting the issue.
+// Reported for a human to resolve; never auto-picks which system's value is correct.
+// Deliberately minimal (report + list): resolution tooling is out of scope here.
 @Injectable()
 export class PaymentReconciliationIssueService {
     constructor(
@@ -56,9 +55,8 @@ export class PaymentReconciliationIssueService {
             }),
         );
 
-        // PaymentAttemptService (the only caller) runs from webhook/inbox processing, so there is
-        // no signed-in administrator on ctx — getCurrentAdministrator would resolve to null.
-        // Broadcast to every administrator instead (issue #87 Part 2) rather than skip notifying.
+        // Called from webhook/inbox processing, so ctx has no signed-in administrator;
+        // getCurrentAdministrator would return null, so notify every administrator instead.
         await this.notificationService.create(ctx, {
             recipientType: 'administrator-broadcast',
             kind: 'warning',
@@ -71,15 +69,8 @@ export class PaymentReconciliationIssueService {
         return saved;
     }
 
-    // Dashboard/ops read model (issue #76) — open issues need a human to resolve; never
-    // auto-resolved from this query. mivend.audit.common's HIGH finding on the first version of
-    // this method: it had no branch/counterparty scoping at all, so a branch-scoped manager saw
-    // every organization's reconciliation issues company-wide (docs/access-control.md layer 3).
-    // Scoped via the same proforma invoice->counterparty join ProformaInvoiceVisibilityService.applyScope already
-    // uses — an issue with no proformaInvoiceId (several issueTypes never set one, e.g.
-    // UNKNOWN_PROVIDER_OPERATION) can't be tied to any counterparty/branch at all, so it is
-    // excluded for own/department scope (the most-restrictive-fallback rule) and only visible to
-    // 'all'-scoped roles, same principle as an unresolved role falling back to the tightest scope.
+    // Scoped via the proforma invoice->counterparty join; open issues are never auto-resolved here.
+    // No proformaInvoiceId means no counterparty/branch: hidden from own/department, 'all'-scope only.
     async findOpen(
         ctx: RequestContext,
         options?: OpenPaymentReconciliationIssueListOptions,

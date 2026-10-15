@@ -4,10 +4,8 @@ import { Column, Entity, Index } from 'typeorm';
 
 export type PaymentRefundStatus = 'pending' | 'succeeded' | 'failed';
 
-// Named PaymentRefund, not Refund — @vendure/core already registers its own Refund entity
-// (tied 1:1 to a Vendure Payment), and TypeORM/Vendure's entity registry throws
-// error.entity-name-conflict on bootstrap if two entities share a class name, regardless of
-// which module they come from.
+// @vendure/core already registers a Refund entity; duplicate entity class names fail bootstrap
+// TypeORM throws error.entity-name-conflict regardless of which module declares it.
 @Entity()
 export class PaymentRefund extends UuidEntity {
     constructor(input?: DeepPartial<PaymentRefund>) {

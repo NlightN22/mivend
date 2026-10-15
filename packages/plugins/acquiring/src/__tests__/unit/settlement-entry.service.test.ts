@@ -294,9 +294,8 @@ describe('SettlementEntryService.allocate', () => {
     );
 
     it('still settles the target proforma invoice first even when it falls outside the bounded FIFO scan (fetched separately, also locked)', async () => {
-        // Simulate a counterparty/organization with 200 older open proforma invoices already filling the
-        // bounded scan — the target proforma invoice (id 1) isn't among them, so it must be fetched
-        // directly rather than silently skipped.
+        // Bounded scan is filled by 200 older open proformas; target id 1 is not among them,
+        // so it must be fetched directly instead of being silently skipped by the scan.
         const olderProformaInvoices = Array.from({ length: 200 }, (_, i) =>
             makeProformaInvoice({ id: 100 + i, amount: 10 }),
         );

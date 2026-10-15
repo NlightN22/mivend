@@ -94,13 +94,8 @@ describe('InboxService', () => {
         });
     });
 
-    // claimBatch itself (oldest-first ordering, marking 'processing', the atomic
-    // SELECT...FOR UPDATE SKIP LOCKED claim, and stuck-'processing' recovery) is deliberately
-    // NOT unit-tested here — it runs a real transaction/row-lock against rawConnection, and a
-    // mocked query builder would only prove the mock was called, not that the locking actually
-    // prevents a double-claim (see docs/testing-strategy.md: "a unit test does not prove
-    // ORM/SQL/transaction/locking behavior"). Covered for real in
-    // integration/payment-inbox-claim.int.test.ts.
+    // Not unit-tested: a mock can't prove the row-locking claim prevents double-claims.
+    // Covered by integration/payment-inbox-claim.int.test.ts against a real transaction.
 
     describe('markProcessed / markFailed', () => {
         it('markProcessed sets status "processed" with a processedAt timestamp', async () => {

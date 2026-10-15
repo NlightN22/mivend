@@ -9,9 +9,8 @@ import {
 } from 'shared';
 import { ProformaInvoiceService } from '../../proforma-invoice.service';
 
-// Same approach as plugin-documents' integration test: VendureEntity needs a bootstrapped
-// EntityIdStrategy, so we mirror the production `proforma invoice` table with a standalone TypeORM
-// entity against real Postgres rather than using the real ProformaInvoice class directly.
+// VendureEntity needs a bootstrapped EntityIdStrategy, so the test uses a plain TypeORM entity
+// mirroring the production table schema against real Postgres, not the ProformaInvoice class.
 @Entity('proforma_invoice')
 @Index(['counterpartyId'])
 class TestProformaInvoice {

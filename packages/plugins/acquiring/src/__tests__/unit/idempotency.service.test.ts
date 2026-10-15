@@ -24,13 +24,8 @@ describe('IdempotencyService', () => {
         service = new IdempotencyService(mockConnection);
     });
 
-    // The "key already exists" branches (completed retry returns the stored response,
-    // payload-mismatch conflict, in-progress conflict, failed-key retry) all depend on
-    // IdempotencyService.claim()'s real unique-constraint violation and conditional UPDATE
-    // behavior — that's exactly the concurrency-safety this rewrite exists to prove, and a
-    // mocked repo whose save() never throws can't exercise it meaningfully (see
-    // docs/testing-strategy.md: a unit test doesn't prove transaction/locking behavior). Covered
-    // for real in integration/idempotency.int.test.ts.
+    // Key-exists branches need claim()'s real unique-constraint and conditional UPDATE behavior;
+    // a mocked save() never throws, so these are covered in integration/idempotency.int.test.ts.
 
     it('executes fn once and stores the result on first call', async () => {
         const fn = vi.fn().mockResolvedValue({ ok: true });

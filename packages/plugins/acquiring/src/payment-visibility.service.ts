@@ -8,10 +8,8 @@ import { PaymentAttempt } from './entities/payment-attempt.entity';
 import { ProformaInvoiceVisibilityService } from './proforma-invoice-visibility.service';
 import { PaymentListOptions } from './payment-attempt.service';
 
-// Row-level visibility for the manager portal's payment list — a payment is a resource *derived*
-// from ProformaInvoice (joined via proformaInvoiceId), so it reuses ProformaInvoiceVisibilityService's scope resolution
-// and filter logic rather than duplicating a resolvePaymentScope (see docs/access-control.md's
-// "derived resource" rule — same reasoning as documents inheriting counterparty scope).
+// Payment inherits visibility from its ProformaInvoice, so reuse that service's scope and filters,
+// not a separate resolvePaymentScope (derived-resource rule).
 @Injectable()
 export class PaymentVisibilityService {
     constructor(
@@ -31,11 +29,8 @@ export class PaymentVisibilityService {
         const qb = this.connection
             .getRepository(ctx, PaymentAttempt)
             .createQueryBuilder('payment')
-            // Raw ON-clause strings, not .where()/.andWhere() — TypeORM's alias.property
-            // auto-quoting replacement doesn't run here, so camelCase columns must be quoted by
-            // hand or Postgres lowercases them to nonexistent columns (real bug, only caught by
-            // a live query against real Postgres — see proforma-invoice-visibility.service.ts's identical
-            // fix).
+            // Raw ON-clause string: TypeORM's alias.property auto-quoting doesn't apply here, so quote
+            // camelCase columns by hand, or Postgres lowercases them to nonexistent names.
             .innerJoin(
                 ProformaInvoice,
                 'proformaInvoice',
@@ -71,10 +66,8 @@ export class PaymentVisibilityService {
         );
 
         const totalItems = await qb.getCount();
-        // getRawAndEntities (not getManyAndCount) — proformaInvoice.counterpartyId isn't a PaymentAttempt
-        // column, so it only comes back via the raw row; attached below as a transient property
-        // so PaymentAttempt.counterpartyId (admin.schema.ts) can resolve it without a second,
-        // per-row proforma invoice lookup from the manager-portal Payments list (see api/payments.ts).
+        // getRawAndEntities: proformaInvoice.counterpartyId is not a PaymentAttempt column, so it only
+        // comes back only in the raw row; attach it as a transient property to avoid per-row lookups.
         const { entities, raw } = await qb
             .addSelect('proformaInvoice.counterpartyId', 'proformaInvoice_counterpartyId')
             .orderBy('payment.createdAt', 'DESC')
