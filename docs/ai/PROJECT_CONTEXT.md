@@ -1,13 +1,22 @@
 # Project Context
 
-Updated: 2026-10-15 16:22
+Updated: 2026-10-15 21:30
 
-## #234 Kafka topic rename (2026-10-14, pushed `606f5480`, closed; not audited in a separate session)
+## #175 / #232 / #112 / #238 + ERP status cycle (2026-10-14..15, DONE: audited twice, pushed `d5e365b8`, closed; leftovers #239)
 
-- Names are `<writer>.<entity>.<kind>.<version>` (search-platform#201): ERP writes `erp.<entity>.events.v1`, mivend writes `mivend.order.commands.v1`. event-contracts `^0.71.0` (lockfile edited by hand).
-- ONE consumer for `erp.order.events.v1` (`order-events-message.ts`): protobuf `OrderEvent` oneof + header `type`, routed to the unchanged inbox streams `order-registration-result` / `order-changed` / `order-cancel-result`; `change-result` and unknown types skipped with a warning; header/oneof mismatch dead-lettered. The three streams share one topic, so the consumer subscribes once and lag polling/stream health dedupe by topic. `KafkaConfig.topic` and `INTEGRATION_KAFKA_TOPIC` are gone; `INTEGRATION_KAFKA_TOPIC_ORDER_EVENTS` overrides the order topic. Decisions in `docs/order-contracts.md` "Kafka topic names".
-- Verified live on staging-integration (35 topics, order topic lag 0, no errors; Integration health page shows the new names). Kafka lag was still "unknown" right after the restart (no committed offsets yet).
-- Seen on staging, not caused by this change: `offer` ~49.8k no-op/24h (not investigated), 12833 failed `stock` and 4 failed `product` (old), one pending `order-changed` for an order mivend does not have.
+- **Order page / list (#175):** repeat order via cart, copy-number button (execCommand fallback on http), reserve column, `OrderDetailPage` split. Status badge = label of the status's `customerGroup` (pending/confirmed/in_transit/delivered/cancelled/rejected; no status code in the frontend), exact dictionary name only in the badge `title` and history. List tabs built from dictionary groups: Active (everything except delivered+cancelled, `erpStatus.notIn`), Awaiting approval, Preparing, On the way, Completed, Cancelled, All; source default "Placed here"; empty status set matches nothing. Storefront has only a ru locale file (labels are ru; localization is a separate task).
+- **Status history (#232):** `order_status_history_entry` (migration 1791509000000, backfilled from placement time; `occurredAt` = ERP event time, migration 1791510000000), filtered server-side to customer-visible dictionary statuses. Shop `orderStatuses` returns only customer-visible statuses and the fields the storefront needs; Admin keeps the full dictionary (`ReadOrder`).
+- **ERP reserve (#112):** `erp_order_reserve` replaced atomically per order under lock `erp-reserve:<orderId>`; an event without lines changes nothing; customer "reserve" column; manager holders with paging after visibility. `ReservationSettings` provider (options `defaultReservationDays`, `rejectedOrderReleaseDays`) replaced the module global.
+- **Cancel (#194 follow-up):** a refused cancel (`REFUSED`) no longer blocks: repeat `cancel-requested` with a fresh eventId; integration side resets its earlier command (subject needed FORWARD compatibility in Schema Registry; done by the integration team). Repeats are not rate-limited (#239).
+- **Delivery vs pickup (#238):** `confirmed` carries `pointOfSaleId` (+ `deliveryAddress` text, printed docs only); only `pointOfSaleId` makes a delivery; a customer-added point has no ERP id so it goes as pickup (warn log). event-contracts `^0.72.1`. Status derivation by receiving method is in `docs/order-contracts.md` ("ERP status derivation by receiving method"). Verified on staging: delivery cycle PICKING->SHIPPING->DELIVERING->DELIVERED, pickup PICKING->DELIVERED; APPROVED never appears when approval and the warehouse order are created in one posting.
+- **Short mivend status names** ("Not accepted", "Passed", "Reserved"; explanations in `description`); provisioning upsert updates name/description on boot.
+- **Credit limit of the staging test customer** was blocked by old open test orders; cancelled (5 local, 2 closed by the integration side, 15 via 1C). Only the fresh test orders 43/44/45/48/55 remain.
+- **Test lesson:** a nested `withTransaction` in the reserve-order test harness must join the ctx's open transaction (like Vendure), otherwise a lock taken twice hangs cancel suites; unit tests do not catch it, `make test-int` does. Fixtures must mirror real column types (a varchar custom field vs int id hid a production query failure).
+- **Open:** #236 (release the local reserve only when the ERP holds the quantity; decision written in the issue, implement in a new session), #237 and #233 (other sessions), #239 (non-blocking audit leftovers), reserve shown on delivered orders (proposal: hide for terminal statuses, not decided). `make ci` is no longer a pre-push step (run by the audit session about once per three issues).
+
+## #234 Kafka topic rename (2026-10-14, closed)
+
+- Names are `<writer>.<entity>.<kind>.<version>`: ERP writes `erp.<entity>.events.v1`, mivend writes `mivend.order.commands.v1`. One consumer for `erp.order.events.v1` (`order-events-message.ts`) routes by header `type` to the inbox streams `order-registration-result` / `order-changed` / `order-cancel-result`; `change-result` and unknown types are skipped. Verified live on staging-integration.
 
 ## #215 / #224 / #227 historical ERP orders and settlement documents (2026-10-13, closed, on main; follow-ups #228/#229/#226)
 
