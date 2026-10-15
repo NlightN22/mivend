@@ -29,9 +29,8 @@ export interface ResolveQueryResponse {
     facets?: ResolveQueryFacets;
 }
 
-// A hung search-service must not hold a shop-api `search` request open indefinitely (audit
-// finding, mivend.audit.70) — aborts and surfaces as the same generic failure as any other
-// unreachable/erroring backend.
+// A hung search-service must not hold the shop-api request open indefinitely.
+// On timeout, the abort surfaces as the same generic failure as any other backend error.
 const REQUEST_TIMEOUT_MS = 5000;
 
 // Sole HTTP client for search-service's POST /resolve-query (issue #69), authenticated via X-Api-Key.

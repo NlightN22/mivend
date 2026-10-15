@@ -52,9 +52,7 @@ export interface ExternalSearchResponse {
     collections: ExternalCollectionResult[];
 }
 
-// Backend for SEARCH_BACKEND=external (issue #69, #164): resolves the shop-api `search` query
-// against search-service. Manufacturer facets map to facetValues and category facets to
-// collections (counts only; the tree itself comes from the Collection query).
+// Collections carry counts only; the category tree must come from the Collection query.
 @Injectable()
 export class ExternalSearchService {
     constructor(

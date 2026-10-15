@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Issue #69, test-design coverage area 4: SEARCH_BACKEND=internal (or unset) registers
-// ElasticsearchPlugin exactly as before; SEARCH_BACKEND=external registers ExternalSearchPlugin
-// instead, never both. searchPlugins is built once at module load (bootstrap), so each case
-// re-imports the module fresh via vi.resetModules().
+// searchPlugins is built once at module load; each case must vi.resetModules() to re-import.
+// Only one backend plugin may be registered, so the test asserts the other is absent.
 describe('search.plugin searchPlugins backend switch', () => {
     const ORIGINAL_BACKEND = process.env.SEARCH_BACKEND;
     const ORIGINAL_URL = process.env.SEARCH_SERVICE_URL;
@@ -19,9 +17,7 @@ describe('search.plugin searchPlugins backend switch', () => {
         process.env.SEARCH_SERVICE_API_KEY = ORIGINAL_KEY;
     });
 
-    // vi.resetModules() forces a full reimport of the plugin's dependency graph (Vendure core,
-    // GraphQL, CrossReferenceService, PriceEntryPlugin) each time — slower than the default 5s
-    // test timeout under a full `make test` run, hence the explicit longer timeout below.
+    // vi.resetModules() reimports the whole dependency graph, which can exceed the default 5s timeout.
     it('registers ElasticsearchPlugin (and not ExternalSearchPlugin) when SEARCH_BACKEND is unset', async () => {
         delete process.env.SEARCH_BACKEND;
         const { searchPlugins } = await import('../../search.plugin');

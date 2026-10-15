@@ -11,9 +11,8 @@ import { SearchFilterResolver } from './search-filter-resolver.service';
 import { SearchPriceTypeService } from './search-price-type.service';
 import { SearchServiceClient } from './search-service.client';
 
-// Registered only when SEARCH_BACKEND=external (issue #69) — supplies the shop-api `search`
-// query against search-service, replacing the seam ElasticsearchPlugin fills for the internal
-// backend. Never registered alongside ElasticsearchPlugin. See search.plugin.ts.
+// Never register alongside ElasticsearchPlugin: both fill the same search seam.
+// The seam's contract is defined in search.plugin.ts.
 @VendurePlugin({
     imports: [PluginCommonModule, ReservationPlugin, PriceEntryPlugin, AccessControlPlugin],
     shopApiExtensions: {

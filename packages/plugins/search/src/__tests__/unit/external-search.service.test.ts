@@ -252,9 +252,8 @@ describe('ExternalSearchService.search', () => {
         expect(lookup.findByExternalIds).toHaveBeenCalledWith(ctx, [], false);
     });
 
-    // Audit finding, mivend.audit.70 (round 3, CRITICAL): a prior fix made this path throw,
-    // which meant a real storefront visitor selecting any facet filter under
-    // SEARCH_BACKEND=external got a hard shop-api failure instead of degraded results.
+    // Under SEARCH_BACKEND=external, facet filters must degrade gracefully, never throw.
+    // A throw here turns any storefront facet selection into a hard shop-api failure.
     it('degrades to a plain free-text search instead of throwing when a facet filter is present', async () => {
         const client = {
             resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),

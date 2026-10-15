@@ -7,21 +7,8 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-// Audit finding, mivend.audit.70: ProductLookupService.findByExternalIds query
-// (product-lookup.service.ts) was entirely unverified against a real repository/DB — every unit
-// test mocks ProductLookupService or fetch. This test does not bootstrap the real Vendure
-// Product entity (this plugin has no @vendure/testing component-test infra, and faithfully
-// replicating Vendure's whole Product/ProductVariant/Translation/Asset relation graph would be
-// its own large undertaking) — instead it validates, against real Postgres, the two specific
-// TypeORM mechanisms the real query depends on:
-//   1. `alias.customFields.propName` in a QueryBuilder `.where()` resolves an embedded custom
-//      field to its real physical column (Vendure's own documented pattern, see
-//      @vendure/core's ActiveOrderStrategy JSDoc) — as opposed to the literal raw column name
-//      convention used by erp-integration's separate `rawConnection.createQueryBuilder()` API.
-//   2. `.innerJoin('product.channels', 'channel', 'channel.id = :channelId', ...)` on a
-//      many-to-many relation correctly scopes results to one channel.
-// via a minimal, schema-faithful replica (embedded customFields column name confirmed against
-// the actual local dev Postgres: `customFieldsExternalid`, see mivend.audit.70's follow-up).
+// Runs on real Postgres with a minimal Product replica; the real Vendure entity graph is not loaded.
+// Verifies customFields.propName maps to the embedded column and channel innerJoin scopes results.
 
 class TestProductCustomFields {
     @Column({ name: 'customFieldsExternalid', type: 'varchar', nullable: true })

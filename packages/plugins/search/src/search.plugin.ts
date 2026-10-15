@@ -161,11 +161,8 @@ function buildElasticsearchPlugin(): Type<unknown> {
 })
 export class SearchPlugin {}
 
-// Single entry point vendure-config.ts spreads into its top-level plugins array — the
-// SEARCH_BACKEND branch (issue #69) is decided here, once at bootstrap, not in vendure-config.ts.
-// `SearchPlugin` (customerPrice/compareAtPrice/discountTiers) is backend-agnostic and always
-// registered; exactly one of ElasticsearchPlugin / ExternalSearchPlugin is added alongside it —
-// never both, no fallback.
+// Decided here at bootstrap, so vendure-config.ts never branches on SEARCH_BACKEND.
+// SearchPlugin always added; exactly one of ElasticsearchPlugin/ExternalSearchPlugin, never both.
 function buildSearchPlugins(): Array<Type<unknown>> {
     const backend = getSearchBackend();
     if (backend === 'external') {

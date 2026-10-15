@@ -5,11 +5,8 @@ export const loggerCtx = 'SearchPlugin';
 
 export type SearchBackend = 'internal' | 'external';
 
-// Issue #69: per-contour deployment choice, read once at bootstrap — never an admin-configurable
-// runtime toggle, never both backends active at once, no fallback. Defaults to 'internal' (kept
-// as ElasticsearchPlugin) so any config site that forgets to set SEARCH_BACKEND fails safe onto
-// today's unchanged behavior — same fail-safe-to-off convention as erp-integration's
-// KAFKA_ENABLED_DEFAULT (see external-integration-rules skill).
+// Read once at bootstrap, never toggled at runtime; both backends never active, no fallback.
+// Defaults to 'internal' so an unset SEARCH_BACKEND fails safe to the existing behavior.
 export const SEARCH_BACKEND_DEFAULT: SearchBackend = 'internal';
 
 export function getSearchBackend(): SearchBackend {

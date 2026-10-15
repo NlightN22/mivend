@@ -1,9 +1,8 @@
 import type { DocumentNode } from 'graphql';
 import gql from 'graphql-tag';
 
-// Fields the ElasticsearchPlugin adds to the shop `search` API and the storefront always sends.
-// inStock narrows to the viewer's branch warehouses; priceRangeWithTax is accepted but not
-// applied (per-customer prices are resolved in mivend, not filterable in search-service).
+// inStock is scoped to the viewer's branch warehouses; priceRangeWithTax is accepted but ignored,
+// since per-customer prices are resolved in mivend and search-service cannot filter on them.
 export const externalSearchSchema: DocumentNode = gql`
     input PriceRangeInput {
         min: Int!

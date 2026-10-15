@@ -23,9 +23,8 @@ export interface ResolvedSearchFilters {
     unsatisfiable: boolean;
 }
 
-// Translates Vendure ids/slugs in SearchInput into the ERP ids search-service filters on.
-// A requested filter that resolves to nothing makes the search unsatisfiable (empty result),
-// never an unfiltered one.
+// An unresolvable requested filter must yield an empty result, never an unfiltered one.
+// Otherwise a failed id/slug lookup would silently widen the search.
 @Injectable()
 export class SearchFilterResolver {
     constructor(
