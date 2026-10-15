@@ -1,15 +1,7 @@
 import { DataSource } from 'typeorm';
 
-/**
- * Generates a unique Postgres schema name for one test file, plus the `extra.options` fragment
- * that sets that schema first on the session `search_path` (`schema, public`) for every
- * connection the pool opens. The `schema` DataSourceOptions field alone only affects table names
- * TypeORM itself generates (entity metadata, query builder) — raw SQL strings written by hand in
- * test files (`dataSource.query('TRUNCATE TABLE ...')`, string-based subqueries) resolve
- * unqualified table names via `search_path`, so both are required for full isolation. See
- * docs/testing-strategy.md's "Database isolation" section for why schema-per-file replaces the
- * previous shared-`public`-schema + `fileParallelism: false` workaround.
- */
+// The `schema` option only qualifies table names TypeORM generates; hand-written raw SQL
+// resolves unqualified names via search_path, so the pool must also set it per connection.
 export function testSchemaOptions(fileTag: string): {
     schema: string;
     extra: { options: string };
@@ -22,28 +14,14 @@ export function testSchemaOptions(fileTag: string): {
     return { schema, extra: { options: `-c search_path="${schema}",public` } };
 }
 
-/**
- * `synchronize: true` does not create the target schema itself — Postgres requires the schema to
- * exist before tables can be created inside it. Call this before initializing the real
- * per-file DataSource, and {@link dropTestSchema} after `dataSource.destroy()`.
- */
+// Postgres requires the schema to exist before synchronize can create tables in it.
 export async function createTestSchema(schema: string): Promise<void> {
     const bootstrap = new DataSource({ type: 'postgres', ...testDataSourceConnectionOptions() });
     await bootstrap.initialize();
     try {
         await bootstrap.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
-        // A handful of entities (Reservation, Counterparty, etc.) default their id column to
-        // uuid_generate_v4(), which needs the uuid-ossp extension. Extensions are
-        // database-scoped, not schema-scoped, so this only needs to run once per database — but
-        // it's idempotent (IF NOT EXISTS) and cheap, so it's simplest to just call it here
-        // alongside schema creation rather than a separate one-time setup step. Installed into
-        // "public" (the default target schema, always the tail of every per-file schema's
-        // search_path via testSchemaOptions) so it resolves regardless of which schema is
-        // active. Real incident this fixes: neither the CI Postgres service (a vanilla
-        // `postgres:16` image) nor a genuinely fresh local `infrastructure/docker/postgres`
-        // volume ever created this extension — it only ever worked locally because of leftover
-        // state in an old, never-recreated dev volume, which meant `plugin-reservation`'s and
-        // `plugin-approval-workflow`'s integration tests had never actually passed in CI.
+        // uuid_generate_v4() id defaults need uuid-ossp, which fresh Postgres images lack. Install it
+        // into "public" so it resolves from every per-file schema's search_path. Idempotent.
         await bootstrap.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
     } finally {
         await bootstrap.destroy();

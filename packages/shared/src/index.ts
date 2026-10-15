@@ -6,11 +6,8 @@ export * from './testing/transactional-test-connection';
 export * from './vendure-events';
 export { withAggregateLock } from './aggregate-lock';
 
-// Named (not `export *`) so tsc's CommonJS output produces static `exports.foo = ...`
-// assignments — Vite/Rollup's CJS interop can't statically detect re-exports that only
-// exist via the `export *` → `__exportStar` runtime loop, which broke storefront's build
-// the first time this package was consumed by a Vite-bundled frontend (sync.ts is only ever
-// consumed by ts-node/Node backend code, so it never hit this).
+// Named re-exports, not `export *`: Vite/Rollup CJS interop can't detect the __exportStar loop
+// tsc must emit static `exports.foo = ...` assignments for browser-bundled consumers.
 export { CREDIT_LIMIT_EXCEEDED_KEY } from './creditLimit';
 export {
     AWAITING_MANAGER_KEY,

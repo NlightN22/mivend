@@ -91,9 +91,8 @@ describe('assertNever', () => {
     });
 });
 
-// ─── Exhaustive switch compile-time check ────────────────────────────────────
-// This function will NOT compile if a new eventType is added to SyncEventSchema
-// without adding a corresponding case here. That is the point.
+// A new SyncEventSchema eventType without a matching case here must fail to compile.
+// The switch exists only for this check, so its unused-variable lint warning is suppressed.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function _exhaustiveConsumerExample(event: SyncEvent): string {
     switch (event.eventType) {

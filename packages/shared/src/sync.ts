@@ -56,25 +56,15 @@ const CreditTermsUpdatedPayload = z.object({
     paymentDeferralDays: z.number().int().nonnegative(),
 });
 
-// Correlation keys are stable, cross-instance identifiers — never the sending instance's native
-// auto-increment ids, which are per-instance and meaningless on the other side (same class of
-// gotcha as Administrator.id, see the backend-plugin-rules skill). Customer is correlated by
-// emailAddress and
-// ProductVariant by sku — both already globally unique, ERP-sourced identifiers used as the
-// correlation key elsewhere in this codebase (CustomerHandler, PriceHandler) — no new field
-// needed for either. The order itself has no such natural key, so `sourceOrderId` (the
-// originating instance's native Order id) is carried explicitly and stored on the receiving
-// side's local Order.customFields.sourceOrderId for idempotent upsert.
+// Correlation keys must be cross-instance stable, never native per-instance auto-increment ids.
+// Customer keyed by emailAddress, ProductVariant by sku; Order uses sourceOrderId for upsert.
 const OrderCreatedPayload = z.object({
     sourceOrderId: z.string(),
     orderCode: z.string(),
     customerEmail: z.string().email(),
     branchId: z.string(),
-    // The order's own state at the moment it became sync-worthy (e.g. 'ArrangingPayment' or
-    // 'PaymentAuthorized', never 'AddingItems' since that's what triggers this event in the
-    // first place) — lets the receiving instance's replica start in the right state instead of
-    // being stuck in 'AddingItems' forever. Optional only for backward compatibility with
-    // already-queued outbox entries from before this field existed.
+    // Order state at sync-worthy time (never 'AddingItems'), so replica doesn't start stuck there.
+    // Optional only for compatibility with outbox entries queued before this field existed.
     state: z.string().optional(),
     lines: z.array(
         z.object({
@@ -90,36 +80,23 @@ const OrderUpdatedPayload = z.object({
     state: z.string(),
 });
 
-// A payment fact — see docs/architecture.md's "Order as a read-model: independent event
-// streams per concern (CQRS)". Published by whichever instance actually witnessed the payment
-// (a real Vendure `PaymentStateTransitionEvent` on that instance's own order, or an operator
-// explicitly reporting one for an order they don't own via `recordWitnessedPayment`). The
-// order's real owner applies it for real (a real `addPaymentToOrder`); every other instance
-// holding only a replica applies it as an informational `customFields.paymentStatus` projection
-// — never a direct mutation of an order it doesn't own (see the internal-sync-rules skill).
+// Published by the witnessing instance; only the order's owner applies it for real.
+// Replicas get only an informational customFields.paymentStatus projection, never a direct mutation.
 const PaymentRecordedPayload = z.object({
     sourceOrderId: z.string(),
     method: z.string(),
     amount: z.number().int().nonnegative(),
     state: z.enum(['Authorized', 'Settled']),
     witnessedBy: z.string(),
-    // Optional: present when the witnessed payment applies to a specific plugin-acquiring
-    // ProformaInvoice (rather than only the legacy native-Order payment above) — lets
-    // CentralConsumer additionally publish BranchKassaPaymentEvent for the acquiring inbox.
+    // Set only for a plugin-acquiring ProformaInvoice payment, not the legacy native-Order one.
+    // When present, CentralConsumer also publishes BranchKassaPaymentEvent for the acquiring inbox.
     proformaInvoiceId: z.number().int().positive().optional(),
-    // The organization (plugin-documents OrganizationRequisites) this payment is for — mandatory
-    // whenever proformaInvoiceId/outcome are present, validated against the target ProformaInvoice's real
-    // organizationId before the payment is applied (the external-integration-rules skill). Left optional at
-    // this shared wire-format layer for the same reason rrn is, below.
+    // Required with proformaInvoiceId/outcome; must match that ProformaInvoice's organizationId.
+    // Optional at this shared wire layer, same as rrn; validated before the payment is applied.
     organizationId: z.number().int().positive().optional(),
     outcome: z.enum(['success', 'pending', 'fail', 'cancel']).optional(),
-    // RRN (Retrieval Reference Number) from the branch's card terminal, or the kassa's own
-    // fiscal receipt/cheque number for a cash payment — mandatory whenever proformaInvoiceId/outcome are
-    // present (i.e. this payload represents a plugin-acquiring payment fact), since without it
-    // the payment can never be reconciled against the branch's kassa system. Left optional at
-    // this wire-format/parse layer (this envelope is shared with non-payment sync payloads too)
-    // — enforced instead at the point that actually matters, PaymentEventListener, which rejects
-    // (dead-letters) a payment fact missing it rather than silently enqueuing it as valid.
+    // rrn is required with proformaInvoiceId/outcome; PaymentEventListener dead-letters it if missing.
+    // Optional at the shared wire layer, since the envelope also carries non-payment sync payloads.
     rrn: z.string().optional(),
 });
 
@@ -144,9 +121,8 @@ const ReservationReleasedPayload = z.object({
     orderCode: z.string(),
 });
 
-// Central is the master for Administrator identity — branches hold a read-only replica
-// (including the password hash, so branch login works fully offline). See
-// docs/architecture.md's "User identity: Central is master, not federated".
+// Central is the master for Administrator identity; branches hold a read-only replica.
+// The replica includes the password hash so branch login works offline.
 const AdministratorSyncPayload = z.object({
     administratorId: z.string(),
     emailAddress: z.string().email(),
@@ -161,9 +137,8 @@ const AdministratorDeactivatedPayload = z.object({
     administratorId: z.string(),
 });
 
-// ─── Discriminated union — THE CONTRACT ──────────────────────────────────────
-// This is the single source of truth for all sync event types.
-// Every consumer MUST handle every variant — enforced at compile time via exhaustive switch.
+// Single source of truth for sync event types; every consumer must handle every variant.
+// Exhaustive switch makes the compiler enforce that.
 
 export const SyncEventSchema = z.discriminatedUnion('eventType', [
     Envelope.extend({ eventType: z.literal('product.created'), payload: ProductCreatedPayload }),
@@ -234,11 +209,8 @@ export const SyncOutboxEntrySchema = z.object({
 
 export type SyncOutboxEntry = z.infer<typeof SyncOutboxEntrySchema>;
 
-// ─── Exhaustive handler helper ────────────────────────────────────────────────
-// Use in the default branch of every consumer switch to get a compile error
-// when a new event type is added to SyncEventSchema but not handled:
-//
-//   default: assertNever(event);
+// Put assertNever(event) in every consumer switch's default branch.
+// Adding a type to SyncEventSchema without handling it then fails to compile.
 
 export function assertNever(event: never): never {
     throw new Error(`Unhandled sync event type: ${JSON.stringify(event)}`);

@@ -149,10 +149,8 @@ interface FacetGroupLike {
     values: { id: string; code: string }[];
 }
 
-// Collections and the 'category' facet share codes by naming convention in this dataset (a
-// Collection slug like "cat-cat-engine-oils" carries the same "cat-engine-oils" facet code,
-// just with an extra "cat-" prefix from the erp-import seed data) — not a structural guarantee,
-// but the established pattern this codebase already relies on for category-dropdown navigation.
+// Collection slug = facet code + extra 'cat-' prefix (erp-import seed data); a naming convention,
+// not a guarantee, but category-dropdown navigation depends on it.
 export function resolveCategoryFacetValueId(
     collectionSlug: string,
     facetGroups: FacetGroupLike[],
