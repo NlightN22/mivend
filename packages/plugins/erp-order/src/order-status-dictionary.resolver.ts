@@ -9,8 +9,34 @@ export class OrderStatusDictionaryResolver {
     constructor(private statuses: OrderStatusReferenceService) {}
 
     @Query()
-    @Allow(Permission.Public)
+    @Allow(Permission.ReadOrder)
     async orderStatuses(@Ctx() ctx: RequestContext): Promise<readonly OrderStatusEntry[]> {
         return (await this.statuses.dictionary(ctx)).entries;
+    }
+}
+
+export type ShopOrderStatus = Pick<
+    OrderStatusEntry,
+    'code' | 'name' | 'description' | 'customerGroup' | 'terminal' | 'cancelled' | 'rejected'
+>;
+
+@Resolver()
+export class ShopOrderStatusDictionaryResolver {
+    constructor(private statuses: OrderStatusReferenceService) {}
+
+    @Query()
+    @Allow(Permission.Public)
+    async orderStatuses(@Ctx() ctx: RequestContext): Promise<ShopOrderStatus[]> {
+        return (await this.statuses.dictionary(ctx)).entries
+            .filter(entry => entry.customerVisible)
+            .map(({ code, name, description, customerGroup, terminal, cancelled, rejected }) => ({
+                code,
+                name,
+                description,
+                customerGroup,
+                terminal,
+                cancelled,
+                rejected,
+            }));
     }
 }

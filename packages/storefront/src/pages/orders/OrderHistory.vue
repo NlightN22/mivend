@@ -28,7 +28,7 @@ function label(entry: Entry): string {
                     <div v-if="entry.reference?.description" class="oh-note">
                         {{ entry.reference.description }}
                     </div>
-                    <div class="oh-date">{{ formatDate(entry.createdAt) }}</div>
+                    <div class="oh-date">{{ formatDate(entry.occurredAt) }}</div>
                 </div>
             </li>
         </ol>

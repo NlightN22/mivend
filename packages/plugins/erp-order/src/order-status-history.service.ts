@@ -5,13 +5,18 @@ import { withAggregateLock } from 'shared';
 
 import { OrderStatusHistoryEntry } from './entities/order-status-history-entry.entity';
 
-// Single write point of the status history; the previous status is read under the per-order
-// lock, so a replayed or concurrent report of the same status adds no row.
+// Single write point of the status history; the previous status is read under the per-order lock,
+// so a replayed or concurrent report of the same status adds no row. occurredAt is the ERP event time.
 @Injectable()
 export class OrderStatusHistoryService {
     constructor(private connection: TransactionalConnection) {}
 
-    async record(ctx: RequestContext, orderId: number | string, status: string): Promise<void> {
+    async record(
+        ctx: RequestContext,
+        orderId: number | string,
+        status: string,
+        occurredAt: Date | null = null,
+    ): Promise<void> {
         const id = Number(orderId);
         await withAggregateLock(this.connection, ctx, `order-status-history:${id}`, async txCtx => {
             const repo = this.connection.getRepository(txCtx, OrderStatusHistoryEntry);
@@ -22,6 +27,7 @@ export class OrderStatusHistoryService {
                 orderId: id,
                 previousStatus: last?.status ?? null,
                 status,
+                occurredAt: occurredAt ?? new Date(),
             });
         });
     }
@@ -29,6 +35,6 @@ export class OrderStatusHistoryService {
     list(ctx: RequestContext, orderId: number | string): Promise<OrderStatusHistoryEntry[]> {
         return this.connection
             .getRepository(ctx, OrderStatusHistoryEntry)
-            .find({ where: { orderId: Number(orderId) }, order: { id: 'ASC' } });
+            .find({ where: { orderId: Number(orderId) }, order: { occurredAt: 'ASC', id: 'ASC' } });
     }
 }

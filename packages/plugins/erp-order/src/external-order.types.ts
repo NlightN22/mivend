@@ -8,6 +8,7 @@ export interface ExternalOrderInput {
     erpOrderId: string;
     counterpartyErpId: string | null;
     erpStatus: string | null;
+    erpStatusAt: Date | null;
     erpOrderStatus: string;
     documentNumber: string | null;
     contractId: string | null;

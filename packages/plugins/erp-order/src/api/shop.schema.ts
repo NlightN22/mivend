@@ -1,13 +1,6 @@
 import { gql } from 'graphql-tag';
 
-// Uses Vendure's own generated `OrderListOptions`/`OrderList!` — this is the documented
-// convention (docs.vendure.io/guides/how-to/paginated-list/), not just a way to avoid the
-// generateListOptions collision. `filter.erpStatus` already exists on `OrderFilterParameter`
-// for free (Order.customFields are exposed flat, per the backend-plugin-rules skill), so no custom filter/options
-// type is needed for that. `search` (free text across order.code and joined product names) is
-// a plain sibling scalar arg — it isn't a real Order column, so it can't be a `filter` field
-// without a `customPropertyMap`-mapped joined expression; a bare arg is simpler and doesn't
-// require inventing a custom options/list type. See the backend-plugin-rules skill's generateListOptions gotcha.
+// Uses Vendure's own OrderListOptions/OrderList; `search` is a bare arg because it is not a real Order column (backend-plugin-rules skill).
 export const shopApiExtensions = gql`
     extend type Query {
         myOrders(options: OrderListOptions, search: String): OrderList!
@@ -18,7 +11,7 @@ export const shopApiExtensions = gql`
         uuid: String!
         previousStatus: String
         status: String!
-        createdAt: DateTime!
+        occurredAt: DateTime!
         reference: OrderStatusReferenceInfo
     }
 
@@ -33,13 +26,8 @@ export const shopApiExtensions = gql`
         code: String!
         name: String!
         description: String!
-        rank: Int!
         customerGroup: String!
-        customerVisible: Boolean!
         terminal: Boolean!
-        warehouseStarted: Boolean!
-        shipped: Boolean!
-        delivered: Boolean!
         cancelled: Boolean!
         rejected: Boolean!
     }

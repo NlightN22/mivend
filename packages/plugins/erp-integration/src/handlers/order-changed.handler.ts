@@ -15,39 +15,7 @@ import { parseTimestamp } from './settlement-payload';
 
 const loggerCtx = 'IntegrationOrderChangedHandler';
 
-// Applies Integration Service's erp.order.events.v1 (type `changed`) stream (issue #110, the
-// real motivating need issue #72). Unlike order-registration-result (a one-shot registration
-// outcome), this reports the order's CURRENT state and fires repeatedly over its lifetime — same
-// "entity's current state, not a diff" convention every other stream in this plugin follows. Only
-// decodes the payload shape and resolves lines' ERP productId to a Vendure ProductVariant id (same
-// join OrderRegistrationResultHandler/StockStreamHandler already use) — the actual order
-// correlation, status/contractId persistence, and release/quantity-match decision live in
-// ReservationWriteOffSyncService.handleOrderChanged, kept plugin-reservation's own concern.
-//
-// appliedDiscountAmount/priceTypeId per line are deliberately NOT consumed here — no current
-// mivend feature reads per-line discount data yet (issue #101/#108's discount-rule/granted-
-// discount design is still in progress), and the issue's own scope explicitly warns against
-// fabricating a use before one exists. comment is out of scope per the issue too. Revisit once
-// #101 lands a real consumer for these fields.
-//
-// status_code (field 38, event-contracts 0.69.0, sp#200) is the ERP-computed status and the only
-// status input: a code absent from the order-status reference retries as a missing dependency
-// (CANCELLED excepted), a code this code does not know is ignored. The facts hasOrder/hasRealization/
-// markedForDeletion/inDelivery/delivered stay on the contract for other consumers and are
-// deliberately NOT read here (status_code supersedes them, sp#200). documentNumber (15)
-// refreshes erpRegistrationDocumentNumber; stale events are dropped upstream by the inbox version check.
-//
-// Header-level customerId/organizationId/warehouseId, and per-line plain `quantity` (distinct
-// from reservedQuantity), are ALSO deliberately not consumed — explicit decision, not an
-// oversight (mivend.audit.common's #110 review flagged these as needing a written call, same as
-// the discount fields above): the order's customer/organization/warehouse are already known
-// locally from the Order itself (for mivend orders this handler only correlates by entityId into
-// an existing Order), so re-deriving them would be a redundant, unused write. An order with no
-// orderUuid and no local match is imported as an external order instead (#215), where customerId
-// is the counterparty. `quantity` (the ordered amount, as opposed to reservedQuantity, the ERP-confirmed
-// reserved amount) has no current consumer — only reservedQuantity feeds #72's reservation
-// tracking. Revisit if a future feature needs to detect an ERP-side order-line quantity edit
-// independent of reservation state.
+// Applies the erp.order.events.v1 `changed` stream (current order state). Rules: docs/order-changed-handler.md
 @Injectable()
 export class OrderChangedStreamHandler implements InboundStreamHandler {
     constructor(
@@ -64,28 +32,14 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
-        // This stream reports current state, not a diff — a deleted order is a legitimate "no
-        // work to do" case here, not a missing-dependency retry case. isDeleted was a plain
-        // (non-optional) proto3 bool through 0.15.0; @nlightn22/event-contracts@0.38.0 changed it
-        // to `optional bool` (real presence, absent now genuinely means "not sent" rather than a
-        // zero-value omission). The `=== true` read is correct under either shape — an absent/
-        // undefined key and an explicit `false` both correctly fall through as "not deleted" — so
-        // no behavior change was needed, only this comment (verified against the 0.38.0 .d.ts;
-        // see the external-integration-rules skill's "always check the current contract" rule).
+        // A deleted order is a no-op, not a retry (docs/order-changed-handler.md).
         if (payload.isDeleted === true) {
             return inboundNoop(`order-changed ${entityId}: deleted, skipping`);
         }
 
-        // status is a plain (non-optional) proto3 string — absent means '' (the zero value),
-        // same rule as order-registration-result's own status field.
         const status = payload.status != null ? String(payload.status) : '';
-        // contractId is a real proto `optional string` — absent genuinely means "not sent",
-        // never a zero-value-omission case (external-integration-rules skill).
         const contractId = payload.contractId != null ? String(payload.contractId) : null;
-        // order_uuid (field 14, mivend#207) is a real `optional string` — absent genuinely means
-        // not registered through our integration, never a zero-value.
         const orderUuid = payload.orderUuid != null ? String(payload.orderUuid) : null;
-        // document_number (field 15) is a real `optional string`: absent/'' never clears a known number.
         const documentNumber =
             payload.documentNumber != null ? String(payload.documentNumber) : null;
 
@@ -104,9 +58,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         for (const rawLine of rawLines) {
             const line = rawLine as Record<string, unknown>;
             const productId = line.productId != null ? String(line.productId) : '';
-            // reservedQuantity is a plain (non-optional) proto3 double — an absent key means 0
-            // (a fully-cancelled/zeroed line), not a malformed line — only productId (a string
-            // field, genuinely invalid when empty) is a real malformed-payload check here.
+            // Only an empty productId is malformed; absent reservedQuantity means 0.
             if (!productId) {
                 Logger.warn(
                     `order-changed ${entityId}: skipping line with missing productId`,
@@ -122,10 +74,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
                 continue;
             }
             if (!variant) {
-                // Ordinary eventual-consistency race (product stream not consumed yet) — retry
-                // via MissingDependencyError, same as OrderRegistrationResultHandler's own
-                // identical lookup (see that file's extensive comment on the all-or-nothing
-                // trade-off this also inherits here).
+                // Product stream not consumed yet: retry as a missing dependency.
                 throw new MissingDependencyError(
                     `order-changed ${entityId}: variant not found for productId=${productId}`,
                 );
@@ -152,7 +101,6 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             return inboundApplied();
         }
 
-        // reservedQuantity is a plain proto3 double: absent means 0, not a malformed line.
         const reservedLines = resolvedLines.map(resolved => ({
             productVariantId: resolved.productVariantId,
             reservedQuantity: Math.round(
@@ -168,6 +116,8 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             contractId,
             documentNumber,
             derivedStatus,
+            derivedStatusAt:
+                parseTimestamp(payload.updatedAt) ?? parseTimestamp(payload.occurredAt),
             paidAmountMinor: paidAmountMinor(payload),
             reserveUntil: parseTimestamp(payload.reserveUntil),
         });
@@ -179,8 +129,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             : inboundApplied();
     }
 
-    // status_code is a real `optional string`: absent means the producer derived nothing. A code the
-    // dictionary does not have yet is a not-yet-arrived dependency and retries.
+    // Absent means nothing derived; a code missing from the dictionary retries (bounded by the inbox policy).
     private async resolveStatusCode(
         ctx: RequestContext,
         entityId: string,
@@ -195,8 +144,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         return statusCode;
     }
 
-    // Quantities of a line with a unit are in that unit (#214); local reservations are in base units.
-    // An unknown unit is not retried (it would stall every order): treated as base, the ERP wins.
+    // Line quantities are in the line's unit (#214), reservations in base units; an unknown unit reads as base.
     private async unitRatioToBase(
         ctx: RequestContext,
         entityId: string,

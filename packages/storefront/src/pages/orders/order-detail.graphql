@@ -29,7 +29,7 @@ query OrderDetail($id: ID!) {
         statusHistory {
             uuid
             status
-            createdAt
+            occurredAt
             reference {
                 name
                 description

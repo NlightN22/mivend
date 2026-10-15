@@ -123,6 +123,7 @@ describe('OrderChangedStreamHandler', () => {
             contractId: null,
             documentNumber: null,
             derivedStatus: null,
+            derivedStatusAt: null,
             paidAmountMinor: null,
             reserveUntil: null,
         });
@@ -324,6 +325,7 @@ describe('OrderChangedStreamHandler', () => {
             contractId: null,
             documentNumber: null,
             derivedStatus: null,
+            derivedStatusAt: null,
             paidAmountMinor: null,
             reserveUntil: null,
         });
@@ -357,6 +359,7 @@ describe('OrderChangedStreamHandler', () => {
             contractId: null,
             documentNumber: null,
             derivedStatus: null,
+            derivedStatusAt: null,
             paidAmountMinor: null,
             reserveUntil: null,
         });
@@ -408,6 +411,7 @@ describe('OrderChangedStreamHandler', () => {
             lines: [],
             contractId: 'contract-guid-1',
             derivedStatus: null,
+            derivedStatusAt: null,
         });
 
         expect(syncService.handleOrderChanged).toHaveBeenCalledWith(

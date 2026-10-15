@@ -161,7 +161,7 @@ export class ExternalOrderService {
                 customFields,
             });
             if (nextStatus !== null) {
-                await this.statusHistory.record(ctx, existing.id, nextStatus);
+                await this.statusHistory.record(ctx, existing.id, nextStatus, input.erpStatusAt);
             }
             await this.replaceLinesIfChanged(ctx, existing.id, input, variants);
             return { kind: 'updated', orderId: existing.id, counterpartyPending };
@@ -192,7 +192,7 @@ export class ExternalOrderService {
             }),
         );
         await this.insertLines(ctx, order, input, variants);
-        await this.statusHistory.record(ctx, order.id, createdStatus);
+        await this.statusHistory.record(ctx, order.id, createdStatus, input.erpStatusAt);
         return { kind: 'created', orderId: String(order.id), counterpartyPending };
     }
 

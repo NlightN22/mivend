@@ -2635,7 +2635,7 @@ export type OrderStateTransitionError = ErrorResult & {
 };
 
 export type OrderStatusHistoryEntry = {
-    createdAt: Scalars['DateTime']['output'];
+    occurredAt: Scalars['DateTime']['output'];
     previousStatus?: Maybe<Scalars['String']['output']>;
     reference?: Maybe<OrderStatusReferenceInfo>;
     status: Scalars['String']['output'];
@@ -2646,15 +2646,10 @@ export type OrderStatusInfo = {
     cancelled: Scalars['Boolean']['output'];
     code: Scalars['String']['output'];
     customerGroup: Scalars['String']['output'];
-    customerVisible: Scalars['Boolean']['output'];
-    delivered: Scalars['Boolean']['output'];
     description: Scalars['String']['output'];
     name: Scalars['String']['output'];
-    rank: Scalars['Int']['output'];
     rejected: Scalars['Boolean']['output'];
-    shipped: Scalars['Boolean']['output'];
     terminal: Scalars['Boolean']['output'];
-    warehouseStarted: Scalars['Boolean']['output'];
 };
 
 export type OrderStatusReferenceInfo = {
@@ -5024,7 +5019,7 @@ export type OrderDetailQuery = {
         statusHistory: Array<{
             uuid: string;
             status: string;
-            createdAt: any;
+            occurredAt: any;
             reference?: { name: string; description: string; customerVisible: boolean } | null;
         }>;
         shippingAddress?: {
@@ -5477,13 +5472,8 @@ export type OrderStatusesQuery = {
         code: string;
         name: string;
         description: string;
-        rank: number;
         customerGroup: string;
-        customerVisible: boolean;
         terminal: boolean;
-        warehouseStarted: boolean;
-        shipped: boolean;
-        delivered: boolean;
         cancelled: boolean;
         rejected: boolean;
     }>;
@@ -6225,7 +6215,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
     statusHistory {
       uuid
       status
-      createdAt
+      occurredAt
       reference {
         name
         description
@@ -6750,13 +6740,8 @@ export const OrderStatusesDocument = new TypedDocumentString(`
     code
     name
     description
-    rank
     customerGroup
-    customerVisible
     terminal
-    warehouseStarted
-    shipped
-    delivered
     cancelled
     rejected
   }

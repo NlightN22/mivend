@@ -27,7 +27,10 @@ import { OrderStatusHistoryEntry } from './entities/order-status-history-entry.e
 import { OrderStatusHistoryResolver } from './order-status-history.resolver';
 import { OrderStatusHistoryService } from './order-status-history.service';
 import { OrderStatusReference } from './entities/order-status-reference.entity';
-import { OrderStatusDictionaryResolver } from './order-status-dictionary.resolver';
+import {
+    OrderStatusDictionaryResolver,
+    ShopOrderStatusDictionaryResolver,
+} from './order-status-dictionary.resolver';
 import { OrderStatusProvisioningService } from './order-status-provisioning.service';
 import { OrderStatusReferenceResolver } from './order-status-reference.resolver';
 import { OrderStatusReferenceService } from './order-status-reference.service';
@@ -87,7 +90,7 @@ const adminApiSchema = gql`
             ErpOrderResolver,
             OrderStatusHistoryResolver,
             OrderStatusReferenceResolver,
-            OrderStatusDictionaryResolver,
+            ShopOrderStatusDictionaryResolver,
         ],
     },
     adminApiExtensions: {

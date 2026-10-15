@@ -3,7 +3,7 @@ import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 @Entity()
-@Index(['orderId', 'id'])
+@Index(['orderId', 'occurredAt', 'id'])
 export class OrderStatusHistoryEntry extends UuidEntity {
     constructor(input?: DeepPartial<OrderStatusHistoryEntry>) {
         super(input);
@@ -17,4 +17,7 @@ export class OrderStatusHistoryEntry extends UuidEntity {
 
     @Column({ type: 'varchar' })
     status!: string;
+
+    @Column({ type: 'timestamp', default: () => 'now()' })
+    occurredAt!: Date;
 }
