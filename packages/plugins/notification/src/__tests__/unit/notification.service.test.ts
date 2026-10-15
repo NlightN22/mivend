@@ -3,10 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { NotificationService } from '../../notification.service';
 import { Notification } from '../../entities/notification.entity';
 
-// Mirrors erp-integration's reconciliation.service.test.ts convention: stub
-// TransactionalConnection.getRepository() directly rather than a real DataSource — this suite is
-// about NotificationService's own upsert/state-transition logic, not TypeORM/Postgres behavior
-// (that's covered separately by the identity-scoping component test against a real schema).
+// Stubs getRepository() rather than using a real DataSource; TypeORM/Postgres behavior is
+// covered by the identity-scoping test against a real schema.
 function makeService(existing: Notification | null = null): {
     service: NotificationService;
     findOne: ReturnType<typeof vi.fn>;
@@ -264,13 +262,8 @@ describe('NotificationService.resolveBySource', () => {
         expect(result.every(n => n.resolvedAt instanceof Date)).toBe(true);
     });
 
-    // The whole reason this matches by (sourceType, sourceId) alone and never filters by
-    // recipientId: NotificationService.create's own dedupe-by-source lookup is keyed on
-    // recipientId too, so a manual reconciliation run (recipientId=some admin) followed later by
-    // a scheduled run for the same still-open issue (recipientId=null) misses that dedupe lookup
-    // and inserts a SECOND notification row for the same source instead of updating the first.
-    // Both rows must still be closed out when the source issue resolves, or the first one is
-    // orphaned "unread" forever.
+    // Matches only (sourceType, sourceId), not recipientId: create()'s dedupe includes recipientId,
+    // so a manual and a scheduled run on one source create two rows; both must be closed on resolve.
     it('resolves every row for the source even when they carry different (or null) recipientIds', async () => {
         const open = [
             new Notification({

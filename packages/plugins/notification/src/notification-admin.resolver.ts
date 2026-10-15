@@ -15,24 +15,16 @@ import {
 } from './types';
 import { NOTIFICATION_SOURCE_PERMISSIONS } from './notification-source-permissions';
 
-// The WS identity attached by apps/server/src/subscriptions.ts — for administrators this also
-// carries deniedBroadcastSourceTypes, computed once per connection via the same
-// resolveBroadcastVisibility() the query path uses (see notification-source-permissions.ts), so a
-// broadcast row an administrator can't read via the `notifications` query can also never arrive
-// over their subscription (issue #87 audit, mivend.audit.85). A denylist (rather than an
-// allowlist of every visible sourceType) is used because ungated sourceTypes are unbounded and
-// visible by default — only the small, fixed set of gated sourceTypes this admin lacks
-// permission for needs to travel with the connection identity.
+// Same resolver as the query, run once per connection: unreadable broadcasts never stream.
+// Denylist, not allowlist: ungated sourceTypes are unbounded and visible by default.
 export interface AdministratorSubscriptionIdentity {
     recipientType?: string;
     recipientId?: string;
     deniedBroadcastSourceTypes?: string[];
 }
 
-// Extracted to a named, directly-testable function rather than an inline lambda — mirrors
-// NotificationService.findForRecipient's OR-condition: a connected administrator receives their
-// own notifications AND every 'administrator-broadcast' event they have permission to see, not
-// just events addressed to them by id. Customers have no broadcast concept.
+// Mirrors NotificationService.findForRecipient's OR-condition: admins also get permitted broadcasts.
+// Customers have no broadcast concept, so this filter must not apply to them.
 export function administratorNotificationSubscriptionFilter(
     payload: NotificationReceivedEvent,
     _variables: unknown,
@@ -50,9 +42,8 @@ export function administratorNotificationSubscriptionFilter(
     return false;
 }
 
-// Authenticated-only, no role-based Permission — per docs/access-control.md's "permission = action
-// only, scope = service layer": any signed-in administrator may read/act on their OWN
-// notifications, and NotificationRecipientService (never client input) is what determines "own".
+// Permission covers the action only; scope is the service layer (docs/access-control.md).
+// Ownership comes from NotificationRecipientService, never client input.
 @Resolver()
 export class NotificationAdminResolver {
     constructor(
@@ -97,11 +88,8 @@ export class NotificationAdminResolver {
         return this.notificationService.resolve(ctx, args.id, args.resolution);
     }
 
-    // graphql-ws subscriptions in this codebase's Vendure/NestJS version don't go through
-    // Vendure's usual @Ctx() RequestContext injection (that relies on the HTTP AuthGuard
-    // populating `req` — see apps/server's subscriptions wiring) — the WS connection's own
-    // context object carries the resolved identity instead, attached by
-    // apps/server/src/subscriptions.ts's connection `context` factory.
+    // graphql-ws skips Vendure's @Ctx() RequestContext, which needs the HTTP AuthGuard to set req.
+    // The WS connection context factory in subscriptions.ts supplies the identity instead.
     @Subscription('notificationReceived', {
         filter: administratorNotificationSubscriptionFilter,
     })
@@ -112,11 +100,8 @@ export class NotificationAdminResolver {
         return this.pubSub.asyncIterableIterator(NOTIFICATION_RECEIVED);
     }
 
-    // Any authenticated administrator may act on a broadcast notification (it has no single
-    // owner) as well as their own — mirrors NotificationService.findForRecipient's OR-condition —
-    // but only if they hold the sourceType's own gating permission (same rule as the `notifications`
-    // query/subscription, see notification-source-permissions.ts): an admin who can't even see a
-    // broadcast row must not be able to act on it by guessing its id either.
+    // Broadcasts have no owner: admins act on them only with the sourceType's gating permission.
+    // Otherwise guessing an id would bypass the visibility rule of the notifications query.
     private async assertOwnNotification(ctx: RequestContext, id: string): Promise<void> {
         const recipient = await this.recipientService.getCurrentAdministrator(ctx);
         const notification = recipient ? await this.notificationService.findOne(ctx, id) : null;

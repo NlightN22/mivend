@@ -43,17 +43,12 @@ export class NotificationService {
         @Inject(NOTIFICATION_PUB_SUB) private pubSub: PubSub,
     ) {}
 
-    // Upsert-by-source: a still-open (non-resolved) notification about the same (sourceType,
-    // sourceId) is updated in place rather than piling up duplicates every time the producing
-    // event fires again — mirrors ErpReconciliationIssue.recordIssue's own dedupe rule. Once a
-    // notification is resolved, the next event for that source starts a fresh row: a resolved
-    // notification is a closed record, not something later events should reopen.
+    // An open notification for the same (sourceType, sourceId) is updated in place, not duplicated.
+    // A resolved one is a closed record, so the next event for that source inserts a fresh row.
     async create(ctx: RequestContext, input: CreateNotificationInput): Promise<Notification> {
         const repo = this.connection.getRepository(ctx, Notification);
-        // Broadcast rows have no single recipient — recipientId is always null for them,
-        // regardless of what (if anything) the caller passed. This keeps the dedupe key below
-        // effectively (sourceType, sourceId, recipientType) for broadcast rows, so a single row
-        // is upserted rather than one per administrator.
+        // Broadcast rows have no single recipient: recipientId is forced to null regardless of input.
+        // So the dedupe key collapses to (sourceType, sourceId, recipientType): one row, not one per admin.
         const recipientId =
             input.recipientType === 'administrator-broadcast' ? null : (input.recipientId ?? null);
         let notification: Notification | null = null;
@@ -100,11 +95,8 @@ export class NotificationService {
         return saved;
     }
 
-    // Exposed so apps/server's standalone WS-subscriptions schema (subscriptions.ts) can attach
-    // to the same PubSub instance this service publishes to without resolving the
-    // NOTIFICATION_PUB_SUB DI token directly from outside this plugin's module graph — that
-    // token lookup was found to be unreliable via `app.get()` from a bootstrap hook, whereas
-    // resolving this already-injected, already-working service is not.
+    // Exposed so apps/server's WS-subscriptions schema attaches to the same PubSub instance.
+    // Resolving NOTIFICATION_PUB_SUB via app.get() from a bootstrap hook proved unreliable.
     subscribeToReceived(): AsyncIterableIterator<unknown> {
         return this.pubSub.asyncIterableIterator(NOTIFICATION_RECEIVED);
     }
@@ -114,22 +106,16 @@ export class NotificationService {
         return repo.findOne({ where: { id } });
     }
 
-    // For recipientType === 'administrator', this also returns every 'administrator-broadcast'
-    // row (issue #87 Part 2 / #42) — an authenticated administrator sees all broadcast
-    // notifications THEY HAVE PERMISSION FOR, in addition to their own (issue #87 audit,
-    // mivend.audit.85: a broadcast sourceType gated by NOTIFICATION_SOURCE_PERMISSIONS is excluded
-    // at the SQL level for an administrator lacking that permission — never loaded and filtered in
-    // JS, so pagination/totalItems stay accurate). Customers have no broadcast concept: a customer
-    // query never includes broadcast rows.
+    // For administrators, also returns 'administrator-broadcast' rows the admin has permission for.
+    // Filtered in SQL, not JS, so pagination and totalItems stay accurate. Customers get none.
     async findForRecipient(
         ctx: RequestContext,
         recipientType: NotificationRecipientType,
         recipientId: string,
         opts: FindForRecipientOptions = {},
     ): Promise<PaginatedList<Notification>> {
-        // Clamp against both a negative client-supplied value (would otherwise reach TypeORM as
-        // e.g. `LIMIT -1`, a Postgres syntax error surfaced as a raw GraphQL 500 instead of a
-        // clean empty page — mivend.issue.90 audit) and the upper MAX_LIST_TAKE bound.
+        // Clamp negative client input: a raw LIMIT -1 reaches Postgres and surfaces as a GraphQL 500.
+        // Also cap at MAX_LIST_TAKE.
         const take = Math.min(Math.max(opts.take ?? DEFAULT_LIST_TAKE, 0), MAX_LIST_TAKE);
         const skip = Math.max(opts.skip ?? 0, 0);
 
@@ -211,12 +197,8 @@ export class NotificationService {
         return notification;
     }
 
-    // Broadcast rows (recipientType === 'administrator-broadcast') have shared, not per-viewer,
-    // read/resolved state: this matches ReservationReconciliationIssue/PaymentReconciliationIssue/
-    // ErpReconciliationIssue, which all carry a single shared `status` column per issue, not a
-    // per-admin read marker. Whichever administrator acts on a broadcast notification marks it
-    // read/resolved for every administrator who sees it — do not add per-viewer state here
-    // without also changing that underlying assumption.
+    // Broadcast rows share read/resolved state across all admins, matching the shared issue status.
+    // Adding per-viewer state here requires changing that underlying assumption too.
     async resolve(ctx: RequestContext, id: string, resolution: string): Promise<Notification> {
         const repo = this.connection.getRepository(ctx, Notification);
         const notification = await repo.findOneOrFail({ where: { id } });
@@ -226,16 +208,8 @@ export class NotificationService {
         return repo.save(notification);
     }
 
-    // For a producer (e.g. ReconciliationService) whose own source record just transitioned to
-    // resolved to close out the notification(s) it raised — otherwise the alert sits "unread"
-    // forever with stale numbers even after the underlying drift is gone (issue #99). Matches by
-    // (sourceType, sourceId) only, never recipientId: create()'s own dedupe-by-source lookup is
-    // itself keyed on recipientId, so a manual run (recipientId=some admin) followed later by a
-    // scheduled run for the same still-open issue (recipientId=null) misses that dedupe and
-    // inserts a SECOND row for the same source rather than updating the first — multiple rows
-    // with different (or null) recipientIds for one source is a real, not hypothetical, state.
-    // Filtering this query by recipientId would leave whichever row doesn't match orphaned
-    // "unread" forever; matching on source identity alone resolves all of them.
+    // Match on (sourceType, sourceId) only: one source can have rows with differing or null recipientId.
+    // Filtering by recipientId would leave some rows orphaned as unread forever.
     async resolveBySource(
         ctx: RequestContext,
         source: { sourceType: string; sourceId: string },

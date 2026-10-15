@@ -7,9 +7,8 @@ import {
 } from '../../notification-admin.resolver';
 import type { NotificationReceivedEvent } from '../../types';
 
-// Exercises the two places NotificationAdminResolver decides "does this administrator see this
-// broadcast row": the notificationReceived subscription filter and assertOwnNotification (used
-// by markNotificationRead/resolveNotification) — issue #87 Part 2 / #42.
+// Both the notificationReceived filter and assertOwnNotification must apply the same visibility rule
+// or a broadcast row could be shown in one path and rejected in the other.
 describe('administratorNotificationSubscriptionFilter', () => {
     const broadcastPayload: NotificationReceivedEvent = {
         notificationReceived: {

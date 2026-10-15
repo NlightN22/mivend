@@ -14,10 +14,8 @@ import {
     NotificationReceivedEvent,
 } from './types';
 
-// Extracted and exported for the same reason as NotificationAdminResolver's
-// administratorNotificationSubscriptionFilter — reused directly by apps/server's standalone
-// subscriptions schema (see that file's own comment for why it doesn't reuse this @Subscription
-// decorator's own filter wiring).
+// Exported so apps/server's standalone subscriptions schema can reuse this filter directly.
+// It does not reuse the @Subscription decorator's own filter wiring; see NotificationAdminResolver.
 export function customerNotificationSubscriptionFilter(
     payload: NotificationReceivedEvent,
     _variables: unknown,
@@ -30,9 +28,8 @@ export function customerNotificationSubscriptionFilter(
     );
 }
 
-// Permission.Owner mirrors plugin-acquiring's PaymentShopResolver/ProformaInvoiceResolver convention for
-// "any logged-in customer, scoped to their own data" — no new role-based permission, per
-// docs/access-control.md.
+// Permission.Owner is the convention for any logged-in customer scoped to their own data.
+// Matches plugin-acquiring's PaymentShopResolver; adds no role-based permission (access-control.md).
 @Resolver()
 export class NotificationShopResolver {
     constructor(

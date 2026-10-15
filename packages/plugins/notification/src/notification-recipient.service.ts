@@ -9,10 +9,7 @@ export interface NotificationRecipient {
     recipientId: string;
 }
 
-// Resolves "who is calling" from ctx.activeUserId — mirrors the pattern already used by
-// plugin-acquiring's PaymentShopResolver.getOwnCounterparty (Customer side) and
-// plugin-access-control/plugin-saved-views's own AdministratorService.findOneByUserId lookups
-// (Administrator side). Never trusts a client-supplied recipientId.
+// Caller identity comes from ctx.activeUserId; never trust a client-supplied recipientId.
 @Injectable()
 export class NotificationRecipientService {
     constructor(
@@ -30,10 +27,8 @@ export class NotificationRecipientService {
         return this.getCurrentCustomerByUserId(ctx, ctx.activeUserId);
     }
 
-    // Split out from getCurrentAdministrator/getCurrentCustomer for the WS subscription context
-    // (apps/server/src/subscriptions.ts), which resolves a user id from a session token directly
-    // rather than from ctx.activeUserId (no HTTP AuthGuard runs on that path — see that file's
-    // own comment).
+    // Used by WS subscriptions, where no HTTP AuthGuard runs, so ctx.activeUserId is unset.
+    // The user id must come from the session token instead.
     async getCurrentAdministratorByUserId(
         ctx: RequestContext,
         userId: ID,

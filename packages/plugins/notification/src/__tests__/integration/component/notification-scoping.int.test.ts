@@ -10,12 +10,8 @@ import {
 
 import { NotificationService } from '../../../notification.service';
 
-// findForRecipient's administrator path now calls ctx.userHasPermissions() to gate broadcast
-// sourceTypes (issue #87 audit, mivend.audit.85) — a fake ctx exposing that one method is enough
-// for this suite, which never touches any other RequestContext behavior. Default: every
-// permission granted, matching the pre-fix "any administrator sees every broadcast" behavior, so
-// existing scoping assertions in this file don't have to know about the new gate unless they are
-// specifically testing it.
+// Fake ctx only needs userHasPermissions; this suite never touches other RequestContext methods.
+// Defaults to granting all permissions so scoping tests need not know about the sourceType gate.
 function fakeAdminCtx(grantedPermissions: string[] | 'all' = 'all'): RequestContext {
     return {
         userHasPermissions: (permissions: string[]) =>
@@ -23,11 +19,8 @@ function fakeAdminCtx(grantedPermissions: string[] | 'all' = 'all'): RequestCont
     } as unknown as RequestContext;
 }
 
-// Vendure's VendureEntity relies on an EntityIdStrategy registered during bootstrap() to generate
-// its primary column — a standalone DataSource can't use the real Notification class directly
-// (confirmed empirically, same constraint plugin-documents's own
-// documents.service.int.test.ts hit and documented). Mirror table matching the production schema
-// instead, same approach.
+// VendureEntity's primary column needs an EntityIdStrategy registered by bootstrap().
+// A standalone DataSource can't use the real Notification class, so mirror its table schema.
 @Entity('notification')
 @Index(['sourceType', 'sourceId'])
 class TestNotification {
@@ -283,9 +276,8 @@ describe('NotificationService.findForRecipient — administrator-broadcast (comp
     });
 });
 
-// issue #87 audit (mivend.audit.85): broadcast visibility must be permission-scoped by
-// sourceType, not just authentication-scoped — an administrator lacking the resource's own read
-// permission must not see that sourceType's broadcast rows at all.
+// Broadcast visibility is permission-scoped per sourceType, not just authentication-scoped.
+// An admin without that resource's read permission must not see its broadcast rows.
 describe('NotificationService.findForRecipient — broadcast permission scoping (component, real Postgres)', () => {
     it('excludes a gated broadcast sourceType when the caller lacks its permission', async () => {
         await notificationService.create({} as never, {
@@ -361,13 +353,8 @@ describe('NotificationService.findForRecipient — broadcast permission scoping 
     });
 });
 
-// mivend.audit.85 (second pass): pagination (skip/take/MAX_LIST_TAKE clamp) was added in the same
-// commit as the broadcast permission gating above but was never itself asserted — neither the
-// ordering/slicing, the clamp, nor totalItems' interaction with the gating's SQL-level Brackets
-// exclusion. Direct-repo inserts (bypassing notificationService.create) are used here specifically
-// to control createdAt explicitly, since findForRecipient orders by createdAt DESC, id DESC and
-// notificationService.create always stamps "now()" — insertion order alone isn't a reliable proxy
-// for query order at this resolution.
+// Inserts go direct to the repo to control createdAt: create() always stamps now().
+// Insertion order is no proxy for the createdAt DESC, id DESC query order at this resolution.
 describe('NotificationService.findForRecipient — pagination (component, real Postgres)', () => {
     async function insertNotification(overrides: Partial<TestNotification>): Promise<void> {
         await dataSource.getRepository(TestNotification).save(
@@ -489,9 +476,8 @@ describe('NotificationService.findForRecipient — pagination (component, real P
         );
     });
 
-    // mivend.issue.90 audit (LOW): a negative take/skip previously reached TypeORM as-is
-    // (`LIMIT -1`/`OFFSET -1`), which Postgres rejects as a syntax error — a raw 500 instead of a
-    // clean, empty-safe page.
+    // Negative take/skip must be clamped first: Postgres rejects LIMIT -1 and OFFSET -1 outright.
+    // Without the clamp the request fails with a raw 500 instead of an empty page.
     it('clamps a negative take/skip instead of passing them through to the query', async () => {
         for (let i = 1; i <= 3; i++) {
             await insertNotification({ sourceId: `neg-${i}`, title: `NEG${i}` });

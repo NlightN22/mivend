@@ -9,10 +9,8 @@ import { NOTIFICATION_PUB_SUB, createNotificationPubSub } from './notification-p
 import { adminApiExtensions } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
 
-// Unified notification system (issue #87, Part 1) — this plugin only owns storage, the
-// upsert-by-source rule, and the Admin/Shop API surface. Producers (reservation, acquiring,
-// erp-integration, etc. calling NotificationService.create) are separate follow-up work, per the
-// issue's own phasing.
+// This plugin owns only storage, the upsert-by-source rule, and the Admin/Shop API surface.
+// Producers calling NotificationService.create come in follow-up work; none exist yet.
 @VendurePlugin({
     imports: [PluginCommonModule],
     entities: [Notification],

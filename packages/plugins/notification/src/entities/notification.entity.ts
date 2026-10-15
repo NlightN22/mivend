@@ -6,15 +6,8 @@ export type NotificationRecipientType = 'administrator' | 'administrator-broadca
 export type NotificationKind = 'info' | 'success' | 'warning' | 'error';
 export type NotificationStatus = 'unread' | 'read' | 'resolved';
 
-// One row per notification, addressed to either a single Administrator, a Customer, or (issue
-// #87 Part 2 / #42) ALL administrators via 'administrator-broadcast' — the recipientType/
-// recipientId pair is the identity, not a foreign key, since either side can point at a
-// different table depending on recipientType. 'administrator-broadcast' rows have
-// recipientId = null: there is no single owning recipient, and NotificationService never fans
-// one out into N per-administrator rows (would break upsert-by-source dedupe and doesn't scale).
-// Upserted by (sourceType, sourceId, recipientType, recipientId) while still open (see
-// NotificationService.create) so a repeated event about the same source updates the existing row
-// instead of piling up duplicates.
+// recipientType/recipientId is an identity, not a foreign key; the target table depends on type.
+// Broadcast rows use recipientId = null and are never fanned out per admin (breaks upsert dedupe).
 @Entity()
 @Index(['sourceType', 'sourceId'])
 export class Notification extends VendureEntity {
