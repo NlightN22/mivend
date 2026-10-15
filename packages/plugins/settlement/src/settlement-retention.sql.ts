@@ -1,6 +1,5 @@
-// $1 = retention months. Removable: ERP-owned, every entry before its triple's window start (no
-// balance fact = kept), and no linked local order or payment still open. A tombstone waits twice
-// the period so a late older version of the document stays a noop.
+// Tombstones wait twice the retention period so a late, older copy of the document stays a noop.
+// Entries without a balance fact are always kept.
 export const REMOVABLE_DOCUMENT_PREDICATE = `
     d."isErpOwned" = true
     AND EXISTS (SELECT 1 FROM settlement_document_entry e WHERE e."documentId" = d.id)

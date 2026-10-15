@@ -1,8 +1,5 @@
-// FIFO per (organization, contract) triple of one counterparty, evaluated in SQL: credits (payments,
-// returns, a negative opening balance) close the oldest debts first; a positive opening balance is
-// the oldest lot and counts as already overdue. The payment term is the counterparty's general term; an
-// individually controlled contract uses its own; no term means no due date, never an implicit zero.
-// $1 = counterparty id; only customer contracts count.
+// Positive opening balance = oldest debt, already overdue.
+// Missing term means no due date, never an implicit zero.
 export const AGING_CTE = `
 bal AS (
     SELECT b."organizationErpId" AS org, b."contractId" AS ctr, b."openingDate" AS od,
