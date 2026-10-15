@@ -11,10 +11,8 @@ import {
 
 import { PICKUP_SHIPPING_METHOD_CODE, loggerCtx } from './constants';
 
-// Idempotent, safe to run on every boot, on both instance types — same pattern as
-// plugin-deferred-payment's DeferredPaymentBootstrapService. A branch instance can originate its
-// own local checkout too (see docs/sync.md), so this is not instanceType-gated. Replaces the
-// manual createShippingMethod block that used to live in infrastructure/scripts/seed-erp.mjs.
+// Runs on every boot of both instance types, so it must be idempotent.
+// Not instanceType-gated: a branch instance can originate its own local checkout (docs/sync.md).
 @Injectable()
 export class PickupShippingBootstrapService implements OnApplicationBootstrap {
     constructor(
