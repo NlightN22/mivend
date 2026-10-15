@@ -24,9 +24,8 @@ interface TxCtx {
     qr?: ReturnType<DataSource['createQueryRunner']>;
 }
 
-// Real SQL (exposure sum, advisory lock), real decide/policy over a schema-faithful replica of the
-// Vendure tables they touch; only the other plugins' services are stubbed. withTransaction opens a
-// real transaction so the advisory lock behaves as in production (held to commit).
+// Only other plugins' services are stubbed; advisory lock needs a real transaction held to commit
+// Schema replica must mirror Vendure tables exactly, or the SQL under test diverges.
 export function useCreditPlacementHarness(schemaName: string) {
     const { schema, extra } = testSchemaOptions(schemaName);
     let dataSource: DataSource;
