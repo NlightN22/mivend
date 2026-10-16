@@ -63,33 +63,41 @@ The ERP refuses to post an approved order unless two controls pass (its check
 rules**: mivend computes the same rules early so staff see the reason before the ERP rejects the order. Both
 are providers of the checks framework (`docs/checks-and-policies.md`) on the subject type `order`.
 
-| Code                                      | Reasons in `facts.reason`                                                       |
-| ----------------------------------------- | ------------------------------------------------------------------------------- |
-| `erp.contract-with-storage-organization`  | `no-contract-with-storage-organization`                                         |
-| `erp.organization-stock`                  | `storage-organizations-short`, `contract-organizations-short`                   |
+| Code                                      | Reason in `facts.reason`                |
+| ----------------------------------------- | --------------------------------------- |
+| `erp.contract-with-storage-organization`  | `no-contract-with-line-organization`    |
+| `erp.organization-stock`                  | `line-organization-stock-short`         |
 
-**Inputs, per order line** (product P by its ERP id, order warehouse W, buyer counterparty C):
+**One organization per line (owner decision, deliberately narrower than #237's "intersection / sum over
+organizations").** A line is sold by exactly one organization: its stamped organization
+(`OrderLine.customFields.organizationId`, resolved to the organization's ERP id), the election winner of the
+storage-location rows. Both checks judge only that organization O and the finding is shown on that line. Other
+organizations' contracts or stock never rescue the line. The ERP's own distribution of a line over organizations
+may differ, which is why the consequence stays a warning by default.
+
+**Inputs, per order line** (product P by its ERP id, order warehouse W, buyer counterparty C, line organization O):
 
 - **W** is the ERP warehouse of the order: of its active reservations when there are any, otherwise of the
   stock location with most free stock per line; the warehouse holding most quantity wins, ties by id (the same
   rule as the `order.confirmed` warehouse). Unknown W means no finding.
+- **O** is the line's stamped organization. Absent or unresolvable O means no finding (unknown, not flagged).
 - **Storage organizations** = organizations of the `storage_location_assignment` rows of P with
-  `warehouseId = W`. Rows without a warehouse or without an organization are not stored and not counted: a
-  storage location without an organization is *unknown*, never a finding. The line's own stamped organization
-  (`OrderLine.customFields.organizationId`) is the election winner of the same rows and is not an extra input.
+  `warehouseId = W`. Rows without a warehouse or organization are not counted. O must be among them (it holds the
+  storage place at W); if it is not, that is a data inconsistency and the line is not flagged. They feed only the
+  per-organization breakdown in the facts.
 - **Contract organizations** = `organizationId` of C's contracts with `isActive` and `isCustomerContract = true`,
   matched on the buyer's own counterparty id (the flag alone also covers employees' contracts).
-- **Stock** = `stock_organization` rows (`isActive`), summed per organization as the ERP does, negative
-  balances included, in the product storage unit.
+- **Stock** = `stock_organization` rows (`isActive`), summed per organization, negative balances included, in the
+  product storage unit.
 
-**Check 1 `erp.contract-with-storage-organization`:** the line fails when storage organizations and contract
-organizations do not intersect. The finding lists both sets (ids and names).
+**Check 1 `erp.contract-with-storage-organization`:** the line fails when C has no such contract with O.
 
-**Check 2 `erp.organization-stock`:** `needed = line quantity / storage-unit ratio to base`; `available` = stock summed
-over storage organizations that also have a contract with the buyer. The line fails when `needed > available`.
-Two reasons are told apart: `storage-organizations-short` (the organizations holding the storage place hold less
-than needed) and `contract-organizations-short` (they hold enough, but the ones with a contract with the buyer
-do not, or there are none). A product without any stock row has `available = 0`, as in the ERP.
+**Check 2 `erp.organization-stock`:** `needed = line quantity / storage-unit ratio to base`; `available` = stock of
+O for P. The line fails when `needed > available`. A product without a stock row of O has `available = 0`.
+
+**Facts** (structured, no prose): `reason`, `productErpId`, `sku`, `warehouseErpId`, `organization` `{id, name}`
+(O), and `storageOrganizations[{id, name, stock, hasContract}]` (every storage organization at W, for the
+tooltip, O highlighted). Check 2 adds `needed` and `available` (O only).
 
 **Consequences are policy rows**, not code: default `warn` at every stage; `hold` is allowed at `pre-reserve` and
 `pre-send-to-erp`; `block` and `require-approval` are not allowed for orders (the customer's order is always
@@ -108,9 +116,9 @@ An order with no stored findings has nothing to flag, so a *new* failure of a cl
 recompute point (reserve, send, edit or panel read).
 
 **Message keys.** Findings store facts and a key, never prose; every rendering must say these are ERP
-requirements: `erp.contract-with-storage-organization.missing` ("No contract with <organizations> for <product>;
-create a contract with that organization (ERP requirement)"), `erp.organization-stock.storage-organizations-short`
-and `erp.organization-stock.contract-organizations-short` ("... needed N, available M (ERP requirement)").
+requirements: `erp.contract-with-storage-organization.missing` ("No contract with <organization> for <product>;
+create a contract with that organization (ERP requirement)") and `erp.organization-stock.short`
+("<organization> holds M, needed N (ERP requirement)").
 End customers see at most a soft generic note, never these.
 
 **Known gaps (ERP side).** The ERP skips check 2 for organizations flagged "do not control stock" and under a

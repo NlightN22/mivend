@@ -47,6 +47,10 @@ class OrderFields {
     @Column({ name: 'customFieldsHascheckfindings', type: 'boolean', default: false })
     hasCheckFindings!: boolean;
 }
+class LineFields {
+    @Column({ name: 'customFieldsOrganizationid', type: 'int', nullable: true })
+    organizationId!: number | null;
+}
 class StockFields {
     @Column({ name: 'customFieldsErpavailablequantity', type: 'int', nullable: true })
     erpAvailableQuantity!: number | null;
@@ -72,6 +76,7 @@ class OrderLineM extends Base {
     @Column({ type: 'int' }) orderId!: number;
     @Column({ type: 'int' }) productVariantId!: number;
     @Column({ type: 'int' }) quantity!: number;
+    @Column(() => LineFields, { prefix: false }) customFields!: LineFields;
     @ManyToOne(() => OrderM, o => o.lines) @JoinColumn({ name: 'orderId' }) order!: OrderM;
     @ManyToOne(() => VariantM) @JoinColumn({ name: 'productVariantId' }) productVariant!: VariantM;
 }
@@ -168,6 +173,8 @@ export interface SeedLine {
     sku: string;
     productErpId: string;
     quantity: number;
+    // Organization the line is stamped with; omitted means unknown.
+    organizationErpId?: string;
 }
 
 export interface OrderChecksWorld {
@@ -224,6 +231,13 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
     await dataSource.query(
         `INSERT INTO stock_location ("customFieldsWarehouseerpid") VALUES ('${WAREHOUSE}')`,
     );
+
+    const requisitesId = async (erpId: string): Promise<number> => {
+        const repo = dataSource.getRepository(RequisitesM);
+        const row =
+            (await repo.findOneBy({ erpId })) ?? (await repo.save({ erpId, legalName: erpId }));
+        return row.id;
+    };
 
     const base = createTestConnection(dataSource);
     const connection = {
@@ -296,8 +310,14 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
                     [product.id, line.sku],
                 );
                 await dataSource.query(
-                    `INSERT INTO order_line ("orderId", "productVariantId", quantity) VALUES ($1, $2, $3)`,
-                    [order.id, variant.id, line.quantity],
+                    `INSERT INTO order_line ("orderId", "productVariantId", quantity, "customFieldsOrganizationid")
+                     VALUES ($1, $2, $3, $4)`,
+                    [
+                        order.id,
+                        variant.id,
+                        line.quantity,
+                        line.organizationErpId ? await requisitesId(line.organizationErpId) : null,
+                    ],
                 );
             }
             return String(order.id);

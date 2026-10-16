@@ -17,6 +17,7 @@ const subject = (over: Partial<OrderCheckSubject> = {}): OrderCheckSubject => ({
             productVariantId: 'v-1',
             sku: 'A',
             productErpId: 'p-1',
+            organizationErpId: 'org-1',
             quantity: 10,
             storageUnitRatioToBase: 1,
         },
@@ -32,32 +33,34 @@ const data = (over: Partial<OrderCheckData> = {}): OrderCheckData => ({
     ...over,
 });
 
+const orgs = (stock: Record<string, number>): OrderCheckData['stockByProduct'] =>
+    new Map([['p-1', new Map(Object.entries(stock))]]);
+
 describe('erp.contract-with-storage-organization', () => {
-    it('passes when a storage organization has a customer contract with the buyer', () => {
+    it('passes when the line organization has a customer contract with the buyer', () => {
         expect(evaluateContractWithStorageOrganization(subject(), data())).toEqual([]);
     });
 
-    it('passes with several storage organizations when one of them intersects', () => {
+    it('fails when only another storage organization has a contract (no rescue)', () => {
         const d = data({
             storageOrganizations: new Map([['p-1', ['org-1', 'org-2']]]),
-            contractOrganizations: new Set(['org-2', 'org-3']),
+            contractOrganizations: new Set(['org-2']),
+            stockByProduct: orgs({ 'org-1': 10, 'org-2': 50 }),
         });
-        expect(evaluateContractWithStorageOrganization(subject(), d)).toEqual([]);
-    });
-
-    it('fails with organization names when the sets do not intersect', () => {
-        const d = data({ contractOrganizations: new Set(['org-2']) });
         const [finding] = evaluateContractWithStorageOrganization(subject(), d);
         expect(finding).toMatchObject({
             severity: 'error',
             lineRef: 'l-1',
             messageKey: 'erp.contract-with-storage-organization.missing',
             facts: {
-                reason: 'no-contract-with-storage-organization',
+                reason: 'no-contract-with-line-organization',
                 productErpId: 'p-1',
                 warehouseErpId: 'wh-1',
-                storageOrganizations: [{ id: 'org-1', name: 'Organization One' }],
-                contractOrganizations: [{ id: 'org-2', name: null }],
+                organization: { id: 'org-1', name: 'Organization One' },
+                storageOrganizations: [
+                    { id: 'org-1', name: 'Organization One', stock: 10, hasContract: false },
+                    { id: 'org-2', name: null, stock: 50, hasContract: true },
+                ],
             },
         });
     });
@@ -67,77 +70,68 @@ describe('erp.contract-with-storage-organization', () => {
         expect(evaluateContractWithStorageOrganization(subject(), d)).toHaveLength(1);
     });
 
-    it('stays silent when no storage organization is known, the warehouse or the buyer is unknown', () => {
-        const none = data({ storageOrganizations: new Map() });
-        expect(evaluateContractWithStorageOrganization(subject(), none)).toEqual([]);
+    it('stays silent for an unknown line organization, one outside the storage set, or unknown warehouse/buyer', () => {
+        const noContract = data({ contractOrganizations: new Set() });
+        const unknownOrg = subject({
+            lines: [{ ...subject().lines[0], organizationErpId: null }],
+        });
+        expect(evaluateContractWithStorageOrganization(unknownOrg, noContract)).toEqual([]);
+        const outside = subject({
+            lines: [{ ...subject().lines[0], organizationErpId: 'org-9' }],
+        });
+        expect(evaluateContractWithStorageOrganization(outside, noContract)).toEqual([]);
         expect(
-            evaluateContractWithStorageOrganization(subject({ warehouseErpId: null }), data()),
+            evaluateContractWithStorageOrganization(
+                subject(),
+                data({ storageOrganizations: new Map(), contractOrganizations: new Set() }),
+            ),
+        ).toEqual([]);
+        expect(
+            evaluateContractWithStorageOrganization(subject({ warehouseErpId: null }), noContract),
         ).toEqual([]);
         expect(
             evaluateContractWithStorageOrganization(
                 subject({ buyerCounterpartyId: null }),
-                data({ contractOrganizations: new Set() }),
+                noContract,
             ),
         ).toEqual([]);
     });
 });
 
 describe('erp.organization-stock', () => {
-    it('passes when eligible stock covers the needed quantity exactly', () => {
+    it('passes when the line organization covers the needed quantity exactly', () => {
         expect(evaluateOrganizationStock(subject(), data())).toEqual([]);
     });
 
-    it('fails with the storage reason when the storage organizations hold too little', () => {
-        const d = data({ stockByProduct: new Map([['p-1', new Map([['org-1', 4]])]]) });
+    it('fails with needed, available and the per-organization breakdown', () => {
+        const d = data({ stockByProduct: orgs({ 'org-1': 4 }) });
         const [finding] = evaluateOrganizationStock(subject(), d);
+        expect(finding.messageKey).toBe('erp.organization-stock.short');
         expect(finding.facts).toMatchObject({
-            reason: 'storage-organizations-short',
+            reason: 'line-organization-stock-short',
             needed: 10,
             available: 4,
-            storageStock: 4,
-        });
-        expect(finding.messageKey).toBe('erp.organization-stock.storage-organizations-short');
-    });
-
-    it('fails with the contract reason when only organizations without a contract hold the stock', () => {
-        const d = data({
-            storageOrganizations: new Map([['p-1', ['org-1', 'org-2']]]),
-            contractOrganizations: new Set(['org-1']),
-            stockByProduct: new Map([
-                [
-                    'p-1',
-                    new Map([
-                        ['org-1', 2],
-                        ['org-2', 50],
-                    ]),
-                ],
-            ]),
-        });
-        const [finding] = evaluateOrganizationStock(subject(), d);
-        expect(finding.facts).toMatchObject({
-            reason: 'contract-organizations-short',
-            available: 2,
-            storageStock: 52,
-            eligibleOrganizations: [{ id: 'org-1', name: 'Organization One' }],
+            organization: { id: 'org-1', name: 'Organization One' },
+            storageOrganizations: [
+                { id: 'org-1', name: 'Organization One', stock: 4, hasContract: true },
+            ],
         });
     });
 
-    it('sums negative balances as the ERP does', () => {
+    it('does not let other organizations stock cover the line', () => {
         const d = data({
             storageOrganizations: new Map([['p-1', ['org-1', 'org-2']]]),
             contractOrganizations: new Set(['org-1', 'org-2']),
-            stockByProduct: new Map([
-                [
-                    'p-1',
-                    new Map([
-                        ['org-1', 12],
-                        ['org-2', -3],
-                    ]),
-                ],
-            ]),
+            stockByProduct: orgs({ 'org-1': 2, 'org-2': 50 }),
         });
         const [finding] = evaluateOrganizationStock(subject(), d);
-        expect(finding.facts).toMatchObject({ available: 9, needed: 10 });
+        expect(finding.facts).toMatchObject({ available: 2, needed: 10 });
+    });
+
+    it('keeps a negative balance of the line organization', () => {
+        const d = data({ stockByProduct: orgs({ 'org-1': -3 }) });
+        const [finding] = evaluateOrganizationStock(subject(), d);
+        expect(finding.facts).toMatchObject({ available: -3, needed: 10 });
     });
 
     it('converts the line quantity into the storage unit', () => {
@@ -149,19 +143,29 @@ describe('erp.organization-stock', () => {
     });
 
     it('treats a product without stock rows as zero available, never as unknown', () => {
-        const d = data({ stockByProduct: new Map() });
-        expect(evaluateOrganizationStock(subject(), d)).toHaveLength(1);
+        expect(
+            evaluateOrganizationStock(subject(), data({ stockByProduct: new Map() })),
+        ).toHaveLength(1);
     });
 
-    it('stays silent without a known storage organization, warehouse or buyer', () => {
+    it('stays silent for an unknown line organization, one outside the storage set, or unknown warehouse/buyer', () => {
+        const empty = data({ stockByProduct: new Map() });
+        const line = subject().lines[0];
         expect(
-            evaluateOrganizationStock(subject(), data({ storageOrganizations: new Map() })),
+            evaluateOrganizationStock(
+                subject({ lines: [{ ...line, organizationErpId: null }] }),
+                empty,
+            ),
         ).toEqual([]);
         expect(
             evaluateOrganizationStock(
-                subject({ warehouseErpId: null }),
-                data({ stockByProduct: new Map() }),
+                subject({ lines: [{ ...line, organizationErpId: 'org-9' }] }),
+                empty,
             ),
         ).toEqual([]);
+        expect(evaluateOrganizationStock(subject({ warehouseErpId: null }), empty)).toEqual([]);
+        expect(evaluateOrganizationStock(subject({ buyerCounterpartyId: null }), empty)).toEqual(
+            [],
+        );
     });
 });

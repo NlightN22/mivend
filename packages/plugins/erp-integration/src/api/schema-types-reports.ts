@@ -9,7 +9,7 @@ export const reportTypes = `
 
     type OrderCheckHealthRow {
         checkCode: String!
-        "Reason from the finding facts, e.g. storage-organizations-short; null when the check has one."
+        "Reason from the finding facts, e.g. line-organization-stock-short; null when the check has one."
         reason: String
         orderCount: Int!
         "Of those, orders whose stored result is marked stale (needs recompute)."

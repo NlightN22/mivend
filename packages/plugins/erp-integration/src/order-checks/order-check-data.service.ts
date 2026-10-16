@@ -16,11 +16,7 @@ export class OrderCheckDataService {
         private stockRead: StockOrganizationReadService,
     ) {}
 
-    async load(
-        ctx: RequestContext,
-        subject: OrderCheckSubject,
-        options: { withStock: boolean },
-    ): Promise<OrderCheckData> {
+    async load(ctx: RequestContext, subject: OrderCheckSubject): Promise<OrderCheckData> {
         const productErpIds = [
             ...new Set(subject.lines.map(l => l.productErpId).filter((id): id is string => !!id)),
         ];
@@ -34,15 +30,16 @@ export class OrderCheckDataService {
             subject.buyerCounterpartyId,
         );
         const stockByProduct = new Map<string, Map<string, number>>();
-        if (options.withStock) {
-            for (const productErpId of storageOrganizations.keys()) {
-                stockByProduct.set(
-                    productErpId,
-                    await this.stockRead.getOrganizationStock(ctx, [productErpId]),
-                );
-            }
+        for (const productErpId of storageOrganizations.keys()) {
+            stockByProduct.set(
+                productErpId,
+                await this.stockRead.getOrganizationStock(ctx, [productErpId]),
+            );
         }
         const organizationIds = new Set<string>(contractOrganizations);
+        for (const line of subject.lines) {
+            if (line.organizationErpId) organizationIds.add(line.organizationErpId);
+        }
         for (const ids of storageOrganizations.values()) ids.forEach(id => organizationIds.add(id));
         return {
             storageOrganizations,

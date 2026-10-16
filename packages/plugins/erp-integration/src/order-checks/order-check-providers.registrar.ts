@@ -26,11 +26,11 @@ export class OrderCheckProvidersRegistrar implements OnModuleInit {
             subjectType: ORDER_SUBJECT_TYPE,
             stages: STAGES,
             description:
-                'ERP requirement: the buyer needs an active customer contract with an organization that holds the product storage place at the order warehouse.',
+                'ERP requirement: the buyer needs an active customer contract with the organization that sells the order line.',
             evaluate: async (subject, { ctx }) =>
                 evaluateContractWithStorageOrganization(
                     subject,
-                    await this.data.load(ctx, subject, { withStock: false }),
+                    await this.data.load(ctx, subject),
                 ),
         });
         this.registry.registerCheck<OrderCheckSubject>({
@@ -38,12 +38,9 @@ export class OrderCheckProvidersRegistrar implements OnModuleInit {
             subjectType: ORDER_SUBJECT_TYPE,
             stages: STAGES,
             description:
-                'ERP requirement: organizations holding the storage place and having a customer contract with the buyer must hold the ordered quantity.',
+                'ERP requirement: the organization that sells the order line must hold the ordered quantity.',
             evaluate: async (subject, { ctx }) =>
-                evaluateOrganizationStock(
-                    subject,
-                    await this.data.load(ctx, subject, { withStock: true }),
-                ),
+                evaluateOrganizationStock(subject, await this.data.load(ctx, subject)),
         });
     }
 }

@@ -5540,7 +5540,7 @@ export type OrderCancelSuccess = {
 export type OrderCheckHealthRow = {
     checkCode: Scalars['String']['output'];
     orderCount: Scalars['Int']['output'];
-    /** Reason from the finding facts, e.g. storage-organizations-short; null when the check has one. */
+    /** Reason from the finding facts, e.g. line-organization-stock-short; null when the check has one. */
     reason: Maybe<Scalars['String']['output']>;
     /** Of those, orders whose stored result is marked stale (needs recompute). */
     staleOrderCount: Scalars['Int']['output'];

@@ -26,6 +26,7 @@ export class OrderCheckSubjectLoader {
             ? await this.counterpartyService.getForCustomer(ctx, order.customerId)
             : null;
         const erpIdByProductId = await this.productErpIds(order);
+        const organizationErpIds = await this.organizationErpIds(order);
         return {
             orderId: String(order.id),
             orderCode: order.code,
@@ -39,6 +40,8 @@ export class OrderCheckSubjectLoader {
                 productErpId: line.productVariant?.productId
                     ? (erpIdByProductId.get(String(line.productVariant.productId)) ?? null)
                     : null,
+                organizationErpId:
+                    organizationErpIds.get(String(line.customFields?.organizationId)) ?? null,
                 quantity: line.quantity,
                 storageUnitRatioToBase: 1,
             })),
@@ -102,6 +105,26 @@ export class OrderCheckSubjectLoader {
             );
         }
         return quantityByWarehouse;
+    }
+
+    private async organizationErpIds(order: Order): Promise<Map<string, string>> {
+        const ids = [
+            ...new Set(
+                order.lines
+                    .map(l => l.customFields?.organizationId)
+                    .filter(id => id != null)
+                    .map(Number),
+            ),
+        ];
+        if (ids.length === 0) return new Map();
+        const rows = await this.connection.rawConnection
+            .createQueryBuilder()
+            .select('o.id', 'id')
+            .addSelect('o."erpId"', 'erpId')
+            .from('organization_requisites', 'o')
+            .where('o.id IN (:...ids)', { ids })
+            .getRawMany<{ id: number; erpId: string }>();
+        return new Map(rows.map(r => [String(r.id), r.erpId]));
     }
 
     private async productErpIds(order: Order): Promise<Map<string, string>> {
