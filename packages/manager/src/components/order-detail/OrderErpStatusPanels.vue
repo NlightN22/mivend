@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { MvPanel, MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderDetail } from '../../api/orderDetail';
-import { isNotRegisteredInErp } from '../../composables/isNotRegisteredInErp';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import ReservationFailurePanel from './ReservationFailurePanel.vue';
 
@@ -12,9 +11,6 @@ void statuses.load();
 </script>
 
 <template>
-    <MvPanel v-if="isNotRegisteredInErp(order.customFields)" title="ERP registration">
-        <MvStatusBadge variant="warning">Not registered in the ERP</MvStatusBadge>
-    </MvPanel>
     <MvPanel
         v-if="
             order.customFields.erpRegistrationDocumentNumber ||

@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { IconAlertTriangle, IconCircleCheck, IconClock, IconRefresh } from '@tabler/icons-vue';
+import { IconAlertTriangle, IconCircleCheck, IconRefresh } from '@tabler/icons-vue';
 import { MvButton, MvCard, MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
 import { findingTitle } from '../../utils/orderCheckMessages';
 import { checksSummary } from '../../utils/orderLineChecks';
-import type { OrderReservation } from '../../api/reservation';
 
 const props = defineProps<{
     findings: OrderCheckFinding[];
-    reservations: OrderReservation[];
     notRegistered: boolean;
     erpStatus: string | null;
     canSeeChecks: boolean;
@@ -20,8 +18,6 @@ const props = defineProps<{
 const emit = defineEmits<{ goToContract: []; recompute: [] }>();
 
 const summary = computed(() => checksSummary(props.findings));
-const active = computed(() => props.reservations.filter(r => r.status === 'active'));
-const expiresAt = computed(() => active.value[0]?.expiresAt ?? null);
 const stale = computed(() => props.findings.some(f => f.stale));
 const clean = computed(() => !props.findings.length);
 </script>
@@ -71,16 +67,6 @@ const clean = computed(() => !props.findings.length);
                 <strong>ERP registration</strong>
                 <p v-if="notRegistered">Not registered in the ERP yet.</p>
                 <p v-else>{{ erpStatus ?? 'Registered or not yet due.' }}</p>
-            </div>
-        </MvCard>
-        <MvCard padding="14px 16px" class="status-card">
-            <IconClock :size="26" class="status-card__icon--info" />
-            <div class="status-card__body">
-                <strong>Reservation</strong>
-                <p v-if="expiresAt">
-                    Reserved until {{ new Date(expiresAt).toLocaleString('en-US') }}
-                </p>
-                <p v-else>Stock is not reserved for this order.</p>
             </div>
         </MvCard>
     </div>
@@ -144,9 +130,5 @@ const clean = computed(() => !props.findings.length);
 
 .status-card__icon--warn {
     color: var(--el-color-warning, #d97706);
-}
-
-.status-card__icon--info {
-    color: var(--el-color-primary-dark-2, #008a70);
 }
 </style>

@@ -152,7 +152,6 @@ watch(() => route.params.code, load);
 
         <OrderStatusCards
             :findings="canSeeChecks ? checks.findings.value : []"
-            :reservations="reservations"
             :not-registered="isNotRegisteredInErp(order.customFields)"
             :erp-status="order.customFields.erpRegistrationStatus ?? null"
             :can-see-checks="canSeeChecks"
