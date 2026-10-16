@@ -83,13 +83,13 @@ export class SessionManagementService {
 
     // Not a security control: runs outside any request, so no ctx is built.
     // Targets base Session so anonymous cart sessions are swept too (STI shares one table).
-    async deleteExpiredSessions(): Promise<number> {
+    async deleteEndedSessions(): Promise<number> {
         const result = await this.dataSource
             .getRepository(Session)
             .createQueryBuilder()
             .delete()
             .from(Session)
-            .where('expires <= :now', { now: new Date() })
+            .where('expires <= :now OR invalidated = true', { now: new Date() })
             .execute();
         return result.affected ?? 0;
     }

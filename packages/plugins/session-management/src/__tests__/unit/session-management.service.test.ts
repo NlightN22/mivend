@@ -169,21 +169,21 @@ describe('SessionManagementService', () => {
         expect(sessionService.deleteSessionsByUser).not.toHaveBeenCalled();
     });
 
-    it('deleteExpiredSessions returns the number of rows deleted', async () => {
+    it('deleteEndedSessions removes expired and invalidated sessions', async () => {
         queryBuilder.execute.mockResolvedValue({ affected: 3 });
 
-        const deleted = await service.deleteExpiredSessions();
+        const deleted = await service.deleteEndedSessions();
 
         expect(deleted).toBe(3);
-        expect(queryBuilder.where).toHaveBeenCalledWith('expires <= :now', {
+        expect(queryBuilder.where).toHaveBeenCalledWith('expires <= :now OR invalidated = true', {
             now: expect.any(Date),
         });
     });
 
-    it('deleteExpiredSessions returns 0 when nothing was affected', async () => {
+    it('deleteEndedSessions returns 0 when nothing was affected', async () => {
         queryBuilder.execute.mockResolvedValue({ affected: undefined });
 
-        const deleted = await service.deleteExpiredSessions();
+        const deleted = await service.deleteEndedSessions();
 
         expect(deleted).toBe(0);
     });

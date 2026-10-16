@@ -395,6 +395,14 @@ out (and creates a new session row) on every restart. Outside production a fixed
 in production the server refuses to start without a real value (a `change-me…` placeholder is also
 rejected). Changing it logs everybody out exactly once.
 
+## Session lifetime and cap
+
+`SESSION_DURATION` (default `30d`, Vendure's own default is one year) is the server-side session
+lifetime; Vendure extends it on activity. A "remember me" cookie still lives one year (hardcoded
+in Vendure), but the token it carries stops working once the session expires.
+`SESSION_MAX_ACTIVE_PER_USER` (default `20`) caps active sessions per user: each login ends the
+user's oldest ones beyond it. The hourly `session-cleanup` task deletes expired and ended sessions.
+
 ## Migration name drift
 
 The plain rename migrations (#223) do not rename FK/PK/index hash names, so `migration:run` on a

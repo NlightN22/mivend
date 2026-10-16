@@ -8,6 +8,7 @@ import {
     VendureConfig,
 } from '@vendure/core';
 import { NumberingOrderCodeStrategy } from './order-code.strategy';
+import { sessionOptionsFromEnv } from './session-options';
 import { OrderUuidSubscriber } from './order-uuid.subscriber';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { DeferredPaymentPlugin } from '@mivend/plugin-deferred-payment';
@@ -111,6 +112,7 @@ const instancePlugins = [AcquiringPlugin.init({})];
 
 // Issue #121: until a real transport exists, emails (real token/link) are written to disk instead
 // of sent. The HTTP /mailbox route exposes those tokens, so it exists only with the explicit flag.
+const sessionOptions = sessionOptionsFromEnv(process.env);
 const emailDevMailboxEnabled = process.env.EMAIL_DEV_MAILBOX_ENABLED === 'true';
 const emailTransportConfigured = Boolean(process.env.EMAIL_TRANSPORT);
 const emailOutputPath = path.join(__dirname, '../static/email/test-mailbox');
@@ -155,6 +157,7 @@ export const config: VendureConfig = {
         tokenMethod: ['bearer', 'cookie'],
         // Vendure's default secret is random per process start, which logs everyone out on every restart.
         cookieOptions: { secret: cookieSecret },
+        sessionDuration: sessionOptions.sessionDuration,
         superadminCredentials: {
             identifier: process.env.SUPERADMIN_USERNAME ?? 'superadmin',
             password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
@@ -565,7 +568,9 @@ export const config: VendureConfig = {
         RoleProvisioningDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode }),
         AccessControlPlugin.init({ branchNames, defaultPriceTypeCode, defaultCurrencyCode }),
-        SessionManagementPlugin.init({}),
+        SessionManagementPlugin.init({
+            maxActiveSessionsPerUser: sessionOptions.maxActiveSessionsPerUser,
+        }),
         ApprovalWorkflowPlugin,
         VersioningPlugin,
         CounterpartyPlugin,

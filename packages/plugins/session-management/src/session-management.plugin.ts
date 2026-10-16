@@ -12,6 +12,7 @@ import { subscribeAndLog } from 'shared';
 
 import { SessionManagementResolver } from './api/session-management.resolver';
 import { sessionManagementSchema } from './api/session-management.schema';
+import { SessionCapService } from './session-cap.service';
 import { createSessionCleanupTask } from './session-cleanup.scheduled-task';
 import { SessionLoginListenerService } from './session-login-listener.service';
 import { SessionManagementService } from './session-management.service';
@@ -23,6 +24,7 @@ import type { SessionManagementPluginOptions } from './session.types';
     providers: [
         SessionManagementService,
         SessionLoginListenerService,
+        SessionCapService,
         {
             provide: SESSION_MANAGEMENT_PLUGIN_OPTIONS,
             useFactory: (): SessionManagementPluginOptions => SessionManagementPlugin.options,
@@ -66,13 +68,20 @@ export class SessionManagementPlugin implements OnApplicationBootstrap {
     constructor(
         private readonly eventBus: EventBus,
         private readonly loginListenerService: SessionLoginListenerService,
+        private readonly sessionCapService: SessionCapService,
     ) {}
 
     onApplicationBootstrap(): void {
         subscribeAndLog(
             this.eventBus,
             LoginEvent,
-            event => this.loginListenerService.tagLatestSessionWithUserAgent(event.ctx, event.user),
+            async event => {
+                await this.loginListenerService.tagLatestSessionWithUserAgent(
+                    event.ctx,
+                    event.user,
+                );
+                await this.sessionCapService.enforceCap(event.user.id);
+            },
             'SessionManagementPlugin',
         );
     }

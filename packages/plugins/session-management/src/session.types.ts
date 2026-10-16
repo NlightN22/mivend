@@ -6,8 +6,12 @@ export const SESSION_MANAGEMENT_PLUGIN_OPTIONS = Symbol('SESSION_MANAGEMENT_PLUG
 // check at auth time (see SessionService.findSessionByToken()). An hourly sweep is plenty.
 export const CLEANUP_POLL_INTERVAL_DEFAULT = 60 * 60_000;
 
+// Generous for people; bounds sessions leaked by automated logins that never log out.
+export const MAX_ACTIVE_SESSIONS_DEFAULT = 20;
+
 export interface SessionManagementPluginOptions {
     cleanupPollIntervalMs?: number;
+    maxActiveSessionsPerUser?: number;
 }
 
 export interface SessionSummary {

@@ -52,6 +52,18 @@ who has `ReassignCounterpartyManager` within her own department) — this is wha
 `manager-department-head`'s `"department"` scope. All three role projects run the exact same
 spec files with no skips.
 
+## Sessions opened by a run are ended in teardown
+
+Every login (UI or API) opens a server session. `global-setup.ts` records the run start;
+`global-teardown.ts` logs in as each test account, ends every session created since then and
+fails the run if one stays active (issue #231). Rules for new specs:
+
+- Reuse the `storageState` session or a token obtained once per spec file; do not log in per test.
+- A spec that logs in as an account not listed in `global-teardown.ts`'s `ACCOUNTS` adds it there.
+- Sessions a developer opens for the same accounts during a run are ended too.
+- The server caps active sessions per user (`SESSION_MAX_ACTIVE_PER_USER`, default 20): more than
+  ~20 logins of one account inside a run would end the oldest, i.e. the stored `storageState` one.
+
 ## Checkout and credit limits, proformas per organization
 
 Two UI + API sets under `packages/e2e/storefront/`, both run in the `storefront` project with an

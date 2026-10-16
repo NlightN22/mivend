@@ -11,12 +11,12 @@ export function createSessionCleanupTask(options: SessionManagementPluginOptions
     const everyMs = options.cleanupPollIntervalMs ?? CLEANUP_POLL_INTERVAL_DEFAULT;
     return new ScheduledTask({
         id: 'session-cleanup',
-        description: 'Deletes expired customer/administrator sessions.',
+        description: 'Deletes expired and ended customer/administrator sessions.',
         schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
-            const deleted = await injector.get(SessionManagementService).deleteExpiredSessions();
+            const deleted = await injector.get(SessionManagementService).deleteEndedSessions();
             if (deleted > 0) {
-                Logger.verbose(`Deleted ${deleted} expired session(s)`, loggerCtx);
+                Logger.verbose(`Deleted ${deleted} ended session(s)`, loggerCtx);
             }
             return { deleted };
         },

@@ -5,24 +5,13 @@ import { adminGql, postBatch, waitForRun } from './helpers/api';
 import { loginAs } from './helpers/storefront-auth';
 import { loginAsManager } from './helpers/manager-auth';
 import { createConfirmedOrder } from './helpers/manager-order';
+import { MANAGER_ACCOUNTS, SUPERADMIN } from './fixtures/accounts';
+import { markRunStart } from './helpers/session-cleanup';
 import { seedRecords, E2E_CUSTOMER, E2E_OTHER_COUNTERPARTY_ID } from './fixtures/seed';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 const STOREFRONT_URL = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
 const MANAGER_URL = process.env.MANAGER_URL ?? 'http://localhost:5174';
-const SUPERADMIN = {
-    identifier: process.env.SUPERADMIN_USERNAME ?? 'superadmin',
-    password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
-};
-
-// Not re-seeded here: relies on `make seed` having run first (prerequisite for e2e).
-// Logs in only; accounts match .tests/accounts.md, one per manager-portal KPI variant.
-const MANAGER_ACCOUNTS = {
-    operator: { username: 'ivan.operator@mivend.dev', password: 'Password123!' },
-    manager: { username: 'petr.manager@mivend.dev', password: 'Password123!' },
-    departmentHead: { username: 'olga.depthead@mivend.dev', password: 'Password123!' },
-    portalAdmin: { username: 'anna.portaladmin@mivend.dev', password: 'Password123!' },
-} as const;
 
 async function ensureShippingMethod(token: string): Promise<void> {
     const { data } = await adminGql<{ shippingMethods: { items: { id: string }[] } }>(
@@ -72,6 +61,7 @@ async function ensureCountry(token: string, code: string, name: string): Promise
 
 export default async function globalSetup(): Promise<void> {
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
+    markRunStart();
 
     const { token: adminToken } = await adminGql<unknown>(
         `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { ... on CurrentUser { id } } }`,
