@@ -166,8 +166,9 @@ Four controls that used to refuse checkout (or the reserve) are checks of the su
   refused when it is added); never on `checkout` or later.
 - `credit.limit` at `checkout` is read by the placement decision (`assess` -> `decidePlacement`), not by
   `isHeld`: `hold` = the over-limit order is placed and waits for manager confirmation (the former default of the
-  branch flag; it is not a refusal), `warn`/`info` = it may go to the ERP now after the customer's acknowledgement (the explicit
-  acknowledgement step stays as it was), disabled = no limit control. The finding shows the manager why.
+  branch flag; it is not a refusal and not the `pre-reserve` hold), `warn`/`info` = it may go to the ERP now after the customer's acknowledgement (the explicit
+  acknowledgement step stays as it was), disabled = no limit control. The finding shows the manager why. Changing or resetting the policy applies to
+  orders placed afterwards; placed orders are not recomputed.
 - Branch scope: every policy can be overridden per branch (`docs/checks-and-policies.md`). The former branch
   toggles `enforceMultiplicity` and `allowExceedingCreditLimit` are the branch overrides of `order.multiplicity`
   (`cart`, `pre-reserve`, `on-edit`) and `credit.limit` (`checkout`).

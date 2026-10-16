@@ -64,3 +64,13 @@ export function isRowDirty(row: PolicyRow): boolean {
         row.enabled !== row.saved.enabled
     );
 }
+
+// `credit.limit` at `checkout` is read by the placement decision, not by the staff-confirmation hold.
+export function policyCaption(
+    row: Pick<PolicyRow, 'checkCode' | 'stage' | 'consequence'>,
+): string | null {
+    if (row.checkCode !== 'credit.limit' || row.stage !== 'checkout') return null;
+    return row.consequence === 'hold'
+        ? 'hold: the order is placed and waits for manager confirmation'
+        : 'the order goes on to the ERP now once the customer acknowledges the limit';
+}

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MvButton, MvInput, MvSelect, MvStatusBadge, MvSwitch } from '@mivend/ui-kit';
-import { isRowDirty, type PolicyRow } from '../../utils/checkPolicyRows';
+import { isRowDirty, policyCaption, type PolicyRow } from '../../utils/checkPolicyRows';
 
 defineProps<{ rows: PolicyRow[]; savingKey: string | null }>();
 defineEmits<{ save: [row: PolicyRow]; reset: [row: PolicyRow] }>();
@@ -39,6 +39,9 @@ defineEmits<{ save: [row: PolicyRow]; reset: [row: PolicyRow] }>();
                             v-model="row.consequence"
                             :options="row.allowedConsequences.map(c => ({ value: c, label: c }))"
                         />
+                        <div v-if="policyCaption(row)" class="policies__desc">
+                            {{ policyCaption(row) }}
+                        </div>
                     </td>
                     <td><MvInput v-model="row.recipient" placeholder="Role or group" /></td>
                     <td><MvSwitch v-model="row.enabled" /></td>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPolicyRows, isRowDirty } from '../../utils/checkPolicyRows';
+import { buildPolicyRows, isRowDirty, policyCaption } from '../../utils/checkPolicyRows';
 
 const defs = [
     {
@@ -82,5 +82,13 @@ describe('buildPolicyRows', () => {
         expect(other).toMatchObject({ branchId: 'b2', inherited: true, consequence: 'hold' });
         const [global] = buildPolicyRows(defs, policies, null);
         expect(global).toMatchObject({ branchId: null, inherited: false, consequence: 'hold' });
+    });
+
+    it('explains the credit limit checkout policy, which routes placement, and nothing else', () => {
+        const row = { checkCode: 'credit.limit', stage: 'checkout', consequence: 'hold' };
+        expect(policyCaption(row)).toContain('waits for manager confirmation');
+        expect(policyCaption({ ...row, consequence: 'warn' })).toContain('acknowledges');
+        expect(policyCaption({ ...row, stage: 'on-edit' })).toBeNull();
+        expect(policyCaption({ ...row, checkCode: 'order.multiplicity' })).toBeNull();
     });
 });

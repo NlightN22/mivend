@@ -99,7 +99,11 @@ and checks are registered by the plugins that own them.
   either way because a lazily created row starts from that default. A stage's consequence can be consumed by
   a flow other than `isHeld`: `credit.limit` at `checkout` is read by the placement decision (hold = the over-limit
   order waits for a manager, warn/info = it goes on after the customer's acknowledgement), so its `hold` default is
-  live, not decorative. `enabled=false`
+  live, not decorative. That `hold` is NOT the staff-confirmation hold of `pre-reserve` / `pre-send-to-erp`: it
+  routes the placement (the order is placed and waits for a manager) and the tab shows a caption saying so. The
+  check therefore has no `pre-reserve` / `pre-send-to-erp` stage; adding one would hold the same order a second
+  time. A change or reset of this policy applies to orders placed afterwards: already placed orders keep the route
+  they were placed with and are not recomputed. `enabled=false`
   skips the provider and clears its stored findings. `updateCheckPolicy` rejects a consequence the
   subject type does not allow at that stage and appends `check_policy_history` (before/after, user id);
   `resetCheckPolicyOverride` removes a branch row (recorded in the history as removed).
