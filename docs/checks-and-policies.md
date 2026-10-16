@@ -96,7 +96,8 @@ and checks are registered by the plugins that own them.
   so a failing check does not hold or block the order. The failure is not silent: it is logged at
   error level and written to `order_check_failure` (error text cut to 500 characters, kept 30 days,
   pruned by a scheduled task) on its own connection, deferred and not awaited so the caller never
-  waits for a second pool connection while holding one; `orderCheckHealth` lists it as
+  waits for a second pool connection while holding one. It is best effort: the queue is bounded (100 pending
+  writes, extra ones are dropped and counted in the error log) and a write is lost on shutdown; `orderCheckHealth` lists it as
   `check-run-failed` per stage for 7 days. In
   `reserveOrder` the checks run inside a savepoint, so a SQL error in a provider cannot abort the
   reserve's transaction. A hold therefore depends on the check being able to run.
@@ -108,7 +109,10 @@ and checks are registered by the plugins that own them.
   lose the request and no order lock is held across a bulk load. `CheckStaleRequestService.drain`
   (fast path right after commit, plus the `check-stale-requests` scheduled task every minute)
   marks the affected subjects stale in short per-subject transactions (keyset pages, no cap) and
-  deletes a request only if its version is unchanged; a failing handler leaves it for the next pass. A tombstone or delete that carries an entity id shared by several rows removes
+  deletes a request only if its version is unchanged. One pass visits every row by keyset, so rows without a
+  handler in this process or failing ones never starve later rows; they stay for the next pass. A transaction-level
+  advisory try-lock per request keeps two processes (scheduled task and post-commit drain) from duplicating work
+  without blocking the writer's upsert. A request for a subject type this process does not know is kept. A tombstone or delete that carries an entity id shared by several rows removes
   all of them and marks every affected product.
 - **A policy takes effect for new runs; stored results are flagged out of date.**
   `updateCheckPolicy` (consequence or `enabled` changed) writes a `check-code` stale request in the
@@ -124,7 +128,8 @@ and checks are registered by the plugins that own them.
   normal rebuild (`HeldSendRedriveService`), so a hold cannot block the ERP send for good. The
   row stays `skipped` while another policy still holds the order. The event path is only the fast
   path: a scheduled sweep (`erp-integration-held-send-redrive`, every 5 minutes) re-evaluates every
-  held row (and rows whose rebuild failed) through the same rebuild, so a missed event, a failed
+  held row (and rows whose rebuild failed, retried with a growing delay and given up after 7 days, after which
+  they stay counted as skipped in outbox health) through the same rebuild, so a missed event, a failed
   rebuild, or a hold cause that disappeared with new data (for example a stock-organization row
   arriving) still ends in a send. Rebuild takes the outbox row lock first, then the order lock
   after the build, the same lock the live enqueue holds across check + insert, so a confirm and a
