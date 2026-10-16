@@ -53,6 +53,8 @@ class OrderFields {
     branchId!: string | null;
     @Column({ name: 'customFieldsHascheckfindings', type: 'boolean', default: false })
     hasCheckFindings!: boolean;
+    @Column({ name: 'customFieldsSelectedcontractid', type: 'varchar', nullable: true })
+    selectedContractId!: string | null;
 }
 class LineFields {
     @Column({ name: 'customFieldsOrganizationid', type: 'int', nullable: true })
@@ -79,6 +81,13 @@ class OrderM extends Base {
     @Column({ type: 'int', nullable: true }) customerId!: number | null;
     @Column(() => OrderFields, { prefix: false }) customFields!: OrderFields;
     @OneToMany(() => OrderLineM, l => l.order) lines!: OrderLineM[];
+    @OneToMany(() => ShippingLineM, l => l.order) shippingLines!: ShippingLineM[];
+}
+// Only the columns the freight check reads; the real table is Vendure's `shipping_line`.
+@Entity('shipping_line')
+class ShippingLineM extends Base {
+    @Column({ type: 'int' }) shippingMethodId!: number;
+    @ManyToOne(() => OrderM, o => o.shippingLines) @JoinColumn({ name: 'orderId' }) order!: OrderM;
 }
 @Entity('order_line')
 class OrderLineM extends Base {
@@ -249,7 +258,7 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [...Object.values(mirrors), OrderLineM, VariantM] as never[],
+        entities: [...Object.values(mirrors), OrderLineM, ShippingLineM, VariantM] as never[],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -429,7 +438,7 @@ export async function seedReservation(
 
 export async function resetWorld(world: OrderChecksWorld): Promise<void> {
     await world.dataSource.query(
-        `TRUNCATE check_result, check_stale_request, order_check_failure, check_policy_history, check_policy, "order", order_line, product,
+        `TRUNCATE check_result, check_stale_request, order_check_failure, check_policy_history, check_policy, "order", order_line, shipping_line, product,
          product_variant, contract, storage_location_assignment, stock_organization,
          organization_requisites, reservation, stock_level RESTART IDENTITY CASCADE`,
     );
