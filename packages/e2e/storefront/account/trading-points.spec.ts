@@ -12,6 +12,8 @@ test.describe('Trading points', () => {
         await page.goto('/account/trading-points');
         await page.waitForLoadState('networkidle');
 
-        await expect(page.getByText('E2E Trading Point')).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.tp-card__name', { hasText: 'E2E Trading Point' })).toBeVisible({
+            timeout: 10000,
+        });
     });
 });

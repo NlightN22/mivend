@@ -14,7 +14,7 @@ test.describe('Orders page', () => {
 
     test('orders page shows filter chips', async ({ page }) => {
         await goToOrders(page);
-        await expect(page.getByRole('button', { name: 'Все' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Все', exact: true })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Активные' })).toBeVisible();
     });
 
@@ -57,19 +57,19 @@ test.describe('Order detail page', () => {
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.od-title')).toBeVisible({ timeout: 10000 });
         const title = await page.locator('.od-title').textContent();
-        expect(title).toMatch(/Order\s+[A-Z0-9-]+/);
+        expect(title).toMatch(/Заказ\s+[0-9-]+/);
     });
 
     test('detail page shows order lines', async ({ page }) => {
         await page.goto(`/orders/${orderId}`);
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.locator('.od-row').first()).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.olt-table tbody tr').first()).toBeVisible({ timeout: 10000 });
     });
 
     test('detail page shows summary totals', async ({ page }) => {
         await page.goto(`/orders/${orderId}`);
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.locator('.od-summary-total')).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.otc-total')).toBeVisible({ timeout: 10000 });
     });
 
     test('back link returns to orders list', async ({ page }) => {

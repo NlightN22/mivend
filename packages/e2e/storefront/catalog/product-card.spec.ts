@@ -2,6 +2,14 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Product page', () => {
     test.beforeEach(async ({ page }) => {
+        // A product already in the cart shows the qty stepper instead of "Add to cart".
+        await page.request.post(
+            `${process.env.STOREFRONT_URL ?? 'http://localhost:5173'}/shop-api`,
+            {
+                data: { query: 'mutation { removeAllOrderLines { __typename } }' },
+                headers: { 'Content-Type': 'application/json' },
+            },
+        );
         // Navigate to catalog and click the first product to get a real slug
         await page.goto('/catalog');
         await page.waitForLoadState('networkidle');

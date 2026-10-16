@@ -55,10 +55,7 @@ test.describe('Catalog filters', () => {
         await waitForProducts(page);
         const countBefore = await getRowCount(page);
 
-        const facetCheckboxes = page
-            .locator('.catalog-facets__block')
-            .filter({ hasNot: page.locator('label:has-text("In stock only")') })
-            .locator('input[type="checkbox"]');
+        const facetCheckboxes = page.locator('.mv-facet-group__row');
 
         if ((await facetCheckboxes.count()) === 0) {
             test.skip();

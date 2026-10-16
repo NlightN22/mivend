@@ -89,7 +89,7 @@ test.describe('Catalog collection navigation', () => {
         expect(countB).toBeGreaterThan(0);
     });
 
-    test('switching from collection to search clears collection param', async ({ page }) => {
+    test('searching inside a collection keeps the collection scope (#171)', async ({ page }) => {
         await goToCatalog(page);
         await page.locator(CATALOG_BTN).click();
         await expect(page.locator(CAT_ITEM).first()).toBeVisible({ timeout: 5000 });
@@ -103,6 +103,6 @@ test.describe('Catalog collection navigation', () => {
         await page.waitForLoadState('networkidle');
 
         expect(page.url()).toContain('q=oil');
-        expect(page.url()).not.toContain('collection=');
+        expect(page.url()).toContain('collection=');
     });
 });
