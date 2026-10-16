@@ -45,7 +45,7 @@ test.describe('Catalog grid — cart ordering', () => {
     test('clicking "Add to cart" replaces button with stepper showing qty 1', async ({ page }) => {
         await firstCard(page).locator(CARD_BUY_BTN).click();
         await expect(firstCard(page).locator(CARD_STEPPER)).toBeVisible({ timeout: 5000 });
-        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveText('1');
+        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveValue('1');
         await expect(firstCard(page).locator(CARD_BUY_BTN)).not.toBeVisible();
     });
 
@@ -56,9 +56,9 @@ test.describe('Catalog grid — cart ordering', () => {
 
         // Increase qty to 3 — badge must stay 1
         await firstCard(page).locator(CARD_STEPPER).locator(STEPPER_INC).click();
-        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveText('2');
+        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveValue('2');
         await firstCard(page).locator(CARD_STEPPER).locator(STEPPER_INC).click();
-        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveText('3');
+        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveValue('3');
         await expect(page.locator(BADGE)).toHaveText('1');
     });
 
@@ -67,7 +67,7 @@ test.describe('Catalog grid — cart ordering', () => {
         await expect(firstCard(page).locator(CARD_STEPPER)).toBeVisible({ timeout: 5000 });
 
         await firstCard(page).locator(CARD_STEPPER).locator(STEPPER_INC).click();
-        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveText('2');
+        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveValue('2');
     });
 
     test('− decrements qty', async ({ page }) => {
@@ -75,10 +75,10 @@ test.describe('Catalog grid — cart ordering', () => {
         await expect(firstCard(page).locator(CARD_STEPPER)).toBeVisible({ timeout: 5000 });
 
         await firstCard(page).locator(CARD_STEPPER).locator(STEPPER_INC).click();
-        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveText('2');
+        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveValue('2');
 
         await firstCard(page).locator(CARD_STEPPER).locator(STEPPER_DEC).click();
-        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveText('1');
+        await expect(firstCard(page).locator(CARD_STEPPER).locator(STEPPER_VAL)).toHaveValue('1');
     });
 
     test('− at qty 1 removes product and restores "Add to cart" button', async ({ page }) => {

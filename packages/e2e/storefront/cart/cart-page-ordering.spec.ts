@@ -52,20 +52,20 @@ test.describe('Cart page — ordering', () => {
     });
 
     test('added product appears in cart with qty 1', async ({ page }) => {
-        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveText('1');
+        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveValue('1');
         await expect(firstItem(page).locator(CONFIRM)).not.toBeVisible();
     });
 
     test('+ increments qty on cart page', async ({ page }) => {
         await firstItem(page).locator(STEPPER_INC).click();
-        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveText('2');
+        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveValue('2');
     });
 
     test('− decrements qty on cart page', async ({ page }) => {
         await firstItem(page).locator(STEPPER_INC).click();
-        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveText('2');
+        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveValue('2');
         await firstItem(page).locator(STEPPER_DEC).click();
-        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveText('1');
+        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveValue('1');
     });
 
     test('− at qty 1 shows remove confirmation instead of deleting', async ({ page }) => {
@@ -95,7 +95,7 @@ test.describe('Cart page — ordering', () => {
 
         await expect(firstItem(page).locator(CONFIRM)).not.toBeVisible();
         await expect(firstItem(page).locator(STEPPER)).toBeVisible();
-        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveText('1');
+        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveValue('1');
         await expect(page.locator(BADGE)).toHaveText('1');
     });
 
@@ -117,7 +117,7 @@ test.describe('Cart page — ordering', () => {
         const badgeBefore = await page.locator(BADGE).textContent();
 
         await firstItem(page).locator(STEPPER_INC).click();
-        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveText('2');
+        await expect(firstItem(page).locator(STEPPER_VAL)).toHaveValue('2');
 
         await expect(page.locator(BADGE)).toHaveText(badgeBefore ?? '1');
     });

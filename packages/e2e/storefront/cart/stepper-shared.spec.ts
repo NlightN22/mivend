@@ -103,7 +103,7 @@ function stepperScenarios(
             const c = ctx(page);
             await c.add();
             await expect(c.stepper()).toBeVisible({ timeout: 5000 });
-            await expect(c.val()).toHaveText('1');
+            await expect(c.val()).toHaveValue('1');
             await expect(c.addBtn()).not.toBeVisible();
         });
 
@@ -113,10 +113,10 @@ function stepperScenarios(
             await expect(c.stepper()).toBeVisible({ timeout: 5000 });
 
             await c.inc().click();
-            await expect(c.val()).toHaveText('2');
+            await expect(c.val()).toHaveValue('2');
 
             await c.inc().click();
-            await expect(c.val()).toHaveText('3');
+            await expect(c.val()).toHaveValue('3');
         });
 
         test('− decrements qty: 3 → 2 → 1', async ({ page }) => {
@@ -125,14 +125,14 @@ function stepperScenarios(
             await expect(c.stepper()).toBeVisible({ timeout: 5000 });
 
             await c.inc().click();
-            await expect(c.val()).toHaveText('2');
+            await expect(c.val()).toHaveValue('2');
             await c.inc().click();
-            await expect(c.val()).toHaveText('3');
+            await expect(c.val()).toHaveValue('3');
 
             await c.dec().click();
-            await expect(c.val()).toHaveText('2');
+            await expect(c.val()).toHaveValue('2');
             await c.dec().click();
-            await expect(c.val()).toHaveText('1');
+            await expect(c.val()).toHaveValue('1');
         });
 
         test('− at qty 1 removes item; Add button restored; badge 0', async ({ page }) => {
@@ -154,10 +154,10 @@ function stepperScenarios(
             await expect(c.stepper()).toBeVisible({ timeout: 5000 });
 
             await c.inc().click();
-            await expect(c.val()).toHaveText('2');
+            await expect(c.val()).toHaveValue('2');
 
             await c.dec().click();
-            await expect(c.val()).toHaveText('1');
+            await expect(c.val()).toHaveValue('1');
             await expect(c.stepper()).toBeVisible();
             await expect(c.addBtn()).not.toBeVisible();
         });
@@ -169,9 +169,9 @@ function stepperScenarios(
             await expect(page.locator(BADGE)).toHaveText('1');
 
             await c.inc().click();
-            await expect(c.val()).toHaveText('2');
+            await expect(c.val()).toHaveValue('2');
             await c.inc().click();
-            await expect(c.val()).toHaveText('3');
+            await expect(c.val()).toHaveValue('3');
 
             // 3 units of 1 product = still 1 position
             await expect(page.locator(BADGE)).toHaveText('1');

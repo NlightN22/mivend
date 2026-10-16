@@ -52,7 +52,7 @@ test.describe('Catalog — cart ordering', () => {
     test('clicking Add replaces button with stepper showing qty 1', async ({ page }) => {
         await firstRowAddBtn(page).click();
         await expect(firstRowStepper(page)).toBeVisible({ timeout: 5000 });
-        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveText('1');
+        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveValue('1');
         await expect(firstRowAddBtn(page)).not.toBeVisible();
     });
 
@@ -64,9 +64,9 @@ test.describe('Catalog — cart ordering', () => {
 
         // Increase qty to 3 — badge must stay 1 (positions, not units)
         await firstRowStepper(page).locator(STEPPER_INC).click();
-        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveText('2');
+        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveValue('2');
         await firstRowStepper(page).locator(STEPPER_INC).click();
-        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveText('3');
+        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveValue('3');
         await expect(page.locator(BADGE)).toHaveText('1');
     });
 
@@ -92,10 +92,10 @@ test.describe('Catalog — cart ordering', () => {
         await expect(firstRowStepper(page)).toBeVisible({ timeout: 5000 });
 
         await firstRowStepper(page).locator(STEPPER_INC).click();
-        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveText('2');
+        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveValue('2');
 
         await firstRowStepper(page).locator(STEPPER_INC).click();
-        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveText('3');
+        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveValue('3');
     });
 
     test('− button decrements qty in stepper', async ({ page }) => {
@@ -103,12 +103,12 @@ test.describe('Catalog — cart ordering', () => {
         await expect(firstRowStepper(page)).toBeVisible({ timeout: 5000 });
 
         await firstRowStepper(page).locator(STEPPER_INC).click();
-        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveText('2');
+        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveValue('2');
         await firstRowStepper(page).locator(STEPPER_INC).click();
-        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveText('3');
+        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveValue('3');
 
         await firstRowStepper(page).locator(STEPPER_DEC).click();
-        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveText('2');
+        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveValue('2');
     });
 
     test('− at qty 1 removes product and restores Add button; badge clears', async ({ page }) => {
@@ -130,10 +130,14 @@ test.describe('Catalog — cart ordering', () => {
         await expect(firstRowStepper(page)).toBeVisible({ timeout: 5000 });
 
         await firstRowStepper(page).locator(STEPPER_INC).click();
-        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveText('2', { timeout: 5000 });
+        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveValue('2', {
+            timeout: 5000,
+        });
 
         await firstRowStepper(page).locator(STEPPER_DEC).click();
-        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveText('1', { timeout: 5000 });
+        await expect(firstRowStepper(page).locator(STEPPER_VAL)).toHaveValue('1', {
+            timeout: 5000,
+        });
         await expect(firstRowStepper(page)).toBeVisible();
         await expect(firstRowAddBtn(page)).not.toBeVisible();
     });
