@@ -44,6 +44,9 @@ After the bound, fail loudly; never loop forever and never overwrite.
 An EventBus subscriber must never write from `event.order` (or any event entity snapshot). It
 takes the aggregate lock, re-reads the rows it needs inside that transaction, then writes.
 Treat the event as a notification of "something changed", not as data.
+A `save(event.order)` of the stale entity writes every column that differs from the database, so it reverts a key
+another subscriber wrote meanwhile: `ErpOrderService.onOrderPlaced` did exactly that to the reservation state
+(#241, proved with a trigger on `order`); a subscriber writes only the keys it owns with `repo.update`.
 
 ### (e) Never swallow errors in handlers
 

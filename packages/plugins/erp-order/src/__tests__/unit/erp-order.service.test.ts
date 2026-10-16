@@ -78,7 +78,32 @@ describe('ErpOrderService', () => {
                 (order as { customFields: { placedByAdministratorId?: string } }).customFields
                     .placedByAdministratorId,
             ).toBe('admin-1');
-            expect(mockOrderRepo.save).toHaveBeenCalledWith(order);
+            expect(mockOrderRepo.save).not.toHaveBeenCalled();
+            expect(mockOrderRepo.update).toHaveBeenCalledWith(
+                undefined,
+                expect.objectContaining({
+                    customFields: expect.objectContaining({ placedByAdministratorId: 'admin-1' }),
+                }),
+            );
+        });
+
+        it('writes only the keys it sets, never the whole stale entity (a concurrent reservation state must survive)', async () => {
+            mockAdministratorService.findOneByUserId.mockResolvedValue(null);
+            const order = {
+                id: 5,
+                customFields: { reservationState: 'NOT_REQUIRED', uuid: 'u-1' },
+                customerId: null,
+            } as never;
+
+            await service.onOrderPlaced(mockCtx, order);
+
+            const [id, data] = mockOrderRepo.update.mock.calls[0] as [
+                number,
+                { customFields: Record<string, unknown> },
+            ];
+            expect(id).toBe(5);
+            expect(Object.keys(data.customFields).sort()).toEqual(['erpStatus', 'erpStatusAt']);
+            expect(mockOrderRepo.save).not.toHaveBeenCalled();
         });
 
         it("leaves placedByAdministratorId unset for a storefront customer's own checkout (no matching Administrator)", async () => {

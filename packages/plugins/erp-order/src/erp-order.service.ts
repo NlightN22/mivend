@@ -28,10 +28,14 @@ export class ErpOrderService {
         private readonly statusReference: OrderStatusReferenceService,
     ) {}
 
+    // Writes only the keys it sets: it runs after commit on a stale event.order, and a full save() would
+    // overwrite a concurrent writer's key (the reservation state, #241) with that snapshot.
     async onOrderPlaced(ctx: RequestContext, order: Order): Promise<void> {
         const initialStatus = (await this.statusReference.dictionary(ctx)).codeWith('initial');
-        order.customFields.erpStatus = initialStatus;
-        order.customFields.erpStatusAt = new Date();
+        const changed: Record<string, unknown> = {
+            erpStatus: initialStatus,
+            erpStatusAt: new Date(),
+        };
 
         // Denormalized at placement time; see docs/access-control.md (branch-scope axis).
         // A missing preferred trading point is not an error; the order just gets no branch scope.
@@ -41,16 +45,18 @@ export class ErpOrderService {
                     ctx,
                     order.customerId,
                 );
-                if (counterparty) order.customFields.counterpartyId = String(counterparty.id);
+                if (counterparty) changed.counterpartyId = String(counterparty.id);
             }
             const tradingPoint = await this.tradingPointService.getPreferredForCustomer(
                 ctx,
                 order.customerId,
             );
             if (tradingPoint) {
-                order.customFields.tradingPointId = String(tradingPoint.id);
-                order.customFields.branchId =
-                    await this.tradingPointService.resolveServicingBranchId(ctx, tradingPoint);
+                changed.tradingPointId = String(tradingPoint.id);
+                changed.branchId = await this.tradingPointService.resolveServicingBranchId(
+                    ctx,
+                    tradingPoint,
+                );
             }
         }
 
@@ -59,11 +65,12 @@ export class ErpOrderService {
         if (ctx.activeUserId !== undefined) {
             const admin = await this.administratorService.findOneByUserId(ctx, ctx.activeUserId);
             if (admin) {
-                order.customFields.placedByAdministratorId = String(admin.id);
+                changed.placedByAdministratorId = String(admin.id);
             }
         }
 
-        await this.connection.getRepository(ctx, Order).save(order);
+        Object.assign(order.customFields, changed);
+        await this.connection.getRepository(ctx, Order).update(order.id, { customFields: changed });
         await this.statusHistory.record(ctx, order.id, initialStatus);
         this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
     }

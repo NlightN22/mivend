@@ -18,19 +18,9 @@ function createMockOrderRepo(order: unknown): {
         where: () => builder,
         getOne: async () => locked,
     };
-    let stored = order as { customFields?: Record<string, unknown> } | null;
     return {
-        findOne: vi.fn(async () => stored),
-        update: vi.fn(
-            async (_id: unknown, data: { customFields?: { reservationState?: string } }) => {
-                const state = data?.customFields?.reservationState;
-                if (state && stored)
-                    stored = {
-                        ...stored,
-                        customFields: { ...stored.customFields, reservationState: state },
-                    };
-            },
-        ),
+        findOne: vi.fn(async () => order),
+        update: vi.fn(async () => undefined),
         createQueryBuilder: vi.fn(() => builder),
     };
 }
@@ -287,21 +277,6 @@ describe('ReservationPaymentService', () => {
             paymentRepo.find.mockResolvedValue([withPlacement('erp-now')]);
             await service.handleOrderPlaced(ctx, placedOrder() as never);
             expect(reservationService.reserveOrder).toHaveBeenCalledTimes(1);
-        });
-
-        it("re-applies the waiting state when the placement flow's trailing save reverted it, and stops once it stuck", async () => {
-            paymentRepo.find.mockResolvedValue([withPlacement('manager-confirmation')]);
-            const stored = placedOrder() as { customFields: Record<string, unknown> };
-            let verifications = 0;
-            orderRepo.findOne.mockImplementation(async () => {
-                verifications += 1;
-                // 1: the stored-state guard, 2: the first verification sees the revert, 3: the retry stuck.
-                return verifications === 3
-                    ? { ...stored, customFields: { reservationState: 'AWAITING_CONFIRMATION' } }
-                    : stored;
-            });
-            await service.handleOrderPlaced(ctx, placedOrder() as never);
-            expect(orderRepo.update).toHaveBeenCalledTimes(2);
         });
 
         it('keeps a manager-confirmation order waiting even with the switch on', async () => {

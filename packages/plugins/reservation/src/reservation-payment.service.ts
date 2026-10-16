@@ -47,7 +47,7 @@ export class ReservationPaymentService {
         if ((stored ?? order).customFields?.reservationState !== 'NOT_REQUIRED') {
             return;
         }
-        await this.markAwaitingConfirmationDurably(ctx, order);
+        await this.markAwaitingConfirmation(ctx, order);
         if (placement?.route === 'erp-now') {
             await this.reserveOrRecord(
                 ctx,
@@ -58,21 +58,6 @@ export class ReservationPaymentService {
             return;
         }
         if (!placement) await this.autoReserveIfEnabled(ctx, order);
-    }
-
-    // The placement flow's own trailing save of the stale order can revert the write; verify it stuck (as the failure record does).
-    private async markAwaitingConfirmationDurably(
-        ctx: RequestContext,
-        order: Order,
-    ): Promise<void> {
-        for (let attempt = 0; attempt < 4; attempt++) {
-            await this.markAwaitingConfirmation(ctx, order);
-            await new Promise(resolve => setTimeout(resolve, 300));
-            const current = await this.connection
-                .getRepository(ctx, Order)
-                .findOne({ where: { id: order.id } });
-            if (current?.customFields?.reservationState !== 'NOT_REQUIRED') return;
-        }
     }
 
     // Row lock + stored NOT_REQUIRED guard, so a manual confirm is never rolled back (#199); writes only the changed key (#209).
