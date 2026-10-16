@@ -4,6 +4,10 @@ import { MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../../api/orderDetail';
 import { fetchAvailableStock } from '../../api/reservation';
 import { formatLineQuantity } from '../../composables/lineSalesUnit';
+import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
+import { findingsByLine } from '../../utils/orderCheckMessages';
+import { lineCheckView } from '../../utils/orderLineChecks';
+import OrderLineCheckCells from './OrderLineCheckCells.vue';
 import PriceAdjustmentPanel from '../order-create/PriceAdjustmentPanel.vue';
 
 const props = defineProps<{
@@ -13,11 +17,13 @@ const props = defineProps<{
     editable: boolean;
     packagesOnly: boolean;
     adjustmentRequests: PriceAdjustmentRequestSummary[];
+    findings: OrderCheckFinding[];
 }>();
 const emit = defineEmits<{ adjusted: [] }>();
 
 const openAdjustLineId = ref<string | null>(null);
 const availableByVariantId = ref<Map<string, number>>(new Map());
+const findingsByLineId = computed(() => findingsByLine(props.findings));
 
 async function loadAvailableStock(): Promise<void> {
     const variantIds = [...new Set(props.lines.map(l => l.productVariant.id))];
@@ -86,90 +92,96 @@ function toggleAdjust(lineId: string): void {
 </script>
 
 <template>
-    <table class="order-lines">
-        <thead>
-            <tr>
-                <th>SKU</th>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Available stock</th>
-                <th>Unit price</th>
-                <th>Adjustment</th>
-                <th v-if="editable"></th>
-                <th>Line total</th>
-            </tr>
-        </thead>
-        <tbody>
-            <template v-for="line in lines" :key="line.id">
+    <div class="order-lines__scroll">
+        <table class="order-lines">
+            <thead>
                 <tr>
-                    <td>{{ line.productVariant.sku }}</td>
-                    <td>{{ line.productVariant.name }}</td>
-                    <td>
-                        {{
-                            formatLineQuantity(
-                                line.quantity,
-                                line.productVariant.customFields,
-                                packagesOnly,
-                            )
-                        }}
-                    </td>
-                    <td>
-                        <span
-                            :class="{
-                                'order-lines__stock--low':
-                                    (availableByVariantId.get(line.productVariant.id) ?? 0) <
+                    <th rowspan="2">SKU</th>
+                    <th rowspan="2">Product</th>
+                    <th rowspan="2">Qty</th>
+                    <th colspan="2" class="order-lines__group">Stock</th>
+                    <th class="order-lines__group">Contract</th>
+                    <th rowspan="2">Unit price</th>
+                    <th rowspan="2">Adjustment</th>
+                    <th v-if="editable" rowspan="2"></th>
+                    <th rowspan="2">Line total</th>
+                </tr>
+                <tr>
+                    <th>Available</th>
+                    <th>Needed</th>
+                    <th>Allowed</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template v-for="line in lines" :key="line.id">
+                    <tr>
+                        <td>{{ line.productVariant.sku }}</td>
+                        <td>{{ line.productVariant.name }}</td>
+                        <td>
+                            {{
+                                formatLineQuantity(
                                     line.quantity,
-                            }"
-                        >
-                            {{ availableByVariantId.get(line.productVariant.id) ?? '—' }}
-                        </span>
-                    </td>
-                    <td>{{ money(line.unitPriceWithTax) }}</td>
-                    <td>
-                        <RouterLink
-                            v-if="adjustmentByLineId.get(line.id)?.approvalRequestId"
-                            :to="`/approvals/${adjustmentByLineId.get(line.id)?.approvalRequestId}`"
-                        >
-                            <MvStatusBadge :variant="adjustmentByLineId.get(line.id)!.variant">
+                                    line.productVariant.customFields,
+                                    packagesOnly,
+                                )
+                            }}
+                        </td>
+                        <OrderLineCheckCells
+                            :view="
+                                lineCheckView(
+                                    line.quantity,
+                                    availableByVariantId.get(line.productVariant.id),
+                                    findingsByLineId.get(line.id) ?? [],
+                                )
+                            "
+                        />
+                        <td>{{ money(line.unitPriceWithTax) }}</td>
+                        <td>
+                            <RouterLink
+                                v-if="adjustmentByLineId.get(line.id)?.approvalRequestId"
+                                :to="`/approvals/${adjustmentByLineId.get(line.id)?.approvalRequestId}`"
+                            >
+                                <MvStatusBadge :variant="adjustmentByLineId.get(line.id)!.variant">
+                                    {{ adjustmentByLineId.get(line.id)?.label }}
+                                </MvStatusBadge>
+                            </RouterLink>
+                            <MvStatusBadge
+                                v-else-if="adjustmentByLineId.get(line.id)"
+                                :variant="adjustmentByLineId.get(line.id)!.variant"
+                            >
                                 {{ adjustmentByLineId.get(line.id)?.label }}
                             </MvStatusBadge>
-                        </RouterLink>
-                        <MvStatusBadge
-                            v-else-if="adjustmentByLineId.get(line.id)"
-                            :variant="adjustmentByLineId.get(line.id)!.variant"
-                        >
-                            {{ adjustmentByLineId.get(line.id)?.label }}
-                        </MvStatusBadge>
-                    </td>
-                    <td v-if="editable">
-                        <button
-                            type="button"
-                            class="order-lines__adjust"
-                            @click="toggleAdjust(line.id)"
-                        >
-                            Adjust price
-                        </button>
-                    </td>
-                    <td>{{ money(line.linePriceWithTax) }}</td>
-                </tr>
-                <tr v-if="openAdjustLineId === line.id">
-                    <td :colspan="editable ? 8 : 7">
-                        <PriceAdjustmentPanel
-                            :order-id="orderId"
-                            :line="line"
-                            @applied="
-                                () => {
-                                    emit('adjusted');
-                                    openAdjustLineId = null;
-                                }
-                            "
-                            @close="openAdjustLineId = null"
-                        />
-                    </td>
-                </tr>
-            </template>
-        </tbody>
-    </table>
+                        </td>
+                        <td v-if="editable">
+                            <button
+                                type="button"
+                                class="order-lines__adjust"
+                                @click="toggleAdjust(line.id)"
+                            >
+                                Adjust price
+                            </button>
+                        </td>
+                        <td>{{ money(line.linePriceWithTax) }}</td>
+                    </tr>
+                    <tr v-if="openAdjustLineId === line.id">
+                        <td :colspan="editable ? 10 : 9">
+                            <PriceAdjustmentPanel
+                                :order-id="orderId"
+                                :line="line"
+                                @applied="
+                                    () => {
+                                        emit('adjusted');
+                                        openAdjustLineId = null;
+                                    }
+                                "
+                                @close="openAdjustLineId = null"
+                            />
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
 </template>
 
 <style scoped>
@@ -195,9 +207,13 @@ function toggleAdjust(lineId: string): void {
     border-bottom: 1px solid var(--el-border-color, #e4e7ec);
 }
 
-.order-lines__stock--low {
-    color: var(--el-color-danger, #dc2626);
-    font-weight: 700;
+.order-lines__scroll {
+    overflow-x: auto;
+}
+
+.order-lines__group {
+    text-align: center;
+    border-left: 1px solid var(--el-border-color, #e4e7ec);
 }
 
 .order-lines__adjust {

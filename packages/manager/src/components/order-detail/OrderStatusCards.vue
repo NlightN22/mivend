@@ -1,0 +1,132 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import { IconAlertTriangle, IconCircleCheck, IconClock } from '@tabler/icons-vue';
+import { MvButton, MvCard, MvStatusBadge } from '@mivend/ui-kit';
+import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
+import { findingTitle } from '../../utils/orderCheckMessages';
+import { checksSummary } from '../../utils/orderLineChecks';
+import type { OrderReservation } from '../../api/reservation';
+
+const props = defineProps<{
+    findings: OrderCheckFinding[];
+    reservations: OrderReservation[];
+    notRegistered: boolean;
+    erpStatus: string | null;
+    canSeeChecks: boolean;
+    canRecompute: boolean;
+    recomputing: boolean;
+    error: string;
+}>();
+const emit = defineEmits<{ goToContract: []; recompute: [] }>();
+
+const summary = computed(() => checksSummary(props.findings));
+const active = computed(() => props.reservations.filter(r => r.status === 'active'));
+const expiresAt = computed(() => active.value[0]?.expiresAt ?? null);
+const stale = computed(() => props.findings.some(f => f.stale));
+const clean = computed(() => !props.findings.length);
+</script>
+
+<template>
+    <div class="status-cards">
+        <MvCard v-if="canSeeChecks" padding="14px 16px" class="status-card">
+            <IconCircleCheck v-if="clean" :size="26" class="status-card__icon--ok" />
+            <IconAlertTriangle v-else :size="26" class="status-card__icon--warn" />
+            <div class="status-card__body">
+                <strong>ERP-mandated controls</strong>
+                <p v-if="clean">No findings. The ERP checks stock and contracts per line.</p>
+                <p v-else>
+                    {{ summary.lineCount }} line(s) do not meet ERP requirements (see the order
+                    lines). The ERP will not post the order until fixed; it is not refused here.
+                </p>
+                <p v-for="f in summary.orderLevel" :key="f.id">{{ findingTitle(f.messageKey) }}</p>
+                <MvStatusBadge v-if="stale" variant="warning">Out of date</MvStatusBadge>
+                <p v-if="error" class="status-card__error">{{ error }}</p>
+                <MvButton
+                    v-if="canRecompute"
+                    variant="secondary"
+                    size="sm"
+                    :disabled="recomputing"
+                    @click="emit('recompute')"
+                >
+                    {{ recomputing ? 'Recomputing…' : 'Recompute' }}
+                </MvButton>
+                <MvButton
+                    v-if="summary.hasContractIssue"
+                    variant="secondary"
+                    size="sm"
+                    @click="emit('goToContract')"
+                >
+                    Change contract
+                </MvButton>
+            </div>
+        </MvCard>
+        <MvCard padding="14px 16px" class="status-card">
+            <IconAlertTriangle v-if="notRegistered" :size="26" class="status-card__icon--warn" />
+            <IconCircleCheck v-else :size="26" class="status-card__icon--ok" />
+            <div class="status-card__body">
+                <strong>ERP registration</strong>
+                <p v-if="notRegistered">Not registered in the ERP yet.</p>
+                <p v-else>{{ erpStatus ?? 'Registered or not yet due.' }}</p>
+            </div>
+        </MvCard>
+        <MvCard padding="14px 16px" class="status-card">
+            <IconClock :size="26" class="status-card__icon--info" />
+            <div class="status-card__body">
+                <strong>Reservation</strong>
+                <p v-if="expiresAt">
+                    Reserved until {{ new Date(expiresAt).toLocaleString('en-US') }}
+                </p>
+                <p v-else>Stock is not reserved for this order.</p>
+            </div>
+        </MvCard>
+    </div>
+</template>
+
+<style scoped>
+.status-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+
+.status-card {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 13px;
+}
+
+.status-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.status-card__body p {
+    margin: 0;
+    color: var(--el-text-color-secondary, #6b7280);
+}
+
+.status-card__body p.status-card__error {
+    color: var(--el-color-danger, #dc2626);
+}
+
+.status-card svg {
+    flex-shrink: 0;
+}
+
+.status-card__icon--ok {
+    color: var(--el-color-success, #059669);
+}
+
+.status-card__icon--warn {
+    color: var(--el-color-warning, #d97706);
+}
+
+.status-card__icon--info {
+    color: var(--el-color-primary-dark-2, #008a70);
+}
+</style>

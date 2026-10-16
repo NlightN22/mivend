@@ -19,7 +19,8 @@ import { fetchOrderReservations, type OrderReservation } from '../../api/reserva
 import { isNotRegisteredInErp } from '../../composables/isNotRegisteredInErp';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 import OrderContextPanel from '../../components/order-detail/OrderContextPanel.vue';
-import OrderChecksPanel from '../../components/order-detail/OrderChecksPanel.vue';
+import OrderStatusCards from '../../components/order-detail/OrderStatusCards.vue';
+import { useOrderChecks } from '../../composables/useOrderChecks';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
 import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
@@ -44,6 +45,11 @@ const loading = ref(true);
 const notFound = ref(false);
 const credit = ref<CustomerCredit | null>(null);
 const reservations = ref<OrderReservation[]>([]);
+const orderId = computed(() => order.value?.id ?? '');
+const checks = useOrderChecks(orderId);
+const canSeeChecks = computed(() => authStore.hasPermission('ReadCheckResults'));
+const contractPanel = ref<{ $el: HTMLElement } | null>(null);
+const contractAnchor = computed(() => contractPanel.value?.$el ?? null);
 
 // Mirrors DEFAULT_RESERVATION_DAYS in packages/plugins/reservation/src/types.ts — used only as
 // the form's initial value before an order's own customFields.reservationDays default loads.
@@ -116,6 +122,9 @@ async function reload(): Promise<void> {
 }
 
 onMounted(load);
+watch([orderId, reservations], () => {
+    if (orderId.value && canSeeChecks.value) void checks.load();
+});
 watch(() => route.params.code, load);
 </script>
 
@@ -144,6 +153,19 @@ watch(() => route.params.code, load);
             </p>
         </div>
 
+        <OrderStatusCards
+            :findings="canSeeChecks ? checks.findings.value : []"
+            :reservations="reservations"
+            :not-registered="isNotRegisteredInErp(order.customFields)"
+            :erp-status="order.customFields.erpRegistrationStatus ?? null"
+            :can-see-checks="canSeeChecks"
+            :can-recompute="canSeeChecks"
+            :recomputing="checks.recomputing.value"
+            :error="checks.error.value"
+            @recompute="checks.recompute"
+            @go-to-contract="contractAnchor?.scrollIntoView({ behavior: 'smooth' })"
+        />
+
         <div class="order-detail__grid">
             <div class="order-detail__left-stack">
                 <MvPanel title="Order lines">
@@ -154,6 +176,7 @@ watch(() => route.params.code, load);
                         :editable="editable"
                         :packages-only="order.packagesOnlySales"
                         :adjustment-requests="adjustmentRequests"
+                        :findings="canSeeChecks ? checks.findings.value : []"
                         @adjusted="reload"
                     />
                     <div class="order-detail__totals">
@@ -172,17 +195,6 @@ watch(() => route.params.code, load);
                         />
                         <strong>Total: {{ money(order.totalWithTax) }}</strong>
                     </div>
-                </MvPanel>
-
-                <MvPanel
-                    v-if="authStore.hasPermission('ReadCheckResults')"
-                    title="ERP requirements"
-                >
-                    <OrderChecksPanel
-                        :order-id="order.id"
-                        :lines="order.lines"
-                        :refresh-on="reservations"
-                    />
                 </MvPanel>
 
                 <MvPanel v-if="adjustmentRequests.length" title="Price adjustment history">
@@ -274,7 +286,7 @@ watch(() => route.params.code, load);
                     <ReservationHolds :order-id="order.id" :refresh-on="reservations" />
                 </MvPanel>
 
-                <MvPanel title="Contract">
+                <MvPanel ref="contractPanel" title="Contract">
                     <OrderContractPanel
                         :order-id="order.id"
                         :locked="reservations.some(r => r.status === 'active')"
@@ -315,6 +327,7 @@ watch(() => route.params.code, load);
 .order-detail__left-stack,
 .order-detail__right-stack {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 18px;
     min-width: 0;
 }
@@ -353,7 +366,8 @@ watch(() => route.params.code, load);
 .order-detail__totals {
     display: flex;
     justify-content: flex-end;
-    gap: 20px;
+    flex-wrap: wrap;
+    gap: 8px 20px;
     margin-top: 14px;
     font-size: 13px;
 }
