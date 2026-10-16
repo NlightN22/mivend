@@ -2,6 +2,13 @@
 
 Updated: 2026-10-16 08:00
 
+## #233 manager edits order lines before confirmation (2026-10-16, implemented, not audited, not pushed)
+
+- **Backend** (plugin-reservation `OrderLineEditService`, resolver `order-line-edit.resolver.ts`): `changeOrderLineQuantity`, `removeOrderLine`, `splitOrderLinesByStock` (permission `ConfirmOrder`, no new permission), query `orderLineAvailability`. Guards: no active reservation, not ERP-registered/external, no settled payment, pack multiple, last line stays; lock `reserve-order:<id>`; prices re-resolved via `applyPriceAdjustments` (Vendure `adjustOrderLine` refuses placed orders); history note; `on-edit` checks run in the same transaction; `OrderLinesEditedEvent`. Rules in `docs/order-contracts.md` ("Editing an order's lines before confirmation").
+- **Single availability function:** `OrderLineAvailabilityService` (erp-integration, registered through plugin-reservation's `OrderLineAvailabilityPortRegistry`): `available = min(best branch warehouse free, own-organization stock)`; free per location comes from the new `ReservationAvailabilityService.getFreeByLocation` (ATP now uses it too). Auto split writes `order_line_shortfall` (migration `1791517000000`, created by `synchronize` on dev contours).
+- **UI:** order lines table shows per-warehouse and per-organization needed vs available in the Available tooltip, an Edit column (quantity, remove) and "Cut lines to available stock". Needs a screenshot check.
+- **Not done / open:** customer notification, proforma re-issue and credit re-evaluation after an edit; edit of orders paid by card; sibling lines of one product are judged independently (as the reserve does).
+
 ## #237 ERP-mandated order controls + checks/policies framework (2026-10-16, implemented, audit round 1 fixed; not pushed)
 
 - **Framework** (`packages/plugins/checks`, `docs/checks-and-policies.md`, skill `checks-policy`): subject-agnostic; a check is a pure provider returning findings with structured facts, the consequence is a per-check policy row (`info|warn|hold|block|require-approval`, editable in the manager portal tab "Controls and policies", permission `ManageCheckPolicies`), one stored `check_result` per subject, one entry point `runChecks(subjectType, ref, stage)`. Order subject registered by plugin-reservation, providers in erp-integration (`src/order-checks`). Audit of all older controls: #241.

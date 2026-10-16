@@ -2,9 +2,11 @@
 import { IconAlertTriangle, IconCircleCheck } from '@tabler/icons-vue';
 import { MvTooltip } from '@mivend/ui-kit';
 import type { LineCheckView } from '../../utils/orderLineChecks';
+import type { OrderLineAvailability } from '../../api/orderLineEdit';
 import OrderLineOrgList from './OrderLineOrgList.vue';
+import OrderLineStockSources from './OrderLineStockSources.vue';
 
-defineProps<{ view: LineCheckView; reserved: number }>();
+defineProps<{ view: LineCheckView; reserved: number; sources: OrderLineAvailability | null }>();
 </script>
 
 <template>
@@ -20,7 +22,8 @@ defineProps<{ view: LineCheckView; reserved: number }>();
                 {{ view.stockTitle }} (ERP-mandated control).
             </p>
             <p v-else class="line-check__note">No ERP stock finding for this line.</p>
-            <OrderLineOrgList v-if="view.orgRows.length" :rows="view.orgRows" mode="stock" />
+            <OrderLineStockSources v-if="sources" :availability="sources" />
+            <OrderLineOrgList v-else-if="view.orgRows.length" :rows="view.orgRows" mode="stock" />
         </MvTooltip>
     </td>
     <td class="line-check__cell">{{ view.needed }}</td>

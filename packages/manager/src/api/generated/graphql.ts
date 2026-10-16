@@ -3110,6 +3110,8 @@ export type IntegrationInboxReplayResult = {
 export type IntegrationOutboxHealth = {
     eventType: Scalars['String']['output'];
     failed: Scalars['Int']['output'];
+    /** Sends held by an order check policy (not counted in skipped). */
+    held: Scalars['Int']['output'];
     lastError: Maybe<Scalars['String']['output']>;
     lastErrorAt: Maybe<Scalars['DateTime']['output']>;
     lastPublishedAt: Maybe<Scalars['DateTime']['output']>;
@@ -3850,6 +3852,8 @@ export type Mutation = {
     /** Cancel an order on behalf of staff; same condition as the customer. */
     cancelOrderAsStaff: OrderCancelResult;
     cancelPayment: CancelPaymentResult;
+    /** Staff edits before confirmation (#233); need ConfirmOrder, refused after a reservation, ERP registration or payment. */
+    changeOrderLineQuantity: Scalars['Boolean']['output'];
     confirmOrder: Array<Reservation>;
     /** Marks the order's cash or bank-transfer payment (or the one given by paymentId) as received (Settled), recording who and when; a repeat is a no-op. */
     confirmPaymentReceived: Order;
@@ -4077,6 +4081,7 @@ export type Mutation = {
      * as well as removing any of the group's options from the Product's ProductVariants.
      */
     removeOptionGroupFromProduct: RemoveOptionGroupFromProductResult;
+    removeOrderLine: Scalars['Boolean']['output'];
     /** Removes PaymentMethods from the specified Channel */
     removePaymentMethodsFromChannel: Array<PaymentMethod>;
     /** Removes ProductOptionGroups from the specified Channel */
@@ -4148,6 +4153,8 @@ export type Mutation = {
     setTradingPointActive: TradingPoint;
     settlePayment: SettlePaymentResult;
     settleRefund: SettleRefundResult;
+    /** Cuts the short lines to what stock covers and records the rest as shortfall. */
+    splitOrderLinesByStock: Array<OrderLineSplitOutcome>;
     transitionFulfillmentToState: TransitionFulfillmentToStateResult;
     transitionOrderToState: Maybe<TransitionOrderToStateResult>;
     transitionPaymentToState: TransitionPaymentToStateResult;
@@ -4372,6 +4379,12 @@ export type MutationCancelOrderAsStaffArgs = {
 
 export type MutationCancelPaymentArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type MutationChangeOrderLineQuantityArgs = {
+    orderId: Scalars['ID']['input'];
+    orderLineId: Scalars['ID']['input'];
+    quantity: Scalars['Int']['input'];
 };
 
 export type MutationConfirmOrderArgs = {
@@ -4886,6 +4899,11 @@ export type MutationRemoveOptionGroupFromProductArgs = {
     productId: Scalars['ID']['input'];
 };
 
+export type MutationRemoveOrderLineArgs = {
+    orderId: Scalars['ID']['input'];
+    orderLineId: Scalars['ID']['input'];
+};
+
 export type MutationRemovePaymentMethodsFromChannelArgs = {
     input: RemovePaymentMethodsFromChannelInput;
 };
@@ -5085,6 +5103,10 @@ export type MutationSettlePaymentArgs = {
 
 export type MutationSettleRefundArgs = {
     input: SettleRefundInput;
+};
+
+export type MutationSplitOrderLinesByStockArgs = {
+    orderId: Scalars['ID']['input'];
 };
 
 export type MutationTransitionFulfillmentToStateArgs = {
@@ -5744,6 +5766,19 @@ export type OrderLine = Node & {
     updatedAt: Scalars['DateTime']['output'];
 };
 
+export type OrderLineAvailability = {
+    /** What the warehouse and the line's own organization can cover now. */
+    available: Scalars['Int']['output'];
+    /** available capped at the ordered quantity. */
+    fitting: Scalars['Int']['output'];
+    /** warehouse | organization, null when the line is fully covered. */
+    limitedBy: Maybe<Scalars['String']['output']>;
+    needed: Scalars['Int']['output'];
+    orderLineId: Scalars['ID']['output'];
+    organizations: Array<OrderLineOrganizationStock>;
+    warehouses: Array<OrderLineWarehouseStock>;
+};
+
 export type OrderLineCustomFields = {
     manualPriceReason: Maybe<Scalars['String']['output']>;
     manualUnitPrice: Maybe<Scalars['Int']['output']>;
@@ -5760,6 +5795,27 @@ export type OrderLineInput = {
     customFields?: InputMaybe<OrderLineCustomFieldsInput>;
     orderLineId: Scalars['ID']['input'];
     quantity: Scalars['Int']['input'];
+};
+
+export type OrderLineOrganizationStock = {
+    hasContract: Scalars['Boolean']['output'];
+    id: Scalars['String']['output'];
+    name: Maybe<Scalars['String']['output']>;
+    selling: Scalars['Boolean']['output'];
+    stock: Scalars['Float']['output'];
+};
+
+export type OrderLineSplitOutcome = {
+    kept: Scalars['Int']['output'];
+    orderLineId: Scalars['ID']['output'];
+    requested: Scalars['Int']['output'];
+    shortfall: Scalars['Int']['output'];
+};
+
+export type OrderLineWarehouseStock = {
+    free: Scalars['Int']['output'];
+    name: Maybe<Scalars['String']['output']>;
+    warehouseErpId: Scalars['String']['output'];
 };
 
 export type OrderList = PaginatedList & {
@@ -7315,6 +7371,8 @@ export type Query = {
     orderCheckHealth: Array<OrderCheckHealthRow>;
     /** Active contracts of the order's counterparty; the one the order is registered under is marked (#205). */
     orderContracts: Array<OrderContractOption>;
+    /** Stock that applies to each line, per warehouse and per organization (#233). Needs ReadOrder. */
+    orderLineAvailability: Array<OrderLineAvailability>;
     /** Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet. */
     orderPaymentSummaries: Array<OrderPaymentSummary>;
     /** Every hold behind an order's lines: our own reservation rows and what the ERP reports. */
@@ -7687,6 +7745,10 @@ export type QueryOrderArgs = {
 };
 
 export type QueryOrderContractsArgs = {
+    orderId: Scalars['ID']['input'];
+};
+
+export type QueryOrderLineAvailabilityArgs = {
     orderId: Scalars['ID']['input'];
 };
 
@@ -11343,6 +11405,72 @@ export type RelatedDocumentsQuery = {
     };
 };
 
+export type OrderLineAvailabilityFieldsFragment = {
+    orderLineId: string;
+    needed: number;
+    available: number;
+    fitting: number;
+    limitedBy: string | null;
+    warehouses: Array<{ warehouseErpId: string; name: string | null; free: number }>;
+    organizations: Array<{
+        id: string;
+        name: string | null;
+        stock: number;
+        hasContract: boolean;
+        selling: boolean;
+    }>;
+};
+
+export type OrderLineAvailabilityQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type OrderLineAvailabilityQuery = {
+    orderLineAvailability: Array<{
+        orderLineId: string;
+        needed: number;
+        available: number;
+        fitting: number;
+        limitedBy: string | null;
+        warehouses: Array<{ warehouseErpId: string; name: string | null; free: number }>;
+        organizations: Array<{
+            id: string;
+            name: string | null;
+            stock: number;
+            hasContract: boolean;
+            selling: boolean;
+        }>;
+    }>;
+};
+
+export type ChangeOrderLineQuantityMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    orderLineId: Scalars['ID']['input'];
+    quantity: Scalars['Int']['input'];
+}>;
+
+export type ChangeOrderLineQuantityMutation = { changeOrderLineQuantity: boolean };
+
+export type RemoveOrderLineMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    orderLineId: Scalars['ID']['input'];
+}>;
+
+export type RemoveOrderLineMutation = { removeOrderLine: boolean };
+
+export type SplitOrderLinesByStockMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type SplitOrderLinesByStockMutation = {
+    splitOrderLinesByStock: Array<{
+        orderLineId: string;
+        requested: number;
+        kept: number;
+        shortfall: number;
+    }>;
+};
+
 export type OrderProformaInvoicesQueryVariables = Exact<{
     orderId: Scalars['ID']['input'];
 }>;
@@ -12409,6 +12537,30 @@ export const DraftOrderFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'DraftOrderFields' },
 ) as unknown as TypedDocumentString<DraftOrderFieldsFragment, unknown>;
+export const OrderLineAvailabilityFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment OrderLineAvailabilityFields on OrderLineAvailability {
+  orderLineId
+  needed
+  available
+  fitting
+  limitedBy
+  warehouses {
+    warehouseErpId
+    name
+    free
+  }
+  organizations {
+    id
+    name
+    stock
+    hasContract
+    selling
+  }
+}
+    `,
+    { fragmentName: 'OrderLineAvailabilityFields' },
+) as unknown as TypedDocumentString<OrderLineAvailabilityFieldsFragment, unknown>;
 export const OrderListItemFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment OrderListItemFields on Order {
@@ -14333,6 +14485,64 @@ export const RelatedDocumentsDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<RelatedDocumentsQuery, RelatedDocumentsQueryVariables>;
+export const OrderLineAvailabilityDocument = new TypedDocumentString(`
+    query OrderLineAvailability($orderId: ID!) {
+  orderLineAvailability(orderId: $orderId) {
+    ...OrderLineAvailabilityFields
+  }
+}
+    fragment OrderLineAvailabilityFields on OrderLineAvailability {
+  orderLineId
+  needed
+  available
+  fitting
+  limitedBy
+  warehouses {
+    warehouseErpId
+    name
+    free
+  }
+  organizations {
+    id
+    name
+    stock
+    hasContract
+    selling
+  }
+}`) as unknown as TypedDocumentString<
+    OrderLineAvailabilityQuery,
+    OrderLineAvailabilityQueryVariables
+>;
+export const ChangeOrderLineQuantityDocument = new TypedDocumentString(`
+    mutation ChangeOrderLineQuantity($orderId: ID!, $orderLineId: ID!, $quantity: Int!) {
+  changeOrderLineQuantity(
+    orderId: $orderId
+    orderLineId: $orderLineId
+    quantity: $quantity
+  )
+}
+    `) as unknown as TypedDocumentString<
+    ChangeOrderLineQuantityMutation,
+    ChangeOrderLineQuantityMutationVariables
+>;
+export const RemoveOrderLineDocument = new TypedDocumentString(`
+    mutation RemoveOrderLine($orderId: ID!, $orderLineId: ID!) {
+  removeOrderLine(orderId: $orderId, orderLineId: $orderLineId)
+}
+    `) as unknown as TypedDocumentString<RemoveOrderLineMutation, RemoveOrderLineMutationVariables>;
+export const SplitOrderLinesByStockDocument = new TypedDocumentString(`
+    mutation SplitOrderLinesByStock($orderId: ID!) {
+  splitOrderLinesByStock(orderId: $orderId) {
+    orderLineId
+    requested
+    kept
+    shortfall
+  }
+}
+    `) as unknown as TypedDocumentString<
+    SplitOrderLinesByStockMutation,
+    SplitOrderLinesByStockMutationVariables
+>;
 export const OrderProformaInvoicesDocument = new TypedDocumentString(`
     query OrderProformaInvoices($orderId: ID!) {
   proformaInvoicesForOrder(orderId: $orderId) {

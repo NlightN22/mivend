@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../../api/orderDetail';
-import { fetchAvailableStock } from '../../api/reservation';
+import { useOrderLineEdit } from '../../composables/useOrderLineEdit';
 import { formatLineQuantity } from '../../composables/lineSalesUnit';
 import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
 import { findingsByLine } from '../../utils/orderCheckMessages';
@@ -10,12 +10,15 @@ import { lineCheckView, lineReservedQuantity } from '../../utils/orderLineChecks
 import type { OrderReservation } from '../../api/reservation';
 import OrderLineCheckCells from './OrderLineCheckCells.vue';
 import PriceAdjustmentPanel from '../order-create/PriceAdjustmentPanel.vue';
+import OrderLineEditCell from './OrderLineEditCell.vue';
+import OrderLinesEditBar from './OrderLinesEditBar.vue';
 
 const props = defineProps<{
     orderId: string;
     lines: OrderDetailLine[];
     currencyCode: string;
     editable: boolean;
+    canEditLines: boolean;
     packagesOnly: boolean;
     adjustmentRequests: PriceAdjustmentRequestSummary[];
     findings: OrderCheckFinding[];
@@ -24,19 +27,15 @@ const props = defineProps<{
 const emit = defineEmits<{ adjusted: [] }>();
 
 const openAdjustLineId = ref<string | null>(null);
-const availableByVariantId = ref<Map<string, number>>(new Map());
 const findingsByLineId = computed(() => findingsByLine(props.findings));
+const orderIdRef = computed(() => props.orderId);
+const edit = useOrderLineEdit(orderIdRef, () => emit('adjusted'));
+const anyShort = computed(() =>
+    [...edit.availability.value.values()].some(a => a.fitting < a.needed),
+);
 
-async function loadAvailableStock(): Promise<void> {
-    const variantIds = [...new Set(props.lines.map(l => l.productVariant.id))];
-    const entries = await Promise.all(
-        variantIds.map(async id => [id, await fetchAvailableStock(id, props.orderId)] as const),
-    );
-    availableByVariantId.value = new Map(entries);
-}
-
-onMounted(loadAvailableStock);
-watch(() => props.lines, loadAvailableStock);
+onMounted(edit.load);
+watch(() => props.lines, edit.load);
 
 function money(amount: number): string {
     return new Intl.NumberFormat('en-US', {
@@ -94,6 +93,14 @@ function toggleAdjust(lineId: string): void {
 </script>
 
 <template>
+    <OrderLinesEditBar
+        v-if="canEditLines"
+        :any-short="anyShort"
+        :busy="edit.busy.value"
+        :error="edit.error.value"
+        :split="edit.lastSplit.value"
+        @cut="edit.cutToStock"
+    />
     <div class="order-lines__scroll">
         <table class="order-lines">
             <thead>
@@ -106,6 +113,7 @@ function toggleAdjust(lineId: string): void {
                     <th rowspan="2" class="order-lines__num">Unit price</th>
                     <th rowspan="2">Adjustment</th>
                     <th rowspan="2" class="order-lines__num">Line total</th>
+                    <th v-if="canEditLines" rowspan="2">Edit</th>
                 </tr>
                 <tr>
                     <th class="order-lines__sub">Available</th>
@@ -134,11 +142,12 @@ function toggleAdjust(lineId: string): void {
                             :view="
                                 lineCheckView(
                                     line.quantity,
-                                    availableByVariantId.get(line.productVariant.id),
+                                    edit.availability.value.get(line.id)?.available,
                                     findingsByLineId.get(line.id) ?? [],
                                 )
                             "
                             :reserved="lineReservedQuantity(reservations, line.id)"
+                            :sources="edit.availability.value.get(line.id) ?? null"
                         />
                         <td class="order-lines__num">{{ money(line.unitPriceWithTax) }}</td>
                         <td>
@@ -166,9 +175,17 @@ function toggleAdjust(lineId: string): void {
                             </button>
                         </td>
                         <td class="order-lines__num">{{ money(line.linePriceWithTax) }}</td>
+                        <td v-if="canEditLines">
+                            <OrderLineEditCell
+                                :quantity="line.quantity"
+                                :busy="edit.busy.value"
+                                @save="edit.setQuantity(line.id, $event)"
+                                @remove="edit.remove(line.id)"
+                            />
+                        </td>
                     </tr>
                     <tr v-if="openAdjustLineId === line.id">
-                        <td colspan="9">
+                        <td :colspan="canEditLines ? 10 : 9">
                             <PriceAdjustmentPanel
                                 :order-id="orderId"
                                 :line="line"

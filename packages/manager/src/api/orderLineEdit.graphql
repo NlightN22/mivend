@@ -1,0 +1,42 @@
+fragment OrderLineAvailabilityFields on OrderLineAvailability {
+    orderLineId
+    needed
+    available
+    fitting
+    limitedBy
+    warehouses {
+        warehouseErpId
+        name
+        free
+    }
+    organizations {
+        id
+        name
+        stock
+        hasContract
+        selling
+    }
+}
+
+query OrderLineAvailability($orderId: ID!) {
+    orderLineAvailability(orderId: $orderId) {
+        ...OrderLineAvailabilityFields
+    }
+}
+
+mutation ChangeOrderLineQuantity($orderId: ID!, $orderLineId: ID!, $quantity: Int!) {
+    changeOrderLineQuantity(orderId: $orderId, orderLineId: $orderLineId, quantity: $quantity)
+}
+
+mutation RemoveOrderLine($orderId: ID!, $orderLineId: ID!) {
+    removeOrderLine(orderId: $orderId, orderLineId: $orderLineId)
+}
+
+mutation SplitOrderLinesByStock($orderId: ID!) {
+    splitOrderLinesByStock(orderId: $orderId) {
+        orderLineId
+        requested
+        kept
+        shortfall
+    }
+}

@@ -128,6 +128,31 @@ global switch; neither is published, so mivend can be stricter than the ERP, hen
 product storage unit is not published either: stock is taken as kept in the base unit
 (`storageUnitRatioToBase = 1`); the conversion is one place in the order subject loader.
 
+## Editing an order's lines before confirmation (#233)
+
+Staff (permission `ConfirmOrder`, order visibility scope) can change a line quantity, remove a line, or cut the
+order to what stock covers. Allowed only while the order has no active reservation, is not registered in the ERP,
+is not an ERP-owned order and has no settled payment; refused otherwise with the reason. It takes
+`reserve-order:<id>`, so an edit and a reserve of the same order serialize. A quantity must respect the pack
+multiple; the last line cannot be removed (cancel the order instead).
+
+- **One availability function.** `OrderLineAvailabilityService` (erp-integration, registered into plugin-reservation's
+  `OrderLineAvailabilityPortRegistry`) gives per line: free quantity per branch warehouse (the reserve's
+  `freeQuantity` rule, best location per warehouse) and the stock of the line's OWN organization (the check-2 rule,
+  other organizations never rescue it). `available = min(best warehouse, own organization stock)`,
+  `fitting = min(needed, available)`, `limitedBy` = the smaller source. The Admin query `orderLineAvailability`
+  feeds the order page (per-warehouse and per-organization needed vs available per line). Sibling lines of the
+  same product are judged independently, as the reserve does.
+- **Automatic split** (`splitOrderLinesByStock`): every short line is cut to whole packs of `fitting`; a line where
+  nothing fits is removed; the cut part is stored as one `order_line_shortfall` row per line (requested, kept,
+  shortfall, `limitedBy`, administrator) for demand statistics. Manual edit (quantity/remove) records no shortfall.
+- **After an edit** prices are re-resolved for all lines (`OrderService.applyPriceAdjustments`; Vendure's own
+  `adjustOrderLine` refuses placed orders), an order history note records who changed what, the checks are
+  recomputed through `OrderChecksService.run(..., 'on-edit')` in the same transaction and
+  `OrderLinesEditedEvent` is published.
+- **Not done:** customer notification, proforma invoice re-issue (they stay on the old content until a new version
+  is requested) and credit-limit re-evaluation are not triggered by an edit.
+
 ## `order.confirmed` contents
 
 - One event per order (one warehouse, see "Order events topic" below); never per organization.

@@ -65,6 +65,15 @@ const editable = computed(
     () => !!order.value && !NON_EDITABLE_ORDER_STATES.includes(order.value.state),
 );
 
+const canEditLines = computed(
+    () =>
+        editable.value &&
+        authStore.hasPermission('ConfirmOrder') &&
+        !!order.value &&
+        isNotRegisteredInErp(order.value.customFields) &&
+        !reservations.value.some(r => r.status === 'active'),
+);
+
 const packagingLabel = computed(() => {
     if (!order.value) return null;
     return formatPackaging(useOrderPackaging(order.value.lines));
@@ -168,6 +177,7 @@ watch(() => route.params.code, load);
                 :lines="order.lines"
                 :currency-code="order.currencyCode"
                 :editable="editable"
+                :can-edit-lines="canEditLines"
                 :packages-only="order.packagesOnlySales"
                 :adjustment-requests="adjustmentRequests"
                 :findings="canSeeChecks ? checks.findings.value : []"

@@ -100,7 +100,7 @@ department-head, general-director, security-officer, portal-admin): the findings
 already read, and `checkResults` still passes through the order visibility scope (a foreign order returns
 nothing). `ManageCheckPolicies` (consequence policies) stays with general-director and portal-admin.
 `recomputeOrderChecks` writes results and takes the order lock, so it needs `ReadCheckResults` AND
-`ConfirmOrder` (the permission of the other staff order actions: confirm, release, set contract);
+`ConfirmOrder` (the permission of the other staff order actions: confirm, release, set contract, edit lines before confirmation, #233);
 `@Allow` is any-of, so the second one is checked in the resolver. `ConfirmOrder` is broader than a
 recompute strictly needs; accepted for now (owner decision). If a role must recompute without being able to
 confirm, introduce a dedicated permission instead of widening this one.
