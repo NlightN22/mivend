@@ -11,6 +11,9 @@ import { OrderCheckSubjectRegistrar } from './order-check-subject.registrar';
 import { loggerCtx } from './types';
 import type { ReservationCreationMethod } from './types';
 
+const MAX_FAILURE_MESSAGE = 500;
+const FAILURE_RETENTION_DAYS = 30;
+
 // The single caller of runChecks for orders: keeps one current result set per order and the list flag.
 @Injectable()
 export class OrderChecksService {
@@ -73,31 +76,41 @@ export class OrderChecksService {
                 }),
             );
         } catch (error) {
-            await this.recordFailure(orderId, stage, error);
+            this.recordFailure(orderId, stage, error);
             return false;
         }
     }
 
-    async recordFailure(orderId: string, stage: OrderCheckStage, error: unknown): Promise<void> {
+    // Deferred and not awaited: the caller still holds a pool connection, so waiting for a second one
+    // could exhaust the pool under mass failure. Own connection, so a rollback of the caller keeps it.
+    recordFailure(orderId: string, stage: OrderCheckStage, error: unknown): void {
         const message = error instanceof Error ? error.message : String(error);
         Logger.error(
             `Order checks failed for order ${orderId} at ${stage}, continuing: ${message}`,
             error instanceof Error ? error.stack : undefined,
             loggerCtx,
         );
-        try {
-            // Own connection: the caller's transaction may still roll back, the signal must survive.
-            await this.connection.rawConnection.query(
-                `INSERT INTO order_check_failure ("uuid", "orderId", "stage", "message") VALUES ($1, $2, $3, $4)`,
-                [randomUUID(), orderId, stage, message],
-            );
-        } catch (recordError) {
-            Logger.error(
-                `Could not record the check failure: ${String(recordError)}`,
-                undefined,
-                loggerCtx,
-            );
-        }
+        setImmediate(() => {
+            this.connection.rawConnection
+                .query(
+                    `INSERT INTO order_check_failure ("uuid", "orderId", "stage", "message") VALUES ($1, $2, $3, $4)`,
+                    [randomUUID(), orderId, stage, message.slice(0, MAX_FAILURE_MESSAGE)],
+                )
+                .catch((recordError: unknown) =>
+                    Logger.error(
+                        `Could not record the check failure: ${String(recordError)}`,
+                        undefined,
+                        loggerCtx,
+                    ),
+                );
+        });
+    }
+
+    async pruneFailures(): Promise<number> {
+        const result: unknown[] = await this.connection.rawConnection.query(
+            `DELETE FROM order_check_failure WHERE "createdAt" < now() - interval '${FAILURE_RETENTION_DAYS} days' RETURNING id`,
+        );
+        return result.length;
     }
 
     async recompute(ctx: RequestContext, orderId: string): Promise<CheckResult[]> {

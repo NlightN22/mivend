@@ -26,7 +26,7 @@ export class OrderSendHoldService {
             );
             return !active.some(r => r.creationMethod === 'manual' || r.confirmedByAdministratorId);
         } catch (error) {
-            await this.orderChecks.recordFailure(orderId, 'pre-send-to-erp', error);
+            this.orderChecks.recordFailure(orderId, 'pre-send-to-erp', error);
             return false;
         }
     }

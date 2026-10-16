@@ -71,6 +71,7 @@ describe('OrderChecksService.isHeld', () => {
     it('does not stop the order flow when a provider fails, and leaves a health record of it', async () => {
         const { orders, record } = service(new Error('boom'));
         expect(await orders.isHeld(ctx, '1', 'auto-trust-rule')).toBe(false);
+        await new Promise(r => setImmediate(r));
         expect(record).toHaveBeenCalledWith(expect.stringContaining('order_check_failure'), [
             expect.any(String),
             '1',
@@ -79,10 +80,19 @@ describe('OrderChecksService.isHeld', () => {
         ]);
     });
 
+    it('stores at most 500 characters of the error text', async () => {
+        const { orders, record } = service(new Error('x'.repeat(2000)));
+        await orders.isHeld(ctx, '1', 'auto-trust-rule');
+        await new Promise(r => setImmediate(r));
+        const params = (record.mock.calls[0] as unknown as unknown[])[1] as string[];
+        expect(params[3]).toHaveLength(500);
+    });
+
     it('still continues when recording the failure fails too', async () => {
         const { orders, record } = service(new Error('boom'));
         record.mockRejectedValueOnce(new Error('db down'));
         expect(await orders.isHeld(ctx, '1', 'auto-trust-rule')).toBe(false);
+        await new Promise(r => setImmediate(r));
     });
 });
 
