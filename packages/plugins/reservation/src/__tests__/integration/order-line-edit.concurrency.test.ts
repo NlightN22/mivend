@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { withAggregateLock } from 'shared';
 
+import { ReservationReleasedEvent } from '../../reservation.events';
 import { OrderLineEditGuard } from '../../order-line-edit.guard';
+import { OrderLineStockSyncService } from '../../order-line-stock-sync.service';
 import { OrderLineEditService } from '../../order-line-edit.service';
 import {
     mockCtx,
@@ -14,6 +16,36 @@ import {
 } from './reserve-order.harness';
 
 const h = useReserveOrderHarness('order_line_edit_concurrency');
+
+// Vendure's allocation semantics over real tables: allocation adds to stockAllocated, release subtracts.
+const stockMovement = {
+    createAllocationsForOrderLines: (
+        _c: unknown,
+        lines: Array<{ orderLineId: string; quantity: number }>,
+    ) => moveStock('ALLOCATION', 1, lines),
+    createReleasesForOrderLines: (
+        _c: unknown,
+        lines: Array<{ orderLineId: string; quantity: number }>,
+    ) => moveStock('RELEASE', -1, lines),
+};
+
+async function moveStock(
+    type: string,
+    sign: number,
+    lines: Array<{ orderLineId: string; quantity: number }>,
+): Promise<void> {
+    for (const { orderLineId, quantity } of lines) {
+        await h.dataSource.query(
+            `INSERT INTO stock_movement (type, quantity, "orderLineId") VALUES ($1, $2, $3)`,
+            [type, quantity, orderLineId],
+        );
+        await h.dataSource.query(
+            `UPDATE reservation_test_stock_level SET "stockAllocated" = "stockAllocated" + $1
+              WHERE "productVariantId" = (SELECT "productVariantId" FROM reservation_test_order_line WHERE id = $2)`,
+            [sign * quantity, orderLineId],
+        );
+    }
+}
 
 const outcome = (r: PromiseSettledResult<unknown>): string =>
     r.status === 'fulfilled' ? 'ok' : String((r as PromiseRejectedResult).reason);
@@ -49,13 +81,97 @@ function editService(
         { get: () => ({ forOrder: async () => [] }) } as never,
         { run: async () => undefined } as never,
         { afterLinesEdited: reissue } as never,
-        {
-            changeQuantity: async () => undefined,
-            removeLine: async (c: never, _o: never, l: never) =>
-                h.connection.getRepository(c, { name: 'OrderLine' } as never).remove(l),
-        } as never,
+        new OrderLineStockSyncService(h.connection, stockMovement as never),
     );
 }
+
+beforeAll(async () => {
+    await h.dataSource.query(
+        `CREATE TABLE IF NOT EXISTS stock_movement (id SERIAL PRIMARY KEY, type varchar NOT NULL, quantity int NOT NULL, "orderLineId" varchar NOT NULL)`,
+    );
+});
+beforeEach(async () => {
+    await h.dataSource.query('TRUNCATE TABLE stock_movement');
+});
+
+async function allocatedLine(quantity: number, allocate: boolean) {
+    await h.dataSource.getRepository(TestStockLevel).save({
+        productVariantId: 'variant-s1',
+        stockLocationId: h.location.id,
+        stockOnHand: 100,
+        stockAllocated: allocate ? quantity : 0,
+    });
+    const order = await h.dataSource
+        .getRepository(TestOrder)
+        .save({ customerId: 'customer-1', customFields: { branchId: 'branch-1' } });
+    const [line, other] = await h.dataSource.getRepository(TestOrderLine).save(
+        [quantity, 1].map(q => ({
+            orderId: order.id,
+            productVariantId: 'variant-s1',
+            productVariantEntityId: h.productVariant.id,
+            quantity: q,
+        })),
+    );
+    if (allocate) {
+        await h.dataSource.query(
+            `INSERT INTO stock_movement (type, quantity, "orderLineId") VALUES ('ALLOCATION', $1, $2)`,
+            [quantity, line.id],
+        );
+    }
+    return { order, line, other };
+}
+
+const stockState = async (): Promise<{ allocated: number; net: number }> => ({
+    allocated: (
+        await h.dataSource
+            .getRepository(TestStockLevel)
+            .findOneByOrFail({ productVariantId: 'variant-s1' })
+    ).stockAllocated,
+    net: Number(
+        (
+            await h.dataSource.query(
+                `SELECT COALESCE(SUM(CASE WHEN type = 'ALLOCATION' THEN quantity ELSE -quantity END), 0) AS net FROM stock_movement`,
+            )
+        )[0].net,
+    ),
+});
+
+describe('OrderLineStockSyncService (integration, real Postgres)', () => {
+    it('quantity up allocates, quantity down releases, stockAllocated follows the movements', async () => {
+        const { order, line } = await allocatedLine(10, true);
+        await editService().setQuantity(mockCtx, order.id, line.id, 14);
+        expect(await stockState()).toEqual({ allocated: 14, net: 14 });
+        await editService().setQuantity(mockCtx, order.id, line.id, 3);
+        expect(await stockState()).toEqual({ allocated: 3, net: 3 });
+    });
+
+    it('removing an allocated line releases it, drops its rows and keeps stockAllocated non-negative', async () => {
+        const { order, line } = await allocatedLine(10, true);
+        await editService().removeLine(mockCtx, order.id, line.id);
+        expect(await stockState()).toEqual({ allocated: 0, net: 0 });
+        expect(
+            await h.dataSource.getRepository(TestOrderLine).count({ where: { id: line.id } }),
+        ).toBe(0);
+    });
+
+    it('a placed order whose lines were never allocated is left alone', async () => {
+        const { order, line } = await allocatedLine(10, false);
+        await editService().setQuantity(mockCtx, order.id, line.id, 2);
+        await editService().removeLine(mockCtx, order.id, line.id);
+        expect(await stockState()).toEqual({ allocated: 0, net: 0 });
+    });
+
+    it('other movement types of the line are not deleted by a removal', async () => {
+        const { order, line } = await allocatedLine(10, true);
+        await h.dataSource.query(
+            `INSERT INTO stock_movement (type, quantity, "orderLineId") VALUES ('SALE', 1, $1)`,
+            [line.id],
+        );
+        await editService().removeLine(mockCtx, order.id, line.id);
+        const kept = await h.dataSource.query(`SELECT type FROM stock_movement`);
+        expect(kept).toEqual([{ type: 'SALE' }]);
+    });
+});
 
 describe('OrderLineEditService (integration, real Postgres, concurrency)', () => {
     it('a quantity edit and a concurrent reserve never leave a reservation that differs from the line', async () => {
@@ -90,6 +206,21 @@ describe('OrderLineEditService (integration, real Postgres, concurrency)', () =>
         expect(results[0].status).toBe('fulfilled');
         expect(finalLine.quantity).toBe(4);
         for (const row of active) expect(row.quantity).toBe(4);
+    });
+
+    it('an edit over an active reservation releases it and emits nothing but the release event', async () => {
+        const { order, line } = await allocatedLine(10, false);
+        await h.service.reserveOrder(mockCtx, order.id, 7, 'manual');
+        h.published.length = 0;
+
+        await editService().setQuantity(mockCtx, order.id, line.id, 4);
+
+        expect(h.published.length).toBeGreaterThan(0);
+        expect(h.published.every(e => e instanceof ReservationReleasedEvent)).toBe(true);
+        const rows = await h.dataSource
+            .getRepository(TestReservation)
+            .find({ where: { orderId: order.id } });
+        expect(rows.every(r => r.status === 'released')).toBe(true);
     });
 
     it('two concurrent removals of different lines leave the order with its remaining line', async () => {

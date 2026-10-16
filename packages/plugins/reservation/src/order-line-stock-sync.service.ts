@@ -7,8 +7,14 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 
+interface LineAllocation {
+    allocated: boolean;
+    net: number;
+}
+
 // Keeps Vendure's own allocation (stock_movement, StockLevel.stockAllocated) in step with a staff edit of a
 // placed order: the edit writes lines directly, so Vendure's order-modification hooks never run (#233).
+// Whether a line is allocated is read from its ALLOCATION/RELEASE rows, never guessed from the order state.
 @Injectable()
 export class OrderLineStockSyncService {
     constructor(
@@ -18,27 +24,54 @@ export class OrderLineStockSyncService {
 
     async changeQuantity(
         ctx: RequestContext,
-        order: Order,
+        _order: Order,
         line: OrderLine,
         delta: number,
     ): Promise<void> {
-        if (delta === 0 || !this.isAllocated(order)) return;
-        const lines = [{ orderLineId: line.id, quantity: Math.abs(delta) }];
-        if (delta > 0) await this.stockMovement.createAllocationsForOrderLines(ctx, lines);
-        else await this.stockMovement.createReleasesForOrderLines(ctx, lines);
+        if (delta === 0) return;
+        const current = await this.allocationOf(ctx, line.id);
+        if (!current.allocated) return;
+        if (delta > 0) {
+            await this.stockMovement.createAllocationsForOrderLines(ctx, [
+                { orderLineId: line.id, quantity: delta },
+            ]);
+            return;
+        }
+        const release = Math.min(-delta, current.net);
+        if (release > 0) await this.release(ctx, line, release);
     }
 
     // A line with stock movements cannot be deleted (foreign key); once the allocation is released its
-    // movements net to zero, so they are dropped with it.
-    async removeLine(ctx: RequestContext, order: Order, line: OrderLine): Promise<void> {
-        await this.changeQuantity(ctx, order, line, -line.quantity);
-        await this.connection
-            .getRepository(ctx, OrderLine)
-            .query(`DELETE FROM stock_movement WHERE "orderLineId" = $1`, [line.id]);
-        await this.connection.getRepository(ctx, OrderLine).remove(line);
+    // allocation and release rows net to zero, so they are dropped with it.
+    async removeLine(ctx: RequestContext, _order: Order, line: OrderLine): Promise<void> {
+        const { net } = await this.allocationOf(ctx, line.id);
+        if (net > 0) await this.release(ctx, line, net);
+        const repo = this.connection.getRepository(ctx, OrderLine);
+        await repo.query(
+            `DELETE FROM stock_movement WHERE "orderLineId" = $1 AND type IN ('ALLOCATION', 'RELEASE')`,
+            [line.id],
+        );
+        await repo.remove(line);
     }
 
-    private isAllocated(order: Order): boolean {
-        return !order.active && order.state !== 'Draft';
+    private async release(ctx: RequestContext, line: OrderLine, quantity: number): Promise<void> {
+        await this.stockMovement.createReleasesForOrderLines(ctx, [
+            { orderLineId: line.id, quantity },
+        ]);
+    }
+
+    private async allocationOf(ctx: RequestContext, lineId: unknown): Promise<LineAllocation> {
+        const rows: Array<{ type: string; total: string }> = await this.connection
+            .getRepository(ctx, OrderLine)
+            .query(
+                `SELECT type, COALESCE(SUM(quantity), 0) AS total FROM stock_movement
+                  WHERE "orderLineId" = $1 AND type IN ('ALLOCATION', 'RELEASE') GROUP BY type`,
+                [lineId],
+            );
+        const sum = (type: string): number => Number(rows.find(r => r.type === type)?.total ?? 0);
+        return {
+            allocated: rows.some(r => r.type === 'ALLOCATION'),
+            net: sum('ALLOCATION') - sum('RELEASE'),
+        };
     }
 }

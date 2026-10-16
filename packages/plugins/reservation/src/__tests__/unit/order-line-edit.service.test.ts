@@ -19,6 +19,7 @@ interface Setup {
     submission?: 'none' | 'pending' | 'sent';
     skipped?: boolean;
     state?: string;
+    notAllocated?: boolean;
 }
 
 function build(setup: Setup = {}) {
@@ -43,7 +44,12 @@ function build(setup: Setup = {}) {
     const saved: unknown[] = [];
     const removed: unknown[] = [];
     const repo = (entity: { name: string }) => ({
-        query: async () => undefined,
+        query: async (sql: string, params: unknown[]) => {
+            if (!sql.startsWith('SELECT')) return undefined;
+            if (setup.notAllocated) return [];
+            const line = lines.find(l => l.id === params[0]);
+            return [{ type: 'ALLOCATION', total: String(line?.quantity ?? 0) }];
+        },
         count: async () => setup.settledPayments ?? 0,
         save: async (rows: unknown) => {
             saved.push({ entity: entity.name, rows });
@@ -218,6 +224,20 @@ describe('OrderLineEditService', () => {
             { orderLineId: '1', quantity: 2 },
         ]);
         expect(gone.removed).toHaveLength(1);
+    });
+
+    it('leaves Vendure stock alone for a line that was never allocated', async () => {
+        const t = build({
+            notAllocated: true,
+            lines: [
+                { id: '1', quantity: 2 },
+                { id: '2', quantity: 3 },
+            ],
+        });
+        await t.service.setQuantity(ctx, '5', '1', 1);
+        await t.service.removeLine(ctx, '5', '2');
+        expect(t.stock.createAllocationsForOrderLines).not.toHaveBeenCalled();
+        expect(t.stock.createReleasesForOrderLines).not.toHaveBeenCalled();
     });
 
     it('rejects a quantity above the limit', async () => {

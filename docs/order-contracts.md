@@ -150,15 +150,18 @@ multiple; the last line cannot be removed (cancel the order instead).
 - **Vendure allocation.** The project does use Vendure's own allocation (`stock_movement` ALLOCATION/RELEASE,
   `StockLevel.stockAllocated`, part of `freeQuantity`). The edit writes lines directly (Vendure refuses placed
   orders), so `OrderLineStockSyncService` keeps it consistent: more quantity allocates the difference, less releases
-  it, a removed line is released and its (net-zero) `stock_movement` rows are deleted with it, because the movement
-  rows hold a foreign key to the line. `OrderLineEvent`/`OrderModifiedEvent` are deliberately not published: the
+  it, a removed line is released and its (net-zero) ALLOCATION/RELEASE `stock_movement` rows are deleted with it, because the
+  movement rows hold a foreign key to the line. Whether a line is allocated is read from its own ALLOCATION/RELEASE rows
+  (never guessed from the order state), so a placed order that was never allocated is left alone and a release can
+  never exceed what is allocated. `OrderLineEvent`/`OrderModifiedEvent` are deliberately not published: the
   tier-rebalance subscriber would call `adjustOrderLine`, which refuses placed orders. Reservation rows keep the
   removed line's id as plain history (`orderLineId` is a varchar with no foreign key).
 - **Rejected orders.** An ERP-rejected order may be edited and is re-sent after staff reconfirm: the builder's
   duplicate guard already lets an `order.confirmed` through when the previous submission was rejected (owner decision 5,
   `order-submitted.builder.test.ts`), with a new event id for the same order uuid.
-- **Releasing for an edit** publishes only `ReservationReleasedEvent` (the internal sync outbox, same as the manual
-  release button); erp-integration listens to nothing of it and no Kafka cancel/release command is produced. An unsent
+- **Releasing for an edit** publishes only `ReservationReleasedEvent`; its one listener is plugin-sync's internal outbox
+  (`reservation.released`, paired with the `reservation.created` written when the reserve was made, same as the manual
+  release button). erp-integration has no listener of it (guarded by a test) and no Kafka cancel/release command is produced. An unsent
   `order.confirmed` is skipped first.
 - **Proforma invoices.** After the lines change, `OrderLinesEditPortRegistry` calls the erp-integration adapter,
   which reissues the order's proforma invoices (new version per organization, an organization left without lines
