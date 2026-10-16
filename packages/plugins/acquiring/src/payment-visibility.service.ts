@@ -39,7 +39,7 @@ export class PaymentVisibilityService {
             .leftJoin(
                 Counterparty,
                 'counterparty',
-                'counterparty.id::text = proformaInvoice."counterpartyId"::text',
+                'counterparty.id::text = "proformaInvoice"."counterpartyId"::text',
             );
 
         if (counterpartyId) {

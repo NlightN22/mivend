@@ -53,7 +53,7 @@ export class ProformaInvoiceVisibilityService {
             .leftJoin(
                 Counterparty,
                 'counterparty',
-                'counterparty.id::text = proformaInvoice."counterpartyId"::text',
+                'counterparty.id::text = "proformaInvoice"."counterpartyId"::text',
             )
             .andWhere('proformaInvoice.counterpartyId = :counterpartyId', { counterpartyId })
             .andWhere('proformaInvoice.status IN (:...statuses)', {
@@ -121,8 +121,8 @@ export class ProformaInvoiceVisibilityService {
                 Counterparty,
                 'counterparty',
                 // Raw ON-clause: TypeORM only auto-quotes alias.property inside where clauses, not here.
-                // Quote the camelCase column by hand, or Postgres lowercases it and the query fails.
-                'counterparty.id::text = proformaInvoice."counterpartyId"::text',
+                // Quote the camelCase alias and column by hand, or Postgres lowercases them and the query fails.
+                'counterparty.id::text = "proformaInvoice"."counterpartyId"::text',
             );
         if (options?.status) {
             applyStatusFilter(qb, 'proformaInvoice', options.status);
