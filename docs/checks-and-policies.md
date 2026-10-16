@@ -3,7 +3,8 @@
 One way to add, run and act on any control: a limit, a stock or contract rule, an ERP-mandated
 requirement, a customer rule, a manager's own limit. Orders are only the first **subject type**;
 the framework is not tied to them. Introduced with #237; existing controls (#201, #205, credit,
-reserve) are wrapped as providers gradually, when touched, not in one rewrite.
+reserve) are wrapped as providers gradually, when touched, not in one rewrite. The classified
+inventory of every existing control is `docs/controls-inventory.md` (#241).
 
 ## Principles
 
