@@ -13,6 +13,7 @@ export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
     const busy = ref(false);
     const error = ref('');
     const lastSplit = ref<SplitOutcome[]>([]);
+    const alreadyWithinStock = ref(false);
     let loadSeq = 0;
 
     async function load(): Promise<void> {
@@ -42,19 +43,32 @@ export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
     const setQuantity = (lineId: string, quantity: number): Promise<void> =>
         run(async () => {
             lastSplit.value = [];
+            alreadyWithinStock.value = false;
             await changeOrderLineQuantity(orderId.value, lineId, quantity);
         });
 
     const remove = (lineId: string): Promise<void> =>
         run(async () => {
             lastSplit.value = [];
+            alreadyWithinStock.value = false;
             await removeOrderLine(orderId.value, lineId);
         });
 
     const cutToStock = (): Promise<void> =>
         run(async () => {
             lastSplit.value = await splitOrderLinesByStock(orderId.value);
+            alreadyWithinStock.value = lastSplit.value.length === 0;
         });
 
-    return { availability, busy, error, lastSplit, load, setQuantity, remove, cutToStock };
+    return {
+        availability,
+        busy,
+        error,
+        lastSplit,
+        alreadyWithinStock,
+        load,
+        setQuantity,
+        remove,
+        cutToStock,
+    };
 }

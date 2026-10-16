@@ -99,6 +99,7 @@ function toggleAdjust(lineId: string): void {
         :busy="edit.busy.value"
         :error="edit.error.value"
         :split="edit.lastSplit.value"
+        :already-within-stock="edit.alreadyWithinStock.value"
         @cut="edit.cutToStock"
     />
     <div class="order-lines__scroll">

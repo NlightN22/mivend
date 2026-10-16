@@ -174,6 +174,22 @@ describe('ProformaInvoiceIssuingService versions (real Postgres)', () => {
         await expect(issuing.differenceAfterPayment(ctx, paid as never)).resolves.toBe(2000);
     });
 
+    it('keeps a paid snapshot and reports a negative difference when the order shrinks', async () => {
+        orderLines = [orderLine(1, 1, 1000, 3), orderLine(2, 2, 500)];
+        await issuing.issueForOrder(ctx, 7);
+        await dataSource
+            .getRepository(TestProformaInvoice)
+            .update({ organizationId: 1 }, { status: 'paid' });
+        orderLines = [orderLine(1, 1, 1000, 1), orderLine(2, 2, 500)];
+
+        const result = await issuing.issueForOrder(ctx, 7);
+
+        expect(result.created).toHaveLength(0);
+        const paid = (await rows()).find(r => r.organizationId === 1)!;
+        expect(paid).toMatchObject({ status: 'paid', version: 1, amount: 3000 });
+        await expect(issuing.differenceAfterPayment(ctx, paid as never)).resolves.toBe(-2000);
+    });
+
     it('creates one snapshot per organization under concurrent requests', async () => {
         const results = await Promise.all(
             Array.from({ length: 6 }, () => issuing.requestForOrder(ctx, 7)),

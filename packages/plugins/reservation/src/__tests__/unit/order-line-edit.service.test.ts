@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
+import { OrderLineEditGuard } from '../../order-line-edit.guard';
 import { OrderLineEditService } from '../../order-line-edit.service';
+import { OrderLineStockSyncService } from '../../order-line-stock-sync.service';
 
 const ctx = { activeUserId: 'admin-1' } as unknown as RequestContext;
 
@@ -16,7 +18,7 @@ interface Setup {
     fitting?: Record<string, number>;
     submission?: 'none' | 'pending' | 'sent';
     skipped?: boolean;
-    shipped?: boolean;
+    state?: string;
 }
 
 function build(setup: Setup = {}) {
@@ -28,7 +30,8 @@ function build(setup: Setup = {}) {
     }));
     const order = {
         id: '5',
-        state: 'PaymentAuthorized',
+        state: setup.state ?? 'PaymentAuthorized',
+        active: false,
         customerId: 'c1',
         lines,
         customFields: {
@@ -69,15 +72,29 @@ function build(setup: Setup = {}) {
     };
     const history = { createHistoryEntryForOrder: vi.fn(async () => undefined) };
     const eventBus = { publish: vi.fn() };
-    const service = new OrderLineEditService(
-        connection as never,
-        { buildVisibleOrdersQuery: async () => qb } as never,
-        { dictionary: async () => ({ get: () => null }) } as never,
+    const statuses = { dictionary: async () => ({ get: () => null }) };
+    const guard = new OrderLineEditGuard(
+        statuses as never,
         {
             releaseReservations: released,
             findForOrder: async () =>
                 setup.activeReservation ? [{ status: 'active' }] : [{ status: 'released' }],
         } as never,
+        {
+            get: () => ({
+                submissionState: async () => setup.submission ?? 'none',
+                skipPendingSubmission: skipPending,
+            }),
+        } as never,
+    );
+    const stock = {
+        createAllocationsForOrderLines: vi.fn(async () => []),
+        createReleasesForOrderLines: vi.fn(async () => []),
+    };
+    const service = new OrderLineEditService(
+        connection as never,
+        { buildVisibleOrdersQuery: async () => qb } as never,
+        guard,
         orderService as never,
         history as never,
         eventBus as never,
@@ -97,16 +114,14 @@ function build(setup: Setup = {}) {
             }),
         } as never,
         orderChecks as never,
-        {
-            get: () => ({
-                submissionState: async () => setup.submission ?? 'none',
-                skipPendingSubmission: skipPending,
-            }),
-        } as never,
         { afterLinesEdited: editHook } as never,
+        new OrderLineStockSyncService(connection as never, stock as never),
     );
     return {
         service,
+        guard,
+        statuses,
+        stock,
         released,
         skipPending,
         editHook,
@@ -173,12 +188,61 @@ describe('OrderLineEditService', () => {
 
     it('refuses once the warehouse has started', async () => {
         const t = build({ erpStatus: 'picking' });
-        (t.service as unknown as { statuses: unknown }).statuses = {
+        (t.guard as unknown as { statuses: unknown }).statuses = {
             dictionary: async () => ({
                 get: () => ({ shipped: false, warehouseStarted: true, rejected: false }),
             }),
         };
         await expect(t.service.setQuantity(ctx, '5', '1', 4)).rejects.toThrow(/warehouse/);
+    });
+
+    it('keeps Vendure allocation in step: more allocates, less releases, removal releases and drops the line', async () => {
+        const up = build({ state: 'PaymentSettled' });
+        await up.service.setQuantity(ctx, '5', '1', 14);
+        expect(up.stock.createAllocationsForOrderLines).toHaveBeenCalledWith(expect.anything(), [
+            { orderLineId: '1', quantity: 4 },
+        ]);
+        const down = build({ state: 'PaymentSettled' });
+        await down.service.setQuantity(ctx, '5', '1', 3);
+        expect(down.stock.createReleasesForOrderLines).toHaveBeenCalledWith(expect.anything(), [
+            { orderLineId: '1', quantity: 7 },
+        ]);
+        const gone = build({
+            lines: [
+                { id: '1', quantity: 2 },
+                { id: '2', quantity: 3 },
+            ],
+        });
+        await gone.service.removeLine(ctx, '5', '1');
+        expect(gone.stock.createReleasesForOrderLines).toHaveBeenCalledWith(expect.anything(), [
+            { orderLineId: '1', quantity: 2 },
+        ]);
+        expect(gone.removed).toHaveLength(1);
+    });
+
+    it('rejects a quantity above the limit', async () => {
+        await expect(build().service.setQuantity(ctx, '5', '1', 2_000_000)).rejects.toThrow(
+            /from 1 to/,
+        );
+    });
+
+    it('splitting an order already within stock is a no-op: no release, no history', async () => {
+        const t = build({ activeReservation: true });
+        await expect(t.service.splitByStock(ctx, '5')).resolves.toEqual([]);
+        expect(t.released).not.toHaveBeenCalled();
+        expect(t.history.createHistoryEntryForOrder).not.toHaveBeenCalled();
+    });
+
+    it('releasing for an edit sends the ERP nothing but the local release (no cancel request)', async () => {
+        const t = build({ activeReservation: true, submission: 'sent', erpStatus: 'rejected' });
+        (t.guard as unknown as { statuses: unknown }).statuses = {
+            dictionary: async () => ({
+                get: () => ({ shipped: false, warehouseStarted: false, rejected: true }),
+            }),
+        };
+        await t.service.setQuantity(ctx, '5', '1', 4);
+        expect(t.released).toHaveBeenCalledTimes(1);
+        expect(t.skipPending).not.toHaveBeenCalled();
     });
 
     it('refuses to remove the last line', async () => {
@@ -222,7 +286,7 @@ describe('OrderLineEditService', () => {
     });
 
     it('refuses a split when every line is covered or nothing would remain', async () => {
-        await expect(build().service.splitByStock(ctx, '5')).rejects.toThrow(/already covered/);
+        await expect(build().service.splitByStock(ctx, '5')).resolves.toEqual([]);
         const t = build({ fitting: { '1': 0 } });
         await expect(t.service.splitByStock(ctx, '5')).rejects.toThrow(/without lines/);
     });

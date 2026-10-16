@@ -2,7 +2,13 @@
 import { MvButton, MvNotice } from '@mivend/ui-kit';
 import type { SplitOutcome } from '../../api/orderLineEdit';
 
-defineProps<{ anyShort: boolean; busy: boolean; error: string; split: SplitOutcome[] }>();
+defineProps<{
+    anyShort: boolean;
+    busy: boolean;
+    error: string;
+    split: SplitOutcome[];
+    alreadyWithinStock: boolean;
+}>();
 const emit = defineEmits<{ cut: [] }>();
 </script>
 
@@ -12,6 +18,9 @@ const emit = defineEmits<{ cut: [] }>();
             Cut lines to available stock
         </MvButton>
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
+        <MvNotice v-else-if="alreadyWithinStock" variant="info">
+            Already within available stock; nothing to cut.
+        </MvNotice>
         <MvNotice v-else-if="split.length" variant="info">
             Cut {{ split.length }} line(s); the part stock could not cover is recorded as shortfall.
         </MvNotice>

@@ -59,6 +59,8 @@ import { OrderLineReservationResolver, ReservationViewResolver } from './reserva
 import { adminReservationViewSchema, shopReservationViewSchema } from './reservation-view.schema';
 import { OrderLineShortfall } from './entities/order-line-shortfall.entity';
 import { OrderLineAvailabilityPortRegistry } from './order-line-availability.port';
+import { OrderLineEditGuard } from './order-line-edit.guard';
+import { OrderLineStockSyncService } from './order-line-stock-sync.service';
 import { OrderLinesEditPortRegistry } from './order-line-edit.port';
 import { OrderLineEditResolver } from './order-line-edit.resolver';
 import { adminOrderLineEditSchema } from './order-line-edit.schema';
@@ -96,6 +98,8 @@ import type { ReservationPluginOptions } from './types';
         OrderContractService,
         OrderLineEditService,
         OrderLinesEditPortRegistry,
+        OrderLineStockSyncService,
+        OrderLineEditGuard,
         OrderLineAvailabilityPortRegistry,
         OrderCheckSubjectLoader,
         OrderCheckSubjectRegistrar,

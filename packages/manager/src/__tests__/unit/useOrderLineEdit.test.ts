@@ -51,4 +51,12 @@ describe('useOrderLineEdit', () => {
         await edit.cutToStock();
         expect(edit.lastSplit.value).toHaveLength(1);
     });
+
+    it('reports a repeated cut as already within stock, not as an error', async () => {
+        api.splitOrderLinesByStock.mockResolvedValue([]);
+        const edit = useOrderLineEdit(ref('1'), vi.fn());
+        await edit.cutToStock();
+        expect(edit.alreadyWithinStock.value).toBe(true);
+        expect(edit.error.value).toBe('');
+    });
 });

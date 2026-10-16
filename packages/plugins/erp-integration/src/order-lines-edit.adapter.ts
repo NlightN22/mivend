@@ -1,6 +1,10 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ProformaInvoice, ProformaInvoiceIssuingService } from '@mivend/plugin-acquiring';
+import { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    ProformaInvoice,
+    ProformaInvoiceIssuedEvent,
+    ProformaInvoiceIssuingService,
+} from '@mivend/plugin-acquiring';
 import { OrderLinesEditPortRegistry } from '@mivend/plugin-reservation';
 import type { OrderLinesEditPort } from '@mivend/plugin-reservation';
 
@@ -12,6 +16,7 @@ export class OrderLinesEditAdapter implements OrderLinesEditPort, OnApplicationB
         private readonly connection: TransactionalConnection,
         private readonly issuing: ProformaInvoiceIssuingService,
         private readonly registry: OrderLinesEditPortRegistry,
+        private readonly eventBus: EventBus,
     ) {}
 
     onApplicationBootstrap(): void {
@@ -22,6 +27,10 @@ export class OrderLinesEditAdapter implements OrderLinesEditPort, OnApplicationB
         const existing = await this.connection
             .getRepository(ctx, ProformaInvoice)
             .count({ where: { orderId: Number(orderId) } });
-        if (existing > 0) await this.issuing.issueForOrder(ctx, orderId);
+        if (existing === 0) return;
+        const { created } = await this.issuing.issueForOrder(ctx, orderId);
+        for (const invoice of created) {
+            await this.eventBus.publish(new ProformaInvoiceIssuedEvent(ctx, invoice));
+        }
     }
 }

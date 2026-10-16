@@ -143,9 +143,31 @@ multiple; the last line cannot be removed (cancel the order instead).
   `ReservationService.releaseReservations`; the order goes back to the confirmation queue (`RELEASED`) and staff
   confirm again, which re-runs the `pre-reserve` checks and reserves the new quantities. No automatic re-reserve:
   it could fail on stock mid-edit.
+- **Lock order.** The edit takes `proformaInvoices-for-order:<id>` first and `reserve-order:<id>` second
+  (alphabetical, `docs/concurrency.md`); the proforma reissue re-enters the first. No path takes them in the other
+  order (withdraw takes only the proforma lock; the reserve paths never touch proformas). A race test runs edits,
+  a concurrent proforma lock holder and a reserve together.
+- **Vendure allocation.** The project does use Vendure's own allocation (`stock_movement` ALLOCATION/RELEASE,
+  `StockLevel.stockAllocated`, part of `freeQuantity`). The edit writes lines directly (Vendure refuses placed
+  orders), so `OrderLineStockSyncService` keeps it consistent: more quantity allocates the difference, less releases
+  it, a removed line is released and its (net-zero) `stock_movement` rows are deleted with it, because the movement
+  rows hold a foreign key to the line. `OrderLineEvent`/`OrderModifiedEvent` are deliberately not published: the
+  tier-rebalance subscriber would call `adjustOrderLine`, which refuses placed orders. Reservation rows keep the
+  removed line's id as plain history (`orderLineId` is a varchar with no foreign key).
+- **Rejected orders.** An ERP-rejected order may be edited and is re-sent after staff reconfirm: the builder's
+  duplicate guard already lets an `order.confirmed` through when the previous submission was rejected (owner decision 5,
+  `order-submitted.builder.test.ts`), with a new event id for the same order uuid.
+- **Releasing for an edit** publishes only `ReservationReleasedEvent` (the internal sync outbox, same as the manual
+  release button); erp-integration listens to nothing of it and no Kafka cancel/release command is produced. An unsent
+  `order.confirmed` is skipped first.
 - **Proforma invoices.** After the lines change, `OrderLinesEditPortRegistry` calls the erp-integration adapter,
   which reissues the order's proforma invoices (new version per organization, an organization left without lines
-  is cancelled) when the order already has any, in the same transaction.
+  is cancelled) when the order already has any, in the same transaction, and publishes `ProformaInvoiceIssuedEvent`
+  for each new version. A paid snapshot is never rewritten (existing contract): a quantity increase leaves the paid
+  version and `differenceAfterPayment` reports the positive difference; a decrease reports a negative one (an
+  advance in the ERP).
+- **Limits.** A quantity is 1..1,000,000 and must respect the pack multiple; `splitOrderLinesByStock` on an order
+  already within stock is a no-op returning no lines.
 - **Overpayment.** If the edited total falls below what was paid, nothing is credited by mivend: payments are money
   on the counterparty balance held in the ERP, and an overpayment is an advance the ERP offsets against the next sales
   invoice (`docs/payments.md`); the order page shows "overpaid by Z" from `erpPaidAmount`. mivend has no refund-to-balance

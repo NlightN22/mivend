@@ -11,7 +11,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { OrderStatusReferenceService, OrderVisibilityService } from '@mivend/plugin-erp-order';
+import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import { PackagingPolicyService } from '@mivend/plugin-moq';
 import { withAggregateLock } from 'shared';
 
@@ -20,19 +20,12 @@ import { OrderLinesEditedEvent } from './order-line-edit.events';
 import { OrderLineAvailabilityPortRegistry } from './order-line-availability.port';
 import type { LineAvailability } from './order-line-availability.port';
 import { planSplit } from './order-line-split';
-import { decideEdit, erpStageFacts } from './order-cancellation.decision';
-import type { EditRefusal } from './order-cancellation.decision';
-import { OrderCancellationPortRegistry } from './order-cancellation.port';
+import { OrderLineEditGuard } from './order-line-edit.guard';
+import { OrderLineStockSyncService } from './order-line-stock-sync.service';
 import { OrderLinesEditPortRegistry } from './order-line-edit.port';
 import { OrderChecksService } from './order-checks.service';
-import { ReservationService } from './reservation.service';
 
-const EDIT_REFUSALS: Record<EditRefusal, string> = {
-    cancelled: 'The order is cancelled',
-    shipped: 'The order has shipped',
-    'in-progress': 'The warehouse has started on the order',
-    'sent-to-erp': 'The order was already sent to the ERP; cancel it instead',
-};
+const MAX_LINE_QUANTITY = 1_000_000;
 
 export interface SplitOutcome {
     lineId: string;
@@ -41,23 +34,22 @@ export interface SplitOutcome {
     shortfall: number;
 }
 
-// Staff edit of an order's lines before it is confirmed (#233): no active reservation, not yet in
-// the ERP, nothing paid. Same lock as reserveOrder, checks recomputed at the on-edit stage.
+// Staff edit of an order's lines until it is sent to the ERP (#233). Same lock as reserveOrder,
+// checks recomputed at the on-edit stage.
 @Injectable()
 export class OrderLineEditService {
     constructor(
         private connection: TransactionalConnection,
         private visibility: OrderVisibilityService,
-        private statuses: OrderStatusReferenceService,
-        private reservations: ReservationService,
+        private guard: OrderLineEditGuard,
         private orderService: OrderService,
         private history: HistoryService,
         private eventBus: EventBus,
         private packaging: PackagingPolicyService,
         private availabilityPorts: OrderLineAvailabilityPortRegistry,
         private orderChecks: OrderChecksService,
-        private cancelPorts: OrderCancellationPortRegistry,
         private editPorts: OrderLinesEditPortRegistry,
+        private stockSync: OrderLineStockSyncService,
     ) {}
 
     availability(ctx: RequestContext, orderId: ID): Promise<LineAvailability[]> {
@@ -66,16 +58,22 @@ export class OrderLineEditService {
         );
     }
 
-    setQuantity(ctx: RequestContext, orderId: ID, lineId: ID, quantity: number): Promise<void> {
-        if (!Number.isInteger(quantity) || quantity <= 0) {
+    async setQuantity(
+        ctx: RequestContext,
+        orderId: ID,
+        lineId: ID,
+        quantity: number,
+    ): Promise<void> {
+        if (!Number.isInteger(quantity) || quantity <= 0 || quantity > MAX_LINE_QUANTITY) {
             throw new UserInputError(
-                'Quantity must be a positive whole number; remove the line instead',
+                `Quantity must be a whole number from 1 to ${MAX_LINE_QUANTITY}; remove the line instead`,
             );
         }
         return this.edit(ctx, orderId, 'quantity', async (txCtx, order) => {
             const line = this.lineOf(order, lineId);
             await this.assertMultiple(txCtx, order, line, quantity);
             const before = line.quantity;
+            await this.stockSync.changeQuantity(txCtx, order, line, quantity - before);
             line.quantity = quantity;
             await this.persist(txCtx, order, [line]);
             return `Line ${line.productVariant.sku}: quantity ${before} -> ${quantity}`;
@@ -86,15 +84,18 @@ export class OrderLineEditService {
         return this.edit(ctx, orderId, 'remove', async (txCtx, order) => {
             const line = this.lineOf(order, lineId);
             this.assertNotLast(order, 1);
-            await this.connection.getRepository(txCtx, OrderLine).remove(line);
+            const removedQuantity = line.quantity;
+            await this.stockSync.removeLine(txCtx, order, line);
             order.lines = order.lines.filter(l => String(l.id) !== String(lineId));
             await this.persist(txCtx, order, order.lines);
-            return `Line ${line.productVariant.sku} removed (was ${line.quantity})`;
+            return `Line ${line.productVariant.sku} removed (was ${removedQuantity})`;
         });
     }
 
     // Cuts every line to the part the warehouse and its own organization can cover and records the rest as shortfall.
     async splitByStock(ctx: RequestContext, orderId: ID): Promise<SplitOutcome[]> {
+        const before = await this.availability(ctx, orderId);
+        if (before.every(a => a.fitting >= a.needed)) return [];
         let outcomes: SplitOutcome[] = [];
         await this.edit(ctx, orderId, 'split', async (txCtx, order) => {
             const availability = await this.availabilityPorts
@@ -134,9 +135,15 @@ export class OrderLineEditService {
                 });
                 if (plan.keep === 0) {
                     const removedId = String(line.id);
-                    await this.connection.getRepository(txCtx, OrderLine).remove(line);
+                    await this.stockSync.removeLine(txCtx, order, line);
                     order.lines = order.lines.filter(l => String(l.id) !== removedId);
                 } else {
+                    await this.stockSync.changeQuantity(
+                        txCtx,
+                        order,
+                        line,
+                        plan.keep - line.quantity,
+                    );
                     line.quantity = plan.keep;
                 }
             }
@@ -151,9 +158,24 @@ export class OrderLineEditService {
         ctx: RequestContext,
         orderId: ID,
         kind: 'quantity' | 'remove' | 'split',
-        change: (txCtx: RequestContext, order: Order) => Promise<string>,
+        change: (txCtx: RequestContext, order: Order) => Promise<string | null>,
     ): Promise<void> {
         await this.visible(ctx, orderId);
+        // Proforma lock first (alphabetical, docs/concurrency.md): the edit reissues them under it.
+        await withAggregateLock(
+            this.connection,
+            ctx,
+            `proformaInvoices-for-order:${orderId}`,
+            txCtx => this.editLocked(txCtx, orderId, kind, change),
+        );
+    }
+
+    private async editLocked(
+        ctx: RequestContext,
+        orderId: ID,
+        kind: 'quantity' | 'remove' | 'split',
+        change: (txCtx: RequestContext, order: Order) => Promise<string | null>,
+    ): Promise<void> {
         await withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, async txCtx => {
             const order = await this.orderService.findOne(txCtx, orderId, [
                 'lines',
@@ -162,8 +184,9 @@ export class OrderLineEditService {
                 'surcharges',
             ]);
             if (!order) throw new UserInputError('Order not found');
-            await this.assertEditable(txCtx, order);
+            await this.guard.assertEditable(txCtx, order);
             const note = await change(txCtx, order);
+            if (note === null) return;
             await this.history.createHistoryEntryForOrder(
                 {
                     ctx: txCtx,
@@ -177,44 +200,6 @@ export class OrderLineEditService {
             await this.orderChecks.run(txCtx, String(orderId), 'on-edit');
             this.eventBus.publish(new OrderLinesEditedEvent(txCtx, orderId, kind));
         });
-    }
-
-    // Same stage facts as order cancellation (decideEdit). A reservation does not block an edit: it is
-    // released here under the same lock, the order returns to the confirmation queue and staff re-confirm.
-    private async assertEditable(ctx: RequestContext, order: Order): Promise<void> {
-        if (order.customFields?.isExternal === true) {
-            throw new UserInputError('Orders from the ERP are managed there');
-        }
-        const fields = order.customFields;
-        const dictionary = await this.statuses.dictionary(ctx);
-        const port = this.cancelPorts.get();
-        const submission = fields.erpOrderId
-            ? 'sent'
-            : await port.submissionState(ctx, String(order.id));
-        const verdict = decideEdit({
-            orderState: order.state,
-            erpStatus: erpStageFacts(dictionary, fields.erpStatus),
-            erpOrderId: fields.erpOrderId ?? null,
-            latestFulfillmentState: fields.latestFulfillmentState ?? null,
-            hasSettledPayment: false,
-            cancelRequestStatus: fields.cancelRequestStatus ?? null,
-            submission,
-            requestRegistered: true,
-        });
-        if (!verdict.allowed) throw new UserInputError(EDIT_REFUSALS[verdict.reason]);
-        const rows = await this.reservations.findForOrder(ctx, order.id);
-        if (!rows.some(r => r.status === 'active')) return;
-        if (
-            submission === 'pending' &&
-            !(await port.skipPendingSubmission(
-                ctx,
-                String(order.id),
-                'order lines edited before it was sent',
-            ))
-        ) {
-            throw new UserInputError(EDIT_REFUSALS['sent-to-erp']);
-        }
-        await this.reservations.releaseReservations(ctx, order.id);
     }
 
     private assertNotLast(order: Order, removing: number): void {
