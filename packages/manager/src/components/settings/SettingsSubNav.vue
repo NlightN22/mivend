@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useAuthStore } from '../../stores/auth';
+
 // Shared tab bar between the Settings sub-pages (Roles & Access, Users, Branches) — styled like
 // CustomerDetailPage.vue's in-page tabs, but these are real routes (RouterLink), not
 // activeTab toggles, since each section is its own page with its own data loading.
@@ -10,8 +12,10 @@ defineProps<{
         | 'branches'
         | 'organizations'
         | 'category-visibility'
-        | 'system-health';
+        | 'system-health'
+        | 'check-policies';
 }>();
+const authStore = useAuthStore();
 </script>
 
 <template>
@@ -32,6 +36,12 @@ defineProps<{
         >
             Category visibility
         </RouterLink>
+        <RouterLink
+            v-if="authStore.hasPermission('ManageCheckPolicies')"
+            to="/settings/check-policies"
+            :class="{ active: active === 'check-policies' }"
+            >Controls and policies</RouterLink
+        >
         <RouterLink to="/settings/security" :class="{ active: active === 'security' }"
             >Security</RouterLink
         >

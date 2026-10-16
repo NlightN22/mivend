@@ -770,10 +770,11 @@ export const config: VendureConfig = {
             resyncSourceSystem: process.env.INTEGRATION_RESYNC_SOURCE_SYSTEM,
             eventContractsRegistryToken: process.env.EVENT_CONTRACTS_REGISTRY_TOKEN,
         }),
+        // Before ReservationPlugin: its schema extension references CheckResult, and extensions apply in list order.
+        ChecksPlugin,
         ReservationPlugin.init({}),
         NotificationPlugin,
         MoqPlugin,
         SavedViewsPlugin,
-        ChecksPlugin,
     ],
 };

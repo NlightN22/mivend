@@ -1,0 +1,31 @@
+query OrderCheckDefinitions {
+    checkDefinitions(subjectType: "order") {
+        code
+        stages
+        description
+        defaultConsequence
+        allowedConsequences
+    }
+}
+
+query OrderCheckPolicies {
+    checkPolicies(subjectType: "order") {
+        id
+        checkCode
+        stage
+        consequence
+        recipient
+        enabled
+    }
+}
+
+mutation UpdateCheckPolicy($input: UpdateCheckPolicyInput!) {
+    updateCheckPolicy(input: $input) {
+        id
+        checkCode
+        stage
+        consequence
+        recipient
+        enabled
+    }
+}

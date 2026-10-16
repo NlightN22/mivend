@@ -81,6 +81,7 @@ interface OrderRow {
     creditExceeded: boolean;
     erpRejected: boolean;
     reservationFailed: boolean;
+    erpRequirements: boolean;
     total: string;
     date: string;
     branch: string;
@@ -104,6 +105,7 @@ const rows = computed<OrderRow[]>(() =>
             creditExceeded: order.creditLimitExceeded,
             erpRejected: statuses.isRejected(order.customFields?.erpStatus),
             reservationFailed: Boolean(order.customFields?.reservationFailureReason),
+            erpRequirements: Boolean(order.customFields?.hasCheckFindings),
             total: new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: order.currencyCode,
@@ -417,6 +419,9 @@ function resetLayout(): void {
                     >
                     <MvStatusBadge v-if="(data as OrderRow).reservationFailed" variant="warning">
                         Reserve failed</MvStatusBadge
+                    >
+                    <MvStatusBadge v-if="(data as OrderRow).erpRequirements" variant="warning"
+                        >ERP requirements</MvStatusBadge
                     >
                 </template>
                 <template v-if="col.field === 'state'" #filter>

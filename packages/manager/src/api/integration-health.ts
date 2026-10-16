@@ -1,6 +1,7 @@
 import { adminApi } from './client';
 import {
     FailedIntegrationInboxEventsDocument,
+    OrderCheckHealthDocument,
     RunErpReconciliationDocument,
 } from './generated/graphql';
 
@@ -32,4 +33,16 @@ export interface ErpReconciliationRunResult {
 export async function runErpReconciliation(): Promise<ErpReconciliationRunResult> {
     const result = await adminApi(RunErpReconciliationDocument);
     return result.runErpReconciliation;
+}
+
+export interface OrderCheckHealthRow {
+    checkCode: string;
+    reason: string | null;
+    orderCount: number;
+    staleOrderCount: number;
+}
+
+export async function fetchOrderCheckHealth(): Promise<OrderCheckHealthRow[]> {
+    const result = await adminApi(OrderCheckHealthDocument);
+    return result.orderCheckHealth;
 }

@@ -24,6 +24,7 @@ export interface OrdersFilters {
     reservationState: string;
     erpStatus: string;
     reservationFailed: string;
+    hasCheckFindings: string;
 }
 
 export const DEFAULT_FILTERS: OrdersFilters = {
@@ -34,6 +35,7 @@ export const DEFAULT_FILTERS: OrdersFilters = {
     reservationState: '',
     erpStatus: '',
     reservationFailed: '',
+    hasCheckFindings: '',
 };
 
 // Order.customFields.reservationState — an internal technical enum fixed by app logic (see
@@ -120,6 +122,7 @@ function buildFilter(filters: OrdersFilters): Record<string, unknown> {
     if (filters.reservationFailed) {
         filter.reservationFailureReason = { isNull: false };
     }
+    if (filters.hasCheckFindings) filter.hasCheckFindings = { eq: true };
     return filter;
 }
 

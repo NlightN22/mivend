@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAuthStore } from '../../stores/auth';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -18,6 +19,7 @@ import { fetchOrderReservations, type OrderReservation } from '../../api/reserva
 import { isNotRegisteredInErp } from '../../composables/isNotRegisteredInErp';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 import OrderContextPanel from '../../components/order-detail/OrderContextPanel.vue';
+import OrderChecksPanel from '../../components/order-detail/OrderChecksPanel.vue';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
 import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
@@ -30,6 +32,7 @@ import ReservationFailurePanel from '../../components/order-detail/ReservationFa
 import ReservationHolds from '../../components/order-detail/ReservationHolds.vue';
 import ReservationPanel from '../../components/order-detail/ReservationPanel.vue';
 
+const authStore = useAuthStore();
 const statuses = useOrderStatusesStore();
 void statuses.load();
 const route = useRoute();
@@ -169,6 +172,17 @@ watch(() => route.params.code, load);
                         />
                         <strong>Total: {{ money(order.totalWithTax) }}</strong>
                     </div>
+                </MvPanel>
+
+                <MvPanel
+                    v-if="authStore.hasPermission('ReadCheckResults')"
+                    title="ERP requirements"
+                >
+                    <OrderChecksPanel
+                        :order-id="order.id"
+                        :lines="order.lines"
+                        :refresh-on="reservations"
+                    />
                 </MvPanel>
 
                 <MvPanel v-if="adjustmentRequests.length" title="Price adjustment history">

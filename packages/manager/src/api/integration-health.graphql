@@ -18,3 +18,12 @@ mutation RunErpReconciliation {
         skipped
     }
 }
+
+query OrderCheckHealth {
+    orderCheckHealth {
+        checkCode
+        reason
+        orderCount
+        staleOrderCount
+    }
+}

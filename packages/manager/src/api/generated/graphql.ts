@@ -670,6 +670,41 @@ export type ChannelSortParameter = {
     updatedAt?: InputMaybe<SortOrder>;
 };
 
+export type CheckDefinition = {
+    allowedConsequences: Array<Scalars['String']['output']>;
+    code: Scalars['String']['output'];
+    defaultConsequence: Scalars['String']['output'];
+    description: Scalars['String']['output'];
+    stages: Array<Scalars['String']['output']>;
+    subjectType: Scalars['String']['output'];
+};
+
+export type CheckPolicy = {
+    checkCode: Scalars['String']['output'];
+    consequence: Scalars['String']['output'];
+    enabled: Scalars['Boolean']['output'];
+    id: Scalars['ID']['output'];
+    recipient: Maybe<Scalars['String']['output']>;
+    stage: Scalars['String']['output'];
+    updatedAt: Scalars['DateTime']['output'];
+    uuid: Scalars['String']['output'];
+};
+
+export type CheckResult = {
+    checkCode: Scalars['String']['output'];
+    computedAt: Scalars['DateTime']['output'];
+    dataVersion: Maybe<Scalars['String']['output']>;
+    facts: Scalars['JSON']['output'];
+    id: Scalars['ID']['output'];
+    lineRef: Maybe<Scalars['String']['output']>;
+    messageKey: Scalars['String']['output'];
+    severity: Scalars['String']['output'];
+    stage: Maybe<Scalars['String']['output']>;
+    stale: Scalars['Boolean']['output'];
+    subjectId: Scalars['String']['output'];
+    subjectType: Scalars['String']['output'];
+};
+
 export type Collection = Node & {
     assets: Array<Asset>;
     breadcrumbs: Array<CollectionBreadcrumb>;
@@ -4012,6 +4047,8 @@ export type Mutation = {
     reassignCounterpartyManagerByFilter: Scalars['Int']['output'];
     /** Rebuilds the event of a skipped outbox row from its source data (issue #200). */
     rebuildSkippedIntegrationOutbox: RebuildSkippedOutcome;
+    /** Recomputes the ERP-requirement checks of one visible order and returns its stored results (#237). Needs ReadCheckResults. */
+    recomputeOrderChecks: Array<CheckResult>;
     /** Records a real Dispute/chargeback row for a payment — its own lifecycle, never folded into PaymentAttempt.paymentStatus. */
     recordPaymentDispute: Dispute;
     /** Records a real PaymentRefund row (the external-integration-rules skill: a refund is its own entity, never a negative payment record), modeled on Robokassa's RefundOperation API — providerRefundId mirrors Robokassa's OpKey. */
@@ -4130,6 +4167,7 @@ export type Mutation = {
     updateAsset: Asset;
     /** Update an existing Channel */
     updateChannel: UpdateChannelResult;
+    updateCheckPolicy: CheckPolicy;
     /** Update an existing Collection */
     updateCollection: Collection;
     /** Update an existing Country */
@@ -4772,6 +4810,10 @@ export type MutationRebuildSkippedIntegrationOutboxArgs = {
     id: Scalars['ID']['input'];
 };
 
+export type MutationRecomputeOrderChecksArgs = {
+    orderId: Scalars['ID']['input'];
+};
+
 export type MutationRecordPaymentDisputeArgs = {
     amount: Scalars['Int']['input'];
     paymentId: Scalars['ID']['input'];
@@ -5086,6 +5128,10 @@ export type MutationUpdateAssetArgs = {
 
 export type MutationUpdateChannelArgs = {
     input: UpdateChannelInput;
+};
+
+export type MutationUpdateCheckPolicyArgs = {
+    input: UpdateCheckPolicyInput;
 };
 
 export type MutationUpdateCollectionArgs = {
@@ -5491,6 +5537,15 @@ export type OrderCancelSuccess = {
     outcome: OrderCancelOutcome;
 };
 
+export type OrderCheckHealthRow = {
+    checkCode: Scalars['String']['output'];
+    orderCount: Scalars['Int']['output'];
+    /** Reason from the finding facts, e.g. storage-organizations-short; null when the check has one. */
+    reason: Maybe<Scalars['String']['output']>;
+    /** Of those, orders whose stored result is marked stale (needs recompute). */
+    staleOrderCount: Scalars['Int']['output'];
+};
+
 export type OrderContractOption = {
     erpId: Scalars['String']['output'];
     isMain: Scalars['Boolean']['output'];
@@ -5519,6 +5574,7 @@ export type OrderCustomFields = {
     erpStatus: Maybe<Scalars['String']['output']>;
     erpStatusAt: Maybe<Scalars['DateTime']['output']>;
     externalLinesIncomplete: Maybe<Scalars['Boolean']['output']>;
+    hasCheckFindings: Maybe<Scalars['Boolean']['output']>;
     isExternal: Maybe<Scalars['Boolean']['output']>;
     latestFulfillmentState: Maybe<Scalars['String']['output']>;
     paymentStatus: Maybe<Scalars['String']['output']>;
@@ -5566,6 +5622,7 @@ export type OrderFilterParameter = {
     erpStatus?: InputMaybe<StringOperators>;
     erpStatusAt?: InputMaybe<DateOperators>;
     externalLinesIncomplete?: InputMaybe<BooleanOperators>;
+    hasCheckFindings?: InputMaybe<BooleanOperators>;
     id?: InputMaybe<IdOperators>;
     isExternal?: InputMaybe<BooleanOperators>;
     latestFulfillmentState?: InputMaybe<StringOperators>;
@@ -5800,6 +5857,7 @@ export type OrderSortParameter = {
     erpStatus?: InputMaybe<SortOrder>;
     erpStatusAt?: InputMaybe<SortOrder>;
     externalLinesIncomplete?: InputMaybe<SortOrder>;
+    hasCheckFindings?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     isExternal?: InputMaybe<SortOrder>;
     latestFulfillmentState?: InputMaybe<SortOrder>;
@@ -6232,6 +6290,8 @@ export type Permission =
     | 'ManageAdministratorLifecycle'
     /** Create/edit WorkflowDefinition chains (layer 5, /settings) */
     | 'ManageApprovalWorkflows'
+    /** Read and change the consequence policy of each check (docs/checks-and-policies.md) */
+    | 'ManageCheckPolicies'
     /** Activate/deactivate a Counterparty's storefront portal login (Customer created from its phone/officialEmail) and view/deactivate its already-created portal sub-users (issue #120) — scoped via AccessScopeService.resolveCounterpartyScope, same own/department/all model as ReassignCounterpartyManager */
     | 'ManageCounterpartyPortalAccess'
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
@@ -6252,6 +6312,8 @@ export type Permission =
     | 'ReadCatalog'
     /** Grants permission to read Channel */
     | 'ReadChannel'
+    /** Read stored check results and the registered check definitions */
+    | 'ReadCheckResults'
     /** Grants permission to read Collection */
     | 'ReadCollection'
     /** Read counterparty records (scope resolved separately by AccessScopeService) */
@@ -7167,6 +7229,9 @@ export type Query = {
     capturedOnlinePayments: Array<PaymentAttempt>;
     channel: Maybe<Channel>;
     channels: ChannelList;
+    checkDefinitions: Array<CheckDefinition>;
+    checkPolicies: Array<CheckPolicy>;
+    checkResults: Array<CheckResult>;
     /** Get a Collection either by id or slug. If neither id nor slug is specified, an error will result. */
     collection: Maybe<Collection>;
     collectionFilters: Array<ConfigurableOperationDefinition>;
@@ -7246,6 +7311,8 @@ export type Query = {
     /** Open reservation/ERP drift issues, newest first — for the manager-portal dashboard's integration-health panel (issue #76). */
     openReservationReconciliationIssues: ReservationReconciliationIssueList;
     order: Maybe<Order>;
+    /** Orders with a failing ERP-requirement check, per check code and reason (issue #237). */
+    orderCheckHealth: Array<OrderCheckHealthRow>;
     /** Active contracts of the order's counterparty; the one the order is registered under is marked (#205). */
     orderContracts: Array<OrderContractOption>;
     /** Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet. */
@@ -7406,6 +7473,19 @@ export type QueryChannelArgs = {
 
 export type QueryChannelsArgs = {
     options?: InputMaybe<ChannelListOptions>;
+};
+
+export type QueryCheckDefinitionsArgs = {
+    subjectType?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QueryCheckPoliciesArgs = {
+    subjectType?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QueryCheckResultsArgs = {
+    subjectId: Scalars['String']['input'];
+    subjectType: Scalars['String']['input'];
 };
 
 export type QueryCollectionArgs = {
@@ -9095,6 +9175,14 @@ export type UpdateChannelInput = {
 
 export type UpdateChannelResult = Channel | LanguageNotAvailableError;
 
+export type UpdateCheckPolicyInput = {
+    checkCode: Scalars['String']['input'];
+    consequence: Scalars['String']['input'];
+    enabled: Scalars['Boolean']['input'];
+    recipient?: InputMaybe<Scalars['String']['input']>;
+    stage: Scalars['String']['input'];
+};
+
 export type UpdateCollectionCustomFieldsInput = {
     visibilityOverride?: InputMaybe<Scalars['String']['input']>;
 };
@@ -9220,6 +9308,7 @@ export type UpdateOrderCustomFieldsInput = {
     erpStatus?: InputMaybe<Scalars['String']['input']>;
     erpStatusAt?: InputMaybe<Scalars['DateTime']['input']>;
     externalLinesIncomplete?: InputMaybe<Scalars['Boolean']['input']>;
+    hasCheckFindings?: InputMaybe<Scalars['Boolean']['input']>;
     isExternal?: InputMaybe<Scalars['Boolean']['input']>;
     latestFulfillmentState?: InputMaybe<Scalars['String']['input']>;
     paymentStatus?: InputMaybe<Scalars['String']['input']>;
@@ -10071,6 +10160,46 @@ export type DefaultCurrencyQueryVariables = Exact<{ [key: string]: never }>;
 
 export type DefaultCurrencyQuery = { activeChannel: { defaultCurrencyCode: CurrencyCode } };
 
+export type OrderCheckDefinitionsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type OrderCheckDefinitionsQuery = {
+    checkDefinitions: Array<{
+        code: string;
+        stages: Array<string>;
+        description: string;
+        defaultConsequence: string;
+        allowedConsequences: Array<string>;
+    }>;
+};
+
+export type OrderCheckPoliciesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type OrderCheckPoliciesQuery = {
+    checkPolicies: Array<{
+        id: string;
+        checkCode: string;
+        stage: string;
+        consequence: string;
+        recipient: string | null;
+        enabled: boolean;
+    }>;
+};
+
+export type UpdateCheckPolicyMutationVariables = Exact<{
+    input: UpdateCheckPolicyInput;
+}>;
+
+export type UpdateCheckPolicyMutation = {
+    updateCheckPolicy: {
+        id: string;
+        checkCode: string;
+        stage: string;
+        consequence: string;
+        recipient: string | null;
+        enabled: boolean;
+    };
+};
+
 export type CounterpartyTeamMemberFieldsFragment = {
     id: string;
     administratorId: string;
@@ -10678,6 +10807,17 @@ export type RunErpReconciliationMutation = {
     runErpReconciliation: { checked: number; issuesFound: number; skipped: Array<string> };
 };
 
+export type OrderCheckHealthQueryVariables = Exact<{ [key: string]: never }>;
+
+export type OrderCheckHealthQuery = {
+    orderCheckHealth: Array<{
+        checkCode: string;
+        reason: string | null;
+        orderCount: number;
+        staleOrderCount: number;
+    }>;
+};
+
 export type NotificationFieldsFragment = {
     id: string;
     kind: NotificationKind;
@@ -10782,6 +10922,54 @@ export type CancelOrderAsStaffMutation = {
     cancelOrderAsStaff:
         | { reason: OrderCancelRefusalReason; message: string }
         | { outcome: OrderCancelOutcome };
+};
+
+export type OrderCheckResultFieldsFragment = {
+    id: string;
+    checkCode: string;
+    stage: string | null;
+    lineRef: string | null;
+    severity: string;
+    messageKey: string;
+    facts: any;
+    computedAt: any;
+    stale: boolean;
+};
+
+export type OrderCheckResultsQueryVariables = Exact<{
+    orderId: Scalars['String']['input'];
+}>;
+
+export type OrderCheckResultsQuery = {
+    checkResults: Array<{
+        id: string;
+        checkCode: string;
+        stage: string | null;
+        lineRef: string | null;
+        severity: string;
+        messageKey: string;
+        facts: any;
+        computedAt: any;
+        stale: boolean;
+    }>;
+};
+
+export type RecomputeOrderChecksMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type RecomputeOrderChecksMutation = {
+    recomputeOrderChecks: Array<{
+        id: string;
+        checkCode: string;
+        stage: string | null;
+        lineRef: string | null;
+        severity: string;
+        messageKey: string;
+        facts: any;
+        computedAt: any;
+        stale: boolean;
+    }>;
 };
 
 export type OrderCreateCounterpartiesQueryVariables = Exact<{ [key: string]: never }>;
@@ -11224,6 +11412,7 @@ export type OrderListItemFieldsFragment = {
         reservationState: string | null;
         reservationFailureReason: string | null;
         erpStatus: string | null;
+        hasCheckFindings: boolean | null;
     } | null;
     customer: {
         firstName: string;
@@ -11260,6 +11449,7 @@ export type OrdersPageQuery = {
                 reservationState: string | null;
                 reservationFailureReason: string | null;
                 erpStatus: string | null;
+                hasCheckFindings: boolean | null;
             } | null;
             customer: {
                 firstName: string;
@@ -12178,6 +12368,22 @@ export const NotificationFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'NotificationFields' },
 ) as unknown as TypedDocumentString<NotificationFieldsFragment, unknown>;
+export const OrderCheckResultFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment OrderCheckResultFields on CheckResult {
+  id
+  checkCode
+  stage
+  lineRef
+  severity
+  messageKey
+  facts
+  computedAt
+  stale
+}
+    `,
+    { fragmentName: 'OrderCheckResultFields' },
+) as unknown as TypedDocumentString<OrderCheckResultFieldsFragment, unknown>;
 export const DraftOrderFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment DraftOrderFields on Order {
@@ -12218,6 +12424,7 @@ export const OrderListItemFieldsFragmentDoc = new TypedDocumentString(
     reservationState
     reservationFailureReason
     erpStatus
+    hasCheckFindings
   }
   customer {
     firstName
@@ -12820,6 +13027,47 @@ export const DefaultCurrencyDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<DefaultCurrencyQuery, DefaultCurrencyQueryVariables>;
+export const OrderCheckDefinitionsDocument = new TypedDocumentString(`
+    query OrderCheckDefinitions {
+  checkDefinitions(subjectType: "order") {
+    code
+    stages
+    description
+    defaultConsequence
+    allowedConsequences
+  }
+}
+    `) as unknown as TypedDocumentString<
+    OrderCheckDefinitionsQuery,
+    OrderCheckDefinitionsQueryVariables
+>;
+export const OrderCheckPoliciesDocument = new TypedDocumentString(`
+    query OrderCheckPolicies {
+  checkPolicies(subjectType: "order") {
+    id
+    checkCode
+    stage
+    consequence
+    recipient
+    enabled
+  }
+}
+    `) as unknown as TypedDocumentString<OrderCheckPoliciesQuery, OrderCheckPoliciesQueryVariables>;
+export const UpdateCheckPolicyDocument = new TypedDocumentString(`
+    mutation UpdateCheckPolicy($input: UpdateCheckPolicyInput!) {
+  updateCheckPolicy(input: $input) {
+    id
+    checkCode
+    stage
+    consequence
+    recipient
+    enabled
+  }
+}
+    `) as unknown as TypedDocumentString<
+    UpdateCheckPolicyMutation,
+    UpdateCheckPolicyMutationVariables
+>;
 export const CounterpartyTeamDocument = new TypedDocumentString(`
     query CounterpartyTeam($id: ID!) {
   counterparty(id: $id) {
@@ -13507,6 +13755,16 @@ export const RunErpReconciliationDocument = new TypedDocumentString(`
     RunErpReconciliationMutation,
     RunErpReconciliationMutationVariables
 >;
+export const OrderCheckHealthDocument = new TypedDocumentString(`
+    query OrderCheckHealth {
+  orderCheckHealth {
+    checkCode
+    reason
+    orderCount
+    staleOrderCount
+  }
+}
+    `) as unknown as TypedDocumentString<OrderCheckHealthQuery, OrderCheckHealthQueryVariables>;
 export const NotificationsDocument = new TypedDocumentString(`
     query Notifications($options: NotificationListOptions) {
   notifications(options: $options) {
@@ -13610,6 +13868,43 @@ export const CancelOrderAsStaffDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     CancelOrderAsStaffMutation,
     CancelOrderAsStaffMutationVariables
+>;
+export const OrderCheckResultsDocument = new TypedDocumentString(`
+    query OrderCheckResults($orderId: String!) {
+  checkResults(subjectType: "order", subjectId: $orderId) {
+    ...OrderCheckResultFields
+  }
+}
+    fragment OrderCheckResultFields on CheckResult {
+  id
+  checkCode
+  stage
+  lineRef
+  severity
+  messageKey
+  facts
+  computedAt
+  stale
+}`) as unknown as TypedDocumentString<OrderCheckResultsQuery, OrderCheckResultsQueryVariables>;
+export const RecomputeOrderChecksDocument = new TypedDocumentString(`
+    mutation RecomputeOrderChecks($orderId: ID!) {
+  recomputeOrderChecks(orderId: $orderId) {
+    ...OrderCheckResultFields
+  }
+}
+    fragment OrderCheckResultFields on CheckResult {
+  id
+  checkCode
+  stage
+  lineRef
+  severity
+  messageKey
+  facts
+  computedAt
+  stale
+}`) as unknown as TypedDocumentString<
+    RecomputeOrderChecksMutation,
+    RecomputeOrderChecksMutationVariables
 >;
 export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
     query OrderCreateCounterparties {
@@ -14136,6 +14431,7 @@ export const OrdersPageDocument = new TypedDocumentString(`
     reservationState
     reservationFailureReason
     erpStatus
+    hasCheckFindings
   }
   customer {
     firstName

@@ -11,6 +11,7 @@ import {
     type SystemHealthCheckItem,
 } from '../../api/system-health';
 import { fetchNotifications } from '../../api/notifications';
+import OrderCheckHealthPanel from '../../components/settings/OrderCheckHealthPanel.vue';
 import ErpReconciliationPanel from '../../components/dashboard/ErpReconciliationPanel.vue';
 
 // ERP reconciliation panel take cap — same fixed-row-cap reasoning as the Dashboard's own
@@ -95,6 +96,13 @@ onMounted(() => {
                     <p v-if="item.detail" class="system-health-page__detail">{{ item.detail }}</p>
                 </li>
             </ul>
+        </MvPanel>
+
+        <MvPanel
+            v-if="authStore.hasPermission('ManageErpIntegration')"
+            title="Orders failing ERP requirements"
+        >
+            <OrderCheckHealthPanel />
         </MvPanel>
 
         <MvPanel v-if="authStore.hasPermission('ManageErpIntegration')" title="ERP reconciliation">

@@ -1,0 +1,23 @@
+fragment OrderCheckResultFields on CheckResult {
+    id
+    checkCode
+    stage
+    lineRef
+    severity
+    messageKey
+    facts
+    computedAt
+    stale
+}
+
+query OrderCheckResults($orderId: String!) {
+    checkResults(subjectType: "order", subjectId: $orderId) {
+        ...OrderCheckResultFields
+    }
+}
+
+mutation RecomputeOrderChecks($orderId: ID!) {
+    recomputeOrderChecks(orderId: $orderId) {
+        ...OrderCheckResultFields
+    }
+}

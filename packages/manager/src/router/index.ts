@@ -156,6 +156,12 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'settings/check-policies',
+                    name: 'settings-check-policies',
+                    component: () => import('../pages/settings/CheckPoliciesPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'team',
                     name: 'team',
                     component: () => import('../pages/team/TeamPage.vue'),

@@ -67,6 +67,7 @@ const CHIPS: FilterChip[] = [
     { key: 'awaiting-confirmation', label: 'Awaiting confirmation' },
     { key: 'rejected-by-erp', label: 'Rejected by ERP' },
     { key: 'reservation-failed', label: 'Reservation failed' },
+    { key: 'erp-requirements', label: 'Blocked by ERP requirements' },
     { key: 'overdue', label: 'Overdue' },
 ];
 const activeChip = ref('all');
@@ -159,6 +160,7 @@ function applyChip(key: string): void {
     filters.reservationState = key === 'awaiting-confirmation' ? 'AWAITING_CONFIRMATION' : '';
     filters.erpStatus = key === 'rejected-by-erp' ? statuses.rejectedCodes.join(',') : '';
     filters.reservationFailed = key === 'reservation-failed' ? '1' : '';
+    filters.hasCheckFindings = key === 'erp-requirements' ? '1' : '';
     page.value = 1;
 }
 
@@ -170,6 +172,7 @@ function chipFromFilters(f: OrdersFilters): string {
     if (f.reservationState === 'AWAITING_CONFIRMATION') return 'awaiting-confirmation';
     if (f.erpStatus && f.erpStatus === statuses.rejectedCodes.join(',')) return 'rejected-by-erp';
     if (f.reservationFailed) return 'reservation-failed';
+    if (f.hasCheckFindings) return 'erp-requirements';
     if (f.state === 'PaymentAuthorized') return 'processing';
     if (f.state === 'PaymentSettled') return 'awaiting-shipment';
     return 'all';
