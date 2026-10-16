@@ -10,7 +10,7 @@ interface OrderLine {
 async function findVariantId(page: import('@playwright/test').Page, sku: string): Promise<string> {
     const result = await gql(
         page,
-        `query { search(input: { take: 30 }) { items { sku productVariantId } } }`,
+        `query { search(input: { take: 100 }) { items { sku productVariantId } } }`,
     );
     const items = (result.search as { items: { sku: string; productVariantId: string }[] }).items;
     const item = items.find(i => i.sku === sku);

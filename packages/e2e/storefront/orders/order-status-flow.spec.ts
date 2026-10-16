@@ -9,7 +9,8 @@ async function postStatus(
     status: string,
 ): Promise<void> {
     const res = await page.request.post(`${SERVER_URL}/erp/callback/order-status`, {
-        data: { orderCode: code, status, erpOrderId: 'E2E-DOC-1' },
+        // erpOrderId is unique per order, so each run uses its own.
+        data: { orderCode: code, status, erpOrderId: `E2E-${code}` },
         headers: {
             'Content-Type': 'application/json',
             'X-Api-Key': process.env.ERP_CALLBACK_API_KEY ?? 'dev-callback-key-change-me-0000',
@@ -25,21 +26,23 @@ test.describe('ERP order status flow', () => {
         const { id: orderId, code } = await placeTestOrder(page);
         expect(code).toBeTruthy();
 
-        await postStatus(page, code, 'RESERVED');
+        await postStatus(page, code, 'UNDER_APPROVAL');
         await page.goto(`/orders/${orderId}`);
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.locator('.od-status')).toHaveText('Reserved / Pending approval', {
+        await expect(page.locator('.od-status')).toHaveText('На согласовании', {
             timeout: 10000,
         });
 
         await postStatus(page, code, 'SHIPPING');
-        await page.reload();
-        await page.waitForLoadState('domcontentloaded');
-        await expect(page.locator('.od-status')).toHaveText('Shipped', { timeout: 10000 });
+        // The callback is applied asynchronously via the event bus.
+        await expect(async () => {
+            await page.reload();
+            await expect(page.locator('.od-status')).toHaveText('В пути', { timeout: 2000 });
+        }).toPass({ timeout: 15000 });
 
         await page.goto('/orders');
         await page.waitForLoadState('domcontentloaded');
-        const card = page.locator('.order-card', { hasText: code });
-        await expect(card.locator('.status-pill')).toHaveText('Shipped', { timeout: 10000 });
+        const card = page.locator('.order-card', { hasText: code.replace(/^(\d{3})/, '$1-') });
+        await expect(card.locator('.status-pill')).toHaveText('В пути', { timeout: 10000 });
     });
 });
