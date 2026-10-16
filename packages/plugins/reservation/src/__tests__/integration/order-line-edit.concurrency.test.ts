@@ -88,7 +88,7 @@ function editService(
 
 beforeAll(async () => {
     await h.dataSource.query(
-        `CREATE TABLE IF NOT EXISTS stock_movement (id SERIAL PRIMARY KEY, type varchar NOT NULL, quantity int NOT NULL, "orderLineId" varchar NOT NULL)`,
+        `CREATE TABLE IF NOT EXISTS stock_movement (id SERIAL PRIMARY KEY, type varchar NOT NULL, quantity int NOT NULL, "orderLineId" varchar NOT NULL, "stockLocationId" varchar)`,
     );
 });
 beforeEach(async () => {

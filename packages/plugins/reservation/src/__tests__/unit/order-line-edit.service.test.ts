@@ -20,6 +20,7 @@ interface Setup {
     skipped?: boolean;
     state?: string;
     notAllocated?: boolean;
+    locations?: string;
 }
 
 function build(setup: Setup = {}) {
@@ -57,7 +58,13 @@ function build(setup: Setup = {}) {
             if (!sql.startsWith('SELECT')) return undefined;
             if (setup.notAllocated) return [];
             const line = lines.find(l => l.id === params[0]);
-            return [{ type: 'ALLOCATION', total: String(line?.quantity ?? 0) }];
+            return [
+                {
+                    type: 'ALLOCATION',
+                    total: String(line?.quantity ?? 0),
+                    locations: setup.locations ?? '1',
+                },
+            ];
         },
         count: async () => setup.settledPayments ?? 0,
         save: async (rows: unknown) => {
@@ -247,6 +254,15 @@ describe('OrderLineEditService', () => {
         await t.service.setQuantity(ctx, '5', '1', 1);
         await t.service.removeLine(ctx, '5', '2');
         expect(t.stock.createAllocationsForOrderLines).not.toHaveBeenCalled();
+        expect(t.stock.createReleasesForOrderLines).not.toHaveBeenCalled();
+    });
+
+    it('refuses to adjust a line allocated across several stock locations instead of miscounting', async () => {
+        const t = build({ locations: '2' });
+        await expect(t.service.setQuantity(ctx, '5', '1', 4)).rejects.toThrow(
+            /several stock locations/,
+        );
+        expect(t.lines[0].quantity).toBe(10);
         expect(t.stock.createReleasesForOrderLines).not.toHaveBeenCalled();
     });
 

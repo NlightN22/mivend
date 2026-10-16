@@ -113,3 +113,15 @@ await withAggregateLock(connection, ctx, `product-photo:${externalId}`, async tx
 4. Can the same code run twice at once for one aggregate? What happens?
 5. Does every failure path log at error level or fail the caller?
 6. Is there a real-Postgres concurrent-writer test for it?
+
+**Order row vs advisory locks (#233).** An order-line edit takes `proformaInvoices-for-order:<id>`, then
+`reserve-order:<id>`, then the order row (`FOR UPDATE`). Vendure's placement transition (payment mutation) takes the
+payment handlers' locks (proforma issuing, credit exposure) and only later updates the order row, so the order is
+always proforma, reserve, row. Nothing takes `reserve-order` or `proformaInvoices-for-order` after an order-row write
+inside that transaction. Checked: the `OrderProcess` hooks (`contract-order-guard`, `organization-order-guard`,
+`freight-order-guard`, `external-order.guard`, `replica-order.guard`) take no advisory lock; the only blocking event
+handler is the tier-rebalance marker (no lock); `ReservationPaymentService`, `OrderSubmittedListener` and the check
+listeners run from `eventBus.ofType` subscribers, which fire after commit; `TierRebalanceService` takes the order row
+and never an advisory lock. The payment handlers (`offline-terms-handler`, `online-stub-handler`) are the only
+in-transaction advisory takers and take the proforma lock first.
+

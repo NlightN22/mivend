@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock('../../api/orderLineEdit', () => api);
 
+import { stepperMin, stepperOutcome } from '../../composables/orderLineStepper';
 import { useOrderLineEdit } from '../../composables/useOrderLineEdit';
 
 describe('useOrderLineEdit', () => {
@@ -59,5 +60,25 @@ describe('useOrderLineEdit', () => {
         await edit.cutToStock();
         expect(edit.alreadyWithinStock.value).toBe(true);
         expect(edit.error.value).toBe('');
+    });
+
+    describe('stepper remove flow', () => {
+        it('stepping to 0 on a multi-line order asks to confirm, and confirming removes the line', async () => {
+            expect(stepperMin(true, 5)).toBe(0);
+            expect(stepperOutcome(0, 10, true)).toEqual({ kind: 'confirm-remove' });
+            const edit = useOrderLineEdit(ref('1'), vi.fn());
+            await edit.remove('7');
+            expect(api.removeOrderLine).toHaveBeenCalledWith('1', '7');
+        });
+
+        it('keeps the last line: the minimum is one pack and zero is ignored', () => {
+            expect(stepperMin(false, 5)).toBe(5);
+            expect(stepperOutcome(0, 10, false)).toBeNull();
+        });
+
+        it('saves any other changed quantity and ignores an unchanged one', () => {
+            expect(stepperOutcome(15, 10, true)).toEqual({ kind: 'save', quantity: 15 });
+            expect(stepperOutcome(10, 10, true)).toBeNull();
+        });
     });
 });

@@ -5,6 +5,7 @@ import {
     RequestContext,
     StockMovementService,
     TransactionalConnection,
+    UserInputError,
 } from '@vendure/core';
 
 interface LineAllocation {
@@ -63,13 +64,19 @@ export class OrderLineStockSyncService {
     }
 
     private async allocationOf(ctx: RequestContext, lineId: unknown): Promise<LineAllocation> {
-        const rows: Array<{ type: string; total: string }> = await this.connection
-            .getRepository(ctx, OrderLine)
-            .query(
-                `SELECT type, COALESCE(SUM(quantity), 0) AS total FROM stock_movement
+        const rows: Array<{ type: string; total: string; locations: string }> =
+            await this.connection.getRepository(ctx, OrderLine).query(
+                `SELECT type, COALESCE(SUM(quantity), 0) AS total,
+                        COUNT(DISTINCT "stockLocationId") AS locations FROM stock_movement
                   WHERE "orderLineId" = $1 AND type IN ('ALLOCATION', 'RELEASE', 'SALE') GROUP BY type`,
                 [lineId],
             );
+        // Vendure stores a RELEASE row's full quantity once per location, so a split line would be miscounted: refuse.
+        if (rows.some(r => Number(r.locations) > 1)) {
+            throw new UserInputError(
+                'The line is allocated across several stock locations; adjust it in the ERP flow instead',
+            );
+        }
         const sum = (type: string): number => Number(rows.find(r => r.type === type)?.total ?? 0);
         return {
             allocated: rows.some(r => r.type === 'ALLOCATION'),

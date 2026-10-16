@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { MvButton, MvQtyStepper } from '@mivend/ui-kit';
+import { stepperMin, stepperOutcome } from '../../composables/orderLineStepper';
 
 const props = defineProps<{ quantity: number; step: number; canRemove: boolean; busy: boolean }>();
 const emit = defineEmits<{ save: [quantity: number]; remove: [] }>();
@@ -9,11 +10,9 @@ const confirmingRemove = ref(false);
 
 // Stepping down to zero asks to remove the line, as in the storefront cart; the last line cannot go to zero.
 function onChange(value: number): void {
-    if (value === 0) {
-        confirmingRemove.value = true;
-        return;
-    }
-    if (value !== props.quantity) emit('save', value);
+    const outcome = stepperOutcome(value, props.quantity, props.canRemove);
+    if (outcome?.kind === 'confirm-remove') confirmingRemove.value = true;
+    else if (outcome?.kind === 'save') emit('save', outcome.quantity);
 }
 
 function confirmRemove(): void {
@@ -36,7 +35,7 @@ function confirmRemove(): void {
             editable
             size="sm"
             :model-value="quantity"
-            :min="canRemove ? 0 : step"
+            :min="stepperMin(canRemove, step)"
             :step="step"
             :disabled="busy"
             @update:model-value="onChange"
