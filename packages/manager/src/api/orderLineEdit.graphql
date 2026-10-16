@@ -4,6 +4,7 @@ fragment OrderLineAvailabilityFields on OrderLineAvailability {
     available
     fitting
     limitedBy
+    step
     warehouses {
         warehouseErpId
         name

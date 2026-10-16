@@ -114,7 +114,7 @@ function toggleAdjust(lineId: string): void {
                     <th rowspan="2" class="order-lines__num">Unit price</th>
                     <th rowspan="2">Adjustment</th>
                     <th rowspan="2" class="order-lines__num">Line total</th>
-                    <th v-if="canEditLines" rowspan="2">Edit</th>
+                    <th v-if="canEditLines" rowspan="2" class="order-lines__edit">Quantity</th>
                 </tr>
                 <tr>
                     <th class="order-lines__sub">Available</th>
@@ -176,9 +176,11 @@ function toggleAdjust(lineId: string): void {
                             </button>
                         </td>
                         <td class="order-lines__num">{{ money(line.linePriceWithTax) }}</td>
-                        <td v-if="canEditLines">
+                        <td v-if="canEditLines" class="order-lines__edit">
                             <OrderLineEditCell
                                 :quantity="line.quantity"
+                                :step="edit.availability.value.get(line.id)?.step ?? 1"
+                                :can-remove="lines.length > 1"
                                 :busy="edit.busy.value"
                                 @save="edit.setQuantity(line.id, $event)"
                                 @remove="edit.remove(line.id)"
@@ -227,6 +229,11 @@ function toggleAdjust(lineId: string): void {
 .order-lines td {
     padding: 10px;
     border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+}
+
+.order-lines__edit {
+    width: 1%;
+    white-space: nowrap;
 }
 
 .order-lines__scroll {

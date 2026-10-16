@@ -24,6 +24,8 @@ export const adminOrderLineEditSchema = gql`
         fitting: Int!
         "warehouse | organization, null when the line is fully covered."
         limitedBy: String
+        "The pack multiple the quantity must respect."
+        step: Int!
         warehouses: [OrderLineWarehouseStock!]!
         organizations: [OrderLineOrganizationStock!]!
     }

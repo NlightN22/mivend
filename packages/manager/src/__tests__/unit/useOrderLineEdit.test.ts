@@ -16,11 +16,12 @@ describe('useOrderLineEdit', () => {
 
     it('indexes availability by order line', async () => {
         api.fetchOrderLineAvailability.mockResolvedValue([
-            { orderLineId: '7', needed: 5, fitting: 2 },
+            { orderLineId: '7', needed: 5, fitting: 2, step: 5 },
         ]);
         const edit = useOrderLineEdit(ref('1'), vi.fn());
         await edit.load();
         expect(edit.availability.value.get('7')?.fitting).toBe(2);
+        expect(edit.availability.value.get('7')?.step).toBe(5);
     });
 
     it('reports the change to the page after a successful edit', async () => {

@@ -5776,6 +5776,8 @@ export type OrderLineAvailability = {
     needed: Scalars['Int']['output'];
     orderLineId: Scalars['ID']['output'];
     organizations: Array<OrderLineOrganizationStock>;
+    /** The pack multiple the quantity must respect. */
+    step: Scalars['Int']['output'];
     warehouses: Array<OrderLineWarehouseStock>;
 };
 
@@ -11411,6 +11413,7 @@ export type OrderLineAvailabilityFieldsFragment = {
     available: number;
     fitting: number;
     limitedBy: string | null;
+    step: number;
     warehouses: Array<{ warehouseErpId: string; name: string | null; free: number }>;
     organizations: Array<{
         id: string;
@@ -11432,6 +11435,7 @@ export type OrderLineAvailabilityQuery = {
         available: number;
         fitting: number;
         limitedBy: string | null;
+        step: number;
         warehouses: Array<{ warehouseErpId: string; name: string | null; free: number }>;
         organizations: Array<{
             id: string;
@@ -12545,6 +12549,7 @@ export const OrderLineAvailabilityFieldsFragmentDoc = new TypedDocumentString(
   available
   fitting
   limitedBy
+  step
   warehouses {
     warehouseErpId
     name
@@ -14497,6 +14502,7 @@ export const OrderLineAvailabilityDocument = new TypedDocumentString(`
   available
   fitting
   limitedBy
+  step
   warehouses {
     warehouseErpId
     name

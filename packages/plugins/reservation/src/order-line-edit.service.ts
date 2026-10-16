@@ -52,10 +52,22 @@ export class OrderLineEditService {
         private stockSync: OrderLineStockSyncService,
     ) {}
 
-    availability(ctx: RequestContext, orderId: ID): Promise<LineAvailability[]> {
-        return this.visible(ctx, orderId).then(() =>
-            this.availabilityPorts.get().forOrder(ctx, String(orderId)),
-        );
+    // `step` is the pack multiple the line's quantity must respect (what the stepper moves by).
+    async availability(
+        ctx: RequestContext,
+        orderId: ID,
+    ): Promise<Array<LineAvailability & { step: number }>> {
+        await this.visible(ctx, orderId);
+        const rows = await this.availabilityPorts.get().forOrder(ctx, String(orderId));
+        const order = await this.orderService.findOne(ctx, orderId, [
+            'lines',
+            'lines.productVariant',
+        ]);
+        const steps = new Map<string, number>();
+        for (const line of order?.lines ?? []) {
+            steps.set(String(line.id), await this.requiredMultiple(ctx, order as Order, line));
+        }
+        return rows.map(row => ({ ...row, step: steps.get(row.lineId) ?? 1 }));
     }
 
     async setQuantity(
