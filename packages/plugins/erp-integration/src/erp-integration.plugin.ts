@@ -94,6 +94,7 @@ import { OrderCheckDataService } from './order-checks/order-check-data.service';
 import { OrderCheckHealthService } from './order-checks/order-check-health.service';
 import { OrderCheckProvidersRegistrar } from './order-checks/order-check-providers.registrar';
 import { OrderSendHoldService } from './order-checks/order-send-hold.service';
+import { HeldSendRedriveService } from './order-checks/held-send-redrive.service';
 import { RejectedOrderHealthService } from './rejected-order-health.service';
 import { IntegrationEventListResolver } from './integration-event-list.resolver';
 import { IntegrationInboxIssueResolver } from './integration-inbox-issue.resolver';
@@ -174,6 +175,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         OrderCheckProvidersRegistrar,
         OrderCheckHealthService,
         OrderSendHoldService,
+        HeldSendRedriveService,
         IntegrationEventListService,
         IntegrationInboxReplayService,
         IntegrationInboxReplayStateService,

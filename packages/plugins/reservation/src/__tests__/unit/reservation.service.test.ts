@@ -12,6 +12,7 @@ import {
 } from '../../reservation-errors';
 import {
     OrderReservedEvent,
+    OrderStaffConfirmedEvent,
     ReservationConfirmedEvent,
     ReservationReleasedEvent,
 } from '../../reservation.events';
@@ -33,6 +34,9 @@ function createMockReservationRepo(): {
             where: vi.fn().mockReturnThis(),
             andWhere: vi.fn().mockReturnThis(),
             getRawOne: vi.fn(async () => ({ max: null })),
+            update: vi.fn().mockReturnThis(),
+            set: vi.fn().mockReturnThis(),
+            execute: vi.fn(async () => ({ affected: 0 })),
         })),
     };
 }
@@ -282,6 +286,36 @@ describe('ReservationService', () => {
 
             expect(result).toBe(existing);
             expect(reservationRepo.save).not.toHaveBeenCalled();
+            expect(eventBus.publish).not.toHaveBeenCalled();
+        });
+
+        it('a staff confirmation of an already reserved order stamps it and announces the release once', async () => {
+            reservationRepo.find.mockResolvedValue([{ id: 'res-1', status: 'active' }]);
+            const execute = vi
+                .fn()
+                .mockResolvedValueOnce({ affected: 1 })
+                .mockResolvedValue({ affected: 0 });
+            reservationRepo.createQueryBuilder.mockReturnValue({
+                update: vi.fn().mockReturnThis(),
+                set: vi.fn().mockReturnThis(),
+                where: vi.fn().mockReturnThis(),
+                execute,
+            });
+
+            await service.confirmOrder(ctx, 'order-1', 3);
+            await service.confirmOrder(ctx, 'order-1', 3);
+
+            const events = eventBus.publish.mock.calls.map(([event]) => event);
+            expect(events).toHaveLength(1);
+            expect(events[0]).toBeInstanceOf(OrderStaffConfirmedEvent);
+            expect(reservationRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('an automatic re-trigger over an existing reservation never counts as a staff release', async () => {
+            reservationRepo.find.mockResolvedValue([{ id: 'res-1', status: 'active' }]);
+
+            await service.reserveOrder(ctx, 'order-1', 3, 'auto-trust-rule');
+
             expect(eventBus.publish).not.toHaveBeenCalled();
         });
 

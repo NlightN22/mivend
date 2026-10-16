@@ -15,8 +15,10 @@ import { pickLocationWithMostFreeStock } from './reservation-location-picker';
 import { OrderChecksService } from './order-checks.service';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { Reservation } from './entities/reservation.entity';
+import { stampStaffConfirmation } from './reservation-staff-confirm';
 import {
     OrderReservedEvent,
+    OrderStaffConfirmedEvent,
     ReservationConfirmedEvent,
     ReservationReleasedEvent,
 } from './reservation.events';
@@ -83,6 +85,18 @@ export class ReservationService {
                         where: { orderId: String(orderId), status: 'active' },
                     });
                     if (existingActive.length > 0) {
+                        if (
+                            trigger === 'manual' &&
+                            administratorId != null &&
+                            (await stampStaffConfirmation(
+                                this.connection,
+                                txCtx,
+                                orderId,
+                                administratorId,
+                            ))
+                        ) {
+                            this.eventBus.publish(new OrderStaffConfirmedEvent(txCtx, orderId));
+                        }
                         return existingActive;
                     }
 

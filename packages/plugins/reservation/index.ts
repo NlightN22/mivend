@@ -17,6 +17,7 @@ export { ReservationAvailabilityService } from './src/reservation-availability.s
 export { ReservationExtensionLimitService } from './src/reservation-extension-limit.service';
 export {
     OrderReservedEvent,
+    OrderStaffConfirmedEvent,
     ReservationConfirmedEvent,
     ReservationReleasedEvent,
 } from './src/reservation.events';

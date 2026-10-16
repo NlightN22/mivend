@@ -27,6 +27,16 @@ export class OrderReservedEvent extends VendureEvent {
     }
 }
 
+// Staff confirmed an order that already held active reservations: the release of a send hold.
+export class OrderStaffConfirmedEvent extends VendureEvent {
+    constructor(
+        public readonly ctx: RequestContext,
+        public readonly orderId: ID,
+    ) {
+        super();
+    }
+}
+
 export class ReservationReleasedEvent extends VendureEvent {
     constructor(
         public readonly ctx: RequestContext,
