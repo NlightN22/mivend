@@ -18,13 +18,18 @@ test('payments page loads and shows rows for an all-scope account', async ({ pag
     await expect(page.locator('.el-table-v2__row').first()).toBeVisible({ timeout: 15000 });
 });
 
-test('customer detail proforma invoices tab shows a "View all" link that pre-filters the standalone page', async ({
+// The customer tab lists its proforma invoices in place; the standalone page keeps the deep link.
+test('proforma invoices page pre-filters to one customer from the counterpartyId link', async ({
     page,
 }) => {
-    await page.goto('/customers/2');
-    await page.getByRole('button', { name: 'Proforma invoices' }).click();
-    await page.getByRole('button', { name: 'View all proforma invoices' }).click();
+    // The seeded e2e counterparty is the one every role project can see.
+    await page.goto('/customers');
+    await page
+        .locator('.el-table-v2__row', { hasText: 'E2E Co' })
+        .click({ position: { x: 20, y: 10 }, timeout: 15000 });
+    await expect(page).toHaveURL(/\/customers\/\d+/);
+    const counterpartyId = new URL(page.url()).pathname.split('/').pop();
 
-    await expect(page).toHaveURL(/\/proforma-invoices\?counterpartyId=2/);
+    await page.goto(`/proforma-invoices?counterpartyId=${counterpartyId}`);
     await expect(page.getByText('Filtered to one customer')).toBeVisible({ timeout: 15000 });
 });
