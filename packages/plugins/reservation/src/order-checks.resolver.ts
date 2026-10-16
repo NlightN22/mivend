@@ -1,6 +1,6 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import { Allow, Ctx, RequestContext, Transaction } from '@vendure/core';
+import { Allow, Ctx, ForbiddenError, RequestContext, Transaction } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 import type { CheckResult } from '@mivend/plugin-checks';
 
@@ -13,10 +13,14 @@ export class OrderChecksResolver {
     @Transaction()
     @Mutation()
     @Allow(CustomPermission.ReadCheckResults.Permission)
-    recomputeOrderChecks(
+    async recomputeOrderChecks(
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: ID },
     ): Promise<CheckResult[]> {
+        // @Allow is any-of; the recompute writes results and takes the order lock, so it also needs the staff edit permission.
+        if (!ctx.userHasPermissions([CustomPermission.ConfirmOrder.Permission])) {
+            throw new ForbiddenError();
+        }
         return this.orderChecks.recompute(ctx, String(args.orderId));
     }
 }

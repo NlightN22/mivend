@@ -16,6 +16,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'ReadCheckResults',
             'ReadProformaInvoice',
             'ReadPayment',
             'CreateOrder',
@@ -39,6 +40,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'ReadCheckResults',
             'ReadProformaInvoice',
             'ReadPayment',
             'CreateOrder',
@@ -62,6 +64,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'ReadCheckResults',
             'ReadProformaInvoice',
             'ReadPayment',
             'ReadCustomer',
@@ -126,6 +129,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
         permissions: [
             'ReadCatalog',
             'ReadOrder',
+            'ReadCheckResults',
             'ReadProformaInvoice',
             'ReadPayment',
             'ReadCustomer',

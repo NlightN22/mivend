@@ -93,6 +93,16 @@ separate permission so viewing a page never implies being able to act on it. `Re
 gates requeueing failed and rebuilding skipped outbound events (issue #200); it is granted explicitly
 to a role, nothing inherits it from `ManageErpIntegration`.
 
+### Check results and policies (#237)
+
+`ReadCheckResults` is granted to every role that sees orders in the manager portal (operator, manager,
+department-head, general-director, security-officer, portal-admin): the findings concern the orders they
+already read, and `checkResults` still passes through the order visibility scope (a foreign order returns
+nothing). `ManageCheckPolicies` (consequence policies) stays with general-director and portal-admin.
+`recomputeOrderChecks` writes results and takes the order lock, so it needs `ReadCheckResults` AND
+`ConfirmOrder` (the permission of the other staff order actions: confirm, release, set contract);
+`@Allow` is any-of, so the second one is checked in the resolver.
+
 ## Layer 3: `AccessScopeService` — one service, reused everywhere
 
 **Rule: row-level visibility filtering is a single, reusable service — never copy-pasted

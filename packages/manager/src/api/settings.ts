@@ -101,6 +101,8 @@ export const PERMISSION_CATEGORIES: { key: string; label: string; permissionName
         permissionNames: [
             'ManageAccessControl',
             'ManageApprovalWorkflows',
+            'ReadCheckResults',
+            'ManageCheckPolicies',
             'ReadEntityHistory',
             'ReadAdministrator',
             'UpdateAdministrator',

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { PERMISSIONS_METADATA_KEY } from '@vendure/core';
+import { ForbiddenError, PERMISSIONS_METADATA_KEY } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
@@ -99,6 +99,22 @@ describe('order subject helpers and gates', () => {
             OrderChecksResolver.prototype.recomputeOrderChecks,
         );
         expect(gate).toEqual([CustomPermission.ReadCheckResults.Permission]);
+    });
+
+    it('recomputeOrderChecks denies a read-only role and never reaches the service', async () => {
+        const orderChecks = { recompute: vi.fn(async () => []) };
+        const resolver = new OrderChecksResolver(orderChecks as never);
+        const readOnly = {
+            userHasPermissions: (p: string[]) =>
+                p[0] === CustomPermission.ReadCheckResults.Permission,
+        } as unknown as RequestContext;
+        await expect(resolver.recomputeOrderChecks(readOnly, { orderId: '1' })).rejects.toThrow(
+            ForbiddenError,
+        );
+        expect(orderChecks.recompute).not.toHaveBeenCalled();
+        const staff = { userHasPermissions: () => true } as unknown as RequestContext;
+        await resolver.recomputeOrderChecks(staff, { orderId: '1' });
+        expect(orderChecks.recompute).toHaveBeenCalledTimes(1);
     });
 
     it('registers the order subject with only info, warn and hold', () => {
