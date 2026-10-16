@@ -1,15 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ChecksService } from '@mivend/plugin-checks';
 
 import { ORDER_SUBJECT_TYPE } from './order-check-subject';
-import { loggerCtx } from './types';
 
 const PAGE_SIZE = 200;
-const MAX_PAGES = 20;
 
-// Only orders that already hold fresh stored findings are candidates: the set is small by
-// construction, so one indexed query per change is enough. Each flag takes the order lock.
+// Only orders that already hold fresh stored findings are candidates (partial index on them).
+// Keyset pages by order id, no cap; each flag takes the order lock, ascending so callers cannot deadlock.
 @Injectable()
 export class OrderCheckStaleService {
     constructor(
@@ -50,7 +48,8 @@ export class OrderCheckStaleService {
         param: unknown,
     ): Promise<number> {
         let marked = 0;
-        for (let page = 0; page < MAX_PAGES; page += 1) {
+        let lastId = 0;
+        for (;;) {
             const rows: Array<{ id: number }> = await this.connection.rawConnection.query(
                 `WITH cand AS (
                      SELECT DISTINCT "subjectId"::int AS id FROM check_result
@@ -58,16 +57,16 @@ export class OrderCheckStaleService {
                  SELECT DISTINCT cand.id FROM cand
                  JOIN "order" o ON o.id = cand.id AND o.state <> 'Cancelled'
                  ${joinsAndWhere}
+                   AND cand.id > $2
                  ORDER BY cand.id LIMIT ${PAGE_SIZE}`,
-                [param],
+                [param, lastId],
             );
             for (const row of rows) {
                 await this.markOrder(ctx, String(row.id));
             }
             marked += rows.length;
             if (rows.length < PAGE_SIZE) return marked;
+            lastId = rows[rows.length - 1].id;
         }
-        Logger.warn(`Order check stale marking stopped at ${marked} orders`, loggerCtx);
-        return marked;
     }
 }
