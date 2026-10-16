@@ -46,8 +46,10 @@ dev DB, which is not deterministic (real usage, other test runs, manual QA all l
 behind).
 
 `global-setup.ts` also assigns the e2e counterparty (`e2e-cnt-001`) to `petr.manager@mivend.dev`
-via the real `reassignCounterpartyManager` mutation (logged in as `olga.depthead@mivend.dev`,
-who has `ReassignCounterpartyManager` within her own department) — this is what makes
+via the real `reassignCounterpartyManager` mutation (logged in as `anna.portaladmin@mivend.dev`:
+since Vendure 3.7.3 a department head cannot read other administrators, so her own reassignment
+is refused), and sets both e2e counterparties' `branchId` to the central `Branch.id` through
+`upsertCounterparty` (erp-import never writes it) — this is what makes
 `manager-manager`'s `"own"` access scope see the same test data as `manager-operator`/
 `manager-department-head`'s `"department"` scope. All three role projects run the exact same
 spec files with no skips.

@@ -107,6 +107,33 @@ export default async function globalSetup(): Promise<void> {
     if (!centralBranchId)
         throw new Error('Seeded branch "branch-central" not found; run make seed');
 
+    // erp-import never writes Counterparty.branchId either; department scope needs the Branch row id.
+    for (const record of seedRecords) {
+        if (record.type !== 'counterparty') continue;
+        await adminGql(
+            `mutation($erpId: String!, $legalName: String!, $shortName: String!, $creditLimit: Int!,
+                $creditBalance: Int!, $paymentDelayDays: Int!, $priceType: String!, $isActive: Boolean!,
+                $branchId: String) {
+                upsertCounterparty(erpId: $erpId, legalName: $legalName, shortName: $shortName,
+                    creditLimit: $creditLimit, creditBalance: $creditBalance,
+                    paymentDelayDays: $paymentDelayDays, priceType: $priceType, isActive: $isActive,
+                    branchId: $branchId) { id }
+            }`,
+            {
+                erpId: record.data.erpId,
+                legalName: record.data.legalName,
+                shortName: record.data.shortName,
+                creditLimit: record.data.creditLimit,
+                creditBalance: record.data.creditBalance,
+                paymentDelayDays: record.data.paymentDelayDays,
+                priceType: record.data.priceType,
+                isActive: record.data.isActive,
+                branchId: centralBranchId,
+            },
+            adminToken,
+        );
+    }
+
     const warehousesResult = await adminGql<{ warehouses: { branchId: string | null }[] }>(
         `query { warehouses { branchId } }`,
         undefined,
@@ -220,11 +247,11 @@ export default async function globalSetup(): Promise<void> {
     const order = await createConfirmedOrder(operatorToken, customerId, productVariantId);
     fs.writeFileSync(path.join(AUTH_DIR, 'e2e-order.json'), JSON.stringify(order));
 
-    // department-head may run reassignCounterpartyManager only within their own department, and the
-    // e2e counterparty is in dept-sales, so this goes through the real mutation, not a DB write.
-    const deptHeadToken = await adminTokenFor(
-        MANAGER_ACCOUNTS.departmentHead.username,
-        MANAGER_ACCOUNTS.departmentHead.password,
+    // Portal-admin reassigns without scope limits; a department head no longer sees other admins
+    // since Vendure 3.7.3 restricts administrator reads, which would block the whole suite here.
+    const reassignerToken = await adminTokenFor(
+        MANAGER_ACCOUNTS.portalAdmin.username,
+        MANAGER_ACCOUNTS.portalAdmin.password,
     );
 
     // counterparties returns { items, totalItems }; take:200 is a bound matching the stopgap used
@@ -234,7 +261,7 @@ export default async function globalSetup(): Promise<void> {
     }>(
         `query { counterparties(options: { take: 200 }) { items { id erpId } } }`,
         undefined,
-        deptHeadToken,
+        reassignerToken,
     );
     const e2eCounterpartyId = counterpartiesResult.data.counterparties.items.find(
         c => c.erpId === 'e2e-cnt-001',
@@ -242,20 +269,20 @@ export default async function globalSetup(): Promise<void> {
 
     const teamResult = await adminGql<{
         teamMembers: { id: string; firstName: string; lastName: string }[];
-    }>(`query { teamMembers { id firstName lastName } }`, undefined, deptHeadToken);
+    }>(`query { teamMembers { id firstName lastName } }`, undefined, adminToken);
     const managerAdminId = teamResult.data.teamMembers.find(
         m => m.firstName === 'Petr' && m.lastName === 'Manager',
     )?.id;
 
-    if (e2eCounterpartyId && managerAdminId) {
-        await adminGql(
-            `mutation($cid: ID!, $aid: ID!) {
-                reassignCounterpartyManager(counterpartyId: $cid, administratorId: $aid) { id }
-            }`,
-            { cid: e2eCounterpartyId, aid: managerAdminId },
-            deptHeadToken,
-        );
-    }
+    if (!e2eCounterpartyId || !managerAdminId)
+        throw new Error('e2e-cnt-001 or Petr Manager not found');
+    await adminGql(
+        `mutation($cid: ID!, $aid: ID!) {
+            reassignCounterpartyManager(counterpartyId: $cid, administratorId: $aid) { id }
+        }`,
+        { cid: e2eCounterpartyId, aid: managerAdminId },
+        reassignerToken,
+    );
 
     // DiscountGrant is materialized only on approval and has no erp-import record type, so seed
     // through requestDiscountGrant -> decideDiscountGrantRequest. Second grant must not leak onto e2e.
@@ -280,6 +307,10 @@ export default async function globalSetup(): Promise<void> {
         );
     }
 
+    const deptHeadToken = await adminTokenFor(
+        MANAGER_ACCOUNTS.departmentHead.username,
+        MANAGER_ACCOUNTS.departmentHead.password,
+    );
     const managerToken = await adminTokenFor(
         MANAGER_ACCOUNTS.manager.username,
         MANAGER_ACCOUNTS.manager.password,
