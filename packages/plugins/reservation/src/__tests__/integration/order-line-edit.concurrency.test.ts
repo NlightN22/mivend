@@ -32,7 +32,7 @@ function editService(): OrderLineEditService {
     return new OrderLineEditService(
         h.connection,
         { buildVisibleOrdersQuery: async () => qb } as never,
-        { dictionary: async () => ({ has: () => true }) } as never,
+        { dictionary: async () => ({ get: () => null }) } as never,
         h.service,
         orderService as never,
         { createHistoryEntryForOrder: async () => undefined } as never,
@@ -40,6 +40,8 @@ function editService(): OrderLineEditService {
         { requiredMultiple: async () => 1 } as never,
         { get: () => ({ forOrder: async () => [] }) } as never,
         { run: async () => undefined } as never,
+        { get: () => ({ submissionState: async () => 'none' }) } as never,
+        { afterLinesEdited: async () => undefined } as never,
     );
 }
 
@@ -72,10 +74,10 @@ describe('OrderLineEditService (integration, real Postgres, concurrency)', () =>
         const active = await h.dataSource
             .getRepository(TestReservation)
             .find({ where: { orderId: order.id, status: 'active' } });
-        expect(active).toHaveLength(1);
-        expect(active[0].quantity).toBe(finalLine.quantity);
-        // Either the edit won (reserve saw 4) or the reserve won and the edit was refused.
-        expect(results[0].status).toBe(finalLine.quantity === 10 ? 'rejected' : 'fulfilled');
+        // The edit always lands: it either runs first (reserve sees 4) or releases the reserve it finds.
+        expect(results[0].status).toBe('fulfilled');
+        expect(finalLine.quantity).toBe(4);
+        for (const row of active) expect(row.quantity).toBe(4);
     });
 
     it('two concurrent removals of different lines leave the order with its remaining line', async () => {

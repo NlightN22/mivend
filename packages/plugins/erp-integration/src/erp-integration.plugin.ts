@@ -8,6 +8,7 @@ import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { NotificationPlugin } from '@mivend/plugin-notification';
+import { AcquiringPlugin } from '@mivend/plugin-acquiring';
 import { OrderIdentityPlugin } from '@mivend/plugin-order-identity';
 import { ChecksPlugin } from '@mivend/plugin-checks';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
@@ -103,6 +104,7 @@ import { IntegrationInboxIssueResolver } from './integration-inbox-issue.resolve
 import { IntegrationEventListService } from './integration-event-list.service';
 import { IntegrationInboxReplayStateService } from './integration-inbox-replay-state.service';
 import { IntegrationInboxReplayService } from './integration-inbox-replay.service';
+import { OrderLinesEditAdapter } from './order-lines-edit.adapter';
 import { OrderCancellationAdapter } from './order-cancellation.adapter';
 import { OutboundGateway } from './outbound-gateway';
 import { IntegrationOutboxRecoveryService } from './integration-outbox-recovery.service';
@@ -124,6 +126,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         CounterpartyPlugin,
         DocumentsPlugin,
         ReservationPlugin,
+        AcquiringPlugin,
         ChecksPlugin,
         OrderIdentityPlugin,
         NotificationPlugin,
@@ -158,6 +161,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         SchemaRegistryClient,
         OrderSubmittedListener,
         OrderCancellationAdapter,
+        OrderLinesEditAdapter,
         CategoryOverrideRecomputeListener,
         ProductTaxCodeFlagService,
         StockOrganizationReadService,

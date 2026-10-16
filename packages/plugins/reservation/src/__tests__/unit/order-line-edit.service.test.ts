@@ -7,12 +7,16 @@ const ctx = { activeUserId: 'admin-1' } as unknown as RequestContext;
 
 interface Setup {
     erpStatus?: string | null;
+    erpOrderId?: string | null;
     activeReservation?: boolean;
     settledPayments?: number;
     isExternal?: boolean;
     multiple?: number;
     lines?: Array<{ id: string; quantity: number }>;
     fitting?: Record<string, number>;
+    submission?: 'none' | 'pending' | 'sent';
+    skipped?: boolean;
+    shipped?: boolean;
 }
 
 function build(setup: Setup = {}) {
@@ -27,7 +31,11 @@ function build(setup: Setup = {}) {
         state: 'PaymentAuthorized',
         customerId: 'c1',
         lines,
-        customFields: { erpStatus: setup.erpStatus ?? null, isExternal: setup.isExternal ?? false },
+        customFields: {
+            erpStatus: setup.erpStatus ?? null,
+            erpOrderId: setup.erpOrderId ?? null,
+            isExternal: setup.isExternal ?? false,
+        },
     };
     const saved: unknown[] = [];
     const removed: unknown[] = [];
@@ -51,6 +59,9 @@ function build(setup: Setup = {}) {
         andWhere: () => qb,
         getOne: async () => order,
     };
+    const released = vi.fn(async () => 1);
+    const skipPending = vi.fn(async () => setup.skipped ?? true);
+    const editHook = vi.fn(async () => undefined);
     const orderChecks = { run: vi.fn(async () => undefined) };
     const orderService = {
         findOne: async () => order,
@@ -61,8 +72,9 @@ function build(setup: Setup = {}) {
     const service = new OrderLineEditService(
         connection as never,
         { buildVisibleOrdersQuery: async () => qb } as never,
-        { dictionary: async () => ({ has: () => true }) } as never,
+        { dictionary: async () => ({ get: () => null }) } as never,
         {
+            releaseReservations: released,
             findForOrder: async () =>
                 setup.activeReservation ? [{ status: 'active' }] : [{ status: 'released' }],
         } as never,
@@ -85,8 +97,27 @@ function build(setup: Setup = {}) {
             }),
         } as never,
         orderChecks as never,
+        {
+            get: () => ({
+                submissionState: async () => setup.submission ?? 'none',
+                skipPendingSubmission: skipPending,
+            }),
+        } as never,
+        { afterLinesEdited: editHook } as never,
     );
-    return { service, orderChecks, orderService, history, eventBus, saved, removed, lines };
+    return {
+        service,
+        released,
+        skipPending,
+        editHook,
+        orderChecks,
+        orderService,
+        history,
+        eventBus,
+        saved,
+        removed,
+        lines,
+    };
 }
 
 describe('OrderLineEditService', () => {
@@ -107,21 +138,47 @@ describe('OrderLineEditService', () => {
     });
 
     it.each([
-        ['an active reservation', { activeReservation: true }, /Release the reservation/],
-        ['a received payment', { settledPayments: 1 }, /payment has already been received/],
         ['an order from the ERP', { isExternal: true }, /managed there/],
+        ['an order already sent to the ERP', { submission: 'sent' }, /already sent/],
     ])('refuses to edit %s', async (_name, setup, message) => {
         const t = build(setup as Setup);
         await expect(t.service.setQuantity(ctx, '5', '1', 4)).rejects.toThrow(message);
         expect(t.lines[0].quantity).toBe(10);
     });
 
+    it('allows an edit after payment was received', async () => {
+        const t = build({ settledPayments: 1 });
+        await t.service.setQuantity(ctx, '5', '1', 4);
+        expect(t.lines[0].quantity).toBe(4);
+    });
+
+    it('releases an active reservation, skips the unsent confirmation and notifies the edit hook', async () => {
+        const t = build({ activeReservation: true, submission: 'pending' });
+        await t.service.setQuantity(ctx, '5', '1', 4);
+        expect(t.skipPending).toHaveBeenCalled();
+        expect(t.released).toHaveBeenCalled();
+        expect(t.editHook).toHaveBeenCalledWith(expect.anything(), '5');
+    });
+
+    it('refuses when the pending confirmation was sent meanwhile', async () => {
+        const t = build({ activeReservation: true, submission: 'pending', skipped: false });
+        await expect(t.service.setQuantity(ctx, '5', '1', 4)).rejects.toThrow(/already sent/);
+        expect(t.released).not.toHaveBeenCalled();
+    });
+
     it('refuses to edit an order the ERP has registered', async () => {
-        const t = build({ erpStatus: 'registered' });
+        const t = build({ erpOrderId: 'erp-1' });
+        await expect(t.service.setQuantity(ctx, '5', '1', 4)).rejects.toThrow(/already sent/);
+    });
+
+    it('refuses once the warehouse has started', async () => {
+        const t = build({ erpStatus: 'picking' });
         (t.service as unknown as { statuses: unknown }).statuses = {
-            dictionary: async () => ({ has: () => false }),
+            dictionary: async () => ({
+                get: () => ({ shipped: false, warehouseStarted: true, rejected: false }),
+            }),
         };
-        await expect(t.service.setQuantity(ctx, '5', '1', 4)).rejects.toThrow(/already registered/);
+        await expect(t.service.setQuantity(ctx, '5', '1', 4)).rejects.toThrow(/warehouse/);
     });
 
     it('refuses to remove the last line', async () => {

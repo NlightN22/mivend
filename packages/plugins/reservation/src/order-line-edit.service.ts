@@ -7,7 +7,6 @@ import {
     Order,
     OrderLine,
     OrderService,
-    Payment,
     RequestContext,
     TransactionalConnection,
     UserInputError,
@@ -21,8 +20,19 @@ import { OrderLinesEditedEvent } from './order-line-edit.events';
 import { OrderLineAvailabilityPortRegistry } from './order-line-availability.port';
 import type { LineAvailability } from './order-line-availability.port';
 import { planSplit } from './order-line-split';
+import { decideEdit, erpStageFacts } from './order-cancellation.decision';
+import type { EditRefusal } from './order-cancellation.decision';
+import { OrderCancellationPortRegistry } from './order-cancellation.port';
+import { OrderLinesEditPortRegistry } from './order-line-edit.port';
 import { OrderChecksService } from './order-checks.service';
 import { ReservationService } from './reservation.service';
+
+const EDIT_REFUSALS: Record<EditRefusal, string> = {
+    cancelled: 'The order is cancelled',
+    shipped: 'The order has shipped',
+    'in-progress': 'The warehouse has started on the order',
+    'sent-to-erp': 'The order was already sent to the ERP; cancel it instead',
+};
 
 export interface SplitOutcome {
     lineId: string;
@@ -46,6 +56,8 @@ export class OrderLineEditService {
         private packaging: PackagingPolicyService,
         private availabilityPorts: OrderLineAvailabilityPortRegistry,
         private orderChecks: OrderChecksService,
+        private cancelPorts: OrderCancellationPortRegistry,
+        private editPorts: OrderLinesEditPortRegistry,
     ) {}
 
     availability(ctx: RequestContext, orderId: ID): Promise<LineAvailability[]> {
@@ -161,29 +173,48 @@ export class OrderLineEditService {
                 },
                 false,
             );
+            await this.editPorts.afterLinesEdited(txCtx, String(orderId));
             await this.orderChecks.run(txCtx, String(orderId), 'on-edit');
             this.eventBus.publish(new OrderLinesEditedEvent(txCtx, orderId, kind));
         });
     }
 
+    // Same stage facts as order cancellation (decideEdit). A reservation does not block an edit: it is
+    // released here under the same lock, the order returns to the confirmation queue and staff re-confirm.
     private async assertEditable(ctx: RequestContext, order: Order): Promise<void> {
         if (order.customFields?.isExternal === true) {
             throw new UserInputError('Orders from the ERP are managed there');
         }
-        if (order.state === 'Cancelled') throw new UserInputError('The order is cancelled');
-        const erpStatus = order.customFields?.erpStatus;
-        if (erpStatus != null && !(await this.statuses.dictionary(ctx)).has(erpStatus, 'initial')) {
-            throw new UserInputError('The order is already registered in the ERP');
-        }
+        const fields = order.customFields;
+        const dictionary = await this.statuses.dictionary(ctx);
+        const port = this.cancelPorts.get();
+        const submission = fields.erpOrderId
+            ? 'sent'
+            : await port.submissionState(ctx, String(order.id));
+        const verdict = decideEdit({
+            orderState: order.state,
+            erpStatus: erpStageFacts(dictionary, fields.erpStatus),
+            erpOrderId: fields.erpOrderId ?? null,
+            latestFulfillmentState: fields.latestFulfillmentState ?? null,
+            hasSettledPayment: false,
+            cancelRequestStatus: fields.cancelRequestStatus ?? null,
+            submission,
+            requestRegistered: true,
+        });
+        if (!verdict.allowed) throw new UserInputError(EDIT_REFUSALS[verdict.reason]);
         const rows = await this.reservations.findForOrder(ctx, order.id);
-        if (rows.some(r => r.status === 'active')) {
-            throw new UserInputError('Release the reservation before editing the lines');
+        if (!rows.some(r => r.status === 'active')) return;
+        if (
+            submission === 'pending' &&
+            !(await port.skipPendingSubmission(
+                ctx,
+                String(order.id),
+                'order lines edited before it was sent',
+            ))
+        ) {
+            throw new UserInputError(EDIT_REFUSALS['sent-to-erp']);
         }
-        const settled = await this.connection
-            .getRepository(ctx, Payment)
-            .count({ where: { order: { id: order.id }, state: 'Settled' } });
-        if (settled > 0)
-            throw new UserInputError('A payment has already been received for this order');
+        await this.reservations.releaseReservations(ctx, order.id);
     }
 
     private assertNotLast(order: Order, removing: number): void {

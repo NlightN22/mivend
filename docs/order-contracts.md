@@ -131,11 +131,26 @@ product storage unit is not published either: stock is taken as kept in the base
 ## Editing an order's lines before confirmation (#233)
 
 Staff (permission `ConfirmOrder`, order visibility scope) can change a line quantity, remove a line, or cut the
-order to what stock covers. Allowed only while the order has no active reservation, is not registered in the ERP,
-is not an ERP-owned order and has no settled payment; refused otherwise with the reason. It takes
+order to what stock covers. The stage rule is `decideEdit`, built on the same facts as order cancellation
+(`order-cancellation.decision.ts`): refused when the order is cancelled, shipped, started by the warehouse, or already
+sent to the ERP (`erpOrderId` or the confirmed event already published); then only cancelling is possible. A paid
+order stays editable, and so does one the ERP rejected. An ERP-owned order is never editable. The edit takes
 `reserve-order:<id>`, so an edit and a reserve of the same order serialize. A quantity must respect the pack
 multiple; the last line cannot be removed (cancel the order instead).
 
+- **Reservation.** An active reservation does not block an edit. Under the same lock the edit skips the still unsent
+  `order.confirmed` outbox row (refused if it was sent meanwhile) and releases the reservation through
+  `ReservationService.releaseReservations`; the order goes back to the confirmation queue (`RELEASED`) and staff
+  confirm again, which re-runs the `pre-reserve` checks and reserves the new quantities. No automatic re-reserve:
+  it could fail on stock mid-edit.
+- **Proforma invoices.** After the lines change, `OrderLinesEditPortRegistry` calls the erp-integration adapter,
+  which reissues the order's proforma invoices (new version per organization, an organization left without lines
+  is cancelled) when the order already has any, in the same transaction.
+- **Overpayment.** If the edited total falls below what was paid, nothing is credited by mivend: payments are money
+  on the counterparty balance held in the ERP, and an overpayment is an advance the ERP offsets against the next sales
+  invoice (`docs/payments.md`); the order page shows "overpaid by Z" from `erpPaidAmount`. mivend has no refund-to-balance
+  mechanism and none was invented.
+- No customer notification and no credit-limit re-evaluation on an edit (owner decision).
 - **One availability function.** `OrderLineAvailabilityService` (erp-integration, registered into plugin-reservation's
   `OrderLineAvailabilityPortRegistry`) gives per line: free quantity per branch warehouse (the reserve's
   `freeQuantity` rule, best location per warehouse) and the stock of the line's OWN organization (the check-2 rule,
@@ -150,8 +165,6 @@ multiple; the last line cannot be removed (cancel the order instead).
   `adjustOrderLine` refuses placed orders), an order history note records who changed what, the checks are
   recomputed through `OrderChecksService.run(..., 'on-edit')` in the same transaction and
   `OrderLinesEditedEvent` is published.
-- **Not done:** customer notification, proforma invoice re-issue (they stay on the old content until a new version
-  is requested) and credit-limit re-evaluation are not triggered by an edit.
 
 ## `order.confirmed` contents
 

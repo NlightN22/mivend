@@ -39,15 +39,37 @@ const SHIPPED_FULFILLMENT_STATES = ['Shipped', 'Delivered'];
 
 // Pure state decision of "what may happen to this order now" (docs/order-contracts.md, "Reserve and
 // order cancellation"); the service performs the chosen action under the order's lock.
-export function decideCancellation(facts: CancelFacts): CancelDecision {
-    if (facts.orderState === 'Cancelled') return { action: 'already-cancelled' };
-
-    const shipped =
+function isShipped(facts: CancelFacts): boolean {
+    return (
         SHIPPED_ORDER_STATES.includes(facts.orderState) ||
         facts.erpStatus?.shipped === true ||
         (facts.latestFulfillmentState !== null &&
-            SHIPPED_FULFILLMENT_STATES.includes(facts.latestFulfillmentState));
-    if (shipped) return { action: 'refuse', reason: 'shipped' };
+            SHIPPED_FULFILLMENT_STATES.includes(facts.latestFulfillmentState))
+    );
+}
+
+export type EditRefusal = 'cancelled' | 'shipped' | 'in-progress' | 'sent-to-erp';
+
+// Lines may change until the order is sent to the ERP (#233): the same stage facts as cancellation,
+// but a paid order stays editable and an ERP-rejected one (never created there) may be fixed.
+export function decideEdit(
+    facts: CancelFacts,
+): { allowed: true } | { allowed: false; reason: EditRefusal } {
+    if (facts.orderState === 'Cancelled') return { allowed: false, reason: 'cancelled' };
+    if (isShipped(facts)) return { allowed: false, reason: 'shipped' };
+    if (facts.erpStatus?.warehouseStarted === true)
+        return { allowed: false, reason: 'in-progress' };
+    if (facts.erpStatus?.rejected === true) return { allowed: true };
+    if (facts.erpOrderId || facts.submission === 'sent') {
+        return { allowed: false, reason: 'sent-to-erp' };
+    }
+    return { allowed: true };
+}
+
+export function decideCancellation(facts: CancelFacts): CancelDecision {
+    if (facts.orderState === 'Cancelled') return { action: 'already-cancelled' };
+
+    if (isShipped(facts)) return { action: 'refuse', reason: 'shipped' };
 
     if (facts.erpStatus?.warehouseStarted === true) {
         return { action: 'refuse', reason: 'in-progress' };

@@ -70,8 +70,7 @@ const canEditLines = computed(
         editable.value &&
         authStore.hasPermission('ConfirmOrder') &&
         !!order.value &&
-        isNotRegisteredInErp(order.value.customFields) &&
-        !reservations.value.some(r => r.status === 'active'),
+        isNotRegisteredInErp(order.value.customFields),
 );
 
 const packagingLabel = computed(() => {
