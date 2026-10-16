@@ -15,7 +15,7 @@ import { IntegrationOutboxProcessorService } from '../../../integration-outbox-p
 import { IntegrationOutboxRecoveryService } from '../../../integration-outbox-recovery.service';
 import { IntegrationOutboxService } from '../../../integration-outbox.service';
 import { OUTBOUND_EVENT_TYPES } from '../../../outbound-event-types';
-import { outboundSend, outboundSkip } from '../../../outbound-gateway';
+import { OutboundGateway, outboundSend, outboundSkip } from '../../../outbound-gateway';
 import type { OrderSubmittedPayload } from '../../../schemas/order-submitted.schema';
 import type { OutboundBuildResult } from '../../../outbound-gateway';
 
@@ -103,6 +103,37 @@ describe('requeueFailed', () => {
 
         expect(publish).toHaveBeenCalledTimes(1);
         expect((await repo().findOneByOrFail({ id: failed.id })).status).toBe('published');
+    });
+});
+
+describe('rebuildSkipped racing the live enqueue', () => {
+    it('a live enqueue and a rebuild of the same order produce exactly one pending row', async () => {
+        const gateway = new OutboundGateway(dataSource, new IntegrationOutboxService());
+        const skipped = await insertRow({ status: 'skipped', lastError: 'held' });
+        build.mockResolvedValue(outboundSend([{ payload: { ...subject, rebuilt: true } }]));
+
+        const live = dataSource.transaction(async em => {
+            await em.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+                `reserve-order:${subject.orderId}`,
+            ]);
+            await gateway.enqueue({
+                eventType: 'order.confirmed',
+                subject,
+                build: async () => {
+                    const sent = await gateway.hasActiveEntry('order.confirmed', subject.orderId);
+                    await new Promise(r => setTimeout(r, 300));
+                    return sent
+                        ? outboundSkip('already submitted')
+                        : outboundSend([{ payload: subject }]);
+                },
+            });
+        });
+        await new Promise(r => setTimeout(r, 50));
+        const rebuilt = recovery.rebuildSkipped(ctx, skipped.id);
+        await Promise.all([live, rebuilt]);
+
+        expect(await repo().count({ where: { status: 'pending' } })).toBe(1);
+        expect((await repo().findOneByOrFail({ id: skipped.id })).status).toBe('resolved');
     });
 });
 

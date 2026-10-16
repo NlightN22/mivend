@@ -23,6 +23,7 @@ import type { OutboundBuildResult } from '../../../outbound-gateway';
 // Real Postgres: a send held at pre-send-to-erp leaves a skipped row that a release must re-drive.
 let dataSource: DataSource;
 const build = vi.fn<() => Promise<OutboundBuildResult>>();
+let service: HeldSendRedriveService;
 const handlers = new Map<string, (event: unknown) => Promise<void>>();
 const ctx = {} as RequestContext;
 
@@ -65,13 +66,14 @@ beforeAll(async () => {
             subscribe: (fn: (event: unknown) => Promise<void>) => handlers.set(cls.name, fn),
         }),
     };
-    new HeldSendRedriveService(
+    service = new HeldSendRedriveService(
         eventBus as never,
         dataSource,
         recovery,
         { create: async () => ctx } as never,
         { instanceType: 'central' } as never,
-    ).onApplicationBootstrap();
+    );
+    service.onApplicationBootstrap();
 });
 
 beforeEach(() => {
@@ -124,6 +126,35 @@ describe('held send re-drive', () => {
 
         expect(await statusOf(a.id)).toBe('skipped');
         expect(await repo().count({ where: { status: 'pending' } })).toBe(0);
+    });
+
+    it('the sweep sends a held row whose release event was never seen (cause gone on data)', async () => {
+        const a = await heldRow('1');
+
+        await service.sweep();
+
+        expect(await statusOf(a.id)).toBe('resolved');
+    });
+
+    it('the sweep keeps retrying a rebuild that failed until it succeeds', async () => {
+        const a = await heldRow('1');
+        build.mockRejectedValueOnce(new Error('db blip'));
+
+        await service.sweep();
+        expect(await statusOf(a.id)).toBe('skipped');
+        expect((await repo().findOneByOrFail({ id: a.id })).lastError).toMatch(/rebuild failed/);
+
+        await service.sweep();
+        expect(await statusOf(a.id)).toBe('resolved');
+    });
+
+    it('the sweep leaves a send that is still held skipped and sends nothing', async () => {
+        const a = await heldRow('1');
+        build.mockResolvedValue(outboundSkip(HELD_SKIP_REASON));
+
+        expect(await service.sweep()).toBe(0);
+
+        expect(await statusOf(a.id)).toBe('skipped');
     });
 
     it('ignores other stages, policies that were not holding, and rows skipped for other reasons', async () => {

@@ -95,6 +95,7 @@ import { OrderCheckHealthService } from './order-checks/order-check-health.servi
 import { OrderCheckProvidersRegistrar } from './order-checks/order-check-providers.registrar';
 import { OrderSendHoldService } from './order-checks/order-send-hold.service';
 import { HeldSendRedriveService } from './order-checks/held-send-redrive.service';
+import { createHeldSendRedriveTask } from './order-checks/held-send-redrive.scheduled-task';
 import { RejectedOrderHealthService } from './rejected-order-health.service';
 import { IntegrationEventListResolver } from './integration-event-list.resolver';
 import { IntegrationInboxIssueResolver } from './integration-inbox-issue.resolver';
@@ -226,6 +227,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
                 createIntegrationInboxRetentionTask(ErpIntegrationPlugin.options),
                 createIntegrationInboxReplaySweepTask(ErpIntegrationPlugin.options),
                 createIntegrationOutboxTask(ErpIntegrationPlugin.options),
+                createHeldSendRedriveTask(ErpIntegrationPlugin.options),
                 createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
                 createCategoryTreeRecomputeTask(ErpIntegrationPlugin.options),
                 createCreditLimitRecomputeTask(ErpIntegrationPlugin.options),

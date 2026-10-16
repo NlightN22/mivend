@@ -11,6 +11,7 @@ import type { ErpIntegrationPluginOptions } from '../types';
 import { HELD_SKIP_REASON } from './order-send-hold.service';
 
 const loggerCtx = 'HeldSendRedrive';
+const SWEEP_LIMIT = 200;
 
 // A send held at pre-send-to-erp leaves a `skipped` row; a staff release or a policy that stops
 // holding re-drives it through the normal rebuild, so a hold can never block the send for good.
@@ -45,20 +46,35 @@ export class HeldSendRedriveService implements OnApplicationBootstrap {
     }
 
     async redrive(orderId?: string): Promise<void> {
+        await this.rebuildHeld(orderId, 1000);
+    }
+
+    // Periodic, idempotent: re-evaluates every held send, so a release whose event was missed, a failed
+    // rebuild, or a hold cause that disappeared with new data all end in a send. Oldest attempt first.
+    async sweep(): Promise<number> {
+        return this.rebuildHeld(undefined, SWEEP_LIMIT);
+    }
+
+    private async rebuildHeld(orderId: string | undefined, limit: number): Promise<number> {
         const rows: Array<{ id: string }> = await this.dataSource.query(
             `SELECT id FROM integration_outbox
-              WHERE event_type = 'order.confirmed' AND status = 'skipped' AND last_error = $1
+              WHERE event_type = 'order.confirmed' AND status = 'skipped'
+                AND (last_error = $1 OR last_error LIKE 'rebuild failed:%')
                 AND ($2::text IS NULL OR payload ->> 'orderId' = $2)
-              ORDER BY id`,
+              ORDER BY last_error_at ASC NULLS FIRST, id LIMIT ${limit}`,
             [HELD_SKIP_REASON, orderId ?? null],
         );
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        let queued = 0;
         for (const row of rows) {
             try {
-                await this.recovery.rebuildSkipped(ctx, Number(row.id));
+                if ((await this.recovery.rebuildSkipped(ctx, Number(row.id))) === 'queued') {
+                    queued += 1;
+                }
             } catch (error) {
                 Logger.error(`Re-drive of held send ${row.id} failed: ${String(error)}`, loggerCtx);
             }
         }
+        return queued;
     }
 }

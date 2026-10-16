@@ -61,19 +61,23 @@ export class IntegrationOutboxRecoveryService {
 
             const eventType = row.eventType as OutboundEventType;
             const subjectKey = OUTBOUND_EVENT_TYPES[eventType].subjectKey;
-            const alreadySent = await em.query(
-                `SELECT 1 FROM integration_outbox
+            const isAlreadySent = async (): Promise<boolean> =>
+                (
+                    await em.query(
+                        `SELECT 1 FROM integration_outbox
                  WHERE event_type = $1 AND status IN ('pending', 'published')
                    AND payload ->> $2 = $3
                  LIMIT 1`,
-                [row.eventType, subjectKey, String(row.payload[subjectKey])],
-            );
-            if (alreadySent.length > 0) {
+                        [row.eventType, subjectKey, String(row.payload[subjectKey])],
+                    )
+                ).length > 0;
+            const markAlreadySent = async (): Promise<'already-sent'> => {
                 row.status = 'resolved';
                 row.lastError = 'already sent by another outbox row';
                 await em.save(row);
-                return 'already-sent' as const;
-            }
+                return 'already-sent';
+            };
+            if (await isAlreadySent()) return markAlreadySent();
 
             // The builder reads committed data on its own connection; holding this row lock does
             // not block it. A throw is recorded on the row (and rethrown after commit), not lost.
@@ -88,6 +92,14 @@ export class IntegrationOutboxRecoveryService {
                 return 'still-skipped' as const;
             }
             if (result.kind === 'send' && result.events.length > 0) {
+                // Lock order: outbox row, then the order lock after the build (the build takes it on another connection).
+                // The live enqueue holds it across check + insert, so one of the two sees the other's row.
+                if (eventType === 'order.confirmed') {
+                    await em.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+                        `reserve-order:${String(row.payload.orderId)}`,
+                    ]);
+                    if (await isAlreadySent()) return markAlreadySent();
+                }
                 for (const event of result.events) {
                     await this.outbox.writeToOutbox(em, {
                         eventId: event.eventId,
