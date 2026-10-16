@@ -102,7 +102,12 @@ test('bottom nav and FAB are hidden on desktop/tablet, sidebar shows instead', a
 test('scroll-to-top button appears after scrolling down and scrolls back to top', async ({
     page,
 }) => {
+    // A short viewport and a loaded list keep the page scrollable past the button's threshold.
+    await page.setViewportSize({ width: 1280, height: 500 });
     await page.goto('/orders');
+    await expect(page.locator('.orders-data-table tbody tr').first()).toBeVisible({
+        timeout: 15000,
+    });
     const scrollUp = page.getByRole('button', { name: 'Scroll to top' });
     await expect(scrollUp).toBeHidden();
 
