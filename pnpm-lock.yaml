@@ -233,6 +233,9 @@ importers:
             '@mivend/plugin-approval-workflow':
                 specifier: workspace:*
                 version: link:../plugins/approval-workflow
+            '@mivend/plugin-checks':
+                specifier: workspace:*
+                version: link:../plugins/checks
             '@mivend/plugin-counterparty':
                 specifier: workspace:*
                 version: link:../plugins/counterparty
