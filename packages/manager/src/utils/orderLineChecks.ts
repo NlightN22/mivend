@@ -1,38 +1,38 @@
-import { findingTitle, type OrderCheckFinding, type OrgRef } from './orderCheckMessages';
+import { findingTitle, type OrderCheckFinding, type OrgBreakdown } from './orderCheckMessages';
+import type { OrderReservation } from '../api/reservation';
 
-export interface OrgContractRow {
+export interface OrgRow {
     id: string;
     name: string;
+    stock: number;
     hasContract: boolean;
+    selling: boolean;
 }
 
 export interface LineCheckView {
     needed: number;
-    warehouseAvailable: number | null;
+    available: number | null;
     stockShort: boolean;
     stockTitle: string | null;
-    storageStock: number | null;
-    eligibleStock: number | null;
-    eligibleNames: string[];
     contractOk: boolean;
     allowed: number;
     contractTitle: string | null;
-    orgRows: OrgContractRow[];
-    stale: boolean;
+    orgRows: OrgRow[];
 }
 
 const CONTRACT_CODE = 'erp.contract-with-storage-organization';
 const STOCK_CODE = 'erp.organization-stock';
 
-export function orgContractRows(
-    storage: OrgRef[] | undefined,
-    contract: OrgRef[] | undefined,
-): OrgContractRow[] {
-    const withContract = new Set((contract ?? []).map(o => o.id));
+export function orgRows(
+    storage: OrgBreakdown[] | undefined,
+    sellingId: string | undefined,
+): OrgRow[] {
     return (storage ?? []).map(o => ({
         id: o.id,
-        name: o.name,
-        hasContract: withContract.has(o.id),
+        name: o.name ?? o.id,
+        stock: o.stock,
+        hasContract: o.hasContract,
+        selling: o.id === sellingId,
     }));
 }
 
@@ -43,26 +43,26 @@ export function lineCheckView(
 ): LineCheckView {
     const contract = findings.find(f => f.checkCode === CONTRACT_CODE);
     const stock = findings.find(f => f.checkCode === STOCK_CODE);
-    const source = contract ?? stock;
-    const needed = stock?.facts.needed ?? contract?.facts.needed ?? quantity;
+    const source = stock ?? contract;
+    const needed = stock?.facts.needed ?? quantity;
     const contractOk = !contract;
+    const organization = source?.facts.organization;
     return {
         needed,
-        warehouseAvailable: warehouseAvailable ?? null,
+        available: stock ? (stock.facts.available ?? 0) : (warehouseAvailable ?? null),
         stockShort: !!stock || (warehouseAvailable !== undefined && warehouseAvailable < quantity),
         stockTitle: stock ? findingTitle(stock.messageKey) : null,
-        storageStock: stock?.facts.storageStock ?? null,
-        eligibleStock: stock ? (stock.facts.available ?? 0) : null,
-        eligibleNames: (stock?.facts.eligibleOrganizations ?? []).map(o => o.name),
         contractOk,
         allowed: contractOk ? needed : 0,
         contractTitle: contract ? findingTitle(contract.messageKey) : null,
-        orgRows: orgContractRows(
-            source?.facts.storageOrganizations,
-            source?.facts.contractOrganizations,
-        ),
-        stale: findings.some(f => f.stale),
+        orgRows: orgRows(source?.facts.storageOrganizations, organization?.id),
     };
+}
+
+export function lineReservedQuantity(reservations: OrderReservation[], lineId: string): number {
+    return reservations
+        .filter(r => r.status === 'active' && r.orderLineId === lineId)
+        .reduce((total, r) => total + r.quantity, 0);
 }
 
 export function checksSummary(findings: OrderCheckFinding[]): {

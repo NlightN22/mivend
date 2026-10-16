@@ -6,7 +6,8 @@ import { fetchAvailableStock } from '../../api/reservation';
 import { formatLineQuantity } from '../../composables/lineSalesUnit';
 import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
 import { findingsByLine } from '../../utils/orderCheckMessages';
-import { lineCheckView } from '../../utils/orderLineChecks';
+import { lineCheckView, lineReservedQuantity } from '../../utils/orderLineChecks';
+import type { OrderReservation } from '../../api/reservation';
 import OrderLineCheckCells from './OrderLineCheckCells.vue';
 import PriceAdjustmentPanel from '../order-create/PriceAdjustmentPanel.vue';
 
@@ -18,6 +19,7 @@ const props = defineProps<{
     packagesOnly: boolean;
     adjustmentRequests: PriceAdjustmentRequestSummary[];
     findings: OrderCheckFinding[];
+    reservations: OrderReservation[];
 }>();
 const emit = defineEmits<{ adjusted: [] }>();
 
@@ -96,28 +98,30 @@ function toggleAdjust(lineId: string): void {
         <table class="order-lines">
             <thead>
                 <tr>
-                    <th rowspan="2">SKU</th>
                     <th rowspan="2">Product</th>
-                    <th rowspan="2">Qty</th>
+                    <th rowspan="2" class="order-lines__num">Qty</th>
                     <th colspan="2" class="order-lines__group">Stock</th>
                     <th class="order-lines__group">Contract</th>
-                    <th rowspan="2">Unit price</th>
+                    <th class="order-lines__group">Reservation</th>
+                    <th rowspan="2" class="order-lines__num">Unit price</th>
                     <th rowspan="2">Adjustment</th>
-                    <th v-if="editable" rowspan="2"></th>
-                    <th rowspan="2">Line total</th>
+                    <th rowspan="2" class="order-lines__num">Line total</th>
                 </tr>
                 <tr>
-                    <th>Available</th>
-                    <th>Needed</th>
-                    <th>Allowed</th>
+                    <th class="order-lines__sub">Available</th>
+                    <th class="order-lines__sub">Needed</th>
+                    <th class="order-lines__sub">Allowed</th>
+                    <th class="order-lines__sub">Ordered</th>
                 </tr>
             </thead>
             <tbody>
                 <template v-for="line in lines" :key="line.id">
                     <tr>
-                        <td>{{ line.productVariant.sku }}</td>
-                        <td>{{ line.productVariant.name }}</td>
-                        <td>
+                        <td class="order-lines__product">
+                            <strong>{{ line.productVariant.name }}</strong>
+                            <span>{{ line.productVariant.sku }}</span>
+                        </td>
+                        <td class="order-lines__num">
                             {{
                                 formatLineQuantity(
                                     line.quantity,
@@ -134,8 +138,9 @@ function toggleAdjust(lineId: string): void {
                                     findingsByLineId.get(line.id) ?? [],
                                 )
                             "
+                            :reserved="lineReservedQuantity(reservations, line.id)"
                         />
-                        <td>{{ money(line.unitPriceWithTax) }}</td>
+                        <td class="order-lines__num">{{ money(line.unitPriceWithTax) }}</td>
                         <td>
                             <RouterLink
                                 v-if="adjustmentByLineId.get(line.id)?.approvalRequestId"
@@ -151,9 +156,8 @@ function toggleAdjust(lineId: string): void {
                             >
                                 {{ adjustmentByLineId.get(line.id)?.label }}
                             </MvStatusBadge>
-                        </td>
-                        <td v-if="editable">
                             <button
+                                v-if="editable"
                                 type="button"
                                 class="order-lines__adjust"
                                 @click="toggleAdjust(line.id)"
@@ -161,10 +165,10 @@ function toggleAdjust(lineId: string): void {
                                 Adjust price
                             </button>
                         </td>
-                        <td>{{ money(line.linePriceWithTax) }}</td>
+                        <td class="order-lines__num">{{ money(line.linePriceWithTax) }}</td>
                     </tr>
                     <tr v-if="openAdjustLineId === line.id">
-                        <td :colspan="editable ? 10 : 9">
+                        <td colspan="9">
                             <PriceAdjustmentPanel
                                 :order-id="orderId"
                                 :line="line"
@@ -216,7 +220,39 @@ function toggleAdjust(lineId: string): void {
     border-left: 1px solid var(--el-border-color, #e4e7ec);
 }
 
+.order-lines__num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.order-lines__sub {
+    text-align: center;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.order-lines__product {
+    min-width: 160px;
+}
+
+.order-lines__product strong,
+.order-lines__product span {
+    display: block;
+}
+
+.order-lines__product span {
+    color: var(--el-text-color-secondary, #6b7280);
+    font-size: 12px;
+}
+
+.order-lines td:not(.order-lines__product):not(.order-lines__num) {
+    text-align: center;
+}
+
 .order-lines__adjust {
+    display: block;
+    margin: 2px auto 0;
     background: none;
     border: none;
     color: var(--el-color-primary-dark-2, #008a70);

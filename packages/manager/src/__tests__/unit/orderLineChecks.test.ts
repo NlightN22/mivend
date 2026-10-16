@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
-import { checksSummary, lineCheckView, orgContractRows } from '../../utils/orderLineChecks';
+import type { OrderCheckFinding, OrgBreakdown } from '../../utils/orderCheckMessages';
+import type { OrderReservation } from '../../api/reservation';
+import {
+    checksSummary,
+    lineCheckView,
+    lineReservedQuantity,
+    orgRows,
+} from '../../utils/orderLineChecks';
 
-const A = { id: 'a', name: 'Org A' };
-const B = { id: 'b', name: 'Org B' };
+const A: OrgBreakdown = { id: 'a', name: 'Org A', stock: 1, hasContract: false };
+const B: OrgBreakdown = { id: 'b', name: null, stock: 50, hasContract: true };
 
 function f(over: Partial<OrderCheckFinding>): OrderCheckFinding {
     return {
@@ -11,8 +17,8 @@ function f(over: Partial<OrderCheckFinding>): OrderCheckFinding {
         checkCode: 'erp.organization-stock',
         stage: null,
         lineRef: 'l1',
-        severity: 'warning',
-        messageKey: 'erp.organization-stock.storage-organizations-short',
+        severity: 'error',
+        messageKey: 'erp.organization-stock.short',
         facts: {},
         computedAt: '2026-10-16T00:00:00Z',
         stale: false,
@@ -21,14 +27,23 @@ function f(over: Partial<OrderCheckFinding>): OrderCheckFinding {
 }
 
 describe('order line check view', () => {
-    it('marks per-organization contract state', () => {
-        expect(orgContractRows([A, B], [B]).map(r => r.hasContract)).toEqual([false, true]);
-        expect(orgContractRows(undefined, undefined)).toEqual([]);
+    it('marks the selling organization and falls back to the id for a missing name', () => {
+        const rows = orgRows([A, B], 'a');
+        expect(rows.map(r => r.selling)).toEqual([true, false]);
+        expect(rows[1].name).toBe('b');
+        expect(orgRows(undefined, undefined)).toEqual([]);
     });
 
-    it('has no finding state for a clean line', () => {
+    it('has no finding state for a clean line and uses the warehouse stock', () => {
         const v = lineCheckView(2, 5, []);
-        expect(v).toMatchObject({ needed: 2, stockShort: false, contractOk: true, allowed: 2 });
+        expect(v).toMatchObject({
+            needed: 2,
+            available: 5,
+            stockShort: false,
+            contractOk: true,
+            allowed: 2,
+            orgRows: [],
+        });
     });
 
     it('flags short warehouse stock even without a finding', () => {
@@ -36,42 +51,47 @@ describe('order line check view', () => {
         expect(lineCheckView(2, undefined, []).stockShort).toBe(false);
     });
 
-    it('shows allowed 0 and the organizations without a contract', () => {
+    it('shows allowed 0 and every organization with the selling one marked', () => {
         const v = lineCheckView(2, 0, [
             f({
                 checkCode: 'erp.contract-with-storage-organization',
                 messageKey: 'erp.contract-with-storage-organization.missing',
-                facts: { storageOrganizations: [A, B], contractOrganizations: [] },
+                facts: { organization: { id: 'a', name: 'Org A' }, storageOrganizations: [A, B] },
             }),
         ]);
-        expect(v.contractOk).toBe(false);
-        expect(v.allowed).toBe(0);
-        expect(v.orgRows.every(r => !r.hasContract)).toBe(true);
+        expect(v).toMatchObject({ contractOk: false, allowed: 0 });
+        expect(v.orgRows.map(r => [r.hasContract, r.selling])).toEqual([
+            [false, true],
+            [true, false],
+        ]);
     });
 
-    it('takes needed and stock sums from the stock finding and keeps the contract ok', () => {
+    it('takes needed and available of the selling organization from the stock finding', () => {
         const v = lineCheckView(1, 9, [
             f({
                 facts: {
                     needed: 4,
                     available: 1,
-                    storageStock: 7,
+                    organization: { id: 'a', name: 'Org A' },
                     storageOrganizations: [A, B],
-                    contractOrganizations: [A],
-                    eligibleOrganizations: [A],
                 },
             }),
         ]);
-        expect(v).toMatchObject({
-            needed: 4,
-            stockShort: true,
-            storageStock: 7,
-            eligibleStock: 1,
-            contractOk: true,
-            allowed: 4,
-            eligibleNames: ['Org A'],
-        });
-        expect(v.orgRows.map(r => r.hasContract)).toEqual([true, false]);
+        expect(v).toMatchObject({ needed: 4, available: 1, stockShort: true, contractOk: true });
+        expect(v.orgRows.map(r => r.stock)).toEqual([1, 50]);
+    });
+
+    it('sums only active reservations of the given line', () => {
+        const r = (over: Partial<OrderReservation>): OrderReservation =>
+            ({ orderLineId: 'l1', quantity: 2, status: 'active', ...over }) as OrderReservation;
+        const list = [
+            r({}),
+            r({ quantity: 3 }),
+            r({ status: 'released' }),
+            r({ orderLineId: 'l2' }),
+        ];
+        expect(lineReservedQuantity(list, 'l1')).toBe(5);
+        expect(lineReservedQuantity([], 'l1')).toBe(0);
     });
 
     it('summarizes lines, contract issues and order-level findings separately', () => {

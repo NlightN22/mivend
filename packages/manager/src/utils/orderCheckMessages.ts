@@ -2,7 +2,12 @@ import type { StatusBadgeVariant } from '@mivend/ui-kit';
 
 export interface OrgRef {
     id: string;
-    name: string;
+    name: string | null;
+}
+
+export interface OrgBreakdown extends OrgRef {
+    stock: number;
+    hasContract: boolean;
 }
 
 export interface OrderCheckFacts {
@@ -10,12 +15,10 @@ export interface OrderCheckFacts {
     productErpId?: string;
     sku?: string;
     warehouseErpId?: string;
-    storageOrganizations?: OrgRef[];
-    contractOrganizations?: OrgRef[];
-    eligibleOrganizations?: OrgRef[];
+    organization?: OrgRef;
+    storageOrganizations?: OrgBreakdown[];
     needed?: number;
     available?: number;
-    storageStock?: number;
 }
 
 export interface OrderCheckFinding {
@@ -32,11 +35,9 @@ export interface OrderCheckFinding {
 
 const TITLES: Record<string, string> = {
     'erp.contract-with-storage-organization.missing':
-        'No contract with an organization that holds the storage place',
-    'erp.organization-stock.storage-organizations-short':
-        'The organizations holding the storage place have less stock than needed',
-    'erp.organization-stock.contract-organizations-short':
-        'Stock is enough, but not at the organizations the buyer has a contract with',
+        'No contract with the organization that sells this line',
+    'erp.organization-stock.short':
+        'The organization that sells this line has less stock than needed',
 };
 
 export function findingTitle(messageKey: string): string {
@@ -47,10 +48,6 @@ export function severityVariant(severity: string): StatusBadgeVariant {
     if (severity === 'error') return 'danger';
     if (severity === 'warning') return 'warning';
     return 'info';
-}
-
-export function orgNames(orgs: OrgRef[] | undefined): string {
-    return orgs?.length ? orgs.map(o => o.name).join(', ') : '—';
 }
 
 export function findingsByLine(findings: OrderCheckFinding[]): Map<string, OrderCheckFinding[]> {

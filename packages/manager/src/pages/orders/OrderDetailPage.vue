@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useAuthStore } from '../../stores/auth';
-import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { MvPanel, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
@@ -29,13 +28,11 @@ import OrderCancelPanel from '../../components/order-detail/OrderCancelPanel.vue
 import ProformaInvoicesPanel from '../../components/order-detail/ProformaInvoicesPanel.vue';
 import PaymentReceivedPanel from '../../components/order-detail/PaymentReceivedPanel.vue';
 import OrderContractPanel from '../../components/order-detail/OrderContractPanel.vue';
-import ReservationFailurePanel from '../../components/order-detail/ReservationFailurePanel.vue';
+import OrderErpStatusPanels from '../../components/order-detail/OrderErpStatusPanels.vue';
 import ReservationHolds from '../../components/order-detail/ReservationHolds.vue';
 import ReservationPanel from '../../components/order-detail/ReservationPanel.vue';
 
 const authStore = useAuthStore();
-const statuses = useOrderStatusesStore();
-void statuses.load();
 const route = useRoute();
 const order = ref<OrderDetail | null>(null);
 const managers = ref<ManagerOption[]>([]);
@@ -166,146 +163,79 @@ watch(() => route.params.code, load);
             @go-to-contract="contractAnchor?.scrollIntoView({ behavior: 'smooth' })"
         />
 
-        <div class="order-detail__grid">
-            <div class="order-detail__left-stack">
-                <MvPanel title="Order lines">
-                    <OrderLinesTable
-                        :order-id="order.id"
-                        :lines="order.lines"
-                        :currency-code="order.currencyCode"
-                        :editable="editable"
-                        :packages-only="order.packagesOnlySales"
-                        :adjustment-requests="adjustmentRequests"
-                        :findings="canSeeChecks ? checks.findings.value : []"
-                        @adjusted="reload"
-                    />
-                    <div class="order-detail__totals">
-                        <span>Subtotal: {{ money(order.subTotalWithTax) }}</span>
-                        <span>Shipping: {{ money(order.shippingWithTax) }}</span>
-                        <span v-if="packagingLabel">Weight / volume: {{ packagingLabel }}</span>
-                        <OrderPaidAmount
-                            v-if="order.customFields.erpPaidAmount != null"
-                            :paid="money(order.customFields.erpPaidAmount)"
-                            :total="money(order.totalWithTax)"
-                            :overpaid="
-                                order.customFields.erpPaidAmount > order.totalWithTax
-                                    ? money(order.customFields.erpPaidAmount - order.totalWithTax)
-                                    : null
-                            "
-                        />
-                        <strong>Total: {{ money(order.totalWithTax) }}</strong>
-                    </div>
-                </MvPanel>
-
-                <MvPanel v-if="adjustmentRequests.length" title="Price adjustment history">
-                    <PriceAdjustmentHistoryPanel :requests="adjustmentRequests" />
-                </MvPanel>
-            </div>
-
-            <aside class="order-detail__right-stack">
-                <PaymentReceivedPanel
-                    :order-id="order.id"
-                    :payments="order.payments ?? []"
-                    @confirmed="reload"
-                />
-                <ProformaInvoicesPanel
-                    :order-id="order.id"
-                    :cancelled="order.state === 'Cancelled'"
-                />
-                <OrderCancelPanel
-                    :order-id="order.id"
-                    :cancellable="order.cancellable"
-                    @cancelled="reload"
-                />
-                <MvPanel v-if="isNotRegisteredInErp(order.customFields)" title="ERP registration">
-                    <MvStatusBadge variant="warning">Not registered in the ERP</MvStatusBadge>
-                </MvPanel>
-                <MvPanel
-                    v-if="
-                        order.customFields.erpRegistrationDocumentNumber ||
-                        order.customFields.erpRegistrationStatus
+        <MvPanel title="Order lines">
+            <OrderLinesTable
+                :order-id="order.id"
+                :lines="order.lines"
+                :currency-code="order.currencyCode"
+                :editable="editable"
+                :packages-only="order.packagesOnlySales"
+                :adjustment-requests="adjustmentRequests"
+                :findings="canSeeChecks ? checks.findings.value : []"
+                :reservations="reservations"
+                @adjusted="reload"
+            />
+            <div class="order-detail__totals">
+                <span>Subtotal: {{ money(order.subTotalWithTax) }}</span>
+                <span>Shipping: {{ money(order.shippingWithTax) }}</span>
+                <span v-if="packagingLabel">Weight / volume: {{ packagingLabel }}</span>
+                <OrderPaidAmount
+                    v-if="order.customFields.erpPaidAmount != null"
+                    :paid="money(order.customFields.erpPaidAmount)"
+                    :total="money(order.totalWithTax)"
+                    :overpaid="
+                        order.customFields.erpPaidAmount > order.totalWithTax
+                            ? money(order.customFields.erpPaidAmount - order.totalWithTax)
+                            : null
                     "
-                    title="ERP document"
-                >
-                    <div
-                        v-if="order.customFields.erpRegistrationDocumentNumber"
-                        class="order-detail__rejection-row"
-                    >
-                        <span class="order-detail__rejection-label">Document number</span>
-                        <span>{{ order.customFields.erpRegistrationDocumentNumber }}</span>
-                    </div>
-                    <div
-                        v-if="order.customFields.erpRegistrationStatus"
-                        class="order-detail__rejection-row"
-                    >
-                        <span class="order-detail__rejection-label">Registration status</span>
-                        <span>{{ order.customFields.erpRegistrationStatus }}</span>
-                    </div>
-                </MvPanel>
-                <MvPanel
-                    v-if="statuses.isRejected(order.customFields.erpStatus)"
-                    title="Rejected by ERP"
-                >
-                    <div class="order-detail__rejection">
-                        <MvStatusBadge variant="danger">Rejected by ERP</MvStatusBadge>
-                        <div
-                            v-if="order.customFields.erpRejectionReasonCode"
-                            class="order-detail__rejection-row"
-                        >
-                            <span class="order-detail__rejection-label">Reason code</span>
-                            <span>{{ order.customFields.erpRejectionReasonCode }}</span>
-                        </div>
-                        <div
-                            v-if="order.customFields.erpRejectionReasonText"
-                            class="order-detail__rejection-row"
-                        >
-                            <span class="order-detail__rejection-label">Reason</span>
-                            <span>{{ order.customFields.erpRejectionReasonText }}</span>
-                        </div>
-                    </div>
-                </MvPanel>
+                />
+                <strong>Total: {{ money(order.totalWithTax) }}</strong>
+            </div>
+        </MvPanel>
 
-                <MvPanel
-                    v-if="order.customFields.reservationFailureReason"
-                    title="Reservation failed"
-                >
-                    <ReservationFailurePanel
-                        :reason="order.customFields.reservationFailureReason"
-                        :detail="order.customFields.reservationFailureDetail"
-                        :failed-at="order.customFields.reservationFailedAt"
-                    />
-                </MvPanel>
+        <div class="order-detail__panels">
+            <MvPanel v-if="adjustmentRequests.length" title="Price adjustment history">
+                <PriceAdjustmentHistoryPanel :requests="adjustmentRequests" />
+            </MvPanel>
 
-                <MvPanel title="Reservation">
-                    <ReservationPanel
-                        :order-id="order.id"
-                        :reservations="reservations"
-                        :default-reservation-days="defaultReservationDays"
-                        @changed="reload"
-                    />
-                    <ReservationHolds :order-id="order.id" :refresh-on="reservations" />
-                </MvPanel>
+            <PaymentReceivedPanel
+                :order-id="order.id"
+                :payments="order.payments ?? []"
+                @confirmed="reload"
+            />
+            <ProformaInvoicesPanel :order-id="order.id" :cancelled="order.state === 'Cancelled'" />
+            <OrderCancelPanel
+                :order-id="order.id"
+                :cancellable="order.cancellable"
+                @cancelled="reload"
+            />
+            <OrderErpStatusPanels :order="order" />
 
-                <MvPanel ref="contractPanel" title="Contract">
-                    <OrderContractPanel
-                        :order-id="order.id"
-                        :locked="reservations.some(r => r.status === 'active')"
-                        @changed="reload"
-                    />
-                </MvPanel>
+            <MvPanel title="Reservation">
+                <ReservationPanel
+                    :order-id="order.id"
+                    :reservations="reservations"
+                    :default-reservation-days="defaultReservationDays"
+                    @changed="reload"
+                />
+                <ReservationHolds :order-id="order.id" :refresh-on="reservations" />
+            </MvPanel>
 
-                <MvPanel title="Order context">
-                    <OrderContextPanel
-                        :order="order"
-                        :manager-name="managerName"
-                        :credit="credit"
-                    />
-                </MvPanel>
+            <MvPanel ref="contractPanel" title="Contract">
+                <OrderContractPanel
+                    :order-id="order.id"
+                    :locked="reservations.some(r => r.status === 'active')"
+                    @changed="reload"
+                />
+            </MvPanel>
 
-                <MvPanel title="Documents">
-                    <RelatedDocumentsPanel :documents="documents" />
-                </MvPanel>
-            </aside>
+            <MvPanel title="Order context">
+                <OrderContextPanel :order="order" :manager-name="managerName" :credit="credit" />
+            </MvPanel>
+
+            <MvPanel title="Documents">
+                <RelatedDocumentsPanel :documents="documents" />
+            </MvPanel>
         </div>
     </div>
 </template>
@@ -317,25 +247,11 @@ watch(() => route.params.code, load);
     gap: 18px;
 }
 
-.order-detail__grid {
+.order-detail__panels {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 18px;
     align-items: start;
-}
-
-.order-detail__left-stack,
-.order-detail__right-stack {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
-    min-width: 0;
-}
-
-@media (max-width: 1200px) {
-    .order-detail__grid {
-        grid-template-columns: 1fr;
-    }
 }
 
 .order-detail__breadcrumb {
@@ -370,24 +286,6 @@ watch(() => route.params.code, load);
     gap: 8px 20px;
     margin-top: 14px;
     font-size: 13px;
-}
-
-.order-detail__rejection {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.order-detail__rejection-row {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 13px;
-}
-
-.order-detail__rejection-label {
-    color: var(--el-text-color-secondary, #6b7280);
-    font-size: 12px;
 }
 
 .order-detail__not-found {

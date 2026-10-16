@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { IconAlertTriangle, IconCircleCheck, IconClock } from '@tabler/icons-vue';
+import { IconAlertTriangle, IconCircleCheck, IconClock, IconRefresh } from '@tabler/icons-vue';
 import { MvButton, MvCard, MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
 import { findingTitle } from '../../utils/orderCheckMessages';
@@ -32,24 +32,28 @@ const clean = computed(() => !props.findings.length);
             <IconCircleCheck v-if="clean" :size="26" class="status-card__icon--ok" />
             <IconAlertTriangle v-else :size="26" class="status-card__icon--warn" />
             <div class="status-card__body">
-                <strong>ERP-mandated controls</strong>
+                <div class="status-card__head">
+                    <strong>ERP-mandated controls</strong>
+                    <MvButton
+                        v-if="canRecompute"
+                        variant="secondary"
+                        size="sm"
+                        class="status-card__recompute"
+                        :disabled="recomputing"
+                        @click="emit('recompute')"
+                    >
+                        <IconRefresh :size="14" />
+                        {{ recomputing ? 'Recomputing…' : 'Recompute' }}
+                    </MvButton>
+                </div>
                 <p v-if="clean">No findings. The ERP checks stock and contracts per line.</p>
                 <p v-else>
                     {{ summary.lineCount }} line(s) do not meet ERP requirements (see the order
                     lines). The ERP will not post the order until fixed; it is not refused here.
                 </p>
-                <p v-for="f in summary.orderLevel" :key="f.id">{{ findingTitle(f.messageKey) }}</p>
                 <MvStatusBadge v-if="stale" variant="warning">Out of date</MvStatusBadge>
+                <p v-for="f in summary.orderLevel" :key="f.id">{{ findingTitle(f.messageKey) }}</p>
                 <p v-if="error" class="status-card__error">{{ error }}</p>
-                <MvButton
-                    v-if="canRecompute"
-                    variant="secondary"
-                    size="sm"
-                    :disabled="recomputing"
-                    @click="emit('recompute')"
-                >
-                    {{ recomputing ? 'Recomputing…' : 'Recompute' }}
-                </MvButton>
                 <MvButton
                     v-if="summary.hasContractIssue"
                     variant="secondary"
@@ -87,7 +91,7 @@ const clean = computed(() => !props.findings.length);
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 14px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .status-card {
@@ -98,11 +102,27 @@ const clean = computed(() => !props.findings.length);
 }
 
 .status-card__body {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 6px;
     align-items: flex-start;
     min-width: 0;
+}
+
+.status-card__head strong {
+    white-space: nowrap;
+}
+
+.status-card__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: stretch;
+}
+
+.status-card__recompute {
+    margin-left: auto;
 }
 
 .status-card__body p {
