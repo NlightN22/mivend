@@ -3,8 +3,7 @@ import { OrderLine, TransactionalConnection } from '@vendure/core';
 
 let connection: TransactionalConnection;
 
-// Stamps only: a line whose variant has no organization is reported by the
-// `order.line-without-organization` check (docs/controls-inventory.md), it never stops checkout.
+// Stamps only: a variant without an organization is the `order.line-without-organization` finding, never a refusal.
 // Re-stamped on each ArrangingPayment entry so later steps never re-read the variant.
 export const organizationOrderGuard: OrderProcess<OrderState> = {
     init(injector: Injector) {

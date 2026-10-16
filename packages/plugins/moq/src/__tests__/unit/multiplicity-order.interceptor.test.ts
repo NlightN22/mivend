@@ -42,10 +42,17 @@ describe('MultiplicityOrderInterceptor', () => {
                             ) => tp.servicingBranchId,
                         } as never,
                         {
-                            resolve: async () => ({
-                                enabled: (await resolveEffective())?.enforceMultiplicity === true,
-                                consequence: 'block',
-                            }),
+                            resolve: async () => {
+                                const settings = await (
+                                    resolveEffective as unknown as () => Promise<{
+                                        enforceMultiplicity?: boolean;
+                                    } | null>
+                                )();
+                                return {
+                                    enabled: settings?.enforceMultiplicity === true,
+                                    consequence: 'block',
+                                };
+                            },
                         } as never,
                     );
                 }

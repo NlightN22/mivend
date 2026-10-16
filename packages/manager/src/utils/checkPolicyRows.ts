@@ -27,7 +27,7 @@ export function buildPolicyRows(
     policies: CheckPolicy[],
     branchId: string | null = null,
 ): PolicyRow[] {
-    const find = (code: string, stage: string, branch: string | null) =>
+    const find = (code: string, stage: string, branch: string | null): CheckPolicy | undefined =>
         policies.find(p => p.checkCode === code && p.stage === stage && p.branchId === branch);
     return defs.flatMap(def =>
         def.stages.map(stage => {
