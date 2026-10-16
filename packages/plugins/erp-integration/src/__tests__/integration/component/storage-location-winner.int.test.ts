@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, EntityManager, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
@@ -26,6 +26,7 @@ class TestAssignment {
 let dataSource: DataSource;
 let handler: StorageLocationStreamHandler;
 let updates = 0;
+const markForProducts = vi.fn(async (_ctx: RequestContext, _ids: string[]) => 0);
 const ORGANIZATION_IDS: Record<string, number> = { 'org-a': 1, 'org-b': 2, 'org-c': 3 };
 
 const { schema, extra } = testSchemaOptions('erp_storage_location_winner');
@@ -103,12 +104,14 @@ beforeAll(async () => {
         connection,
         productVariantService as never,
         documentsService as never,
-        { markForProducts: async () => 0 } as never,
+        { markForProducts } as never,
     );
 });
 
 beforeEach(async () => {
     updates = 0;
+    markForProducts.mockReset();
+    markForProducts.mockResolvedValue(0);
     await dataSource.query(
         `TRUNCATE "StorageLocationAssignment", product, product_variant RESTART IDENTITY`,
     );
@@ -169,6 +172,20 @@ describe('StorageLocationStreamHandler winner election (real Postgres)', () => {
 
         await apply('loc-b', null, 5, { isDeleted: true });
         expect(await variant()).toEqual({ org: null, source: null });
+    });
+
+    it('a delete whose marking failed rolls back, so the retry still deletes and marks', async () => {
+        await apply('loc-a', 'org-a', 1);
+        markForProducts.mockRejectedValueOnce(new Error('mark failed'));
+
+        await expect(apply('loc-a', null, 1, { isDeleted: true })).rejects.toThrow('mark failed');
+        expect(await variant()).toEqual({ org: 1, source: 'loc-a' });
+
+        markForProducts.mockClear();
+        expect(await apply('loc-a', null, 1, { isDeleted: true })).toMatchObject({
+            kind: 'applied',
+        });
+        expect(markForProducts).toHaveBeenCalledWith(expect.anything(), ['product-1']);
     });
 
     it('does nothing for an address-only row that never had an organization', async () => {

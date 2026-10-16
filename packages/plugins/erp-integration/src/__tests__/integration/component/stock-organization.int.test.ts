@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, EntityManager, PrimaryGeneratedColumn, Unique } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
@@ -26,6 +26,7 @@ class TestStockOrganization {
 let dataSource: DataSource;
 let handler: StockOrganizationStreamHandler;
 let reader: StockOrganizationReadService;
+const markForProducts = vi.fn(async (_ctx: RequestContext, _ids: string[]) => 0);
 
 const { schema, extra } = testSchemaOptions('erp_stock_organization');
 const ctx = {} as RequestContext;
@@ -65,13 +66,13 @@ beforeAll(async () => {
         withTransaction: async (c: RequestContext, work: (t: RequestContext) => Promise<unknown>) =>
             dataSource.transaction(manager => work(withManager(c, manager))),
     } as unknown as TransactionalConnection;
-    handler = new StockOrganizationStreamHandler(connection, {
-        markForProducts: async () => 0,
-    } as never);
+    handler = new StockOrganizationStreamHandler(connection, { markForProducts } as never);
     reader = new StockOrganizationReadService(connection);
 });
 
 beforeEach(async () => {
+    markForProducts.mockReset();
+    markForProducts.mockResolvedValue(0);
     await dataSource.query(`TRUNCATE "StockOrganization" RESTART IDENTITY`);
 });
 
@@ -103,6 +104,30 @@ describe('StockOrganization (real Postgres)', () => {
 
         await apply('e-1', { isDeleted: true });
         expect(await rows()).toHaveLength(0);
+    });
+
+    it('a tombstone whose marking failed keeps the row, so the retry still marks', async () => {
+        await apply('e-1', { quantity: 5 });
+        markForProducts.mockRejectedValueOnce(new Error('mark failed'));
+
+        await expect(apply('e-1', { isDeleted: true })).rejects.toThrow('mark failed');
+        expect(await rows()).toHaveLength(1);
+
+        markForProducts.mockClear();
+        expect(await apply('e-1', { isDeleted: true })).toMatchObject({ kind: 'applied' });
+        expect(await rows()).toHaveLength(0);
+        expect(markForProducts).toHaveBeenCalledWith(expect.anything(), ['p-1']);
+    });
+
+    it('a tombstone for an entity id shared by two rows removes both and marks both products', async () => {
+        await apply('e-1', { productId: 'p-1', quantity: 1 });
+        await apply('e-1', { productId: 'p-2', quantity: 2 });
+        expect(await rows()).toHaveLength(2);
+
+        await apply('e-1', { isDeleted: true });
+
+        expect(await rows()).toHaveLength(0);
+        expect(markForProducts).toHaveBeenLastCalledWith(expect.anything(), ['p-1', 'p-2']);
     });
 
     it('concurrent updates of one key converge on a single row', async () => {

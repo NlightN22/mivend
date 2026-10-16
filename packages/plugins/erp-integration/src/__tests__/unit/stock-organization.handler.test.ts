@@ -7,7 +7,7 @@ function setup(affected = 1) {
     const repo = {
         upsert: vi.fn(),
         delete: vi.fn().mockResolvedValue({ affected }),
-        findOne: vi.fn().mockResolvedValue(affected ? { productId: 'p-1' } : null),
+        find: vi.fn().mockResolvedValue(affected ? [{ productId: 'p-1' }] : []),
     };
     const connection = {
         withTransaction: vi.fn((ctx: RequestContext, work: (c: RequestContext) => unknown) =>
@@ -82,6 +82,19 @@ describe('StockOrganizationStreamHandler', () => {
         const unknown = setup(0);
         await unknown.handler.apply(ctx, 'e-1', { isDeleted: true });
         expect(unknown.stale.markForProducts).not.toHaveBeenCalled();
+    });
+
+    it('flags every product of the rows that share one entity id', async () => {
+        const { repo, stale, handler } = setup();
+        repo.find.mockResolvedValue([
+            { productId: 'p-1' },
+            { productId: 'p-2' },
+            { productId: 'p-1' },
+        ]);
+
+        await handler.apply(ctx, 'e-1', { isDeleted: true });
+
+        expect(stale.markForProducts).toHaveBeenCalledWith(ctx, ['p-1', 'p-2']);
     });
 
     it('is a noop for a tombstone of an unknown row', async () => {

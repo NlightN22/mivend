@@ -29,24 +29,27 @@ export class StockOrganizationStreamHandler implements InboundStreamHandler {
         // Optional proto3 bool: absent is "unset", only an explicit false deactivates.
         const isActive = payload.isActive !== false;
 
+        // Marking runs inside the lock transaction: the rows and the stale flags commit together, so a
+        // retried message (row already gone) can never lose the mark. The order locks it takes are held to commit.
         if (isDeleted) {
-            const removedProductId = await withAggregateLock(
+            const removed = await withAggregateLock(
                 this.connection,
                 ctx,
                 `stock-organization:${entityId}`,
                 async txCtx => {
                     const repo = this.connection.getRepository(txCtx, StockOrganization);
-                    const row = await repo.findOne({ where: { entityId } });
-                    if (!row) return null;
+                    const rows = await repo.find({ where: { entityId } });
+                    if (rows.length === 0) return false;
                     await repo.delete({ entityId });
-                    return row.productId;
+                    await this.orderCheckStale.markForProducts(txCtx, [
+                        ...new Set(rows.map(row => row.productId)),
+                    ]);
+                    return true;
                 },
             );
-            if (removedProductId === null) {
-                return inboundNoop(`stock-organization ${entityId}: deleted, nothing stored`);
-            }
-            await this.orderCheckStale.markForProducts(ctx, [removedProductId]);
-            return inboundApplied();
+            return removed
+                ? inboundApplied()
+                : inboundNoop(`stock-organization ${entityId}: deleted, nothing stored`);
         }
         if (!productId || !organizationErpId || !Number.isFinite(quantity)) {
             return inboundNoop(
@@ -54,15 +57,20 @@ export class StockOrganizationStreamHandler implements InboundStreamHandler {
             );
         }
 
-        await withAggregateLock(this.connection, ctx, `stock-organization:${entityId}`, txCtx =>
-            this.connection
-                .getRepository(txCtx, StockOrganization)
-                .upsert({ entityId, productId, organizationErpId, quantity, isActive }, [
-                    'productId',
-                    'organizationErpId',
-                ]),
+        await withAggregateLock(
+            this.connection,
+            ctx,
+            `stock-organization:${entityId}`,
+            async txCtx => {
+                await this.connection
+                    .getRepository(txCtx, StockOrganization)
+                    .upsert({ entityId, productId, organizationErpId, quantity, isActive }, [
+                        'productId',
+                        'organizationErpId',
+                    ]);
+                await this.orderCheckStale.markForProducts(txCtx, [productId]);
+            },
         );
-        await this.orderCheckStale.markForProducts(ctx, [productId]);
         return inboundApplied();
     }
 }

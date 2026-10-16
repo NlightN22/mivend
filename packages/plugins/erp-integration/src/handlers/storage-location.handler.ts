@@ -45,7 +45,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         const priority = Number(payload.priority ?? 0);
         const hasOrganization = payload.isDeleted !== true && organizationErpId !== '';
 
-        const outcome = await withAggregateLock(
+        return withAggregateLock(
             this.connection,
             ctx,
             `storage-location-product:${productId}`,
@@ -65,13 +65,11 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
                     }
                 }
                 await this.applyWinner(txCtx, productId);
+                // Same transaction as the delete: a retry that finds nothing left to delete cannot lose the mark.
+                await this.orderCheckStale.markForProducts(txCtx, [productId]);
                 return inboundApplied();
             },
         );
-        if (outcome.kind === 'applied') {
-            await this.orderCheckStale.markForProducts(ctx, [productId]);
-        }
-        return outcome;
     }
 
     private async applyWinner(ctx: RequestContext, productId: string): Promise<void> {
