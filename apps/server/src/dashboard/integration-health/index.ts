@@ -35,6 +35,7 @@ const outboxAlertDocument = graphql(`
             eventType
             failed
             skipped
+            held
         }
     }
 `);
@@ -46,9 +47,10 @@ const rejectedOrderAlertDocument = graphql(`
 `);
 
 function outboxAlert(
-    key: 'failed' | 'skipped',
+    key: 'failed' | 'skipped' | 'held',
     id: string,
     title: (n: number) => string,
+    severity: 'error' | 'warning' = 'error',
 ): DashboardAlertDefinition<string[]> {
     return {
         id,
@@ -62,7 +64,7 @@ function outboxAlert(
             }
         },
         shouldShow: types => (types?.length ?? 0) > 0,
-        severity: 'error',
+        severity,
         title: types => title((types ?? []).length),
         description: types => (types ?? []).join(', '),
         actions: [
@@ -88,6 +90,13 @@ export const outboxSkippedAlert = outboxAlert(
     'skipped',
     'integration-outbox-skipped',
     n => `Outbound events were skipped, never sent (${n} event type(s))`,
+);
+
+export const outboxHeldAlert = outboxAlert(
+    'held',
+    'integration-outbox-held',
+    n => `Sends held by an order check policy (${n} event type(s))`,
+    'warning',
 );
 
 export const kafkaLagAlert: DashboardAlertDefinition<string[]> = {
@@ -148,7 +157,13 @@ export const rejectedOrdersAlert: DashboardAlertDefinition<number> = {
 };
 
 defineDashboardExtension({
-    alerts: [kafkaLagAlert, outboxFailedAlert, outboxSkippedAlert, rejectedOrdersAlert],
+    alerts: [
+        kafkaLagAlert,
+        outboxFailedAlert,
+        outboxSkippedAlert,
+        outboxHeldAlert,
+        rejectedOrdersAlert,
+    ],
     routes: [
         {
             path: INBOX_ISSUES_PATH,

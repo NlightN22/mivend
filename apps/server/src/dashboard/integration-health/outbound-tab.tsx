@@ -24,6 +24,7 @@ const outboxHealthDocument = graphql(`
             pending
             failed
             skipped
+            held
             oldestPendingAt
             lastPublishedAt
             lastError
@@ -153,6 +154,10 @@ export function OutboundTab() {
                 </Table>
             </div>
             <div className="mt-4 flex items-center gap-2">
+                <span className="text-muted-foreground">Sends held by policy:</span>
+                <span>{rows.reduce((sum, r) => sum + r.held, 0)}</span>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
                 <span className="text-muted-foreground">Orders rejected by the ERP:</span>
                 <CountLink
                     count={rejectedOrderCount}

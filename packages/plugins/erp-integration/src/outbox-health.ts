@@ -6,6 +6,8 @@ export interface OutboxHealthByEventType {
     pending: number;
     failed: number;
     skipped: number;
+    // Skipped sends held by an order check policy: expected, released by staff or a policy change.
+    held: number;
     oldestPendingAt: Date | null;
     lastPublishedAt: Date | null;
     lastError: string | null;
@@ -25,6 +27,7 @@ const emptyRow = (eventType: string): OutboxHealthByEventType => ({
     pending: 0,
     failed: 0,
     skipped: 0,
+    held: 0,
     oldestPendingAt: null,
     lastPublishedAt: null,
     lastError: null,

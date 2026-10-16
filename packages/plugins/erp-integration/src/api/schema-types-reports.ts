@@ -29,6 +29,8 @@ export const reportTypes = `
         failed: Int!
         "Events that could not be built and were never published (issue #200)."
         skipped: Int!
+        "Sends held by an order check policy (not counted in skipped)."
+        held: Int!
         oldestPendingAt: DateTime
         lastPublishedAt: DateTime
         lastError: String

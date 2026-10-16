@@ -11,6 +11,7 @@ const row = (
     pending: 0,
     failed: 0,
     skipped: 0,
+    held: 0,
     oldestPendingAt: null,
     lastPublishedAt: null,
     lastError: null,

@@ -47,14 +47,15 @@ describe('formatAge', () => {
 
 describe('outboundTypesWith', () => {
     const rows = [
-        { eventType: 'a', failed: 1, skipped: 0 },
-        { eventType: 'b', failed: 0, skipped: 2 },
-        { eventType: 'c', failed: 0, skipped: 0 },
+        { eventType: 'a', failed: 1, skipped: 0, held: 0 },
+        { eventType: 'b', failed: 0, skipped: 2, held: 0 },
+        { eventType: 'c', failed: 0, skipped: 0, held: 3 },
     ];
 
     it('lists the event types with a non-zero count for the given key', () => {
         expect(outboundTypesWith(rows, 'failed')).toEqual(['a']);
         expect(outboundTypesWith(rows, 'skipped')).toEqual(['b']);
+        expect(outboundTypesWith(rows, 'held')).toEqual(['c']);
     });
 });
 

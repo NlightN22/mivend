@@ -39,8 +39,8 @@ export const VERSION_DRIFT_MESSAGES: Record<
 };
 
 export function outboundTypesWith(
-    rows: ReadonlyArray<{ eventType: string; failed: number; skipped: number }>,
-    key: 'failed' | 'skipped',
+    rows: ReadonlyArray<{ eventType: string; failed: number; skipped: number; held: number }>,
+    key: 'failed' | 'skipped' | 'held',
 ): string[] {
     return rows.filter(r => r[key] > 0).map(r => r.eventType);
 }

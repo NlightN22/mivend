@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
+import { HELD_SKIP_REASON } from './order-checks/order-send-hold.service';
 import { mergeOutboxHealth } from './outbox-health';
 import type { OutboxHealthByEventType } from './outbox-health';
 
@@ -9,12 +10,14 @@ export class IntegrationOutboxHealthService {
     constructor(private readonly dataSource: DataSource) {}
 
     async getHealthByEventType(): Promise<OutboxHealthByEventType[]> {
-        const rows: OutboxHealthByEventType[] = await this.dataSource.query(`
+        const rows: OutboxHealthByEventType[] = await this.dataSource.query(
+            `
             SELECT
                 e.event_type AS "eventType",
                 COUNT(*) FILTER (WHERE e.status = 'pending')::int AS pending,
                 COUNT(*) FILTER (WHERE e.status = 'failed')::int AS failed,
-                COUNT(*) FILTER (WHERE e.status = 'skipped')::int AS skipped,
+                COUNT(*) FILTER (WHERE e.status = 'skipped' AND e.last_error IS DISTINCT FROM $1)::int AS skipped,
+                COUNT(*) FILTER (WHERE e.status = 'skipped' AND e.last_error = $1)::int AS held,
                 MIN(e.created_at) FILTER (WHERE e.status = 'pending') AS "oldestPendingAt",
                 MAX(e.published_at) AS "lastPublishedAt",
                 (ARRAY_AGG(e.last_error ORDER BY e.last_error_at DESC)
@@ -26,7 +29,9 @@ export class IntegrationOutboxHealthService {
             FROM integration_outbox e
             GROUP BY e.event_type
             ORDER BY e.event_type
-        `);
+        `,
+            [HELD_SKIP_REASON],
+        );
         return mergeOutboxHealth(rows);
     }
 }

@@ -17,6 +17,7 @@ import { VariantUnitHealthService } from '../../../variant-unit-health.service';
 import { OrderCheckHealthService } from '../../../order-checks/order-check-health.service';
 import { RejectedOrderHealthService } from '../../../rejected-order-health.service';
 import { IntegrationOutboxHealthService } from '../../../integration-outbox-health.service';
+import { HELD_SKIP_REASON } from '../../../order-checks/order-send-hold.service';
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
 import type { ContractVersionClient } from '../../../contract-version.client';
 import { IntegrationStreamHealthResolver } from '../../../integration-stream-health.resolver';
@@ -209,10 +210,28 @@ describe('integrationOutboxHealth', () => {
 
         expect(row).toMatchObject({
             skipped: 1,
+            held: 0,
             pending: 0,
             lastSkipReason: 'line 1 has no organizationId',
             lastError: null,
         });
+    });
+
+    it('counts a send held by policy as held, not as skipped', async () => {
+        await dataSource.getRepository(IntegrationOutboxEntry).save({
+            eventId: randomUUID(),
+            eventType: 'order.confirmed',
+            payload: { orderId: 'o-2' },
+            status: 'skipped',
+            lastError: HELD_SKIP_REASON,
+            lastErrorAt: new Date(),
+        });
+
+        const row = (await resolver.integrationOutboxHealth()).find(
+            r => r.eventType === 'order.confirmed',
+        )!;
+
+        expect(row).toMatchObject({ skipped: 0, held: 1 });
     });
 });
 
