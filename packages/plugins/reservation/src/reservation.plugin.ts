@@ -19,6 +19,7 @@ import { MoqPlugin } from '@mivend/plugin-moq';
 import { NotificationPlugin } from '@mivend/plugin-notification';
 
 import { ErpOrderReserve } from './entities/erp-order-reserve.entity';
+import { OrderCheckFailure } from './entities/order-check-failure.entity';
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
@@ -81,6 +82,7 @@ import type { ReservationPluginOptions } from './types';
         ReservationExtensionLimit,
         ReservationReconciliationIssue,
         ErpOrderReserve,
+        OrderCheckFailure,
     ],
     providers: [
         OrderContractService,

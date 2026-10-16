@@ -1,11 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
 import { OrderChecksService, ReservationService } from '@mivend/plugin-reservation';
 
-const loggerCtx = 'OrderSendHold';
+export const HELD_SKIP_REASON = 'held by an order check policy (pre-send-to-erp)';
 
 // `hold` at pre-send-to-erp stops an automatically reserved order from being sent; a manual
-// confirmation is the staff release. A failing check never stops the send.
+// confirmation is the staff release. Fail-open by owner decision (docs/checks-and-policies.md).
 @Injectable()
 export class OrderSendHoldService {
     constructor(
@@ -24,9 +24,9 @@ export class OrderSendHoldService {
             const active = (await this.reservations.findForOrder(ctx, orderId)).filter(
                 r => r.status === 'active',
             );
-            return !active.some(r => r.creationMethod === 'manual');
+            return !active.some(r => r.creationMethod === 'manual' || r.confirmedByAdministratorId);
         } catch (error) {
-            Logger.error(`Order checks failed for order ${orderId}: ${String(error)}`, loggerCtx);
+            await this.orderChecks.recordFailure(orderId, 'pre-send-to-erp', error);
             return false;
         }
     }

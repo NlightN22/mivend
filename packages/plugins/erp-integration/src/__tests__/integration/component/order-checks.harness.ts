@@ -156,7 +156,15 @@ class ResultM extends UuidBase {
     @Column({ type: 'boolean', default: false }) stale!: boolean;
 }
 
+@Entity('order_check_failure')
+class FailureM extends UuidBase {
+    @Column({ type: 'varchar' }) orderId!: string;
+    @Column({ type: 'varchar' }) stage!: string;
+    @Column({ type: 'text' }) message!: string;
+}
+
 const mirrors: Record<string, unknown> = {
+    OrderCheckFailure: FailureM,
     Order: OrderM,
     Reservation: ReservationM,
     StockLevel: StockLevelM,
@@ -381,7 +389,7 @@ export async function seedReservation(
 
 export async function resetWorld(world: OrderChecksWorld): Promise<void> {
     await world.dataSource.query(
-        `TRUNCATE check_result, check_policy_history, check_policy, "order", order_line, product,
+        `TRUNCATE check_result, order_check_failure, check_policy_history, check_policy, "order", order_line, product,
          product_variant, contract, storage_location_assignment, stock_organization,
          organization_requisites, reservation, stock_level RESTART IDENTITY CASCADE`,
     );

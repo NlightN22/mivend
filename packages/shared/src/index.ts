@@ -5,6 +5,7 @@ export * from './testing/transactional-test-connection';
 // carve-out as sync.ts above, see that comment.
 export * from './vendure-events';
 export { withAggregateLock } from './aggregate-lock';
+export { withSavepoint } from './savepoint';
 
 // Named re-exports, not `export *`: Vite/Rollup CJS interop can't detect the __exportStar loop
 // tsc must emit static `exports.foo = ...` assignments for browser-bundled consumers.

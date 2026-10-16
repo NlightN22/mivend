@@ -2,9 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EntityNotFoundError, Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { CheckRegistry, CheckResult, ChecksService } from '@mivend/plugin-checks';
 import type { CheckRunResult } from '@mivend/plugin-checks';
-import { withAggregateLock } from 'shared';
+import { randomUUID } from 'node:crypto';
+import { withSavepoint } from 'shared';
 
-import { ORDER_SUBJECT_TYPE, orderLockKey } from './order-check-subject';
+import { ORDER_SUBJECT_TYPE } from './order-check-subject';
 import type { OrderCheckStage } from './order-check-subject';
 import { OrderCheckSubjectRegistrar } from './order-check-subject.registrar';
 import { loggerCtx } from './types';
@@ -25,7 +26,8 @@ export class OrderChecksService {
         orderId: string,
         stage: OrderCheckStage,
     ): Promise<CheckRunResult> {
-        return withAggregateLock(this.connection, ctx, orderLockKey(orderId), async txCtx => {
+        // runChecks takes the order lock first; it is held to the end of this transaction, so the cleanup below is covered.
+        return this.connection.withTransaction(ctx, async txCtx => {
             const result = await this.checks.runChecks(txCtx, ORDER_SUBJECT_TYPE, orderId, stage);
             // Every stage evaluates the same facts, so the newest run supersedes older stages' rows.
             const codes = this.registry.listForStage(ORDER_SUBJECT_TYPE, stage).map(p => p.code);
@@ -47,7 +49,8 @@ export class OrderChecksService {
     }
 
     // An auto trigger that hits `hold` leaves the order in the manual confirmation queue; staff
-    // confirming it manually is the release. A failing provider never stops the order flow.
+    // confirming it manually is the release.
+    // Fail-open by owner decision (docs/checks-and-policies.md): a broken check never stops an order.
     async isHeld(
         ctx: RequestContext,
         orderId: string,
@@ -57,20 +60,43 @@ export class OrderChecksService {
         const stages: OrderCheckStage[] = automatic
             ? ['pre-reserve', 'pre-send-to-erp']
             : ['pre-reserve'];
+        let stage: OrderCheckStage = stages[0];
         try {
-            let held = false;
-            for (const stage of stages) {
-                const { strongestConsequence } = await this.run(ctx, orderId, stage);
-                held = held || strongestConsequence === 'hold';
-            }
-            return automatic && held;
+            return await this.connection.withTransaction(ctx, txCtx =>
+                withSavepoint(this.connection, txCtx, async () => {
+                    let held = false;
+                    for (stage of stages) {
+                        const { strongestConsequence } = await this.run(txCtx, orderId, stage);
+                        held = held || strongestConsequence === 'hold';
+                    }
+                    return automatic && held;
+                }),
+            );
         } catch (error) {
+            await this.recordFailure(orderId, stage, error);
+            return false;
+        }
+    }
+
+    async recordFailure(orderId: string, stage: OrderCheckStage, error: unknown): Promise<void> {
+        const message = error instanceof Error ? error.message : String(error);
+        Logger.error(
+            `Order checks failed for order ${orderId} at ${stage}, continuing: ${message}`,
+            error instanceof Error ? error.stack : undefined,
+            loggerCtx,
+        );
+        try {
+            // Own connection: the caller's transaction may still roll back, the signal must survive.
+            await this.connection.rawConnection.query(
+                `INSERT INTO order_check_failure ("uuid", "orderId", "stage", "message") VALUES ($1, $2, $3, $4)`,
+                [randomUUID(), orderId, stage, message],
+            );
+        } catch (recordError) {
             Logger.error(
-                `Order checks failed for order ${orderId}, continuing: ${String(error)}`,
+                `Could not record the check failure: ${String(recordError)}`,
                 undefined,
                 loggerCtx,
             );
-            return false;
         }
     }
 

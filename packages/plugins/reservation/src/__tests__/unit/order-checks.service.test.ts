@@ -16,7 +16,9 @@ function service(strongest: string | null | Error) {
         return { findings: [], strongestConsequence: strongest };
     });
     const checks = { runChecks: run, findResults: vi.fn(async () => []) };
+    const record = vi.fn(async () => undefined);
     const connection = {
+        rawConnection: { query: record },
         withTransaction: async (c: unknown, work: (c: unknown) => unknown) => work(c),
         getRepository: () => ({
             query: async () => [],
@@ -38,6 +40,7 @@ function service(strongest: string | null | Error) {
     const registrar = { visibleIds: async (_c: unknown, ids: string[]) => new Set(ids) };
     return {
         run,
+        record,
         orders: new OrderChecksService(
             connection as never,
             checks as never,
@@ -65,8 +68,20 @@ describe('OrderChecksService.isHeld', () => {
         expect(await orders.isHeld(ctx, '1', 'auto-prepaid')).toBe(false);
     });
 
-    it('does not stop the order flow when a provider fails', async () => {
-        const { orders } = service(new Error('boom'));
+    it('does not stop the order flow when a provider fails, and leaves a health record of it', async () => {
+        const { orders, record } = service(new Error('boom'));
+        expect(await orders.isHeld(ctx, '1', 'auto-trust-rule')).toBe(false);
+        expect(record).toHaveBeenCalledWith(expect.stringContaining('order_check_failure'), [
+            expect.any(String),
+            '1',
+            'pre-reserve',
+            'boom',
+        ]);
+    });
+
+    it('still continues when recording the failure fails too', async () => {
+        const { orders, record } = service(new Error('boom'));
+        record.mockRejectedValueOnce(new Error('db down'));
         expect(await orders.isHeld(ctx, '1', 'auto-trust-rule')).toBe(false);
     });
 });
