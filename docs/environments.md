@@ -224,7 +224,9 @@ available stock", "Remove? Yes/No" on a non-last line and the last-line restrict
 whose `order.confirmed` send is held by policy (dashboard Outbound tab "Sends held by policy" and the alert
 `integration-outbox-held`). It imports storage places, organization stock and contracts through the
 `erp-import` record types `storageLocation`, `stockOrganization`, `contract`, and leaves the policy
-`erp.organization-stock` at `pre-send-to-erp` set to `hold` on the local contour. The held row is marked by
+`erp.organization-stock` at `pre-send-to-erp` set to `hold` on the local contour (that hold queues every automatic
+reserve of an order short on organization stock, so e2e checkout specs expecting `RESERVED` fail until the
+policy is set back to `warn` in Controls and policies). The held row is marked by
 one raw SQL update (an automatic reserve already stops at the same hold, so the live flow cannot produce it on
 demand). Never run it against staging-integration.
 
