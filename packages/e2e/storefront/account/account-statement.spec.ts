@@ -12,13 +12,14 @@ test.describe('Account statement section', () => {
         await expect(statement).toBeVisible();
         await expect(page.getByRole('link', { name: 'Payments', exact: true })).toHaveCount(0);
 
-        const group = page.getByRole('button', { name: 'Documents' });
+        const nav = page.getByRole('navigation');
+        const group = nav.getByRole('button', { name: 'Documents' });
         await expect(group).toHaveAttribute('aria-expanded', 'false');
         await group.click();
         await expect(group).toHaveAttribute('aria-expanded', 'true');
-        await expect(page.getByRole('link', { name: 'Proforma invoices' })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Contracts and files' })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Reconciliation acts' })).toBeVisible();
+        await expect(nav.getByRole('link', { name: 'Proforma invoices' })).toBeVisible();
+        await expect(nav.getByRole('link', { name: 'Contracts and files' })).toBeVisible();
+        await expect(nav.getByRole('link', { name: 'Reconciliation acts' })).toBeVisible();
 
         await statement.click();
         await expect(page.getByRole('heading', { name: 'Account statement' })).toBeVisible();

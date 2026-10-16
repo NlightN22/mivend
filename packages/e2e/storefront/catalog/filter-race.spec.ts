@@ -6,7 +6,23 @@ const COUNT = '.plv-toolbar__count';
 // fires loadMore() before the first load() resolves, duplicating rows (stale currentSkip=0).
 test.describe('Catalog filtered list has no duplicate rows on cold navigation', () => {
     test('collection + facet filter via URL shows each SKU exactly once', async ({ page }) => {
-        await page.goto('/catalog?collection=cat-cat-engine&fv=20');
+        // Facet value ids are DB-generated, so the brand is resolved by name, not a fixed id.
+        const res = await page.request.post(
+            `${process.env.STOREFRONT_URL ?? 'http://localhost:5173'}/shop-api`,
+            {
+                data: {
+                    query: `{ search(input: { collectionSlug: "cat-cat-engine", groupByProduct: true }) {
+                        facetValues { facetValue { id name } } } }`,
+                },
+                headers: { 'Content-Type': 'application/json' },
+            },
+        );
+        const body = (await res.json()) as {
+            data: { search: { facetValues: { facetValue: { id: string; name: string } }[] } };
+        };
+        const mann = body.data.search.facetValues.find(f => f.facetValue.name === 'Mann');
+        expect(mann).toBeTruthy();
+        await page.goto(`/catalog?collection=cat-cat-engine&fv=${mann?.facetValue.id}`);
         await page.waitForLoadState('networkidle');
         await expect(page.locator(COUNT)).toBeVisible({ timeout: 10000 });
         await expect(page.locator(COUNT)).not.toHaveText('Loading...', { timeout: 8000 });

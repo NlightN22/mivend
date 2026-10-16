@@ -96,7 +96,7 @@ test.describe('Proforma invoice detail page', () => {
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.id-title')).toBeVisible({ timeout: 10000 });
         const title = await page.locator('.id-title').textContent();
-        expect(title).toMatch(/ProformaInvoice\s+#\d+/);
+        expect(title).toMatch(/Proforma invoice\s+#[\d-]+/);
     });
 
     test('detail page shows proforma invoice line items', async ({ page }) => {
@@ -128,7 +128,9 @@ test.describe('Proforma invoice detail page', () => {
         await page.goto('/proforma-invoices');
         await page.waitForLoadState('domcontentloaded');
         const row = page
-            .locator('.proforma-invoice-row', { hasText: `Order ${orderCode}` })
+            .locator('.proforma-invoice-row', {
+                hasText: `Order ${orderCode.replace(/^(\d{3})/, '$1-')}`,
+            })
             .first();
         await expect(row).toBeVisible({ timeout: 10000 });
         await row.getByRole('button', { name: 'Open' }).click();
@@ -140,8 +142,12 @@ test.describe('Proforma invoice detail page', () => {
 
         await page.getByRole('button', { name: /Payment successful/ }).click();
         await expect(page).toHaveURL(/\/proforma-invoices\/[a-zA-Z0-9]+$/, { timeout: 10000 });
-        await expect(page.locator('.id-pay-note')).toContainText('fully paid');
-        await expect(page.getByRole('button', { name: 'Pay proforma invoice' })).toBeDisabled();
+        // The detail page no longer shows a paid notice (#206); the settlement is checked via the API.
+        const paidId = page.url().split('/proforma-invoices/')[1];
+        const paid = await gql(page, `query($id: ID!) { proformaInvoice(id: $id) { status } }`, {
+            id: paidId,
+        });
+        expect((paid.proformaInvoice as { status: string }).status).toBe('paid');
     });
 
     test('back link returns to proforma invoices list', async ({ page }) => {

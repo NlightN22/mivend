@@ -129,17 +129,18 @@ test.describe('Documents page — all document types', () => {
 
         const proformaInvoice = await waitForDocumentReady(
             page,
-            d => d.type === 'proforma-invoice' && d.number === orderCode,
+            // Proforma numbers are versioned per order: <order>-<NN>-<version> (#206).
+            d => d.type === 'proforma-invoice' && d.number.startsWith(`${orderCode}-`),
         );
         expect(proformaInvoice.status).toBe('ready');
 
         await page.goto('/documents');
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.getByText(orderCode)).toBeVisible({ timeout: 10000 });
+        await expect(page.getByText(proformaInvoice.number)).toBeVisible({ timeout: 10000 });
 
         // Asset-backed PDFs trigger a native browser download (not a new tab) —
         // unlike ERP-pushed fileUrl documents, which open as a normal page.
-        const proformaInvoiceRow = page.locator('.doc-row', { hasText: orderCode });
+        const proformaInvoiceRow = page.locator('.doc-row', { hasText: proformaInvoice.number });
         const [download] = await Promise.all([
             page.waitForEvent('download'),
             proformaInvoiceRow.getByRole('link', { name: 'Download' }).click(),

@@ -31,7 +31,9 @@ test.describe('Favorites', () => {
         await addFirstCatalogProductToFavorites(page);
         await goToFavorites(page);
         await expect(page.locator('.favorites-page__empty')).not.toBeVisible();
-        await expect(page.locator('.fav-card').first()).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.mv-product-row, .mv-product-card').first()).toBeVisible({
+            timeout: 10000,
+        });
     });
 
     test('favorite persists across page reload', async ({ page }) => {
@@ -47,7 +49,11 @@ test.describe('Favorites', () => {
         await goToFavorites(page);
         await expect(page.locator('.favorites-page__empty')).not.toBeVisible();
 
-        await page.getByLabel('Remove from favorites').first().click();
+        await page
+            .locator('.mv-product-row, .mv-product-card')
+            .first()
+            .getByLabel('Toggle favorite')
+            .click();
         await expect(page.locator('.favorites-page__empty')).toBeVisible({ timeout: 10000 });
     });
 
