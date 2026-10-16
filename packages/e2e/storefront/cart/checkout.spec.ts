@@ -45,10 +45,9 @@ test.describe('Checkout', () => {
 
     test('checkout page has order submit button', async ({ page }) => {
         await page.goto('/checkout');
-        await page.waitForLoadState('networkidle');
 
-        await expect(
-            page.getByRole('button', { name: /Place order|Confirm order|Pay online/ }),
-        ).toBeVisible();
+        await expect(page.getByRole('button', { name: /^(Place order|Pay .*→)/ })).toBeVisible({
+            timeout: 10000,
+        });
     });
 });

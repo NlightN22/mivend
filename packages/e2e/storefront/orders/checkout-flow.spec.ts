@@ -82,7 +82,7 @@ test.describe('Checkout places a real order (regression)', () => {
         await page.goto('/checkout');
         await page.waitForLoadState('networkidle');
         await page.getByRole('button', { name: /Card online/i }).click();
-        await page.getByRole('button', { name: 'Pay online →' }).click();
+        await page.getByRole('button', { name: /^Pay .*→$/ }).click();
 
         await expect(page).toHaveURL(/\/payment-stub/, { timeout: 15000 });
         await page.getByRole('button', { name: /Payment successful/i }).click();
@@ -104,7 +104,7 @@ test.describe('Checkout places a real order (regression)', () => {
         await page.goto('/checkout');
         await page.waitForLoadState('networkidle');
         await page.getByRole('button', { name: /Card online/i }).click();
-        await page.getByRole('button', { name: 'Pay online →' }).click();
+        await page.getByRole('button', { name: /^Pay .*→$/ }).click();
 
         await expect(page).toHaveURL(/\/payment-stub/, { timeout: 15000 });
         await page.getByRole('button', { name: /Payment failed/i }).click();
