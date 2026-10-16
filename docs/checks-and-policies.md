@@ -94,29 +94,41 @@ and checks are registered by the plugins that own them.
 - **Order flows fail open (owner decision: a failing check must never stop an order).**
   `OrderChecksService.isHeld` (reserve) and `OrderSendHoldService` (send) catch the rethrown error,
   so a failing check does not hold or block the order. The failure is not silent: it is logged at
-  error level and written to `order_check_failure` on its own connection (it survives a rollback of
-  the order flow), and `orderCheckHealth` lists it as `check-run-failed` per stage for 7 days. In
+  error level and written to `order_check_failure` (error text cut to 500 characters, kept 30 days,
+  pruned by a scheduled task) on its own connection, deferred and not awaited so the caller never
+  waits for a second pool connection while holding one; `orderCheckHealth` lists it as
+  `check-run-failed` per stage for 7 days. In
   `reserveOrder` the checks run inside a savepoint, so a SQL error in a provider cannot abort the
   reserve's transaction. A hold therefore depends on the check being able to run.
 - **Stale.** `markStale(ctx, subjectType, subjectId)` (under the same lock) flags stored rows; a
-  subject with no stored findings has nothing to flag, callers needing freshness re-run. Order
-  data handlers (stock-organization, storage-location) mark inside their own lock transaction, so
-  the data change and the mark commit together and a retried message cannot lose the mark; the
-  marking pages by order id with no cap. The contract handler marks after its idempotent write and
-  re-marks on retry. A tombstone or delete that carries an entity id shared by several rows removes
+  subject with no stored findings has nothing to flag, callers needing freshness re-run. Data
+  handlers (stock-organization, storage-location, contract) do not mark in their own transaction:
+  they write a durable, idempotent row to `check_stale_request` (kind + key, a version counter bumped
+  by a repeated request) in the same transaction as the data change, so a retried message cannot
+  lose the request and no order lock is held across a bulk load. `CheckStaleRequestService.drain`
+  (fast path right after commit, plus the `check-stale-requests` scheduled task every minute)
+  marks the affected subjects stale in short per-subject transactions (keyset pages, no cap) and
+  deletes a request only if its version is unchanged; a failing handler leaves it for the next pass. A tombstone or delete that carries an entity id shared by several rows removes
   all of them and marks every affected product.
 - **A policy takes effect for new runs; stored results are flagged out of date.**
-  `updateCheckPolicy` (consequence or `enabled` changed) marks every stored result of that check
-  stale in the same transaction and publishes `CheckPolicyChangedEvent`. Runs share-lock the
+  `updateCheckPolicy` (consequence or `enabled` changed) writes a `check-code` stale request in the
+  same transaction (never a mass UPDATE under the policy lock, which could deadlock with a run
+  holding result rows) and publishes `CheckPolicyChangedEvent`; the drain flags the results. Runs share-lock the
   policy rows, so a run in flight cannot leave fresh-looking results of the old policy. A disabled
   check keeps its old findings, flagged stale, until the subject is next recomputed. Loosening a
-  `hold` at `pre-send-to-erp` re-drives the held sends (see below); orders held at `pre-reserve`
-  stay in the confirmation queue until staff confirms them.
+  `hold` at `pre-send-to-erp` re-drives the held sends (see below); a policy loosened from `hold` at
+  `pre-reserve` does NOT auto-advance the order: it stays in the confirmation queue until staff confirms.
 - **A send hold is rebuildable.** A hold at `pre-send-to-erp` leaves a `skipped` outbox row with a
   fixed reason. A staff confirmation of an already reserved order (stamps the reservations,
   `OrderStaffConfirmedEvent`) or a policy that stops holding re-drives those rows through the
   normal rebuild (`HeldSendRedriveService`), so a hold cannot block the ERP send for good. The
-  row stays `skipped` while another policy still holds the order.
+  row stays `skipped` while another policy still holds the order. The event path is only the fast
+  path: a scheduled sweep (`erp-integration-held-send-redrive`, every 5 minutes) re-evaluates every
+  held row (and rows whose rebuild failed) through the same rebuild, so a missed event, a failed
+  rebuild, or a hold cause that disappeared with new data (for example a stock-organization row
+  arriving) still ends in a send. Rebuild takes the outbox row lock first, then the order lock
+  after the build, the same lock the live enqueue holds across check + insert, so a confirm and a
+  re-drive in parallel produce exactly one outbox row.
 - **Locking trade-off.** An order run takes `reserve-order:<id>`, the same lock as the reserve, so
   a long recompute delays the reserve of that order. The lock is taken once, inside `runChecks`,
   and held to the end of the surrounding transaction, which also covers the cross-stage cleanup.

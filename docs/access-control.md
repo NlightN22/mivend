@@ -101,7 +101,9 @@ already read, and `checkResults` still passes through the order visibility scope
 nothing). `ManageCheckPolicies` (consequence policies) stays with general-director and portal-admin.
 `recomputeOrderChecks` writes results and takes the order lock, so it needs `ReadCheckResults` AND
 `ConfirmOrder` (the permission of the other staff order actions: confirm, release, set contract);
-`@Allow` is any-of, so the second one is checked in the resolver.
+`@Allow` is any-of, so the second one is checked in the resolver. `ConfirmOrder` is broader than a
+recompute strictly needs; accepted for now (owner decision). If a role must recompute without being able to
+confirm, introduce a dedicated permission instead of widening this one.
 
 ## Layer 3: `AccessScopeService` — one service, reused everywhere
 
