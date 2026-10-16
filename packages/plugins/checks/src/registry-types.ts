@@ -15,7 +15,7 @@ export interface SubjectTypeDefinition<S = unknown> {
     lockKey(subjectRef: string): string;
     dataVersion?(subject: S): string;
     // Admin reads of stored results go through it so one actor never reads another scope's subjects.
-    visibleSubjectIds?(ctx: RequestContext, subjectIds: string[]): Promise<Set<string>>;
+    visibleSubjectIds(ctx: RequestContext, subjectIds: string[]): Promise<Set<string>>;
 }
 
 export interface CheckProvider<S = unknown> {

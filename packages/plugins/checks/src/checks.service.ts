@@ -56,7 +56,7 @@ export class ChecksService {
                 if (subject === null || subject === undefined) {
                     throw new Error(`Subject ${subjectType}:${subjectRef} not found`);
                 }
-                const policies = await this.policies.ensureForStage(txCtx, providers, stage);
+                const policies = await this.policies.ensureForStage(txCtx, providers, stage, true);
                 const resolved: ResolvedFinding[] = [];
                 for (const provider of providers) {
                     const policy = policies.get(provider.code);
@@ -114,11 +114,13 @@ export class ChecksService {
         subjectId: string,
     ): Promise<CheckResult[]> {
         const definition = this.registry.findSubjectType(subjectType);
-        if (definition?.visibleSubjectIds) {
-            const ids = await definition.visibleSubjectIds(ctx, [subjectId]);
-            if (!ids.has(subjectId)) {
-                return [];
-            }
+        // Fail closed: an unknown subject type, or one without a visibility rule, exposes nothing.
+        if (typeof definition?.visibleSubjectIds !== 'function') {
+            return [];
+        }
+        const ids = await definition.visibleSubjectIds(ctx, [subjectId]);
+        if (!ids.has(subjectId)) {
+            return [];
         }
         return this.connection.getRepository(ctx, CheckResult).find({
             where: { subjectType, subjectId },

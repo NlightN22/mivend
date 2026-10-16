@@ -20,7 +20,7 @@ function setup(visible: string[] | null) {
                       new Set(ids.filter(i => visible.includes(i))),
               }
             : {}),
-    });
+    } as never);
     const find = vi.fn(async () => [{ id: 1 }]);
     const connection = { getRepository: () => ({ find }) };
     return { find, service: new ChecksService(connection as never, registry, {} as never) };
@@ -39,8 +39,15 @@ describe('ChecksService.findResults visibility', () => {
         expect(find).not.toHaveBeenCalled();
     });
 
-    it('keeps reading unrestricted when the subject type declares no visibility', async () => {
-        const { service } = setup(null);
-        expect(await service.findResults(ctx, 'thing', 'b')).toEqual([{ id: 1 }]);
+    it('fails closed when the subject type declares no visibility rule', async () => {
+        const { service, find } = setup(null);
+        expect(await service.findResults(ctx, 'thing', 'b')).toEqual([]);
+        expect(find).not.toHaveBeenCalled();
+    });
+
+    it('fails closed for an unknown subject type', async () => {
+        const { service, find } = setup(['a']);
+        expect(await service.findResults(ctx, 'nope', 'a')).toEqual([]);
+        expect(find).not.toHaveBeenCalled();
     });
 });

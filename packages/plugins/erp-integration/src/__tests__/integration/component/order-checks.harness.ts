@@ -268,7 +268,9 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
     };
 
     const registry = new CheckRegistry();
-    const policies = new CheckPolicyService(connection, registry);
+    const policies = new CheckPolicyService(connection, registry, {
+        publish: () => undefined,
+    } as never);
     const checks = new ChecksService(connection, registry, policies);
     const loader = new OrderCheckSubjectLoader(
         connection,

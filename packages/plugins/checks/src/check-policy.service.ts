@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
 import { randomUUID } from 'node:crypto';
 import { withAggregateLock } from 'shared';
 import { In } from 'typeorm';
 
 import { CheckRegistry } from './check-registry';
+import { CheckPolicyChangedEvent } from './check-policy-changed.event';
 import { CheckPolicy } from './entities/check-policy.entity';
 import { CheckPolicyHistory } from './entities/check-policy-history.entity';
+import { CheckResult } from './entities/check-result.entity';
 import type { CheckProvider } from './registry-types';
 import { CONSEQUENCES, Consequence, DEFAULT_CONSEQUENCE } from './types';
 
@@ -23,13 +25,17 @@ export class CheckPolicyService {
     constructor(
         private connection: TransactionalConnection,
         private registry: CheckRegistry,
+        private eventBus: EventBus,
     ) {}
 
     // A missing row is created from the provider's declared default (warn unless it says otherwise).
+    // `lockRows` (runs only) share-locks the rows so a concurrent policy update waits for the run
+    // and then marks its fresh results stale.
     async ensureForStage(
         ctx: RequestContext,
         providers: CheckProvider[],
         stage: string,
+        lockRows = false,
     ): Promise<Map<string, CheckPolicy>> {
         const repo = this.connection.getRepository(ctx, CheckPolicy);
         if (providers.length === 0) {
@@ -52,6 +58,7 @@ export class CheckPolicyService {
             .execute();
         const rows = await repo.find({
             where: { stage, checkCode: In(providers.map(p => p.code)) },
+            ...(lockRows ? { lock: { mode: 'pessimistic_read' as const } } : {}),
         });
         return new Map(rows.map(row => [row.checkCode, row]));
     }
@@ -123,6 +130,16 @@ export class CheckPolicyService {
                         },
                     }),
                 );
+                const changed =
+                    before.consequence !== saved.consequence || before.enabled !== saved.enabled;
+                if (changed) {
+                    await this.connection
+                        .getRepository(txCtx, CheckResult)
+                        .update({ checkCode: input.checkCode, stale: false }, { stale: true });
+                    this.eventBus.publish(
+                        new CheckPolicyChangedEvent(txCtx, input.checkCode, input.stage, before),
+                    );
+                }
                 return saved;
             },
         );

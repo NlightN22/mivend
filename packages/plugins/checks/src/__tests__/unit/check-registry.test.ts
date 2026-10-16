@@ -11,6 +11,7 @@ const subject: SubjectTypeDefinition = {
     allowedConsequences: ['info', 'warn', 'block'],
     loadSubject: async () => ({}),
     lockKey: ref => `thing:${ref}`,
+    visibleSubjectIds: async (_c, ids) => new Set(ids),
 };
 
 function provider(over: Partial<CheckProvider> = {}): CheckProvider {
@@ -82,7 +83,7 @@ describe('CheckPolicyService.update validation', () => {
     const registry = new CheckRegistry();
     registry.registerSubjectType(subject);
     registry.registerCheck(provider());
-    const service = new CheckPolicyService(null as never, registry);
+    const service = new CheckPolicyService(null as never, registry, null as never);
     const ctx = {} as never;
 
     it('rejects a consequence the subject type does not allow', async () => {

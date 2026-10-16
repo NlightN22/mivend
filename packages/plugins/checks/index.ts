@@ -8,3 +8,4 @@ export { CheckPolicyHistory } from './src/entities/check-policy-history.entity';
 export { CheckResult } from './src/entities/check-result.entity';
 export type { CheckContext, CheckProvider, SubjectTypeDefinition } from './src/registry-types';
 export * from './src/types';
+export { CheckPolicyChangedEvent } from './src/check-policy-changed.event';

@@ -103,6 +103,7 @@ beforeAll(async () => {
         allowedConsequences: ['info', 'warn', 'block'],
         loadSubject: async (_c, ref) => ({ ref }),
         lockKey: ref => `thing:${ref}`,
+        visibleSubjectIds: async (_c, ids) => new Set(ids),
     });
     const provider: CheckProvider<{ ref: string }> = {
         code: 'demo.rule',
@@ -126,7 +127,9 @@ beforeAll(async () => {
         },
     };
     registry.registerCheck(provider);
-    policies = new CheckPolicyService(connection, registry);
+    policies = new CheckPolicyService(connection, registry, {
+        publish: published.push.bind(published),
+    } as never);
     checks = new ChecksService(connection, registry, policies);
 });
 
@@ -137,11 +140,14 @@ afterAll(async () => {
 
 beforeEach(async () => {
     calls = 0;
+    published.length = 0;
     behaviour = { throwOnEvaluate: false, delayMs: 0, severity: 'warning' };
     await dataSource.query(
         'TRUNCATE check_result, check_policy_history, check_policy RESTART IDENTITY',
     );
 });
+
+const published: unknown[] = [];
 
 const stored = (subjectId: string): Promise<{ stage: string; stale: boolean }[]> =>
     dataSource.query('SELECT stage, stale FROM check_result WHERE "subjectId" = $1', [subjectId]);
@@ -187,6 +193,54 @@ describe('checks framework (real Postgres)', () => {
         expect(run.findings).toEqual([]);
         expect(run.strongestConsequence).toBeNull();
         expect(await stored('a')).toHaveLength(0);
+    });
+
+    it('a policy change flags every stored result of that check as stale and announces it', async () => {
+        await checks.runChecks(ctx, 'thing', 'a', 'draft');
+        await checks.runChecks(ctx, 'thing', 'b', 'final');
+        await policies.update(ctx, {
+            checkCode: 'demo.rule',
+            stage: 'draft',
+            consequence: 'warn',
+            recipient: 'ops',
+            enabled: true,
+        });
+        expect((await stored('a')).every(r => !r.stale)).toBe(true);
+        expect(published).toHaveLength(0);
+        await policies.update(ctx, {
+            checkCode: 'demo.rule',
+            stage: 'draft',
+            consequence: 'info',
+            enabled: true,
+        });
+        expect((await stored('a')).every(r => r.stale)).toBe(true);
+        expect((await stored('b')).every(r => r.stale)).toBe(true);
+        expect(published).toHaveLength(1);
+    });
+
+    it('a disabled policy leaves its old findings visibly out of date until the next run', async () => {
+        await checks.runChecks(ctx, 'thing', 'a', 'draft');
+        await policies.update(ctx, {
+            checkCode: 'demo.rule',
+            stage: 'draft',
+            consequence: 'warn',
+            enabled: false,
+        });
+        expect((await stored('a')).map(r => r.stale)).toEqual([true]);
+    });
+
+    it('a run in flight when the policy changes cannot leave fresh-looking old results', async () => {
+        behaviour.delayMs = 150;
+        const run = checks.runChecks(ctx, 'thing', 'a', 'draft');
+        await new Promise(r => setTimeout(r, 40));
+        await policies.update(ctx, {
+            checkCode: 'demo.rule',
+            stage: 'draft',
+            consequence: 'info',
+            enabled: true,
+        });
+        await run;
+        expect((await stored('a')).every(r => r.stale)).toBe(true);
     });
 
     it('a rerun replaces results of its own stage only, and markStale flags the rest', async () => {
