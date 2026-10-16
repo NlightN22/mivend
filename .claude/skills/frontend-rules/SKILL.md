@@ -72,3 +72,26 @@ back/forward and shared links restore it. Use `useUrlState` / `useUrlSyncedState
 - Filter and page changes push a history entry; typing in a search box replaces it (`typingKeys`).
 - Default values are omitted from the URL; keys the page does not own are preserved.
 - State is initialised from the URL on load and re-read when the route query changes.
+
+## Layers (z-index)
+
+Page-level stacking comes only from the `--mv-z-*` tokens in `packages/ui-kit/src/styles/tokens.css`
+(mirrored in `tokens/layers.ts` for JS-configured libraries):
+sticky < dropdown < floating < overlay < modal < popover < connection-bar < toast.
+
+- Pick the layer by role, never by number; a sibling inside one role is `calc(var(--mv-z-<layer>) ± 1)`.
+- Raw numbers are allowed only up to 10, for ordering elements inside one component.
+- Anything that must cover the page (modal, sheet, panel) is `position: fixed` and is not nested in
+  a sticky/transformed ancestor, which would trap it in that ancestor's stacking context.
+- A new layer role is added to both `tokens.css` and `layers.ts`; `layers.test.ts` enforces sync and
+  rejects raw page-level values.
+
+## Final checklist (before calling frontend work done)
+
+- [ ] Only ui-kit components/tokens used; no parallel local component or hard-coded color.
+- [ ] Every new `z-index` uses a `--mv-z-*` token (or `calc` on one); `make test` passes `layers.test.ts`.
+- [ ] Opened every new dropdown/popup/modal/panel on a real page and checked it sits above the header
+      and below the connection bar and toasts; a library popup inside a modal is visible.
+- [ ] Checked the mobile width (390px) too: bottom nav, sheets, drawers do not cover each other wrongly.
+- [ ] Took the screenshots myself and looked at them; `toBeVisible` does not prove an element is not
+      covered — use `document.elementFromPoint` when overlap matters.
