@@ -28,7 +28,7 @@ ERP inbound/outbound handlers. Never from an automated suite: orders reach the r
 | Same `eventId` redelivered | One inbox row, one customer order, one ERP document |
 | New `eventId`, same `orderUuid` | New inbox row processed, still one customer order and one ERP document |
 | Same registration result applied twice | State unchanged, no error (re-queue the inbox row) |
-| Variant without organization | Hidden for customers, checkout transition refused; reason in `transitionError` |
+| Variant without organization | Hidden for customers; checkout is not refused, the order shows the finding `order.line-without-organization` |
 | Cart with two organizations, same warehouse | One `order.confirmed`; lines keep their organizations after checkout |
 | Digits search | Order found by digits; the display dash is undone by the manager search only |
 

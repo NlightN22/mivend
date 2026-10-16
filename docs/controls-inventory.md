@@ -1,12 +1,12 @@
 # Controls inventory (#241)
 
 Every control that exists in the code today, classified against `docs/checks-and-policies.md`.
-This table is the source for the follow-up migration issues (clusters below), not a refactor plan.
+Order controls were migrated in #241 (state per row below); the manager controls are #242.
 Rule text of a concrete control stays in its domain doc; this file only classifies.
 
-Status values: **provider** (already in the framework), **wrap** (becomes a provider), **policy
-toggle** (a hard-coded behavior or a `BranchSettings` flag that becomes a policy row), **stays
-outside** (a guard that is not a business control, reason given).
+Status values: **provider** (in the framework), **migrated** (was a guard or a flag, now a provider and
+policy rows, #241), **open** (not migrated yet, issue linked), **stays outside** (a guard that is not a business
+control, reason given).
 
 ## Order subject
 
@@ -14,13 +14,13 @@ outside** (a guard that is not a business control, reason given).
 |---|---|---|---|---|---|---|
 | 1 | Contract with the storage organization (#237) | providers in `erp-integration` | `warn` | `erp.contract-with-storage-organization`, all order stages | `warn` | provider |
 | 2 | Organization stock (#237) | providers in `erp-integration` | `warn` | `erp.organization-stock` | `warn` | provider |
-| 3 | Variant without a seller organization (#201) | `organizationOrderGuard` (to `ArrangingPayment`); again in `findErpExportGaps` (reserve, `organizationId`) | checkout refused with the SKU list; reserve fails | `order.line-without-organization`, `checkout`, `pre-reserve` | `block` | wrap |
-| 4 | No usable order contract (#205) | `contractOrderGuard` (to `ArrangingPayment`); again in `findErpExportGaps` (`missingContract`) | checkout refused; reserve fails | `order.contract-unresolved`, `checkout`, `pre-reserve` | `block` | wrap |
-| 5 | ERP export data gaps: customer id, product id, warehouse id | `findErpExportGaps` in `reserveOrder` | reserve fails (`ErpExportDataMissingError`), reservation state FAILED | `erp.export-data-missing`, `pre-reserve` | `block` | wrap |
-| 6 | Quantity multiplicity (#103, #219) | `MultiplicityOrderInterceptor` (add, adjust); `findMultiplicityViolations` in `reserveOrder`; stepper step in the line editor (#233) | add/adjust refused; reserve fails | `order.multiplicity`, `cart`, `pre-reserve`, `on-edit` | `block`, enabled by branch flag | wrap + policy toggle |
-| 7 | Warehouse stock at reserve | `reserveOrder` (`InsufficientStockError`); free stock also computed by `OrderLineAvailabilityService` (#233) and ATP | reserve fails, reservation state FAILED | `reservation.warehouse-stock`, `pre-reserve` | `block` | wrap (see decision D2) |
-| 8 | Credit limit exceeded (#222) | `DeferredCreditAssessmentService` + `decidePlacement`; flag stored in payment metadata (`CreditFlagService`) | route `manager-confirmation` (hold), or `erp-now` when the branch allows and the customer acknowledged | `credit.limit`, `checkout` (preview), `pre-send-to-erp` | `hold` | wrap + policy toggle |
-| 9 | Freight needs an active trading point | `freightOrderGuard` (to `ArrangingPayment`) | checkout refused | `delivery.freight-trading-point`, `checkout` | `block` | wrap |
+| 3 | Variant without a seller organization (#201) | provider `order.line-without-organization` (plugin-acquiring); `organizationOrderGuard` only stamps; the reserve keeps its `findErpExportGaps` gate | finding; checkout is not refused | `order.line-without-organization`: `checkout` warn, `pre-reserve` hold, `on-edit` warn | as left | migrated |
+| 4 | No usable order contract (#205) | provider `order.contract-unresolved` (plugin-acquiring); `contractOrderGuard` only stamps | finding; checkout is not refused | `order.contract-unresolved`: same stages | as left | migrated |
+| 5 | ERP export data gaps: customer id, product id, warehouse id | provider `erp.export-data-missing` (plugin-reservation); `findErpExportGaps` stays as the reserve's transactional gate | finding; the reserve still refuses an unexportable order | `erp.export-data-missing`: same stages | as left | migrated (hard gate stays) |
+| 6 | Quantity multiplicity (#103, #219) | provider `order.multiplicity` (plugin-moq); the interceptor and the line editor read the `cart` policy; the reserve keeps its defense-in-depth check | cart: quantity refused when the policy blocks; findings otherwise | `order.multiplicity`: `cart` block, `pre-reserve` hold, `on-edit` warn; all off by default, a branch override turns it on | as left | migrated |
+| 7 | Warehouse stock at reserve | `reserveOrder` (`InsufficientStockError`); free stock also computed by `OrderLineAvailabilityService` (#233) and ATP | reserve fails, reservation state FAILED | the order page describes it (`erp.organization-stock` and the availability columns); the reserve gate stays | n/a | stays outside (hard transactional gate) |
+| 8 | Credit limit exceeded (#222) | provider `credit.limit` (plugin-deferred-payment); the placement decision reads the `checkout` policy of the order's branch; the customer's explicit acknowledgement step is unchanged | `hold`: manager confirmation; `warn`/`info`: `erp-now` after the acknowledgement; disabled: no limit control | `credit.limit`: `checkout` hold, `on-edit` warn | as left | migrated |
+| 9 | Freight needs an active trading point | provider `delivery.freight-trading-point` (plugin-freight-shipping); the guard is gone | finding; checkout is not refused | same stages as row 3 | as left | migrated |
 | 10 | Staff confirmation hold | `OrderChecksService.isHeld`, `OrderSendHoldService` | n/a, consumer of policies | part of the framework | n/a | provider (framework) |
 | 11 | ERP rejects a registered order (#204) | inbound ERP result handling | order marked rejected, shown on the order | later: finding `erp.registration-rejected` (display only) | `info` | stays outside for now (an inbound fact, not a pre-check) |
 
@@ -28,9 +28,9 @@ outside** (a guard that is not a business control, reason given).
 
 | # | Control | Where | On failure now | Target | Status |
 |---|---|---|---|---|---|
-| 12 | Reservation extension limit per role (max extra days), fail closed without a row | `ReservationExtensionLimitService`, `ReservationExtensionService` | extension refused | `manager.reservation-extension-days` | policy toggle (data already per role) |
-| 13 | Credit-term limit (days, amount), gate hard-codes the `department-head` role | `CreditTermGateService`, `CreditTermService` | request escalates to security review | `manager.credit-term-extension`, `require-approval` | wrap + policy toggle; the role code must become data |
-| 14 | Price adjustment below the floor price (no floor = approval) | `PriceAdjustmentGateService` | needs approval | `manager.price-adjustment-floor`, `require-approval` | wrap |
+| 12 | Reservation extension limit per role (max extra days), fail closed without a row | `ReservationExtensionLimitService`, `ReservationExtensionService` | extension refused | `manager.reservation-extension-days` | open (#242) |
+| 13 | Credit-term limit (days, amount), gate hard-codes the `department-head` role | `CreditTermGateService`, `CreditTermService` | request escalates to security review | `manager.credit-term-extension`, `require-approval` | open (#242); the role code must become data |
+| 14 | Price adjustment below the floor price (no floor = approval) | `PriceAdjustmentGateService` | needs approval | `manager.price-adjustment-floor`, `require-approval` | open (#242) |
 | 15 | Discount grant needs justification and approval | `DiscountGrantService`, approval-workflow | justification missing = validation error; approval chain | approval chain stays in `approval-workflow`; the consequence is `require-approval` | stays outside (input validation) + executor |
 
 ## Guards that intentionally stay outside
@@ -48,49 +48,36 @@ should be able to relax. No finding, no policy.
 | `prepaymentReserveDays`, `proformaPaymentTermDays` | parameters, not controls |
 | Credit limit recompute, reservation expiry, held-send sweep | background jobs |
 
-## Manager-portal toggles to move into "Controls and policies"
+## Manager-portal toggles (moved into "Controls and policies" in #241)
 
-| Toggle (today) | Becomes | Note |
-|---|---|---|
-| `BranchSettings.enforceMultiplicity` | policy of `order.multiplicity` (enabled flag, consequence) | settings are per branch, policies are global: see D1 |
-| `BranchSettings.allowExceedingCreditLimit` | policy of `credit.limit` | needs "customer acknowledges" (D3) |
-| Role editor: reservation extension limit | policy of `manager.reservation-extension-days` | per role already |
-| Role editor: credit-term limit | policy of `manager.credit-term-extension` | per role already |
+| Toggle (was) | Is now | Note |
+| --- | --- | --- |
+| `BranchSettings.enforceMultiplicity` | branch override of `order.multiplicity` (`cart`, `pre-reserve`, `on-edit`) | migration `1791519000000` carries the data; the branch settings form only points to the tab |
+| `BranchSettings.allowExceedingCreditLimit` | branch override of `credit.limit` at `checkout` (`warn` = was on, `hold` = was off) | same migration |
+| Role editor: reservation extension limit, credit-term limit | stay data per role for now | the policy of the manager checks is #242 |
 | Stay in branch settings | `packagesOnly`, `prepaymentReserveDays`, `proformaPaymentTermDays`, default/visible price types and warehouses | parameters and scope defaults |
 
-## Duplicates to collapse into one provider plus `runChecks`
+## Duplicates
 
-- **Contract**: `contractOrderGuard` and `findErpExportGaps` re-implement the same lookup (#4).
-- **Organization**: `organizationOrderGuard`, `findErpExportGaps` (`organizationId`) and the #237
-  providers read the same line field (#3, #1, #2).
-- **Multiplicity**: interceptor on add, interceptor on adjust, `findMultiplicityViolations` in the
-  reserve, and the line editor step (#6).
-- **Stock**: the reserve check, `OrderLineAvailabilityService` and ATP compute free stock separately
-  (`freeQuantity` is the shared core) (#7).
+- **Contract** and **organization**: the guards no longer refuse and only stamp; the reserve's
+  `findErpExportGaps` stays as a transactional gate and the providers describe the same facts for the
+  manager. One lookup (`order-contract-resolution`) serves the guard and the provider.
+- **Multiplicity**: the cart interceptor, the line editor step and the reserve check all call
+  `PackagingPolicyService.requiredMultiple`; the provider calls it with the rule assumed enforced.
+- **Stock**: the reserve check, `OrderLineAvailabilityService` and ATP share `freeQuantity`; the reserve gate
+  stays (a hard, race-safe barrier), the page only describes it.
 
-## Framework gaps the migration needs (owner decisions)
+## Owner decisions (#241)
 
-- **D1 branch scope.** A policy row is per (check, stage); two toggles are per branch. Either add a
-  scope dimension (global, branch) to `check_policy` or keep these two flags in branch settings and
-  let the provider read them.
-- **D2 enforcement vs advisory.** The reserve check is a transactional, race-safe guard and must
-  stay the hard gate; a provider can only describe it for the manager page. Same for checkout
-  guards: the guard must call `runChecks` and act on the consequence, not keep its own `if`.
-- **D3 customer acknowledgement.** The credit-limit route needs a "customer acknowledges" step the
-  five consequences do not express.
-- **D4 `block` for orders.** Orders reject `block` today (#237). Items 3, 4, 5, 9 refuse checkout and
-  need it at least at `checkout`.
-- **D5 `manager` subject type** for items 12 to 14, with `require-approval` bridged to
-  `approval-workflow`.
-
-## Proposed follow-up issues (one per cluster)
-
-1. Order data completeness (#3, #4, #5, #9) with D4.
-2. Multiplicity (#6) with D1.
-3. Credit limit (#8) with D1 and D3.
-4. Warehouse stock provider (#7) with D2, on top of `OrderLineAvailabilityService`.
-5. Manager limits (#12 to #14) with D5 and the `require-approval` bridge.
-6. Framework: D1, D2, D4 as needed by the above.
+- **Branch scope**: a `branchId` dimension on `check_policy` (a branch row overrides the global row).
+- **Reserve stock** stays a hard transactional gate; guards that refused checkout no longer do.
+- **Credit limit** only informs the customer and the manager: no new consequence and no new confirmation step;
+  the existing acknowledgement step is kept.
+- **No block at customer checkout**: `block` exists for the order subject at `cart` only (a quantity refused when
+  added); the four ERP-oriented controls (organization, contract, ERP data, freight) warn at checkout and hold
+  at the manager stage, and show in the manager order page.
+- **Manager-action checks and basic approvals**: #242. Only basic client-manager approvals; complex routes may
+  move to an external approvals system later.
 
 No control is left unclassified; a new one found later is added to this table when it is added to
 the code (the `checks-policy` skill, step 3).

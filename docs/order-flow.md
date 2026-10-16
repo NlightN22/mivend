@@ -307,8 +307,9 @@ Courier delivery is its own plugin, `plugin-freight-shipping` (ShippingMethod co
 `freight-delivery`, created idempotently at boot like `pickup`). It is available only when the
 customer's counterparty has at least one active, non-hidden trading point
 (`freightEligibilityChecker`, so `eligibleShippingMethods` simply omits it otherwise), and an
-order process guard rejects the transition to `ArrangingPayment` with that method when the
-customer has no usable preferred trading point. The preferred point is assigned automatically
+check `delivery.freight-trading-point` reports an order that ships by that method when the
+customer has no usable preferred trading point (a warning at checkout, a hold of the automatic
+reserve; checkout is never refused, #241). The preferred point is assigned automatically
 (see `docs/access-control.md`, "The preferred trading point is self-healing"). The storefront
 renders the delivery options from `eligibleShippingMethods` and applies the method the customer
 selected; the shipping price is currently zero (price rules are not defined yet).
@@ -325,13 +326,16 @@ quantity, checkout, order-confirm, API-driven changes) — this is the one point
 non-optional; product-page/cart-level checks are UX sugar on top, not a substitute. Don't
 auto-round silently.
 
-**Opt-in per branch (#219).** Multiplicity is enforced and shown only when the resolved
-`BranchSettings.enforceMultiplicity` is `true` (default `false`); when off, the interceptor and
-reservation skip it and the storefront hides the Multiplicity cell/block. The pack rule below is
-unaffected. Deploy note: migration `1791486000000` sets `enforceMultiplicity=false` on every existing
-branch (owner decision), so a 1C multiplicity > 1 that used to always apply now applies only where the
-flag is enabled. ERP import keeps writing the field. Both enforcement points call
-`PackagingPolicyService.requiredMultiple`, so they always agree.
+**Opt-in per branch (#219, #241).** Multiplicity is enforced and shown only when the check
+`order.multiplicity` is enabled and blocks at stage `cart` for the order's branch (a branch policy row
+overrides the global one; default off, edited in "Controls and policies"). The old
+`BranchSettings.enforceMultiplicity` flag is gone: migration `1791519000000` moved it into policy rows.
+When off, the interceptor and reservation skip it and the storefront hides the Multiplicity cell/block.
+The pack rule below is unaffected. A 1C multiplicity > 1 therefore applies only where the policy is on.
+ERP import keeps writing the field. Both enforcement points call
+`PackagingPolicyService.requiredMultiple`, so they always agree. The same rule is reported as a
+finding (`order.multiplicity`, stages `cart`, `pre-reserve`, `on-edit`; default consequence `hold` at
+`pre-reserve`, `warn` at `on-edit`), whatever the cart policy is.
 
 **Only some SKUs are constrained — this is intentional, not a partial implementation.** In ERP,
 a package multiplicity only applies to items whose default sales unit of measure
@@ -507,8 +511,8 @@ All contract and organization decisions are collected in `docs/order-contracts.m
   (`contractOrderGuard`, plugin-acquiring). Selection order: (1) the stored selection if still valid
   (active, same counterparty, with an organization); (2) the counterparty's main contract if active;
   (3) any other active contract of the counterparty: same price type as the customer's price type
-  first, then the most recently created, then the lowest `erpId` (deterministic); (4) none: that
-  transition is blocked with a clear message. `isActive` mirrors the ERP deletion mark and only a
+  first, then the most recently created, then the lowest `erpId` (deterministic); (4) none: the
+  order still enters checkout and the finding `order.contract-unresolved` is reported (#241). `isActive` mirrors the ERP deletion mark and only a
   minority of counterparties have an active main contract, hence (3). `reserveOrder()` and the
   builder re-check with the same rule. Out of scope for now: contracts with dedicated limits and
   per-brand/per-position contracts.

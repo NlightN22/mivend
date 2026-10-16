@@ -39,9 +39,12 @@ Stages are defined per subject type. For `order`: `cart`, `checkout`, `pre-reser
 
 ## Policy (business rule)
 
-One row per (`check code`, `stage`): consequence, recipient, enabled flag, history (who changed
-what, when). Editable in the manager portal ("Controls and policies" tab, own permission). The
-portal's existing control toggles migrate into this table.
+One row per (`check code`, `stage`, scope): consequence, recipient, enabled flag, history (who changed
+what, when). The scope is global (`branchId` null) or one branch: a branch row overrides the global row of
+the same (check, stage) for subjects of that branch, a branch without a row follows the global one.
+Editable in the manager portal ("Controls and policies" tab, own permission; a scope selector edits the
+global default or a branch override, "Reset to global" drops an override). The portal's former per-branch
+control toggles are rows of this table (#241).
 
 | Consequence        | Effect                                                                       |
 | ------------------ | ---------------------------------------------------------------------------- |
@@ -81,10 +84,19 @@ and checks are registered by the plugins that own them.
   `registerCheck({ code, subjectType, stages, description, defaultConsequence?, evaluate })` from
   `onModuleInit`. Plugin init order is not assumed: stage names and the default consequence are
   validated whenever both sides are known; duplicate codes/types throw at startup.
-- **Policies.** `check_policy` is unique on (`checkCode`, `stage`) and created lazily on first run
-  (or first list) from the provider's `defaultConsequence`, `warn` when omitted. `enabled=false`
+- **Policies.** `check_policy` is unique on (`checkCode`, `stage`) among global rows and on (`checkCode`,
+  `stage`, `branchId`) among branch rows (two partial indexes). A global row is created lazily on first run
+  (or first list) from the provider's default: `stageDefaults[stage]`, else `defaultConsequence`, else `warn`;
+  `defaultEnabled` (a boolean, or a record by stage where a missing stage is on) lets an opt-in control start
+  off. A branch row exists only when an editor saves one (it starts as a copy of the global row).
+  `SubjectTypeDefinition.branchId(subject)` names the subject's branch; a run takes the branch row over the
+  global one. `stageConsequences` allows an extra consequence at one stage only (the `order` subject allows
+  `block` at `cart` only, for input validation); the provider defaults are validated against it.
+  `CheckPolicyService.resolve(ctx, code, stage, branchId)` is the read-only lookup for a consumer that is not a
+  run (an order interceptor, a placement decision): branch row, else global row, else the declared default. `enabled=false`
   skips the provider and clears its stored findings. `updateCheckPolicy` rejects a consequence the
-  subject type does not allow and appends `check_policy_history` (before/after, user id).
+  subject type does not allow at that stage and appends `check_policy_history` (before/after, user id);
+  `resetCheckPolicyOverride` removes a branch row (recorded in the history as removed).
 - **Run.** `ChecksService.runChecks(ctx, subjectType, subjectRef, stage)` takes the subject's
   advisory lock (`lockKey`), loads the subject under it, evaluates providers of the stage, replaces
   that subject+stage rows of `check_result` and returns `{ findings, strongestConsequence }`.
@@ -147,6 +159,12 @@ and checks are registered by the plugins that own them.
   The `order` subject type is registered by `plugin-reservation` (loader, lock `reserve-order:<id>`,
   stages, `info|warn|hold`); its ERP providers by `plugin-erp-integration`. Order callers use
   `OrderChecksService.run`, the only caller of `runChecks` for orders.
+- **Checks live with the plugin that owns the rule.** A plugin registers its check from `onModuleInit`
+  (it needs only `ChecksPlugin` and the subject type string; the data it reads comes from its own services or the
+  subject). `plugin-moq` owns `order.multiplicity`, `plugin-deferred-payment` `credit.limit`,
+  `plugin-acquiring` `order.line-without-organization` and `order.contract-unresolved`,
+  `plugin-freight-shipping` `delivery.freight-trading-point`, `plugin-reservation` `erp.export-data-missing`,
+  `plugin-erp-integration` the ERP-mandated contract and stock checks. Rule text: `docs/order-contracts.md`.
 - **Admin API.** `checkResults(subjectType, subjectId)` and `checkDefinitions(subjectType?)` need
   `ReadCheckResults` (granted to every role that reads orders, see `docs/access-control.md`); `checkPolicies(subjectType?)` and `updateCheckPolicy(input)` need
   `ManageCheckPolicies`.

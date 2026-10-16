@@ -5,7 +5,7 @@ import type { OrderCheckSubject } from './order-check-subject';
 export const ERP_EXPORT_DATA_MISSING = 'erp.export-data-missing';
 
 // What the ERP order event needs besides the contract and the organization (own checks): the buyer's
-// ERP id, each product's ERP id, and the warehouse. Unknown data is never a false positive.
+// ERP id, each product's ERP id, and the warehouse (judged only once the order has its branch).
 export function evaluateExportDataMissing(subject: OrderCheckSubject): Finding[] {
     const findings: Finding[] = [];
     if (!subject.buyerCounterpartyId) {
@@ -24,7 +24,7 @@ export function evaluateExportDataMissing(subject: OrderCheckSubject): Finding[]
             facts: { reason: 'product-without-erp-id', sku: line.sku },
         });
     }
-    if (subject.lines.length > 0 && !subject.warehouseErpId) {
+    if (subject.lines.length > 0 && subject.branchId && !subject.warehouseErpId) {
         findings.push({
             severity: 'error',
             messageKey: 'erp.export-data-missing.warehouse',

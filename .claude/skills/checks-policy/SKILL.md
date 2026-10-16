@@ -18,7 +18,9 @@ Read `docs/checks-and-policies.md` first. It is the source of truth; this is the
    `evaluate` returning findings with structured `facts` and a message key. Unknown data gives no
    finding.
 5. **Default policy as data** (seed/migration row), default `warn` unless the owner decided
-   otherwise. Never hardcode a consequence, role or threshold in code.
+   otherwise (`stageDefaults` per stage, `defaultEnabled` for an opt-in control). A per-branch
+   variation is a branch override row, never a `BranchSettings` flag. Never hardcode a consequence,
+   role or threshold in code.
 6. **Enforce through `runChecks` only.** No direct call from a resolver, flow or listener; no rule
    text duplicated per stage.
 7. **Show through the stored result** only; no frontend logic, no second read path; customer text

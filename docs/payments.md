@@ -537,8 +537,9 @@ async ERP acknowledgement is not compatible with this.
       (`SearchResult.availableForOrder` on the Admin API).
     - **Cart** marks the line "Not available for order" (`ProductVariant.availableForOrder`) and
       disables checkout until it is removed.
-    - **Hard gate**: `organizationOrderGuard` (`plugin-acquiring`) refuses the transition to
-      `ArrangingPayment`, which every payment method needs, naming the SKUs. Safety nets: payment
+    - **Finding, not a gate (#241)**: `organizationOrderGuard` (`plugin-acquiring`) no longer refuses the
+      transition to `ArrangingPayment`; the check `order.line-without-organization` reports the SKUs on
+      the order page and holds the automatic reserve. Safety nets: payment
       handlers still decline an unsplittable order, `reserveOrder()` rejects the order as
       ERP-export data missing (`organizationId`), and a skipped `order.submitted` is recorded as a
       `skipped` outbox row (see docs/integration-health.md).
@@ -834,8 +835,10 @@ The checkout list below mixes a form (proforma invoice, online) with terms (defe
 **Stage 1 done (#222):** `OpenDeferredExposureService` is payment-method-agnostic: an unconfirmed (ERP `PENDING`/
 `SENT_TO_ERP`/`RESERVED`), non-cancelled, not-too-old order of the counterparty counts until a payment of a method
 other than `deferred-payment` is `Settled`. Legacy `deferred-payment` payments (`Authorized` at placement, no money)
-keep counting. New branch setting `allowExceedingCreditLimit` (default off, manager portal Settings -> Branches) is
-exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront checkout uses it since stage 2b.
+keep counting. The branch behavior (#241: the former branch setting `allowExceedingCreditLimit` is now the `checkout`
+policy of the check `credit.limit`, per branch in "Controls and policies": `hold` = manager confirmation (default),
+`warn` or `info` = the order may go to the ERP now after the customer's acknowledgement, disabled = no limit control)
+is exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront checkout uses it since stage 2b.
 
 **Stage 2a done (#222, backend only; storefront checkout UI is the next run):**
 
@@ -849,7 +852,7 @@ exposed as `DeferredCreditAssessment.allowExceedingCreditLimit`; the storefront 
   (`route`: `erp-now` | `after-payment` | `manager-confirmation`, `countsAgainstLimit`, `reserveDays`) plus the public
   `creditLimitExceeded` flag. Reservation reads `route`; the exposure SQL skips a payment with
   `countsAgainstLimit = false` (card awaiting payment) and counts everything else not Settled.
-- Over the limit the server never trusts the UI: `erp-now` needs the branch setting `allowExceedingCreditLimit` AND the
+- Over the limit the server never trusts the UI: `erp-now` needs the branch's `credit.limit` checkout policy not to hold AND the
   customer's `creditLimitAcknowledged: true` in the `addPaymentToOrder` metadata; otherwise the order waits in
   `AWAITING_CONFIRMATION`. This also holds for card (the matrix says "any form").
 - Concurrency: exposure read, decision and payment creation run under the advisory lock

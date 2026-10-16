@@ -128,6 +128,34 @@ global switch; neither is published, so mivend can be stricter than the ERP, hen
 product storage unit is not published either: stock is taken as kept in the base unit
 (`storageUnitRatioToBase = 1`); the conversion is one place in the order subject loader.
 
+## Order data controls (#241)
+
+Four controls that used to refuse checkout (or the reserve) are checks of the subject type `order`
+(framework: `docs/checks-and-policies.md`). The customer is never stopped at checkout: the guards of
+`ArrangingPayment` only stamp the organization and the contract; the findings are shown to managers
+(header card "Order controls" and under the line on the order page) and the automatic reserve is held.
+
+| Code                                | Fact (`facts`)                                              | Stages (default consequence)                                  |
+| ----------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------- |
+| `order.line-without-organization`   | `sku`: no stamped organization and the variant has none     | `checkout` warn, `pre-reserve` hold, `on-edit` warn           |
+| `order.contract-unresolved`         | `reason: no-usable-order-contract` (buyer known, none picked) | same                                                        |
+| `delivery.freight-trading-point`    | `reason: no-active-trading-point` (freight, no usable point) | same                                                          |
+| `erp.export-data-missing`           | buyer without ERP counterparty, product without ERP id, no ERP warehouse | same                                             |
+| `order.multiplicity`                | `sku`, `quantity`, `requiredMultiple`                       | `cart` block, `pre-reserve` hold, `on-edit` warn; all off by default |
+| `credit.limit`                      | `availableCredit`, `orderAmount`, `excessKopecks`           | `checkout` hold, `on-edit` warn                               |
+
+- A hold at `pre-reserve` keeps the automatic reserve in the confirmation queue; the manual confirmation is the
+  release. The reserve itself keeps its transactional gate (`findErpExportGaps`): it still refuses an order the
+  ERP event cannot be built for, so a hold never lets an unexportable order through.
+- `block` is allowed on the order subject at the stage `cart` only (a quantity that breaks the pack multiple is
+  refused when it is added); never on `checkout` or later.
+- `credit.limit` at `checkout` is read by the placement decision: `hold` = the over-limit order waits for manager
+  confirmation, `warn`/`info` = it may go to the ERP now after the customer's acknowledgement (the explicit
+  acknowledgement step stays as it was), disabled = no limit control. The finding shows the manager why.
+- Branch scope: every policy can be overridden per branch (`docs/checks-and-policies.md`). The former branch
+  toggles `enforceMultiplicity` and `allowExceedingCreditLimit` are the branch overrides of `order.multiplicity`
+  (`cart`, `pre-reserve`, `on-edit`) and `credit.limit` (`checkout`).
+
 ## Editing an order's lines before confirmation (#233)
 
 Staff (permission `ConfirmOrder`, order visibility scope) can change a line quantity, remove a line, or cut the

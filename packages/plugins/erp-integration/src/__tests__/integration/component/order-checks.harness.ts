@@ -3,6 +3,7 @@ import {
     CreateDateColumn,
     DataSource,
     Entity,
+    Index,
     JoinColumn,
     ManyToOne,
     OneToMany,
@@ -132,10 +133,18 @@ class RequisitesM extends Base {
     @Column({ type: 'varchar' }) legalName!: string;
 }
 @Entity('check_policy')
-@Unique(['checkCode', 'stage'])
+@Index('IDX_check_policy_global', ['checkCode', 'stage'], {
+    unique: true,
+    where: '"branchId" IS NULL',
+})
+@Index('IDX_check_policy_branch', ['checkCode', 'stage', 'branchId'], {
+    unique: true,
+    where: '"branchId" IS NOT NULL',
+})
 class PolicyM extends UuidBase {
     @Column({ type: 'varchar' }) checkCode!: string;
     @Column({ type: 'varchar' }) stage!: string;
+    @Column({ type: 'varchar', nullable: true }) branchId!: string | null;
     @Column({ type: 'varchar' }) consequence!: string;
     @Column({ type: 'varchar', nullable: true }) recipient!: string | null;
     @Column({ type: 'boolean', default: true }) enabled!: boolean;

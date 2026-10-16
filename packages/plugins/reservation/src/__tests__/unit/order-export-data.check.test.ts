@@ -7,7 +7,7 @@ const subject = (over: Partial<OrderCheckSubject> = {}): OrderCheckSubject => ({
     orderId: '1',
     orderCode: '100-1',
     customerId: '1',
-    branchId: null,
+    branchId: 'branch-1',
     buyerCounterpartyId: 'cp-1',
     warehouseErpId: 'w-1',
     lines: [
@@ -46,7 +46,10 @@ describe('evaluateExportDataMissing', () => {
         expect(findings[1]).toMatchObject({ lineRef: '10', facts: { sku: 'A' } });
     });
 
-    it('does not ask for a warehouse of an order without lines', () => {
+    it('does not ask for a warehouse of an order without lines or before it has a branch', () => {
         expect(evaluateExportDataMissing(subject({ lines: [], warehouseErpId: null }))).toEqual([]);
+        expect(
+            evaluateExportDataMissing(subject({ branchId: null, warehouseErpId: null })),
+        ).toEqual([]);
     });
 });
