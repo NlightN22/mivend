@@ -14,7 +14,9 @@ interface LineAllocation {
 
 // Keeps Vendure's own allocation (stock_movement, StockLevel.stockAllocated) in step with a staff edit of a
 // placed order: the edit writes lines directly, so Vendure's order-modification hooks never run (#233).
-// Whether a line is allocated is read from its ALLOCATION/RELEASE rows, never guessed from the order state.
+// Whether a line is allocated is read from its own movement rows, never guessed from the order state.
+// Verified against @vendure/core 3.7.3 StockMovementService: ALLOCATION and RELEASE rows store a positive
+// quantity (stockAllocated +q / -q), SALE stores -q and takes q out of stockAllocated AND stockOnHand.
 @Injectable()
 export class OrderLineStockSyncService {
     constructor(
@@ -65,13 +67,13 @@ export class OrderLineStockSyncService {
             .getRepository(ctx, OrderLine)
             .query(
                 `SELECT type, COALESCE(SUM(quantity), 0) AS total FROM stock_movement
-                  WHERE "orderLineId" = $1 AND type IN ('ALLOCATION', 'RELEASE') GROUP BY type`,
+                  WHERE "orderLineId" = $1 AND type IN ('ALLOCATION', 'RELEASE', 'SALE') GROUP BY type`,
                 [lineId],
             );
         const sum = (type: string): number => Number(rows.find(r => r.type === type)?.total ?? 0);
         return {
             allocated: rows.some(r => r.type === 'ALLOCATION'),
-            net: sum('ALLOCATION') - sum('RELEASE'),
+            net: sum('ALLOCATION') - sum('RELEASE') + sum('SALE'),
         };
     }
 }

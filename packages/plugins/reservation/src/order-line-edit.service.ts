@@ -189,6 +189,15 @@ export class OrderLineEditService {
         change: (txCtx: RequestContext, order: Order) => Promise<string | null>,
     ): Promise<void> {
         await withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, async txCtx => {
+            // Row lock before reading: Vendure's placement transition (state + allocation, one transaction)
+            // updates this row, so an in-flight one commits first and the edit then sees its allocation.
+            await this.connection
+                .getRepository(txCtx, Order)
+                .createQueryBuilder('o')
+                .setLock('pessimistic_write')
+                .where('o.id = :id', { id: orderId })
+                .select('o.id')
+                .getOne();
             const order = await this.orderService.findOne(txCtx, orderId, [
                 'lines',
                 'lines.productVariant',

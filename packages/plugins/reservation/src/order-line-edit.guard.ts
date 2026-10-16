@@ -25,6 +25,10 @@ export class OrderLineEditGuard {
     // Same stage facts as order cancellation (decideEdit). A reservation does not block an edit: it is
     // released here under the same lock, the order returns to the confirmation queue and staff re-confirm.
     async assertEditable(ctx: RequestContext, order: Order): Promise<void> {
+        // A cart is not allocated yet and its placement transition may still be in flight (#233).
+        if (order.active || order.state === 'Draft') {
+            throw new UserInputError('The order is not placed yet');
+        }
         if (order.customFields?.isExternal === true) {
             throw new UserInputError('Orders from the ERP are managed there');
         }

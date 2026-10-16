@@ -44,6 +44,15 @@ function build(setup: Setup = {}) {
     const saved: unknown[] = [];
     const removed: unknown[] = [];
     const repo = (entity: { name: string }) => ({
+        createQueryBuilder: () => {
+            const qb = {
+                setLock: () => qb,
+                where: () => qb,
+                select: () => qb,
+                getOne: async () => ({}),
+            };
+            return qb;
+        },
         query: async (sql: string, params: unknown[]) => {
             if (!sql.startsWith('SELECT')) return undefined;
             if (setup.notAllocated) return [];
@@ -124,6 +133,7 @@ function build(setup: Setup = {}) {
         new OrderLineStockSyncService(connection as never, stock as never),
     );
     return {
+        order,
         service,
         guard,
         statuses,
@@ -238,6 +248,13 @@ describe('OrderLineEditService', () => {
         await t.service.removeLine(ctx, '5', '2');
         expect(t.stock.createAllocationsForOrderLines).not.toHaveBeenCalled();
         expect(t.stock.createReleasesForOrderLines).not.toHaveBeenCalled();
+    });
+
+    it('refuses to edit an order that is still a cart', async () => {
+        const t = build();
+        (t.order as { active: boolean }).active = true;
+        await expect(t.service.setQuantity(ctx, '5', '1', 4)).rejects.toThrow(/not placed yet/);
+        expect(t.stock.createAllocationsForOrderLines).not.toHaveBeenCalled();
     });
 
     it('rejects a quantity above the limit', async () => {

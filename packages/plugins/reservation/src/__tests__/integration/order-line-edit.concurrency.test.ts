@@ -17,7 +17,8 @@ import {
 
 const h = useReserveOrderHarness('order_line_edit_concurrency');
 
-// Vendure's allocation semantics over real tables: allocation adds to stockAllocated, release subtracts.
+// Vendure's allocation over real tables, as @vendure/core 3.7.3 StockMovementService does it: ALLOCATION and RELEASE rows
+// store +q and move stockAllocated by +q / -q (SALE stores -q); the real service cannot be bootstrapped in this harness.
 const stockMovement = {
     createAllocationsForOrderLines: (
         _c: unknown,
@@ -164,13 +165,68 @@ describe('OrderLineStockSyncService (integration, real Postgres)', () => {
     it('other movement types of the line are not deleted by a removal', async () => {
         const { order, line } = await allocatedLine(10, true);
         await h.dataSource.query(
-            `INSERT INTO stock_movement (type, quantity, "orderLineId") VALUES ('SALE', 1, $1)`,
+            `INSERT INTO stock_movement (type, quantity, "orderLineId") VALUES ('SALE', -1, $1)`,
             [line.id],
         );
+        await h.dataSource.query(`UPDATE reservation_test_stock_level SET "stockAllocated" = 9`);
         await editService().removeLine(mockCtx, order.id, line.id);
         const kept = await h.dataSource.query(`SELECT type FROM stock_movement`);
         expect(kept).toEqual([{ type: 'SALE' }]);
+        expect((await stockState()).allocated).toBe(0);
     });
+});
+
+const pause = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+// Vendure's placement transition: state + allocation in one transaction, committed together.
+async function placementTransition(
+    order: { id: string },
+    line: { id: string },
+    quantity: number,
+    orderFirst: boolean,
+): Promise<void> {
+    await h.dataSource.transaction(async em => {
+        const markPlaced = (): Promise<unknown> =>
+            em.query(`UPDATE reservation_test_order SET active = false WHERE id = $1`, [order.id]);
+        if (orderFirst) await markPlaced();
+        await em.query(
+            `INSERT INTO stock_movement (type, quantity, "orderLineId") VALUES ('ALLOCATION', $1, $2)`,
+            [quantity, line.id],
+        );
+        await em.query(
+            `UPDATE reservation_test_stock_level SET "stockAllocated" = "stockAllocated" + $1`,
+            [quantity],
+        );
+        await pause(300);
+        if (!orderFirst) await markPlaced();
+    });
+}
+
+describe('edit vs Vendure placement transition (integration, real Postgres, concurrency)', () => {
+    it.each([true, false])(
+        'an edit racing the allocating transition (order row first: %s) leaves allocation equal to the line',
+        async orderFirst => {
+            const { order, line } = await allocatedLine(10, false);
+            await h.dataSource.query(
+                `UPDATE reservation_test_order SET active = true WHERE id = $1`,
+                [order.id],
+            );
+
+            const [, edit] = await Promise.allSettled([
+                placementTransition(order, line, 10, orderFirst),
+                pause(100).then(() => editService().setQuantity(mockCtx, order.id, line.id, 4)),
+            ]);
+
+            const finalLine = await h.dataSource
+                .getRepository(TestOrderLine)
+                .findOneByOrFail({ id: line.id });
+            const state = await stockState();
+            expect(state.allocated).toBe(state.net);
+            expect(state.allocated).toBe(finalLine.quantity);
+            if (!orderFirst)
+                expect(String((edit as PromiseRejectedResult).reason)).toMatch(/not placed yet/);
+        },
+    );
 });
 
 describe('OrderLineEditService (integration, real Postgres, concurrency)', () => {
@@ -215,7 +271,10 @@ describe('OrderLineEditService (integration, real Postgres, concurrency)', () =>
 
         await editService().setQuantity(mockCtx, order.id, line.id, 4);
 
-        expect(h.published.length).toBeGreaterThan(0);
+        await editService().setQuantity(mockCtx, order.id, line.id, 2);
+
+        // One release event per reservation row (the order has two lines), however often the order is edited.
+        expect(h.published).toHaveLength(2);
         expect(h.published.every(e => e instanceof ReservationReleasedEvent)).toBe(true);
         const rows = await h.dataSource
             .getRepository(TestReservation)

@@ -153,7 +153,15 @@ multiple; the last line cannot be removed (cancel the order instead).
   it, a removed line is released and its (net-zero) ALLOCATION/RELEASE `stock_movement` rows are deleted with it, because the
   movement rows hold a foreign key to the line. Whether a line is allocated is read from its own ALLOCATION/RELEASE rows
   (never guessed from the order state), so a placed order that was never allocated is left alone and a release can
-  never exceed what is allocated. `OrderLineEvent`/`OrderModifiedEvent` are deliberately not published: the
+  never exceed what is allocated. Verified against `@vendure/core` 3.7.3 `StockMovementService`: ALLOCATION and RELEASE
+  rows store a positive quantity (`stockAllocated` +q / -q), SALE stores -q and lowers both `stockAllocated` and
+  `stockOnHand`, CANCELLATION restocks `stockOnHand` only; the net allocated of a line is ALLOCATION - RELEASE + SALE.
+  **Race with the placement transition:** Vendure writes the state change and the allocation in one transaction without
+  any advisory lock. The edit refuses an order that is still `active` (a cart) or a draft, and takes a row lock on the
+  order before reading it: an in-flight transition either already updated the row (the edit waits, then sees state and
+  allocation together) or has not (the edit sees an active order and refuses). A concurrent test covers both orders of
+  the transition's statements. The real service cannot be bootstrapped in the integration harness (no Vendure test
+  setup in the repo), so the test uses a stand-in with the same semantics. `OrderLineEvent`/`OrderModifiedEvent` are deliberately not published: the
   tier-rebalance subscriber would call `adjustOrderLine`, which refuses placed orders. Reservation rows keep the
   removed line's id as plain history (`orderLineId` is a varchar with no foreign key).
 - **Rejected orders.** An ERP-rejected order may be edited and is re-sent after staff reconfirm: the builder's
