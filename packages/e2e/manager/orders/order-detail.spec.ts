@@ -9,11 +9,11 @@ test('order detail shows the two-column layout with order lines and context', as
         timeout: 15000,
     });
     await expect(page.getByRole('heading', { name: 'Order context' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Reservation' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Reservation', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible();
 
-    await expect(page.locator('.order-lines')).toContainText('Available stock');
-    await expect(page.locator('.order-detail__right-stack')).toContainText('E2E Co');
+    await expect(page.locator('.order-lines thead')).toContainText('Available');
+    await expect(page.locator('.order-detail__panels')).toContainText('E2E Co');
 });
 
 test('confirming an order creates a reservation and shows the expiry', async ({ page }) => {
@@ -27,7 +27,7 @@ test('confirming an order creates a reservation and shows the expiry', async ({ 
     // before clicking, or the button can disappear mid-click once "already reserved" arrives.
     await page.waitForLoadState('networkidle');
 
-    const panel = page.locator('.order-detail__right-stack');
+    const panel = page.locator('.order-detail__panels');
     const confirmBtn = page.getByRole('button', { name: 'Confirm order' });
 
     if (await confirmBtn.isVisible().catch(() => false)) {

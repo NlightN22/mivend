@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 import { adminGql } from '../../helpers/api';
 import { createConfirmedOrder } from '../../helpers/manager-order';
 import { E2E_CUSTOMER } from '../../fixtures/seed';
+import { formatDocumentNumber } from '../../helpers/e2e-order';
 
 // One spec runs under three role projects, each pre-authenticated as a different seeded role.
 // Expected cards per role must match api/dashboard-config.ts, not be hardcoded here.
@@ -58,7 +59,7 @@ function orderCellLocator(
     page: import('@playwright/test').Page,
     code: string,
 ): import('@playwright/test').Locator {
-    return page.locator('.el-table-v2__cell-text', { hasText: code });
+    return page.locator('.el-table-v2__cell-text', { hasText: formatDocumentNumber(code) });
 }
 
 test.describe('Recent orders filter chips', () => {

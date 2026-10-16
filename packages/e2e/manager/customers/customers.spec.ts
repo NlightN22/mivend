@@ -89,7 +89,7 @@ test('customer detail Orders tab shows the seeded e2e order', async ({ page }) =
     await openE2eCustomerDetail(page);
 
     await page.getByRole('button', { name: 'Orders' }).click();
-    await expect(page.getByText(order.code)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(order.displayCode)).toBeVisible({ timeout: 15000 });
 });
 
 test('customer detail Discounts tab shows a grant scoped to this customer (positive)', async ({
