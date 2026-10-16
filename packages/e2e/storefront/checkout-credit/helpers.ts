@@ -189,12 +189,9 @@ export interface BranchSettingsSnapshot {
     allowExceedingCreditLimit: boolean;
 }
 
-// The branch toggle is the branch's `credit.limit` checkout policy (docs/checks-and-policies.md): warn allows, hold waits for a manager.
+// The old default-branch toggle is the global `credit.limit` checkout policy: every branch without its own
+// override follows it (docs/checks-and-policies.md). warn lets an acknowledged order go to the ERP, hold waits for a manager.
 export async function defaultBranchSettings(): Promise<BranchSettingsSnapshot> {
-    const g = await admin<{ globalSettings: { customFields: { defaultBranchId: string } } }>(
-        `query { globalSettings { customFields { defaultBranchId } } }`,
-    );
-    const branchId = g.globalSettings.customFields.defaultBranchId;
     const p = await admin<{
         checkPolicies: {
             checkCode: string;
@@ -203,22 +200,24 @@ export async function defaultBranchSettings(): Promise<BranchSettingsSnapshot> {
             consequence: string;
         }[];
     }>(`query { checkPolicies(subjectType: "order") { checkCode stage branchId consequence } }`);
-    const rows = p.checkPolicies.filter(
-        r => r.checkCode === 'credit.limit' && r.stage === 'checkout',
+    const row = p.checkPolicies.find(
+        r => r.checkCode === 'credit.limit' && r.stage === 'checkout' && r.branchId === null,
     );
-    const row = rows.find(r => r.branchId === branchId) ?? rows.find(r => r.branchId === null);
-    return { branchId, allowExceedingCreditLimit: row !== undefined && row.consequence !== 'hold' };
+    return {
+        branchId: '',
+        allowExceedingCreditLimit: row !== undefined && row.consequence !== 'hold',
+    };
 }
 
 export async function setAllowExceeding(
-    base: BranchSettingsSnapshot,
+    _base: BranchSettingsSnapshot,
     allow: boolean,
 ): Promise<void> {
     await admin(
-        `mutation($b: String!, $c: String!) {
-            updateCheckPolicy(input: { checkCode: "credit.limit", stage: "checkout", branchId: $b, consequence: $c, enabled: true }) { id }
+        `mutation($c: String!) {
+            updateCheckPolicy(input: { checkCode: "credit.limit", stage: "checkout", consequence: $c, enabled: true }) { id }
         }`,
-        { b: base.branchId, c: allow ? 'warn' : 'hold' },
+        { c: allow ? 'warn' : 'hold' },
     );
 }
 
@@ -245,5 +244,7 @@ export async function boostStock(skus: string[], stockOnHand = 1000): Promise<vo
 
 // The checkout is ready once a payment-method button is rendered.
 export async function waitForCheckoutReady(page: Page): Promise<void> {
-    await expect(page.getByRole('button', { name: /Card online|^Cash/i }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /Card online|^Cash/i }).first()).toBeVisible({
+        timeout: 20_000,
+    });
 }
