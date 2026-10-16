@@ -125,7 +125,9 @@ describe('reservation failure on the order (real Postgres)', () => {
 
         const order = await reload(orderId);
         expect(order.customFields.reservationFailureReason).toBe('ERP_EXPORT_DATA_MISSING');
-        expect(order.customFields.reservationFailureDetail).toBe('no active contract');
+        expect(order.customFields.reservationFailureDetail).toBe(
+            'no active contract (use Change contract on the order page)',
+        );
     });
 
     it('records an unexpected error as UNEXPECTED', async () => {

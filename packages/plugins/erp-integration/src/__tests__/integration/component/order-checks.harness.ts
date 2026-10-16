@@ -68,6 +68,8 @@ class VariantM {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'int' }) productId!: number;
     @Column({ type: 'varchar' }) sku!: string;
+    @Column({ name: 'customFieldsOrganizationid', type: 'int', nullable: true })
+    organizationId!: number | null;
 }
 @Entity('order')
 class OrderM extends Base {
