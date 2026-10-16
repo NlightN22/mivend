@@ -121,9 +121,8 @@ export class ChecksService {
                     [checkCode, last?.subjectType ?? null, last?.subjectId ?? null],
                 );
             for (const row of rows) {
-                if (this.registry.findSubjectType(row.subjectType)) {
-                    await this.markStale(ctx, row.subjectType, row.subjectId);
-                }
+                // An unregistered type here throws, so the request is kept until a process that knows it runs.
+                await this.markStale(ctx, row.subjectType, row.subjectId);
             }
             if (rows.length < 200) return;
             last = rows[rows.length - 1];

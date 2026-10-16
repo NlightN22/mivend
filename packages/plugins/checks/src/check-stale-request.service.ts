@@ -43,41 +43,56 @@ export class CheckStaleRequestService {
         );
     }
 
-    // Idempotent; a request that arrived while it ran has a newer version and is kept for the next pass.
+    // One keyset pass over every row, so unprocessable rows (no handler, failing) never starve later ones;
+    // they stay for the next pass. Idempotent; a request repeated meanwhile has a newer version and is kept.
     async drain(ctx?: RequestContext): Promise<number> {
         if (this.draining) return 0;
         this.draining = true;
         try {
             const runCtx = ctx ?? (await this.requestContextService.create({ apiType: 'admin' }));
             let done = 0;
+            let lastId = 0;
             for (;;) {
                 const rows: PendingRow[] = await this.connection.rawConnection.query(
-                    `SELECT id, kind, key, version FROM check_stale_request ORDER BY id LIMIT ${BATCH}`,
+                    `SELECT id, kind, key, version FROM check_stale_request WHERE id > $1 ORDER BY id LIMIT ${BATCH}`,
+                    [lastId],
                 );
-                let progressed = 0;
                 for (const row of rows) {
-                    const handler = this.handlers.get(row.kind);
-                    if (!handler) continue;
-                    try {
-                        await handler(runCtx, row.key);
-                    } catch (error) {
-                        Logger.error(
-                            `Stale request ${row.kind}:${row.key} failed, will retry: ${String(error)}`,
-                            loggerCtx,
-                        );
-                        continue;
-                    }
-                    await this.connection.rawConnection.query(
-                        `DELETE FROM check_stale_request WHERE id = $1 AND version = $2`,
-                        [row.id, row.version],
-                    );
-                    progressed += 1;
+                    if (await this.process(runCtx, row)) done += 1;
                 }
-                done += progressed;
-                if (rows.length < BATCH || progressed === 0) return done;
+                if (rows.length < BATCH) return done;
+                lastId = rows[rows.length - 1].id;
             }
         } finally {
             this.draining = false;
         }
+    }
+
+    // A transaction-level advisory try-lock instead of a row lock: another process (the scheduled task vs
+    // the post-commit drain) skips a request being worked on, and the writer's upsert never waits for it.
+    private async process(ctx: RequestContext, row: PendingRow): Promise<boolean> {
+        const handler = this.handlers.get(row.kind);
+        if (!handler) return false;
+        return this.connection.rawConnection.transaction(async em => {
+            const [{ locked }] = await em.query(
+                `SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS locked`,
+                [`check-stale-request:${row.id}`],
+            );
+            if (!locked) return false;
+            try {
+                await handler(ctx, row.key);
+            } catch (error) {
+                Logger.error(
+                    `Stale request ${row.kind}:${row.key} failed, will retry: ${String(error)}`,
+                    loggerCtx,
+                );
+                return false;
+            }
+            await em.query(`DELETE FROM check_stale_request WHERE id = $1 AND version = $2`, [
+                row.id,
+                row.version,
+            ]);
+            return true;
+        });
     }
 }

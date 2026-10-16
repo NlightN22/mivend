@@ -300,6 +300,55 @@ describe('checks framework (real Postgres)', () => {
         expect((await stored('a')).every(r => r.stale)).toBe(true);
     });
 
+    it('unprocessable requests do not starve a processable one behind them', async () => {
+        await dataSource.query(
+            `INSERT INTO check_stale_request (kind, key) SELECT 'nohandler', g::text FROM generate_series(1, 120) g`,
+        );
+        const seen: string[] = [];
+        staleRequests.registerHandler('late', async (_c, key) => void seen.push(key));
+        await dataSource.query(`INSERT INTO check_stale_request (kind, key) VALUES ('late', 'k')`);
+
+        await staleRequests.drain(ctx);
+
+        expect(seen).toEqual(['k']);
+        expect(await dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(120);
+    });
+
+    it('keeps a check-code request when a result belongs to a subject type this process does not know', async () => {
+        await dataSource.query(
+            `INSERT INTO check_result ("subjectType", "subjectId", "checkCode", stage, severity, "messageKey", facts, "computedAt")
+             VALUES ('ghost', 'g-1', 'demo.rule', 'draft', 'warning', 'x', '{}', now())`,
+        );
+        await dataSource.query(
+            `INSERT INTO check_stale_request (kind, key) VALUES ('check-code', 'demo.rule')`,
+        );
+
+        await staleRequests.drain(ctx);
+
+        expect(await dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(1);
+    });
+
+    it('two drains in different processes do not work on the same request twice', async () => {
+        const other = new CheckStaleRequestService(
+            (staleRequests as unknown as { connection: TransactionalConnection }).connection,
+            { create: async () => ctx } as never,
+            checks,
+        );
+        let calls = 0;
+        const handler = async (): Promise<void> => {
+            calls += 1;
+            await new Promise(r => setTimeout(r, 200));
+        };
+        staleRequests.registerHandler('slow', handler);
+        other.registerHandler('slow', handler);
+        await dataSource.query(`INSERT INTO check_stale_request (kind, key) VALUES ('slow', 'k')`);
+
+        await Promise.all([staleRequests.drain(ctx), other.drain(ctx)]);
+
+        expect(calls).toBe(1);
+        expect(await dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(0);
+    });
+
     it('a pending stale request survives a failing handler and is retried', async () => {
         await checks.runChecks(ctx, 'thing', 'a', 'draft');
         let fail = true;
