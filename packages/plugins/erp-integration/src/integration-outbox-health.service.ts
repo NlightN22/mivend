@@ -25,7 +25,8 @@ export class IntegrationOutboxHealthService {
                     AS "lastError",
                 MAX(e.last_error_at) FILTER (WHERE e.status IN ('pending', 'failed')) AS "lastErrorAt",
                 (ARRAY_AGG(e.last_error ORDER BY e.last_error_at DESC)
-                    FILTER (WHERE e.status = 'skipped'))[1] AS "lastSkipReason"
+                    FILTER (WHERE e.status = 'skipped' AND e.last_error IS DISTINCT FROM $1))[1]
+                    AS "lastSkipReason"
             FROM integration_outbox e
             GROUP BY e.event_type
             ORDER BY e.event_type

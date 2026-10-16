@@ -231,7 +231,37 @@ describe('integrationOutboxHealth', () => {
             r => r.eventType === 'order.confirmed',
         )!;
 
-        expect(row).toMatchObject({ skipped: 0, held: 1 });
+        expect(row).toMatchObject({ skipped: 0, held: 1, lastSkipReason: null, lastError: null });
+    });
+
+    it('keeps the last skip reason of a real skip when a held row is newer', async () => {
+        const repo = dataSource.getRepository(IntegrationOutboxEntry);
+        await repo.save({
+            eventId: randomUUID(),
+            eventType: 'order.confirmed',
+            payload: { orderId: 'o-3' },
+            status: 'skipped',
+            lastError: 'line 1 has no organizationId',
+            lastErrorAt: new Date(Date.now() - 60_000),
+        });
+        await repo.save({
+            eventId: randomUUID(),
+            eventType: 'order.confirmed',
+            payload: { orderId: 'o-4' },
+            status: 'skipped',
+            lastError: HELD_SKIP_REASON,
+            lastErrorAt: new Date(),
+        });
+
+        const row = (await resolver.integrationOutboxHealth()).find(
+            r => r.eventType === 'order.confirmed',
+        )!;
+
+        expect(row).toMatchObject({
+            skipped: 1,
+            held: 1,
+            lastSkipReason: 'line 1 has no organizationId',
+        });
     });
 });
 

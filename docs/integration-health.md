@@ -198,7 +198,7 @@ built), `resolved` (a skipped row whose event was rebuilt).
   "held by an order check policy (pre-send-to-erp)"; a staff confirmation or a policy change away
   from `hold` rebuilds it automatically, and a 5-minute sweep retries it (so it also leaves the hold when the
   cause disappears with new data); the manual Rebuild also works. Held rows are counted separately
-  (`held`, "Sends held by policy" on the Outbound tab and a warning alert) and not in `skipped`.
+  (`held`, "Sends held by policy" on the Outbound tab and a warning alert) and not in `skipped`; the per-event-type table has a neutral "Held" column and its "Last error / skip reason" never shows the held reason.
 - **System -> Outbound problems** lists failed and skipped outbox rows (event type, subject id such
   as the order id, status, retries, last error); the Failed and Skipped numbers of the Outbound tab
   link to it pre-filtered. **Requeue** (failed rows) and **Rebuild** (skipped rows) call the

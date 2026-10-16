@@ -88,6 +88,9 @@ export function OutboundTab() {
                             <TableHead title="Events that could not be built and were never published">
                                 Skipped
                             </TableHead>
+                            <TableHead title="Sends held by an order check policy; expected, not a problem">
+                                Held
+                            </TableHead>
                             <TableHead title="Age of the oldest pending outbox row">
                                 Oldest
                             </TableHead>
@@ -139,6 +142,7 @@ export function OutboundTab() {
                                         destructive
                                     />
                                 </TableCell>
+                                <TableCell className="text-muted-foreground">{r.held}</TableCell>
                                 <TableCell>{formatAge(r.oldestPendingAt, now)}</TableCell>
                                 <TableCell>
                                     {r.lastPublishedAt
