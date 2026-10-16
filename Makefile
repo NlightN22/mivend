@@ -17,7 +17,7 @@ export
         preview-build preview-up preview-down \
         prod-up prod-down \
         dev dev-fresh dev-reset dev-branch dev-staging-integration seed seed-approvals seed-payment-refunds \
-        seed-customer-detail seed-all \
+        seed-customer-detail seed-order-edit-states seed-all \
         verify-branch-scope \
         storybook storybook-ui-kit storybook-manager storybook-storefront storybook-down \
         storefront storefront-dev
@@ -162,6 +162,13 @@ seed-customer-detail:
 	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
 	@echo "Server ready. Topping up customer-detail tabs..."
 	node infrastructure/scripts/seed-customer-detail.mjs
+
+# Unsent order with a line short on its organization's stock (order-edit UI, #233) and a send held by
+# policy (#237). Needs `make seed-all` first; idempotent. Sets the pre-send-to-erp hold policy of
+# erp.organization-stock on the local contour. Not part of seed-all.
+seed-order-edit-states:
+	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done
+	ERP_IMPORT_TOKEN=$${ERP_IMPORT_TOKEN:-dev-import-token-change-me-0000} node infrastructure/scripts/seed-order-edit-states.mjs
 
 # One command for the full local seeding order (ERP data → approval requests — this exact order
 # matters, see seed-approvals' own comment above; manager-portal roles are no longer part of this

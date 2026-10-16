@@ -28,6 +28,8 @@ import { PositionHandler } from './handlers/position.handler';
 import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
 import { WarehouseHandler } from './handlers/warehouse.handler';
+import { StockOrganizationHandler } from './handlers/stock-organization.handler';
+import { StorageLocationHandler } from './handlers/storage-location.handler';
 import { ContractHandler } from './handlers/contract.handler';
 import { OrderStatusHandler } from './handlers/order-status.handler';
 
@@ -66,6 +68,8 @@ import { OrderStatusHandler } from './handlers/order-status.handler';
         WarehouseHandler,
         ContractHandler,
         OrderStatusHandler,
+        StockOrganizationHandler,
+        StorageLocationHandler,
     ],
     compatibility: '>0.0.0',
 })

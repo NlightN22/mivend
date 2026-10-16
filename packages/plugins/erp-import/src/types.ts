@@ -57,6 +57,22 @@ export interface PriceRecord {
     price: number;
 }
 
+export interface StockOrganizationRecord {
+    entityId: string;
+    productErpId: string;
+    organizationErpId: string;
+    quantity: number;
+    isActive?: boolean;
+}
+
+export interface StorageLocationRecord {
+    entityId: string;
+    productErpId: string;
+    organizationErpId: string;
+    warehouseErpId: string;
+    priority?: number;
+}
+
 export interface StockRecord {
     sku: string;
     stockOnHand: number;
@@ -162,7 +178,9 @@ export type ImportRecord =
     | { type: 'employee'; data: EmployeeRecordInput }
     | { type: 'warehouse'; data: WarehouseRecord }
     | { type: 'contract'; data: ContractRecord }
-    | { type: 'orderStatus'; data: OrderStatusRecord };
+    | { type: 'orderStatus'; data: OrderStatusRecord }
+    | { type: 'stockOrganization'; data: StockOrganizationRecord }
+    | { type: 'storageLocation'; data: StorageLocationRecord };
 
 export interface BatchImportBody {
     exchangeId: string;

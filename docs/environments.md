@@ -217,6 +217,17 @@ automated tests only ever run against the seeded one. If a test needs data the l
 doesn't have yet, extend the seed (`erp-import` record type, `seed-erp.mjs`) or the test's own
 fixtures — don't borrow real data from staging-integration to make a test pass.
 
+**Order-edit and held-send states (local only).** `make seed-order-edit-states` (after `make seed-all`,
+server running, idempotent) creates, for the demo customer `credit-limited@buyer.example`: an unsent
+order with three lines whose middle line is short on its own organization's stock (exercises "Cut lines to
+available stock", "Remove? Yes/No" on a non-last line and the last-line restriction), and a reserved order
+whose `order.confirmed` send is held by policy (dashboard Outbound tab "Sends held by policy" and the alert
+`integration-outbox-held`). It imports storage places, organization stock and contracts through the
+`erp-import` record types `storageLocation`, `stockOrganization`, `contract`, and leaves the policy
+`erp.organization-stock` at `pre-send-to-erp` set to `hold` on the local contour. The held row is marked by
+one raw SQL update (an automatic reserve already stops at the same hold, so the live flow cannot produce it on
+demand). Never run it against staging-integration.
+
 ## Setting up the staging-integration contour
 
 1. Copy `apps/server/.env.central.staging-integration.example` to

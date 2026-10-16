@@ -17,3 +17,5 @@ export { EmployeeRecordDto } from './employee-record.dto';
 export { ContractRecordDto } from './contract-record.dto';
 export { OrderStatusRecordDto } from './order-status-record.dto';
 export { WarehouseRecordDto } from './warehouse-record.dto';
+export { StockOrganizationRecordDto } from './stock-organization-record.dto';
+export { StorageLocationRecordDto } from './storage-location-record.dto';
