@@ -53,7 +53,7 @@ describe('describeReservationFailure', () => {
         expect(describeReservationFailure(error, skus)).toEqual({
             reason: 'ERP_EXPORT_DATA_MISSING',
             detail:
-                'customer has no ERP counterparty; no active contract; ' +
+                'customer has no ERP counterparty; no active contract (use Change contract on the order page); ' +
                 'SKU 574726: missing organizationId, warehouseId',
         });
     });

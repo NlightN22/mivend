@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
 import { randomUUID } from 'node:crypto';
+import { Branch } from '@mivend/plugin-access-control';
 import { withAggregateLock } from 'shared';
 import { In, IsNull, Repository } from 'typeorm';
 
@@ -140,6 +141,7 @@ export class CheckPolicyService {
             );
         }
         const branchId = input.branchId ?? null;
+        if (branchId !== null) await this.assertBranchExists(ctx, branchId);
         return withAggregateLock(
             this.connection,
             ctx,
@@ -220,6 +222,16 @@ export class CheckPolicyService {
                 return true;
             },
         );
+    }
+
+    // An override for a branch that does not exist could never apply and would only hide in the table.
+    private async assertBranchExists(ctx: RequestContext, branchId: string): Promise<void> {
+        const found =
+            /^\d+$/.test(branchId) &&
+            (await this.connection
+                .getRepository(ctx, Branch)
+                .count({ where: { id: Number(branchId) } })) > 0;
+        if (!found) throw new Error(`Unknown branch "${branchId}"`);
     }
 
     // A branch row is created as a copy of the effective global row, then edited.

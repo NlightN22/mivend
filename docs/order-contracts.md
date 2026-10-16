@@ -144,13 +144,29 @@ Four controls that used to refuse checkout (or the reserve) are checks of the su
 | `order.multiplicity`                | `sku`, `quantity`, `requiredMultiple`                       | `cart` block, `pre-reserve` hold, `on-edit` warn; all off by default |
 | `credit.limit`                      | `availableCredit`, `orderAmount`, `excessKopecks`           | `checkout` hold, `on-edit` warn                               |
 
-- A hold at `pre-reserve` keeps the automatic reserve in the confirmation queue; the manual confirmation is the
-  release. The reserve itself keeps its transactional gate (`findErpExportGaps`): it still refuses an order the
-  ERP event cannot be built for, so a hold never lets an unexportable order through.
+- A hold at `pre-reserve` keeps the automatic reserve in the confirmation queue (`AWAITING_CONFIRMATION`); the
+  manual confirmation is the release of the hold only. `reserveOrder` consults the hold before its gates, so a
+  data gap queues the order instead of failing it. The reserve then keeps its transactional gates: staff
+  confirming an order without a contract, an organization, a buyer or a product ERP id gets
+  `ErpExportDataMissingError` (reservation state `FAILED`, nothing reserved) until the data is fixed, so
+  `OrderSubmittedBuilder` is never reached for such an order. If a reservation exists and the contract
+  disappears later, the builder returns a skip with the reason (`no active contract for counterparty ...`),
+  never a throw (`order-submitted.builder.test.ts`; hold and gate: `reservation.service.test.ts`,
+  `order-data-checks.int.test.ts`).
+- **A hold is not a bypass of a missing-data gate (owner decision).** Hold means "cannot proceed
+  automatically"; the manual confirmation overrides only holds a manager can legitimately waive (the
+  organization-stock policy, freight without a trading point). The data the ERP event needs (usable contract,
+  selling organization, buyer's and products' ERP ids, warehouse) is never waived: the reserve refuses the
+  manual confirmation with `ErpExportDataMissingError`, shown to the manager as "Missing data for the ERP: no
+  active contract (use Change contract on the order page); SKU X: missing organizationId", and the order page
+  lists the same findings and offers "Change contract". So `order.confirmed` can never be built for such an
+  order. Freight is not an ERP-export gate (the builder tolerates a missing trading point), so its
+  `pre-reserve` hold is the one a manager may override.
 - `block` is allowed on the order subject at the stage `cart` only (a quantity that breaks the pack multiple is
   refused when it is added); never on `checkout` or later.
-- `credit.limit` at `checkout` is read by the placement decision: `hold` = the over-limit order waits for manager
-  confirmation, `warn`/`info` = it may go to the ERP now after the customer's acknowledgement (the explicit
+- `credit.limit` at `checkout` is read by the placement decision (`assess` -> `decidePlacement`), not by
+  `isHeld`: `hold` = the over-limit order is placed and waits for manager confirmation (the former default of the
+  branch flag; it is not a refusal), `warn`/`info` = it may go to the ERP now after the customer's acknowledgement (the explicit
   acknowledgement step stays as it was), disabled = no limit control. The finding shows the manager why.
 - Branch scope: every policy can be overridden per branch (`docs/checks-and-policies.md`). The former branch
   toggles `enforceMultiplicity` and `allowExceedingCreditLimit` are the branch overrides of `order.multiplicity`

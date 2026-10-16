@@ -190,6 +190,7 @@ const mirrors: Record<string, unknown> = {
     CheckStaleRequest: StaleRequestM,
     OrderCheckFailure: FailureM,
     Order: OrderM,
+    OrderLine: OrderLineM,
     Reservation: ReservationM,
     StockLevel: StockLevelM,
     Contract: ContractM,
@@ -211,6 +212,7 @@ export interface SeedLine {
 
 export interface OrderChecksWorld {
     dataSource: DataSource;
+    connection: TransactionalConnection;
     ctx: RequestContext;
     registry: CheckRegistry;
     policies: CheckPolicyService;
@@ -329,6 +331,7 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
 
     const world: OrderChecksWorld = {
         dataSource,
+        connection,
         ctx: { activeUserId: 'user-1' } as unknown as RequestContext,
         registry,
         policies,

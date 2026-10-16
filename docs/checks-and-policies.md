@@ -50,7 +50,7 @@ control toggles are rows of this table (#241).
 | ------------------ | ---------------------------------------------------------------------------- |
 | `info`             | recorded and shown, nothing else                                             |
 | `warn`             | shown to the recipient, the subject proceeds                                 |
-| `hold`             | the subject is not advanced automatically until staff releases it            |
+| `hold`             | the subject is not advanced automatically until staff releases it (a hold is overridden by the manual action only where a manager may waive it; a gate that protects a data requirement stays in force, the order flow refuses with the reason) |
 | `block`            | the transition is refused with the reason                                    |
 | `require-approval` | creates a requirement for a role; the chain is `approval-workflow`'s job     |
 
@@ -93,7 +93,13 @@ and checks are registered by the plugins that own them.
   global one. `stageConsequences` allows an extra consequence at one stage only (the `order` subject allows
   `block` at `cart` only, for input validation); the provider defaults are validated against it.
   `CheckPolicyService.resolve(ctx, code, stage, branchId)` is the read-only lookup for a consumer that is not a
-  run (an order interceptor, a placement decision): branch row, else global row, else the declared default. `enabled=false`
+  run (an order interceptor, a placement decision): branch row, else global row, else the declared default.
+  Global rows are created lazily by a run or by listing the policies (the manager tab), never by `resolve`, so
+  a consumer that resolves before either has run reads the declared default; the resolved value is the same
+  either way because a lazily created row starts from that default. A stage's consequence can be consumed by
+  a flow other than `isHeld`: `credit.limit` at `checkout` is read by the placement decision (hold = the over-limit
+  order waits for a manager, warn/info = it goes on after the customer's acknowledgement), so its `hold` default is
+  live, not decorative. `enabled=false`
   skips the provider and clears its stored findings. `updateCheckPolicy` rejects a consequence the
   subject type does not allow at that stage and appends `check_policy_history` (before/after, user id);
   `resetCheckPolicyOverride` removes a branch row (recorded in the history as removed).

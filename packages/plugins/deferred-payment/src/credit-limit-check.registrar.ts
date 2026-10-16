@@ -19,6 +19,7 @@ export class CreditLimitCheckRegistrar implements OnModuleInit {
             subjectType: 'order',
             stages: ['checkout', 'on-edit'],
             description: "The order amount must fit the buyer's available credit.",
+            // `checkout` is read by the placement decision (hold = manager confirmation, the old default), not by isHeld.
             stageDefaults: { checkout: 'hold', 'on-edit': 'warn' },
             evaluate: async (subject, { ctx }) => {
                 const order = await this.connection

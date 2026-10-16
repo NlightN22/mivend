@@ -277,6 +277,26 @@ describe('ReservationService', () => {
             expect(customFields.reservationState).toBe('AWAITING_CONFIRMATION');
         });
 
+        it('holds an automatic reserve of an order with an ERP data gap in the queue instead of failing it, and staff confirmation meets the gate (#241)', async () => {
+            counterpartyService.getForCustomer.mockResolvedValue(null);
+            orderChecks.isHeld.mockResolvedValue(true);
+
+            const held = await service.reserveOrder(ctx, 'order-1', 3, 'auto-trust-rule');
+
+            expect(held).toEqual([]);
+            const [, { customFields }] = orderRepo.update.mock.calls.at(-1) as [
+                unknown,
+                { customFields: Record<string, unknown> },
+            ];
+            expect(customFields.reservationState).toBe('AWAITING_CONFIRMATION');
+
+            orderChecks.isHeld.mockResolvedValue(false);
+            await expect(service.confirmOrder(ctx, 'order-1', 3)).rejects.toBeInstanceOf(
+                ErpExportDataMissingError,
+            );
+            expect(reservationRepo.save).not.toHaveBeenCalled();
+        });
+
         it('asks the order checks with the manual trigger so staff confirmation is the release', async () => {
             await service.confirmOrder(ctx, 'order-1', 3);
 

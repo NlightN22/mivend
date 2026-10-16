@@ -51,7 +51,8 @@ export function describeReservationFailure(
     } else if (error instanceof ErpExportDataMissingError) {
         const parts: string[] = [];
         if (error.missingCustomerId) parts.push('customer has no ERP counterparty');
-        if (error.missingContract) parts.push('no active contract');
+        if (error.missingContract)
+            parts.push('no active contract (use Change contract on the order page)');
         for (const line of error.lines) {
             parts.push(`${sku(line.productVariantId)}: missing ${line.missing.join(', ')}`);
         }

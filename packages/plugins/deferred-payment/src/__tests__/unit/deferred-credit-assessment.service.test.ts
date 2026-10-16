@@ -3,6 +3,7 @@ import { CreditLimitCheckService } from '@mivend/plugin-counterparty';
 import type { Order, RequestContext } from '@vendure/core';
 
 import { DeferredCreditAssessmentService } from '../../deferred-credit-assessment.service';
+import { decidePlacement } from '../../placement-policy';
 
 const getForCustomer = vi.fn();
 const sumUnconfirmedRubles = vi.fn();
@@ -115,6 +116,29 @@ describe('DeferredCreditAssessmentService.assess', () => {
         expect(result?.allowExceedingCreditLimit).toBe(true);
         expect(resolvePolicy).toHaveBeenCalledWith(ctx, 'credit.limit', 'checkout', 'branch-a');
         expect(getPreferredForCustomer).not.toHaveBeenCalled();
+    });
+
+    it('the checkout policy is what the placement decision reads: hold waits for a manager, warn goes on after the acknowledgement', async () => {
+        getForCustomer.mockResolvedValue({
+            id: 3,
+            creditLimit: 1000,
+            creditBalance: 1000,
+            paymentDelayDays: 14,
+        });
+        const routeFor = async (consequence: string, acknowledged: boolean) => {
+            resolvePolicy.mockResolvedValue({ enabled: true, consequence });
+            const a = await service.assess(ctx, order(100, 7, 'branch-a'));
+            return decidePlacement({
+                form: 'cash',
+                limitControlled: a!.limitControlled,
+                exceeded: a!.exceeded,
+                allowExceeding: a!.allowExceedingCreditLimit,
+                acknowledged,
+            }).route;
+        };
+        expect(await routeFor('hold', true)).toBe('manager-confirmation');
+        expect(await routeFor('warn', false)).toBe('manager-confirmation');
+        expect(await routeFor('warn', true)).toBe('erp-now');
     });
 
     it('a disabled policy means no limit control, info allows exceeding like warn', async () => {

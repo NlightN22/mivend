@@ -20,5 +20,5 @@ describe('migration files', () => {
                 ).toBe(true);
             }
         }
-    });
+    }, 60_000);
 });

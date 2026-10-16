@@ -59,3 +59,4 @@ export { OrderLineShortfall } from './src/entities/order-line-shortfall.entity';
 export { planSplit } from './src/order-line-split';
 export { OrderLinesEditPortRegistry } from './src/order-line-edit.port';
 export type { OrderLinesEditPort } from './src/order-line-edit.port';
+export { OrderExportDataRegistrar } from './src/order-export-data.registrar';

@@ -117,6 +117,13 @@ export class ReservationService {
                         throw new OrderNotEligibleError('Order is cancelled');
                     }
 
+                    // Before the gates below: a held order waits in the queue, its data gap shown as a finding;
+                    // staff confirmation (manual) skips the hold and then meets the gates.
+                    if (await this.orderChecks.isHeld(txCtx, String(order.id), trigger)) {
+                        await this.setOrderReservationState(txCtx, order, 'AWAITING_CONFIRMATION');
+                        return [];
+                    }
+
                     // Defense in depth: same step as the moq OrderInterceptor (docs/order-flow.md).
                     const multiplicityViolations = await findMultiplicityViolations(
                         this.packagingPolicyService,
@@ -147,11 +154,6 @@ export class ReservationService {
                             gaps.lines,
                             gaps.missingContract,
                         );
-                    }
-
-                    if (await this.orderChecks.isHeld(txCtx, String(order.id), trigger)) {
-                        await this.setOrderReservationState(txCtx, order, 'AWAITING_CONFIRMATION');
-                        return [];
                     }
 
                     const shortfalls: InsufficientStockLine[] = [];

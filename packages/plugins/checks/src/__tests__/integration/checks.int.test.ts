@@ -74,6 +74,12 @@ class CheckResult extends Base {
     @Column({ type: 'boolean', default: false }) stale!: boolean;
 }
 
+@Entity('branch')
+class Branch extends Base {
+    @Column({ type: 'varchar' }) erpId!: string;
+    @Column({ type: 'varchar' }) name!: string;
+}
+
 @Entity('check_stale_request')
 @Index(['kind', 'key'], { unique: true })
 class CheckStaleRequest extends Base {
@@ -83,6 +89,7 @@ class CheckStaleRequest extends Base {
 }
 
 const mirrors: Record<string, unknown> = {
+    Branch,
     CheckPolicy,
     CheckPolicyHistory,
     CheckResult,
@@ -106,7 +113,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [CheckPolicy, CheckPolicyHistory, CheckResult, CheckStaleRequest],
+        entities: [Branch, CheckPolicy, CheckPolicyHistory, CheckResult, CheckStaleRequest],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -129,7 +136,7 @@ beforeAll(async () => {
         stageConsequences: { final: ['require-approval'] },
         loadSubject: async (_c, ref) => ({ ref }),
         lockKey: ref => `thing:${ref}`,
-        branchId: subject => (subject.ref.startsWith('b1-') ? 'branch-1' : null),
+        branchId: subject => (subject.ref.startsWith('b1-') ? '1' : null),
         visibleSubjectIds: async (_c, ids) => new Set(ids),
     });
     const provider: CheckProvider<{ ref: string }> = {
@@ -154,6 +161,21 @@ beforeAll(async () => {
         },
     };
     registry.registerCheck(provider);
+    registry.registerSubjectType({
+        type: 'other',
+        stages: ['s'],
+        allowedConsequences: ['info', 'warn'],
+        loadSubject: async () => ({}),
+        lockKey: () => 'other',
+        visibleSubjectIds: async () => new Set(),
+    });
+    registry.registerCheck({
+        ...provider,
+        code: 'demo.optin',
+        subjectType: 'other',
+        stages: ['s'],
+        defaultEnabled: false,
+    });
     policies = new CheckPolicyService(
         connection,
         registry,
@@ -178,7 +200,10 @@ beforeEach(async () => {
     published.length = 0;
     behaviour = { throwOnEvaluate: false, delayMs: 0, severity: 'warning' };
     await dataSource.query(
-        'TRUNCATE check_result, check_stale_request, check_policy_history, check_policy RESTART IDENTITY',
+        'TRUNCATE check_result, check_stale_request, check_policy_history, check_policy, branch RESTART IDENTITY',
+    );
+    await dataSource.query(
+        `INSERT INTO branch ("erpId", name) VALUES ('e-1', 'One'), ('e-2', 'Two')`,
     );
 });
 
@@ -192,7 +217,7 @@ describe('checks framework (real Postgres)', () => {
         await policies.update(ctx, {
             checkCode: 'demo.rule',
             stage: 'draft',
-            branchId: 'branch-1',
+            branchId: '1',
             consequence: 'block',
             enabled: true,
         });
@@ -205,7 +230,7 @@ describe('checks framework (real Postgres)', () => {
         );
         expect(rows).toEqual([
             { branchId: null, consequence: 'warn' },
-            { branchId: 'branch-1', consequence: 'block' },
+            { branchId: '1', consequence: 'block' },
         ]);
     });
 
@@ -213,12 +238,12 @@ describe('checks framework (real Postgres)', () => {
         await policies.update(ctx, {
             checkCode: 'demo.rule',
             stage: 'draft',
-            branchId: 'branch-1',
+            branchId: '1',
             consequence: 'block',
             enabled: true,
         });
-        expect(await policies.resetOverride(ctx, 'demo.rule', 'draft', 'branch-1')).toBe(true);
-        expect(await policies.resetOverride(ctx, 'demo.rule', 'draft', 'branch-1')).toBe(false);
+        expect(await policies.resetOverride(ctx, 'demo.rule', 'draft', '1')).toBe(true);
+        expect(await policies.resetOverride(ctx, 'demo.rule', 'draft', '1')).toBe(false);
         const run = await checks.runChecks(ctx, 'thing', 'b1-a', 'draft');
         expect(run.strongestConsequence).toBe('warn');
         const history = await dataSource.query(
@@ -228,7 +253,7 @@ describe('checks framework (real Postgres)', () => {
     });
 
     it('resolve reads the branch row, then the global row, then the provider default, creating nothing', async () => {
-        expect(await policies.resolve(ctx, 'demo.rule', 'draft', 'branch-1')).toEqual({
+        expect(await policies.resolve(ctx, 'demo.rule', 'draft', '1')).toEqual({
             consequence: 'warn',
             enabled: true,
         });
@@ -236,15 +261,15 @@ describe('checks framework (real Postgres)', () => {
         await policies.update(ctx, {
             checkCode: 'demo.rule',
             stage: 'draft',
-            branchId: 'branch-1',
+            branchId: '1',
             consequence: 'info',
             enabled: false,
         });
-        expect(await policies.resolve(ctx, 'demo.rule', 'draft', 'branch-1')).toEqual({
+        expect(await policies.resolve(ctx, 'demo.rule', 'draft', '1')).toEqual({
             consequence: 'info',
             enabled: false,
         });
-        expect(await policies.resolve(ctx, 'demo.rule', 'draft', 'branch-2')).toEqual({
+        expect(await policies.resolve(ctx, 'demo.rule', 'draft', '2')).toEqual({
             consequence: 'warn',
             enabled: true,
         });
@@ -254,15 +279,68 @@ describe('checks framework (real Postgres)', () => {
         const input = {
             checkCode: 'demo.rule',
             stage: 'draft',
-            branchId: 'branch-1',
+            branchId: '1',
             consequence: 'info' as const,
             enabled: true,
         };
         await Promise.all([policies.update(ctx, input), policies.update(ctx, input)]);
-        const rows = await dataSource.query(
-            `SELECT 1 FROM check_policy WHERE "branchId" = 'branch-1'`,
-        );
+        const rows = await dataSource.query(`SELECT 1 FROM check_policy WHERE "branchId" = '1'`);
         expect(rows).toHaveLength(1);
+    });
+
+    it('rejects an override for a branch that does not exist, a non-numeric id included', async () => {
+        for (const branchId of ['99', 'branch-x']) {
+            await expect(
+                policies.update(ctx, {
+                    checkCode: 'demo.rule',
+                    stage: 'draft',
+                    branchId,
+                    consequence: 'info',
+                    enabled: true,
+                }),
+            ).rejects.toThrow(/Unknown branch/);
+        }
+        expect(
+            await dataSource.query('SELECT 1 FROM check_policy WHERE "branchId" IS NOT NULL'),
+        ).toHaveLength(0);
+    });
+
+    it('a branch override that disables a blocking global row switches the control off for that branch only; deleting it returns to the global row; no row falls back to the provider default', async () => {
+        await policies.update(ctx, {
+            checkCode: 'demo.rule',
+            stage: 'draft',
+            consequence: 'block',
+            enabled: true,
+        });
+        await policies.update(ctx, {
+            checkCode: 'demo.rule',
+            stage: 'draft',
+            branchId: '1',
+            consequence: 'block',
+            enabled: false,
+        });
+        expect(await policies.resolve(ctx, 'demo.rule', 'draft', '1')).toEqual({
+            consequence: 'block',
+            enabled: false,
+        });
+        expect(await policies.resolve(ctx, 'demo.rule', 'draft', '2')).toEqual({
+            consequence: 'block',
+            enabled: true,
+        });
+        await policies.resetOverride(ctx, 'demo.rule', 'draft', '1');
+        expect(await policies.resolve(ctx, 'demo.rule', 'draft', '1')).toEqual({
+            consequence: 'block',
+            enabled: true,
+        });
+        await dataSource.query('DELETE FROM check_policy');
+        expect(await policies.resolve(ctx, 'demo.rule', 'draft', '1')).toEqual({
+            consequence: 'warn',
+            enabled: true,
+        });
+        expect(await policies.resolve(ctx, 'demo.optin', 's', '1')).toEqual({
+            consequence: 'warn',
+            enabled: false,
+        });
     });
 
     it('a consequence allowed only at one stage is rejected elsewhere', async () => {

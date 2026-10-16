@@ -49,3 +49,4 @@ export {
 export { SettlementEntryService } from './src/settlement-entry.service';
 export { IdempotencyConflictError, type AcquiringPluginOptions } from './src/types';
 export { offlineTermsPaymentHandler, OFFLINE_TERMS_METHOD_CODE } from './src/offline-terms-handler';
+export { OrderDataChecksRegistrar } from './src/order-data-checks.registrar';
