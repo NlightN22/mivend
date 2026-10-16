@@ -12,11 +12,15 @@ import { loggerCtx } from './types';
 import type { ReservationCreationMethod } from './types';
 
 const MAX_FAILURE_MESSAGE = 500;
+const MAX_PENDING_FAILURE_WRITES = 100;
 const FAILURE_RETENTION_DAYS = 30;
 
 // The single caller of runChecks for orders: keeps one current result set per order and the list flag.
 @Injectable()
 export class OrderChecksService {
+    private pendingFailureWrites = 0;
+    private droppedFailureWrites = 0;
+
     constructor(
         private connection: TransactionalConnection,
         private checks: ChecksService,
@@ -81,6 +85,7 @@ export class OrderChecksService {
         }
     }
 
+    // Best effort: bounded queue, dropped (and counted in the log) when full, lost on shutdown.
     // Deferred and not awaited: the caller still holds a pool connection, so waiting for a second one
     // could exhaust the pool under mass failure. Own connection, so a rollback of the caller keeps it.
     recordFailure(orderId: string, stage: OrderCheckStage, error: unknown): void {
@@ -90,12 +95,23 @@ export class OrderChecksService {
             error instanceof Error ? error.stack : undefined,
             loggerCtx,
         );
+        if (this.pendingFailureWrites >= MAX_PENDING_FAILURE_WRITES) {
+            this.droppedFailureWrites += 1;
+            Logger.error(
+                `Check failure record dropped (queue full); ${this.droppedFailureWrites} dropped so far`,
+                undefined,
+                loggerCtx,
+            );
+            return;
+        }
+        this.pendingFailureWrites += 1;
         setImmediate(() => {
             this.connection.rawConnection
                 .query(
                     `INSERT INTO order_check_failure ("uuid", "orderId", "stage", "message") VALUES ($1, $2, $3, $4)`,
                     [randomUUID(), orderId, stage, message.slice(0, MAX_FAILURE_MESSAGE)],
                 )
+                .finally(() => (this.pendingFailureWrites -= 1))
                 .catch((recordError: unknown) =>
                     Logger.error(
                         `Could not record the check failure: ${String(recordError)}`,

@@ -88,6 +88,15 @@ describe('OrderChecksService.isHeld', () => {
         expect(params[3]).toHaveLength(500);
     });
 
+    it('bounds the queue of failure records: extra ones are dropped, not buffered without limit', async () => {
+        const { orders, record } = service(new Error('boom'));
+        record.mockImplementation(() => new Promise(() => undefined));
+        for (let i = 0; i < 150; i += 1)
+            orders.recordFailure(String(i), 'pre-reserve', new Error('x'));
+        await new Promise(r => setImmediate(r));
+        expect(record).toHaveBeenCalledTimes(100);
+    });
+
     it('still continues when recording the failure fails too', async () => {
         const { orders, record } = service(new Error('boom'));
         record.mockRejectedValueOnce(new Error('db down'));

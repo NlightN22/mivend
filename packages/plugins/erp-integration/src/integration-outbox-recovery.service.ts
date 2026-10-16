@@ -10,6 +10,9 @@ import type { OutboundEventType } from './outbound-event-types';
 import type { OutboundBuildResult } from './outbound-gateway';
 import { buildCancelRequested } from './order-cancel-requested.builder';
 
+// Another recovery got there first; callers that race on purpose (the sweep) treat it as a no-op.
+export class NotSkippedError extends Error {}
+
 export type RebuildOutcome = 'queued' | 'still-skipped' | 'already-sent';
 
 type OutboundRebuilder = (
@@ -57,7 +60,7 @@ export class IntegrationOutboxRecoveryService {
                 .setLock('pessimistic_write')
                 .where('e.id = :id AND e.status = :status', { id, status: 'skipped' })
                 .getOne();
-            if (!row) throw new Error(`Outbox row ${id} is not a skipped row`);
+            if (!row) throw new NotSkippedError(`Outbox row ${id} is not a skipped row`);
 
             const eventType = row.eventType as OutboundEventType;
             const subjectKey = OUTBOUND_EVENT_TYPES[eventType].subjectKey;

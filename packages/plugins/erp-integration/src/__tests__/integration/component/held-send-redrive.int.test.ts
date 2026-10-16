@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'crypto';
+import { Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import type { Repository } from 'typeorm';
 import type { RequestContext } from '@vendure/core';
@@ -136,16 +137,49 @@ describe('held send re-drive', () => {
         expect(await statusOf(a.id)).toBe('resolved');
     });
 
-    it('the sweep keeps retrying a rebuild that failed until it succeeds', async () => {
+    it('the sweep retries a failed rebuild with a growing delay until it succeeds', async () => {
         const a = await heldRow('1');
         build.mockRejectedValueOnce(new Error('db blip'));
 
         await service.sweep();
-        expect(await statusOf(a.id)).toBe('skipped');
         expect((await repo().findOneByOrFail({ id: a.id })).lastError).toMatch(/rebuild failed/);
 
         await service.sweep();
+        expect(await statusOf(a.id)).toBe('skipped');
+
+        await dataSource.query(
+            `UPDATE integration_outbox SET created_at = now() - interval '3 days',
+                    last_error_at = now() - interval '2 days' WHERE id = $1`,
+            [a.id],
+        );
+        await service.sweep();
         expect(await statusOf(a.id)).toBe('resolved');
+    });
+
+    it('the sweep gives up on a failed rebuild older than 7 days', async () => {
+        const a = await heldRow('1', 'rebuild failed: gone');
+        await dataSource.query(
+            `UPDATE integration_outbox SET created_at = now() - interval '8 days',
+                    last_error_at = now() - interval '2 days' WHERE id = $1`,
+            [a.id],
+        );
+
+        await service.sweep();
+
+        expect(await statusOf(a.id)).toBe('skipped');
+        expect(build).not.toHaveBeenCalled();
+    });
+
+    it('two sweeps at once send once and log no error for the lost race', async () => {
+        const a = await heldRow('1');
+        const logged = vi.spyOn(Logger, 'error').mockImplementation(() => undefined);
+
+        await Promise.all([service.sweep(), service.sweep()]);
+
+        expect(await statusOf(a.id)).toBe('resolved');
+        expect(await repo().count({ where: { status: 'pending' } })).toBe(1);
+        expect(logged).not.toHaveBeenCalled();
+        logged.mockRestore();
     });
 
     it('the sweep leaves a send that is still held skipped and sends nothing', async () => {

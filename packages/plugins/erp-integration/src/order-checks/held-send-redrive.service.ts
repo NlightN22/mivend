@@ -5,7 +5,10 @@ import { OrderStaffConfirmedEvent } from '@mivend/plugin-reservation';
 import { subscribeAndLog } from 'shared';
 import { DataSource } from 'typeorm';
 
-import { IntegrationOutboxRecoveryService } from '../integration-outbox-recovery.service';
+import {
+    IntegrationOutboxRecoveryService,
+    NotSkippedError,
+} from '../integration-outbox-recovery.service';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from '../types';
 import type { ErpIntegrationPluginOptions } from '../types';
 import { HELD_SKIP_REASON } from './order-send-hold.service';
@@ -49,8 +52,8 @@ export class HeldSendRedriveService implements OnApplicationBootstrap {
         await this.rebuildHeld(orderId, 1000);
     }
 
-    // Periodic, idempotent: re-evaluates every held send, so a release whose event was missed, a failed
-    // rebuild, or a hold cause that disappeared with new data all end in a send. Oldest attempt first.
+    // Periodic and idempotent: covers missed events, failed rebuilds (growing delay, given up after 7 days,
+    // then left counted as skipped) and holds whose cause vanished with new data. Oldest attempt first.
     async sweep(): Promise<number> {
         return this.rebuildHeld(undefined, SWEEP_LIMIT);
     }
@@ -59,10 +62,13 @@ export class HeldSendRedriveService implements OnApplicationBootstrap {
         const rows: Array<{ id: string }> = await this.dataSource.query(
             `SELECT id FROM integration_outbox
               WHERE event_type = 'order.confirmed' AND status = 'skipped'
-                AND (last_error = $1 OR last_error LIKE 'rebuild failed:%')
+                AND (last_error = $1 OR (last_error LIKE 'rebuild failed:%' AND ($3 OR (
+                       created_at > now() - interval '7 days'
+                       AND (last_error_at IS NULL OR last_error_at <= now() - GREATEST(
+                            interval '5 minutes', LEAST(interval '1 day', last_error_at - created_at)))))))
                 AND ($2::text IS NULL OR payload ->> 'orderId' = $2)
               ORDER BY last_error_at ASC NULLS FIRST, id LIMIT ${limit}`,
-            [HELD_SKIP_REASON, orderId ?? null],
+            [HELD_SKIP_REASON, orderId ?? null, orderId !== undefined],
         );
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
         let queued = 0;
@@ -72,6 +78,7 @@ export class HeldSendRedriveService implements OnApplicationBootstrap {
                     queued += 1;
                 }
             } catch (error) {
+                if (error instanceof NotSkippedError) continue;
                 Logger.error(`Re-drive of held send ${row.id} failed: ${String(error)}`, loggerCtx);
             }
         }
