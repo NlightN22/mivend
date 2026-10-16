@@ -9,8 +9,8 @@ describe('ReservationExpiryService.expireDueReservations', () => {
     function createService(
         dueRows: unknown[],
         orderRows: unknown[] = [],
-        rejectedOrders: unknown[] = [],
-        rejectedReservations: unknown[] = [],
+        rejectedOrders: { id: number | string }[] = [],
+        rejectedReservations: { orderId: number | string }[] = [],
         settings: ReservationPluginOptions = {},
     ): {
         service: ReservationExpiryService;
