@@ -2,21 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TransactionalConnection } from '@vendure/core';
 import type { Injector, Order, OrderState, RequestContext } from '@vendure/core';
 
-import {
-    organizationOrderGuard,
-    ORGANIZATION_MISSING_MESSAGE,
-} from '../../organization-order-guard';
+import { organizationOrderGuard } from '../../organization-order-guard';
 
 const query = vi.fn();
 const injector = {
     get: (token: unknown) =>
-        token === TransactionalConnection ? { rawConnection: { query } } : undefined,
+        token === TransactionalConnection ? { getRepository: () => ({ query }) } : undefined,
 } as unknown as Injector;
-const run = (toState: OrderState) =>
-    organizationOrderGuard.onTransitionStart?.('AddingItems', toState, {
-        ctx: {} as RequestContext,
-        order: { id: 1 } as unknown as Order,
-    });
+const args = { ctx: {} as RequestContext, order: { id: 1 } as unknown as Order };
+const end = (toState: OrderState) =>
+    organizationOrderGuard.onTransitionEnd?.('AddingItems', toState, args);
 
 beforeEach(() => {
     query.mockReset();
@@ -24,19 +19,18 @@ beforeEach(() => {
 });
 
 describe('organizationOrderGuard', () => {
-    it('rejects checkout and names the SKUs that have no organization', async () => {
-        query.mockResolvedValue([{ sku: 'SKU-1' }, { sku: 'SKU-2' }]);
-        expect(await run('ArrangingPayment')).toBe(`${ORGANIZATION_MISSING_MESSAGE}SKU-1, SKU-2`);
+    it("never refuses checkout: a missing organization is the check's finding, not a transition error", () => {
+        expect(organizationOrderGuard.onTransitionStart).toBeUndefined();
     });
 
-    it('allows checkout when every line has an organization', async () => {
-        query.mockResolvedValue([]);
-        expect(await run('ArrangingPayment')).toBeUndefined();
+    it('locks the order row, then stamps the variant organization on entering ArrangingPayment', async () => {
+        await end('ArrangingPayment');
+        expect(query.mock.calls[0][0]).toContain('FOR UPDATE');
+        expect(query.mock.calls[1][0]).toContain('UPDATE order_line');
     });
 
-    it('does not query for other transitions', async () => {
-        expect(await run('PaymentAuthorized')).toBeUndefined();
-        expect(await run('AddingItems')).toBeUndefined();
+    it('does nothing for other transitions', async () => {
+        await end('PaymentAuthorized');
         expect(query).not.toHaveBeenCalled();
     });
 });

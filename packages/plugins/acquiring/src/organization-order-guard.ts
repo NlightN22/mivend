@@ -1,59 +1,27 @@
 import type { Injector, OrderProcess, OrderState } from '@vendure/core';
 import { OrderLine, TransactionalConnection } from '@vendure/core';
 
-export const ORGANIZATION_MISSING_MESSAGE =
-    'Some items cannot be ordered right now. Remove them from the cart to continue: ';
-
 let connection: TransactionalConnection;
 
-async function missingSkus(orderId: unknown): Promise<string[]> {
-    const rows: Array<{ sku: string }> = await connection.rawConnection.query(
-        `SELECT v.sku FROM order_line l
-         INNER JOIN product_variant v ON v.id = l."productVariantId"
-         WHERE l."orderId" = $1 AND v."customFieldsOrganizationid" IS NULL
-         ORDER BY l.id`,
-        [orderId],
-    );
-    return rows.map(row => row.sku);
-}
-
-// Blocks checkout for everyone and every payment method: addPaymentToOrder needs ArrangingPayment.
+// Stamps only: a line whose variant has no organization is reported by the
+// `order.line-without-organization` check (docs/controls-inventory.md), it never stops checkout.
+// Re-stamped on each ArrangingPayment entry so later steps never re-read the variant.
 export const organizationOrderGuard: OrderProcess<OrderState> = {
     init(injector: Injector) {
         connection = injector.get(TransactionalConnection);
     },
-    async onTransitionStart(_fromState, toState, { order }) {
-        if (toState !== 'ArrangingPayment') return;
-        const skus = await missingSkus(order.id);
-        if (skus.length === 0) return;
-        return ORGANIZATION_MISSING_MESSAGE + skus.join(', ');
-    },
-    // Re-stamped on each ArrangingPayment entry so later steps never re-read the variant.
-    // Variant must be set at stamp time; one cleared after onTransitionStart fails the transition.
     async onTransitionEnd(_fromState, toState, { ctx, order }) {
         if (toState !== 'ArrangingPayment') return;
         // Order row lock first: a tier-rebalance refresh holding stale lines must commit before this stamp.
         await connection
             .getRepository(ctx, OrderLine)
             .query('SELECT id FROM "order" WHERE id = $1 FOR UPDATE', [order.id]);
-        const rows: Array<{ missing: number }> = await connection
-            .getRepository(ctx, OrderLine)
-            .query(
-                `WITH stamped AS (
-                 UPDATE order_line l SET "customFieldsOrganizationid" = v."customFieldsOrganizationid"
-                 FROM product_variant v
-                 WHERE v.id = l."productVariantId" AND l."orderId" = $1
-                   AND v."customFieldsOrganizationid" IS NOT NULL
-                 RETURNING l.id
-             )
-             SELECT (SELECT count(*) FROM order_line WHERE "orderId" = $1)::int
-                    - (SELECT count(*) FROM stamped)::int AS missing`,
-                [order.id],
-            );
-        if (Number(rows[0]?.missing) > 0) {
-            throw new Error(
-                ORGANIZATION_MISSING_MESSAGE + (await missingSkus(order.id)).join(', '),
-            );
-        }
+        await connection.getRepository(ctx, OrderLine).query(
+            `UPDATE order_line l SET "customFieldsOrganizationid" = v."customFieldsOrganizationid"
+             FROM product_variant v
+             WHERE v.id = l."productVariantId" AND l."orderId" = $1
+               AND v."customFieldsOrganizationid" IS NOT NULL`,
+            [order.id],
+        );
     },
 };

@@ -1,38 +1,23 @@
-import type { Injector, OrderProcess, OrderState, RequestContext } from '@vendure/core';
+import type { Injector, OrderProcess, OrderState } from '@vendure/core';
 import { Order, TransactionalConnection } from '@vendure/core';
-import type { Contract } from '@mivend/plugin-counterparty';
+
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 
-export const CONTRACT_MISSING_MESSAGE =
-    'No active contract is available to register this order. Contact your manager.';
+import { resolveOrderContractFor } from './order-contract-resolution';
+import type { ContractResolutionDeps } from './order-contract-resolution';
 
 let connection: TransactionalConnection;
-let counterparties: CounterpartyService;
-let contracts: ContractService;
+let deps: ContractResolutionDeps;
 
-async function resolveContract(ctx: RequestContext, order: Order): Promise<Contract | null> {
-    if (!order.customerId) return null;
-    const counterparty = await counterparties.getForCustomer(ctx, order.customerId);
-    if (!counterparty) return null;
-    return contracts.resolveOrderContract(
-        ctx,
-        counterparty,
-        order.customFields?.selectedContractId,
-        order.customerId,
-    );
-}
-
-// The order is registered in the ERP under one contract: without a usable one checkout stops here
-// instead of failing after the reservation (#205).
+// Stamps the resolved contract; an order without a usable one is reported by the
+// `order.contract-unresolved` check (docs/controls-inventory.md) and never stops checkout (#205, #241).
 export const contractOrderGuard: OrderProcess<OrderState> = {
     init(injector: Injector) {
         connection = injector.get(TransactionalConnection);
-        counterparties = injector.get(CounterpartyService);
-        contracts = injector.get(ContractService);
-    },
-    async onTransitionStart(_fromState, toState, { ctx, order }) {
-        if (toState !== 'ArrangingPayment') return;
-        if (!(await resolveContract(ctx, order))) return CONTRACT_MISSING_MESSAGE;
+        deps = {
+            counterparties: injector.get(CounterpartyService),
+            contracts: injector.get(ContractService),
+        };
     },
     async onTransitionEnd(_fromState, toState, { ctx, order }) {
         if (toState !== 'ArrangingPayment') return;
@@ -40,7 +25,10 @@ export const contractOrderGuard: OrderProcess<OrderState> = {
         await connection
             .getRepository(ctx, Order)
             .query('SELECT id FROM "order" WHERE id = $1 FOR UPDATE', [order.id]);
-        const contract = await resolveContract(ctx, order);
+        const contract = await resolveOrderContractFor(deps, ctx, {
+            customerId: order.customerId,
+            selectedContractId: order.customFields?.selectedContractId,
+        });
         if (!contract) return;
         await connection.getRepository(ctx, Order).query(
             `UPDATE "order" SET "customFieldsSelectedcontractid" = $2

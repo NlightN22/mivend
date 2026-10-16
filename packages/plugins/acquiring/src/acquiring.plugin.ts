@@ -7,6 +7,7 @@ import {
 } from '@vendure/core';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { ChecksPlugin } from '@mivend/plugin-checks';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { NotificationPlugin } from '@mivend/plugin-notification';
 import { NumberingPlugin } from '@mivend/plugin-numbering';
@@ -28,6 +29,7 @@ import { ProformaInvoiceIssuingService } from './proforma-invoice-issuing.servic
 import { PaymentAttemptService } from './payment-attempt.service';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
 import { contractOrderGuard } from './contract-order-guard';
+import { OrderDataChecksRegistrar } from './order-data-checks.registrar';
 import { organizationOrderGuard } from './organization-order-guard';
 import { createPaymentInboxTask } from './payment-inbox.scheduled-task';
 import { PaymentEventListener } from './payment-event.listener';
@@ -69,6 +71,7 @@ import type { AcquiringPluginOptions } from './types';
         PluginCommonModule,
         CounterpartyPlugin,
         AccessControlPlugin,
+        ChecksPlugin,
         ErpOrderPlugin,
         NotificationPlugin,
         NumberingPlugin,
@@ -103,6 +106,7 @@ import type { AcquiringPluginOptions } from './types';
         CashBootstrapService,
         PaymentReceivedService,
         VariantOrganizationHealthService,
+        OrderDataChecksRegistrar,
         {
             provide: ACQUIRING_PLUGIN_OPTIONS,
             useFactory: (): AcquiringPluginOptions => AcquiringPlugin.options,

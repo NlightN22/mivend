@@ -12,7 +12,7 @@ import {
 } from 'shared';
 
 import { freightEligibilityChecker } from '../../freight-eligibility-checker';
-import { freightOrderGuard, FREIGHT_NO_TRADING_POINT_MESSAGE } from '../../freight-order-guard';
+import { hasFreightWithoutTradingPoint } from '../../freight-trading-point.check';
 
 // Vendure entities need the bootstrap-time id strategy, so tables can't be hand-rolled here.
 // CounterpartyService is stubbed by a join copied from counterparty.service.ts getForCustomer.
@@ -37,6 +37,7 @@ const { schema, extra } = testSchemaOptions('freight_trading_point');
 let dataSource: DataSource;
 const ctx = {} as RequestContext;
 let shippingMethodCode = 'freight-delivery';
+let connectionGetRepository: (ctx: unknown, entity: unknown) => unknown;
 
 const run = (sql: string, params: unknown[] = []): Promise<Array<Record<string, unknown>>> =>
     dataSource.query(sql, params);
@@ -110,10 +111,14 @@ const eligible = (customerId: number) =>
     );
 
 const checkout = (customerId: number) =>
-    freightOrderGuard.onTransitionStart?.('AddingItems', 'ArrangingPayment', {
+    hasFreightWithoutTradingPoint(
+        {
+            connection: { getRepository: connectionGetRepository } as never,
+            tradingPoints: tradingPointService,
+        },
         ctx,
-        order: { customerId, shippingLines: [{ shippingMethodId: 1 }] } as unknown as Order,
-    });
+        { customerId, shippingMethodIds: [1] },
+    );
 
 beforeAll(async () => {
     await createTestSchema(schema);
@@ -131,15 +136,11 @@ beforeAll(async () => {
         id serial PRIMARY KEY, "customFieldsCounterpartyid" varchar,
         "customFieldsPreferredtradingpointid" varchar)`);
 
-    const connection = {
-        rawConnection: dataSource,
-        getRepository: (_ctx: unknown, entity: unknown) =>
-            entity === TransactionalConnection
-                ? undefined
-                : typeof entity === 'function' && entity.name === 'ShippingMethod'
-                  ? { findByIds: async () => [{ code: shippingMethodCode }] }
-                  : dataSource.getRepository(TestPoint),
-    };
+    connectionGetRepository = (_ctx: unknown, entity: unknown) =>
+        typeof entity === 'function' && entity.name === 'ShippingMethod'
+            ? { findByIds: async () => [{ code: shippingMethodCode }] }
+            : dataSource.getRepository(TestPoint);
+    const connection = { rawConnection: dataSource, getRepository: connectionGetRepository };
     tradingPointService = new TradingPointService(
         connection as never,
         {} as never,
@@ -151,7 +152,6 @@ beforeAll(async () => {
     providers.set(TradingPointService, tradingPointService);
     providers.set(TransactionalConnection, connection);
     void freightEligibilityChecker.init?.(injector);
-    void freightOrderGuard.init?.(injector);
 });
 
 beforeEach(async () => {
@@ -230,18 +230,18 @@ describe('freight eligibility and order guard', () => {
         expect(await eligible(a.customerId)).toBe(true);
     });
 
-    it('rejects freight checkout without a usable point and allows it with one', async () => {
+    it('reports freight without a usable point and passes with one', async () => {
         const buyer = await addBuyer();
-        expect(await checkout(buyer.customerId)).toBe(FREIGHT_NO_TRADING_POINT_MESSAGE);
+        expect(await checkout(buyer.customerId)).toBe(true);
         await addPoint(buyer.counterpartyId, 'Off', { isActive: false });
-        expect(await checkout(buyer.customerId)).toBe(FREIGHT_NO_TRADING_POINT_MESSAGE);
+        expect(await checkout(buyer.customerId)).toBe(true);
         await addPoint(buyer.counterpartyId, 'Own point');
-        expect(await checkout(buyer.customerId)).toBeUndefined();
+        expect(await checkout(buyer.customerId)).toBe(false);
     });
 
-    it('does not guard pickup orders', async () => {
+    it('does not flag pickup orders', async () => {
         const buyer = await addBuyer();
         shippingMethodCode = 'pickup';
-        expect(await checkout(buyer.customerId)).toBeUndefined();
+        expect(await checkout(buyer.customerId)).toBe(false);
     });
 });

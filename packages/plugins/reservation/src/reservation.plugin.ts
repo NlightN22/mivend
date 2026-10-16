@@ -26,6 +26,7 @@ import { ReservationReconciliationIssue } from './entities/reservation-reconcili
 import { OrderCheckStaleService } from './order-check-stale.service';
 import { OrderCheckSubjectLoader } from './order-check-subject-loader.service';
 import { OrderCheckSubjectRegistrar } from './order-check-subject.registrar';
+import { OrderExportDataRegistrar } from './order-export-data.registrar';
 import { OrderChecksListener } from './order-checks.listener';
 import { OrderChecksResolver } from './order-checks.resolver';
 import { adminOrderChecksSchema } from './order-checks.schema';
@@ -105,6 +106,7 @@ import type { ReservationPluginOptions } from './types';
         OrderLineAvailabilityPortRegistry,
         OrderCheckSubjectLoader,
         OrderCheckSubjectRegistrar,
+        OrderExportDataRegistrar,
         OrderChecksService,
         OrderCheckStaleService,
         OrderChecksListener,

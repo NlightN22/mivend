@@ -9,10 +9,8 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-import {
-    organizationOrderGuard,
-    ORGANIZATION_MISSING_MESSAGE,
-} from '../../organization-order-guard';
+import { findLinesWithoutOrganization } from '../../order-data-checks.query';
+import { organizationOrderGuard } from '../../organization-order-guard';
 
 // Real SQL over hand-rolled order_line/product_variant tables (Vendure entities need bootstrap).
 const { schema, extra } = testSchemaOptions('organization_order_guard');
@@ -31,12 +29,6 @@ async function addLine(orderId: number, sku: string, organizationId: number | nu
         variant.id,
     ]);
 }
-
-const checkout = (orderId: number) =>
-    organizationOrderGuard.onTransitionStart?.('AddingItems', 'ArrangingPayment', {
-        ctx: {} as RequestContext,
-        order: { id: orderId } as unknown as Order,
-    });
 
 beforeAll(async () => {
     await createTestSchema(schema);
@@ -90,22 +82,6 @@ const lineOrganizations = async (orderId: number) =>
     ).map(row => row.org);
 
 describe('organizationOrderGuard (real SQL)', () => {
-    it('names only the lines of this order whose variant has no organization', async () => {
-        await addLine(1, 'OK-1', 7);
-        await addLine(1, 'NO-ORG-1', null);
-        await addLine(2, 'NO-ORG-OTHER-ORDER', null);
-
-        expect(await checkout(1)).toBe(`${ORGANIZATION_MISSING_MESSAGE}NO-ORG-1`);
-    });
-
-    it('allows an order whose every variant has an organization', async () => {
-        await addLine(1, 'OK-1', 7);
-        await addLine(1, 'OK-2', 8);
-        await addLine(2, 'NO-ORG-OTHER-ORDER', null);
-
-        expect(await checkout(1)).toBeUndefined();
-    });
-
     it('stamps each line of this order with its variant organization, leaving other orders alone', async () => {
         await addLine(1, 'A', 7);
         await addLine(1, 'B', 8);
@@ -127,50 +103,36 @@ describe('organizationOrderGuard (real SQL)', () => {
         expect(await lineOrganizations(1)).toEqual([11]);
     });
 
-    it('fails the transition when a variant organization is cleared after the check passed', async () => {
+    it('leaves a line whose variant has no organization unstamped without failing the transition', async () => {
         await addLine(1, 'KEEPS', 7);
+        await addLine(1, 'NO-ORG', null);
         await addLine(1, 'CLEARED', 8);
-        expect(await checkout(1)).toBeUndefined();
         await run(
             `UPDATE product_variant SET "customFieldsOrganizationid" = NULL WHERE sku = 'CLEARED'`,
         );
 
-        await expect(stamp(1)).rejects.toThrow(`${ORGANIZATION_MISSING_MESSAGE}CLEARED`);
+        await expect(stamp(1)).resolves.toBeUndefined();
+
+        expect(await lineOrganizations(1)).toEqual([7, null, null]);
+    });
+});
+
+describe('findLinesWithoutOrganization (real SQL)', () => {
+    it("names only this order's lines where neither the line nor its variant has an organization", async () => {
+        await addLine(1, 'OK-1', 7);
+        await addLine(1, 'NO-ORG-1', null);
+        await addLine(2, 'NO-ORG-OTHER-ORDER', null);
+        await run(`UPDATE order_line SET "customFieldsOrganizationid" = 5 WHERE id = 1`);
+
+        expect((await findLinesWithoutOrganization(run as never, '1')).map(r => r.sku)).toEqual([
+            'NO-ORG-1',
+        ]);
     });
 
-    it('never stamps an organization the variant no longer has', async () => {
-        await addLine(1, 'A', 7);
-        await stamp(1);
-        await run(`UPDATE product_variant SET "customFieldsOrganizationid" = NULL`);
+    it('does not flag a line already stamped even when the variant lost its organization', async () => {
+        await addLine(1, 'STAMPED', null);
+        await run(`UPDATE order_line SET "customFieldsOrganizationid" = 5`);
 
-        await expect(stamp(1)).rejects.toThrow();
-        expect(await lineOrganizations(1)).toEqual([7]);
-    });
-
-    it('waits for a concurrent writer holding the order row, so its stale write cannot erase the stamp', async () => {
-        await addLine(1, 'A', 7);
-        const writer = dataSource.createQueryRunner();
-        await writer.startTransaction();
-        await writer.query(`SELECT id FROM "order" WHERE id = 1 FOR UPDATE`);
-
-        const stamping = stamp(1);
-        await new Promise(resolve => setTimeout(resolve, 150));
-        await writer.query(`UPDATE order_line SET "customFieldsOrganizationid" = NULL`);
-        await writer.commitTransaction();
-        await writer.release();
-        await stamping;
-
-        expect(await lineOrganizations(1)).toEqual([7]);
-    });
-
-    it('does not stamp on other transitions', async () => {
-        await addLine(1, 'A', 7);
-
-        await organizationOrderGuard.onTransitionEnd?.('ArrangingPayment', 'PaymentAuthorized', {
-            ctx: {} as RequestContext,
-            order: { id: 1 } as unknown as Order,
-        });
-
-        expect(await lineOrganizations(1)).toEqual([null]);
+        expect(await findLinesWithoutOrganization(run as never, '1')).toEqual([]);
     });
 });
