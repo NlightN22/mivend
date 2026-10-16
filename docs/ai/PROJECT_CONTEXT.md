@@ -1,6 +1,14 @@
 # Project Context
 
-Updated: 2026-10-15 21:30
+Updated: 2026-10-16 08:00
+
+## #237 ERP-mandated order controls + checks/policies framework (2026-10-16, implemented, awaiting audit; not pushed)
+
+- **Framework** (`packages/plugins/checks`, `docs/checks-and-policies.md`, skill `checks-policy`): subject-agnostic; a check is a pure provider returning findings with structured facts, the consequence is a per-check policy row (`info|warn|hold|block|require-approval`, editable in the manager portal tab "Controls and policies", permission `ManageCheckPolicies`), one stored `check_result` per subject, one entry point `runChecks(subjectType, ref, stage)`. Order subject registered by plugin-reservation, providers in erp-integration (`src/order-checks`). Audit of all older controls: #241.
+- **Rules** (`docs/order-contracts.md`): per line the check judges only the line's OWN organization (owner decision, deviates from the issue's intersection/sum rule): contract with it, its own `stock_organization`. Unknown line organization or one outside the storage set at the order warehouse = no finding. Default policy `warn`; `block` rejected for orders; `hold` keeps automatic reserve/send in the confirmation queue. Data: `storage_location_assignment.warehouseId`, `stock_organization` master.
+- **UI** (manager order page): header cards, per-line Stock / Contract / Reservation columns with per-organization tooltips, list chip `hasCheckFindings`, System health counters (`orderCheckHealth`), settings tab. The order page widget grid reflows by width (design); owner finds it messy, not critical.
+- **Known limits:** storage-unit coefficient fixed at 1 until search-platform#206 (also organization "do not control stock" flags); stale marking only covers orders that already hold findings; staff-override record and `require-approval` bridge not built; the two new permissions were added to the two default role lists that carry `ManageApprovalWorkflows` without a role review; `recipient` is free text; no unit test for tab gating.
+- **Next:** audit (MiVentAudit), fix findings, push + close; then #233 (manager edits order lines before confirmation; owner: also automatic split into the part that fits and shortfall) via a background agent.
 
 ## #236 local reserve handed over to the ERP only for what it holds (2026-10-15, DONE: audited twice, pushed `91238d9c`, closed)
 
@@ -26,7 +34,7 @@ Updated: 2026-10-15 21:30
 - **Credit limit of the staging test customer** was blocked by old open test orders; cancelled (5 local, 2 closed by the integration side, 15 via 1C). Only the fresh test orders 43/44/45/48/55 remain.
 - **Test lesson:** a nested `withTransaction` in the reserve-order test harness must join the ctx's open transaction (like Vendure), otherwise a lock taken twice hangs cancel suites; unit tests do not catch it, `make test-int` does. Fixtures must mirror real column types (a varchar custom field vs int id hid a production query failure).
 - **#237 backend (stage C1):** order subject type + two ERP-requirement providers (`erp.contract-with-storage-organization`, `erp.organization-stock`) wired at checkout / `reserveOrder()` / `order.confirmed`, policy rows decide (default `warn`; `hold` keeps an automatic trigger in the confirmation queue), stale marking, `recomputeOrderChecks`, `orderCheckHealth`, `Order.hasCheckFindings`; rules in `docs/order-contracts.md`. Frontend stage pending.
-- **Open:** #236 (release the local reserve only when the ERP holds the quantity; in progress in another session), #237 and #233 (other sessions), #239 (non-blocking audit leftovers), reserve shown on delivered orders (proposal: hide for terminal statuses, not decided). `make ci` is no longer a pre-push step (run by the audit session about once per three issues).
+- **Open:** #237 (audit pending) and #233, #239 (non-blocking audit leftovers), reserve shown on delivered orders (proposal: hide for terminal statuses, not decided). `make ci` is no longer a pre-push step (run by the audit session about once per three issues).
 
 ## #234 Kafka topic rename (2026-10-14, closed)
 
