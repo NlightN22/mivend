@@ -9,6 +9,7 @@ const subject = (over: Partial<OrderCheckSubject> = {}): OrderCheckSubject => ({
     orderId: '1',
     orderCode: 'ORD-1',
     customerId: '1',
+    branchId: null,
     buyerCounterpartyId: 'cp-1',
     warehouseErpId: 'wh-1',
     lines: [

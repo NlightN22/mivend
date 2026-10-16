@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
 import { randomUUID } from 'node:crypto';
 import { withAggregateLock } from 'shared';
-import { In } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 
 import { CheckRegistry } from './check-registry';
 import { CheckPolicyChangedEvent } from './check-policy-changed.event';
@@ -10,11 +10,13 @@ import { CheckPolicy } from './entities/check-policy.entity';
 import { CheckPolicyHistory } from './entities/check-policy-history.entity';
 import { CHECK_CODE_KIND, CheckStaleRequestWriter } from './check-stale-request.writer';
 import type { CheckProvider } from './registry-types';
-import { CONSEQUENCES, Consequence, DEFAULT_CONSEQUENCE } from './types';
+import { CONSEQUENCES, Consequence } from './types';
 
 export interface UpdateCheckPolicyInput {
     checkCode: string;
     stage: string;
+    // Omitted/null edits the global row; a branch id creates or edits that branch's override.
+    branchId?: string | null;
     consequence: Consequence;
     recipient?: string | null;
     enabled: boolean;
@@ -29,13 +31,14 @@ export class CheckPolicyService {
         private staleRequests: CheckStaleRequestWriter,
     ) {}
 
-    // A missing row is created from the provider's declared default (warn unless it says otherwise).
+    // A missing global row is created from the provider's declared default; a branch override row replaces it.
     // `lockRows` (runs) share-locks the rows: a concurrent policy update waits, then marks the results stale.
     async ensureForStage(
         ctx: RequestContext,
         providers: CheckProvider[],
         stage: string,
         lockRows = false,
+        branchId: string | null = null,
     ): Promise<Map<string, CheckPolicy>> {
         const repo = this.connection.getRepository(ctx, CheckPolicy);
         if (providers.length === 0) {
@@ -49,18 +52,53 @@ export class CheckPolicyService {
                     uuid: randomUUID(),
                     checkCode: p.code,
                     stage,
-                    consequence: p.defaultConsequence ?? DEFAULT_CONSEQUENCE,
+                    branchId: null,
+                    consequence: this.registry.defaultConsequence(p, stage),
                     recipient: null,
-                    enabled: true,
+                    enabled: this.registry.defaultEnabled(p, stage),
                 })),
             )
             .orIgnore()
             .execute();
+        const codes = providers.map(p => p.code);
+        const lock = lockRows ? { lock: { mode: 'pessimistic_read' as const } } : {};
         const rows = await repo.find({
-            where: { stage, checkCode: In(providers.map(p => p.code)) },
-            ...(lockRows ? { lock: { mode: 'pessimistic_read' as const } } : {}),
+            where: { stage, checkCode: In(codes), branchId: IsNull() },
+            ...lock,
         });
-        return new Map(rows.map(row => [row.checkCode, row]));
+        const effective = new Map(rows.map(row => [row.checkCode, row]));
+        if (branchId) {
+            const overrides = await repo.find({
+                where: { stage, checkCode: In(codes), branchId },
+                ...lock,
+            });
+            for (const row of overrides) effective.set(row.checkCode, row);
+        }
+        return effective;
+    }
+
+    // The consequence a consumer outside `runChecks` (an interceptor, a placement decision) must apply.
+    // Read-only: a missing row falls back to the provider's declared default, nothing is created.
+    async resolve(
+        ctx: RequestContext,
+        checkCode: string,
+        stage: string,
+        branchId: string | null,
+    ): Promise<{ consequence: Consequence; enabled: boolean }> {
+        const provider = this.registry.getCheck(checkCode);
+        if (!provider) {
+            throw new Error(`Unknown check "${checkCode}"`);
+        }
+        const repo = this.connection.getRepository(ctx, CheckPolicy);
+        const row =
+            (branchId ? await repo.findOne({ where: { checkCode, stage, branchId } }) : null) ??
+            (await repo.findOne({ where: { checkCode, stage, branchId: IsNull() } }));
+        return row
+            ? { consequence: row.consequence, enabled: row.enabled }
+            : {
+                  consequence: this.registry.defaultConsequence(provider, stage),
+                  enabled: this.registry.defaultEnabled(provider, stage),
+              };
     }
 
     async list(ctx: RequestContext, subjectType?: string): Promise<CheckPolicy[]> {
@@ -78,7 +116,7 @@ export class CheckPolicyService {
         }
         return this.connection.getRepository(ctx, CheckPolicy).find({
             where: { checkCode: In(providers.map(p => p.code)) },
-            order: { checkCode: 'ASC', stage: 'ASC' },
+            order: { checkCode: 'ASC', stage: 'ASC', branchId: 'ASC' },
         });
     }
 
@@ -94,11 +132,14 @@ export class CheckPolicyService {
             throw new Error(`Unknown consequence "${input.consequence}"`);
         }
         const subjectType = this.registry.getSubjectType(provider.subjectType);
-        if (!subjectType.allowedConsequences.includes(input.consequence)) {
+        if (
+            !this.registry.allowedConsequences(subjectType, input.stage).includes(input.consequence)
+        ) {
             throw new Error(
-                `Consequence "${input.consequence}" is not allowed for subject type "${subjectType.type}"`,
+                `Consequence "${input.consequence}" is not allowed for subject type "${subjectType.type}" at "${input.stage}"`,
             );
         }
+        const branchId = input.branchId ?? null;
         return withAggregateLock(
             this.connection,
             ctx,
@@ -106,9 +147,7 @@ export class CheckPolicyService {
             async txCtx => {
                 await this.ensureForStage(txCtx, [provider], input.stage);
                 const repo = this.connection.getRepository(txCtx, CheckPolicy);
-                const row = await repo.findOneOrFail({
-                    where: { checkCode: input.checkCode, stage: input.stage },
-                });
+                const row = await this.rowFor(repo, input.checkCode, input.stage, branchId);
                 const before = {
                     consequence: row.consequence,
                     recipient: row.recipient,
@@ -140,6 +179,72 @@ export class CheckPolicyService {
                 }
                 return saved;
             },
+        );
+    }
+
+    // Drops a branch override so the branch follows the global row again.
+    async resetOverride(
+        ctx: RequestContext,
+        checkCode: string,
+        stage: string,
+        branchId: string,
+    ): Promise<boolean> {
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            `check-policy:${checkCode}:${stage}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, CheckPolicy);
+                const row = await repo.findOne({ where: { checkCode, stage, branchId } });
+                if (!row) return false;
+                await this.connection.getRepository(txCtx, CheckPolicyHistory).save(
+                    new CheckPolicyHistory({
+                        checkPolicyId: Number(row.id),
+                        changedByUserId: ctx.activeUserId ? String(ctx.activeUserId) : null,
+                        before: {
+                            consequence: row.consequence,
+                            recipient: row.recipient,
+                            enabled: row.enabled,
+                        },
+                        after: { removed: true },
+                    }),
+                );
+                await repo.remove(row);
+                await this.staleRequests.request(txCtx, CHECK_CODE_KIND, checkCode);
+                this.eventBus.publish(
+                    new CheckPolicyChangedEvent(txCtx, checkCode, stage, {
+                        consequence: row.consequence,
+                        enabled: row.enabled,
+                    }),
+                );
+                return true;
+            },
+        );
+    }
+
+    // A branch row is created as a copy of the effective global row, then edited.
+    private async rowFor(
+        repo: Repository<CheckPolicy>,
+        checkCode: string,
+        stage: string,
+        branchId: string | null,
+    ): Promise<CheckPolicy> {
+        const global = await repo.findOneOrFail({
+            where: { checkCode, stage, branchId: IsNull() },
+        });
+        if (!branchId) return global;
+        const existing = await repo.findOne({ where: { checkCode, stage, branchId } });
+        return (
+            existing ??
+            repo.create({
+                uuid: randomUUID(),
+                checkCode,
+                stage,
+                branchId,
+                consequence: global.consequence,
+                recipient: global.recipient,
+                enabled: global.enabled,
+            })
         );
     }
 }

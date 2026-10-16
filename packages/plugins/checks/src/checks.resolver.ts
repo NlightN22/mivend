@@ -36,6 +36,10 @@ export class ChecksResolver {
             description: p.description,
             defaultConsequence: p.defaultConsequence ?? DEFAULT_CONSEQUENCE,
             allowedConsequences: this.registry.getSubjectType(p.subjectType).allowedConsequences,
+            stageConsequences:
+                this.registry.getSubjectType(p.subjectType).stageConsequences ?? null,
+            stageDefaults: p.stageDefaults ?? null,
+            defaultEnabled: p.defaultEnabled ?? true,
         }));
     }
 
@@ -56,5 +60,15 @@ export class ChecksResolver {
         @Args() args: { input: UpdateCheckPolicyInput },
     ): Promise<CheckPolicy> {
         return this.policies.update(ctx, args.input);
+    }
+
+    @Mutation()
+    @Transaction()
+    @Allow(CustomPermission.ManageCheckPolicies.Permission)
+    resetCheckPolicyOverride(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { checkCode: string; stage: string; branchId: string },
+    ): Promise<boolean> {
+        return this.policies.resetOverride(ctx, args.checkCode, args.stage, args.branchId);
     }
 }

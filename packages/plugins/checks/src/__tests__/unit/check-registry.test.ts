@@ -52,6 +52,38 @@ describe('CheckRegistry', () => {
         );
     });
 
+    it('takes the per-stage default and validates it against the stage-specific allowed set', () => {
+        const registry = new CheckRegistry();
+        registry.registerSubjectType({ ...subject, stageConsequences: { final: ['hold'] } });
+        const stageDefaults = { draft: 'info', final: 'hold' } as const;
+        const p = provider({ stages: ['draft', 'final'], stageDefaults });
+        registry.registerCheck(p);
+        expect(registry.defaultConsequence(p, 'draft')).toBe('info');
+        expect(registry.defaultConsequence(p, 'final')).toBe('hold');
+        expect(() =>
+            registry.registerCheck(
+                provider({ code: 'y.check', stages: ['draft'], stageDefaults: { draft: 'hold' } }),
+            ),
+        ).toThrow(/not allowed/);
+        expect(() =>
+            registry.registerCheck(
+                provider({ code: 'z.check', stages: ['draft'], stageDefaults: { final: 'info' } }),
+            ),
+        ).toThrow(/unused stage/);
+    });
+
+    it('resolves default enablement per stage, on when unspecified', () => {
+        const registry = new CheckRegistry();
+        const stages = ['draft', 'final'];
+        expect(registry.defaultEnabled(provider({ stages }), 'draft')).toBe(true);
+        expect(registry.defaultEnabled(provider({ stages, defaultEnabled: false }), 'final')).toBe(
+            false,
+        );
+        const perStage = provider({ stages, defaultEnabled: { draft: false } });
+        expect(registry.defaultEnabled(perStage, 'draft')).toBe(false);
+        expect(registry.defaultEnabled(perStage, 'final')).toBe(true);
+    });
+
     it('lists only providers of the stage and rejects an undefined stage', () => {
         const registry = new CheckRegistry();
         registry.registerSubjectType(subject);

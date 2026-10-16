@@ -9,6 +9,7 @@ const proto = ChecksResolver.prototype;
 describe('ChecksResolver permission gates', () => {
     it.each([
         ['updateCheckPolicy', CustomPermission.ManageCheckPolicies],
+        ['resetCheckPolicyOverride', CustomPermission.ManageCheckPolicies],
         ['checkPolicies', CustomPermission.ManageCheckPolicies],
         ['checkResults', CustomPermission.ReadCheckResults],
         ['checkDefinitions', CustomPermission.ReadCheckResults],

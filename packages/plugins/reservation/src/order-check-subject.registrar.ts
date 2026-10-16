@@ -7,7 +7,8 @@ import { ORDER_CHECK_STAGES, ORDER_SUBJECT_TYPE, orderLockKey } from './order-ch
 import type { OrderCheckSubject } from './order-check-subject';
 import { OrderCheckSubjectLoader } from './order-check-subject-loader.service';
 
-// No `block` and no `require-approval`: the customer's order is always accepted (#237).
+// No `block` and no `require-approval` for a placed order: it is always accepted (#237). `block` is
+// allowed on `cart` only, for input validation (a quantity that breaks the pack multiple is refused).
 @Injectable()
 export class OrderCheckSubjectRegistrar implements OnModuleInit {
     constructor(
@@ -21,6 +22,8 @@ export class OrderCheckSubjectRegistrar implements OnModuleInit {
             type: ORDER_SUBJECT_TYPE,
             stages: ORDER_CHECK_STAGES,
             allowedConsequences: ['info', 'warn', 'hold'],
+            stageConsequences: { cart: ['block'] },
+            branchId: subject => subject.branchId,
             loadSubject: (ctx, orderId) => this.loader.load(ctx, orderId),
             lockKey: orderLockKey,
             dataVersion: subject =>

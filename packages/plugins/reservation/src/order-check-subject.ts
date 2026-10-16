@@ -26,6 +26,8 @@ export interface OrderCheckSubject {
     orderId: string;
     orderCode: string;
     customerId: string | null;
+    // The order's own branch once placed; before that no branch policy override applies.
+    branchId: string | null;
     buyerCounterpartyId: string | null;
     warehouseErpId: string | null;
     lines: OrderCheckLine[];

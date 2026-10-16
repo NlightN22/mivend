@@ -8,6 +8,10 @@ export interface CheckPolicySnapshot {
     enabled: boolean;
 }
 
+export interface CheckPolicyRemoved {
+    removed: true;
+}
+
 @Entity()
 export class CheckPolicyHistory extends UuidEntity {
     constructor(input?: DeepPartial<CheckPolicyHistory>) {
@@ -25,5 +29,5 @@ export class CheckPolicyHistory extends UuidEntity {
     before!: CheckPolicySnapshot;
 
     @Column({ type: 'jsonb' })
-    after!: CheckPolicySnapshot;
+    after!: CheckPolicySnapshot | CheckPolicyRemoved;
 }

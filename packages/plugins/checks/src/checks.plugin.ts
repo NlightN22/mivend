@@ -21,6 +21,9 @@ const adminApiSchema = gql`
         description: String!
         defaultConsequence: String!
         allowedConsequences: [String!]!
+        stageConsequences: JSON
+        stageDefaults: JSON
+        defaultEnabled: JSON!
     }
 
     type CheckPolicy {
@@ -28,6 +31,7 @@ const adminApiSchema = gql`
         uuid: String!
         checkCode: String!
         stage: String!
+        branchId: String
         consequence: String!
         recipient: String
         enabled: Boolean!
@@ -52,6 +56,7 @@ const adminApiSchema = gql`
     input UpdateCheckPolicyInput {
         checkCode: String!
         stage: String!
+        branchId: String
         consequence: String!
         recipient: String
         enabled: Boolean!
@@ -65,6 +70,7 @@ const adminApiSchema = gql`
 
     extend type Mutation {
         updateCheckPolicy(input: UpdateCheckPolicyInput!): CheckPolicy!
+        resetCheckPolicyOverride(checkCode: String!, stage: String!, branchId: String!): Boolean!
     }
 `;
 

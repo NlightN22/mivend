@@ -56,7 +56,14 @@ export class ChecksService {
                 if (subject === null || subject === undefined) {
                     throw new Error(`Subject ${subjectType}:${subjectRef} not found`);
                 }
-                const policies = await this.policies.ensureForStage(txCtx, providers, stage, true);
+                const branchId = definition.branchId?.(subject) ?? null;
+                const policies = await this.policies.ensureForStage(
+                    txCtx,
+                    providers,
+                    stage,
+                    true,
+                    branchId,
+                );
                 const resolved: ResolvedFinding[] = [];
                 for (const provider of providers) {
                     const policy = policies.get(provider.code);

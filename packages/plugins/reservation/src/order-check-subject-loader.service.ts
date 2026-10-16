@@ -31,6 +31,7 @@ export class OrderCheckSubjectLoader {
             orderId: String(order.id),
             orderCode: order.code,
             customerId: order.customerId ? String(order.customerId) : null,
+            branchId: order.customFields?.branchId ?? null,
             buyerCounterpartyId: counterparty ? String(counterparty.id) : null,
             warehouseErpId: await this.resolveWarehouse(ctx, order),
             lines: order.lines.map(line => ({
