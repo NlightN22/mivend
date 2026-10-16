@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { MvButton, MvInput, MvSelect, MvSwitch } from '@mivend/ui-kit';
+import { MvButton, MvInput, MvSelect, MvStatusBadge, MvSwitch } from '@mivend/ui-kit';
 import { isRowDirty, type PolicyRow } from '../../utils/checkPolicyRows';
 
 defineProps<{ rows: PolicyRow[]; savingKey: string | null }>();
-defineEmits<{ save: [row: PolicyRow] }>();
+defineEmits<{ save: [row: PolicyRow]; reset: [row: PolicyRow] }>();
 </script>
 
 <template>
@@ -25,7 +25,15 @@ defineEmits<{ save: [row: PolicyRow] }>();
                         <strong>{{ row.checkCode }}</strong>
                         <div class="policies__desc">{{ row.description }}</div>
                     </td>
-                    <td>{{ row.stage }}</td>
+                    <td>
+                        {{ row.stage }}
+                        <MvStatusBadge v-if="row.branchId && row.inherited" variant="neutral">
+                            Global default
+                        </MvStatusBadge>
+                        <MvStatusBadge v-else-if="row.branchId" variant="info">
+                            Branch override
+                        </MvStatusBadge>
+                    </td>
                     <td>
                         <MvSelect
                             v-model="row.consequence"
@@ -41,6 +49,15 @@ defineEmits<{ save: [row: PolicyRow] }>();
                             @click="$emit('save', row)"
                         >
                             Save
+                        </MvButton>
+                        <MvButton
+                            v-if="row.branchId && !row.inherited"
+                            size="sm"
+                            variant="secondary"
+                            :disabled="savingKey === row.key"
+                            @click="$emit('reset', row)"
+                        >
+                            Reset to global
                         </MvButton>
                     </td>
                 </tr>

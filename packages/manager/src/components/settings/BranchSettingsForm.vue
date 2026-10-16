@@ -28,8 +28,6 @@ const emit = defineEmits<{
             defaultWarehouseId: string;
             visibleWarehouseIds: string[];
             packagesOnly: boolean;
-            enforceMultiplicity: boolean;
-            allowExceedingCreditLimit: boolean;
             prepaymentReserveDays: number;
             proformaPaymentTermDays: number;
         },
@@ -42,8 +40,6 @@ const form = reactive({
     defaultWarehouseId: '',
     visibleWarehouseIds: [] as string[],
     packagesOnly: false,
-    enforceMultiplicity: false,
-    allowExceedingCreditLimit: false,
     prepaymentReserveDays: 3,
     proformaPaymentTermDays: 3,
 });
@@ -59,8 +55,6 @@ watch(
         form.defaultWarehouseId = settings?.defaultWarehouseId ?? '';
         form.visibleWarehouseIds = settings?.visibleWarehouseIds ?? [];
         form.packagesOnly = settings?.packagesOnly ?? false;
-        form.enforceMultiplicity = settings?.enforceMultiplicity ?? false;
-        form.allowExceedingCreditLimit = settings?.allowExceedingCreditLimit ?? false;
         form.prepaymentReserveDays = settings?.prepaymentReserveDays ?? 3;
         form.proformaPaymentTermDays = settings?.proformaPaymentTermDays ?? 3;
     },
@@ -93,8 +87,6 @@ function onSave(): void {
         defaultWarehouseId: form.defaultWarehouseId,
         visibleWarehouseIds: form.visibleWarehouseIds,
         packagesOnly: form.packagesOnly,
-        enforceMultiplicity: form.enforceMultiplicity,
-        allowExceedingCreditLimit: form.allowExceedingCreditLimit,
         prepaymentReserveDays: form.prepaymentReserveDays,
         proformaPaymentTermDays: form.proformaPaymentTermDays,
     });
@@ -140,26 +132,14 @@ function onSave(): void {
                 </p>
             </MvFormField>
 
-            <MvFormField label="Enforce order multiplicity">
-                <MvSwitch v-model="form.enforceMultiplicity" label="Enabled" />
-                <p class="branch-settings-form__hint">
-                    When on, quantities must be multiples of the product multiplicity, and it is
-                    shown in the catalog. When off, multiplicity is neither enforced nor shown.
-                </p>
-            </MvFormField>
+            <p class="branch-settings-form__hint">
+                Pack multiplicity and exceeding the credit limit are controls: set them per branch
+                under Settings, Controls and policies.
+            </p>
         </section>
 
         <section class="branch-settings-form__section">
             <h3 class="branch-settings-form__section-title">Credit</h3>
-
-            <MvFormField label="Allow exceeding the credit limit">
-                <MvSwitch v-model="form.allowExceedingCreditLimit" label="Enabled" />
-                <p class="branch-settings-form__hint">
-                    When on, a customer over the credit limit can place the order after
-                    acknowledging it, without waiting for a manager. When off, such orders wait for
-                    manager confirmation.
-                </p>
-            </MvFormField>
 
             <MvFormField label="Prepayment reserve (days)">
                 <MvInput

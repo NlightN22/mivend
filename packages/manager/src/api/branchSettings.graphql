@@ -15,8 +15,6 @@ fragment BranchSettingsFields on BranchSettings {
     defaultWarehouseId
     visibleWarehouseIds
     packagesOnly
-    enforceMultiplicity
-    allowExceedingCreditLimit
     prepaymentReserveDays
     proformaPaymentTermDays
 }
@@ -70,8 +68,6 @@ mutation SetBranchSettings(
     $defaultWarehouseId: String!
     $visibleWarehouseIds: [String!]
     $packagesOnly: Boolean!
-    $enforceMultiplicity: Boolean!
-    $allowExceedingCreditLimit: Boolean!
     $prepaymentReserveDays: Int!
     $proformaPaymentTermDays: Int!
 ) {
@@ -82,8 +78,6 @@ mutation SetBranchSettings(
         defaultWarehouseId: $defaultWarehouseId
         visibleWarehouseIds: $visibleWarehouseIds
         packagesOnly: $packagesOnly
-        enforceMultiplicity: $enforceMultiplicity
-        allowExceedingCreditLimit: $allowExceedingCreditLimit
         prepaymentReserveDays: $prepaymentReserveDays
         proformaPaymentTermDays: $proformaPaymentTermDays
     ) {

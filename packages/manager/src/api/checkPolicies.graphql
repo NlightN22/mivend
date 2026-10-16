@@ -5,6 +5,9 @@ query OrderCheckDefinitions {
         description
         defaultConsequence
         allowedConsequences
+        stageConsequences
+        stageDefaults
+        defaultEnabled
     }
 }
 
@@ -13,6 +16,7 @@ query OrderCheckPolicies {
         id
         checkCode
         stage
+        branchId
         consequence
         recipient
         enabled
@@ -24,8 +28,13 @@ mutation UpdateCheckPolicy($input: UpdateCheckPolicyInput!) {
         id
         checkCode
         stage
+        branchId
         consequence
         recipient
         enabled
     }
+}
+
+mutation ResetCheckPolicyOverride($checkCode: String!, $stage: String!, $branchId: String!) {
+    resetCheckPolicyOverride(checkCode: $checkCode, stage: $stage, branchId: $branchId)
 }

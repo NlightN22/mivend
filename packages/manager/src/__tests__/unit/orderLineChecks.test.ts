@@ -94,14 +94,26 @@ describe('order line check view', () => {
         expect(lineReservedQuantity([], 'l1')).toBe(0);
     });
 
-    it('summarizes lines, contract issues and order-level findings separately', () => {
+    it('summarizes column lines, contract issues and the findings listed as text separately', () => {
         const s = checksSummary([
             f({ id: '1', lineRef: 'l1' }),
             f({ id: '2', lineRef: 'l1', checkCode: 'erp.contract-with-storage-organization' }),
             f({ id: '3', lineRef: null }),
+            f({
+                id: '4',
+                lineRef: 'l2',
+                checkCode: 'order.multiplicity',
+                messageKey: 'order.multiplicity.violated',
+            }),
+            f({
+                id: '5',
+                lineRef: null,
+                checkCode: 'order.contract-unresolved',
+                messageKey: 'order.contract-unresolved.missing',
+            }),
         ]);
         expect(s.lineCount).toBe(1);
         expect(s.hasContractIssue).toBe(true);
-        expect(s.orderLevel.map(x => x.id)).toEqual(['3']);
+        expect(s.listed.map(x => x.id)).toEqual(['3', '4', '5']);
     });
 });

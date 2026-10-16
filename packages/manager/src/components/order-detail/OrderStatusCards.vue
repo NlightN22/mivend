@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { IconAlertTriangle, IconCircleCheck, IconRefresh } from '@tabler/icons-vue';
 import { MvButton, MvCard, MvStatusBadge } from '@mivend/ui-kit';
 import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
-import { findingTitle } from '../../utils/orderCheckMessages';
+import { findingDetail, findingTitle } from '../../utils/orderCheckMessages';
 import { checksSummary } from '../../utils/orderLineChecks';
 
 const props = defineProps<{
@@ -29,7 +29,7 @@ const clean = computed(() => !props.findings.length);
             <IconAlertTriangle v-else :size="26" class="status-card__icon--warn" />
             <div class="status-card__body">
                 <div class="status-card__head">
-                    <strong>ERP-mandated controls</strong>
+                    <strong>Order controls</strong>
                     <MvButton
                         v-if="canRecompute"
                         variant="secondary"
@@ -44,11 +44,20 @@ const clean = computed(() => !props.findings.length);
                 </div>
                 <p v-if="clean">No findings. The ERP checks stock and contracts per line.</p>
                 <p v-else>
-                    {{ summary.lineCount }} line(s) do not meet ERP requirements (see the order
-                    lines). The ERP will not post the order until fixed; it is not refused here.
+                    The order is accepted; these controls inform you or hold the automatic
+                    confirmation until a manager confirms.
+                    <template v-if="summary.lineCount">
+                        {{ summary.lineCount }} line(s) do not meet ERP requirements (see the
+                        order lines).
+                    </template>
                 </p>
                 <MvStatusBadge v-if="stale" variant="warning">Out of date</MvStatusBadge>
-                <p v-for="f in summary.orderLevel" :key="f.id">{{ findingTitle(f.messageKey) }}</p>
+                <ul v-if="summary.listed.length" class="status-card__list">
+                    <li v-for="f in summary.listed" :key="f.id">
+                        {{ findingTitle(f.messageKey) }}
+                        <span v-if="findingDetail(f)">({{ findingDetail(f) }})</span>
+                    </li>
+                </ul>
                 <p v-if="error" class="status-card__error">{{ error }}</p>
                 <MvButton
                     v-if="summary.hasContractIssue"
@@ -113,6 +122,12 @@ const clean = computed(() => !props.findings.length);
 
 .status-card__body p {
     margin: 0;
+    color: var(--el-text-color-secondary, #6b7280);
+}
+
+.status-card__list {
+    margin: 0;
+    padding-left: 18px;
     color: var(--el-text-color-secondary, #6b7280);
 }
 

@@ -168,8 +168,6 @@ async function onSave(payload: {
     defaultWarehouseId: string;
     visibleWarehouseIds: string[];
     packagesOnly: boolean;
-    enforceMultiplicity: boolean;
-    allowExceedingCreditLimit: boolean;
     prepaymentReserveDays: number;
     proformaPaymentTermDays: number;
 }): Promise<void> {
@@ -188,8 +186,6 @@ async function onSave(payload: {
                 ? payload.visibleWarehouseIds
                 : null,
             packagesOnly: payload.packagesOnly,
-            enforceMultiplicity: payload.enforceMultiplicity,
-            allowExceedingCreditLimit: payload.allowExceedingCreditLimit,
             prepaymentReserveDays: payload.prepaymentReserveDays,
             proformaPaymentTermDays: payload.proformaPaymentTermDays,
         });

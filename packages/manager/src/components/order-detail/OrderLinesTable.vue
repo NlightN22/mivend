@@ -5,8 +5,8 @@ import type { OrderDetailLine, PriceAdjustmentRequestSummary } from '../../api/o
 import { useOrderLineEdit } from '../../composables/useOrderLineEdit';
 import { formatLineQuantity } from '../../composables/lineSalesUnit';
 import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
-import { findingsByLine } from '../../utils/orderCheckMessages';
-import { lineCheckView, lineReservedQuantity } from '../../utils/orderLineChecks';
+import { findingDetail, findingsByLine, findingTitle } from '../../utils/orderCheckMessages';
+import { lineCheckView, lineReservedQuantity, listedFindings } from '../../utils/orderLineChecks';
 import type { OrderReservation } from '../../api/reservation';
 import OrderLineCheckCells from './OrderLineCheckCells.vue';
 import PriceAdjustmentPanel from '../order-create/PriceAdjustmentPanel.vue';
@@ -129,6 +129,14 @@ function toggleAdjust(lineId: string): void {
                         <td class="order-lines__product">
                             <strong>{{ line.productVariant.name }}</strong>
                             <span>{{ line.productVariant.sku }}</span>
+                            <em
+                                v-for="f in listedFindings(findingsByLineId.get(line.id) ?? [])"
+                                :key="f.id"
+                                class="order-lines__finding"
+                            >
+                                {{ findingTitle(f.messageKey) }}
+                                <template v-if="findingDetail(f)">({{ findingDetail(f) }})</template>
+                            </em>
                         </td>
                         <td class="order-lines__num">
                             {{
@@ -269,6 +277,15 @@ function toggleAdjust(lineId: string): void {
 .order-lines__product span {
     color: var(--el-text-color-secondary, #6b7280);
     font-size: 12px;
+}
+
+.order-lines__finding {
+    display: block;
+    margin-top: 2px;
+    color: var(--el-color-warning, #d97706);
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 700;
 }
 
 .order-lines td:not(.order-lines__product):not(.order-lines__num) {

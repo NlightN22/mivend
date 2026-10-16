@@ -1,16 +1,34 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { MvNotice, MvPanel } from '@mivend/ui-kit';
+import { computed, onMounted, ref } from 'vue';
+import { MvFormField, MvNotice, MvPanel, MvSelect } from '@mivend/ui-kit';
+import { fetchBranchOptions, type BranchOption } from '../../api/branchSettings';
 import { useAuthStore } from '../../stores/auth';
 import { useCheckPolicies } from '../../composables/useCheckPolicies';
 import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import CheckPoliciesTable from '../../components/settings/CheckPoliciesTable.vue';
 
 const authStore = useAuthStore();
-const { rows, loading, savingKey, error, load, save } = useCheckPolicies();
+const { rows, branchId, loading, savingKey, error, load, selectBranch, save, reset } =
+    useCheckPolicies();
+const branches = ref<BranchOption[]>([]);
+const GLOBAL = '';
+const scopeOptions = computed(() => [
+    { value: GLOBAL, label: 'All branches (global default)' },
+    ...branches.value.map(b => ({ value: b.id, label: b.name })),
+]);
+const scope = computed({
+    get: () => branchId.value ?? GLOBAL,
+    set: (value: string) => void selectBranch(value === GLOBAL ? null : value),
+});
 
 onMounted(() => {
-    if (authStore.hasPermission('ManageCheckPolicies')) void load();
+    if (!authStore.hasPermission('ManageCheckPolicies')) return;
+    void load();
+    void fetchBranchOptions()
+        .then(list => (branches.value = list))
+        .catch((e: unknown) => {
+            error.value = e instanceof Error ? e.message : 'Could not load branches';
+        });
 });
 </script>
 
@@ -30,10 +48,23 @@ onMounted(() => {
         <MvPanel title="Order controls">
             <p class="check-policies__lead">
                 A control only describes a fact; its consequence is set here per stage. Orders are
-                always accepted: consequences stronger than hold are not available.
+                always accepted: consequences stronger than hold are not available (a quantity may be refused when it is added to the cart).
             </p>
+            <MvFormField label="Scope">
+                <MvSelect v-model="scope" :options="scopeOptions" />
+                <p class="check-policies__lead">
+                    A branch row overrides the global default for orders of that branch; the
+                    branch follows the global default until it is saved.
+                </p>
+            </MvFormField>
             <p v-if="loading">Loading…</p>
-            <CheckPoliciesTable v-else :rows="rows" :saving-key="savingKey" @save="save" />
+            <CheckPoliciesTable
+                v-else
+                :rows="rows"
+                :saving-key="savingKey"
+                @save="save"
+                @reset="reset"
+            />
         </MvPanel>
     </div>
 </template>

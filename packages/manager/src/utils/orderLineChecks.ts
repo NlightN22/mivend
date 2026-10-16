@@ -22,6 +22,13 @@ export interface LineCheckView {
 
 const CONTRACT_CODE = 'erp.contract-with-storage-organization';
 const STOCK_CODE = 'erp.organization-stock';
+const CONTRACT_UNRESOLVED_CODE = 'order.contract-unresolved';
+// Line findings of these checks are drawn in the Stock and Contract columns; every other finding is listed as text.
+const COLUMN_CODES = new Set([CONTRACT_CODE, STOCK_CODE]);
+
+export function listedFindings(findings: OrderCheckFinding[]): OrderCheckFinding[] {
+    return findings.filter(f => !(COLUMN_CODES.has(f.checkCode) && f.lineRef));
+}
 
 export function orgRows(
     storage: OrgBreakdown[] | undefined,
@@ -68,12 +75,16 @@ export function lineReservedQuantity(reservations: OrderReservation[], lineId: s
 export function checksSummary(findings: OrderCheckFinding[]): {
     lineCount: number;
     hasContractIssue: boolean;
-    orderLevel: OrderCheckFinding[];
+    listed: OrderCheckFinding[];
 } {
-    const lines = new Set(findings.filter(f => f.lineRef).map(f => f.lineRef));
+    const columnLines = new Set(
+        findings.filter(f => COLUMN_CODES.has(f.checkCode) && f.lineRef).map(f => f.lineRef),
+    );
     return {
-        lineCount: lines.size,
-        hasContractIssue: findings.some(f => f.checkCode === CONTRACT_CODE),
-        orderLevel: findings.filter(f => !f.lineRef),
+        lineCount: columnLines.size,
+        hasContractIssue: findings.some(
+            f => f.checkCode === CONTRACT_CODE || f.checkCode === CONTRACT_UNRESOLVED_CODE,
+        ),
+        listed: listedFindings(findings),
     };
 }

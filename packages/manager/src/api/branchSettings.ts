@@ -33,8 +33,6 @@ export interface BranchSettingsInput {
     defaultWarehouseId: string;
     visibleWarehouseIds: string[] | null;
     packagesOnly: boolean;
-    enforceMultiplicity: boolean;
-    allowExceedingCreditLimit: boolean;
     prepaymentReserveDays: number;
     proformaPaymentTermDays: number;
 }

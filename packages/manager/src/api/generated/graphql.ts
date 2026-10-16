@@ -531,11 +531,9 @@ export type Branch = {
 };
 
 export type BranchSettings = {
-    allowExceedingCreditLimit: Scalars['Boolean']['output'];
     branchId: Scalars['String']['output'];
     defaultPriceTypeId: Scalars['String']['output'];
     defaultWarehouseId: Maybe<Scalars['String']['output']>;
-    enforceMultiplicity: Scalars['Boolean']['output'];
     id: Scalars['ID']['output'];
     packagesOnly: Scalars['Boolean']['output'];
     prepaymentReserveDays: Scalars['Int']['output'];
@@ -674,12 +672,16 @@ export type CheckDefinition = {
     allowedConsequences: Array<Scalars['String']['output']>;
     code: Scalars['String']['output'];
     defaultConsequence: Scalars['String']['output'];
+    defaultEnabled: Scalars['JSON']['output'];
     description: Scalars['String']['output'];
+    stageConsequences: Maybe<Scalars['JSON']['output']>;
+    stageDefaults: Maybe<Scalars['JSON']['output']>;
     stages: Array<Scalars['String']['output']>;
     subjectType: Scalars['String']['output'];
 };
 
 export type CheckPolicy = {
+    branchId: Maybe<Scalars['String']['output']>;
     checkCode: Scalars['String']['output'];
     consequence: Scalars['String']['output'];
     enabled: Scalars['Boolean']['output'];
@@ -4111,6 +4113,7 @@ export type Mutation = {
     requeueFailedIntegrationOutbox: Scalars['Int']['output'];
     resendAdministratorPasswordReset: Scalars['Boolean']['output'];
     resetAdministratorPassword: ResetAdministratorPasswordResult;
+    resetCheckPolicyOverride: Scalars['Boolean']['output'];
     /** Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved. */
     resolveErpReconciliationIssue: ErpReconciliationIssue;
     resolveNotification: Notification;
@@ -4977,6 +4980,12 @@ export type MutationResetAdministratorPasswordArgs = {
     token: Scalars['String']['input'];
 };
 
+export type MutationResetCheckPolicyOverrideArgs = {
+    branchId: Scalars['String']['input'];
+    checkCode: Scalars['String']['input'];
+    stage: Scalars['String']['input'];
+};
+
 export type MutationResolveErpReconciliationIssueArgs = {
     id: Scalars['ID']['input'];
     resolution: Scalars['String']['input'];
@@ -5008,11 +5017,9 @@ export type MutationSetAdministratorActiveArgs = {
 };
 
 export type MutationSetBranchSettingsArgs = {
-    allowExceedingCreditLimit?: InputMaybe<Scalars['Boolean']['input']>;
     branchId: Scalars['String']['input'];
     defaultPriceTypeId: Scalars['String']['input'];
     defaultWarehouseId: Scalars['String']['input'];
-    enforceMultiplicity?: InputMaybe<Scalars['Boolean']['input']>;
     packagesOnly?: InputMaybe<Scalars['Boolean']['input']>;
     prepaymentReserveDays?: InputMaybe<Scalars['Int']['input']>;
     proformaPaymentTermDays?: InputMaybe<Scalars['Int']['input']>;
@@ -9260,6 +9267,7 @@ export type UpdateChannelInput = {
 export type UpdateChannelResult = Channel | LanguageNotAvailableError;
 
 export type UpdateCheckPolicyInput = {
+    branchId?: InputMaybe<Scalars['String']['input']>;
     checkCode: Scalars['String']['input'];
     consequence: Scalars['String']['input'];
     enabled: Scalars['Boolean']['input'];
@@ -10019,8 +10027,6 @@ export type BranchSettingsFieldsFragment = {
     defaultWarehouseId: string | null;
     visibleWarehouseIds: Array<string> | null;
     packagesOnly: boolean;
-    enforceMultiplicity: boolean;
-    allowExceedingCreditLimit: boolean;
     prepaymentReserveDays: number;
     proformaPaymentTermDays: number;
 };
@@ -10078,8 +10084,6 @@ export type BranchSettingsForBranchQuery = {
         defaultWarehouseId: string | null;
         visibleWarehouseIds: Array<string> | null;
         packagesOnly: boolean;
-        enforceMultiplicity: boolean;
-        allowExceedingCreditLimit: boolean;
         prepaymentReserveDays: number;
         proformaPaymentTermDays: number;
     } | null;
@@ -10096,8 +10100,6 @@ export type SetBranchSettingsMutationVariables = Exact<{
         Array<Scalars['String']['input']> | Scalars['String']['input']
     >;
     packagesOnly: Scalars['Boolean']['input'];
-    enforceMultiplicity: Scalars['Boolean']['input'];
-    allowExceedingCreditLimit: Scalars['Boolean']['input'];
     prepaymentReserveDays: Scalars['Int']['input'];
     proformaPaymentTermDays: Scalars['Int']['input'];
 }>;
@@ -10111,8 +10113,6 @@ export type SetBranchSettingsMutation = {
         defaultWarehouseId: string | null;
         visibleWarehouseIds: Array<string> | null;
         packagesOnly: boolean;
-        enforceMultiplicity: boolean;
-        allowExceedingCreditLimit: boolean;
         prepaymentReserveDays: number;
         proformaPaymentTermDays: number;
     };
@@ -10253,6 +10253,9 @@ export type OrderCheckDefinitionsQuery = {
         description: string;
         defaultConsequence: string;
         allowedConsequences: Array<string>;
+        stageConsequences: any | null;
+        stageDefaults: any | null;
+        defaultEnabled: any;
     }>;
 };
 
@@ -10263,6 +10266,7 @@ export type OrderCheckPoliciesQuery = {
         id: string;
         checkCode: string;
         stage: string;
+        branchId: string | null;
         consequence: string;
         recipient: string | null;
         enabled: boolean;
@@ -10278,11 +10282,20 @@ export type UpdateCheckPolicyMutation = {
         id: string;
         checkCode: string;
         stage: string;
+        branchId: string | null;
         consequence: string;
         recipient: string | null;
         enabled: boolean;
     };
 };
+
+export type ResetCheckPolicyOverrideMutationVariables = Exact<{
+    checkCode: Scalars['String']['input'];
+    stage: Scalars['String']['input'];
+    branchId: Scalars['String']['input'];
+}>;
+
+export type ResetCheckPolicyOverrideMutation = { resetCheckPolicyOverride: boolean };
 
 export type CounterpartyTeamMemberFieldsFragment = {
     id: string;
@@ -12413,8 +12426,6 @@ export const BranchSettingsFieldsFragmentDoc = new TypedDocumentString(
   defaultWarehouseId
   visibleWarehouseIds
   packagesOnly
-  enforceMultiplicity
-  allowExceedingCreditLimit
   prepaymentReserveDays
   proformaPaymentTermDays
 }
@@ -13040,8 +13051,6 @@ export const BranchSettingsForBranchDocument = new TypedDocumentString(`
   defaultWarehouseId
   visibleWarehouseIds
   packagesOnly
-  enforceMultiplicity
-  allowExceedingCreditLimit
   prepaymentReserveDays
   proformaPaymentTermDays
 }`) as unknown as TypedDocumentString<
@@ -13049,7 +13058,7 @@ export const BranchSettingsForBranchDocument = new TypedDocumentString(`
     BranchSettingsForBranchQueryVariables
 >;
 export const SetBranchSettingsDocument = new TypedDocumentString(`
-    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!, $enforceMultiplicity: Boolean!, $allowExceedingCreditLimit: Boolean!, $prepaymentReserveDays: Int!, $proformaPaymentTermDays: Int!) {
+    mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $visiblePriceTypeIds: [String!], $defaultWarehouseId: String!, $visibleWarehouseIds: [String!], $packagesOnly: Boolean!, $prepaymentReserveDays: Int!, $proformaPaymentTermDays: Int!) {
   setBranchSettings(
     branchId: $branchId
     defaultPriceTypeId: $defaultPriceTypeId
@@ -13057,8 +13066,6 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
     defaultWarehouseId: $defaultWarehouseId
     visibleWarehouseIds: $visibleWarehouseIds
     packagesOnly: $packagesOnly
-    enforceMultiplicity: $enforceMultiplicity
-    allowExceedingCreditLimit: $allowExceedingCreditLimit
     prepaymentReserveDays: $prepaymentReserveDays
     proformaPaymentTermDays: $proformaPaymentTermDays
   ) {
@@ -13073,8 +13080,6 @@ export const SetBranchSettingsDocument = new TypedDocumentString(`
   defaultWarehouseId
   visibleWarehouseIds
   packagesOnly
-  enforceMultiplicity
-  allowExceedingCreditLimit
   prepaymentReserveDays
   proformaPaymentTermDays
 }`) as unknown as TypedDocumentString<
@@ -13230,6 +13235,9 @@ export const OrderCheckDefinitionsDocument = new TypedDocumentString(`
     description
     defaultConsequence
     allowedConsequences
+    stageConsequences
+    stageDefaults
+    defaultEnabled
   }
 }
     `) as unknown as TypedDocumentString<
@@ -13242,6 +13250,7 @@ export const OrderCheckPoliciesDocument = new TypedDocumentString(`
     id
     checkCode
     stage
+    branchId
     consequence
     recipient
     enabled
@@ -13254,6 +13263,7 @@ export const UpdateCheckPolicyDocument = new TypedDocumentString(`
     id
     checkCode
     stage
+    branchId
     consequence
     recipient
     enabled
@@ -13262,6 +13272,18 @@ export const UpdateCheckPolicyDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     UpdateCheckPolicyMutation,
     UpdateCheckPolicyMutationVariables
+>;
+export const ResetCheckPolicyOverrideDocument = new TypedDocumentString(`
+    mutation ResetCheckPolicyOverride($checkCode: String!, $stage: String!, $branchId: String!) {
+  resetCheckPolicyOverride(
+    checkCode: $checkCode
+    stage: $stage
+    branchId: $branchId
+  )
+}
+    `) as unknown as TypedDocumentString<
+    ResetCheckPolicyOverrideMutation,
+    ResetCheckPolicyOverrideMutationVariables
 >;
 export const CounterpartyTeamDocument = new TypedDocumentString(`
     query CounterpartyTeam($id: ID!) {

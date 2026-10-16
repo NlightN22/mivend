@@ -3,6 +3,7 @@ import {
     findingTitle,
     findingsByLine,
     severityVariant,
+    findingDetail,
     type OrderCheckFinding,
 } from '../../utils/orderCheckMessages';
 
@@ -25,9 +26,17 @@ describe('order check messages', () => {
         const keys = [
             'erp.contract-with-storage-organization.missing',
             'erp.organization-stock.short',
+            'order.line-without-organization.missing',
+            'order.contract-unresolved.missing',
+            'erp.export-data-missing.customer',
+            'erp.export-data-missing.product',
+            'erp.export-data-missing.warehouse',
+            'delivery.freight-trading-point.missing',
+            'order.multiplicity.violated',
+            'credit.limit.exceeded',
         ];
         const titles = keys.map(findingTitle);
-        expect(new Set(titles).size).toBe(2);
+        expect(new Set(titles).size).toBe(keys.length);
         titles.forEach((t, i) => expect(t).not.toBe(keys[i]));
         expect(findingTitle('some.future.key')).toBe('some.future.key');
     });
@@ -46,5 +55,25 @@ describe('order check messages', () => {
         ]);
         expect(grouped.get('l1')?.map(f => f.id)).toEqual(['1', '2']);
         expect(grouped.get('')?.map(f => f.id)).toEqual(['3']);
+    });
+
+    it('explains a finding in one line from its facts', () => {
+        const base = finding('1', 'l1');
+        expect(
+            findingDetail({
+                ...base,
+                messageKey: 'order.multiplicity.violated',
+                facts: { sku: 'A-1', quantity: 5, requiredMultiple: 4 },
+            }),
+        ).toBe('A-1: 5 is not a multiple of 4');
+        expect(
+            findingDetail({
+                ...base,
+                messageKey: 'credit.limit.exceeded',
+                facts: { orderAmount: 500, availableCredit: 100 },
+            }),
+        ).toBe('Order 500, available credit 100');
+        expect(findingDetail({ ...base, facts: { sku: 'B-2' } })).toBe('B-2');
+        expect(findingDetail({ ...base, facts: {} })).toBeNull();
     });
 });
