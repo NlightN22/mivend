@@ -26,7 +26,7 @@ class TestAssignment {
 let dataSource: DataSource;
 let handler: StorageLocationStreamHandler;
 let updates = 0;
-const markForProducts = vi.fn(async (_ctx: RequestContext, _ids: string[]) => 0);
+const markForProducts = vi.fn(async (_ctx: RequestContext, _ids: string[]) => undefined);
 const ORGANIZATION_IDS: Record<string, number> = { 'org-a': 1, 'org-b': 2, 'org-c': 3 };
 
 const { schema, extra } = testSchemaOptions('erp_storage_location_winner');
@@ -104,14 +104,14 @@ beforeAll(async () => {
         connection,
         productVariantService as never,
         documentsService as never,
-        { markForProducts } as never,
+        { requestForProducts: markForProducts, drainSoon: () => undefined } as never,
     );
 });
 
 beforeEach(async () => {
     updates = 0;
     markForProducts.mockReset();
-    markForProducts.mockResolvedValue(0);
+    markForProducts.mockResolvedValue(undefined);
     await dataSource.query(
         `TRUNCATE "StorageLocationAssignment", product, product_variant RESTART IDENTITY`,
     );

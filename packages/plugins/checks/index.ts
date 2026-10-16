@@ -9,3 +9,7 @@ export { CheckResult } from './src/entities/check-result.entity';
 export type { CheckContext, CheckProvider, SubjectTypeDefinition } from './src/registry-types';
 export * from './src/types';
 export { CheckPolicyChangedEvent } from './src/check-policy-changed.event';
+export { CheckStaleRequestService } from './src/check-stale-request.service';
+export type { StaleRequestHandler } from './src/check-stale-request.service';
+export { CheckStaleRequestWriter } from './src/check-stale-request.writer';
+export { CheckStaleRequest } from './src/entities/check-stale-request.entity';

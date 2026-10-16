@@ -1,19 +1,49 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { ChecksService } from '@mivend/plugin-checks';
+import {
+    CheckStaleRequestService,
+    CheckStaleRequestWriter,
+    ChecksService,
+} from '@mivend/plugin-checks';
 
 import { ORDER_SUBJECT_TYPE } from './order-check-subject';
 
 const PAGE_SIZE = 200;
+const PRODUCT_KIND = 'order-product';
+const CONTRACT_KIND = 'order-contract';
 
 // Only orders that already hold fresh stored findings are candidates (partial index on them).
 // Keyset pages by order id, no cap; each flag takes the order lock, ascending so callers cannot deadlock.
 @Injectable()
-export class OrderCheckStaleService {
+export class OrderCheckStaleService implements OnModuleInit {
     constructor(
         private connection: TransactionalConnection,
         private checks: ChecksService,
+        private writer: CheckStaleRequestWriter,
+        private requests: CheckStaleRequestService,
     ) {}
+
+    onModuleInit(): void {
+        this.requests.registerHandler(PRODUCT_KIND, async (ctx, key) => {
+            await this.markForProducts(ctx, [key]);
+        });
+        this.requests.registerHandler(CONTRACT_KIND, async (ctx, key) => {
+            await this.markForContract(ctx, key);
+        });
+    }
+
+    // Written in the data change's own transaction; the marking itself runs later, in short transactions.
+    async requestForProducts(ctx: RequestContext, productErpIds: string[]): Promise<void> {
+        for (const id of new Set(productErpIds)) await this.writer.request(ctx, PRODUCT_KIND, id);
+    }
+
+    requestForContract(ctx: RequestContext, contractErpId: string): Promise<void> {
+        return this.writer.request(ctx, CONTRACT_KIND, contractErpId);
+    }
+
+    drainSoon(): void {
+        this.requests.drainSoon();
+    }
 
     async markOrder(ctx: RequestContext, orderId: string): Promise<void> {
         await this.checks.markStale(ctx, ORDER_SUBJECT_TYPE, orderId);

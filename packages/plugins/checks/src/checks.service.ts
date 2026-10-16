@@ -108,6 +108,28 @@ export class ChecksService {
         );
     }
 
+    // Keyset over subjects, each flagged under its own lock: never a mass UPDATE that could wait on a running recompute.
+    async markStaleByCheckCode(ctx: RequestContext, checkCode: string): Promise<void> {
+        let last: { subjectType: string; subjectId: string } | null = null;
+        for (;;) {
+            const rows: Array<{ subjectType: string; subjectId: string }> =
+                await this.connection.rawConnection.query(
+                    `SELECT DISTINCT "subjectType", "subjectId" FROM check_result
+                      WHERE "checkCode" = $1 AND stale = false
+                        AND ($2::text IS NULL OR ("subjectType", "subjectId") > ($2, $3))
+                      ORDER BY "subjectType", "subjectId" LIMIT 200`,
+                    [checkCode, last?.subjectType ?? null, last?.subjectId ?? null],
+                );
+            for (const row of rows) {
+                if (this.registry.findSubjectType(row.subjectType)) {
+                    await this.markStale(ctx, row.subjectType, row.subjectId);
+                }
+            }
+            if (rows.length < 200) return;
+            last = rows[rows.length - 1];
+        }
+    }
+
     async findResults(
         ctx: RequestContext,
         subjectType: string,

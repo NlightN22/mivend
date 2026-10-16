@@ -15,7 +15,7 @@ function setup(affected = 1) {
         ),
         getRepository: vi.fn(() => ({ ...repo, query: vi.fn() })),
     };
-    const stale = { markForProducts: vi.fn().mockResolvedValue(0) };
+    const stale = { requestForProducts: vi.fn().mockResolvedValue(undefined), drainSoon: vi.fn() };
     return {
         repo,
         connection,
@@ -73,15 +73,15 @@ describe('StockOrganizationStreamHandler', () => {
     it('flags the orders of the product after a change and after a tombstone, not after a noop', async () => {
         const first = setup();
         await first.handler.apply(ctx, 'e-1', { productId: 'p-2', organizationId: 'o-1' });
-        expect(first.stale.markForProducts).toHaveBeenCalledWith(ctx, ['p-2']);
+        expect(first.stale.requestForProducts).toHaveBeenCalledWith(ctx, ['p-2']);
 
         const tombstone = setup();
         await tombstone.handler.apply(ctx, 'e-1', { isDeleted: true });
-        expect(tombstone.stale.markForProducts).toHaveBeenCalledWith(ctx, ['p-1']);
+        expect(tombstone.stale.requestForProducts).toHaveBeenCalledWith(ctx, ['p-1']);
 
         const unknown = setup(0);
         await unknown.handler.apply(ctx, 'e-1', { isDeleted: true });
-        expect(unknown.stale.markForProducts).not.toHaveBeenCalled();
+        expect(unknown.stale.requestForProducts).not.toHaveBeenCalled();
     });
 
     it('flags every product of the rows that share one entity id', async () => {
@@ -94,7 +94,7 @@ describe('StockOrganizationStreamHandler', () => {
 
         await handler.apply(ctx, 'e-1', { isDeleted: true });
 
-        expect(stale.markForProducts).toHaveBeenCalledWith(ctx, ['p-1', 'p-2']);
+        expect(stale.requestForProducts).toHaveBeenCalledWith(ctx, ['p-1', 'p-2']);
     });
 
     it('is a noop for a tombstone of an unknown row', async () => {

@@ -12,7 +12,7 @@ describe('StorageLocationStreamHandler', () => {
             connection as never,
             { update: vi.fn() } as never,
             { findRequisitesIdByErpId: vi.fn() } as never,
-            { markForProducts: vi.fn() } as never,
+            { requestForProducts: vi.fn(), drainSoon: vi.fn() } as never,
         );
 
         const outcome = await handler.apply({} as RequestContext, 'loc-1', {

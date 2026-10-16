@@ -32,7 +32,10 @@ export class ContractStreamHandler implements InboundStreamHandler {
         // write (docs/ai/erp-streams-map.md's `contract` field accounting).
         if (!name) {
             const matched = await this.contractService.deactivateTombstone(ctx, entityId);
-            if (matched) await this.orderCheckStale.markForContract(ctx, entityId);
+            if (matched) {
+                await this.orderCheckStale.requestForContract(ctx, entityId);
+                this.orderCheckStale.drainSoon();
+            }
             Logger.verbose(
                 `contract ${entityId}: tombstone — deactivated if a row existed`,
                 loggerCtx,
@@ -89,7 +92,8 @@ export class ContractStreamHandler implements InboundStreamHandler {
         });
         const stored = await this.contractService.findByErpId(ctx, entityId);
         if (stored) await this.settlementPending.attachContract(ctx, entityId, String(stored.id));
-        await this.orderCheckStale.markForContract(ctx, entityId);
+        await this.orderCheckStale.requestForContract(ctx, entityId);
+        this.orderCheckStale.drainSoon();
         Logger.verbose(`Upserted contract erpId=${entityId}`, loggerCtx);
         return inboundApplied();
     }

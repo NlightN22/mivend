@@ -8,7 +8,7 @@ import { CheckRegistry } from './check-registry';
 import { CheckPolicyChangedEvent } from './check-policy-changed.event';
 import { CheckPolicy } from './entities/check-policy.entity';
 import { CheckPolicyHistory } from './entities/check-policy-history.entity';
-import { CheckResult } from './entities/check-result.entity';
+import { CHECK_CODE_KIND, CheckStaleRequestWriter } from './check-stale-request.writer';
 import type { CheckProvider } from './registry-types';
 import { CONSEQUENCES, Consequence, DEFAULT_CONSEQUENCE } from './types';
 
@@ -26,6 +26,7 @@ export class CheckPolicyService {
         private connection: TransactionalConnection,
         private registry: CheckRegistry,
         private eventBus: EventBus,
+        private staleRequests: CheckStaleRequestWriter,
     ) {}
 
     // A missing row is created from the provider's declared default (warn unless it says otherwise).
@@ -132,9 +133,7 @@ export class CheckPolicyService {
                 const changed =
                     before.consequence !== saved.consequence || before.enabled !== saved.enabled;
                 if (changed) {
-                    await this.connection
-                        .getRepository(txCtx, CheckResult)
-                        .update({ checkCode: input.checkCode, stale: false }, { stale: true });
+                    await this.staleRequests.request(txCtx, CHECK_CODE_KIND, input.checkCode);
                     this.eventBus.publish(
                         new CheckPolicyChangedEvent(txCtx, input.checkCode, input.stage, before),
                     );

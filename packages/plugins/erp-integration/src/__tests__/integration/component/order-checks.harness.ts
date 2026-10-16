@@ -11,7 +11,13 @@ import {
     UpdateDateColumn,
 } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
-import { CheckPolicyService, CheckRegistry, ChecksService } from '@mivend/plugin-checks';
+import {
+    CheckPolicyService,
+    CheckRegistry,
+    CheckStaleRequestService,
+    CheckStaleRequestWriter,
+    ChecksService,
+} from '@mivend/plugin-checks';
 import {
     OrderCheckStaleService,
     OrderCheckSubjectLoader,
@@ -163,7 +169,16 @@ class FailureM extends UuidBase {
     @Column({ type: 'text' }) message!: string;
 }
 
+@Entity('check_stale_request')
+@Unique(['kind', 'key'])
+class StaleRequestM extends UuidBase {
+    @Column({ type: 'varchar' }) kind!: string;
+    @Column({ type: 'varchar' }) key!: string;
+    @Column({ type: 'int', default: 1 }) version!: number;
+}
+
 const mirrors: Record<string, unknown> = {
+    CheckStaleRequest: StaleRequestM,
     OrderCheckFailure: FailureM,
     Order: OrderM,
     Reservation: ReservationM,
@@ -193,6 +208,7 @@ export interface OrderChecksWorld {
     checks: ChecksService;
     orderChecks: OrderChecksService;
     stale: OrderCheckStaleService;
+    requests: CheckStaleRequestService;
     health: OrderCheckHealthService;
     data: OrderCheckDataService;
     // Branch the stub visibility lets the actor see; null sees every order.
@@ -276,10 +292,19 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
     };
 
     const registry = new CheckRegistry();
-    const policies = new CheckPolicyService(connection, registry, {
-        publish: () => undefined,
-    } as never);
+    const writer = new CheckStaleRequestWriter(connection);
+    const policies = new CheckPolicyService(
+        connection,
+        registry,
+        { publish: () => undefined } as never,
+        writer,
+    );
     const checks = new ChecksService(connection, registry, policies);
+    const requests = new CheckStaleRequestService(
+        connection,
+        { create: async () => ({ activeUserId: 'user-1' }) } as never,
+        checks,
+    );
     const loader = new OrderCheckSubjectLoader(
         connection,
         counterparties as never,
@@ -300,7 +325,8 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
         policies,
         checks,
         orderChecks: new OrderChecksService(connection, checks, registry, registrar),
-        stale: new OrderCheckStaleService(connection, checks),
+        stale: new OrderCheckStaleService(connection, checks, writer, requests),
+        requests,
         health: new OrderCheckHealthService(dataSource),
         data,
         visibleBranch,
@@ -389,7 +415,7 @@ export async function seedReservation(
 
 export async function resetWorld(world: OrderChecksWorld): Promise<void> {
     await world.dataSource.query(
-        `TRUNCATE check_result, order_check_failure, check_policy_history, check_policy, "order", order_line, product,
+        `TRUNCATE check_result, check_stale_request, order_check_failure, check_policy_history, check_policy, "order", order_line, product,
          product_variant, contract, storage_location_assignment, stock_organization,
          organization_requisites, reservation, stock_level RESTART IDENTITY CASCADE`,
     );

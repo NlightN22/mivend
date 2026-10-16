@@ -19,6 +19,8 @@ import {
 
 import { CheckPolicyService } from '../../check-policy.service';
 import { CheckRegistry } from '../../check-registry';
+import { CheckStaleRequestService } from '../../check-stale-request.service';
+import { CheckStaleRequestWriter } from '../../check-stale-request.writer';
 import { ChecksService } from '../../checks.service';
 import type { CheckProvider } from '../../registry-types';
 
@@ -64,7 +66,20 @@ class CheckResult extends Base {
     @Column({ type: 'boolean', default: false }) stale!: boolean;
 }
 
-const mirrors: Record<string, unknown> = { CheckPolicy, CheckPolicyHistory, CheckResult };
+@Entity('check_stale_request')
+@Index(['kind', 'key'], { unique: true })
+class CheckStaleRequest extends Base {
+    @Column({ type: 'varchar' }) kind!: string;
+    @Column({ type: 'varchar' }) key!: string;
+    @Column({ type: 'int', default: 1 }) version!: number;
+}
+
+const mirrors: Record<string, unknown> = {
+    CheckPolicy,
+    CheckPolicyHistory,
+    CheckResult,
+    CheckStaleRequest,
+};
 const ctx = { activeUserId: 'user-1' } as unknown as RequestContext;
 const { schema, extra } = testSchemaOptions('checks_framework');
 
@@ -72,6 +87,7 @@ let dataSource: DataSource;
 let registry: CheckRegistry;
 let policies: CheckPolicyService;
 let checks: ChecksService;
+let staleRequests: CheckStaleRequestService;
 let calls: number;
 let behaviour: { throwOnEvaluate: boolean; delayMs: number; severity: 'warning' | 'error' };
 
@@ -82,12 +98,13 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [CheckPolicy, CheckPolicyHistory, CheckResult],
+        entities: [CheckPolicy, CheckPolicyHistory, CheckResult, CheckStaleRequest],
         synchronize: true,
     });
     await dataSource.initialize();
     const base = createTestConnection(dataSource);
     const connection = {
+        rawConnection: dataSource,
         withTransaction: base.withTransaction.bind(base),
         getRepository: (c: unknown, entity: { name: string } | string) =>
             base.getRepository(
@@ -127,10 +144,18 @@ beforeAll(async () => {
         },
     };
     registry.registerCheck(provider);
-    policies = new CheckPolicyService(connection, registry, {
-        publish: published.push.bind(published),
-    } as never);
+    policies = new CheckPolicyService(
+        connection,
+        registry,
+        { publish: published.push.bind(published) } as never,
+        new CheckStaleRequestWriter(connection),
+    );
     checks = new ChecksService(connection, registry, policies);
+    staleRequests = new CheckStaleRequestService(
+        connection,
+        { create: async () => ctx } as never,
+        checks,
+    );
 });
 
 afterAll(async () => {
@@ -143,7 +168,7 @@ beforeEach(async () => {
     published.length = 0;
     behaviour = { throwOnEvaluate: false, delayMs: 0, severity: 'warning' };
     await dataSource.query(
-        'TRUNCATE check_result, check_policy_history, check_policy RESTART IDENTITY',
+        'TRUNCATE check_result, check_stale_request, check_policy_history, check_policy RESTART IDENTITY',
     );
 });
 
@@ -205,6 +230,7 @@ describe('checks framework (real Postgres)', () => {
             recipient: 'ops',
             enabled: true,
         });
+        await staleRequests.drain(ctx);
         expect((await stored('a')).every(r => !r.stale)).toBe(true);
         expect(published).toHaveLength(0);
         await policies.update(ctx, {
@@ -213,8 +239,11 @@ describe('checks framework (real Postgres)', () => {
             consequence: 'info',
             enabled: true,
         });
+        expect((await stored('a')).every(r => !r.stale)).toBe(true);
+        await staleRequests.drain(ctx);
         expect((await stored('a')).every(r => r.stale)).toBe(true);
         expect((await stored('b')).every(r => r.stale)).toBe(true);
+        expect(await dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(0);
         expect(published).toHaveLength(1);
     });
 
@@ -226,6 +255,7 @@ describe('checks framework (real Postgres)', () => {
             consequence: 'warn',
             enabled: false,
         });
+        await staleRequests.drain(ctx);
         expect((await stored('a')).map(r => r.stale)).toEqual([true]);
     });
 
@@ -240,7 +270,50 @@ describe('checks framework (real Postgres)', () => {
             enabled: true,
         });
         await run;
+        await staleRequests.drain(ctx);
         expect((await stored('a')).every(r => r.stale)).toBe(true);
+    });
+
+    it('a policy update interleaved with a two-stage run in one transaction cannot deadlock', async () => {
+        await policies.update(ctx, {
+            checkCode: 'demo.rule',
+            stage: 'final',
+            consequence: 'warn',
+            enabled: true,
+        });
+        const twoStages = (
+            checks as unknown as { connection: TransactionalConnection }
+        ).connection.withTransaction(ctx, async txCtx => {
+            await checks.runChecks(txCtx, 'thing', 'a', 'draft');
+            await new Promise(r => setTimeout(r, 300));
+            await checks.runChecks(txCtx, 'thing', 'a', 'final');
+        });
+        await new Promise(r => setTimeout(r, 100));
+        await policies.update(ctx, {
+            checkCode: 'demo.rule',
+            stage: 'final',
+            consequence: 'info',
+            enabled: true,
+        });
+        await twoStages;
+        await staleRequests.drain(ctx);
+        expect((await stored('a')).every(r => r.stale)).toBe(true);
+    });
+
+    it('a pending stale request survives a failing handler and is retried', async () => {
+        await checks.runChecks(ctx, 'thing', 'a', 'draft');
+        let fail = true;
+        staleRequests.registerHandler('flaky', async () => {
+            if (fail) throw new Error('mark failed');
+        });
+        await dataSource.query(`INSERT INTO check_stale_request (kind, key) VALUES ('flaky', 'k')`);
+
+        await staleRequests.drain(ctx);
+        expect(await dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(1);
+
+        fail = false;
+        await staleRequests.drain(ctx);
+        expect(await dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(0);
     });
 
     it('a rerun replaces results of its own stage only, and markStale flags the rest', async () => {

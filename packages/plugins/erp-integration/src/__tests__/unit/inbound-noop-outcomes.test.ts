@@ -44,7 +44,7 @@ describe.each([
                 { deactivateTombstone: vi.fn().mockResolvedValue(m) } as never,
                 {} as never,
                 { attachContract: vi.fn() } as never,
-                { markForContract: vi.fn() } as never,
+                { requestForContract: vi.fn(), drainSoon: vi.fn() } as never,
             ),
         { isDeleted: true },
     ],

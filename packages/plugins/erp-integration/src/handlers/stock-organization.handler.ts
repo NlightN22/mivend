@@ -29,8 +29,8 @@ export class StockOrganizationStreamHandler implements InboundStreamHandler {
         // Optional proto3 bool: absent is "unset", only an explicit false deactivates.
         const isActive = payload.isActive !== false;
 
-        // Marking runs inside the lock transaction: the rows and the stale flags commit together, so a
-        // retried message (row already gone) can never lose the mark. The order locks it takes are held to commit.
+        // The stale request commits with the data change, so a retried message (row already gone) cannot
+        // lose it; the orders are marked later in short transactions (no order lock held across the load).
         if (isDeleted) {
             const removed = await withAggregateLock(
                 this.connection,
@@ -41,12 +41,13 @@ export class StockOrganizationStreamHandler implements InboundStreamHandler {
                     const rows = await repo.find({ where: { entityId } });
                     if (rows.length === 0) return false;
                     await repo.delete({ entityId });
-                    await this.orderCheckStale.markForProducts(txCtx, [
+                    await this.orderCheckStale.requestForProducts(txCtx, [
                         ...new Set(rows.map(row => row.productId)),
                     ]);
                     return true;
                 },
             );
+            if (removed) this.orderCheckStale.drainSoon();
             return removed
                 ? inboundApplied()
                 : inboundNoop(`stock-organization ${entityId}: deleted, nothing stored`);
@@ -68,7 +69,7 @@ export class StockOrganizationStreamHandler implements InboundStreamHandler {
                         'productId',
                         'organizationErpId',
                     ]);
-                await this.orderCheckStale.markForProducts(txCtx, [productId]);
+                await this.orderCheckStale.requestForProducts(txCtx, [productId]);
             },
         );
         return inboundApplied();

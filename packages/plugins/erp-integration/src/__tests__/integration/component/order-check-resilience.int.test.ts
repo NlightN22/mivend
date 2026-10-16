@@ -11,6 +11,7 @@ const provider = { failing: false };
 
 beforeAll(async () => {
     w = await createOrderChecksWorld('erp_order_check_resilience');
+    w.stale.onModuleInit();
     w.registry.registerCheck({
         code: 'test.sql-error',
         subjectType: 'order',
@@ -58,6 +59,7 @@ describe('a failing check cannot break the order flow', () => {
             orderId,
         ]);
         expect(order.code).toBe('RESERVED-MARK');
+        await new Promise(r => setTimeout(r, 200));
         const health = await w.health.getHealth();
         expect(health).toContainEqual({
             checkCode: 'check-run-failed',
@@ -117,4 +119,33 @@ describe('stale marking without a cap', () => {
         );
         expect(left.n).toBe(0);
     }, 120_000);
+});
+
+describe('stale requests', () => {
+    it('a request written with the data change marks every candidate order later, and is then gone', async () => {
+        const orderId = await failingOrder();
+        await w.orderChecks.run(w.ctx, orderId, 'pre-reserve');
+
+        await w.stale.requestForProducts(w.ctx, ['p-1', 'p-1']);
+        expect(await w.dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(1);
+        expect((await w.results(orderId)).some(r => r['stale'])).toBe(false);
+
+        await w.requests.drain(w.ctx);
+
+        expect((await w.results(orderId)).every(r => r['stale'])).toBe(true);
+        expect(await w.dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(0);
+    });
+
+    it('a request repeated while it is being processed is kept for the next pass', async () => {
+        const orderId = await failingOrder();
+        await w.orderChecks.run(w.ctx, orderId, 'pre-reserve');
+        await w.stale.requestForProducts(w.ctx, ['p-1']);
+        w.requests.registerHandler('order-product', async () => {
+            await w.stale.requestForProducts(w.ctx, ['p-1']);
+        });
+
+        await w.requests.drain(w.ctx);
+
+        expect(await w.dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(1);
+    });
 });

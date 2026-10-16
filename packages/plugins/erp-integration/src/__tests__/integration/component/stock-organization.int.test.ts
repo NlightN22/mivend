@@ -26,7 +26,7 @@ class TestStockOrganization {
 let dataSource: DataSource;
 let handler: StockOrganizationStreamHandler;
 let reader: StockOrganizationReadService;
-const markForProducts = vi.fn(async (_ctx: RequestContext, _ids: string[]) => 0);
+const markForProducts = vi.fn(async (_ctx: RequestContext, _ids: string[]) => undefined);
 
 const { schema, extra } = testSchemaOptions('erp_stock_organization');
 const ctx = {} as RequestContext;
@@ -66,13 +66,16 @@ beforeAll(async () => {
         withTransaction: async (c: RequestContext, work: (t: RequestContext) => Promise<unknown>) =>
             dataSource.transaction(manager => work(withManager(c, manager))),
     } as unknown as TransactionalConnection;
-    handler = new StockOrganizationStreamHandler(connection, { markForProducts } as never);
+    handler = new StockOrganizationStreamHandler(connection, {
+        requestForProducts: markForProducts,
+        drainSoon: () => undefined,
+    } as never);
     reader = new StockOrganizationReadService(connection);
 });
 
 beforeEach(async () => {
     markForProducts.mockReset();
-    markForProducts.mockResolvedValue(0);
+    markForProducts.mockResolvedValue(undefined);
     await dataSource.query(`TRUNCATE "StockOrganization" RESTART IDENTITY`);
 });
 
