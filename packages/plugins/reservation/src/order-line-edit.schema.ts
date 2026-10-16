@@ -37,7 +37,23 @@ export const adminOrderLineEditSchema = gql`
         shortfall: Int!
     }
 
+    type OrderLineShortfall {
+        id: ID!
+        orderLineId: ID!
+        productVariantId: ID!
+        sku: String
+        name: String
+        requestedQuantity: Int!
+        keptQuantity: Int!
+        shortfallQuantity: Int!
+        "warehouse | organization: the source that limited the line when it was cut."
+        limitedBy: String
+        createdAt: DateTime!
+    }
+
     extend type Query {
+        "Demand cut from the order by 'cut to available stock' (#233). Needs ReadOrder and order visibility."
+        orderLineShortfalls(orderId: ID!): [OrderLineShortfall!]!
         "Stock that applies to each line, per warehouse and per organization (#233). Needs ReadOrder."
         orderLineAvailability(orderId: ID!): [OrderLineAvailability!]!
     }

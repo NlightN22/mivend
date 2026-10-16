@@ -61,6 +61,21 @@ function mockOrderDetailData(erpPaidAmount: number | null = null): void {
     }));
     registerMock('RelatedDocuments', () => ({ documents: { items: [] } }));
     registerMock('OrderReservations', () => ({ orderReservations: [] }));
+    registerMock('OrderLineShortfalls', () => ({
+        orderLineShortfalls: [
+            {
+                id: '1',
+                orderLineId: '9',
+                sku: 'SKU-002',
+                name: 'Oil filter',
+                requestedQuantity: 5,
+                keptQuantity: 2,
+                shortfallQuantity: 3,
+                limitedBy: 'organization',
+                createdAt: new Date().toISOString(),
+            },
+        ],
+    }));
 }
 
 export const Default: Story = {

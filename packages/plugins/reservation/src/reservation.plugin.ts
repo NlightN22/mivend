@@ -65,6 +65,7 @@ import { OrderLinesEditPortRegistry } from './order-line-edit.port';
 import { OrderLineEditResolver } from './order-line-edit.resolver';
 import { adminOrderLineEditSchema } from './order-line-edit.schema';
 import { OrderLineEditService } from './order-line-edit.service';
+import { OrderLineShortfallService } from './order-line-shortfall.service';
 import { ReservationViewService } from './reservation-view.service';
 import { ReservationExtensionService } from './reservation-extension.service';
 import { ReservationFailureService } from './reservation-failure.service';
@@ -97,6 +98,7 @@ import type { ReservationPluginOptions } from './types';
     providers: [
         OrderContractService,
         OrderLineEditService,
+        OrderLineShortfallService,
         OrderLinesEditPortRegistry,
         OrderLineStockSyncService,
         OrderLineEditGuard,

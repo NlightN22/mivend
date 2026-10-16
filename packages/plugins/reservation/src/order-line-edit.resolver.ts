@@ -4,16 +4,26 @@ import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/co
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { OrderLineEditService } from './order-line-edit.service';
+import { OrderLineShortfallService } from './order-line-shortfall.service';
 
 @Resolver()
 export class OrderLineEditResolver {
-    constructor(private edits: OrderLineEditService) {}
+    constructor(
+        private edits: OrderLineEditService,
+        private shortfalls: OrderLineShortfallService,
+    ) {}
 
     @Query()
     @Allow(Permission.ReadOrder)
     async orderLineAvailability(@Ctx() ctx: RequestContext, @Args() args: { orderId: ID }) {
         const rows = await this.edits.availability(ctx, args.orderId);
         return rows.map(({ lineId, ...rest }) => ({ orderLineId: lineId, ...rest }));
+    }
+
+    @Query()
+    @Allow(Permission.ReadOrder)
+    orderLineShortfalls(@Ctx() ctx: RequestContext, @Args() args: { orderId: ID }) {
+        return this.shortfalls.forOrder(ctx, args.orderId);
     }
 
     @Transaction()

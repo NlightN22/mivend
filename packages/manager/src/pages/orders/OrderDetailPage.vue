@@ -14,6 +14,7 @@ import {
 } from '../../api/orderDetail';
 import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
 import { fetchCreditForCounterparty, type CustomerCredit } from '../../api/customers';
+import { fetchOrderLineShortfalls, type OrderLineShortfallRow } from '../../api/orderLineEdit';
 import { fetchOrderReservations, type OrderReservation } from '../../api/reservation';
 import { isNotRegisteredInErp } from '../../composables/isNotRegisteredInErp';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
@@ -23,6 +24,8 @@ import { useOrderChecks } from '../../composables/useOrderChecks';
 import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
 import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
 import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
+import OrderShortfallPanel from '../../components/order-detail/OrderShortfallPanel.vue';
+import OrderOverpaymentNotice from '../../components/order-detail/OrderOverpaymentNotice.vue';
 import OrderPaidAmount from '../../components/order-detail/OrderPaidAmount.vue';
 import OrderCancelPanel from '../../components/order-detail/OrderCancelPanel.vue';
 import ProformaInvoicesPanel from '../../components/order-detail/ProformaInvoicesPanel.vue';
@@ -42,6 +45,7 @@ const loading = ref(true);
 const notFound = ref(false);
 const credit = ref<CustomerCredit | null>(null);
 const reservations = ref<OrderReservation[]>([]);
+const shortfalls = ref<OrderLineShortfallRow[]>([]);
 const orderId = computed(() => order.value?.id ?? '');
 const checks = useOrderChecks(orderId);
 const canSeeChecks = computed(() => authStore.hasPermission('ReadCheckResults'));
@@ -73,6 +77,12 @@ const canEditLines = computed(
         isNotRegisteredInErp(order.value.customFields),
 );
 
+const overpaidAmount = computed(() => {
+    const paid = order.value?.customFields.erpPaidAmount;
+    if (!order.value || paid == null || paid <= order.value.totalWithTax) return null;
+    return money(paid - order.value.totalWithTax);
+});
+
 const packagingLabel = computed(() => {
     if (!order.value) return null;
     return formatPackaging(useOrderPackaging(order.value.lines));
@@ -102,13 +112,19 @@ async function load(): Promise<void> {
         }
         order.value = detail;
         const counterpartyId = detail.customer?.counterparty?.id;
-        [adjustmentRequests.value, documents.value, reservations.value, credit.value] =
-            await Promise.all([
-                fetchPriceAdjustmentRequestsForOrder(detail.id),
-                fetchRelatedDocuments(detail.id),
-                fetchOrderReservations(detail.id),
-                counterpartyId ? fetchCreditForCounterparty(counterpartyId) : Promise.resolve(null),
-            ]);
+        [
+            adjustmentRequests.value,
+            documents.value,
+            reservations.value,
+            shortfalls.value,
+            credit.value,
+        ] = await Promise.all([
+            fetchPriceAdjustmentRequestsForOrder(detail.id),
+            fetchRelatedDocuments(detail.id),
+            fetchOrderReservations(detail.id),
+            fetchOrderLineShortfalls(detail.id),
+            counterpartyId ? fetchCreditForCounterparty(counterpartyId) : Promise.resolve(null),
+        ]);
     } finally {
         loading.value = false;
     }
@@ -116,11 +132,13 @@ async function load(): Promise<void> {
 
 async function reload(): Promise<void> {
     if (!order.value) return;
-    const [detail, requests, reservationRows] = await Promise.all([
+    const [detail, requests, reservationRows, shortfallRows] = await Promise.all([
         fetchOrderDetail(order.value.code),
         fetchPriceAdjustmentRequestsForOrder(order.value.id),
         fetchOrderReservations(order.value.id),
+        fetchOrderLineShortfalls(order.value.id),
     ]);
+    shortfalls.value = shortfallRows;
     order.value = detail;
     adjustmentRequests.value = requests;
     reservations.value = reservationRows;
@@ -199,6 +217,11 @@ watch(() => route.params.code, load);
                 />
                 <strong>Total: {{ money(order.totalWithTax) }}</strong>
             </div>
+            <OrderOverpaymentNotice v-if="overpaidAmount" :amount="overpaidAmount" />
+        </MvPanel>
+
+        <MvPanel v-if="shortfalls.length" title="Cut for lack of stock">
+            <OrderShortfallPanel :rows="shortfalls" />
         </MvPanel>
 
         <div class="order-detail__panels">

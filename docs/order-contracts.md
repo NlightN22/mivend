@@ -141,8 +141,10 @@ multiple; the last line cannot be removed (cancel the order instead).
 - **Reservation.** An active reservation does not block an edit. Under the same lock the edit skips the still unsent
   `order.confirmed` outbox row (refused if it was sent meanwhile) and releases the reservation through
   `ReservationService.releaseReservations`; the order goes back to the confirmation queue (`RELEASED`) and staff
-  confirm again, which re-runs the `pre-reserve` checks and reserves the new quantities. No automatic re-reserve:
-  it could fail on stock mid-edit.
+  confirm again, which re-runs the `pre-reserve` checks and reserves the new quantities. **No automatic re-reserve
+  (decided in #233 follow-up):** a reserve can fail on stock, contract or export data, so inside the edit it would
+  either roll the edit back or leave it half done; after the commit it would publish `OrderReservedEvent` and send
+  `order.confirmed` to the ERP with no staff decision about the edited order. Reconfirming stays a staff step.
 - **Lock order.** The edit takes `proformaInvoices-for-order:<id>` first and `reserve-order:<id>` second
   (alphabetical, `docs/concurrency.md`); the proforma reissue re-enters the first. No path takes them in the other
   order (withdraw takes only the proforma lock; the reserve paths never touch proformas). A race test runs edits,
@@ -181,8 +183,9 @@ multiple; the last line cannot be removed (cancel the order instead).
   already within stock is a no-op returning no lines.
 - **Overpayment.** If the edited total falls below what was paid, nothing is credited by mivend: payments are money
   on the counterparty balance held in the ERP, and an overpayment is an advance the ERP offsets against the next sales
-  invoice (`docs/payments.md`); the order page shows "overpaid by Z" from `erpPaidAmount`. mivend has no refund-to-balance
-  mechanism and none was invented.
+  invoice (`docs/payments.md`); the order page shows "overpaid by Z" from `erpPaidAmount` and, when overpaid, a warning notice under the totals saying
+  the amount is not refunded by mivend and stays as an ERP advance for the next sales invoice. mivend has no
+  refund-to-balance mechanism and none was invented.
 - No customer notification and no credit-limit re-evaluation on an edit (owner decision).
 - **One availability function.** `OrderLineAvailabilityService` (erp-integration, registered into plugin-reservation's
   `OrderLineAvailabilityPortRegistry`) gives per line: free quantity per branch warehouse (the reserve's
@@ -194,6 +197,8 @@ multiple; the last line cannot be removed (cancel the order instead).
 - **Automatic split** (`splitOrderLinesByStock`): every short line is cut to whole packs of `fitting`; a line where
   nothing fits is removed; the cut part is stored as one `order_line_shortfall` row per line (requested, kept,
   shortfall, `limitedBy`, administrator) for demand statistics. Manual edit (quantity/remove) records no shortfall.
+  The Admin query `orderLineShortfalls(orderId)` (ReadOrder, order visibility scope) feeds the manager order page
+  panel "Cut for lack of stock": per cut line the sku, requested/kept/cut and the limiting source.
 - **After an edit** prices are re-resolved for all lines (`OrderService.applyPriceAdjustments`; Vendure's own
   `adjustOrderLine` refuses placed orders), an order history note records who changed what, the checks are
   recomputed through `OrderChecksService.run(..., 'on-edit')` in the same transaction and

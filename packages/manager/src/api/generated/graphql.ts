@@ -5807,6 +5807,20 @@ export type OrderLineOrganizationStock = {
     stock: Scalars['Float']['output'];
 };
 
+export type OrderLineShortfall = {
+    createdAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    keptQuantity: Scalars['Int']['output'];
+    /** warehouse | organization: the source that limited the line when it was cut. */
+    limitedBy: Maybe<Scalars['String']['output']>;
+    name: Maybe<Scalars['String']['output']>;
+    orderLineId: Scalars['ID']['output'];
+    productVariantId: Scalars['ID']['output'];
+    requestedQuantity: Scalars['Int']['output'];
+    shortfallQuantity: Scalars['Int']['output'];
+    sku: Maybe<Scalars['String']['output']>;
+};
+
 export type OrderLineSplitOutcome = {
     kept: Scalars['Int']['output'];
     orderLineId: Scalars['ID']['output'];
@@ -7375,6 +7389,8 @@ export type Query = {
     orderContracts: Array<OrderContractOption>;
     /** Stock that applies to each line, per warehouse and per organization (#233). Needs ReadOrder. */
     orderLineAvailability: Array<OrderLineAvailability>;
+    /** Demand cut from the order by 'cut to available stock' (#233). Needs ReadOrder and order visibility. */
+    orderLineShortfalls: Array<OrderLineShortfall>;
     /** Batched captured-payment total per order, for the manager portal's order-list Payment badge. Returns one summary per orderId requested, capturedAmount 0 if none captured yet. */
     orderPaymentSummaries: Array<OrderPaymentSummary>;
     /** Every hold behind an order's lines: our own reservation rows and what the ERP reports. */
@@ -7751,6 +7767,10 @@ export type QueryOrderContractsArgs = {
 };
 
 export type QueryOrderLineAvailabilityArgs = {
+    orderId: Scalars['ID']['input'];
+};
+
+export type QueryOrderLineShortfallsArgs = {
     orderId: Scalars['ID']['input'];
 };
 
@@ -11475,6 +11495,24 @@ export type SplitOrderLinesByStockMutation = {
     }>;
 };
 
+export type OrderLineShortfallsQueryVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+}>;
+
+export type OrderLineShortfallsQuery = {
+    orderLineShortfalls: Array<{
+        id: string;
+        orderLineId: string;
+        sku: string | null;
+        name: string | null;
+        requestedQuantity: number;
+        keptQuantity: number;
+        shortfallQuantity: number;
+        limitedBy: string | null;
+        createdAt: any;
+    }>;
+};
+
 export type OrderProformaInvoicesQueryVariables = Exact<{
     orderId: Scalars['ID']['input'];
 }>;
@@ -14548,6 +14586,24 @@ export const SplitOrderLinesByStockDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     SplitOrderLinesByStockMutation,
     SplitOrderLinesByStockMutationVariables
+>;
+export const OrderLineShortfallsDocument = new TypedDocumentString(`
+    query OrderLineShortfalls($orderId: ID!) {
+  orderLineShortfalls(orderId: $orderId) {
+    id
+    orderLineId
+    sku
+    name
+    requestedQuantity
+    keptQuantity
+    shortfallQuantity
+    limitedBy
+    createdAt
+  }
+}
+    `) as unknown as TypedDocumentString<
+    OrderLineShortfallsQuery,
+    OrderLineShortfallsQueryVariables
 >;
 export const OrderProformaInvoicesDocument = new TypedDocumentString(`
     query OrderProformaInvoices($orderId: ID!) {

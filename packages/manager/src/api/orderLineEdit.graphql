@@ -41,3 +41,17 @@ mutation SplitOrderLinesByStock($orderId: ID!) {
         shortfall
     }
 }
+
+query OrderLineShortfalls($orderId: ID!) {
+    orderLineShortfalls(orderId: $orderId) {
+        id
+        orderLineId
+        sku
+        name
+        requestedQuantity
+        keptQuantity
+        shortfallQuantity
+        limitedBy
+        createdAt
+    }
+}
