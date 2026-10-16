@@ -1,3 +1,4 @@
+import { adminTokenFor } from '../../helpers/api-tokens';
 import { test, expect } from '@playwright/test';
 import { adminGql } from '../../helpers/api';
 import { createConfirmedOrder } from '../../helpers/manager-order';
@@ -17,12 +18,7 @@ test('orders list pagination does not collapse the page to the top', async ({ pa
 
     const PAGE_SIZE = 10;
 
-    const login = await adminGql<{ login: { __typename: string } }>(
-        `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { __typename ... on CurrentUser { id } } }`,
-        { id: 'ivan.operator@mivend.dev', pw: 'Password123!' },
-    );
-    const token = login.token;
-    if (!token) throw new Error('Could not log in as operator to seed pagination fixture orders');
+    const token = await adminTokenFor('ivan.operator@mivend.dev', 'Password123!');
 
     const customersResult = await adminGql<{
         customers: { items: { id: string; emailAddress: string }[] };

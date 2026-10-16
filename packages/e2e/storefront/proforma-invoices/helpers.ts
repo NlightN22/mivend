@@ -1,3 +1,4 @@
+import { adminTokenFor } from '../../helpers/api-tokens';
 import { type Page } from '@playwright/test';
 import { adminGql } from '../../helpers/api';
 import { gql, clearCart } from '../orders/helpers';
@@ -39,10 +40,7 @@ export async function pickTwoVariantsFromDifferentOrganizations(
         throw new Error('Need at least 2 in-stock variants to test a multi-organization split');
     }
 
-    const { token } = await adminGql<{ login: { __typename: string } }>(
-        `mutation($u: String!, $p: String!) { login(username: $u, password: $p) { __typename } }`,
-        { u: SUPERADMIN.identifier, p: SUPERADMIN.password },
-    );
+    const token = await adminTokenFor(SUPERADMIN.identifier, SUPERADMIN.password);
 
     const variants: InStockVariant[] = [];
     for (const id of candidateIds) {

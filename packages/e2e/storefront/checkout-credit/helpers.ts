@@ -1,3 +1,4 @@
+import { adminTokenFor } from '../../helpers/api-tokens';
 import { expect, type Page } from '@playwright/test';
 import { adminGql, postBatch, waitForRun } from '../../helpers/api';
 import { gql, clearCart } from '../orders/helpers';
@@ -129,20 +130,12 @@ function addPaymentToOrderResult(r: Record<string, string>): PlacedPayment {
     };
 }
 
-let adminToken: string | undefined;
-
 export async function admin<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-    if (!adminToken) {
-        const res = await adminGql<unknown>(
-            `mutation($u: String!, $p: String!) { login(username: $u, password: $p) { __typename } }`,
-            {
-                u: process.env.SUPERADMIN_USERNAME ?? 'superadmin',
-                p: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
-            },
-        );
-        adminToken = res.token;
-    }
-    return (await adminGql<T>(query, variables, adminToken)).data;
+    const token = await adminTokenFor(
+        process.env.SUPERADMIN_USERNAME ?? 'superadmin',
+        process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
+    );
+    return (await adminGql<T>(query, variables, token)).data;
 }
 
 export async function adminOrder(code: string): Promise<AdminOrder> {

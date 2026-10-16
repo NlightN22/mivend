@@ -38,6 +38,7 @@ async function call<T>(
 }
 
 export function markRunStart(): void {
+    fs.rmSync(path.join(__dirname, '../.auth/admin-tokens.json'), { force: true });
     fs.writeFileSync(RUN_START_FILE, JSON.stringify({ startedAt: new Date().toISOString() }));
 }
 

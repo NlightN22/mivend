@@ -1,3 +1,4 @@
+import { adminTokenFor } from './api-tokens';
 import { adminGql, shopGql } from './api';
 
 const SUPERADMIN = {
@@ -21,12 +22,7 @@ interface AdminCollection {
 }
 
 export async function adminToken(): Promise<string> {
-    const { token } = await adminGql<unknown>(
-        `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { __typename } }`,
-        { id: SUPERADMIN.identifier, pw: SUPERADMIN.password },
-    );
-    if (!token) throw new Error('Admin login returned no token');
-    return token;
+    return adminTokenFor(SUPERADMIN.identifier, SUPERADMIN.password);
 }
 
 export async function adminCollections(token: string): Promise<AdminCollection[]> {

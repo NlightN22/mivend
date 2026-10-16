@@ -58,7 +58,9 @@ Every login (UI or API) opens a server session. `global-setup.ts` records the ru
 `global-teardown.ts` logs in as each test account, ends every session created since then and
 fails the run if one stays active (issue #231). Rules for new specs:
 
-- Reuse the `storageState` session or a token obtained once per spec file; do not log in per test.
+- Browser specs reuse the `storageState` session. Admin API calls take their token from
+  `adminTokenFor()` (`helpers/api-tokens.ts`): one session per account for the whole run, re-logged
+  in only if it was ended. Only specs that test login or ending sessions log in themselves.
 - A spec that logs in as an account not listed in `global-teardown.ts`'s `ACCOUNTS` adds it there.
 - Sessions a developer opens for the same accounts during a run are ended too.
 - The server caps active sessions per user (`SESSION_MAX_ACTIVE_PER_USER`, default 20): more than

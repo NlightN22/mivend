@@ -1,3 +1,4 @@
+import { adminTokenFor } from '../../helpers/api-tokens';
 import { test, expect, type Page } from '@playwright/test';
 import { E2E_COUNTERPARTY_ID } from '../../fixtures/seed';
 import { postBatch, adminGql } from '../../helpers/api';
@@ -149,17 +150,11 @@ test.describe('Documents page — all document types', () => {
     test('the Admin generateContract mutation produces a real, downloadable contract document', async ({
         page,
     }) => {
-        const login = await adminGql<{ login: { __typename: string } }>(
-            `mutation($u: String!, $p: String!) { login(username: $u, password: $p) { __typename } }`,
-            { u: SUPERADMIN.identifier, p: SUPERADMIN.password },
+        const token = await adminTokenFor(SUPERADMIN.identifier, SUPERADMIN.password);
+        const deptHeadToken = await adminTokenFor(
+            DEPARTMENT_HEAD.identifier,
+            DEPARTMENT_HEAD.password,
         );
-        const token = login.token!;
-
-        const deptHeadLogin = await adminGql<{ login: { __typename: string } }>(
-            `mutation($u: String!, $p: String!) { login(username: $u, password: $p) { __typename } }`,
-            { u: DEPARTMENT_HEAD.identifier, p: DEPARTMENT_HEAD.password },
-        );
-        const deptHeadToken = deptHeadLogin.token!;
 
         const counterparties = await adminGql<{
             counterparties: { items: { id: string; erpId: string }[] };

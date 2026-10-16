@@ -2,6 +2,7 @@ import { chromium } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 import { adminGql, postBatch, waitForRun } from './helpers/api';
+import { adminTokenFor } from './helpers/api-tokens';
 import { loginAs } from './helpers/storefront-auth';
 import { loginAsManager } from './helpers/manager-auth';
 import { createConfirmedOrder } from './helpers/manager-order';
@@ -63,14 +64,9 @@ export default async function globalSetup(): Promise<void> {
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
     markRunStart();
 
-    const { token: adminToken } = await adminGql<unknown>(
-        `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { ... on CurrentUser { id } } }`,
-        { id: SUPERADMIN.identifier, pw: SUPERADMIN.password },
-    );
-    if (adminToken) {
-        await ensureCountry(adminToken, 'RU', 'Russia');
-        await ensureShippingMethod(adminToken);
-    }
+    const adminToken = await adminTokenFor(SUPERADMIN.identifier, SUPERADMIN.password);
+    await ensureCountry(adminToken, 'RU', 'Russia');
+    await ensureShippingMethod(adminToken);
 
     // erp-import rejects products without organizationId, which requires organizationSplitEnabled
     // (turned on by `make seed`). Query the seeded organizations instead of creating duplicates.
@@ -153,14 +149,10 @@ export default async function globalSetup(): Promise<void> {
 
     // Operator has department-wide visibility, so this order is visible to all three manager-portal
     // test roles. Saved to JSON because the order code is server-generated, not fixed.
-    const operatorLogin = await adminGql<{
-        login: { __typename: string };
-    }>(
-        `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { __typename ... on CurrentUser { id } } }`,
-        { id: MANAGER_ACCOUNTS.operator.username, pw: MANAGER_ACCOUNTS.operator.password },
+    const operatorToken = await adminTokenFor(
+        MANAGER_ACCOUNTS.operator.username,
+        MANAGER_ACCOUNTS.operator.password,
     );
-    const operatorToken = operatorLogin.token;
-    if (!operatorToken) throw new Error('Could not log in as operator to seed an e2e order');
 
     const customersResult = await adminGql<{
         customers: { items: { id: string; emailAddress: string }[] };
@@ -229,16 +221,10 @@ export default async function globalSetup(): Promise<void> {
 
     // department-head may run reassignCounterpartyManager only within their own department, and the
     // e2e counterparty is in dept-sales, so this goes through the real mutation, not a DB write.
-    const deptHeadLogin = await adminGql<{ login: { __typename: string } }>(
-        `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { __typename ... on CurrentUser { id } } }`,
-        {
-            id: MANAGER_ACCOUNTS.departmentHead.username,
-            pw: MANAGER_ACCOUNTS.departmentHead.password,
-        },
+    const deptHeadToken = await adminTokenFor(
+        MANAGER_ACCOUNTS.departmentHead.username,
+        MANAGER_ACCOUNTS.departmentHead.password,
     );
-    const deptHeadToken = deptHeadLogin.token;
-    if (!deptHeadToken)
-        throw new Error('Could not log in as department-head to assign the e2e manager');
 
     // counterparties returns { items, totalItems }; take:200 is a bound matching the stopgap used
     // elsewhere (fetchAllCustomersCapped), not a real pagination need for this one-off lookup.
@@ -293,17 +279,16 @@ export default async function globalSetup(): Promise<void> {
         );
     }
 
-    const managerLogin = await adminGql<{ login: { __typename: string } }>(
-        `mutation($id: String!, $pw: String!) { login(username: $id, password: $pw) { __typename ... on CurrentUser { id } } }`,
-        { id: MANAGER_ACCOUNTS.manager.username, pw: MANAGER_ACCOUNTS.manager.password },
+    const managerToken = await adminTokenFor(
+        MANAGER_ACCOUNTS.manager.username,
+        MANAGER_ACCOUNTS.manager.password,
     );
-    const managerToken = managerLogin.token;
 
     const otherCounterpartyId = counterpartiesResult.data.counterparties.items.find(
         c => c.erpId === E2E_OTHER_COUNTERPARTY_ID,
     )?.id;
 
-    if (managerToken && deptHeadToken && e2eCounterpartyId && otherCounterpartyId) {
+    if (e2eCounterpartyId && otherCounterpartyId) {
         // requestDiscountGrant has no natural key to upsert on and always creates a new ApprovalRequest,
         // so check for an existing grant first; duplicates break the specs' strict-mode text locators.
         const existingGrants = await adminGql<{
