@@ -13,7 +13,7 @@ function setup(visible: string[] | null) {
         stages: ['draft'],
         allowedConsequences: ['info', 'warn'],
         loadSubject: async () => ({}),
-        lockKey: ref => `thing:${ref}`,
+        lockKey: (ref: string) => `thing:${ref}`,
         ...(visible
             ? {
                   visibleSubjectIds: async (_c: RequestContext, ids: string[]) =>

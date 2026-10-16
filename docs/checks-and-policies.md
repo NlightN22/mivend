@@ -88,16 +88,47 @@ and checks are registered by the plugins that own them.
   advisory lock (`lockKey`), loads the subject under it, evaluates providers of the stage, replaces
   that subject+stage rows of `check_result` and returns `{ findings, strongestConsequence }`.
   Strength order: `info < warn < require-approval < hold < block`.
-- **Provider errors are never swallowed.** A throwing provider is logged at error level and the
-  run rethrows; the transaction rolls back, so the previous stored results stay and a broken check
-  never reads as "no findings".
+- **Provider errors are never swallowed by the framework.** A throwing provider is logged at error
+  level and the run rethrows; the transaction rolls back, so the previous stored results stay and a
+  broken check never reads as "no findings".
+- **Order flows fail open (owner decision: a failing check must never stop an order).**
+  `OrderChecksService.isHeld` (reserve) and `OrderSendHoldService` (send) catch the rethrown error,
+  so a failing check does not hold or block the order. The failure is not silent: it is logged at
+  error level and written to `order_check_failure` on its own connection (it survives a rollback of
+  the order flow), and `orderCheckHealth` lists it as `check-run-failed` per stage for 7 days. In
+  `reserveOrder` the checks run inside a savepoint, so a SQL error in a provider cannot abort the
+  reserve's transaction. A hold therefore depends on the check being able to run.
 - **Stale.** `markStale(ctx, subjectType, subjectId)` (under the same lock) flags stored rows; a
-  subject with no stored findings has nothing to flag, callers needing freshness re-run.
-- **Visibility.** A subject type may declare `visibleSubjectIds(ctx, ids)`; `findResults` (and so the Admin
-  `checkResults`) returns nothing for a subject outside it, so stored findings never cross the actor's scope.
+  subject with no stored findings has nothing to flag, callers needing freshness re-run. Order
+  data handlers (stock-organization, storage-location) mark inside their own lock transaction, so
+  the data change and the mark commit together and a retried message cannot lose the mark; the
+  marking pages by order id with no cap. The contract handler marks after its idempotent write and
+  re-marks on retry. A tombstone or delete that carries an entity id shared by several rows removes
+  all of them and marks every affected product.
+- **A policy takes effect for new runs; stored results are flagged out of date.**
+  `updateCheckPolicy` (consequence or `enabled` changed) marks every stored result of that check
+  stale in the same transaction and publishes `CheckPolicyChangedEvent`. Runs share-lock the
+  policy rows, so a run in flight cannot leave fresh-looking results of the old policy. A disabled
+  check keeps its old findings, flagged stale, until the subject is next recomputed. Loosening a
+  `hold` at `pre-send-to-erp` re-drives the held sends (see below); orders held at `pre-reserve`
+  stay in the confirmation queue until staff confirms them.
+- **A send hold is rebuildable.** A hold at `pre-send-to-erp` leaves a `skipped` outbox row with a
+  fixed reason. A staff confirmation of an already reserved order (stamps the reservations,
+  `OrderStaffConfirmedEvent`) or a policy that stops holding re-drives those rows through the
+  normal rebuild (`HeldSendRedriveService`), so a hold cannot block the ERP send for good. The
+  row stays `skipped` while another policy still holds the order.
+- **Locking trade-off.** An order run takes `reserve-order:<id>`, the same lock as the reserve, so
+  a long recompute delays the reserve of that order. The lock is taken once, inside `runChecks`,
+  and held to the end of the surrounding transaction, which also covers the cross-stage cleanup.
+- **No unique constraint on `check_result`.** A provider may emit several findings for one
+  (check, line), and `lineRef`/`stage` are nullable, so a correct key does not exist at framework
+  level; the guarantee is delete-then-insert under the subject lock, proved by concurrent-run tests.
+- **Visibility.** A subject type must declare `visibleSubjectIds(ctx, ids)`; `findResults` (and so the Admin
+  `checkResults`) returns nothing for a subject outside it, and nothing for an unknown subject type or one
+  without a rule (fail closed), so stored findings never cross the actor's scope.
   The `order` subject type is registered by `plugin-reservation` (loader, lock `reserve-order:<id>`,
   stages, `info|warn|hold`); its ERP providers by `plugin-erp-integration`. Order callers use
   `OrderChecksService.run`, the only caller of `runChecks` for orders.
 - **Admin API.** `checkResults(subjectType, subjectId)` and `checkDefinitions(subjectType?)` need
-  `ReadCheckResults`; `checkPolicies(subjectType?)` and `updateCheckPolicy(input)` need
+  `ReadCheckResults` (granted to every role that reads orders, see `docs/access-control.md`); `checkPolicies(subjectType?)` and `updateCheckPolicy(input)` need
   `ManageCheckPolicies`.

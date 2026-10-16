@@ -103,7 +103,9 @@ tooltip, O highlighted). Check 2 adds `needed` and `available` (O only).
 `pre-send-to-erp`; `block` and `require-approval` are not allowed for orders (the customer's order is always
 accepted). Under `hold` an automatic trigger leaves the order in the manual confirmation queue
 (`AWAITING_CONFIRMATION`, nothing reserved or sent); a manual staff confirmation is the release. A failing
-provider is logged and the flow continues, never read as "no findings" in stored results.
+provider is logged, counted in the order-check health data and the flow continues (owner decision), never read as
+"no findings" in stored results. A hold at `pre-send-to-erp` is released by staff confirming the order or by a policy
+change away from `hold`; both re-drive the held send.
 
 **Stages wired:** `checkout` (after the transition to `ArrangingPayment`, after commit, never on the customer's
 path), `pre-reserve` (inside `reserveOrder()`, under its lock), `pre-send-to-erp` (the `order.confirmed` builder),

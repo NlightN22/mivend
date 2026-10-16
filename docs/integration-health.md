@@ -194,6 +194,9 @@ built), `resolved` (a skipped row whose event was rebuilt).
   `QUEUED`; `STILL_SKIPPED` (reason updated, also when the builder threw: the error is recorded on
   the row and rethrown); `ALREADY_SENT` (a pending/published row already carries the same subject,
   matched by the registry's `subjectKey`, `orderId` for `order.submitted`).
+- A send held by an order check policy (`pre-send-to-erp`, #237) is a `skipped` row with the reason
+  "held by an order check policy (pre-send-to-erp)"; a staff confirmation or a policy change away
+  from `hold` rebuilds it automatically (the manual Rebuild also works).
 - **System -> Outbound problems** lists failed and skipped outbox rows (event type, subject id such
   as the order id, status, retries, last error); the Failed and Skipped numbers of the Outbound tab
   link to it pre-filtered. **Requeue** (failed rows) and **Rebuild** (skipped rows) call the

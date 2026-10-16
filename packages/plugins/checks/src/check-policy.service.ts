@@ -29,8 +29,7 @@ export class CheckPolicyService {
     ) {}
 
     // A missing row is created from the provider's declared default (warn unless it says otherwise).
-    // `lockRows` (runs only) share-locks the rows so a concurrent policy update waits for the run
-    // and then marks its fresh results stale.
+    // `lockRows` (runs) share-locks the rows: a concurrent policy update waits, then marks the results stale.
     async ensureForStage(
         ctx: RequestContext,
         providers: CheckProvider[],
