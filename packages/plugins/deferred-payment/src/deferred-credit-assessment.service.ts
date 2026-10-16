@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BranchSettingsService } from '@mivend/plugin-access-control';
+import { CheckPolicyService } from '@mivend/plugin-checks';
 import {
     CounterpartyService,
     CreditLimitCheckService,
@@ -8,6 +9,7 @@ import {
 import { ID, Order, RequestContext } from '@vendure/core';
 import { DEFAULT_PREPAYMENT_RESERVE_DAYS } from 'shared';
 
+import { CREDIT_LIMIT_CHECK_CODE } from './credit-limit.check';
 import { OpenDeferredExposureService } from './open-deferred-exposure.service';
 
 export interface DeferredCreditAssessment {
@@ -30,18 +32,19 @@ export class DeferredCreditAssessmentService {
         private readonly exposureService: OpenDeferredExposureService,
         private readonly branchSettingsService: BranchSettingsService,
         private readonly tradingPointService: TradingPointService,
+        private readonly checkPolicies: CheckPolicyService,
     ) {}
 
     // The order's own branch once placed; before placement, the preferred trading point's servicing branch.
-    private async branchSettings(ctx: RequestContext, order: Order, customerId: ID) {
-        let branchId = (order.customFields as { branchId?: string | null } | undefined)?.branchId;
-        if (!branchId) {
-            const point = await this.tradingPointService.getPreferredForCustomer(ctx, customerId);
-            branchId = point
-                ? await this.tradingPointService.resolveServicingBranchId(ctx, point)
-                : null;
-        }
-        return this.branchSettingsService.resolveEffective(ctx, branchId);
+    private async branchId(
+        ctx: RequestContext,
+        order: Order,
+        customerId: ID,
+    ): Promise<string | null> {
+        const own = (order.customFields as { branchId?: string | null } | undefined)?.branchId;
+        if (own) return own;
+        const point = await this.tradingPointService.getPreferredForCustomer(ctx, customerId);
+        return point ? await this.tradingPointService.resolveServicingBranchId(ctx, point) : null;
     }
 
     async assess(ctx: RequestContext, order: Order): Promise<DeferredCreditAssessment | null> {
@@ -64,14 +67,23 @@ export class DeferredCreditAssessmentService {
             null,
             open + orderRubles,
         );
-        const settings = await this.branchSettings(ctx, order, customerId);
+        const branchId = await this.branchId(ctx, order, customerId);
+        const settings = await this.branchSettingsService.resolveEffective(ctx, branchId);
+        // The `checkout` policy of `credit.limit`: off = no limit control, hold = manager confirmation,
+        // info/warn = the order may go to the ERP now once the customer acknowledges.
+        const policy = await this.checkPolicies.resolve(
+            ctx,
+            CREDIT_LIMIT_CHECK_CODE,
+            'checkout',
+            branchId,
+        );
         const available =
             Number(counterparty.creditLimit) - Number(counterparty.creditBalance) - open;
         return {
-            exceeded: limitControlled && !decision.withinLimit,
+            exceeded: policy.enabled && limitControlled && !decision.withinLimit,
             availableCredit: Math.round(available),
             orderAmount: Math.round(orderRubles),
-            allowExceedingCreditLimit: settings?.allowExceedingCreditLimit === true,
+            allowExceedingCreditLimit: policy.enabled && policy.consequence !== 'hold',
             prepaymentReserveDays:
                 settings?.prepaymentReserveDays ?? DEFAULT_PREPAYMENT_RESERVE_DAYS,
             limitControlled,

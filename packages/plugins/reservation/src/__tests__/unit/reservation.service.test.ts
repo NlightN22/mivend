@@ -185,6 +185,12 @@ describe('ReservationService', () => {
             new PackagingPolicyService(
                 { resolveEffective: async () => branchSettings } as never,
                 { getPreferredForCustomer: async () => null } as never,
+                {
+                    resolve: async () => ({
+                        enabled: branchSettings?.enforceMultiplicity === true,
+                        consequence: 'block',
+                    }),
+                } as never,
             ),
             orderChecks as never,
         );

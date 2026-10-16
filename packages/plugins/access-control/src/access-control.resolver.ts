@@ -195,8 +195,6 @@ export class AccessControlResolver {
             defaultWarehouseId: string;
             visibleWarehouseIds?: string[];
             packagesOnly?: boolean;
-            enforceMultiplicity?: boolean;
-            allowExceedingCreditLimit?: boolean;
             prepaymentReserveDays?: number;
             proformaPaymentTermDays?: number;
         },
@@ -208,8 +206,6 @@ export class AccessControlResolver {
             defaultWarehouseId: args.defaultWarehouseId,
             visibleWarehouseIds: args.visibleWarehouseIds ?? null,
             packagesOnly: args.packagesOnly,
-            enforceMultiplicity: args.enforceMultiplicity,
-            allowExceedingCreditLimit: args.allowExceedingCreditLimit,
             prepaymentReserveDays: args.prepaymentReserveDays,
             proformaPaymentTermDays: args.proformaPaymentTermDays,
         });

@@ -41,6 +41,12 @@ describe('MultiplicityOrderInterceptor', () => {
                                 tp: { servicingBranchId: string | null },
                             ) => tp.servicingBranchId,
                         } as never,
+                        {
+                            resolve: async () => ({
+                                enabled: (await resolveEffective())?.enforceMultiplicity === true,
+                                consequence: 'block',
+                            }),
+                        } as never,
                     );
                 }
                 return {
@@ -166,7 +172,7 @@ describe('MultiplicityOrderInterceptor', () => {
         expect(result).toContain('multiples of 4');
     });
 
-    describe('enforceMultiplicity off (#219)', () => {
+    describe('multiplicity policy off (#219, #241)', () => {
         it('does not enforce multiplicity when the branch has not enabled it', async () => {
             resolveEffective.mockResolvedValue({ packagesOnly: false, enforceMultiplicity: false });
             const result = await interceptor.willAddItemToOrder(ctx, createOrder('branch-a'), {

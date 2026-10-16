@@ -67,8 +67,6 @@ const adminApiSchema = gql`
         defaultWarehouseId: String
         visibleWarehouseIds: [String!]
         packagesOnly: Boolean!
-        enforceMultiplicity: Boolean!
-        allowExceedingCreditLimit: Boolean!
         prepaymentReserveDays: Int!
         proformaPaymentTermDays: Int!
     }
@@ -227,8 +225,6 @@ const adminApiSchema = gql`
             defaultWarehouseId: String!
             visibleWarehouseIds: [String!]
             packagesOnly: Boolean
-            enforceMultiplicity: Boolean
-            allowExceedingCreditLimit: Boolean
             prepaymentReserveDays: Int
             proformaPaymentTermDays: Int
         ): BranchSettings!

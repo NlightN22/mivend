@@ -186,23 +186,28 @@ export async function cancelOpenOrders(email: string): Promise<void> {
 
 export interface BranchSettingsSnapshot {
     branchId: string;
-    defaultPriceTypeId: string;
-    defaultWarehouseId: string | null;
-    visiblePriceTypeIds: string[] | null;
-    visibleWarehouseIds: string[] | null;
     allowExceedingCreditLimit: boolean;
 }
 
+// The branch toggle is the branch's `credit.limit` checkout policy (docs/checks-and-policies.md): warn allows, hold waits for a manager.
 export async function defaultBranchSettings(): Promise<BranchSettingsSnapshot> {
     const g = await admin<{ globalSettings: { customFields: { defaultBranchId: string } } }>(
         `query { globalSettings { customFields { defaultBranchId } } }`,
     );
     const branchId = g.globalSettings.customFields.defaultBranchId;
-    const s = await admin<{ branchSettings: BranchSettingsSnapshot }>(
-        `query($b: String!) { branchSettings(branchId: $b) { branchId defaultPriceTypeId defaultWarehouseId visiblePriceTypeIds visibleWarehouseIds allowExceedingCreditLimit } }`,
-        { b: branchId },
+    const p = await admin<{
+        checkPolicies: {
+            checkCode: string;
+            stage: string;
+            branchId: string | null;
+            consequence: string;
+        }[];
+    }>(`query { checkPolicies(subjectType: "order") { checkCode stage branchId consequence } }`);
+    const rows = p.checkPolicies.filter(
+        r => r.checkCode === 'credit.limit' && r.stage === 'checkout',
     );
-    return s.branchSettings;
+    const row = rows.find(r => r.branchId === branchId) ?? rows.find(r => r.branchId === null);
+    return { branchId, allowExceedingCreditLimit: row !== undefined && row.consequence !== 'hold' };
 }
 
 export async function setAllowExceeding(
@@ -210,17 +215,10 @@ export async function setAllowExceeding(
     allow: boolean,
 ): Promise<void> {
     await admin(
-        `mutation($b: String!, $p: String!, $w: String!, $vp: [String!], $vw: [String!], $a: Boolean) {
-            setBranchSettings(branchId: $b, defaultPriceTypeId: $p, defaultWarehouseId: $w, visiblePriceTypeIds: $vp, visibleWarehouseIds: $vw, allowExceedingCreditLimit: $a) { branchId }
+        `mutation($b: String!, $c: String!) {
+            updateCheckPolicy(input: { checkCode: "credit.limit", stage: "checkout", branchId: $b, consequence: $c, enabled: true }) { id }
         }`,
-        {
-            b: base.branchId,
-            p: base.defaultPriceTypeId,
-            w: base.defaultWarehouseId ?? '',
-            vp: base.visiblePriceTypeIds,
-            vw: base.visibleWarehouseIds,
-            a: allow,
-        },
+        { b: base.branchId, c: allow ? 'warn' : 'hold' },
     );
 }
 

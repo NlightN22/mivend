@@ -82,12 +82,15 @@ export function useCreditPlacementHarness(schemaName: string) {
         new CreditLimitCheckService(null as never, null as never),
         exposureService,
         {
-            resolveEffective: async () => ({
-                allowExceedingCreditLimit: state.allowExceeding,
-                prepaymentReserveDays: state.reserveDays,
-            }),
+            resolveEffective: async () => ({ prepaymentReserveDays: state.reserveDays }),
         } as never,
         { getPreferredForCustomer: async () => null } as never,
+        {
+            resolve: async () => ({
+                enabled: true,
+                consequence: state.allowExceeding ? 'warn' : 'hold',
+            }),
+        } as never,
     );
     const placement = new CreditPlacementService(
         connection as never,

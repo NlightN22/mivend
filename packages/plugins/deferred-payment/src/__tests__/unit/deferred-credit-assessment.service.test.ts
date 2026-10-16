@@ -9,12 +9,14 @@ const sumUnconfirmedRubles = vi.fn();
 const resolveEffective = vi.fn();
 const getPreferredForCustomer = vi.fn();
 const resolveServicingBranchId = vi.fn();
+const resolvePolicy = vi.fn();
 const service = new DeferredCreditAssessmentService(
     { getForCustomer } as never,
     new CreditLimitCheckService(null as never, null as never),
     { sumUnconfirmedRubles } as never,
     { resolveEffective } as never,
     { getPreferredForCustomer, resolveServicingBranchId } as never,
+    { resolve: resolvePolicy } as never,
 );
 const ctx = {} as RequestContext;
 const order = (
@@ -37,6 +39,8 @@ beforeEach(() => {
     resolveEffective.mockResolvedValue(null);
     getPreferredForCustomer.mockReset();
     getPreferredForCustomer.mockResolvedValue(null);
+    resolvePolicy.mockReset();
+    resolvePolicy.mockResolvedValue({ enabled: true, consequence: 'hold' });
 });
 
 describe('DeferredCreditAssessmentService.assess', () => {
@@ -99,18 +103,32 @@ describe('DeferredCreditAssessmentService.assess', () => {
         expect(sumUnconfirmedRubles).toHaveBeenCalledWith(ctx, 3, 9);
     });
 
-    it('exposes the order branch setting when the branch allows exceeding', async () => {
+    it('reads the credit.limit checkout policy of the order branch: warn allows exceeding', async () => {
         getForCustomer.mockResolvedValue({
             id: 3,
             creditLimit: 1000,
             creditBalance: 0,
             paymentDelayDays: 14,
         });
-        resolveEffective.mockResolvedValue({ allowExceedingCreditLimit: true });
+        resolvePolicy.mockResolvedValue({ enabled: true, consequence: 'warn' });
         const result = await service.assess(ctx, order(100, 7, 'branch-a'));
         expect(result?.allowExceedingCreditLimit).toBe(true);
-        expect(resolveEffective).toHaveBeenCalledWith(ctx, 'branch-a');
+        expect(resolvePolicy).toHaveBeenCalledWith(ctx, 'credit.limit', 'checkout', 'branch-a');
         expect(getPreferredForCustomer).not.toHaveBeenCalled();
+    });
+
+    it('a disabled policy means no limit control, info allows exceeding like warn', async () => {
+        getForCustomer.mockResolvedValue({
+            id: 3,
+            creditLimit: 1000,
+            creditBalance: 1000,
+            paymentDelayDays: 14,
+        });
+        resolvePolicy.mockResolvedValue({ enabled: false, consequence: 'hold' });
+        expect((await service.assess(ctx, order(100, 7, 'branch-a')))?.exceeded).toBe(false);
+        resolvePolicy.mockResolvedValue({ enabled: true, consequence: 'info' });
+        const result = await service.assess(ctx, order(100, 7, 'branch-a'));
+        expect(result).toMatchObject({ exceeded: true, allowExceedingCreditLimit: true });
     });
 
     it('falls back to the preferred trading point branch before placement', async () => {
@@ -122,10 +140,10 @@ describe('DeferredCreditAssessmentService.assess', () => {
         });
         getPreferredForCustomer.mockResolvedValue({ id: 5 });
         resolveServicingBranchId.mockResolvedValue('branch-b');
-        resolveEffective.mockResolvedValue({ allowExceedingCreditLimit: false });
+        resolvePolicy.mockResolvedValue({ enabled: true, consequence: 'hold' });
         const result = await service.assess(ctx, order(100));
         expect(result?.allowExceedingCreditLimit).toBe(false);
-        expect(resolveEffective).toHaveBeenCalledWith(ctx, 'branch-b');
+        expect(resolvePolicy).toHaveBeenCalledWith(ctx, 'credit.limit', 'checkout', 'branch-b');
     });
 
     it('returns null without a counterparty or customer', async () => {

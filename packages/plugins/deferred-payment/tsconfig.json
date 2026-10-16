@@ -11,6 +11,9 @@
             "path": "../access-control"
         },
         {
+            "path": "../checks"
+        },
+        {
             "path": "../counterparty"
         },
         {

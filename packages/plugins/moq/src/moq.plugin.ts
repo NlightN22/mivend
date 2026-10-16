@@ -6,6 +6,7 @@ import {
 } from '@vendure/core';
 import gql from 'graphql-tag';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { ChecksPlugin } from '@mivend/plugin-checks';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 
 import {
@@ -13,6 +14,7 @@ import {
     OrderPackagesOnlyAdminResolver,
     PackagingPolicyShopResolver,
 } from './packaging-policy.resolver';
+import { MultiplicityCheckRegistrar } from './multiplicity-check.registrar';
 import { PackagingPolicyService } from './packaging-policy.service';
 import { MultiplicityOrderInterceptor } from './multiplicity-order.interceptor';
 import './types';
@@ -20,8 +22,8 @@ import './types';
 // Pack-size / MOQ + branch-conditional packaging enforcement — see docs/order-flow.md's
 // "Pack-size / MOQ" and mivend#103 sections. Deliberately its own small plugin (AGENTS.md).
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
-    providers: [PackagingPolicyService],
+    imports: [PluginCommonModule, AccessControlPlugin, ChecksPlugin, CounterpartyPlugin],
+    providers: [PackagingPolicyService, MultiplicityCheckRegistrar],
     exports: [PackagingPolicyService],
     shopApiExtensions: {
         schema: gql`

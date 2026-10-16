@@ -18,8 +18,6 @@ export interface BranchSettingsInput {
     defaultWarehouseId: string;
     visibleWarehouseIds?: string[] | null;
     packagesOnly?: boolean;
-    enforceMultiplicity?: boolean;
-    allowExceedingCreditLimit?: boolean;
     prepaymentReserveDays?: number;
     proformaPaymentTermDays?: number;
 }
@@ -50,10 +48,6 @@ export class BranchSettingsService {
             settings.defaultWarehouseId = input.defaultWarehouseId;
             settings.visibleWarehouseIds = input.visibleWarehouseIds ?? null;
             settings.packagesOnly = input.packagesOnly ?? settings.packagesOnly;
-            settings.enforceMultiplicity =
-                input.enforceMultiplicity ?? settings.enforceMultiplicity;
-            settings.allowExceedingCreditLimit =
-                input.allowExceedingCreditLimit ?? settings.allowExceedingCreditLimit;
             settings.prepaymentReserveDays =
                 input.prepaymentReserveDays ?? settings.prepaymentReserveDays;
             settings.proformaPaymentTermDays =
@@ -66,8 +60,6 @@ export class BranchSettingsService {
                 defaultWarehouseId: input.defaultWarehouseId,
                 visibleWarehouseIds: input.visibleWarehouseIds ?? null,
                 packagesOnly: input.packagesOnly ?? false,
-                enforceMultiplicity: input.enforceMultiplicity ?? false,
-                allowExceedingCreditLimit: input.allowExceedingCreditLimit ?? false,
                 prepaymentReserveDays:
                     input.prepaymentReserveDays ?? DEFAULT_PREPAYMENT_RESERVE_DAYS,
                 proformaPaymentTermDays:

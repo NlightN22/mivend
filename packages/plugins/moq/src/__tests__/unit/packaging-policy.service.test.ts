@@ -23,7 +23,11 @@ function makeService(options: {
         ),
     };
     return {
-        service: new PackagingPolicyService({ resolveEffective } as never, tradingPoints as never),
+        service: new PackagingPolicyService(
+            { resolveEffective } as never,
+            tradingPoints as never,
+            {} as never,
+        ),
         resolveEffective,
     };
 }
@@ -66,14 +70,31 @@ describe('PackagingPolicyService', () => {
         expect(await service.isPackagesOnly(ctx, 'customer-1')).toBe(false);
     });
 
-    it('isMultiplicityEnforced reads enforceMultiplicity and defaults to false', async () => {
-        const resolveEffective = vi.fn(async () => ({ enforceMultiplicity: true }));
-        const on = new PackagingPolicyService({ resolveEffective } as never, {} as never);
-        expect(await on.isMultiplicityEnforced(ctx, undefined, 'branch-a')).toBe(true);
-        const off = new PackagingPolicyService(
-            { resolveEffective: vi.fn(async () => null) } as never,
-            {} as never,
-        );
-        expect(await off.isMultiplicityEnforced(ctx, undefined)).toBe(false);
+    it('isMultiplicityEnforced reads the branch cart policy: on only when enabled and blocking', async () => {
+        const policyFor = (policy: { enabled: boolean; consequence: string }) => {
+            const resolve = vi.fn(async () => policy);
+            const service = new PackagingPolicyService(
+                { resolveEffective: vi.fn(async () => null) } as never,
+                {} as never,
+                { resolve } as never,
+            );
+            return { service, resolve };
+        };
+        const on = policyFor({ enabled: true, consequence: 'block' });
+        expect(await on.service.isMultiplicityEnforced(ctx, undefined, 'branch-a')).toBe(true);
+        expect(on.resolve).toHaveBeenCalledWith(ctx, 'order.multiplicity', 'cart', 'branch-a');
+        expect(
+            await policyFor({
+                enabled: false,
+                consequence: 'block',
+            }).service.isMultiplicityEnforced(ctx, undefined, 'branch-a'),
+        ).toBe(false);
+        expect(
+            await policyFor({ enabled: true, consequence: 'warn' }).service.isMultiplicityEnforced(
+                ctx,
+                undefined,
+                'branch-a',
+            ),
+        ).toBe(false);
     });
 });
