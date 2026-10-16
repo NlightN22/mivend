@@ -37,6 +37,8 @@ export async function adminTokenFor(username: string, password: string): Promise
     );
     if (!token) throw new Error(`Admin login as ${username} returned no token`);
     fs.mkdirSync(path.dirname(TOKENS_FILE), { recursive: true });
-    fs.writeFileSync(TOKENS_FILE, JSON.stringify({ ...readTokens(), [username]: token }));
+    const tmp = `${TOKENS_FILE}.${process.pid}`;
+    fs.writeFileSync(tmp, JSON.stringify({ ...readTokens(), [username]: token }));
+    fs.renameSync(tmp, TOKENS_FILE);
     return token;
 }

@@ -402,6 +402,11 @@ lifetime; Vendure extends it on activity. A "remember me" cookie still lives one
 in Vendure), but the token it carries stops working once the session expires.
 `SESSION_MAX_ACTIVE_PER_USER` (default `20`) caps active sessions per user: each login ends the
 user's oldest ones beyond it. The hourly `session-cleanup` task deletes expired and ended sessions.
+Ended sessions are only listed nowhere (`mySessions` shows active ones) and nothing references the
+`session` table, so deleting them loses no history. The session cache is in-process (Vendure's
+default, no Redis): another server process may accept an ended token until its cache entry
+expires (`sessionCacheTTL`, 300 s). The cap applies to every account; raise it on a contour where
+many tools share one login.
 
 ## Migration name drift
 

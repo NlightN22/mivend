@@ -75,11 +75,13 @@ export class SessionManagementPlugin implements OnApplicationBootstrap {
         subscribeAndLog(
             this.eventBus,
             LoginEvent,
+            event => this.loginListenerService.tagLatestSessionWithUserAgent(event.ctx, event.user),
+            'SessionManagementPlugin',
+        );
+        subscribeAndLog(
+            this.eventBus,
+            LoginEvent,
             async event => {
-                await this.loginListenerService.tagLatestSessionWithUserAgent(
-                    event.ctx,
-                    event.user,
-                );
                 await this.sessionCapService.enforceCap(event.user.id);
             },
             'SessionManagementPlugin',

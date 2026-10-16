@@ -1,8 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { E2E_API_USER_AGENT, E2E_USER_AGENT_MARK } from './user-agent';
+
 const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:3000';
-const RUN_START_FILE = path.join(__dirname, '../.auth/run-start.json');
+const AUTH_DIR = path.join(__dirname, '../.auth');
+const RUN_START_FILE = path.join(AUTH_DIR, 'run-start.json');
 
 export type ApiName = 'admin-api' | 'shop-api';
 
@@ -14,6 +17,7 @@ export interface TestAccount {
 
 interface SessionRow {
     id: string;
+    userAgent: string | null;
     createdAt: string;
     current: boolean;
 }
@@ -28,6 +32,7 @@ async function call<T>(
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'User-Agent': E2E_API_USER_AGENT,
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ query, variables }),
@@ -38,11 +43,13 @@ async function call<T>(
 }
 
 export function markRunStart(): void {
-    fs.rmSync(path.join(__dirname, '../.auth/admin-tokens.json'), { force: true });
+    fs.rmSync(path.join(AUTH_DIR, 'admin-tokens.json'), { force: true });
     fs.writeFileSync(RUN_START_FILE, JSON.stringify({ startedAt: new Date().toISOString() }));
 }
 
-function runStart(): Date {
+// Undefined when global setup did not run (e.g. a single project launched with --no-deps).
+export function runStart(): Date | undefined {
+    if (!fs.existsSync(RUN_START_FILE)) return undefined;
     const { startedAt } = JSON.parse(fs.readFileSync(RUN_START_FILE, 'utf8')) as {
         startedAt: string;
     };
@@ -52,17 +59,21 @@ function runStart(): Date {
 async function runSessions(api: ApiName, token: string, since: Date): Promise<SessionRow[]> {
     const { data } = await call<{ mySessions: SessionRow[] }>(
         api,
-        `query { mySessions { id createdAt current } }`,
+        `query { mySessions { id userAgent createdAt current } }`,
         {},
         token,
     );
-    return data.mySessions.filter(s => !s.current && new Date(s.createdAt) >= since);
+    return data.mySessions.filter(
+        s =>
+            !s.current &&
+            new Date(s.createdAt) >= since &&
+            (s.userAgent ?? '').includes(E2E_USER_AGENT_MARK),
+    );
 }
 
-// Ends every session the run opened for the account (UI and API logins alike), then its own.
+// Ends the sessions this run opened for the account (marked by user agent), then its own.
 // Returns how many run sessions were still active afterwards: anything above 0 is a leak.
-export async function endRunSessions(account: TestAccount): Promise<number> {
-    const since = runStart();
+export async function endRunSessions(account: TestAccount, since: Date): Promise<number> {
     const { token } = await call(
         account.api,
         `mutation($u: String!, $p: String!) { login(username: $u, password: $p) { __typename } }`,

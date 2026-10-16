@@ -1,4 +1,14 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices, type PlaywrightTestOptions, type Project } from '@playwright/test';
+import { E2E_USER_AGENT_MARK } from './helpers/user-agent';
+
+function markSessions(
+    projects: Project<PlaywrightTestOptions>[],
+): Project<PlaywrightTestOptions>[] {
+    return projects.map(p => ({
+        ...p,
+        use: { ...p.use, userAgent: `${p.use?.userAgent ?? ''} ${E2E_USER_AGENT_MARK}` },
+    }));
+}
 
 export default defineConfig({
     testDir: '.',
@@ -14,7 +24,7 @@ export default defineConfig({
         screenshot: 'only-on-failure',
         video: 'on-first-retry',
     },
-    projects: [
+    projects: markSessions([
         {
             name: 'storefront-noauth',
             testDir: './storefront/auth',
@@ -94,5 +104,5 @@ export default defineConfig({
                 storageState: '.auth/manager-portalAdmin.json',
             },
         },
-    ],
+    ]),
 });

@@ -1,3 +1,4 @@
+import { E2E_API_USER_AGENT, E2E_BROWSER_USER_AGENT } from '../../helpers/user-agent';
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,7 +27,7 @@ async function adminApiRequest<T>(
 async function loginViaApi(): Promise<string> {
     const res = await fetch(`${SERVER_URL}/admin-api`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'User-Agent': E2E_API_USER_AGENT },
         body: JSON.stringify({
             query: `mutation($u: String!, $p: String!) {
                 login(username: $u, password: $p) { __typename ... on CurrentUser { id } }
@@ -149,7 +150,7 @@ test.describe('Settings > Security page — UI', () => {
         );
 
         const cookieB = await loginViaApi();
-        const context = await browser.newContext();
+        const context = await browser.newContext({ userAgent: E2E_BROWSER_USER_AGENT });
         const page = await context.newPage();
         try {
             await page.goto('/login');
@@ -192,7 +193,7 @@ test.describe('Settings > Security page — UI', () => {
     }, testInfo) => {
         test.skip(testInfo.project.name !== 'manager-operator', 'UI test, runs once');
 
-        const context = await browser.newContext();
+        const context = await browser.newContext({ userAgent: E2E_BROWSER_USER_AGENT });
         const page = await context.newPage();
         try {
             await page.goto('/login');

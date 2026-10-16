@@ -1,3 +1,5 @@
+import { E2E_API_USER_AGENT } from './user-agent';
+
 const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:3000';
 const ERP_TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-import-token-change-me-0000';
 
@@ -53,6 +55,7 @@ export async function adminGql<T>(
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'User-Agent': E2E_API_USER_AGENT,
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ query, variables }),
@@ -72,6 +75,7 @@ export async function shopGql<T>(
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'User-Agent': E2E_API_USER_AGENT,
             ...(cookie ? { Cookie: cookie } : {}),
         },
         body: JSON.stringify({ query, variables }),

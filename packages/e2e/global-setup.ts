@@ -8,6 +8,7 @@ import { loginAsManager } from './helpers/manager-auth';
 import { createConfirmedOrder } from './helpers/manager-order';
 import { MANAGER_ACCOUNTS, SUPERADMIN } from './fixtures/accounts';
 import { markRunStart } from './helpers/session-cleanup';
+import { E2E_BROWSER_USER_AGENT } from './helpers/user-agent';
 import { seedRecords, E2E_CUSTOMER, E2E_OTHER_COUNTERPARTY_ID } from './fixtures/seed';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
@@ -338,7 +339,10 @@ export default async function globalSetup(): Promise<void> {
     }
 
     const browser = await chromium.launch();
-    const context = await browser.newContext({ baseURL: STOREFRONT_URL });
+    const context = await browser.newContext({
+        baseURL: STOREFRONT_URL,
+        userAgent: E2E_BROWSER_USER_AGENT,
+    });
     const page = await context.newPage();
 
     await loginAs(page, E2E_CUSTOMER.email, E2E_CUSTOMER.password);
@@ -346,7 +350,10 @@ export default async function globalSetup(): Promise<void> {
     await context.close();
 
     for (const [key, account] of Object.entries(MANAGER_ACCOUNTS)) {
-        const managerContext = await browser.newContext({ baseURL: MANAGER_URL });
+        const managerContext = await browser.newContext({
+            baseURL: MANAGER_URL,
+            userAgent: E2E_BROWSER_USER_AGENT,
+        });
         const managerPage = await managerContext.newPage();
         await loginAsManager(managerPage, account.username, account.password);
         await managerContext.storageState({ path: path.join(AUTH_DIR, `manager-${key}.json`) });

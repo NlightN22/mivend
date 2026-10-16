@@ -55,14 +55,16 @@ spec files with no skips.
 ## Sessions opened by a run are ended in teardown
 
 Every login (UI or API) opens a server session. `global-setup.ts` records the run start;
-`global-teardown.ts` logs in as each test account, ends every session created since then and
-fails the run if one stays active (issue #231). Rules for new specs:
+`global-teardown.ts` logs in as each test account, ends the sessions created since then whose user
+agent carries the `mivend-e2e` marker (`helpers/user-agent.ts`), and fails the run if one stays
+active (issue #231). A developer's own browser session is never touched. Rules for new specs:
 
 - Browser specs reuse the `storageState` session. Admin API calls take their token from
   `adminTokenFor()` (`helpers/api-tokens.ts`): one session per account for the whole run, re-logged
   in only if it was ended. Only specs that test login or ending sessions log in themselves.
 - A spec that logs in as an account not listed in `global-teardown.ts`'s `ACCOUNTS` adds it there.
-- Sessions a developer opens for the same accounts during a run are ended too.
+- A browser context created inside a spec (`browser.newContext`) or a raw `fetch` login passes the
+  marked user agent (`E2E_BROWSER_USER_AGENT` / `E2E_API_USER_AGENT`), or its session is missed.
 - The server caps active sessions per user (`SESSION_MAX_ACTIVE_PER_USER`, default 20): more than
   ~20 logins of one account inside a run would end the oldest, i.e. the stored `storageState` one.
 
@@ -72,8 +74,8 @@ Two UI + API sets under `packages/e2e/storefront/`, both run in the `storefront`
 empty storage state (each test logs in as a seeded buyer through the Shop API):
 
 - `checkout-credit/` - the real checkout page and API assertions for cash / bank transfer / card within
-  the limit (credit-limited and prepayment buyer), over the limit with the branch setting
-  `allowExceedingCreditLimit` on/off and the acknowledgement, a card payment of excess + total, and negative
+  the limit (credit-limited and prepayment buyer), over the limit with the branch's `credit.limit`
+  checkout policy warn/hold and the acknowledgement, a card payment of excess + total, and negative
   paths (bypass without acknowledgement, stale card amount, unknown method, `confirmPaymentReceived`).
 - `proforma-organizations/` - one proforma per organization, `<order>-NN` numbering and sum, idempotent
   on-demand request, versioning after `modifyOrder` (v2 badge, superseded notice, disabled pay), customer

@@ -1,3 +1,4 @@
+import { E2E_API_USER_AGENT, E2E_BROWSER_USER_AGENT } from '../../helpers/user-agent';
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,7 +27,7 @@ async function shopApiRequest<T>(
 async function loginViaApi(): Promise<string> {
     const res = await fetch(`${SERVER_URL}/shop-api`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'User-Agent': E2E_API_USER_AGENT },
         body: JSON.stringify({
             query: `mutation($u: String!, $p: String!) {
                 login(username: $u, password: $p) { __typename ... on CurrentUser { id } }
@@ -132,7 +133,7 @@ test.describe('Settings page — Security UI', () => {
         );
 
         const cookieB = await loginViaApi();
-        const context = await browser.newContext();
+        const context = await browser.newContext({ userAgent: E2E_BROWSER_USER_AGENT });
         const page = await context.newPage();
         try {
             await page.goto('/login');
@@ -161,7 +162,7 @@ test.describe('Settings page — Security UI', () => {
     test('"Sign out everywhere" logs the current session out too (positive)', async ({
         browser,
     }) => {
-        const context = await browser.newContext();
+        const context = await browser.newContext({ userAgent: E2E_BROWSER_USER_AGENT });
         const page = await context.newPage();
         try {
             await page.goto('/login');
