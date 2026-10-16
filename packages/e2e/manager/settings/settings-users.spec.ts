@@ -36,11 +36,13 @@ test('portal-admin can reach /settings/users and see the seeded administrators (
     );
 
     await page.goto('/settings/users');
-    await expect(page.getByText('Ivan Operator', { exact: true })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('Petr Manager', { exact: true })).toBeVisible();
-    await expect(page.getByText('Olga DeptHead', { exact: true })).toBeVisible();
-    await expect(page.getByText(TARGET_NAME, { exact: true })).toBeVisible();
-    await expect(page.getByText('Anna PortalAdmin', { exact: true })).toBeVisible();
+    // The mobile More sheet also renders the signed-in user's name, so scope to the page body.
+    const main = page.getByRole('main');
+    await expect(main.getByText('Ivan Operator', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(main.getByText('Petr Manager', { exact: true })).toBeVisible();
+    await expect(main.getByText('Olga DeptHead', { exact: true })).toBeVisible();
+    await expect(main.getByText(TARGET_NAME, { exact: true })).toBeVisible();
+    await expect(main.getByText('Anna PortalAdmin', { exact: true })).toBeVisible();
 });
 
 test('the Settings sub-nav links Roles & access and Users correctly (positive)', async ({

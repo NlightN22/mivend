@@ -59,7 +59,7 @@ test('orders list pagination does not collapse the page to the top', async ({ pa
 
     try {
         await page.goto('/orders');
-        const rows = page.locator('.el-table-v2__row');
+        const rows = page.locator('.orders-data-table tbody tr');
         // 'Saved views' is static chrome and does not mean orders have loaded.
         // Wait for a full first page of rows before reading totalItems, or the read races loading.
         await expect(rows).toHaveCount(PAGE_SIZE, { timeout: 15000 });
@@ -82,7 +82,7 @@ test('orders list pagination does not collapse the page to the top', async ({ pa
         const lastPageRowCount = totalItems - (pageCount - 1) * PAGE_SIZE;
         expect(lastPageRowCount).toBeLessThan(PAGE_SIZE); // sanity check: the last page is partial
 
-        const table = page.locator('.mv-table').first();
+        const table = page.locator('.orders-data-table').first();
         const heightOnFirstPage = (await table.boundingBox())?.height ?? 0;
         expect(heightOnFirstPage).toBeGreaterThan(400); // a full page (10 rows) is ~560px tall
 
