@@ -48,6 +48,28 @@ export class ReservationAvailabilityService {
         if (variantIds.length === 0) return totals;
 
         const stockLocationIds = await this.resolveStockLocationIds(ctx, branchId);
+        const byLocation = await this.getFreeByLocation(ctx, variantIds, stockLocationIds);
+        for (const [variantId, locations] of byLocation) {
+            const values = [...locations.values()];
+            totals.set(
+                variantId,
+                scope === 'max'
+                    ? Math.max(0, ...values)
+                    : values.reduce((sum, free) => sum + free, 0),
+            );
+        }
+        return totals;
+    }
+
+    // The single definition of a location's free quantity per variant (freeQuantity); every ATP,
+    // reserve preview and order-line availability read goes through it.
+    async getFreeByLocation(
+        ctx: RequestContext,
+        variantIds: string[],
+        stockLocationIds: string[],
+    ): Promise<Map<string, Map<string, number>>> {
+        const result = new Map<string, Map<string, number>>();
+        if (variantIds.length === 0 || stockLocationIds.length === 0) return result;
         const stockLevels = await this.connection.getRepository(ctx, StockLevel).find({
             where: {
                 productVariantId: In(variantIds),
@@ -66,23 +88,21 @@ export class ReservationAvailabilityService {
             const key = `${row.productVariantId}:${row.stockLocationId}`;
             reservedByKey.set(key, (reservedByKey.get(key) ?? 0) + row.quantity);
         }
-
         for (const level of stockLevels) {
             const variantId = String(level.productVariantId);
-            const free = freeQuantity(
-                level.stockOnHand,
-                level.stockAllocated,
-                reservedByKey.get(`${variantId}:${level.stockLocationId}`) ?? 0,
-                level.customFields?.erpAvailableQuantity,
+            const locations = result.get(variantId) ?? new Map<string, number>();
+            locations.set(
+                String(level.stockLocationId),
+                freeQuantity(
+                    level.stockOnHand,
+                    level.stockAllocated,
+                    reservedByKey.get(`${variantId}:${level.stockLocationId}`) ?? 0,
+                    level.customFields?.erpAvailableQuantity,
+                ),
             );
-            totals.set(
-                variantId,
-                scope === 'max'
-                    ? Math.max(totals.get(variantId) ?? 0, free)
-                    : (totals.get(variantId) ?? 0) + free,
-            );
+            result.set(variantId, locations);
         }
-        return totals;
+        return result;
     }
 
     // What one order line can actually reserve: reservation takes a single location per line, so

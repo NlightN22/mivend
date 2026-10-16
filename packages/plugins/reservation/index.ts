@@ -46,3 +46,14 @@ export { ORDER_SUBJECT_TYPE, pickOrderWarehouse } from './src/order-check-subjec
 export type { OrderCheckLine, OrderCheckSubject, OrderCheckStage } from './src/order-check-subject';
 export { OrderCheckSubjectLoader } from './src/order-check-subject-loader.service';
 export { OrderCheckSubjectRegistrar } from './src/order-check-subject.registrar';
+export { OrderLineAvailabilityPortRegistry } from './src/order-line-availability.port';
+export type {
+    LineAvailability,
+    OrderLineAvailabilityPort,
+    OrganizationAvailability,
+    WarehouseAvailability,
+    AvailabilitySource,
+} from './src/order-line-availability.port';
+export { OrderLinesEditedEvent } from './src/order-line-edit.events';
+export { OrderLineShortfall } from './src/entities/order-line-shortfall.entity';
+export { planSplit } from './src/order-line-split';

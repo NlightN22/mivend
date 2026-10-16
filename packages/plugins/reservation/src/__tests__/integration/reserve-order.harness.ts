@@ -152,6 +152,7 @@ export class TestReservation {
 
 const entityMap = {
     Order: TestOrder,
+    OrderLine: TestOrderLine,
     Reservation: TestReservation,
     StockLevel: TestStockLevel,
     StockLocation: TestStockLocation,

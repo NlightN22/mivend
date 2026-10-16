@@ -57,6 +57,11 @@ import { ErpOrderReserveService } from './erp-order-reserve.service';
 import { ReservationExtensionLimitService } from './reservation-extension-limit.service';
 import { OrderLineReservationResolver, ReservationViewResolver } from './reservation-view.resolver';
 import { adminReservationViewSchema, shopReservationViewSchema } from './reservation-view.schema';
+import { OrderLineShortfall } from './entities/order-line-shortfall.entity';
+import { OrderLineAvailabilityPortRegistry } from './order-line-availability.port';
+import { OrderLineEditResolver } from './order-line-edit.resolver';
+import { adminOrderLineEditSchema } from './order-line-edit.schema';
+import { OrderLineEditService } from './order-line-edit.service';
 import { ReservationViewService } from './reservation-view.service';
 import { ReservationExtensionService } from './reservation-extension.service';
 import { ReservationFailureService } from './reservation-failure.service';
@@ -84,9 +89,12 @@ import type { ReservationPluginOptions } from './types';
         ReservationReconciliationIssue,
         ErpOrderReserve,
         OrderCheckFailure,
+        OrderLineShortfall,
     ],
     providers: [
         OrderContractService,
+        OrderLineEditService,
+        OrderLineAvailabilityPortRegistry,
         OrderCheckSubjectLoader,
         OrderCheckSubjectRegistrar,
         OrderChecksService,
@@ -118,6 +126,9 @@ import type { ReservationPluginOptions } from './types';
     ],
     exports: [
         ReservationService,
+        ReservationAvailabilityService,
+        OrderCheckSubjectLoader,
+        OrderLineAvailabilityPortRegistry,
         OrderChecksService,
         OrderCheckStaleService,
         ReservationWriteOffSyncService,
@@ -145,10 +156,12 @@ import type { ReservationPluginOptions } from './types';
             ${adminCancelOrderSchema}
             ${adminReservationViewSchema}
             ${adminOrderChecksSchema}
+            ${adminOrderLineEditSchema}
         `,
         resolvers: [
             ReservationResolver,
             OrderChecksResolver,
+            OrderLineEditResolver,
             ReservationViewResolver,
             AdminCancelOrderResolver,
             OrderCancelResultResolver,

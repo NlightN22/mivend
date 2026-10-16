@@ -90,6 +90,7 @@ import { IntegrationStreamHealthResolver } from './integration-stream-health.res
 import { IntegrationOutboxHealthService } from './integration-outbox-health.service';
 import { ContractVersionClient } from './contract-version.client';
 import { VariantUnitHealthService } from './variant-unit-health.service';
+import { OrderLineAvailabilityService } from './order-checks/order-line-availability.service';
 import { OrderCheckDataService } from './order-checks/order-check-data.service';
 import { OrderCheckHealthService } from './order-checks/order-check-health.service';
 import { OrderCheckProvidersRegistrar } from './order-checks/order-check-providers.registrar';
@@ -173,6 +174,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         VariantUnitHealthService,
         RejectedOrderHealthService,
         OrderCheckDataService,
+        OrderLineAvailabilityService,
         OrderCheckProvidersRegistrar,
         OrderCheckHealthService,
         OrderSendHoldService,
