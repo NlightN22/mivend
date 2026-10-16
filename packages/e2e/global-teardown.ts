@@ -10,6 +10,8 @@ const ACCOUNTS: TestAccount[] = [
     { api: 'shop-api', username: E2E_CUSTOMER.email, password: E2E_CUSTOMER.password },
     { api: 'shop-api', username: CREDIT_BUYER, password: PASSWORD },
     { api: 'shop-api', username: PREPAY_BUYER, password: PASSWORD },
+    // The dev storefront logs this customer in on any unauthenticated page (App.vue).
+    { api: 'shop-api', username: 'ivan@autoservice-nord.example', password: PASSWORD },
 ];
 
 export default async function globalTeardown(): Promise<void> {
