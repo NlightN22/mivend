@@ -151,4 +151,4 @@ or fixed. Procedure: `.claude/skills/concurrency-audit/SKILL.md`.
   re-driven by `OrderSubmittedReconciler`. A sweep would need a durable "replicated" marker (the
   claim leaves none, and `erp-order` cannot write the sync outbox: `sync` depends on `erp-order`),
   so it is not a small change. Accepted: the window is one in-process publish call after commit, and
-  a missed replica is repaired by re-saving the order through sync resend, not silently wrong data.
+  the order itself stays correct on its own instance; only its replica is missing.
