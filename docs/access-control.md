@@ -110,25 +110,29 @@ confirm, introduce a dedicated permission instead of widening this one.
 Core checks only channel and permission on its order operations, so one guard applies mivend's
 order scope (`OrderVisibilityService`) to all of them; an order outside the caller's scope is
 `EntityNotFound`, on read and on write. SuperAdmin is not scoped. The registry is
-`packages/plugins/erp-order/src/core-order-scope/core-order-operations.ts`; a unit test parses
-core's Admin API schema and fails when a core operation that takes or returns order data is not in it.
+`packages/plugins/erp-order/src/core-order-scope/core-order-operations.ts`; a unit test walks
+core's Admin API schema from `Query`/`Mutation` and fails when order data is reachable without
+crossing a registered field.
 
-| Class | Operations | Order resolved from |
+| Class | Operations | Checked target |
 | --- | --- | --- |
 | Read | `order`, `eligibleShippingMethodsForDraftOrder` | order id |
-| Scoped lists (overridden resolvers) | `orders`, `Customer.orders`, `OrderLine.order` | the visible-orders query |
-| Order writes | `transitionOrderToState`, `cancelOrder`, `modifyOrder` (+ its refund payments), `addNoteToOrder`, `setOrderCustomFields`, `setOrderCustomer`, `addManualPaymentToOrder` | order id |
-| Draft writes | `deleteDraftOrder`, `addItemToDraftOrder`, `adjustDraftOrderLine`, `removeDraftOrderLine`, `setCustomerForDraftOrder`, `setDraftOrder*`, `unsetDraftOrder*Address`, `applyCouponCodeToDraftOrder`, `removeCouponCodeFromDraftOrder` | order id (+ line id) |
+| Scoped resolvers (overridden) | `orders`, `Customer.orders`, `OrderLine.order`, `Allocation.orderLine`, `Cancellation.orderLine` | the visible-orders query |
+| Order writes | `transitionOrderToState`, `cancelOrder`, `modifyOrder` (+ its refund payments), `addNoteToOrder`, `setOrderCustomFields`, `addManualPaymentToOrder` | order id |
+| Customer change | `setOrderCustomer`, `setCustomerForDraftOrder` | order id and the new customer's counterparty (`CounterpartyService.findOneVisible`; a customer without one only for counterparty scope `all`) |
+| Draft writes | `deleteDraftOrder`, `addItemToDraftOrder`, `adjustDraftOrderLine`, `removeDraftOrderLine`, `setDraftOrder*`, `unsetDraftOrder*Address`, `applyCouponCodeToDraftOrder`, `removeCouponCodeFromDraftOrder` | order id (+ line id) |
 | Payments, refunds | `settlePayment`, `cancelPayment`, `transitionPaymentToState`, `refundOrder`, `settleRefund` | payment / refund id |
-| Fulfillments | `addFulfillmentToOrder`, `transitionFulfillmentToState` | order line / fulfillment id |
+| Fulfillments | `addFulfillmentToOrder`, `transitionFulfillmentToState` | order line / fulfillment id (every order it spans) |
 | Notes | `updateOrderNote`, `deleteOrderNote` | history entry id |
-| Exempt | `createDraftOrder` (new order); `updateCustomerNote` (customer note); fields reachable only through a scoped order | — |
+| Exempt | `createDraftOrder` (new order); `updateCustomerNote` (customer note) | — |
 
-Root operations go through `CoreOrderScopeInterceptor` (one `APP_INTERCEPTOR`, Admin API only);
-lists cannot be filtered after the fact, so `orders`, `Customer.orders` and `OrderLine.order`
-are overridden with the same visible-orders query. A draft that is still `Draft` with no customer
-belongs to no scope yet and stays reachable, so its creator can set the customer. Dashboard access
-for roles below portal-admin is unchanged: the Dashboard now shows them only their scope.
+Root operations go through `CoreOrderScopeInterceptor` (one `APP_INTERCEPTOR`, Admin API only,
+decision in `CoreOrderScopeService`). A target whose row exists but has no order (a refund whose
+payment is gone) is refused; an id that does not exist is left to core. A draft still in `Draft`
+with no customer belongs to no scope: only `order` and `setCustomerForDraftOrder` (with an in-scope
+customer) reach it. Core 3.7.3 never loads `Allocation.orderLine`/`Cancellation.orderLine` (the
+field errors for everyone); keep them scoped, never exempt them. Dashboard access for roles below
+portal-admin is unchanged: the Dashboard shows them only their scope.
 
 ## Layer 3: `AccessScopeService` — one service, reused everywhere
 

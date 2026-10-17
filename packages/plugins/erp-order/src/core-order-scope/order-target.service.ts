@@ -1,86 +1,61 @@
 import { Injectable } from '@nestjs/common';
 import type { ID } from '@vendure/common/lib/shared-types';
-import {
-    EntityNotFoundError,
-    Fulfillment,
-    Order,
-    OrderLine,
-    Payment,
-    Refund,
-    RequestContext,
-    TransactionalConnection,
-} from '@vendure/core';
-import { In, IsNull } from 'typeorm';
+import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import type { OrderTargetKind } from './core-order-operations';
 
-const ENTITY_NAME: Record<OrderTargetKind, string> = {
-    order: 'Order',
-    orderLine: 'OrderLine',
-    payment: 'Payment',
-    fulfillment: 'Fulfillment',
-    refund: 'Refund',
-    orderNote: 'HistoryEntry',
+// Raw SQL: core does not export every entity (history entries, fulfillment lines) it needs.
+const OWNER_SQL: Record<OrderTargetKind, string> = {
+    order: `SELECT o.id::text AS "targetId", o.id::text AS "ownerId" FROM "order" o WHERE o.id::text = ANY($1)`,
+    orderLine: `SELECT l.id::text AS "targetId", l."orderId"::text AS "ownerId" FROM order_line l WHERE l.id::text = ANY($1)`,
+    payment: `SELECT p.id::text AS "targetId", p."orderId"::text AS "ownerId" FROM payment p WHERE p.id::text = ANY($1)`,
+    refund: `SELECT r.id::text AS "targetId", p."orderId"::text AS "ownerId" FROM refund r
+        LEFT JOIN payment p ON p.id = r."paymentId" WHERE r.id::text = ANY($1)`,
+    fulfillment: `SELECT fl."fulfillmentId"::text AS "targetId", l."orderId"::text AS "ownerId"
+        FROM order_line_reference fl LEFT JOIN order_line l ON l.id = fl."orderLineId"
+        WHERE fl.discriminator = 'FulfillmentLine' AND fl."fulfillmentId"::text = ANY($1)`,
+    orderNote: `SELECT h.id::text AS "targetId", h."orderId"::text AS "ownerId" FROM history_entry h
+        WHERE h.discriminator = 'OrderHistoryEntry' AND h.id::text = ANY($1)`,
+    customer: `SELECT c.id::text AS "targetId", c."customFieldsCounterpartyid"::text AS "ownerId"
+        FROM customer c WHERE c.id::text = ANY($1)`,
 };
 
-// Maps an operation's target ids to the orders they belong to; an unknown id is left to core.
+// Maps target ids to their owners (orders, or a customer's counterparty). An id absent from the
+// map does not exist and is left to core; a present id with a null owner is a dangling row.
 @Injectable()
 export class OrderTargetService {
     constructor(private connection: TransactionalConnection) {}
 
-    async orderIds(ctx: RequestContext, kind: OrderTargetKind, ids: ID[]): Promise<ID[]> {
-        if (ids.length === 0) return [];
-        const rows = await this.query(ctx, kind, ids).getRawMany<{ orderId: ID | null }>();
-        return rows.flatMap(row => (row.orderId == null ? [] : [row.orderId]));
-    }
-
-    // A fresh draft has no customer yet, so no scope can claim it; its creator must still set one.
-    async customerlessDraftIds(ctx: RequestContext, orderIds: ID[]): Promise<Set<string>> {
-        if (orderIds.length === 0) return new Set();
-        const drafts = await this.connection.getRepository(ctx, Order).find({
-            select: { id: true },
-            where: { id: In(orderIds), state: 'Draft', customerId: IsNull() },
-        });
-        return new Set(drafts.map(d => String(d.id)));
-    }
-
-    notFound(kind: OrderTargetKind, id: ID): EntityNotFoundError {
-        return new EntityNotFoundError(ENTITY_NAME[kind], id);
-    }
-
-    private query(ctx: RequestContext, kind: OrderTargetKind, ids: ID[]) {
-        const repo = <T extends object>(entity: new () => T) =>
-            this.connection.getRepository(ctx, entity).createQueryBuilder('t');
-        switch (kind) {
-            case 'order':
-                return repo(Order).select('t.id', 'orderId').whereInIds(ids);
-            case 'orderLine':
-                return repo(OrderLine).select('t.orderId', 'orderId').whereInIds(ids);
-            case 'payment':
-                return repo(Payment)
-                    .innerJoin('t.order', 'o')
-                    .select('o.id', 'orderId')
-                    .whereInIds(ids);
-            case 'refund':
-                return repo(Refund)
-                    .innerJoin('t.payment', 'p')
-                    .innerJoin('p.order', 'o')
-                    .select('o.id', 'orderId')
-                    .whereInIds(ids);
-            case 'fulfillment':
-                return repo(Fulfillment)
-                    .innerJoin('t.lines', 'fl')
-                    .innerJoin('fl.orderLine', 'ol')
-                    .select('DISTINCT ol.orderId', 'orderId')
-                    .whereInIds(ids);
-            case 'orderNote':
-                // Core does not export the history entry entities; order notes set history_entry.orderId.
-                return this.connection
-                    .getRepository(ctx, Order)
-                    .manager.createQueryBuilder()
-                    .select('h."orderId"', 'orderId')
-                    .from('history_entry', 'h')
-                    .where('h.id IN (:...ids)', { ids });
+    async owners(
+        ctx: RequestContext,
+        kind: OrderTargetKind,
+        ids: ID[],
+    ): Promise<Map<string, Array<string | null>>> {
+        if (ids.length === 0) return new Map();
+        const rows = await this.query<{ targetId: string; ownerId: string | null }>(
+            ctx,
+            OWNER_SQL[kind],
+            ids,
+        );
+        const owners = new Map<string, Array<string | null>>();
+        for (const row of rows) {
+            owners.set(row.targetId, [...(owners.get(row.targetId) ?? []), row.ownerId]);
         }
+        return owners;
+    }
+
+    async customerlessDraftIds(ctx: RequestContext, orderIds: string[]): Promise<Set<string>> {
+        if (orderIds.length === 0) return new Set();
+        const rows = await this.query<{ id: string }>(
+            ctx,
+            `SELECT o.id::text AS id FROM "order" o
+             WHERE o.state = 'Draft' AND o."customerId" IS NULL AND o.id::text = ANY($1)`,
+            orderIds,
+        );
+        return new Set(rows.map(row => row.id));
+    }
+
+    private query<T>(ctx: RequestContext, sql: string, ids: ID[]): Promise<T[]> {
+        return this.connection.getRepository(ctx, Order).manager.query(sql, [ids.map(String)]);
     }
 }

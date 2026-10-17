@@ -17,6 +17,7 @@ import {
 
 import { OrderVisibilityService } from '../order-visibility.service';
 import { bypassesScope } from './core-order-scope.interceptor';
+import { OrderTargetService } from './order-target.service';
 
 // Overrides core's `orders` (same field name): the list is the caller's visible orders.
 @Resolver()
@@ -93,5 +94,56 @@ export class ScopedOrderLineOrderResolver {
         const visible = await this.visibility.visibleIds(ctx, [order.id]);
         if (!visible.has(String(order.id))) throw new EntityNotFoundError('Order', order.id);
         return order;
+    }
+}
+
+// Core 3.7.3 never loads a stock movement's orderLine (the field errors); scoped in case it does.
+abstract class ScopedStockMovementOrderLine {
+    constructor(
+        private visibility: OrderVisibilityService,
+        private targets: OrderTargetService,
+    ) {}
+
+    async scopedOrderLine(
+        ctx: RequestContext,
+        movement: { orderLine?: OrderLine },
+    ): Promise<OrderLine | undefined> {
+        const line = movement.orderLine;
+        if (!line || bypassesScope(ctx)) return line;
+        const owners = await this.targets.owners(ctx, 'orderLine', [line.id]);
+        const orderId = owners.get(String(line.id))?.[0];
+        const visible = orderId ? await this.visibility.visibleIds(ctx, [orderId]) : new Set();
+        if (!orderId || !visible.has(orderId)) throw new EntityNotFoundError('OrderLine', line.id);
+        return line;
+    }
+}
+
+@Resolver('Allocation')
+export class ScopedAllocationOrderLineResolver extends ScopedStockMovementOrderLine {
+    constructor(visibility: OrderVisibilityService, targets: OrderTargetService) {
+        super(visibility, targets);
+    }
+
+    @ResolveField()
+    orderLine(
+        @Ctx() ctx: RequestContext,
+        @Parent() movement: { orderLine?: OrderLine },
+    ): Promise<OrderLine | undefined> {
+        return this.scopedOrderLine(ctx, movement);
+    }
+}
+
+@Resolver('Cancellation')
+export class ScopedCancellationOrderLineResolver extends ScopedStockMovementOrderLine {
+    constructor(visibility: OrderVisibilityService, targets: OrderTargetService) {
+        super(visibility, targets);
+    }
+
+    @ResolveField()
+    orderLine(
+        @Ctx() ctx: RequestContext,
+        @Parent() movement: { orderLine?: OrderLine },
+    ): Promise<OrderLine | undefined> {
+        return this.scopedOrderLine(ctx, movement);
     }
 }

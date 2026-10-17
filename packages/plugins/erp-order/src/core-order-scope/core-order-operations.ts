@@ -6,7 +6,8 @@ export type OrderTargetKind =
     | 'payment'
     | 'fulfillment'
     | 'refund'
-    | 'orderNote';
+    | 'orderNote'
+    | 'customer';
 
 export type OperationArgs = Record<string, unknown>;
 
@@ -36,7 +37,6 @@ const byInput = (kind: OrderTargetKind, key: string): OrderTarget => ({
     kind,
     ids: args => [input(args)[key]],
 });
-const inOrder = 'reachable only through an already scoped order';
 const draft = { targets: [byArg('order', 'orderId')] };
 
 // Every core Admin API operation that takes or returns order data (docs/access-control.md).
@@ -45,13 +45,8 @@ export const CORE_ORDER_OPERATIONS: Record<string, CoreOrderOperation> = {
     orders: { scopedResolver: true },
     'Customer.orders': { scopedResolver: true },
     'OrderLine.order': { scopedResolver: true },
-    'FulfillmentLine.fulfillment': { exempt: inOrder },
-    'OrderModification.payment': { exempt: inOrder },
-    'OrderModification.refund': { exempt: inOrder },
-    'RefundLine.refund': { exempt: inOrder },
-    'InsufficientStockError.order': {
-        exempt: 'returns the order the caller just passed the guard for',
-    },
+    'Allocation.orderLine': { scopedResolver: true },
+    'Cancellation.orderLine': { scopedResolver: true },
     updateCustomerNote: { exempt: 'a customer note, not an order note' },
     eligibleShippingMethodsForDraftOrder: draft,
     settlePayment: { targets: [byArg('payment', 'id')] },
@@ -69,7 +64,7 @@ export const CORE_ORDER_OPERATIONS: Record<string, CoreOrderOperation> = {
     deleteOrderNote: { targets: [byArg('orderNote', 'id')] },
     transitionOrderToState: { targets: [byArg('order', 'id')] },
     setOrderCustomFields: { targets: [byInput('order', 'id')] },
-    setOrderCustomer: { targets: [byInput('order', 'orderId')] },
+    setOrderCustomer: { targets: [byInput('order', 'orderId'), byInput('customer', 'customerId')] },
     modifyOrder: {
         targets: [
             byInput('order', 'orderId'),
@@ -90,7 +85,9 @@ export const CORE_ORDER_OPERATIONS: Record<string, CoreOrderOperation> = {
     removeDraftOrderLine: {
         targets: [byArg('order', 'orderId'), byArg('orderLine', 'orderLineId')],
     },
-    setCustomerForDraftOrder: draft,
+    setCustomerForDraftOrder: {
+        targets: [byArg('order', 'orderId'), byArg('customer', 'customerId')],
+    },
     setDraftOrderShippingAddress: draft,
     setDraftOrderBillingAddress: draft,
     unsetDraftOrderShippingAddress: draft,
@@ -100,6 +97,9 @@ export const CORE_ORDER_OPERATIONS: Record<string, CoreOrderOperation> = {
     removeCouponCodeFromDraftOrder: draft,
     setDraftOrderShippingMethod: draft,
 };
+
+// A customerless draft belongs to no scope yet: only reading it and choosing its customer pass.
+export const CUSTOMERLESS_DRAFT_OPERATIONS = new Set(['order', 'setCustomerForDraftOrder']);
 
 export function targetIds(target: OrderTarget, args: OperationArgs): ID[] {
     return target

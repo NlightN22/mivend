@@ -3,17 +3,13 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import type { GraphQLResolveInfo } from 'graphql';
 import { internal_getRequestContext, Permission, RequestContext } from '@vendure/core';
 
-import { OrderVisibilityService } from '../order-visibility.service';
-import { CORE_ORDER_OPERATIONS, OperationArgs, targetIds } from './core-order-operations';
-import { OrderTargetService } from './order-target.service';
+import { CORE_ORDER_OPERATIONS, OperationArgs } from './core-order-operations';
+import { CoreOrderScopeService } from './core-order-scope.service';
 
-// The single mivend order-scope gate in front of core Admin API order operations (#248).
+// The single mivend order-scope gate in front of core Admin API root order operations (#248).
 @Injectable()
 export class CoreOrderScopeInterceptor implements NestInterceptor {
-    constructor(
-        private visibility: OrderVisibilityService,
-        private targets: OrderTargetService,
-    ) {}
+    constructor(private scope: CoreOrderScopeService) {}
 
     async intercept(
         context: ExecutionContext,
@@ -22,22 +18,10 @@ export class CoreOrderScopeInterceptor implements NestInterceptor {
         if (context.getType<string>() !== 'graphql') return next.handle();
         const gql = GqlExecutionContext.create(context);
         const info = gql.getInfo<GraphQLResolveInfo>();
-        const operation = CORE_ORDER_OPERATIONS[info.fieldName];
-        if (!operation || !('targets' in operation) || !isRootField(info)) return next.handle();
+        if (!isRootField(info) || !(info.fieldName in CORE_ORDER_OPERATIONS)) return next.handle();
         const ctx = internal_getRequestContext(gql.getContext<{ req: never }>().req, context);
         if (ctx.apiType !== 'admin' || bypassesScope(ctx)) return next.handle();
-        for (const target of operation.targets) {
-            const ids = targetIds(target, gql.getArgs<OperationArgs>());
-            const orderIds = await this.targets.orderIds(ctx, target.kind, ids);
-            const visible = await this.visibility.visibleIds(ctx, orderIds);
-            const drafts = await this.targets.customerlessDraftIds(
-                ctx,
-                orderIds.filter(id => !visible.has(String(id))),
-            );
-            if (orderIds.some(id => !visible.has(String(id)) && !drafts.has(String(id)))) {
-                throw this.targets.notFound(target.kind, ids[0]);
-            }
-        }
+        await this.scope.assertInScope(ctx, info.fieldName, gql.getArgs<OperationArgs>());
         return next.handle();
     }
 }

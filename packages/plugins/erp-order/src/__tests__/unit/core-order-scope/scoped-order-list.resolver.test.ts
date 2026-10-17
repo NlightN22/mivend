@@ -3,6 +3,7 @@ import { EntityNotFoundError } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
 import {
+    ScopedAllocationOrderLineResolver,
     ScopedCustomerOrdersResolver,
     ScopedOrderLineOrderResolver,
     ScopedOrdersResolver,
@@ -90,5 +91,22 @@ describe('scoped core order lists', () => {
                 own.orderService as never,
             ).order(ctx(false), { id: 'l2' } as never, []),
         ).resolves.toEqual({ id: '2' });
+    });
+
+    it('a stock movement order line of a foreign order is not found, an own one is returned', async () => {
+        const targets = { owners: async () => new Map([['l2', ['2']]]) };
+        const line = { orderLine: { id: 'l2' } } as never;
+        await expect(
+            new ScopedAllocationOrderLineResolver(
+                deps().visibility as never,
+                targets as never,
+            ).orderLine(ctx(false), line),
+        ).rejects.toBeInstanceOf(EntityNotFoundError);
+        await expect(
+            new ScopedAllocationOrderLineResolver(
+                deps(['2']).visibility as never,
+                targets as never,
+            ).orderLine(ctx(false), line),
+        ).resolves.toEqual({ id: 'l2' });
     });
 });

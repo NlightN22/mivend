@@ -40,7 +40,10 @@ import { OrderStatusReferenceService } from './order-status-reference.service';
 import { OrderVisibilityService } from './order-visibility.service';
 import { CoreOrderScopeInterceptor } from './core-order-scope/core-order-scope.interceptor';
 import { OrderTargetService } from './core-order-scope/order-target.service';
+import { CoreOrderScopeService } from './core-order-scope/core-order-scope.service';
 import {
+    ScopedAllocationOrderLineResolver,
+    ScopedCancellationOrderLineResolver,
     ScopedCustomerOrdersResolver,
     ScopedOrderLineOrderResolver,
     ScopedOrdersResolver,
@@ -88,6 +91,7 @@ const adminApiSchema = gql`
         OrderStatusProvisioningService,
         OrderVisibilityService,
         OrderTargetService,
+        CoreOrderScopeService,
         { provide: 'APP_INTERCEPTOR', useClass: CoreOrderScopeInterceptor },
         DraftOrderDeliveryService,
         ExternalOrderService,
@@ -120,6 +124,8 @@ const adminApiSchema = gql`
             ScopedOrdersResolver,
             ScopedCustomerOrdersResolver,
             ScopedOrderLineOrderResolver,
+            ScopedAllocationOrderLineResolver,
+            ScopedCancellationOrderLineResolver,
         ],
     },
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
