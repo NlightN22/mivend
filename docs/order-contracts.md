@@ -469,12 +469,18 @@ The delivery method is the order's shipping line (`freight-delivery` or `pickup`
 with a point; otherwise it is a pickup and carries neither.
 
 - Storefront checkout: the point is the customer's preferred trading point at placement.
-- Staff-created order: the manager chooses the method and one of the order client's active, visible points with
-  Admin API `setDraftOrderTradingPoint(orderId, tradingPointId)` (`CreateOrder`, order visibility scope, draft state
-  only, order lock; a point of another counterparty is refused; `null` clears it). Placement snapshots that point.
-  With no point chosen the order is self-pickup: no `tradingPointId`, no `deliveryAddress`, never the customer's
-  preferred point (the branch scope still comes from it). The manager portal defaults to self-pickup and requires a
-  point for courier delivery.
+- Staff-created order: "staff" means `ctx.activeUserId` resolves to an Administrator (the rule of
+  `placedByAdministratorId`), so an administrator placing a storefront-style cart for themselves is a staff order too.
+  The manager chooses the method and one of the order client's active, visible points with Admin API
+  `setDraftOrderTradingPoint(orderId, tradingPointId)` (`CreateOrder`, order visibility scope, draft state only,
+  order lock; a point of another counterparty is refused; `null` clears it). Placement snapshots that point.
+  With no point chosen and a pickup shipping line the order is self-pickup: no `tradingPointId`, no
+  `deliveryAddress`, never the customer's preferred point (the branch scope still comes from it).
+- Courier needs a point, enforced on the server (`freightPointGuard`, an order process on the
+  `AddingItems`/`Draft` -> `ArrangingPayment` transition, so the refusal reaches the client as the transition error):
+  a staff order needs its own chosen point of the client's counterparty, a storefront order needs a usable preferred
+  point. The submit event never downgrades such an order to pickup: a courier order without a known point is skipped
+  with a reason until it has one. Only a customer-added point (no ERP id) is still submitted as pickup, with a warning.
 - Not covered yet: changing the point of an already placed order (staff edit before ERP registration).
 
 ### ERP status derivation by receiving method (owner-approved; the ERP computes it, we only read `status_code`)

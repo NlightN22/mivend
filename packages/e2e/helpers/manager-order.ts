@@ -44,12 +44,17 @@ export async function createConfirmedOrder(
         token,
     );
 
-    const eligible = await adminGql<{ eligibleShippingMethodsForDraftOrder: { id: string }[] }>(
-        `query($orderId: ID!) { eligibleShippingMethodsForDraftOrder(orderId: $orderId) { id } }`,
+    const eligible = await adminGql<{
+        eligibleShippingMethodsForDraftOrder: { id: string; code: string }[];
+    }>(
+        `query($orderId: ID!) { eligibleShippingMethodsForDraftOrder(orderId: $orderId) { id code } }`,
         { orderId },
         token,
     );
-    const shippingMethodId = eligible.data.eligibleShippingMethodsForDraftOrder[0]?.id;
+    // Self-pickup: courier delivery needs a chosen trading point, which this helper does not set.
+    const shippingMethodId = eligible.data.eligibleShippingMethodsForDraftOrder.find(
+        m => m.code === 'pickup',
+    )?.id;
     if (shippingMethodId) {
         await adminGql(
             `mutation($orderId: ID!, $id: ID!) {

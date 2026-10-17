@@ -1,3 +1,3 @@
 export const loggerCtx = 'FreightShippingPlugin';
 
-export const FREIGHT_SHIPPING_METHOD_CODE = 'freight-delivery';
+export { FREIGHT_SHIPPING_METHOD_CODE } from 'shared';

@@ -633,15 +633,15 @@ describe('OrderSubmittedBuilder', () => {
     });
 
     describe('delivery fields', () => {
-        const buildDelivery = async (
+        const buildDeliveryResult = async (
             shippingCode: string,
             tradingPoint: { erpId: string; address: string; customerOwned: boolean } | null,
             orderPoint: { tradingPointId?: string; deliveryAddress?: string } = {
                 tradingPointId: 'tp-1',
                 deliveryAddress: 'Street 1',
             },
-        ): Promise<Record<string, unknown>> => {
-            const result = await build(
+        ): ReturnType<typeof build> => {
+            return build(
                 makeBuilder({
                     order: makeOrder(
                         [packLine()],
@@ -659,6 +659,11 @@ describe('OrderSubmittedBuilder', () => {
                     tradingPoint,
                 }),
             );
+        };
+        const buildDelivery = async (
+            ...args: Parameters<typeof buildDeliveryResult>
+        ): Promise<Record<string, unknown>> => {
+            const result = await buildDeliveryResult(...args);
             if (result.kind !== 'send') throw new Error('expected send');
             return result.events[0].payload;
         };
@@ -701,16 +706,17 @@ describe('OrderSubmittedBuilder', () => {
             expect(payload).not.toHaveProperty('deliveryAddress');
         });
 
-        it('sends neither field for a staff order with no chosen point, whatever the live point is', async () => {
-            const payload = await buildDelivery('freight-delivery', point, {});
-            expect(payload).not.toHaveProperty('pointOfSaleId');
-            expect(payload).not.toHaveProperty('deliveryAddress');
+        it('skips a courier order with no chosen point instead of sending it as pickup', async () => {
+            const result = await buildDeliveryResult('freight-delivery', point, {});
+            expect(result).toEqual({
+                kind: 'skip',
+                reason: expect.stringContaining('trading point'),
+            });
         });
 
-        it('sends neither field when the point is unknown', async () => {
-            const payload = await buildDelivery('freight-delivery', null);
-            expect(payload).not.toHaveProperty('pointOfSaleId');
-            expect(payload).not.toHaveProperty('deliveryAddress');
+        it('skips a courier order whose point is unknown instead of sending it as pickup', async () => {
+            const result = await buildDeliveryResult('freight-delivery', null);
+            expect(result.kind).toBe('skip');
         });
     });
 });

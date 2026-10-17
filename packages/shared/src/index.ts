@@ -4,6 +4,7 @@ export * from './testing/transactional-test-connection';
 // vendure-events.ts is backend-only (imports @vendure/core) — same "never touched by Vite"
 // carve-out as sync.ts above, see that comment.
 export * from './vendure-events';
+export { FREIGHT_SHIPPING_METHOD_CODE, PICKUP_SHIPPING_METHOD_CODE } from './deliveryMethods';
 export { withAggregateLock } from './aggregate-lock';
 export { withOrderCancelLocks } from './order-cancel-locks';
 export { withSavepoint } from './savepoint';

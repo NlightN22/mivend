@@ -181,4 +181,40 @@ test.describe('delivery point of a staff-created order', () => {
             deliveryAddress: null,
         });
     });
+
+    test('a courier order with no chosen point is refused at the placement transition', async () => {
+        const orderId = await draftWithLine(token, ids);
+        created.push(orderId);
+        await adminGql(
+            `mutation($o: ID!, $i: CreateAddressInput!) { setDraftOrderShippingAddress(orderId: $o, input: $i) { id } }`,
+            { o: orderId, i: { streetLine1: 'E2E Test Street 1', countryCode: 'RU' } },
+            token,
+        );
+        const eligible = await adminGql<{
+            eligibleShippingMethodsForDraftOrder: { id: string; code: string }[];
+        }>(
+            `query($o: ID!) { eligibleShippingMethodsForDraftOrder(orderId: $o) { id code } }`,
+            { o: orderId },
+            token,
+        );
+        const freight = eligible.data.eligibleShippingMethodsForDraftOrder.find(
+            m => m.code === 'freight-delivery',
+        );
+        await adminGql(
+            `mutation($o: ID!, $id: ID!) { setDraftOrderShippingMethod(orderId: $o, shippingMethodId: $id) { __typename } }`,
+            { o: orderId, id: freight?.id },
+            token,
+        );
+        const transition = await adminGql<{
+            transitionOrderToState: { __typename: string; transitionError?: string };
+        }>(
+            `mutation($id: ID!) { transitionOrderToState(id: $id, state: "ArrangingPayment") { __typename ... on OrderStateTransitionError { transitionError } } }`,
+            { id: orderId },
+            token,
+        );
+        expect(transition.data.transitionOrderToState.__typename).toBe('OrderStateTransitionError');
+        expect(transition.data.transitionOrderToState.transitionError).toContain(
+            'needs a trading point',
+        );
+    });
 });

@@ -25,6 +25,7 @@ import { createExternalOrderReconcileTask } from './external-order-reconcile.sch
 import { ExternalOrderService } from './external-order.service';
 import { ExternalOrderCounterpartyListener } from './external-order-counterparty.listener';
 import { externalOrderProcess } from './external-order.guard';
+import { freightPointGuard } from './freight-point.guard';
 import { OrderStatusHistoryEntry } from './entities/order-status-history-entry.entity';
 import { OrderStatusHistoryResolver } from './order-status-history.resolver';
 import { OrderStatusHistoryService } from './order-status-history.service';
@@ -152,6 +153,7 @@ const adminApiSchema = gql`
         config.orderOptions.process = [
             ...(config.orderOptions.process ?? []),
             externalOrderProcess,
+            freightPointGuard,
         ];
         config.orderOptions.orderByCodeAccessStrategy = new ExternalOrderAccessStrategy(
             config.orderOptions.orderByCodeAccessStrategy,

@@ -1,3 +1,3 @@
 export const loggerCtx = 'PickupShippingPlugin';
 
-export const PICKUP_SHIPPING_METHOD_CODE = 'pickup';
+export { PICKUP_SHIPPING_METHOD_CODE } from 'shared';

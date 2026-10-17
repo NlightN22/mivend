@@ -154,6 +154,7 @@ export class OrderSubmittedBuilder {
             ([idA, qtyA], [idB, qtyB]) => qtyB - qtyA || (idA < idB ? -1 : 1),
         )[0];
         const delivery = await this.resolveDelivery(ctx, order);
+        if ('skipReason' in delivery) return outboundSkip(delivery.skipReason);
         const payload: OrderSubmittedPayload = {
             eventId: randomUUID(),
             orderId: String(orderId),
@@ -178,18 +179,23 @@ export class OrderSubmittedBuilder {
     }
 
     // Only pointOfSaleId makes it a delivery; the address text is for printed documents. A
-    // customer-added point has no ERP id, so its order is registered as pickup.
+    // customer-added point has no ERP id, so its order is registered as pickup. A courier order
+    // without a known point is never sent as pickup: it is skipped and rebuilt once it has one.
     private async resolveDelivery(
         ctx: RequestContext,
         order: Order,
-    ): Promise<Pick<OrderSubmittedPayload, 'pointOfSaleId' | 'deliveryAddress'>> {
+    ): Promise<
+        Pick<OrderSubmittedPayload, 'pointOfSaleId' | 'deliveryAddress'> | { skipReason: string }
+    > {
         const isDelivery = order.shippingLines?.some(
             line => line.shippingMethod?.code === FREIGHT_SHIPPING_METHOD_CODE,
         );
+        if (!isDelivery) return {};
         const tradingPointId = order.customFields?.tradingPointId;
-        if (!isDelivery || !tradingPointId) return {};
-        const point = await this.tradingPointService.findById(ctx, tradingPointId);
-        if (!point) return {};
+        const point = tradingPointId
+            ? await this.tradingPointService.findById(ctx, tradingPointId)
+            : null;
+        if (!point) return { skipReason: 'courier delivery without a trading point' };
         if (point.customerOwned) {
             this.logger.warn(
                 `Order ${order.code}: delivery to a customer-owned point is submitted as pickup`,

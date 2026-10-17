@@ -307,9 +307,9 @@ Courier delivery is its own plugin, `plugin-freight-shipping` (ShippingMethod co
 `freight-delivery`, created idempotently at boot like `pickup`). It is available only when the
 customer's counterparty has at least one active, non-hidden trading point
 (`freightEligibilityChecker`, so `eligibleShippingMethods` simply omits it otherwise), and an
-check `delivery.freight-trading-point` reports an order that ships by that method when the
-customer has no usable preferred trading point (a warning at checkout, a hold of the automatic
-reserve; checkout is never refused, #241). The preferred point is assigned automatically
+check `delivery.freight-trading-point` reports an existing order that ships by that method when the
+customer has no usable preferred trading point. Placement itself refuses a courier order without a
+usable point (`freightPointGuard`, #245). The preferred point is assigned automatically
 (see `docs/access-control.md`, "The preferred trading point is self-healing"). The storefront
 renders the delivery options from `eligibleShippingMethods` and applies the method the customer
 selected; the shipping price is currently zero (price rules are not defined yet). A manager creating
