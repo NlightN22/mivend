@@ -227,7 +227,10 @@ describe('core order scope on real SQL', () => {
         ).resolves.toBeUndefined();
     });
 
-    it('a non-numeric id has no owner and is left to core', async () => {
+    it('a non-numeric or out-of-range id has no owner and is left to core', async () => {
         await expect(service().assertInScope(ctx, 'order', { id: 'abc' })).resolves.toBeUndefined();
+        await expect(
+            service().assertInScope(ctx, 'order', { id: '99999999999' }),
+        ).resolves.toBeUndefined();
     });
 });

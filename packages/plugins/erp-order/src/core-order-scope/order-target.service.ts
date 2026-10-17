@@ -36,7 +36,7 @@ export class OrderTargetService {
         const keys =
             kind === 'customerEmail'
                 ? ids.map(id => String(id).trim().toLowerCase())
-                : ids.map(String).filter(id => /^\d+$/.test(id));
+                : ids.map(String).filter(id => /^\d{1,9}$/.test(id));
         if (keys.length === 0) return new Map();
         const rows = await this.query<{ targetId: string; ownerId: string | null }>(
             ctx,
@@ -51,7 +51,7 @@ export class OrderTargetService {
     }
 
     async customerlessDraftIds(ctx: RequestContext, orderIds: string[]): Promise<Set<string>> {
-        const ids = orderIds.filter(id => /^\d+$/.test(id));
+        const ids = orderIds.filter(id => /^\d{1,9}$/.test(id));
         if (ids.length === 0) return new Set();
         const rows = await this.query<{ id: string }>(
             ctx,
