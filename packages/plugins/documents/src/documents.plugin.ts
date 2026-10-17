@@ -23,6 +23,7 @@ import { loggerCtx } from './constants';
 import { Document } from './entities/document.entity';
 import { OrganizationRequisites } from './entities/organization-requisites.entity';
 import { DocumentsService } from './documents.service';
+import { ProformaInvoiceHtmlBuilder } from './pdf/proforma-invoice-html.builder';
 import { SupersededProformaRerenderService } from './superseded-proforma-rerender.service';
 import { OrganizationEventService } from './organization-event.service';
 import { ProformaRequeueService } from './proforma-requeue.service';
@@ -64,6 +65,7 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
         SupersededProformaRerenderService,
         PdfBrowserService,
         PdfGeneratorService,
+        ProformaInvoiceHtmlBuilder,
         ProformaRequeueService,
         OrganizationEventService,
     ],
