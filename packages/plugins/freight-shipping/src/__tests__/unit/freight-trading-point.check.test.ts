@@ -69,6 +69,26 @@ describe('hasFreightWithoutTradingPoint', () => {
     });
 });
 
+describe('hasFreightWithoutTradingPoint for a customer-added point', () => {
+    it('is a gap on a placed order, since the ERP does not know the point yet', async () => {
+        findById.mockResolvedValue({
+            isActive: true,
+            customerStatus: 'active',
+            customerOwned: true,
+        });
+        expect(await gap({ placedPointId: '9' })).toBe(true);
+    });
+
+    it('is no gap on a cart, where the preferred point is only a choice', async () => {
+        getPreferredForCustomer.mockResolvedValue({
+            isActive: true,
+            customerStatus: 'active',
+            customerOwned: true,
+        });
+        expect(await gap()).toBe(false);
+    });
+});
+
 describe('evaluateFreightTradingPoint', () => {
     it('yields one order-level finding for a gap and none otherwise', () => {
         expect(evaluateFreightTradingPoint(true)).toEqual([

@@ -160,7 +160,7 @@ Four controls that used to refuse checkout (or the reserve) are checks of the su
   manual confirmation with `ErpExportDataMissingError`, shown to the manager as "Missing data for the ERP: no
   active contract (use Change contract on the order page); SKU X: missing organizationId", and the order page
   lists the same findings and offers "Change contract". So `order.confirmed` can never be built for such an
-  order. Freight is not an ERP-export gate (the builder tolerates a missing trading point), so its
+  order. Freight is not an ERP-export gate (the builder skips the send until the point is usable), so its
   `pre-reserve` hold is the one a manager may override.
 - `block` is allowed on the order subject at the stage `cart` only (a quantity that breaks the pack multiple is
   refused when it is added); never on `checkout` or later.
@@ -483,7 +483,11 @@ with a point; otherwise it is a pickup and carries neither.
   point. The submit event never downgrades such an order to pickup: a courier order without a known point is skipped
   with the reason `courier delivery without a trading point` (a `skipped` outbox row, counted in the integration
   health panel, and an error finding of `delivery.freight-trading-point` on the order page, which judges a placed order
-  by its own stored point) until staff set a point or switch to pickup, which re-drives the row at once. Only a customer-added point (no ERP id) is still submitted as pickup, with a warning.
+  by its own stored point) until staff set a point or switch to pickup, which re-drives the row at once.
+  A customer-added point has no ERP id until staff confirm it and the ERP echoes it back (that flow is not built yet);
+  a point without an ERP id is never sent anywhere. A courier order to such a point is skipped the same way, with the
+  reason `trading point not confirmed by the ERP yet`, and the same `delivery.freight-trading-point` error finding. The
+  periodic `HeldSendRedriveService` sweep rebuilds the row once the point has an ERP id. Pickup orders are unaffected.
 - Editing a placed order: Admin API `setOrderDelivery(orderId, method PICKUP|COURIER, tradingPointId)` (`ConfirmOrder`,
   order visibility scope; only staff, a customer asks the manager). It is allowed while the order is editable by the
   line-edit rules (#233): not sent to the ERP, not shipped, not cancelled (`OrderLineEditGuard`; an active reservation
@@ -492,8 +496,9 @@ with a point; otherwise it is a pickup and carries neither.
   column (courier: one of the client's active points; pickup: both cleared), and adds an order note to the history.
   Every shipping line gets the same method (one predicate, `hasFreightShippingLine`, is used by the guard and the
   builder). The shipping price is not recomputed: both methods use a zero-rate calculator today, so a switch changes
-  no amount; a priced freight method must recompute it here. `branchId` is not recomputed either (it drives stock
-  allocation and visibility). After the edit commits, `OrderDeliveryEditedEvent` re-drives the order's skipped
+  no amount; a priced freight method must recompute it here. `branchId` is deliberately not recomputed on a delivery edit: it drives stock allocation and visibility,
+  which a delivery change must not move. The proforma invoice is untouched by a delivery edit: its amounts do not depend
+  on delivery today, since freight and pickup are zero-rate. After the edit commits, `OrderDeliveryEditedEvent` re-drives the order's skipped
   `order.confirmed` row immediately (`HeldSendRedriveService`), and the order checks are recomputed. The manager
   portal order page has a "Delivery" panel for it.
 

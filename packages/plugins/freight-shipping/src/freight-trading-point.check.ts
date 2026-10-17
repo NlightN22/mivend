@@ -29,6 +29,8 @@ export async function hasFreightWithoutTradingPoint(
         point = order.placedPointId
             ? await deps.tradingPoints.findById(ctx, order.placedPointId)
             : null;
+        // A customer-added point has no ERP id yet, so the courier order is held back from the ERP.
+        if (point?.customerOwned) return true;
     } else if (order.customerId) {
         point = await deps.tradingPoints.getPreferredForCustomer(ctx, order.customerId);
     }

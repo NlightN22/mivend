@@ -1,5 +1,4 @@
 import { testOrderStatusDictionary } from '@mivend/plugin-erp-order';
-import { Logger } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
@@ -680,24 +679,15 @@ describe('OrderSubmittedBuilder', () => {
             expect(payload.deliveryAddress).toBe('Street 1');
         });
 
-        it('sends neither field for a customer-added point, which has no ERP id', async () => {
-            const payload = await buildDelivery('freight-delivery', {
+        it('skips a courier order to a customer-added point, never sending it as pickup', async () => {
+            const result = await buildDeliveryResult('freight-delivery', {
                 ...point,
                 customerOwned: true,
             });
-            expect(payload).not.toHaveProperty('deliveryAddress');
-            expect(payload).not.toHaveProperty('pointOfSaleId');
-        });
-
-        it('warns about the pickup fallback for a customer-owned point without changing the payload', async () => {
-            const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-            const payload = await buildDelivery('freight-delivery', {
-                ...point,
-                customerOwned: true,
+            expect(result).toEqual({
+                kind: 'skip',
+                reason: 'trading point not confirmed by the ERP yet',
             });
-            expect(warn).toHaveBeenCalledWith(expect.stringContaining('submitted as pickup'));
-            expect(payload).not.toHaveProperty('pointOfSaleId');
-            warn.mockRestore();
         });
 
         it('sends neither field for pickup', async () => {

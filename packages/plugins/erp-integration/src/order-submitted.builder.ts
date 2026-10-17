@@ -1,5 +1,5 @@
 import { OrderStatusReferenceService } from '@mivend/plugin-erp-order';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { ID } from '@vendure/common/lib/shared-types';
@@ -20,6 +20,7 @@ import type { OutboundBuildResult } from './outbound-gateway';
 import type { OrderSubmittedLine, OrderSubmittedPayload } from './schemas/order-submitted.schema';
 
 export const COURIER_WITHOUT_POINT_SKIP_REASON = 'courier delivery without a trading point';
+export const COURIER_POINT_UNCONFIRMED_SKIP_REASON = 'trading point not confirmed by the ERP yet';
 
 interface ActiveReservations {
     warehouseIdByLineId: Map<string, string>;
@@ -30,8 +31,6 @@ interface ActiveReservations {
 // or not at all: a partial order cannot be completed in the ERP later, a skipped one can be rebuilt.
 @Injectable()
 export class OrderSubmittedBuilder {
-    private readonly logger = new Logger(OrderSubmittedBuilder.name);
-
     constructor(
         private readonly connection: TransactionalConnection,
         private readonly counterpartyService: CounterpartyService,
@@ -181,8 +180,8 @@ export class OrderSubmittedBuilder {
     }
 
     // Only pointOfSaleId makes it a delivery; the address text is for printed documents. A
-    // customer-added point has no ERP id, so its order is registered as pickup. A courier order
-    // without a known point is never sent as pickup: it is skipped and rebuilt once it has one.
+    // courier order without a known point, or with a customer-added one that has no ERP id yet, is
+    // never sent as pickup: it is skipped and rebuilt once the point is set or confirmed.
     private async resolveDelivery(
         ctx: RequestContext,
         order: Order,
@@ -196,12 +195,7 @@ export class OrderSubmittedBuilder {
             ? await this.tradingPointService.findById(ctx, tradingPointId)
             : null;
         if (!point) return { skipReason: COURIER_WITHOUT_POINT_SKIP_REASON };
-        if (point.customerOwned) {
-            this.logger.warn(
-                `Order ${order.code}: delivery to a customer-owned point is submitted as pickup`,
-            );
-            return {};
-        }
+        if (point.customerOwned) return { skipReason: COURIER_POINT_UNCONFIRMED_SKIP_REASON };
         return {
             pointOfSaleId: point.erpId,
             ...(order.customFields?.deliveryAddress

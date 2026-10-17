@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { OrderDeliveryEditedEvent } from '@mivend/plugin-reservation';
 import { HeldSendRedriveService } from '../../order-checks/held-send-redrive.service';
-import { COURIER_WITHOUT_POINT_SKIP_REASON } from '../../order-submitted.builder';
+import {
+    COURIER_POINT_UNCONFIRMED_SKIP_REASON,
+    COURIER_WITHOUT_POINT_SKIP_REASON,
+} from '../../order-submitted.builder';
 
 describe('HeldSendRedriveService on a staff delivery edit', () => {
     it("rebuilds the order's courier-without-point skipped row right away", async () => {
@@ -27,6 +30,7 @@ describe('HeldSendRedriveService on a staff delivery edit', () => {
         const params = dataSource.query.mock.calls[0][1] as unknown[];
         expect(params[1]).toBe('7');
         expect(params[3]).toBe(COURIER_WITHOUT_POINT_SKIP_REASON);
+        expect(params[4]).toBe(COURIER_POINT_UNCONFIRMED_SKIP_REASON);
         expect(recovery.rebuildSkipped).toHaveBeenCalledWith({}, 11);
     });
 });
