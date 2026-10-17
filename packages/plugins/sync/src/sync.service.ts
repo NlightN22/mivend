@@ -13,6 +13,7 @@ import { SyncEventSchema } from 'shared';
 import type { SyncEvent } from 'shared';
 
 const BATCH_SIZE = 50;
+const PUBLISH_TIMEOUT_MS = 10_000;
 
 type OutboxInput = Omit<SyncEvent, 'eventId' | 'sourceInstanceId' | 'timestamp'> & {
     eventId?: string;
@@ -96,9 +97,26 @@ export class SyncService {
         if (seen.length) qb.andWhere('e.id NOT IN (:...seen)', { seen });
         return qb
             .orderBy('e.createdAt', 'ASC')
+            .limit(1)
             .setLock('pessimistic_write')
             .setOnLocked('skip_locked')
             .getOne();
+    }
+
+    // A hung broker must not pin the claim transaction (and its connection) forever.
+    private async publishWithTimeout(key: string, event: SyncEvent): Promise<void> {
+        let timer: NodeJS.Timeout | undefined;
+        const timeout = new Promise<never>((_, reject) => {
+            timer = setTimeout(
+                () => reject(new Error(`publish timed out after ${PUBLISH_TIMEOUT_MS} ms`)),
+                PUBLISH_TIMEOUT_MS,
+            );
+        });
+        try {
+            await Promise.race([this.rabbitmq.publish(key, event), timeout]);
+        } finally {
+            clearTimeout(timer);
+        }
     }
 
     private async publishEntry(em: EntityManager, entry: SyncOutboxEntry): Promise<void> {
@@ -113,7 +131,7 @@ export class SyncService {
 
             // Target is part of the routing key because consumers filter at the broker via binding patterns,
             // not in application code, so the key format is load-bearing for every subscriber.
-            await this.rabbitmq.publish(`${entry.eventType}.${entry.target}`, event);
+            await this.publishWithTimeout(`${entry.eventType}.${entry.target}`, event);
             await em.getRepository(SyncOutboxEntry).update(entry.id, {
                 deliveredAt: new Date(),
                 status: 'delivered',

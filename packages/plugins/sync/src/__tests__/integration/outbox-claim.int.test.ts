@@ -42,20 +42,20 @@ afterAll(async () => {
 });
 
 describe('SyncService.processOutbox claim (integration, real Postgres)', () => {
-    it('overlapping sweeps publish each pending entry exactly once', async () => {
-        const published: string[] = [];
-        const slowRabbit = {
+    it('overlapping sweeps split the backlog: each entry once, and both sweeps publish', async () => {
+        const publishedBy: Record<string, string[]> = { a: [], b: [] };
+        const rabbitFor = (sweep: string) => ({
             publish: async (_key: string, event: { eventId: string }) => {
                 await new Promise(r => setTimeout(r, 50));
-                published.push(event.eventId);
+                publishedBy[sweep].push(event.eventId);
             },
-        };
-        const make = () =>
-            new SyncService(dataSource, slowRabbit as never, OPTIONS, mockLogger as never);
-        const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+        });
+        const make = (sweep: string) =>
+            new SyncService(dataSource, rabbitFor(sweep) as never, OPTIONS, mockLogger as never);
+        const ids = Array.from({ length: 6 }, () => randomUUID());
         for (const eventId of ids) {
             await dataSource.transaction(em =>
-                make().writeToOutbox(
+                make('a').writeToOutbox(
                     em,
                     {
                         eventId,
@@ -67,9 +67,12 @@ describe('SyncService.processOutbox claim (integration, real Postgres)', () => {
             );
         }
 
-        await Promise.all([make().processOutbox(), make().processOutbox()]);
+        await Promise.all([make('a').processOutbox(), make('b').processOutbox()]);
 
-        expect([...published].sort()).toEqual([...ids].sort());
+        const all = [...publishedBy.a, ...publishedBy.b];
+        expect([...all].sort()).toEqual([...ids].sort());
+        expect(publishedBy.a.length).toBeGreaterThan(0);
+        expect(publishedBy.b.length).toBeGreaterThan(0);
         const rows = await dataSource.getRepository(SyncOutboxEntry).find();
         expect(rows.every(r => r.status === 'delivered')).toBe(true);
     });
