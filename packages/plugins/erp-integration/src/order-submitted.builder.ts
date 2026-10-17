@@ -198,7 +198,9 @@ export class OrderSubmittedBuilder {
         }
         return {
             pointOfSaleId: point.erpId,
-            ...(point.address ? { deliveryAddress: point.address } : {}),
+            ...(order.customFields?.deliveryAddress
+                ? { deliveryAddress: order.customFields.deliveryAddress }
+                : {}),
         };
     }
 

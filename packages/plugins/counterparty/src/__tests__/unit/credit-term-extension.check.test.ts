@@ -15,7 +15,7 @@ function setup(limit: { maxExtraDays: number; maxAmount: number | null } | null)
     const run = (days: number, amount: number | null, recipient: string | null = 'approver') =>
         check.evaluate(
             {
-                roleCode: 'r',
+                roleCodes: ['r'],
                 branchId: null,
                 params: { requestedExtraDays: days, requestedAmount: amount },
             },

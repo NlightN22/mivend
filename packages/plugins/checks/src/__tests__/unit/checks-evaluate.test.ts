@@ -37,7 +37,7 @@ function setup(policy: { consequence: Consequence; enabled: boolean; recipient?:
     return { service, evaluate, effectiveForStage, connection };
 }
 
-const subject = { roleCode: null, branchId: 'b1', params: {} };
+const subject = { roleCodes: [], branchId: 'b1', params: {} };
 
 describe('ChecksService.evaluate (ephemeral subject)', () => {
     it('returns the findings with the policy consequence, stores nothing and takes no lock', async () => {

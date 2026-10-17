@@ -397,9 +397,11 @@ The three manager-action controls (#242), all stage-scoped policies of the `mana
 
 | Code | Stage | Finding when | Default | Per-role data |
 | --- | --- | --- | --- | --- |
-| `manager.reservation-extension-days` | `extend-reservation` | requested extra days exceed the actor's role limit, or the role has no limit row | `block` | `ReservationExtensionLimit` per role |
+| `manager.reservation-extension-days` | `extend-reservation` | requested extra days exceed the most permissive limit among all the actor's roles, or none of them has a limit row | `block` | `ReservationExtensionLimit` per role |
 | `manager.credit-term-extension` | `extend-credit-term` | requested days or amount exceed the limit of the policy **recipient** role, or that role has no limit row, or the policy has no recipient | `require-approval` (the escalated chain; no finding uses the single-step chain) | `CreditTermLimit` per role; the recipient (seeded `department-head`) is policy data, not code |
 | `manager.price-adjustment-floor` | `adjust-price` | requested price is below the floor price, or the variant has no floor price | `require-approval` | none |
+
+An actor with several roles is judged by all of them (`getActorIdentity().roleCodes`); the credit-term check ignores the actor's roles because it is judged against the single policy recipient role.
 
 `require-approval` creates the approval request of the flow's own request type; the chain stays
 `approval-workflow`'s job. `warn`/`info` let the action proceed on the ordinary path (a price is

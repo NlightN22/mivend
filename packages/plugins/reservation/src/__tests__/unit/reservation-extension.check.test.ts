@@ -7,16 +7,16 @@ import type { ReservationExtensionLimitService } from '../../reservation-extensi
 
 const ctx = {} as RequestContext;
 
-function run(limit: { maxExtraDays: number } | null, days: number, roleCode: string | null = 'r') {
-    const getLimit = vi.fn(async () => limit);
+function run(limit: { maxExtraDays: number } | null, days: number, roleCodes: string[] = ['r']) {
+    const getMaxLimit = vi.fn(async () => limit);
     const check = new ReservationExtensionCheck(new CheckRegistry(), {
-        getLimit,
+        getMaxLimit,
     } as unknown as ReservationExtensionLimitService);
     const findings = check.evaluate(
-        { roleCode, branchId: null, params: { additionalDays: days } },
+        { roleCodes, branchId: null, params: { additionalDays: days } },
         { ctx, stage: 'extend-reservation', recipient: null },
     );
-    return { findings, getLimit };
+    return { findings, getLimit: getMaxLimit };
 }
 
 describe('ReservationExtensionCheck', () => {
@@ -34,11 +34,11 @@ describe('ReservationExtensionCheck', () => {
     it('flags a role without a limit row (fail closed), and an actor without a role', async () => {
         const [noRow] = await run(null, 1).findings;
         expect(noRow.messageKey).toBe('manager.reservation-extension-days.no-limit');
-        const noRole = run({ maxExtraDays: 9 }, 1, null);
+        const noRole = run({ maxExtraDays: 9 }, 1, []);
         expect((await noRole.findings)[0].messageKey).toBe(
             'manager.reservation-extension-days.no-limit',
         );
-        expect(noRole.getLimit).not.toHaveBeenCalled();
+        expect(noRole.getLimit).toHaveBeenCalledWith(ctx, []);
     });
 
     it('does not judge a request without a usable day count', async () => {

@@ -51,6 +51,7 @@ export class ErpOrderService {
             );
             if (tradingPoint) {
                 changed.tradingPointId = String(tradingPoint.id);
+                changed.deliveryAddress = tradingPoint.address || null;
                 changed.branchId = await this.tradingPointService.resolveServicingBranchId(
                     ctx,
                     tradingPoint,

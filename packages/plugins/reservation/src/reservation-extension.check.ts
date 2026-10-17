@@ -10,7 +10,7 @@ export interface ReservationExtensionParams {
     additionalDays: number;
 }
 
-// A role without a limit row has no self-service extension (fail closed); the default policy blocks.
+// The most permissive limit among the actor's roles applies; none has a row: fail closed, the default policy blocks.
 @Injectable()
 export class ReservationExtensionCheck implements OnModuleInit {
     constructor(
@@ -35,7 +35,7 @@ export class ReservationExtensionCheck implements OnModuleInit {
     ): Promise<Finding[]> {
         const requestedDays = subject.params.additionalDays;
         if (!Number.isFinite(requestedDays)) return [];
-        const limit = subject.roleCode ? await this.limits.getLimit(ctx, subject.roleCode) : null;
+        const limit = await this.limits.getMaxLimit(ctx, subject.roleCodes);
         if (!limit) {
             return [
                 {

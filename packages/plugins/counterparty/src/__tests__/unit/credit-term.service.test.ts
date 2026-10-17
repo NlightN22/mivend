@@ -51,7 +51,7 @@ describe('CreditTermService', () => {
             connection as unknown as TransactionalConnection,
             counterpartyService as unknown as CounterpartyService,
             {
-                getActorIdentity: async () => ({ roleCode: 'r', branchId: 'b1' }),
+                getActorIdentity: async () => ({ roleCodes: ['r'], branchId: 'b1' }),
             } as unknown as AccessScopeService,
             checks as unknown as ChecksService,
             approvalRequestService as unknown as ApprovalRequestService,
@@ -85,7 +85,7 @@ describe('CreditTermService', () => {
                 expect.anything(),
                 'manager',
                 {
-                    roleCode: 'r',
+                    roleCodes: ['r'],
                     branchId: 'b1',
                     params: { requestedExtraDays: 10, requestedAmount: null },
                 },

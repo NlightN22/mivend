@@ -230,6 +230,13 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'Trading Point' }],
             },
             {
+                // Address of tradingPointId copied at placement, so a later point edit cannot change a submitted order.
+                name: 'deliveryAddress',
+                type: 'text',
+                nullable: true,
+                label: [{ languageCode: LanguageCode.en, value: 'Delivery Address' }],
+            },
+            {
                 name: 'branchId',
                 type: 'string',
                 nullable: true,

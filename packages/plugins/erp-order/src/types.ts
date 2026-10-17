@@ -9,6 +9,7 @@ declare module '@vendure/core' {
         // Denormalized at placement time from the customer's preferred TradingPoint — see
         // ErpOrderService.onOrderPlaced and docs/access-control.md's branch-scope axis.
         tradingPointId?: string | null;
+        deliveryAddress?: string | null;
         branchId?: string | null;
         // Denormalized from the order's own Fulfillments — see ErpOrderService's
         // onFulfillmentStateChanged and vendure-config.ts's doc comment on this field.

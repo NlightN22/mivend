@@ -25,6 +25,7 @@ function makeOrder(
         erpStatus?: string | null;
         uuid?: string;
         tradingPointId?: string;
+        deliveryAddress?: string;
     } = {
         selectedContractId: 'contract-1',
     },
@@ -39,6 +40,7 @@ function makeOrder(
         erpStatus?: string | null;
         uuid: string;
         tradingPointId?: string;
+        deliveryAddress?: string;
     };
     shippingLines: Array<{ shippingMethod: { code: string } }>;
     lines: TestLine[];
@@ -639,7 +641,11 @@ describe('OrderSubmittedBuilder', () => {
                 makeBuilder({
                     order: makeOrder(
                         [packLine()],
-                        { selectedContractId: 'contract-1', tradingPointId: 'tp-1' },
+                        {
+                            selectedContractId: 'contract-1',
+                            tradingPointId: 'tp-1',
+                            deliveryAddress: 'Street 1',
+                        },
                         shippingCode,
                     ),
                     reservations: [reservation('line-1', 'location-1')],
@@ -653,11 +659,16 @@ describe('OrderSubmittedBuilder', () => {
             if (result.kind !== 'send') throw new Error('expected send');
             return result.events[0].payload;
         };
-        const point = { erpId: 'pos-1', address: 'Street 1', customerOwned: false };
+        const point = { erpId: 'pos-1', address: 'Edited Street 9', customerOwned: false };
 
         it('sends the ERP point id and the address text for a delivery to an ERP-known point', async () => {
             const payload = await buildDelivery('freight-delivery', point);
             expect(payload.pointOfSaleId).toBe('pos-1');
+            expect(payload.deliveryAddress).toBe('Street 1');
+        });
+
+        it('sends the address snapshotted at checkout, not the point current address', async () => {
+            const payload = await buildDelivery('freight-delivery', point);
             expect(payload.deliveryAddress).toBe('Street 1');
         });
 

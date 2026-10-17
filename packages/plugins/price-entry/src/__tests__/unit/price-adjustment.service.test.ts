@@ -41,7 +41,7 @@ describe('PriceAdjustmentService', () => {
             connection as unknown as TransactionalConnection,
             orderService as unknown as OrderService,
             {
-                getActorIdentity: async () => ({ roleCode: 'r', branchId: 'b1' }),
+                getActorIdentity: async () => ({ roleCodes: ['r'], branchId: 'b1' }),
             } as unknown as AccessScopeService,
             checks as unknown as ChecksService,
             approvalRequestService as unknown as ApprovalRequestService,
@@ -76,7 +76,7 @@ describe('PriceAdjustmentService', () => {
                 expect.anything(),
                 'manager',
                 {
-                    roleCode: 'r',
+                    roleCodes: ['r'],
                     branchId: 'b1',
                     params: { variantId: 'variant-1', requestedPrice: 1 },
                 },

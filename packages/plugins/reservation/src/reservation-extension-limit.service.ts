@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { In } from 'typeorm';
 
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 
@@ -14,6 +15,21 @@ export class ReservationExtensionLimitService {
         return this.connection
             .getRepository(ctx, ReservationExtensionLimit)
             .findOne({ where: { roleCode } });
+    }
+
+    // The most permissive limit among the roles; null when none of them has a row.
+    async getMaxLimit(
+        ctx: RequestContext,
+        roleCodes: string[],
+    ): Promise<ReservationExtensionLimit | null> {
+        if (roleCodes.length === 0) return null;
+        const rows = await this.connection
+            .getRepository(ctx, ReservationExtensionLimit)
+            .find({ where: { roleCode: In(roleCodes) } });
+        return rows.reduce<ReservationExtensionLimit | null>(
+            (best, row) => (!best || row.maxExtraDays > best.maxExtraDays ? row : best),
+            null,
+        );
     }
 
     async setLimit(

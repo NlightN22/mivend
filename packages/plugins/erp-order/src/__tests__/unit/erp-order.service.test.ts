@@ -165,7 +165,12 @@ describe('ErpOrderService', () => {
     describe('onOrderPlaced branch resolution', () => {
         it('denormalizes the resolved branch (point -> counterparty -> default) onto the order', async () => {
             mockAdministratorService.findOneByUserId.mockResolvedValue(null);
-            const point = { id: 7, servicingBranchId: null, counterpartyId: '5' };
+            const point = {
+                id: 7,
+                servicingBranchId: null,
+                counterpartyId: '5',
+                address: 'Street 1',
+            };
             mockTradingPointService.getPreferredForCustomer.mockResolvedValue(point);
             mockTradingPointService.resolveServicingBranchId.mockResolvedValue('branch-b');
             const order = { customFields: {}, customerId: 'cust-1' } as never;
@@ -176,6 +181,10 @@ describe('ErpOrderService', () => {
                 mockCtx,
                 point,
             );
+            expect(
+                (order as { customFields: { deliveryAddress?: string } }).customFields
+                    .deliveryAddress,
+            ).toBe('Street 1');
             expect((order as { customFields: { branchId?: string } }).customFields.branchId).toBe(
                 'branch-b',
             );

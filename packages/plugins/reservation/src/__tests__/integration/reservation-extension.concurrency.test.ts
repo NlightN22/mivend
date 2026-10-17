@@ -16,7 +16,7 @@ function buildService(consequence: 'block' | null = null): ReservationExtensionS
     return new ReservationExtensionService(
         h.connection,
         {
-            getActorIdentity: async () => ({ roleCode: 'manager', branchId: 'branch-1' }),
+            getActorIdentity: async () => ({ roleCodes: ['manager'], branchId: 'branch-1' }),
         } as unknown as AccessScopeService,
         {
             evaluate: async () => ({ findings: [], strongestConsequence: consequence }),

@@ -12,7 +12,7 @@ function run(floor: number | null, requestedPrice: number) {
         getForVariant: vi.fn(async () => floor),
     } as unknown as PriceEntryService);
     return check.evaluate(
-        { roleCode: null, branchId: null, params: { variantId: 'v1', requestedPrice } },
+        { roleCodes: [], branchId: null, params: { variantId: 'v1', requestedPrice } },
         { ctx, stage: 'adjust-price', recipient: null },
     );
 }

@@ -37,7 +37,7 @@ describe('ReservationExtensionService', () => {
         service = new ReservationExtensionService(
             { getRepository: vi.fn(() => reservationRepo) } as unknown as TransactionalConnection,
             {
-                getActorIdentity: async () => ({ roleCode: 'manager', branchId: 'b1' }),
+                getActorIdentity: async () => ({ roleCodes: ['manager'], branchId: 'b1' }),
             } as unknown as AccessScopeService,
             checks as unknown as ChecksService,
         );
@@ -51,7 +51,7 @@ describe('ReservationExtensionService', () => {
         expect(checks.evaluate).toHaveBeenCalledWith(
             ctx,
             'manager',
-            { roleCode: 'manager', branchId: 'b1', params: { additionalDays: 2 } },
+            { roleCodes: ['manager'], branchId: 'b1', params: { additionalDays: 2 } },
             'extend-reservation',
         );
         expect(result).toHaveLength(1);
