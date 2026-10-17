@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Kind, type ObjectTypeDefinitionNode } from 'graphql';
 
-import { shopApiSchema } from '../../counterparty.plugin';
+import { shopApiSchema } from '../../trading-point.schema';
 
 describe('counterparty Shop API schema', () => {
     const type = shopApiSchema.definitions.find(

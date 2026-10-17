@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Kind, type FieldDefinitionNode, type ObjectTypeDefinitionNode } from 'graphql';
 
-import { adminApiSchema } from '../../counterparty.plugin';
+import { adminApiSchema } from '../../counterparty.schema';
 
 // Reads the raw adminApiSchema AST: it extends Vendure's types and uses scalars that exist only
 // after merge, so buildASTSchema can't build it. Entity fields missing from SDL must fail here.

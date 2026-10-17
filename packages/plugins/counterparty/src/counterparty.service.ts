@@ -99,8 +99,7 @@ export class CounterpartyService {
         );
     }
 
-    // Backfill for rows left managerless when their erpId was still unlinked at event time
-    // Skips rows already assigned, so a late backfill never overwrites a manual reassignment
+    // Backfill for rows left managerless at event time; skips assigned rows so a manual reassignment survives.
     async backfillAssignedManager(
         ctx: RequestContext,
         managerErpId: string,
@@ -169,8 +168,7 @@ export class CounterpartyService {
             .find({ order: { shortName: 'ASC' } });
     }
 
-    // Complete visible set, for scoping a different query (e.g. DocumentsService's IN filter)
-    // Never for display or pagination: returns unbounded results, use findVisiblePage() instead
+    // Unbounded visible set, only for scoping another query (e.g. an IN filter); display uses findVisiblePage().
     async findVisible(ctx: RequestContext): Promise<Counterparty[]> {
         return this.applyVisibilityScope(ctx, this.baseVisibleQb(ctx)).then(qb => qb.getMany());
     }
@@ -209,8 +207,7 @@ export class CounterpartyService {
         return qb.getOne();
     }
 
-    // KPIs are SQL aggregates over the scoped set, never load-all-and-reduce in JS
-    // Separate summary query alongside the paginated list, as in fetchOrdersSummary
+    // KPIs are SQL aggregates over the scoped set, never load-all-and-reduce in JS.
     async getSummary(ctx: RequestContext): Promise<{
         totalCount: number;
         activeCount: number;
