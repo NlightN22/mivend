@@ -67,6 +67,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ReadCheckResults',
             'ReadProformaInvoice',
             'ReadPayment',
+            'ConfirmOrder',
             'ReadCustomer',
             'ReadCounterparty',
             'ReadFloorPrice',

@@ -22,7 +22,13 @@ describe('default roles: check permissions (#237)', () => {
     });
 
     it('roles that may recompute checks keep the staff order permission', () => {
-        for (const code of ['operator', 'manager', 'general-director', 'portal-admin']) {
+        for (const code of [
+            'operator',
+            'manager',
+            'department-head',
+            'general-director',
+            'portal-admin',
+        ]) {
             expect(byCode(code)).toContain('ConfirmOrder');
         }
     });

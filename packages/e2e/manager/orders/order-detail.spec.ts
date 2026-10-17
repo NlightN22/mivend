@@ -56,20 +56,11 @@ test.describe('reservation of the shared e2e order', () => {
         await releaseOrderReservation(token, readE2eOrder().id);
     });
 
-    test('confirming an order creates a reservation and shows the expiry', async ({
-        page,
-    }, testInfo) => {
+    test('confirming an order creates a reservation and shows the expiry', async ({ page }) => {
         await page.goto(`/orders/${readE2eOrder().code}`);
         const panel = page.locator('.order-detail__panels');
         await expect(panel).toContainText('Not confirmed yet', { timeout: 15000 });
-        const confirmBtn = page.getByRole('button', { name: 'Confirm order' });
-
-        // default-roles.ts gives department-head no ConfirmOrder permission.
-        if (testInfo.project.name === 'manager-department-head') {
-            await expect(confirmBtn).toHaveCount(0);
-            return;
-        }
-        await confirmBtn.click();
+        await page.getByRole('button', { name: 'Confirm order' }).click();
 
         await expect(panel).toContainText('Reserved');
         await expect(panel.getByRole('button', { name: 'Release reservation' })).toBeVisible();
