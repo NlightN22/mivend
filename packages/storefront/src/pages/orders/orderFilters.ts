@@ -3,28 +3,23 @@ export interface StatusFilter {
     labelKey: string | null;
     label: string;
     groups: string[] | null;
-    excludeGroups?: string[];
+    excludeFinal?: boolean;
 }
 
 export const DEFAULT_STATUS = 'active';
 export const DEFAULT_SOURCE = 'mivend';
 
-const FINAL_GROUPS = ['delivered', 'cancelled'];
-const GROUP_LABEL_KEYS: Record<string, string> = {
-    pending: 'orders.filters.pending',
-    confirmed: 'orders.filters.confirmed',
-    in_transit: 'orders.filters.inTransit',
-    delivered: 'orders.filters.delivered',
-    cancelled: 'orders.filters.cancelled',
-};
-const TAB_ORDER = Object.keys(GROUP_LABEL_KEYS);
+export interface StatusGroup {
+    key: string;
+    label: string;
+}
 
 const ACTIVE_FILTER: StatusFilter = {
     key: 'active',
     labelKey: 'orders.filters.active',
     label: 'active',
     groups: null,
-    excludeGroups: FINAL_GROUPS,
+    excludeFinal: true,
 };
 const ALL_FILTER: StatusFilter = {
     key: 'all',
@@ -33,15 +28,15 @@ const ALL_FILTER: StatusFilter = {
     groups: null,
 };
 
-// Rejected orders live in Active and All only, not under a tab of their own.
-export function buildStatusFilters(presentGroups: string[]): StatusFilter[] {
-    const known = TAB_ORDER.filter(g => presentGroups.includes(g));
-    const unknown = presentGroups.filter(g => !TAB_ORDER.includes(g) && g !== 'rejected');
-    const tabs = [...known, ...unknown].map(g => ({
-        key: g,
-        labelKey: GROUP_LABEL_KEYS[g] ?? null,
-        label: g,
-        groups: [g],
+const camelCase = (key: string): string => key.replace(/_(\w)/g, (_, c: string) => c.toUpperCase());
+
+// One tab per dictionary group, in dictionary order; its label is the i18n entry when present.
+export function buildStatusFilters(presentGroups: StatusGroup[]): StatusFilter[] {
+    const tabs = presentGroups.map(g => ({
+        key: g.key,
+        labelKey: `orders.filters.${camelCase(g.key)}`,
+        label: g.label,
+        groups: [g.key],
     }));
     return [ACTIVE_FILTER, ...tabs, ALL_FILTER];
 }

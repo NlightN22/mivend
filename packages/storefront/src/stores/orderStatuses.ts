@@ -49,9 +49,18 @@ export const useOrderStatusesStore = defineStore('orderStatuses', () => {
             .map(s => s.code);
     }
 
-    const groups = computed(() => [
-        ...new Set(statuses.value.map(s => s.customerGroup).filter((g): g is string => !!g)),
-    ]);
+    const finalCodes = computed(() => statuses.value.filter(s => s.terminal).map(s => s.code));
 
-    return { statuses, loaded, load, label, groupOf, variant, codesInGroups, groups };
+    // Dictionary (rank) order; a group of only rejected or hidden statuses gets no tab.
+    const groups = computed(() => {
+        const tabs = new Map<string, { key: string; label: string }>();
+        for (const s of statuses.value) {
+            if (!s.customerVisible || s.rejected || !s.customerGroup) continue;
+            if (!tabs.has(s.customerGroup))
+                tabs.set(s.customerGroup, { key: s.customerGroup, label: s.name });
+        }
+        return [...tabs.values()];
+    });
+
+    return { statuses, loaded, load, label, groupOf, variant, codesInGroups, finalCodes, groups };
 });

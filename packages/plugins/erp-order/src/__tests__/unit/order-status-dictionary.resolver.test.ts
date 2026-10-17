@@ -13,10 +13,14 @@ describe('ShopOrderStatusDictionaryResolver', () => {
         dictionary: async () => new OrderStatusDictionary(entries),
     } as never);
 
-    it('returns only customer-visible statuses', async () => {
-        const codes = (await resolver.orderStatuses({} as RequestContext)).map(s => s.code);
-        expect(codes).toContain('UNDER_APPROVAL');
-        expect(codes).not.toContain('PICKING');
+    it('keeps hidden statuses with their texts blanked, so list filters can still exclude them', async () => {
+        const list = await resolver.orderStatuses({} as RequestContext);
+        expect(list.find(s => s.code === 'UNDER_APPROVAL')?.customerVisible).toBe(true);
+        expect(list.find(s => s.code === 'PICKING')).toMatchObject({
+            customerVisible: false,
+            name: 'PICKING',
+            description: '',
+        });
     });
 
     it('exposes no internal flags', async () => {
@@ -25,6 +29,7 @@ describe('ShopOrderStatusDictionaryResolver', () => {
             'cancelled',
             'code',
             'customerGroup',
+            'customerVisible',
             'description',
             'name',
             'rejected',

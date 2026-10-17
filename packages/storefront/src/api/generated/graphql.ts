@@ -2364,7 +2364,6 @@ export enum OrderCancelOutcome {
 export enum OrderCancelRefusalReason {
     InProgress = 'IN_PROGRESS',
     Paid = 'PAID',
-    RefusedByErp = 'REFUSED_BY_ERP',
     RegistrationRejected = 'REGISTRATION_REJECTED',
     Shipped = 'SHIPPED',
 }
@@ -2646,6 +2645,7 @@ export type OrderStatusInfo = {
     cancelled: Scalars['Boolean']['output'];
     code: Scalars['String']['output'];
     customerGroup: Scalars['String']['output'];
+    customerVisible: Scalars['Boolean']['output'];
     description: Scalars['String']['output'];
     name: Scalars['String']['output'];
     rejected: Scalars['Boolean']['output'];
@@ -5476,6 +5476,7 @@ export type OrderStatusesQuery = {
         terminal: boolean;
         cancelled: boolean;
         rejected: boolean;
+        customerVisible: boolean;
     }>;
 };
 
@@ -6744,6 +6745,7 @@ export const OrderStatusesDocument = new TypedDocumentString(`
     terminal
     cancelled
     rejected
+    customerVisible
   }
 }
     `) as unknown as TypedDocumentString<OrderStatusesQuery, OrderStatusesQueryVariables>;

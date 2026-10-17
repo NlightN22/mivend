@@ -30,6 +30,7 @@ export const shopApiExtensions = gql`
         terminal: Boolean!
         cancelled: Boolean!
         rejected: Boolean!
+        customerVisible: Boolean!
     }
 
     extend type Order {

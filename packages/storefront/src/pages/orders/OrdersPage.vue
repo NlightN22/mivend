@@ -30,7 +30,7 @@ const searchQuery = toRef(urlState, 'q');
 
 const statuses = useOrderStatusesStore();
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 
 const statusFilters = computed(() => buildStatusFilters(statuses.groups));
 
@@ -42,9 +42,7 @@ async function reload(): Promise<void> {
         skip: (page.value - 1) * PAGE_SIZE,
         search: searchQuery.value.trim() || undefined,
         erpStatuses: filter.groups ? statuses.codesInGroups(filter.groups) : undefined,
-        excludeErpStatuses: filter.excludeGroups
-            ? statuses.codesInGroups(filter.excludeGroups)
-            : undefined,
+        excludeErpStatuses: filter.excludeFinal ? statuses.finalCodes : undefined,
         isExternal: sourceIsExternal(activeSource.value),
     });
 }
@@ -81,7 +79,7 @@ onMounted(() => void reload());
                     :class="{ active: activeFilter === f.key }"
                     @click="activeFilter = f.key"
                 >
-                    {{ f.labelKey ? t(f.labelKey) : f.label }}
+                    {{ f.labelKey && te(f.labelKey) ? t(f.labelKey) : f.label }}
                 </button>
             </div>
 

@@ -17,7 +17,14 @@ export class OrderStatusDictionaryResolver {
 
 export type ShopOrderStatus = Pick<
     OrderStatusEntry,
-    'code' | 'name' | 'description' | 'customerGroup' | 'terminal' | 'cancelled' | 'rejected'
+    | 'code'
+    | 'name'
+    | 'description'
+    | 'customerGroup'
+    | 'terminal'
+    | 'cancelled'
+    | 'rejected'
+    | 'customerVisible'
 >;
 
 @Resolver()
@@ -27,9 +34,9 @@ export class ShopOrderStatusDictionaryResolver {
     @Query()
     @Allow(Permission.Public)
     async orderStatuses(@Ctx() ctx: RequestContext): Promise<ShopOrderStatus[]> {
-        return (await this.statuses.dictionary(ctx)).entries
-            .filter(entry => entry.customerVisible)
-            .map(({ code, name, description, customerGroup, terminal, cancelled, rejected }) => ({
+        // Hidden statuses stay in the list so list filters can still exclude final ones; their texts are blanked.
+        return (await this.statuses.dictionary(ctx)).entries.map(
+            ({
                 code,
                 name,
                 description,
@@ -37,6 +44,17 @@ export class ShopOrderStatusDictionaryResolver {
                 terminal,
                 cancelled,
                 rejected,
-            }));
+                customerVisible,
+            }) => ({
+                code,
+                name: customerVisible ? name : code,
+                description: customerVisible ? description : '',
+                customerGroup,
+                terminal,
+                cancelled,
+                rejected,
+                customerVisible,
+            }),
+        );
     }
 }

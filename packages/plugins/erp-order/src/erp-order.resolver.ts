@@ -13,6 +13,7 @@ import { Brackets, WhereExpressionBuilder } from 'typeorm';
 import { documentNumberSearchTerm } from 'shared';
 import { TradingPointService } from '@mivend/plugin-counterparty';
 
+import { andErpStatusFilter } from './erp-status-filter';
 import { EXTERNAL_ORDER_OWNER_CLAUSE } from './external-order-visibility';
 
 @Resolver()
@@ -77,18 +78,9 @@ export class ErpOrderResolver {
             qb.andWhere('"order"."customFieldsIsexternal" = :isExternal', { isExternal });
         }
 
-        if (erpStatuses) {
-            // An empty set matches nothing; it never means "no filter".
-            if (erpStatuses.length === 0) return { items: [], totalItems: 0 };
-            qb.andWhere('"order"."customFieldsErpstatus" IN (:...erpStatuses)', { erpStatuses });
-        }
-
-        if (excludedStatuses && excludedStatuses.length > 0) {
-            qb.andWhere(
-                '("order"."customFieldsErpstatus" IS NULL OR "order"."customFieldsErpstatus" NOT IN (:...excludedStatuses))',
-                { excludedStatuses },
-            );
-        }
+        // An empty `in` set matches nothing; it never means "no filter".
+        if (erpStatuses?.length === 0) return { items: [], totalItems: 0 };
+        andErpStatusFilter(qb, { in: erpStatuses, notIn: excludedStatuses });
 
         if (search) {
             const term = `%${search}%`;
