@@ -21,7 +21,8 @@ CREATE TABLE refund (id serial PRIMARY KEY, "paymentId" int);
 CREATE TABLE order_line_reference (id serial PRIMARY KEY, discriminator varchar NOT NULL,
     "fulfillmentId" int, "orderLineId" int);
 CREATE TABLE history_entry (id serial PRIMARY KEY, discriminator varchar NOT NULL, "orderId" int);
-CREATE TABLE customer (id serial PRIMARY KEY, "customFieldsCounterpartyid" varchar);
+CREATE TABLE customer (id serial PRIMARY KEY, "customFieldsCounterpartyid" varchar,
+    "emailAddress" varchar, "deletedAt" timestamp);
 INSERT INTO "order" (id, state, "customerId", "customFieldsBranchid") VALUES
     (1, 'PaymentSettled', 1, 'branch-a'), (2, 'PaymentSettled', 2, 'branch-b'),
     (3, 'Draft', NULL, NULL), (4, 'Draft', 1, 'branch-b');
@@ -33,7 +34,9 @@ INSERT INTO order_line_reference (id, discriminator, "fulfillmentId", "orderLine
     (3, 'FulfillmentLine', 43, 11), (4, 'FulfillmentLine', 43, 12);
 INSERT INTO history_entry (id, discriminator, "orderId") VALUES
     (51, 'OrderHistoryEntry', 1), (52, 'OrderHistoryEntry', 2), (53, 'CustomerHistoryEntry', NULL);
-INSERT INTO customer (id, "customFieldsCounterpartyid") VALUES (61, 'cp-own'), (62, 'cp-foreign'), (63, NULL);
+INSERT INTO customer (id, "customFieldsCounterpartyid", "emailAddress", "deletedAt") VALUES
+    (61, 'cp-own', 'own@buyer.example', NULL), (62, 'cp-foreign', 'foreign@buyer.example', NULL),
+    (63, NULL, NULL, NULL), (64, 'cp-foreign', 'gone@buyer.example', now());
 `;
 
 const { schema, extra } = testSchemaOptions('core_order_scope');
@@ -202,5 +205,29 @@ describe('core order scope on real SQL', () => {
         await expect(
             service('all').assertInScope(ctx, 'setOrderCustomer', args),
         ).resolves.toBeUndefined();
+    });
+
+    it('a new-customer input naming an existing foreign customer by email is refused', async () => {
+        const draft = (emailAddress: string) => ({ orderId: 1, input: { emailAddress } });
+        await expect(
+            service().assertInScope(
+                ctx,
+                'setCustomerForDraftOrder',
+                draft(' Foreign@Buyer.example '),
+            ),
+        ).rejects.toBeInstanceOf(EntityNotFoundError);
+        await expect(
+            service().assertInScope(ctx, 'setCustomerForDraftOrder', draft('own@buyer.example')),
+        ).resolves.toBeUndefined();
+        await expect(
+            service().assertInScope(ctx, 'setCustomerForDraftOrder', draft('new@buyer.example')),
+        ).resolves.toBeUndefined();
+        await expect(
+            service().assertInScope(ctx, 'setCustomerForDraftOrder', draft('gone@buyer.example')),
+        ).resolves.toBeUndefined();
+    });
+
+    it('a non-numeric id has no owner and is left to core', async () => {
+        await expect(service().assertInScope(ctx, 'order', { id: 'abc' })).resolves.toBeUndefined();
     });
 });

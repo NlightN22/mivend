@@ -130,7 +130,10 @@ Root operations go through `CoreOrderScopeInterceptor` (one `APP_INTERCEPTOR`, A
 decision in `CoreOrderScopeService`). A target whose row exists but has no order (a refund whose
 payment is gone) is refused; an id that does not exist is left to core. A draft still in `Draft`
 with no customer belongs to no scope: only `order` and `setCustomerForDraftOrder` (with an in-scope
-customer) reach it. Core 3.7.3 never loads `Allocation.orderLine`/`Cancellation.orderLine` (the
+customer) reach it, so any staff member can read such an empty draft (accepted: it holds no
+customer data). A new-customer input whose email matches an existing customer is checked as
+that customer, since core attaches the existing one. The schema test covers core fields only;
+order fields added by mivend plugins are scoped by their own services (`OrderVisibilityService`). Core 3.7.3 never loads `Allocation.orderLine`/`Cancellation.orderLine` (the
 field errors for everyone); keep them scoped, never exempt them. Dashboard access for roles below
 portal-admin is unchanged: the Dashboard shows them only their scope.
 

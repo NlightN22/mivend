@@ -7,7 +7,8 @@ export type OrderTargetKind =
     | 'fulfillment'
     | 'refund'
     | 'orderNote'
-    | 'customer';
+    | 'customer'
+    | 'customerEmail';
 
 export type OperationArgs = Record<string, unknown>;
 
@@ -86,7 +87,12 @@ export const CORE_ORDER_OPERATIONS: Record<string, CoreOrderOperation> = {
         targets: [byArg('order', 'orderId'), byArg('orderLine', 'orderLineId')],
     },
     setCustomerForDraftOrder: {
-        targets: [byArg('order', 'orderId'), byArg('customer', 'customerId')],
+        targets: [
+            byArg('order', 'orderId'),
+            byArg('customer', 'customerId'),
+            // Core attaches an existing customer found by this email instead of creating one.
+            byInput('customerEmail', 'emailAddress'),
+        ],
     },
     setDraftOrderShippingAddress: draft,
     setDraftOrderBillingAddress: draft,

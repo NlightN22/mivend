@@ -22,6 +22,7 @@ const ENTITY_NAME: Record<OrderTarget['kind'], string> = {
     refund: 'Refund',
     orderNote: 'HistoryEntry',
     customer: 'Customer',
+    customerEmail: 'Customer',
 };
 
 // Decides whether a registered core order operation stays inside the caller's order scope (#248).
@@ -41,7 +42,7 @@ export class CoreOrderScopeService {
             const ids = targetIds(target, args);
             const owners = await this.targets.owners(ctx, target.kind, ids);
             const denied =
-                target.kind === 'customer'
+                target.kind === 'customer' || target.kind === 'customerEmail'
                     ? await this.deniedCustomers(ctx, owners)
                     : await this.deniedOrderTargets(ctx, field, owners);
             if (denied) throw new EntityNotFoundError(ENTITY_NAME[target.kind], denied);
