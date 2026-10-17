@@ -10,6 +10,8 @@ export interface OrderRegistrationResultInput {
     rejected: boolean;
     // Already resolved from the ERP productId to a ProductVariant id by the caller.
     reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>;
+    // True when an event line was dropped before resolution; the stored reserve set is then only upserted.
+    linesDiscarded?: boolean;
     // ERP productIds the caller could not resolve; reported as a reconciliation issue.
     unresolvedProductIds: string[];
     // Informational for staff, never used in a release decision; status '' means absent.
@@ -29,6 +31,8 @@ export interface OrderChangedInput {
     // Plain proto3 string: '' means absent.
     status: string;
     reservedLines: Array<{ productVariantId: string; reservedQuantity: number }>;
+    // True when an event line was dropped before resolution; the stored reserve set is then only upserted.
+    linesDiscarded?: boolean;
     contractId: string | null;
     // Sent on every emission; null or '' never clears a known number.
     documentNumber?: string | null;

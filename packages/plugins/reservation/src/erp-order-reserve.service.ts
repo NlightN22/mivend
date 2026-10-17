@@ -14,13 +14,14 @@ export interface ErpReservedLine {
 export class ErpOrderReserveService {
     constructor(private connection: TransactionalConnection) {}
 
-    // Replaces the order's set in one transaction: upsert per variant, delete variants the ERP no
-    // longer reports. A missing reserveUntil never clears a known one (optional on the stream).
+    // Upserts per variant in one transaction; deletes variants the ERP no longer reports only when
+    // replaceSet (no event line was discarded). A missing reserveUntil never clears a known one (optional on the stream).
     async record(
         ctx: RequestContext,
         orderId: ID,
         lines: ErpReservedLine[],
         reserveUntil: Date | null,
+        replaceSet = true,
     ): Promise<void> {
         const byVariant = new Map<string, number>();
         for (const line of lines) {
@@ -48,6 +49,7 @@ export class ErpOrderReserveService {
                         [String(orderId), productVariantId, quantity, reserveUntil],
                     );
                 }
+                if (!replaceSet) return;
                 await repo.query(
                     `DELETE FROM erp_order_reserve
                   WHERE "orderId" = $1 AND NOT ("productVariantId" = ANY($2::text[]))`,

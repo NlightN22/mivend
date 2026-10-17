@@ -147,7 +147,13 @@ export class ReservationWriteOffSyncService {
             return;
         }
 
-        await this.erpReserve.record(ctx, orderId, input.reservedLines, null);
+        await this.erpReserve.record(
+            ctx,
+            orderId,
+            input.reservedLines,
+            null,
+            !input.linesDiscarded,
+        );
         await this.releaseMatchingReservations(
             ctx,
             orderId,
@@ -212,7 +218,13 @@ export class ReservationWriteOffSyncService {
             input.derivedStatusAt ?? null,
         );
 
-        await this.erpReserve.record(ctx, orderId, input.reservedLines, input.reserveUntil ?? null);
+        await this.erpReserve.record(
+            ctx,
+            orderId,
+            input.reservedLines,
+            input.reserveUntil ?? null,
+            !input.linesDiscarded,
+        );
         await this.releaseMatchingReservations(
             ctx,
             orderId,

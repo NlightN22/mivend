@@ -30,6 +30,22 @@ describe('ErpOrderReserveService.record', () => {
         expect(calls[2][1]).toEqual(['7', ['10']]);
     });
 
+    it('keeps stored variants absent from the event when a line was discarded', async () => {
+        const { service, query } = create();
+
+        await service.record(
+            ctx,
+            7,
+            [{ productVariantId: '10', reservedQuantity: 2 }],
+            null,
+            false,
+        );
+
+        const sqls = (query.mock.calls as unknown as Array<[string]>).map(call => call[0]);
+        expect(sqls.some(sql => sql.includes('INSERT INTO erp_order_reserve'))).toBe(true);
+        expect(sqls.some(sql => sql.includes('DELETE FROM erp_order_reserve'))).toBe(false);
+    });
+
     it('an event without reserved lines carries no information and changes nothing', async () => {
         const { service, query, connection } = create();
 

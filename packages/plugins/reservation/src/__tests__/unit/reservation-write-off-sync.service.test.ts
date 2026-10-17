@@ -247,7 +247,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
             rejectionReasonCode: null,
             rejectionReasonText: null,
         });
-        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', reservedLines, null);
+        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', reservedLines, null, true);
     });
 
     // An unresolvable productId is its own discrepancy, not 'not confirmed yet': that would block
@@ -1178,7 +1178,27 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             derivedStatus: null,
             reserveUntil,
         });
-        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', reservedLines, reserveUntil);
+        expect(erpReserve.record).toHaveBeenCalledWith(
+            ctx,
+            'order-1',
+            reservedLines,
+            reserveUntil,
+            true,
+        );
+    });
+
+    it('does not replace the stored reserve set when the handler discarded an event line', async () => {
+        await service.handleOrderChanged(ctx, {
+            orderUuid: null,
+            orderEntityId: 'erp-order-1',
+            status: '',
+            reservedLines: [],
+            linesDiscarded: true,
+            contractId: null,
+            derivedStatus: null,
+        });
+
+        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', [], null, false);
     });
 
     it('passes a null reserve_until when the event carried none', async () => {
@@ -1190,7 +1210,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
             contractId: null,
             derivedStatus: null,
         });
-        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', [], null);
+        expect(erpReserve.record).toHaveBeenCalledWith(ctx, 'order-1', [], null, true);
     });
 
     it('persists status onto Order.customFields.erpOrderStatus, never erpRegistrationStatus', async () => {

@@ -98,6 +98,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
             localOrderId,
             rejected,
             reservedLines,
+            linesDiscarded: linesWithoutProductId > 0,
             // Always empty from this caller: unresolved variants throw MissingDependencyError above.
             // Kept as defensive input shape for future callers.
             unresolvedProductIds: [],

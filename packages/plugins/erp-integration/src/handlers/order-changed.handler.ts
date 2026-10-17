@@ -113,6 +113,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
             orderEntityId: entityId,
             status,
             reservedLines,
+            linesDiscarded: linesWithoutProductId > 0,
             contractId,
             documentNumber,
             derivedStatus,
