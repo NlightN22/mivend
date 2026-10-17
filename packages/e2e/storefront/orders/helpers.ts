@@ -1,3 +1,5 @@
+import { adminGql } from '../../helpers/api';
+import { adminTokenFor } from '../../helpers/api-tokens';
 import { type Page } from '@playwright/test';
 
 const STOREFRONT = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
@@ -50,20 +52,58 @@ export async function searchInStock(page: Page): Promise<string> {
     throw new Error('No in-stock products found after retries');
 }
 
+// Smallest quantity the server accepts for a variant (moq plugin's requiredMultiple, #214), from shop API data.
+export async function orderStep(page: Page, variantId: string): Promise<number> {
+    const policy = (await gql(page, `query { packagesOnlySales multiplicityEnforced }`)) as {
+        packagesOnlySales: boolean;
+        multiplicityEnforced: boolean;
+    };
+    const token = await adminTokenFor(
+        process.env.SUPERADMIN_USERNAME ?? 'superadmin',
+        process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
+    );
+    const { data } = await adminGql<{
+        productVariant: {
+            customFields: { multiplicity: number | null; unitRatioToBase: number | null };
+        } | null;
+    }>(
+        `query($id: ID!) { productVariant(id: $id) { customFields { multiplicity unitRatioToBase } } }`,
+        { id: variantId },
+        token,
+    );
+    if (!data.productVariant) throw new Error(`Variant ${variantId} not found`);
+    const { multiplicity, unitRatioToBase: ratio } = data.productVariant.customFields;
+    if (policy.packagesOnlySales && ratio && ratio > 0 && ratio !== 1) {
+        for (let packs = 1; packs <= 1000; packs++) {
+            const base = packs * ratio;
+            if (Math.abs(base - Math.round(base)) < 1e-9) return Math.round(base);
+        }
+    }
+    return policy.multiplicityEnforced && (multiplicity ?? 1) > 1 ? (multiplicity as number) : 1;
+}
+
+// Adds `steps` whole order steps of a variant; any ErrorResult fails the test with the server's message.
+export async function addItem(page: Page, variantId: string, steps = 1): Promise<number> {
+    const quantity = steps * (await orderStep(page, variantId));
+    const data = (await gql(
+        page,
+        `mutation($id: ID!, $q: Int!) { addItemToOrder(productVariantId: $id, quantity: $q) { __typename ... on ErrorResult { message } } }`,
+        { id: variantId, q: quantity },
+    )) as { addItemToOrder: { __typename: string; message?: string } };
+    if (data.addItemToOrder.__typename !== 'Order') {
+        throw new Error(
+            `addItemToOrder(${variantId} x${quantity}): ${data.addItemToOrder.__typename} ${data.addItemToOrder.message ?? ''}`,
+        );
+    }
+    return quantity;
+}
+
 export async function placeTestOrder(page: Page): Promise<{ id: string; code: string }> {
     await clearCart(page);
 
     const variantId = await searchInStock(page);
 
-    await gql(
-        page,
-        `
-        mutation AddItem($id: ID!) {
-            addItemToOrder(productVariantId: $id, quantity: 1) { __typename }
-        }
-    `,
-        { id: variantId },
-    );
+    await addItem(page, variantId);
 
     await gql(
         page,

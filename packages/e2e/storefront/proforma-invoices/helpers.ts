@@ -1,7 +1,7 @@
 import { adminTokenFor } from '../../helpers/api-tokens';
 import { type Page } from '@playwright/test';
 import { adminGql } from '../../helpers/api';
-import { gql, clearCart } from '../orders/helpers';
+import { addItem, gql, clearCart } from '../orders/helpers';
 
 const SUPERADMIN = {
     identifier: process.env.SUPERADMIN_USERNAME ?? 'superadmin',
@@ -79,16 +79,7 @@ export async function buildOrderAcrossOrganizations(page: Page): Promise<[string
     await clearCart(page);
     const [variantA, variantB] = await pickTwoVariantsFromDifferentOrganizations(page);
 
-    for (const id of [variantA, variantB]) {
-        const added = (await gql(
-            page,
-            `mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 1) { __typename ... on ErrorResult { message } } }`,
-            { id },
-        )) as { addItemToOrder: { __typename: string; message?: string } };
-        if (added.addItemToOrder.__typename !== 'Order') {
-            throw new Error(`addItemToOrder(${id}): ${added.addItemToOrder.message}`);
-        }
-    }
+    for (const id of [variantA, variantB]) await addItem(page, id);
 
     await gql(
         page,

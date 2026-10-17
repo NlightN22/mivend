@@ -2,7 +2,7 @@ import { adminTokenFor } from '../../helpers/api-tokens';
 import { test, expect, type Page } from '@playwright/test';
 import { E2E_COUNTERPARTY_ID } from '../../fixtures/seed';
 import { postBatch, adminGql } from '../../helpers/api';
-import { gql, clearCart, searchInStock } from '../orders/helpers';
+import { addItem, gql, clearCart, searchInStock } from '../orders/helpers';
 import { finishOrdersPlacedInEachTest } from '../order-cleanup';
 
 finishOrdersPlacedInEachTest();
@@ -108,11 +108,7 @@ test.describe('Documents page — all document types', () => {
     }) => {
         await clearCart(page);
         const variantId = await searchInStock(page);
-        await gql(
-            page,
-            `mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 1) { __typename } }`,
-            { id: variantId },
-        );
+        await addItem(page, variantId);
         const methods = await gql(page, `{ eligibleShippingMethods { id } }`);
         const methodId = (methods.eligibleShippingMethods as { id: string }[])[0].id;
         await gql(

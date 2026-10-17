@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { clearCart, gql, searchInStock } from './helpers';
+import { addItem, clearCart, gql, searchInStock } from './helpers';
 import { finishOrdersPlacedInEachTest } from '../order-cleanup';
 
 finishOrdersPlacedInEachTest();
@@ -17,11 +17,7 @@ test.describe('Cart recovers from an order stuck in ArrangingPayment', () => {
         await clearCart(page);
         const variantId = await searchInStock(page);
 
-        await gql(
-            page,
-            `mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 1) { __typename } }`,
-            { id: variantId },
-        );
+        await addItem(page, variantId);
         const methodsData = await gql(page, `{ eligibleShippingMethods { id } }`);
         const methodId = (methodsData.eligibleShippingMethods as { id: string }[])[0]?.id;
         await gql(

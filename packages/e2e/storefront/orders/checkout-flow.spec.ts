@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { test, expect, type Page } from '@playwright/test';
-import { clearCart, gql, searchInStock } from './helpers';
+import { addItem, clearCart, gql, searchInStock } from './helpers';
 import { finishOrdersPlacedInEachTest } from '../order-cleanup';
 
 finishOrdersPlacedInEachTest();
@@ -13,11 +13,7 @@ interface OrderState {
 
 async function addOneItemToCart(page: Page): Promise<void> {
     const variantId = await searchInStock(page);
-    await gql(
-        page,
-        `mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 1) { __typename } }`,
-        { id: variantId },
-    );
+    await addItem(page, variantId);
 }
 
 async function latestOrderState(page: Page): Promise<string | undefined> {
