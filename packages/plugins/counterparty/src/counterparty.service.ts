@@ -38,7 +38,6 @@ interface ActiveStateFields extends CounterpartyErpDetails {
     departmentId?: string | null;
     assignedManagerId?: string | null;
     // Raw erpId assignedManagerId was resolved from; always passed alongside it, even when that is null
-    //
     managerErpId?: string | null;
     legalAddress?: string | null;
     factualAddress?: string | null;

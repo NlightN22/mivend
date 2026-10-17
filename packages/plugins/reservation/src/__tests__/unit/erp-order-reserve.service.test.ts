@@ -19,7 +19,7 @@ describe('ErpOrderReserveService.record', () => {
     it('upserts the reported variants and deletes the others in one transaction', async () => {
         const { service, query, connection } = create();
 
-        await service.record(ctx, 7, [{ productVariantId: '10', reservedQuantity: 2 }], null);
+        await service.record(ctx, 7, [{ productVariantId: '10', reservedQuantity: 2 }], null, true);
 
         expect(connection.withTransaction).toHaveBeenCalledTimes(1);
         const calls = query.mock.calls as unknown as Array<[string, unknown[]]>;
@@ -49,7 +49,7 @@ describe('ErpOrderReserveService.record', () => {
     it('an event without reserved lines carries no information and changes nothing', async () => {
         const { service, query, connection } = create();
 
-        await service.record(ctx, 7, [], null);
+        await service.record(ctx, 7, [], null, true);
 
         expect(connection.withTransaction).not.toHaveBeenCalled();
         expect(query).not.toHaveBeenCalled();

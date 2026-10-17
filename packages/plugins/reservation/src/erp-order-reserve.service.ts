@@ -14,14 +14,14 @@ export interface ErpReservedLine {
 export class ErpOrderReserveService {
     constructor(private connection: TransactionalConnection) {}
 
-    // Upserts per variant in one transaction; deletes variants the ERP no longer reports only when
-    // replaceSet (no event line was discarded). A missing reserveUntil never clears a known one (optional on the stream).
+    // Upserts per variant; deletes variants the ERP stopped reporting only when replaceSet (no line discarded).
+    // A missing reserveUntil never clears a known one.
     async record(
         ctx: RequestContext,
         orderId: ID,
         lines: ErpReservedLine[],
         reserveUntil: Date | null,
-        replaceSet = true,
+        replaceSet: boolean,
     ): Promise<void> {
         const byVariant = new Map<string, number>();
         for (const line of lines) {

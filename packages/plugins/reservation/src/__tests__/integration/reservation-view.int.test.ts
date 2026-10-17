@@ -123,16 +123,28 @@ describe('ErpOrderReserveService.record', () => {
 
     it('replaying the same event keeps one row with the same values', async () => {
         const lines = [{ productVariantId: '10', reservedQuantity: 4 }];
-        await erpReserve.record(ctx, 1, lines, soon);
-        await erpReserve.record(ctx, 1, lines, soon);
+        await erpReserve.record(ctx, 1, lines, soon, true);
+        await erpReserve.record(ctx, 1, lines, soon, true);
         const stored = await rows();
         expect(stored).toHaveLength(1);
         expect(stored[0].quantity).toBe(4);
     });
 
     it('a later event overwrites the quantity and a missing reserveUntil never clears the date', async () => {
-        await erpReserve.record(ctx, 1, [{ productVariantId: '10', reservedQuantity: 4 }], soon);
-        await erpReserve.record(ctx, 1, [{ productVariantId: '10', reservedQuantity: 0 }], null);
+        await erpReserve.record(
+            ctx,
+            1,
+            [{ productVariantId: '10', reservedQuantity: 4 }],
+            soon,
+            true,
+        );
+        await erpReserve.record(
+            ctx,
+            1,
+            [{ productVariantId: '10', reservedQuantity: 0 }],
+            null,
+            true,
+        );
         const [stored] = await rows();
         expect(stored.quantity).toBe(0);
         expect(stored.reserveUntil?.getTime()).toBe(soon.getTime());
@@ -148,6 +160,7 @@ describe('ErpOrderReserveService.record', () => {
                 { productVariantId: '20', reservedQuantity: 1 },
             ],
             null,
+            true,
         );
         const stored = await dataSource.query(
             `SELECT "productVariantId", quantity FROM erp_order_reserve ORDER BY "productVariantId"`,
@@ -163,9 +176,15 @@ describe('ErpOrderReserveService.record', () => {
             { productVariantId: '10', reservedQuantity: 2 },
             { productVariantId: '20', reservedQuantity: 1 },
         ];
-        await erpReserve.record(ctx, 1, both, null);
-        await erpReserve.record(ctx, 2, both, null);
-        await erpReserve.record(ctx, 1, [{ productVariantId: '10', reservedQuantity: 2 }], null);
+        await erpReserve.record(ctx, 1, both, null, true);
+        await erpReserve.record(ctx, 2, both, null, true);
+        await erpReserve.record(
+            ctx,
+            1,
+            [{ productVariantId: '10', reservedQuantity: 2 }],
+            null,
+            true,
+        );
         const stored = await rows();
         expect(stored.filter(r => r.orderId === '1').map(r => r.productVariantId)).toEqual(['10']);
         expect(stored.filter(r => r.orderId === '2')).toHaveLength(2);
@@ -174,7 +193,13 @@ describe('ErpOrderReserveService.record', () => {
     it('eight concurrent writers leave exactly one row per order and variant', async () => {
         await Promise.all(
             Array.from({ length: 8 }, (_, i) =>
-                erpReserve.record(ctx, 1, [{ productVariantId: '10', reservedQuantity: i }], soon),
+                erpReserve.record(
+                    ctx,
+                    1,
+                    [{ productVariantId: '10', reservedQuantity: i }],
+                    soon,
+                    true,
+                ),
             ),
         );
         expect(await rows()).toHaveLength(1);
@@ -206,7 +231,13 @@ describe('ReservationViewService', () => {
 
     it('flags a line held by the ERP and takes the earlier of both expiries', async () => {
         await addLocal(1, 100, 10, later);
-        await erpReserve.record(ctx, 1, [{ productVariantId: '10', reservedQuantity: 2 }], soon);
+        await erpReserve.record(
+            ctx,
+            1,
+            [{ productVariantId: '10', reservedQuantity: 2 }],
+            soon,
+            true,
+        );
         expect(await view.lineFlag(freshCtx(), 100)).toEqual({
             reserved: true,
             reservedUntil: soon,
@@ -214,20 +245,44 @@ describe('ReservationViewService', () => {
     });
 
     it('an ERP row with zero quantity or a cancelled order is not a hold', async () => {
-        await erpReserve.record(ctx, 1, [{ productVariantId: '10', reservedQuantity: 0 }], soon);
-        await erpReserve.record(ctx, 3, [{ productVariantId: '10', reservedQuantity: 5 }], soon);
+        await erpReserve.record(
+            ctx,
+            1,
+            [{ productVariantId: '10', reservedQuantity: 0 }],
+            soon,
+            true,
+        );
+        await erpReserve.record(
+            ctx,
+            3,
+            [{ productVariantId: '10', reservedQuantity: 5 }],
+            soon,
+            true,
+        );
         expect((await view.lineFlag(freshCtx(), 100)).reserved).toBe(false);
         expect((await view.lineFlag(freshCtx(), 300)).reserved).toBe(false);
     });
 
     it("does not leak one order's ERP hold onto another order with the same variant", async () => {
-        await erpReserve.record(ctx, 1, [{ productVariantId: '10', reservedQuantity: 2 }], soon);
+        await erpReserve.record(
+            ctx,
+            1,
+            [{ productVariantId: '10', reservedQuantity: 2 }],
+            soon,
+            true,
+        );
         expect((await view.lineFlag(freshCtx(), 200)).reserved).toBe(false);
     });
 
     it('details list local and ERP holds', async () => {
         await addLocal(1, 100, 10, soon);
-        await erpReserve.record(ctx, 1, [{ productVariantId: '20', reservedQuantity: 3 }], later);
+        await erpReserve.record(
+            ctx,
+            1,
+            [{ productVariantId: '20', reservedQuantity: 3 }],
+            later,
+            true,
+        );
         const details = await view.details(ctx, 1);
         expect(details.map(d => [d.source, d.sku, d.orderLineId, d.quantity])).toEqual([
             ['LOCAL', 'SKU-A', '100', 2],
@@ -237,7 +292,13 @@ describe('ReservationViewService', () => {
 
     it('splits the ERP hold of a variant across its lines by line quantity', async () => {
         await dataSource.query(`INSERT INTO order_line VALUES (102, 1, 20, 2)`);
-        await erpReserve.record(ctx, 1, [{ productVariantId: '20', reservedQuantity: 6 }], later);
+        await erpReserve.record(
+            ctx,
+            1,
+            [{ productVariantId: '20', reservedQuantity: 6 }],
+            later,
+            true,
+        );
         const details = await view.details(ctx, 1);
         expect(details.map(d => [d.orderLineId, d.quantity])).toEqual([
             ['101', 5],
@@ -291,8 +352,20 @@ describe('ReservationViewService', () => {
     it('holders lists visible orders only, earliest expiry first, without cancelled or zero holds', async () => {
         await addLocal(1, 100, 10, later);
         await addLocal(2, 200, 10, soon);
-        await erpReserve.record(ctx, 3, [{ productVariantId: '10', reservedQuantity: 9 }], soon);
-        await erpReserve.record(ctx, 1, [{ productVariantId: '10', reservedQuantity: 0 }], soon);
+        await erpReserve.record(
+            ctx,
+            3,
+            [{ productVariantId: '10', reservedQuantity: 9 }],
+            soon,
+            true,
+        );
+        await erpReserve.record(
+            ctx,
+            1,
+            [{ productVariantId: '10', reservedQuantity: 0 }],
+            soon,
+            true,
+        );
         const holders = await view.holders(ctx, 10);
         expect(holders.map(h => [h.orderCode, h.source])).toEqual([
             ['O-2', 'LOCAL'],
