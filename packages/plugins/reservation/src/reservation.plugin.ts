@@ -63,6 +63,9 @@ import { OrderLineShortfall } from './entities/order-line-shortfall.entity';
 import { OrderLineAvailabilityPortRegistry } from './order-line-availability.port';
 import { OrderLineEditGuard } from './order-line-edit.guard';
 import { OrderLineStockSyncService } from './order-line-stock-sync.service';
+import { orderCancelReleaseProcess } from './order-cancel-release.process';
+import { AdminVendureCancelOrderResolver } from './order-cancel-serial.resolver';
+import { OrderCancelSerialService } from './order-cancel-serial.service';
 import { OrderLinesEditPortRegistry } from './order-line-edit.port';
 import { OrderLineEditResolver } from './order-line-edit.resolver';
 import { adminOrderLineEditSchema } from './order-line-edit.schema';
@@ -125,6 +128,7 @@ import type { ReservationPluginOptions } from './types';
         OrderCancellationService,
         OrderCancelEntryService,
         OrderCancelResultService,
+        OrderCancelSerialService,
         OrderErpStatusService,
         ReservationAvailabilityService,
         StockLevelService,
@@ -178,6 +182,7 @@ import type { ReservationPluginOptions } from './types';
             OrderLineEditResolver,
             ReservationViewResolver,
             AdminCancelOrderResolver,
+            AdminVendureCancelOrderResolver,
             OrderCancelResultResolver,
             OrderCancellableResolver,
         ],
@@ -187,6 +192,7 @@ import type { ReservationPluginOptions } from './types';
         config.orderOptions.process = [
             ...(config.orderOptions.process ?? []),
             orderCheckFlagProcess,
+            orderCancelReleaseProcess,
         ];
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
