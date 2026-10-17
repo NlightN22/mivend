@@ -157,7 +157,7 @@ describe('closing a replay_requested row', () => {
         const id = await requested('bank', 'e-1');
         const fresh = await seed('bank', 'e-1', 'pending');
 
-        await inbox.markProcessed(fresh, outcome, reason ?? null);
+        await inbox.markProcessedUnclaimed(fresh, outcome, reason ?? null);
 
         expect(await statusOf(id)).toBe('resolved');
     });
@@ -166,7 +166,7 @@ describe('closing a replay_requested row', () => {
         const older = await seed('bank', 'e-2', 'pending');
         const id = await requested('bank', 'e-2');
 
-        await inbox.markProcessed(older);
+        await inbox.markProcessedUnclaimed(older);
 
         expect(await statusOf(id)).toBe('replay_requested');
     });
@@ -176,8 +176,8 @@ describe('closing a replay_requested row', () => {
         const otherEntity = await seed('bank', 'e-other', 'pending');
         const otherStream = await seed('unit', 'e-3', 'pending');
 
-        await inbox.markProcessed(otherEntity);
-        await inbox.markProcessed(otherStream);
+        await inbox.markProcessedUnclaimed(otherEntity);
+        await inbox.markProcessedUnclaimed(otherStream);
 
         expect(await statusOf(id)).toBe('replay_requested');
     });
@@ -190,7 +190,7 @@ describe('closing a replay_requested row', () => {
             [fresh],
         );
 
-        await inbox.markFailed(fresh, new Error('counterparty not synced yet'));
+        await inbox.markFailedUnclaimed(fresh, new Error('counterparty not synced yet'));
 
         expect(await statusOf(fresh)).toBe('failed');
         expect(await statusOf(id)).toBe('failed');
@@ -203,7 +203,7 @@ describe('closing a replay_requested row', () => {
         const id = await requested('bank', 'e-5');
         const fresh = await seed('bank', 'e-5', 'pending');
 
-        await inbox.markFailed(fresh, new Error('not synced yet'));
+        await inbox.markFailedUnclaimed(fresh, new Error('not synced yet'));
 
         expect(await statusOf(fresh)).toBe('pending');
         expect(await statusOf(id)).toBe('replay_requested');
@@ -267,7 +267,7 @@ describe('timeout sweep', () => {
             const id = await requestedAgo(`race-${n}`, 90);
             const fresh = await seed('bank', `race-${n}`, 'pending');
 
-            await Promise.all([state.expireStale(), inbox.markProcessed(fresh)]);
+            await Promise.all([state.expireStale(), inbox.markProcessedUnclaimed(fresh)]);
 
             const final = await statusOf(id);
             expect(['resolved', 'failed']).toContain(final);

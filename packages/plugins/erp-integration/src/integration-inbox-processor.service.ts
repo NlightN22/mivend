@@ -43,6 +43,7 @@ import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { UnknownOrderUuidError } from '@mivend/plugin-reservation';
 
 import { IntegrationInboxService } from './integration-inbox.service';
+import type { ClaimedInboxEvent } from './integration-inbox.service';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { MissingDependencyError, loggerCtx } from './types';
 import type { InboundStream } from './types';
@@ -184,7 +185,7 @@ export class IntegrationInboxProcessorService {
         return { processed, failed, claimed: rows.length };
     }
 
-    private async processOne(ctx: RequestContext, row: IntegrationInboxEvent): Promise<boolean> {
+    private async processOne(ctx: RequestContext, row: ClaimedInboxEvent): Promise<boolean> {
         try {
             // A lower version arriving after a higher one must not regress state.
             // Such rows are still marked processed: stale replays are expected, not errors.
@@ -223,7 +224,7 @@ export class IntegrationInboxProcessorService {
             await this.inbox.markFailed(
                 row.id,
                 error,
-                undefined,
+                Math.random,
                 onBudgetExhausted,
                 row.claimToken,
             );

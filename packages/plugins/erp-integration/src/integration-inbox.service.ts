@@ -36,6 +36,8 @@ export interface FailedInboxEventListOptions {
 
 // Same claim/ack pattern as plugin-acquiring's InboxService (SKIP LOCKED claims);
 // only the entity and dedup key differ, so keep the two in step.
+export type ClaimedInboxEvent = IntegrationInboxEvent & { claimToken: string };
+
 @Injectable()
 export class IntegrationInboxService {
     constructor(private readonly dataSource: DataSource) {}
@@ -103,7 +105,7 @@ export class IntegrationInboxService {
 
     // Phase 2 repeats the eligibility condition so the lock-time recheck drops rows a competing
     // sweep already claimed (#148, see docs/environments.md's own note for the full incident).
-    async claimBatch(limit = 20, streams?: InboundStream[]): Promise<IntegrationInboxEvent[]> {
+    async claimBatch(limit = 20, streams?: InboundStream[]): Promise<ClaimedInboxEvent[]> {
         const outerRepo = this.dataSource.getRepository(IntegrationInboxEvent);
         return outerRepo.manager.transaction(async manager => {
             const repo = manager.getRepository(outerRepo.target);
@@ -123,14 +125,14 @@ export class IntegrationInboxService {
                 .setLock('pessimistic_write')
                 .setOnLocked('skip_locked')
                 .getMany();
-            if (rows.length === 0) return rows;
+            if (rows.length === 0) return [];
             const claimToken = randomUUID();
             for (const row of rows) {
                 row.status = 'processing';
                 row.claimToken = claimToken;
             }
             await repo.save(rows);
-            return rows;
+            return rows as ClaimedInboxEvent[];
         });
     }
 
@@ -178,38 +180,54 @@ export class IntegrationInboxService {
         return rows.map(row => row.id);
     }
 
-    // The status and claim-token guards keep a stale worker's late outcome from overwriting a row
-    // another worker settled or reclaimed.
+    // Worker path: the claim token restricts the write to the worker that still holds the claim,
+    // so a stale worker's late outcome cannot overwrite a row another worker settled or reclaimed.
     async markProcessed(
         id: number,
-        outcome: InboxOutcome = 'applied',
-        outcomeReason: string | null = null,
-        claimToken?: string | null,
+        outcome: InboxOutcome,
+        outcomeReason: string | null,
+        claimToken: string,
     ): Promise<void> {
         await settleProcessed(this.dataSource, id, outcome, outcomeReason, claimToken);
     }
 
     // Releases a deadline-stopped batch's unprocessed rows back to 'pending' (#149).
-    async releaseClaims(ids: number[], claimToken?: string | null): Promise<void> {
+    async releaseClaims(ids: number[], claimToken: string): Promise<void> {
         if (ids.length === 0) return;
-        await this.dataSource.getRepository(IntegrationInboxEvent).update(
-            {
-                id: In(ids),
-                status: 'processing',
-                ...(claimToken ? { claimToken } : {}),
-            },
-            { status: 'pending', claimToken: null },
-        );
+        await this.dataSource
+            .getRepository(IntegrationInboxEvent)
+            .update(
+                { id: In(ids), status: 'processing', claimToken },
+                { status: 'pending', claimToken: null },
+            );
     }
 
     async markFailed(
         id: number,
         error: Error,
-        random: () => number = Math.random,
-        onBudgetExhausted: BudgetExhaustedNoop | null = null,
-        claimToken?: string | null,
+        random: () => number,
+        onBudgetExhausted: BudgetExhaustedNoop | null,
+        claimToken: string,
     ): Promise<void> {
         await settleFailed(this.dataSource, id, error, random, onBudgetExhausted, claimToken);
+    }
+
+    // Non-worker path (ops and tests settling a row nobody claimed); guarded by status only.
+    async markProcessedUnclaimed(
+        id: number,
+        outcome: InboxOutcome = 'applied',
+        outcomeReason: string | null = null,
+    ): Promise<void> {
+        await settleProcessed(this.dataSource, id, outcome, outcomeReason);
+    }
+
+    async markFailedUnclaimed(
+        id: number,
+        error: Error,
+        random: () => number = Math.random,
+        onBudgetExhausted: BudgetExhaustedNoop | null = null,
+    ): Promise<void> {
+        await settleFailed(this.dataSource, id, error, random, onBudgetExhausted);
     }
 
     // Dashboard/ops read model (issue #76) — 'failed' rows are dead-lettered (markFailed above)

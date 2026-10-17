@@ -90,6 +90,7 @@ export async function settleFailed(
                     SET attempts = $2, first_failed_at = $3, last_error = $4 WHERE id = $1`,
                 [id, attempts, firstFailedAt, error.message],
             );
+            // No token: the claim-guarded row lock above already proved this worker holds the claim.
             await settleProcessed(em, id, onBudgetExhausted.outcome, onBudgetExhausted.reason);
             return true;
         }

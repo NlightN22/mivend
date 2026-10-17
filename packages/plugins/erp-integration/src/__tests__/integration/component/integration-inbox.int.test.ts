@@ -53,7 +53,7 @@ async function deadLetter(id: number): Promise<void> {
         "UPDATE integration_inbox_event SET first_failed_at = now() - interval '25 hours' WHERE id = $1",
         [id],
     );
-    await inboxService.markFailed(id, new Error('boom'));
+    await inboxService.markFailedUnclaimed(id, new Error('boom'));
 }
 
 describe('IntegrationInboxService (integration, real Postgres)', () => {
@@ -251,7 +251,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             payload: { sku: 'SKU-4', priceTypeCode: 'RETAIL', price: 100 },
         });
 
-        await inboxService.markFailed(row.id, new Error('boom'));
+        await inboxService.markFailedUnclaimed(row.id, new Error('boom'));
         let updated = await dataSource
             .getRepository(IntegrationInboxEvent)
             .findOneOrFail({ where: { id: row.id } });
@@ -277,7 +277,10 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             payload: {},
         });
 
-        await inboxService.markFailed(row.id, new NonRetryableInboundError('entry 0 invalid'));
+        await inboxService.markFailedUnclaimed(
+            row.id,
+            new NonRetryableInboundError('entry 0 invalid'),
+        );
 
         const updated = await dataSource
             .getRepository(IntegrationInboxEvent)
@@ -302,7 +305,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             [row.id],
         );
 
-        await inboxService.markFailed(row.id, new Error('transient'));
+        await inboxService.markFailedUnclaimed(row.id, new Error('transient'));
 
         const updated = await dataSource
             .getRepository(IntegrationInboxEvent)
@@ -326,7 +329,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             [row.id],
         );
 
-        await inboxService.markFailed(
+        await inboxService.markFailedUnclaimed(
             row.id,
             new Error('order-registration-result: no Order found'),
             undefined,
@@ -359,7 +362,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             [row.id],
         );
 
-        await inboxService.markFailed(row.id, new Error('boom'));
+        await inboxService.markFailedUnclaimed(row.id, new Error('boom'));
 
         const updated = await dataSource
             .getRepository(IntegrationInboxEvent)
@@ -376,7 +379,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             sourceEventId: 'evt-5',
             payload: { name: 'Widgets' },
         });
-        await inboxService.markProcessed(row.id);
+        await inboxService.markProcessedUnclaimed(row.id);
         const updated = await dataSource
             .getRepository(IntegrationInboxEvent)
             .findOneOrFail({ where: { id: row.id } });
@@ -418,7 +421,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 sourceEventId: 'evt-dismiss-noop',
                 payload: { name: 'Widgets' },
             });
-            await inboxService.markProcessed(row.id, 'applied');
+            await inboxService.markProcessedUnclaimed(row.id, 'applied');
 
             const dismissed = await inboxService.dismissFailed(row.id, 'late click');
             expect(dismissed).toBe(false);
@@ -462,7 +465,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 sourceEventId: 'evt-processed',
                 payload: { sku: 'SKU-PROCESSED' },
             });
-            await inboxService.markProcessed(processedRow.id);
+            await inboxService.markProcessedUnclaimed(processedRow.id);
 
             const result = await inboxService.findFailed();
             expect(result.items).toEqual([]);
@@ -705,7 +708,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 sourceEventId: `evt-${entityId}-${version}`,
                 payload,
             });
-            await inboxService.markProcessed(row.id);
+            await inboxService.markProcessedUnclaimed(row.id);
             return row.id;
         }
 
@@ -822,7 +825,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 sourceEventId: 'evt-shared-stock',
                 payload: { real: 'data' },
             });
-            await inboxService.markProcessed(stockOlder.id);
+            await inboxService.markProcessedUnclaimed(stockOlder.id);
             const stockNewest = await inboxService.enqueue({
                 stream: 'stock',
                 entityId: 'shared-id',
@@ -830,7 +833,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 sourceEventId: 'evt-shared-stock-2',
                 payload: { real: 'data' },
             });
-            await inboxService.markProcessed(stockNewest.id);
+            await inboxService.markProcessedUnclaimed(stockNewest.id);
 
             await retention.purgeSupersededProcessedRows();
 

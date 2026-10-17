@@ -114,7 +114,11 @@ describe('integrationStreamHealth', () => {
             sourceEventId: 'evt-noop',
             payload: {},
         });
-        await inbox.markProcessed(row.id, 'noop', 'bank b-noop: missing name/bik, skipping');
+        await inbox.markProcessedUnclaimed(
+            row.id,
+            'noop',
+            'bank b-noop: missing name/bik, skipping',
+        );
 
         const { streams } = await resolver.integrationStreamHealth();
 

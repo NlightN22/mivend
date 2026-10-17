@@ -121,7 +121,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
             sourceEventId: 'evt-newer',
             payload: { sku: 'SKU-S1', stockOnHand: 10 },
         });
-        await inboxService.markProcessed(newer.id);
+        await inboxService.markProcessedUnclaimed(newer.id);
 
         await inboxService.enqueue({
             stream: 'stock',

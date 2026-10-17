@@ -54,8 +54,8 @@ describe('inbox outcome writes (integration, real Postgres)', () => {
         const row = await enqueue(1);
 
         await Promise.all([
-            inbox.markFailed(row.id, new Error('boom')),
-            inbox.markFailed(row.id, new Error('boom')),
+            inbox.markFailedUnclaimed(row.id, new Error('boom')),
+            inbox.markFailedUnclaimed(row.id, new Error('boom')),
         ]);
 
         expect((await reload(row.id)).attempts).toBe(2);
@@ -63,10 +63,10 @@ describe('inbox outcome writes (integration, real Postgres)', () => {
 
     it('a late markFailed or markProcessed does not overwrite a row another worker settled', async () => {
         const row = await enqueue(2);
-        await inbox.markProcessed(row.id, 'applied');
+        await inbox.markProcessedUnclaimed(row.id, 'applied');
 
-        await inbox.markFailed(row.id, new Error('stale worker'));
-        await inbox.markProcessed(row.id, 'noop', 'stale worker');
+        await inbox.markFailedUnclaimed(row.id, new Error('stale worker'));
+        await inbox.markProcessedUnclaimed(row.id, 'noop', 'stale worker');
 
         const after = await reload(row.id);
         expect(after.status).toBe('processed');
@@ -85,7 +85,7 @@ describe('inbox outcome writes (integration, real Postgres)', () => {
         expect(second.id).toBe(first.id);
         expect(second.claimToken).not.toBe(first.claimToken);
 
-        await inbox.markFailed(row.id, new Error('stale'), undefined, null, first.claimToken);
+        await inbox.markFailed(row.id, new Error('stale'), Math.random, null, first.claimToken);
         await inbox.markProcessed(row.id, 'applied', null, first.claimToken);
 
         const untouched = await reload(row.id);
@@ -103,7 +103,7 @@ describe('inbox outcome writes (integration, real Postgres)', () => {
         const row = await enqueue(4);
         const [claimed] = await inbox.claimBatch(1);
 
-        await inbox.markFailed(row.id, new Error('boom'), undefined, null, claimed.claimToken);
+        await inbox.markFailed(row.id, new Error('boom'), Math.random, null, claimed.claimToken);
 
         const after = await reload(row.id);
         expect(after.status).toBe('pending');

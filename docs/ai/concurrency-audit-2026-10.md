@@ -152,3 +152,7 @@ or fixed. Procedure: `.claude/skills/concurrency-audit/SKILL.md`.
   claim leaves none, and `erp-order` cannot write the sync outbox: `sync` depends on `erp-order`),
   so it is not a small change. Accepted: the window is one in-process publish call after commit, and
   the order itself stays correct on its own instance; only its replica is missing.
+- Inbox worker holding a batch past the 5 minute stale threshold (`STUCK_PROCESSING_THRESHOLD_MS`): another
+  worker reclaims the rows with a new claim token, and the first worker's late `markProcessed`/`markFailed`
+  is dropped by the claim-token guard. The handler may then have run twice, so stream handlers must stay
+  idempotent. The token is required on every worker settle path (#250).
