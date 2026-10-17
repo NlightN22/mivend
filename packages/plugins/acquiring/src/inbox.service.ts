@@ -19,13 +19,14 @@ export class InboxService {
     constructor(private connection: TransactionalConnection) {}
 
     // Recorded before any processing so redeliveries are acked without enqueuing a duplicate.
-    // Returns the existing row on a repeat; both outcomes are safe to ack.
+    // Returns the existing row on a repeat; a rejectReason stores it terminal in the same write.
     async enqueue(
         ctx: RequestContext,
         provider: string,
         providerEventId: string,
         payloadHash: string,
         payload: unknown,
+        rejectReason?: string,
     ): Promise<IncomingPaymentEvent> {
         const repo = this.connection.getRepository(ctx, IncomingPaymentEvent);
         const existing = await repo.findOne({ where: { provider, providerEventId } });
@@ -38,8 +39,9 @@ export class InboxService {
                     providerEventId,
                     payloadHash,
                     payload: JSON.stringify(payload),
-                    status: 'pending',
-                    attempts: 0,
+                    status: rejectReason ? 'failed' : 'pending',
+                    attempts: rejectReason ? MAX_ATTEMPTS : 0,
+                    lastError: rejectReason ?? null,
                 }),
             );
         } catch (err) {
@@ -86,33 +88,37 @@ export class InboxService {
         });
     }
 
+    // Only a row still in 'processing' is settled: a stale worker must not overwrite a newer claim's outcome.
     async markProcessed(ctx: RequestContext, id: number): Promise<void> {
         await this.connection
             .getRepository(ctx, IncomingPaymentEvent)
-            .update({ id }, { status: 'processed', processedAt: new Date() });
+            .update({ id, status: 'processing' }, { status: 'processed', processedAt: new Date() });
     }
 
     // Retry backoff is the sweep interval itself; there is no separate delay mechanism.
     async markFailed(ctx: RequestContext, id: number, error: Error): Promise<void> {
-        const repo = this.connection.getRepository(ctx, IncomingPaymentEvent);
-        const row = await repo.findOneOrFail({ where: { id } });
-        const attempts = row.attempts + 1;
-        await repo.update(
-            { id },
-            {
-                attempts,
+        await this.connection
+            .getRepository(ctx, IncomingPaymentEvent)
+            .createQueryBuilder()
+            .update()
+            .set({
+                attempts: () => 'attempts + 1',
                 lastError: error.message,
-                status: attempts >= MAX_ATTEMPTS ? 'failed' : 'pending',
-            },
-        );
+                status: () =>
+                    `CASE WHEN attempts + 1 >= ${MAX_ATTEMPTS} THEN 'failed' ELSE 'pending' END`,
+            })
+            .where('id = :id AND status = :processing', { id, processing: 'processing' })
+            .execute();
     }
 
     // Retrying cannot fix data the producer never sent, so skip straight to the terminal state.
-    // Still enqueued first, so nothing is silently dropped; it just skips the sweep retries.
     async rejectAsInvalid(ctx: RequestContext, id: number, reason: string): Promise<void> {
         await this.connection
             .getRepository(ctx, IncomingPaymentEvent)
-            .update({ id }, { status: 'failed', attempts: MAX_ATTEMPTS, lastError: reason });
+            .update(
+                { id, status: 'processing' },
+                { status: 'failed', attempts: MAX_ATTEMPTS, lastError: reason },
+            );
     }
 
     // Looks up the event backing an already-processed payment, to render a real (not fabricated)

@@ -164,3 +164,73 @@ describe('InboxService.claimBatch: stuck "processing" recovery (integration, rea
         expect(claimed.map(row => row.id)).not.toContain(fresh.id);
     });
 });
+
+describe('InboxService outcome writes (integration, real Postgres)', () => {
+    async function seedProcessing(ref: string): Promise<TestIncomingPaymentEvent> {
+        const repo = dataSource.getRepository(TestIncomingPaymentEvent);
+        return repo.save(
+            repo.create({
+                provider: 'bank-transfer-erp',
+                providerEventId: ref,
+                payloadHash: 'hash',
+                payload: '{}',
+                status: 'processing',
+                attempts: 0,
+            }),
+        );
+    }
+
+    it('concurrent markFailed calls each count one attempt (no lost increment)', async () => {
+        const row = await seedProcessing('attempts-1');
+
+        await Promise.all([
+            inboxService.markFailed(mockCtx, row.id, new Error('a')),
+            inboxService.markFailed(mockCtx, row.id, new Error('b')),
+        ]);
+
+        const after = await dataSource.getRepository(TestIncomingPaymentEvent).findOneByOrFail({
+            id: row.id,
+        });
+        expect(after.attempts).toBe(1);
+    });
+
+    it('a stale worker cannot overwrite a settled row with markProcessed or markFailed', async () => {
+        const row = await seedProcessing('stale-1');
+        await inboxService.markProcessed(mockCtx, row.id);
+
+        await inboxService.markFailed(mockCtx, row.id, new Error('stale'));
+        await inboxService.markProcessed(mockCtx, row.id);
+
+        const after = await dataSource.getRepository(TestIncomingPaymentEvent).findOneByOrFail({
+            id: row.id,
+        });
+        expect(after.status).toBe('processed');
+        expect(after.attempts).toBe(0);
+    });
+
+    it('markFailed dead-letters on the fifth attempt', async () => {
+        const row = await seedProcessing('dead-1');
+        const repo = dataSource.getRepository(TestIncomingPaymentEvent);
+        await repo.update(row.id, { attempts: 4 });
+
+        await inboxService.markFailed(mockCtx, row.id, new Error('last'));
+
+        const after = await repo.findOneByOrFail({ id: row.id });
+        expect(after.status).toBe('failed');
+        expect(after.attempts).toBe(5);
+    });
+
+    it('enqueue with a rejectReason stores the row terminal, never claimable', async () => {
+        const row = await inboxService.enqueue(
+            mockCtx,
+            'branch-kassa',
+            'no-rrn-1',
+            'h',
+            {},
+            'no rrn',
+        );
+
+        expect(row.status).toBe('failed');
+        expect(await inboxService.claimBatch(mockCtx, 10)).toEqual([]);
+    });
+});

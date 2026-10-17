@@ -26,6 +26,13 @@ describe('InboxService', () => {
     let mockRepo: ReturnType<typeof createMockRepo>;
     let mockConnection: TransactionalConnection;
 
+    const qb = {
+        update: vi.fn(() => qb),
+        set: vi.fn(() => qb),
+        where: vi.fn(() => qb),
+        execute: vi.fn(async () => ({ affected: 1 })),
+    };
+
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
     function createMockRepo() {
         return {
@@ -34,6 +41,7 @@ describe('InboxService', () => {
             create: vi.fn(input => input),
             save: vi.fn(async entity => entity),
             update: vi.fn(),
+            createQueryBuilder: vi.fn(() => qb),
         };
     }
 
@@ -63,6 +71,20 @@ describe('InboxService', () => {
                 }),
             );
             expect(result.status).toBe('pending');
+        });
+
+        it('with a rejectReason records the row terminal in the same write (no pending window)', async () => {
+            mockRepo.findOne.mockResolvedValue(null);
+
+            await service.enqueue(mockCtx, 'branch-kassa', 'evt-9', 'hash', {}, 'no reference');
+
+            expect(mockRepo.save).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    status: 'failed',
+                    attempts: 5,
+                    lastError: 'no reference',
+                }),
+            );
         });
 
         it('returns the existing row instead of creating a duplicate when already enqueued', async () => {
@@ -98,35 +120,28 @@ describe('InboxService', () => {
     // Covered by integration/payment-inbox-claim.int.test.ts against a real transaction.
 
     describe('markProcessed / markFailed', () => {
-        it('markProcessed sets status "processed" with a processedAt timestamp', async () => {
+        it('markProcessed settles only a row still in "processing"', async () => {
             await service.markProcessed(mockCtx, 1);
 
             expect(mockRepo.update).toHaveBeenCalledWith(
-                { id: 1 },
+                { id: 1, status: 'processing' },
                 expect.objectContaining({ status: 'processed' }),
             );
         });
 
-        it('markFailed increments attempts and returns to "pending" while under the retry limit', async () => {
-            mockRepo.findOneOrFail.mockResolvedValue(makeEvent({ attempts: 1 }));
-
+        it('markFailed is one conditional UPDATE that increments attempts in SQL', async () => {
             await service.markFailed(mockCtx, 1, new Error('boom'));
 
-            expect(mockRepo.update).toHaveBeenCalledWith(
-                { id: 1 },
-                { attempts: 2, lastError: 'boom', status: 'pending' },
-            );
-        });
-
-        it('markFailed dead-letters the event ("failed", terminal) once MAX_ATTEMPTS is reached', async () => {
-            mockRepo.findOneOrFail.mockResolvedValue(makeEvent({ attempts: 4 }));
-
-            await service.markFailed(mockCtx, 1, new Error('still broken'));
-
-            expect(mockRepo.update).toHaveBeenCalledWith(
-                { id: 1 },
-                { attempts: 5, lastError: 'still broken', status: 'failed' },
-            );
+            const set = qb.set.mock.calls[0] as unknown as [
+                { attempts: () => string; status: () => string; lastError: string },
+            ];
+            expect(set[0].attempts()).toBe('attempts + 1');
+            expect(set[0].status()).toContain("CASE WHEN attempts + 1 >= 5 THEN 'failed'");
+            expect(set[0].lastError).toBe('boom');
+            expect(qb.where).toHaveBeenCalledWith(expect.stringContaining('status = :processing'), {
+                id: 1,
+                processing: 'processing',
+            });
         });
     });
 
@@ -135,7 +150,7 @@ describe('InboxService', () => {
             await service.rejectAsInvalid(mockCtx, 1, 'missing mandatory external reference');
 
             expect(mockRepo.update).toHaveBeenCalledWith(
-                { id: 1 },
+                { id: 1, status: 'processing' },
                 {
                     status: 'failed',
                     attempts: 5,

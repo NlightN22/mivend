@@ -29,7 +29,6 @@ describe('PaymentEventListener', () => {
     function createMockInboxService() {
         return {
             enqueue: vi.fn(async (..._args: unknown[]) => ({ id: 99 })),
-            rejectAsInvalid: vi.fn(async (..._args: unknown[]) => undefined),
         };
     }
 
@@ -128,7 +127,7 @@ describe('PaymentEventListener', () => {
         });
     });
 
-    it('still durably enqueues a branch-kassa fact with no RRN (never a silent drop), then rejects it as invalid — the external reference is mandatory', async () => {
+    it('still durably enqueues a branch-kassa fact with no RRN (never a silent drop), stored terminal in the same write — the external reference is mandatory', async () => {
         eventBus.emit(
             BranchKassaPaymentEvent,
             new BranchKassaPaymentEvent(mockCtx, 8, 1, 'success', 'SYNC-EVT-10'),
@@ -144,9 +143,8 @@ describe('PaymentEventListener', () => {
             channel: 'branch-kassa',
             externalReference: undefined,
         });
-        expect(inboxService.rejectAsInvalid).toHaveBeenCalledWith(
-            mockCtx,
-            99,
+        expect(inboxService.enqueue).toHaveBeenCalledTimes(1);
+        expect(inboxService.enqueue.mock.calls[0][5]).toEqual(
             expect.stringContaining('Missing mandatory external reference'),
         );
     });
@@ -159,10 +157,10 @@ describe('PaymentEventListener', () => {
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(inboxService.rejectAsInvalid).not.toHaveBeenCalled();
+        expect(inboxService.enqueue.mock.calls[0][5]).toBeUndefined();
     });
 
-    it('does not call payProformaInvoice-adjacent processing — enqueue/rejectAsInvalid are the only side effects', () => {
+    it('does not call payProformaInvoice-adjacent processing — enqueue is the only side effect', () => {
         eventBus.emit(
             ErpPaymentReportedEvent,
             new ErpPaymentReportedEvent(mockCtx, {
@@ -174,6 +172,6 @@ describe('PaymentEventListener', () => {
                 currencyCode: 'RUB',
             }),
         );
-        expect(Object.keys(inboxService).sort()).toEqual(['enqueue', 'rejectAsInvalid']);
+        expect(Object.keys(inboxService).sort()).toEqual(['enqueue']);
     });
 });

@@ -77,22 +77,18 @@ export class PaymentEventListener implements OnModuleInit {
                     channel: 'branch-kassa' satisfies PaymentChannel,
                     externalReference: event.rrn ?? undefined,
                 };
-                const row = await this.inboxService.enqueue(
+                // The RRN/kassa receipt number reconciles with the branch kassa system: stored terminal in the
+                // same write, never as a pending row the worker could process without a reference.
+                await this.inboxService.enqueue(
                     event.ctx,
                     'branch-kassa',
                     event.sourceEventId,
                     hashPayload(payload),
                     payload,
+                    event.rrn
+                        ? undefined
+                        : 'Missing mandatory external reference (RRN/kassa receipt) for branch-kassa payment fact',
                 );
-                if (!event.rrn) {
-                    // Required to reconcile with the branch kassa system (RRN for card, fiscal receipt no. for cash).
-                    // Reject rather than process a payment with no reference.
-                    await this.inboxService.rejectAsInvalid(
-                        event.ctx,
-                        Number(row.id),
-                        'Missing mandatory external reference (RRN/kassa receipt) for branch-kassa payment fact',
-                    );
-                }
             },
             loggerCtx,
         );
