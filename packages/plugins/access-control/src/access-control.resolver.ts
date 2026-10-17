@@ -3,7 +3,6 @@ import { AdministratorListOptions, Permission } from '@vendure/common/lib/genera
 import {
     Administrator,
     Allow,
-    AdministratorService,
     Ctx,
     ListQueryOptions,
     PaginatedList,
@@ -60,7 +59,6 @@ export class AccessControlResolver {
         private warehouseService: WarehouseService,
         private branchSettingsService: BranchSettingsService,
         private creditTermLimitService: CreditTermLimitService,
-        private administratorService: AdministratorService,
         private accessScopeService: AccessScopeService,
         private erpUserService: ErpUserService,
         private administratorProvisioningService: AdministratorProvisioningService,
@@ -88,20 +86,20 @@ export class AccessControlResolver {
     @Query()
     @Allow(Permission.Authenticated)
     async teamDirectory(@Ctx() ctx: RequestContext): Promise<TeamDirectoryMember[]> {
-        const result = await this.administratorService.findAll(ctx, { take: 200 }, ['user.roles']);
+        const team = await this.teamAdministratorService.findTeam(ctx);
         const [ownDepartmentId, visibilityScope] = await Promise.all([
             this.accessScopeService.getOwnDepartmentId(ctx),
             this.accessScopeService.resolveTeamVisibilityScope(ctx),
         ]);
         const positionNames = await this.positionService.findNamesByErpIds(
             ctx,
-            result.items.flatMap(a => {
+            team.flatMap(a => {
                 const id = (a.customFields as { positionId?: string | null } | undefined)
                     ?.positionId;
                 return id ? [id] : [];
             }),
         );
-        return result.items.map(a => {
+        return team.map(a => {
             const customFields = a.customFields as
                 | {
                       departmentId?: string | null;

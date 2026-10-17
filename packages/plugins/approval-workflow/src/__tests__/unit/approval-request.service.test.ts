@@ -41,11 +41,11 @@ describe('ApprovalRequestService', () => {
         create: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
     };
+    let adminRepo: { findOne: ReturnType<typeof vi.fn> };
     let connection: { getRepository: ReturnType<typeof vi.fn> };
     let workflowDefinitionService: { getDefinition: ReturnType<typeof vi.fn> };
     let administratorService: {
         findOneByUserId: ReturnType<typeof vi.fn>;
-        findOne: ReturnType<typeof vi.fn>;
     };
     let service: ApprovalRequestService;
 
@@ -69,9 +69,14 @@ describe('ApprovalRequestService', () => {
             create: vi.fn((x: unknown) => x),
             save: vi.fn(async (x: unknown) => x),
         };
+        adminRepo = { findOne: vi.fn() };
         connection = {
             getRepository: vi.fn((_ctx: unknown, entity: { name: string }) =>
-                entity.name === 'ApprovalRequest' ? requestRepo : stepRepo,
+                entity.name === 'ApprovalRequest'
+                    ? requestRepo
+                    : entity.name === 'Administrator'
+                      ? adminRepo
+                      : stepRepo,
             ),
         };
         workflowDefinitionService = {
@@ -81,7 +86,7 @@ describe('ApprovalRequestService', () => {
                 steps,
             })),
         };
-        administratorService = { findOneByUserId: vi.fn(), findOne: vi.fn() };
+        administratorService = { findOneByUserId: vi.fn() };
         service = new ApprovalRequestService(
             connection as unknown as TransactionalConnection,
             workflowDefinitionService as unknown as WorkflowDefinitionService,
@@ -175,12 +180,31 @@ describe('ApprovalRequestService', () => {
             requestType: 'priceAdjustmentApproval',
         });
         administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
-        administratorService.findOne.mockResolvedValue({
+        adminRepo.findOne.mockResolvedValue({
             user: { roles: [{ code: 'SomeOtherRole' }] },
         });
 
         await expect(service.escalate(mockCtx(true), 'req-1', 'admin-9')).rejects.toThrow(
             UserInputError,
+        );
+    });
+
+    it('rejects escalate() to an administrator that is not a live administrator', async () => {
+        requestRepo.findOneOrFail.mockResolvedValue({
+            id: 'req-1',
+            status: 'pending',
+            requestedByAdministratorId: 'admin-1',
+            currentStepIndex: 0,
+            requestType: 'priceAdjustmentApproval',
+        });
+        administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
+        adminRepo.findOne.mockResolvedValue(null);
+
+        await expect(service.escalate(mockCtx(true), 'req-1', 'admin-9')).rejects.toThrow(
+            'Administrator not found',
+        );
+        expect(adminRepo.findOne).toHaveBeenCalledWith(
+            expect.objectContaining({ relations: ['user', 'user.roles'] }),
         );
     });
 
@@ -194,7 +218,7 @@ describe('ApprovalRequestService', () => {
         };
         requestRepo.findOneOrFail.mockResolvedValue(request);
         administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
-        administratorService.findOne.mockResolvedValue({
+        adminRepo.findOne.mockResolvedValue({
             user: { roles: [{ code: 'GeneralDirector' }] },
         });
         stepRepo.findOne.mockResolvedValue(null);

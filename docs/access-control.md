@@ -113,7 +113,10 @@ colleagues through `TeamAdministratorService` for every `'department'`- and `'ow
 (department-head, operator, manager): live administrators of the caller's own `branchId`, a branchless
 caller sees none. Only `'all'` keeps Vendure's list. Reassignment targets are checked against the
 branch for `'department'` only; other scopes are unchanged. This grants no administrator-management
-permission.
+permission. `teamDirectory` (`/team`) lists the same `findTeam` set, then applies its own
+name anonymization. Approval escalation resolves its target by id directly (live administrators only),
+not through `AdministratorService`, so the requester's grantable roles never hide a valid approver; the
+step's `escalatesTo` role check still applies.
 
 **Rule: row-level visibility filtering is a single, reusable service — never copy-pasted
 `if`/`switch` role checks scattered across resolvers or domain services.**

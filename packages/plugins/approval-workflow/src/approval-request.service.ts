@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { Permission } from '@vendure/common/lib/generated-types';
 import {
+    Administrator,
     AdministratorService,
     ForbiddenError,
     Logger,
@@ -10,7 +11,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { Brackets, SelectQueryBuilder } from 'typeorm';
+import { Brackets, IsNull, SelectQueryBuilder } from 'typeorm';
 import { createActor } from 'xstate';
 
 import { buildApprovalMachine, stepIndexFromStateValue } from './approval-machine';
@@ -180,11 +181,11 @@ export class ApprovalRequestService {
         if (!stepDef) {
             throw new UserInputError(`Invalid currentStepIndex on ApprovalRequest ${requestId}`);
         }
-        const targetAdmin = await this.administratorService.findOne(
-            ctx,
-            escalateToAdministratorId,
-            ['user.roles'],
-        );
+        // Not AdministratorService.findOne: since Vendure 3.7.3 it hides admins whose roles the requester can't grant.
+        const targetAdmin = await this.connection.getRepository(ctx, Administrator).findOne({
+            where: { id: escalateToAdministratorId, deletedAt: IsNull() },
+            relations: ['user', 'user.roles'],
+        });
         if (!targetAdmin) {
             throw new UserInputError('Administrator not found');
         }

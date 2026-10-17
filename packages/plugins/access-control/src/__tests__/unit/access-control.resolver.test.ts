@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AdministratorService, RequestContext } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
 
 import { AccessControlResolver, AdministratorStatusResolver } from '../../access-control.resolver';
 import { AccessScopeService } from '../../access-scope.service';
@@ -48,7 +48,6 @@ describe('AccessControlResolver.teamMembers', () => {
             {} as WarehouseService,
             {} as BranchSettingsService,
             {} as CreditTermLimitService,
-            {} as AdministratorService,
             {} as AccessScopeService,
             {} as ErpUserService,
             {} as AdministratorProvisioningService,
@@ -72,7 +71,7 @@ describe('AccessControlResolver.teamMembers', () => {
 });
 
 describe('AccessControlResolver.teamDirectory', () => {
-    let administratorService: { findAll: ReturnType<typeof vi.fn> };
+    let teamAdministratorService: { findTeam: ReturnType<typeof vi.fn> };
     let positionService: { findNamesByErpIds: ReturnType<typeof vi.fn> };
     let accessScopeService: {
         getOwnDepartmentId: ReturnType<typeof vi.fn>;
@@ -82,7 +81,7 @@ describe('AccessControlResolver.teamDirectory', () => {
     const ctx = {} as RequestContext;
 
     beforeEach(() => {
-        administratorService = { findAll: vi.fn() };
+        teamAdministratorService = { findTeam: vi.fn() };
         positionService = { findNamesByErpIds: vi.fn().mockResolvedValue(new Map()) };
         accessScopeService = {
             getOwnDepartmentId: vi.fn(),
@@ -96,23 +95,20 @@ describe('AccessControlResolver.teamDirectory', () => {
             {} as WarehouseService,
             {} as BranchSettingsService,
             {} as CreditTermLimitService,
-            administratorService as unknown as AdministratorService,
             accessScopeService as unknown as AccessScopeService,
             {} as ErpUserService,
             {} as AdministratorProvisioningService,
             {} as AdministratorActivationService,
-            {} as TeamAdministratorService,
+            teamAdministratorService as unknown as TeamAdministratorService,
         );
     });
 
     it("always shows names for colleagues in the caller's own department", async () => {
-        administratorService.findAll.mockResolvedValue({
-            items: [
-                mockAdministrator('1', 'Olga', 'DeptHead', { departmentId: 'dept-sales' }, [
-                    'department-head',
-                ]),
-            ],
-        });
+        teamAdministratorService.findTeam.mockResolvedValue([
+            mockAdministrator('1', 'Olga', 'DeptHead', { departmentId: 'dept-sales' }, [
+                'department-head',
+            ]),
+        ]);
         accessScopeService.getOwnDepartmentId.mockResolvedValue('dept-sales');
         accessScopeService.resolveTeamVisibilityScope.mockResolvedValue({ kind: 'own' });
 
@@ -132,9 +128,9 @@ describe('AccessControlResolver.teamDirectory', () => {
     });
 
     it('hides names for a different department when scope is not "all"', async () => {
-        administratorService.findAll.mockResolvedValue({
-            items: [mockAdministrator('2', 'Petr', 'Manager', { departmentId: 'dept-purchasing' })],
-        });
+        teamAdministratorService.findTeam.mockResolvedValue([
+            mockAdministrator('2', 'Petr', 'Manager', { departmentId: 'dept-purchasing' }),
+        ]);
         accessScopeService.getOwnDepartmentId.mockResolvedValue('dept-sales');
         accessScopeService.resolveTeamVisibilityScope.mockResolvedValue({ kind: 'department' });
 
@@ -145,11 +141,9 @@ describe('AccessControlResolver.teamDirectory', () => {
     });
 
     it('shows names for a different department when scope is "all"', async () => {
-        administratorService.findAll.mockResolvedValue({
-            items: [
-                mockAdministrator('3', 'Nikolai', 'Director', { departmentId: 'dept-executive' }),
-            ],
-        });
+        teamAdministratorService.findTeam.mockResolvedValue([
+            mockAdministrator('3', 'Nikolai', 'Director', { departmentId: 'dept-executive' }),
+        ]);
         accessScopeService.getOwnDepartmentId.mockResolvedValue('dept-sales');
         accessScopeService.resolveTeamVisibilityScope.mockResolvedValue({ kind: 'all' });
 
@@ -159,15 +153,13 @@ describe('AccessControlResolver.teamDirectory', () => {
     });
 
     it('exposes position/branch custom fields', async () => {
-        administratorService.findAll.mockResolvedValue({
-            items: [
-                mockAdministrator('4', 'Ivan', 'Operator', {
-                    departmentId: 'dept-sales',
-                    branchId: 'branch-central',
-                    positionId: 'pos-1',
-                }),
-            ],
-        });
+        teamAdministratorService.findTeam.mockResolvedValue([
+            mockAdministrator('4', 'Ivan', 'Operator', {
+                departmentId: 'dept-sales',
+                branchId: 'branch-central',
+                positionId: 'pos-1',
+            }),
+        ]);
         accessScopeService.getOwnDepartmentId.mockResolvedValue('dept-sales');
         accessScopeService.resolveTeamVisibilityScope.mockResolvedValue({ kind: 'own' });
 
@@ -191,7 +183,6 @@ describe('AccessControlResolver.portalUsers', () => {
             {} as WarehouseService,
             {} as BranchSettingsService,
             {} as CreditTermLimitService,
-            {} as AdministratorService,
             {} as AccessScopeService,
             {} as ErpUserService,
             {} as AdministratorProvisioningService,
@@ -225,7 +216,6 @@ describe('AccessControlResolver.resetAdministratorPassword', () => {
             {} as WarehouseService,
             {} as BranchSettingsService,
             {} as CreditTermLimitService,
-            {} as AdministratorService,
             {} as AccessScopeService,
             {} as ErpUserService,
             administratorProvisioningService as unknown as AdministratorProvisioningService,
@@ -252,7 +242,6 @@ describe('AccessControlResolver.resetAdministratorPassword', () => {
             {} as WarehouseService,
             {} as BranchSettingsService,
             {} as CreditTermLimitService,
-            {} as AdministratorService,
             {} as AccessScopeService,
             {} as ErpUserService,
             administratorProvisioningService as unknown as AdministratorProvisioningService,
