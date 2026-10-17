@@ -59,7 +59,8 @@ function setup() {
         { publish: vi.fn() } as never,
         { request: vi.fn() } as never,
     );
-    vi.spyOn(service as never, 'assertBranchExists' as never).mockResolvedValue(undefined as never);
+    (service as unknown as { assertBranchExists: () => Promise<void> }).assertBranchExists =
+        async () => undefined;
     return { service, saved };
 }
 
