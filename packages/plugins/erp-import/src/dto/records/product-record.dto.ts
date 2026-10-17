@@ -38,7 +38,10 @@ export class ProductRecordDto {
     @ApiPropertyOptional({ description: 'Brand facet value code.' })
     brandCode?: string;
 
-    @ApiPropertyOptional({ description: 'Manufacturer record code this product references.' })
+    @ApiPropertyOptional({
+        description:
+            'Manufacturer record code this product references; omitted or empty keeps the current link (no unlink).',
+    })
     manufacturerCode?: string;
 
     @ApiPropertyOptional()
