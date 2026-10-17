@@ -52,6 +52,11 @@ created one, which would show no diff at all) — not an incremental step on top
 never-written migration. Any schema change from here on (a new column, a new entity, a new index)
 needs its own incremental migration generated the same way, kept in `apps/server/src/migrations/`.
 
+**Non-blocking index builds (#250).** `migration.ts` runs migrations through Vendure's `runMigrations`, which uses
+transaction mode `each`, so a migration with `transaction = false` may use `CREATE INDEX CONCURRENTLY` (as the
+`integration_outbox` order index does) and does not lock writes on a large table. A failed concurrent build leaves an
+invalid index; the migration drops any existing one first, so re-running it recovers.
+
 **Renames (#223).** There is no production, so a rename is one plain migration (`RENAME`); a synchronize
 contour that sees the new name first drops and recreates the table, which is accepted for dev data. Do not add
 carry-over code for renames.
