@@ -120,6 +120,10 @@ export class OrderDeliveryEditService {
             .getRepository(ctx, ShippingMethod)
             .findOne({ where: { code, deletedAt: IsNull() } });
         if (!target) throw new UserInputError(`Shipping method ${code} is not configured`);
+        const rate = target.calculator?.args?.find(a => a.name === 'rate')?.value;
+        if (rate !== undefined && Number(rate) !== 0) {
+            throw new UserInputError(`Shipping method ${code} must be free but has a rate`);
+        }
         const lines = await this.connection
             .getRepository(ctx, ShippingLine)
             .find({ where: { order: { id: order.id } } });

@@ -5,7 +5,7 @@ import { DataSource } from 'typeorm';
 import type { Repository } from 'typeorm';
 import type { RequestContext } from '@vendure/core';
 import { CheckPolicyChangedEvent } from '@mivend/plugin-checks';
-import { OrderStaffConfirmedEvent } from '@mivend/plugin-reservation';
+import { OrderDeliveryEditedEvent, OrderStaffConfirmedEvent } from '@mivend/plugin-reservation';
 import {
     createTestSchema,
     dropTestSchema,
@@ -18,6 +18,7 @@ import { IntegrationOutboxRecoveryService } from '../../../integration-outbox-re
 import { IntegrationOutboxService } from '../../../integration-outbox.service';
 import { HeldSendRedriveService } from '../../../order-checks/held-send-redrive.service';
 import { HELD_SKIP_REASON } from '../../../order-checks/order-send-hold.service';
+import { COURIER_WITHOUT_POINT_SKIP_REASON } from '../../../order-submitted.builder';
 import { outboundSend, outboundSkip } from '../../../outbound-gateway';
 import type { OutboundBuildResult } from '../../../outbound-gateway';
 
@@ -202,5 +203,28 @@ describe('held send re-drive', () => {
         expect(await statusOf(held.id)).toBe('skipped');
         expect(await statusOf(other.id)).toBe('skipped');
         expect(build).not.toHaveBeenCalled();
+    });
+
+    it('the sweep picks up a send skipped for a courier order without a point', async () => {
+        const a = await heldRow('1', COURIER_WITHOUT_POINT_SKIP_REASON);
+
+        await service.sweep();
+
+        expect(await statusOf(a.id)).toBe('resolved');
+        expect(await repo().count({ where: { status: 'pending' } })).toBe(1);
+    });
+
+    it('delivery edit then staff re-confirm: stays skipped while the point is missing, sent after the re-confirm', async () => {
+        const a = await heldRow('1', COURIER_WITHOUT_POINT_SKIP_REASON);
+        build.mockResolvedValue(outboundSkip(COURIER_WITHOUT_POINT_SKIP_REASON));
+
+        await handlers.get('OrderDeliveryEditedEvent')!(new OrderDeliveryEditedEvent(ctx, '1'));
+        expect(await statusOf(a.id)).toBe('skipped');
+
+        build.mockResolvedValue(outboundSend([{ payload: { orderId: '1' } }]));
+        await handlers.get('OrderStaffConfirmedEvent')!(new OrderStaffConfirmedEvent(ctx, '1'));
+
+        expect(await statusOf(a.id)).toBe('resolved');
+        expect(await repo().count({ where: { status: 'pending' } })).toBe(1);
     });
 });

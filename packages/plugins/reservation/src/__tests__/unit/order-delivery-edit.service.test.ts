@@ -121,4 +121,22 @@ describe('OrderDeliveryEditService.setDelivery', () => {
         await service.setDelivery(ctx, 1, 'PICKUP', null);
         expect(lockedQb.setLock).toHaveBeenCalledWith('pessimistic_write');
     });
+
+    it('refuses a freight or pickup method configured with a non-zero rate', async () => {
+        methodRepo.findOne.mockResolvedValue({
+            id: 70,
+            calculator: { args: [{ name: 'rate', value: '500' }] },
+        });
+        await expect(service.setDelivery(ctx, 1, 'COURIER', '9')).rejects.toThrow(/must be free/);
+        expect(lineRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('accepts a method whose rate is zero', async () => {
+        methodRepo.findOne.mockResolvedValue({
+            id: 70,
+            calculator: { args: [{ name: 'rate', value: '0' }] },
+        });
+        await service.setDelivery(ctx, 1, 'PICKUP', null);
+        expect(lineRepo.update).toHaveBeenCalledTimes(1);
+    });
 });
