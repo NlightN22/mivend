@@ -24,7 +24,7 @@ async function clearCart(page: Page): Promise<void> {
 }
 
 async function addToCartFromCatalog(page: Page, count = 1): Promise<void> {
-    await page.goto('/catalog');
+    await page.goto('/catalog?inStock=1');
     await page.waitForLoadState('networkidle');
     await expect(page.locator('.mv-product-row').first()).toBeVisible({ timeout: 10000 });
     for (let i = 0; i < count; i++) {
@@ -101,7 +101,7 @@ test.describe('Cart page — ordering', () => {
 
     test('badge shows position count when multiple products added', async ({ page }) => {
         // Add a second distinct product (first is already in cart from beforeEach)
-        await page.goto('/catalog');
+        await page.goto('/catalog?inStock=1');
         await page.waitForLoadState('networkidle');
         await expect(page.locator('.mv-product-row').first()).toBeVisible({ timeout: 10000 });
         const secondRow = page.locator('.mv-product-row').nth(1);

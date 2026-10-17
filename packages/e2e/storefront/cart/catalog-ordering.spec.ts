@@ -21,7 +21,7 @@ async function clearCart(page: Page): Promise<void> {
 }
 
 async function openCatalog(page: Page): Promise<void> {
-    await page.goto('/catalog');
+    await page.goto('/catalog?inStock=1');
     await page.waitForLoadState('networkidle');
     await expect(page.locator('.mv-product-row').first()).toBeVisible({ timeout: 10000 });
 }

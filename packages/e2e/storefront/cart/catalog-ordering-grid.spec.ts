@@ -31,7 +31,7 @@ function firstCard(page: Page): Locator {
 test.describe('Catalog grid — cart ordering', () => {
     test.beforeEach(async ({ page }) => {
         await clearCart(page);
-        await page.goto('/catalog');
+        await page.goto('/catalog?inStock=1');
         await page.waitForLoadState('networkidle');
         await expect(page.locator('.mv-product-row').first()).toBeVisible({ timeout: 10000 });
         await switchToGrid(page);
