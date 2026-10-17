@@ -33,6 +33,8 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         const reservationQueryBuilder = {
             setLock: vi.fn().mockReturnThis(),
             setOnLocked: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            getQuery: vi.fn(() => 'SELECT 1'),
             where: vi.fn().mockReturnThis(),
             andWhere: vi.fn(function (this: unknown, sql: string) {
                 if (sql.includes('orderId IN')) isRejectedQuery = true;
