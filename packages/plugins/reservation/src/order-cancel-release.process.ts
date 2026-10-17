@@ -15,6 +15,7 @@ export const orderCancelReleaseProcess: OrderProcess<OrderState> = {
         reservations = injector.get(ReservationService);
     },
     // Before core's first order save, so a path that skipped withOrderCancelLocks keeps the lock order.
+    // Relies on core's transitionToState running inside a transaction; otherwise the xact locks end here.
     async onTransitionStart(_fromState, toState, { ctx, order }) {
         if (toState !== 'Cancelled') return;
         await withOrderCancelLocks(connection, ctx, order.id, async () => undefined);
