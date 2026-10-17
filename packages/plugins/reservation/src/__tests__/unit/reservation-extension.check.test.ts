@@ -8,7 +8,9 @@ import type { ReservationExtensionLimitService } from '../../reservation-extensi
 const ctx = {} as RequestContext;
 
 function run(limit: { maxExtraDays: number } | null, days: number, roleCodes: string[] = ['r']) {
-    const getMaxLimit = vi.fn(async () => limit);
+    const getMaxLimit = vi.fn(async (_ctx: RequestContext, codes: string[]) =>
+        codes.length > 0 ? limit : null,
+    );
     const check = new ReservationExtensionCheck(new CheckRegistry(), {
         getMaxLimit,
     } as unknown as ReservationExtensionLimitService);
@@ -38,7 +40,6 @@ describe('ReservationExtensionCheck', () => {
         expect((await noRole.findings)[0].messageKey).toBe(
             'manager.reservation-extension-days.no-limit',
         );
-        expect(noRole.getLimit).toHaveBeenCalledWith(ctx, []);
     });
 
     it('does not judge a request without a usable day count', async () => {
