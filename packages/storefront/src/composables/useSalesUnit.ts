@@ -38,6 +38,12 @@ export const packsToBase = (packs: number, unit: SalesUnitView): number =>
 export const baseToPacks = (base: number, unit: SalesUnitView): number =>
     Math.round((base / unit.ratio) * 1e6) / 1e6;
 
+// Rounds up so a repeated order never asks for less than the original; at least one step.
+export const roundUpToWholePacks = (base: number, unit: SalesUnitView): number => {
+    const stepBase = packsToBase(unit.packStep, unit);
+    return Math.max(1, Math.ceil(base / stepBase)) * stepBase;
+};
+
 export interface PackagingLevel {
     name: string;
     ratioToBase: number;

@@ -13,6 +13,10 @@ query MyOrders($options: OrderListOptions, $search: String) {
                 linePriceWithTax
                 productVariant {
                     id
+                    customFields {
+                        unitName
+                        unitRatioToBase
+                    }
                     sku
                     name
                     product {

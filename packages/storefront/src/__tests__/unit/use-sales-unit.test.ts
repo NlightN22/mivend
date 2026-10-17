@@ -5,6 +5,7 @@ import {
     nearestPackOf,
     nextPackAbove,
     packsToBase,
+    roundUpToWholePacks,
     salesUnitOf,
 } from '../../composables/useSalesUnit';
 
@@ -71,5 +72,16 @@ describe('nextPackAbove', () => {
             48,
         );
         expect(nextPackAbove({ unitName: 'box', unitRatioToBase: 48 }, levels, 48)).toBeNull();
+    });
+});
+
+describe('roundUpToWholePacks', () => {
+    it('rounds up to a whole pack step and never below one step', () => {
+        const unit = salesUnitOf(variant, true)!;
+        expect(roundUpToWholePacks(7, unit)).toBe(12);
+        expect(roundUpToWholePacks(12, unit)).toBe(12);
+        expect(roundUpToWholePacks(0, unit)).toBe(6);
+        const slow = salesUnitOf({ unitName: 'pack', unitRatioToBase: 0.9 }, true)!;
+        expect(roundUpToWholePacks(10, slow)).toBe(18);
     });
 });

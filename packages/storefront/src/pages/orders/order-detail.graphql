@@ -18,6 +18,10 @@ query OrderDetail($id: ID!) {
             reservedUntil
             productVariant {
                 id
+                customFields {
+                    unitName
+                    unitRatioToBase
+                }
                 sku
                 name
                 product {

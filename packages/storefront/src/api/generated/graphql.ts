@@ -2381,6 +2381,7 @@ export type OrderCancelSuccess = {
 
 export type OrderCustomFields = {
     branchId?: Maybe<Scalars['String']['output']>;
+    deliveryAddress?: Maybe<Scalars['String']['output']>;
     erpContractId?: Maybe<Scalars['String']['output']>;
     erpOrderStatus?: Maybe<Scalars['String']['output']>;
     erpPaidAmount?: Maybe<Scalars['Float']['output']>;
@@ -2411,6 +2412,7 @@ export type OrderFilterParameter = {
     code?: InputMaybe<StringOperators>;
     createdAt?: InputMaybe<DateOperators>;
     currencyCode?: InputMaybe<StringOperators>;
+    deliveryAddress?: InputMaybe<StringOperators>;
     erpContractId?: InputMaybe<StringOperators>;
     erpOrderStatus?: InputMaybe<StringOperators>;
     erpPaidAmount?: InputMaybe<NumberOperators>;
@@ -2582,6 +2584,7 @@ export type OrderSortParameter = {
     /** A unique code for the Order */
     code?: InputMaybe<SortOrder>;
     createdAt?: InputMaybe<SortOrder>;
+    deliveryAddress?: InputMaybe<SortOrder>;
     erpContractId?: InputMaybe<SortOrder>;
     erpOrderStatus?: InputMaybe<SortOrder>;
     erpPaidAmount?: InputMaybe<SortOrder>;
@@ -4338,6 +4341,7 @@ export type UpdateMultipleOrderItemsResult = {
 
 export type UpdateOrderCustomFieldsInput = {
     branchId?: InputMaybe<Scalars['String']['input']>;
+    deliveryAddress?: InputMaybe<Scalars['String']['input']>;
     erpContractId?: InputMaybe<Scalars['String']['input']>;
     erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
     erpRegistrationDocumentNumber?: InputMaybe<Scalars['String']['input']>;
@@ -4972,6 +4976,10 @@ export type MyOrdersQuery = {
                     id: string;
                     sku: string;
                     name: string;
+                    customFields?: {
+                        unitName?: string | null;
+                        unitRatioToBase?: number | null;
+                    } | null;
                     product: { name: string; slug: string };
                 };
             }>;
@@ -5017,6 +5025,7 @@ export type OrderDetailQuery = {
                 id: string;
                 sku: string;
                 name: string;
+                customFields?: { unitName?: string | null; unitRatioToBase?: number | null } | null;
                 product: { name: string; slug: string };
             };
         }>;
@@ -6163,6 +6172,10 @@ export const MyOrdersDocument = new TypedDocumentString(`
         linePriceWithTax
         productVariant {
           id
+          customFields {
+            unitName
+            unitRatioToBase
+          }
           sku
           name
           product {
@@ -6209,6 +6222,10 @@ export const OrderDetailDocument = new TypedDocumentString(`
       reservedUntil
       productVariant {
         id
+        customFields {
+          unitName
+          unitRatioToBase
+        }
         sku
         name
         product {

@@ -1,9 +1,14 @@
 import { ref, type Ref } from 'vue';
 import { useCartStore } from '../../stores/cart';
+import { usePackagesOnly } from '../../composables/usePackagesOnly';
+import { roundUpToWholePacks, salesUnitOf } from '../../composables/useSalesUnit';
 
 export interface RepeatableLine {
     quantity: number;
-    productVariant: { id: string };
+    productVariant: {
+        id: string;
+        customFields?: { unitName?: string | null; unitRatioToBase?: number | null } | null;
+    };
 }
 
 export interface RepeatResult {
@@ -20,17 +25,20 @@ export interface UseRepeatOrder {
 
 export function useRepeatOrder(): UseRepeatOrder {
     const cart = useCartStore();
+    const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
     const repeating = ref(false);
     const result = ref<RepeatResult | null>(null);
 
     async function repeat(lines: RepeatableLine[]): Promise<RepeatResult> {
         repeating.value = true;
         try {
-            await cart.fetchCart();
+            await Promise.all([cart.fetchCart(), loadPackagesOnly()]);
             const wanted = new Map<string, number>();
             for (const line of lines) {
                 const id = line.productVariant.id;
-                wanted.set(id, (wanted.get(id) ?? 0) + line.quantity);
+                const unit = salesUnitOf(line.productVariant.customFields, packagesOnly.value);
+                const quantity = unit ? roundUpToWholePacks(line.quantity, unit) : line.quantity;
+                wanted.set(id, (wanted.get(id) ?? 0) + quantity);
             }
             const before = new Map(cart.lines.map(l => [l.productVariant.id, l.quantity]));
             const failedVariantIds: string[] = [];
