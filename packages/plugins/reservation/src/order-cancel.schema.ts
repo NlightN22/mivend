@@ -12,7 +12,6 @@ const resultTypes = gql`
         SHIPPED
         IN_PROGRESS
         PAID
-        REFUSED_BY_ERP
         REGISTRATION_REJECTED
     }
 

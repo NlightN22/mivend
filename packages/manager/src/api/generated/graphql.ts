@@ -5548,12 +5548,7 @@ export type OrderAddress = {
 
 export type OrderCancelOutcome = 'ALREADY_CANCELLED' | 'CANCELLED' | 'CANCEL_REQUESTED';
 
-export type OrderCancelRefusalReason =
-    | 'IN_PROGRESS'
-    | 'PAID'
-    | 'REFUSED_BY_ERP'
-    | 'REGISTRATION_REJECTED'
-    | 'SHIPPED';
+export type OrderCancelRefusalReason = 'IN_PROGRESS' | 'PAID' | 'REGISTRATION_REJECTED' | 'SHIPPED';
 
 export type OrderCancelRefused = {
     message: Scalars['String']['output'];

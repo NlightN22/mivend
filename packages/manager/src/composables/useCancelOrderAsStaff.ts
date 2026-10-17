@@ -7,7 +7,6 @@ export const REFUSAL_TEXT: Record<string, string> = {
     SHIPPED: 'The order has already shipped and cannot be cancelled.',
     IN_PROGRESS: 'The order is already in progress and cannot be cancelled.',
     PAID: 'The order is paid; cancellation is not possible.',
-    REFUSED_BY_ERP: 'The cancellation was refused by the ERP.',
     REGISTRATION_REJECTED: 'The order registration was rejected; cancellation is unavailable.',
 };
 
