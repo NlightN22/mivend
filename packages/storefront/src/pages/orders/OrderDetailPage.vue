@@ -48,9 +48,10 @@ async function confirmCancel(): Promise<void> {
 
 async function repeatOrder(): Promise<void> {
     if (!order.value) return;
-    const { added, skipped } = await repeat(order.value.lines);
+    const { added, skipped, roundedUp } = await repeat(order.value.lines);
     if (added) toast(t('orders.detail.repeatDone', { added }), 'success');
     if (skipped) toast(t('orders.detail.repeatSkipped', { skipped }), 'error');
+    if (roundedUp) toast(t('orders.detail.repeatRounded', { rounded: roundedUp }), 'info');
 }
 
 onMounted(() => {

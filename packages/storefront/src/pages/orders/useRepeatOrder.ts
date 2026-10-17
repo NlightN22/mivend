@@ -14,6 +14,7 @@ export interface RepeatableLine {
 export interface RepeatResult {
     added: number;
     skipped: number;
+    roundedUp: number;
     failedVariantIds: string[];
 }
 
@@ -33,12 +34,19 @@ export function useRepeatOrder(): UseRepeatOrder {
         repeating.value = true;
         try {
             await Promise.all([cart.fetchCart(), loadPackagesOnly()]);
-            const wanted = new Map<string, number>();
+            const requested = new Map<string, { base: number; line: RepeatableLine }>();
             for (const line of lines) {
                 const id = line.productVariant.id;
+                const entry = requested.get(id);
+                requested.set(id, { base: (entry?.base ?? 0) + line.quantity, line });
+            }
+            const wanted = new Map<string, number>();
+            let roundedUp = 0;
+            for (const [id, { base, line }] of requested) {
                 const unit = salesUnitOf(line.productVariant.customFields, packagesOnly.value);
-                const quantity = unit ? roundUpToWholePacks(line.quantity, unit) : line.quantity;
-                wanted.set(id, (wanted.get(id) ?? 0) + quantity);
+                const quantity = unit ? roundUpToWholePacks(base, unit) : base;
+                if (quantity !== base) roundedUp++;
+                wanted.set(id, quantity);
             }
             const before = new Map(cart.lines.map(l => [l.productVariant.id, l.quantity]));
             const failedVariantIds: string[] = [];
@@ -54,7 +62,7 @@ export function useRepeatOrder(): UseRepeatOrder {
             for (const [variantId, qty] of wanted) {
                 if ((after.get(variantId) ?? 0) >= (before.get(variantId) ?? 0) + qty) added++;
             }
-            result.value = { added, skipped: wanted.size - added, failedVariantIds };
+            result.value = { added, skipped: wanted.size - added, roundedUp, failedVariantIds };
             return result.value;
         } finally {
             repeating.value = false;

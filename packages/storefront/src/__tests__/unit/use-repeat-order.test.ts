@@ -41,11 +41,29 @@ describe('useRepeatOrder pack rounding', () => {
         expect(addItem).toHaveBeenCalledWith('v-pack', 7);
     });
 
-    it('rounds the summed duplicates per line before adding', async () => {
+    it('sums the duplicate lines of a variant first and rounds the total once', async () => {
         await useRepeatOrder().repeat([
             { quantity: 1, productVariant: packVariant },
             { quantity: 1, productVariant: packVariant },
         ]);
-        expect(addItem).toHaveBeenCalledWith('v-pack', 12);
+        expect(addItem).toHaveBeenCalledTimes(1);
+        expect(addItem).toHaveBeenCalledWith('v-pack', 6);
+    });
+
+    it('counts the variants whose quantity was raised to whole packs', async () => {
+        const result = await useRepeatOrder().repeat([
+            { quantity: 7, productVariant: packVariant },
+            { quantity: 6, productVariant: { ...packVariant, id: 'v-exact' } },
+            { quantity: 5, productVariant: pieceVariant },
+        ]);
+        expect(result.roundedUp).toBe(1);
+    });
+
+    it('reports no rounding when the branch does not sell by packages only', async () => {
+        packagesOnly.value = false;
+        const result = await useRepeatOrder().repeat([
+            { quantity: 7, productVariant: packVariant },
+        ]);
+        expect(result.roundedUp).toBe(0);
     });
 });

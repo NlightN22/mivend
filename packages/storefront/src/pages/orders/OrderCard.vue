@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { useStatusGroupLabel } from './useStatusGroupLabel';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge, formatDocumentNumber, toast } from '@mivend/ui-kit';
 import { useRepeatOrder } from './useRepeatOrder';
 import type { OrderSummary } from './useOrders';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
 
 const props = defineProps<{ order: OrderSummary }>();
+const { t } = useI18n();
 const { repeating, repeat } = useRepeatOrder();
 
 async function repeatOrder(): Promise<void> {
-    const { added, skipped } = await repeat(props.order.lines);
-    if (added) toast(`Added to cart: ${added}`, 'success');
-    if (skipped) toast(`Could not add: ${skipped}`, 'error');
+    const { added, skipped, roundedUp } = await repeat(props.order.lines);
+    if (added) toast(t('orders.detail.repeatDone', { added }), 'success');
+    if (skipped) toast(t('orders.detail.repeatSkipped', { skipped }), 'error');
+    if (roundedUp) toast(t('orders.detail.repeatRounded', { rounded: roundedUp }), 'info');
 }
 
 const isExternal = computed(() => props.order.customFields?.isExternal === true);

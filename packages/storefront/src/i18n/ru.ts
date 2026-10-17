@@ -78,6 +78,8 @@ export default {
             copyLink: 'Скопировать ссылку',
             repeatDone: 'Добавлено в корзину: {added}',
             repeatSkipped: 'Не удалось добавить позиций: {skipped}',
+            repeatRounded:
+                'Количество округлено до целых упаковок у позиций: {rounded}. Проверьте корзину.',
             documents: 'Документы заказа',
             items: 'Состав заказа',
             sku: 'Артикул',
