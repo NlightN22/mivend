@@ -1,4 +1,4 @@
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { IncomingPaymentEvent } from '../../entities/incoming-payment-event.entity';
@@ -41,7 +41,7 @@ describe('InboxService', () => {
             findOneOrFail: vi.fn(),
             create: vi.fn(input => input),
             save: vi.fn(async entity => entity),
-            update: vi.fn(),
+            update: vi.fn(async () => ({ affected: 1 })),
             createQueryBuilder: vi.fn(() => qb),
         };
     }
@@ -128,6 +128,19 @@ describe('InboxService', () => {
                 { id: 1, status: 'processing' },
                 expect.objectContaining({ status: 'processed' }),
             );
+        });
+
+        it('markProcessed warns when no row was still processing', async () => {
+            const warn = vi.spyOn(Logger, 'warn').mockImplementation(() => undefined);
+            mockRepo.update.mockResolvedValueOnce({ affected: 0 });
+
+            await service.markProcessed(mockCtx, 1);
+
+            expect(warn).toHaveBeenCalledWith(
+                expect.stringContaining('markProcessed skipped'),
+                'InboxService',
+            );
+            warn.mockRestore();
         });
 
         it('markFailed is one conditional UPDATE that increments attempts in SQL', async () => {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Brackets } from 'typeorm';
 
 import { IncomingPaymentEvent } from './entities/incoming-payment-event.entity';
@@ -90,14 +90,15 @@ export class InboxService {
 
     // Only a row still in 'processing' is settled: a stale worker must not overwrite a newer claim's outcome.
     async markProcessed(ctx: RequestContext, id: number): Promise<void> {
-        await this.connection
+        const result = await this.connection
             .getRepository(ctx, IncomingPaymentEvent)
             .update({ id, status: 'processing' }, { status: 'processed', processedAt: new Date() });
+        this.warnIfSettled(result.affected, 'markProcessed', id);
     }
 
     // Retry backoff is the sweep interval itself; there is no separate delay mechanism.
     async markFailed(ctx: RequestContext, id: number, error: Error): Promise<void> {
-        await this.connection
+        const result = await this.connection
             .getRepository(ctx, IncomingPaymentEvent)
             .createQueryBuilder()
             .update()
@@ -109,16 +110,27 @@ export class InboxService {
             })
             .where('id = :id AND status = :processing', { id, processing: 'processing' })
             .execute();
+        this.warnIfSettled(result.affected, 'markFailed', id);
     }
 
     // Retrying cannot fix data the producer never sent, so skip straight to the terminal state.
     async rejectAsInvalid(ctx: RequestContext, id: number, reason: string): Promise<void> {
-        await this.connection
+        const result = await this.connection
             .getRepository(ctx, IncomingPaymentEvent)
             .update(
                 { id, status: 'processing' },
                 { status: 'failed', attempts: MAX_ATTEMPTS, lastError: reason },
             );
+        this.warnIfSettled(result.affected, 'rejectAsInvalid', id);
+    }
+
+    private warnIfSettled(affected: number | undefined, operation: string, id: number): void {
+        if (!affected) {
+            Logger.warn(
+                `${operation} skipped: inbox event ${id} is no longer processing`,
+                'InboxService',
+            );
+        }
     }
 
     // Looks up the event backing an already-processed payment, to render a real (not fabricated)
