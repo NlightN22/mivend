@@ -272,7 +272,7 @@ export class CheckPolicyService {
         if (!found) throw new Error(`Unknown branch "${branchId}"`);
     }
 
-    // A branch override saved without a recipient keeps following the global one, never silently drops it.
+    // A branch override saved without a recipient copies the global one at save time, never silently drops it.
     private async globalRecipient(
         repo: Repository<CheckPolicy>,
         input: UpdateCheckPolicyInput,
