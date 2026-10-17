@@ -36,6 +36,8 @@ const statusFilters = computed(() => buildStatusFilters(statuses.groups));
 
 async function reload(): Promise<void> {
     await statuses.load();
+    // Without the dictionary the 'Active' filter has no final codes and would list terminal orders.
+    if (!statuses.loaded) return;
     const filter = resolveStatusFilter(statusFilters.value, activeFilter.value);
     void load({
         take: PAGE_SIZE,
