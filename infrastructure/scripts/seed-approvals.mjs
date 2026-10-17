@@ -116,6 +116,23 @@ async function seedWorkflowDefinitions(superToken) {
     }
 }
 
+async function seedCreditTermPolicyRecipient(superToken) {
+    await gql(
+        `mutation($input: UpdateCheckPolicyInput!) { updateCheckPolicy(input: $input) { checkCode } }`,
+        {
+            input: {
+                checkCode: 'manager.credit-term-extension',
+                stage: 'extend-credit-term',
+                consequence: 'require-approval',
+                recipient: 'department-head',
+                enabled: true,
+            },
+        },
+        superToken,
+    );
+    console.log('✔ Credit-term check policy recipient "department-head"');
+}
+
 async function createDraftOrderLine(token, customerId, variantId) {
     const draft = await gql(`mutation { createDraftOrder { id } }`, undefined, token);
     const orderId = draft.data.createDraftOrder.id;
@@ -169,6 +186,7 @@ async function main() {
 
     const superToken = await login('superadmin', 'superadmin');
     await seedWorkflowDefinitions(superToken);
+    await seedCreditTermPolicyRecipient(superToken);
 
     const directorToken = await login('nikolai.director@mivend.dev', 'Password123!');
     const managerToken = await login('petr.manager@mivend.dev', 'Password123!');
