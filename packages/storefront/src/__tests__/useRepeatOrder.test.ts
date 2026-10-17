@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
 vi.mock('@mivend/ui-kit', () => ({ toast: vi.fn() }));
+vi.mock('../composables/usePackagesOnly', () => ({
+    usePackagesOnly: () => ({
+        packagesOnly: { value: false },
+        load: vi.fn().mockResolvedValue(undefined),
+    }),
+}));
 const shopApi = vi.fn();
 vi.mock('../api/client', () => ({ shopApi: (...a: unknown[]) => shopApi(...a) }));
 
