@@ -116,7 +116,14 @@ export async function cancelTestOrder(token: string, orderId: string): Promise<v
         { input: { orderId } },
         token,
     );
-    if (result.data.cancelOrder.__typename !== 'Order') {
+    if (result.data.cancelOrder.__typename === 'Order') return;
+    // Another run's cleanup may have cancelled it first; only a still-open order is a failure.
+    const current = await adminGql<{ order: { state: string } | null }>(
+        `query($id: ID!) { order(id: $id) { state } }`,
+        { id: orderId },
+        token,
+    );
+    if (current.data.order?.state !== 'Cancelled') {
         throw new Error(`Could not cancel e2e order ${orderId}: ${JSON.stringify(result.data)}`);
     }
 }
