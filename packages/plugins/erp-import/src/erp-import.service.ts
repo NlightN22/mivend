@@ -21,6 +21,7 @@ import { WarehouseHandler } from './handlers/warehouse.handler';
 import { StockOrganizationHandler } from './handlers/stock-organization.handler';
 import { StorageLocationHandler } from './handlers/storage-location.handler';
 import { ContractHandler } from './handlers/contract.handler';
+import { ManufacturerHandler } from './handlers/manufacturer.handler';
 import { ImportRunService } from './import-run.service';
 import type { ImportRun } from './entities/import-run.entity';
 import type { BatchImportBody, ImportRecord, ImportRunResult } from './types';
@@ -52,6 +53,7 @@ export class ErpImportService {
         private readonly contractHandler: ContractHandler,
         private readonly stockOrganizationHandler: StockOrganizationHandler,
         private readonly storageLocationHandler: StorageLocationHandler,
+        private readonly manufacturerHandler: ManufacturerHandler,
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
@@ -162,6 +164,9 @@ export class ErpImportService {
                 break;
             case 'storageLocation':
                 await this.storageLocationHandler.upsert(ctx, record.data);
+                break;
+            case 'manufacturer':
+                await this.manufacturerHandler.upsert(ctx, record.data);
                 break;
             default:
                 // No global ValidationPipe validates `type`; an unknown type falls through the switch silently.

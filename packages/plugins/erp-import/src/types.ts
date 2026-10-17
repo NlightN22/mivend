@@ -26,6 +26,11 @@ export interface WarehouseRecord extends WarehouseRecordInput {
     stockLocationName?: string;
 }
 
+export interface ManufacturerRecord {
+    code: string;
+    name: string;
+}
+
 export interface ProductRecord {
     externalId: string;
     sku: string;
@@ -37,6 +42,7 @@ export interface ProductRecord {
     stockOnHand: number;
     categoryCode?: string;
     brandCode?: string;
+    manufacturerCode?: string;
     onSale?: boolean;
     enabled?: boolean;
     weight?: number;
@@ -180,7 +186,8 @@ export type ImportRecord =
     | { type: 'contract'; data: ContractRecord }
     | { type: 'orderStatus'; data: OrderStatusRecord }
     | { type: 'stockOrganization'; data: StockOrganizationRecord }
-    | { type: 'storageLocation'; data: StorageLocationRecord };
+    | { type: 'storageLocation'; data: StorageLocationRecord }
+    | { type: 'manufacturer'; data: ManufacturerRecord };
 
 export interface BatchImportBody {
     exchangeId: string;

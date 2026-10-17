@@ -820,6 +820,9 @@ importers:
             '@mivend/plugin-documents':
                 specifier: workspace:*
                 version: link:../documents
+            '@mivend/plugin-erp-integration':
+                specifier: workspace:*
+                version: link:../erp-integration
             '@mivend/plugin-erp-order':
                 specifier: workspace:*
                 version: link:../erp-order

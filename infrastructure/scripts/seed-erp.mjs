@@ -459,7 +459,8 @@ async function main() {
     // v9: warehouse record binding the default stock location to branch-central.
     // v11: contract records — the scheduled credit-limit job derives limit/days from contracts.
     // v12: the checkout buyers' contracts carry a seeded organization, so the contract guard passes.
-    const run = 'v12';
+    // v13 (#231): manufacturer records; products reference one via manufacturerCode.
+    const run = 'v13';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
@@ -555,8 +556,22 @@ async function main() {
     const organizationErpIds = organizationRequisites.map(org => org.erpId);
     // Round-robin across the 3 seeded organizations so the seeded catalog actually exercises a
     // multi-organization split, instead of every product landing on the same one.
+    const manufacturers = [
+        { code: 'manufacturer-a', name: 'Manufacturer A' },
+        { code: 'manufacturer-b', name: 'Manufacturer B' },
+    ];
+    console.log(`Sending ${manufacturers.length} manufacturers...`);
+    const manufacturerResult = await postBatch(
+        `seed-manufacturers-${run}`,
+        manufacturers.map(data => ({ type: 'manufacturer', data })),
+    );
+    console.log(
+        `  → status=${manufacturerResult.status} processed=${manufacturerResult.processed} failed=${manufacturerResult.failed}`,
+    );
+
     const productsWithOrganization = products.map((product, index) => ({
         ...product,
+        manufacturerCode: manufacturers[index % manufacturers.length].code,
         organizationId:
             organizationIdByErpId[organizationErpIds[index % organizationErpIds.length]],
     }));

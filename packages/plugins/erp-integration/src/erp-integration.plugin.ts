@@ -134,7 +134,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         NotificationPlugin,
     ],
     entities: PLUGIN_ENTITIES,
-    exports: [StockOrganizationReadService],
+    exports: [StockOrganizationReadService, ManufacturerService],
     controllers: isRestSurfaceEnabled('ERP_CALLBACK_ENABLED', 'ERP_CALLBACK_API_KEY', {
         rejectValues: productionRejectValues(ERP_CALLBACK_DEV_PLACEHOLDER_KEY),
     })

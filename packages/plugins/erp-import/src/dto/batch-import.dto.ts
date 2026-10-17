@@ -21,6 +21,7 @@ import {
     OrderStatusRecordDto,
     StockOrganizationRecordDto,
     StorageLocationRecordDto,
+    ManufacturerRecordDto,
 } from './records';
 
 const RECORD_TYPE_DTOS = [
@@ -45,6 +46,7 @@ const RECORD_TYPE_DTOS = [
     OrderStatusRecordDto,
     StockOrganizationRecordDto,
     StorageLocationRecordDto,
+    ManufacturerRecordDto,
 ] as const;
 
 // Must stay in sync with ImportRecord (../types.ts) and ErpImportService.processRecord's switch.
@@ -71,6 +73,7 @@ export const TYPE_TO_SCHEMA: Record<string, (typeof RECORD_TYPE_DTOS)[number]> =
     orderStatus: OrderStatusRecordDto,
     stockOrganization: StockOrganizationRecordDto,
     storageLocation: StorageLocationRecordDto,
+    manufacturer: ManufacturerRecordDto,
 };
 
 @ApiExtraModels(...RECORD_TYPE_DTOS)

@@ -143,6 +143,9 @@ describe('ErpImportService', () => {
             makeHandler() as unknown as InstanceType<
                 typeof import('../../handlers/storage-location.handler').StorageLocationHandler
             >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/manufacturer.handler').ManufacturerHandler
+            >,
         );
     });
 
@@ -271,6 +274,9 @@ describe('ErpImportService', () => {
             >,
             makeHandler() as unknown as InstanceType<
                 typeof import('../../handlers/storage-location.handler').StorageLocationHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/manufacturer.handler').ManufacturerHandler
             >,
         );
         const body: BatchImportBody = {

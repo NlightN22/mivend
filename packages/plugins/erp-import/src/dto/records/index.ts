@@ -19,3 +19,4 @@ export { OrderStatusRecordDto } from './order-status-record.dto';
 export { WarehouseRecordDto } from './warehouse-record.dto';
 export { StockOrganizationRecordDto } from './stock-organization-record.dto';
 export { StorageLocationRecordDto } from './storage-location-record.dto';
+export { ManufacturerRecordDto } from './manufacturer-record.dto';

@@ -12,6 +12,7 @@
         { "path": "../documents" },
         { "path": "../price-entry" },
         { "path": "../access-control" },
-        { "path": "../erp-order" }
+        { "path": "../erp-order" },
+        { "path": "../erp-integration" }
     ]
 }

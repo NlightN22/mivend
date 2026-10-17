@@ -7,6 +7,7 @@ export { SchemaRegistryClient } from './src/schema-registry.client';
 export { IntegrationInboxEvent } from './src/entities/integration-inbox-event.entity';
 export { StockOrganizationReadService } from './src/stock-organization-read.service';
 export { Manufacturer } from './src/entities/manufacturer.entity';
+export { ManufacturerService } from './src/manufacturer.service';
 export type { IntegrationInboxEventStatus } from './src/entities/integration-inbox-event.entity';
 export { encodeConfluentMessage } from './src/wire-format';
 export { BranchStockLocationStrategy } from './src/branch-stock-location.strategy';

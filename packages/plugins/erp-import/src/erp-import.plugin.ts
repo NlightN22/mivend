@@ -5,6 +5,7 @@ import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { DocumentsPlugin } from '@mivend/plugin-documents';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
+import { ErpIntegrationPlugin } from '@mivend/plugin-erp-integration';
 import { ErpImportController } from './erp-import.controller';
 import { CategoryHandler } from './handlers/category.handler';
 import { CrossReferenceHandler } from './handlers/cross-reference.handler';
@@ -32,6 +33,7 @@ import { StockOrganizationHandler } from './handlers/stock-organization.handler'
 import { StorageLocationHandler } from './handlers/storage-location.handler';
 import { ContractHandler } from './handlers/contract.handler';
 import { OrderStatusHandler } from './handlers/order-status.handler';
+import { ManufacturerHandler } from './handlers/manufacturer.handler';
 
 @VendurePlugin({
     imports: [
@@ -42,6 +44,7 @@ import { OrderStatusHandler } from './handlers/order-status.handler';
         DocumentsPlugin,
         AccessControlPlugin,
         ErpOrderPlugin,
+        ErpIntegrationPlugin,
     ],
     entities: [ImportRun, ImportRunError],
     controllers: [ErpImportController],
@@ -70,6 +73,7 @@ import { OrderStatusHandler } from './handlers/order-status.handler';
         OrderStatusHandler,
         StockOrganizationHandler,
         StorageLocationHandler,
+        ManufacturerHandler,
     ],
     compatibility: '>0.0.0',
 })

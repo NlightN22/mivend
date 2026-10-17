@@ -9,6 +9,7 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
+import { ManufacturerService } from '@mivend/plugin-erp-integration';
 import type { ProductRecord } from '../types';
 
 const loggerCtx = 'ErpProductHandler';
@@ -24,6 +25,7 @@ export class ProductHandler {
         private readonly facetService: FacetService,
         private readonly facetValueService: FacetValueService,
         private readonly globalSettingsService: GlobalSettingsService,
+        private readonly manufacturerService: ManufacturerService,
     ) {}
 
     async upsert(ctx: RequestContext, record: ProductRecord): Promise<void> {
@@ -51,6 +53,14 @@ export class ProductHandler {
         const categoryIds = await this.resolveFacetValueIds(record.categoryCode);
         const brandId = await this.resolveOrCreateBrandFacetValue(ctx, record.brandCode);
         const facetValueIds = [...categoryIds, ...(brandId ? [brandId] : [])];
+        const manufacturerFields = record.manufacturerCode
+            ? {
+                  manufacturerId: String(
+                      (await this.manufacturerService.ensureReference(ctx, record.manufacturerCode))
+                          .id,
+                  ),
+              }
+            : {};
 
         if (existing) {
             await this.productService.update(ctx, {
@@ -59,6 +69,7 @@ export class ProductHandler {
                 facetValueIds,
                 customFields: {
                     onSale,
+                    ...manufacturerFields,
                     ...(record.fullName !== undefined && { fullName: record.fullName }),
                 },
                 translations: [
@@ -105,6 +116,7 @@ export class ProductHandler {
                     externalId: record.externalId,
                     onSale,
                     fullName: record.fullName ?? '',
+                    ...manufacturerFields,
                 },
             });
             await this.productVariantService.create(ctx, [

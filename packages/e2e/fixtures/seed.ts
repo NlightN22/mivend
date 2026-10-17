@@ -11,6 +11,11 @@ export const E2E_COUNTERPARTY_ID = 'e2e-cnt-001';
 export const E2E_OTHER_COUNTERPARTY_ID = 'e2e-cnt-002';
 
 export const seedRecords = [
+    // The add-to-cart discount toast names the product's manufacturer, so discounted products need one.
+    {
+        type: 'manufacturer' as const,
+        data: { code: 'manufacturer-a', name: 'Manufacturer A' },
+    },
     {
         type: 'customer' as const,
         data: {
@@ -66,6 +71,7 @@ export const seedRecords = [
             price: 850,
             stockOnHand: 100,
             brandCode: 'e2e-discount-brand',
+            manufacturerCode: 'manufacturer-a',
             weight: 100,
         },
     },
@@ -107,6 +113,7 @@ export const seedRecords = [
             price: 550,
             stockOnHand: 100,
             brandCode: 'e2e-discount-brand',
+            manufacturerCode: 'manufacturer-a',
             weight: 50,
         },
     },
@@ -121,6 +128,7 @@ export const seedRecords = [
             price: 700,
             stockOnHand: 100,
             brandCode: 'e2e-discount-brand',
+            manufacturerCode: 'manufacturer-a',
             weight: 25,
         },
     },
