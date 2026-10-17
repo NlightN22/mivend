@@ -9,6 +9,7 @@ import {
 } from 'shared';
 import { DocumentsService } from '../../documents.service';
 import { OrganizationEventService } from '../../organization-event.service';
+import { SupersededProformaRerenderService } from '../../superseded-proforma-rerender.service';
 
 // Real Vendure entities need EntityIdStrategy from bootstrap() or they lack a primary column.
 // So tests hand-roll tables matching prod schema and run against real Postgres, not mocks.
@@ -22,6 +23,7 @@ class TestDocument {
     @Column({ type: 'varchar' }) type!: string;
     @Column({ type: 'varchar' }) counterpartyId!: string;
     @Column({ type: 'varchar', nullable: true }) orderId!: string | null;
+    @Column({ type: 'varchar', nullable: true }) proformaInvoiceId!: string | null;
     @Column({ type: 'varchar' }) number!: string;
     @Column({ type: 'timestamp' }) issueDate!: Date;
     @Column({ type: 'bigint', nullable: true }) amount!: number | null;
@@ -59,6 +61,7 @@ class TestOrganizationRequisites {
 let dataSource: DataSource;
 let service: DocumentsService;
 let eventService: OrganizationEventService;
+let rerender: SupersededProformaRerenderService;
 const mockCtx = {} as RequestContext;
 const mockCounterpartyService = { findByErpId: vi.fn() };
 
@@ -106,6 +109,7 @@ beforeAll(async () => {
         enqueue: async () => undefined,
     } as never);
     service = new DocumentsService(connectionShim, mockCounterpartyService as never);
+    rerender = new SupersededProformaRerenderService(connectionShim);
 });
 
 afterAll(async () => {
@@ -227,5 +231,29 @@ describe('DocumentsService (integration, real Postgres)', () => {
             kpp: '770001001',
             inn: null,
         });
+    });
+
+    it('a superseded proforma document is claimed for one re-render, even by concurrent triggers', async () => {
+        const repo = dataSource.getRepository(TestDocument);
+        const doc = await repo.save({
+            type: 'proforma-invoice',
+            counterpartyId: 'cp-1',
+            proformaInvoiceId: '41',
+            number: '100-01-1',
+            issueDate: new Date(),
+            status: 'ready',
+            source: 'generated',
+            assetId: 'asset-1',
+        });
+
+        const claims = await Promise.all([1, 2, 3].map(() => rerender.claim(mockCtx, 41)));
+        const again = await rerender.claim(mockCtx, 41);
+
+        expect(claims.filter(c => c !== null).map(c => c!.id)).toEqual([doc.id]);
+        expect(again).toBeNull();
+        const row = await repo.findOneByOrFail({ id: doc.id });
+        expect(row.status).toBe('pending');
+        expect(row.metadata).toEqual({ newerVersionRerender: true });
+        expect(await rerender.claim(mockCtx, 42)).toBeNull();
     });
 });

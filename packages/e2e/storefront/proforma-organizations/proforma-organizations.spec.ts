@@ -123,9 +123,21 @@ test.describe('proformas per organization', () => {
         const { id: orderId } = await orderTotal(code);
         await modifyOrderQuantity(orderId, 2);
         await requestProformas(page, code);
-        const old = (await proformasOf(page, code)).find(r => r.id === v1.id);
-        expect(old?.status).toBe('superseded');
-        const { text } = await pdfTextAndPages(page, v1.document?.asset?.source as string);
+        const firstSource = v1.document?.asset?.source;
+        let rerendered: string | undefined;
+        await expect
+            .poll(
+                async () => {
+                    const old = (await proformasOf(page, code)).find(r => r.id === v1.id);
+                    expect(old?.status).toBe('superseded');
+                    if (old?.document?.status !== 'ready') return undefined;
+                    rerendered = old.document.asset?.source;
+                    return Boolean(rerendered) && rerendered !== firstSource;
+                },
+                { timeout: 20000 },
+            )
+            .toBe(true);
+        const { text } = await pdfTextAndPages(page, rerendered as string);
         expect(text).toContain('Есть более новая версия');
         expect(text).not.toContain('не действителен');
         expect(text).toContain('Отсканируйте для оплаты');

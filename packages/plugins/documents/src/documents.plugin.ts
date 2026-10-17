@@ -1,3 +1,4 @@
+import { ID } from '@vendure/common/lib/shared-types';
 import { OnApplicationBootstrap } from '@nestjs/common';
 import {
     EventBus,
@@ -22,6 +23,7 @@ import { loggerCtx } from './constants';
 import { Document } from './entities/document.entity';
 import { OrganizationRequisites } from './entities/organization-requisites.entity';
 import { DocumentsService } from './documents.service';
+import { SupersededProformaRerenderService } from './superseded-proforma-rerender.service';
 import { OrganizationEventService } from './organization-event.service';
 import { ProformaRequeueService } from './proforma-requeue.service';
 import {
@@ -59,6 +61,7 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
     },
     providers: [
         DocumentsService,
+        SupersededProformaRerenderService,
         PdfBrowserService,
         PdfGeneratorService,
         ProformaRequeueService,
@@ -79,6 +82,7 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
         private documentsService: DocumentsService,
         private pdfGeneratorService: PdfGeneratorService,
         private proformaInvoiceService: ProformaInvoiceService,
+        private supersededRerender: SupersededProformaRerenderService,
     ) {}
 
     onApplicationBootstrap(): void {
@@ -94,7 +98,11 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
         subscribeAndLog(
             this.eventBus,
             ProformaInvoiceIssuedEvent,
-            event => this.ensureDocument(event.ctx, event.proformaInvoice),
+            async event => {
+                await this.ensureDocument(event.ctx, event.proformaInvoice);
+                const { supersedesId } = event.proformaInvoice;
+                if (supersedesId != null) await this.rerenderSuperseded(event.ctx, supersedesId);
+            },
             loggerCtx,
         );
     }
@@ -117,8 +125,11 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
             Number(order.id),
         );
         for (const proformaInvoice of proformaInvoices) {
-            if (proformaInvoice.status === 'superseded') continue;
-            await this.ensureDocument(event.ctx, proformaInvoice);
+            if (proformaInvoice.status === 'superseded') {
+                await this.rerenderSuperseded(event.ctx, proformaInvoice.id);
+            } else {
+                await this.ensureDocument(event.ctx, proformaInvoice);
+            }
         }
     }
 
@@ -131,5 +142,10 @@ export class DocumentsPlugin implements OnApplicationBootstrap {
             proformaInvoice,
         );
         if (created) await this.pdfGeneratorService.enqueue(document.id);
+    }
+
+    private async rerenderSuperseded(ctx: RequestContext, proformaInvoiceId: ID): Promise<void> {
+        const document = await this.supersededRerender.claim(ctx, proformaInvoiceId);
+        if (document) await this.pdfGeneratorService.enqueue(document.id);
     }
 }
