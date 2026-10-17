@@ -92,10 +92,16 @@ beforeAll(async () => {
             }
             return manager.getRepository(mirrors.get(entity) as never);
         },
-        withTransaction: async (c: RequestContext, work: (x: RequestContext) => Promise<unknown>) =>
-            dataSource.transaction(manager =>
-                work({ ...c, __manager: manager } as unknown as RequestContext),
-            ),
+        // Vendure reuses the ctx's open transaction, so a nested aggregate lock is re-entrant.
+        withTransaction: async (
+            c: RequestContext,
+            work: (x: RequestContext) => Promise<unknown>,
+        ) =>
+            (c as unknown as { __manager?: EntityManager }).__manager
+                ? work(c)
+                : dataSource.transaction(manager =>
+                      work({ ...c, __manager: manager } as unknown as RequestContext),
+                  ),
     } as unknown as TransactionalConnection;
     const proformaInvoiceService = new ProformaInvoiceService(connection);
     settlement = new SettlementEntryService(connection, proformaInvoiceService);

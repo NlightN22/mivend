@@ -175,6 +175,9 @@ function buildConnectionShim(): TransactionalConnection {
     return {
         getRepository: (ctx: RequestContext & TxCtx, entity: unknown) => {
             const manager = ctx.__manager ?? dataSource.manager;
+            if (typeof entity === 'string') {
+                return { query: (sql: string, params?: unknown[]) => manager.query(sql, params) };
+            }
             const testEntity = mapEntity(entity);
             const repo = manager.getRepository(testEntity);
             if (testEntity !== TestSettlementEntry || forcedSettlementSaveFailureAtCall === null) {
@@ -199,6 +202,7 @@ function buildConnectionShim(): TransactionalConnection {
             ctx: RequestContext & TxCtx,
             work: (ctx: RequestContext) => Promise<T>,
         ): Promise<T> => {
+            if (ctx.__manager) return work(ctx);
             return dataSource.transaction(async manager => {
                 const txCtx = { ...ctx, __manager: manager } as RequestContext & TxCtx;
                 return work(txCtx);

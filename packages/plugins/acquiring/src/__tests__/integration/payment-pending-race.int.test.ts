@@ -86,9 +86,15 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     const connection = {
-        getRepository: (c: { __manager?: EntityManager }, entity: unknown) =>
-            (c.__manager ?? dataSource.manager).getRepository(mapEntity(entity)),
+        getRepository: (c: { __manager?: EntityManager }, entity: unknown) => {
+            const manager = c.__manager ?? dataSource.manager;
+            if (typeof entity === 'string') {
+                return { query: (sql: string, params?: unknown[]) => manager.query(sql, params) };
+            }
+            return manager.getRepository(mapEntity(entity));
+        },
         withTransaction: async <T>(c: RequestContext, work: (tx: RequestContext) => Promise<T>) => {
+            if ((c as { __manager?: EntityManager }).__manager) return work(c);
             await beforeTransaction();
             return dataSource.transaction(manager => work({ ...c, __manager: manager } as never));
         },
