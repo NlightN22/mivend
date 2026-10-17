@@ -3,6 +3,9 @@
 Playwright tests are in `packages/e2e/storefront/` (storefront) and `packages/e2e/manager/`
 (manager portal).
 
+Rules, checklist and the final checklist audit for every e2e change: the `e2e-rules` skill
+(`.claude/skills/e2e-rules/SKILL.md`).
+
 ## Running
 
 ```bash
