@@ -98,7 +98,6 @@ export async function createConfirmedOrder(
     return { id: orderId, code };
 }
 
-// Vendure's own cancelOrder bypasses mivend reservations, so release them first (issue #231).
 export async function releaseOrderReservation(token: string, orderId: string): Promise<void> {
     await adminGql(
         `mutation($orderId: ID!) { releaseOrderReservation(orderId: $orderId) }`,
@@ -107,8 +106,8 @@ export async function releaseOrderReservation(token: string, orderId: string): P
     );
 }
 
+// Cancel releases reservations and withdraws open proformas itself, and is idempotent (#231).
 export async function cancelTestOrder(token: string, orderId: string): Promise<void> {
-    await releaseOrderReservation(token, orderId);
     const result = await adminGql<{ cancelOrder: { __typename: string; message?: string } }>(
         `mutation($input: CancelOrderInput!) {
             cancelOrder(input: $input) { __typename ... on ErrorResult { message } }
@@ -116,14 +115,27 @@ export async function cancelTestOrder(token: string, orderId: string): Promise<v
         { input: { orderId } },
         token,
     );
-    if (result.data.cancelOrder.__typename === 'Order') return;
-    // Another run's cleanup may have cancelled it first; only a still-open order is a failure.
-    const current = await adminGql<{ order: { state: string } | null }>(
-        `query($id: ID!) { order(id: $id) { state } }`,
-        { id: orderId },
+    if (result.data.cancelOrder.__typename !== 'Order') {
+        throw new Error(`Could not cancel e2e order ${orderId}: ${JSON.stringify(result.data)}`);
+    }
+    const left = await adminGql<{
+        orderReservations: { status: string }[];
+        proformaInvoicesForOrder: { number: string; status: string }[];
+    }>(
+        `query($o: ID!) {
+            orderReservations(orderId: $o) { status }
+            proformaInvoicesForOrder(orderId: $o) { number status }
+        }`,
+        { o: orderId },
         token,
     );
-    if (current.data.order?.state !== 'Cancelled') {
-        throw new Error(`Could not cancel e2e order ${orderId}: ${JSON.stringify(result.data)}`);
+    const active = left.data.orderReservations.filter(r => r.status === 'active');
+    const open = left.data.proformaInvoicesForOrder.filter(
+        p => p.status === 'issued' || p.status === 'pending',
+    );
+    if (active.length > 0 || open.length > 0) {
+        throw new Error(
+            `Cancelled order ${orderId} kept ${active.length} active reservations, open proformas ${JSON.stringify(open)}`,
+        );
     }
 }

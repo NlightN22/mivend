@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { gql } from '../orders/helpers';
-import { buildOrderAcrossOrganizations, myProformaInvoicesForOrder } from './helpers';
+import {
+    buildOrderAcrossOrganizations,
+    myProformaInvoicesForOrder,
+    payProformaInvoice,
+} from './helpers';
 import { finishOrdersPlacedInEachTest } from '../order-cleanup';
 
 finishOrdersPlacedInEachTest();
@@ -28,6 +32,10 @@ test.describe('Proforma invoice lifecycle: order split, payment, status, filters
         expect(organizationIds.size).toBe(proformaInvoices.length);
         for (const proformaInvoice of proformaInvoices) {
             expect(proformaInvoice.status).toBe('issued');
+        }
+        // A stub 'pending' payment never resolves and blocks cancelling the order, so settle it.
+        for (const proformaInvoice of proformaInvoices) {
+            await payProformaInvoice(page, proformaInvoice.id, 'success');
         }
     });
 
