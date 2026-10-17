@@ -13,6 +13,7 @@ import { SyncEventSchema } from 'shared';
 import type { SyncEvent } from 'shared';
 
 const BATCH_SIZE = 50;
+// A timed-out publish may still reach the broker and is sent again; consumers dedupe by eventId.
 const PUBLISH_TIMEOUT_MS = 10_000;
 
 type OutboxInput = Omit<SyncEvent, 'eventId' | 'sourceInstanceId' | 'timestamp'> & {

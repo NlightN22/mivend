@@ -113,13 +113,12 @@ export class RejectedOrderReleaseService {
         if (active.length === 0) return { rows: [], orderCode: order.code };
 
         const releasedAt = new Date();
-        const released = active;
-        for (const row of released) {
+        for (const row of active) {
             row.status = 'released';
             row.releasedAt = releasedAt;
             row.erpReleaseOperationId = randomUUID();
         }
-        for (const row of released) {
+        for (const row of active) {
             await reservationRepo.update(row.id, {
                 status: 'released',
                 releasedAt,
@@ -127,7 +126,7 @@ export class RejectedOrderReleaseService {
             });
         }
         await orderRepo.update(order.id, { customFields: { reservationState: 'RELEASED' } });
-        return { rows: released, orderCode: order.code };
+        return { rows: active, orderCode: order.code };
     }
 
     // Idempotent by (sourceType, sourceId): a repeat updates the open notification in place.
@@ -142,6 +141,7 @@ export class RejectedOrderReleaseService {
                 message: `Reservation ${String(row.id)} (order ${row.orderId}) was released after its order stayed REJECTED by the ERP for over ${this.settings.rejectedOrderReleaseDays()} day(s).`,
             });
         } catch (error) {
+            // best-effort: the release is already committed; a missed staff broadcast is only logged
             Logger.error(
                 `Notification of rejected release ${String(row.id)} failed: ${String(error)}`,
                 loggerCtx,
