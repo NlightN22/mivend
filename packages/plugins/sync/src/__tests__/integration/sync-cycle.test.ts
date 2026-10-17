@@ -363,12 +363,15 @@ describe('branch consumer', () => {
                 timestamp: new Date().toISOString(),
                 payload: { productId: randomUUID(), enabled: true },
             };
+            // The dead-letter queue is shared: earlier tests leave messages, so wait for growth, not for > 0.
+            const baseline = (await poisonRabbitMQ.requireChannel().checkQueue('sync.dead-letters'))
+                .messageCount;
             await poisonRabbitMQ.publish('poison.test', event);
 
             await waitFor(
                 async () => {
                     const q = await poisonRabbitMQ.requireChannel().checkQueue('sync.dead-letters');
-                    return q.messageCount > 0;
+                    return q.messageCount > baseline;
                 },
                 5_000,
                 50,
