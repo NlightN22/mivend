@@ -217,6 +217,20 @@ describe('OrderCancelResultService.apply (real Postgres)', () => {
         expect((await loadOrder(h, order.id)).customFields.cancelRequestStatus).toBe('REQUESTED');
     });
 
+    it('rejected: the same refusal after a repeat request does not notify staff again', async () => {
+        const f = buildCancellationFixture(h);
+        const order = await requestedOrder(f);
+        await f.results.apply(mockCtx, answer(order.uuid, 'rejected'));
+        await f.service.cancel(mockCtx, order.id, 'customer-request');
+
+        expect(await f.results.apply(mockCtx, answer(order.uuid, 'rejected'))).toBe(
+            'refusal-recorded',
+        );
+
+        expect(f.notifications.filter(n => n.kind === 'error')).toHaveLength(1);
+        expect((await loadOrder(h, order.id)).customFields.cancelRequestStatus).toBe('REFUSED');
+    });
+
     it('rejected after a local cancel (sent but unregistered) is reported as an error to staff', async () => {
         const f = buildCancellationFixture(h);
         f.port.submission = 'sent';

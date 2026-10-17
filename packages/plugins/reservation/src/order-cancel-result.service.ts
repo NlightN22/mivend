@@ -75,7 +75,8 @@ export class OrderCancelResultService {
         order: Order,
         input: OrderCancelResultInput,
     ): Promise<OrderCancelResultOutcome> {
-        const status = order.customFields.cancelRequestStatus;
+        const { cancelRequestStatus: status, cancelRefusalReason: previousDetail } =
+            order.customFields;
         if (status === 'REFUSED') return 'refusal-repeated';
         if (status !== 'REQUESTED') return 'refusal-without-request';
 
@@ -85,15 +86,18 @@ export class OrderCancelResultService {
             customFields: { cancelRequestStatus: 'REFUSED', cancelRefusalReason: detail },
         });
         const cancelledLocally = order.state === 'Cancelled';
-        await this.cancellation.notify(
-            ctx,
-            order,
-            'error',
-            cancelledLocally
-                ? 'ERP refused cancel of a locally cancelled order'
-                : 'ERP refused order cancel',
-            `Order ${order.code}: ${detail || 'no reason given'}.`,
-        );
+        const sameRefusalAgain = previousDetail != null && previousDetail === detail;
+        if (!sameRefusalAgain) {
+            await this.cancellation.notify(
+                ctx,
+                order,
+                'error',
+                cancelledLocally
+                    ? 'ERP refused cancel of a locally cancelled order'
+                    : 'ERP refused order cancel',
+                `Order ${order.code}: ${detail || 'no reason given'}.`,
+            );
+        }
         return cancelledLocally ? 'refusal-after-local-cancel' : 'refusal-recorded';
     }
 
