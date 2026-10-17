@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { clearCart, gql, searchInStock } from './helpers';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 interface ActiveOrderState {
     activeOrder: { id: string; state: string } | null;

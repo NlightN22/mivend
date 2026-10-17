@@ -1,4 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 const ADD_BTN = /^\+\s*Add$|^Add to cart$/;
 

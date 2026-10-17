@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { gql } from '../orders/helpers';
 import { buildOrderAcrossOrganizations, myProformaInvoicesForOrder } from './helpers';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 test.describe('Proforma invoice lifecycle: order split, payment, status, filters', () => {
     test('a multi-organization order produces one proforma invoice per organization, all "pending" before payment', async ({

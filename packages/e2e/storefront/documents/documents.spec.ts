@@ -3,6 +3,9 @@ import { test, expect, type Page } from '@playwright/test';
 import { E2E_COUNTERPARTY_ID } from '../../fixtures/seed';
 import { postBatch, adminGql } from '../../helpers/api';
 import { gql, clearCart, searchInStock } from '../orders/helpers';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 const SUPERADMIN = {
     identifier: process.env.SUPERADMIN_USERNAME ?? 'superadmin',

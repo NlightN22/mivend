@@ -8,6 +8,9 @@ import {
     payAllOpenProformaInvoices,
     payProformaInvoice,
 } from './helpers';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 // Duplicate capture of the same proforma invoice (e.g. acquiring plus ERP bank transfer) must not error or double-count;
 // its remainder must cascade to other open invoices (see docs/payments.md).

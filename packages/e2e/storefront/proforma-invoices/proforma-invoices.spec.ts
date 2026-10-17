@@ -1,6 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import { gql } from '../orders/helpers';
 import { buildOrderAcrossOrganizations } from './helpers';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 async function goToProformaInvoices(page: Page): Promise<void> {
     await page.goto('/proforma-invoices');

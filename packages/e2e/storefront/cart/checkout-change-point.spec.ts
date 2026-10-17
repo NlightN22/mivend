@@ -1,4 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 const STOREFRONT = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
 

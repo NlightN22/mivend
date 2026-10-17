@@ -18,15 +18,15 @@ import {
     waitForReadyDocument,
 } from './helpers';
 import { gql } from '../orders/helpers';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.beforeEach(async ({ page }) => {
     await cancelOpenOrders(PREPAY_BUYER);
     await loginBuyer(page, PREPAY_BUYER);
-});
-test.afterEach(async () => {
-    await cancelOpenOrders(PREPAY_BUYER);
 });
 
 test.describe('proformas per organization', () => {

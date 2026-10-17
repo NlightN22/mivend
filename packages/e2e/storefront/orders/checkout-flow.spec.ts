@@ -1,6 +1,9 @@
 import * as path from 'path';
 import { test, expect, type Page } from '@playwright/test';
 import { clearCart, gql, searchInStock } from './helpers';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 const AUTH_STATE_PATH = path.join(__dirname, '../../.auth/storefront-user.json');
 

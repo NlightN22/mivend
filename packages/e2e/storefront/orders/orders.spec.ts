@@ -1,5 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { placeTestOrder } from './helpers';
+import { finishOrdersPlacedInEachTest, finishOrdersTouchedSince } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 async function goToOrders(page: Page): Promise<void> {
     await page.goto('/orders');
@@ -41,6 +44,16 @@ test.describe('Orders page', () => {
 
 test.describe('Order detail page', () => {
     let orderId: string;
+    const placedSince = new Date();
+
+    test.afterAll(async ({ browser }) => {
+        const ctx = await browser.newContext({ storageState: '.auth/storefront-user.json' });
+        try {
+            await finishOrdersTouchedSince(await ctx.newPage(), placedSince);
+        } finally {
+            await ctx.close();
+        }
+    });
 
     test.beforeAll(async ({ browser }) => {
         // auth path is relative to e2e package root (where playwright.config.ts lives)

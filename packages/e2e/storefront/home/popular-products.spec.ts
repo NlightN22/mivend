@@ -1,5 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { gql, clearCart, searchInStock } from '../orders/helpers';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 async function popularProductIds(page: Page, take = 500): Promise<string[]> {
     const result = await gql(page, `query($take: Int!) { popularProductIds(take: $take) }`, {

@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { placeTestOrder } from './helpers';
+import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+
+finishOrdersPlacedInEachTest();
 
 const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:3000';
 
