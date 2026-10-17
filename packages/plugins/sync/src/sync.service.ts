@@ -47,9 +47,16 @@ export class SyncService {
     }
 
     async processOutbox(): Promise<void> {
-        const entries = await this.claimPendingEntries();
-        for (const entry of entries) {
-            await this.publishEntry(entry);
+        const seen: number[] = [];
+        for (let i = 0; i < BATCH_SIZE; i++) {
+            const more = await this.dataSource.transaction(async em => {
+                const entry = await this.claimNextEntry(em, seen);
+                if (!entry) return false;
+                seen.push(entry.id);
+                await this.publishEntry(em, entry);
+                return true;
+            });
+            if (!more) return;
         }
     }
 
@@ -76,22 +83,25 @@ export class SyncService {
         });
     }
 
-    private async claimPendingEntries(): Promise<SyncOutboxEntry[]> {
-        return this.dataSource.transaction(async em => {
-            return em
-                .getRepository(SyncOutboxEntry)
-                .createQueryBuilder('e')
-                .where("e.status = 'pending'")
-                .andWhere('e.retryCount < :max', { max: this.maxRetry })
-                .orderBy('e.createdAt', 'ASC')
-                .limit(BATCH_SIZE)
-                .setLock('pessimistic_write')
-                .setOnLocked('skip_locked')
-                .getMany();
-        });
+    // The row lock is held through publish so overlapping sweeps skip an in-flight entry.
+    private async claimNextEntry(
+        em: EntityManager,
+        seen: number[],
+    ): Promise<SyncOutboxEntry | null> {
+        const qb = em
+            .getRepository(SyncOutboxEntry)
+            .createQueryBuilder('e')
+            .where("e.status = 'pending'")
+            .andWhere('e.retryCount < :max', { max: this.maxRetry });
+        if (seen.length) qb.andWhere('e.id NOT IN (:...seen)', { seen });
+        return qb
+            .orderBy('e.createdAt', 'ASC')
+            .setLock('pessimistic_write')
+            .setOnLocked('skip_locked')
+            .getOne();
     }
 
-    private async publishEntry(entry: SyncOutboxEntry): Promise<void> {
+    private async publishEntry(em: EntityManager, entry: SyncOutboxEntry): Promise<void> {
         try {
             const event = SyncEventSchema.parse({
                 eventId: entry.eventId,
@@ -104,7 +114,7 @@ export class SyncService {
             // Target is part of the routing key because consumers filter at the broker via binding patterns,
             // not in application code, so the key format is load-bearing for every subscriber.
             await this.rabbitmq.publish(`${entry.eventType}.${entry.target}`, event);
-            await this.dataSource.getRepository(SyncOutboxEntry).update(entry.id, {
+            await em.getRepository(SyncOutboxEntry).update(entry.id, {
                 deliveredAt: new Date(),
                 status: 'delivered',
             });
@@ -113,7 +123,7 @@ export class SyncService {
             const error = String(err);
             const nextRetry = entry.retryCount + 1;
             const failed = nextRetry >= this.maxRetry;
-            await this.dataSource.getRepository(SyncOutboxEntry).update(entry.id, {
+            await em.getRepository(SyncOutboxEntry).update(entry.id, {
                 retryCount: nextRetry,
                 lastError: error,
                 lastErrorAt: new Date(),

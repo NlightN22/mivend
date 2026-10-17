@@ -28,7 +28,10 @@ describe('OrderSyncService', () => {
         transaction: ReturnType<typeof vi.fn>;
     };
     let syncService: { writeToOutbox: ReturnType<typeof vi.fn> };
-    let connection: { withTransaction: ReturnType<typeof vi.fn> };
+    let connection: {
+        withTransaction: ReturnType<typeof vi.fn>;
+        getRepository: ReturnType<typeof vi.fn>;
+    };
     let options: { instanceType: string; instanceId: string };
     let service: OrderSyncService;
 
@@ -50,6 +53,9 @@ describe('OrderSyncService', () => {
         };
         syncService = { writeToOutbox: vi.fn(async () => undefined) };
         connection = {
+            getRepository: vi.fn((_ctx: unknown, entity: unknown) =>
+                typeof entity === 'string' ? { query: vi.fn() } : { query, update },
+            ),
             withTransaction: vi.fn(async (_ctx: unknown, work: (txCtx: unknown) => unknown) =>
                 work({}),
             ),

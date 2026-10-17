@@ -92,10 +92,9 @@ describe('SyncService', () => {
                 where: vi.fn().mockReturnThis(),
                 andWhere: vi.fn().mockReturnThis(),
                 orderBy: vi.fn().mockReturnThis(),
-                limit: vi.fn().mockReturnThis(),
                 setLock: vi.fn().mockReturnThis(),
                 setOnLocked: vi.fn().mockReturnThis(),
-                getMany: vi.fn().mockResolvedValue([entry]),
+                getOne: vi.fn().mockResolvedValueOnce(entry).mockResolvedValue(null),
             };
             mockOutboxRepo.createQueryBuilder.mockReturnValue(mockQb);
 
@@ -125,10 +124,9 @@ describe('SyncService', () => {
                 where: vi.fn().mockReturnThis(),
                 andWhere: vi.fn().mockReturnThis(),
                 orderBy: vi.fn().mockReturnThis(),
-                limit: vi.fn().mockReturnThis(),
                 setLock: vi.fn().mockReturnThis(),
                 setOnLocked: vi.fn().mockReturnThis(),
-                getMany: vi.fn().mockResolvedValue([entry]),
+                getOne: vi.fn().mockResolvedValueOnce(entry).mockResolvedValue(null),
             };
             mockOutboxRepo.createQueryBuilder.mockReturnValue(mockQb);
             publishMock.mockRejectedValueOnce(new Error('Connection refused'));
@@ -159,10 +157,9 @@ describe('SyncService', () => {
                 where: vi.fn().mockReturnThis(),
                 andWhere: vi.fn().mockReturnThis(),
                 orderBy: vi.fn().mockReturnThis(),
-                limit: vi.fn().mockReturnThis(),
                 setLock: vi.fn().mockReturnThis(),
                 setOnLocked: vi.fn().mockReturnThis(),
-                getMany: vi.fn().mockResolvedValue([entry]),
+                getOne: vi.fn().mockResolvedValueOnce(entry).mockResolvedValue(null),
             };
             mockOutboxRepo.createQueryBuilder.mockReturnValue(mockQb);
             publishMock.mockRejectedValueOnce(new Error('AMQP error'));

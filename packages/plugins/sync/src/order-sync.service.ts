@@ -11,6 +11,7 @@ import {
 } from '@vendure/core';
 import { DataSource } from 'typeorm';
 import type { ID, OrderState } from '@vendure/core';
+import { withAggregateLock } from 'shared';
 import type { SyncEventByType } from 'shared';
 
 import { SyncService } from './sync.service';
@@ -33,17 +34,30 @@ export class OrderSyncService {
     ) {}
 
     async applyCreate(event: SyncEventByType<'order.created'>): Promise<void> {
-        const { payload } = event;
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        await withAggregateLock(
+            this.connection,
+            ctx,
+            `order-replica:${event.payload.sourceOrderId}`,
+            txCtx => this.applyCreateLocked(txCtx, event),
+        );
+    }
 
-        const existing: Array<{ id: string }> = await this.dataSource.query(
+    // One transaction under a per-source lock: a failure rolls the replica back, so a retry never sees a half-built one.
+    private async applyCreateLocked(
+        ctx: RequestContext,
+        event: SyncEventByType<'order.created'>,
+    ): Promise<void> {
+        const { payload } = event;
+        const orders = this.connection.getRepository(ctx, Order);
+
+        const existing: Array<{ id: string }> = await orders.query(
             `SELECT id FROM "order" WHERE "customFieldsSourceorderid" = $1`,
             [payload.sourceOrderId],
         );
         if (existing[0]) return; // already applied — idempotent
 
-        const ctx = await this.requestContextService.create({ apiType: 'admin' });
-
-        const customerRows: Array<{ userId: string }> = await this.dataSource.query(
+        const customerRows: Array<{ userId: string }> = await orders.query(
             `SELECT "userId" FROM customer WHERE "emailAddress" = $1 LIMIT 1`,
             [payload.customerEmail],
         );
@@ -59,7 +73,7 @@ export class OrderSyncService {
         const order = await this.orderService.create(ctx, userId);
 
         for (const line of payload.lines) {
-            const variantRows: Array<{ id: string }> = await this.dataSource.query(
+            const variantRows: Array<{ id: string }> = await orders.query(
                 `SELECT id FROM product_variant WHERE sku = $1 LIMIT 1`,
                 [line.sku],
             );
@@ -74,7 +88,7 @@ export class OrderSyncService {
             await this.orderService.addItemToOrder(ctx, order.id, variantId, line.quantity);
         }
 
-        await this.dataSource.getRepository(Order).update(order.id, {
+        await orders.update(order.id, {
             customFields: { sourceOrderId: payload.sourceOrderId, branchId: payload.branchId },
         });
 
