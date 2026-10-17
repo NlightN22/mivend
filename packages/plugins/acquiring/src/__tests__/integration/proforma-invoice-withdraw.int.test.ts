@@ -30,11 +30,12 @@ class TestSettlementEntry {
     @Column({ type: 'int' }) amount!: number;
 }
 
+// Column names must match PaymentAttempt: a drifted mirror once hid a wrong column in the query.
 @Entity('payment_attempt')
 class TestPaymentAttempt {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'int', nullable: true }) proformaInvoiceId!: number | null;
-    @Column({ type: 'varchar' }) status!: string;
+    @Column({ type: 'varchar' }) paymentStatus!: string;
 }
 
 let dataSource: DataSource;
@@ -109,21 +110,28 @@ describe('ProformaInvoiceWithdrawService (real Postgres)', () => {
         expect(row.status).toBe('issued');
     });
 
-    it('refuses a version that has an active payment attempt', async () => {
-        const id = await addInvoice('issued');
-        await dataSource
-            .getRepository(TestPaymentAttempt)
-            .save({ proformaInvoiceId: id, status: 'pending' });
+    it.each(['pending', 'authorized'])(
+        'refuses a version that has an active (%s) payment attempt',
+        async paymentStatus => {
+            const id = await addInvoice('issued');
+            await dataSource
+                .getRepository(TestPaymentAttempt)
+                .save({ proformaInvoiceId: id, paymentStatus });
 
-        await expect(service.withdraw(ctx, id, 'admin-1')).rejects.toThrow('payment in progress');
-    });
+            await expect(service.withdraw(ctx, id, 'admin-1')).rejects.toThrow(
+                'payment in progress',
+            );
+            const row = await dataSource.getRepository(TestProformaInvoice).findOneByOrFail({ id });
+            expect(row.status).toBe('issued');
+        },
+    );
 
     it('ignores finished attempts and allocations of another version', async () => {
         const id = await addInvoice('issued');
         const other = await addInvoice('issued');
         await dataSource
             .getRepository(TestPaymentAttempt)
-            .save({ proformaInvoiceId: id, status: 'failed' });
+            .save({ proformaInvoiceId: id, paymentStatus: 'failed' });
         await dataSource
             .getRepository(TestSettlementEntry)
             .save({ proformaInvoiceId: other, amount: 50 });

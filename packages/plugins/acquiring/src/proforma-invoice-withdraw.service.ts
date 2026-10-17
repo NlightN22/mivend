@@ -58,7 +58,7 @@ export class ProformaInvoiceWithdrawService {
                     .getRepository(txCtx, PaymentAttempt)
                     .createQueryBuilder('attempt')
                     .where('attempt.proformaInvoiceId = :id', { id: invoice.id })
-                    .andWhere('attempt.status IN (:...statuses)', {
+                    .andWhere('attempt.paymentStatus IN (:...statuses)', {
                         statuses: ACTIVE_ATTEMPT_STATUSES,
                     })
                     .getCount();
