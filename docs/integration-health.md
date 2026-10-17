@@ -274,8 +274,9 @@ built), `resolved` (a skipped row whose event was rebuilt).
   `integration-inbox-processor.int.test.ts`.
 
 Known gaps: the outbox event is still written on `OrderReservedEvent` (after the reservation
-committed), not in the order's own transaction, so a crash between the two leaves no row and no
-record; a sweep for "reserved order without any outbox row" is not built. Inbound "missing
+committed), not in the order's own transaction; a crash between the two is repaired by
+`OrderSubmittedReconciler` (10-minute sweep: reserved, non-external, non-cancelled orders with no
+`order.confirmed` row at all are re-driven through the same locked enqueue). Inbound "missing
 required field" no-ops are recorded but not dead-lettered. `plugin-sync`'s own hub-to-branch
 outbox is not covered. Drill-down pages for failed/skipped rows, Replay and Requeue buttons are a
 separate follow-up.

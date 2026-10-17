@@ -1,5 +1,6 @@
 import { Injectable, OnApplicationBootstrap, Inject } from '@nestjs/common';
 import { EventBus, TransactionalConnection } from '@vendure/core';
+import type { ID, RequestContext } from '@vendure/core';
 import { OrderReservedEvent } from '@mivend/plugin-reservation';
 import { subscribeAndLog, withAggregateLock } from 'shared';
 
@@ -9,7 +10,7 @@ import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
 // Reacts to OrderReservedEvent, after the reservation committed, so the outbox write cannot join
-// its transaction (known gap, docs/integration-health.md). The gateway records every outcome.
+// its transaction; OrderSubmittedReconciler re-drives a crash in between. The gateway records every outcome.
 @Injectable()
 export class OrderSubmittedListener implements OnApplicationBootstrap {
     constructor(
@@ -32,19 +33,19 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
         );
     }
 
+    private async handle(event: OrderReservedEvent): Promise<void> {
+        await this.enqueueConfirmed(event.ctx, event.orderId, event.orderCode);
+    }
+
     // Same `reserve-order:<id>` lock key as order-contract.service.ts's reserveOrder — closes the
     // check-then-insert race a concurrent re-confirm/redelivery would otherwise hit (issue #199).
-    private async handle(event: OrderReservedEvent): Promise<void> {
-        await withAggregateLock(
-            this.connection,
-            event.ctx,
-            `reserve-order:${String(event.orderId)}`,
-            txCtx =>
-                this.gateway.enqueue({
-                    eventType: 'order.confirmed',
-                    subject: { orderId: String(event.orderId), orderCode: event.orderCode },
-                    build: () => this.builder.build(txCtx, event.orderId, event.orderCode),
-                }),
+    async enqueueConfirmed(ctx: RequestContext, orderId: ID, orderCode: string): Promise<void> {
+        await withAggregateLock(this.connection, ctx, `reserve-order:${String(orderId)}`, txCtx =>
+            this.gateway.enqueue({
+                eventType: 'order.confirmed',
+                subject: { orderId: String(orderId), orderCode },
+                build: () => this.builder.build(txCtx, orderId, orderCode),
+            }),
         );
     }
 }

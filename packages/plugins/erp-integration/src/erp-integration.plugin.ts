@@ -65,6 +65,8 @@ import { TaxZoneService } from './tax-zone.service';
 import { KafkaProducerService } from './kafka-producer.service';
 import { SchemaRegistryClient } from './schema-registry.client';
 import { OrderSubmittedListener } from './order-submitted.listener';
+import { OrderSubmittedReconciler } from './order-submitted-reconciler.service';
+import { createOrderSubmittedReconcilerTask } from './order-submitted-reconciler.scheduled-task';
 import { CategoryOverrideRecomputeListener } from './category-override-recompute.listener';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, isEmailOnlyWorker } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
@@ -160,6 +162,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         KafkaProducerService,
         SchemaRegistryClient,
         OrderSubmittedListener,
+        OrderSubmittedReconciler,
         OrderCancellationAdapter,
         OrderLinesEditAdapter,
         CategoryOverrideRecomputeListener,
@@ -234,6 +237,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
                 createIntegrationInboxReplaySweepTask(ErpIntegrationPlugin.options),
                 createIntegrationOutboxTask(ErpIntegrationPlugin.options),
                 createHeldSendRedriveTask(ErpIntegrationPlugin.options),
+                createOrderSubmittedReconcilerTask(ErpIntegrationPlugin.options),
                 createCollectionFiltersRecomputeTask(ErpIntegrationPlugin.options),
                 createCategoryTreeRecomputeTask(ErpIntegrationPlugin.options),
                 createCreditLimitRecomputeTask(ErpIntegrationPlugin.options),

@@ -20,6 +20,7 @@ const POSTGRES_UNIQUE_VIOLATION = '23505';
 // the next sweep. Mirrors plugin-acquiring's InboxService (STUCK_PROCESSING_THRESHOLD_MS).
 const STUCK_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000;
 
+const OPEN_STATUSES = ['pending', 'processing'];
 const FAILED_EVENTS_MAX_TAKE = 100;
 
 export interface EnqueueInboxEventInput {
@@ -177,6 +178,7 @@ export class IntegrationInboxService {
         return rows.map(row => row.id);
     }
 
+    // The status guard keeps a stale worker's late outcome from overwriting a row another worker settled.
     // One statement: marks the row processed and closes any replay_requested row of the same entity
     // that was requested before this event arrived (any recorded outcome closes it, noop included).
     async markProcessed(
@@ -188,7 +190,7 @@ export class IntegrationInboxService {
             `WITH done AS (
                 UPDATE integration_inbox_event
                    SET status = 'processed', processed_at = now(), outcome = $2, outcome_reason = $3
-                 WHERE id = $1
+                 WHERE id = $1 AND status IN ('pending', 'processing')
              RETURNING stream, entity_id, created_at)
              UPDATE integration_inbox_event r SET status = 'resolved'
                FROM done
@@ -215,20 +217,36 @@ export class IntegrationInboxService {
         onBudgetExhausted: { outcome: 'noop'; reason: string } | null = null,
     ): Promise<void> {
         const repo = this.dataSource.getRepository(IntegrationInboxEvent);
-        const row = await repo.findOneOrFail({ where: { id } });
-        const attempts = row.attempts + 1;
-        const firstFailedAt = row.firstFailedAt ?? new Date();
+        const open = { id, status: In(OPEN_STATUSES) };
+        const bumped = await repo
+            .createQueryBuilder()
+            .update()
+            .set({
+                attempts: () => 'attempts + 1',
+                firstFailedAt: () => 'COALESCE(first_failed_at, now())',
+            })
+            .where(open)
+            .returning(['attempts', 'first_failed_at'])
+            .execute();
+        const raw = (bumped.raw as Array<{ attempts: number; first_failed_at: Date }>)[0];
+        if (!raw) {
+            Logger.warn(`markFailed skipped: inbox row ${id} is already settled`, loggerCtx);
+            return;
+        }
+        const attempts = raw.attempts;
+        const firstFailedAt = raw.first_failed_at;
         const retriable = !(error instanceof NonRetryableInboundError);
         if (!retriable || Date.now() - firstFailedAt.getTime() > INBOX_RETRY_WALL_CLOCK_BUDGET_MS) {
             if (retriable && onBudgetExhausted) {
-                await repo.update({ id }, { attempts, lastError: error.message, firstFailedAt });
+                await repo.update(open, { lastError: error.message });
                 await this.markProcessed(id, onBudgetExhausted.outcome, onBudgetExhausted.reason);
                 return;
             }
-            await repo.update(
-                { id },
-                { attempts, lastError: error.message, status: 'failed', nextRetryAt: null },
-            );
+            await repo.update(open, {
+                lastError: error.message,
+                status: 'failed',
+                nextRetryAt: null,
+            });
             await this.dataSource.query(
                 `UPDATE integration_inbox_event r
                     SET status = 'failed', replay_requested_at = NULL, last_error = $2
@@ -240,19 +258,14 @@ export class IntegrationInboxService {
             return;
         }
         const nextRetryAt = new Date(Date.now() + computeRetryBackoffMs(attempts, random));
-        await repo.update(
-            { id },
-            {
-                attempts,
-                firstFailedAt,
-                lastError: error.message,
-                status: 'pending',
-                nextRetryAt,
-                // Keeps eligibleAt (claimBatch's sole ordering/filter column, #147) equal to
-                // nextRetryAt for the duration of the backoff — see the entity's own comment.
-                eligibleAt: nextRetryAt,
-            },
-        );
+        await repo.update(open, {
+            lastError: error.message,
+            status: 'pending',
+            nextRetryAt,
+            // Keeps eligibleAt (claimBatch's sole ordering/filter column, #147) equal to
+            // nextRetryAt for the duration of the backoff — see the entity's own comment.
+            eligibleAt: nextRetryAt,
+        });
     }
 
     // Dashboard/ops read model (issue #76) — 'failed' rows are dead-lettered (markFailed above)
