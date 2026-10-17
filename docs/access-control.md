@@ -111,7 +111,7 @@ confirm, introduce a dedicated permission instead of widening this one.
 hide every administrator holding a role the caller could not grant. `teamMembers` therefore lists
 colleagues through `TeamAdministratorService` for every `'department'`- and `'own'`-scoped caller
 (department-head, operator, manager): live administrators of the caller's own `branchId`, a branchless
-caller sees none. Only `'all'` keeps Vendure's list. Reassignment targets are checked against the
+caller sees none; `'all'` lists every live administrator directly (Vendure's list would drop the same ones). Reassignment targets are checked against the
 branch for `'department'` only; other scopes are unchanged. This grants no administrator-management
 permission. `teamDirectory` (`/team`) lists the same `findTeam` set, then applies its own
 name anonymization. Approval escalation resolves its target by id directly (live administrators only),

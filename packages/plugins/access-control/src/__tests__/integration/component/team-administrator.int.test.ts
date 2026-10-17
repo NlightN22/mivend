@@ -10,7 +10,7 @@ import {
     OneToOne,
     PrimaryGeneratedColumn,
 } from 'typeorm';
-import type { AdministratorService, RequestContext, TransactionalConnection } from '@vendure/core';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { Administrator } from '@vendure/core';
 import {
     createTestSchema,
@@ -66,7 +66,6 @@ const ctx = {} as RequestContext;
 const { schema, extra } = testSchemaOptions('access_control_team_administrator');
 let dataSource: DataSource;
 const resolveCounterpartyScope = vi.fn();
-const administratorService = { findAll: vi.fn() };
 let service: TeamAdministratorService;
 const ids: Record<string, number> = {};
 
@@ -104,11 +103,9 @@ beforeAll(async () => {
             return dataSource.getRepository(TestAdministrator);
         },
     } as unknown as TransactionalConnection;
-    service = new TeamAdministratorService(
-        connection,
-        administratorService as unknown as AdministratorService,
-        { resolveCounterpartyScope } as unknown as AccessScopeService,
-    );
+    service = new TeamAdministratorService(connection, {
+        resolveCounterpartyScope,
+    } as unknown as AccessScopeService);
     await addAdmin('HeadA', 'branch-a', 'department-head');
     await addAdmin('ManagerA', 'branch-a', 'manager');
     await addAdmin('OperatorA', 'branch-a', 'operator');
@@ -137,7 +134,6 @@ describe('TeamAdministratorService.findTeam', () => {
         expect(team.map(a => a.lastName).sort()).toEqual(['HeadA', 'ManagerA', 'OperatorA']);
         const manager = team.find(a => a.lastName === 'ManagerA');
         expect(manager?.user?.roles?.map(r => r.code)).toEqual(['manager']);
-        expect(administratorService.findAll).not.toHaveBeenCalled();
     });
 
     it('branch scope without a branch lists nobody', async () => {
@@ -152,7 +148,6 @@ describe('TeamAdministratorService.findTeam', () => {
         const team = await service.findTeam(ctx);
 
         expect(team.map(a => a.lastName).sort()).toEqual(['HeadA', 'ManagerA', 'OperatorA']);
-        expect(administratorService.findAll).not.toHaveBeenCalled();
     });
 
     it.each(['Unbranched', 'GoneA'])('own scope of %s lists nobody', async lastName => {
@@ -167,11 +162,20 @@ describe('TeamAdministratorService.findTeam', () => {
         expect(await service.findTeam(ctx)).toEqual([]);
     });
 
-    it('"all" scope keeps the Vendure administrator list unchanged', async () => {
+    it('"all" scope lists every live administrator of every branch with roles', async () => {
         resolveCounterpartyScope.mockResolvedValue({ kind: 'all' });
-        administratorService.findAll.mockResolvedValue({ items: [{ id: 42 }] });
 
-        expect(await service.findTeam(ctx)).toEqual([{ id: 42 }]);
+        const team = await service.findTeam(ctx);
+
+        expect(team.map(a => a.lastName).sort()).toEqual([
+            'HeadA',
+            'ManagerA',
+            'ManagerB',
+            'OperatorA',
+            'Unbranched',
+        ]);
+        const manager = team.find(a => a.lastName === 'ManagerB');
+        expect(manager?.user?.roles?.map(r => r.code)).toEqual(['manager']);
     });
 });
 

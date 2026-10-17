@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
-import {
-    Administrator,
-    AdministratorService,
-    RequestContext,
-    TransactionalConnection,
-} from '@vendure/core';
+import { Administrator, RequestContext, TransactionalConnection } from '@vendure/core';
 import { IsNull } from 'typeorm';
 
 import { AccessScopeService } from './access-scope.service';
@@ -13,29 +8,29 @@ import { AccessScope } from './types';
 
 const TEAM_LIST_LIMIT = 200;
 
-// Vendure 3.7.3 hides administrators whose roles the caller could not grant; a non-'all'
-// caller instead sees colleagues by mivend's branch scope (docs/access-control.md).
+// Vendure 3.7.3's findAll hides administrators whose roles the caller could not grant, so the team
+// is read directly: 'all' sees every live administrator, others their branch (docs/access-control.md).
 @Injectable()
 export class TeamAdministratorService {
     constructor(
         private connection: TransactionalConnection,
-        private administratorService: AdministratorService,
         private accessScopeService: AccessScopeService,
     ) {}
 
     async findTeam(ctx: RequestContext): Promise<Administrator[]> {
         const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
-        if (scope.kind === 'all') {
-            const result = await this.administratorService.findAll(ctx, { take: TEAM_LIST_LIMIT }, [
-                'user.roles',
-            ]);
-            return result.items;
-        }
         const branchId =
-            scope.kind === 'department' ? scope.branchId : await this.callerBranchId(ctx, scope);
-        if (branchId == null) return [];
+            scope.kind === 'all'
+                ? null
+                : scope.kind === 'department'
+                  ? scope.branchId
+                  : await this.callerBranchId(ctx, scope);
+        if (scope.kind !== 'all' && branchId == null) return [];
         return this.connection.getRepository(ctx, Administrator).find({
-            where: { deletedAt: IsNull(), customFields: { branchId: String(branchId) } },
+            where: {
+                deletedAt: IsNull(),
+                ...(branchId != null && { customFields: { branchId: String(branchId) } }),
+            },
             relations: ['user', 'user.roles'],
             order: { id: 'ASC' },
             take: TEAM_LIST_LIMIT,
