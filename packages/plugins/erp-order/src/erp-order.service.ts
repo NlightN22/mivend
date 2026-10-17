@@ -7,6 +7,7 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
+import { IsNull } from 'typeorm';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
 import { OrderReadyForErpEvent } from './erp-order.events';
 import { OrderStatusHistoryService } from './order-status-history.service';
@@ -32,10 +33,7 @@ export class ErpOrderService {
     // overwrite a concurrent writer's key (the reservation state, #241) with that snapshot.
     async onOrderPlaced(ctx: RequestContext, order: Order): Promise<void> {
         const initialStatus = (await this.statusReference.dictionary(ctx)).codeWith('initial');
-        const changed: Record<string, unknown> = {
-            erpStatus: initialStatus,
-            erpStatusAt: new Date(),
-        };
+        const changed: Record<string, unknown> = {};
 
         // Denormalized at placement time; see docs/access-control.md (branch-scope axis).
         // A missing preferred trading point is not an error; the order just gets no branch scope.
@@ -69,8 +67,18 @@ export class ErpOrderService {
             }
         }
 
-        Object.assign(order.customFields, changed);
-        await this.connection.getRepository(ctx, Order).update(order.id, { customFields: changed });
+        const repo = this.connection.getRepository(ctx, Order);
+        if (Object.keys(changed).length > 0) {
+            Object.assign(order.customFields, changed);
+            await repo.update(order.id, { customFields: changed });
+        }
+        // Both placement events call this: only the run that sets the first status records and publishes.
+        const claimed = await repo.update(
+            { id: order.id, customFields: { erpStatus: IsNull() } },
+            { customFields: { erpStatus: initialStatus, erpStatusAt: new Date() } },
+        );
+        if (!claimed.affected) return;
+        order.customFields.erpStatus = initialStatus;
         await this.statusHistory.record(ctx, order.id, initialStatus);
         this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
     }

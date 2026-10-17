@@ -1,6 +1,7 @@
 import { testOrderStatusDictionary } from '../../testing/order-status-fixture';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RequestContext } from '@vendure/core';
+import { FindOperator } from 'typeorm';
 import { ErpOrderService } from '../../erp-order.service';
 
 const mockOrderRepo = {
@@ -49,6 +50,7 @@ describe('ErpOrderService', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockOrderRepo.update.mockResolvedValue({ affected: 1 });
         mockFulfillmentQb.innerJoin.mockReturnValue(mockFulfillmentQb);
         mockFulfillmentQb.where.mockReturnValue(mockFulfillmentQb);
         mockFulfillmentQb.orderBy.mockReturnValue(mockFulfillmentQb);
@@ -88,7 +90,7 @@ describe('ErpOrderService', () => {
         });
 
         it('writes only the keys it sets, never the whole stale entity (a concurrent reservation state must survive)', async () => {
-            mockAdministratorService.findOneByUserId.mockResolvedValue(null);
+            mockAdministratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
             const order = {
                 id: 5,
                 customFields: { reservationState: 'NOT_REQUIRED', uuid: 'u-1' },
@@ -102,8 +104,37 @@ describe('ErpOrderService', () => {
                 { customFields: Record<string, unknown> },
             ];
             expect(id).toBe(5);
-            expect(Object.keys(data.customFields).sort()).toEqual(['erpStatus', 'erpStatusAt']);
+            expect(Object.keys(data.customFields)).toEqual(['placedByAdministratorId']);
+            const [, claim] = mockOrderRepo.update.mock.calls[1] as [
+                unknown,
+                { customFields: Record<string, unknown> },
+            ];
+            expect(Object.keys(claim.customFields).sort()).toEqual(['erpStatus', 'erpStatusAt']);
             expect(mockOrderRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('claims the initial status only while erpStatus is NULL', async () => {
+            mockAdministratorService.findOneByUserId.mockResolvedValue(null);
+
+            await service.onOrderPlaced(mockCtx, { id: 5, customFields: {} } as never);
+
+            const [criteria] = mockOrderRepo.update.mock.calls[0] as [
+                { id: number; customFields: { erpStatus: unknown } },
+            ];
+            expect(criteria.id).toBe(5);
+            expect(criteria.customFields.erpStatus).toBeInstanceOf(FindOperator);
+            expect(mockStatusHistory.record).toHaveBeenCalledTimes(1);
+            expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+        });
+
+        it('a second placement event neither records history nor publishes the ready event again', async () => {
+            mockAdministratorService.findOneByUserId.mockResolvedValue(null);
+            mockOrderRepo.update.mockResolvedValue({ affected: 0 });
+
+            await service.onOrderPlaced(mockCtx, { id: 5, customFields: {} } as never);
+
+            expect(mockStatusHistory.record).not.toHaveBeenCalled();
+            expect(mockEventBus.publish).not.toHaveBeenCalled();
         });
 
         it("leaves placedByAdministratorId unset for a storefront customer's own checkout (no matching Administrator)", async () => {
