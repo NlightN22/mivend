@@ -488,6 +488,9 @@ with a point; otherwise it is a pickup and carries neither.
   a point without an ERP id is never sent anywhere. A courier order to such a point is skipped the same way, with the
   reason `trading point not confirmed by the ERP yet`, and the same `delivery.freight-trading-point` error finding. The
   periodic `HeldSendRedriveService` sweep rebuilds the row once the point has an ERP id. Pickup orders are unaffected.
+  There is no age limit: staff watch the integration health count and the order finding, and either get the point
+  confirmed or switch the order to pickup with `setOrderDelivery`. The sweep rebuilds every skipped courier row per tick,
+  which is cheap while the backlog is small.
 - Editing a placed order: Admin API `setOrderDelivery(orderId, method PICKUP|COURIER, tradingPointId)` (`ConfirmOrder`,
   order visibility scope; only staff, a customer asks the manager). It is allowed while the order is editable by the
   line-edit rules (#233): not sent to the ERP, not shipped, not cancelled (`OrderLineEditGuard`; an active reservation
