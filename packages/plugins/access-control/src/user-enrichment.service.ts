@@ -96,26 +96,26 @@ export class UserEnrichmentService {
                 return null;
             }
             admin.customFields = { ...admin.customFields, erpId: input.erpId };
-            const saved = await repo.save(admin);
-            await this.erpUserService.markLinked(ctx, input.erpId, saved.id);
-            await this.eventBus.publish(new AdministratorLinkedEvent(ctx, input.erpId, saved.id));
+            await repo.update(admin.id, { customFields: { erpId: input.erpId } });
+            await this.erpUserService.markLinked(ctx, input.erpId, admin.id);
+            await this.eventBus.publish(new AdministratorLinkedEvent(ctx, input.erpId, admin.id));
             Logger.verbose(
                 `Linked administrator ${input.email} to erpId=${input.erpId}`,
                 loggerCtx,
             );
-            admin = saved;
         }
-        if (input.departmentId !== undefined) {
-            admin.customFields = { ...admin.customFields, departmentId: input.departmentId };
+        // Writes only the keys this stream owns: a spread of the loaded customFields would revert a concurrent change to others.
+        const owned: { departmentId?: string | null; positionId?: string | null } = {};
+        if (input.departmentId !== undefined) owned.departmentId = input.departmentId;
+        if (input.positionId !== undefined) owned.positionId = input.positionId;
+        if (Object.keys(owned).length > 0) {
+            admin.customFields = { ...admin.customFields, ...owned };
+            await repo.update(admin.id, { customFields: owned });
         }
-        if (input.positionId !== undefined) {
-            admin.customFields = { ...admin.customFields, positionId: input.positionId };
-        }
-        const saved = await repo.save(admin);
         if (input.isActive !== undefined) {
             await this.administratorActivationService.syncFromErp(ctx, input.erpId, input.isActive);
         }
-        return saved;
+        return admin;
     }
 
     // found:false is a real eventual-consistency race (user event may not have arrived): retry.

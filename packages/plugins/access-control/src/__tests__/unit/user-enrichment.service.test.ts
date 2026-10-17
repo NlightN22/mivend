@@ -9,7 +9,7 @@ import { UserEnrichmentService } from '../../user-enrichment.service';
 function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
     return {
         findOne: vi.fn(),
-        save: vi.fn(async (x: unknown) => x),
+        update: vi.fn(),
     } as unknown as Record<string, ReturnType<typeof vi.fn>>;
 }
 
@@ -51,12 +51,12 @@ describe('UserEnrichmentService', () => {
                 departmentId: 'dept-1',
             });
 
-            expect(repo.save).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    id: 'admin-1',
-                    customFields: { erpId: 'user-1', departmentId: 'dept-1' },
-                }),
-            );
+            expect(repo.update).toHaveBeenCalledWith('admin-1', {
+                customFields: { erpId: 'user-1' },
+            });
+            expect(repo.update).toHaveBeenCalledWith('admin-1', {
+                customFields: { departmentId: 'dept-1' },
+            });
             expect(result).toEqual(expect.objectContaining({ id: 'admin-1' }));
         });
 
@@ -69,11 +69,10 @@ describe('UserEnrichmentService', () => {
             await service.linkAndEnrich(ctx, { erpId: 'user-1', departmentId: 'dept-2' });
 
             expect(repo.findOne).toHaveBeenCalledTimes(1);
-            expect(repo.save).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    customFields: { erpId: 'user-1', departmentId: 'dept-2' },
-                }),
-            );
+            expect(repo.update).toHaveBeenCalledTimes(1);
+            expect(repo.update).toHaveBeenCalledWith('admin-1', {
+                customFields: { departmentId: 'dept-2' },
+            });
         });
 
         it('writes positionId, clears it on explicit null, and leaves it untouched when undefined', async () => {
@@ -105,7 +104,7 @@ describe('UserEnrichmentService', () => {
             });
 
             expect(result).toBeNull();
-            expect(repo.save).not.toHaveBeenCalled();
+            expect(repo.update).not.toHaveBeenCalled();
             expect(erpUserService.upsert).toHaveBeenCalledWith(ctx, {
                 erpId: 'user-1',
                 fullName: 'Nobody Home',
@@ -123,7 +122,7 @@ describe('UserEnrichmentService', () => {
             const result = await service.linkAndEnrich(ctx, { erpId: 'user-1' });
 
             expect(result).toBeNull();
-            expect(repo.save).not.toHaveBeenCalled();
+            expect(repo.update).not.toHaveBeenCalled();
             expect(erpUserService.upsert).toHaveBeenCalledWith(ctx, {
                 erpId: 'user-1',
                 fullName: undefined,
@@ -208,11 +207,7 @@ describe('UserEnrichmentService', () => {
 
             await service.linkAndEnrich(ctx, { erpId: 'user-1' });
 
-            expect(repo.save).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    customFields: { erpId: 'user-1', departmentId: 'dept-old' },
-                }),
-            );
+            expect(repo.update).not.toHaveBeenCalled();
         });
     });
 

@@ -20,9 +20,6 @@ export class SessionLoginListenerService {
         if (!latest) {
             return;
         }
-        await repo.update(
-            { id: latest.id },
-            { customFields: { ...latest.customFields, userAgent: String(userAgent) } },
-        );
+        await repo.update({ id: latest.id }, { customFields: { userAgent: String(userAgent) } });
     }
 }
