@@ -636,6 +636,10 @@ describe('OrderSubmittedBuilder', () => {
         const buildDelivery = async (
             shippingCode: string,
             tradingPoint: { erpId: string; address: string; customerOwned: boolean } | null,
+            orderPoint: { tradingPointId?: string; deliveryAddress?: string } = {
+                tradingPointId: 'tp-1',
+                deliveryAddress: 'Street 1',
+            },
         ): Promise<Record<string, unknown>> => {
             const result = await build(
                 makeBuilder({
@@ -643,8 +647,7 @@ describe('OrderSubmittedBuilder', () => {
                         [packLine()],
                         {
                             selectedContractId: 'contract-1',
-                            tradingPointId: 'tp-1',
-                            deliveryAddress: 'Street 1',
+                            ...orderPoint,
                         },
                         shippingCode,
                     ),
@@ -694,6 +697,12 @@ describe('OrderSubmittedBuilder', () => {
 
         it('sends neither field for pickup', async () => {
             const payload = await buildDelivery('pickup', point);
+            expect(payload).not.toHaveProperty('pointOfSaleId');
+            expect(payload).not.toHaveProperty('deliveryAddress');
+        });
+
+        it('sends neither field for a staff order with no chosen point, whatever the live point is', async () => {
+            const payload = await buildDelivery('freight-delivery', point, {});
             expect(payload).not.toHaveProperty('pointOfSaleId');
             expect(payload).not.toHaveProperty('deliveryAddress');
         });

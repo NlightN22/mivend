@@ -35,6 +35,11 @@ export class ErpOrderService {
         const initialStatus = (await this.statusReference.dictionary(ctx)).codeWith('initial');
         const changed: Record<string, unknown> = {};
 
+        const admin =
+            ctx.activeUserId !== undefined
+                ? await this.administratorService.findOneByUserId(ctx, ctx.activeUserId)
+                : null;
+
         // Denormalized at placement time; see docs/access-control.md (branch-scope axis).
         // A missing preferred trading point is not an error; the order just gets no branch scope.
         if (order.customerId) {
@@ -45,28 +50,33 @@ export class ErpOrderService {
                 );
                 if (counterparty) changed.counterpartyId = String(counterparty.id);
             }
-            const tradingPoint = await this.tradingPointService.getPreferredForCustomer(
+            const chosenPointId = admin ? await this.staffChosenPointId(ctx, order) : null;
+            const chosen = chosenPointId
+                ? await this.tradingPointService.findById(ctx, chosenPointId)
+                : null;
+            const preferred = await this.tradingPointService.getPreferredForCustomer(
                 ctx,
                 order.customerId,
             );
-            if (tradingPoint) {
-                changed.tradingPointId = String(tradingPoint.id);
-                changed.deliveryAddress = tradingPoint.address || null;
+            // Staff pick the point explicitly (setDraftOrderTradingPoint); none chosen means self-pickup,
+            // so the customer's preferred point must not leak into tradingPointId/deliveryAddress.
+            const deliveryPoint = admin ? chosen : preferred;
+            if (deliveryPoint) {
+                changed.tradingPointId = String(deliveryPoint.id);
+                changed.deliveryAddress = deliveryPoint.address || null;
+            }
+            const branchPoint = deliveryPoint ?? preferred;
+            if (branchPoint) {
                 changed.branchId = await this.tradingPointService.resolveServicingBranchId(
                     ctx,
-                    tradingPoint,
+                    branchPoint,
                 );
             }
         }
 
         // Stored once at creation, not derived per request from the first HistoryEntry (pagination).
         // Stays null for storefront checkout: ctx.activeUserId doesn't resolve to an Administrator there.
-        if (ctx.activeUserId !== undefined) {
-            const admin = await this.administratorService.findOneByUserId(ctx, ctx.activeUserId);
-            if (admin) {
-                changed.placedByAdministratorId = String(admin.id);
-            }
-        }
+        if (admin) changed.placedByAdministratorId = String(admin.id);
 
         // One transaction: a crash after the claim cannot leave the first status without its history row.
         // Both placement events call this, so only the run that sets erpStatus from NULL records and publishes.
@@ -87,6 +97,14 @@ export class ErpOrderService {
         if (!claimed) return;
         order.customFields.erpStatus = initialStatus;
         this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
+    }
+
+    // Re-read: the placement event carries a snapshot that may predate the staff choice (docs/concurrency.md (d)).
+    private async staffChosenPointId(ctx: RequestContext, order: Order): Promise<string | null> {
+        const fresh = await this.connection
+            .getRepository(ctx, Order)
+            .findOne({ where: { id: order.id }, loadEagerRelations: false });
+        return fresh?.customFields?.tradingPointId ?? null;
     }
 
     // Kept server-side so orders can be sorted and filtered without computing it per request.

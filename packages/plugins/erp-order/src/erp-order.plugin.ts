@@ -16,6 +16,8 @@ import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ErpOrderStatusEvent } from './erp-order.events';
 import { ErpOrderResolver } from './erp-order.resolver';
 import { AdminOrderVisibilityResolver } from './admin-order-visibility.resolver';
+import { DraftOrderDeliveryResolver } from './draft-order-delivery.resolver';
+import { DraftOrderDeliveryService } from './draft-order-delivery.service';
 import { ErpOrderService } from './erp-order.service';
 import { ExternalOrderAccessStrategy } from './external-order-access.strategy';
 import { ExternalOrderReconcileService } from './external-order-reconcile.service';
@@ -62,6 +64,11 @@ const adminApiSchema = gql`
         cancelled: Boolean!
         rejected: Boolean!
     }
+
+    extend type Mutation {
+        "Staff pick one of the order client's trading points on a draft order; null means self-pickup."
+        setDraftOrderTradingPoint(orderId: ID!, tradingPointId: ID): Boolean!
+    }
 `;
 
 @VendurePlugin({
@@ -72,6 +79,7 @@ const adminApiSchema = gql`
         OrderStatusReferenceService,
         OrderStatusProvisioningService,
         OrderVisibilityService,
+        DraftOrderDeliveryService,
         ExternalOrderService,
         ExternalOrderCounterpartyListener,
         ExternalOrderReconcileService,
@@ -95,7 +103,11 @@ const adminApiSchema = gql`
     },
     adminApiExtensions: {
         schema: adminApiSchema,
-        resolvers: [AdminOrderVisibilityResolver, OrderStatusDictionaryResolver],
+        resolvers: [
+            AdminOrderVisibilityResolver,
+            OrderStatusDictionaryResolver,
+            DraftOrderDeliveryResolver,
+        ],
     },
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
         config.customFields.Order = [

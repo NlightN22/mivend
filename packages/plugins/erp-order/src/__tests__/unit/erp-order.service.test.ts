@@ -34,6 +34,7 @@ const mockConnection = {
 
 const mockEventBus = { publish: vi.fn() };
 const mockTradingPointService = {
+    findById: vi.fn(),
     getPreferredForCustomer: vi.fn(),
     resolveServicingBranchId: vi.fn(),
 };
@@ -188,6 +189,45 @@ describe('ErpOrderService', () => {
             expect((order as { customFields: { branchId?: string } }).customFields.branchId).toBe(
                 'branch-b',
             );
+        });
+    });
+
+    describe('onOrderPlaced for a staff-created order', () => {
+        const preferred = { id: 7, counterpartyId: '5', address: 'Preferred 1' };
+        const chosen = { id: 9, counterpartyId: '5', address: 'Chosen 2' };
+
+        beforeEach(() => {
+            mockAdministratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
+            mockTradingPointService.getPreferredForCustomer.mockResolvedValue(preferred);
+            mockTradingPointService.resolveServicingBranchId.mockResolvedValue('branch-b');
+        });
+
+        it('snapshots the point the manager chose, not the preferred one', async () => {
+            mockOrderRepo.findOne.mockResolvedValue({ customFields: { tradingPointId: '9' } });
+            mockTradingPointService.findById.mockResolvedValue(chosen);
+            const order = { id: 1, customFields: {}, customerId: 'cust-1' } as never;
+
+            await service.onOrderPlaced(mockCtx, order);
+
+            const fields = (order as { customFields: Record<string, unknown> }).customFields;
+            expect(fields.tradingPointId).toBe('9');
+            expect(fields.deliveryAddress).toBe('Chosen 2');
+            expect(mockTradingPointService.resolveServicingBranchId).toHaveBeenCalledWith(
+                mockCtx,
+                chosen,
+            );
+        });
+
+        it('writes no point and no address when the manager chose nothing, but keeps the branch scope', async () => {
+            mockOrderRepo.findOne.mockResolvedValue({ customFields: { tradingPointId: null } });
+            const order = { id: 1, customFields: {}, customerId: 'cust-1' } as never;
+
+            await service.onOrderPlaced(mockCtx, order);
+
+            const fields = (order as { customFields: Record<string, unknown> }).customFields;
+            expect(fields.tradingPointId).toBeUndefined();
+            expect(fields.deliveryAddress).toBeUndefined();
+            expect(fields.branchId).toBe('branch-b');
         });
     });
 
