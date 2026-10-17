@@ -36,6 +36,12 @@ class TestDocument {
     @Column({ type: 'simple-json', nullable: true }) metadata!: Record<string, unknown> | null;
 }
 
+@Entity('proforma_invoice')
+class TestProformaInvoice {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar' }) status!: string;
+}
+
 @Entity('organization_requisites')
 @Index(['erpId'], { unique: true })
 class TestOrganizationRequisites {
@@ -74,7 +80,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestDocument, TestOrganizationRequisites],
+        entities: [TestDocument, TestOrganizationRequisites, TestProformaInvoice],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -90,7 +96,11 @@ beforeAll(async () => {
                 return { query: (sql: string, params?: unknown[]) => manager!.query(sql, params) };
             }
             const testEntity =
-                entityMap[entity.name === 'Document' ? 'document' : 'organization_requisites'];
+                entity.name === 'ProformaInvoice'
+                    ? TestProformaInvoice
+                    : entityMap[
+                          entity.name === 'Document' ? 'document' : 'organization_requisites'
+                      ];
             return (manager ?? dataSource).getRepository(testEntity);
         },
         withTransaction: async (
@@ -120,6 +130,7 @@ afterAll(async () => {
 beforeEach(async () => {
     await dataSource.getRepository(TestDocument).clear();
     await dataSource.getRepository(TestOrganizationRequisites).clear();
+    await dataSource.getRepository(TestProformaInvoice).clear();
     mockCounterpartyService.findByErpId.mockReset();
 });
 
@@ -255,5 +266,26 @@ describe('DocumentsService (integration, real Postgres)', () => {
         expect(row.status).toBe('pending');
         expect(row.metadata).toEqual({ newerVersionRerender: true });
         expect(await rerender.claim(mockCtx, 42)).toBeNull();
+    });
+
+    it('a render without the note that lands after the supersede asks for another render', async () => {
+        const invoices = dataSource.getRepository(TestProformaInvoice);
+        const old = await invoices.save({ status: 'issued' });
+        const doc = await dataSource.getRepository(TestDocument).save({
+            type: 'proforma-invoice',
+            counterpartyId: 'cp-1',
+            proformaInvoiceId: String(old.id),
+            number: '100-01-1',
+            issueDate: new Date(),
+            status: 'ready',
+            source: 'generated',
+        });
+        const document = doc as never;
+
+        expect(await rerender.missedNote(mockCtx, document, false)).toBe(false);
+        await invoices.update({ id: old.id }, { status: 'superseded' });
+        expect(await rerender.claim(mockCtx, old.id)).not.toBeNull();
+        expect(await rerender.missedNote(mockCtx, document, false)).toBe(true);
+        expect(await rerender.missedNote(mockCtx, document, true)).toBe(false);
     });
 });

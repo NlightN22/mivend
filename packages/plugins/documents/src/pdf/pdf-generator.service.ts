@@ -21,6 +21,7 @@ import { ProformaInvoiceService } from '@mivend/plugin-acquiring';
 import { GENERATE_DOCUMENT_QUEUE, loggerCtx } from '../constants';
 import { Document } from '../entities/document.entity';
 import { DocumentsService } from '../documents.service';
+import { SupersededProformaRerenderService } from '../superseded-proforma-rerender.service';
 import { resolveBuyerLegalName } from './buyer-legal-name';
 import { PartyInput, ProformaInvoiceSource, printedRowsTotal } from './proforma-invoice-data';
 import {
@@ -50,6 +51,7 @@ export class PdfGeneratorService implements OnModuleInit {
         private documentsService: DocumentsService,
         private pdfBrowserService: PdfBrowserService,
         private proformaInvoiceService: ProformaInvoiceService,
+        private supersededRerender: SupersededProformaRerenderService,
     ) {}
 
     async onModuleInit(): Promise<void> {
@@ -75,9 +77,9 @@ export class PdfGeneratorService implements OnModuleInit {
         try {
             await this.documentsService.markGenerating(ctx, documentId);
 
-            const html =
+            const { html, noted } =
                 document.type === 'contract'
-                    ? await this.buildContractHtml(ctx, document)
+                    ? { html: await this.buildContractHtml(ctx, document), noted: false }
                     : await this.buildProformaInvoiceHtml(ctx, document);
             const pdfBuffer = await this.pdfBrowserService.renderPdf(html);
 
@@ -92,6 +94,9 @@ export class PdfGeneratorService implements OnModuleInit {
                 );
             }
             await this.documentsService.markReady(ctx, documentId, asset.id);
+            if (await this.supersededRerender.missedNote(ctx, document, noted)) {
+                await this.enqueue(documentId);
+            }
             Logger.verbose(`Generated PDF for document ${documentId}`, loggerCtx);
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
@@ -166,7 +171,7 @@ export class PdfGeneratorService implements OnModuleInit {
     private async buildProformaInvoiceHtml(
         ctx: RequestContext,
         document: Document,
-    ): Promise<string> {
+    ): Promise<{ html: string; noted: boolean }> {
         if (!document.orderId) {
             throw new Error(
                 `Document ${document.id} has no orderId — cannot render a proforma invoice`,
@@ -281,7 +286,7 @@ export class PdfGeneratorService implements OnModuleInit {
                 loggerCtx,
             );
         }
-        return renderProformaInvoiceHtml(data);
+        return { html: renderProformaInvoiceHtml(data), noted: source.hasNewerVersion };
     }
 
     private async buildContractHtml(ctx: RequestContext, document: Document): Promise<string> {

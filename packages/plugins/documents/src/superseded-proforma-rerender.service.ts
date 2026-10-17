@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { ProformaInvoice } from '@mivend/plugin-acquiring';
 
 import { Document } from './entities/document.entity';
 
@@ -25,5 +26,14 @@ export class SupersededProformaRerenderService {
             );
             return document;
         });
+    }
+
+    // Read after markReady committed: a render started before the supersede may land after the noted one.
+    async missedNote(ctx: RequestContext, document: Document, noted: boolean): Promise<boolean> {
+        if (noted || !document.proformaInvoiceId) return false;
+        const invoice = await this.connection
+            .getRepository(ctx, ProformaInvoice)
+            .findOne({ where: { id: Number(document.proformaInvoiceId) } });
+        return invoice?.status === 'superseded';
     }
 }
