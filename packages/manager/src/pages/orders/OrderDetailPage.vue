@@ -18,6 +18,7 @@ import { fetchOrderLineShortfalls, type OrderLineShortfallRow } from '../../api/
 import { fetchOrderReservations, type OrderReservation } from '../../api/reservation';
 import { isNotRegisteredInErp } from '../../composables/isNotRegisteredInErp';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
+import OrderDeliveryPanel from '../../components/order-detail/OrderDeliveryPanel.vue';
 import OrderContextPanel from '../../components/order-detail/OrderContextPanel.vue';
 import OrderStatusCards from '../../components/order-detail/OrderStatusCards.vue';
 import { useOrderChecks } from '../../composables/useOrderChecks';
@@ -256,6 +257,18 @@ watch(() => route.params.code, load);
                 <OrderContractPanel
                     :order-id="order.id"
                     :locked="reservations.some(r => r.status === 'active')"
+                    @changed="reload"
+                />
+            </MvPanel>
+
+            <MvPanel title="Delivery">
+                <OrderDeliveryPanel
+                    :order-id="order.id"
+                    :shipping-codes="order.shippingLines.map(l => l.shippingMethod?.code ?? '')"
+                    :trading-point-id="order.customFields.tradingPointId"
+                    :delivery-address="order.customFields.deliveryAddress"
+                    :points="order.customer?.counterparty?.tradingPoints ?? []"
+                    :can-edit="canEditLines"
                     @changed="reload"
                 />
             </MvPanel>

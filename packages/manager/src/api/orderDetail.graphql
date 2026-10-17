@@ -30,6 +30,13 @@ query OrderDetail($code: String!) {
                 erpRegistrationDocumentNumber
                 erpRejectionReasonCode
                 erpRejectionReasonText
+                tradingPointId
+                deliveryAddress
+            }
+            shippingLines {
+                shippingMethod {
+                    code
+                }
             }
             lines {
                 id
@@ -61,6 +68,13 @@ query OrderDetail($code: String!) {
                     inn
                     assignedManagerId
                     priceType
+                    tradingPoints {
+                        id
+                        name
+                        address
+                        isActive
+                        customerStatus
+                    }
                 }
             }
         }

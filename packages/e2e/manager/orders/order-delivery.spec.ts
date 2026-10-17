@@ -217,4 +217,42 @@ test.describe('delivery point of a staff-created order', () => {
             'needs a trading point',
         );
     });
+
+    test('staff switch a placed order to courier and back to self-pickup before it is sent', async () => {
+        const orderId = await draftWithLine(token, ids);
+        created.push(orderId);
+        await place(token, orderId, 'pickup');
+        const setDelivery = (method: string, tradingPointId: string | null) =>
+            adminGql(
+                `mutation($o: ID!, $m: OrderDeliveryMethod!, $t: ID) { setOrderDelivery(orderId: $o, method: $m, tradingPointId: $t) }`,
+                { o: orderId, m: method, t: tradingPointId },
+                token,
+            );
+        const shippingCode = async (): Promise<string | undefined> => {
+            const result = await adminGql<{
+                order: { shippingLines: { shippingMethod: { code: string } }[] };
+            }>(
+                `query($id: ID!) { order(id: $id) { shippingLines { shippingMethod { code } } } }`,
+                { id: orderId },
+                token,
+            );
+            return result.data.order.shippingLines[0]?.shippingMethod.code;
+        };
+
+        await setDelivery('COURIER', ids.points['e2e-tp-002']);
+        expect(await readDelivery(token, orderId)).toEqual({
+            tradingPointId: ids.points['e2e-tp-002'],
+            deliveryAddress: 'North Ave 42',
+        });
+        expect(await shippingCode()).toBe('freight-delivery');
+
+        await expect(setDelivery('COURIER', ids.points['e2e-tp-004'])).rejects.toThrow();
+
+        await setDelivery('PICKUP', null);
+        expect(await readDelivery(token, orderId)).toEqual({
+            tradingPointId: null,
+            deliveryAddress: null,
+        });
+        expect(await shippingCode()).toBe('pickup');
+    });
 });

@@ -28,6 +28,7 @@ function mockOrderDetailData(erpPaidAmount: number | null = null): void {
                     shippingWithTax: 50000,
                     totalWithTax: 450000,
                     customFields: { reservationDays: 7, erpPaidAmount },
+                    shippingLines: [{ shippingMethod: { code: 'pickup' } }],
                     lines: [
                         {
                             id: '1',

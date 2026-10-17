@@ -37,6 +37,8 @@ function normalizeOrderDetail(order: RawOrderDetail): OrderDetail {
             erpRegistrationDocumentNumber: null,
             erpRejectionReasonCode: null,
             erpRejectionReasonText: null,
+            tradingPointId: null,
+            deliveryAddress: null,
         },
         lines: order.lines.map(line => ({
             ...line,

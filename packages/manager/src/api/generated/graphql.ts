@@ -4147,6 +4147,8 @@ export type Mutation = {
     setOrderCustomFields: Maybe<Order>;
     /** Allows a different Customer to be assigned to an Order. Added in v2.2.0. */
     setOrderCustomer: Maybe<Order>;
+    /** Staff change of the delivery method and point of a placed order until it is sent to the ERP (#245); needs ConfirmOrder. */
+    setOrderDelivery: Scalars['Boolean']['output'];
     setOrganizationLogo: Scalars['Boolean']['output'];
     setPreferredTradingPoint: Scalars['Boolean']['output'];
     setReservationExtensionLimit: ReservationExtensionLimit;
@@ -5079,6 +5081,12 @@ export type MutationSetOrderCustomerArgs = {
     input: SetOrderCustomerInput;
 };
 
+export type MutationSetOrderDeliveryArgs = {
+    method: OrderDeliveryMethod;
+    orderId: Scalars['ID']['input'];
+    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 export type MutationSetOrganizationLogoArgs = {
     assetId: Scalars['ID']['input'];
     erpId: Scalars['String']['input'];
@@ -5622,6 +5630,8 @@ export type OrderCustomFields = {
     tradingPointId: Maybe<Scalars['String']['output']>;
     uuid: Maybe<Scalars['String']['output']>;
 };
+
+export type OrderDeliveryMethod = 'COURIER' | 'PICKUP';
 
 export type OrderFilterParameter = {
     _and?: InputMaybe<Array<OrderFilterParameter>>;
@@ -11359,6 +11369,14 @@ export type AddManualPaymentToOrderMutation = {
         | { __typename: 'Order'; code: string };
 };
 
+export type SetOrderDeliveryMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    method: OrderDeliveryMethod;
+    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type SetOrderDeliveryMutation = { setOrderDelivery: boolean };
+
 export type OrderDetailQueryVariables = Exact<{
     code: Scalars['String']['input'];
 }>;
@@ -11391,7 +11409,10 @@ export type OrderDetailQuery = {
                 erpRegistrationDocumentNumber: string | null;
                 erpRejectionReasonCode: string | null;
                 erpRejectionReasonText: string | null;
+                tradingPointId: string | null;
+                deliveryAddress: string | null;
             } | null;
+            shippingLines: Array<{ shippingMethod: { code: string } }>;
             lines: Array<{
                 id: string;
                 quantity: number;
@@ -11422,6 +11443,13 @@ export type OrderDetailQuery = {
                     inn: string | null;
                     assignedManagerId: string | null;
                     priceType: string;
+                    tradingPoints: Array<{
+                        id: string;
+                        name: string;
+                        address: string;
+                        isActive: boolean;
+                        customerStatus: string;
+                    }>;
                 } | null;
             } | null;
         }>;
@@ -14480,6 +14508,18 @@ export const AddManualPaymentToOrderDocument = new TypedDocumentString(`
     AddManualPaymentToOrderMutation,
     AddManualPaymentToOrderMutationVariables
 >;
+export const SetOrderDeliveryDocument = new TypedDocumentString(`
+    mutation SetOrderDelivery($orderId: ID!, $method: OrderDeliveryMethod!, $tradingPointId: ID) {
+  setOrderDelivery(
+    orderId: $orderId
+    method: $method
+    tradingPointId: $tradingPointId
+  )
+}
+    `) as unknown as TypedDocumentString<
+    SetOrderDeliveryMutation,
+    SetOrderDeliveryMutationVariables
+>;
 export const OrderDetailDocument = new TypedDocumentString(`
     query OrderDetail($code: String!) {
   visibleOrders(options: {take: 1, filter: {code: {eq: $code}}}) {
@@ -14513,6 +14553,13 @@ export const OrderDetailDocument = new TypedDocumentString(`
         erpRegistrationDocumentNumber
         erpRejectionReasonCode
         erpRejectionReasonText
+        tradingPointId
+        deliveryAddress
+      }
+      shippingLines {
+        shippingMethod {
+          code
+        }
       }
       lines {
         id
@@ -14544,6 +14591,13 @@ export const OrderDetailDocument = new TypedDocumentString(`
           inn
           assignedManagerId
           priceType
+          tradingPoints {
+            id
+            name
+            address
+            isActive
+            customerStatus
+          }
         }
       }
     }

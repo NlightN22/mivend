@@ -481,7 +481,13 @@ with a point; otherwise it is a pickup and carries neither.
   a staff order needs its own chosen point of the client's counterparty, a storefront order needs a usable preferred
   point. The submit event never downgrades such an order to pickup: a courier order without a known point is skipped
   with a reason until it has one. Only a customer-added point (no ERP id) is still submitted as pickup, with a warning.
-- Not covered yet: changing the point of an already placed order (staff edit before ERP registration).
+- Editing a placed order: Admin API `setOrderDelivery(orderId, method PICKUP|COURIER, tradingPointId)` (`ConfirmOrder`,
+  order visibility scope; only staff, a customer asks the manager). It is allowed while the order is editable by the
+  line-edit rules (#233): not sent to the ERP, not shipped, not cancelled (`OrderLineEditGuard`; an active reservation
+  is released and a pending submission skipped, so staff re-confirm). Under the order lock it points the order's
+  shipping line at the `freight-delivery` or `pickup` method and updates `tradingPointId` + `deliveryAddress` per
+  column (courier: one of the client's active points; pickup: both cleared), and adds an order note to the history.
+  `branchId` is not recomputed. The manager portal order page has a "Delivery" panel for it.
 
 ### ERP status derivation by receiving method (owner-approved; the ERP computes it, we only read `status_code`)
 
