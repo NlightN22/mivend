@@ -24,10 +24,11 @@ test.describe('Proforma invoice payment: pay-any-time, independent of order/sess
 
         // offline-terms: order is placed, proforma invoices become 'issued' — nobody has paid yet, and
         // the order is no longer "in progress" from the customer's point of view.
-        await gql(
+        const placed = await gql(
             page,
-            `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename } }`,
+            `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename ... on ErrorResult { message } } }`,
         );
+        expect(placed.addPaymentToOrder).toMatchObject({ __typename: 'Order' });
         const [proformaInvoiceA] = await myProformaInvoicesForOrder(page, orderCode);
         expect(proformaInvoiceA.status).toBe('issued');
 
@@ -51,10 +52,11 @@ test.describe('Proforma invoice payment: pay-any-time, independent of order/sess
         await buildOrderAcrossOrganizations(page);
         const orderData = await gql(page, `query { activeOrder { code } }`);
         const orderCode = (orderData.activeOrder as { code: string }).code;
-        await gql(
+        const placed = await gql(
             page,
-            `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename } }`,
+            `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename ... on ErrorResult { message } } }`,
         );
+        expect(placed.addPaymentToOrder).toMatchObject({ __typename: 'Order' });
         const [proformaInvoiceA, proformaInvoiceB] = await myProformaInvoicesForOrder(
             page,
             orderCode,
@@ -96,10 +98,11 @@ test.describe('Proforma invoice payment: pay-any-time, independent of order/sess
         await buildOrderAcrossOrganizations(page);
         const orderData = await gql(page, `query { activeOrder { code } }`);
         const orderCode = (orderData.activeOrder as { code: string }).code;
-        await gql(
+        const placed = await gql(
             page,
-            `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename } }`,
+            `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) { __typename ... on ErrorResult { message } } }`,
         );
+        expect(placed.addPaymentToOrder).toMatchObject({ __typename: 'Order' });
         const proformaInvoices = await myProformaInvoicesForOrder(page, orderCode);
         for (const proformaInvoice of proformaInvoices) {
             await payProformaInvoice(page, proformaInvoice.id, 'success');
