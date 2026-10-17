@@ -119,6 +119,24 @@ export class DiscountRegistryService {
         );
     }
 
+    // An entry is reachable by its request id and its rule id; take both keys in alphabetical order so writers never interleave.
+    private async withEntryLocks(
+        ctx: RequestContext,
+        approvalRequestId: ID | null,
+        discountRuleId: ID | null,
+        work: (txCtx: RequestContext) => Promise<void>,
+    ): Promise<void> {
+        const keys: string[] = [];
+        if (approvalRequestId) keys.push(`discount-registry-request:${String(approvalRequestId)}`);
+        if (discountRuleId) keys.push(`discount-registry-rule:${String(discountRuleId)}`);
+        const run = keys
+            .sort()
+            .reduceRight<
+                (txCtx: RequestContext) => Promise<void>
+            >((inner, key) => c => withAggregateLock(this.connection, c, key, inner), work);
+        await run(ctx);
+    }
+
     // Rejected entries are final; approved ones become 'materialized' and validTo drives their status.
     async markDecided(
         ctx: RequestContext,
@@ -126,10 +144,10 @@ export class DiscountRegistryService {
         outcome: 'materialized' | 'rejected',
         discountRuleId?: ID,
     ): Promise<void> {
-        await withAggregateLock(
-            this.connection,
+        await this.withEntryLocks(
             ctx,
-            `discount-registry-request:${String(approvalRequestId)}`,
+            approvalRequestId,
+            outcome === 'materialized' ? (discountRuleId ?? null) : null,
             async txCtx => {
                 const repo = this.connection.getRepository(txCtx, DiscountRegistryEntry);
                 const entry = await repo.findOne({
@@ -213,10 +231,7 @@ export class DiscountRegistryService {
     ): Promise<number> {
         let written = 0;
         for (const item of entries) {
-            const lockKey = item.approvalRequestId
-                ? `discount-registry-request:${String(item.approvalRequestId)}`
-                : `discount-registry-rule:${String(item.discountRuleId)}`;
-            await withAggregateLock(this.connection, ctx, lockKey, txCtx =>
+            await this.withEntryLocks(ctx, item.approvalRequestId, item.discountRuleId, txCtx =>
                 this.backfillOne(txCtx, item),
             );
             written++;
