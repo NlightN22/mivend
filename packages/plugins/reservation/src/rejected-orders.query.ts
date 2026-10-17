@@ -13,16 +13,15 @@ export function findRejectedOrdersWithActiveReserve(
         .createQueryBuilder('o')
         .where('o.customFields.erpStatus IN (:...codes)', { codes: rejectedCodes })
         .andWhere('o.customFields.erpStatusAt <= :cutoff', { cutoff })
-        .andWhere(qb => {
-            const sub = qb
-                .subQuery()
+        .andWhere(
+            `EXISTS (${manager
+                .getRepository(Reservation)
+                .createQueryBuilder('r')
                 .select('1')
-                .from(Reservation, 'r')
                 .where('r.status = :active')
                 .andWhere('r.orderId = CAST(o.id AS varchar)')
-                .getQuery();
-            return `EXISTS ${sub}`;
-        })
+                .getQuery()})`,
+        )
         .setParameter('active', 'active')
         .getMany();
 }

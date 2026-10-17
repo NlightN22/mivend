@@ -174,7 +174,7 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
             expect.anything(),
             order.id,
             'reserve-expired',
-            { requestRegistered: false },
+            { requestRegistered: false, reserveDueBy: expect.any(Date) },
         );
         const reloadedOrder = await realDataSource
             .getRepository(TestOrder)
