@@ -218,23 +218,26 @@ export class IntegrationInboxService {
     ): Promise<void> {
         const repo = this.dataSource.getRepository(IntegrationInboxEvent);
         const open = { id, status: In(OPEN_STATUSES) };
-        const bumped = await repo
-            .createQueryBuilder()
-            .update()
-            .set({
-                attempts: () => 'attempts + 1',
-                firstFailedAt: () => 'COALESCE(first_failed_at, now())',
-            })
-            .where(open)
-            .returning(['attempts', 'first_failed_at'])
-            .execute();
-        const raw = (bumped.raw as Array<{ attempts: number; first_failed_at: Date }>)[0];
-        if (!raw) {
+        const bumped = await this.dataSource.transaction(async em => {
+            const row = await em
+                .getRepository(IntegrationInboxEvent)
+                .createQueryBuilder('e')
+                .setLock('pessimistic_write')
+                .where('e.id = :id AND e.status IN (:...open)', { id, open: OPEN_STATUSES })
+                .getOne();
+            if (!row) return null;
+            const next = {
+                attempts: row.attempts + 1,
+                firstFailedAt: row.firstFailedAt ?? new Date(),
+            };
+            await em.update(IntegrationInboxEvent, { id }, next);
+            return next;
+        });
+        if (!bumped) {
             Logger.warn(`markFailed skipped: inbox row ${id} is already settled`, loggerCtx);
             return;
         }
-        const attempts = raw.attempts;
-        const firstFailedAt = raw.first_failed_at;
+        const { attempts, firstFailedAt } = bumped;
         const retriable = !(error instanceof NonRetryableInboundError);
         if (!retriable || Date.now() - firstFailedAt.getTime() > INBOX_RETRY_WALL_CLOCK_BUDGET_MS) {
             if (retriable && onBudgetExhausted) {

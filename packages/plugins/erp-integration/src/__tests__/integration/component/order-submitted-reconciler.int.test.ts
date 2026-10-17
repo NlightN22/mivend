@@ -74,7 +74,7 @@ describe('OrderSubmittedReconciler', () => {
         await insertOrder(1);
 
         expect(await reconciler.sweep()).toBe(1);
-        expect(enqueueConfirmed).toHaveBeenCalledWith(expect.anything(), '1', 'ORD-1');
+        expect(enqueueConfirmed).toHaveBeenCalledWith(expect.anything(), 1, 'ORD-1');
     });
 
     it('leaves orders with any outbox row, inside the grace period, cancelled, external or not reserved', async () => {
