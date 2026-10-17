@@ -1,7 +1,7 @@
 import { adminTokenFor } from '../../helpers/api-tokens';
 import { test, expect } from '@playwright/test';
 import { adminGql } from '../../helpers/api';
-import { createConfirmedOrder } from '../../helpers/manager-order';
+import { cancelTestOrder, createConfirmedOrder } from '../../helpers/manager-order';
 import { E2E_CUSTOMER } from '../../fixtures/seed';
 import { formatDocumentNumber } from '../../helpers/e2e-order';
 
@@ -116,14 +116,9 @@ test.describe('Recent orders filter chips', () => {
     });
 
     test.afterAll(async () => {
-        // Never leave this fixture order behind — see the beforeAll comment above for why.
         if (!orderId) return;
         const token = await adminTokenFor('ivan.operator@mivend.dev', 'Password123!');
-        await adminGql(
-            `mutation($input: CancelOrderInput!) { cancelOrder(input: $input) { __typename } }`,
-            { input: { orderId } },
-            token,
-        );
+        await cancelTestOrder(token, orderId);
     });
 
     test('"All" chip shows the seeded order (positive)', async ({ page }) => {

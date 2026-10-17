@@ -1,7 +1,7 @@
 import { adminTokenFor } from '../../helpers/api-tokens';
 import { test, expect } from '@playwright/test';
 import { adminGql } from '../../helpers/api';
-import { createConfirmedOrder } from '../../helpers/manager-order';
+import { cancelTestOrder, createConfirmedOrder } from '../../helpers/manager-order';
 import { E2E_CUSTOMER } from '../../fixtures/seed';
 
 // Page height must come from pageSize, not the current page's row count: a short last page
@@ -52,12 +52,12 @@ test('orders list pagination does not collapse the page to the top', async ({ pa
     const existingCount = existingResult.data.customer?.orders.totalItems ?? 0;
     const topUp = Math.max(0, PAGE_SIZE + 1 - existingCount);
     const createdOrderIds: string[] = [];
-    for (let i = 0; i < topUp; i++) {
-        const created = await createConfirmedOrder(token, customerId, productVariantId);
-        createdOrderIds.push(created.id);
-    }
-
     try {
+        for (let i = 0; i < topUp; i++) {
+            const created = await createConfirmedOrder(token, customerId, productVariantId);
+            createdOrderIds.push(created.id);
+        }
+
         await page.goto('/orders');
         const rows = page.locator('.orders-data-table tbody tr');
         // 'Saved views' is static chrome and does not mean orders have loaded.
@@ -107,14 +107,8 @@ test('orders list pagination does not collapse the page to the top', async ({ pa
         const scrollYAfterClick = await page.evaluate(() => window.scrollY);
         expect(scrollYAfterClick).toBeGreaterThan(0);
     } finally {
-        // Never leave fixture orders behind — this test must not grow the e2e customer's order
-        // count run over run (see the topUp comment above for the real incident this caused).
         for (const orderId of createdOrderIds) {
-            await adminGql(
-                `mutation($input: CancelOrderInput!) { cancelOrder(input: $input) { __typename } }`,
-                { input: { orderId } },
-                token,
-            );
+            await cancelTestOrder(token, orderId);
         }
     }
 });

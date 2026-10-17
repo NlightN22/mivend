@@ -97,3 +97,26 @@ export async function createConfirmedOrder(
 
     return { id: orderId, code };
 }
+
+// Vendure's own cancelOrder bypasses mivend reservations, so release them first (issue #231).
+export async function releaseOrderReservation(token: string, orderId: string): Promise<void> {
+    await adminGql(
+        `mutation($orderId: ID!) { releaseOrderReservation(orderId: $orderId) }`,
+        { orderId },
+        token,
+    );
+}
+
+export async function cancelTestOrder(token: string, orderId: string): Promise<void> {
+    await releaseOrderReservation(token, orderId);
+    const result = await adminGql<{ cancelOrder: { __typename: string; message?: string } }>(
+        `mutation($input: CancelOrderInput!) {
+            cancelOrder(input: $input) { __typename ... on ErrorResult { message } }
+        }`,
+        { input: { orderId } },
+        token,
+    );
+    if (result.data.cancelOrder.__typename !== 'Order') {
+        throw new Error(`Could not cancel e2e order ${orderId}: ${JSON.stringify(result.data)}`);
+    }
+}

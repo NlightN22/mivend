@@ -5,7 +5,7 @@ import { adminGql, postBatch, waitForRun } from './helpers/api';
 import { adminTokenFor } from './helpers/api-tokens';
 import { loginAs } from './helpers/storefront-auth';
 import { loginAsManager } from './helpers/manager-auth';
-import { createConfirmedOrder } from './helpers/manager-order';
+import { cancelTestOrder, createConfirmedOrder } from './helpers/manager-order';
 import { MANAGER_ACCOUNTS, SUPERADMIN } from './fixtures/accounts';
 import { markRunStart } from './helpers/session-cleanup';
 import { E2E_BROWSER_USER_AGENT } from './helpers/user-agent';
@@ -226,13 +226,7 @@ export default async function globalSetup(): Promise<void> {
         const orders = priorOrdersResult.data.customer?.orders.items ?? [];
         if (orders.length === 0) break;
         for (const priorOrder of orders) {
-            await adminGql(
-                `mutation($input: CancelOrderInput!) {
-                    cancelOrder(input: $input) { __typename }
-                }`,
-                { input: { orderId: priorOrder.id } },
-                operatorToken,
-            );
+            await cancelTestOrder(operatorToken, priorOrder.id);
         }
     }
 
