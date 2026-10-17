@@ -26,14 +26,13 @@ describe('InboxService', () => {
     let mockRepo: ReturnType<typeof createMockRepo>;
     let mockConnection: TransactionalConnection;
 
-    const qb: Record<'update' | 'set' | 'where', ReturnType<typeof vi.fn>> & {
-        execute: ReturnType<typeof vi.fn>;
-    } = {
+    const qb = {} as Record<'update' | 'set' | 'where' | 'execute', ReturnType<typeof vi.fn>>;
+    Object.assign(qb, {
         update: vi.fn(() => qb),
         set: vi.fn(() => qb),
         where: vi.fn(() => qb),
         execute: vi.fn(async () => ({ affected: 1 })),
-    };
+    });
 
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- vitest's Mock<> generic return type is awkward to spell out exactly here
     function createMockRepo() {
