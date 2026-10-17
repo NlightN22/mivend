@@ -14,7 +14,7 @@ function run(storedFindings: number, order: Partial<Order>, toState: string): Pr
             ctx: {} as RequestContext,
             order: order as Order,
         }),
-    );
+    ).then(() => undefined);
 }
 
 describe('orderCheckFlagProcess', () => {
