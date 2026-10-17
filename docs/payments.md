@@ -345,7 +345,7 @@ redeliver.
   current, unpaid proforma (`withdrawProformaInvoice`, UpdateOrder + order visibility); it is refused when the version
   has any settlement allocation or an active (`pending`/`authorized`) payment attempt, records
   `withdrawnAt`/`withdrawnByAdministratorId`, and emits no outward event (the ERP does not know proformas yet); a later order change or request
-  issues a new version.
+  issues a new version. "Paid X of Y" is shown on the order page only (storefront aside, manager totals), never in lists, from `Order.customFields.erpPaidAmount` (minor units, written by `order-changed` on both the mivend and the external-order path, only when the event carries `paidAmount`). It is a lower bound: sales documents may post with an empty deal in the ERP, so the label says "at least"; nothing is shown when it is null.
 - **Order cancel and payments (#231):** cancelling an order is never refused over payments. On every path into
   `Cancelled` (manager, customer, auto-cancel, ERP `markedForDeletion`) `ProformaInvoiceOrderCancelService`, in the
   cancel's transaction, closes every current version of the order (`pending`/`issued`/`paid` -> `cancelled`, even with a
@@ -353,7 +353,10 @@ redeliver.
   append-only `order.cancelled` pair (`-X` on the document, `+X` advance), so a repeat moves nothing. A payment that
   arrives later naming a cancelled document goes wholly to the advance (step 2 below), never to another order. The
   manual `withdrawProformaInvoice` keeps its refusals on a live order (the customer is still paying that document); on
-  an already cancelled order it runs the same close-and-release instead, never refused. "Paid X of Y" is shown on the order page only (storefront aside, manager totals), never in lists, from `Order.customFields.erpPaidAmount` (minor units, written by `order-changed` on both the mivend and the external-order path, only when the event carries `paidAmount`). It is a lower bound: sales documents may post with an empty deal in the ERP, so the label says "at least"; nothing is shown when it is null.
+  an already cancelled order it runs the same close-and-release instead, never refused.
+  An `order.cancelled` pair is a movement, not new money: the advance balance (`getAdvanceBalance`) counts its `+X`
+  row and FIFO's paid-so-far counts only `payment.captured`; `SettlementEntry` is not sent to the ERP, whose
+  settlement statement is a separate inbound entity.
 - Migration `1791501000000` renumbers existing documents and is irreversible (its `down()` only drops columns).
 - **Allocation of payments to documents (FIFO in this module) is frozen:** kept as is, not extended and not
   used for display. Payments are money on the counterparty balance; documents and debt come from the ERP.
