@@ -8,7 +8,7 @@ Updated: 2026-10-17 18:00
 - Access: department-head has `ConfirmOrder` and can reassign managers; operator/manager see the whole branch team; teamDirectory/approval escalation bypass Vendure 3.7.3 `restrictToVisibleAdministrators`.
 - e2e: skill `.claude/skills/e2e-rules` (seed data via `make seed`, tests follow UI, idempotent cleanup of orders/reservations, scoped batches under flock, checklist + audit). Full `make e2e` only on explicit request. Cart specs open `/catalog?inStock=1` (seed has an intentional zero-stock item). erp-import has a `manufacturer` record + product `manufacturerCode` (seed: manufacturer-a/-b). Nameless placeholder manufacturer before its record = designed (#164).
 - Stuck dev worker child (high CPU, queue not drained) breaks document/PDF specs: kill only that child.
-- Follow-ups: #247 pending->captured callback with same externalReference dropped; #248 Dashboard `transitionOrderToState` lacks mivend order scope.
+- Follow-ups: #247 pending->captured callback with same externalReference dropped; #248 core Admin API order operations (read and write: `orders`, `order`, `transitionOrderToState`, `modifyOrder`, payments...) bypass mivend order scope; needs one central guard.
 
 ## #242 / #243 / #244 manager-action checks (2026-10-17, DONE: audited twice, pushed, closed)
 - Manager actions (`extend-reservation`, `extend-credit-term`, `adjust-price`) run through the checks framework: ephemeral `manager` subject (`ChecksService.evaluate`, no lock, no storage), policy `recipient` in `CheckContext`. Credit-term recipient (`department-head`) comes from migration `1791520000000` or, on `synchronize` contours, `make seed-all` (seed-approvals); unseeded means every request escalates (docs/environments.md).
