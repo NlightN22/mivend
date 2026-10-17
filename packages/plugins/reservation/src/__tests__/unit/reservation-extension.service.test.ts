@@ -14,13 +14,25 @@ vi.mock('shared', async importOriginal => ({
 }));
 
 describe('ReservationExtensionService', () => {
-    let reservationRepo: { find: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn> };
+    let qb: Record<
+        'update' | 'set' | 'setParameter' | 'where' | 'returning' | 'execute',
+        ReturnType<typeof vi.fn>
+    >;
+    let reservationRepo: { createQueryBuilder: ReturnType<typeof vi.fn> };
     let checks: { evaluate: ReturnType<typeof vi.fn> };
     let service: ReservationExtensionService;
     const ctx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
     beforeEach(() => {
-        reservationRepo = { find: vi.fn(async () => []), save: vi.fn(async (x: unknown) => x) };
+        qb = {
+            update: vi.fn(() => qb),
+            set: vi.fn(() => qb),
+            setParameter: vi.fn(() => qb),
+            where: vi.fn(() => qb),
+            returning: vi.fn(() => qb),
+            execute: vi.fn(async () => ({ raw: [] })),
+        };
+        reservationRepo = { createQueryBuilder: vi.fn(() => qb) };
         checks = { evaluate: vi.fn(async () => ({ findings: [], strongestConsequence: null })) };
         service = new ReservationExtensionService(
             { getRepository: vi.fn(() => reservationRepo) } as unknown as TransactionalConnection,
@@ -31,11 +43,10 @@ describe('ReservationExtensionService', () => {
         );
     });
 
-    it('extends expiry on active reservations when the check finds nothing', async () => {
-        const activeRow = { expiresAt: new Date('2026-01-01T00:00:00.000Z') };
-        reservationRepo.find.mockResolvedValue([activeRow]);
+    it('extends expiry with one conditional UPDATE on active rows when the check finds nothing', async () => {
+        qb.execute.mockResolvedValue({ raw: [{ id: 1, expiresAt: new Date() }] });
 
-        await service.extendReservation(ctx, 'order-1', 2);
+        const result = await service.extendReservation(ctx, 'order-1', 2);
 
         expect(checks.evaluate).toHaveBeenCalledWith(
             ctx,
@@ -43,8 +54,12 @@ describe('ReservationExtensionService', () => {
             { roleCode: 'manager', branchId: 'b1', params: { additionalDays: 2 } },
             'extend-reservation',
         );
-        expect(activeRow.expiresAt).toEqual(new Date('2026-01-03T00:00:00.000Z'));
-        expect(reservationRepo.save).toHaveBeenCalledWith([activeRow]);
+        expect(result).toHaveLength(1);
+        expect(qb.setParameter).toHaveBeenCalledWith('days', 2);
+        expect(qb.where).toHaveBeenCalledWith(expect.stringContaining('status = :status'), {
+            orderId: 'order-1',
+            status: 'active',
+        });
     });
 
     it('refuses and reads no reservation when the policy blocks', async () => {
@@ -52,12 +67,12 @@ describe('ReservationExtensionService', () => {
         await expect(service.extendReservation(ctx, 'order-1', 10)).rejects.toBeInstanceOf(
             ForbiddenError,
         );
-        expect(reservationRepo.find).not.toHaveBeenCalled();
+        expect(reservationRepo.createQueryBuilder).not.toHaveBeenCalled();
     });
 
     it('proceeds when the policy is loosened to warn', async () => {
         checks.evaluate.mockResolvedValue({ findings: [{}], strongestConsequence: 'warn' });
-        reservationRepo.find.mockResolvedValue([{ expiresAt: new Date() }]);
+        qb.execute.mockResolvedValue({ raw: [{ id: 1, expiresAt: new Date() }] });
         await expect(service.extendReservation(ctx, 'order-1', 10)).resolves.toHaveLength(1);
     });
 
@@ -68,7 +83,6 @@ describe('ReservationExtensionService', () => {
     });
 
     it('rejects when there is no active reservation to extend', async () => {
-        reservationRepo.find.mockResolvedValue([]);
         await expect(service.extendReservation(ctx, 'order-1', 1)).rejects.toThrow();
     });
 });

@@ -29,6 +29,8 @@ export function toOrderCancelResult(outcome: CancelOutcome): OrderCancelResult {
             return { __typename: 'OrderCancelSuccess', outcome: 'ALREADY_CANCELLED' };
         case 'left-to-erp':
             throw new Error('left-to-erp is only produced at the reserve deadline');
+        case 'reserve-not-due':
+            throw new Error('reserve-not-due is only produced at the reserve deadline');
         case 'not-cancellable':
             return {
                 __typename: 'OrderCancelRefused',

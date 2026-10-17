@@ -4,6 +4,7 @@ import { UserInputError } from '@vendure/core';
 import type { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ReservationService } from '../../reservation.service';
+import { lockStockLevelsInOrder } from '../../reservation-location-picker';
 import {
     ErpExportDataMissingError,
     InsufficientStockError,
@@ -16,6 +17,12 @@ import {
     ReservationConfirmedEvent,
     ReservationReleasedEvent,
 } from '../../reservation.events';
+
+// The ordered pre-lock is a query-shape concern, covered against real Postgres in reserve-order.concurrency.test.ts.
+vi.mock('../../reservation-location-picker', async importOriginal => ({
+    ...(await importOriginal<typeof import('../../reservation-location-picker')>()),
+    lockStockLevelsInOrder: vi.fn(async () => undefined),
+}));
 
 function createMockReservationRepo(): {
     find: ReturnType<typeof vi.fn>;
@@ -232,6 +239,17 @@ describe('ReservationService', () => {
             expect(eventBus.publish).toHaveBeenCalledTimes(3);
             expect(eventBus.publish.mock.calls[0][0]).toBeInstanceOf(ReservationConfirmedEvent);
             expect(eventBus.publish.mock.calls[2][0]).toBeInstanceOf(OrderReservedEvent);
+        });
+
+        it('locks the stock levels of all lines in one ordered statement before picking locations', async () => {
+            vi.mocked(lockStockLevelsInOrder).mockClear();
+            await service.confirmOrder(ctx, 'order-1', 3);
+
+            expect(lockStockLevelsInOrder).toHaveBeenCalledTimes(1);
+            expect(vi.mocked(lockStockLevelsInOrder).mock.calls[0][2]).toEqual([
+                'variant-1',
+                'variant-2',
+            ]);
         });
 
         it('clears a failure left by an earlier failed automatic reserve when the reserve succeeds', async () => {

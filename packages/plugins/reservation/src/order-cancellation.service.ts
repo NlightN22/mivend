@@ -14,6 +14,9 @@ import { ErpOrderStatusEvent, OrderStatusReferenceService } from '@mivend/plugin
 import { NotificationService } from '@mivend/plugin-notification';
 import { withOrderCancelLocks } from 'shared';
 
+import { LessThanOrEqual } from 'typeorm';
+
+import { Reservation } from './entities/reservation.entity';
 import { decideCancellation, erpStageFacts } from './order-cancellation.decision';
 import type { CancelDecision, CancelRefusal } from './order-cancellation.decision';
 import { OrderCancellationPortRegistry } from './order-cancellation.port';
@@ -28,11 +31,14 @@ export type CancelOutcome =
     | { kind: 'already-cancelled' }
     | { kind: 'already-requested' }
     | { kind: 'left-to-erp' }
+    | { kind: 'reserve-not-due' }
     | { kind: 'not-cancellable'; reason: CancelRefusal };
 
 export interface CancelOptions {
     // false at the reserve deadline: a registered order is left to the ERP's own release job.
     requestRegistered?: boolean;
+    // Reserve deadline sweep: skip when no active reservation is due by then (extended or released since the sweep read it).
+    reserveDueBy?: Date;
 }
 
 // Every cancel path goes through here (docs/order-contracts.md, "Reserve and order cancellation"),
@@ -63,6 +69,13 @@ export class OrderCancellationService {
             if (!order) throw new OrderNotEligibleError('Order not found');
             if (order.customFields.isExternal) {
                 throw new OrderNotEligibleError('Orders from the ERP are managed there');
+            }
+
+            if (
+                options.reserveDueBy &&
+                !(await this.hasReserveDueBy(txCtx, orderId, options.reserveDueBy))
+            ) {
+                return { kind: 'reserve-not-due' };
             }
 
             const decision = await this.decide(txCtx, order, options.requestRegistered ?? true);
@@ -122,6 +135,16 @@ export class OrderCancellationService {
             sourceId: `${order.code}:${title}`,
             title,
             message,
+        });
+    }
+
+    private async hasReserveDueBy(ctx: RequestContext, orderId: ID, dueBy: Date): Promise<boolean> {
+        return this.connection.getRepository(ctx, Reservation).exists({
+            where: {
+                orderId: String(orderId),
+                status: 'active',
+                expiresAt: LessThanOrEqual(dueBy),
+            },
         });
     }
 

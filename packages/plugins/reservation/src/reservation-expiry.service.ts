@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { EventBus, Order, RequestContext, RequestContextService } from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
-import { DataSource, In } from 'typeorm';
+import { DataSource, In, LessThanOrEqual } from 'typeorm';
 
 import { Reservation } from './entities/reservation.entity';
 import { OrderCancellationService } from './order-cancellation.service';
@@ -203,6 +203,7 @@ export class ReservationExpiryService {
     private async expireNonPrepaid(rows: Reservation[]): Promise<number> {
         if (rows.length === 0) return 0;
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const sweptAt = new Date();
         const rowsByOrder = new Map<string, Reservation[]>();
         for (const row of rows) {
             rowsByOrder.set(row.orderId, [...(rowsByOrder.get(row.orderId) ?? []), row]);
@@ -215,6 +216,7 @@ export class ReservationExpiryService {
             try {
                 outcome = await this.cancellation.cancel(ctx, orderId, 'reserve-expired', {
                     requestRegistered: false,
+                    reserveDueBy: sweptAt,
                 });
             } catch (error) {
                 // One failing order must not starve the others; the sweep fails after the loop.
@@ -243,6 +245,7 @@ export class ReservationExpiryService {
                     break;
                 case 'cancel-requested':
                 case 'already-requested':
+                case 'reserve-not-due':
                     break;
             }
         }
@@ -252,12 +255,14 @@ export class ReservationExpiryService {
 
     private async returnToConfirmationQueue(orderId: string, rows: Reservation[]): Promise<void> {
         await this.dataSource.transaction(async manager => {
-            await manager
-                .getRepository(Reservation)
-                .update(
-                    { id: In(rows.map(row => row.id)), status: 'active' },
-                    { status: 'expired' },
-                );
+            await manager.getRepository(Reservation).update(
+                {
+                    id: In(rows.map(row => row.id)),
+                    status: 'active',
+                    expiresAt: LessThanOrEqual(new Date()),
+                },
+                { status: 'expired' },
+            );
             const order = await manager.getRepository(Order).findOne({ where: { id: orderId } });
             if (order?.customFields?.reservationState === 'RESERVED') {
                 // `repo.update()` of only the changed key — see ReservationService.setOrderReservationState (#209).

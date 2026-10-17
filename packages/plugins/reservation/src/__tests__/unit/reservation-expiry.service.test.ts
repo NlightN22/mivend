@@ -108,8 +108,20 @@ describe('ReservationExpiryService.expireDueReservations', () => {
             expect.anything(),
             'order-1',
             'reserve-expired',
-            { requestRegistered: false },
+            { requestRegistered: false, reserveDueBy: expect.any(Date) },
         );
+        expect(txOrderRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('leaves an order alone when the cancel finds its reserve no longer due (extended since the read)', async () => {
+        const dueRows = [{ id: 'res-1', orderId: 'order-1', creationMethod: 'manual' }];
+        const { service, txReservationRepo, txOrderRepo, cancellation } = createService(dueRows);
+        cancellation.cancel.mockResolvedValue({ kind: 'reserve-not-due' });
+
+        const count = await service.expireDueReservations();
+
+        expect(count).toBe(0);
+        expect(txReservationRepo.update).not.toHaveBeenCalled();
         expect(txOrderRepo.update).not.toHaveBeenCalled();
     });
 

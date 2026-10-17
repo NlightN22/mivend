@@ -11,7 +11,10 @@ import {
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 import { PackagingPolicyService } from '@mivend/plugin-moq';
 
-import { pickLocationWithMostFreeStock } from './reservation-location-picker';
+import {
+    lockStockLevelsInOrder,
+    pickLocationWithMostFreeStock,
+} from './reservation-location-picker';
 import { OrderChecksService } from './order-checks.service';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { Reservation } from './entities/reservation.entity';
@@ -155,6 +158,13 @@ export class ReservationService {
                             gaps.missingContract,
                         );
                     }
+
+                    await lockStockLevelsInOrder(
+                        this.connection,
+                        txCtx,
+                        [...new Set(order.lines.map(line => line.productVariantId))],
+                        candidateLocationIds,
+                    );
 
                     const shortfalls: InsufficientStockLine[] = [];
                     const now = new Date();

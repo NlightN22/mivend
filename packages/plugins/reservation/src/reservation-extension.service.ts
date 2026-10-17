@@ -51,19 +51,26 @@ export class ReservationExtensionService {
         }
 
         return withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, async txCtx => {
-            const repo = this.connection.getRepository(txCtx, Reservation);
-            const active = await repo.find({
-                where: { orderId: String(orderId), status: 'active' },
-            });
-            if (!active.length) {
+            // One conditional UPDATE: a row an expiry sweep holds or released meanwhile is not extended.
+            const result = await this.connection
+                .getRepository(txCtx, Reservation)
+                .createQueryBuilder()
+                .update()
+                .set({ expiresAt: () => `"expiresAt" + make_interval(days => :days)` })
+                .setParameter('days', additionalDays)
+                .where('orderId = :orderId AND status = :status', {
+                    orderId: String(orderId),
+                    status: 'active',
+                })
+                .returning('*')
+                .execute();
+            const extended = (result.raw as Array<Partial<Reservation>>).map(row =>
+                Object.assign(new Reservation(), row),
+            );
+            if (!extended.length) {
                 throw new UserInputError('This order has no active reservation to extend');
             }
-            for (const row of active) {
-                row.expiresAt = new Date(
-                    row.expiresAt.getTime() + additionalDays * 24 * 60 * 60 * 1000,
-                );
-            }
-            return repo.save(active);
+            return extended;
         });
     }
 }

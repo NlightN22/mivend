@@ -3,6 +3,25 @@ import { ID, RequestContext, StockLevel, TransactionalConnection } from '@vendur
 import { freeQuantity } from './free-stock';
 import { Reservation } from './entities/reservation.entity';
 
+// Locks every StockLevel of the given variants and locations in ascending id order, so two orders with the
+// same variants in a different line order cannot deadlock; the per-line picks below then re-lock held rows.
+export async function lockStockLevelsInOrder(
+    connection: TransactionalConnection,
+    ctx: RequestContext,
+    productVariantIds: ID[],
+    locationIds: string[],
+): Promise<void> {
+    if (productVariantIds.length === 0 || locationIds.length === 0) return;
+    await connection
+        .getRepository(ctx, StockLevel)
+        .createQueryBuilder('stockLevel')
+        .setLock('pessimistic_write')
+        .where('stockLevel.productVariantId IN (:...variantIds)', { variantIds: productVariantIds })
+        .andWhere('stockLevel.stockLocationId IN (:...locationIds)', { locationIds })
+        .orderBy('stockLevel.id', 'ASC')
+        .getMany();
+}
+
 // Locks each candidate StockLevel FOR UPDATE so concurrent reservations serialize before reading free stock.
 export async function pickLocationWithMostFreeStock(
     connection: TransactionalConnection,

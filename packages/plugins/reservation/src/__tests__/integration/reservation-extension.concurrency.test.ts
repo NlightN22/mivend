@@ -70,6 +70,32 @@ describe('ReservationExtensionService.extendReservation under concurrent writers
         expect(row.expiresAt.getTime()).toBe(before);
     });
 
+    it('an extension racing a sweep that expired the row (row lock, no advisory lock) does not extend it', async () => {
+        const order = await seedCancellableOrder(h);
+        const before = (await load(order.id)).expiresAt.getTime();
+        const service = buildService();
+
+        const sweep = h.dataSource.transaction(async manager => {
+            await manager.query(
+                `SELECT 1 FROM reservation_test_reservation WHERE "orderId" = $1 FOR UPDATE`,
+                [order.id],
+            );
+            await sleep(100);
+            await manager.query(
+                `UPDATE reservation_test_reservation SET status = 'expired' WHERE "orderId" = $1`,
+                [order.id],
+            );
+        });
+        await sleep(30);
+        const extension = service.extendReservation(mockCtx, order.id, 2);
+
+        await sweep;
+        await expect(extension).rejects.toBeInstanceOf(UserInputError);
+        const row = await load(order.id);
+        expect(row.status).toBe('expired');
+        expect(row.expiresAt.getTime()).toBe(before);
+    });
+
     it('a blocked extension (over the limit or no limit row) writes nothing', async () => {
         const order = await seedCancellableOrder(h);
         const before = (await load(order.id)).expiresAt.getTime();

@@ -185,3 +185,39 @@ describe('order cancel vs competing writers (real Postgres)', () => {
         expect(f.cancelOrderCalls).toHaveLength(1);
     });
 });
+
+describe('reserve-deadline cancel vs a reservation extended meanwhile (real Postgres)', () => {
+    it('does not cancel an order whose reservation is no longer due under the cancel locks', async () => {
+        const f = buildCancellationFixture(h);
+        const order = await seedCancellableOrder(h);
+        await h.dataSource.query(
+            `UPDATE reservation_test_reservation SET "expiresAt" = now() + interval '2 days' WHERE "orderId" = $1`,
+            [order.id],
+        );
+
+        const outcome = await f.service.cancel(mockCtx, order.id, 'reserve-expired', {
+            requestRegistered: false,
+            reserveDueBy: new Date(),
+        });
+
+        expect(outcome.kind).toBe('reserve-not-due');
+        expect((await loadOrder(h, order.id)).state).not.toBe('Cancelled');
+        expect(await activeReservations(h, order.id)).toBeGreaterThan(0);
+    });
+
+    it('still cancels when the reservation is due', async () => {
+        const f = buildCancellationFixture(h);
+        const order = await seedCancellableOrder(h);
+        await h.dataSource.query(
+            `UPDATE reservation_test_reservation SET "expiresAt" = now() - interval '1 hour' WHERE "orderId" = $1`,
+            [order.id],
+        );
+
+        const outcome = await f.service.cancel(mockCtx, order.id, 'reserve-expired', {
+            requestRegistered: false,
+            reserveDueBy: new Date(),
+        });
+
+        expect(outcome.kind).toBe('cancelled');
+    });
+});
