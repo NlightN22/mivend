@@ -19,7 +19,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
             update: ReturnType<typeof vi.fn>;
         };
         txOrderRepo: {
-            find: ReturnType<typeof vi.fn>;
+            createQueryBuilder: ReturnType<typeof vi.fn>;
             findOne: ReturnType<typeof vi.fn>;
             update: ReturnType<typeof vi.fn>;
         };
@@ -46,20 +46,16 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         };
         const txReservationRepo = {
             createQueryBuilder: vi.fn(() => reservationQueryBuilder),
-            find: vi.fn(async () => [
-                ...rejectedOrders.map(order => ({ orderId: String(order.id) })),
-                ...rejectedReservations.map(row => ({ orderId: String(row.orderId) })),
-            ]),
             update: vi.fn(async () => ({ affected: dueRows.length })),
         };
-        // Order.find is called once for REJECTED orders past the deadline, then (only when a
-        // non-prepaid TTL reservation is due) once more to re-check reservationState.
-        let orderFindCall = 0;
+        const orderQueryBuilder = {
+            where: vi.fn().mockReturnThis(),
+            andWhere: vi.fn().mockReturnThis(),
+            setParameter: vi.fn().mockReturnThis(),
+            getMany: vi.fn(async () => rejectedOrders),
+        };
         const txOrderRepo = {
-            find: vi.fn(async () => {
-                orderFindCall += 1;
-                return orderFindCall === 1 ? rejectedOrders : orderRows;
-            }),
+            createQueryBuilder: vi.fn(() => orderQueryBuilder),
             findOne: vi.fn(async () => orderRows[0] ?? null),
             update: vi.fn(async (x: unknown) => x),
         };
@@ -331,6 +327,28 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         expect(eventBus.publish).toHaveBeenCalledTimes(1);
     });
 
+    it('publishes ReservationReleasedEvent only after the sweep transaction committed', async () => {
+        const rejectedOrders = [{ id: 'order-9', customFields: { erpStatus: 'REJECTED' } }];
+        const rejectedReservations = [
+            { id: 'res-8', orderId: 'order-9', creationMethod: 'manual', status: 'active' },
+            { id: 'res-9', orderId: 'order-9', creationMethod: 'manual', status: 'active' },
+        ];
+        const { service, eventBus, txReservationRepo } = createService(
+            [],
+            [],
+            rejectedOrders,
+            rejectedReservations,
+        );
+        txReservationRepo.update.mockImplementation(async (id: unknown) => {
+            if (id === 'res-9') throw new Error('rollback');
+            return {};
+        });
+
+        await expect(service.expireDueReservations()).rejects.toThrow('rollback');
+
+        expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+
     it('marks nothing when a notification fails, and the next sweep sends it', async () => {
         const dueRows = [
             {
@@ -382,10 +400,9 @@ describe('ReservationExpiryService.expireDueReservations', () => {
 
         await service.expireDueReservations();
 
-        const where = txOrderRepo.find.mock.calls[0][0] as {
-            where: { customFields: { erpStatusAt: { value: Date } } };
-        };
-        const cutoff = where.where.customFields.erpStatusAt.value.getTime();
+        const [, params] = txOrderRepo.createQueryBuilder.mock.results[0].value.andWhere.mock
+            .calls[0] as [string, { cutoff: Date }];
+        const cutoff = params.cutoff.getTime();
         expect(before - cutoff).toBeLessThan(2 * 24 * 60 * 60 * 1000);
         expect(before - cutoff).toBeGreaterThanOrEqual(24 * 60 * 60 * 1000 - 1000);
     });
