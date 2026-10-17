@@ -8,6 +8,8 @@ import {
     UserInputError,
 } from '@vendure/core';
 
+import { withAggregateLock } from 'shared';
+
 import { CUSTOMER_PRICING_PLUGIN_OPTIONS, loggerCtx } from './constants';
 import { CustomerPriceType } from './entities/customer-price-type.entity';
 import { PriceType } from './entities/price-type.entity';
@@ -102,16 +104,20 @@ export class CustomerPricingService {
             throw new UserInputError(`No price type found with id ${priceTypeId}`);
         }
 
-        const repo = this.connection.getRepository(ctx, CustomerPriceType);
-        let record = await repo.findOne({ where: { customerId } });
-
-        if (record) {
-            record.priceType = priceType;
-        } else {
-            record = repo.create({ customerId, priceType });
-        }
-
-        await repo.save(record);
+        const record = await withAggregateLock(
+            this.connection,
+            ctx,
+            `customer-price-type:${String(customerId)}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, CustomerPriceType);
+                const existing = await repo.findOne({ where: { customerId } });
+                if (existing) {
+                    existing.priceType = priceType;
+                    return repo.save(existing);
+                }
+                return repo.save(repo.create({ customerId, priceType }));
+            },
+        );
         Logger.verbose(`Set priceType=${priceType.code} for customer ${customerId}`, loggerCtx);
 
         return record;
@@ -141,16 +147,22 @@ export class CustomerPricingService {
         name: string,
         isActive: boolean,
     ): Promise<PriceType> {
-        const repo = this.connection.getRepository(ctx, PriceType);
-        const existing = await repo.findOne({ where: { externalId } });
-        if (existing) {
-            existing.name = name;
-            existing.isActive = isActive;
-            return repo.save(existing);
-        }
-        const code = await this.generateUniqueCode(ctx, name);
-        const created = repo.create({ externalId, code, name, isActive });
-        return repo.save(created);
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            `price-type-external:${externalId}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, PriceType);
+                const existing = await repo.findOne({ where: { externalId } });
+                if (existing) {
+                    existing.name = name;
+                    existing.isActive = isActive;
+                    return repo.save(existing);
+                }
+                const code = await this.generateUniqueCode(txCtx, name);
+                return repo.save(repo.create({ externalId, code, name, isActive }));
+            },
+        );
     }
 
     private async generateUniqueCode(ctx: RequestContext, name: string): Promise<string> {

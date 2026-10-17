@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CustomerService, RequestContext, TransactionalConnection } from '@vendure/core';
+vi.mock('shared', () => ({
+    withAggregateLock: (_c: unknown, ctx: unknown, _k: unknown, work: (c: unknown) => unknown) =>
+        work(ctx),
+}));
+
 import { CustomerPricingService } from '../../customer-pricing.service';
 
 const retailPriceType = { id: '1', code: 'RETAIL', name: 'Retail', isActive: true };
