@@ -6,7 +6,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { documentNumberSearchTerm } from 'shared';
+import { documentNumberSearchTerm, withAggregateLock } from 'shared';
 import { NumberingService } from '@mivend/plugin-numbering';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
@@ -171,49 +171,55 @@ export class PaymentAttemptService {
         // Must commit atomically with allocate(): a crash between them would leave an orphaned capture.
         // On throw, the caller can safely call again; there is never partial state to reconcile.
         try {
-            await this.connection.withTransaction(ctx, async transactionCtx => {
-                // Re-read under the row lock: the checks above ran on a snapshot. A capture skips it, since
-                // allocate() locks the counterparty's open documents in FIFO order and an earlier lock would invert it.
-                const current =
-                    paymentStatus === 'captured'
-                        ? proformaInvoice
-                        : await this.proformaInvoiceService.findOneForUpdate(
-                              transactionCtx,
-                              Number(proformaInvoice.id),
-                          );
-                if (expectedOrganizationId === undefined && current.status === 'cancelled') {
-                    throw new UserInputError(
-                        `ProformaInvoice ${proformaInvoiceId} is cancelled and cannot be paid`,
+            // The order's proforma lock before any document row: same order as a cancel (docs/concurrency.md).
+            await withAggregateLock(
+                this.connection,
+                ctx,
+                `proformaInvoices-for-order:${proformaInvoice.orderId}`,
+                async transactionCtx => {
+                    // Re-read under the row lock: the checks above ran on a snapshot. A capture skips it, since
+                    // allocate() locks the counterparty's open documents in FIFO order and an earlier lock would invert it.
+                    const current =
+                        paymentStatus === 'captured'
+                            ? proformaInvoice
+                            : await this.proformaInvoiceService.findOneForUpdate(
+                                  transactionCtx,
+                                  Number(proformaInvoice.id),
+                              );
+                    if (expectedOrganizationId === undefined && current.status === 'cancelled') {
+                        throw new UserInputError(
+                            `ProformaInvoice ${proformaInvoiceId} is cancelled and cannot be paid`,
+                        );
+                    }
+                    const repo = this.connection.getRepository(transactionCtx, PaymentAttempt);
+                    const paymentAttempt = await repo.save(
+                        repo.create({
+                            // Flat sequence, not order-scoped: per docs/identifiers.md, our number
+                            // always comes from the sequence; providerPaymentId is the external reference.
+                            number: await this.numberingService.next(transactionCtx, 'payment'),
+                            channel,
+                            proformaInvoiceId: Number(proformaInvoice.id),
+                            orderId: proformaInvoice.orderId,
+                            amount: fact?.amount ?? current.amount,
+                            currencyCode: proformaInvoice.currencyCode,
+                            paymentStatus,
+                            providerPaymentId: externalReference,
+                        }),
                     );
-                }
-                const repo = this.connection.getRepository(transactionCtx, PaymentAttempt);
-                const paymentAttempt = await repo.save(
-                    repo.create({
-                        // Flat sequence, not order-scoped: per docs/identifiers.md, our number
-                        // always comes from the sequence; providerPaymentId is the external reference.
-                        number: await this.numberingService.next(transactionCtx, 'payment'),
-                        channel,
-                        proformaInvoiceId: Number(proformaInvoice.id),
-                        orderId: proformaInvoice.orderId,
-                        amount: fact?.amount ?? current.amount,
-                        currencyCode: proformaInvoice.currencyCode,
-                        paymentStatus,
-                        providerPaymentId: externalReference,
-                    }),
-                );
 
-                if (paymentStatus === 'captured') {
-                    await this.settlementEntryService.allocate(transactionCtx, paymentAttempt);
-                } else if (paymentStatus === 'pending' && current.status === 'pending') {
-                    await this.proformaInvoiceService.updateStatus(
-                        transactionCtx,
-                        Number(proformaInvoice.id),
-                        'issued',
-                    );
-                }
-                // failed/canceled leave ProformaInvoice.status untouched so the payment stays retryable.
-                // A canceled attempt never completed, so there is nothing to reverse financially.
-            });
+                    if (paymentStatus === 'captured') {
+                        await this.settlementEntryService.allocate(transactionCtx, paymentAttempt);
+                    } else if (paymentStatus === 'pending' && current.status === 'pending') {
+                        await this.proformaInvoiceService.updateStatus(
+                            transactionCtx,
+                            Number(proformaInvoice.id),
+                            'issued',
+                        );
+                    }
+                    // failed/canceled leave ProformaInvoice.status untouched so the payment stays retryable.
+                    // A canceled attempt never completed, so there is nothing to reverse financially.
+                },
+            );
         } catch (err) {
             if (!isUniqueViolation(err)) throw err;
             // A concurrent call with the same (channel, externalReference) won; its row is the applied payment.

@@ -56,6 +56,7 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
             // Default: no prior attempt for (channel, externalReference), so tests take the create path.
             // Idempotent-retry tests override this per test.
             findOne: vi.fn(async () => null),
+            query: vi.fn(async () => []),
         };
     }
 
@@ -293,6 +294,10 @@ describe('PaymentAttemptService.payProformaInvoice', () => {
         await service.payProformaInvoice(mockCtx, 1, 'success');
 
         expect(mockConnection.withTransaction).toHaveBeenCalledWith(mockCtx, expect.any(Function));
+        const lockKeys = mockPaymentAttemptRepo.query.mock.calls.map(
+            (c: unknown[]) => (c[1] as string[])[0],
+        );
+        expect(lockKeys).toEqual([`proformaInvoices-for-order:${makeProformaInvoice({}).orderId}`]);
     });
 
     it('propagates a failure from inside the transaction (e.g. allocate throwing) rather than swallowing it — the caller sees the whole operation failed and can safely retry', async () => {

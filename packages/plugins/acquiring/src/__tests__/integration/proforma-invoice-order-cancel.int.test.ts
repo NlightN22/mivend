@@ -6,6 +6,7 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    withAggregateLock,
 } from 'shared';
 
 import { PaymentAttempt } from '../../entities/payment-attempt.entity';
@@ -59,6 +60,7 @@ class TestPaymentAttempt {
 }
 
 let dataSource: DataSource;
+let connection: TransactionalConnection;
 let cancel: ProformaInvoiceOrderCancelService;
 let payments: PaymentAttemptService;
 let settlement: SettlementEntryService;
@@ -81,7 +83,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    const connection = {
+    connection = {
         getRepository: (c: RequestContext, entity: unknown) => {
             const manager =
                 (c as unknown as { __manager?: EntityManager }).__manager ?? dataSource.manager;
@@ -181,5 +183,22 @@ describe('ProformaInvoiceOrderCancelService (real Postgres)', () => {
             expect(await statusOf(id)).toBe('cancelled');
             expect(await advance()).toBe(1000);
         }
+    });
+
+    it('a capture waits for the order proforma lock a cancel holds, then lands on the advance', async () => {
+        const id = await addInvoice(7);
+        let captured = false;
+        let capture: Promise<unknown> = Promise.resolve();
+
+        await withAggregateLock(connection, ctx, 'proformaInvoices-for-order:7', async txCtx => {
+            capture = erpCapture(id, 'cap-held').then(() => (captured = true));
+            await new Promise(resolve => setTimeout(resolve, 150));
+            expect(captured).toBe(false);
+            await cancel.closeForCancelledOrder(txCtx, 7);
+        });
+        await capture;
+
+        expect(await statusOf(id)).toBe('cancelled');
+        expect(await advance()).toBe(1000);
     });
 });
