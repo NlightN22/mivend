@@ -1,6 +1,14 @@
 # Project Context
 
-Updated: 2026-10-16 09:00
+Updated: 2026-10-17 18:00
+
+## #231 session leak + order cancel/e2e cleanup (2026-10-17, DONE: audited 2 rounds, pushed `915ebb48`, closed; follow-ups #247, #248)
+- Sessions: per-user active-session cap, sweep of ended sessions, e2e teardown ends marked run sessions.
+- Cancel: every path into `Cancelled` (mivend, Dashboard, ERP) releases reservations once and withdraws open proformas under `withOrderCancelLocks` (`packages/shared/src/order-cancel-locks.ts`; order: proformas -> reserve-order -> order row, `docs/concurrency.md`). Cancel is never refused over payments; money received becomes the customer's advance (`docs/payments.md`). Superseded proforma PDFs re-render with the newer-version note (stale-render race closed).
+- Access: department-head has `ConfirmOrder` and can reassign managers; operator/manager see the whole branch team; teamDirectory/approval escalation bypass Vendure 3.7.3 `restrictToVisibleAdministrators`.
+- e2e: skill `.claude/skills/e2e-rules` (seed data via `make seed`, tests follow UI, idempotent cleanup of orders/reservations, scoped batches under flock, checklist + audit). Full `make e2e` only on explicit request. Cart specs open `/catalog?inStock=1` (seed has an intentional zero-stock item). erp-import has a `manufacturer` record + product `manufacturerCode` (seed: manufacturer-a/-b). Nameless placeholder manufacturer before its record = designed (#164).
+- Stuck dev worker child (high CPU, queue not drained) breaks document/PDF specs: kill only that child.
+- Follow-ups: #247 pending->captured callback with same externalReference dropped; #248 Dashboard `transitionOrderToState` lacks mivend order scope.
 
 ## #242 / #243 / #244 manager-action checks (2026-10-17, DONE: audited twice, pushed, closed)
 - Manager actions (`extend-reservation`, `extend-credit-term`, `adjust-price`) run through the checks framework: ephemeral `manager` subject (`ChecksService.evaluate`, no lock, no storage), policy `recipient` in `CheckContext`. Credit-term recipient (`department-head`) comes from migration `1791520000000` or, on `synchronize` contours, `make seed-all` (seed-approvals); unseeded means every request escalates (docs/environments.md).
@@ -36,31 +44,9 @@ Updated: 2026-10-16 09:00
 - **Known limits:** storage-unit coefficient fixed at 1 until search-platform#206 (also organization "do not control stock" flags); stale marking only covers orders that already hold findings; staff-override record and `require-approval` bridge not built; the two new permissions were added to the two default role lists that carry `ManageApprovalWorkflows` without a role review; `recipient` is free text; no unit test for tab gating.
 - **Next:** #242 (manager-action checks + basic client-manager approvals), #243 (hasCheckFindings reverted by core save), #244 (harness column guard test). Owner confirmations pending: credit.limit default `hold`, `ManageCheckPolicies` as a global right.
 
-## #236 local reserve handed over to the ERP only for what it holds (2026-10-15, DONE: audited twice, pushed `91238d9c`, closed)
-
-- `ReservationWriteOffSyncService.releaseMatchingReservations`, per variant: `erp >= local+handedOver` releases all; `0 < erp < that` releases only the covered part (row split, remainder stays active, mismatch reported); `erp = 0` keeps it active and reports, except `warehouseStarted` (zero is normal); a variant absent from the answer is untouched (stays active until its own expiry). Rules in `docs/order-flow.md`.
-- Handed-over quantity = rows with `Reservation.erpHandedOverAt` of the CURRENT `reservationGeneration` (never plain `released`: cancel/expiry also set it). Migration `1791511000000`, applied by hand on the three dev DBs (synchronize contours do not run migrations).
-- `handleOrderChanged` now runs under `reserve-order:<id>` like the registration result (split + release in one transaction). `ErpOrderStatusEvent` published inside the lock is safe: subscribers use `eventBus.ofType`, which waits for commit.
-- Tests: unit + `reserve-handover.int.test.ts` (real Postgres: split, zero, repeat, concurrent, cancel-released row). Reserve is still shown on delivered orders (hide for terminal statuses: undecided).
-
-## #197 concurrency HIGH findings (2026-10-15, DONE: audited 3 rounds, pushed `c9bd24a1`, closed)
-
-- Findings 1/2/5 had been fixed by #204/#209. Fixed now: tier rebalance re-reads the sibling quantity under the order lock, logs and rethrows adjust errors after finishing passes and refreshing totals (`be66c862`, `1b1364f4`); `releaseReservations` = `UPDATE ... WHERE status='active' RETURNING` under `reserve-order:<id>`; `markReservationFailed` under the same lock, skipped when active rows exist (`55bf899c`).
-- `payProformaInvoice`: non-capture outcomes lock and re-read the proforma invoice (`ProformaInvoiceService.findOneForUpdate`) inside the transaction; **a capture must not take that early lock** — `allocate()` locks the counterparty's open documents in FIFO (`createdAt`) order and an earlier single-row lock deadlocks two captures (`c9bd24a1`, test `payment-pending-race.int.test.ts`).
-- Accepted LOW: no int tests for two concurrent pending payments / withdraw vs payment; currency/organization from the pre-transaction snapshot (immutable). Tier rebalance has only unit tests; #196 (its replacement) must ship a real-Postgres concurrent test (comment on #196). All remaining findings (17 MEDIUM, 6 LOW) are tracked in #240.
-
-## #175 / #232 / #112 / #238 + ERP status cycle (2026-10-14..15, DONE: audited twice, pushed `d5e365b8`, closed; leftovers #239)
-
-- **Order page / list (#175):** repeat order via cart, copy-number button (execCommand fallback on http), reserve column, `OrderDetailPage` split. Status badge = label of the status's `customerGroup` (pending/confirmed/in_transit/delivered/cancelled/rejected; no status code in the frontend), exact dictionary name only in the badge `title` and history. List tabs built from dictionary groups: Active (everything except delivered+cancelled, `erpStatus.notIn`), Awaiting approval, Preparing, On the way, Completed, Cancelled, All; source default "Placed here"; empty status set matches nothing. Storefront has only a ru locale file (labels are ru; localization is a separate task).
-- **Status history (#232):** `order_status_history_entry` (migration 1791509000000, backfilled from placement time; `occurredAt` = ERP event time, migration 1791510000000), filtered server-side to customer-visible dictionary statuses. Shop `orderStatuses` returns only customer-visible statuses and the fields the storefront needs; Admin keeps the full dictionary (`ReadOrder`).
-- **ERP reserve (#112):** `erp_order_reserve` replaced atomically per order under lock `erp-reserve:<orderId>`; an event without lines changes nothing; customer "reserve" column; manager holders with paging after visibility. `ReservationSettings` provider (options `defaultReservationDays`, `rejectedOrderReleaseDays`) replaced the module global.
-- **Cancel (#194 follow-up):** a refused cancel (`REFUSED`) no longer blocks: repeat `cancel-requested` with a fresh eventId; integration side resets its earlier command (subject needed FORWARD compatibility in Schema Registry; done by the integration team). Repeats are not rate-limited (#239).
-- **Delivery vs pickup (#238):** `confirmed` carries `pointOfSaleId` (+ `deliveryAddress` text, printed docs only); only `pointOfSaleId` makes a delivery; a customer-added point has no ERP id so it goes as pickup (warn log). event-contracts `^0.72.1`. Status derivation by receiving method is in `docs/order-contracts.md` ("ERP status derivation by receiving method"). Verified on staging: delivery cycle PICKING->SHIPPING->DELIVERING->DELIVERED, pickup PICKING->DELIVERED; APPROVED never appears when approval and the warehouse order are created in one posting.
-- **Short mivend status names** ("Not accepted", "Passed", "Reserved"; explanations in `description`); provisioning upsert updates name/description on boot.
-- **Credit limit of the staging test customer** was blocked by old open test orders; cancelled (5 local, 2 closed by the integration side, 15 via 1C). Only the fresh test orders 43/44/45/48/55 remain.
-- **Test lesson:** a nested `withTransaction` in the reserve-order test harness must join the ctx's open transaction (like Vendure), otherwise a lock taken twice hangs cancel suites; unit tests do not catch it, `make test-int` does. Fixtures must mirror real column types (a varchar custom field vs int id hid a production query failure).
-- **#237 backend (stage C1):** order subject type + two ERP-requirement providers (`erp.contract-with-storage-organization`, `erp.organization-stock`) wired at checkout / `reserveOrder()` / `order.confirmed`, policy rows decide (default `warn`; `hold` keeps an automatic trigger in the confirmation queue), stale marking, `recomputeOrderChecks`, `orderCheckHealth`, `Order.hasCheckFindings`; rules in `docs/order-contracts.md`. Frontend stage pending.
-- **Open:** #242, #243, #244, #239, #240, search-platform#206, reserve shown on delivered orders (not decided). `make ci` is audit-session only.
+## #236 / #197 / #175 / #232 / #112 / #238 (2026-10-14..15, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-17-236-197-175-full.md`)
+- #236: local reserve released only for what the ERP holds (per-variant split, `erpHandedOverAt` of current generation; rules in `docs/order-flow.md`). #197: capture must not take an early proforma row lock (`allocate()` locks FIFO; deadlock otherwise); remaining findings in #240.
+- #175/#232/#112/#238: order page/list by dictionary `customerGroup`, status history table, atomic `erp_order_reserve`, delivery vs pickup by `pointOfSaleId` (`docs/order-contracts.md`). Nested `withTransaction` in test harnesses must join the open transaction or lock tests hang.
 
 ## #234 Kafka topic rename (2026-10-14, closed)
 
