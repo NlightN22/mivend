@@ -1,14 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
-    AdministratorService,
     ForbiddenError,
     Logger,
     RequestContext,
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { AccessScope, AccessScopeService } from '@mivend/plugin-access-control';
+import {
+    AccessScope,
+    AccessScopeService,
+    TeamAdministratorService,
+} from '@mivend/plugin-access-control';
 import { VersioningService } from '@mivend/plugin-versioning';
 
 import { CounterpartyListFilter } from './counterparty-list-filter';
@@ -26,7 +29,7 @@ export class CounterpartyManagerAssignmentService {
         private connection: TransactionalConnection,
         private counterpartyService: CounterpartyService,
         private accessScopeService: AccessScopeService,
-        private administratorService: AdministratorService,
+        private teamAdministratorService: TeamAdministratorService,
         private versioningService: VersioningService,
     ) {}
 
@@ -119,12 +122,13 @@ export class CounterpartyManagerAssignmentService {
         administratorId: ID,
     ): Promise<void> {
         if (scope.kind !== 'department') return;
-        const target = await this.administratorService.findOne(ctx, administratorId);
-        const targetBranchId = (target?.customFields as { branchId?: string | null } | undefined)
-            ?.branchId;
-        if (!target || scope.branchId == null || targetBranchId !== scope.branchId) {
-            throw new ForbiddenError();
-        }
+        if (scope.branchId == null) throw new ForbiddenError();
+        const target = await this.teamAdministratorService.findInBranch(
+            ctx,
+            scope.branchId,
+            administratorId,
+        );
+        if (!target) throw new ForbiddenError();
     }
 
     private async recordReassignment(

@@ -107,6 +107,12 @@ confirm, introduce a dedicated permission instead of widening this one.
 
 ## Layer 3: `AccessScopeService` — one service, reused everywhere
 
+**Team pickers and manager reassignment (#231).** Since Vendure 3.7.3, `AdministratorService.findAll`/`findOne`
+hide every administrator holding a role the caller could not grant. A `'department'`-scoped caller
+(department-head, operator) therefore lists and assigns colleagues through `TeamAdministratorService`:
+live administrators of the caller's own `branchId`, a branchless caller sees none. Other scopes keep
+Vendure's list. This grants no administrator-management permission.
+
 **Rule: row-level visibility filtering is a single, reusable service — never copy-pasted
 `if`/`switch` role checks scattered across resolvers or domain services.**
 

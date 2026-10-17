@@ -12,6 +12,7 @@ import { DepartmentService } from '../../department.service';
 import { PositionService } from '../../position.service';
 import { ErpUserService } from '../../erp-user.service';
 import { RoleScopeConfigService } from '../../role-scope-config.service';
+import { TeamAdministratorService } from '../../team-administrator.service';
 import { WarehouseService } from '../../warehouse.service';
 
 function mockAdministrator(
@@ -38,7 +39,7 @@ function mockAdministrator(
 
 describe('AccessControlResolver.teamMembers', () => {
     it('always returns real names, regardless of department or teamVisibility scope — used by manager pickers/filters, not the org directory', async () => {
-        const administratorService = { findAll: vi.fn() };
+        const teamAdministratorService = { findTeam: vi.fn() };
         const resolver = new AccessControlResolver(
             {} as RoleScopeConfigService,
             {} as DepartmentService,
@@ -47,19 +48,18 @@ describe('AccessControlResolver.teamMembers', () => {
             {} as WarehouseService,
             {} as BranchSettingsService,
             {} as CreditTermLimitService,
-            administratorService as unknown as AdministratorService,
+            {} as AdministratorService,
             {} as AccessScopeService,
             {} as ErpUserService,
             {} as AdministratorProvisioningService,
             {} as AdministratorActivationService,
+            teamAdministratorService as unknown as TeamAdministratorService,
         );
-        administratorService.findAll.mockResolvedValue({
-            items: [
-                mockAdministrator('5', 'Petr', 'Manager', { departmentId: 'dept-purchasing' }, [
-                    'manager',
-                ]),
-            ],
-        });
+        teamAdministratorService.findTeam.mockResolvedValue([
+            mockAdministrator('5', 'Petr', 'Manager', { departmentId: 'dept-purchasing' }, [
+                'manager',
+            ]),
+        ]);
 
         const [member] = await resolver.teamMembers({} as RequestContext);
         expect(member).toEqual({
@@ -101,6 +101,7 @@ describe('AccessControlResolver.teamDirectory', () => {
             {} as ErpUserService,
             {} as AdministratorProvisioningService,
             {} as AdministratorActivationService,
+            {} as TeamAdministratorService,
         );
     });
 
@@ -195,6 +196,7 @@ describe('AccessControlResolver.portalUsers', () => {
             {} as ErpUserService,
             {} as AdministratorProvisioningService,
             administratorActivationService as unknown as AdministratorActivationService,
+            {} as TeamAdministratorService,
         );
         const ctx = {} as RequestContext;
         administratorActivationService.findAllWithStatus.mockResolvedValue({
@@ -228,6 +230,7 @@ describe('AccessControlResolver.resetAdministratorPassword', () => {
             {} as ErpUserService,
             administratorProvisioningService as unknown as AdministratorProvisioningService,
             {} as AdministratorActivationService,
+            {} as TeamAdministratorService,
         );
         administratorProvisioningService.completePasswordReset.mockResolvedValue({ success: true });
 
@@ -254,6 +257,7 @@ describe('AccessControlResolver.resetAdministratorPassword', () => {
             {} as ErpUserService,
             administratorProvisioningService as unknown as AdministratorProvisioningService,
             {} as AdministratorActivationService,
+            {} as TeamAdministratorService,
         );
         administratorProvisioningService.completePasswordReset.mockResolvedValue({
             success: false,

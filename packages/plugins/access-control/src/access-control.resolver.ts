@@ -15,6 +15,7 @@ import { AdministratorActivationService } from './administrator-activation.servi
 import { AdministratorProvisioningService } from './administrator-provisioning.service';
 import { CustomPermission } from './custom-permission';
 import { AccessScopeService } from './access-scope.service';
+import { TeamAdministratorService } from './team-administrator.service';
 import { BranchService } from './branch.service';
 import { BranchSettingsService } from './branch-settings.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
@@ -64,6 +65,7 @@ export class AccessControlResolver {
         private erpUserService: ErpUserService,
         private administratorProvisioningService: AdministratorProvisioningService,
         private administratorActivationService: AdministratorActivationService,
+        private teamAdministratorService: TeamAdministratorService,
     ) {}
 
     // Not subject to teamVisibility anonymization: pickers need real names to be usable.
@@ -71,8 +73,8 @@ export class AccessControlResolver {
     @Query()
     @Allow(Permission.Authenticated)
     async teamMembers(@Ctx() ctx: RequestContext): Promise<TeamMember[]> {
-        const result = await this.administratorService.findAll(ctx, { take: 200 }, ['user.roles']);
-        return result.items.map(a => ({
+        const team = await this.teamAdministratorService.findTeam(ctx);
+        return team.map(a => ({
             id: String(a.id),
             firstName: a.firstName,
             lastName: a.lastName,

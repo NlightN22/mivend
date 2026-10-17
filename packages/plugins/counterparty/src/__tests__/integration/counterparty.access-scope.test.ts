@@ -51,7 +51,14 @@ let service: CounterpartyService;
 let assignmentService: CounterpartyManagerAssignmentService;
 const mockCtx = {} as RequestContext;
 const mockVersioningService = { recordChange: vi.fn() };
-const mockAdministratorService = { findOne: vi.fn() };
+const mockTeamAdministratorService = { findInBranch: vi.fn() };
+
+function targetInBranch(branchId: string): void {
+    mockTeamAdministratorService.findInBranch.mockImplementation(
+        async (_ctx: unknown, callerBranchId: string) =>
+            callerBranchId === branchId ? { id: 'admin-9' } : undefined,
+    );
+}
 const mockAccessScopeService = {
     resolveCounterpartyScope: vi.fn(),
     assertCounterpartyWritableInScope: vi.fn(),
@@ -104,7 +111,7 @@ beforeAll(async () => {
         connectionShim,
         service,
         mockAccessScopeService as unknown as AccessScopeService,
-        mockAdministratorService as never,
+        mockTeamAdministratorService as never,
         mockVersioningService as never,
     );
 });
@@ -494,9 +501,7 @@ describe('CounterpartyManagerAssignmentService.reassignManagerByFilter (integrat
             departmentId: 'dept-1',
             branchId: 'branch-a',
         });
-        mockAdministratorService.findOne.mockResolvedValue({
-            customFields: { branchId: 'branch-a' },
-        });
+        targetInBranch('branch-a');
 
         const changed = await assignmentService.reassignManagerByFilter(mockCtx, {}, 'admin-9', 2);
 
@@ -511,9 +516,7 @@ describe('CounterpartyManagerAssignmentService.reassignManagerByFilter (integrat
             departmentId: 'dept-1',
             branchId: 'branch-a',
         });
-        mockAdministratorService.findOne.mockResolvedValue({
-            customFields: { departmentId: 'dept-1', branchId: 'branch-b' },
-        });
+        targetInBranch('branch-b');
         const before = await managerByErpId();
 
         await expect(

@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-    AdministratorService,
     ForbiddenError,
     RequestContext,
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { AccessScope, AccessScopeService } from '@mivend/plugin-access-control';
+import {
+    AccessScope,
+    AccessScopeService,
+    TeamAdministratorService,
+} from '@mivend/plugin-access-control';
 import type { VersioningService } from '@mivend/plugin-versioning';
 
 import {
@@ -18,7 +21,15 @@ import type { CounterpartyService } from '../../counterparty.service';
 const mockRepo = { findOne: vi.fn(), save: vi.fn() };
 const mockConnection = { getRepository: vi.fn(() => mockRepo) };
 const mockCounterpartyService = { visibleFilteredQb: vi.fn() };
-const mockAdministratorService = { findOne: vi.fn() };
+const mockTeamAdministratorService = { findInBranch: vi.fn() };
+
+// Mirrors findInBranch: the target is found only when its branch equals the caller's.
+function targetInBranch(branchId: string | null): void {
+    mockTeamAdministratorService.findInBranch.mockImplementation(
+        async (_ctx: unknown, callerBranchId: string) =>
+            branchId != null && callerBranchId === branchId ? { id: 'admin-9' } : undefined,
+    );
+}
 const mockVersioningService = { recordChange: vi.fn() };
 const mockCtx = {} as RequestContext;
 
@@ -52,7 +63,7 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
             mockConnection as unknown as TransactionalConnection,
             mockCounterpartyService as unknown as CounterpartyService,
             accessScopeService,
-            mockAdministratorService as unknown as AdministratorService,
+            mockTeamAdministratorService as unknown as TeamAdministratorService,
             mockVersioningService as unknown as VersioningService,
         );
     });
@@ -96,9 +107,7 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
     it('rejects "department" scope when the target administrator is in another branch', async () => {
         mockRepo.findOne.mockResolvedValue(counterparty());
         resolveScope.mockResolvedValue(departmentScope);
-        mockAdministratorService.findOne.mockResolvedValue({
-            customFields: { departmentId: 'dept-1', branchId: 'branch-b' },
-        });
+        targetInBranch('branch-b');
 
         await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
             ForbiddenError,
@@ -106,13 +115,10 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
         expect(mockRepo.save).not.toHaveBeenCalled();
     });
 
-    // departmentId is informational only (docs/access-control.md) — it must not block this.
-    it('allows "department" scope for a same-branch target even when its departmentId differs', async () => {
+    it('allows "department" scope for a same-branch target', async () => {
         mockRepo.findOne.mockResolvedValue(counterparty());
         resolveScope.mockResolvedValue(departmentScope);
-        mockAdministratorService.findOne.mockResolvedValue({
-            customFields: { departmentId: 'dept-OTHER', branchId: 'branch-a' },
-        });
+        targetInBranch('branch-a');
 
         const result = await service.reassignManager(mockCtx, 'cp-1', 'admin-9');
 
@@ -122,7 +128,7 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
     it('rejects "department" scope with no branch, even for a null-branch counterparty and target', async () => {
         mockRepo.findOne.mockResolvedValue(counterparty({ branchId: null }));
         resolveScope.mockResolvedValue({ kind: 'department', departmentId: 'dept-1' });
-        mockAdministratorService.findOne.mockResolvedValue({ customFields: { branchId: null } });
+        targetInBranch(null);
 
         await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
             ForbiddenError,
@@ -133,7 +139,7 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
     it('rejects a branchless target administrator even when the counterparty itself is writable', async () => {
         mockRepo.findOne.mockResolvedValue(counterparty());
         resolveScope.mockResolvedValue(departmentScope);
-        mockAdministratorService.findOne.mockResolvedValue({ customFields: { branchId: null } });
+        targetInBranch(null);
 
         await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
             ForbiddenError,

@@ -9,6 +9,7 @@ import gql from 'graphql-tag';
 
 import { AccessControlResolver, AdministratorStatusResolver } from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
+import { TeamAdministratorService } from './team-administrator.service';
 import { AdministratorActivationService } from './administrator-activation.service';
 import { AdministratorProvisioningService } from './administrator-provisioning.service';
 import { BranchService } from './branch.service';
@@ -249,6 +250,7 @@ const adminApiSchema = gql`
     ],
     providers: [
         AccessScopeService,
+        TeamAdministratorService,
         RoleScopeConfigService,
         DepartmentService,
         PositionService,
@@ -271,6 +273,7 @@ const adminApiSchema = gql`
     ],
     exports: [
         AccessScopeService,
+        TeamAdministratorService,
         RoleScopeConfigService,
         DepartmentService,
         PositionService,
