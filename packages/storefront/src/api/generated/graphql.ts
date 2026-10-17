@@ -2990,6 +2990,8 @@ export enum Permission {
     ManageAdministratorLifecycle = 'ManageAdministratorLifecycle',
     /** Create/edit WorkflowDefinition chains (layer 5, /settings) */
     ManageApprovalWorkflows = 'ManageApprovalWorkflows',
+    /** Read and change the consequence policy of each check (docs/checks-and-policies.md) */
+    ManageCheckPolicies = 'ManageCheckPolicies',
     /** Activate/deactivate a Counterparty's storefront portal login (Customer created from its phone/officialEmail) and view/deactivate its already-created portal sub-users (issue #120) — scoped via AccessScopeService.resolveCounterpartyScope, same own/department/all model as ReassignCounterpartyManager */
     ManageCounterpartyPortalAccess = 'ManageCounterpartyPortalAccess',
     /** Add/remove CounterpartyTeamMember rows (backup/observer) for a counterparty — same department/all scoping as ReassignCounterpartyManager, but for the additional team beyond the Owner */
@@ -3010,6 +3012,8 @@ export enum Permission {
     ReadCatalog = 'ReadCatalog',
     /** Grants permission to read Channel */
     ReadChannel = 'ReadChannel',
+    /** Read stored check results and the registered check definitions */
+    ReadCheckResults = 'ReadCheckResults',
     /** Grants permission to read Collection */
     ReadCollection = 'ReadCollection',
     /** Read counterparty records (scope resolved separately by AccessScopeService) */
