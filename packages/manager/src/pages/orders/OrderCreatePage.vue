@@ -11,6 +11,8 @@ import {
     fetchOrder,
     fetchCustomerOptions,
     finalizeOrder,
+    setDraftOrderTradingPoint,
+    type DeliveryMethod,
     type CustomerOption,
     type DraftOrderState,
     type ProductSearchResult,
@@ -29,6 +31,7 @@ const order = ref<DraftOrderState | null>(null);
 const settingUpCustomer = ref(false);
 const error = ref('');
 
+const deliveryMethod = ref<DeliveryMethod>('pickup');
 const tradingPointId = ref('');
 const paymentMethod = ref('offline-terms');
 const pendingApprovalLineIds = ref(new Set<string>());
@@ -40,7 +43,8 @@ const selectedTradingPoint = computed(() =>
 
 async function handleCustomerSelected(selected: CustomerOption): Promise<void> {
     customer.value = selected;
-    tradingPointId.value = selected.tradingPoints[0]?.id ?? '';
+    deliveryMethod.value = 'pickup';
+    tradingPointId.value = '';
     settingUpCustomer.value = true;
     error.value = '';
     try {
@@ -60,6 +64,27 @@ onMounted(async () => {
     const match = options.find(o => o.counterpartyId === preselectCounterpartyId);
     if (match) await handleCustomerSelected(match);
 });
+
+async function handleDeliveryMethod(method: string): Promise<void> {
+    deliveryMethod.value = method === 'courier' ? 'courier' : 'pickup';
+    if (deliveryMethod.value === 'courier') {
+        await handleTradingPoint(
+            tradingPointId.value || customer.value?.tradingPoints[0]?.id || '',
+        );
+    } else {
+        await handleTradingPoint('');
+    }
+}
+
+async function handleTradingPoint(id: string): Promise<void> {
+    tradingPointId.value = id;
+    if (!order.value) return;
+    try {
+        await setDraftOrderTradingPoint(order.value.id, id || null);
+    } catch (e) {
+        error.value = e instanceof Error ? e.message : 'Could not save the delivery point';
+    }
+}
 
 async function handleAddProduct(product: ProductSearchResult): Promise<void> {
     if (!order.value) return;
@@ -96,7 +121,11 @@ async function handleAdjusted(
 
 const hasPendingApproval = computed(() => pendingApprovalLineIds.value.size > 0);
 const canPlaceOrder = computed(
-    () => !!order.value && order.value.lines.length > 0 && !submitting.value,
+    () =>
+        !!order.value &&
+        order.value.lines.length > 0 &&
+        !submitting.value &&
+        (deliveryMethod.value === 'pickup' || !!tradingPointId.value),
 );
 
 async function placeOrder(): Promise<void> {
@@ -113,7 +142,10 @@ async function placeOrder(): Promise<void> {
         }
         const result = await finalizeOrder(
             order.value.id,
-            selectedTradingPoint.value?.address ?? '',
+            {
+                method: deliveryMethod.value,
+                tradingPointAddress: selectedTradingPoint.value?.address ?? '',
+            },
             paymentMethod.value,
         );
         await router.push(`/orders/${result.code}`);
@@ -163,9 +195,11 @@ async function placeOrder(): Promise<void> {
         <MvPanel v-if="customer && order" title="Delivery & Payment">
             <DeliveryPaymentSection
                 :trading-points="customer.tradingPoints"
+                :delivery-method="deliveryMethod"
                 :trading-point-id="tradingPointId"
                 :payment-method="paymentMethod"
-                @update:trading-point-id="tradingPointId = $event"
+                @update:delivery-method="handleDeliveryMethod"
+                @update:trading-point-id="handleTradingPoint"
                 @update:payment-method="paymentMethod = $event"
             />
         </MvPanel>

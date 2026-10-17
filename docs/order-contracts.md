@@ -461,6 +461,22 @@ string validated against the dictionary; `erpOrderStatus` stays the ERP's raw `s
   and filter groups from it. Customer-facing labels are per `customerGroup` (i18n keys per group, none per status); the exact status name stays in the badge tooltip and the history, and an unknown group falls back to the status name.
 - **No backfill:** there is no compatibility layer; an order keeps whatever status string it has.
 
+### Delivery point of an order (#245)
+
+The delivery method is the order's shipping line (`freight-delivery` or `pickup`); the point is
+`customFields.tradingPointId` with its address snapshot `customFields.deliveryAddress`, both written at placement
+(`ErpOrderService.onOrderPlaced`). The submit event carries `pointOfSaleId`/`deliveryAddress` only for a freight line
+with a point; otherwise it is a pickup and carries neither.
+
+- Storefront checkout: the point is the customer's preferred trading point at placement.
+- Staff-created order: the manager chooses the method and one of the order client's active, visible points with
+  Admin API `setDraftOrderTradingPoint(orderId, tradingPointId)` (`CreateOrder`, order visibility scope, draft state
+  only, order lock; a point of another counterparty is refused; `null` clears it). Placement snapshots that point.
+  With no point chosen the order is self-pickup: no `tradingPointId`, no `deliveryAddress`, never the customer's
+  preferred point (the branch scope still comes from it). The manager portal defaults to self-pickup and requires a
+  point for courier delivery.
+- Not covered yet: changing the point of an already placed order (staff edit before ERP registration).
+
 ### ERP status derivation by receiving method (owner-approved; the ERP computes it, we only read `status_code`)
 
 The ERP picks the first match in this order: CANCELLED (marked for deletion) > DELIVERED > DELIVERING (`inDelivery`)
@@ -548,7 +564,7 @@ Today the consumer drops them as a `noop`. Decision: import them as real `Order`
 
 - Migration `1791509000000` backfills the history entry of the current status with the order placement time, so it
   is approximate for old orders.
-- #238 (delivery point) reads the point address at confirmation time; it is not a snapshot of the address at placement.
+- The submit event's `deliveryAddress` is the address snapshotted on the order at placement (`customFields.deliveryAddress`, #245); a later edit of the point does not change it. `pointOfSaleId` is read from the point at submission.
 
 ## Settlement documents (receivables history, #224)
 

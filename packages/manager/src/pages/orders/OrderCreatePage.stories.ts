@@ -22,7 +22,15 @@ function mockOrderCreateData(): void {
                     legalName: 'customer-123 LLC',
                     inn: '7701234567',
                     priceType: 'price-type-wholesale',
-                    tradingPoints: [{ id: '1', name: 'Main point', address: 'branch-a, 1st line' }],
+                    tradingPoints: [
+                        {
+                            id: '1',
+                            name: 'Main point',
+                            address: 'branch-a, 1st line',
+                            isActive: true,
+                            customerStatus: 'active',
+                        },
+                    ],
                 },
             ],
         },

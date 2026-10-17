@@ -14,6 +14,7 @@ import {
     SetCustomerForDraftOrderDocument,
     SetDraftOrderShippingAddressDocument,
     SetDraftOrderShippingMethodDocument,
+    SetDraftOrderTradingPointDocument,
     TransitionOrderToStateDocument,
     type DraftOrderFieldsFragment,
 } from './generated/graphql';
@@ -61,7 +62,10 @@ export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
             legalName: c.legalName,
             inn: c.inn,
             priceType: c.priceType,
-            tradingPoints: c.tradingPoints,
+            // Same rule as the server: only active, visible points can be chosen for delivery.
+            tradingPoints: c.tradingPoints
+                .filter(p => p.isActive && p.customerStatus === 'active')
+                .map(({ id, name, address }) => ({ id, name, address })),
         }));
 }
 
@@ -172,21 +176,44 @@ export const PAYMENT_METHOD_OPTIONS = [
     { value: 'offline-terms', label: 'Bank transfer (proforma invoice)' },
 ] as const;
 
+export type DeliveryMethod = 'pickup' | 'courier';
+
+export const DELIVERY_METHOD_OPTIONS = [
+    { value: 'pickup', label: 'Self-pickup' },
+    { value: 'courier', label: 'Courier delivery' },
+] as const;
+
+const SHIPPING_CODE_BY_DELIVERY: Record<DeliveryMethod, string> = {
+    pickup: 'pickup',
+    courier: 'freight-delivery',
+};
+
+export async function setDraftOrderTradingPoint(
+    orderId: string,
+    tradingPointId: string | null,
+): Promise<void> {
+    await adminApi(SetDraftOrderTradingPointDocument, { orderId, tradingPointId });
+}
+
 export async function finalizeOrder(
     orderId: string,
-    tradingPointAddress: string,
+    delivery: { method: DeliveryMethod; tradingPointAddress: string },
     paymentMethod: string,
 ): Promise<{ code: string }> {
     await adminApi(SetDraftOrderShippingAddressDocument, {
         orderId,
-        input: { streetLine1: tradingPointAddress || 'N/A', countryCode: 'RU' },
+        input: {
+            streetLine1: (delivery.method === 'courier' && delivery.tradingPointAddress) || 'N/A',
+            countryCode: 'RU',
+        },
     });
 
     const eligible = await adminApi(EligibleShippingMethodsForDraftOrderDocument, { orderId });
-    const shippingMethodId = eligible.eligibleShippingMethodsForDraftOrder[0]?.id;
-    if (shippingMethodId) {
-        await adminApi(SetDraftOrderShippingMethodDocument, { orderId, id: shippingMethodId });
-    }
+    const shippingMethod = eligible.eligibleShippingMethodsForDraftOrder.find(
+        m => m.code === SHIPPING_CODE_BY_DELIVERY[delivery.method],
+    );
+    if (!shippingMethod) throw new Error('The chosen delivery method is not available');
+    await adminApi(SetDraftOrderShippingMethodDocument, { orderId, id: shippingMethod.id });
 
     const transition = await adminApi(TransitionOrderToStateDocument, { id: orderId });
     if (

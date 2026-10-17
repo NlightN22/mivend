@@ -4140,6 +4140,8 @@ export type Mutation = {
     setDraftOrderShippingAddress: Order;
     /** Sets the shipping method by id, which can be obtained with the `eligibleShippingMethodsForDraftOrder` query */
     setDraftOrderShippingMethod: SetOrderShippingMethodResult;
+    /** Staff pick one of the order client's trading points on a draft order; null means self-pickup. */
+    setDraftOrderTradingPoint: Scalars['Boolean']['output'];
     /** Change the contract the order is registered under; only before it is reserved (#205). */
     setOrderContract: Array<OrderContractOption>;
     setOrderCustomFields: Maybe<Order>;
@@ -5059,6 +5061,11 @@ export type MutationSetDraftOrderShippingMethodArgs = {
     shippingMethodId: Scalars['ID']['input'];
 };
 
+export type MutationSetDraftOrderTradingPointArgs = {
+    orderId: Scalars['ID']['input'];
+    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 export type MutationSetOrderContractArgs = {
     contractId: Scalars['String']['input'];
     orderId: Scalars['ID']['input'];
@@ -5587,6 +5594,7 @@ export type OrderCustomFields = {
     cancelRequestStatus: Maybe<Scalars['String']['output']>;
     cancelRequestedAt: Maybe<Scalars['DateTime']['output']>;
     counterpartyId: Maybe<Scalars['String']['output']>;
+    deliveryAddress: Maybe<Scalars['String']['output']>;
     erpContractId: Maybe<Scalars['String']['output']>;
     erpOrderId: Maybe<Scalars['String']['output']>;
     erpOrderStatus: Maybe<Scalars['String']['output']>;
@@ -5635,6 +5643,7 @@ export type OrderFilterParameter = {
     creditLimitExceeded?: InputMaybe<BooleanOperators>;
     currencyCode?: InputMaybe<StringOperators>;
     customerLastName?: InputMaybe<StringOperators>;
+    deliveryAddress?: InputMaybe<StringOperators>;
     erpContractId?: InputMaybe<StringOperators>;
     erpOrderId?: InputMaybe<StringOperators>;
     erpOrderStatus?: InputMaybe<StringOperators>;
@@ -5920,6 +5929,7 @@ export type OrderSortParameter = {
     counterpartyId?: InputMaybe<SortOrder>;
     createdAt?: InputMaybe<SortOrder>;
     customerLastName?: InputMaybe<SortOrder>;
+    deliveryAddress?: InputMaybe<SortOrder>;
     erpContractId?: InputMaybe<SortOrder>;
     erpOrderId?: InputMaybe<SortOrder>;
     erpOrderStatus?: InputMaybe<SortOrder>;
@@ -9385,6 +9395,7 @@ export type UpdateOrderCustomFieldsInput = {
     cancelRequestStatus?: InputMaybe<Scalars['String']['input']>;
     cancelRequestedAt?: InputMaybe<Scalars['DateTime']['input']>;
     counterpartyId?: InputMaybe<Scalars['String']['input']>;
+    deliveryAddress?: InputMaybe<Scalars['String']['input']>;
     erpContractId?: InputMaybe<Scalars['String']['input']>;
     erpOrderId?: InputMaybe<Scalars['String']['input']>;
     erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
@@ -11075,7 +11086,13 @@ export type OrderCreateCounterpartiesQuery = {
             legalName: string;
             inn: string | null;
             priceType: string;
-            tradingPoints: Array<{ id: string; name: string; address: string }>;
+            tradingPoints: Array<{
+                id: string;
+                name: string;
+                address: string;
+                isActive: boolean;
+                customerStatus: string;
+            }>;
         }>;
     };
 };
@@ -11298,8 +11315,15 @@ export type EligibleShippingMethodsForDraftOrderQueryVariables = Exact<{
 }>;
 
 export type EligibleShippingMethodsForDraftOrderQuery = {
-    eligibleShippingMethodsForDraftOrder: Array<{ id: string }>;
+    eligibleShippingMethodsForDraftOrder: Array<{ id: string; code: string }>;
 };
+
+export type SetDraftOrderTradingPointMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type SetDraftOrderTradingPointMutation = { setDraftOrderTradingPoint: boolean };
 
 export type SetDraftOrderShippingMethodMutationVariables = Exact<{
     orderId: Scalars['ID']['input'];
@@ -14130,6 +14154,8 @@ export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
         id
         name
         address
+        isActive
+        customerStatus
       }
     }
   }
@@ -14395,11 +14421,20 @@ export const EligibleShippingMethodsForDraftOrderDocument = new TypedDocumentStr
     query EligibleShippingMethodsForDraftOrder($orderId: ID!) {
   eligibleShippingMethodsForDraftOrder(orderId: $orderId) {
     id
+    code
   }
 }
     `) as unknown as TypedDocumentString<
     EligibleShippingMethodsForDraftOrderQuery,
     EligibleShippingMethodsForDraftOrderQueryVariables
+>;
+export const SetDraftOrderTradingPointDocument = new TypedDocumentString(`
+    mutation SetDraftOrderTradingPoint($orderId: ID!, $tradingPointId: ID) {
+  setDraftOrderTradingPoint(orderId: $orderId, tradingPointId: $tradingPointId)
+}
+    `) as unknown as TypedDocumentString<
+    SetDraftOrderTradingPointMutation,
+    SetDraftOrderTradingPointMutationVariables
 >;
 export const SetDraftOrderShippingMethodDocument = new TypedDocumentString(`
     mutation SetDraftOrderShippingMethod($orderId: ID!, $id: ID!) {

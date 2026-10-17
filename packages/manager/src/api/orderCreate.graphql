@@ -10,6 +10,8 @@ query OrderCreateCounterparties {
                 id
                 name
                 address
+                isActive
+                customerStatus
             }
         }
     }
@@ -147,7 +149,12 @@ mutation SetDraftOrderShippingAddress($orderId: ID!, $input: CreateAddressInput!
 query EligibleShippingMethodsForDraftOrder($orderId: ID!) {
     eligibleShippingMethodsForDraftOrder(orderId: $orderId) {
         id
+        code
     }
+}
+
+mutation SetDraftOrderTradingPoint($orderId: ID!, $tradingPointId: ID) {
+    setDraftOrderTradingPoint(orderId: $orderId, tradingPointId: $tradingPointId)
 }
 
 mutation SetDraftOrderShippingMethod($orderId: ID!, $id: ID!) {

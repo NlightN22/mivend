@@ -312,7 +312,9 @@ customer has no usable preferred trading point (a warning at checkout, a hold of
 reserve; checkout is never refused, #241). The preferred point is assigned automatically
 (see `docs/access-control.md`, "The preferred trading point is self-healing"). The storefront
 renders the delivery options from `eligibleShippingMethods` and applies the method the customer
-selected; the shipping price is currently zero (price rules are not defined yet).
+selected; the shipping price is currently zero (price rules are not defined yet). A manager creating
+an order for a client picks the method and one of the client's own points the same way, self-pickup by
+default (`docs/order-contracts.md`, "Delivery point of an order").
 
 ### Pack-size / MOQ
 
