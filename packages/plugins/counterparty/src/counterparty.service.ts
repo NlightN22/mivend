@@ -17,33 +17,15 @@ import { withAggregateLock } from 'shared';
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
 import { CounterpartyCreatedEvent } from './counterparty-created.event';
 import { Counterparty } from './entities/counterparty.entity';
-import { CounterpartyErpDetails, definedErpDetails } from './counterparty-erp-details';
+import {
+    ActiveStateFields,
+    applyActiveStateFields,
+    newCounterpartyFromActiveState,
+} from './counterparty-active-state';
+import { selectHighUsage, summarizeCounterparties } from './counterparty-credit-queries';
+import { applyCounterpartyVisibilityScope } from './counterparty-visibility';
+import { applyCounterpartySort } from './counterparty-sort';
 import { CounterpartySortParameter, CounterpartyUpsertPayload, loggerCtx } from './types';
-
-// Column name must come from a whitelist of CounterpartySortParameter fields, never caller input
-// Today only GraphQL-validated enum keys arrive, but the whitelist must hold regardless
-const SORTABLE_COLUMNS: Record<keyof CounterpartySortParameter, string> = {
-    shortName: 'c.shortName',
-    inn: 'c.inn',
-    managerErpId: 'c.managerErpId',
-    phone: 'c.phone',
-    officialEmail: 'c.officialEmail',
-};
-
-interface ActiveStateFields extends CounterpartyErpDetails {
-    name: string | null;
-    isActive: boolean;
-    inn?: string | null;
-    erpGroupLabel?: string | null;
-    departmentId?: string | null;
-    assignedManagerId?: string | null;
-    // Raw erpId assignedManagerId was resolved from; always passed alongside it, even when that is null
-    managerErpId?: string | null;
-    legalAddress?: string | null;
-    factualAddress?: string | null;
-    phone?: string | null;
-    officialEmail?: string | null;
-}
 
 @Injectable()
 export class CounterpartyService {
@@ -98,46 +80,13 @@ export class CounterpartyService {
         const repo = this.connection.getRepository(ctx, Counterparty);
         const entity = await repo.findOne({ where: { erpId } });
         if (entity) {
-            if (fields.name) {
-                entity.legalName = fields.name;
-                entity.shortName = fields.name;
-            }
-            entity.isActive = fields.isActive;
-            if (fields.inn !== undefined) entity.inn = fields.inn;
-            if (fields.erpGroupLabel !== undefined) entity.erpGroupLabel = fields.erpGroupLabel;
-            if (fields.departmentId !== undefined) entity.departmentId = fields.departmentId;
-            if (fields.assignedManagerId !== undefined) {
-                entity.assignedManagerId = fields.assignedManagerId;
-            }
-            if (fields.managerErpId !== undefined) entity.managerErpId = fields.managerErpId;
-            if (fields.legalAddress !== undefined) entity.legalAddress = fields.legalAddress;
-            if (fields.factualAddress !== undefined) {
-                entity.factualAddress = fields.factualAddress;
-            }
-            if (fields.phone !== undefined) entity.phone = fields.phone;
-            if (fields.officialEmail !== undefined) entity.officialEmail = fields.officialEmail;
-            Object.assign(entity, definedErpDetails(fields));
+            applyActiveStateFields(entity, fields);
             await repo.save(entity);
             return true;
         }
         if (!fields.name) return false;
         const created = await repo.save(
-            repo.create({
-                erpId,
-                legalName: fields.name,
-                shortName: fields.name,
-                isActive: fields.isActive,
-                inn: fields.inn ?? null,
-                erpGroupLabel: fields.erpGroupLabel ?? null,
-                departmentId: fields.departmentId ?? null,
-                assignedManagerId: fields.assignedManagerId ?? null,
-                managerErpId: fields.managerErpId ?? null,
-                legalAddress: fields.legalAddress ?? null,
-                factualAddress: fields.factualAddress ?? null,
-                phone: fields.phone ?? null,
-                officialEmail: fields.officialEmail ?? null,
-                ...definedErpDetails(fields),
-            }),
+            repo.create(newCounterpartyFromActiveState(erpId, fields.name, fields)),
         );
         this.publishCreated(ctx, created);
         Logger.verbose(`Created partial counterparty erpId=${erpId} from Kafka stream`, loggerCtx);
@@ -175,8 +124,7 @@ export class CounterpartyService {
         return affected;
     }
 
-    // Register-driven stream: creditBalance can change without other fields, and vice versa
-    // No-op when no row exists for erpId: a balance alone cannot create a counterparty (no name)
+    // No-op when no row exists: a balance alone cannot create a counterparty (no name)
     async updateCreditBalance(
         ctx: RequestContext,
         erpId: string,
@@ -227,8 +175,7 @@ export class CounterpartyService {
         return this.applyVisibilityScope(ctx, this.baseVisibleQb(ctx)).then(qb => qb.getMany());
     }
 
-    // Paginated variant for direct display; findVisible() is unbounded, which is wrong for scope 'all'
-    // Scope 'all' roles would otherwise get an unbounded list of every counterparty
+    // Paginated variant for direct display; findVisible() is unbounded, wrong for scope 'all'
     async findVisiblePage(
         ctx: RequestContext,
         options: CounterpartyListFilter & {
@@ -238,7 +185,7 @@ export class CounterpartyService {
         } = {},
     ): Promise<PaginatedList<Counterparty>> {
         const qb = await this.visibleFilteredQb(ctx, options);
-        this.applySort(qb, options.sort);
+        applyCounterpartySort(qb, options.sort);
         const totalItems = await qb.getCount();
         const items = await qb
             .take(options.take ?? 50)
@@ -256,7 +203,6 @@ export class CounterpartyService {
     }
 
     // Returns null, not ForbiddenError, for out-of-scope ids: don't leak that the id exists
-    //
     async findOneVisible(ctx: RequestContext, id: ID): Promise<Counterparty | null> {
         let qb = this.baseVisibleQb(ctx).andWhere('c.id = :id', { id: String(id) });
         qb = await this.applyVisibilityScope(ctx, qb);
@@ -273,55 +219,21 @@ export class CounterpartyService {
     }> {
         let qb = this.baseVisibleQb(ctx);
         qb = await this.applyVisibilityScope(ctx, qb);
-        // Aggregate-only query, no GROUP BY — baseVisibleQb's ORDER BY shortName would be invalid
-        // here (Postgres requires an ORDER BY column to be aggregated or grouped), so clear it.
-        const raw = await qb
-            .orderBy()
-            .select('COUNT(*)', 'totalCount')
-            .addSelect('COUNT(*) FILTER (WHERE c.isActive)', 'activeCount')
-            .addSelect('COALESCE(SUM(c.creditBalance), 0)', 'totalCreditBalance')
-            .addSelect(
-                // TypeORM's alias replacement silently skips c.creditBalance::float, so camelCase columns need quotes
-                // Without quotes Postgres fails with 42703; mocks don't catch this, integration tests do
-                'COUNT(*) FILTER (WHERE c."creditLimit" > 0 AND c."creditBalance"::float / c."creditLimit" >= 0.8)',
-                'highUsageCount',
-            )
-            .getRawOne<{
-                totalCount: string;
-                activeCount: string;
-                totalCreditBalance: string;
-                highUsageCount: string;
-            }>();
-        return {
-            totalCount: Number(raw?.totalCount ?? 0),
-            activeCount: Number(raw?.activeCount ?? 0),
-            totalCreditBalance: Number(raw?.totalCreditBalance ?? 0),
-            highUsageCount: Number(raw?.highUsageCount ?? 0),
-        };
+        return summarizeCounterparties(qb);
     }
 
-    // Dashboard "Unassigned clients" KPI — a real COUNT scoped by the caller's visibility, not
-    // a fetch-everything-then-count in JS.
+    // Dashboard "Unassigned clients" KPI: a real COUNT scoped by the caller's visibility
     async countUnassigned(ctx: RequestContext): Promise<number> {
         let qb = this.baseVisibleQb(ctx);
         qb = await this.applyVisibilityScope(ctx, qb);
         return qb.orderBy().andWhere('c.assignedManagerId IS NULL').getCount();
     }
 
-    // Explicit LIMIT top-N, not fetching everything then slice(0,5) in JS
-    // Same bounded pattern as popularProductIds(take)
+    // Explicit LIMIT top-N, never fetch-everything-then-slice
     async findHighUsage(ctx: RequestContext, limit: number): Promise<Counterparty[]> {
         let qb = this.baseVisibleQb(ctx);
         qb = await this.applyVisibilityScope(ctx, qb);
-        // Quoted column names: TypeORM's alias replacement silently breaks on c.creditBalance::float
-        // Unquoted camelCase columns fail in Postgres (42703).
-        return qb
-            .orderBy()
-            .andWhere('c."creditLimit" > 0')
-            .andWhere('c."creditBalance"::float / c."creditLimit" >= 0.8')
-            .orderBy('c."creditBalance"::float / c."creditLimit"', 'DESC')
-            .take(limit)
-            .getMany();
+        return selectHighUsage(qb, limit);
     }
 
     private baseVisibleQb(ctx: RequestContext): SelectQueryBuilder<Counterparty> {
@@ -331,40 +243,11 @@ export class CounterpartyService {
             .orderBy('c.shortName', 'ASC');
     }
 
-    // Only the first non-null sort key applies: one active sort, matching MvAdvancedDataTable
-    // Falls back to baseVisibleQb's default (shortName ASC) when no sort is requested
-    private applySort(
-        qb: SelectQueryBuilder<Counterparty>,
-        sort?: CounterpartySortParameter,
-    ): void {
-        if (!sort) return;
-        for (const [field, order] of Object.entries(sort) as Array<
-            [keyof CounterpartySortParameter, 'ASC' | 'DESC' | null | undefined]
-        >) {
-            if (!order) continue;
-            qb.orderBy(SORTABLE_COLUMNS[field], order);
-            return;
-        }
-    }
-
-    private async applyVisibilityScope(
+    private applyVisibilityScope(
         ctx: RequestContext,
         qb: SelectQueryBuilder<Counterparty>,
     ): Promise<SelectQueryBuilder<Counterparty>> {
-        const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
-        switch (scope.kind) {
-            case 'own':
-                this.accessScopeService.applyOwnCounterpartyFilter(qb, 'c', scope.administratorId);
-                break;
-            case 'department':
-                // Only Branch gates visibility; Department is display-only and departmentId is never compared
-                // Null branchId hides the row from branch-scoped roles (deny-by-default); no IS NULL carve-out
-                qb.andWhere('c.branchId = :scopeBranch', { scopeBranch: scope.branchId ?? null });
-                break;
-            case 'all':
-                break;
-        }
-        return qb;
+        return applyCounterpartyVisibilityScope(this.accessScopeService, ctx, qb);
     }
 
     async getForCustomer(ctx: RequestContext, customerId: ID): Promise<Counterparty | null> {
@@ -378,7 +261,6 @@ export class CounterpartyService {
     }
 
     // Read-only: shows an existing link only; creating it is the separate activation mutation
-    //
     async getLinkedCustomerId(ctx: RequestContext, counterpartyId: ID): Promise<ID | null> {
         const result = await this.connection.rawConnection.query(
             `SELECT cu.id AS id FROM customer cu
