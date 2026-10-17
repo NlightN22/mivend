@@ -142,3 +142,13 @@ or fixed. Procedure: `.claude/skills/concurrency-audit/SKILL.md`.
   every upsert listed in findings 19 and 20.
 - Runtime behavior of findings 2, 5, 6 (no race test exists for them; `reserve-order.
   concurrency.test.ts` covers stock contention between different orders only).
+
+## Accepted residual risk
+
+- `ErpOrderService.onOrderPlaced`: a crash between the claim/history commit and the
+  `OrderReadyForErpEvent` publish loses that event. Its only consumer is the hub/branch
+  `order.created` replication in `plugin-sync`; the ERP submission is independent and is already
+  re-driven by `OrderSubmittedReconciler`. A sweep would need a durable "replicated" marker (the
+  claim leaves none, and `erp-order` cannot write the sync outbox: `sync` depends on `erp-order`),
+  so it is not a small change. Accepted: the window is one in-process publish call after commit, and
+  a missed replica is repaired by re-saving the order through sync resend, not silently wrong data.
