@@ -48,6 +48,8 @@ export class TestOrderCustomFields {
     @Column({ type: 'varchar', nullable: true }) cancelReason!: string | null;
     @Column({ type: 'varchar', nullable: true }) cancelRequestStatus!: string | null;
     @Column({ type: 'text', nullable: true }) cancelRefusalReason!: string | null;
+    @Column({ type: 'varchar', nullable: true }) tradingPointId!: string | null;
+    @Column({ type: 'varchar', nullable: true }) deliveryAddress!: string | null;
 }
 
 @Entity('reservation_test_customer')
@@ -176,7 +178,15 @@ export interface ReserveOrderHarness {
 
 // Registers the suite hooks; the returned object is filled in by beforeAll. ReservationService
 // runs unmodified against real Postgres, only the ERP-export gate collaborators are shimmed.
-export function useReserveOrderHarness(schemaKey: string): ReserveOrderHarness {
+export interface HarnessExtras {
+    entities: Array<new () => object>;
+    entityMap: Record<string, new () => object>;
+}
+
+export function useReserveOrderHarness(
+    schemaKey: string,
+    extras: HarnessExtras = { entities: [], entityMap: {} },
+): ReserveOrderHarness {
     const { schema, extra } = testSchemaOptions(schemaKey);
     const h = { published: [] as unknown[] } as ReserveOrderHarness;
 
@@ -196,6 +206,7 @@ export function useReserveOrderHarness(schemaKey: string): ReserveOrderHarness {
                 TestStockLevel,
                 TestReservation,
                 TestPayment,
+                ...extras.entities,
             ],
             synchronize: true,
         });
@@ -228,7 +239,9 @@ export function useReserveOrderHarness(schemaKey: string): ReserveOrderHarness {
                         query: (sql: string, params?: unknown[]) => manager!.query(sql, params),
                     };
                 }
-                const target = entityMap[entity.name as keyof typeof entityMap];
+                const target =
+                    entityMap[entity.name as keyof typeof entityMap] ??
+                    extras.entityMap[entity.name];
                 return manager ? manager.getRepository(target) : h.dataSource.getRepository(target);
             },
             withTransaction: async (
