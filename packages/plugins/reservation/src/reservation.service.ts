@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
@@ -11,10 +10,8 @@ import {
 import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
 import { PackagingPolicyService } from '@mivend/plugin-moq';
 
-import {
-    lockStockLevelsInOrder,
-    pickLocationWithMostFreeStock,
-} from './reservation-location-picker';
+import { lockStockLevelsInOrder } from './reservation-location-picker';
+import { allocateReservationRows } from './reservation-allocation';
 import { OrderChecksService } from './order-checks.service';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { Reservation } from './entities/reservation.entity';
@@ -28,7 +25,6 @@ import {
 import {
     ErpExportDataMissingError,
     InsufficientStockError,
-    InsufficientStockLine,
     InvalidMultiplicityError,
     OrderNotEligibleError,
 } from './reservation-errors';
@@ -166,64 +162,13 @@ export class ReservationService {
                         candidateLocationIds,
                     );
 
-                    const shortfalls: InsufficientStockLine[] = [];
-                    const now = new Date();
-                    const expiresAt = new Date(
-                        now.getTime() + reservationDays * 24 * 60 * 60 * 1000,
+                    const { rows, shortfalls } = await allocateReservationRows(
+                        this.connection,
+                        txCtx,
+                        order,
+                        candidateLocationIds,
+                        { branchId, reservationDays, trigger, administratorId },
                     );
-                    const rows: Reservation[] = [];
-                    const heldByVariant = new Map<string, Map<string, number>>();
-
-                    for (const line of order.lines) {
-                        const held = heldByVariant.get(String(line.productVariantId)) ?? new Map();
-                        const { stockLocationId, available: bestAvailable } =
-                            await pickLocationWithMostFreeStock(
-                                this.connection,
-                                txCtx,
-                                line.productVariantId,
-                                candidateLocationIds,
-                                { lock: true, held },
-                            );
-
-                        if (bestAvailable < line.quantity) {
-                            shortfalls.push({
-                                orderLineId: String(line.id),
-                                productVariantId: String(line.productVariantId),
-                                required: line.quantity,
-                                available: bestAvailable,
-                            });
-                            continue;
-                        }
-
-                        const generation = await this.nextGeneration(
-                            txCtx,
-                            String(line.id),
-                            stockLocationId,
-                        );
-                        held.set(stockLocationId, (held.get(stockLocationId) ?? 0) + line.quantity);
-                        heldByVariant.set(String(line.productVariantId), held);
-                        rows.push(
-                            reservationRepo.create({
-                                orderId: String(order.id),
-                                orderLineId: String(line.id),
-                                productVariantId: String(line.productVariantId),
-                                stockLocationId,
-                                branchId,
-                                quantity: line.quantity,
-                                status: 'active' as const,
-                                reservedAt: now,
-                                expiresAt,
-                                releasedAt: null,
-                                reservationGeneration: generation,
-                                creationMethod: trigger,
-                                confirmedByAdministratorId: administratorId
-                                    ? String(administratorId)
-                                    : null,
-                                erpOperationId: randomUUID(),
-                                erpConfirmedAt: null,
-                            }),
-                        );
-                    }
 
                     if (shortfalls.length > 0) {
                         throw new InsufficientStockError(shortfalls);
@@ -310,21 +255,6 @@ export class ReservationService {
         state: OrderReservationState,
     ): Promise<void> {
         await writeOrderReservationState(this.connection, ctx, order, state);
-    }
-
-    private async nextGeneration(
-        ctx: RequestContext,
-        orderLineId: string,
-        stockLocationId: string,
-    ): Promise<number> {
-        const result = await this.connection
-            .getRepository(ctx, Reservation)
-            .createQueryBuilder('r')
-            .select('MAX(r.reservationGeneration)', 'max')
-            .where('r.orderLineId = :orderLineId', { orderLineId })
-            .andWhere('r.stockLocationId = :stockLocationId', { stockLocationId })
-            .getRawOne<{ max: number | null }>();
-        return (result?.max ?? 0) + 1;
     }
 
     // Same lock as reserveOrder, so a concurrent successful reserve is not overwritten with FAILED.
