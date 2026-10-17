@@ -1,5 +1,5 @@
 import type { Injector, OrderProcess, OrderState } from '@vendure/core';
-import { TransactionalConnection } from '@vendure/core';
+import { TransactionalConnection, UserInputError } from '@vendure/core';
 import { In, IsNull } from 'typeorm';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
@@ -8,8 +8,8 @@ import { ProformaInvoiceWithdrawService } from './proforma-invoice-withdraw.serv
 let connection: TransactionalConnection;
 let withdrawService: ProformaInvoiceWithdrawService;
 
-// Any path into Cancelled withdraws the order's open proformas in its transaction; a proforma
-// with a payment in progress makes withdraw throw, which aborts the cancel instead of leaving it open.
+// Any path into Cancelled withdraws the order's open proformas in its transaction. A payment in
+// progress refuses withdraw; throwing rolls back the whole cancel, stock and reservations included.
 export const proformaInvoiceCancelProcess: OrderProcess<OrderState> = {
     init(injector: Injector) {
         connection = injector.get(TransactionalConnection);
@@ -24,6 +24,15 @@ export const proformaInvoiceCancelProcess: OrderProcess<OrderState> = {
                 supersededById: IsNull(),
             },
         });
-        for (const invoice of open) await withdrawService.withdraw(ctx, invoice.id);
+        for (const invoice of open) {
+            try {
+                await withdrawService.withdraw(ctx, invoice.id);
+            } catch (error) {
+                if (!(error instanceof UserInputError)) throw error;
+                throw new UserInputError(
+                    `Order ${order.code} cannot be cancelled: proforma invoice ${invoice.number} has a payment in progress or recorded`,
+                );
+            }
+        }
     },
 };
