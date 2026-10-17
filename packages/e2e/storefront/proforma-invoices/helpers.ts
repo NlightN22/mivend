@@ -79,16 +79,16 @@ export async function buildOrderAcrossOrganizations(page: Page): Promise<[string
     await clearCart(page);
     const [variantA, variantB] = await pickTwoVariantsFromDifferentOrganizations(page);
 
-    await gql(
-        page,
-        `mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 1) { __typename } }`,
-        { id: variantA },
-    );
-    await gql(
-        page,
-        `mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 1) { __typename } }`,
-        { id: variantB },
-    );
+    for (const id of [variantA, variantB]) {
+        const added = (await gql(
+            page,
+            `mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 1) { __typename ... on ErrorResult { message } } }`,
+            { id },
+        )) as { addItemToOrder: { __typename: string; message?: string } };
+        if (added.addItemToOrder.__typename !== 'Order') {
+            throw new Error(`addItemToOrder(${id}): ${added.addItemToOrder.message}`);
+        }
+    }
 
     await gql(
         page,
@@ -119,7 +119,8 @@ export async function myProformaInvoicesForOrder(
 ): Promise<ProformaInvoiceSummary[]> {
     const result = await gql(
         page,
-        `query { myProformaInvoices(options: { take: 50 }) { items { id uuid number status organizationId amount currencyCode order { code } } } }`,
+        `query($c: String!) { myProformaInvoices(options: { orderCode: $c, take: 50 }) { items { id uuid number status organizationId amount currencyCode order { code } } } }`,
+        { c: orderCode },
     );
     const items = (result.myProformaInvoices as { items: ProformaInvoiceSummary[] }).items;
     return items.filter(i => i.order.code === orderCode);

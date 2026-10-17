@@ -205,8 +205,7 @@ test.describe('Documents page — all document types', () => {
         await returnChip.click();
 
         const rows = page.locator('.doc-row');
-        const count = await rows.count();
-        expect(count).toBeGreaterThan(0);
-        await expect(page.locator('.doc-row').first()).toContainText('RET');
+        await expect(rows.first()).toContainText('RET', { timeout: 10000 });
+        await expect(rows.filter({ hasNotText: 'RET' })).toHaveCount(0, { timeout: 15000 });
     });
 });
