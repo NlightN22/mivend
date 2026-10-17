@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { TransactionalConnection } from '@vendure/core';
 import type { Injector, Order, RequestContext } from '@vendure/core';
 
 import { orderCancelReleaseProcess } from '../../order-cancel-release.process';
@@ -39,5 +40,22 @@ describe('orderCancelReleaseProcess', () => {
         const order = { id: 7, customFields: { reservationState: 'RESERVED' } };
         expect(await run('PaymentSettled', 2, order as never)).toEqual([]);
         expect(order.customFields.reservationState).toBe('RESERVED');
+    });
+
+    it('takes the proforma then the reserve lock before core saves a Cancelled order', async () => {
+        const keys: string[] = [];
+        const connection = {
+            withTransaction: async (c: unknown, work: (t: unknown) => Promise<unknown>) => work(c),
+            getRepository: () => ({
+                query: async (_sql: string, params: string[]) => keys.push(params[0]),
+            }),
+        };
+        orderCancelReleaseProcess.init?.({
+            get: (token: unknown) => (token === TransactionalConnection ? connection : undefined),
+        } as unknown as Injector);
+        const data = { ctx: {} as RequestContext, order: { id: 7 } as Order };
+        await orderCancelReleaseProcess.onTransitionStart?.('PaymentSettled', 'Shipped', data);
+        await orderCancelReleaseProcess.onTransitionStart?.('PaymentSettled', 'Cancelled', data);
+        expect(keys).toEqual(['proformaInvoices-for-order:7', 'reserve-order:7']);
     });
 });

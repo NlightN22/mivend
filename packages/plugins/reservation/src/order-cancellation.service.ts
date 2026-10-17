@@ -12,7 +12,7 @@ import {
 } from '@vendure/core';
 import { ErpOrderStatusEvent, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 import { NotificationService } from '@mivend/plugin-notification';
-import { withAggregateLock } from 'shared';
+import { withOrderCancelLocks } from 'shared';
 
 import { decideCancellation, erpStageFacts } from './order-cancellation.decision';
 import type { CancelDecision, CancelRefusal } from './order-cancellation.decision';
@@ -36,7 +36,7 @@ export interface CancelOptions {
 }
 
 // Every cancel path goes through here (docs/order-contracts.md, "Reserve and order cancellation"),
-// under reserveOrder's lock so a cancel, a confirm and a registration result serialize per order.
+// under the cancel locks so a cancel, a confirm and a registration result serialize per order.
 @Injectable()
 export class OrderCancellationService {
     constructor(
@@ -56,7 +56,7 @@ export class OrderCancellationService {
         reason: CancelReason,
         options: CancelOptions = {},
     ): Promise<CancelOutcome> {
-        return withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, async txCtx => {
+        return withOrderCancelLocks(this.connection, ctx, orderId, async txCtx => {
             const order = await this.connection
                 .getRepository(txCtx, Order)
                 .findOne({ where: { id: orderId } });
@@ -71,7 +71,7 @@ export class OrderCancellationService {
     }
 
     // Local cancel: release reservations, void the authorized payment, Vendure Cancelled, history
-    // reason, staff notification. Callers hold the order's `reserve-order:<id>` lock.
+    // reason, staff notification. Callers hold withOrderCancelLocks.
     async cancelLocally(ctx: RequestContext, order: Order, reason: string): Promise<void> {
         await this.reservationService.releaseReservations(ctx, order.id);
 

@@ -20,7 +20,7 @@ export type {
     OrderChangedInput,
     OrderRegistrationResultInput,
 } from './reservation-write-off-sync.types';
-import { withAggregateLock } from 'shared';
+import { withAggregateLock, withOrderCancelLocks } from 'shared';
 
 // Bridges erp.order.events.v1 `registration-result` and `changed` into the reservation domain (#75).
 // Never publishes ReservationReleasedEvent: that would send a release command back to the ERP that just wrote off.
@@ -171,7 +171,8 @@ export class ReservationWriteOffSyncService {
                     `orderEntityId=${input.orderEntityId}`,
             );
         }
-        await withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, txCtx =>
+        // The cancel locks: a cancelled derived status cancels the order inside this transaction.
+        await withOrderCancelLocks(this.connection, ctx, orderId, txCtx =>
             this.applyOrderChanged(txCtx, orderId, input),
         );
     }

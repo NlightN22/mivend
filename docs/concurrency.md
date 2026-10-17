@@ -128,3 +128,12 @@ listeners run from `eventBus.ofType` subscribers, which fire after commit; `Tier
 and never an advisory lock. The payment handlers (`offline-terms-handler`, `online-stub-handler`) are the only
 in-transaction advisory takers and take the proforma lock first.
 
+**Cancel (#231).** Every path into `Cancelled` takes `withOrderCancelLocks` (`shared`: proforma, then reserve) before
+any write: `OrderCancellationService.cancel` (customer, staff, reserve expiry), `OrderCancelResultService.apply` and
+the ERP `order-changed` inbox, and the Admin API `cancelOrder` override. The `Cancelled` hooks
+(`orderCancelReleaseProcess`, `proformaInvoiceCancelProcess`) take the same locks again after core's order save;
+`pg_advisory_xact_lock` is reentrant within one transaction, so those are no-ops there. A path that bypasses the entry
+points (Dashboard `transitionOrderToState`, hub/branch sync) gets the locks from `orderCancelReleaseProcess`'s
+`onTransitionStart`, which runs before core's first order save. A capture (`PaymentAttemptService`) takes the order's
+proforma lock before the document rows, so a late capture and a cancel serialize the same way.
+

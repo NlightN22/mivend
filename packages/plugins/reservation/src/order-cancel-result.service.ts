@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { withOrderCancelLocks } from 'shared';
 
 import { OrderCancellationService } from './order-cancellation.service';
 import { UnknownOrderUuidError } from './reservation-errors';
@@ -39,7 +39,7 @@ export class OrderCancelResultService {
                 `order-cancel-result: no Order found via orderUuid=${input.orderUuid}`,
             );
         }
-        return withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, async txCtx => {
+        return withOrderCancelLocks(this.connection, ctx, orderId, async txCtx => {
             const repo = this.connection.getRepository(txCtx, Order);
             const order = await repo.findOne({ where: { id: orderId } });
             if (!order) {
