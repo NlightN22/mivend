@@ -1,0 +1,52 @@
+import { describe, expect, it } from 'vitest';
+import type { Injector, Order, RequestContext } from '@vendure/core';
+import { TransactionalConnection } from '@vendure/core';
+
+import { proformaInvoiceCancelProcess } from '../../proforma-invoice-cancel.process';
+import { ProformaInvoiceWithdrawService } from '../../proforma-invoice-withdraw.service';
+
+async function run(
+    toState: string,
+    openIds: number[],
+): Promise<{ where: unknown[]; withdrawn: number[] }> {
+    const seen = { where: [] as unknown[], withdrawn: [] as number[] };
+    const connection = {
+        getRepository: () => ({
+            find: async (options: { where: unknown }) => {
+                seen.where.push(options.where);
+                return openIds.map(id => ({ id }));
+            },
+        }),
+    };
+    const withdraw = {
+        withdraw: async (_ctx: RequestContext, id: number) => {
+            seen.withdrawn.push(id);
+        },
+    };
+    proformaInvoiceCancelProcess.init?.({
+        get: (token: unknown) =>
+            token === TransactionalConnection
+                ? connection
+                : token === ProformaInvoiceWithdrawService
+                  ? withdraw
+                  : undefined,
+    } as unknown as Injector);
+    await proformaInvoiceCancelProcess.onTransitionEnd?.('PaymentSettled', toState as never, {
+        ctx: {} as RequestContext,
+        order: { id: '42' } as unknown as Order,
+    });
+    return seen;
+}
+
+describe('proformaInvoiceCancelProcess', () => {
+    it('withdraws every open current proforma of an order entering Cancelled', async () => {
+        const seen = await run('Cancelled', [3, 5]);
+        expect(seen.withdrawn).toEqual([3, 5]);
+        expect(seen.where[0]).toMatchObject({ orderId: 42 });
+    });
+
+    it('does not look at proformas on any other transition', async () => {
+        const seen = await run('PaymentSettled', [3]);
+        expect(seen).toEqual({ where: [], withdrawn: [] });
+    });
+});
