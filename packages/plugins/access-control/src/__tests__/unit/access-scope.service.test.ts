@@ -180,4 +180,13 @@ describe('AccessScopeService', () => {
             ).resolves.toBeUndefined();
         });
     });
+
+    it('getActorIdentity picks the alphabetically first role code, whatever the stored order', async () => {
+        administratorService.findOneByUserId.mockResolvedValue({
+            id: 'a',
+            customFields: { branchId: 'b1' },
+            user: { roles: [{ code: 'zeta' }, { code: 'alpha' }, { code: 'mid' }] },
+        });
+        expect(await service.getActorIdentity(ctx)).toEqual({ roleCode: 'alpha', branchId: 'b1' });
+    });
 });

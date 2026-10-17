@@ -22,7 +22,7 @@ function setup(policy: { consequence: Consequence; enabled: boolean; recipient?:
         defaultConsequence: 'require-approval',
         evaluate,
     });
-    const ensureForStage = vi.fn(
+    const effectiveForStage = vi.fn(
         async () => new Map([['manager.test', { recipient: null, ...policy }]]),
     );
     const connection = {
@@ -31,15 +31,17 @@ function setup(policy: { consequence: Consequence; enabled: boolean; recipient?:
         }),
         rawConnection: { query: vi.fn() },
     };
-    const service = new ChecksService(connection as never, registry, { ensureForStage } as never);
-    return { service, evaluate, ensureForStage, connection };
+    const service = new ChecksService(connection as never, registry, {
+        effectiveForStage,
+    } as never);
+    return { service, evaluate, effectiveForStage, connection };
 }
 
 const subject = { roleCode: null, branchId: 'b1', params: {} };
 
 describe('ChecksService.evaluate (ephemeral subject)', () => {
     it('returns the findings with the policy consequence, stores nothing and takes no lock', async () => {
-        const { service, connection, ensureForStage } = setup({
+        const { service, connection, effectiveForStage } = setup({
             consequence: 'require-approval',
             enabled: true,
         });
@@ -50,11 +52,10 @@ describe('ChecksService.evaluate (ephemeral subject)', () => {
             consequence: 'require-approval',
         });
         expect(connection.getRepository).not.toHaveBeenCalled();
-        expect(ensureForStage).toHaveBeenCalledWith(
+        expect(effectiveForStage).toHaveBeenCalledWith(
             ctx,
             expect.anything(),
             'adjust-price',
-            false,
             'b1',
         );
     });

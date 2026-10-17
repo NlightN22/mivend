@@ -15,7 +15,7 @@ export class CreditTermPolicyRecipient1791520000000 implements MigrationInterfac
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
-            `DELETE FROM check_policy WHERE "checkCode" = 'manager.credit-term-extension' AND "stage" = 'extend-credit-term' AND "branchId" IS NULL AND "recipient" = 'department-head'`,
+            `UPDATE check_policy SET "recipient" = NULL WHERE "checkCode" = 'manager.credit-term-extension' AND "stage" = 'extend-credit-term' AND "branchId" IS NULL AND "recipient" = 'department-head'`,
         );
     }
 }

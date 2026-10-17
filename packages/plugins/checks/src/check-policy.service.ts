@@ -23,6 +23,12 @@ export interface UpdateCheckPolicyInput {
     enabled: boolean;
 }
 
+export interface EffectivePolicy {
+    consequence: Consequence;
+    enabled: boolean;
+    recipient: string | null;
+}
+
 @Injectable()
 export class CheckPolicyService {
     constructor(
@@ -74,6 +80,37 @@ export class CheckPolicyService {
                 ...lock,
             });
             for (const row of overrides) effective.set(row.checkCode, row);
+        }
+        return effective;
+    }
+
+    // Read-only counterpart of `ensureForStage`: missing rows fall back to the declared defaults, nothing is written.
+    async effectiveForStage(
+        ctx: RequestContext,
+        providers: CheckProvider[],
+        stage: string,
+        branchId: string | null,
+    ): Promise<Map<string, EffectivePolicy>> {
+        if (providers.length === 0) return new Map();
+        const repo = this.connection.getRepository(ctx, CheckPolicy);
+        const codes = providers.map(p => p.code);
+        const rows = await repo.find({
+            where: [
+                { stage, checkCode: In(codes), branchId: IsNull() },
+                ...(branchId ? [{ stage, checkCode: In(codes), branchId }] : []),
+            ],
+        });
+        const effective = new Map<string, EffectivePolicy>();
+        for (const p of providers) {
+            const forCode = rows.filter(r => r.checkCode === p.code);
+            const row =
+                (branchId ? forCode.find(r => r.branchId === branchId) : undefined) ??
+                forCode.find(r => r.branchId === null);
+            effective.set(p.code, {
+                consequence: row?.consequence ?? this.registry.defaultConsequence(p, stage),
+                enabled: row?.enabled ?? this.registry.defaultEnabled(p, stage),
+                recipient: row?.recipient ?? null,
+            });
         }
         return effective;
     }
@@ -156,7 +193,8 @@ export class CheckPolicyService {
                     enabled: row.enabled,
                 };
                 row.consequence = input.consequence;
-                row.recipient = input.recipient ?? null;
+                row.recipient =
+                    input.recipient ?? (branchId ? await this.globalRecipient(repo, input) : null);
                 row.enabled = input.enabled;
                 const saved = await repo.save(row);
                 await this.connection.getRepository(txCtx, CheckPolicyHistory).save(
@@ -232,6 +270,17 @@ export class CheckPolicyService {
                 .getRepository(ctx, Branch)
                 .count({ where: { id: Number(branchId) } })) > 0;
         if (!found) throw new Error(`Unknown branch "${branchId}"`);
+    }
+
+    // A branch override saved without a recipient keeps following the global one, never silently drops it.
+    private async globalRecipient(
+        repo: Repository<CheckPolicy>,
+        input: UpdateCheckPolicyInput,
+    ): Promise<string | null> {
+        const global = await repo.findOneOrFail({
+            where: { checkCode: input.checkCode, stage: input.stage, branchId: IsNull() },
+        });
+        return global.recipient;
     }
 
     // A branch row is created as a copy of the effective global row, then edited.

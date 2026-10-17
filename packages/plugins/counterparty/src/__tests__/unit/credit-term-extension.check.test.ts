@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 import type { CreditTermLimitService } from '@mivend/plugin-access-control';
-import { CheckRegistry } from '@mivend/plugin-checks';
+import { CheckRegistry, MANAGER_STAGES, MANAGER_SUBJECT_TYPE } from '@mivend/plugin-checks';
 
 import { CreditTermExtensionCheck } from '../../credit-term-extension.check';
 
@@ -61,5 +61,31 @@ describe('CreditTermExtensionCheck', () => {
         const [finding] = await run(1, null, null);
         expect(getLimit).not.toHaveBeenCalled();
         expect(finding.facts).toMatchObject({ reason: 'no-limit' });
+    });
+});
+
+describe('CreditTermExtensionCheck default policy', () => {
+    it('lazily resolves to require-approval at extend-credit-term', () => {
+        const registry = new CheckRegistry();
+        registry.registerSubjectType({
+            type: MANAGER_SUBJECT_TYPE,
+            ephemeral: true,
+            stages: [
+                MANAGER_STAGES.extendReservation,
+                MANAGER_STAGES.extendCreditTerm,
+                MANAGER_STAGES.adjustPrice,
+            ],
+            allowedConsequences: ['info', 'warn', 'block'],
+            stageConsequences: {
+                [MANAGER_STAGES.extendCreditTerm]: ['require-approval'],
+                [MANAGER_STAGES.adjustPrice]: ['require-approval'],
+            },
+        });
+        new CreditTermExtensionCheck(registry, {} as never).onModuleInit();
+        const provider = registry.getCheck('manager.credit-term-extension');
+        expect(registry.defaultConsequence(provider!, 'extend-credit-term')).toBe(
+            'require-approval',
+        );
+        expect(registry.defaultEnabled(provider!, 'extend-credit-term')).toBe(true);
     });
 });

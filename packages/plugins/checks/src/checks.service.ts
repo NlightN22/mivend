@@ -110,13 +110,9 @@ export class ChecksService {
         lockPolicyRows: boolean,
     ): Promise<ResolvedFinding[]> {
         const branchId = definition.branchId?.(subject) ?? null;
-        const policies = await this.policies.ensureForStage(
-            ctx,
-            providers,
-            stage,
-            lockPolicyRows,
-            branchId,
-        );
+        const policies = lockPolicyRows
+            ? await this.policies.ensureForStage(ctx, providers, stage, true, branchId)
+            : await this.policies.effectiveForStage(ctx, providers, stage, branchId);
         const resolved: ResolvedFinding[] = [];
         for (const provider of providers) {
             const policy = policies.get(provider.code);

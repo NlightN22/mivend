@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
-import { CheckRegistry } from '@mivend/plugin-checks';
+import { CheckRegistry, MANAGER_STAGES, MANAGER_SUBJECT_TYPE } from '@mivend/plugin-checks';
 
 import { ReservationExtensionCheck } from '../../reservation-extension.check';
 import type { ReservationExtensionLimitService } from '../../reservation-extension-limit.service';
@@ -43,5 +43,29 @@ describe('ReservationExtensionCheck', () => {
 
     it('does not judge a request without a usable day count', async () => {
         expect(await run(null, Number.NaN).findings).toEqual([]);
+    });
+});
+
+describe('ReservationExtensionCheck default policy', () => {
+    it('lazily resolves to block at extend-reservation', () => {
+        const registry = new CheckRegistry();
+        registry.registerSubjectType({
+            type: MANAGER_SUBJECT_TYPE,
+            ephemeral: true,
+            stages: [
+                MANAGER_STAGES.extendReservation,
+                MANAGER_STAGES.extendCreditTerm,
+                MANAGER_STAGES.adjustPrice,
+            ],
+            allowedConsequences: ['info', 'warn', 'block'],
+            stageConsequences: {
+                [MANAGER_STAGES.extendCreditTerm]: ['require-approval'],
+                [MANAGER_STAGES.adjustPrice]: ['require-approval'],
+            },
+        });
+        new ReservationExtensionCheck(registry, {} as never).onModuleInit();
+        const provider = registry.getCheck('manager.reservation-extension-days');
+        expect(registry.defaultConsequence(provider!, 'extend-reservation')).toBe('block');
+        expect(registry.defaultEnabled(provider!, 'extend-reservation')).toBe(true);
     });
 });

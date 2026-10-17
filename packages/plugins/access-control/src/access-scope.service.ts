@@ -47,14 +47,14 @@ export class AccessScopeService {
         return customFields?.departmentId ?? null;
     }
 
-    // The acting administrator's first role code and branch, for per-actor limits and branch policies.
+    // The acting administrator's role code (alphabetically first, so it is deterministic) and branch, for per-actor limits and branch policies.
     async getActorIdentity(
         ctx: RequestContext,
     ): Promise<{ roleCode: string | null; branchId: string | null }> {
         const admin = await this.getAdministrator(ctx);
         const customFields = admin?.customFields as { branchId?: string | null } | undefined;
         return {
-            roleCode: admin?.user?.roles?.[0]?.code ?? null,
+            roleCode: (admin?.user?.roles ?? []).map(r => r.code).sort()[0] ?? null,
             branchId: customFields?.branchId ?? null,
         };
     }

@@ -98,7 +98,7 @@ to a role, nothing inherits it from `ManageErpIntegration`.
 `ReadCheckResults` is granted to every role that sees orders in the manager portal (operator, manager,
 department-head, general-director, security-officer, portal-admin): the findings concern the orders they
 already read, and `checkResults` still passes through the order visibility scope (a foreign order returns
-nothing). `ManageCheckPolicies` (consequence policies) stays with general-director and portal-admin. It is a global (central admin) right on purpose: it edits the global default and every branch's override (`updateCheckPolicy`/`resetCheckPolicyOverride` take any existing `branchId`, an unknown one is rejected); there is no per-branch policy editor role.
+nothing). `ManageCheckPolicies` (consequence policies) stays with general-director and portal-admin. It is a global (central admin) right on purpose: it edits the global default and every branch's override (`updateCheckPolicy`/`resetCheckPolicyOverride` take any existing `branchId`, an unknown one is rejected); there is no per-branch policy editor role. The same permission edits the `manager` subject's policies (reservation extension, credit-term, price floor, #242): no stronger or dedicated permission, because the audience already can soften order controls; a branch override saved without a recipient inherits the global recipient.
 `recomputeOrderChecks` writes results and takes the order lock, so it needs `ReadCheckResults` AND
 `ConfirmOrder` (the permission of the other staff order actions: confirm, release, set contract, edit lines before confirmation, #233);
 `@Allow` is any-of, so the second one is checked in the resolver. `ConfirmOrder` is broader than a

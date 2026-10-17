@@ -202,3 +202,8 @@ and checks are registered by the plugins that own them (the one exception is the
 - **Admin API.** `checkResults(subjectType, subjectId)` and `checkDefinitions(subjectType?)` need
   `ReadCheckResults` (granted to every role that reads orders, see `docs/access-control.md`); `checkPolicies(subjectType?)` and `updateCheckPolicy(input)` need
   `ManageCheckPolicies`.
+
+### Policy editing rights for the `manager` subject (#242)
+
+`updateCheckPolicy` and `resetCheckPolicyOverride` need `ManageCheckPolicies` for every subject type, `manager` included; no dedicated permission is added. Softening a manager limit (block to warn) is therefore a general-director / portal-admin decision, the same audience that already softens order controls; `docs/access-control.md` records this. A branch override saved without a recipient inherits the global row's recipient, so a branch never loses the credit-term limit role by omission.
+

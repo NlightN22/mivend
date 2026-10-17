@@ -8,6 +8,8 @@ interface Row {
     branchId: string | null;
     consequence: string;
     enabled: boolean;
+    recipient?: string | null;
+    checkCode?: string;
 }
 
 // Read-only lookup: a fake repository answering findOne by the branch it is asked for.
@@ -32,6 +34,8 @@ function service(rows: Row[]): CheckPolicyService {
         evaluate: () => [],
     });
     const repo = {
+        find: async () =>
+            rows.map(r => ({ checkCode: 'order.multiplicity', recipient: null, ...r })),
         findOne: async ({ where }: { where: { branchId: unknown } }) => {
             const wanted = typeof where.branchId === 'string' ? where.branchId : null;
             return rows.find(r => r.branchId === wanted) ?? null;
@@ -75,5 +79,39 @@ describe('CheckPolicyService.resolve', () => {
         await expect(service([]).resolve(ctx, 'nope', 'cart', null)).rejects.toThrow(
             /Unknown check/,
         );
+    });
+});
+
+describe('CheckPolicyService.effectiveForStage', () => {
+    const providerFor = (s: CheckPolicyService) =>
+        (s as unknown as { registry: CheckRegistry }).registry.getCheck('order.multiplicity')!;
+
+    it('falls back to declared defaults with a null recipient and never writes', async () => {
+        const s = service([]);
+        const map = await s.effectiveForStage(ctx, [providerFor(s)], 'cart', 'b1');
+        expect(map.get('order.multiplicity')).toEqual({
+            consequence: 'block',
+            enabled: false,
+            recipient: null,
+        });
+    });
+
+    it('uses the global row, and a branch override wins with its own recipient', async () => {
+        const s = service([
+            { branchId: null, consequence: 'warn', enabled: true, recipient: 'head' },
+            { branchId: 'b1', consequence: 'hold', enabled: true, recipient: 'dir' },
+        ]);
+        const p = providerFor(s);
+        expect((await s.effectiveForStage(ctx, [p], 'cart', null)).get(p.code)).toMatchObject({
+            consequence: 'warn',
+            recipient: 'head',
+        });
+        expect((await s.effectiveForStage(ctx, [p], 'cart', 'b1')).get(p.code)).toMatchObject({
+            consequence: 'hold',
+            recipient: 'dir',
+        });
+        expect((await s.effectiveForStage(ctx, [p], 'cart', 'b2')).get(p.code)).toMatchObject({
+            recipient: 'head',
+        });
     });
 });
