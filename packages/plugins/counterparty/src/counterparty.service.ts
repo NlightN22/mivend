@@ -12,6 +12,7 @@ import {
 import type { SelectQueryBuilder } from 'typeorm';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
+import { withAggregateLock } from 'shared';
 
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
 import { CounterpartyCreatedEvent } from './counterparty-created.event';
@@ -29,6 +30,22 @@ const SORTABLE_COLUMNS: Record<keyof CounterpartySortParameter, string> = {
     officialEmail: 'c.officialEmail',
 };
 
+interface ActiveStateFields extends CounterpartyErpDetails {
+    name: string | null;
+    isActive: boolean;
+    inn?: string | null;
+    erpGroupLabel?: string | null;
+    departmentId?: string | null;
+    assignedManagerId?: string | null;
+    // Raw erpId assignedManagerId was resolved from; always passed alongside it, even when that is null
+    //
+    managerErpId?: string | null;
+    legalAddress?: string | null;
+    factualAddress?: string | null;
+    phone?: string | null;
+    officialEmail?: string | null;
+}
+
 @Injectable()
 export class CounterpartyService {
     constructor(
@@ -39,19 +56,27 @@ export class CounterpartyService {
         private eventBus: EventBus,
     ) {}
 
+    // Find-then-write per erpId runs under an advisory lock so parallel inbox events cannot both insert.
     async upsert(ctx: RequestContext, payload: CounterpartyUpsertPayload): Promise<Counterparty> {
-        const repo = this.connection.getRepository(ctx, Counterparty);
-        let record = await repo.findOne({ where: { erpId: payload.erpId } });
-        const isNew = !record;
-        if (record) {
-            Object.assign(record, payload);
-        } else {
-            record = repo.create(payload);
-        }
-        const saved = await repo.save(record);
-        if (isNew) this.publishCreated(ctx, saved);
-        Logger.verbose(`Upserted counterparty erpId=${payload.erpId}`, loggerCtx);
-        return saved;
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            `counterparty:${payload.erpId}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, Counterparty);
+                let record = await repo.findOne({ where: { erpId: payload.erpId } });
+                const isNew = !record;
+                if (record) {
+                    Object.assign(record, payload);
+                } else {
+                    record = repo.create(payload);
+                }
+                const saved = await repo.save(record);
+                if (isNew) this.publishCreated(txCtx, saved);
+                Logger.verbose(`Upserted counterparty erpId=${payload.erpId}`, loggerCtx);
+                return saved;
+            },
+        );
     }
 
     // Never reuse upsert() here: the stream omits creditLimit/paymentDelayDays/priceType/branchId
@@ -59,21 +84,17 @@ export class CounterpartyService {
     async upsertActiveState(
         ctx: RequestContext,
         erpId: string,
-        fields: {
-            name: string | null;
-            isActive: boolean;
-            inn?: string | null;
-            erpGroupLabel?: string | null;
-            departmentId?: string | null;
-            assignedManagerId?: string | null;
-            // Raw erpId assignedManagerId was resolved from; always passed alongside it, even when that is null
-            //
-            managerErpId?: string | null;
-            legalAddress?: string | null;
-            factualAddress?: string | null;
-            phone?: string | null;
-            officialEmail?: string | null;
-        } & CounterpartyErpDetails,
+        fields: ActiveStateFields,
+    ): Promise<boolean> {
+        return withAggregateLock(this.connection, ctx, `counterparty:${erpId}`, txCtx =>
+            this.applyActiveState(txCtx, erpId, fields),
+        );
+    }
+
+    private async applyActiveState(
+        ctx: RequestContext,
+        erpId: string,
+        fields: ActiveStateFields,
     ): Promise<boolean> {
         const repo = this.connection.getRepository(ctx, Counterparty);
         const entity = await repo.findOne({ where: { erpId } });

@@ -16,9 +16,11 @@ const mockRepo = {
     save: vi.fn(),
     update: vi.fn(),
     find: vi.fn(),
+    query: vi.fn(),
 };
 
 const mockConnection = {
+    withTransaction: vi.fn((c: unknown, work: (c: unknown) => unknown) => work(c)),
     getRepository: vi.fn(() => mockRepo),
     rawConnection: { query: vi.fn() },
 };
