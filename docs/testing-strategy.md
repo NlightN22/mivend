@@ -134,6 +134,11 @@ component test verified as the reference. Confirmed by running all of `documents
 prevent (cross-plugin, not just cross-file, DDL races against one shared `mivend_test` database)
 is what this run exercises, not just each plugin in isolation.
 
+**Hand-mirrored Vendure columns.** Harnesses that mirror Vendure tables by hand must not drift from production:
+`apps/server/src/__tests__/unit/harness-custom-field-columns.test.ts` fails when a `customFields*` column used in
+any test no longer matches a custom field defined in production code. Columns of Vendure's own tables (for example
+`shipping_line`) change only with a Vendure upgrade and are not guarded; recheck the mirrors when upgrading.
+
 ## Mocking strategy
 
 Allowed to mock: external payment provider, ERP adapter, transport boundary, SMTP, file storage,
