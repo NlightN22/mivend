@@ -2,6 +2,15 @@
 
 Updated: 2026-10-16 09:00
 
+## #242 / #243 / #244 manager-action checks (2026-10-17, DONE: audited twice, pushed, closed)
+- Manager actions (`extend-reservation`, `extend-credit-term`, `adjust-price`) run through the checks framework: ephemeral `manager` subject (`ChecksService.evaluate`, no lock, no storage), policy `recipient` in `CheckContext`. Credit-term recipient (`department-head`) comes from migration `1791520000000` or, on `synchronize` contours, `make seed-all` (seed-approvals); unseeded means every request escalates (docs/environments.md).
+- `orderCheckFlagProcess` keeps `hasCheckFindings` through core's trailing order save (#243). `harness-custom-field-columns.test.ts` guards hand-mirrored harness columns (#244).
+- Known flakes logged, not baseline: one-off load failure of erp-integration `integration-inbox-processor.int.test.ts` (not reproduced after batch fixes); manager `auth.store.test.ts` flakes under load; plugin-sync dead-letter wait fixed in 57cceda3.
+
+## #239 / #240 follow-ups (2026-10-17, implemented and committed locally, awaiting audit, not pushed)
+- #239 done except decisions: point-address snapshot at checkout (#238), `erpStatusAt` event time, client-side pack rounding on repeat order, e2e cross-counterparty visibility test.
+- #240: many audit findings were already fixed; new fixes in sync outbox claim, erp-integration inbox guards + `OrderSubmittedReconciler`, price-entry/counterparty locks, reservation (`reserveDueBy`, StockLevel lock order, atomic extension), erp-order `erpStatus` claim, acquiring inbox. Open: #27 (partial allocation over-allocates a proforma), customer-pricing upsert lock (unique indexes make a race fail loudly), reservation-failure.record 300 ms loop, same-variant lines in one order each see full free stock (unverified).
+
 ## #230 connection bar + z-index layer scale (2026-10-16, DONE: audited, pushed, closed)
 
 - All page-level stacking uses `--mv-z-*` tokens in `packages/ui-kit/src/styles/tokens.css` (sticky 100 < dropdown 200 < floating 300 < overlay 400 < modal 500 < popover 600 < connection-bar 700 < toast 800), mirrored in `tokens/layers.ts` (`layers`), which configures Element Plus and PrimeVue overlays. Raw z-index only <=10 inside one component; `layers.test.ts` enforces it in .vue/.ts/.css of ui-kit and both portals. Fixed: manager notification panel covered MvModal.
