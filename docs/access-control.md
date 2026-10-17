@@ -101,7 +101,7 @@ already read, and `checkResults` still passes through the order visibility scope
 nothing). `ManageCheckPolicies` (consequence policies) stays with general-director and portal-admin. It is a global (central admin) right on purpose: it edits the global default and every branch's override (`updateCheckPolicy`/`resetCheckPolicyOverride` take any existing `branchId`, an unknown one is rejected); there is no per-branch policy editor role. The same permission edits the `manager` subject's policies (reservation extension, credit-term, price floor, #242): no stronger or dedicated permission, because the audience already can soften order controls; a branch override saved without a recipient inherits the global recipient.
 `recomputeOrderChecks` writes results and takes the order lock, so it needs `ReadCheckResults` AND
 `ConfirmOrder` (the permission of the other staff order actions: confirm, release, set contract, edit lines before confirmation, #233);
-`@Allow` is any-of, so the second one is checked in the resolver. `ConfirmOrder` is broader than a
+`@Allow` is any-of, so the second one is checked in the resolver. The Admin API `cancelOrder` override (#231) keeps core's `UpdateOrder` but resolves the order through `OrderVisibilityService` first: core checks only the channel, so an order outside the administrator's scope is `EntityNotFound`. `ConfirmOrder` is broader than a
 recompute strictly needs; accepted for now (owner decision). If a role must recompute without being able to
 confirm, introduce a dedicated permission instead of widening this one.
 

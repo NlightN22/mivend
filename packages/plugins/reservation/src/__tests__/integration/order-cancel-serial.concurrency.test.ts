@@ -24,6 +24,9 @@ const h = useReserveOrderHarness('order_cancel_serial_concurrency');
 const manager = (ctx: RequestContext) =>
     (ctx as unknown as { __manager: import('typeorm').EntityManager }).__manager;
 
+const visibleQuery = { alias: 'o', andWhere: () => visibleQuery, getOne: async () => ({}) };
+const visibleToAll = { buildVisibleOrdersQuery: async () => visibleQuery } as never;
+
 // Mirrors core's cancelOrder: release the allocation of a not-yet-cancelled order, then transition,
 // whose hook releases reservations. The sleep widens the window a missing lock would leave open.
 function fakeCore(stockLevelId: string): { calls: number; orderService: unknown } {
@@ -78,7 +81,11 @@ describe('Admin API cancelOrder serialized per order (real Postgres)', () => {
             stockAllocated: 2,
         });
         const core = fakeCore(level.id);
-        const service = new OrderCancelSerialService(h.connection, core.orderService as never);
+        const service = new OrderCancelSerialService(
+            h.connection,
+            core.orderService as never,
+            visibleToAll,
+        );
         const published = h.published.length;
 
         await Promise.all([
@@ -105,7 +112,11 @@ describe('Admin API cancelOrder serialized per order (real Postgres)', () => {
             stockAllocated: 0,
         });
         const core = fakeCore(level.id);
-        const service = new OrderCancelSerialService(h.connection, core.orderService as never);
+        const service = new OrderCancelSerialService(
+            h.connection,
+            core.orderService as never,
+            visibleToAll,
+        );
 
         const whole = await service.cancelOrder(mockCtx, { orderId: order.id });
         const partial = await service.cancelOrder(mockCtx, {
@@ -127,7 +138,11 @@ describe('Admin API cancelOrder serialized per order (real Postgres)', () => {
             stockAllocated: 2,
         });
         const core = fakeCore(level.id);
-        const service = new OrderCancelSerialService(h.connection, core.orderService as never);
+        const service = new OrderCancelSerialService(
+            h.connection,
+            core.orderService as never,
+            visibleToAll,
+        );
         // OrderLineEditService.edit's lock order: proforma, reserve, then the order row.
         const edit = withAggregateLock(
             h.connection,
