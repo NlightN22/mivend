@@ -26,7 +26,9 @@ describe('InboxService', () => {
     let mockRepo: ReturnType<typeof createMockRepo>;
     let mockConnection: TransactionalConnection;
 
-    const qb = {
+    const qb: Record<'update' | 'set' | 'where', ReturnType<typeof vi.fn>> & {
+        execute: ReturnType<typeof vi.fn>;
+    } = {
         update: vi.fn(() => qb),
         set: vi.fn(() => qb),
         where: vi.fn(() => qb),
