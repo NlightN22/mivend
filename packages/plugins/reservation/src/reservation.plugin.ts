@@ -27,6 +27,7 @@ import { OrderCheckStaleService } from './order-check-stale.service';
 import { OrderCheckSubjectLoader } from './order-check-subject-loader.service';
 import { OrderCheckSubjectRegistrar } from './order-check-subject.registrar';
 import { OrderExportDataRegistrar } from './order-export-data.registrar';
+import { orderCheckFlagProcess } from './order-check-flag.process';
 import { OrderChecksListener } from './order-checks.listener';
 import { OrderChecksResolver } from './order-checks.resolver';
 import { adminOrderChecksSchema } from './order-checks.schema';
@@ -181,6 +182,10 @@ import type { ReservationPluginOptions } from './types';
     },
     configuration: (config: RuntimeVendureConfig) => {
         addReservationCustomFields(config, ReservationPlugin.options);
+        config.orderOptions.process = [
+            ...(config.orderOptions.process ?? []),
+            orderCheckFlagProcess,
+        ];
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
             createReservationExpiryTask(ReservationPlugin.options),

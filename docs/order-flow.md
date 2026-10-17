@@ -625,3 +625,7 @@ silently reverted (`reservationState` kept going back to `NOT_REQUIRED`). A fres
 connection, and `writeOrderReservationState` re-verifies the write and retries a bounded number of times.
 It writes with `repo.update()` of the changed keys only, because `.save(order)` recomputes calculated fields
 (`taxSummary`) that need relations a narrow load does not have.
+
+`hasCheckFindings` is covered by an `OrderProcess` (`orderCheckFlagProcess`): on every transition out of the cart
+it stamps the stored finding count onto the in-memory order, so core's trailing save writes the current value
+instead of reverting it (#243).
