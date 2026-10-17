@@ -172,14 +172,17 @@ export class ReservationService {
                         now.getTime() + reservationDays * 24 * 60 * 60 * 1000,
                     );
                     const rows: Reservation[] = [];
+                    const heldByVariant = new Map<string, Map<string, number>>();
 
                     for (const line of order.lines) {
+                        const held = heldByVariant.get(String(line.productVariantId)) ?? new Map();
                         const { stockLocationId, available: bestAvailable } =
                             await pickLocationWithMostFreeStock(
                                 this.connection,
                                 txCtx,
                                 line.productVariantId,
                                 candidateLocationIds,
+                                { lock: true, held },
                             );
 
                         if (bestAvailable < line.quantity) {
@@ -197,6 +200,8 @@ export class ReservationService {
                             String(line.id),
                             stockLocationId,
                         );
+                        held.set(stockLocationId, (held.get(stockLocationId) ?? 0) + line.quantity);
+                        heldByVariant.set(String(line.productVariantId), held);
                         rows.push(
                             reservationRepo.create({
                                 orderId: String(order.id),

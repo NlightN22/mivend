@@ -22,13 +22,14 @@ export async function lockStockLevelsInOrder(
         .getMany();
 }
 
+// `held`: quantities per location of this variant already picked by the caller but not yet saved.
 // Locks each candidate StockLevel FOR UPDATE so concurrent reservations serialize before reading free stock.
 export async function pickLocationWithMostFreeStock(
     connection: TransactionalConnection,
     ctx: RequestContext,
     productVariantId: ID,
     candidateLocationIds: string[],
-    options: { lock: boolean } = { lock: true },
+    options: { lock: boolean; held?: Map<string, number> } = { lock: true },
 ): Promise<{ stockLocationId: string; available: number }> {
     let best = { stockLocationId: candidateLocationIds[0], available: -Infinity };
     for (const locationId of candidateLocationIds) {
@@ -50,7 +51,7 @@ export async function pickLocationWithMostFreeStock(
         const available = freeQuantity(
             stockLevel?.stockOnHand ?? 0,
             stockLevel?.stockAllocated ?? 0,
-            reserved.reduce((sum, r) => sum + r.quantity, 0),
+            reserved.reduce((sum, r) => sum + r.quantity, 0) + (options.held?.get(locationId) ?? 0),
             stockLevel?.customFields?.erpAvailableQuantity,
         );
         if (available > best.available) best = { stockLocationId: locationId, available };
