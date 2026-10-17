@@ -146,15 +146,33 @@ describe('TeamAdministratorService.findTeam', () => {
         expect(await service.findTeam(ctx)).toEqual([]);
     });
 
-    it.each<AccessScope>([{ kind: 'all' }, { kind: 'own', administratorId: 1 }])(
-        '"$kind" scope keeps the Vendure administrator list unchanged',
-        async scope => {
-            resolveCounterpartyScope.mockResolvedValue(scope);
-            administratorService.findAll.mockResolvedValue({ items: [{ id: 42 }] });
+    it("own scope lists the whole team of the caller's branch", async () => {
+        resolveCounterpartyScope.mockResolvedValue({ kind: 'own', administratorId: ids.ManagerA });
 
-            expect(await service.findTeam(ctx)).toEqual([{ id: 42 }]);
-        },
-    );
+        const team = await service.findTeam(ctx);
+
+        expect(team.map(a => a.lastName).sort()).toEqual(['HeadA', 'ManagerA', 'OperatorA']);
+        expect(administratorService.findAll).not.toHaveBeenCalled();
+    });
+
+    it.each(['Unbranched', 'GoneA'])('own scope of %s lists nobody', async lastName => {
+        resolveCounterpartyScope.mockResolvedValue({ kind: 'own', administratorId: ids[lastName] });
+
+        expect(await service.findTeam(ctx)).toEqual([]);
+    });
+
+    it('own scope without an administrator lists nobody', async () => {
+        resolveCounterpartyScope.mockResolvedValue({ kind: 'own' });
+
+        expect(await service.findTeam(ctx)).toEqual([]);
+    });
+
+    it('"all" scope keeps the Vendure administrator list unchanged', async () => {
+        resolveCounterpartyScope.mockResolvedValue({ kind: 'all' });
+        administratorService.findAll.mockResolvedValue({ items: [{ id: 42 }] });
+
+        expect(await service.findTeam(ctx)).toEqual([{ id: 42 }]);
+    });
 });
 
 describe('TeamAdministratorService.findInBranch', () => {
