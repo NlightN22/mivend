@@ -288,4 +288,22 @@ describe('DocumentsService (integration, real Postgres)', () => {
         expect(await rerender.missedNote(mockCtx, document, false)).toBe(true);
         expect(await rerender.missedNote(mockCtx, document, true)).toBe(false);
     });
+
+    it('a render without the note ignores a proforma cancelled after the render', async () => {
+        const invoices = dataSource.getRepository(TestProformaInvoice);
+        const invoice = await invoices.save({ status: 'issued' });
+        const document = (await dataSource.getRepository(TestDocument).save({
+            type: 'proforma-invoice',
+            counterpartyId: 'cp-1',
+            proformaInvoiceId: String(invoice.id),
+            number: '101-01-1',
+            issueDate: new Date(),
+            status: 'ready',
+            source: 'generated',
+        })) as never;
+
+        await invoices.update({ id: invoice.id }, { status: 'cancelled' });
+
+        expect(await rerender.missedNote(mockCtx, document, false)).toBe(false);
+    });
 });
