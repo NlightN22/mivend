@@ -15,6 +15,7 @@ import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { displayStatusOf } from './proforma-invoice-display';
+import { ProformaInvoiceOrderCancelService } from './proforma-invoice-order-cancel.service';
 import { ProformaInvoiceWithdrawService } from './proforma-invoice-withdraw.service';
 import { ProformaInvoiceService, ProformaInvoiceListOptions } from './proforma-invoice.service';
 import { ProformaInvoiceIssuingService } from './proforma-invoice-issuing.service';
@@ -31,6 +32,7 @@ export class ProformaInvoiceAdminResolver {
         private orderVisibility: OrderVisibilityService,
         private withdrawService: ProformaInvoiceWithdrawService,
         private administratorService: AdministratorService,
+        private orderCancelService: ProformaInvoiceOrderCancelService,
     ) {}
 
     @Mutation()
@@ -45,6 +47,10 @@ export class ProformaInvoiceAdminResolver {
             ? await qb.andWhere(`${qb.alias}.id = :orderId`, { orderId: invoice.orderId }).getOne()
             : null;
         if (!invoice || !visible) throw new ForbiddenError();
+        if (visible.state === 'Cancelled') {
+            await this.orderCancelService.closeForCancelledOrder(ctx, invoice.orderId);
+            return (await this.proformaInvoiceService.findOne(ctx, Number(invoice.id)))!;
+        }
         const administrator = ctx.activeUserId
             ? await this.administratorService.findOneByUserId(ctx, ctx.activeUserId)
             : null;

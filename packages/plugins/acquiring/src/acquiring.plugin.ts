@@ -63,6 +63,7 @@ import { VariantOrganizationHealthResolver } from './variant-organization-health
 import { VariantOrganizationHealthService } from './variant-organization-health.service';
 import { ProductVariantAvailabilityResolver } from './variant-availability.resolver';
 import { ProformaInvoiceWithdrawService } from './proforma-invoice-withdraw.service';
+import { ProformaInvoiceOrderCancelService } from './proforma-invoice-order-cancel.service';
 import { proformaInvoiceCancelProcess } from './proforma-invoice-cancel.process';
 import { ACQUIRING_PLUGIN_OPTIONS } from './types';
 import type { AcquiringPluginOptions } from './types';
@@ -94,6 +95,7 @@ import type { AcquiringPluginOptions } from './types';
         ProformaInvoiceService,
         ProformaInvoiceIssuingService,
         ProformaInvoiceWithdrawService,
+        ProformaInvoiceOrderCancelService,
         PaymentAttemptService,
         SettlementEntryService,
         PaymentInboxProcessorService,

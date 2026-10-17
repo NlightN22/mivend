@@ -205,6 +205,8 @@ export class SettlementEntryService {
                 if (!next) break;
                 preferred = next;
             }
+            // Money for a withdrawn document (cancelled order) is the customer's advance, never another order's.
+            if (preferred?.status === 'cancelled') return [];
             if (preferred && (preferred.status === 'pending' || preferred.status === 'issued')) {
                 const at = open.findIndex(p => Number(p.id) === Number(preferred!.id));
                 if (at >= 0) open.splice(at, 1);

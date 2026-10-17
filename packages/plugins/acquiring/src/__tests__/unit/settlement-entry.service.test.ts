@@ -276,7 +276,22 @@ describe('SettlementEntryService.allocate', () => {
         expect(mockProformaInvoiceService.updateStatus).toHaveBeenCalledWith(mockCtx, 3, 'paid');
     });
 
-    it.each(['superseded', 'cancelled', 'paid'] as const)(
+    it('credits the whole payment to the advance when the named document is cancelled', async () => {
+        const dead = makeProformaInvoice({ id: 1, status: 'cancelled' });
+        mockProformaInvoiceService.findOne.mockResolvedValue(dead);
+        setup([makeProformaInvoice({ id: 2, amount: 5000 })], dead);
+
+        const entries = await service.allocate(
+            mockCtx,
+            makePaymentAttempt({ proformaInvoiceId: 1 }),
+        );
+
+        expect(entries).toHaveLength(1);
+        expect(entries[0]).toMatchObject({ proformaInvoiceId: null, amount: 5000 });
+        expect(mockProformaInvoiceService.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it.each(['superseded', 'paid'] as const)(
         'applies FIFO over the open documents when the target is %s and has no open current version',
         async status => {
             const dead = makeProformaInvoice({ id: 1, status });

@@ -106,7 +106,7 @@ export async function releaseOrderReservation(token: string, orderId: string): P
     );
 }
 
-// Cancel releases reservations and withdraws open proformas itself, and is idempotent (#231).
+// Cancel releases reservations and closes the proformas itself, is never refused and is idempotent (#231).
 export async function cancelTestOrder(token: string, orderId: string): Promise<void> {
     const result = await adminGql<{ cancelOrder: { __typename: string; message?: string } }>(
         `mutation($input: CancelOrderInput!) {
@@ -131,7 +131,7 @@ export async function cancelTestOrder(token: string, orderId: string): Promise<v
     );
     const active = left.data.orderReservations.filter(r => r.status === 'active');
     const open = left.data.proformaInvoicesForOrder.filter(
-        p => p.status === 'issued' || p.status === 'pending',
+        p => p.status === 'issued' || p.status === 'pending' || p.status === 'paid',
     );
     if (active.length > 0 || open.length > 0) {
         throw new Error(

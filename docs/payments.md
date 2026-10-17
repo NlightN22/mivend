@@ -345,7 +345,15 @@ redeliver.
   current, unpaid proforma (`withdrawProformaInvoice`, UpdateOrder + order visibility); it is refused when the version
   has any settlement allocation or an active (`pending`/`authorized`) payment attempt, records
   `withdrawnAt`/`withdrawnByAdministratorId`, and emits no outward event (the ERP does not know proformas yet); a later order change or request
-  issues a new version. "Paid X of Y" is shown on the order page only (storefront aside, manager totals), never in lists, from `Order.customFields.erpPaidAmount` (minor units, written by `order-changed` on both the mivend and the external-order path, only when the event carries `paidAmount`). It is a lower bound: sales documents may post with an empty deal in the ERP, so the label says "at least"; nothing is shown when it is null.
+  issues a new version.
+- **Order cancel and payments (#231):** cancelling an order is never refused over payments. On every path into
+  `Cancelled` (manager, customer, auto-cancel, ERP `markedForDeletion`) `ProformaInvoiceOrderCancelService`, in the
+  cancel's transaction, closes every current version of the order (`pending`/`issued`/`paid` -> `cancelled`, even with a
+  `pending`/`authorized` attempt) and moves the net allocation of each of the order's documents to the advance with an
+  append-only `order.cancelled` pair (`-X` on the document, `+X` advance), so a repeat moves nothing. A payment that
+  arrives later naming a cancelled document goes wholly to the advance (step 2 below), never to another order. The
+  manual `withdrawProformaInvoice` keeps its refusals on a live order (the customer is still paying that document); on
+  an already cancelled order it runs the same close-and-release instead, never refused. "Paid X of Y" is shown on the order page only (storefront aside, manager totals), never in lists, from `Order.customFields.erpPaidAmount` (minor units, written by `order-changed` on both the mivend and the external-order path, only when the event carries `paidAmount`). It is a lower bound: sales documents may post with an empty deal in the ERP, so the label says "at least"; nothing is shown when it is null.
 - Migration `1791501000000` renumbers existing documents and is irreversible (its `down()` only drops columns).
 - **Allocation of payments to documents (FIFO in this module) is frozen:** kept as is, not extended and not
   used for display. Payments are money on the counterparty balance; documents and debt come from the ERP.
@@ -366,9 +374,9 @@ How an ERP-reported payment fact is applied (`PaymentInboxProcessorService` -> `
    stream (#195) and follows the same FIFO rule; the REST callback (test-only) always names a document.
 2. **Order.** The named document first, when open (`pending`/`issued`). A `superseded` named document redirects to
    the current head of its version chain (`supersededById`, same counterparty and organization). Whatever remains,
-   or everything when the named document is not open (`paid`, `cancelled`, no open head), goes FIFO over the
+   or everything when the named document is not open (`paid`, no open head), goes FIFO over the
    counterparty's open documents of the same organization and currency, oldest first. An already paid named
-   document never blocks the money.
+   document never blocks the money. A `cancelled` named document (or chain head) sends the whole amount to the advance.
 3. **Remainder.** Money no open document can take is stored as an advance `SettlementEntry` (no document, no
    order) on the counterparty. It is not consumed automatically by later documents; a person re-allocates it.
 4. **Version is irrelevant.** The printed version the customer paid does not matter, only the fact of payment.

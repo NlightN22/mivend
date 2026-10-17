@@ -207,7 +207,6 @@ export default async function globalSetup(): Promise<void> {
     // Cancelling prior runs' orders is what releases allocated stock: seed resets only stockOnHand,
     // so stockAllocated creeps up. Page through all non-cancelled orders, not just the first 100.
     const pageSize = 100;
-    const refused = new Set<string>();
     for (;;) {
         // Keep skip at 0: cancelling removes orders from the state-filtered set, so the next page
         // shifts into view. Advancing skip would skip over them.
@@ -221,22 +220,13 @@ export default async function globalSetup(): Promise<void> {
                     }
                 }
             }`,
-            { id: customerId, take: pageSize + refused.size },
+            { id: customerId, take: pageSize },
             operatorToken,
         );
-        const orders = (priorOrdersResult.data.customer?.orders.items ?? []).filter(
-            o => !refused.has(o.id),
-        );
+        const orders = priorOrdersResult.data.customer?.orders.items ?? [];
         if (orders.length === 0) break;
         for (const priorOrder of orders) {
-            try {
-                await cancelTestOrder(operatorToken, priorOrder.id);
-            } catch (error) {
-                // Cancel is refused while a payment is in progress (#231); report, do not loop on it.
-                if (!String(error).includes('payment in progress')) throw error;
-                refused.add(priorOrder.id);
-                console.warn(`global-setup: order ${priorOrder.id} left open: ${String(error)}`);
-            }
+            await cancelTestOrder(operatorToken, priorOrder.id);
         }
     }
 

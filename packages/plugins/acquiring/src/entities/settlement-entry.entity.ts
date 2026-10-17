@@ -7,7 +7,8 @@ export type SettlementEntrySourceType =
     | 'refund.succeeded'
     | 'chargeback.created'
     | 'order.created'
-    | 'erp-reconciliation';
+    | 'erp-reconciliation'
+    | 'order.cancelled';
 
 @Entity()
 export class SettlementEntry extends UuidEntity {
