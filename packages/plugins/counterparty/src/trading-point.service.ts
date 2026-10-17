@@ -153,7 +153,13 @@ export class TradingPointService {
                 email: c.email ?? null,
                 isPrimary: c.isPrimary ?? false,
             }));
-            if (JSON.stringify(before) !== JSON.stringify(after)) {
+            // Contacts load without a stable order, so compare them as a set.
+            const key = (list: typeof after): string =>
+                list
+                    .map(c => JSON.stringify(c))
+                    .sort()
+                    .join();
+            if (key(before) !== key(after)) {
                 changedFields.contacts = { from: before, to: after };
                 await cpRepo.delete({ tradingPoint: { id: record.id } });
                 record.contacts = after.map(c => cpRepo.create(c));

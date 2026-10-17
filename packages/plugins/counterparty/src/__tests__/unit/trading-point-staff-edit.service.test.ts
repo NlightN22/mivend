@@ -108,6 +108,25 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
             expect(mockVersioningService.recordChange).not.toHaveBeenCalled();
         });
 
+        it('treats the same contacts in a different order as unchanged', async () => {
+            const ivan = { name: 'Ivan', phone: '123', email: null, isPrimary: true };
+            const petr = { name: 'Petr', phone: null, email: null, isPrimary: false };
+            mockTpRepo.findOne.mockResolvedValue({
+                id: 'tp-1',
+                name: 'Point A',
+                address: 'Same Address',
+                workingHours: null,
+                deliveryComment: null,
+                counterpartyId: 'cp-1',
+                contacts: [petr, ivan],
+            });
+
+            await service.updateDetails(mockCtx, 'tp-1', { contacts: [ivan, petr] });
+
+            expect(mockCpRepo.delete).not.toHaveBeenCalled();
+            expect(mockVersioningService.recordChange).not.toHaveBeenCalled();
+        });
+
         it('records a field-level diff for a plain attribute change', async () => {
             mockTpRepo.findOne.mockResolvedValue({
                 id: 'tp-1',
