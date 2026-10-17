@@ -50,15 +50,6 @@ export class ReservationFailureService {
             reservationFailureDetail: failure.detail,
             reservationFailedAt: new Date(),
         };
-        const repo = this.connection.getRepository(ctx, Order);
-        await repo.update(orderId, { customFields });
-        // The placement/payment event's own trailing save can revert the write (same hazard as
-        // ReservationService.setOrderReservationState): verify it stuck, bounded retries.
-        for (let attempt = 0; attempt < 3; attempt++) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            const current = await repo.findOne({ where: { id: orderId } });
-            if (current?.customFields?.reservationFailureReason === failure.reason) return;
-            await repo.update(orderId, { customFields });
-        }
+        await this.connection.getRepository(ctx, Order).update(orderId, { customFields });
     }
 }

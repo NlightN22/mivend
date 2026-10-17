@@ -67,19 +67,24 @@ export class ErpOrderService {
             }
         }
 
-        const repo = this.connection.getRepository(ctx, Order);
-        if (Object.keys(changed).length > 0) {
-            Object.assign(order.customFields, changed);
-            await repo.update(order.id, { customFields: changed });
-        }
-        // Both placement events call this: only the run that sets the first status records and publishes.
-        const claimed = await repo.update(
-            { id: order.id, customFields: { erpStatus: IsNull() } },
-            { customFields: { erpStatus: initialStatus, erpStatusAt: new Date() } },
-        );
-        if (!claimed.affected) return;
+        // One transaction: a crash after the claim cannot leave the first status without its history row.
+        // Both placement events call this, so only the run that sets erpStatus from NULL records and publishes.
+        const claimed = await this.connection.withTransaction(ctx, async txCtx => {
+            const repo = this.connection.getRepository(txCtx, Order);
+            if (Object.keys(changed).length > 0) {
+                await repo.update(order.id, { customFields: changed });
+            }
+            const result = await repo.update(
+                { id: order.id, customFields: { erpStatus: IsNull() } },
+                { customFields: { erpStatus: initialStatus, erpStatusAt: new Date() } },
+            );
+            if (!result.affected) return false;
+            await this.statusHistory.record(txCtx, order.id, initialStatus);
+            return true;
+        });
+        Object.assign(order.customFields, changed);
+        if (!claimed) return;
         order.customFields.erpStatus = initialStatus;
-        await this.statusHistory.record(ctx, order.id, initialStatus);
         this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
     }
 

@@ -26,6 +26,7 @@ const mockFulfillmentRepo = {
 };
 
 const mockConnection = {
+    withTransaction: vi.fn(async (ctx: unknown, work: (c: unknown) => unknown) => work(ctx)),
     getRepository: vi.fn((_ctx: unknown, entity: { name: string }) =>
         entity.name === 'Fulfillment' ? mockFulfillmentRepo : mockOrderRepo,
     ),
@@ -134,6 +135,17 @@ describe('ErpOrderService', () => {
             await service.onOrderPlaced(mockCtx, { id: 5, customFields: {} } as never);
 
             expect(mockStatusHistory.record).not.toHaveBeenCalled();
+            expect(mockEventBus.publish).not.toHaveBeenCalled();
+        });
+
+        it('publishes nothing when the history row cannot be written (claim and history are one transaction)', async () => {
+            mockAdministratorService.findOneByUserId.mockResolvedValue(null);
+            mockStatusHistory.record.mockRejectedValueOnce(new Error('history down'));
+
+            await expect(
+                service.onOrderPlaced(mockCtx, { id: 5, customFields: {} } as never),
+            ).rejects.toThrow('history down');
+
             expect(mockEventBus.publish).not.toHaveBeenCalled();
         });
 

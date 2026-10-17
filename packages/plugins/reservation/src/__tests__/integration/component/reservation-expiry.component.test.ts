@@ -2,14 +2,17 @@ import { OrderStatusReference, seedTestOrderStatuses } from '@mivend/plugin-erp-
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, EntityManager, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { Order } from '@vendure/core';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
     createTestSchema,
+    withOrderCancelLocks,
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
 } from 'shared';
 
 import { Reservation } from '../../../entities/reservation.entity';
+import { RejectedOrderReleaseService } from '../../../rejected-order-release.service';
 import { ReservationExpiryService } from '../../../reservation-expiry.service';
 import { ReservationSettings } from '../../../reservation-settings';
 
@@ -57,6 +60,7 @@ class TestReservation {
 
 let realDataSource: DataSource;
 let service: ReservationExpiryService;
+let connectionShim: TransactionalConnection;
 let notificationServiceShim: { create: ReturnType<typeof vi.fn> };
 let eventBusShim: { publish: ReturnType<typeof vi.fn> };
 // The real cancel flow has its own lock/Postgres tests (order-cancellation.concurrency.test.ts);
@@ -81,6 +85,35 @@ function wrapManager(manager: EntityManager): EntityManager {
     });
 }
 
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+interface TxContext {
+    manager?: EntityManager;
+}
+
+// Real Postgres transactions under the same entity mapping as wrapManager; ctx carries the open transaction.
+function buildConnectionShim(): TransactionalConnection {
+    const managerOf = (ctx: TxContext): EntityManager => ctx.manager ?? realDataSource.manager;
+    return {
+        rawConnection: {
+            query: (sql: string, params?: unknown[]) => realDataSource.query(sql, params),
+        },
+        withTransaction: async (ctx: TxContext, work: (txCtx: TxContext) => Promise<unknown>) =>
+            ctx.manager
+                ? work(ctx)
+                : realDataSource.transaction(manager => work({ ...ctx, manager })),
+        getRepository: (ctx: TxContext, entity: unknown) => {
+            const manager = managerOf(ctx);
+            if (entity === Reservation) return manager.getRepository(TestReservation);
+            if (entity === Order) return manager.getRepository(TestOrder);
+            if (typeof entity === 'string') {
+                return { query: (sql: string, params?: unknown[]) => manager.query(sql, params) };
+            }
+            return manager.getRepository(entity as never);
+        },
+    } as unknown as TransactionalConnection;
+}
+
 beforeAll(async () => {
     await createTestSchema(schema);
     realDataSource = new DataSource({
@@ -94,6 +127,7 @@ beforeAll(async () => {
     await realDataSource.initialize();
     await seedTestOrderStatuses((sql, params) => realDataSource.query(sql, params));
 
+    connectionShim = buildConnectionShim();
     const dataSourceShim = {
         transaction: (work: (manager: EntityManager) => Promise<unknown>) =>
             realDataSource.transaction(manager => work(wrapManager(manager))),
@@ -106,13 +140,19 @@ beforeAll(async () => {
     eventBusShim = { publish: vi.fn() };
     cancellationShim = { cancel: vi.fn() };
 
+    const rejectedRelease = new RejectedOrderReleaseService(
+        connectionShim,
+        requestContextServiceShim as never,
+        notificationServiceShim as never,
+        eventBusShim as never,
+        new ReservationSettings({}),
+    );
     service = new ReservationExpiryService(
         dataSourceShim as never,
         requestContextServiceShim as never,
         notificationServiceShim as never,
-        eventBusShim as never,
         cancellationShim as never,
-        new ReservationSettings({}),
+        rejectedRelease,
     );
 });
 
@@ -418,6 +458,78 @@ describe('ReservationExpiryService.expireDueReservations (component, real Postgr
                 expect.objectContaining({ sourceType: 'reservation-rejected-release' }),
             );
             expect(eventBusShim.publish).toHaveBeenCalledTimes(1);
+        });
+
+        it('leaves an order that left REJECTED between the candidate list and the lock untouched', async () => {
+            const order = await seedRejectedOrder(8);
+            await realDataSource.getRepository(TestReservation).save(
+                dueReservation({
+                    orderId: order.id,
+                    creationMethod: 'manual',
+                    expiresAt: new Date(Date.now() + 60_000),
+                }),
+            );
+
+            const holder = withOrderCancelLocks(
+                connectionShim,
+                {} as RequestContext,
+                order.id,
+                async txCtx => {
+                    await sleep(150);
+                    await (txCtx as unknown as TxContext)
+                        .manager!.getRepository(TestOrder)
+                        .update(order.id, { customFields: { erpStatus: 'CONFIRMED' } });
+                },
+            );
+            await sleep(40);
+            const count = await service.expireDueReservations();
+            await holder;
+
+            expect(count).toBe(0);
+            const reservation = await realDataSource.getRepository(TestReservation).find();
+            expect(reservation[0]?.status).toBe('active');
+            const reloadedOrder = await realDataSource
+                .getRepository(TestOrder)
+                .findOneByOrFail({ id: order.id });
+            expect(reloadedOrder.customFields.reservationState).toBe('RESERVED');
+            expect(eventBusShim.publish).not.toHaveBeenCalled();
+            expect(notificationServiceShim.create).not.toHaveBeenCalled();
+        });
+
+        it('a sweep racing a cancel takes the same locks in the same order: no deadlock, one winner', async () => {
+            for (let round = 0; round < 5; round++) {
+                const order = await seedRejectedOrder(8);
+                await realDataSource.getRepository(TestReservation).save(
+                    dueReservation({
+                        orderId: order.id,
+                        creationMethod: 'manual',
+                        expiresAt: new Date(Date.now() + 60_000),
+                    }),
+                );
+                const cancel = withOrderCancelLocks(
+                    connectionShim,
+                    {} as RequestContext,
+                    order.id,
+                    async txCtx => {
+                        const manager = (txCtx as unknown as TxContext).manager!;
+                        await manager
+                            .getRepository(TestReservation)
+                            .update({ orderId: order.id }, { status: 'released' });
+                        await sleep(30);
+                        await manager
+                            .getRepository(TestOrder)
+                            .update(order.id, { customFields: { reservationState: 'RELEASED' } });
+                    },
+                );
+
+                const results = await Promise.allSettled([service.expireDueReservations(), cancel]);
+
+                expect(results.map(r => r.status)).toEqual(['fulfilled', 'fulfilled']);
+                const rows = await realDataSource
+                    .getRepository(TestReservation)
+                    .find({ where: { orderId: order.id } });
+                expect(rows.map(r => r.status)).toEqual(['released']);
+            }
         });
     });
 });

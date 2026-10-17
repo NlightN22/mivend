@@ -13,13 +13,19 @@ describe('ShopOrderStatusDictionaryResolver', () => {
         dictionary: async () => new OrderStatusDictionary(entries),
     } as never);
 
-    it('keeps hidden statuses with their texts blanked, so list filters can still exclude them', async () => {
+    it('keeps hidden statuses as code and terminal only, so list filters can still exclude them', async () => {
         const list = await resolver.orderStatuses({} as RequestContext);
         expect(list.find(s => s.code === 'UNDER_APPROVAL')?.customerVisible).toBe(true);
-        expect(list.find(s => s.code === 'PICKING')).toMatchObject({
-            customerVisible: false,
-            name: 'PICKING',
+        const hidden = entries.find(e => e.code === 'PICKING')!;
+        expect(list.find(s => s.code === 'PICKING')).toEqual({
+            code: 'PICKING',
+            name: '',
             description: '',
+            customerGroup: '',
+            terminal: hidden.terminal,
+            cancelled: false,
+            rejected: false,
+            customerVisible: false,
         });
     });
 

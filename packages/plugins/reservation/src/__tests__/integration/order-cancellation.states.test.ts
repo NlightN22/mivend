@@ -217,6 +217,19 @@ describe('OrderCancelResultService.apply (real Postgres)', () => {
         expect((await loadOrder(h, order.id)).customFields.cancelRequestStatus).toBe('REQUESTED');
     });
 
+    it('rejected: the refusal reason survives the REFUSED to REQUESTED reset (the dedupe key)', async () => {
+        const f = buildCancellationFixture(h);
+        const order = await requestedOrder(f);
+        await f.results.apply(mockCtx, answer(order.uuid, 'rejected'));
+
+        await f.service.cancel(mockCtx, order.id, 'customer-request');
+
+        expect((await loadOrder(h, order.id)).customFields).toMatchObject({
+            cancelRequestStatus: 'REQUESTED',
+            cancelRefusalReason: 'IN_PROGRESS warehouse order exists',
+        });
+    });
+
     it('rejected: the same refusal after a repeat request does not notify staff again', async () => {
         const f = buildCancellationFixture(h);
         const order = await requestedOrder(f);

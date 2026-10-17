@@ -34,27 +34,29 @@ export class ShopOrderStatusDictionaryResolver {
     @Query()
     @Allow(Permission.Public)
     async orderStatuses(@Ctx() ctx: RequestContext): Promise<ShopOrderStatus[]> {
-        // Hidden statuses stay in the list so list filters can still exclude final ones; their texts are blanked.
-        return (await this.statuses.dictionary(ctx)).entries.map(
-            ({
-                code,
-                name,
-                description,
-                customerGroup,
-                terminal,
-                cancelled,
-                rejected,
-                customerVisible,
-            }) => ({
-                code,
-                name: customerVisible ? name : code,
-                description: customerVisible ? description : '',
-                customerGroup,
-                terminal,
-                cancelled,
-                rejected,
-                customerVisible,
-            }),
+        // Hidden statuses stay so list filters can exclude final ones; only code, terminal and the flag are exposed.
+        return (await this.statuses.dictionary(ctx)).entries.map(entry =>
+            entry.customerVisible
+                ? {
+                      code: entry.code,
+                      name: entry.name,
+                      description: entry.description,
+                      customerGroup: entry.customerGroup,
+                      terminal: entry.terminal,
+                      cancelled: entry.cancelled,
+                      rejected: entry.rejected,
+                      customerVisible: true,
+                  }
+                : {
+                      code: entry.code,
+                      name: '',
+                      description: '',
+                      customerGroup: '',
+                      terminal: entry.terminal,
+                      cancelled: false,
+                      rejected: false,
+                      customerVisible: false,
+                  },
         );
     }
 }

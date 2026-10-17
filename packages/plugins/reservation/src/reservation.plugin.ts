@@ -53,6 +53,7 @@ import {
 import { OrderCancellableResolver } from './order-cancellable.resolver';
 import { ReservationErpSyncService } from './reservation-erp-sync.service';
 import { ReservationExpiryService } from './reservation-expiry.service';
+import { RejectedOrderReleaseService } from './rejected-order-release.service';
 import { createReservationExpiryTask } from './reservation-expiry.scheduled-task';
 import { createOrderCheckFailurePruneTask } from './order-check-failure-prune.scheduled-task';
 import { ErpOrderReserveService } from './erp-order-reserve.service';
@@ -124,6 +125,7 @@ import type { ReservationPluginOptions } from './types';
         ReservationReconciliationIssueService,
         ReservationWriteOffSyncService,
         ReservationExpiryService,
+        RejectedOrderReleaseService,
         OrderCancellationPortRegistry,
         OrderCancellationService,
         OrderCancelEntryService,
