@@ -8,6 +8,7 @@ import gql from 'graphql-tag';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
+import { ChecksPlugin } from '@mivend/plugin-checks';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 
 import { CounterpartyConsumer } from './consumers/counterparty.consumer';
@@ -43,7 +44,7 @@ import {
 import { CreditTermResolver } from './credit-term.resolver';
 import { CounterpartyService } from './counterparty.service';
 import { TradingPointService } from './trading-point.service';
-import { CreditTermGateService } from './credit-term-gate.service';
+import { CreditTermExtensionCheck } from './credit-term-extension.check';
 import { CreditTermService } from './credit-term.service';
 import { AdministratorLinkedListener } from './administrator-linked.listener';
 import { CounterpartyPortalAccessService } from './counterparty-portal-access.service';
@@ -400,6 +401,7 @@ const adminResolvers = [
         CustomerPricingPlugin,
         AccessControlPlugin,
         ApprovalWorkflowPlugin,
+        ChecksPlugin,
         VersioningPlugin,
     ],
     entities: [Counterparty, TradingPoint, ContactPerson, CounterpartyTeamMember, Contract],
@@ -416,7 +418,7 @@ const adminResolvers = [
         CounterpartyConsumer,
         TradingPointService,
         TradingPointConsumer,
-        CreditTermGateService,
+        CreditTermExtensionCheck,
         CreditTermService,
         CounterpartyTeamService,
         CounterpartyManagerAssignmentService,

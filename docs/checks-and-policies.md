@@ -26,6 +26,16 @@ findings, and its lock for recomputation. Checks belong to exactly one subject t
 Stages are defined per subject type. For `order`: `cart`, `checkout`, `pre-reserve`,
 `pre-send-to-erp`, `on-edit`.
 
+**`manager` (#242)** is an actor's own action being requested: the ref is not a stored entity but an
+in-flight request the caller builds (`{ roleCode, branchId, params }`, `ManagerActionSubject`). The
+subject type is **ephemeral**: it has no loader, lock or visibility, and its results are never stored
+(there is nothing to open later, recompute or mark stale), so the caller evaluates it with
+`ChecksService.evaluate` and acts on the strongest consequence instead of `runChecks`. Stages are the
+action requested: `extend-reservation`, `extend-credit-term`, `adjust-price`. Allowed consequences:
+`info`, `warn`, `block`, plus `require-approval` at the two stages that have an approval executor.
+`branchId` is the actor's branch, so a branch override applies to managers of that branch. The checks
+are registered by the plugins that own the rule (rule text: `docs/access-control.md`, layer 5).
+
 ## Check (provider)
 
 - Registered in the `CheckRegistry` (see Implementation); `code` is a stable dotted key
@@ -77,7 +87,7 @@ the framework.
 ## Implementation (`packages/plugins/checks`, `@mivend/plugin-checks`)
 
 Subject-agnostic: it depends only on `shared` and `access-control` (permissions); subject types
-and checks are registered by the plugins that own them.
+and checks are registered by the plugins that own them (the one exception is the domain-free `manager` type).
 
 - **Registration.** A plugin imports `ChecksPlugin`, injects `CheckRegistry` and calls
   `registerSubjectType({ type, stages, allowedConsequences, loadSubject, lockKey, dataVersion? })` and
@@ -111,6 +121,20 @@ and checks are registered by the plugins that own them.
   advisory lock (`lockKey`), loads the subject under it, evaluates providers of the stage, replaces
   that subject+stage rows of `check_result` and returns `{ findings, strongestConsequence }`.
   Strength order: `info < warn < require-approval < hold < block`.
+- **Ephemeral subjects.** `SubjectTypeDefinition.ephemeral` makes `loadSubject`, `lockKey` and
+  `visibleSubjectIds` optional (the registry requires the first two otherwise).
+  `ChecksService.evaluate(ctx, type, subject, stage)` is the pure path: it resolves policies (branch row over
+  global, global rows created lazily like a run), runs the enabled providers on the caller's subject and returns
+  the same `{ findings, strongestConsequence }`, with no lock and no `check_result` write. `runChecks` and
+  `markStale` refuse an ephemeral type, `evaluate` refuses a stored one. The caller's own read-compute-write
+  (for example the reservation extension) takes its own lock per `docs/concurrency.md`; a policy edited between
+  evaluate and act applies to the next request. Providers get the policy `recipient` in `CheckContext`, so a
+  control can name the role whose limit applies as data (the credit-term check) instead of a role code in code.
+  The `manager` subject is registered by `ChecksPlugin` itself (`ManagerSubjectRegistrar`): its three
+  consumers do not depend on each other and it carries no domain data.
+- **`require-approval` bridge.** The flow, not the framework, turns the consequence into an approval request
+  (`ApprovalRequestService.createRequest` with its own request type); `approval-workflow` is unchanged and
+  owns the chain. No finding or a `warn`/`info` consequence takes the ordinary path.
 - **Provider errors are never swallowed by the framework.** A throwing provider is logged at error
   level and the run rethrows; the transaction rolls back, so the previous stored results stay and a
   broken check never reads as "no findings".

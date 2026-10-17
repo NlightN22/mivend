@@ -1,6 +1,7 @@
-query OrderCheckDefinitions {
-    checkDefinitions(subjectType: "order") {
+query CheckDefinitions {
+    checkDefinitions {
         code
+        subjectType
         stages
         description
         defaultConsequence
@@ -11,8 +12,8 @@ query OrderCheckDefinitions {
     }
 }
 
-query OrderCheckPolicies {
-    checkPolicies(subjectType: "order") {
+query CheckPolicies {
+    checkPolicies {
         id
         checkCode
         stage

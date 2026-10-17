@@ -19,7 +19,6 @@ export type { CounterpartyDiscountRuleInput } from './src/counterparty-discount-
 export type { DiscountRuleRecipientType, DiscountRuleCondition } from './src/discount-rule.entity';
 export { PriceResolutionService } from './src/price-resolution.service';
 export type { ResolvedPrice, TierProgressVM } from './src/price-resolution.service';
-export { PriceAdjustmentGateService } from './src/price-adjustment-gate.service';
 export { PriceAdjustmentService } from './src/price-adjustment.service';
 export type { PriceAdjustmentResult } from './src/price-adjustment.service';
 export { FLOOR_PRICE_TYPE_CODE } from './src/types';

@@ -5,6 +5,8 @@ import type { Consequence, Finding } from './types';
 export interface CheckContext {
     ctx: RequestContext;
     stage: string;
+    // The policy row's recipient (a role or group code) for the run, null when none is set.
+    recipient: string | null;
 }
 
 export interface SubjectTypeDefinition<S = unknown> {
@@ -13,13 +15,15 @@ export interface SubjectTypeDefinition<S = unknown> {
     allowedConsequences: readonly Consequence[];
     // Extra consequences allowed only at one stage (e.g. `block` on an input-validation stage).
     stageConsequences?: Readonly<Record<string, readonly Consequence[]>>;
-    loadSubject(ctx: RequestContext, subjectRef: string): Promise<S | null>;
-    lockKey(subjectRef: string): string;
+    // An ephemeral subject is an in-flight request built by the caller: evaluated, never loaded, locked or stored.
+    ephemeral?: boolean;
+    loadSubject?(ctx: RequestContext, subjectRef: string): Promise<S | null>;
+    lockKey?(subjectRef: string): string;
     dataVersion?(subject: S): string;
     // Branch scope of the subject: a branch policy row overrides the global one; null means global only.
     branchId?(subject: S): string | null;
-    // Admin reads of stored results go through it so one actor never reads another scope's subjects.
-    visibleSubjectIds(ctx: RequestContext, subjectIds: string[]): Promise<Set<string>>;
+    // Admin reads of stored results go through it; absent means nothing is readable (fail closed).
+    visibleSubjectIds?(ctx: RequestContext, subjectIds: string[]): Promise<Set<string>>;
 }
 
 export interface CheckProvider<S = unknown> {

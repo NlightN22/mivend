@@ -26,6 +26,13 @@ function provider(over: Partial<CheckProvider> = {}): CheckProvider {
 }
 
 describe('CheckRegistry', () => {
+    it('requires a loader and a lock unless the subject type is ephemeral', () => {
+        const registry = new CheckRegistry();
+        const bare = { type: 'action', stages: ['go'], allowedConsequences: ['warn' as const] };
+        expect(() => registry.registerSubjectType(bare)).toThrow(/loadSubject and lockKey/);
+        expect(() => registry.registerSubjectType({ ...bare, ephemeral: true })).not.toThrow();
+    });
+
     it('rejects duplicate codes and duplicate subject types', () => {
         const registry = new CheckRegistry();
         registry.registerSubjectType(subject);

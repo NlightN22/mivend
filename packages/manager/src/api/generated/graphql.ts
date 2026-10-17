@@ -10244,11 +10244,12 @@ export type DefaultCurrencyQueryVariables = Exact<{ [key: string]: never }>;
 
 export type DefaultCurrencyQuery = { activeChannel: { defaultCurrencyCode: CurrencyCode } };
 
-export type OrderCheckDefinitionsQueryVariables = Exact<{ [key: string]: never }>;
+export type CheckDefinitionsQueryVariables = Exact<{ [key: string]: never }>;
 
-export type OrderCheckDefinitionsQuery = {
+export type CheckDefinitionsQuery = {
     checkDefinitions: Array<{
         code: string;
+        subjectType: string;
         stages: Array<string>;
         description: string;
         defaultConsequence: string;
@@ -10259,9 +10260,9 @@ export type OrderCheckDefinitionsQuery = {
     }>;
 };
 
-export type OrderCheckPoliciesQueryVariables = Exact<{ [key: string]: never }>;
+export type CheckPoliciesQueryVariables = Exact<{ [key: string]: never }>;
 
-export type OrderCheckPoliciesQuery = {
+export type CheckPoliciesQuery = {
     checkPolicies: Array<{
         id: string;
         checkCode: string;
@@ -13227,10 +13228,11 @@ export const DefaultCurrencyDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<DefaultCurrencyQuery, DefaultCurrencyQueryVariables>;
-export const OrderCheckDefinitionsDocument = new TypedDocumentString(`
-    query OrderCheckDefinitions {
-  checkDefinitions(subjectType: "order") {
+export const CheckDefinitionsDocument = new TypedDocumentString(`
+    query CheckDefinitions {
+  checkDefinitions {
     code
+    subjectType
     stages
     description
     defaultConsequence
@@ -13240,13 +13242,10 @@ export const OrderCheckDefinitionsDocument = new TypedDocumentString(`
     defaultEnabled
   }
 }
-    `) as unknown as TypedDocumentString<
-    OrderCheckDefinitionsQuery,
-    OrderCheckDefinitionsQueryVariables
->;
-export const OrderCheckPoliciesDocument = new TypedDocumentString(`
-    query OrderCheckPolicies {
-  checkPolicies(subjectType: "order") {
+    `) as unknown as TypedDocumentString<CheckDefinitionsQuery, CheckDefinitionsQueryVariables>;
+export const CheckPoliciesDocument = new TypedDocumentString(`
+    query CheckPolicies {
+  checkPolicies {
     id
     checkCode
     stage
@@ -13256,7 +13255,7 @@ export const OrderCheckPoliciesDocument = new TypedDocumentString(`
     enabled
   }
 }
-    `) as unknown as TypedDocumentString<OrderCheckPoliciesQuery, OrderCheckPoliciesQueryVariables>;
+    `) as unknown as TypedDocumentString<CheckPoliciesQuery, CheckPoliciesQueryVariables>;
 export const UpdateCheckPolicyDocument = new TypedDocumentString(`
     mutation UpdateCheckPolicy($input: UpdateCheckPolicyInput!) {
   updateCheckPolicy(input: $input) {

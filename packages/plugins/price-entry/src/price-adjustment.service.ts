@@ -9,14 +9,16 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
-import { CustomPermission } from '@mivend/plugin-access-control';
+import { AccessScopeService, CustomPermission } from '@mivend/plugin-access-control';
 import {
     ApprovalRequest,
     ApprovalRequestService,
     ApprovalStepDecision,
 } from '@mivend/plugin-approval-workflow';
+import { ChecksService, MANAGER_STAGES, MANAGER_SUBJECT_TYPE } from '@mivend/plugin-checks';
+import type { ManagerActionSubject } from '@mivend/plugin-checks';
 
-import { PriceAdjustmentGateService } from './price-adjustment-gate.service';
+import type { PriceAdjustmentParams } from './price-adjustment-floor.check';
 import { PriceAdjustmentDecision, loggerCtx } from './types';
 
 const PRICE_ADJUSTMENT_REQUEST_TYPE = 'priceAdjustmentApproval';
@@ -41,7 +43,8 @@ export class PriceAdjustmentService {
     constructor(
         private connection: TransactionalConnection,
         private orderService: OrderService,
-        private gate: PriceAdjustmentGateService,
+        private accessScope: AccessScopeService,
+        private checks: ChecksService,
         private approvalRequestService: ApprovalRequestService,
     ) {}
 
@@ -56,11 +59,22 @@ export class PriceAdjustmentService {
             .getRepository(ctx, OrderLine)
             .findOneOrFail({ where: { id: orderLineId }, relations: ['productVariant'] });
 
-        const decision = await this.gate.evaluate(
+        const actor = await this.accessScope.getActorIdentity(ctx);
+        const subject: ManagerActionSubject<PriceAdjustmentParams> = {
+            ...actor,
+            params: { variantId: String(orderLine.productVariant.id), requestedPrice },
+        };
+        const { strongestConsequence } = await this.checks.evaluate(
             ctx,
-            String(orderLine.productVariant.id),
-            requestedPrice,
+            MANAGER_SUBJECT_TYPE,
+            subject,
+            MANAGER_STAGES.adjustPrice,
         );
+        if (strongestConsequence === 'block') {
+            throw new ForbiddenError();
+        }
+        const decision: PriceAdjustmentDecision =
+            strongestConsequence === 'require-approval' ? 'requires-approval' : 'apply-directly';
 
         if (decision === 'apply-directly') {
             if (!ctx.userHasPermissions([CustomPermission.AdjustPriceWithinLimit.Permission])) {

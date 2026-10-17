@@ -1,13 +1,14 @@
 import { adminApi } from './client';
 import {
-    OrderCheckDefinitionsDocument,
-    OrderCheckPoliciesDocument,
+    CheckDefinitionsDocument,
+    CheckPoliciesDocument,
     ResetCheckPolicyOverrideDocument,
     UpdateCheckPolicyDocument,
 } from './generated/graphql';
 
 export interface CheckDefinition {
     code: string;
+    subjectType: string;
     stages: string[];
     description: string;
     defaultConsequence: string;
@@ -28,12 +29,12 @@ export interface CheckPolicy {
     enabled: boolean;
 }
 
-export async function fetchOrderCheckDefinitions(): Promise<CheckDefinition[]> {
-    return (await adminApi(OrderCheckDefinitionsDocument)).checkDefinitions as CheckDefinition[];
+export async function fetchCheckDefinitions(): Promise<CheckDefinition[]> {
+    return (await adminApi(CheckDefinitionsDocument)).checkDefinitions as CheckDefinition[];
 }
 
-export async function fetchOrderCheckPolicies(): Promise<CheckPolicy[]> {
-    return (await adminApi(OrderCheckPoliciesDocument)).checkPolicies;
+export async function fetchCheckPolicies(): Promise<CheckPolicy[]> {
+    return (await adminApi(CheckPoliciesDocument)).checkPolicies;
 }
 
 export async function updateCheckPolicy(input: {

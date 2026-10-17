@@ -69,6 +69,7 @@ import { adminOrderLineEditSchema } from './order-line-edit.schema';
 import { OrderLineEditService } from './order-line-edit.service';
 import { OrderLineShortfallService } from './order-line-shortfall.service';
 import { ReservationViewService } from './reservation-view.service';
+import { ReservationExtensionCheck } from './reservation-extension.check';
 import { ReservationExtensionService } from './reservation-extension.service';
 import { ReservationFailureService } from './reservation-failure.service';
 import { ReservationPaymentService } from './reservation-payment.service';
@@ -115,6 +116,7 @@ import type { ReservationPluginOptions } from './types';
         ReservationFailureService,
         ReservationPaymentService,
         ReservationExtensionService,
+        ReservationExtensionCheck,
         ReservationErpSyncService,
         ReservationReconciliationIssueService,
         ReservationWriteOffSyncService,

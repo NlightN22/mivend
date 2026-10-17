@@ -10,6 +10,7 @@
         { "path": "../customer-pricing" },
         { "path": "../access-control" },
         { "path": "../approval-workflow" },
+        { "path": "../checks" },
         { "path": "../versioning" }
     ]
 }

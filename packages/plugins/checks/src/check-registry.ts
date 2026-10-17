@@ -18,6 +18,11 @@ export class CheckRegistry {
         if (definition.stages.length === 0) {
             throw new Error(`Subject type "${definition.type}" declares no stages`);
         }
+        if (!definition.ephemeral && (!definition.loadSubject || !definition.lockKey)) {
+            throw new Error(
+                `Subject type "${definition.type}" needs loadSubject and lockKey (or ephemeral)`,
+            );
+        }
         for (const consequence of definition.allowedConsequences) {
             if (!CONSEQUENCES.includes(consequence)) {
                 throw new Error(`Unknown consequence "${consequence}" on "${definition.type}"`);

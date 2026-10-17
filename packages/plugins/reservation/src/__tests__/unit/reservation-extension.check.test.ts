@@ -1,0 +1,47 @@
+import { describe, it, expect, vi } from 'vitest';
+import type { RequestContext } from '@vendure/core';
+import { CheckRegistry } from '@mivend/plugin-checks';
+
+import { ReservationExtensionCheck } from '../../reservation-extension.check';
+import type { ReservationExtensionLimitService } from '../../reservation-extension-limit.service';
+
+const ctx = {} as RequestContext;
+
+function run(limit: { maxExtraDays: number } | null, days: number, roleCode: string | null = 'r') {
+    const getLimit = vi.fn(async () => limit);
+    const check = new ReservationExtensionCheck(new CheckRegistry(), {
+        getLimit,
+    } as unknown as ReservationExtensionLimitService);
+    const findings = check.evaluate(
+        { roleCode, branchId: null, params: { additionalDays: days } },
+        { ctx, stage: 'extend-reservation', recipient: null },
+    );
+    return { findings, getLimit };
+}
+
+describe('ReservationExtensionCheck', () => {
+    it('passes within and exactly at the role limit', async () => {
+        expect(await run({ maxExtraDays: 3 }, 3).findings).toEqual([]);
+        expect(await run({ maxExtraDays: 3 }, 1).findings).toEqual([]);
+    });
+
+    it('flags days beyond the role limit', async () => {
+        const [finding] = await run({ maxExtraDays: 3 }, 4).findings;
+        expect(finding.messageKey).toBe('manager.reservation-extension-days.over-limit');
+        expect(finding.facts).toEqual({ requestedDays: 4, limitDays: 3 });
+    });
+
+    it('flags a role without a limit row (fail closed), and an actor without a role', async () => {
+        const [noRow] = await run(null, 1).findings;
+        expect(noRow.messageKey).toBe('manager.reservation-extension-days.no-limit');
+        const noRole = run({ maxExtraDays: 9 }, 1, null);
+        expect((await noRole.findings)[0].messageKey).toBe(
+            'manager.reservation-extension-days.no-limit',
+        );
+        expect(noRole.getLimit).not.toHaveBeenCalled();
+    });
+
+    it('does not judge a request without a usable day count', async () => {
+        expect(await run(null, Number.NaN).findings).toEqual([]);
+    });
+});

@@ -4,6 +4,7 @@ import { buildPolicyRows, isRowDirty, policyCaption } from '../../utils/checkPol
 const defs = [
     {
         code: 'erp.organization-stock',
+        subjectType: 'order',
         stages: ['pre-reserve', 'pre-send-to-erp'],
         description: 'd',
         defaultConsequence: 'warn',
@@ -90,5 +91,24 @@ describe('buildPolicyRows', () => {
         expect(policyCaption({ ...row, consequence: 'warn' })).toContain('acknowledges');
         expect(policyCaption({ ...row, stage: 'on-edit' })).toBeNull();
         expect(policyCaption({ ...row, checkCode: 'order.multiplicity' })).toBeNull();
+    });
+
+    it('shows a manager control with its stage-only consequence and the subject type', () => {
+        const manager = {
+            ...defs[0],
+            code: 'manager.credit-term-extension',
+            subjectType: 'manager',
+            stages: ['extend-credit-term'],
+            defaultConsequence: 'require-approval',
+            allowedConsequences: ['info', 'warn', 'block'],
+            stageConsequences: { 'extend-credit-term': ['require-approval'] },
+        };
+        const [row] = buildPolicyRows([manager], []);
+        expect(row).toMatchObject({
+            subjectType: 'manager',
+            stage: 'extend-credit-term',
+            consequence: 'require-approval',
+        });
+        expect(row.allowedConsequences).toEqual(['info', 'warn', 'block', 'require-approval']);
     });
 });

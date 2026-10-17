@@ -13,3 +13,5 @@ export { CheckStaleRequestService } from './src/check-stale-request.service';
 export type { StaleRequestHandler } from './src/check-stale-request.service';
 export { CheckStaleRequestWriter } from './src/check-stale-request.writer';
 export { CheckStaleRequest } from './src/entities/check-stale-request.entity';
+export { MANAGER_STAGES, MANAGER_SUBJECT_TYPE } from './src/manager-subject';
+export type { ManagerActionSubject } from './src/manager-subject';

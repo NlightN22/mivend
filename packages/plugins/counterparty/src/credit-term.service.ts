@@ -7,14 +7,16 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { CustomPermission } from '@mivend/plugin-access-control';
+import { AccessScopeService, CustomPermission } from '@mivend/plugin-access-control';
 import {
     ApprovalRequest,
     ApprovalRequestService,
     ApprovalStepDecision,
 } from '@mivend/plugin-approval-workflow';
+import { ChecksService, MANAGER_STAGES, MANAGER_SUBJECT_TYPE } from '@mivend/plugin-checks';
+import type { ManagerActionSubject } from '@mivend/plugin-checks';
 
-import { CreditTermGateService } from './credit-term-gate.service';
+import type { CreditTermParams } from './credit-term-extension.check';
 import { CreditTermApprovedEvent } from './credit-term.events';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyService } from './counterparty.service';
@@ -36,13 +38,14 @@ interface CreditTermPayload {
     justification: string;
 }
 
-// Two separate WorkflowDefinition rows, chosen by CreditTermGateService; not one branching chain.
+// Two WorkflowDefinition rows, chosen by the `manager.credit-term-extension` policy; not one branching chain.
 @Injectable()
 export class CreditTermService {
     constructor(
         private connection: TransactionalConnection,
         private counterpartyService: CounterpartyService,
-        private gate: CreditTermGateService,
+        private accessScope: AccessScopeService,
+        private checks: ChecksService,
         private approvalRequestService: ApprovalRequestService,
         private eventBus: EventBus,
     ) {}
@@ -71,13 +74,27 @@ export class CreditTermService {
             throw new UserInputError(`Counterparty not found: erpId=${input.counterpartyErpId}`);
         }
 
-        const decision = await this.gate.evaluate(
+        const actor = await this.accessScope.getActorIdentity(ctx);
+        const subject: ManagerActionSubject<CreditTermParams> = {
+            ...actor,
+            params: {
+                requestedExtraDays: input.requestedExtraDays,
+                requestedAmount: input.requestedAmount ?? null,
+            },
+        };
+        const { strongestConsequence } = await this.checks.evaluate(
             ctx,
-            input.requestedExtraDays,
-            input.requestedAmount ?? null,
+            MANAGER_SUBJECT_TYPE,
+            subject,
+            MANAGER_STAGES.extendCreditTerm,
         );
+        if (strongestConsequence === 'block') {
+            throw new ForbiddenError();
+        }
         const requestType =
-            decision === 'within-limit' ? WITHIN_LIMIT_REQUEST_TYPE : ESCALATED_REQUEST_TYPE;
+            strongestConsequence === 'require-approval'
+                ? ESCALATED_REQUEST_TYPE
+                : WITHIN_LIMIT_REQUEST_TYPE;
 
         const payload: CreditTermPayload = {
             counterpartyErpId: input.counterpartyErpId,

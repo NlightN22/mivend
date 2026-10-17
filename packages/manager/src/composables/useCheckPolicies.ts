@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import {
-    fetchOrderCheckDefinitions,
-    fetchOrderCheckPolicies,
+    fetchCheckDefinitions,
+    fetchCheckPolicies,
     resetCheckPolicyOverride,
     updateCheckPolicy,
 } from '../api/checkPolicies';
@@ -19,8 +19,8 @@ export function useCheckPolicies() {
         error.value = '';
         try {
             const [defs, policies] = await Promise.all([
-                fetchOrderCheckDefinitions(),
-                fetchOrderCheckPolicies(),
+                fetchCheckDefinitions(),
+                fetchCheckPolicies(),
             ]);
             rows.value = buildPolicyRows(defs, policies, branchId.value);
         } catch (e) {

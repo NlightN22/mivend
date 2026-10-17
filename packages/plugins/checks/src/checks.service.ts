@@ -5,6 +5,7 @@ import { withAggregateLock } from 'shared';
 import { CheckPolicyService } from './check-policy.service';
 import { CheckRegistry } from './check-registry';
 import { CheckResult } from './entities/check-result.entity';
+import type { CheckProvider, SubjectTypeDefinition } from './registry-types';
 import {
     CONSEQUENCE_STRENGTH,
     CheckRunResult,
@@ -46,73 +47,117 @@ export class ChecksService {
     ): Promise<CheckRunResult> {
         const definition = this.registry.getSubjectType(subjectType);
         const providers = this.registry.listForStage(subjectType, stage);
+        const { loadSubject, lockKey } = definition;
+        if (definition.ephemeral || !loadSubject || !lockKey) {
+            throw new Error(`Subject type "${subjectType}" is ephemeral: use evaluate`);
+        }
 
-        return withAggregateLock(
-            this.connection,
+        return withAggregateLock(this.connection, ctx, lockKey(subjectRef), async txCtx => {
+            const subject = await loadSubject(txCtx, subjectRef);
+            if (subject === null || subject === undefined) {
+                throw new Error(`Subject ${subjectType}:${subjectRef} not found`);
+            }
+            const resolved = await this.evaluateProviders(
+                txCtx,
+                definition,
+                providers,
+                subject,
+                stage,
+                true,
+            );
+            await this.replaceResults(
+                txCtx,
+                subjectType,
+                subjectRef,
+                stage,
+                resolved,
+                definition.dataVersion?.(subject) ?? null,
+            );
+            return { findings: resolved, strongestConsequence: strongestConsequence(resolved) };
+        });
+    }
+
+    // Pure path for an ephemeral subject (an action being requested): same providers and policies as
+    // `runChecks`, but no lock and nothing stored; the caller acts on the returned consequence.
+    async evaluate(
+        ctx: RequestContext,
+        subjectType: string,
+        subject: unknown,
+        stage: string,
+    ): Promise<CheckRunResult> {
+        const definition = this.registry.getSubjectType(subjectType);
+        if (!definition.ephemeral) {
+            throw new Error(`Subject type "${subjectType}" is stored: use runChecks`);
+        }
+        const providers = this.registry.listForStage(subjectType, stage);
+        const resolved = await this.evaluateProviders(
             ctx,
-            definition.lockKey(subjectRef),
-            async txCtx => {
-                const subject = await definition.loadSubject(txCtx, subjectRef);
-                if (subject === null || subject === undefined) {
-                    throw new Error(`Subject ${subjectType}:${subjectRef} not found`);
-                }
-                const branchId = definition.branchId?.(subject) ?? null;
-                const policies = await this.policies.ensureForStage(
-                    txCtx,
-                    providers,
-                    stage,
-                    true,
-                    branchId,
-                );
-                const resolved: ResolvedFinding[] = [];
-                for (const provider of providers) {
-                    const policy = policies.get(provider.code);
-                    if (!policy?.enabled) {
-                        continue;
-                    }
-                    let findings: Finding[];
-                    try {
-                        findings = await provider.evaluate(subject, { ctx: txCtx, stage });
-                    } catch (error) {
-                        this.logger.error(
-                            `Check ${provider.code} failed for ${subjectType}:${subjectRef}`,
-                            error instanceof Error ? error.stack : String(error),
-                        );
-                        throw error;
-                    }
-                    for (const finding of findings) {
-                        resolved.push({
-                            ...finding,
-                            checkCode: provider.code,
-                            consequence: policy.consequence,
-                        });
-                    }
-                }
-                await this.replaceResults(
-                    txCtx,
-                    subjectType,
-                    subjectRef,
-                    stage,
-                    resolved,
-                    definition.dataVersion?.(subject) ?? null,
-                );
-                return { findings: resolved, strongestConsequence: strongestConsequence(resolved) };
-            },
+            definition,
+            providers,
+            subject,
+            stage,
+            false,
         );
+        return { findings: resolved, strongestConsequence: strongestConsequence(resolved) };
+    }
+
+    private async evaluateProviders(
+        ctx: RequestContext,
+        definition: SubjectTypeDefinition,
+        providers: CheckProvider[],
+        subject: unknown,
+        stage: string,
+        lockPolicyRows: boolean,
+    ): Promise<ResolvedFinding[]> {
+        const branchId = definition.branchId?.(subject) ?? null;
+        const policies = await this.policies.ensureForStage(
+            ctx,
+            providers,
+            stage,
+            lockPolicyRows,
+            branchId,
+        );
+        const resolved: ResolvedFinding[] = [];
+        for (const provider of providers) {
+            const policy = policies.get(provider.code);
+            if (!policy?.enabled) {
+                continue;
+            }
+            let findings: Finding[];
+            try {
+                findings = await provider.evaluate(subject, {
+                    ctx,
+                    stage,
+                    recipient: policy.recipient,
+                });
+            } catch (error) {
+                this.logger.error(
+                    `Check ${provider.code} failed for ${definition.type}`,
+                    error instanceof Error ? error.stack : String(error),
+                );
+                throw error;
+            }
+            for (const finding of findings) {
+                resolved.push({
+                    ...finding,
+                    checkCode: provider.code,
+                    consequence: policy.consequence,
+                });
+            }
+        }
+        return resolved;
     }
 
     async markStale(ctx: RequestContext, subjectType: string, subjectId: string): Promise<void> {
-        const definition = this.registry.getSubjectType(subjectType);
-        await withAggregateLock(
-            this.connection,
-            ctx,
-            definition.lockKey(subjectId),
-            async txCtx => {
-                await this.connection
-                    .getRepository(txCtx, CheckResult)
-                    .update({ subjectType, subjectId }, { stale: true });
-            },
-        );
+        const lockKey = this.registry.getSubjectType(subjectType).lockKey;
+        if (!lockKey) {
+            throw new Error(`Subject type "${subjectType}" stores no results`);
+        }
+        await withAggregateLock(this.connection, ctx, lockKey(subjectId), async txCtx => {
+            await this.connection
+                .getRepository(txCtx, CheckResult)
+                .update({ subjectType, subjectId }, { stale: true });
+        });
     }
 
     // Keyset over subjects, each flagged under its own lock: never a mass UPDATE that could wait on a running recompute.

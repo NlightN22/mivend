@@ -24,13 +24,13 @@ control, reason given).
 | 10 | Staff confirmation hold | `OrderChecksService.isHeld`, `OrderSendHoldService` | n/a, consumer of policies | part of the framework | n/a | provider (framework) |
 | 11 | ERP rejects a registered order (#204) | inbound ERP result handling | order marked rejected, shown on the order | later: finding `erp.registration-rejected` (display only) | `info` | stays outside for now (an inbound fact, not a pre-check) |
 
-## Manager / actor subject (does not exist yet)
+## Manager subject (#242)
 
 | # | Control | Where | On failure now | Target | Status |
 |---|---|---|---|---|---|
-| 12 | Reservation extension limit per role (max extra days), fail closed without a row | `ReservationExtensionLimitService`, `ReservationExtensionService` | extension refused | `manager.reservation-extension-days` | open (#242) |
-| 13 | Credit-term limit (days, amount), gate hard-codes the `department-head` role | `CreditTermGateService`, `CreditTermService` | request escalates to security review | `manager.credit-term-extension`, `require-approval` | open (#242); the role code must become data |
-| 14 | Price adjustment below the floor price (no floor = approval) | `PriceAdjustmentGateService` | needs approval | `manager.price-adjustment-floor`, `require-approval` | open (#242) |
+| 12 | Reservation extension limit per role (max extra days), fail closed without a row | provider `manager.reservation-extension-days` (plugin-reservation); `ReservationExtensionService` evaluates it | policy `block` (default): extension refused | `manager.reservation-extension-days`, stage `extend-reservation` | done (#242) |
+| 13 | Credit-term limit (days, amount), gate hard-codes the `department-head` role | provider `manager.credit-term-extension` (plugin-counterparty); `CreditTermService` evaluates it; the gate service is gone | policy `require-approval` (default): escalated chain | `manager.credit-term-extension`, stage `extend-credit-term` | done (#242); the limit role is the policy recipient, no role code in code |
+| 14 | Price adjustment below the floor price (no floor = approval) | provider `manager.price-adjustment-floor` (plugin-price-entry); `PriceAdjustmentService` evaluates it; the gate service is gone | policy `require-approval` (default): approval request | `manager.price-adjustment-floor`, stage `adjust-price` | done (#242) |
 | 15 | Discount grant needs justification and approval | `DiscountGrantService`, approval-workflow | justification missing = validation error; approval chain | approval chain stays in `approval-workflow`; the consequence is `require-approval` | stays outside (input validation) + executor |
 
 ## Guards that intentionally stay outside
@@ -54,7 +54,7 @@ should be able to relax. No finding, no policy.
 | --- | --- | --- |
 | `BranchSettings.enforceMultiplicity` | branch override of `order.multiplicity` (`cart`, `pre-reserve`, `on-edit`) | migration `1791519000000` carries the data; the branch settings form only points to the tab |
 | `BranchSettings.allowExceedingCreditLimit` | branch override of `credit.limit` at `checkout` (`warn` = was on, `hold` = was off) | same migration |
-| Role editor: reservation extension limit, credit-term limit | stay data per role for now | the policy of the manager checks is #242 |
+| Role editor: reservation extension limit, credit-term limit | stay data per role | the consequence of exceeding them is the policy of the `manager` checks (#242) |
 | Stay in branch settings | `packagesOnly`, `prepaymentReserveDays`, `proformaPaymentTermDays`, default/visible price types and warehouses | parameters and scope defaults |
 
 ## Duplicates

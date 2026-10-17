@@ -12,6 +12,7 @@ import { CheckStaleRequestWriter } from './check-stale-request.writer';
 import { createCheckStaleRequestTask } from './check-stale-request.scheduled-task';
 import { ChecksResolver } from './checks.resolver';
 import { ChecksService } from './checks.service';
+import { ManagerSubjectRegistrar } from './manager-subject.registrar';
 
 const adminApiSchema = gql`
     type CheckDefinition {
@@ -83,6 +84,7 @@ const adminApiSchema = gql`
         ChecksService,
         CheckStaleRequestWriter,
         CheckStaleRequestService,
+        ManagerSubjectRegistrar,
     ],
     exports: [
         CheckRegistry,

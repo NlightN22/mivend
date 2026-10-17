@@ -10,6 +10,8 @@ import CheckPoliciesTable from '../../components/settings/CheckPoliciesTable.vue
 const authStore = useAuthStore();
 const { rows, branchId, loading, savingKey, error, load, selectBranch, save, reset } =
     useCheckPolicies();
+const orderRows = computed(() => rows.value.filter(r => r.subjectType === 'order'));
+const managerRows = computed(() => rows.value.filter(r => r.subjectType === 'manager'));
 const branches = ref<BranchOption[]>([]);
 const GLOBAL = '';
 const scopeOptions = computed(() => [
@@ -48,19 +50,38 @@ onMounted(() => {
         <MvPanel title="Order controls">
             <p class="check-policies__lead">
                 A control only describes a fact; its consequence is set here per stage. Orders are
-                always accepted: consequences stronger than hold are not available (a quantity may be refused when it is added to the cart).
+                always accepted: consequences stronger than hold are not available (a quantity may
+                be refused when it is added to the cart).
             </p>
             <MvFormField label="Scope">
                 <MvSelect v-model="scope" :options="scopeOptions" />
                 <p class="check-policies__lead">
-                    A branch row overrides the global default for orders of that branch; the
-                    branch follows the global default until it is saved.
+                    A branch row overrides the global default for orders of that branch and for
+                    actions of managers in it; the branch follows the global default until it is
+                    saved.
                 </p>
             </MvFormField>
             <p v-if="loading">Loading…</p>
             <CheckPoliciesTable
                 v-else
-                :rows="rows"
+                :rows="orderRows"
+                :saving-key="savingKey"
+                @save="save"
+                @reset="reset"
+            />
+        </MvPanel>
+
+        <MvPanel title="Manager controls">
+            <p class="check-policies__lead">
+                Limits on a manager's own action: the consequence applies when the action is
+                requested. A per-role limit stays in the role editor; here you choose what happens
+                when it is exceeded. For a credit-term control the recipient is the role whose limit
+                decides the escalation.
+            </p>
+            <p v-if="loading">Loading…</p>
+            <CheckPoliciesTable
+                v-else
+                :rows="managerRows"
                 :saving-key="savingKey"
                 @save="save"
                 @reset="reset"

@@ -47,6 +47,18 @@ export class AccessScopeService {
         return customFields?.departmentId ?? null;
     }
 
+    // The acting administrator's first role code and branch, for per-actor limits and branch policies.
+    async getActorIdentity(
+        ctx: RequestContext,
+    ): Promise<{ roleCode: string | null; branchId: string | null }> {
+        const admin = await this.getAdministrator(ctx);
+        const customFields = admin?.customFields as { branchId?: string | null } | undefined;
+        return {
+            roleCode: admin?.user?.roles?.[0]?.code ?? null,
+            branchId: customFields?.branchId ?? null,
+        };
+    }
+
     // Throws ForbiddenError unless the caller's counterparty scope covers this row. Only
     // `branchId` gates 'department' scope; `departmentId` is informational (docs/access-control.md).
     async assertCounterpartyWritable(

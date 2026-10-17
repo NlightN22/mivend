@@ -3,6 +3,7 @@ import type { CheckDefinition, CheckPolicy } from '../api/checkPolicies';
 export interface PolicyRow {
     key: string;
     checkCode: string;
+    subjectType: string;
     description: string;
     stage: string;
     // The branch this row is edited for; null edits the global default.
@@ -42,6 +43,7 @@ export function buildPolicyRows(
             return {
                 key: `${def.code}:${stage}`,
                 checkCode: def.code,
+                subjectType: def.subjectType,
                 description: def.description,
                 stage,
                 branchId,

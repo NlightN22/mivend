@@ -4,7 +4,8 @@ import type { EventBus, RequestContext, TransactionalConnection } from '@vendure
 import type { ApprovalRequestService } from '@mivend/plugin-approval-workflow';
 
 import { CreditTermService } from '../../credit-term.service';
-import { CreditTermGateService } from '../../credit-term-gate.service';
+import type { AccessScopeService } from '@mivend/plugin-access-control';
+import type { ChecksService } from '@mivend/plugin-checks';
 import { CounterpartyService } from '../../counterparty.service';
 
 function mockCtx(permissions: string[]): RequestContext {
@@ -25,7 +26,7 @@ describe('CreditTermService', () => {
         save: ReturnType<typeof vi.fn>;
     };
     let counterpartyService: { findByErpId: ReturnType<typeof vi.fn> };
-    let gate: { evaluate: ReturnType<typeof vi.fn> };
+    let checks: { evaluate: ReturnType<typeof vi.fn> };
     let approvalRequestService: {
         createRequest: ReturnType<typeof vi.fn>;
         decide: ReturnType<typeof vi.fn>;
@@ -40,7 +41,7 @@ describe('CreditTermService', () => {
         };
         const connection = { getRepository: () => counterpartyRepo };
         counterpartyService = { findByErpId: vi.fn(async () => ({ id: '1', erpId: 'cnt-001' })) };
-        gate = { evaluate: vi.fn() };
+        checks = { evaluate: vi.fn() };
         approvalRequestService = {
             createRequest: vi.fn(async () => ({ id: 'req-1' })),
             decide: vi.fn(),
@@ -49,15 +50,51 @@ describe('CreditTermService', () => {
         service = new CreditTermService(
             connection as unknown as TransactionalConnection,
             counterpartyService as unknown as CounterpartyService,
-            gate as unknown as CreditTermGateService,
+            {
+                getActorIdentity: async () => ({ roleCode: 'r', branchId: 'b1' }),
+            } as unknown as AccessScopeService,
+            checks as unknown as ChecksService,
             approvalRequestService as unknown as ApprovalRequestService,
             eventBus as unknown as EventBus,
         );
     });
 
     describe('requestExtension', () => {
-        it('routes to the single-step chain when the gate says within-limit', async () => {
-            gate.evaluate.mockResolvedValue('within-limit');
+        it('refuses and creates no request when the policy blocks', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: 'block' });
+            await expect(
+                service.requestExtension(mockCtx(['RequestCreditTermApproval']), validInput),
+            ).rejects.toBeInstanceOf(ForbiddenError);
+            expect(approvalRequestService.createRequest).not.toHaveBeenCalled();
+        });
+
+        it('keeps the single-step chain when the policy is loosened to warn', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: 'warn' });
+            await service.requestExtension(mockCtx(['RequestCreditTermApproval']), validInput);
+            expect(approvalRequestService.createRequest).toHaveBeenCalledWith(
+                expect.anything(),
+                'creditTermApproval',
+                expect.anything(),
+            );
+        });
+
+        it('asks the check at the credit-term stage with the actor and the request', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: null });
+            await service.requestExtension(mockCtx(['RequestCreditTermApproval']), validInput);
+            expect(checks.evaluate).toHaveBeenCalledWith(
+                expect.anything(),
+                'manager',
+                {
+                    roleCode: 'r',
+                    branchId: 'b1',
+                    params: { requestedExtraDays: 10, requestedAmount: null },
+                },
+                'extend-credit-term',
+            );
+        });
+
+        it('routes to the single-step chain when the policy says no finding', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: null });
             const ctx = mockCtx(['RequestCreditTermApproval']);
 
             await service.requestExtension(ctx, validInput);
@@ -69,8 +106,8 @@ describe('CreditTermService', () => {
             );
         });
 
-        it('routes to the escalated two-step chain when the gate says exceeds-limit', async () => {
-            gate.evaluate.mockResolvedValue('exceeds-limit');
+        it('routes to the escalated two-step chain when the policy says require-approval', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: 'require-approval' });
             const ctx = mockCtx(['RequestCreditTermApproval']);
 
             await service.requestExtension(ctx, validInput);
@@ -83,7 +120,7 @@ describe('CreditTermService', () => {
         });
 
         it('rejects a caller without RequestCreditTermApproval', async () => {
-            gate.evaluate.mockResolvedValue('within-limit');
+            checks.evaluate.mockResolvedValue({ strongestConsequence: null });
             const ctx = mockCtx([]);
             await expect(service.requestExtension(ctx, validInput)).rejects.toThrow(ForbiddenError);
             expect(approvalRequestService.createRequest).not.toHaveBeenCalled();

@@ -4,8 +4,8 @@ import type { OrderService, RequestContext, TransactionalConnection } from '@ven
 import type { ApprovalRequestService } from '@mivend/plugin-approval-workflow';
 
 import { PriceAdjustmentService } from '../../price-adjustment.service';
-import { PriceAdjustmentGateService } from '../../price-adjustment-gate.service';
-
+import type { AccessScopeService } from '@mivend/plugin-access-control';
+import type { ChecksService } from '@mivend/plugin-checks';
 function mockCtx(permissions: string[]): RequestContext {
     return {
         userHasPermissions: (p: string[]) => p.some(x => permissions.includes(x)),
@@ -15,7 +15,7 @@ function mockCtx(permissions: string[]): RequestContext {
 describe('PriceAdjustmentService', () => {
     let orderLineRepo: { findOneOrFail: ReturnType<typeof vi.fn> };
     let orderService: { adjustOrderLine: ReturnType<typeof vi.fn> };
-    let gate: { evaluate: ReturnType<typeof vi.fn> };
+    let checks: { evaluate: ReturnType<typeof vi.fn> };
     let approvalRequestService: {
         createRequest: ReturnType<typeof vi.fn>;
         decide: ReturnType<typeof vi.fn>;
@@ -32,7 +32,7 @@ describe('PriceAdjustmentService', () => {
         };
         const connection = { getRepository: () => orderLineRepo };
         orderService = { adjustOrderLine: vi.fn(async () => ({ id: 'order-1' })) };
-        gate = { evaluate: vi.fn() };
+        checks = { evaluate: vi.fn() };
         approvalRequestService = {
             createRequest: vi.fn(async () => ({ id: 'req-1' })),
             decide: vi.fn(),
@@ -40,14 +40,52 @@ describe('PriceAdjustmentService', () => {
         service = new PriceAdjustmentService(
             connection as unknown as TransactionalConnection,
             orderService as unknown as OrderService,
-            gate as unknown as PriceAdjustmentGateService,
+            {
+                getActorIdentity: async () => ({ roleCode: 'r', branchId: 'b1' }),
+            } as unknown as AccessScopeService,
+            checks as unknown as ChecksService,
             approvalRequestService as unknown as ApprovalRequestService,
         );
     });
 
     describe('requestAdjustment', () => {
-        it('applies the price directly and creates no approval request when the gate allows it', async () => {
-            gate.evaluate.mockResolvedValue('apply-directly');
+        it('refuses, applying nothing and requesting nothing, when the policy blocks', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: 'block' });
+            await expect(
+                service.requestAdjustment(
+                    mockCtx(['AdjustPriceWithinLimit']),
+                    'order-1',
+                    'line-1',
+                    1,
+                ),
+            ).rejects.toBeInstanceOf(ForbiddenError);
+            expect(orderService.adjustOrderLine).not.toHaveBeenCalled();
+            expect(approvalRequestService.createRequest).not.toHaveBeenCalled();
+        });
+
+        it('applies directly when the policy is loosened to warn, and checks the variant at the adjust-price stage', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: 'warn' });
+            const result = await service.requestAdjustment(
+                mockCtx(['AdjustPriceWithinLimit']),
+                'order-1',
+                'line-1',
+                1,
+            );
+            expect(result.decision).toBe('apply-directly');
+            expect(checks.evaluate).toHaveBeenCalledWith(
+                expect.anything(),
+                'manager',
+                {
+                    roleCode: 'r',
+                    branchId: 'b1',
+                    params: { variantId: 'variant-1', requestedPrice: 1 },
+                },
+                'adjust-price',
+            );
+        });
+
+        it('applies the price directly and creates no approval request when the policy allows it', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: null });
             const ctx = mockCtx(['AdjustPriceWithinLimit']);
 
             const result = await service.requestAdjustment(
@@ -67,7 +105,7 @@ describe('PriceAdjustmentService', () => {
         });
 
         it('rejects apply-directly when the caller lacks AdjustPriceWithinLimit, applying nothing', async () => {
-            gate.evaluate.mockResolvedValue('apply-directly');
+            checks.evaluate.mockResolvedValue({ strongestConsequence: null });
             const ctx = mockCtx([]);
 
             await expect(service.requestAdjustment(ctx, 'order-1', 'line-1', 9000)).rejects.toThrow(
@@ -76,8 +114,8 @@ describe('PriceAdjustmentService', () => {
             expect(orderService.adjustOrderLine).not.toHaveBeenCalled();
         });
 
-        it('creates an ApprovalRequest instead of applying when the gate requires approval', async () => {
-            gate.evaluate.mockResolvedValue('requires-approval');
+        it('creates an ApprovalRequest instead of applying when the policy requires approval', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: 'require-approval' });
             const ctx = mockCtx(['RequestPriceAdjustmentApproval']);
 
             const result = await service.requestAdjustment(
@@ -104,7 +142,7 @@ describe('PriceAdjustmentService', () => {
         });
 
         it('rejects requesting approval when the caller lacks RequestPriceAdjustmentApproval', async () => {
-            gate.evaluate.mockResolvedValue('requires-approval');
+            checks.evaluate.mockResolvedValue({ strongestConsequence: 'require-approval' });
             const ctx = mockCtx([]);
 
             await expect(service.requestAdjustment(ctx, 'order-1', 'line-1', 100)).rejects.toThrow(

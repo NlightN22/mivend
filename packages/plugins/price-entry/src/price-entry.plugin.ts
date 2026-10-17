@@ -7,6 +7,7 @@ import {
 import gql from 'graphql-tag';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
+import { ChecksPlugin } from '@mivend/plugin-checks';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { NumberingPlugin } from '@mivend/plugin-numbering';
 
@@ -31,7 +32,7 @@ import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.se
 import { PriceResolutionService } from './price-resolution.service';
 import { ActiveOrderSettleInterceptor } from './active-order-settle.interceptor';
 import { TierRebalanceService } from './tier-rebalance.service';
-import { PriceAdjustmentGateService } from './price-adjustment-gate.service';
+import { PriceAdjustmentFloorCheck } from './price-adjustment-floor.check';
 import { PriceAdjustmentService } from './price-adjustment.service';
 import { DiscountGrantService } from './discount-grant.service';
 import { DiscountRegistryService } from './discount-registry.service';
@@ -279,6 +280,7 @@ const adminApiSchema = gql`
         PluginCommonModule,
         AccessControlPlugin,
         ApprovalWorkflowPlugin,
+        ChecksPlugin,
         CounterpartyPlugin,
         NumberingPlugin,
     ],
@@ -311,7 +313,7 @@ const adminApiSchema = gql`
         PriceResolutionService,
         TierRebalanceService,
         { provide: 'APP_INTERCEPTOR', useClass: ActiveOrderSettleInterceptor },
-        PriceAdjustmentGateService,
+        PriceAdjustmentFloorCheck,
         PriceAdjustmentService,
         DiscountGrantService,
         DiscountRegistryService,

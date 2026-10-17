@@ -22,7 +22,7 @@ job and one place in the codebase.
 | 2   | RBAC (`Permission`)   | Can this role perform this action at all?                                                  | `@Allow()` on resolvers                                                 |
 | 3   | Scope                 | Which records can this role see, out of the ones layer 2 allowed?                          | `AccessScopeService` + service-layer query filtering                    |
 | 4   | Field-level redaction | Which fields of an allowed record can this role see?                                       | `requiresPermission` on customFields, or a dedicated protected resolver |
-| 5   | Approval gate         | Is this specific mutation allowed to apply directly, or must it go through approval first? | A dedicated gate service per business rule (e.g. `PriceAdjustmentGate`) |
+| 5   | Approval gate         | Is this specific mutation allowed to apply directly, or must it go through approval first? | A `manager` check per business rule (e.g. `manager.price-adjustment-floor`), consequence from its policy |
 
 A resolver only ever touches layer 2. A service only ever touches layer 3. Nothing outside the
 gate service touches layer 5. If you find yourself writing role-name `if`/`switch` logic inside
@@ -377,16 +377,32 @@ assumed from documentation.
 ## Layer 5: approval gate
 
 **Rule: "is this action allowed to apply directly, or does it need approval" is decided by a
-dedicated gate service, called from the mutation, before the underlying change is applied. The
-gate is the only code that sees the protected threshold value (e.g. `floorPrice`) — the client
-never receives it, only the gate's decision.**
+`manager` check (`docs/checks-and-policies.md`), evaluated by the service before the underlying
+change is applied; its policy, not code, says whether the answer is `block`, `warn` or
+`require-approval`. The check is the only code that sees the protected threshold value (e.g.
+`floorPrice`) — its findings carry a reason, never the threshold, and the client never receives it.**
+
+The three manager-action controls (#242), all stage-scoped policies of the `manager` subject:
+
+| Code | Stage | Finding when | Default | Per-role data |
+| --- | --- | --- | --- | --- |
+| `manager.reservation-extension-days` | `extend-reservation` | requested extra days exceed the actor's role limit, or the role has no limit row | `block` | `ReservationExtensionLimit` per role |
+| `manager.credit-term-extension` | `extend-credit-term` | requested days or amount exceed the limit of the policy **recipient** role, or that role has no limit row, or the policy has no recipient | `require-approval` (the escalated chain; no finding uses the single-step chain) | `CreditTermLimit` per role; the recipient (seeded `department-head`) is policy data, not code |
+| `manager.price-adjustment-floor` | `adjust-price` | requested price is below the floor price, or the variant has no floor price | `require-approval` | none |
+
+`require-approval` creates the approval request of the flow's own request type; the chain stays
+`approval-workflow`'s job. `warn`/`info` let the action proceed on the ordinary path (a price is
+still applied only with `AdjustPriceWithinLimit`). `block` refuses with `ForbiddenError`.
+`require-approval` is offered at the credit-term and price stages only: a reservation extension has no
+approval executor. Extending a reservation takes the order's `reserve-order:<id>` lock before reading
+the active reservations, so two extensions add up.
 
 ```typescript
 @Mutation()
 @Allow(CustomPermission.AdjustPriceWithinLimit.Permission,
        CustomPermission.RequestPriceAdjustmentApproval.Permission)
 async adjustOrderLinePrice(@Ctx() ctx: RequestContext, @Args() args: AdjustPriceInput) {
-  const decision = await this.priceAdjustmentGate.evaluate(ctx, args);
+  const decision = await this.priceAdjustment.decide(ctx, args); // evaluates the manager check
   if (decision === 'apply-directly') {
     return this.orderPricingService.applyAdjustment(ctx, args);
   }

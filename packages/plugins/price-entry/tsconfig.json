@@ -9,6 +9,7 @@
     "references": [
         { "path": "../access-control" },
         { "path": "../approval-workflow" },
+        { "path": "../checks" },
         { "path": "../counterparty" },
         { "path": "../customer-pricing" },
         { "path": "../../shared" }
