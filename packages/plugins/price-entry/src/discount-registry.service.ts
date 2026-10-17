@@ -3,6 +3,7 @@ import { ID } from '@vendure/common/lib/shared-types';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Brackets, In, WhereExpressionBuilder } from 'typeorm';
 import { Counterparty } from '@mivend/plugin-counterparty';
+import { withAggregateLock } from 'shared';
 
 import { DiscountRegistryEntry } from './discount-registry-entry.entity';
 
@@ -93,19 +94,29 @@ export class DiscountRegistryService {
     // No ApprovalRequest exists for ERP-pushed rules, so they go straight to 'materialized'.
     // Callers must skip portal-origin rules (erpId portal-<requestId>); their entry already exists.
     async upsertFromRule(ctx: RequestContext, rule: DiscountRuleForRegistry): Promise<void> {
-        const repo = this.connection.getRepository(ctx, DiscountRegistryEntry);
-        let entry = await repo.findOne({ where: { discountRuleId: String(rule.id) } });
-        if (!entry) {
-            entry = repo.create({ discountRuleId: String(rule.id), approvalRequestId: null });
-        }
-        entry.status = 'materialized';
-        entry.priceTypeCode = rule.priceTypeCode ?? '';
-        entry.facetCode = rule.facetCode;
-        entry.facetValueCode = rule.facetValueCode;
-        entry.percent = rule.percent;
-        entry.validFrom = rule.validFrom;
-        entry.validTo = rule.validTo;
-        await repo.save(entry);
+        await withAggregateLock(
+            this.connection,
+            ctx,
+            `discount-registry-rule:${String(rule.id)}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, DiscountRegistryEntry);
+                let entry = await repo.findOne({ where: { discountRuleId: String(rule.id) } });
+                if (!entry) {
+                    entry = repo.create({
+                        discountRuleId: String(rule.id),
+                        approvalRequestId: null,
+                    });
+                }
+                entry.status = 'materialized';
+                entry.priceTypeCode = rule.priceTypeCode ?? '';
+                entry.facetCode = rule.facetCode;
+                entry.facetValueCode = rule.facetValueCode;
+                entry.percent = rule.percent;
+                entry.validFrom = rule.validFrom;
+                entry.validTo = rule.validTo;
+                await repo.save(entry);
+            },
+        );
     }
 
     // Rejected entries are final; approved ones become 'materialized' and validTo drives their status.
@@ -115,14 +126,21 @@ export class DiscountRegistryService {
         outcome: 'materialized' | 'rejected',
         discountRuleId?: ID,
     ): Promise<void> {
-        const repo = this.connection.getRepository(ctx, DiscountRegistryEntry);
-        const entry = await repo.findOne({
-            where: { approvalRequestId: String(approvalRequestId) },
-        });
-        if (!entry) return; // entry predates the registry (backfilled separately) or was never created
-        entry.status = outcome;
-        if (discountRuleId !== undefined) entry.discountRuleId = String(discountRuleId);
-        await repo.save(entry);
+        await withAggregateLock(
+            this.connection,
+            ctx,
+            `discount-registry-request:${String(approvalRequestId)}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, DiscountRegistryEntry);
+                const entry = await repo.findOne({
+                    where: { approvalRequestId: String(approvalRequestId) },
+                });
+                if (!entry) return; // predates the registry (backfilled separately) or never created
+                entry.status = outcome;
+                if (discountRuleId !== undefined) entry.discountRuleId = String(discountRuleId);
+                await repo.save(entry);
+            },
+        );
     }
 
     async findAllPaginated(
@@ -193,39 +211,56 @@ export class DiscountRegistryService {
             input: Omit<DiscountRegistryEntryInput, 'approvalRequestId'>;
         }>,
     ): Promise<number> {
-        const repo = this.connection.getRepository(ctx, DiscountRegistryEntry);
         let written = 0;
         for (const item of entries) {
-            const lookupKey = item.approvalRequestId
-                ? { approvalRequestId: String(item.approvalRequestId) }
-                : { discountRuleId: String(item.discountRuleId) };
-            const existing = await repo.findOne({ where: lookupKey });
-            const customerNamesForSearch = await this.resolveCustomerNamesForSearch(
-                ctx,
-                item.input.counterpartyIds,
+            const lockKey = item.approvalRequestId
+                ? `discount-registry-request:${String(item.approvalRequestId)}`
+                : `discount-registry-rule:${String(item.discountRuleId)}`;
+            await withAggregateLock(this.connection, ctx, lockKey, txCtx =>
+                this.backfillOne(txCtx, item),
             );
-            const fields = {
-                approvalRequestId: item.approvalRequestId ? String(item.approvalRequestId) : null,
-                discountRuleId: item.discountRuleId ? String(item.discountRuleId) : null,
-                status: item.status,
-                priceTypeCode: item.input.priceTypeCode,
-                facetCode: item.input.facetCode,
-                facetValueCode: item.input.facetValueCode,
-                percent: item.input.percent,
-                validFrom: item.input.validFrom,
-                validTo: item.input.validTo,
-                justification: item.input.justification,
-                counterpartyIds: item.input.counterpartyIds,
-                customerNamesForSearch,
-            };
-            if (existing) {
-                Object.assign(existing, fields);
-                await repo.save(existing);
-            } else {
-                await repo.save(repo.create(fields));
-            }
             written++;
         }
         return written;
+    }
+
+    private async backfillOne(
+        ctx: RequestContext,
+        item: {
+            approvalRequestId: ID | null;
+            discountRuleId: ID | null;
+            status: 'pending' | 'rejected' | 'materialized';
+            input: Omit<DiscountRegistryEntryInput, 'approvalRequestId'>;
+        },
+    ): Promise<void> {
+        const repo = this.connection.getRepository(ctx, DiscountRegistryEntry);
+        const lookupKey = item.approvalRequestId
+            ? { approvalRequestId: String(item.approvalRequestId) }
+            : { discountRuleId: String(item.discountRuleId) };
+        const existing = await repo.findOne({ where: lookupKey });
+        const customerNamesForSearch = await this.resolveCustomerNamesForSearch(
+            ctx,
+            item.input.counterpartyIds,
+        );
+        const fields = {
+            approvalRequestId: item.approvalRequestId ? String(item.approvalRequestId) : null,
+            discountRuleId: item.discountRuleId ? String(item.discountRuleId) : null,
+            status: item.status,
+            priceTypeCode: item.input.priceTypeCode,
+            facetCode: item.input.facetCode,
+            facetValueCode: item.input.facetValueCode,
+            percent: item.input.percent,
+            validFrom: item.input.validFrom,
+            validTo: item.input.validTo,
+            justification: item.input.justification,
+            counterpartyIds: item.input.counterpartyIds,
+            customerNamesForSearch,
+        };
+        if (existing) {
+            Object.assign(existing, fields);
+            await repo.save(existing);
+        } else {
+            await repo.save(repo.create(fields));
+        }
     }
 }

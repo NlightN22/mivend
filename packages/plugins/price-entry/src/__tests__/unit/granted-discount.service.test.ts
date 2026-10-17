@@ -18,8 +18,12 @@ const input = {
 };
 
 function setup(existing: Record<string, unknown> | null) {
-    const repo = { findOne: vi.fn().mockResolvedValue(existing), save: vi.fn() };
-    const service = new GrantedDiscountService({ getRepository: () => repo } as never);
+    const repo = { findOne: vi.fn().mockResolvedValue(existing), save: vi.fn(), query: vi.fn() };
+    const connection = {
+        getRepository: () => repo,
+        withTransaction: (c: unknown, work: (c: unknown) => unknown) => work(c),
+    };
+    const service = new GrantedDiscountService(connection as never);
     return { repo, service };
 }
 

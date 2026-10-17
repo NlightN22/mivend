@@ -19,11 +19,13 @@ const mockRepo = {
     save: vi.fn(async (input: unknown) => input),
     findOne: vi.fn(),
     createQueryBuilder: vi.fn(() => mockQb),
+    query: vi.fn(),
 };
 
 const counterpartyRepo = { findBy: vi.fn(async (): Promise<{ legalName: string }[]> => []) };
 
 const mockConnection = {
+    withTransaction: (c: unknown, work: (c: unknown) => unknown) => work(c),
     getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
         entity?.name === 'Counterparty' ? counterpartyRepo : mockRepo,
     ),

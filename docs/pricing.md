@@ -355,3 +355,9 @@ computed from a stale line set. A blocking handler records only a per-order mark
 `ActiveOrderSettleInterceptor` makes Shop API `activeOrder` wait (3 s max, never throwing) until
 the rebalance clears it. Mutation responses themselves are not delayed, so they may show pre-rebalance
 prices; the following `activeOrder` read is settled. The wait is per process.
+
+Deployment constraint: the `running`, `pending` and marker maps are in-process, so the coalescing
+and the `activeOrder` settle wait assume a single API process (events are handled in the process
+that served the mutation). Writes stay correct on several processes (each adjust and the totals
+refresh re-read under the order row lock); only the coalescing and the settle wait degrade, so
+`activeOrder` can briefly show pre-rebalance prices.
