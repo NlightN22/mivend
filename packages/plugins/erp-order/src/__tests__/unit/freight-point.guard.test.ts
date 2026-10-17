@@ -67,11 +67,23 @@ describe('freightPointGuard', () => {
         expect(await run()).toBe(FREIGHT_WITHOUT_POINT_MESSAGE);
     });
 
+    it('checks the rule again on payment, after the shipping method may have been changed', async () => {
+        orderRepo.findOne.mockResolvedValue({ customFields: {} });
+        expect(await run('ArrangingPayment', 'PaymentSettled')).toBe(FREIGHT_WITHOUT_POINT_MESSAGE);
+        expect(await run('ArrangingPayment', 'PaymentAuthorized')).toBe(
+            FREIGHT_WITHOUT_POINT_MESSAGE,
+        );
+        orderRepo.findOne.mockResolvedValue({ customFields: { tradingPointId: '9' } });
+        tradingPoints.findById.mockResolvedValue(activePoint);
+        expect(await run('ArrangingPayment', 'PaymentSettled')).toBeUndefined();
+    });
+
     it('does not touch a pickup order or a transition that is not the placement', async () => {
         shippingRepo.find.mockResolvedValue([{ shippingMethod: { code: 'pickup' } }]);
         expect(await run()).toBeUndefined();
         shippingRepo.find.mockResolvedValue([{ shippingMethod: { code: 'freight-delivery' } }]);
-        expect(await run('ArrangingPayment', 'PaymentSettled')).toBeUndefined();
+        expect(await run('PaymentSettled', 'Shipped')).toBeUndefined();
+        expect(await run('ArrangingPayment', 'AddingItems')).toBeUndefined();
         expect(await run('PaymentSettled', 'ArrangingPayment')).toBeUndefined();
     });
 });

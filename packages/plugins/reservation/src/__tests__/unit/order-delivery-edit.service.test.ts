@@ -10,6 +10,7 @@ vi.mock('shared', () => ({
 }));
 
 vi.mock('../../order-line-edit.guard', () => ({ OrderLineEditGuard: class {} }));
+vi.mock('../../order-checks.service', () => ({ OrderChecksService: class {} }));
 vi.mock('@mivend/plugin-erp-order', () => ({ OrderVisibilityService: class {} }));
 
 const ctx = {} as RequestContext;
@@ -32,6 +33,8 @@ const guard = { assertEditable: vi.fn() };
 const history = { createHistoryEntryForOrder: vi.fn() };
 const tradingPoints = { findVisibleForCounterparty: vi.fn() };
 const counterparties = { getForCustomer: vi.fn() };
+const eventBus = { publish: vi.fn() };
+const orderChecks = { run: vi.fn() };
 const point = { id: 9, name: 'North Depot', address: 'North Ave 42' };
 
 describe('OrderDeliveryEditService.setDelivery', () => {
@@ -64,6 +67,8 @@ describe('OrderDeliveryEditService.setDelivery', () => {
             history as never,
             tradingPoints as never,
             counterparties as never,
+            eventBus as never,
+            orderChecks as never,
         );
     });
 
@@ -75,6 +80,8 @@ describe('OrderDeliveryEditService.setDelivery', () => {
         });
         expect(history.createHistoryEntryForOrder).toHaveBeenCalledTimes(1);
         expect(guard.assertEditable).toHaveBeenCalledTimes(1);
+        expect(orderChecks.run).toHaveBeenCalledWith(ctx, '1', 'on-edit');
+        expect(eventBus.publish).toHaveBeenCalledTimes(1);
     });
 
     it('switches to self-pickup: clears the point and address together with the shipping line', async () => {
@@ -90,6 +97,7 @@ describe('OrderDeliveryEditService.setDelivery', () => {
         await expect(service.setDelivery(ctx, 1, 'COURIER', '9')).rejects.toThrow('sent');
         expect(orderRepo.update).not.toHaveBeenCalled();
         expect(lineRepo.update).not.toHaveBeenCalled();
+        expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
     it('refuses a point that is not one of the order client points', async () => {

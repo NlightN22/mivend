@@ -11,3 +11,13 @@ export class OrderLinesEditedEvent extends VendureEvent {
         super();
     }
 }
+
+// Staff changed a placed order's delivery method or point (#245); published after the edit commits.
+export class OrderDeliveryEditedEvent extends VendureEvent {
+    constructor(
+        public readonly ctx: RequestContext,
+        public readonly orderId: ID,
+    ) {
+        super();
+    }
+}

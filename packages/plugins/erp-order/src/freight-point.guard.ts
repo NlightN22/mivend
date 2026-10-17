@@ -1,7 +1,7 @@
 import type { Injector, OrderProcess, OrderState } from '@vendure/core';
 import { AdministratorService, Order, ShippingLine, TransactionalConnection } from '@vendure/core';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
-import { FREIGHT_SHIPPING_METHOD_CODE } from 'shared';
+import { hasFreightShippingLine } from 'shared';
 
 import './types';
 
@@ -13,7 +13,7 @@ let tradingPoints: TradingPointService;
 let counterparties: CounterpartyService;
 let administrators: AdministratorService;
 
-// Placement refuses a courier order without a usable point; staff pick the point on the order, a customer's is the preferred one.
+// Placement and payment refuse a courier order without a usable point; staff pick the point on the order, a customer's is the preferred one.
 export const freightPointGuard: OrderProcess<OrderState> = {
     init(injector: Injector) {
         connection = injector.get(TransactionalConnection);
@@ -22,13 +22,19 @@ export const freightPointGuard: OrderProcess<OrderState> = {
         administrators = injector.get(AdministratorService);
     },
     async onTransitionStart(fromState, toState, { ctx, order }) {
-        if (toState !== 'ArrangingPayment') return;
-        if (fromState !== 'AddingItems' && fromState !== 'Draft') return;
+        const placement =
+            toState === 'ArrangingPayment' &&
+            (fromState === 'AddingItems' || fromState === 'Draft');
+        // The shipping method can still change in ArrangingPayment, so the rule is checked again on payment.
+        const payment =
+            fromState === 'ArrangingPayment' &&
+            (toState === 'PaymentAuthorized' || toState === 'PaymentSettled');
+        if (!placement && !payment) return;
         const lines = await connection.getRepository(ctx, ShippingLine).find({
             where: { order: { id: order.id } },
             relations: ['shippingMethod'],
         });
-        if (!lines.some(l => l.shippingMethod?.code === FREIGHT_SHIPPING_METHOD_CODE)) return;
+        if (!hasFreightShippingLine(lines)) return;
         if (!order.customerId) return FREIGHT_WITHOUT_POINT_MESSAGE;
 
         const isStaff =

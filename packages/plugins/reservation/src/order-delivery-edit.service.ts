@@ -3,6 +3,7 @@ import type { ID } from '@vendure/common/lib/shared-types';
 import { HistoryEntryType } from '@vendure/common/lib/generated-types';
 import { In, IsNull } from 'typeorm';
 import {
+    EventBus,
     HistoryService,
     Order,
     RequestContext,
@@ -23,6 +24,8 @@ import {
     withAggregateLock,
 } from 'shared';
 
+import { OrderChecksService } from './order-checks.service';
+import { OrderDeliveryEditedEvent } from './order-line-edit.events';
 import { OrderLineEditGuard } from './order-line-edit.guard';
 
 export type OrderDeliveryMethod = 'PICKUP' | 'COURIER';
@@ -37,6 +40,8 @@ export class OrderDeliveryEditService {
         private history: HistoryService,
         private tradingPoints: TradingPointService,
         private counterparties: CounterpartyService,
+        private eventBus: EventBus,
+        private orderChecks: OrderChecksService,
     ) {}
 
     async setDelivery(
@@ -83,6 +88,8 @@ export class OrderDeliveryEditService {
                 },
                 false,
             );
+            await this.orderChecks.run(txCtx, String(orderId), 'on-edit');
+            await this.eventBus.publish(new OrderDeliveryEditedEvent(txCtx, orderId));
         });
     }
 

@@ -11,13 +11,15 @@ import {
     CounterpartyService,
     TradingPointService,
 } from '@mivend/plugin-counterparty';
-import { FREIGHT_SHIPPING_METHOD_CODE } from '@mivend/plugin-freight-shipping';
+import { hasFreightShippingLine } from 'shared';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 
 import { HELD_SKIP_REASON, OrderSendHoldService } from './order-checks/order-send-hold.service';
 import { outboundSend, outboundSkip, OutboundGateway } from './outbound-gateway';
 import type { OutboundBuildResult } from './outbound-gateway';
 import type { OrderSubmittedLine, OrderSubmittedPayload } from './schemas/order-submitted.schema';
+
+export const COURIER_WITHOUT_POINT_SKIP_REASON = 'courier delivery without a trading point';
 
 interface ActiveReservations {
     warehouseIdByLineId: Map<string, string>;
@@ -187,15 +189,13 @@ export class OrderSubmittedBuilder {
     ): Promise<
         Pick<OrderSubmittedPayload, 'pointOfSaleId' | 'deliveryAddress'> | { skipReason: string }
     > {
-        const isDelivery = order.shippingLines?.some(
-            line => line.shippingMethod?.code === FREIGHT_SHIPPING_METHOD_CODE,
-        );
+        const isDelivery = hasFreightShippingLine(order.shippingLines ?? []);
         if (!isDelivery) return {};
         const tradingPointId = order.customFields?.tradingPointId;
         const point = tradingPointId
             ? await this.tradingPointService.findById(ctx, tradingPointId)
             : null;
-        if (!point) return { skipReason: 'courier delivery without a trading point' };
+        if (!point) return { skipReason: COURIER_WITHOUT_POINT_SKIP_REASON };
         if (point.customerOwned) {
             this.logger.warn(
                 `Order ${order.code}: delivery to a customer-owned point is submitted as pickup`,

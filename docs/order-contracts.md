@@ -477,17 +477,25 @@ with a point; otherwise it is a pickup and carries neither.
   With no point chosen and a pickup shipping line the order is self-pickup: no `tradingPointId`, no
   `deliveryAddress`, never the customer's preferred point (the branch scope still comes from it).
 - Courier needs a point, enforced on the server (`freightPointGuard`, an order process on the
-  `AddingItems`/`Draft` -> `ArrangingPayment` transition, so the refusal reaches the client as the transition error):
+  `AddingItems`/`Draft` -> `ArrangingPayment` transition and again on `ArrangingPayment` -> `PaymentAuthorized`/`PaymentSettled`,
+  because the shipping method can change in between; the refusal reaches the client as the transition error):
   a staff order needs its own chosen point of the client's counterparty, a storefront order needs a usable preferred
   point. The submit event never downgrades such an order to pickup: a courier order without a known point is skipped
-  with a reason until it has one. Only a customer-added point (no ERP id) is still submitted as pickup, with a warning.
+  with the reason `courier delivery without a trading point` (a `skipped` outbox row, counted in the integration
+  health panel, and an error finding of `delivery.freight-trading-point` on the order page, which judges a placed order
+  by its own stored point) until staff set a point or switch to pickup, which re-drives the row at once. Only a customer-added point (no ERP id) is still submitted as pickup, with a warning.
 - Editing a placed order: Admin API `setOrderDelivery(orderId, method PICKUP|COURIER, tradingPointId)` (`ConfirmOrder`,
   order visibility scope; only staff, a customer asks the manager). It is allowed while the order is editable by the
   line-edit rules (#233): not sent to the ERP, not shipped, not cancelled (`OrderLineEditGuard`; an active reservation
   is released and a pending submission skipped, so staff re-confirm). Under the order lock it points the order's
   shipping line at the `freight-delivery` or `pickup` method and updates `tradingPointId` + `deliveryAddress` per
   column (courier: one of the client's active points; pickup: both cleared), and adds an order note to the history.
-  `branchId` is not recomputed. The manager portal order page has a "Delivery" panel for it.
+  Every shipping line gets the same method (one predicate, `hasFreightShippingLine`, is used by the guard and the
+  builder). The shipping price is not recomputed: both methods use a zero-rate calculator today, so a switch changes
+  no amount; a priced freight method must recompute it here. `branchId` is not recomputed either (it drives stock
+  allocation and visibility). After the edit commits, `OrderDeliveryEditedEvent` re-drives the order's skipped
+  `order.confirmed` row immediately (`HeldSendRedriveService`), and the order checks are recomputed. The manager
+  portal order page has a "Delivery" panel for it.
 
 ### ERP status derivation by receiving method (owner-approved; the ERP computes it, we only read `status_code`)
 

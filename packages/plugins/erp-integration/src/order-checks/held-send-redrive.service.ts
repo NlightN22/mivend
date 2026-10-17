@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { EventBus, RequestContextService } from '@vendure/core';
 import { CheckPolicyChangedEvent } from '@mivend/plugin-checks';
-import { OrderStaffConfirmedEvent } from '@mivend/plugin-reservation';
+import { OrderDeliveryEditedEvent, OrderStaffConfirmedEvent } from '@mivend/plugin-reservation';
 import { subscribeAndLog } from 'shared';
 import { DataSource } from 'typeorm';
 
@@ -11,12 +11,13 @@ import {
 } from '../integration-outbox-recovery.service';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from '../types';
 import type { ErpIntegrationPluginOptions } from '../types';
+import { COURIER_WITHOUT_POINT_SKIP_REASON } from '../order-submitted.builder';
 import { HELD_SKIP_REASON } from './order-send-hold.service';
 
 const loggerCtx = 'HeldSendRedrive';
 const SWEEP_LIMIT = 200;
 
-// A send held at pre-send-to-erp leaves a `skipped` row; a staff release or a policy that stops
+// A send held at pre-send-to-erp, or a courier order without a point, leaves a `skipped` row; a staff release or a policy that stops
 // holding re-drives it through the normal rebuild, so a hold can never block the send for good.
 @Injectable()
 export class HeldSendRedriveService implements OnApplicationBootstrap {
@@ -34,6 +35,12 @@ export class HeldSendRedriveService implements OnApplicationBootstrap {
         subscribeAndLog(
             this.eventBus,
             OrderStaffConfirmedEvent,
+            event => this.redrive(String(event.orderId)),
+            loggerCtx,
+        );
+        subscribeAndLog(
+            this.eventBus,
+            OrderDeliveryEditedEvent,
             event => this.redrive(String(event.orderId)),
             loggerCtx,
         );
@@ -62,13 +69,18 @@ export class HeldSendRedriveService implements OnApplicationBootstrap {
         const rows: Array<{ id: string }> = await this.dataSource.query(
             `SELECT id FROM integration_outbox
               WHERE event_type = 'order.confirmed' AND status = 'skipped'
-                AND (last_error = $1 OR (last_error LIKE 'rebuild failed:%' AND ($3 OR (
+                AND (last_error = $1 OR last_error = $4 OR (last_error LIKE 'rebuild failed:%' AND ($3 OR (
                        created_at > now() - interval '7 days'
                        AND (last_error_at IS NULL OR last_error_at <= now() - GREATEST(
                             interval '5 minutes', LEAST(interval '1 day', last_error_at - created_at)))))))
                 AND ($2::text IS NULL OR payload ->> 'orderId' = $2)
               ORDER BY last_error_at ASC NULLS FIRST, id LIMIT ${limit}`,
-            [HELD_SKIP_REASON, orderId ?? null, orderId !== undefined],
+            [
+                HELD_SKIP_REASON,
+                orderId ?? null,
+                orderId !== undefined,
+                COURIER_WITHOUT_POINT_SKIP_REASON,
+            ],
         );
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
         let queued = 0;

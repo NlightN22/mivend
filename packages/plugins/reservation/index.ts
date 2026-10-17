@@ -54,7 +54,7 @@ export type {
     WarehouseAvailability,
     AvailabilitySource,
 } from './src/order-line-availability.port';
-export { OrderLinesEditedEvent } from './src/order-line-edit.events';
+export { OrderDeliveryEditedEvent, OrderLinesEditedEvent } from './src/order-line-edit.events';
 export { OrderLineShortfall } from './src/entities/order-line-shortfall.entity';
 export { planSplit } from './src/order-line-split';
 export { OrderLinesEditPortRegistry } from './src/order-line-edit.port';

@@ -9,6 +9,13 @@ import {
     hasFreightWithoutTradingPoint,
 } from './freight-trading-point.check';
 
+interface PointFields {
+    tradingPointId?: string | null;
+}
+
+const isPlaced = (order: Order | null): boolean =>
+    !!order && order.state !== 'AddingItems' && order.state !== 'Draft';
+
 // The customer is never stopped at checkout; the manager stage holds the automatic reserve (#241).
 @Injectable()
 export class FreightTradingPointRegistrar implements OnModuleInit {
@@ -34,6 +41,10 @@ export class FreightTradingPointRegistrar implements OnModuleInit {
                     ctx,
                     {
                         customerId: subject.customerId,
+                        placedPointId: isPlaced(order)
+                            ? ((order?.customFields as PointFields | undefined)?.tradingPointId ??
+                              null)
+                            : undefined,
                         shippingMethodIds: (order?.shippingLines ?? [])
                             .map(l => l.shippingMethodId)
                             .filter((id): id is NonNullable<typeof id> => id != null),
