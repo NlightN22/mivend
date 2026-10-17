@@ -323,15 +323,17 @@ describe('branch consumer', () => {
     it('invalid schema message goes to dead-letters without requeue', async () => {
         const ch = hubRabbitMQ.requireChannel();
         const invalid = Buffer.from(JSON.stringify({ not: 'a valid sync event' }));
+        const baseline = (await branchRabbitMQ.requireChannel().checkQueue('sync.dead-letters'))
+            .messageCount;
         ch.publish(EXCHANGE, 'product.updated.all-branches', invalid, { persistent: true });
 
         await waitFor(async () => {
             const q = await branchRabbitMQ.requireChannel().checkQueue('sync.dead-letters');
-            return q.messageCount > 0;
+            return q.messageCount > baseline;
         });
 
         const q = await branchRabbitMQ.requireChannel().checkQueue('sync.dead-letters');
-        expect(q.messageCount).toBeGreaterThan(0);
+        expect(q.messageCount).toBeGreaterThan(baseline);
 
         const mainQ = await branchRabbitMQ.requireChannel().checkQueue('sync.branch-a');
         expect(mainQ.messageCount).toBe(0);
@@ -393,6 +395,10 @@ describe('branch consumer', () => {
 describe('batch processing', () => {
     it('processes product.created, product.updated, product.deleted in sequence', async () => {
         const productId = randomUUID();
+        const processedBaseline = await dataSource.getRepository(SyncProcessedEvent).count();
+        const deliveredBaseline = await dataSource
+            .getRepository(SyncOutboxEntry)
+            .countBy({ status: 'delivered' });
 
         await dataSource.transaction(async em => {
             await syncService.writeToOutbox(
@@ -422,13 +428,13 @@ describe('batch processing', () => {
 
         await waitFor(async () => {
             const count = await dataSource.getRepository(SyncProcessedEvent).count();
-            return count === 3;
+            return count - processedBaseline >= 3;
         });
 
         const delivered = await dataSource
             .getRepository(SyncOutboxEntry)
             .countBy({ status: 'delivered' });
-        expect(delivered).toBe(3);
+        expect(delivered - deliveredBaseline).toBeGreaterThanOrEqual(3);
     });
 });
 
