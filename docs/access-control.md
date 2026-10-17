@@ -101,9 +101,34 @@ already read, and `checkResults` still passes through the order visibility scope
 nothing). `ManageCheckPolicies` (consequence policies) stays with general-director and portal-admin. It is a global (central admin) right on purpose: it edits the global default and every branch's override (`updateCheckPolicy`/`resetCheckPolicyOverride` take any existing `branchId`, an unknown one is rejected); there is no per-branch policy editor role. The same permission edits the `manager` subject's policies (reservation extension, credit-term, price floor, #242): no stronger or dedicated permission, because the audience already can soften order controls; a branch override saved without a recipient inherits the global recipient.
 `recomputeOrderChecks` writes results and takes the order lock, so it needs `ReadCheckResults` AND
 `ConfirmOrder` (the permission of the other staff order actions: confirm, release, set contract, edit lines before confirmation, #233);
-`@Allow` is any-of, so the second one is checked in the resolver. `setDraftOrderTradingPoint` (#245) needs core `CreateOrder`, resolves the order through `OrderVisibilityService` (a foreign order is `Order not found`) and accepts only active, visible points of the order's own counterparty; `setOrderDelivery` (placed orders) needs `ConfirmOrder` with the same scope and point rule. The Admin API `cancelOrder` override (#231) keeps core's `UpdateOrder` but resolves the order through `OrderVisibilityService` first: core checks only the channel, so an order outside the administrator's scope is `EntityNotFound`. Known gap: core `transitionOrderToState` (Dashboard), including into `Cancelled`, has no mivend order-scope check. `ConfirmOrder` is broader than a
+`@Allow` is any-of, so the second one is checked in the resolver. `setDraftOrderTradingPoint` (#245) needs core `CreateOrder`, resolves the order through `OrderVisibilityService` (a foreign order is `Order not found`) and accepts only active, visible points of the order's own counterparty; `setOrderDelivery` (placed orders) needs `ConfirmOrder` with the same scope and point rule. The Admin API `cancelOrder` override (#231) keeps core's `UpdateOrder`; its order scope comes from the core order scope guard below. `ConfirmOrder` is broader than a
 recompute strictly needs; accepted for now (owner decision). If a role must recompute without being able to
 confirm, introduce a dedicated permission instead of widening this one.
+
+### Core Admin API order operations (#248)
+
+Core checks only channel and permission on its order operations, so one guard applies mivend's
+order scope (`OrderVisibilityService`) to all of them; an order outside the caller's scope is
+`EntityNotFound`, on read and on write. SuperAdmin is not scoped. The registry is
+`packages/plugins/erp-order/src/core-order-scope/core-order-operations.ts`; a unit test parses
+core's Admin API schema and fails when a core operation that takes or returns order data is not in it.
+
+| Class | Operations | Order resolved from |
+| --- | --- | --- |
+| Read | `order`, `eligibleShippingMethodsForDraftOrder` | order id |
+| Scoped lists (overridden resolvers) | `orders`, `Customer.orders`, `OrderLine.order` | the visible-orders query |
+| Order writes | `transitionOrderToState`, `cancelOrder`, `modifyOrder` (+ its refund payments), `addNoteToOrder`, `setOrderCustomFields`, `setOrderCustomer`, `addManualPaymentToOrder` | order id |
+| Draft writes | `deleteDraftOrder`, `addItemToDraftOrder`, `adjustDraftOrderLine`, `removeDraftOrderLine`, `setCustomerForDraftOrder`, `setDraftOrder*`, `unsetDraftOrder*Address`, `applyCouponCodeToDraftOrder`, `removeCouponCodeFromDraftOrder` | order id (+ line id) |
+| Payments, refunds | `settlePayment`, `cancelPayment`, `transitionPaymentToState`, `refundOrder`, `settleRefund` | payment / refund id |
+| Fulfillments | `addFulfillmentToOrder`, `transitionFulfillmentToState` | order line / fulfillment id |
+| Notes | `updateOrderNote`, `deleteOrderNote` | history entry id |
+| Exempt | `createDraftOrder` (new order); `updateCustomerNote` (customer note); fields reachable only through a scoped order | — |
+
+Root operations go through `CoreOrderScopeInterceptor` (one `APP_INTERCEPTOR`, Admin API only);
+lists cannot be filtered after the fact, so `orders`, `Customer.orders` and `OrderLine.order`
+are overridden with the same visible-orders query. A draft that is still `Draft` with no customer
+belongs to no scope yet and stays reachable, so its creator can set the customer. Dashboard access
+for roles below portal-admin is unchanged: the Dashboard now shows them only their scope.
 
 ## Layer 3: `AccessScopeService` — one service, reused everywhere
 

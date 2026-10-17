@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ListQueryBuilder, Order, PaginatedList, RequestContext } from '@vendure/core';
+import { ID, ListQueryBuilder, Order, PaginatedList, RequestContext } from '@vendure/core';
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 import { Brackets, SelectQueryBuilder, WhereExpressionBuilder } from 'typeorm';
 import { documentNumberSearchTerm } from 'shared';
@@ -22,12 +22,19 @@ export class OrderVisibilityService {
         managerId?: string,
         customerId?: string,
         search?: string,
+        relations: string[] = [],
     ): Promise<SelectQueryBuilder<Order>> {
         const scope = await this.accessScopeService.resolveOrderScope(ctx);
         // Vendure's Order.totalQuantity resolver throws unless lines and fulfillments are joined here.
         const qb = this.listQueryBuilder.build(Order, options, {
             ctx,
-            relations: ['lines', 'fulfillments'],
+            relations: [
+                ...new Set([
+                    'lines',
+                    'fulfillments',
+                    ...relations.filter(r => !r.startsWith('customer')),
+                ]),
+            ],
         });
         qb.leftJoinAndSelect(`${qb.alias}.customer`, 'customer').leftJoin(
             Counterparty,
@@ -84,6 +91,15 @@ export class OrderVisibilityService {
         return qb;
     }
 
+    async visibleIds(ctx: RequestContext, orderIds: ID[]): Promise<Set<string>> {
+        if (orderIds.length === 0) return new Set();
+        const qb = await this.buildVisibleOrdersQuery(ctx);
+        const rows = await qb
+            .andWhere(`${qb.alias}.id IN (:...scopeOrderIds)`, { scopeOrderIds: orderIds })
+            .getMany();
+        return new Set(rows.map(order => String(order.id)));
+    }
+
     async findVisible(
         ctx: RequestContext,
         options?: OrderListOptions,
@@ -94,8 +110,16 @@ export class OrderVisibilityService {
         // Must be server-side: company name, INN and phone live on joined Counterparty/Customer rows.
         // OrderFilterParameter._or can only reach Order's own columns.
         search?: string,
+        relations?: string[],
     ): Promise<PaginatedList<Order>> {
-        const qb = await this.buildVisibleOrdersQuery(ctx, options, managerId, customerId, search);
+        const qb = await this.buildVisibleOrdersQuery(
+            ctx,
+            options,
+            managerId,
+            customerId,
+            search,
+            relations,
+        );
         const [items, totalItems] = await qb.getManyAndCount();
         return { items, totalItems };
     }
