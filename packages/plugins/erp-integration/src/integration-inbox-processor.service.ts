@@ -179,7 +179,7 @@ export class IntegrationInboxProcessorService {
                 `processPendingBatch: deadline reached mid-batch, releasing ${unprocessedIds.length} claimed row(s) back to pending`,
                 loggerCtx,
             );
-            await this.inbox.releaseClaims(unprocessedIds);
+            await this.inbox.releaseClaims(unprocessedIds, sorted[stoppedAt].claimToken);
         }
         return { processed, failed, claimed: rows.length };
     }
@@ -198,14 +198,15 @@ export class IntegrationInboxProcessorService {
                     row.id,
                     'superseded',
                     'a newer version was already processed',
+                    row.claimToken,
                 );
                 return true;
             }
             const result = await this.handlers[row.stream].apply(ctx, row.entityId, row.payload);
             if (result && result.kind === 'noop') {
-                await this.inbox.markProcessed(row.id, 'noop', result.reason);
+                await this.inbox.markProcessed(row.id, 'noop', result.reason, row.claimToken);
             } else {
-                await this.inbox.markProcessed(row.id);
+                await this.inbox.markProcessed(row.id, 'applied', null, row.claimToken);
             }
             return true;
         } catch (err) {
@@ -219,7 +220,13 @@ export class IntegrationInboxProcessorService {
                 error instanceof UnknownOrderUuidError
                     ? { outcome: 'noop' as const, reason: 'unknown order uuid' }
                     : null;
-            await this.inbox.markFailed(row.id, error, undefined, onBudgetExhausted);
+            await this.inbox.markFailed(
+                row.id,
+                error,
+                undefined,
+                onBudgetExhausted,
+                row.claimToken,
+            );
             return false;
         }
     }

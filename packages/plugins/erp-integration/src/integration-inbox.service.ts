@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import type { PaginatedList } from '@vendure/core';
 import { Logger } from '@vendure/core';
+import { randomUUID } from 'crypto';
 import { DataSource, EntityManager, In } from 'typeorm';
 
 const loggerCtx = 'IntegrationInboxService';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
-import { replayDidNotResolve } from './inbox-replay-lifecycle';
-import { NonRetryableInboundError } from './non-retryable-inbound-error';
-import { computeRetryBackoffMs } from './retry-policy';
-import { INBOX_RETRY_WALL_CLOCK_BUDGET_MS } from './types';
+import { settleFailed, settleProcessed } from './integration-inbox-settle';
+import type { BudgetExhaustedNoop, InboxOutcome } from './integration-inbox-settle';
 import type { InboundStream } from './types';
 import { insertRejectedInboxRow } from './integration-inbox-rejected';
 import type { RejectedInboxMessage } from './integration-inbox-rejected';
@@ -20,7 +19,6 @@ const POSTGRES_UNIQUE_VIOLATION = '23505';
 // the next sweep. Mirrors plugin-acquiring's InboxService (STUCK_PROCESSING_THRESHOLD_MS).
 const STUCK_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000;
 
-const OPEN_STATUSES = ['pending', 'processing'];
 const FAILED_EVENTS_MAX_TAKE = 100;
 
 export interface EnqueueInboxEventInput {
@@ -126,8 +124,10 @@ export class IntegrationInboxService {
                 .setOnLocked('skip_locked')
                 .getMany();
             if (rows.length === 0) return rows;
+            const claimToken = randomUUID();
             for (const row of rows) {
                 row.status = 'processing';
+                row.claimToken = claimToken;
             }
             await repo.save(rows);
             return rows;
@@ -178,97 +178,38 @@ export class IntegrationInboxService {
         return rows.map(row => row.id);
     }
 
-    // The status guard keeps a stale worker's late outcome from overwriting a row another worker settled.
-    // One statement: marks the row processed and closes any replay_requested row of the same entity
-    // that was requested before this event arrived (any recorded outcome closes it, noop included).
+    // The status and claim-token guards keep a stale worker's late outcome from overwriting a row
+    // another worker settled or reclaimed.
     async markProcessed(
         id: number,
-        outcome: 'applied' | 'superseded' | 'noop' = 'applied',
+        outcome: InboxOutcome = 'applied',
         outcomeReason: string | null = null,
+        claimToken?: string | null,
     ): Promise<void> {
-        await this.dataSource.query(
-            `WITH done AS (
-                UPDATE integration_inbox_event
-                   SET status = 'processed', processed_at = now(), outcome = $2, outcome_reason = $3
-                 WHERE id = $1 AND status IN ('pending', 'processing')
-             RETURNING stream, entity_id, created_at)
-             UPDATE integration_inbox_event r SET status = 'resolved'
-               FROM done
-              WHERE r.stream = done.stream AND r.entity_id = done.entity_id
-                AND r.status = 'replay_requested' AND r.replay_requested_at <= done.created_at`,
-            [id, outcome, outcomeReason],
-        );
+        await settleProcessed(this.dataSource, id, outcome, outcomeReason, claimToken);
     }
 
     // Releases a deadline-stopped batch's unprocessed rows back to 'pending' (#149).
-    async releaseClaims(ids: number[]): Promise<void> {
+    async releaseClaims(ids: number[], claimToken?: string | null): Promise<void> {
         if (ids.length === 0) return;
-        await this.dataSource
-            .getRepository(IntegrationInboxEvent)
-            .update({ id: In(ids), status: 'processing' }, { status: 'pending' });
+        await this.dataSource.getRepository(IntegrationInboxEvent).update(
+            {
+                id: In(ids),
+                status: 'processing',
+                ...(claimToken ? { claimToken } : {}),
+            },
+            { status: 'pending', claimToken: null },
+        );
     }
 
-    // Failures retry with backoff and dead-letter only after 24h from the first failure;
-    // NonRetryableInboundError fails at once. onBudgetExhausted can turn a kind into a noop instead.
     async markFailed(
         id: number,
         error: Error,
         random: () => number = Math.random,
-        onBudgetExhausted: { outcome: 'noop'; reason: string } | null = null,
+        onBudgetExhausted: BudgetExhaustedNoop | null = null,
+        claimToken?: string | null,
     ): Promise<void> {
-        const repo = this.dataSource.getRepository(IntegrationInboxEvent);
-        const open = { id, status: In(OPEN_STATUSES) };
-        const bumped = await this.dataSource.transaction(async em => {
-            const row = await em
-                .getRepository(IntegrationInboxEvent)
-                .createQueryBuilder('e')
-                .setLock('pessimistic_write')
-                .where('e.id = :id AND e.status IN (:...open)', { id, open: OPEN_STATUSES })
-                .getOne();
-            if (!row) return null;
-            const next = {
-                attempts: row.attempts + 1,
-                firstFailedAt: row.firstFailedAt ?? new Date(),
-            };
-            await em.update(IntegrationInboxEvent, { id }, next);
-            return next;
-        });
-        if (!bumped) {
-            Logger.warn(`markFailed skipped: inbox row ${id} is already settled`, loggerCtx);
-            return;
-        }
-        const { attempts, firstFailedAt } = bumped;
-        const retriable = !(error instanceof NonRetryableInboundError);
-        if (!retriable || Date.now() - firstFailedAt.getTime() > INBOX_RETRY_WALL_CLOCK_BUDGET_MS) {
-            if (retriable && onBudgetExhausted) {
-                await repo.update(open, { lastError: error.message });
-                await this.markProcessed(id, onBudgetExhausted.outcome, onBudgetExhausted.reason);
-                return;
-            }
-            await repo.update(open, {
-                lastError: error.message,
-                status: 'failed',
-                nextRetryAt: null,
-            });
-            await this.dataSource.query(
-                `UPDATE integration_inbox_event r
-                    SET status = 'failed', replay_requested_at = NULL, last_error = $2
-                   FROM integration_inbox_event n
-                  WHERE n.id = $1 AND r.stream = n.stream AND r.entity_id = n.entity_id
-                    AND r.status = 'replay_requested' AND r.replay_requested_at <= n.created_at`,
-                [id, replayDidNotResolve(`the replayed event failed: ${error.message}`)],
-            );
-            return;
-        }
-        const nextRetryAt = new Date(Date.now() + computeRetryBackoffMs(attempts, random));
-        await repo.update(open, {
-            lastError: error.message,
-            status: 'pending',
-            nextRetryAt,
-            // Keeps eligibleAt (claimBatch's sole ordering/filter column, #147) equal to
-            // nextRetryAt for the duration of the backoff — see the entity's own comment.
-            eligibleAt: nextRetryAt,
-        });
+        await settleFailed(this.dataSource, id, error, random, onBudgetExhausted, claimToken);
     }
 
     // Dashboard/ops read model (issue #76) — 'failed' rows are dead-lettered (markFailed above)

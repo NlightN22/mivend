@@ -73,4 +73,43 @@ describe('inbox outcome writes (integration, real Postgres)', () => {
         expect(after.outcome).toBe('applied');
         expect(after.attempts).toBe(0);
     });
+
+    it("a stale claimant whose claim was reclaimed cannot settle the new claimant's row", async () => {
+        const row = await enqueue(3);
+        const [first] = await inbox.claimBatch(1);
+        await dataSource.query(
+            `UPDATE integration_inbox_event SET updated_at = now() - interval '1 hour' WHERE id = $1`,
+            [row.id],
+        );
+        const [second] = await inbox.claimBatch(1);
+        expect(second.id).toBe(first.id);
+        expect(second.claimToken).not.toBe(first.claimToken);
+
+        await inbox.markFailed(row.id, new Error('stale'), undefined, null, first.claimToken);
+        await inbox.markProcessed(row.id, 'applied', null, first.claimToken);
+
+        const untouched = await reload(row.id);
+        expect(untouched.status).toBe('processing');
+        expect(untouched.attempts).toBe(0);
+        expect(untouched.claimToken).toBe(second.claimToken);
+
+        await inbox.markProcessed(row.id, 'applied', null, second.claimToken);
+        const settled = await reload(row.id);
+        expect(settled.status).toBe('processed');
+        expect(settled.claimToken).toBeNull();
+    });
+
+    it('markFailed with the current claim token bumps attempts and schedules the retry in one step', async () => {
+        const row = await enqueue(4);
+        const [claimed] = await inbox.claimBatch(1);
+
+        await inbox.markFailed(row.id, new Error('boom'), undefined, null, claimed.claimToken);
+
+        const after = await reload(row.id);
+        expect(after.status).toBe('pending');
+        expect(after.attempts).toBe(1);
+        expect(after.lastError).toBe('boom');
+        expect(after.nextRetryAt).not.toBeNull();
+        expect(after.claimToken).toBeNull();
+    });
 });

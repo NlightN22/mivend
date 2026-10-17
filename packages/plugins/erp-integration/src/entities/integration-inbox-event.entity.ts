@@ -107,4 +107,9 @@ export class IntegrationInboxEvent {
     // backoff (IntegrationInboxService.markFailed). Replaces the un-indexable COALESCE expression.
     @Column({ type: 'timestamptz', name: 'eligible_at', default: () => 'now()' })
     eligibleAt!: Date;
+
+    // Set by claimBatch; only the worker holding it may settle the row, so a slow worker whose
+    // claim was reclaimed cannot overwrite the new claimant's outcome.
+    @Column({ type: 'uuid', name: 'claim_token', nullable: true })
+    claimToken!: string | null;
 }
