@@ -261,6 +261,8 @@ export default [
             '**/node_modules/**',
             '**/storybook-static/**',
             'infrastructure/scripts/**',
+            // Agent worktrees are full checkouts of other branches, linted in their own runs.
+            '.claude/worktrees/**',
             // Codegen output (packages/storefront/codegen.ts) — never hand-edited, regenerated
             // from the schema + .graphql operation files.
             'packages/storefront/src/api/generated/**',
