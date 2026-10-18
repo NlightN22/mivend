@@ -1,6 +1,14 @@
 # Project Context
 
-Updated: 2026-10-18 17:00
+Updated: 2026-10-18 19:30
+
+## #248 core Admin API order scope + #251 / #252 + dev kill scripts (2026-10-18, DONE: audited, pushed, closed)
+- #248: one APP_INTERCEPTOR (`erp-order/src/core-order-scope/`) checks every core Admin API order operation against `OrderVisibilityService`; inventory in `CORE_ORDER_OPERATIONS` + `docs/access-control.md`; `orders`/`Customer.orders`/`OrderLine.order`/stock-movement `orderLine` overridden by scoped resolvers; out of scope = EntityNotFound; superadmin bypasses. A unit guard test walks core's SDL and fails on an unlisted order operation. Verified on staging-integration under a real manager (52 own of 62 orders, foreign order "not found").
+- #251: see the #117 line below (`erp_position`, `erp_user.positionErpId`). Staging data restored by Integration Service replay (`POST /api/resync/v1/replay`, aggregateType `position` / `user`, ≤200 ids), never by manual inserts; our own `replayFailedIntegrationInbox` only replays failed events.
+- #252: `parseErpFullName` (ERP "Surname Name Patronymic" -> firstName "Name Patronymic", lastName "Surname"). The manager portal still renders `${firstName} ${lastName}`; changing display order was explicitly NOT wanted.
+- Dev kill scripts: shared `infrastructure/scripts/dev-kill-lib.sh` (`collect_descendants`, `kill_recorded_group` kills a recorded pgid only if a member's cwd is this repo); `make test` runs `infrastructure/scripts/tests/dev-kill-lib.test.sh`. Before this, every `make dev` SIGKILLed the staging-integration server.
+- Staging logins: only `createAdministratorFromErpUser(erpId)` creates a login for an ERP user, and it needs the ERP email. Most ERP users have none; test emails are added on the ERP side (via the search-platform session's OData), never by an optional API argument. Staging has one real manager login (ERP-linked, role manager); the link handler backfills `counterparty.assignedManagerId` automatically, never by hand.
+- Gotchas: Dashboard dev server serves from `/` (`/login`, `/orders`), not `/dashboard`. Staging and local share `packages/plugins/*/dist`, so a plugin rebuild restarts staging and can hang its worker (90% CPU) — restart with `make dev-staging-integration`.
 
 ## #231 session leak + order cancel/e2e cleanup (2026-10-17, DONE: audited 2 rounds, pushed `915ebb48`, closed; follow-ups #247, #248)
 - Sessions: per-user active-session cap, sweep of ended sessions, e2e teardown ends marked run sessions.
