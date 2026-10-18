@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RequestContext } from '@vendure/core';
 import { OrderDeliveryEditService } from '../../order-delivery-edit.service';
 
-vi.mock('shared', () => ({
+vi.mock('shared', async importOriginal => ({
+    ...(await importOriginal<typeof import('shared')>()),
     FREIGHT_SHIPPING_METHOD_CODE: 'freight-delivery',
     PICKUP_SHIPPING_METHOD_CODE: 'pickup',
     withAggregateLock: (_c: unknown, ctx: unknown, _k: unknown, work: (c: unknown) => unknown) =>
