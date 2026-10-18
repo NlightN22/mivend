@@ -8,6 +8,16 @@ import {
 } from '../api/generated/graphql';
 import type { ProductItem } from './useProductList';
 
+type ItemVariant = ProductItem['variants'][number];
+
+interface WidgetVariant extends ItemVariant {
+    customFields?: {
+        unitName?: string | null;
+        unitRatioToBase?: number | null;
+        multiplicity?: number | null;
+    } | null;
+}
+
 export type WidgetMode = 'new-arrivals' | 'sales' | 'popular';
 
 // Overwrite price with customerPrice: variant.price is the raw ERP listPrice, not price-type-aware.
@@ -15,11 +25,14 @@ export type WidgetMode = 'new-arrivals' | 'sales' | 'popular';
 export function withResolvedPrice(items: ProductItem[]): ProductItem[] {
     return items.map(item => ({
         ...item,
-        variants: item.variants.map(variant => ({
+        variants: (item.variants as WidgetVariant[]).map(variant => ({
             ...variant,
             // undefined, not 0, when unresolved (audit finding, mivend.audit.70) — same fix as
             // useProductList.ts, see its ProductVariant.price comment.
             price: variant.customerPrice ?? undefined,
+            unitName: variant.customFields?.unitName ?? null,
+            unitRatioToBase: variant.customFields?.unitRatioToBase ?? null,
+            multiplicity: variant.customFields?.multiplicity ?? null,
         })),
     }));
 }

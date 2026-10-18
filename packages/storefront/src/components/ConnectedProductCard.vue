@@ -8,11 +8,14 @@ import { useProductQuantity } from '../composables/useProductQuantity';
 import { brandOf } from '../utils/brand';
 import type { ProductItem } from '../composables/useProductList';
 
-const props = defineProps<{
-    item: ProductItem;
-    mode: 'row' | 'card';
-    showPrices?: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        item: ProductItem;
+        mode: 'row' | 'card';
+        showPrices?: boolean;
+    }>(),
+    { showPrices: undefined },
+);
 
 const authStore = useAuthStore();
 const favoritesStore = useFavoritesStore();

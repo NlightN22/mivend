@@ -18,6 +18,11 @@ fragment ProductWidgetFields on Product {
         }
         currencyCode
         stockLevel
+        customFields {
+            unitName
+            unitRatioToBase
+            multiplicity
+        }
     }
     facetValues {
         id
