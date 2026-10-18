@@ -64,7 +64,7 @@ describe('AdministratorProvisioningService', () => {
         erpUserService.findByErpId.mockResolvedValue({
             erpId: 'user-1',
             email: 'ivan@example.com',
-            fullName: 'Ivan Petrov',
+            fullName: 'Petrov Ivan Ivanovich',
             departmentId: 'dept-1',
         });
         administratorService.create.mockResolvedValue({ id: 'admin-1' });
@@ -79,7 +79,7 @@ describe('AdministratorProvisioningService', () => {
             ctx,
             expect.objectContaining({
                 emailAddress: 'ivan@example.com',
-                firstName: 'Ivan',
+                firstName: 'Ivan Ivanovich',
                 lastName: 'Petrov',
                 roleIds: [],
                 customFields: { erpId: 'user-1', departmentId: 'dept-1' },

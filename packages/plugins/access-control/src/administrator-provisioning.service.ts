@@ -13,6 +13,7 @@ import {
 } from '@vendure/core';
 
 import { AdministratorLinkedEvent } from './administrator-linked.event';
+import { parseErpFullName } from './erp-full-name';
 import { ErpUserService } from './erp-user.service';
 
 // Only creation path: the Kafka stream (UserEnrichmentService) never creates an Administrator,
@@ -41,13 +42,13 @@ export class AdministratorProvisioningService {
                 `Pending ERP user erpId=${erpId} has no email address — cannot create a login without one`,
             );
         }
-        const [firstName, ...rest] = (pending.fullName ?? pending.email).trim().split(/\s+/);
+        const { firstName, lastName } = parseErpFullName(pending.fullName, pending.email);
         const throwawayPassword = randomBytes(32).toString('hex');
 
         const admin = await this.administratorService.create(ctx, {
             emailAddress: pending.email,
-            firstName: firstName || pending.email,
-            lastName: rest.join(' ') || '-',
+            firstName,
+            lastName,
             password: throwawayPassword,
             roleIds: [],
             customFields: { erpId, departmentId: pending.departmentId },
