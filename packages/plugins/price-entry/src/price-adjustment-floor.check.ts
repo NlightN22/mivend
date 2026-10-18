@@ -11,8 +11,8 @@ export interface PriceAdjustmentParams {
     requestedPrice: number;
 }
 
-// Runs regardless of the viewer's rights; the only consumer besides the floorPrice query. Facts never carry the threshold: the manager must not learn
-// it from a finding, an error or a stored row.
+// Runs regardless of the viewer's rights; the only consumer besides the floorPrice query.
+// Facts never carry the threshold: the manager must not learn it from a finding, error or row.
 @Injectable()
 export class PriceAdjustmentFloorCheck implements OnModuleInit {
     constructor(
