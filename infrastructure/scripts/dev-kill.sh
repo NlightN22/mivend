@@ -32,7 +32,7 @@ fi
 
 collect_descendants() {
     local pid=$1
-    local children
+    local children child
     children=$(pgrep -P "$pid" 2>/dev/null || true)
     for child in $children; do
         collect_descendants "$child"
@@ -45,7 +45,7 @@ collect_descendants() {
 other_roots=$(pgrep -f "apps/server/\.env\.branch\b|apps/server/\.env\.central\.staging-integration\b" 2>/dev/null || true)
 protected_pids=" "
 for root in $other_roots; do
-    protected_pids="$protected_pids $root $(collect_descendants "$root") "
+    protected_pids="$protected_pids $root $(collect_descendants "$root" | tr '\n' ' ') "
 done
 
 is_protected() {

@@ -25,7 +25,7 @@ fi
 
 collect_descendants() {
     local pid=$1
-    local children
+    local children child
     children=$(pgrep -P "$pid" 2>/dev/null || true)
     for child in $children; do
         collect_descendants "$child"
