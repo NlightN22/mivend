@@ -1,7 +1,3 @@
-mutation SetOrderDelivery(
-    $orderId: ID!
-    $method: OrderDeliveryMethod!
-    $tradingPointId: ID
-) {
+mutation SetOrderDelivery($orderId: ID!, $method: OrderDeliveryMethod!, $tradingPointId: ID) {
     setOrderDelivery(orderId: $orderId, method: $method, tradingPointId: $tradingPointId)
 }

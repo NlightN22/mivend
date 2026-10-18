@@ -47,8 +47,8 @@ const clean = computed(() => !props.findings.length);
                     The order is accepted; these controls inform you or hold the automatic
                     confirmation until a manager confirms.
                     <template v-if="summary.lineCount">
-                        {{ summary.lineCount }} line(s) do not meet ERP requirements (see the
-                        order lines).
+                        {{ summary.lineCount }} line(s) do not meet ERP requirements (see the order
+                        lines).
                     </template>
                 </p>
                 <MvStatusBadge v-if="stale" variant="warning">Out of date</MvStatusBadge>

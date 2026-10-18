@@ -135,7 +135,9 @@ function toggleAdjust(lineId: string): void {
                                 class="order-lines__finding"
                             >
                                 {{ findingTitle(f.messageKey) }}
-                                <template v-if="findingDetail(f)">({{ findingDetail(f) }})</template>
+                                <template v-if="findingDetail(f)"
+                                    >({{ findingDetail(f) }})</template
+                                >
                             </em>
                         </td>
                         <td class="order-lines__num">
