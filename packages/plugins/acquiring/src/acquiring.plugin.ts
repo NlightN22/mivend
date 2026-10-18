@@ -27,6 +27,7 @@ import { InboxService } from './inbox.service';
 import { ProformaInvoiceService } from './proforma-invoice.service';
 import { ProformaInvoiceIssuingService } from './proforma-invoice-issuing.service';
 import { PaymentAttemptService } from './payment-attempt.service';
+import { PaymentAttemptQueryService } from './payment-attempt-query.service';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
 import { contractOrderGuard } from './contract-order-guard';
 import { OrderDataChecksRegistrar } from './order-data-checks.registrar';
@@ -97,6 +98,7 @@ import type { AcquiringPluginOptions } from './types';
         ProformaInvoiceWithdrawService,
         ProformaInvoiceOrderCancelService,
         PaymentAttemptService,
+        PaymentAttemptQueryService,
         SettlementEntryService,
         PaymentInboxProcessorService,
         PaymentEventListener,

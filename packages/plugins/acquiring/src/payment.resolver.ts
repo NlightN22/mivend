@@ -20,9 +20,9 @@ import { InboxService } from './inbox.service';
 import { ProformaInvoiceService } from './proforma-invoice.service';
 import {
     PaymentAllocation,
-    PaymentAttemptService,
+    PaymentAttemptQueryService,
     PaymentListOptions,
-} from './payment-attempt.service';
+} from './payment-attempt-query.service';
 import { PaymentRefundService } from './payment-refund.service';
 
 export interface PaymentProcessingEvent {
@@ -45,7 +45,7 @@ export class PaymentFieldResolver {
     constructor(
         private proformaInvoiceService: ProformaInvoiceService,
         private orderService: OrderService,
-        private paymentAttemptService: PaymentAttemptService,
+        private paymentAttemptQueryService: PaymentAttemptQueryService,
         private paymentRefundService: PaymentRefundService,
         private disputeService: DisputeService,
         private inboxService: InboxService,
@@ -136,7 +136,7 @@ export class PaymentFieldResolver {
     ): Promise<
         Array<{ proformaInvoice: ProformaInvoice | null; amount: number; isAdvance: boolean }>
     > {
-        const allocations = await this.paymentAttemptService.getAllocationsForPayment(
+        const allocations = await this.paymentAttemptQueryService.getAllocationsForPayment(
             ctx,
             Number(payment.id),
         );
@@ -151,7 +151,7 @@ export class PaymentFieldResolver {
 @Resolver()
 export class PaymentShopResolver {
     constructor(
-        private paymentAttemptService: PaymentAttemptService,
+        private paymentAttemptQueryService: PaymentAttemptQueryService,
         private customerService: CustomerService,
         private counterpartyService: CounterpartyService,
     ) {}
@@ -164,7 +164,11 @@ export class PaymentShopResolver {
     ): Promise<PaginatedList<PaymentAttempt>> {
         const counterparty = await this.getOwnCounterparty(ctx);
         if (!counterparty) return { items: [], totalItems: 0 };
-        return this.paymentAttemptService.findForCounterparty(ctx, counterparty.id, args.options);
+        return this.paymentAttemptQueryService.findForCounterparty(
+            ctx,
+            counterparty.id,
+            args.options,
+        );
     }
 
     @Query()
@@ -175,11 +179,11 @@ export class PaymentShopResolver {
     ): Promise<PaymentAttempt | null> {
         const counterparty = await this.getOwnCounterparty(ctx);
         const payment = counterparty
-            ? await this.paymentAttemptService.findOne(ctx, Number(args.id))
+            ? await this.paymentAttemptQueryService.findOne(ctx, Number(args.id))
             : null;
         if (
             !payment ||
-            !(await this.paymentAttemptService.belongsToCounterparty(
+            !(await this.paymentAttemptQueryService.belongsToCounterparty(
                 ctx,
                 payment,
                 counterparty!.id,

@@ -4,7 +4,7 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { PaymentAttempt } from './entities/payment-attempt.entity';
 import { PaymentVisibilityService } from './payment-visibility.service';
-import { PaymentAttemptService, PaymentListOptions } from './payment-attempt.service';
+import { PaymentAttemptQueryService, PaymentListOptions } from './payment-attempt-query.service';
 
 export interface OrderPaymentSummary {
     orderId: string;
@@ -17,7 +17,7 @@ export interface OrderPaymentSummary {
 export class AdminPaymentVisibilityResolver {
     constructor(
         private paymentVisibilityService: PaymentVisibilityService,
-        private paymentAttemptService: PaymentAttemptService,
+        private paymentAttemptQueryService: PaymentAttemptQueryService,
     ) {}
 
     @Query()
@@ -38,7 +38,10 @@ export class AdminPaymentVisibilityResolver {
         @Args() args: { orderIds: string[] },
     ): Promise<OrderPaymentSummary[]> {
         const numericIds = args.orderIds.map(Number);
-        const sums = await this.paymentAttemptService.sumCapturedAmountsByOrderIds(ctx, numericIds);
+        const sums = await this.paymentAttemptQueryService.sumCapturedAmountsByOrderIds(
+            ctx,
+            numericIds,
+        );
         return args.orderIds.map(orderId => ({
             orderId,
             capturedAmount: sums.get(Number(orderId)) ?? 0,

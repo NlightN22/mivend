@@ -1,17 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ID } from '@vendure/common/lib/shared-types';
-import {
-    PaginatedList,
-    RequestContext,
-    TransactionalConnection,
-    UserInputError,
-} from '@vendure/core';
-import { documentNumberSearchTerm, withAggregateLock } from 'shared';
+import { RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
+import { withAggregateLock } from 'shared';
 import { NumberingService } from '@mivend/plugin-numbering';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt, PaymentChannel, PaymentStatus } from './entities/payment-attempt.entity';
-import { SettlementEntry } from './entities/settlement-entry.entity';
 import { ProformaInvoiceService } from './proforma-invoice.service';
 import { PaymentReconciliationIssueService } from './payment-reconciliation-issue.service';
 import { SettlementEntryService } from './settlement-entry.service';
@@ -72,25 +65,6 @@ const OUTCOME_TO_PAYMENT_STATUS: Record<PayProformaInvoiceOutcome, PaymentStatus
     fail: 'failed',
     cancel: 'canceled',
 };
-
-// Must match the GraphQL PaymentListOptions field name exactly: args.options is passed through,
-// and a mismatch silently drops the filter instead of erroring.
-export interface PaymentListOptions {
-    take?: number;
-    skip?: number;
-    status?: string;
-    channel?: string;
-    // Substring match against the payment's own internal number (see PaymentAttempt.number's
-    // doc comment) — never providerPaymentId, the external reference, per the external-integration-rules skill.
-    search?: string;
-}
-
-// One row of "what this payment was applied to" — a SettlementEntry that traces back to a
-// given PaymentAttempt, joined with the proforma invoice it settled (or partially settled).
-export interface PaymentAllocation {
-    settlementEntry: SettlementEntry;
-    proformaInvoice: ProformaInvoice | null;
-}
 
 // Independent of Vendure's Order/Payment machinery: the proforma must stay payable at any time.
 // Never rejects success on an already-paid proforma; allocate() cascades the surplus instead.
@@ -166,15 +140,7 @@ export class PaymentAttemptService {
             .getRepository(ctx, PaymentAttempt)
             .findOne({ where: { channel, providerPaymentId: externalReference } });
         if (existing) {
-            if (shouldResolvePendingAttempt(existing.paymentStatus, paymentStatus)) {
-                await this.resolvePendingAttempt(
-                    ctx,
-                    proformaInvoice,
-                    Number(existing.id),
-                    paymentStatus,
-                    fact,
-                );
-            }
+            await this.applyRepeatDelivery(ctx, proformaInvoice, existing, paymentStatus, fact);
             return (await this.proformaInvoiceService.findOne(ctx, Number(proformaInvoice.id)))!;
         }
 
@@ -237,155 +203,81 @@ export class PaymentAttemptService {
                 const winner = await this.connection
                     .getRepository(ctx, PaymentAttempt)
                     .findOneOrFail({ where: { channel, providerPaymentId: externalReference } });
-                await this.resolvePendingAttempt(
-                    ctx,
-                    proformaInvoice,
-                    Number(winner.id),
-                    paymentStatus,
-                    fact,
-                );
+                await this.applyRepeatDelivery(ctx, proformaInvoice, winner, paymentStatus, fact);
             }
         }
 
         return (await this.proformaInvoiceService.findOne(ctx, Number(proformaInvoice.id)))!;
     }
 
+    // A repeat for another document or a capture after a final failure is money a human must place.
+    private async applyRepeatDelivery(
+        ctx: RequestContext,
+        proformaInvoice: ProformaInvoice,
+        existing: PaymentAttempt,
+        paymentStatus: PaymentStatus,
+        fact?: PaymentFact,
+    ): Promise<void> {
+        const details = {
+            proformaInvoiceId: Number(proformaInvoice.id),
+            organizationId: proformaInvoice.organizationId,
+            providerPaymentId: existing.providerPaymentId ?? undefined,
+        };
+        if (existing.proformaInvoiceId !== Number(proformaInvoice.id)) {
+            await this.reconciliationIssueService.report(ctx, 'ORDER_MISMATCH', details);
+            return;
+        }
+        const finalStatus = await this.resolvePendingAttempt(
+            ctx,
+            proformaInvoice,
+            existing,
+            paymentStatus,
+            fact,
+        );
+        if (
+            paymentStatus === 'captured' &&
+            (finalStatus === 'failed' || finalStatus === 'canceled')
+        ) {
+            await this.reconciliationIssueService.report(ctx, 'INVALID_STATE_TRANSITION', details);
+        }
+    }
+
     // Same lock order as a new capture; the row re-read under lock makes concurrent deliveries apply once.
     private async resolvePendingAttempt(
         ctx: RequestContext,
         proformaInvoice: ProformaInvoice,
-        paymentAttemptId: number,
+        existing: PaymentAttempt,
         paymentStatus: PaymentStatus,
         fact?: PaymentFact,
-    ): Promise<void> {
-        await withAggregateLock(
+    ): Promise<PaymentStatus> {
+        if (!shouldResolvePendingAttempt(existing.paymentStatus, paymentStatus)) {
+            return existing.paymentStatus;
+        }
+        return withAggregateLock(
             this.connection,
             ctx,
             `proformaInvoices-for-order:${proformaInvoice.orderId}`,
             async transactionCtx => {
                 const repo = this.connection.getRepository(transactionCtx, PaymentAttempt);
                 const attempt = await repo.findOneOrFail({
-                    where: { id: paymentAttemptId },
+                    where: { id: existing.id },
                     lock: { mode: 'pessimistic_write' },
                 });
-                if (!shouldResolvePendingAttempt(attempt.paymentStatus, paymentStatus)) return;
+                if (!shouldResolvePendingAttempt(attempt.paymentStatus, paymentStatus)) {
+                    return attempt.paymentStatus;
+                }
                 attempt.paymentStatus = paymentStatus;
                 if (paymentStatus !== 'captured') {
                     await repo.save(attempt);
-                    return;
+                    return paymentStatus;
                 }
                 attempt.amount = fact?.amount ?? attempt.amount;
                 await this.settlementEntryService.allocate(
                     transactionCtx,
                     await repo.save(attempt),
                 );
+                return paymentStatus;
             },
         );
-    }
-
-    async findOne(ctx: RequestContext, id: number): Promise<PaymentAttempt | null> {
-        return this.connection.getRepository(ctx, PaymentAttempt).findOne({ where: { id } });
-    }
-
-    // Badge-only: sums captured rows, without netting refunds or disputes; not for accounting decisions.
-    // Batched into one query per page to avoid N+1 queries on order lists.
-    async sumCapturedAmountsByOrderIds(
-        ctx: RequestContext,
-        orderIds: number[],
-    ): Promise<Map<number, number>> {
-        const result = new Map<number, number>();
-        if (!orderIds.length) return result;
-        const rows = await this.connection
-            .getRepository(ctx, PaymentAttempt)
-            .createQueryBuilder('payment')
-            .select('payment.orderId', 'orderId')
-            .addSelect('SUM(payment.amount)', 'capturedAmount')
-            .where('payment.orderId IN (:...orderIds)', { orderIds })
-            .andWhere('payment.paymentStatus = :status', {
-                status: 'captured' satisfies PaymentStatus,
-            })
-            .groupBy('payment.orderId')
-            .getRawMany<{ orderId: number; capturedAmount: string }>();
-        for (const row of rows) {
-            result.set(row.orderId, Number(row.capturedAmount));
-        }
-        return result;
-    }
-
-    // Ownership check for the `payment(id)` query — a payment belongs to a counterparty via its
-    // target proforma invoice (same join reasoning as findForCounterparty).
-    async belongsToCounterparty(
-        ctx: RequestContext,
-        payment: PaymentAttempt,
-        counterpartyId: ID,
-    ): Promise<boolean> {
-        if (!payment.proformaInvoiceId) return false;
-        const proformaInvoice = await this.connection
-            .getRepository(ctx, ProformaInvoice)
-            .findOne({ where: { id: payment.proformaInvoiceId } });
-        return proformaInvoice?.counterpartyId === Number(counterpartyId);
-    }
-
-    // PaymentAttempt has no counterpartyId; ProformaInvoice is the source of truth, so join through it.
-    async findForCounterparty(
-        ctx: RequestContext,
-        counterpartyId: ID,
-        options?: PaymentListOptions,
-    ): Promise<PaginatedList<PaymentAttempt>> {
-        const take = options?.take ?? 50;
-        const skip = options?.skip ?? 0;
-
-        const qb = this.connection
-            .getRepository(ctx, PaymentAttempt)
-            .createQueryBuilder('payment')
-            .innerJoin(
-                ProformaInvoice,
-                'proformaInvoice',
-                'proformaInvoice.id = payment.proformaInvoiceId',
-            )
-            .where('proformaInvoice.counterpartyId = :counterpartyId', {
-                counterpartyId: Number(counterpartyId),
-            })
-            .orderBy('payment.createdAt', 'DESC')
-            .addOrderBy('payment.id', 'DESC')
-            .take(take)
-            .skip(skip);
-
-        if (options?.status) {
-            qb.andWhere('payment.paymentStatus = :paymentStatus', {
-                paymentStatus: options.status,
-            });
-        }
-        if (options?.channel) {
-            qb.andWhere('payment.channel = :channel', { channel: options.channel });
-        }
-        if (options?.search) {
-            qb.andWhere('payment.number ILIKE :search', {
-                search: documentNumberSearchTerm(options.search),
-            });
-        }
-
-        const [items, totalItems] = await qb.getManyAndCount();
-        return { items, totalItems };
-    }
-
-    // One row per SettlementEntry: target proforma invoice first, then FIFO overflow, then advance last.
-    async getAllocationsForPayment(
-        ctx: RequestContext,
-        paymentAttemptId: number,
-    ): Promise<PaymentAllocation[]> {
-        const entries = await this.connection
-            .getRepository(ctx, SettlementEntry)
-            .find({ where: { sourcePaymentId: paymentAttemptId }, order: { id: 'ASC' } });
-        const allocations: PaymentAllocation[] = [];
-        for (const entry of entries) {
-            const proformaInvoice = entry.proformaInvoiceId
-                ? await this.connection
-                      .getRepository(ctx, ProformaInvoice)
-                      .findOne({ where: { id: entry.proformaInvoiceId } })
-                : null;
-            allocations.push({ settlementEntry: entry, proformaInvoice });
-        }
-        return allocations;
     }
 }

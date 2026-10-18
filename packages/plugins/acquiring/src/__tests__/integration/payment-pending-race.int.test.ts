@@ -61,6 +61,7 @@ class TestPaymentAttempt {
 let dataSource: DataSource;
 let service: PaymentAttemptService;
 let beforeTransaction: () => Promise<void>;
+let reportedIssues: string[] = [];
 const ctx = {} as RequestContext;
 
 function mapEntity(
@@ -109,7 +110,12 @@ beforeAll(async () => {
         connection,
         proformaInvoiceService,
         new SettlementEntryService(connection, proformaInvoiceService),
-        { report: async () => ({ id: 1 }) } as never,
+        {
+            report: async (_ctx: unknown, issueType: string) => {
+                reportedIssues.push(issueType);
+                return { id: 1 };
+            },
+        } as never,
         numbering as never,
     );
 });
@@ -124,6 +130,7 @@ beforeEach(async () => {
     await dataSource.getRepository(TestPaymentAttempt).clear();
     await dataSource.getRepository(TestProformaInvoice).clear();
     beforeTransaction = async () => undefined;
+    reportedIssues = [];
 });
 
 describe('payProformaInvoice pending outcome (#197)', () => {
@@ -275,8 +282,24 @@ describe('payProformaInvoice repeat delivery with the same reference (#247)', ()
             ]);
             expect(entries).toHaveLength(0);
             expect(unpaid.status).toBe('issued');
+            expect(reportedIssues).toEqual(['INVALID_STATE_TRANSITION']);
         },
     );
+
+    it('reports a repeat reference for another proforma invoice and leaves both untouched', async () => {
+        const first = await seedIssued();
+        const second = await seedIssued();
+
+        await service.payProformaInvoice(ctx, first.id, 'pending', 'online-acquiring', 'ref-5');
+        await service.payProformaInvoice(ctx, second.id, 'success', 'online-acquiring', 'ref-5');
+
+        const { attempts, entries } = await stored(first.id);
+        expect(attempts.map(a => [a.proformaInvoiceId, a.paymentStatus])).toEqual([
+            [first.id, 'pending'],
+        ]);
+        expect(entries).toHaveLength(0);
+        expect(reportedIssues).toEqual(['ORDER_MISMATCH']);
+    });
 
     it('ignores a pending delivery that arrives after the capture', async () => {
         const invoice = await seedIssued();

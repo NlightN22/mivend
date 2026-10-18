@@ -6,7 +6,7 @@ import { Counterparty } from '@mivend/plugin-counterparty';
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt } from './entities/payment-attempt.entity';
 import { ProformaInvoiceVisibilityService } from './proforma-invoice-visibility.service';
-import { PaymentListOptions } from './payment-attempt.service';
+import { PaymentListOptions } from './payment-attempt-query.service';
 
 // Payment inherits visibility from its ProformaInvoice, so reuse that service's scope and filters,
 // not a separate resolvePaymentScope (derived-resource rule).
