@@ -2,7 +2,6 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { randomUUID } from 'crypto';
 import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import type { Repository } from 'typeorm';
-import { Notification } from '@mivend/plugin-notification';
 import {
     createTestSchema,
     dropTestSchema,
@@ -27,6 +26,13 @@ class TestOrder {
     reservationDays!: number | null;
 }
 
+@Entity('notification')
+class TestNotification {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar' }) sourceType!: string;
+    @Column({ type: 'varchar' }) sourceId!: string;
+}
+
 const { schema, extra } = testSchemaOptions('erp_point_confirmation_expiry');
 let dataSource: DataSource;
 let service: PointConfirmationExpiryService;
@@ -42,9 +48,10 @@ const cancel = vi.fn(async (_ctx: unknown, orderId: string) => {
 });
 const notifications = {
     create: vi.fn(async (_ctx: unknown, input: Record<string, string>) =>
-        dataSource
-            .getRepository(Notification)
-            .save(dataSource.getRepository(Notification).create({ ...input, status: 'unread' })),
+        dataSource.getRepository(TestNotification).save({
+            sourceType: input.sourceType,
+            sourceId: input.sourceId,
+        }),
     ),
 };
 
@@ -80,7 +87,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [IntegrationOutboxEntry, TestOrder, Notification],
+        entities: [IntegrationOutboxEntry, TestOrder, TestNotification],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -129,7 +136,7 @@ describe('point-confirmation expiry', () => {
         await Promise.all([service.expireDue(), service.expireDue()]);
 
         expect(await stateOf(paid.id)).toBe('ArrangingPayment');
-        expect(await dataSource.getRepository(Notification).count()).toBe(1);
+        expect(await dataSource.getRepository(TestNotification).count()).toBe(1);
     });
 
     it('leaves a send held for another reason untouched', async () => {
