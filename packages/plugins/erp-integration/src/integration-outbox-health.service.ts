@@ -28,6 +28,8 @@ export class IntegrationOutboxHealthService {
                     FILTER (WHERE e.status = 'skipped' AND e.last_error IS DISTINCT FROM $1))[1]
                     AS "lastSkipReason"
             FROM integration_outbox e
+            WHERE NOT (e.status = 'skipped' AND e.event_type = 'order.confirmed' AND EXISTS (
+                SELECT 1 FROM "order" o WHERE o.id::text = e.payload ->> 'orderId' AND o.state = 'Cancelled'))
             GROUP BY e.event_type
             ORDER BY e.event_type
         `,

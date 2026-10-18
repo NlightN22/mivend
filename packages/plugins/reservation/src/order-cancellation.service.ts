@@ -43,6 +43,8 @@ export interface CancelOptions {
     requestRegistered?: boolean;
     // Reserve deadline sweep: skip when no active reservation is due by then (extended or released since the sweep read it).
     reserveDueBy?: Date;
+    // Re-checked under the order locks; false returns 'reserve-not-due' (the caller's own deadline moved or passed).
+    stillDue?: (ctx: RequestContext, order: Order) => Promise<boolean>;
 }
 
 // Every cancel path goes through here (docs/order-contracts.md, "Reserve and order cancellation"),
@@ -79,6 +81,10 @@ export class OrderCancellationService {
                 options.reserveDueBy &&
                 !(await this.hasReserveDueBy(txCtx, orderId, options.reserveDueBy))
             ) {
+                return { kind: 'reserve-not-due' };
+            }
+
+            if (options.stillDue && !(await options.stillDue(txCtx, order))) {
                 return { kind: 'reserve-not-due' };
             }
 

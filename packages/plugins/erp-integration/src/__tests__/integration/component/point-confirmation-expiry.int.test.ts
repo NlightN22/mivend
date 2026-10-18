@@ -9,6 +9,8 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import type { CancelOptions } from '@mivend/plugin-reservation';
+
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
 import { HELD_SKIP_REASON } from '../../../order-checks/order-send-hold.service';
 import { PointConfirmationExpiryService } from '../../../order-checks/point-confirmation-expiry.service';
@@ -41,11 +43,21 @@ const ctx = {} as never;
 
 const outbox = (): Repository<IntegrationOutboxEntry> =>
     dataSource.getRepository(IntegrationOutboxEntry);
-const cancel = vi.fn(async (_ctx: unknown, orderId: string) => {
-    if (paidOrderIds.has(orderId)) return { kind: 'not-cancellable', reason: 'paid' };
-    await dataSource.getRepository(TestOrder).update(Number(orderId), { state: 'Cancelled' });
-    return { kind: 'cancelled', eventSent: false };
-});
+let beforeLockedCheck: ((orderId: string) => Promise<void>) | undefined;
+const cancel = vi.fn(
+    async (_ctx: unknown, orderId: string, _reason: string, options?: CancelOptions) => {
+        await beforeLockedCheck?.(orderId);
+        if (options?.stillDue) {
+            const order = await dataSource
+                .getRepository(TestOrder)
+                .findOneByOrFail({ id: Number(orderId) });
+            if (!(await options.stillDue(ctx, order as never))) return { kind: 'reserve-not-due' };
+        }
+        if (paidOrderIds.has(orderId)) return { kind: 'not-cancellable', reason: 'paid' };
+        await dataSource.getRepository(TestOrder).update(Number(orderId), { state: 'Cancelled' });
+        return { kind: 'cancelled', eventSent: false };
+    },
+);
 const notifications = {
     create: vi.fn(async (_ctx: unknown, input: Record<string, string>) =>
         dataSource.getRepository(TestNotification).save({
@@ -93,6 +105,7 @@ beforeAll(async () => {
     await dataSource.initialize();
     service = new PointConfirmationExpiryService(
         dataSource,
+        { getRepository: () => dataSource.getRepository(TestOrder) } as never,
         { create: async () => ctx } as never,
         { cancel } as never,
         notifications as never,
@@ -102,6 +115,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
     paidOrderIds.clear();
+    beforeLockedCheck = undefined;
     cancel.mockClear();
     notifications.create.mockClear();
     await outbox().clear();
@@ -146,5 +160,28 @@ describe('point-confirmation expiry', () => {
 
         expect(cancel).not.toHaveBeenCalled();
         expect(await stateOf(held.id)).toBe('ArrangingPayment');
+    });
+
+    it('does not cancel when the validity period is extended between the sweep read and the cancel', async () => {
+        const order = await waitingOrder(4);
+        beforeLockedCheck = async id => {
+            await dataSource.getRepository(TestOrder).update(Number(id), { reservationDays: 10 });
+        };
+
+        await service.expireDue();
+
+        expect(await stateOf(order.id)).toBe('ArrangingPayment');
+        expect(await dataSource.getRepository(TestNotification).count()).toBe(0);
+    });
+
+    it('does not cancel when the point got confirmed between the sweep read and the cancel', async () => {
+        const order = await waitingOrder(4);
+        beforeLockedCheck = async () => {
+            await outbox().update({ status: 'skipped' }, { status: 'published', lastError: null });
+        };
+
+        await service.expireDue();
+
+        expect(await stateOf(order.id)).toBe('ArrangingPayment');
     });
 });

@@ -156,3 +156,6 @@ or fixed. Procedure: `.claude/skills/concurrency-audit/SKILL.md`.
   worker reclaims the rows with a new claim token, and the first worker's late `markProcessed`/`markFailed`
   is dropped by the claim-token guard. The handler may then have run twice, so stream handlers must stay
   idempotent. The token is required on every worker settle path (#250).
+- `PointConfirmationExpiryService.findDue` takes the 200 oldest due orders per sweep. If cancels of the oldest orders
+  keep failing (the sweep throws after the loop), newer due orders wait behind them; there is no attempt-time ordering.
+  Accepted: failures are logged and re-thrown so the scheduled task reports them, and the backlog is small.

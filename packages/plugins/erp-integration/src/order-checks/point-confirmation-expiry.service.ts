@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RequestContext, RequestContextService } from '@vendure/core';
+import {
+    Order,
+    RequestContext,
+    RequestContextService,
+    TransactionalConnection,
+} from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
 import { OrderCancellationService, ReservationSettings } from '@mivend/plugin-reservation';
 import type { CancelOutcome } from '@mivend/plugin-reservation';
@@ -9,6 +14,11 @@ import { COURIER_POINT_UNCONFIRMED_SKIP_REASON } from '../order-submitted.builde
 
 const loggerCtx = 'PointConfirmationExpiry';
 const SWEEP_LIMIT = 200;
+const DUE_FROM = `FROM integration_outbox x
+               JOIN "order" o ON o.id::text = x.payload ->> 'orderId'
+              WHERE x.event_type = 'order.confirmed' AND x.status = 'skipped' AND x.last_error = $1
+                AND o.state <> 'Cancelled'
+                AND o."orderPlacedAt" + make_interval(days => COALESCE(o."customFieldsReservationdays", $2::int)) <= now()`;
 export const POINT_CONFIRMATION_EXPIRED_SOURCE = 'point-confirmation-expired';
 
 export interface WaitingOrder {
@@ -18,7 +28,28 @@ export interface WaitingOrder {
 
 export type ExpiryAction = 'done' | 'notify';
 
-// Cancelled (or a cancel already in flight) ends the wait; anything the cancel flow refuses needs staff.
+// Plain-English reason for staff; 'left-to-erp' means the ERP already holds the order.
+export function describeRefusal(outcome: CancelOutcome): string {
+    switch (outcome.kind) {
+        case 'left-to-erp':
+            return 'the order is registered in the ERP and is left to it';
+        case 'not-cancellable':
+            switch (outcome.reason) {
+                case 'paid':
+                    return 'the order has a settled payment';
+                case 'in-progress':
+                    return 'the order is already being processed';
+                case 'shipped':
+                    return 'the order has been shipped';
+                case 'registration-rejected':
+                    return 'the ERP rejected the order registration';
+            }
+            break;
+    }
+    return 'the cancel flow refused it';
+}
+
+// Cancelled (or a cancel already in flight) ends the wait, and so does a deadline that moved or a point confirmed since the sweep read it; anything the cancel flow refuses needs staff.
 export function expiryActionFor(outcome: CancelOutcome): ExpiryAction {
     switch (outcome.kind) {
         case 'cancelled':
@@ -26,9 +57,10 @@ export function expiryActionFor(outcome: CancelOutcome): ExpiryAction {
         case 'cancel-requested':
         case 'already-requested':
             return 'done';
+        case 'reserve-not-due':
+            return 'done';
         case 'left-to-erp':
         case 'not-cancellable':
-        case 'reserve-not-due':
             return 'notify';
     }
 }
@@ -39,6 +71,7 @@ export function expiryActionFor(outcome: CancelOutcome): ExpiryAction {
 export class PointConfirmationExpiryService {
     constructor(
         private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         private readonly requestContextService: RequestContextService,
         private readonly cancellation: OrderCancellationService,
         private readonly notificationService: NotificationService,
@@ -57,6 +90,7 @@ export class PointConfirmationExpiryService {
                     ctx,
                     order.id,
                     'point-confirmation-expired',
+                    { stillDue: (txCtx, locked) => this.isStillDue(txCtx, locked) },
                 );
                 if (expiryActionFor(outcome) === 'notify')
                     await this.notifyOnce(ctx, order, outcome);
@@ -74,14 +108,21 @@ export class PointConfirmationExpiryService {
         return handled;
     }
 
+    private async isStillDue(ctx: RequestContext, order: Order): Promise<boolean> {
+        const rows: unknown[] = await this.connection
+            .getRepository(ctx, Order)
+            .query(`SELECT 1 ${DUE_FROM} AND o.id::text = $3 LIMIT 1`, [
+                COURIER_POINT_UNCONFIRMED_SKIP_REASON,
+                this.settings.defaultReservationDays(),
+                String(order.id),
+            ]);
+        return rows.length > 0;
+    }
+
     private findDue(): Promise<WaitingOrder[]> {
         return this.dataSource.query(
             `SELECT DISTINCT o.id::text AS id, o.code, o."orderPlacedAt"
-               FROM integration_outbox x
-               JOIN "order" o ON o.id::text = x.payload ->> 'orderId'
-              WHERE x.event_type = 'order.confirmed' AND x.status = 'skipped' AND x.last_error = $1
-                AND o.state <> 'Cancelled'
-                AND o."orderPlacedAt" + make_interval(days => COALESCE(o."customFieldsReservationdays", $2::int)) <= now()
+               ${DUE_FROM}
               ORDER BY o."orderPlacedAt" LIMIT ${SWEEP_LIMIT}`,
             [COURIER_POINT_UNCONFIRMED_SKIP_REASON, this.settings.defaultReservationDays()],
         );
@@ -108,7 +149,7 @@ export class PointConfirmationExpiryService {
                 sourceType: POINT_CONFIRMATION_EXPIRED_SOURCE,
                 sourceId: order.id,
                 title: 'Order waiting for a delivery point confirmation has expired',
-                message: `Order ${order.code} passed its validity period while its delivery point is unconfirmed and cannot be cancelled automatically (${outcome.kind}).`,
+                message: `Order ${order.code} passed its validity period while its delivery point is unconfirmed and cannot be cancelled automatically (${describeRefusal(outcome)}).`,
             });
         });
     }

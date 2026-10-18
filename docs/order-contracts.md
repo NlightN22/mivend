@@ -495,7 +495,11 @@ with a point; otherwise it is a pickup and carries neither.
   sends) cancels the order through `OrderCancellationService` with the reason `point-confirmation-expired`. When the
   cancel flow refuses (paid, in progress, shipped) it creates one staff notification (`sourceType`
   `point-confirmation-expired`, `sourceId` = order id, guarded by an advisory lock and an existence check) and leaves
-  the order alone. One failing order does not stop the others. The sweep rebuilds every skipped courier row per tick,
+  the order alone; the message names the reason in plain words. The deadline and the unconfirmed-point state are
+  re-checked under the cancel locks (`CancelOptions.stillDue`), so an extended period or a point confirmed since the
+  sweep read the row skips the order. `orderPlacedAt` is a timestamp without time zone compared against the database
+  `now()`, so the Node process and the database session time zone must both be UTC. The integration health panel does
+  not count the skipped row of a cancelled order. One failing order does not stop the others. The sweep rebuilds every skipped courier row per tick,
   which is cheap while the backlog is small.
 - Editing a placed order: Admin API `setOrderDelivery(orderId, method PICKUP|COURIER, tradingPointId)` (`ConfirmOrder`,
   order visibility scope; only staff, a customer asks the manager). It is allowed while the order is editable by the

@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { DataSource } from 'typeorm';
+import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import {
     createTestSchema,
     dropTestSchema,
@@ -24,6 +24,14 @@ import { IntegrationStreamHealthResolver } from '../../../integration-stream-hea
 import { ALL_INBOUND_STREAMS } from '../../../types';
 import type { ErpIntegrationPluginOptions } from '../../../types';
 
+@Entity('order')
+class TestOrder {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar', default: 'ArrangingPayment' }) state!: string;
+    @Column({ name: 'customFieldsErpstatus', type: 'varchar', nullable: true })
+    erpStatus!: string | null;
+}
+
 let dataSource: DataSource;
 let inbox: IntegrationInboxService;
 let resolver: IntegrationStreamHealthResolver;
@@ -38,7 +46,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [IntegrationInboxEvent, IntegrationOutboxEntry, OrderStatusReference],
+        entities: [IntegrationInboxEvent, IntegrationOutboxEntry, OrderStatusReference, TestOrder],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -61,6 +69,7 @@ afterEach(async () => {
     await dataSource.getRepository(IntegrationInboxEvent).clear();
     lagRows = [];
     await dataSource.getRepository(IntegrationOutboxEntry).clear();
+    await dataSource.query('TRUNCATE "order" RESTART IDENTITY');
 });
 
 afterAll(async () => {
@@ -219,6 +228,28 @@ describe('integrationOutboxHealth', () => {
             lastSkipReason: 'line 1 has no organizationId',
             lastError: null,
         });
+    });
+
+    it('does not count a skipped confirmed row of a cancelled order', async () => {
+        const orders = dataSource.getRepository(TestOrder);
+        const cancelled = await orders.save({ state: 'Cancelled' });
+        const waiting = await orders.save({});
+        for (const order of [cancelled, waiting]) {
+            await dataSource.getRepository(IntegrationOutboxEntry).save({
+                eventId: randomUUID(),
+                eventType: 'order.confirmed',
+                payload: { orderId: String(order.id) },
+                status: 'skipped',
+                lastError: 'trading point not confirmed by the ERP yet',
+                lastErrorAt: new Date(),
+            });
+        }
+
+        const row = (await resolver.integrationOutboxHealth()).find(
+            r => r.eventType === 'order.confirmed',
+        )!;
+
+        expect(row.skipped).toBe(1);
     });
 
     it('counts a send held by policy as held, not as skipped', async () => {
