@@ -86,7 +86,7 @@ describe('OrderFloorPriceCheck', () => {
             stages: ['cart', 'checkout', 'pre-reserve', 'pre-send-to-erp', 'on-edit'],
             allowedConsequences: ['info', 'warn', 'hold'],
             loadSubject: async () => null,
-            lockKey: id => id,
+            lockKey: (id: string) => id,
         } as never);
         new OrderFloorPriceCheck(registry, {} as never, {} as never).onModuleInit();
         const provider = registry.getCheck('order.below-floor-price')!;
