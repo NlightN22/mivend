@@ -18,8 +18,9 @@ function make(opts: {
     const ctx = {
         userHasPermissions: (p: string[]) => p.every(x => (opts.permissions ?? []).includes(x)),
     } as unknown as RequestContext;
+    const query = vi.fn(async () => rows);
     const service = new PriceTypeAccessService(
-        { rawConnection: { query: vi.fn(async () => rows) } } as never,
+        { rawConnection: { query } } as never,
         {
             getActorIdentity: vi.fn(async () => ({
                 roleCodes: [],
@@ -28,10 +29,28 @@ function make(opts: {
         } as never,
         { getForBranch: vi.fn(async () => opts.settings ?? null) } as never,
     );
-    return { ctx, service };
+    return { ctx, service, query };
 }
 
 describe('PriceTypeAccessService (deny by default)', () => {
+    it('computes the access base once per request for N list calls', async () => {
+        const { ctx, service, query } = make({
+            branchId: 'branch-a',
+            settings: { defaultPriceTypeId: '1', visiblePriceTypeIds: null },
+        });
+        for (let i = 0; i < 20; i++) {
+            await service.isCodeAllowed(ctx, 'retail', { contextCodes: ['wholesale'] });
+        }
+        expect(query).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not share the memo between requests', async () => {
+        const { ctx, service, query } = make({});
+        await service.allowedCodes(ctx);
+        await service.allowedCodes({ ...ctx } as RequestContext);
+        expect(query).toHaveBeenCalledTimes(2);
+    });
+
     it('grants nothing without a branch rule or a permission', async () => {
         const { ctx, service } = make({});
         expect(await service.allowedCodes(ctx)).toEqual([]);

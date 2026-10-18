@@ -17,11 +17,18 @@ export interface PriceTypeAccessContext {
     contextCodes?: Array<string | null | undefined>;
 }
 
+interface PriceTypeBase {
+    rows: AccessiblePriceType[];
+    branchIds: Set<string> | 'all';
+}
+
 // The single deny-by-default decision for price types (docs/access-control.md, layer 4):
 // customer types = branch allow-list (+ branch default) or ReadAllCustomerPriceTypes;
 // confidential types = ReadConfidentialPriceTypes only, never a branch rule or a context.
 @Injectable()
 export class PriceTypeAccessService {
+    private baseCache = new WeakMap<RequestContext, Promise<PriceTypeBase>>();
+
     constructor(
         private connection: TransactionalConnection,
         private accessScope: AccessScopeService,
@@ -36,11 +43,8 @@ export class PriceTypeAccessService {
         ctx: RequestContext,
         access: PriceTypeAccessContext = {},
     ): Promise<AccessiblePriceType[]> {
-        const rows: AccessiblePriceType[] = await this.connection.rawConnection.query(
-            `SELECT id::varchar AS id, code, "externalId", visibility FROM price_type ORDER BY code`,
-        );
+        const { rows, branchIds } = await this.baseFor(ctx);
         const confidential = this.canReadConfidential(ctx);
-        const branchIds = await this.branchAllowedIds(ctx);
         const contextCodes = new Set(access.contextCodes ?? []);
         return rows.filter(row => {
             if (row.visibility === 'customer') {
@@ -77,6 +81,24 @@ export class PriceTypeAccessService {
 
     assertConfidential(ctx: RequestContext): void {
         if (!this.canReadConfidential(ctx)) throw new ForbiddenError();
+    }
+
+    // Per-request memo: ResolveFields call list() once per row, so a page of N rows costs one pass.
+    private baseFor(ctx: RequestContext): Promise<PriceTypeBase> {
+        let base = this.baseCache.get(ctx);
+        if (!base) {
+            base = this.loadBase(ctx);
+            this.baseCache.set(ctx, base);
+            base.catch(() => this.baseCache.delete(ctx));
+        }
+        return base;
+    }
+
+    private async loadBase(ctx: RequestContext): Promise<PriceTypeBase> {
+        const rows: AccessiblePriceType[] = await this.connection.rawConnection.query(
+            `SELECT id::varchar AS id, code, "externalId", visibility FROM price_type ORDER BY code`,
+        );
+        return { rows, branchIds: await this.branchAllowedIds(ctx) };
     }
 
     private async branchAllowedIds(ctx: RequestContext): Promise<Set<string> | 'all'> {
