@@ -58,6 +58,7 @@ describe('DiscountGrantService', () => {
         create: ReturnType<typeof vi.fn>;
         save: ReturnType<typeof vi.fn>;
         find: ReturnType<typeof vi.fn>;
+        findOneOrFail: ReturnType<typeof vi.fn>;
         createQueryBuilder: ReturnType<typeof vi.fn>;
     };
     let ruleRepo: { findBy: ReturnType<typeof vi.fn> };
@@ -81,6 +82,7 @@ describe('DiscountGrantService', () => {
             create: vi.fn((input: unknown) => input),
             save: vi.fn(async (input: unknown) => input),
             find: vi.fn(async () => []),
+            findOneOrFail: vi.fn(),
             createQueryBuilder: vi.fn(() => qb),
         };
         ruleRepo = { findBy: vi.fn(async () => []) };
@@ -151,6 +153,29 @@ describe('DiscountGrantService', () => {
     });
 
     describe('decideAndApply', () => {
+        it('refuses to decide a request of a hidden price type before deciding anything', async () => {
+            grantRepo.findOneOrFail.mockResolvedValue({
+                requestType: 'discountGrantApproval',
+                payload: JSON.stringify({ ...validInput, priceTypeCode: 'purchase' }),
+            });
+            const ctx = mockCtx(['ApproveDiscountRequest']);
+
+            await expect(
+                service.decideAndApply(ctx, 'req-1', 'approved', undefined, ['WHOLESALE']),
+            ).rejects.toBeInstanceOf(ForbiddenError);
+            expect(approvalRequestService.decide).not.toHaveBeenCalled();
+        });
+
+        it('treats an empty allowed list as deny for a grant request', async () => {
+            grantRepo.findOneOrFail.mockResolvedValue({
+                requestType: 'discountGrantApproval',
+                payload: JSON.stringify(validInput),
+            });
+            await expect(
+                service.decideAndApply(mockCtx([]), 'req-1', 'approved', undefined, []),
+            ).rejects.toBeInstanceOf(ForbiddenError);
+        });
+
         it('materializes a DiscountRule once the request is approved', async () => {
             approvalRequestService.decide.mockResolvedValue({
                 id: 'req-1',

@@ -145,6 +145,19 @@ export class DiscountGrantService {
         return request;
     }
 
+    private async assertPayloadTypeAllowed(
+        ctx: RequestContext,
+        requestId: ID,
+        allowedCodes: string[],
+    ): Promise<void> {
+        const request = await this.connection
+            .getRepository(ctx, ApprovalRequest)
+            .findOneOrFail({ where: { id: requestId } });
+        if (request.requestType !== DISCOUNT_GRANT_REQUEST_TYPE) return;
+        const { priceTypeCode } = JSON.parse(request.payload) as DiscountGrantPayload;
+        if (!allowedCodes.includes(priceTypeCode)) throw new ForbiddenError();
+    }
+
     // The generic approval engine doesn't know this requestType creates rules/grants.
     // Same composition pattern as PriceAdjustmentService.decideAndApply().
     async decideAndApply(
@@ -152,7 +165,10 @@ export class DiscountGrantService {
         requestId: ID,
         decision: ApprovalStepDecision,
         comment?: string,
+        allowedPriceTypeCodes?: string[],
     ): Promise<ApprovalRequest> {
+        if (allowedPriceTypeCodes)
+            await this.assertPayloadTypeAllowed(ctx, requestId, allowedPriceTypeCodes);
         const request = await this.approvalRequestService.decide(ctx, requestId, decision, comment);
         if (request.requestType !== DISCOUNT_GRANT_REQUEST_TYPE) return request;
 

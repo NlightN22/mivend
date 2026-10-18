@@ -67,6 +67,7 @@ export class DiscountGrantResolver {
             args.requestId,
             args.decision,
             args.comment,
+            await this.priceTypeAccess.allowedCodes(ctx),
         );
     }
 }
