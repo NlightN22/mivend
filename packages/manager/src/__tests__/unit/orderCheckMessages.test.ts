@@ -34,6 +34,7 @@ describe('order check messages', () => {
             'delivery.freight-trading-point.missing',
             'order.multiplicity.violated',
             'credit.limit.exceeded',
+            'order.below-floor-price.below-floor',
         ];
         const titles = keys.map(findingTitle);
         expect(new Set(titles).size).toBe(keys.length);

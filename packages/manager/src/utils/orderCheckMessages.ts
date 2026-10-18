@@ -50,6 +50,7 @@ const TITLES: Record<string, string> = {
     'delivery.freight-trading-point.missing': 'Freight delivery needs an active trading point',
     'order.multiplicity.violated': 'The quantity is not a multiple of the pack size',
     'credit.limit.exceeded': "The order exceeds the buyer's available credit",
+    'order.below-floor-price.below-floor': 'The unit price is below the floor price',
 };
 
 // The facts that explain a finding in one line, for the list in the header card and under a line.
