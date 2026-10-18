@@ -60,3 +60,4 @@ export { planSplit } from './src/order-line-split';
 export { OrderLinesEditPortRegistry } from './src/order-line-edit.port';
 export type { OrderLinesEditPort } from './src/order-line-edit.port';
 export { OrderExportDataRegistrar } from './src/order-export-data.registrar';
+export { ReservationSettings } from './src/reservation-settings';

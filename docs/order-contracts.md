@@ -488,8 +488,14 @@ with a point; otherwise it is a pickup and carries neither.
   a point without an ERP id is never sent anywhere. A courier order to such a point is skipped the same way, with the
   reason `trading point not confirmed by the ERP yet`, and the same `delivery.freight-trading-point` error finding. The
   periodic `HeldSendRedriveService` sweep rebuilds the row once the point has an ERP id. Pickup orders are unaffected.
-  There is no age limit: staff watch the integration health count and the order finding, and either get the point
-  confirmed or switch the order to pickup with `setOrderDelivery`. The sweep rebuilds every skipped courier row per tick,
+  Such a waiting order has the same validity period as a reservation: the order's `customFields.reservationDays`
+  (default `defaultReservationDays`), counted from placement (`orderPlacedAt`). Staff either get the point confirmed or
+  switch the order to pickup with `setOrderDelivery` before it ends. Past the deadline `PointConfirmationExpiryService`
+  (a step of the held-send re-drive task, only for skipped rows with the unconfirmed-point reason, not other held
+  sends) cancels the order through `OrderCancellationService` with the reason `point-confirmation-expired`. When the
+  cancel flow refuses (paid, in progress, shipped) it creates one staff notification (`sourceType`
+  `point-confirmation-expired`, `sourceId` = order id, guarded by an advisory lock and an existence check) and leaves
+  the order alone. One failing order does not stop the others. The sweep rebuilds every skipped courier row per tick,
   which is cheap while the backlog is small.
 - Editing a placed order: Admin API `setOrderDelivery(orderId, method PICKUP|COURIER, tradingPointId)` (`ConfirmOrder`,
   order visibility scope; only staff, a customer asks the manager). It is allowed while the order is editable by the

@@ -1,0 +1,115 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { RequestContext, RequestContextService } from '@vendure/core';
+import { NotificationService } from '@mivend/plugin-notification';
+import { OrderCancellationService, ReservationSettings } from '@mivend/plugin-reservation';
+import type { CancelOutcome } from '@mivend/plugin-reservation';
+import { DataSource } from 'typeorm';
+
+import { COURIER_POINT_UNCONFIRMED_SKIP_REASON } from '../order-submitted.builder';
+
+const loggerCtx = 'PointConfirmationExpiry';
+const SWEEP_LIMIT = 200;
+export const POINT_CONFIRMATION_EXPIRED_SOURCE = 'point-confirmation-expired';
+
+export interface WaitingOrder {
+    id: string;
+    code: string;
+}
+
+export type ExpiryAction = 'done' | 'notify';
+
+// Cancelled (or a cancel already in flight) ends the wait; anything the cancel flow refuses needs staff.
+export function expiryActionFor(outcome: CancelOutcome): ExpiryAction {
+    switch (outcome.kind) {
+        case 'cancelled':
+        case 'already-cancelled':
+        case 'cancel-requested':
+        case 'already-requested':
+            return 'done';
+        case 'left-to-erp':
+        case 'not-cancellable':
+        case 'reserve-not-due':
+            return 'notify';
+    }
+}
+
+// A courier order waiting for its customer-added point to be confirmed lives as long as a reservation
+// (order days or the default, from placement); then it is cancelled or, if it cannot be, staff are told once.
+@Injectable()
+export class PointConfirmationExpiryService {
+    constructor(
+        private readonly dataSource: DataSource,
+        private readonly requestContextService: RequestContextService,
+        private readonly cancellation: OrderCancellationService,
+        private readonly notificationService: NotificationService,
+        private readonly settings: ReservationSettings,
+    ) {}
+
+    async expireDue(): Promise<number> {
+        const due = await this.findDue();
+        if (due.length === 0) return 0;
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        let handled = 0;
+        let firstError: unknown;
+        for (const order of due) {
+            try {
+                const outcome = await this.cancellation.cancel(
+                    ctx,
+                    order.id,
+                    'point-confirmation-expired',
+                );
+                if (expiryActionFor(outcome) === 'notify')
+                    await this.notifyOnce(ctx, order, outcome);
+                handled += 1;
+            } catch (error) {
+                // One failing order must not starve the others; the sweep fails after the loop.
+                Logger.error(
+                    `Point-confirmation expiry of order ${order.id} failed: ${String(error)}`,
+                    loggerCtx,
+                );
+                firstError ??= error;
+            }
+        }
+        if (firstError !== undefined) throw firstError;
+        return handled;
+    }
+
+    private findDue(): Promise<WaitingOrder[]> {
+        return this.dataSource.query(
+            `SELECT DISTINCT o.id::text AS id, o.code, o."orderPlacedAt"
+               FROM integration_outbox x
+               JOIN "order" o ON o.id::text = x.payload ->> 'orderId'
+              WHERE x.event_type = 'order.confirmed' AND x.status = 'skipped' AND x.last_error = $1
+                AND o.state <> 'Cancelled'
+                AND o."orderPlacedAt" + make_interval(days => COALESCE(o."customFieldsReservationdays", $2::int)) <= now()
+              ORDER BY o."orderPlacedAt" LIMIT ${SWEEP_LIMIT}`,
+            [COURIER_POINT_UNCONFIRMED_SKIP_REASON, this.settings.defaultReservationDays()],
+        );
+    }
+
+    // The advisory lock + existence check keep it to one notification per order across sweeps and concurrent sweeps.
+    private async notifyOnce(
+        ctx: RequestContext,
+        order: WaitingOrder,
+        outcome: CancelOutcome,
+    ): Promise<void> {
+        await this.dataSource.transaction(async manager => {
+            await manager.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+                `${POINT_CONFIRMATION_EXPIRED_SOURCE}:${order.id}`,
+            ]);
+            const existing: unknown[] = await manager.query(
+                'SELECT 1 FROM notification WHERE "sourceType" = $1 AND "sourceId" = $2 LIMIT 1',
+                [POINT_CONFIRMATION_EXPIRED_SOURCE, order.id],
+            );
+            if (existing.length > 0) return;
+            await this.notificationService.create(ctx, {
+                recipientType: 'administrator-broadcast',
+                kind: 'warning',
+                sourceType: POINT_CONFIRMATION_EXPIRED_SOURCE,
+                sourceId: order.id,
+                title: 'Order waiting for a delivery point confirmation has expired',
+                message: `Order ${order.code} passed its validity period while its delivery point is unconfirmed and cannot be cancelled automatically (${outcome.kind}).`,
+            });
+        });
+    }
+}

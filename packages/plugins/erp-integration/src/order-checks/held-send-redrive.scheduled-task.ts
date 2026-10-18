@@ -2,6 +2,7 @@ import { ScheduledTask } from '@vendure/core';
 import { cronEveryMs } from 'shared';
 
 import { HeldSendRedriveService } from './held-send-redrive.service';
+import { PointConfirmationExpiryService } from './point-confirmation-expiry.service';
 import type { ErpIntegrationPluginOptions } from '../types';
 
 const EVERY_MS = 5 * 60 * 1000;
@@ -15,7 +16,11 @@ export function createHeldSendRedriveTask(options: ErpIntegrationPluginOptions):
         schedule: cronEveryMs(EVERY_MS),
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
-            return { queued: await injector.get(HeldSendRedriveService).sweep() };
+            const queued = await injector.get(HeldSendRedriveService).sweep();
+            return {
+                queued,
+                expired: await injector.get(PointConfirmationExpiryService).expireDue(),
+            };
         },
     });
 }

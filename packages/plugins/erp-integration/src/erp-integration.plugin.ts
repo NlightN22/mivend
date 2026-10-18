@@ -99,6 +99,7 @@ import { OrderCheckHealthService } from './order-checks/order-check-health.servi
 import { OrderCheckProvidersRegistrar } from './order-checks/order-check-providers.registrar';
 import { OrderSendHoldService } from './order-checks/order-send-hold.service';
 import { HeldSendRedriveService } from './order-checks/held-send-redrive.service';
+import { PointConfirmationExpiryService } from './order-checks/point-confirmation-expiry.service';
 import { createHeldSendRedriveTask } from './order-checks/held-send-redrive.scheduled-task';
 import { RejectedOrderHealthService } from './rejected-order-health.service';
 import { IntegrationEventListResolver } from './integration-event-list.resolver';
@@ -186,6 +187,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         OrderCheckHealthService,
         OrderSendHoldService,
         HeldSendRedriveService,
+        PointConfirmationExpiryService,
         IntegrationEventListService,
         IntegrationInboxReplayService,
         IntegrationInboxReplayStateService,

@@ -268,6 +268,9 @@ Per-channel/per-customer-segment overrides are not needed for stage 1.
   cancellation"); a registered, in-progress or shipped order is left to the ERP, and an order that
   cannot be cancelled automatically (settled payment, an ERP-rejected registration) keeps this
   behaviour.
+- A courier order waiting for its customer-added delivery point to be confirmed has no reserve to expire; it gets the
+  same validity period from placement and is then cancelled (`point-confirmation-expired`) or, if it cannot be,
+  flagged to staff once (`docs/order-contracts.md`, "Delivery point of an order").
 - Prepaid: do **not** silently release a paid customer's stock. Use a longer TTL for this
   path, and on expiry move to a distinct "needs intervention" state with a task/notification
   for staff, rather than auto-releasing.

@@ -23,7 +23,11 @@ import { OrderCancellationPortRegistry } from './order-cancellation.port';
 import { OrderNotEligibleError } from './reservation-errors';
 import { ReservationService } from './reservation.service';
 
-export type CancelReason = 'reserve-expired' | 'customer-request' | 'staff-request';
+export type CancelReason =
+    | 'reserve-expired'
+    | 'point-confirmation-expired'
+    | 'customer-request'
+    | 'staff-request';
 
 export type CancelOutcome =
     | { kind: 'cancelled'; eventSent: boolean }

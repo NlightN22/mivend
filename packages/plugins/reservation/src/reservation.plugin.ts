@@ -160,6 +160,7 @@ import type { ReservationPluginOptions } from './types';
         OrderCancellationPortRegistry,
         OrderCancellationService,
         OrderCancelResultService,
+        ReservationSettings,
     ],
     shopApiExtensions: {
         schema: gql`
