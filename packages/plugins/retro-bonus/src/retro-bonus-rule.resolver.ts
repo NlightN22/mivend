@@ -1,7 +1,7 @@
 import { Args, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
 import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
-import { CustomPermission } from '@mivend/plugin-access-control';
+import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 import { CounterpartyService, ContractService } from '@mivend/plugin-counterparty';
 
 import { accrualKindLabel } from './accrual-kind-label';
@@ -13,6 +13,22 @@ export class RetroBonusRuleAccrualKindResolver {
     @ResolveField()
     accrualKindLabel(@Parent() rule: RetroBonusRule): string {
         return accrualKindLabel(rule.accrualKind);
+    }
+}
+
+// Null when the viewer may not see that price type (deny by default).
+@Resolver('RetroBonusRule')
+export class RetroBonusRulePriceTypeResolver {
+    constructor(private priceTypeAccess: PriceTypeAccessService) {}
+
+    @ResolveField()
+    async priceTypeErpId(
+        @Ctx() ctx: RequestContext,
+        @Parent() rule: RetroBonusRule,
+    ): Promise<string | null> {
+        return (await this.priceTypeAccess.isExternalIdAllowed(ctx, rule.priceTypeErpId))
+            ? rule.priceTypeErpId
+            : null;
     }
 }
 

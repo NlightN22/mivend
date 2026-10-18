@@ -19,6 +19,8 @@ export interface DiscountRegistryListOptions {
     skip?: number;
     search?: string;
     priceTypeCode?: string;
+    // Set by the resolver from PriceTypeAccessService; never a client argument.
+    allowedPriceTypeCodes?: string[];
     status?: DiscountRegistryFilterStatus;
 }
 
@@ -169,6 +171,13 @@ export class DiscountRegistryService {
             .getRepository(ctx, DiscountRegistryEntry)
             .createQueryBuilder('entry');
 
+        if (options.allowedPriceTypeCodes) {
+            qb.andWhere('entry.priceTypeCode IN (:...allowedPriceTypeCodes)', {
+                allowedPriceTypeCodes: options.allowedPriceTypeCodes.length
+                    ? options.allowedPriceTypeCodes
+                    : [''],
+            });
+        }
         if (options.priceTypeCode) {
             qb.andWhere('entry.priceTypeCode = :priceTypeCode', {
                 priceTypeCode: options.priceTypeCode,

@@ -87,7 +87,8 @@ export const PERMISSION_CATEGORIES: { key: string; label: string; permissionName
         label: 'Pricing & Discounts',
         permissionNames: [
             'AdjustPriceWithinLimit',
-            'ReadFloorPrice',
+            'ReadConfidentialPriceTypes',
+            'ReadAllCustomerPriceTypes',
             'RequestPriceAdjustmentApproval',
             'RequestDiscountGrantApproval',
             'RequestCreditTermApproval',

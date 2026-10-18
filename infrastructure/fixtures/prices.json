@@ -121,122 +121,122 @@
     },
     {
         "sku": "MOT-5W30-4L",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 1785
     },
     {
         "sku": "MOT-10W40-4L",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 1360
     },
     {
         "sku": "FIL-OIL-C001",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 246
     },
     {
         "sku": "BRK-PAD-F101",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 892
     },
     {
         "sku": "BAT-60-AGM",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 6120
     },
     {
         "sku": "FIL-AIR-A004",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 348
     },
     {
         "sku": "BRK-DISC-F201",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 2040
     },
     {
         "sku": "SPK-PLUG-B6S",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 128
     },
     {
         "sku": "MOT-0W20-4L",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 2320
     },
     {
         "sku": "MOT-5W40-1L",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 561
     },
     {
         "sku": "FIL-FUEL-F301",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 298
     },
     {
         "sku": "FIL-CAB-C101",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 476
     },
     {
         "sku": "BRK-PAD-R102",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 765
     },
     {
         "sku": "BRK-FLUID-500",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 230
     },
     {
         "sku": "SPK-PLUG-IR6",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 348
     },
     {
         "sku": "BAT-45-STD",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 3026
     },
     {
         "sku": "BAT-75-EFB",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 4862
     },
     {
         "sku": "MOT-5W30-1L",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 484
     },
     {
         "sku": "MOT-15W40-5L",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 1054
     },
     {
         "sku": "FIL-OIL-M002",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 366
     },
     {
         "sku": "BRK-DRUM-R301",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 2465
     },
     {
         "sku": "SPK-PLUG-PL4",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 272
     },
     {
         "sku": "COOL-G12-1L",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 289
     },
     {
         "sku": "COOL-G12-5L",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 1334
     },
     {
@@ -246,7 +246,7 @@
     },
     {
         "sku": "BELT-TIMING-T401",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 2670
     },
     {
@@ -256,7 +256,7 @@
     },
     {
         "sku": "BELT-DRIVE-V501",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 650
     },
     {
@@ -266,7 +266,7 @@
     },
     {
         "sku": "SUS-BALL-B601",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 860
     },
     {
@@ -276,7 +276,7 @@
     },
     {
         "sku": "SUS-BUSH-B701",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 550
     },
     {
@@ -286,7 +286,7 @@
     },
     {
         "sku": "SUS-SHOCK-F801",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 2160
     },
     {
@@ -296,7 +296,7 @@
     },
     {
         "sku": "BRK-DISC-R901",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 1580
     },
     {
@@ -306,7 +306,7 @@
     },
     {
         "sku": "BRK-HOSE-H101",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 250
     },
     {
@@ -316,7 +316,7 @@
     },
     {
         "sku": "WIPER-BLADE-24",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 420
     },
     {
@@ -326,7 +326,7 @@
     },
     {
         "sku": "LIGHT-H7-BULB",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 190
     },
     {
@@ -336,7 +336,7 @@
     },
     {
         "sku": "SPK-PLUG-DBL-J8",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 470
     },
     {
@@ -346,7 +346,7 @@
     },
     {
         "sku": "BAT-90-AGM",
-        "priceTypeCode": "FLOOR",
+        "priceTypeCode": "PURCHASE",
         "price": 7580
     }
 ]

@@ -14,6 +14,7 @@ import {
 import {
     CatalogFacetsDocument,
     CatalogPageDocument,
+    CatalogFloorPricesForVariantsDocument,
     CatalogPriceEntriesForVariantsDocument,
     CatalogVariantStockDocument,
     CategoryTreeDocument,
@@ -107,6 +108,19 @@ export async function fetchStockForVariants(variantIds: string[]): Promise<Map<s
             v.stockLevels.reduce((sum, s) => sum + s.stockOnHand, 0),
         ]),
     );
+}
+
+// Null (not an empty map) when the caller lacks ReadConfidentialPriceTypes.
+export async function fetchFloorPricesForVariants(
+    variantIds: string[],
+): Promise<Map<string, number> | null> {
+    if (variantIds.length === 0) return new Map();
+    try {
+        const result = await adminApi(CatalogFloorPricesForVariantsDocument, { ids: variantIds });
+        return new Map(result.floorPricesForVariants.map(e => [e.variantId, e.price]));
+    } catch {
+        return null;
+    }
 }
 
 // Returns null (not an empty map) when the caller lacks permission for priceTypeCode,

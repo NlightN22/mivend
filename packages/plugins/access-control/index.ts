@@ -28,3 +28,5 @@ export { BranchSettings } from './src/entities/branch-settings.entity';
 export { BranchSettingsService } from './src/branch-settings.service';
 export type { BranchSettingsInput } from './src/branch-settings.service';
 export type { AccessControlPluginOptions, AccessScope, AccessScopeKind } from './src/types';
+export { PriceTypeAccessService } from './src/price-type-access.service';
+export type { AccessiblePriceType, PriceTypeAccessContext } from './src/price-type-access.service';

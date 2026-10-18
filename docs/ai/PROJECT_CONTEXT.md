@@ -137,6 +137,7 @@ Over-limit deferred order is NOT rejected (flag `creditLimitExceeded`, manager c
 
 ## #70 guest price, branch stock tiers (compressed, closed/audited — full text: `.backup/PROJECT_CONTEXT.20261005-70-stock-tiers.md`)
 
+- Price type visibility (#235): deny by default via `PriceType.visibility` + `PriceTypeAccessService` (branch allow-list union `ReadAllCustomerPriceTypes`/`ReadConfidentialPriceTypes`); floor is derived (`FloorPriceService`, purchase type x multiplier from the price-type stream), no `FLOOR` code. Classify customer types with `infrastructure/scripts/price-type-visibility.sql` (data step; unclassified stay confidential). Open: #256, decideDiscountGrantRequest/approval payloads not yet type-gated.
 - Guests: API resolves default price (branch default `PriceType`); UI hides price AND stock tier. Default branch/price type/RUB currency bootstrapped from options (`BOOTSTRAP_BRANCH_NAMES`, `DEFAULT_PRICE_TYPE_CODE`, `DEFAULT_CURRENCY_CODE`); branch is mivend's own entity.
 
 ## #160/#59/#158 search backend + category tree/hierarchy (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-03-04-160-59-158-full.md`)

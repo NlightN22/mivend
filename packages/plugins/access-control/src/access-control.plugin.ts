@@ -15,6 +15,9 @@ import { AdministratorProvisioningService } from './administrator-provisioning.s
 import { BranchService } from './branch.service';
 import { DefaultBranchBootstrapService } from './default-branch-bootstrap.service';
 import { DefaultChannelCurrencyBootstrapService } from './default-channel-currency-bootstrap.service';
+import { CustomerPriceTypeResolver, PriceTypeAdminResolver } from './price-type-admin.resolver';
+import { priceTypeSdl } from './price-type.schema';
+import { PriceTypeAccessService } from './price-type-access.service';
 import { BranchSettingsService } from './branch-settings.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
@@ -37,6 +40,8 @@ import { Warehouse } from './entities/warehouse.entity';
 import { WarehouseService } from './warehouse.service';
 
 const adminApiSchema = gql`
+    ${priceTypeSdl}
+
     type ErpPosition {
         id: ID!
         erpId: String!
@@ -270,6 +275,7 @@ const adminApiSchema = gql`
         BranchService,
         WarehouseService,
         BranchSettingsService,
+        PriceTypeAccessService,
         EmployeeService,
         CreditTermLimitService,
         UserEnrichmentService,
@@ -293,6 +299,7 @@ const adminApiSchema = gql`
         BranchService,
         WarehouseService,
         BranchSettingsService,
+        PriceTypeAccessService,
         EmployeeService,
         CreditTermLimitService,
         UserEnrichmentService,
@@ -302,7 +309,13 @@ const adminApiSchema = gql`
     ],
     adminApiExtensions: {
         schema: adminApiSchema,
-        resolvers: [AccessControlResolver, AdministratorStatusResolver, ErpUserResolver],
+        resolvers: [
+            AccessControlResolver,
+            AdministratorStatusResolver,
+            ErpUserResolver,
+            PriceTypeAdminResolver,
+            CustomerPriceTypeResolver,
+        ],
     },
     configuration: (config: RuntimeVendureConfig) => {
         // System-managed: hand edits break the correlation/sync that owns each field.

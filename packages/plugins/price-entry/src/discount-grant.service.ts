@@ -7,7 +7,7 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { And, Brackets, In, LessThanOrEqual, MoreThan } from 'typeorm';
+import { Brackets, In } from 'typeorm';
 import { documentNumberSearchTerm } from 'shared';
 import { NumberingService } from '@mivend/plugin-numbering';
 import { CustomPermission } from '@mivend/plugin-access-control';
@@ -46,6 +46,8 @@ export interface DiscountGrantsForCounterpartyOptions {
     // Substring match against the grant's own number (DiscountGrant.number).
     search?: string;
     status?: DiscountGrantFilterStatus;
+    // Set by the resolver from PriceTypeAccessService; never a client argument.
+    allowedPriceTypeCodes?: string[];
 }
 
 const DISCOUNT_GRANT_REQUEST_TYPE = 'discountGrantApproval';
@@ -58,6 +60,11 @@ function computeGrantStatus(validTo: Date, now: Date = new Date()): DiscountGran
     if (validTo.getTime() < soon) return 'expiring-soon';
     return 'active';
 }
+
+// A grant is hidden when its rule belongs to a price type the viewer cannot see.
+const RULE_PRICE_TYPE_ALLOWED_SQL = `(grant.discountRuleId IN (
+    SELECT dr.id::varchar FROM discount_rule dr
+    WHERE dr."priceTypeCode" IS NULL OR dr."priceTypeCode" IN (:...allowedPriceTypeCodes)))`;
 
 export interface DiscountGrantInput {
     priceTypeCode: string;
@@ -221,6 +228,13 @@ export class DiscountGrantService {
                 }),
             );
 
+        if (options.allowedPriceTypeCodes) {
+            qb.andWhere(RULE_PRICE_TYPE_ALLOWED_SQL, {
+                allowedPriceTypeCodes: options.allowedPriceTypeCodes.length
+                    ? options.allowedPriceTypeCodes
+                    : [''],
+            });
+        }
         if (options.search) {
             qb.andWhere('grant.number ILIKE :search', {
                 search: documentNumberSearchTerm(options.search),
@@ -277,13 +291,23 @@ export class DiscountGrantService {
 
     // Only customer-scoped grants: a company-wide expiry is a catalog-wide policy change.
     // Those are already visible on /discounts.
-    async findExpiringSoon(ctx: RequestContext, withinDays: number): Promise<DiscountGrant[]> {
+    async findExpiringSoon(
+        ctx: RequestContext,
+        withinDays: number,
+        allowedPriceTypeCodes: string[],
+    ): Promise<DiscountGrant[]> {
         const now = new Date();
         const horizon = new Date(now.getTime() + withinDays * 24 * 60 * 60 * 1000);
-        return this.connection.getRepository(ctx, DiscountGrant).find({
-            where: { scopeType: 'customer', validTo: And(MoreThan(now), LessThanOrEqual(horizon)) },
-            relations: ['counterparties'],
-            order: { validTo: 'ASC' },
-        });
+        return this.connection
+            .getRepository(ctx, DiscountGrant)
+            .createQueryBuilder('grant')
+            .leftJoinAndSelect('grant.counterparties', 'counterparty')
+            .where('grant.scopeType = :customer', { customer: 'customer' })
+            .andWhere('grant.validTo > :now AND grant.validTo <= :horizon', { now, horizon })
+            .andWhere(RULE_PRICE_TYPE_ALLOWED_SQL, {
+                allowedPriceTypeCodes: allowedPriceTypeCodes.length ? allowedPriceTypeCodes : [''],
+            })
+            .orderBy('grant.validTo', 'ASC')
+            .getMany();
     }
 }

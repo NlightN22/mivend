@@ -1,7 +1,7 @@
 import { Args, Query, Mutation, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
 import { Allow, Ctx, PaginatedList, Permission, RequestContext, Transaction } from '@vendure/core';
-import { CustomPermission } from '@mivend/plugin-access-control';
+import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 import { ApprovalRequest, ApprovalStepDecision } from '@mivend/plugin-approval-workflow';
 
 import {
@@ -14,7 +14,10 @@ import { DiscountGrant } from './discount-grant.entity';
 
 @Resolver()
 export class DiscountGrantResolver {
-    constructor(private discountGrantService: DiscountGrantService) {}
+    constructor(
+        private discountGrantService: DiscountGrantService,
+        private priceTypeAccess: PriceTypeAccessService,
+    ) {}
 
     @Query()
     @Allow(Permission.ReadCatalog)
@@ -22,7 +25,11 @@ export class DiscountGrantResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { withinDays: number },
     ): Promise<DiscountGrant[]> {
-        return this.discountGrantService.findExpiringSoon(ctx, args.withinDays);
+        return this.discountGrantService.findExpiringSoon(
+            ctx,
+            args.withinDays,
+            await this.priceTypeAccess.allowedCodes(ctx),
+        );
     }
 
     @Query()
@@ -31,11 +38,10 @@ export class DiscountGrantResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { counterpartyId: ID; options?: DiscountGrantsForCounterpartyOptions },
     ): Promise<PaginatedList<DiscountGrantForCustomer>> {
-        return this.discountGrantService.findForCounterparty(
-            ctx,
-            args.counterpartyId,
-            args.options,
-        );
+        return this.discountGrantService.findForCounterparty(ctx, args.counterpartyId, {
+            ...args.options,
+            allowedPriceTypeCodes: await this.priceTypeAccess.allowedCodes(ctx),
+        });
     }
 
     @Transaction()
@@ -45,6 +51,7 @@ export class DiscountGrantResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { input: DiscountGrantInput },
     ): Promise<ApprovalRequest> {
+        await this.priceTypeAccess.assertCodeAllowed(ctx, args.input.priceTypeCode);
         return this.discountGrantService.requestGrant(ctx, args.input);
     }
 

@@ -39,6 +39,28 @@ The default channel currency is set from `DEFAULT_CURRENCY_CODE` (default `RUB`)
 
 ---
 
+## Price type visibility and the derived floor (#235)
+
+`PriceType.visibility` (`customer` | `confidential`, default `confidential`) decides who may see a
+type; the rules live in `docs/access-control.md` (layer 4, `PriceTypeAccessService`).
+
+**Classifying the customer set is a data step, not code.** After the migration every type is
+confidential. Apply `infrastructure/scripts/price-type-visibility.sql` to the contour's database
+with the codes of the customer types, for example
+`psql -v customer_codes=code-a,code-b -f price-type-visibility.sql`: it marks those types
+`customer` (never the purchase type) and fills every still-empty branch allow-list with all
+customer types. Types nobody classified stay confidential. The local seed applies it to its
+synthetic types.
+
+**The floor is derived, not a price type.** The ERP price-type stream carries `isPurchasePriceType`
+(exactly one type) and `ceilingPriceMultiplier` (only on that type); they are stored as
+`PriceType.isPurchase` / `ceilingMultiplier` (a partial unique index keeps one purchase type, a new
+one takes the flag over). `FloorPriceService.forVariants` = the variant's purchase entry x the
+multiplier; without a purchase type, multiplier or entry the floor is unknown and the existing
+rule applies (no floor = approval). The floor check and the `floorPrice`/`floorPricesForVariants`
+queries use it; the latter need `ReadConfidentialPriceTypes`. A purchase type is never resolved as
+a customer's selling price. Re-checking open orders when the floor changes: #256.
+
 ## How a customer gets a price type
 
 **Target rule (decided 2026-10-06):** a customer's price type is the price type of their

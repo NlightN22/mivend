@@ -26,6 +26,7 @@ import { PriceAdjustmentResolver } from './price-adjustment.resolver';
 import { DiscountGrantResolver } from './discount-grant.resolver';
 import { DiscountRegistryResolver } from './discount-registry.resolver';
 import { PriceEntryService } from './price-entry.service';
+import { FloorPriceService } from './floor-price.service';
 import { DiscountRuleService } from './discount-rule.service';
 import { PromoDiscountRuleService } from './promo-discount-rule.service';
 import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.service';
@@ -220,8 +221,9 @@ const adminApiSchema = gql`
     }
 
     extend type Query {
-        # Restricted to ReadFloorPrice — see PriceAdjustmentResolver.
-        floorPrice(variantId: ID!): Int
+        # Restricted to ReadConfidentialPriceTypes — see PriceAdjustmentResolver.
+        floorPrice(variantId: ID!): Float
+        floorPricesForVariants(variantIds: [ID!]!): [VariantPriceEntry!]!
         discountRules(priceTypeCode: String): [DiscountRule!]!
         expiringDiscountGrants(withinDays: Int!): [DiscountGrant!]!
         # Only grants that actually apply to this counterparty (company-wide or scoped to it) —
@@ -233,9 +235,7 @@ const adminApiSchema = gql`
             options: DiscountGrantForCustomerListOptions
         ): DiscountGrantForCustomerList!
         priceTypeCodes: [String!]!
-        # Batch lookup for the catalog list/detail pages. Gated on ReadCatalog UNLESS
-        # priceTypeCode is the floor price type, which requires ReadFloorPrice instead —
-        # see PriceEntryAdminResolver.priceEntriesForVariants.
+        # Batch lookup for the catalog list/detail pages; see PriceEntryAdminResolver.priceEntriesForVariants.
         priceEntriesForVariants(variantIds: [ID!]!, priceTypeCode: String!): [VariantPriceEntry!]!
         # Real server-side pagination + filtering for the /discounts registry (issue #39) — the
         # single unified list, replacing the earlier two-table split (discountRulesPage +
@@ -307,6 +307,7 @@ const adminApiSchema = gql`
     },
     providers: [
         PriceEntryService,
+        FloorPriceService,
         DiscountRuleService,
         PromoDiscountRuleService,
         CounterpartyDiscountRuleService,

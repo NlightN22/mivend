@@ -9,6 +9,7 @@ function make(opts: {
     codeByUser?: Record<string, string | null>;
     types: Array<{ id: string; code: string; externalId: string | null }>;
     defaultId?: string | null;
+    allowed?: string[];
 }) {
     const repo = {
         findOne: vi.fn(
@@ -30,6 +31,11 @@ function make(opts: {
     const service = new SearchPriceTypeService(
         priceEntry as never,
         branch as never,
+        {
+            isCodeAllowed: vi.fn(async (_c: unknown, code: string) =>
+                (opts.allowed ?? []).includes(code),
+            ),
+        } as never,
         { getRepository: () => repo } as never,
     );
     return { service, branch };
@@ -68,5 +74,19 @@ describe('SearchPriceTypeService.resolveExternalId', () => {
     it('returns null when nothing resolves or the type has no externalId', async () => {
         expect(await make({ types }).service.resolveExternalId(ctx)).toBeNull();
         expect(await make({ types, defaultId: '3' }).service.resolveExternalId(ctx)).toBeNull();
+    });
+});
+
+describe('SearchPriceTypeService staff visibility', () => {
+    const admin = { apiType: 'admin' } as RequestContext;
+
+    it('staff never price by a type they may not see (omits the parameter)', async () => {
+        const { service } = make({ types, defaultId: '1', allowed: [] });
+        expect(await service.resolveExternalId(admin)).toBeNull();
+    });
+
+    it('staff price by the branch default when it is allowed', async () => {
+        const { service } = make({ types, defaultId: '1', allowed: ['wholesale'] });
+        expect(await service.resolveExternalId(admin)).toBe('guid-wholesale');
     });
 });

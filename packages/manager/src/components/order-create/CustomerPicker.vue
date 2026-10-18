@@ -82,7 +82,7 @@ watch(search, () => {
                 <span v-if="selected.inn" class="customer-picker__meta"
                     >INN {{ selected.inn }}</span
                 >
-                <MvStatusBadge variant="info">{{ selected.priceType }}</MvStatusBadge>
+                <MvStatusBadge variant="info">{{ selected.priceType ?? '—' }}</MvStatusBadge>
             </div>
             <div v-if="credit" class="customer-picker__credit">
                 <span>Credit limit: {{ formatWhole(credit.creditLimit) }}</span>

@@ -33,3 +33,22 @@ describe('default roles: check permissions (#237)', () => {
         }
     });
 });
+
+describe('default roles: price type permissions (#235)', () => {
+    it('ReadFloorPrice is gone and only leadership roles read confidential price types', () => {
+        for (const role of DEFAULT_ROLES) expect(role.permissions).not.toContain('ReadFloorPrice');
+        const readers = DEFAULT_ROLES.filter(r =>
+            r.permissions.includes('ReadConfidentialPriceTypes'),
+        ).map(r => r.code);
+        expect(readers.sort()).toEqual([
+            'department-head',
+            'general-director',
+            'portal-admin',
+            'security-officer',
+        ]);
+        for (const code of ['operator', 'manager']) {
+            expect(byCode(code)).not.toContain('ReadConfidentialPriceTypes');
+            expect(byCode(code)).not.toContain('ReadAllCustomerPriceTypes');
+        }
+    });
+});

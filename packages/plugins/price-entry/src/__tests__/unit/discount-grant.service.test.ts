@@ -337,15 +337,23 @@ describe('DiscountGrantService', () => {
     describe('findExpiringSoon', () => {
         it('queries only customer-scoped grants, ordered by soonest expiry', async () => {
             const ctx = mockCtx([]);
-            await service.findExpiringSoon(ctx, 14);
+            await service.findExpiringSoon(ctx, 14, ['retail']);
 
-            expect(grantRepo.find).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    where: expect.objectContaining({ scopeType: 'customer' }),
-                    relations: ['counterparties'],
-                    order: { validTo: 'ASC' },
-                }),
-            );
+            expect(qb.where).toHaveBeenCalledWith('grant.scopeType = :customer', {
+                customer: 'customer',
+            });
+            expect(qb.orderBy).toHaveBeenCalledWith('grant.validTo', 'ASC');
+            expect(qb.andWhere).toHaveBeenCalledWith(expect.stringContaining('discount_rule'), {
+                allowedPriceTypeCodes: ['retail'],
+            });
+        });
+
+        it('hides grants of a price type the viewer cannot see (empty allow-list matches nothing)', async () => {
+            await service.findExpiringSoon(mockCtx([]), 14, []);
+
+            expect(qb.andWhere).toHaveBeenCalledWith(expect.stringContaining('discount_rule'), {
+                allowedPriceTypeCodes: [''],
+            });
         });
     });
 

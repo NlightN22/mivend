@@ -18,7 +18,8 @@ export const adminApiSchema = gql`
         "Null for a caller without ReadCounterpartyCredit — see CounterpartyCreditResolver"
         creditBalance: Int
         paymentDelayDays: Int!
-        priceType: String!
+        "Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver"
+        priceType: String
         isActive: Boolean!
         assignedManagerId: String
         "Raw ERP manager id (the ERP) — fallback display when assignedManagerId hasn't resolved yet, see issue #133."

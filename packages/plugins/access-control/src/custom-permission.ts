@@ -22,10 +22,14 @@ export const CustomPermission = {
         description:
             'Adjust an order line price directly, as long as it stays at/above the floor price (layer 5 gate)',
     }),
-    ReadFloorPrice: new PermissionDefinition({
-        name: 'ReadFloorPrice',
+    ReadConfidentialPriceTypes: new PermissionDefinition({
+        name: 'ReadConfidentialPriceTypes',
         description:
-            'Read the raw floor-price threshold for a variant (financial data, layer 4 redaction)',
+            'Read confidential price types (purchase price, floor price) and values derived from them (layer 4)',
+    }),
+    ReadAllCustomerPriceTypes: new PermissionDefinition({
+        name: 'ReadAllCustomerPriceTypes',
+        description: 'Read customer price types of every branch, beyond the branch allow-list',
     }),
     RequestPriceAdjustmentApproval: new PermissionDefinition({
         name: 'RequestPriceAdjustmentApproval',

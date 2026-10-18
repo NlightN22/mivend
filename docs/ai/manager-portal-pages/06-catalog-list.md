@@ -30,7 +30,7 @@
 2. **Фасетная панель** (`MvCatalogFacets`): поиск по названию/SKU/OEM-коду/VIN (одно универсальное поле — уже так работает реальный ES-поиск с кроссами в коде, отдельных полей под каждый тип запроса не нужно), чекбоксы Category/Brand (динамически из фасетов), диапазон цены, "In stock only", кнопка "Reset".
 3. **Список товаров** (`MvProductRow` построчно), у каждой строки:
     - SKU, Product name (кликабельно → `/catalog/:slug`), Brand, Stock, базовая цена (первый доступный price type, например Wholesale).
-    - Ниже строки — тонкая манагер-специфичная "экстра"-плашка (`CatalogRowExtras`) с дополнительными price-type колонками (если их больше одного) и Floor price — **только если** у роли есть право `ReadFloorPrice` (Purchasing Dept Head/Director/General Director/Security Officer); у остальных ролей поля просто нет в ответе API, не просто скрыто визуально.
+    - Ниже строки — тонкая манагер-специфичная "экстра"-плашка (`CatalogRowExtras`) с дополнительными price-type колонками (если их больше одного) и Floor price — **только если** у роли есть право `ReadConfidentialPriceTypes` (Purchasing Dept Head/Director/General Director/Security Officer); у остальных ролей поля просто нет в ответе API, не просто скрыто визуально.
 
 ## Состояния
 

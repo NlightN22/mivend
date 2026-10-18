@@ -57,7 +57,7 @@ async function reactivate(tp: TradingPointInfo): Promise<void> {
         <dl class="overview-tab__facts">
             <div>
                 <dt>Price type</dt>
-                <dd>{{ customer.priceType }}</dd>
+                <dd>{{ customer.priceType ?? '—' }}</dd>
             </div>
             <div v-if="credit">
                 <dt>Credit limit</dt>

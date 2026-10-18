@@ -1,6 +1,7 @@
 // Seed script via ERP import REST API. Run: node infrastructure/scripts/seed-erp.mjs
 // Requires the server running on localhost:3000 and ERP_IMPORT_TOKEN env variable.
 
+import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -436,6 +437,21 @@ async function ensureBranchSettingsSeeded() {
         );
         console.log(`  → BranchSettings for ${branchId}: defaultPriceTypeId=RETAIL (${retail.id})`);
     }
+}
+
+// Synthetic local classification (#235); a real contour applies price-type-visibility.sql to its own codes.
+function seedPriceTypeVisibility() {
+    const psql = `docker exec -i docker-postgres-central-1 psql -U postgres -d mivend_central -v ON_ERROR_STOP=1`;
+    const purchaseSql = `INSERT INTO price_type (code, name, "isActive", visibility, "isPurchase", "ceilingMultiplier")
+        VALUES ('PURCHASE', 'Purchase', true, 'confidential', true, 1.1)
+        ON CONFLICT (code) DO UPDATE SET "isPurchase" = true, "ceilingMultiplier" = 1.1;`;
+    execSync(psql, { input: purchaseSql, stdio: ['pipe', 'inherit', 'inherit'] });
+    const visibilitySql = readFileSync(join(__dirname, 'price-type-visibility.sql'), 'utf8');
+    execSync(`${psql} -v customer_codes=RETAIL,WHOLESALE,SPECIAL`, {
+        input: visibilitySql,
+        stdio: ['pipe', 'inherit', 'inherit'],
+    });
+    console.log('  → price type visibility and branch allow-lists seeded');
 }
 
 async function main() {
@@ -1471,6 +1487,8 @@ async function main() {
     if (employeeResult.errors?.length > 0) {
         for (const e of employeeResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
+
+    seedPriceTypeVisibility();
 
     console.log('Done.');
 }

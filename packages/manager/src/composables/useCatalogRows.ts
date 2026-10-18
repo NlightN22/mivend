@@ -3,11 +3,11 @@ import { useLatestRequest } from '@mivend/ui-kit';
 import {
     fetchCatalogPage,
     fetchStockForVariants,
+    fetchFloorPricesForVariants,
     fetchPriceEntriesForVariants,
     type CatalogFilters,
     type CatalogListItem,
 } from '../api/catalog';
-import { FLOOR_PRICE_TYPE_CODE } from '../constants/pricing';
 import type { FacetGroup } from 'shared';
 
 const PAGE_SIZE = 20;
@@ -58,7 +58,7 @@ export function useCatalogRows(
         const variantIds = rows.map(r => r.productVariantId);
         const [stockMap, floorMap, ...priceMaps] = await Promise.all([
             fetchStockForVariants(variantIds),
-            fetchPriceEntriesForVariants(variantIds, FLOOR_PRICE_TYPE_CODE),
+            fetchFloorPricesForVariants(variantIds),
             ...priceTypeCodes.value.map(code => fetchPriceEntriesForVariants(variantIds, code)),
         ]);
         return { stockMap, floorMap, priceMaps };

@@ -5,25 +5,37 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 import { ApprovalRequest, ApprovalStepDecision } from '@mivend/plugin-approval-workflow';
 
 import { PriceAdjustmentService, PriceAdjustmentResult } from './price-adjustment.service';
-import { PriceEntryService } from './price-entry.service';
-import { FLOOR_PRICE_TYPE_CODE } from './types';
+import { FloorPriceService } from './floor-price.service';
 
 @Resolver()
 export class PriceAdjustmentResolver {
     constructor(
         private priceAdjustmentService: PriceAdjustmentService,
-        private priceEntryService: PriceEntryService,
+        private floorPriceService: FloorPriceService,
     ) {}
 
     // The only place a human can see the raw limit price; the gate reads it for its own decision.
     // Root Query @Allow() is reliable, unlike @ResolveField() (access-control antipattern #2).
     @Query()
-    @Allow(CustomPermission.ReadFloorPrice.Permission)
+    @Allow(CustomPermission.ReadConfidentialPriceTypes.Permission)
     async floorPrice(
         @Ctx() ctx: RequestContext,
         @Args() args: { variantId: string },
     ): Promise<number | null> {
-        return this.priceEntryService.getForVariant(ctx, args.variantId, FLOOR_PRICE_TYPE_CODE);
+        return (
+            (await this.floorPriceService.forVariants(ctx, [args.variantId])).get(args.variantId) ??
+            null
+        );
+    }
+
+    @Query()
+    @Allow(CustomPermission.ReadConfidentialPriceTypes.Permission)
+    async floorPricesForVariants(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { variantIds: string[] },
+    ): Promise<{ variantId: string; price: number }[]> {
+        const map = await this.floorPriceService.forVariants(ctx, args.variantIds);
+        return [...map.entries()].map(([variantId, price]) => ({ variantId, price }));
     }
 
     @Transaction()

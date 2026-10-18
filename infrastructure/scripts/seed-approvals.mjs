@@ -382,9 +382,8 @@ async function main() {
     }
 
     // --- priceAdjustmentApproval: varied justifications, real draft orders ---
-    // No FLOOR price type is seeded by `make seed`, so PriceAdjustmentGateService's
-    // "no floor configured -> requires-approval" conservative default means every adjustment
-    // below always goes through the approval workflow, regardless of the requested price.
+    // The requested price is far below any seeded floor, so every adjustment below goes
+    // through the approval workflow.
     const priceAdjustmentScenarios = [
         {
             justification: 'Competitor is offering this SKU at a lower price locally',

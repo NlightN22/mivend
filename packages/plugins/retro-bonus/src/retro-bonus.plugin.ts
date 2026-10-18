@@ -12,6 +12,7 @@ import { GrantedRetroBonusService } from './granted-retro-bonus.service';
 import { RetroBonusRule } from './retro-bonus-rule.entity';
 import {
     RetroBonusRuleAccrualKindResolver,
+    RetroBonusRulePriceTypeResolver,
     RetroBonusRuleResolver,
 } from './retro-bonus-rule.resolver';
 import { RetroBonusRuleService } from './retro-bonus-rule.service';
@@ -87,6 +88,7 @@ const adminApiSchema = gql`
         resolvers: [
             RetroBonusRuleResolver,
             RetroBonusRuleAccrualKindResolver,
+            RetroBonusRulePriceTypeResolver,
             GrantedRetroBonusResolver,
             GrantedRetroBonusFieldResolver,
         ],

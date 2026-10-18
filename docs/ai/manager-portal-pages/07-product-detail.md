@@ -23,7 +23,7 @@
 3. Блок "Prices" (внутри `ManagerProductInfoPanel`) — список прайс-типов и их значений (Wholesale, ...), по одному ряду на реальный `priceTypeCode` (не хардкодить список "Retail/Wholesale" — берётся из `priceTypeCodes`). Это **просмотр**, не редактирование — подпись мелким текстом "Base prices are managed in the ERP system", без кнопки "Edit" — базовые цены не редактируются в портале.
 4. Блок "Stock" (там же) — остаток единиц на складе.
 5. **Блок "Cross-references / applicability"** (отдельная секция под трёхколоночной раскладкой) — таблица OEM-кодов и брендов-аналогов, для которых этот товар взаимозаменяем (столбцы: OEM code, OEM brand). Реальные данные через `productCrossReferences`, не выдумка — если для товара нет кросс-ссылок, блок не рендерится вовсе.
-6. Если у роли есть право `ReadFloorPrice` (Purchasing Dept Head/Director/General Director/Security Officer): дополнительная строка в блоке "Prices" — "Floor price". У остальных ролей строка отсутствует, потому что сам GraphQL-запрос возвращает `FORBIDDEN` для этого `priceTypeCode` — не просто скрыта на фронте.
+6. Если у роли есть право `ReadConfidentialPriceTypes` (Purchasing Dept Head/Director/General Director/Security Officer): дополнительная строка в блоке "Prices" — "Floor price". У остальных ролей строка отсутствует, потому что сам GraphQL-запрос возвращает `FORBIDDEN` для этого `priceTypeCode` — не просто скрыта на фронте.
 
 ## Действия
 

@@ -20,10 +20,6 @@ declare module '@vendure/core' {
     }
 }
 
-// priceTypeCode is a fixed technical identifier, not business data: only the per-variant value
-// is DB-driven, so the code must not be made configurable.
-export const FLOOR_PRICE_TYPE_CODE = 'FLOOR';
-
 export type PriceAdjustmentDecision = 'apply-directly' | 'requires-approval';
 
 export const loggerCtx = 'PriceEntryPlugin';

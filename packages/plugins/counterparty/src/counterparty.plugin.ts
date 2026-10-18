@@ -24,6 +24,7 @@ import {
     CustomerCounterpartyResolver,
     CounterpartyResolver,
     CounterpartyCreditResolver,
+    CounterpartyPriceTypeResolver,
     CounterpartyCustomerLinkResolver,
 } from './counterparty.resolver';
 import {
@@ -64,6 +65,7 @@ const shopResolvers = [
 ];
 
 const adminResolvers = [
+    CounterpartyPriceTypeResolver,
     CustomerCounterpartyResolver,
     CustomerTradingPointResolver,
     CounterpartyTradingPointResolver,

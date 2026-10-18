@@ -9,7 +9,7 @@ import {
     RequestContext,
     Transaction,
 } from '@vendure/core';
-import { CustomPermission } from '@mivend/plugin-access-control';
+import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 
 import type { CounterpartyListFilter } from './counterparty-list-filter';
 import { Counterparty } from './entities/counterparty.entity';
@@ -55,6 +55,24 @@ export class CounterpartyCreditResolver {
     }
 }
 
+// Null when the viewer may not see this type; the counterparty's own type is shown in its context
+// when it is a customer type (never a confidential one).
+@Resolver('Counterparty')
+export class CounterpartyPriceTypeResolver {
+    constructor(private priceTypeAccess: PriceTypeAccessService) {}
+
+    @ResolveField()
+    async priceType(
+        @Ctx() ctx: RequestContext,
+        @Parent() counterparty: Counterparty,
+    ): Promise<string | null> {
+        const allowed = await this.priceTypeAccess.isCodeAllowed(ctx, counterparty.priceType, {
+            contextCodes: [counterparty.priceType],
+        });
+        return allowed ? counterparty.priceType : null;
+    }
+}
+
 // Works without the activation feature: reports any existing link (e.g. legacy email-matched Customer),
 // otherwise returns null.
 @Resolver('Counterparty')
@@ -75,6 +93,7 @@ export class CounterpartyResolver {
     constructor(
         private counterpartyService: CounterpartyService,
         private managerAssignmentService: CounterpartyManagerAssignmentService,
+        private priceTypeAccess: PriceTypeAccessService,
     ) {}
 
     @Query()
@@ -173,6 +192,7 @@ export class CounterpartyResolver {
             erpGroupLabel?: string;
         },
     ): Promise<Counterparty> {
+        await this.priceTypeAccess.assertCodeAllowed(ctx, args.priceType);
         return this.counterpartyService.upsert(ctx, args);
     }
 

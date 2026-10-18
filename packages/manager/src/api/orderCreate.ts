@@ -25,7 +25,7 @@ export interface CustomerOption {
     shortName: string;
     legalName: string;
     inn: string | null;
-    priceType: string;
+    priceType: string | null;
     tradingPoints: { id: string; name: string; address: string }[];
 }
 

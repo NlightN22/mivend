@@ -84,6 +84,7 @@ export class DiscountRuleService {
         ctx: RequestContext,
         priceTypeCode?: string,
         take = 200,
+        allowedCodes?: string[],
     ): Promise<DiscountRule[]> {
         const repo = this.connection.getRepository(ctx, DiscountRule);
         if (priceTypeCode) {
@@ -91,13 +92,15 @@ export class DiscountRuleService {
         }
         // Counterparty/contract rules (recipientType set) are excluded like promo rules: this listing
         // only shows facet/priceType-threshold rules.
-        return repo
+        const qb = repo
             .createQueryBuilder('dr')
             .where('dr.triggerProductErpId IS NULL')
-            .andWhere('dr.recipientType IS NULL')
-            .orderBy('dr.validTo', 'DESC')
-            .take(take)
-            .getMany();
+            .andWhere('dr.recipientType IS NULL');
+        if (allowedCodes)
+            qb.andWhere('dr.priceTypeCode IN (:...allowedCodes)', {
+                allowedCodes: allowedCodes.length ? allowedCodes : [''],
+            });
+        return qb.orderBy('dr.validTo', 'DESC').take(take).getMany();
     }
 
     async bulkUpsert(ctx: RequestContext, entries: DiscountRuleInput[]): Promise<number> {

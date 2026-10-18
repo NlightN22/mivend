@@ -194,4 +194,19 @@ describe('PriceEntryService', () => {
             expect(result).toBeNull();
         });
     });
+
+    describe('customer price type lookups never resolve a purchase type (#235)', () => {
+        it.each(['getPriceTypeCodeForUser', 'getPriceTypeCodeForCustomer', 'getPriceTypeCodeById'])(
+            '%s excludes isPurchase in SQL',
+            async method => {
+                mockRawQuery.mockResolvedValue([]);
+                const ctx = { activeUserId: 'u1' } as unknown as RequestContext;
+                await (service as unknown as Record<string, (...a: unknown[]) => Promise<unknown>>)[
+                    method
+                ](ctx, 'x');
+
+                expect(mockRawQuery.mock.calls[0][0]).toContain('"isPurchase" = false');
+            },
+        );
+    });
 });

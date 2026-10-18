@@ -40,7 +40,7 @@ describe('CounterpartyResolver credit-derived aggregate gating', () => {
         getSummary: vi.fn(async () => summary),
         findHighUsage: vi.fn(async () => [counterparty]),
     } as unknown as CounterpartyService;
-    const resolver = new CounterpartyResolver(mockService, {} as never);
+    const resolver = new CounterpartyResolver(mockService, {} as never, {} as never);
 
     it('counterpartySummary nulls out totalCreditBalance/highUsageCount without ReadCounterpartyCredit, keeps totalCount/activeCount', async () => {
         const result = await resolver.counterpartySummary(mockCtx(false));

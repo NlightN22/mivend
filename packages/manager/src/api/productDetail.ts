@@ -1,7 +1,6 @@
 import { adminApi } from './client';
-import { fetchPriceEntriesForVariants } from './catalog';
+import { fetchFloorPricesForVariants, fetchPriceEntriesForVariants } from './catalog';
 import { fetchPriceTypeCodes } from './discounts';
-import { FLOOR_PRICE_TYPE_CODE } from '../constants/pricing';
 import { ProductBySlugDocument, ProductCrossReferencesDocument } from './generated/graphql';
 
 export interface ProductDetail {
@@ -51,7 +50,7 @@ export interface PriceRow {
 }
 
 // One row per price type from priceTypeCodes; never hardcode the list (see AGENTS.md).
-// Floor price row is added only if the caller has ReadFloorPrice (confidential).
+// Floor price row is added only if the caller has ReadConfidentialPriceTypes (confidential).
 export async function fetchPricesForVariant(variantId: string): Promise<PriceRow[]> {
     const codes = await fetchPriceTypeCodes();
     const rows: PriceRow[] = [];
@@ -63,10 +62,10 @@ export async function fetchPricesForVariant(variantId: string): Promise<PriceRow
             price: map?.get(variantId) ?? null,
         });
     }
-    const floorMap = await fetchPriceEntriesForVariants([variantId], FLOOR_PRICE_TYPE_CODE);
+    const floorMap = await fetchFloorPricesForVariants([variantId]);
     if (floorMap) {
         rows.push({
-            priceTypeCode: FLOOR_PRICE_TYPE_CODE,
+            priceTypeCode: 'floor',
             label: 'Floor price',
             price: floorMap.get(variantId) ?? null,
         });

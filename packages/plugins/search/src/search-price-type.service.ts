@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { BranchSettingsService } from '@mivend/plugin-access-control';
+import { BranchSettingsService, PriceTypeAccessService } from '@mivend/plugin-access-control';
 import { PriceType } from '@mivend/plugin-customer-pricing';
 import { PriceEntryService } from '@mivend/plugin-price-entry';
 
@@ -11,6 +11,7 @@ export class SearchPriceTypeService {
     constructor(
         private priceEntryService: PriceEntryService,
         private branchSettingsService: BranchSettingsService,
+        private priceTypeAccess: PriceTypeAccessService,
         private connection: TransactionalConnection,
     ) {}
 
@@ -19,11 +20,19 @@ export class SearchPriceTypeService {
         const code = await this.priceEntryService.getPriceTypeCodeForUser(ctx);
         if (code) {
             const own = await repo.findOne({ where: { code } });
-            if (own?.externalId) return own.externalId;
+            if (own?.externalId && (await this.isVisible(ctx, own))) return own.externalId;
         }
         const settings = await this.branchSettingsService.resolveEffective(ctx);
         if (!settings) return null;
         const fallback = await repo.findOne({ where: { id: settings.defaultPriceTypeId } });
-        return fallback?.externalId ?? null;
+        return fallback?.externalId && (await this.isVisible(ctx, fallback))
+            ? fallback.externalId
+            : null;
+    }
+
+    // Staff searching the catalog never price by a type they may not see; a customer's own type is theirs.
+    private async isVisible(ctx: RequestContext, type: PriceType): Promise<boolean> {
+        if (ctx.apiType !== 'admin') return true;
+        return this.priceTypeAccess.isCodeAllowed(ctx, type.code);
     }
 }

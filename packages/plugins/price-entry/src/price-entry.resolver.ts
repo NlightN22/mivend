@@ -9,14 +9,13 @@ import {
     Transaction,
     TransactionalConnection,
 } from '@vendure/core';
-import { CustomPermission } from '@mivend/plugin-access-control';
+import { PriceTypeAccessService } from '@mivend/plugin-access-control';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { PriceEntryInput, PriceEntryService } from './price-entry.service';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountRuleInput, DiscountRuleService, DiscountTierVM } from './discount-rule.service';
 import { PriceResolutionService, TierProgressVM } from './price-resolution.service';
-import { FLOOR_PRICE_TYPE_CODE } from './types';
 
 @Resolver('ProductVariant')
 export class ProductVariantPriceResolver {
@@ -94,28 +93,24 @@ export class OrderLineDiscountResolver {
 
 @Resolver()
 export class PriceEntryAdminResolver {
-    constructor(private priceEntryService: PriceEntryService) {}
+    constructor(
+        private priceEntryService: PriceEntryService,
+        private priceTypeAccess: PriceTypeAccessService,
+    ) {}
 
     @Query()
     @Allow(Permission.ReadCatalog)
     async priceTypeCodes(@Ctx() ctx: RequestContext): Promise<string[]> {
-        return this.priceEntryService.listPriceTypeCodes(ctx);
+        return this.priceTypeAccess.allowedCodes(ctx);
     }
 
-    // Blocks ReadCatalog callers from reading floor prices via FLOOR_PRICE_TYPE_CODE.
-    // Must mirror PriceAdjustmentResolver.floorPrice; see docs/access-control.md §3.3.
     @Query()
-    @Allow(Permission.ReadCatalog, CustomPermission.ReadFloorPrice.Permission)
+    @Allow(Permission.ReadCatalog)
     async priceEntriesForVariants(
         @Ctx() ctx: RequestContext,
         @Args() args: { variantIds: string[]; priceTypeCode: string },
     ): Promise<{ variantId: string; price: number }[]> {
-        if (
-            args.priceTypeCode === FLOOR_PRICE_TYPE_CODE &&
-            !ctx.userHasPermissions([CustomPermission.ReadFloorPrice.Permission])
-        ) {
-            throw new ForbiddenError();
-        }
+        await this.priceTypeAccess.assertCodeAllowed(ctx, args.priceTypeCode);
         const map = await this.priceEntryService.getForVariants(
             ctx,
             args.variantIds,
@@ -131,6 +126,7 @@ export class PriceEntryAdminResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { variantId: string; priceTypeCode: string; price: number },
     ): Promise<ProductVariantPriceEntry> {
+        await this.priceTypeAccess.assertCodeAllowed(ctx, args.priceTypeCode);
         return this.priceEntryService.upsert(ctx, args.variantId, args.priceTypeCode, args.price);
     }
 
@@ -141,13 +137,18 @@ export class PriceEntryAdminResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { entries: PriceEntryInput[] },
     ): Promise<number> {
+        const allowed = new Set(await this.priceTypeAccess.allowedCodes(ctx));
+        if (args.entries.some(e => !allowed.has(e.priceTypeCode))) throw new ForbiddenError();
         return this.priceEntryService.bulkUpsert(ctx, args.entries);
     }
 }
 
 @Resolver()
 export class DiscountRuleAdminResolver {
-    constructor(private discountRuleService: DiscountRuleService) {}
+    constructor(
+        private discountRuleService: DiscountRuleService,
+        private priceTypeAccess: PriceTypeAccessService,
+    ) {}
 
     // ReadCatalog, not UpdateCatalog: anyone who can see a customer's price type can see its discounts.
     @Query()
@@ -156,7 +157,12 @@ export class DiscountRuleAdminResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { priceTypeCode?: string },
     ): Promise<DiscountRule[]> {
-        return this.discountRuleService.findByPriceType(ctx, args.priceTypeCode);
+        if (args.priceTypeCode) {
+            await this.priceTypeAccess.assertCodeAllowed(ctx, args.priceTypeCode);
+            return this.discountRuleService.findByPriceType(ctx, args.priceTypeCode);
+        }
+        const allowed = await this.priceTypeAccess.allowedCodes(ctx);
+        return this.discountRuleService.findByPriceType(ctx, undefined, 200, allowed);
     }
 
     @Transaction()
@@ -166,6 +172,7 @@ export class DiscountRuleAdminResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { input: DiscountRuleInput },
     ): Promise<DiscountRule> {
+        await this.priceTypeAccess.assertCodeAllowed(ctx, args.input.priceTypeCode);
         return this.discountRuleService.upsert(ctx, args.input);
     }
 
@@ -176,6 +183,8 @@ export class DiscountRuleAdminResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { entries: DiscountRuleInput[] },
     ): Promise<number> {
+        const allowed = new Set(await this.priceTypeAccess.allowedCodes(ctx));
+        if (args.entries.some(e => !allowed.has(e.priceTypeCode))) throw new ForbiddenError();
         return this.discountRuleService.bulkUpsert(ctx, args.entries);
     }
 }

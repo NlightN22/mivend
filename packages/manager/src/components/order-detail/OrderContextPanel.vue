@@ -34,7 +34,9 @@ const { formatWhole } = useCurrency();
         </div>
         <div v-if="order.customer.counterparty" class="order-context__row">
             <span class="order-context__label">Price type</span>
-            <span class="order-context__value">{{ order.customer.counterparty.priceType }}</span>
+            <span class="order-context__value">{{
+                order.customer.counterparty.priceType ?? '—'
+            }}</span>
         </div>
         <div v-if="credit" class="order-context__row">
             <span class="order-context__label">Credit limit</span>

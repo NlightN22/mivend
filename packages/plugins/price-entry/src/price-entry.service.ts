@@ -82,21 +82,12 @@ export class PriceEntryService {
         return map;
     }
 
-    // Deliberately not scoped by the caller's counterparties: a Manager with no assigned clients
-    // would otherwise get an empty price-type select in the discount grant form.
-    async listPriceTypeCodes(_ctx: RequestContext): Promise<string[]> {
-        const rows = await this.connection.rawConnection.query(
-            `SELECT code FROM price_type ORDER BY code`,
-        );
-        return rows.map((row: { code: string }) => row.code);
-    }
-
     async getPriceTypeCodeForUser(ctx: RequestContext): Promise<string | null> {
         if (!ctx.activeUserId) return null;
         const rows = await this.connection.rawConnection.query(
             `SELECT pt.code
              FROM customer cu
-             JOIN price_type pt ON pt.id = COALESCE(
+             JOIN price_type pt ON pt."isPurchase" = false AND pt.id = COALESCE(
                  ${mainContractPriceTypeIdSql('cu.id')},
                  (SELECT cpt."priceTypeId" FROM customer_price_type cpt
                   WHERE cpt."customerId"::varchar = cu.id::varchar LIMIT 1))
@@ -116,7 +107,7 @@ export class PriceEntryService {
         const rows = await this.connection.rawConnection.query(
             `SELECT pt.code
              FROM price_type pt
-             WHERE pt.id = COALESCE(
+             WHERE pt."isPurchase" = false AND pt.id = COALESCE(
                  ${mainContractPriceTypeIdSql('$1')},
                  (SELECT cpt."priceTypeId" FROM customer_price_type cpt
                   WHERE cpt."customerId"::varchar = $1 LIMIT 1))`,
@@ -125,11 +116,12 @@ export class PriceEntryService {
         return rows?.[0]?.code ?? null;
     }
 
+    // A purchase type is never a selling price, so these lookups skip it.
     // BranchSettings.defaultPriceTypeId stores a PriceType id, not a code, while the price-entry
     // lookups above are keyed by code, so this needs an extra resolution step.
     async getPriceTypeCodeById(_ctx: RequestContext, priceTypeId: string): Promise<string | null> {
         const rows = await this.connection.rawConnection.query(
-            `SELECT code FROM price_type WHERE id::varchar = $1 LIMIT 1`,
+            `SELECT code FROM price_type WHERE id::varchar = $1 AND "isPurchase" = false LIMIT 1`,
             [priceTypeId],
         );
         return rows?.[0]?.code ?? null;

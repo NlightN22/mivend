@@ -912,7 +912,7 @@ export type Counterparty = Node & {
     phone: Maybe<Scalars['String']['output']>;
     /** Customers linked to this Counterparty via customFields.counterpartyId, active or deactivated — issue #120. */
     portalUsers: Array<Customer>;
-    priceType: Scalars['String']['output'];
+    priceType: Maybe<Scalars['String']['output']>;
     shortName: Scalars['String']['output'];
     /** Additional managers beyond the Owner (assignedManagerId) — see CounterpartyTeamMember. */
     teamMembers: Array<CounterpartyTeamMember>;
@@ -6435,10 +6435,12 @@ export type Permission =
     | 'ReadDashboardGlobalViews'
     /** Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves */
     | 'ReadEntityHistory'
+    /** Read confidential price types (purchase price, floor price) and values derived from them (layer 4) */
+    | 'ReadConfidentialPriceTypes'
+    /** Read customer price types of every branch, beyond the branch allow-list */
+    | 'ReadAllCustomerPriceTypes'
     /** Grants permission to read Facet */
     | 'ReadFacet'
-    /** Read the raw floor-price threshold for a variant (financial data, layer 4 redaction) */
-    | 'ReadFloorPrice'
     /** Grants permission to read Order */
     | 'ReadOrder'
     /** Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope) */
@@ -7376,7 +7378,8 @@ export type Query = {
     facets: FacetList;
     /** Dead-lettered inbound Kafka events, newest first — for the manager-portal dashboard's integration-health panel (issue #76). */
     failedIntegrationInboxEvents: FailedIntegrationInboxEventList;
-    floorPrice: Maybe<Scalars['Int']['output']>;
+    floorPrice: Maybe<Scalars['Float']['output']>;
+    floorPricesForVariants: Array<VariantPriceEntry>;
     fulfillmentHandlers: Array<ConfigurableOperationDefinition>;
     /** Get value for a specific key (automatically scoped based on field configuration) */
     getSettingsStoreValue: Maybe<Scalars['JSON']['output']>;
@@ -10223,6 +10226,14 @@ export type CatalogPriceEntriesForVariantsQuery = {
     priceEntriesForVariants: Array<{ variantId: string; price: number }>;
 };
 
+export type CatalogFloorPricesForVariantsQueryVariables = Exact<{
+    ids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+export type CatalogFloorPricesForVariantsQuery = {
+    floorPricesForVariants: Array<{ variantId: string; price: number }>;
+};
+
 export type CategoryCollectionFieldsFragment = {
     id: string;
     name: string;
@@ -10380,7 +10391,7 @@ export type CustomerListItemFieldsFragment = {
     legalName: string;
     inn: string | null;
     isActive: boolean;
-    priceType: string;
+    priceType: string | null;
     assignedManagerId: string | null;
     branchId: string | null;
     erpGroupLabel: string | null;
@@ -10413,7 +10424,7 @@ export type CustomersPageQuery = {
             legalName: string;
             inn: string | null;
             isActive: boolean;
-            priceType: string;
+            priceType: string | null;
             assignedManagerId: string | null;
             branchId: string | null;
             erpGroupLabel: string | null;
@@ -10469,7 +10480,7 @@ export type HighUsageCustomersQuery = {
         legalName: string;
         inn: string | null;
         isActive: boolean;
-        priceType: string;
+        priceType: string | null;
         assignedManagerId: string | null;
         branchId: string | null;
         erpGroupLabel: string | null;
@@ -10501,7 +10512,7 @@ export type CustomerByIdQuery = {
         legalName: string;
         inn: string | null;
         isActive: boolean;
-        priceType: string;
+        priceType: string | null;
         assignedManagerId: string | null;
         branchId: string | null;
         erpGroupLabel: string | null;
@@ -11107,7 +11118,7 @@ export type OrderCreateCounterpartiesQuery = {
             shortName: string;
             legalName: string;
             inn: string | null;
-            priceType: string;
+            priceType: string | null;
             tradingPoints: Array<{
                 id: string;
                 name: string;
@@ -11454,7 +11465,7 @@ export type OrderDetailQuery = {
                     shortName: string;
                     inn: string | null;
                     assignedManagerId: string | null;
-                    priceType: string;
+                    priceType: string | null;
                     tradingPoints: Array<{
                         id: string;
                         name: string;
@@ -11663,7 +11674,7 @@ export type OrderListItemFieldsFragment = {
         counterparty: {
             shortName: string;
             inn: string | null;
-            priceType: string;
+            priceType: string | null;
             assignedManagerId: string | null;
             branchId: string | null;
         } | null;
@@ -11700,7 +11711,7 @@ export type OrdersPageQuery = {
                 counterparty: {
                     shortName: string;
                     inn: string | null;
-                    priceType: string;
+                    priceType: string | null;
                     assignedManagerId: string | null;
                     branchId: string | null;
                 } | null;
@@ -13234,6 +13245,17 @@ export const CatalogPriceEntriesForVariantsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     CatalogPriceEntriesForVariantsQuery,
     CatalogPriceEntriesForVariantsQueryVariables
+>;
+export const CatalogFloorPricesForVariantsDocument = new TypedDocumentString(`
+    query CatalogFloorPricesForVariants($ids: [ID!]!) {
+  floorPricesForVariants(variantIds: $ids) {
+    variantId
+    price
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CatalogFloorPricesForVariantsQuery,
+    CatalogFloorPricesForVariantsQueryVariables
 >;
 export const CategoryVisibilityCollectionsDocument = new TypedDocumentString(`
     query CategoryVisibilityCollections($skip: Int!, $take: Int!) {

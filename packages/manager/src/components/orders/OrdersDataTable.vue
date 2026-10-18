@@ -97,7 +97,7 @@ const rows = computed<OrderRow[]>(() =>
             code: order.code,
             customer: counterparty?.shortName ?? '—',
             customerMeta: counterparty
-                ? `INN ${counterparty.inn ?? '—'} · ${counterparty.priceType}`
+                ? `INN ${counterparty.inn ?? '—'} · ${counterparty.priceType ?? '—'}`
                 : '',
             manager: managerName(counterparty?.assignedManagerId),
             state: ORDER_STATE_LABEL[order.state] ?? order.state,

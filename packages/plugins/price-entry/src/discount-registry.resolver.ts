@@ -9,7 +9,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { ApprovalRequestService } from '@mivend/plugin-approval-workflow';
-import { CustomPermission } from '@mivend/plugin-access-control';
+import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountRegistryEntry } from './discount-registry-entry.entity';
@@ -34,6 +34,7 @@ export class DiscountRegistryResolver {
         private discountRegistryService: DiscountRegistryService,
         private connection: TransactionalConnection,
         private approvalRequestService: ApprovalRequestService,
+        private priceTypeAccess: PriceTypeAccessService,
     ) {}
 
     @Query()
@@ -42,7 +43,13 @@ export class DiscountRegistryResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { options?: DiscountRegistryListOptions },
     ): Promise<PaginatedList<DiscountRegistryEntry>> {
-        return this.discountRegistryService.findAllPaginated(ctx, args.options ?? {});
+        const { priceTypeCode, ...rest } = args.options ?? {};
+        if (priceTypeCode) await this.priceTypeAccess.assertCodeAllowed(ctx, priceTypeCode);
+        return this.discountRegistryService.findAllPaginated(ctx, {
+            ...rest,
+            priceTypeCode,
+            allowedPriceTypeCodes: await this.priceTypeAccess.allowedCodes(ctx),
+        });
     }
 
     // Idempotent: re-running is safe.

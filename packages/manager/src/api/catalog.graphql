@@ -76,6 +76,13 @@ query CatalogVariantStock($ids: [String!]!) {
     }
 }
 
+query CatalogFloorPricesForVariants($ids: [ID!]!) {
+    floorPricesForVariants(variantIds: $ids) {
+        variantId
+        price
+    }
+}
+
 query CatalogPriceEntriesForVariants($ids: [ID!]!, $priceTypeCode: String!) {
     priceEntriesForVariants(variantIds: $ids, priceTypeCode: $priceTypeCode) {
         variantId

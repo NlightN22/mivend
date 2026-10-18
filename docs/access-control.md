@@ -383,8 +383,44 @@ becomes a real requirement, not preemptively.
 
 ## Layer 4: field-level redaction
 
-**Rule: a field that must never reach a role (e.g. the "floor price" price type) is protected
-declaratively at the schema level, not filtered manually after the fact.**
+**Rule: a field that must never reach a role (e.g. the purchase or floor price) is protected
+declaratively where possible, and always deny-by-default: nothing is returned, neither the value
+nor the type code, unless a rule grants it.**
+
+### Price type visibility (#235)
+
+`PriceType.visibility` is a DB attribute with two classes: `customer` (types a customer can buy
+at and a manager can assign) and `confidential` (purchase price, floor, any internal price). Every
+type is `confidential` until a data step classifies the customer set
+(`infrastructure/scripts/price-type-visibility.sql`, see `docs/pricing.md`).
+
+`PriceTypeAccessService` (plugin-access-control) is the single decision for every admin path.
+Effective access is the union of:
+
+1. Branch allow-list: `BranchSettings.visiblePriceTypeIds` plus the branch default type, customer
+   types only. A `null` list grants nothing beyond the default; an actor without a branch gets nothing.
+2. `ReadAllCustomerPriceTypes`: customer types of every branch.
+3. `ReadConfidentialPriceTypes`: confidential types (replaces `ReadFloorPrice`). A branch rule
+   never grants a confidential type, and neither does a customer context.
+
+Context: a customer's own type is shown in that customer's/counterparty's context even outside the
+branch list, as long as it is a `customer` type. Derived values (floor, markup, margin, profit)
+need `ReadConfidentialPriceTypes`; a derived value is never more accessible than its source.
+
+Consumers (admin API): `priceTypeCodes`, `priceTypes`, `priceEntriesForVariants`,
+`upsertPriceEntry`/`bulkUpsertPriceEntries`, `discountRules` and its upserts, `discountRegistryPage`,
+`expiringDiscountGrants`, `discountGrantsForCounterparty`, `requestDiscountGrant`,
+`Customer.priceType`, `Counterparty.priceType` (null without access), `upsertCounterparty`,
+`RetroBonusRule.priceTypeErpId` (null without access), admin catalog search pricing
+(`SearchPriceTypeService`), `floorPrice`/`floorPricesForVariants` (`ReadConfidentialPriceTypes`).
+A hidden or unknown code returns `ForbiddenError`; a list simply omits the type. The floor check
+runs regardless of the viewer's rights and its findings never carry the number.
+
+Storefront: a customer only ever gets the price of their own type (main contract type, else the
+branch default); a purchase type is never resolved for a customer. No shop query exposes another
+type. `price-type-schema-guard.test.ts` fails on any new price-bearing GraphQL field that is not
+classified in its inventory. Reserved for a purchasing portal: a product-range scope on top of
+these permissions.
 
 Preferred mechanism — `requiresPermission` on the `CustomFieldConfig`:
 
@@ -394,13 +430,13 @@ customFields: {
     {
       name: 'floorPrice',
       type: 'float',
-      requiresPermission: [CustomPermission.ReadFloorPrice.Permission],
+      requiresPermission: [CustomPermission.ReadConfidentialPriceTypes.Permission],
     },
   ],
 }
 ```
 
-For a role without `ReadFloorPrice`, the field is absent from the GraphQL schema itself (not
+For a role without `ReadConfidentialPriceTypes`, the field is absent from the GraphQL schema itself (not
 just `null` in the response) — this is stronger than manually omitting the field in a resolver,
 because it cannot be accidentally reintroduced by some other resolver reusing the same GraphQL
 type.
