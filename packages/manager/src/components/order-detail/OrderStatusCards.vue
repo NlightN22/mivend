@@ -50,6 +50,10 @@ const clean = computed(() => !props.findings.length);
                         {{ summary.lineCount }} line(s) do not meet ERP requirements (see the order
                         lines).
                     </template>
+                    <template v-if="summary.belowFloorLineCount">
+                        {{ summary.belowFloorLineCount }} line(s) are priced below the floor price
+                        (see the order lines).
+                    </template>
                 </p>
                 <MvStatusBadge v-if="stale" variant="warning">Out of date</MvStatusBadge>
                 <ul v-if="summary.listed.length" class="status-card__list">

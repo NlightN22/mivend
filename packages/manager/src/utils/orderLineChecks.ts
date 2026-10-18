@@ -23,8 +23,13 @@ export interface LineCheckView {
 const CONTRACT_CODE = 'erp.contract-with-storage-organization';
 const STOCK_CODE = 'erp.organization-stock';
 const CONTRACT_UNRESOLVED_CODE = 'order.contract-unresolved';
-// Line findings of these checks are drawn in the Stock and Contract columns; every other finding is listed as text.
-const COLUMN_CODES = new Set([CONTRACT_CODE, STOCK_CODE]);
+// Line findings of these checks are drawn in the Stock, Contract and Unit price columns; every other finding is listed as text.
+const BELOW_FLOOR_CODE = 'order.below-floor-price';
+const COLUMN_CODES = new Set([CONTRACT_CODE, STOCK_CODE, BELOW_FLOOR_CODE]);
+
+export function isBelowFloor(findings: OrderCheckFinding[]): boolean {
+    return findings.some(f => f.checkCode === BELOW_FLOOR_CODE);
+}
 
 export function listedFindings(findings: OrderCheckFinding[]): OrderCheckFinding[] {
     return findings.filter(f => !(COLUMN_CODES.has(f.checkCode) && f.lineRef));
@@ -74,14 +79,15 @@ export function lineReservedQuantity(reservations: OrderReservation[], lineId: s
 
 export function checksSummary(findings: OrderCheckFinding[]): {
     lineCount: number;
+    belowFloorLineCount: number;
     hasContractIssue: boolean;
     listed: OrderCheckFinding[];
 } {
-    const columnLines = new Set(
-        findings.filter(f => COLUMN_CODES.has(f.checkCode) && f.lineRef).map(f => f.lineRef),
-    );
+    const linesOf = (match: (code: string) => boolean): Set<string | null> =>
+        new Set(findings.filter(f => match(f.checkCode) && f.lineRef).map(f => f.lineRef));
     return {
-        lineCount: columnLines.size,
+        lineCount: linesOf(code => code !== BELOW_FLOOR_CODE && COLUMN_CODES.has(code)).size,
+        belowFloorLineCount: linesOf(code => code === BELOW_FLOOR_CODE).size,
         hasContractIssue: findings.some(
             f => f.checkCode === CONTRACT_CODE || f.checkCode === CONTRACT_UNRESOLVED_CODE,
         ),

@@ -6,9 +6,15 @@ import { useOrderLineEdit } from '../../composables/useOrderLineEdit';
 import { formatLineQuantity } from '../../composables/lineSalesUnit';
 import type { OrderCheckFinding } from '../../utils/orderCheckMessages';
 import { findingDetail, findingsByLine, findingTitle } from '../../utils/orderCheckMessages';
-import { lineCheckView, lineReservedQuantity, listedFindings } from '../../utils/orderLineChecks';
+import {
+    isBelowFloor,
+    lineCheckView,
+    lineReservedQuantity,
+    listedFindings,
+} from '../../utils/orderLineChecks';
 import type { OrderReservation } from '../../api/reservation';
 import OrderLineCheckCells from './OrderLineCheckCells.vue';
+import OrderLineUnitPrice from './OrderLineUnitPrice.vue';
 import PriceAdjustmentPanel from '../order-create/PriceAdjustmentPanel.vue';
 import OrderLineEditCell from './OrderLineEditCell.vue';
 import OrderLinesEditBar from './OrderLinesEditBar.vue';
@@ -160,7 +166,12 @@ function toggleAdjust(lineId: string): void {
                             :reserved="lineReservedQuantity(reservations, line.id)"
                             :sources="edit.availability.value.get(line.id) ?? null"
                         />
-                        <td class="order-lines__num">{{ money(line.unitPriceWithTax) }}</td>
+                        <td class="order-lines__num">
+                            <OrderLineUnitPrice
+                                :price="money(line.unitPriceWithTax)"
+                                :below-floor="isBelowFloor(findingsByLineId.get(line.id) ?? [])"
+                            />
+                        </td>
                         <td>
                             <RouterLink
                                 v-if="adjustmentByLineId.get(line.id)?.approvalRequestId"

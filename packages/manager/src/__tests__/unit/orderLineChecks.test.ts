@@ -3,6 +3,7 @@ import type { OrderCheckFinding, OrgBreakdown } from '../../utils/orderCheckMess
 import type { OrderReservation } from '../../api/reservation';
 import {
     checksSummary,
+    isBelowFloor,
     lineCheckView,
     lineReservedQuantity,
     orgRows,
@@ -115,5 +116,23 @@ describe('order line check view', () => {
         expect(s.lineCount).toBe(1);
         expect(s.hasContractIssue).toBe(true);
         expect(s.listed.map(x => x.id)).toEqual(['3', '4', '5']);
+    });
+
+    it('counts below-floor lines once, draws them in the price column and does not list them', () => {
+        const floor = (id: string, lineRef: string): OrderCheckFinding =>
+            f({
+                id,
+                lineRef,
+                checkCode: 'order.below-floor-price',
+                severity: 'warning',
+                messageKey: 'order.below-floor-price.below-floor',
+            });
+        const findings = [floor('1', 'l1'), floor('2', 'l2'), f({ id: '3', lineRef: 'l1' })];
+        const s = checksSummary(findings);
+        expect(s.belowFloorLineCount).toBe(2);
+        expect(s.lineCount).toBe(1);
+        expect(s.listed).toEqual([]);
+        expect(isBelowFloor([findings[0]])).toBe(true);
+        expect(isBelowFloor([findings[2]])).toBe(false);
     });
 });
