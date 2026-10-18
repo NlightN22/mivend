@@ -1,14 +1,9 @@
 <script setup lang="ts">
-import { MvErrorState, type StockVariant, stockVariantFromLevel } from '@mivend/ui-kit';
+import { MvErrorState } from '@mivend/ui-kit';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useAuthStore } from '../stores/auth';
-import { useFavoritesStore } from '../stores/favorites';
-import { useCartActions } from '../composables/useCartActions';
-import { brandOf } from '../utils/brand';
+import ConnectedProductCard from './ConnectedProductCard.vue';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
-import { useMultiplicityEnforced } from '../composables/useMultiplicityEnforced';
-import { usePackagesOnly } from '../composables/usePackagesOnly';
-import { baseToPacks, nextPackAbove, packsToBase, salesUnitOf } from '../composables/useSalesUnit';
+import { useProductQuantity } from '../composables/useProductQuantity';
 
 const props = defineProps<{
     items: ProductItem[];
@@ -34,72 +29,7 @@ const emit = defineEmits<{
     retry: [];
 }>();
 
-const authStore = useAuthStore();
-const favoritesStore = useFavoritesStore();
-const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
-const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
-void loadPackagesOnly();
-const { multiplicityEnforced, load: loadMultiplicityEnforced } = useMultiplicityEnforced();
-void loadMultiplicityEnforced();
-
-// Unit view of a list item: in a packages-only branch prices and quantities are per pack.
-function unitView(p: ProductItem): {
-    label: string;
-    factor: number;
-    step: number;
-    multiplicity?: string;
-    note?: string;
-} {
-    const v = p.variants[0];
-    const unit = salesUnitOf(
-        { unitName: v?.unitName, unitRatioToBase: v?.unitRatioToBase },
-        packagesOnly.value,
-    );
-    if (!unit) return { label: 'pc.', factor: 1, step: 1 };
-    return {
-        label: unit.name,
-        factor: unit.ratio,
-        step: unit.packStep,
-        multiplicity: unit.packStep > 1 ? `${unit.packStep} ${unit.name}` : '—',
-        note: `1 ${unit.name} = ${packsToBase(1, unit)} pc.`,
-    };
-}
-
-// Pieces in the nearest pack (the variant's own pack unit, else the smallest level above 1).
-function packQty(p: ProductItem): number | null {
-    const v = p.variants[0];
-    return (
-        nextPackAbove(
-            { unitName: v?.unitName, unitRatioToBase: v?.unitRatioToBase },
-            v?.packagingLevels ?? [],
-            salesUnitOf(
-                { unitName: v?.unitName, unitRatioToBase: v?.unitRatioToBase },
-                packagesOnly.value,
-            )?.ratio ?? 1,
-        )?.baseQty ?? null
-    );
-}
-
-function shownQty(p: ProductItem): number {
-    const qty = cartLineFor(p.variants[0]?.id)?.quantity ?? 0;
-    const unit = salesUnitOf(
-        { unitName: p.variants[0]?.unitName, unitRatioToBase: p.variants[0]?.unitRatioToBase },
-        packagesOnly.value,
-    );
-    return unit ? baseToPacks(qty, unit) : qty;
-}
-
-function toBaseQty(p: ProductItem, shown: number): number {
-    const unit = salesUnitOf(
-        { unitName: p.variants[0]?.unitName, unitRatioToBase: p.variants[0]?.unitRatioToBase },
-        packagesOnly.value,
-    );
-    return unit ? packsToBase(shown, unit) : shown;
-}
-
-function addQty(p: ProductItem): number {
-    return toBaseQty(p, unitView(p).step);
-}
+const { multiplicityEnforced } = useProductQuantity();
 const sentinel = ref<HTMLElement | null>(null);
 const gridStyle = computed(() =>
     props.gridColumns
@@ -119,15 +49,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => observer?.disconnect());
-
-function stockProps(stockLevel: string): { stockVariant?: StockVariant } {
-    if (!authStore.isLoggedIn) return {};
-    return { stockVariant: stockVariantFromLevel(stockLevel) };
-}
-
-function handleToggleFavorite(p: ProductItem): void {
-    favoritesStore.toggle(p.variants[0]?.id ?? p.id, p.id);
-}
 </script>
 
 <template>
@@ -191,103 +112,24 @@ function handleToggleFavorite(p: ProductItem): void {
                     ><span>{{ multiplicityEnforced ? 'Multiplicity' : 'Pack' }}</span
                     ><span>Price</span><span>Order</span>
                 </div>
-                <MvProductRow
+                <ConnectedProductCard
                     v-for="p in items"
                     :key="p.id"
-                    :image-url="p.images[0]"
-                    :name="p.name"
-                    :sku="p.variants[0]?.sku ?? ''"
-                    :brand="brandOf(p.manufacturer)"
-                    :price="
-                        p.variants[0]?.price != null
-                            ? Math.round(p.variants[0].price * unitView(p).factor) / 100
-                            : undefined
-                    "
-                    :customer-price="
-                        p.variants[0]?.customerPrice != null
-                            ? Math.round(p.variants[0].customerPrice * unitView(p).factor) / 100
-                            : undefined
-                    "
-                    :old-price="
-                        p.variants[0]?.compareAtPrice != null
-                            ? Math.round(p.variants[0].compareAtPrice * unitView(p).factor) / 100
-                            : undefined
-                    "
-                    :unit-label="unitView(p).label"
-                    :unit-note="unitView(p).note"
-                    :multiplicity="p.variants[0]?.multiplicity ?? 1"
-                    :multiplicity-label="unitView(p).multiplicity"
-                    :show-multiplicity="multiplicityEnforced"
-                    :pack-label="
-                        multiplicityEnforced ? undefined : packQty(p) ? `${packQty(p)} pcs` : '—'
-                    "
-                    :qty-step="unitView(p).step"
-                    :discount-tiers="p.variants[0]?.discountTiers"
-                    :currency="p.variants[0]?.currencyCode ?? 'RUB'"
-                    :slug="p.slug"
+                    :item="p"
+                    mode="row"
                     :show-prices="showPrices"
-                    :variant-id="p.variants[0]?.id"
-                    :cart-qty="shownQty(p)"
-                    :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
-                    :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
-                    v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="
-                        (variantId: string | undefined) => onAddToCart(variantId, addQty(p))
-                    "
-                    @update-cart-qty="
-                        (lineId: string, qty: number) => onUpdateQty(lineId, toBaseQty(p, qty))
-                    "
-                    @toggle-favorite="() => handleToggleFavorite(p)"
-                    @view-analogs="() => {}"
                 />
             </div>
         </template>
 
         <template v-else>
             <div class="plv-grid" :style="{ gridTemplateColumns: gridStyle }">
-                <MvProductCard
+                <ConnectedProductCard
                     v-for="p in items"
                     :key="p.id"
-                    :images="p.images"
-                    :name="p.name"
-                    :sku="p.variants[0]?.sku ?? ''"
-                    :brand="brandOf(p.manufacturer)"
-                    :price="
-                        p.variants[0]?.price != null
-                            ? Math.round(p.variants[0].price * unitView(p).factor) / 100
-                            : undefined
-                    "
-                    :customer-price="
-                        p.variants[0]?.customerPrice != null
-                            ? Math.round(p.variants[0].customerPrice * unitView(p).factor) / 100
-                            : undefined
-                    "
-                    :compare-at-price="
-                        p.variants[0]?.compareAtPrice != null
-                            ? Math.round(p.variants[0].compareAtPrice * unitView(p).factor) / 100
-                            : undefined
-                    "
-                    :unit-label="unitView(p).label"
-                    :unit-note="unitView(p).note"
-                    :pack-label="packQty(p) ? `pack of ${packQty(p)}` : ''"
-                    :qty-step="unitView(p).step"
-                    :discount-tiers="p.variants[0]?.discountTiers"
-                    :currency="p.variants[0]?.currencyCode ?? 'RUB'"
-                    :slug="p.slug"
+                    :item="p"
+                    mode="card"
                     :show-prices="showPrices"
-                    :variant-id="p.variants[0]?.id"
-                    :cart-qty="shownQty(p)"
-                    :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
-                    :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
-                    v-bind="stockProps(p.variants[0]?.stockLevel ?? '')"
-                    @add-to-cart="
-                        (variantId: string | undefined) => onAddToCart(variantId, addQty(p))
-                    "
-                    @update-cart-qty="
-                        (lineId: string, qty: number) => onUpdateQty(lineId, toBaseQty(p, qty))
-                    "
-                    @toggle-favorite="() => handleToggleFavorite(p)"
-                    @view-analogs="() => {}"
                 />
             </div>
         </template>

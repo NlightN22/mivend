@@ -3,21 +3,17 @@ import { stockVariantFromLevel, useUrlState } from '@mivend/ui-kit';
 import { computed, toRef } from 'vue';
 import ProductListView from '../../components/ProductListView.vue';
 import { useAuthStore } from '../../stores/auth';
-import { useCartStore } from '../../stores/cart';
 import { useFavoritesStore } from '../../stores/favorites';
 import { useFavoriteProducts } from '../../composables/useFavoriteProducts';
-import { usePackagesOnly } from '../../composables/usePackagesOnly';
-import { packsToBase, salesUnitOf } from '../../composables/useSalesUnit';
+import { useCartActions } from '../../composables/useCartActions';
 import { useViewMode } from '../../composables/useViewMode';
 import AccountSidebar from '../account/AccountSidebar.vue';
 
 const authStore = useAuthStore();
-const cartStore = useCartStore();
 const favoritesStore = useFavoritesStore();
 const { products, loading, error } = useFavoriteProducts();
 const { viewMode, setViewMode } = useViewMode();
-const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
-void loadPackagesOnly();
+const { addToCart } = useCartActions();
 
 const { filters: urlState } = useUrlState({ q: '', inStock: '' }, { typingKeys: ['q'] });
 const search = toRef(urlState, 'q');
@@ -50,8 +46,7 @@ async function handleAddAll(): Promise<void> {
     for (const p of shown.value) {
         const v = p.variants[0];
         if (!v || !isAvailable(v.stockLevel)) continue;
-        const unit = salesUnitOf(v, packagesOnly.value);
-        await cartStore.addItem(v.id, unit ? packsToBase(unit.packStep, unit) : 1);
+        await addToCart(v.id, v);
     }
 }
 

@@ -26,7 +26,12 @@ onMounted(() => Promise.all([cartStore.fetchCart(), checkoutStore.loadDeliveryMe
             <h1 class="checkout-page__title">Checkout</h1>
         </div>
 
-        <div class="checkout-page__layout">
+        <MvNotice v-if="cartStore.loaded && cartStore.isEmpty" variant="info">
+            Your cart is empty.
+            <RouterLink to="/catalog">Go to catalog</RouterLink>
+        </MvNotice>
+
+        <div v-else class="checkout-page__layout">
             <section class="checkout-page__main">
                 <PaymentMethodSelector />
                 <DeliverySelector />

@@ -12,6 +12,7 @@ interface Props {
     cartQty?: number;
     cartLineId?: string;
     salesUnit?: SalesUnitView | null;
+    requiredMultiple?: number;
     nearestPack?: { name: string; ratio: number; baseQty: number } | null;
 }
 
@@ -24,6 +25,7 @@ const props = withDefaults(defineProps<Props>(), {
     cartLineId: undefined,
     salesUnit: null,
     nearestPack: null,
+    requiredMultiple: 1,
 });
 
 const emit = defineEmits<{
@@ -46,7 +48,9 @@ const stepperValue = computed(() =>
     props.salesUnit ? baseToPacks(props.cartQty, props.salesUnit) : props.cartQty,
 );
 const addQty = computed(() =>
-    props.salesUnit ? packsToBase(props.salesUnit.packStep, props.salesUnit) : 1,
+    props.salesUnit
+        ? packsToBase(props.salesUnit.packStep, props.salesUnit)
+        : props.requiredMultiple,
 );
 
 function onAddPack(): void {
@@ -105,7 +109,7 @@ function onStepper(lineId: string | undefined, value: number): void {
                 v-if="cartQty > 0"
                 :model-value="stepperValue"
                 :min="0"
-                :step="salesUnit?.packStep ?? 1"
+                :step="salesUnit?.packStep ?? requiredMultiple"
                 editable
                 block
                 @update:model-value="(val: number) => onStepper(cartLineId, val)"

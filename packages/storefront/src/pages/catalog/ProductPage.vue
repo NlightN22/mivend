@@ -191,7 +191,12 @@ onMounted(() => {
                     :cart-line-id="cartLineFor(variant?.id)?.id"
                     :sales-unit="salesUnit"
                     :nearest-pack="nearestPack"
-                    @add-to-cart="(qty: number) => onAddToCart(variant?.id, qty)"
+                    :required-multiple="
+                        multiplicityEnforced ? (variant?.customFields?.multiplicity ?? 1) : 1
+                    "
+                    @add-to-cart="
+                        (qty: number) => onAddToCart(variant?.id, variant?.customFields, qty)
+                    "
                     @update-cart-qty="onUpdateQty"
                 />
             </div>

@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
+vi.mock('../composables/useMultiplicityEnforced', () => ({
+    useMultiplicityEnforced: () => ({
+        multiplicityEnforced: { value: false },
+        load: vi.fn().mockResolvedValue(undefined),
+    }),
+}));
 vi.mock('@mivend/ui-kit', () => ({ toast: vi.fn() }));
 vi.mock('../composables/usePackagesOnly', () => ({
     usePackagesOnly: () => ({

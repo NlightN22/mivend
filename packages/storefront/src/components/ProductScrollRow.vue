@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import { stockVariantFromLevel } from '@mivend/ui-kit';
 import { ref, computed } from 'vue';
-import { useAuthStore } from '../stores/auth';
-import { useFavoritesStore } from '../stores/favorites';
-import { useCartActions } from '../composables/useCartActions';
-import { brandOf } from '../utils/brand';
+import ConnectedProductCard from './ConnectedProductCard.vue';
 import type { ProductItem } from '../composables/useProductList';
 
 const props = defineProps<{
@@ -12,10 +8,6 @@ const props = defineProps<{
     items: ProductItem[];
     loading: boolean;
 }>();
-
-const authStore = useAuthStore();
-const favoritesStore = useFavoritesStore();
-const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
 
 const CARD_WIDTH = 220;
 const CARD_GAP = 14;
@@ -65,45 +57,12 @@ function next(): void {
 
             <div class="psr-viewport">
                 <div class="psr-track" :style="{ transform: `translateX(-${offset}px)` }">
-                    <MvProductCard
+                    <ConnectedProductCard
                         v-for="(p, i) in displayItems"
                         :key="`${p.id}-${i}`"
                         class="psr-card"
-                        :name="p.name"
-                        :sku="p.variants[0]?.sku ?? ''"
-                        :brand="brandOf(p.manufacturer)"
-                        :price="
-                            p.variants[0]?.price != null ? p.variants[0].price / 100 : undefined
-                        "
-                        :customer-price="
-                            p.variants[0]?.customerPrice != null
-                                ? p.variants[0].customerPrice / 100
-                                : undefined
-                        "
-                        :compare-at-price="
-                            p.variants[0]?.compareAtPrice != null
-                                ? p.variants[0].compareAtPrice / 100
-                                : undefined
-                        "
-                        :discount-tiers="p.variants[0]?.discountTiers"
-                        :currency="p.variants[0]?.currencyCode ?? 'RUB'"
-                        :slug="p.slug"
-                        :show-prices="authStore.isLoggedIn"
-                        :variant-id="p.variants[0]?.id"
-                        :stock-variant="
-                            authStore.isLoggedIn
-                                ? stockVariantFromLevel(p.variants[0]?.stockLevel)
-                                : undefined
-                        "
-                        :cart-qty="cartLineFor(p.variants[0]?.id)?.quantity ?? 0"
-                        :cart-line-id="cartLineFor(p.variants[0]?.id)?.id"
-                        :is-favorited="favoritesStore.has(p.variants[0]?.id ?? '')"
-                        @add-to-cart="(variantId: string | undefined) => onAddToCart(variantId, 1)"
-                        @update-cart-qty="onUpdateQty"
-                        @toggle-favorite="
-                            () => favoritesStore.toggle(p.variants[0]?.id ?? p.id, p.id)
-                        "
-                        @view-analogs="() => {}"
+                        :item="p"
+                        mode="card"
                     />
                 </div>
             </div>

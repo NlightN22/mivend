@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue';
 import { useCartStore } from '../../stores/cart';
+import { useCartActions } from '../../composables/useCartActions';
 import { usePackagesOnly } from '../../composables/usePackagesOnly';
 import { roundUpToWholePacks, salesUnitOf } from '../../composables/useSalesUnit';
 
@@ -26,6 +27,7 @@ export interface UseRepeatOrder {
 
 export function useRepeatOrder(): UseRepeatOrder {
     const cart = useCartStore();
+    const { addToCart } = useCartActions();
     const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
     const repeating = ref(false);
     const result = ref<RepeatResult | null>(null);
@@ -52,7 +54,11 @@ export function useRepeatOrder(): UseRepeatOrder {
             const failedVariantIds: string[] = [];
             for (const [variantId, qty] of wanted) {
                 try {
-                    await cart.addItem(variantId, qty);
+                    await addToCart(
+                        variantId,
+                        requested.get(variantId)?.line.productVariant.customFields,
+                        qty,
+                    );
                 } catch {
                     failedVariantIds.push(variantId);
                 }

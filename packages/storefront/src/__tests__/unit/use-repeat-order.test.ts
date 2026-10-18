@@ -6,6 +6,12 @@ const packagesOnly = ref(true);
 vi.mock('../../composables/usePackagesOnly', () => ({
     usePackagesOnly: () => ({ packagesOnly, load: vi.fn().mockResolvedValue(undefined) }),
 }));
+vi.mock('../../composables/useMultiplicityEnforced', () => ({
+    useMultiplicityEnforced: () => ({
+        multiplicityEnforced: { value: false },
+        load: vi.fn().mockResolvedValue(undefined),
+    }),
+}));
 vi.mock('@mivend/ui-kit', () => ({ toast: vi.fn() }));
 vi.mock('../../api/client', () => ({ shopApi: vi.fn() }));
 

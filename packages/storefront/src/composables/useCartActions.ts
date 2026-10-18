@@ -1,13 +1,27 @@
 import { toast } from '@mivend/ui-kit';
 import { useCartStore, type CartLine } from '../stores/cart';
 import { discountAddToCartHint } from '../utils/discountMessages';
+import { resolveAddQty, type QuantityVariant } from './productQuantity';
+import { useMultiplicityEnforced } from './useMultiplicityEnforced';
+import { usePackagesOnly } from './usePackagesOnly';
 
 export function useCartActions(): {
     cartLineFor: (variantId: string | undefined) => CartLine | null;
-    onAddToCart: (variantId: string | undefined, qty?: number) => Promise<void>;
+    addToCart: (
+        variantId: string,
+        variant: QuantityVariant | null | undefined,
+        baseQty?: number,
+    ) => Promise<{ brand: string; percent: number } | null>;
+    onAddToCart: (
+        variantId: string | undefined,
+        variant: QuantityVariant | null | undefined,
+        baseQty?: number,
+    ) => Promise<void>;
     onUpdateQty: (lineId: string, qty: number) => Promise<void>;
 } {
     const cartStore = useCartStore();
+    const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
+    const { multiplicityEnforced, load: loadMultiplicityEnforced } = useMultiplicityEnforced();
 
     function cartLineFor(variantId: string | undefined): CartLine | null {
         if (!variantId) return null;
@@ -17,11 +31,25 @@ export function useCartActions(): {
         return line;
     }
 
-    async function onAddToCart(variantId: string | undefined, qty = 1): Promise<void> {
+    // The only path into cartStore.addItem: the quantity always honours the pack/multiplicity rule.
+    async function addToCart(
+        variantId: string,
+        variant: QuantityVariant | null | undefined,
+        baseQty?: number,
+    ): Promise<{ brand: string; percent: number } | null> {
+        await Promise.all([loadPackagesOnly(), loadMultiplicityEnforced()]);
+        const qty = resolveAddQty(variant, packagesOnly.value, multiplicityEnforced.value, baseQty);
+        return cartStore.addItem(variantId, qty);
+    }
+
+    async function onAddToCart(
+        variantId: string | undefined,
+        variant: QuantityVariant | null | undefined,
+        baseQty?: number,
+    ): Promise<void> {
         if (!variantId) return;
-        // Show the discount from the mutation response: the catalog price is wrong once this add
-        // crosses into or out of a weight/amount tier.
-        const discount = await cartStore.addItem(variantId, qty);
+        // The mutation response carries the discount: the catalog price is wrong once an add crosses a tier.
+        const discount = await addToCart(variantId, variant, baseQty);
         if (discount) {
             toast(discountAddToCartHint(discount.percent, discount.brand), 'success');
         }
@@ -35,5 +63,5 @@ export function useCartActions(): {
         }
     }
 
-    return { cartLineFor, onAddToCart, onUpdateQty };
+    return { cartLineFor, addToCart, onAddToCart, onUpdateQty };
 }
