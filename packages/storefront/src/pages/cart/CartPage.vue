@@ -2,6 +2,7 @@
 import { onMounted } from 'vue';
 import { useCartStore } from '../../stores/cart';
 import CartItemList from './CartItemList.vue';
+import EmptyCartState from '../../components/EmptyCartState.vue';
 import CartSkeleton from './CartSkeleton.vue';
 import CartSummary from './CartSummary.vue';
 import CartPromoBanner from './CartPromoBanner.vue';
@@ -33,12 +34,7 @@ onMounted(() => cartStore.fetchCart());
 
         <CartSkeleton v-if="!cartStore.loaded" />
 
-        <div v-else-if="cartStore.isEmpty" class="cart-page__empty">
-            <div class="cart-page__empty-icon">🛒</div>
-            <h2 class="cart-page__empty-title">Your cart is empty</h2>
-            <p class="cart-page__empty-text">Add products from the catalog to place an order.</p>
-            <RouterLink to="/catalog" class="cart-page__empty-btn">Go to catalog</RouterLink>
-        </div>
+        <EmptyCartState v-else-if="cartStore.isEmpty" />
 
         <template v-else>
             <div class="cart-page__layout">
@@ -108,49 +104,6 @@ onMounted(() => cartStore.fetchCart());
     display: flex;
     flex-direction: column;
     gap: 24px;
-}
-
-.cart-page__empty {
-    text-align: center;
-    padding: 80px 40px;
-    background: #fff;
-    border-radius: 28px;
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-}
-
-.cart-page__empty-icon {
-    font-size: 64px;
-    margin-bottom: 18px;
-}
-.cart-page__empty-title {
-    margin: 0 0 10px;
-    font-size: 28px;
-    font-weight: 900;
-    letter-spacing: -0.04em;
-}
-.cart-page__empty-text {
-    margin: 0 0 24px;
-    color: #66736e;
-    font-size: 16px;
-}
-
-.cart-page__empty-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 52px;
-    padding: 0 28px;
-    border-radius: 16px;
-    background: #00a878;
-    color: #fff;
-    font-size: 16px;
-    font-weight: 800;
-    text-decoration: none;
-    transition: background 0.15s;
-}
-.cart-page__empty-btn:hover {
-    background: #008a64;
 }
 
 @media (max-width: 1180px) {

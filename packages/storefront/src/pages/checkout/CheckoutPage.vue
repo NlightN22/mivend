@@ -3,6 +3,7 @@ import { onMounted } from 'vue';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore } from '../../stores/checkout';
 import { useCreditPreview } from '../../composables/useCreditPreview';
+import EmptyCartState from '../../components/EmptyCartState.vue';
 import PaymentMethodSelector from './PaymentMethodSelector.vue';
 import DeliverySelector from './DeliverySelector.vue';
 import CheckoutOrderItems from './CheckoutOrderItems.vue';
@@ -26,10 +27,7 @@ onMounted(() => Promise.all([cartStore.fetchCart(), checkoutStore.loadDeliveryMe
             <h1 class="checkout-page__title">Checkout</h1>
         </div>
 
-        <MvNotice v-if="cartStore.loaded && cartStore.isEmpty" variant="info">
-            Your cart is empty.
-            <RouterLink to="/catalog">Go to catalog</RouterLink>
-        </MvNotice>
+        <EmptyCartState v-if="cartStore.loaded && cartStore.isEmpty" />
 
         <div v-else class="checkout-page__layout">
             <section class="checkout-page__main">
