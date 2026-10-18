@@ -47,6 +47,7 @@ export class UserEnrichmentService {
     ): Promise<Administrator | null> {
         const repo = this.connection.getRepository(ctx, Administrator);
         let admin = await this.findByErpId(ctx, input.erpId);
+        const linkedNow = !admin;
         if (!admin) {
             if (input.isActive === false) {
                 // Inactive rows are flagged active: false, not deleted: the counterparty handler must
@@ -100,7 +101,7 @@ export class UserEnrichmentService {
             }
             admin.customFields = { ...admin.customFields, erpId: input.erpId };
             await repo.update(admin.id, { customFields: { erpId: input.erpId } });
-            await this.erpUserService.markLinked(ctx, input.erpId, admin.id);
+            await this.erpUserService.markLinked(ctx, input.erpId, admin.id, input.positionErpId);
             await this.eventBus.publish(new AdministratorLinkedEvent(ctx, input.erpId, admin.id));
             Logger.verbose(
                 `Linked administrator ${input.email} to erpId=${input.erpId}`,
@@ -112,9 +113,7 @@ export class UserEnrichmentService {
             admin.customFields = { ...admin.customFields, departmentId: input.departmentId };
             await repo.update(admin.id, { customFields: { departmentId: input.departmentId } });
         }
-        if (input.positionErpId !== undefined) {
-            // markLinked guarantees the row exists without ever creating it as an unlinked candidate.
-            await this.erpUserService.markLinked(ctx, input.erpId, admin.id);
+        if (!linkedNow && input.positionErpId !== undefined) {
             await this.erpUserService.setPositionIfExists(ctx, input.erpId, input.positionErpId);
         }
         if (input.isActive !== undefined) {

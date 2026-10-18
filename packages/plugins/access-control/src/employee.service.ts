@@ -78,11 +78,17 @@ export class EmployeeService {
         // Elevate to the bootstrap SuperAdmin only for this call, not the whole batch.
         const systemCtx = await this.getSystemContext(ctx);
         await this.administratorService.update(systemCtx, updateInput);
-        await this.erpUserService.setPositionIfExists(
+        const positionStored = await this.erpUserService.setPositionIfExists(
             ctx,
             record.erpId,
             record.positionErpId ?? null,
         );
+        if (!positionStored) {
+            Logger.warn(
+                `No ERP user row for employee erpId=${record.erpId}, position not stored`,
+                loggerCtx,
+            );
+        }
         Logger.verbose(
             `Assigned department=${record.departmentErpId} branch=${branchId ?? 'null'} to administrator ${record.email}`,
             loggerCtx,

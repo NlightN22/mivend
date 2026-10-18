@@ -61,7 +61,12 @@ export class ErpUserService {
 
     // Keep the row on link: counterparty.handler.ts distinguishes unseen erpId (retry) from unlinked
     // and linked erpIds, so upsert first: email-match can link an erpId never seen as a candidate.
-    async markLinked(ctx: RequestContext, erpId: string, administratorId: ID): Promise<void> {
+    async markLinked(
+        ctx: RequestContext,
+        erpId: string,
+        administratorId: ID,
+        positionErpId?: string | null,
+    ): Promise<void> {
         const repo = this.connection.getRepository(ctx, ErpUser);
         const now = new Date();
         const existing = await repo.findOne({ where: { erpId } });
@@ -69,6 +74,7 @@ export class ErpUserService {
             existing.status = 'linked';
             existing.administratorId = administratorId;
             existing.lastSeenAt = now;
+            if (positionErpId !== undefined) existing.positionErpId = positionErpId;
             await repo.save(existing);
             return;
         }
@@ -78,7 +84,7 @@ export class ErpUserService {
                 fullName: null,
                 email: null,
                 departmentId: null,
-                positionErpId: null,
+                positionErpId: positionErpId ?? null,
                 active: null,
                 status: 'linked',
                 administratorId,
@@ -117,8 +123,11 @@ export class ErpUserService {
         ctx: RequestContext,
         erpId: string,
         positionErpId: string | null,
-    ): Promise<void> {
-        await this.connection.getRepository(ctx, ErpUser).update({ erpId }, { positionErpId });
+    ): Promise<boolean> {
+        const result = await this.connection
+            .getRepository(ctx, ErpUser)
+            .update({ erpId }, { positionErpId });
+        return (result.affected ?? 0) > 0;
     }
 
     async findByErpId(ctx: RequestContext, erpId: string): Promise<ErpUser | null> {

@@ -77,7 +77,7 @@ describe('EmployeeService', () => {
         administratorService = createMockAdministratorService();
         roleService = createMockRoleService();
         requestContextService = createMockRequestContextService(systemCtx);
-        erpUserService = { setPositionIfExists: vi.fn() };
+        erpUserService = { setPositionIfExists: vi.fn().mockResolvedValue(true) };
         service = new EmployeeService(
             connection as unknown as TransactionalConnection,
             administratorService as unknown as AdministratorService,

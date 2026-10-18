@@ -76,7 +76,18 @@ beforeAll(async () => {
                 ? dataSource.getRepository(TestAdministrator)
                 : dataSource.getRepository(TestErpUser),
     } as unknown as TransactionalConnection;
-    erpUserService = new ErpUserService(connection, {} as unknown as ListQueryBuilder);
+    // Stands in for Vendure's ListQueryBuilder: applies the eq filter to a real query builder.
+    const listQueryBuilder = {
+        build: (_e: unknown, options?: { filter?: { positionErpId?: { eq?: string } } }) => {
+            const qb = erpUsers().createQueryBuilder('erpUser');
+            const eq = options?.filter?.positionErpId?.eq;
+            return eq ? qb.where('erpUser.positionErpId = :eq', { eq }) : qb;
+        },
+    };
+    erpUserService = new ErpUserService(
+        connection,
+        listQueryBuilder as unknown as ListQueryBuilder,
+    );
     service = new UserEnrichmentService(
         connection,
         erpUserService,
@@ -116,6 +127,12 @@ describe('ERP user position (real DB, #251)', () => {
             emailAddress: 'a@example.com',
             customFields: { erpId: 'user-2', departmentId: null },
         });
+        await erpUsers().save({
+            erpId: 'user-2',
+            status: 'linked',
+            firstSeenAt: new Date(),
+            lastSeenAt: new Date(),
+        });
 
         await service.linkAndEnrich(ctx, { erpId: 'user-2', positionErpId: 'pos-2' });
         expect(await erpUsers().findOne({ where: { erpId: 'user-2' } })).toMatchObject({
@@ -144,5 +161,37 @@ describe('ERP user position (real DB, #251)', () => {
     it('setPositionIfExists never creates a row for an unseen erpId', async () => {
         await erpUserService.setPositionIfExists(ctx, 'u-unseen', 'pos-1');
         expect(await erpUsers().count()).toBe(0);
+    });
+
+    it('writes the position in the same save that links an email-matched Administrator', async () => {
+        await dataSource.getRepository(TestAdministrator).save({
+            firstName: 'A',
+            lastName: 'B',
+            emailAddress: 'link@example.com',
+            customFields: { erpId: null, departmentId: null },
+        });
+        await service.linkAndEnrich(ctx, {
+            erpId: 'user-3',
+            email: 'link@example.com',
+            positionErpId: 'pos-3',
+        });
+        expect(await erpUsers().findOneBy({ erpId: 'user-3' })).toMatchObject({
+            status: 'linked',
+            positionErpId: 'pos-3',
+        });
+    });
+
+    it('pending list filtered by position returns only candidates with that position', async () => {
+        const now = new Date();
+        await erpUsers().save([
+            { erpId: 'u-sales', positionErpId: 'pos-sales', firstSeenAt: now, lastSeenAt: now },
+            { erpId: 'u-store', positionErpId: 'pos-store', firstSeenAt: now, lastSeenAt: now },
+        ]);
+        const page = await erpUserService.findAllPaginated(ctx, {
+            filter: { positionErpId: { eq: 'pos-sales' } },
+        });
+        expect(page.items.map(u => u.erpId)).toEqual(['u-sales']);
+        expect(page.items.some(u => u.erpId === 'u-store')).toBe(false);
+        expect(page.totalItems).toBe(1);
     });
 });

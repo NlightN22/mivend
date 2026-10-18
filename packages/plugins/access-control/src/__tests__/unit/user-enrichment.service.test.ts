@@ -82,7 +82,7 @@ describe('UserEnrichmentService', () => {
             repo.findOne.mockResolvedValue(admin);
 
             await service.linkAndEnrich(ctx, { erpId: 'user-1', positionErpId: 'pos-2' });
-            expect(erpUserService.markLinked).toHaveBeenCalledWith(ctx, 'user-1', 'admin-1');
+            expect(erpUserService.markLinked).not.toHaveBeenCalled();
             expect(erpUserService.setPositionIfExists).toHaveBeenCalledWith(ctx, 'user-1', 'pos-2');
             expect(repo.update).not.toHaveBeenCalled();
 
@@ -165,7 +165,12 @@ describe('UserEnrichmentService', () => {
 
             await service.linkAndEnrich(ctx, { erpId: 'user-1', email: 'admin@example.com' });
 
-            expect(erpUserService.markLinked).toHaveBeenCalledWith(ctx, 'user-1', 'admin-1');
+            expect(erpUserService.markLinked).toHaveBeenCalledWith(
+                ctx,
+                'user-1',
+                'admin-1',
+                undefined,
+            );
             expect(eventBus.publish).toHaveBeenCalledWith(expect.any(AdministratorLinkedEvent));
             const published = eventBus.publish.mock.calls[0][0] as AdministratorLinkedEvent;
             expect(published.erpId).toBe('user-1');
