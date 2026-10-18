@@ -255,6 +255,8 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 ## Known problems and limitations
 
+- #252: ERP-provisioned Administrators now get firstName = name + patronymic, lastName = surname (`parseErpFullName`); ones created before #252 keep swapped names, and `UserChanged` never rewrites firstName/lastName.
+
 - **`limitAmount` on a counterparty/contract discount rule is not enforced** — rules that set it
   are excluded from applying at all (safe default), not capped. See #154.
 - **Upstream (search-platform) version-collision/dedup risk for `discount-rule`** — their

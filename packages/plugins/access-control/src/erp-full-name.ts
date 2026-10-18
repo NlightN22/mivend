@@ -4,6 +4,7 @@ export interface AdministratorName {
 }
 
 // ERP fullName is "Surname Name Patronymic"; firstName carries name + patronymic.
+// Surname is assumed to be one token; a multi-word surname lands in firstName (format can't tell).
 export function parseErpFullName(
     fullName: string | null | undefined,
     fallback: string,

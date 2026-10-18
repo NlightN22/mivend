@@ -4,9 +4,9 @@ import { parseErpFullName } from '../../erp-full-name';
 
 describe('parseErpFullName', () => {
     it('maps surname to lastName and name with patronymic to firstName', () => {
-        expect(parseErpFullName('Иванов Сергей Владимирович', 'a@b.c')).toEqual({
-            firstName: 'Сергей Владимирович',
-            lastName: 'Иванов',
+        expect(parseErpFullName('Surname Name Patronymic', 'a@b.c')).toEqual({
+            firstName: 'Name Patronymic',
+            lastName: 'Surname',
         });
     });
 
