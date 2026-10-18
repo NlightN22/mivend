@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
 import { Counterparty } from '@mivend/plugin-counterparty';
+import { IsNull } from 'typeorm';
 
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import {
@@ -37,6 +38,18 @@ export class PaymentReconciliationIssueService {
         },
     ): Promise<PaymentReconciliationIssue> {
         const repo = this.connection.getRepository(ctx, PaymentReconciliationIssue);
+        // At-least-once redelivery of one bad event must not open a new issue each time.
+        if (details.providerPaymentId) {
+            const open = await repo.findOne({
+                where: {
+                    issueType,
+                    status: 'open',
+                    providerPaymentId: details.providerPaymentId,
+                    proformaInvoiceId: details.proformaInvoiceId ?? IsNull(),
+                },
+            });
+            if (open) return open;
+        }
         const saved = await repo.save(
             repo.create({
                 issueType,

@@ -30,7 +30,7 @@ export class AdminPaymentVisibilityResolver {
     }
 
     // Refunds and disputes are deliberately not netted out of the captured amount.
-    // See PaymentAttemptService.sumCapturedAmountsByOrderIds for the definition of "captured".
+    // See PaymentAttemptQueryService.sumCapturedAmountsByOrderIds for the definition of "captured".
     @Query()
     @Allow(CustomPermission.ReadPayment.Permission)
     async orderPaymentSummaries(

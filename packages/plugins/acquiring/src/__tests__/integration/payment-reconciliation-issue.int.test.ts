@@ -132,3 +132,30 @@ describe('PaymentReconciliationIssueService.findOpen (integration, real Postgres
         expect(resultIds).toEqual([sameTimestampB.id, sameTimestampA.id, newer.id, older.id]);
     });
 });
+
+describe('PaymentReconciliationIssueService.report (integration, real Postgres)', () => {
+    it('a redelivered report for the same reference opens one issue', async () => {
+        const details = { proformaInvoiceId: 1, organizationId: 1, providerPaymentId: 'ref-1' };
+
+        const first = await service.report(mockCtx, 'INVALID_STATE_TRANSITION', details);
+        const second = await service.report(mockCtx, 'INVALID_STATE_TRANSITION', details);
+
+        expect(second.id).toBe(first.id);
+        expect(await dataSource.getRepository(TestPaymentReconciliationIssue).count()).toBe(1);
+    });
+
+    it('opens a new issue once the previous one is resolved', async () => {
+        await createIssue({
+            issueType: 'ORDER_MISMATCH',
+            providerPaymentId: 'ref-2',
+            status: 'resolved',
+        });
+
+        await service.report(mockCtx, 'ORDER_MISMATCH', {
+            proformaInvoiceId: 1,
+            providerPaymentId: 'ref-2',
+        });
+
+        expect(await dataSource.getRepository(TestPaymentReconciliationIssue).count()).toBe(2);
+    });
+});

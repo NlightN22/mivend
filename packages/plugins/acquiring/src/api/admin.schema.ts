@@ -159,7 +159,7 @@ export const adminApiExtensions: DocumentNode = gql`
 
     type OrderPaymentSummary {
         orderId: ID!
-        "Sum of paymentStatus='captured' PaymentAttempt rows for this order — see PaymentAttemptService.sumCapturedAmountsByOrderIds for what's deliberately not netted out (refunds/disputes)."
+        "Sum of paymentStatus='captured' PaymentAttempt rows for this order — see PaymentAttemptQueryService.sumCapturedAmountsByOrderIds for what's deliberately not netted out (refunds/disputes)."
         capturedAmount: Int!
     }
 
