@@ -248,6 +248,36 @@ describe('payProformaInvoice repeat delivery with the same reference (#247)', ()
         expect(entries).toHaveLength(1);
     });
 
+    it.each(['fail', 'cancel'] as const)(
+        'resolves the pending attempt on a %s delivery without allocating',
+        async outcome => {
+            const invoice = await seedIssued();
+
+            await service.payProformaInvoice(
+                ctx,
+                invoice.id,
+                'pending',
+                'online-acquiring',
+                'ref-4',
+            );
+            await service.payProformaInvoice(ctx, invoice.id, outcome, 'online-acquiring', 'ref-4');
+            await service.payProformaInvoice(
+                ctx,
+                invoice.id,
+                'success',
+                'online-acquiring',
+                'ref-4',
+            );
+
+            const { attempts, entries, invoice: unpaid } = await stored(invoice.id);
+            expect(attempts.map(a => a.paymentStatus)).toEqual([
+                outcome === 'fail' ? 'failed' : 'canceled',
+            ]);
+            expect(entries).toHaveLength(0);
+            expect(unpaid.status).toBe('issued');
+        },
+    );
+
     it('ignores a pending delivery that arrives after the capture', async () => {
         const invoice = await seedIssued();
 

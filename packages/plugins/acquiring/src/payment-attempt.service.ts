@@ -15,7 +15,7 @@ import { SettlementEntry } from './entities/settlement-entry.entity';
 import { ProformaInvoiceService } from './proforma-invoice.service';
 import { PaymentReconciliationIssueService } from './payment-reconciliation-issue.service';
 import { SettlementEntryService } from './settlement-entry.service';
-import { shouldCapturePendingAttempt } from './payment-status-transition';
+import { shouldResolvePendingAttempt } from './payment-status-transition';
 
 export type PayProformaInvoiceOutcome = 'success' | 'pending' | 'fail' | 'cancel';
 
@@ -166,8 +166,14 @@ export class PaymentAttemptService {
             .getRepository(ctx, PaymentAttempt)
             .findOne({ where: { channel, providerPaymentId: externalReference } });
         if (existing) {
-            if (shouldCapturePendingAttempt(existing.paymentStatus, paymentStatus)) {
-                await this.capturePendingAttempt(ctx, proformaInvoice, Number(existing.id), fact);
+            if (shouldResolvePendingAttempt(existing.paymentStatus, paymentStatus)) {
+                await this.resolvePendingAttempt(
+                    ctx,
+                    proformaInvoice,
+                    Number(existing.id),
+                    paymentStatus,
+                    fact,
+                );
             }
             return (await this.proformaInvoiceService.findOne(ctx, Number(proformaInvoice.id)))!;
         }
@@ -226,23 +232,30 @@ export class PaymentAttemptService {
             );
         } catch (err) {
             if (!isUniqueViolation(err)) throw err;
-            // A concurrent call with the same (channel, externalReference) won; a capture may still upgrade its pending row.
-            if (paymentStatus === 'captured') {
+            // A concurrent call with the same (channel, externalReference) won; a final outcome may still resolve its pending row.
+            if (paymentStatus !== 'pending') {
                 const winner = await this.connection
                     .getRepository(ctx, PaymentAttempt)
                     .findOneOrFail({ where: { channel, providerPaymentId: externalReference } });
-                await this.capturePendingAttempt(ctx, proformaInvoice, Number(winner.id), fact);
+                await this.resolvePendingAttempt(
+                    ctx,
+                    proformaInvoice,
+                    Number(winner.id),
+                    paymentStatus,
+                    fact,
+                );
             }
         }
 
         return (await this.proformaInvoiceService.findOne(ctx, Number(proformaInvoice.id)))!;
     }
 
-    // Same lock order as a new capture; the row re-read under lock makes concurrent deliveries allocate once.
-    private async capturePendingAttempt(
+    // Same lock order as a new capture; the row re-read under lock makes concurrent deliveries apply once.
+    private async resolvePendingAttempt(
         ctx: RequestContext,
         proformaInvoice: ProformaInvoice,
         paymentAttemptId: number,
+        paymentStatus: PaymentStatus,
         fact?: PaymentFact,
     ): Promise<void> {
         await withAggregateLock(
@@ -255,8 +268,12 @@ export class PaymentAttemptService {
                     where: { id: paymentAttemptId },
                     lock: { mode: 'pessimistic_write' },
                 });
-                if (!shouldCapturePendingAttempt(attempt.paymentStatus, 'captured')) return;
-                attempt.paymentStatus = 'captured';
+                if (!shouldResolvePendingAttempt(attempt.paymentStatus, paymentStatus)) return;
+                attempt.paymentStatus = paymentStatus;
+                if (paymentStatus !== 'captured') {
+                    await repo.save(attempt);
+                    return;
+                }
                 attempt.amount = fact?.amount ?? attempt.amount;
                 await this.settlementEntryService.allocate(
                     transactionCtx,

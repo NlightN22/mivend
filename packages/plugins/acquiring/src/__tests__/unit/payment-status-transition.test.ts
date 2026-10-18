@@ -1,21 +1,25 @@
 import { describe, expect, it } from 'vitest';
 
 import type { PaymentStatus } from '../../entities/payment-attempt.entity';
-import { shouldCapturePendingAttempt } from '../../payment-status-transition';
+import { shouldResolvePendingAttempt } from '../../payment-status-transition';
 
-describe('shouldCapturePendingAttempt', () => {
-    it('captures a pending attempt on a captured delivery', () => {
-        expect(shouldCapturePendingAttempt('pending', 'captured')).toBe(true);
-    });
+describe('shouldResolvePendingAttempt', () => {
+    it.each<PaymentStatus>(['captured', 'failed', 'canceled'])(
+        'resolves a pending attempt to %s',
+        incoming => {
+            expect(shouldResolvePendingAttempt('pending', incoming)).toBe(true);
+        },
+    );
 
     it.each<[PaymentStatus, PaymentStatus]>([
         ['captured', 'captured'],
         ['captured', 'pending'],
+        ['captured', 'failed'],
         ['pending', 'pending'],
-        ['pending', 'failed'],
-        ['refunded', 'captured'],
         ['failed', 'captured'],
+        ['canceled', 'captured'],
+        ['refunded', 'captured'],
     ])('ignores %s -> %s', (existing, incoming) => {
-        expect(shouldCapturePendingAttempt(existing, incoming)).toBe(false);
+        expect(shouldResolvePendingAttempt(existing, incoming)).toBe(false);
     });
 });
