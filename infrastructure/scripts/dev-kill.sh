@@ -22,23 +22,8 @@
 # The ancestry-based walk below stays as a defense-in-depth fallback for anything this doesn't
 # cover (e.g. a run started before this mechanism existed).
 PGID_FILE="/tmp/mivend-dev.pgid"
-if [ -f "$PGID_FILE" ]; then
-    pgid=$(cat "$PGID_FILE" 2>/dev/null || true)
-    if [ -n "$pgid" ]; then
-        kill -9 -- "-$pgid" 2>/dev/null || true
-    fi
-    rm -f "$PGID_FILE"
-fi
-
-collect_descendants() {
-    local pid=$1
-    local children child
-    children=$(pgrep -P "$pid" 2>/dev/null || true)
-    for child in $children; do
-        collect_descendants "$child"
-        echo "$child"
-    done
-}
+source "$(dirname "$0")/dev-kill-lib.sh"
+kill_recorded_group "$PGID_FILE"
 
 # Roots belonging to OTHER contours/instances — this script (and everything it kills below) must
 # never touch these PIDs or anything descended from them.

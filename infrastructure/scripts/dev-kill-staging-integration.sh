@@ -15,23 +15,8 @@
 # :3010/the Kafka consumer group for hours). Kept as defense-in-depth fallback for anything
 # predating this mechanism.
 PGID_FILE="/tmp/mivend-dev-staging-integration.pgid"
-if [ -f "$PGID_FILE" ]; then
-    pgid=$(cat "$PGID_FILE" 2>/dev/null || true)
-    if [ -n "$pgid" ]; then
-        kill -9 -- "-$pgid" 2>/dev/null || true
-    fi
-    rm -f "$PGID_FILE"
-fi
-
-collect_descendants() {
-    local pid=$1
-    local children child
-    children=$(pgrep -P "$pid" 2>/dev/null || true)
-    for child in $children; do
-        collect_descendants "$child"
-        echo "$child"
-    done
-}
+source "$(dirname "$0")/dev-kill-lib.sh"
+kill_recorded_group "$PGID_FILE"
 
 roots=$(pgrep -f "apps/server/\.env\.central\.staging-integration\b" 2>/dev/null || true)
 
