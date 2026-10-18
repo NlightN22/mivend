@@ -197,3 +197,66 @@ describe('payProformaInvoice pending outcome (#197)', () => {
         expect(stored.map(row => row.status)).toEqual(['paid', 'paid']);
     });
 });
+
+describe('payProformaInvoice repeat delivery with the same reference (#247)', () => {
+    async function seedIssued(): Promise<TestProformaInvoice> {
+        return dataSource.getRepository(TestProformaInvoice).save({
+            orderId: 1,
+            organizationId: 1,
+            counterpartyId: 1,
+            amount: 1000,
+            currencyCode: 'USD',
+            status: 'issued',
+        });
+    }
+
+    async function stored(invoiceId: number) {
+        const attempts = await dataSource.getRepository(TestPaymentAttempt).find();
+        const entries = await dataSource.getRepository(TestSettlementEntry).find();
+        const invoice = await dataSource
+            .getRepository(TestProformaInvoice)
+            .findOneByOrFail({ id: invoiceId });
+        return { attempts, entries, invoice };
+    }
+
+    it('captures the existing pending attempt and allocates once', async () => {
+        const invoice = await seedIssued();
+
+        await service.payProformaInvoice(ctx, invoice.id, 'pending', 'online-acquiring', 'ref-1');
+        await service.payProformaInvoice(ctx, invoice.id, 'success', 'online-acquiring', 'ref-1');
+        await service.payProformaInvoice(ctx, invoice.id, 'success', 'online-acquiring', 'ref-1');
+
+        const { attempts, entries, invoice: paid } = await stored(invoice.id);
+        expect(attempts.map(a => a.paymentStatus)).toEqual(['captured']);
+        expect(entries).toHaveLength(1);
+        expect(entries[0].sourcePaymentId).toBe(attempts[0].id);
+        expect(paid.status).toBe('paid');
+    });
+
+    it('two concurrent captured deliveries after pending allocate exactly once', async () => {
+        const invoice = await seedIssued();
+        await service.payProformaInvoice(ctx, invoice.id, 'pending', 'online-acquiring', 'ref-2');
+
+        const results = await Promise.allSettled([
+            service.payProformaInvoice(ctx, invoice.id, 'success', 'online-acquiring', 'ref-2'),
+            service.payProformaInvoice(ctx, invoice.id, 'success', 'online-acquiring', 'ref-2'),
+        ]);
+
+        expect(results.map(r => r.status)).toEqual(['fulfilled', 'fulfilled']);
+        const { attempts, entries } = await stored(invoice.id);
+        expect(attempts.map(a => a.paymentStatus)).toEqual(['captured']);
+        expect(entries).toHaveLength(1);
+    });
+
+    it('ignores a pending delivery that arrives after the capture', async () => {
+        const invoice = await seedIssued();
+
+        await service.payProformaInvoice(ctx, invoice.id, 'success', 'online-acquiring', 'ref-3');
+        await service.payProformaInvoice(ctx, invoice.id, 'pending', 'online-acquiring', 'ref-3');
+
+        const { attempts, entries, invoice: paid } = await stored(invoice.id);
+        expect(attempts.map(a => a.paymentStatus)).toEqual(['captured']);
+        expect(entries).toHaveLength(1);
+        expect(paid.status).toBe('paid');
+    });
+});
