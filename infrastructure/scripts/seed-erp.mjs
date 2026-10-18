@@ -439,15 +439,20 @@ async function ensureBranchSettingsSeeded() {
     }
 }
 
-// Synthetic local classification (#235); a real contour applies price-type-visibility.sql to its own codes.
-function seedPriceTypeVisibility() {
-    const psql = `docker exec -i docker-postgres-central-1 psql -U postgres -d mivend_central -v ON_ERROR_STOP=1`;
+const PSQL = `docker exec -i docker-postgres-central-1 psql -U postgres -d mivend_central -v ON_ERROR_STOP=1`;
+
+// Must exist before the price batch, or the purchase entries are rejected (#235).
+function seedPurchasePriceType() {
     const purchaseSql = `INSERT INTO price_type (code, name, "isActive", visibility, "isPurchase", "ceilingMultiplier")
         VALUES ('PURCHASE', 'Purchase', true, 'confidential', true, 1.1)
         ON CONFLICT (code) DO UPDATE SET "isPurchase" = true, "ceilingMultiplier" = 1.1;`;
-    execSync(psql, { input: purchaseSql, stdio: ['pipe', 'inherit', 'inherit'] });
+    execSync(PSQL, { input: purchaseSql, stdio: ['pipe', 'inherit', 'inherit'] });
+}
+
+// Synthetic local classification (#235); a real contour applies price-type-visibility.sql to its own codes.
+function seedPriceTypeVisibility() {
     const visibilitySql = readFileSync(join(__dirname, 'price-type-visibility.sql'), 'utf8');
-    execSync(`${psql} -v customer_codes=RETAIL,WHOLESALE,SPECIAL`, {
+    execSync(`${PSQL} -v customer_codes=RETAIL,WHOLESALE,SPECIAL`, {
         input: visibilitySql,
         stdio: ['pipe', 'inherit', 'inherit'],
     });
@@ -476,7 +481,7 @@ async function main() {
     // v11: contract records — the scheduled credit-limit job derives limit/days from contracts.
     // v12: the checkout buyers' contracts carry a seeded organization, so the contract guard passes.
     // v13 (#231): manufacturer records; products reference one via manufacturerCode.
-    const run = 'v13';
+    const run = 'v14';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
@@ -633,6 +638,7 @@ async function main() {
         priceTypeCode: 'SPECIAL',
         price: Math.round(p.price * 0.9 * 100) / 100,
     }));
+    seedPurchasePriceType();
     const allPrices = [...prices, ...retailPrices, ...specialPrices];
     console.log(`Sending ${allPrices.length} prices...`);
     const priceResult = await postBatch(
