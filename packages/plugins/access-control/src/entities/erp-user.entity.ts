@@ -25,6 +25,10 @@ export class ErpUser extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     departmentId!: string | null;
 
+    // Soft reference to ErpPosition.erpId: the position may arrive after the user.
+    @Column({ type: 'varchar', nullable: true })
+    positionErpId!: string | null;
+
     @Column({ type: 'timestamp' })
     firstSeenAt!: Date;
 

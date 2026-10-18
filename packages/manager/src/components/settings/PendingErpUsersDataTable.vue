@@ -22,10 +22,12 @@ const props = defineProps<{
     searchFilter: string;
     creatingErpId: string | null;
     departmentName: (departmentId: string | null) => string;
+    positionOptions: { value: string; label: string }[];
 }>();
 
 const emit = defineEmits<{
     'update:search': [search: string];
+    'update:position': [positionErpId: string];
     'update:page': [page: number];
     'update:page-size': [size: number];
     create: [erpId: string];
@@ -43,6 +45,12 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     { field: 'email', header: 'Email', width: 220, filterConfig: { type: 'none' } },
     { field: 'department', header: 'Department', width: 160, filterConfig: { type: 'none' } },
     {
+        field: 'position',
+        header: 'Position',
+        width: 180,
+        filterConfig: { type: 'select', placeholder: 'All positions', options: [] },
+    },
+    {
         field: 'status',
         header: 'Status',
         width: 110,
@@ -55,8 +63,24 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
 interface PendingFilterState {
     [key: string]: unknown;
     fullName: string;
+    position: string;
 }
-const BLANK_FILTERS: PendingFilterState = { fullName: '' };
+const BLANK_FILTERS: PendingFilterState = { fullName: '', position: '' };
+
+const columns = computed<AdvancedDataTableColumn[]>(() =>
+    ALL_COLUMNS.map(col =>
+        col.field === 'position'
+            ? {
+                  ...col,
+                  filterConfig: {
+                      type: 'select' as const,
+                      placeholder: 'All positions',
+                      options: [{ value: '', label: 'All positions' }, ...props.positionOptions],
+                  },
+              }
+            : col,
+    ),
+);
 
 const { state: tableState } = useDataTableState<PendingFilterState>(
     'settings-pending-erp-users-datatable',
@@ -65,19 +89,22 @@ const { state: tableState } = useDataTableState<PendingFilterState>(
         columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
         hiddenColumns: [],
         sort: [],
-        filters: { fullName: props.searchFilter },
+        filters: { fullName: props.searchFilter, position: '' },
         pageSize: props.pageSize,
     },
     {
         columns: ALL_COLUMNS,
-        allowedFilterKeys: ['fullName'],
+        allowedFilterKeys: ['fullName', 'position'],
         externallyOwned: { pageSize: true, filterKeys: ['fullName'] },
     },
 );
 
 watch(
     () => tableState.value.filters,
-    f => emit('update:search', f.fullName),
+    f => {
+        emit('update:search', f.fullName);
+        emit('update:position', f.position ?? '');
+    },
     { deep: true },
 );
 watch(
@@ -104,6 +131,7 @@ interface Row {
     fullName: string;
     email: string;
     department: string;
+    position: string;
     status: string;
 }
 const rows = computed<Row[]>(() =>
@@ -113,6 +141,7 @@ const rows = computed<Row[]>(() =>
         fullName: u.fullName ?? u.email ?? u.erpId,
         email: u.email ?? '—',
         department: props.departmentName(u.departmentId),
+        position: u.position ?? '—',
         status: 'Pending',
     })),
 );
@@ -121,7 +150,7 @@ const rows = computed<Row[]>(() =>
 <template>
     <MvAdvancedDataTable
         v-model:table-state="tableState"
-        :columns="ALL_COLUMNS"
+        :columns="columns"
         :rows="rows"
         :loading="loading"
         :total-items="totalItems"

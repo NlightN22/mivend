@@ -4,7 +4,6 @@ import {
     Administrator,
     Allow,
     Ctx,
-    ListQueryOptions,
     PaginatedList,
     RequestContext,
     Transaction,
@@ -23,7 +22,6 @@ import { Branch } from './entities/branch.entity';
 import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
-import { ErpUser } from './entities/erp-user.entity';
 import { Warehouse } from './entities/warehouse.entity';
 import { ErpUserService } from './erp-user.service';
 import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.service';
@@ -91,25 +89,28 @@ export class AccessControlResolver {
             this.accessScopeService.getOwnDepartmentId(ctx),
             this.accessScopeService.resolveTeamVisibilityScope(ctx),
         ]);
-        const positionNames = await this.positionService.findNamesByErpIds(
+        const positionByErpId = await this.erpUserService.findPositionErpIds(
             ctx,
             team.flatMap(a => {
-                const id = (a.customFields as { positionId?: string | null } | undefined)
-                    ?.positionId;
-                return id ? [id] : [];
+                const erpId = (a.customFields as { erpId?: string | null } | undefined)?.erpId;
+                return erpId ? [erpId] : [];
             }),
         );
+        const positionNames = await this.positionService.findNamesByErpIds(ctx, [
+            ...new Set(positionByErpId.values()),
+        ]);
         return team.map(a => {
             const customFields = a.customFields as
                 | {
                       departmentId?: string | null;
                       branchId?: string | null;
-                      positionId?: string | null;
+                      erpId?: string | null;
                   }
                 | undefined;
             const departmentId = customFields?.departmentId ?? null;
             const sameDepartment = ownDepartmentId != null && departmentId === ownDepartmentId;
             const nameVisible = visibilityScope.kind === 'all' || sameDepartment;
+            const positionId = positionByErpId.get(customFields?.erpId ?? '');
             return {
                 id: String(a.id),
                 firstName: nameVisible ? a.firstName : null,
@@ -117,8 +118,8 @@ export class AccessControlResolver {
                 roleCodes: a.user?.roles?.map(r => r.code) ?? [],
                 departmentId,
                 branchId: customFields?.branchId ?? null,
-                positionId: customFields?.positionId ?? null,
-                position: positionNames.get(customFields?.positionId ?? '') ?? null,
+                positionId: positionId ?? null,
+                position: positionId ? (positionNames.get(positionId) ?? null) : null,
             };
         });
     }
@@ -265,16 +266,6 @@ export class AccessControlResolver {
             args.maxExtraDays,
             args.maxAmount ?? null,
         );
-    }
-
-    // Issue #119: unlinked ERP users awaiting a human decision — see ErpUser's own comment.
-    @Query()
-    @Allow(CustomPermission.ManageAdministratorLifecycle.Permission)
-    async pendingErpUsers(
-        @Ctx() ctx: RequestContext,
-        @Args() args: { options?: ListQueryOptions<ErpUser> },
-    ): Promise<PaginatedList<ErpUser>> {
-        return this.erpUserService.findAllPaginated(ctx, args.options);
     }
 
     // Soft-deleted: hidden from the native administrators query, so not a filter on it.

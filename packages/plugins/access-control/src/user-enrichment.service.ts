@@ -19,7 +19,7 @@ export interface UserEnrichmentInput {
     // null means ERP explicitly cleared it and must be applied like any value.
     email?: string | null;
     departmentId?: string | null;
-    positionId?: string | null;
+    positionErpId?: string | null;
     // Issue #119: only meaningful once an Administrator is linked (AdministratorActivationService
     // no-ops otherwise) — never used to decide whether to create/keep an ErpUser row.
     fullName?: string | null;
@@ -56,6 +56,7 @@ export class UserEnrichmentService {
                     fullName: input.fullName,
                     email: input.email,
                     departmentId: input.departmentId,
+                    positionErpId: input.positionErpId,
                     active: false,
                 });
                 Logger.verbose(
@@ -74,6 +75,7 @@ export class UserEnrichmentService {
                     fullName: input.fullName,
                     email: input.email,
                     departmentId: input.departmentId,
+                    positionErpId: input.positionErpId,
                     active: input.isActive,
                 });
                 return null;
@@ -91,6 +93,7 @@ export class UserEnrichmentService {
                     fullName: input.fullName,
                     email: input.email,
                     departmentId: input.departmentId,
+                    positionErpId: input.positionErpId,
                     active: input.isActive,
                 });
                 return null;
@@ -105,12 +108,14 @@ export class UserEnrichmentService {
             );
         }
         // Writes only the keys this stream owns: a spread of the loaded customFields would revert a concurrent change to others.
-        const owned: { departmentId?: string | null; positionId?: string | null } = {};
-        if (input.departmentId !== undefined) owned.departmentId = input.departmentId;
-        if (input.positionId !== undefined) owned.positionId = input.positionId;
-        if (Object.keys(owned).length > 0) {
-            admin.customFields = { ...admin.customFields, ...owned };
-            await repo.update(admin.id, { customFields: owned });
+        if (input.departmentId !== undefined) {
+            admin.customFields = { ...admin.customFields, departmentId: input.departmentId };
+            await repo.update(admin.id, { customFields: { departmentId: input.departmentId } });
+        }
+        if (input.positionErpId !== undefined) {
+            // markLinked guarantees the row exists without ever creating it as an unlinked candidate.
+            await this.erpUserService.markLinked(ctx, input.erpId, admin.id);
+            await this.erpUserService.setPositionIfExists(ctx, input.erpId, input.positionErpId);
         }
         if (input.isActive !== undefined) {
             await this.administratorActivationService.syncFromErp(ctx, input.erpId, input.isActive);

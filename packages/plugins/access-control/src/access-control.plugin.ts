@@ -19,13 +19,14 @@ import { BranchSettingsService } from './branch-settings.service';
 import { CreditTermLimitService } from './credit-term-limit.service';
 import { DepartmentService } from './department.service';
 import { EmployeeService } from './employee.service';
+import { ErpUserResolver } from './erp-user.resolver';
 import { ErpUserService } from './erp-user.service';
 import { UserEnrichmentService } from './user-enrichment.service';
 import { Branch } from './entities/branch.entity';
 import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
-import { Position } from './entities/position.entity';
+import { ErpPosition } from './entities/erp-position.entity';
 import { PositionService } from './position.service';
 import { ErpUser } from './entities/erp-user.entity';
 import { RoleAccessScope } from './entities/role-access-scope.entity';
@@ -36,6 +37,14 @@ import { Warehouse } from './entities/warehouse.entity';
 import { WarehouseService } from './warehouse.service';
 
 const adminApiSchema = gql`
+    type ErpPosition {
+        id: ID!
+        erpId: String!
+        name: String!
+        parentErpId: String
+        isActive: Boolean!
+    }
+
     type Department {
         id: ID!
         erpId: String!
@@ -125,6 +134,8 @@ const adminApiSchema = gql`
         fullName: String
         email: String
         departmentId: String
+        positionErpId: String
+        position: String
         firstSeenAt: DateTime!
         lastSeenAt: DateTime!
         status: String!
@@ -138,6 +149,7 @@ const adminApiSchema = gql`
 
     input ErpUserFilterParameter {
         erpId: StringOperators
+        positionErpId: StringOperators
         fullName: StringOperators
         email: StringOperators
     }
@@ -184,6 +196,7 @@ const adminApiSchema = gql`
 
     extend type Query {
         departments: [Department!]!
+        positions: [ErpPosition!]!
         branches: [Branch!]!
         warehouses: [Warehouse!]!
         branchSettings(branchId: String!): BranchSettings
@@ -241,7 +254,7 @@ const adminApiSchema = gql`
     entities: [
         RoleAccessScope,
         Department,
-        Position,
+        ErpPosition,
         Branch,
         Warehouse,
         BranchSettings,
@@ -289,7 +302,7 @@ const adminApiSchema = gql`
     ],
     adminApiExtensions: {
         schema: adminApiSchema,
-        resolvers: [AccessControlResolver, AdministratorStatusResolver],
+        resolvers: [AccessControlResolver, AdministratorStatusResolver, ErpUserResolver],
     },
     configuration: (config: RuntimeVendureConfig) => {
         // System-managed: hand edits break the correlation/sync that owns each field.
@@ -311,15 +324,6 @@ const adminApiSchema = gql`
                 nullable: true,
                 readonly: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Branch ID' }],
-            },
-            {
-                // Position.erpId — set by UserEnrichmentService (UserChanged.position_id) or
-                // EmployeeService; the display name is resolved from Position, never stored.
-                name: 'positionId',
-                type: 'string' as const,
-                nullable: true,
-                readonly: true,
-                label: [{ languageCode: LanguageCode.en, value: 'Position ID' }],
             },
             {
                 // Owned by @mivend/plugin-sync; declared here so it can be read without a package dependency.

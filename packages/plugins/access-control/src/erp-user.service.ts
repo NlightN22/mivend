@@ -7,6 +7,7 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
+import { In, IsNull, Not } from 'typeorm';
 
 import { ErpUser } from './entities/erp-user.entity';
 
@@ -15,6 +16,7 @@ export interface ErpUserUpsertInput {
     fullName?: string | null;
     email?: string | null;
     departmentId?: string | null;
+    positionErpId?: string | null;
     // undefined = "this event didn't carry the field, leave `active` unchanged" — same
     // undefined-vs-null convention as UserEnrichmentInput's own email/departmentId.
     active?: boolean;
@@ -37,6 +39,7 @@ export class ErpUserService {
             if (input.fullName !== undefined) user.fullName = input.fullName;
             if (input.email !== undefined) user.email = input.email;
             if (input.departmentId !== undefined) user.departmentId = input.departmentId;
+            if (input.positionErpId !== undefined) user.positionErpId = input.positionErpId;
             if (input.active !== undefined) user.active = input.active;
             user.lastSeenAt = now;
         } else {
@@ -45,6 +48,7 @@ export class ErpUserService {
                 fullName: input.fullName ?? null,
                 email: input.email ?? null,
                 departmentId: input.departmentId ?? null,
+                positionErpId: input.positionErpId ?? null,
                 active: input.active ?? null,
                 status: 'unlinked',
                 administratorId: null,
@@ -74,6 +78,7 @@ export class ErpUserService {
                 fullName: null,
                 email: null,
                 departmentId: null,
+                positionErpId: null,
                 active: null,
                 status: 'linked',
                 administratorId,
@@ -98,6 +103,22 @@ export class ErpUserService {
         );
         const [items, totalItems] = await qb.getManyAndCount();
         return { items, totalItems };
+    }
+
+    async findPositionErpIds(ctx: RequestContext, erpIds: string[]): Promise<Map<string, string>> {
+        if (erpIds.length === 0) return new Map();
+        const rows = await this.connection
+            .getRepository(ctx, ErpUser)
+            .find({ where: { erpId: In(erpIds), positionErpId: Not(IsNull()) } });
+        return new Map(rows.map(u => [u.erpId, u.positionErpId as string]));
+    }
+
+    async setPositionIfExists(
+        ctx: RequestContext,
+        erpId: string,
+        positionErpId: string | null,
+    ): Promise<void> {
+        await this.connection.getRepository(ctx, ErpUser).update({ erpId }, { positionErpId });
     }
 
     async findByErpId(ctx: RequestContext, erpId: string): Promise<ErpUser | null> {

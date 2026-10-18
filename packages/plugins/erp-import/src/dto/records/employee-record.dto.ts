@@ -35,7 +35,7 @@ export class EmployeeRecordDto {
     @ApiPropertyOptional({
         type: String,
         nullable: true,
-        description: 'erpId of the Position, display-only — not used for authorization.',
+        description: 'erpId of the ErpPosition, display-only — not used for authorization.',
     })
     positionErpId?: string | null;
 }

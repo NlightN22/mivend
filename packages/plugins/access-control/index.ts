@@ -8,7 +8,7 @@ export { RoleAccessScope } from './src/entities/role-access-scope.entity';
 export { Department } from './src/entities/department.entity';
 export { DepartmentService } from './src/department.service';
 export type { DepartmentRecordInput } from './src/department.service';
-export { Position } from './src/entities/position.entity';
+export { ErpPosition } from './src/entities/erp-position.entity';
 export { PositionService } from './src/position.service';
 export type { PositionRecordInput } from './src/position.service';
 export { Branch } from './src/entities/branch.entity';

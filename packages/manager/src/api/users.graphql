@@ -35,6 +35,8 @@ query PendingErpUsersPage($options: ErpUserListOptions) {
             fullName
             email
             departmentId
+            positionErpId
+            position
         }
         totalItems
     }

@@ -4,8 +4,8 @@ import { Column, Entity, Index } from 'typeorm';
 
 // Job-position master data — ERP is the source of truth, populated only by the `position` stream.
 @Entity()
-export class Position extends VendureEntity {
-    constructor(input?: DeepPartial<Position>) {
+export class ErpPosition extends VendureEntity {
+    constructor(input?: DeepPartial<ErpPosition>) {
         super(input);
     }
 

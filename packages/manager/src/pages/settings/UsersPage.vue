@@ -7,7 +7,7 @@ import UsersDataTable from '../../components/settings/UsersDataTable.vue';
 import PendingErpUsersDataTable from '../../components/settings/PendingErpUsersDataTable.vue';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import { fetchRoles, updateAdministratorRole, type RoleSummary } from '../../api/settings';
-import { fetchDepartments, type DepartmentOption } from '../../api/team';
+import { fetchDepartments, fetchPositions, type DepartmentOption } from '../../api/team';
 import {
     fetchPortalUsers,
     fetchPendingErpUsers,
@@ -65,6 +65,8 @@ const pendingPageSize = ref(20);
 const pendingTotalItems = ref(0);
 const pendingUsers = ref<PendingErpUserRow[]>([]);
 const pendingSearchFilter = ref('');
+const pendingPositionFilter = ref('');
+const positionOptions = ref<{ value: string; label: string }[]>([]);
 const creatingErpId = ref<string | null>(null);
 
 interface UrlFilters {
@@ -118,9 +120,14 @@ const { loading: pendingLoading, run: loadPending } = useLatestRequest(
         fetchPendingErpUsers({
             skip: (pendingPage.value - 1) * pendingPageSize.value,
             take: pendingPageSize.value,
-            filter: pendingSearchFilter.value
-                ? { fullName: { contains: pendingSearchFilter.value } }
-                : undefined,
+            filter: {
+                ...(pendingSearchFilter.value
+                    ? { fullName: { contains: pendingSearchFilter.value } }
+                    : {}),
+                ...(pendingPositionFilter.value
+                    ? { positionErpId: { eq: pendingPositionFilter.value } }
+                    : {}),
+            },
         }),
     result => {
         pendingUsers.value = result.items;
@@ -164,10 +171,13 @@ watch(view, v => {
     if (v === 'users' && users.value.length === 0) void safeLoadUsers();
     if (v === 'pending' && pendingUsers.value.length === 0) void safeLoadPending();
 });
-watch(pendingSearchFilter, () => {
+watch([pendingSearchFilter, pendingPositionFilter], () => {
     pendingPage.value = 1;
 });
-watch([pendingPage, pendingSearchFilter, pendingPageSize], () => void safeLoadPending());
+watch(
+    [pendingPage, pendingSearchFilter, pendingPositionFilter, pendingPageSize],
+    () => void safeLoadPending(),
+);
 
 function onUsersFilters(filters: { status: string; search: string }): void {
     statusFilter.value = filters.status;
@@ -227,6 +237,9 @@ async function onCreateAdministrator(erpId: string): Promise<void> {
 onMounted(async () => {
     await Promise.all([
         fetchDepartments().then(d => (departments.value = d)),
+        fetchPositions().then(
+            p => (positionOptions.value = p.map(x => ({ value: x.erpId, label: x.name }))),
+        ),
         fetchRoles().then(r => (roles.value = r)),
         loadCounts(),
     ]);
@@ -294,7 +307,9 @@ onMounted(async () => {
             :search-filter="pendingSearchFilter"
             :creating-erp-id="creatingErpId"
             :department-name="departmentName"
+            :position-options="positionOptions"
             @update:search="pendingSearchFilter = $event"
+            @update:position="pendingPositionFilter = $event"
             @update:page="pendingPage = $event"
             @update:page-size="pendingPageSize = $event"
             @create="onCreateAdministrator"

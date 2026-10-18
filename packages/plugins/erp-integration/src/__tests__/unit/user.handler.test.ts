@@ -24,7 +24,7 @@ describe('UserStreamHandler', () => {
             erpId: 'user-1',
             email: 'ivan@example.com',
             departmentId: 'dept-1',
-            positionId: 'pos-1',
+            positionErpId: 'pos-1',
             fullName: 'Ivan Ivanov',
             isActive: true,
         });
@@ -42,7 +42,7 @@ describe('UserStreamHandler', () => {
             erpId: 'user-1',
             email: undefined,
             departmentId: undefined,
-            positionId: undefined,
+            positionErpId: undefined,
             fullName: undefined,
             isActive: false,
         });

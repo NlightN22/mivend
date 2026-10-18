@@ -82,6 +82,7 @@ class TestErpUser {
     @Column({ type: 'varchar', nullable: true }) fullName!: string | null;
     @Column({ type: 'varchar', nullable: true }) email!: string | null;
     @Column({ type: 'varchar', nullable: true }) departmentId!: string | null;
+    @Column({ type: 'varchar', nullable: true }) positionErpId!: string | null;
     @Column({ type: 'timestamp' }) firstSeenAt!: Date;
     @Column({ type: 'timestamp' }) lastSeenAt!: Date;
     @Column({ type: 'varchar', default: 'unlinked' }) status!: string;

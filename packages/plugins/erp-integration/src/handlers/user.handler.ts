@@ -36,7 +36,7 @@ export class UserStreamHandler implements InboundStreamHandler {
             erpId: entityId,
             email,
             departmentId,
-            positionId,
+            positionErpId: positionId,
             fullName,
             isActive,
         });

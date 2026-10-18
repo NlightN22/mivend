@@ -72,6 +72,7 @@ describe('AccessControlResolver.teamMembers', () => {
 
 describe('AccessControlResolver.teamDirectory', () => {
     let teamAdministratorService: { findTeam: ReturnType<typeof vi.fn> };
+    let erpUserService: { findPositionErpIds: ReturnType<typeof vi.fn> };
     let positionService: { findNamesByErpIds: ReturnType<typeof vi.fn> };
     let accessScopeService: {
         getOwnDepartmentId: ReturnType<typeof vi.fn>;
@@ -83,6 +84,7 @@ describe('AccessControlResolver.teamDirectory', () => {
     beforeEach(() => {
         teamAdministratorService = { findTeam: vi.fn() };
         positionService = { findNamesByErpIds: vi.fn().mockResolvedValue(new Map()) };
+        erpUserService = { findPositionErpIds: vi.fn().mockResolvedValue(new Map()) };
         accessScopeService = {
             getOwnDepartmentId: vi.fn(),
             resolveTeamVisibilityScope: vi.fn(),
@@ -96,7 +98,7 @@ describe('AccessControlResolver.teamDirectory', () => {
             {} as BranchSettingsService,
             {} as CreditTermLimitService,
             accessScopeService as unknown as AccessScopeService,
-            {} as ErpUserService,
+            erpUserService as unknown as ErpUserService,
             {} as AdministratorProvisioningService,
             {} as AdministratorActivationService,
             teamAdministratorService as unknown as TeamAdministratorService,
@@ -152,17 +154,18 @@ describe('AccessControlResolver.teamDirectory', () => {
         expect(member.lastName).toBe('Director');
     });
 
-    it('exposes position/branch custom fields', async () => {
+    it('exposes the branch and the position read from the ERP user', async () => {
         teamAdministratorService.findTeam.mockResolvedValue([
             mockAdministrator('4', 'Ivan', 'Operator', {
                 departmentId: 'dept-sales',
                 branchId: 'branch-central',
-                positionId: 'pos-1',
+                erpId: 'user-4',
             }),
         ]);
         accessScopeService.getOwnDepartmentId.mockResolvedValue('dept-sales');
         accessScopeService.resolveTeamVisibilityScope.mockResolvedValue({ kind: 'own' });
 
+        erpUserService.findPositionErpIds.mockResolvedValue(new Map([['user-4', 'pos-1']]));
         positionService.findNamesByErpIds.mockResolvedValue(new Map([['pos-1', 'Sales operator']]));
 
         const [member] = await resolver.teamDirectory(ctx);

@@ -20,6 +20,7 @@ describe('UserEnrichmentService', () => {
         upsert: ReturnType<typeof vi.fn>;
         markLinked: ReturnType<typeof vi.fn>;
         findByErpId: ReturnType<typeof vi.fn>;
+        setPositionIfExists?: ReturnType<typeof vi.fn>;
     };
     let administratorActivationService: { syncFromErp: ReturnType<typeof vi.fn> };
     let eventBus: { publish: ReturnType<typeof vi.fn> };
@@ -75,18 +76,18 @@ describe('UserEnrichmentService', () => {
             });
         });
 
-        it('writes positionId, clears it on explicit null, and leaves it untouched when undefined', async () => {
-            const admin = { id: 'admin-1', customFields: { erpId: 'user-1', positionId: 'pos-1' } };
+        it('writes the position to the linked ErpUser row, never to Administrator.customFields', async () => {
+            erpUserService.setPositionIfExists = vi.fn();
+            const admin = { id: 'admin-1', customFields: { erpId: 'user-1' } };
             repo.findOne.mockResolvedValue(admin);
 
-            await service.linkAndEnrich(ctx, { erpId: 'user-1', positionId: 'pos-2' });
-            expect(admin.customFields.positionId).toBe('pos-2');
+            await service.linkAndEnrich(ctx, { erpId: 'user-1', positionErpId: 'pos-2' });
+            expect(erpUserService.markLinked).toHaveBeenCalledWith(ctx, 'user-1', 'admin-1');
+            expect(erpUserService.setPositionIfExists).toHaveBeenCalledWith(ctx, 'user-1', 'pos-2');
+            expect(repo.update).not.toHaveBeenCalled();
 
             await service.linkAndEnrich(ctx, { erpId: 'user-1' });
-            expect(admin.customFields.positionId).toBe('pos-2');
-
-            await service.linkAndEnrich(ctx, { erpId: 'user-1', positionId: null });
-            expect(admin.customFields.positionId).toBeNull();
+            expect(erpUserService.setPositionIfExists).toHaveBeenCalledTimes(1);
         });
 
         // Never creates an Administrator — account provisioning stays manual. Issue #119:

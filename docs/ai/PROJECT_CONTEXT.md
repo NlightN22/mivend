@@ -148,7 +148,7 @@ Over-limit deferred order is NOT rejected (flag `creditLimitExceeded`, manager c
 Kafka `CategoryChanged.parent_id` builds the real Collection tree (design: `docs/category-hierarchy.md`); both portals render it (mega-menu/drill-down, `packages/shared/src/collectionTree.ts`); `SEARCH_BACKEND=external` resolves `totalItems`/ranking via search-service. Open: #159 (34 storefront e2e specs), staging products/facets blocked by #69.
 
 ## #117 Position entity (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT.20261005-117-position.md`)
-`Position` (ERP master data) in `plugin-access-control`, fed by the `position` stream; `Administrator.customFields.positionId` = `Position.erpId` is a **soft link** (name resolved on read, no error if absent). erp-import `EmployeeRecord.position` -> `positionErpId`. Dev gotcha: ts-node-dev children can hang in `waitForFile` under load — free load, restart via `make dev`, never raw kill.
+`Position` (ERP master data) in `plugin-access-control`, fed by the `position` stream; #251: renamed `ErpPosition` (`erp_position`); the position lives on `erp_user.positionErpId` (soft link, always written by `UserChanged`, linked or not); `Administrator.customFields.positionId` dropped, Administrator position read via its `erp_user`; `positions` query + pending-list position filter. erp-import `EmployeeRecord.position` -> `positionErpId`. Dev gotcha: ts-node-dev children can hang in `waitForFile` under load — free load, restart via `make dev`, never raw kill.
 
 ## Kafka reference streams #101/#102/#106/#108 (compressed, shipped/audited/closed)
 

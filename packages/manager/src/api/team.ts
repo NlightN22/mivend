@@ -1,6 +1,6 @@
 import { adminApi } from './client';
 import { fetchBranchOptions, type BranchOption } from './orders';
-import { DepartmentsDocument, TeamDirectoryDocument } from './generated/graphql';
+import { DepartmentsDocument, PositionsDocument, TeamDirectoryDocument } from './generated/graphql';
 
 export interface DepartmentOption {
     id: string;
@@ -21,6 +21,11 @@ export interface TeamDirectoryMember {
 export async function fetchDepartments(): Promise<DepartmentOption[]> {
     const result = await adminApi(DepartmentsDocument);
     return result.departments;
+}
+
+export async function fetchPositions(): Promise<DepartmentOption[]> {
+    const result = await adminApi(PositionsDocument);
+    return result.positions;
 }
 
 export { fetchBranchOptions };

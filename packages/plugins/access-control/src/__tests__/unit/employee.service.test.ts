@@ -9,6 +9,7 @@ import type {
 } from '@vendure/core';
 
 import { EmployeeService } from '../../employee.service';
+import type { ErpUserService } from '../../erp-user.service';
 
 function createMockAdministratorService(): Record<string, ReturnType<typeof vi.fn>> {
     return { update: vi.fn(async (..._args: unknown[]) => ({})) } as unknown as Record<
@@ -55,6 +56,7 @@ describe('EmployeeService', () => {
     let roleService: ReturnType<typeof createMockRoleService>;
     let requestContextService: ReturnType<typeof createMockRequestContextService>;
     let service: EmployeeService;
+    let erpUserService: { setPositionIfExists: ReturnType<typeof vi.fn> };
     const ctx = {} as unknown as RequestContext;
     const systemCtx = { __system: true } as unknown as RequestContext;
 
@@ -75,11 +77,30 @@ describe('EmployeeService', () => {
         administratorService = createMockAdministratorService();
         roleService = createMockRoleService();
         requestContextService = createMockRequestContextService(systemCtx);
+        erpUserService = { setPositionIfExists: vi.fn() };
         service = new EmployeeService(
             connection as unknown as TransactionalConnection,
             administratorService as unknown as AdministratorService,
             requestContextService as unknown as RequestContextService,
             roleService as unknown as RoleService,
+            erpUserService as unknown as ErpUserService,
+        );
+    });
+
+    it('writes the position to the ERP user, not to the Administrator', async () => {
+        adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
+        await service.upsert(ctx, {
+            erpId: 'emp-1',
+            email: 'admin@example.com',
+            departmentErpId: 'dept-sales',
+            positionErpId: 'pos-1',
+        });
+        expect(erpUserService.setPositionIfExists).toHaveBeenCalledWith(ctx, 'emp-1', 'pos-1');
+        expect(administratorService.update).toHaveBeenCalledWith(
+            systemCtx,
+            expect.objectContaining({
+                customFields: { departmentId: 'dept-sales', branchId: null },
+            }),
         );
     });
 
@@ -110,7 +131,6 @@ describe('EmployeeService', () => {
                 customFields: {
                     departmentId: 'dept-sales',
                     branchId: 'branch-row-5',
-                    positionId: null,
                 },
             }),
         );
@@ -128,7 +148,7 @@ describe('EmployeeService', () => {
         expect(administratorService.update).toHaveBeenCalledWith(
             systemCtx,
             expect.objectContaining({
-                customFields: { departmentId: 'dept-sales', branchId: null, positionId: null },
+                customFields: { departmentId: 'dept-sales', branchId: null },
             }),
         );
     });
@@ -144,7 +164,7 @@ describe('EmployeeService', () => {
         expect(administratorService.update).toHaveBeenCalledWith(
             systemCtx,
             expect.objectContaining({
-                customFields: { departmentId: 'dept-sales', branchId: null, positionId: null },
+                customFields: { departmentId: 'dept-sales', branchId: null },
             }),
         );
     });

@@ -6,6 +6,14 @@ query Departments {
     }
 }
 
+query Positions {
+    positions {
+        id
+        erpId
+        name
+    }
+}
+
 query TeamDirectory {
     teamDirectory {
         id

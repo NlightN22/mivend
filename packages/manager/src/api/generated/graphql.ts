@@ -108,7 +108,6 @@ export type AdministratorCustomFields = {
     branchId: Maybe<Scalars['String']['output']>;
     departmentId: Maybe<Scalars['String']['output']>;
     erpId: Maybe<Scalars['String']['output']>;
-    positionId: Maybe<Scalars['String']['output']>;
     sourceAdministratorId: Maybe<Scalars['String']['output']>;
 };
 
@@ -124,7 +123,6 @@ export type AdministratorFilterParameter = {
     id?: InputMaybe<IdOperators>;
     isActive?: InputMaybe<BooleanOperators>;
     lastName?: InputMaybe<StringOperators>;
-    positionId?: InputMaybe<StringOperators>;
     sourceAdministratorId?: InputMaybe<StringOperators>;
     updatedAt?: InputMaybe<DateOperators>;
 };
@@ -172,7 +170,6 @@ export type AdministratorSortParameter = {
     firstName?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     lastName?: InputMaybe<SortOrder>;
-    positionId?: InputMaybe<SortOrder>;
     sourceAdministratorId?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
 };
@@ -2382,6 +2379,14 @@ export type EntityVersionListOptions = {
     take?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type ErpPosition = {
+    erpId: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    isActive: Scalars['Boolean']['output'];
+    name: Scalars['String']['output'];
+    parentErpId: Maybe<Scalars['String']['output']>;
+};
+
 export type ErpReconciliationIssue = {
     aggregateType: Scalars['String']['output'];
     detectedAt: Scalars['DateTime']['output'];
@@ -2415,6 +2420,8 @@ export type ErpUser = Node & {
     fullName: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
     lastSeenAt: Scalars['DateTime']['output'];
+    position: Maybe<Scalars['String']['output']>;
+    positionErpId: Maybe<Scalars['String']['output']>;
     status: Scalars['String']['output'];
 };
 
@@ -2429,6 +2436,8 @@ export type ErpUserFilterParameter = {
     fullName?: InputMaybe<StringOperators>;
     id?: InputMaybe<IdOperators>;
     lastSeenAt?: InputMaybe<DateOperators>;
+    position?: InputMaybe<StringOperators>;
+    positionErpId?: InputMaybe<StringOperators>;
     status?: InputMaybe<StringOperators>;
 };
 
@@ -2454,6 +2463,8 @@ export type ErpUserSortParameter = {
     fullName?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     lastSeenAt?: InputMaybe<SortOrder>;
+    position?: InputMaybe<SortOrder>;
+    positionErpId?: InputMaybe<SortOrder>;
     status?: InputMaybe<SortOrder>;
 };
 
@@ -7433,6 +7444,7 @@ export type Query = {
     pendingPriceAdjustmentOrderIds: Array<Scalars['String']['output']>;
     pendingSearchIndexUpdates: Scalars['Int']['output'];
     portalUsers: AdministratorList;
+    positions: Array<ErpPosition>;
     /** Used for real-time previews of the contents of a Collection */
     previewCollectionVariants: ProductVariantList;
     priceAdjustmentRequestsForOrder: Array<ApprovalRequest>;
@@ -12221,6 +12233,10 @@ export type DepartmentsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type DepartmentsQuery = { departments: Array<{ id: string; erpId: string; name: string }> };
 
+export type PositionsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type PositionsQuery = { positions: Array<{ id: string; erpId: string; name: string }> };
+
 export type TeamDirectoryQueryVariables = Exact<{ [key: string]: never }>;
 
 export type TeamDirectoryQuery = {
@@ -12283,6 +12299,8 @@ export type PendingErpUsersPageQuery = {
             fullName: string | null;
             email: string | null;
             departmentId: string | null;
+            positionErpId: string | null;
+            position: string | null;
         }>;
     };
 };
@@ -15424,6 +15442,15 @@ export const DepartmentsDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<DepartmentsQuery, DepartmentsQueryVariables>;
+export const PositionsDocument = new TypedDocumentString(`
+    query Positions {
+  positions {
+    id
+    erpId
+    name
+  }
+}
+    `) as unknown as TypedDocumentString<PositionsQuery, PositionsQueryVariables>;
 export const TeamDirectoryDocument = new TypedDocumentString(`
     query TeamDirectory {
   teamDirectory {
@@ -15484,6 +15511,8 @@ export const PendingErpUsersPageDocument = new TypedDocumentString(`
       fullName
       email
       departmentId
+      positionErpId
+      position
     }
     totalItems
   }

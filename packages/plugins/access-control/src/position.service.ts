@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
-import { Position } from './entities/position.entity';
+import { ErpPosition } from './entities/erp-position.entity';
 import { loggerCtx } from './types';
 
 export interface PositionRecordInput {
@@ -16,8 +16,8 @@ export interface PositionRecordInput {
 export class PositionService {
     constructor(private connection: TransactionalConnection) {}
 
-    async upsert(ctx: RequestContext, record: PositionRecordInput): Promise<Position> {
-        const repo = this.connection.getRepository(ctx, Position);
+    async upsert(ctx: RequestContext, record: PositionRecordInput): Promise<ErpPosition> {
+        const repo = this.connection.getRepository(ctx, ErpPosition);
         const existing = await repo.findOne({ where: { erpId: record.erpId } });
         const saved = await repo.save(
             existing ? Object.assign(existing, record) : repo.create(record),
@@ -32,7 +32,7 @@ export class PositionService {
         erpId: string,
         isActive: boolean,
     ): Promise<boolean> {
-        const repo = this.connection.getRepository(ctx, Position);
+        const repo = this.connection.getRepository(ctx, ErpPosition);
         const position = await repo.findOne({ where: { erpId } });
         if (!position) return false;
         position.isActive = isActive;
@@ -43,8 +43,12 @@ export class PositionService {
     async findNamesByErpIds(ctx: RequestContext, erpIds: string[]): Promise<Map<string, string>> {
         if (erpIds.length === 0) return new Map();
         const rows = await this.connection
-            .getRepository(ctx, Position)
+            .getRepository(ctx, ErpPosition)
             .find({ where: { erpId: In(erpIds) } });
         return new Map(rows.map(p => [p.erpId, p.name]));
+    }
+
+    async findAll(ctx: RequestContext): Promise<ErpPosition[]> {
+        return this.connection.getRepository(ctx, ErpPosition).find({ order: { name: 'ASC' } });
     }
 }

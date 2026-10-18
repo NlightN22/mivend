@@ -62,6 +62,8 @@ export interface PendingErpUserRow {
     fullName: string | null;
     email: string | null;
     departmentId: string | null;
+    positionErpId: string | null;
+    position: string | null;
 }
 
 export async function fetchPendingErpUsers(

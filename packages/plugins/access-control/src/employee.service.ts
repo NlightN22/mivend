@@ -15,6 +15,7 @@ import {
 } from '@vendure/core';
 
 import { Branch } from './entities/branch.entity';
+import { ErpUserService } from './erp-user.service';
 import { loggerCtx } from './types';
 
 export interface EmployeeRecordInput {
@@ -25,7 +26,7 @@ export interface EmployeeRecordInput {
     // Raw ERP ids are a different value space; every branchId consumer expects Branch.id.
     branchErpId?: string | null;
     roleCode?: string | null;
-    // Position.erpId, stored as-is (name resolved from the Position entity on read).
+    // ErpPosition.erpId, stored on the ERP user, not on the Administrator.
     positionErpId?: string | null;
 }
 
@@ -38,6 +39,7 @@ export class EmployeeService {
         private administratorService: AdministratorService,
         private requestContextService: RequestContextService,
         private roleService: RoleService,
+        private erpUserService: ErpUserService,
     ) {}
 
     async upsert(ctx: RequestContext, record: EmployeeRecordInput): Promise<void> {
@@ -59,7 +61,6 @@ export class EmployeeService {
             customFields: {
                 departmentId: record.departmentErpId,
                 branchId,
-                positionId: record.positionErpId ?? null,
             },
         };
 
@@ -77,6 +78,11 @@ export class EmployeeService {
         // Elevate to the bootstrap SuperAdmin only for this call, not the whole batch.
         const systemCtx = await this.getSystemContext(ctx);
         await this.administratorService.update(systemCtx, updateInput);
+        await this.erpUserService.setPositionIfExists(
+            ctx,
+            record.erpId,
+            record.positionErpId ?? null,
+        );
         Logger.verbose(
             `Assigned department=${record.departmentErpId} branch=${branchId ?? 'null'} to administrator ${record.email}`,
             loggerCtx,

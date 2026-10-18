@@ -99,13 +99,12 @@ export type InboundStream =
     | 'order-cancel-result'
     // Feeds Department in @mivend/plugin-access-control; sourced from company.customers, not catalog/orders.
     | 'department'
-    // Job-position master data (company.customers) — feeds Position in @mivend/plugin-access-control.
+    // Job-position master data (company.customers) — feeds ErpPosition in @mivend/plugin-access-control.
     | 'position'
     // Partial create only: creditLimit/paymentDelayDays/priceType/branchId are erp-import/REST-only and
     // never fabricated here. creditBalance arrives on its own stream (counterparty-credit-balance).
     | 'counterparty'
     // Enrichment only: never creates an Administrator, just matches by email to set erpId/departmentId.
-    // role/positionId deliberately not consumed yet; the Position entity design is not finalized.
     | 'user'
     // creditBalance comes from the accumulation register, independent of CounterpartyChanged's own
     // trigger, so balance updates do not depend on the counterparty catalog stream.
