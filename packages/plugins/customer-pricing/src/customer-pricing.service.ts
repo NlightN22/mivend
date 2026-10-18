@@ -153,37 +153,46 @@ export class CustomerPricingService {
         isActive: boolean,
         purchaseRule: PurchaseRule = { isPurchase: false, ceilingMultiplier: null },
     ): Promise<PriceType> {
-        return withAggregateLock(
-            this.connection,
-            ctx,
-            `price-type-external:${externalId}`,
-            async txCtx => {
-                const repo = this.connection.getRepository(txCtx, PriceType);
-                const rule = {
-                    isPurchase: purchaseRule.isPurchase,
-                    ceilingMultiplier: purchaseRule.isPurchase
-                        ? purchaseRule.ceilingMultiplier
-                        : null,
-                };
-                if (rule.isPurchase) {
-                    await repo
-                        .createQueryBuilder()
-                        .update()
-                        .set({ isPurchase: false, ceilingMultiplier: null })
-                        .where('"isPurchase" = true AND "externalId" <> :externalId', {
-                            externalId,
-                        })
-                        .execute();
-                }
-                const existing = await repo.findOne({ where: { externalId } });
-                if (existing) {
-                    Object.assign(existing, { name, isActive }, rule);
-                    return repo.save(existing);
-                }
-                const code = await this.generateUniqueCode(txCtx, name);
-                return repo.save(repo.create({ externalId, code, name, isActive, ...rule }));
-            },
-        );
+        const upsert = (lockCtx: RequestContext): Promise<PriceType> =>
+            withAggregateLock(
+                this.connection,
+                lockCtx,
+                `price-type-external:${externalId}`,
+                txCtx => this.upsertLocked(txCtx, externalId, name, isActive, purchaseRule),
+            );
+        // Purchase-flag changes on different external ids all contend on IDX_price_type_single_purchase.
+        return purchaseRule.isPurchase
+            ? withAggregateLock(this.connection, ctx, PURCHASE_FLAG_LOCK_KEY, upsert)
+            : upsert(ctx);
+    }
+
+    private async upsertLocked(
+        txCtx: RequestContext,
+        externalId: string,
+        name: string,
+        isActive: boolean,
+        purchaseRule: PurchaseRule,
+    ): Promise<PriceType> {
+        const repo = this.connection.getRepository(txCtx, PriceType);
+        const rule = {
+            isPurchase: purchaseRule.isPurchase,
+            ceilingMultiplier: purchaseRule.isPurchase ? purchaseRule.ceilingMultiplier : null,
+        };
+        if (rule.isPurchase) {
+            await repo
+                .createQueryBuilder()
+                .update()
+                .set({ isPurchase: false, ceilingMultiplier: null })
+                .where('"isPurchase" = true AND "externalId" <> :externalId', { externalId })
+                .execute();
+        }
+        const existing = await repo.findOne({ where: { externalId } });
+        if (existing) {
+            Object.assign(existing, { name, isActive }, rule);
+            return repo.save(existing);
+        }
+        const code = await this.generateUniqueCode(txCtx, name);
+        return repo.save(repo.create({ externalId, code, name, isActive, ...rule }));
     }
 
     private async generateUniqueCode(ctx: RequestContext, name: string): Promise<string> {
@@ -198,6 +207,8 @@ export class CustomerPricingService {
         return candidate;
     }
 }
+
+const PURCHASE_FLAG_LOCK_KEY = 'price-type-purchase-flag';
 
 const CYRILLIC_TO_LATIN: Record<string, string> = {
     а: 'a',

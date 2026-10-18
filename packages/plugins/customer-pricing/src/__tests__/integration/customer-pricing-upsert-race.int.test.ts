@@ -22,6 +22,10 @@ import { CustomerPricingService } from '../../customer-pricing.service';
 
 // VendureEntity's primary column needs a bootstrapped EntityIdStrategy; a bare DataSource has none.
 @Entity('price_type')
+@Index('IDX_price_type_single_purchase', ['isPurchase'], {
+    unique: true,
+    where: '"isPurchase" = true',
+})
 class TestPriceType {
     @PrimaryGeneratedColumn() id!: number;
     @Index({ unique: true }) @Column({ type: 'varchar' }) code!: string;
@@ -123,6 +127,23 @@ describe('CustomerPricingService upserts (integration, real Postgres)', () => {
         expect(rows.map((r: { isPurchase: boolean }) => r.isPurchase)).toEqual([false, true]);
         expect(rows[0].ceilingMultiplier).toBeNull();
         expect(Number(rows[1].ceilingMultiplier)).toBe(1.5);
+    });
+
+    it('concurrent purchase upserts of different external ids leave one purchase type and no unique violation', async () => {
+        await Promise.all(
+            ['ext-1', 'ext-2', 'ext-3'].map(id =>
+                service.upsertPriceTypeByExternalId(ctx, id, `Purchase ${id}`, true, {
+                    isPurchase: true,
+                    ceilingMultiplier: 1.2,
+                }),
+            ),
+        );
+
+        const rows = await dataSource.query(
+            `SELECT "isPurchase" FROM price_type WHERE "isPurchase" = true`,
+        );
+        expect(rows).toHaveLength(1);
+        expect(await dataSource.getRepository(TestPriceType).count()).toBe(3);
     });
 
     it('concurrent first assignments for one customer leave a single row on the last-committed type', async () => {
