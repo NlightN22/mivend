@@ -1,6 +1,12 @@
 # Project Context
 
-Updated: 2026-10-18 19:30
+Updated: 2026-10-18 21:00
+
+## #247 repeat payment delivery (2026-10-18, DONE: audited 2 rounds, pushed, closed)
+- `PaymentAttemptService.payProformaInvoice`: an existing attempt with the same (channel, externalReference) that is `pending` is resolved to `captured`/`failed`/`canceled` (`payment-status-transition.ts`) under `proformaInvoices-for-order:<id>` + row `FOR UPDATE`; only a capture allocates, once. Final statuses never rewind.
+- A capture after `failed`/`canceled` -> reconciliation issue `INVALID_STATE_TRANSITION`; same reference for another proforma -> `ORDER_MISMATCH`. `PaymentReconciliationIssueService.report` reuses the open issue with the same type/reference/proforma (at-least-once inbox).
+- Read-only payment queries live in `PaymentAttemptQueryService` (writer kept under 300 lines).
+- Only the branch-kassa channel (RRN) can realistically hit this today; ERP payments use a unique erpEventId, online acquiring is still a stub.
 
 ## #248 core Admin API order scope + #251 / #252 + dev kill scripts (2026-10-18, DONE: audited, pushed, closed)
 - #248: one APP_INTERCEPTOR (`erp-order/src/core-order-scope/`) checks every core Admin API order operation against `OrderVisibilityService`; inventory in `CORE_ORDER_OPERATIONS` + `docs/access-control.md`; `orders`/`Customer.orders`/`OrderLine.order`/stock-movement `orderLine` overridden by scoped resolvers; out of scope = EntityNotFound; superadmin bypasses. A unit guard test walks core's SDL and fails on an unlisted order operation. Verified on staging-integration under a real manager (52 own of 62 orders, foreign order "not found").
@@ -16,7 +22,7 @@ Updated: 2026-10-18 19:30
 - Access: department-head has `ConfirmOrder` and can reassign managers; operator/manager see the whole branch team; teamDirectory/approval escalation bypass Vendure 3.7.3 `restrictToVisibleAdministrators`.
 - e2e: skill `.claude/skills/e2e-rules` (seed data via `make seed`, tests follow UI, idempotent cleanup of orders/reservations, scoped batches under flock, checklist + audit). Full `make e2e` only on explicit request. Cart specs open `/catalog?inStock=1` (seed has an intentional zero-stock item). erp-import has a `manufacturer` record + product `manufacturerCode` (seed: manufacturer-a/-b). Nameless placeholder manufacturer before its record = designed (#164).
 - Stuck dev worker child (high CPU, queue not drained) breaks document/PDF specs: kill only that child.
-- Follow-ups: #247 pending->captured callback with same externalReference dropped; #248 core Admin API order operations (read and write: `orders`, `order`, `transitionOrderToState`, `modifyOrder`, payments...) bypass mivend order scope; needs one central guard.
+- Follow-ups: #247 (done 2026-10-18, see above); #248 core Admin API order operations (read and write: `orders`, `order`, `transitionOrderToState`, `modifyOrder`, payments...) bypass mivend order scope; needs one central guard.
 
 ## #242 / #243 / #244 manager-action checks (2026-10-17, DONE: audited twice, pushed, closed)
 - Manager actions (`extend-reservation`, `extend-credit-term`, `adjust-price`) run through the checks framework: ephemeral `manager` subject (`ChecksService.evaluate`, no lock, no storage), policy `recipient` in `CheckContext`. Credit-term recipient (`department-head`) comes from migration `1791520000000` or, on `synchronize` contours, `make seed-all` (seed-approvals); unseeded means every request escalates (docs/environments.md).
@@ -48,16 +54,8 @@ Updated: 2026-10-18 19:30
 
 - Names are `<writer>.<entity>.<kind>.<version>`: ERP writes `erp.<entity>.events.v1`, mivend writes `mivend.order.commands.v1`. One consumer for `erp.order.events.v1` (`order-events-message.ts`) routes by header `type` to the inbox streams `order-registration-result` / `order-changed` / `order-cancel-result`; `change-result` and unknown types are skipped. Verified live on staging-integration.
 
-## #215 / #224 / #227 historical ERP orders and settlement documents (2026-10-13, closed, on main; follow-ups #228/#229/#226)
-
-- **External orders (#215)**: an `order-changed` with no `orderUuid` and no `erpOrderId` match becomes an `Order` with `isExternal`, direct `counterpartyId` (pending until the counterparty exists, then attached by event + periodic reconcile), no Customer, state written directly from `erpStatus` (forward-only), read-only (transition guard, no reserve/cancel/proforma/confirm, no access by code). Visibility everywhere by `counterpartyId` (COALESCE with the customer's counterparty for drafts). Storefront "My orders": From ERP badge, source filter, ERP document number. Migration adds a unique partial index on `erpOrderId`: a DB with duplicates stops with a clear error. Decisions in `docs/order-contracts.md`.
-- **Settlement documents (#224)**: plugin `packages/plugins/settlement` (documents -> entries per organization/counterparty/contract triple -> order links, balances per triple). Streams `settlement-document-changed`, `settlement-balance-changed`, `settlement-document-type-changed` (event-contracts 0.68.x). Key = ERP document uuid; whole-entries replace; tombstones kept 2x the retention period; `closing_balance` authoritative, never summed; pending references attached by events and a periodic reconcile; retention cleaner (period `settlementRetentionMonths`, default 12, in the Vendure admin).
-- **Customer visibility fails closed (#227)**: a document is shown only if its type is `customerVisible` in the ERP reference AND its contract has `isCustomerContract` (true also for employee contracts, salary types are invisible). Categories (sale/payment/return/correction/bonus) come from the reference. The two interim admin settings were removed.
-- **Payment term vs amount limit (docs/payments.md)**: the term is the counterparty's `paymentDelayDays` (own `debtDaysLimit` for an individually controlled contract); `Contract.paymentDelayDays` is empty in 1C, never read; no term = no due date, nothing overdue. Currency arrives as ISO numeric (643), the API returns alphabetic.
-- **Storefront menu**: Account statement (`/settlements`) + collapsible Documents group (Proforma invoices, Contracts and files, Reconciliation acts placeholder). The old Payments page was removed by owner decision.
-- **Fractional quantities**: Vendure `OrderLine.quantity` is an integer; sell measured goods in a small base unit (ml, g) (docs/order-flow.md).
-- **Contour facts**: ERP seeds only a debt-covering window (+12 months) per triple, so old paid contracts have no documents (verified with search-platform). 12.8k failed `stock` rows on staging-integration came from a hidden warehouse tombstone (fixed, rows stay failed). `ts-node-dev` children can spin at 90% CPU and never listen: kill the children by PID, `touch` a file to respawn; never `pkill -f` with a pattern that matches your own shell.
-
+## #215 / #224 / #227 ERP orders + settlement documents (closed; full text: `.backup/PROJECT_CONTEXT-2026-10-18-215-224-227-full.md`)
+- External ERP orders are read-only `isExternal` orders seen by `counterpartyId`; settlement plugin keeps ERP documents/balances per organization/counterparty/contract (`closing_balance` authoritative); customer visibility fails closed (`customerVisible` type AND `isCustomerContract`). Payment term = counterparty `paymentDelayDays` (docs/payments.md). Measured goods sell in a small base unit (integer quantity).
 
 ## #206 proforma invoices + #222 form of payment vs terms (2026-10-12..15, done, audited 3 rounds, pushed `865ed997`, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-15-206-222-sections-full.md`)
 
