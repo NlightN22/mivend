@@ -12,6 +12,9 @@
     "peerDependencies": {
         "@vendure/core": "^3.7.3"
     },
+    "dependencies": {
+        "shared": "workspace:*"
+    },
     "devDependencies": {
         "@nestjs/common": "^11.0.0",
         "@vendure/core": "^3.7.3",
