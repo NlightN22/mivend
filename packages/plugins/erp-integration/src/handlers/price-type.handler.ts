@@ -7,7 +7,7 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 const loggerCtx = 'IntegrationPriceTypeHandler';
 
 // entityId is the ERP's own GUID; it must match PriceChanged.priceTypeId (see PriceStreamHandler).
-// Only name/isActive are mapped; currency and multiplier fields are deliberately skipped.
+// Maps name/isActive and the purchase-type rule (isPurchasePriceType, ceilingPriceMultiplier); currency is skipped.
 @Injectable()
 export class PriceTypeStreamHandler implements InboundStreamHandler {
     constructor(private readonly customerPricingService: CustomerPricingService) {}
@@ -24,11 +24,18 @@ export class PriceTypeStreamHandler implements InboundStreamHandler {
         // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
         // zero-value omission).
         const isActive = payload.isActive === true;
+        const isPurchase = payload.isPurchasePriceType === true;
+        const multiplier = Number(payload.ceilingPriceMultiplier);
         await this.customerPricingService.upsertPriceTypeByExternalId(
             ctx,
             entityId,
             name,
             isActive,
+            {
+                isPurchase,
+                ceilingMultiplier:
+                    Number.isFinite(multiplier) && multiplier > 0 ? multiplier : null,
+            },
         );
         Logger.verbose(`Upserted price type externalId=${entityId}`, loggerCtx);
         return inboundApplied();

@@ -30,6 +30,11 @@ class TestPriceType {
     @Index({ unique: true }) @Column({ type: 'varchar', nullable: true }) externalId!:
         | string
         | null;
+    @Column({ type: 'varchar', default: 'confidential' }) visibility!: string;
+    @Column({ type: 'boolean', default: false }) isPurchase!: boolean;
+    @Column({ type: 'numeric', precision: 12, scale: 6, nullable: true }) ceilingMultiplier!:
+        | string
+        | null;
 }
 
 @Entity('customer_price_type')
@@ -100,6 +105,24 @@ describe('CustomerPricingService upserts (integration, real Postgres)', () => {
         ]);
 
         expect(await dataSource.getRepository(TestPriceType).count()).toBe(1);
+    });
+
+    it('a second purchase type takes the flag from the first (exactly one purchase type)', async () => {
+        await service.upsertPriceTypeByExternalId(ctx, 'ext-1', 'Purchase', true, {
+            isPurchase: true,
+            ceilingMultiplier: 1.2,
+        });
+        await service.upsertPriceTypeByExternalId(ctx, 'ext-2', 'Other', true, {
+            isPurchase: true,
+            ceilingMultiplier: 1.5,
+        });
+
+        const rows = await dataSource.query(
+            `SELECT "externalId", "isPurchase", "ceilingMultiplier" FROM price_type ORDER BY "externalId"`,
+        );
+        expect(rows.map((r: { isPurchase: boolean }) => r.isPurchase)).toEqual([false, true]);
+        expect(rows[0].ceilingMultiplier).toBeNull();
+        expect(Number(rows[1].ceilingMultiplier)).toBe(1.5);
     });
 
     it('concurrent first assignments for one customer leave a single row on the last-committed type', async () => {

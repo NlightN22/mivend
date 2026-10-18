@@ -241,6 +241,8 @@ describe('CustomerPricingService', () => {
                 code: 'wholesale',
                 name: 'Wholesale',
                 isActive: true,
+                isPurchase: false,
+                ceilingMultiplier: null,
             });
             expect(result).toEqual(created);
         });

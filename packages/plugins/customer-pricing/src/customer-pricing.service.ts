@@ -16,6 +16,11 @@ import { PriceType } from './entities/price-type.entity';
 import { mainContractPriceTypeIdSql } from './main-contract-price-type.sql';
 import { CustomerPricingPluginOptions } from './types';
 
+export interface PurchaseRule {
+    isPurchase: boolean;
+    ceilingMultiplier: number | null;
+}
+
 @Injectable()
 export class CustomerPricingService {
     constructor(
@@ -146,6 +151,7 @@ export class CustomerPricingService {
         externalId: string,
         name: string,
         isActive: boolean,
+        purchaseRule: PurchaseRule = { isPurchase: false, ceilingMultiplier: null },
     ): Promise<PriceType> {
         return withAggregateLock(
             this.connection,
@@ -153,14 +159,29 @@ export class CustomerPricingService {
             `price-type-external:${externalId}`,
             async txCtx => {
                 const repo = this.connection.getRepository(txCtx, PriceType);
+                const rule = {
+                    isPurchase: purchaseRule.isPurchase,
+                    ceilingMultiplier: purchaseRule.isPurchase
+                        ? purchaseRule.ceilingMultiplier
+                        : null,
+                };
+                if (rule.isPurchase) {
+                    await repo
+                        .createQueryBuilder()
+                        .update()
+                        .set({ isPurchase: false, ceilingMultiplier: null })
+                        .where('"isPurchase" = true AND "externalId" <> :externalId', {
+                            externalId,
+                        })
+                        .execute();
+                }
                 const existing = await repo.findOne({ where: { externalId } });
                 if (existing) {
-                    existing.name = name;
-                    existing.isActive = isActive;
+                    Object.assign(existing, { name, isActive }, rule);
                     return repo.save(existing);
                 }
                 const code = await this.generateUniqueCode(txCtx, name);
-                return repo.save(repo.create({ externalId, code, name, isActive }));
+                return repo.save(repo.create({ externalId, code, name, isActive, ...rule }));
             },
         );
     }

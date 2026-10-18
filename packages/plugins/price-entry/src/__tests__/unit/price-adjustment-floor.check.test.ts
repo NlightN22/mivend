@@ -3,14 +3,14 @@ import type { RequestContext } from '@vendure/core';
 import { CheckRegistry, MANAGER_STAGES, MANAGER_SUBJECT_TYPE } from '@mivend/plugin-checks';
 
 import { PriceAdjustmentFloorCheck } from '../../price-adjustment-floor.check';
-import type { PriceEntryService } from '../../price-entry.service';
+import type { FloorPriceService } from '../../floor-price.service';
 
 const ctx = {} as RequestContext;
 
 function run(floor: number | null, requestedPrice: number) {
     const check = new PriceAdjustmentFloorCheck(new CheckRegistry(), {
-        getForVariant: vi.fn(async () => floor),
-    } as unknown as PriceEntryService);
+        forVariants: vi.fn(async () => (floor === null ? new Map() : new Map([['v1', floor]]))),
+    } as unknown as FloorPriceService);
     return check.evaluate(
         { roleCodes: [], branchId: null, params: { variantId: 'v1', requestedPrice } },
         { ctx, stage: 'adjust-price', recipient: null },

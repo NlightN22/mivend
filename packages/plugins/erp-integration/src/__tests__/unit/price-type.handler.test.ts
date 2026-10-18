@@ -30,6 +30,7 @@ describe('PriceTypeStreamHandler', () => {
             'guid-1',
             'Wholesale',
             false,
+            { isPurchase: false, ceilingMultiplier: null },
         );
     });
 
@@ -46,6 +47,30 @@ describe('PriceTypeStreamHandler', () => {
             'guid-1',
             'Wholesale',
             true,
+            { isPurchase: false, ceilingMultiplier: null },
         );
+    });
+});
+
+describe('PriceTypeStreamHandler purchase rule', () => {
+    const ctx = {} as RequestContext;
+    const run = async (payload: Record<string, unknown>) => {
+        const svc = { upsertPriceTypeByExternalId: vi.fn().mockResolvedValue({}) };
+        await new PriceTypeStreamHandler(svc as never).apply(ctx, 'g', { name: 'N', ...payload });
+        return svc.upsertPriceTypeByExternalId.mock.calls[0][4];
+    };
+
+    it('passes the purchase flag and multiplier through', async () => {
+        expect(await run({ isPurchasePriceType: true, ceilingPriceMultiplier: 1.25 })).toEqual({
+            isPurchase: true,
+            ceilingMultiplier: 1.25,
+        });
+    });
+
+    it('treats an absent flag as non-purchase and drops an invalid multiplier', async () => {
+        expect(await run({ ceilingPriceMultiplier: 0 })).toEqual({
+            isPurchase: false,
+            ceilingMultiplier: null,
+        });
     });
 });
