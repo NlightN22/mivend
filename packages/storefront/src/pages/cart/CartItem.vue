@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { IconPackage } from '@tabler/icons-vue';
-import { MvStatusBadge, MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit';
+import { MvFavoriteButton, MvStatusBadge, MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit';
 import { assetUrl } from '../../composables/assetUrl';
 import { useFavoritesStore } from '../../stores/favorites';
 import { useCartStore, type CartLine } from '../../stores/cart';
