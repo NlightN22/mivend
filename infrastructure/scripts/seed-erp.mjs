@@ -418,7 +418,7 @@ async function ensureBranchSettingsSeeded() {
     // the comment above: this column is a raw, non-FK string, and each branch's real warehouse(s)
     // get seeded separately via seed-warehouses-via-inbox.mjs, which does not depend on this
     // placeholder value at all.
-    const branchIds = ['branch-central', 'branch-east'];
+    const branchIds = ['branch-central', 'branch-east', '1'];
     for (const branchId of branchIds) {
         await adminGraphqlWithSession(
             `mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $defaultWarehouseId: String!) {
@@ -481,7 +481,7 @@ async function main() {
     // v11: contract records — the scheduled credit-limit job derives limit/days from contracts.
     // v12: the checkout buyers' contracts carry a seeded organization, so the contract guard passes.
     // v13 (#231): manufacturer records; products reference one via manufacturerCode.
-    const run = 'v14';
+    const run = 'v15';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
