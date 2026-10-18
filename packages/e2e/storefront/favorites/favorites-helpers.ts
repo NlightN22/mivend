@@ -49,6 +49,11 @@ export function setupPackSales(packagesOnly: boolean): PackSetup {
         .split('\n')
         .filter(Boolean)
         .map(row => row.split('|'));
+    const unit = psql(
+        `SELECT COALESCE("customFieldsUnitname", '') || '|' || COALESCE("customFieldsUnitratiotobase"::text, '') FROM product_variant WHERE sku = '${PACK_SKU}'`,
+    )
+        .trim()
+        .split('|');
     setUnit(PACK_SKU, 'box', PACK_SIZE);
     psql(`UPDATE branch_settings SET "packagesOnly" = ${packagesOnly}`);
     return {
@@ -58,7 +63,7 @@ export function setupPackSales(packagesOnly: boolean): PackSetup {
                     `UPDATE branch_settings SET "packagesOnly" = ${flag === 't'} WHERE "branchId" = '${branchId}'`,
                 );
             }
-            setUnit(PACK_SKU, null, null);
+            setUnit(PACK_SKU, unit[0] || null, unit[1] ? Number(unit[1]) : null);
         },
     };
 }

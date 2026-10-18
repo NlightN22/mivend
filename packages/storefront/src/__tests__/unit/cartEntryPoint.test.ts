@@ -14,7 +14,7 @@ function sourceFiles(dir: string): string[] {
 }
 
 describe('cart entry point', () => {
-    it('calls cartStore.addItem only through useCartActions', () => {
+    it('no source text calls addItem( outside the cart store and useCartActions (text guard, aliases are not detected)', () => {
         const offenders = sourceFiles(SRC)
             .filter(f => !ALLOWED.includes(relative(SRC, f)))
             .filter(f => /\baddItem\(/.test(readFileSync(f, 'utf8')))

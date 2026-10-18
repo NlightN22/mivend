@@ -14,6 +14,7 @@ const props = withDefaults(
         mode: 'row' | 'card';
         showPrices?: boolean;
     }>(),
+    // undefined keeps the prop unset so Vue does not cast an omitted boolean to false
     { showPrices: undefined },
 );
 
