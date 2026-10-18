@@ -4,3 +4,4 @@ dist/
 *.hbs
 *.md
 mockServiceWorker.js
+pnpm-lock.yaml
