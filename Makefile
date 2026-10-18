@@ -12,7 +12,7 @@ export
 .PHONY: up up-rebuild down logs ps restart \
         build lint fmt ci \
         test test-int test-e2e mutation-pilot \
-        e2e e2e-smoke e2e-cart e2e-ui e2e-report \
+        e2e e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
         docker-build docker-push \
         preview-build preview-up preview-down \
         prod-up prod-down \
@@ -353,6 +353,11 @@ e2e-ui:
 # Not part of `make e2e`/CI; SIGSTOPs the real local dev server, takes a few minutes.
 e2e-resilience:
 	E2E_RESILIENCE=1 pnpm --filter @mivend/e2e test:resilience
+
+# Manual order exchange suite against a running `make dev-staging-integration` (#255); never in CI.
+# May restart that contour. Subset: make e2e-integration E2E_ARGS="01-placement".
+e2e-integration:
+	pnpm --filter @mivend/e2e test:integration $(E2E_ARGS)
 
 e2e-report:
 	pnpm --filter @mivend/e2e report

@@ -30,6 +30,22 @@ Auth state is stored in `packages/e2e/.auth/storefront-user.json` and
 Delete these files if tests fail with auth errors after a server restart — Playwright recreates
 them via `global-setup`.
 
+## Staging-integration order exchange suite (`make e2e-integration`, #255)
+
+Manual only, never in `make e2e`/CI: `packages/e2e/integration/` with its own
+`playwright.integration.config.ts`. Needs a running `make dev-staging-integration`; reads URLs,
+the test customer (`STAGING_TEST_CUSTOMER_*`), the superadmin and the optional manager login
+(`STAGING_TEST_MANAGER_*`) from `apps/server/.env.central.staging-integration`. It builds a mixed
+cart from the live catalog, checks out and cancels in the UI, and checks the contour DB with
+read-only SELECTs (`docker exec ... psql`, `default_transaction_read_only`). Scenarios: placement
+(RESERVED, one `order.confirmed`), ERP registration, repeated placement, registration quantities vs
+local reservations, storefront and manager cancel, cancel before the outbox publishes (restarts the
+contour with an unreachable schema registry and restores it), cleanup. The first ERP wait decides
+for the run whether the exchange answers; ERP-dependent scenarios are skipped, not failed, when it
+does not. Teardown restores the contour, cancels every order of the run (staff cancel) and ends its
+sessions. A summary with skip reasons is printed at the end. Subset:
+`make e2e-integration E2E_ARGS="01-placement"`.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —

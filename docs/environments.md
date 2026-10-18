@@ -223,6 +223,8 @@ ever) — each contour has exactly one of "seeded" or "real external data," neve
 automated tests only ever run against the seeded one. If a test needs data the local seed set
 doesn't have yet, extend the seed (`erp-import` record type, `seed-erp.mjs`) or the test's own
 fixtures — don't borrow real data from staging-integration to make a test pass.
+Sole exception: `make e2e-integration` (#255, `docs/e2e-testing.md`), run by hand against a running
+staging-integration contour; it seeds nothing, reads the contour DB with SELECTs only and may restart the contour.
 
 **Order-edit and held-send states (local only).** `make seed-order-edit-states` (after `make seed-all`,
 server running, idempotent) creates, for the demo customer `credit-limited@buyer.example`: an unsent
@@ -253,6 +255,8 @@ demand). Never run it against staging-integration.
    `make dev-branch`'s processes: `dev-kill.sh`/`dev-kill-branch.sh`/`dev-kill-staging-integration.sh`
    each identify only their own contour's processes (by the `.env.*` file on the process's own
    command line) before killing anything.
+5. Optional, for `make e2e-integration`: `STAGING_TEST_MANAGER_USERNAME`/`STAGING_TEST_MANAGER_PASSWORD`
+   (the contour's manager login) enable the manager-portal cancel scenario; without them it is skipped.
 
 It does not run its own `tsc -b --watch` plugin compiler — `dist/` is shared across contours, and
 a second watcher alongside `make dev`'s would be the exact duplicate-process/stale-dist hazard

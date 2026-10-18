@@ -2,7 +2,10 @@
 
 Manual pass across mivend, the Integration Service and the ERP (issue #208). Run it on the
 staging-integration contour after any change to order contracts, identifiers, reservation or the
-ERP inbound/outbound handlers. Never from an automated suite: orders reach the real broker.
+ERP inbound/outbound handlers. Never from the regular automated suites: orders reach the real broker.
+
+`make e2e-integration` (#255, `docs/e2e-testing.md`) automates the rows marked "auto" below through the
+storefront and manager UI; the other rows stay manual.
 
 ## Setup
 
@@ -22,9 +25,9 @@ ERP inbound/outbound handlers. Never from an automated suite: orders reach the r
 
 | Scenario | Expected |
 | --- | --- |
-| Auto-reserve on placement | `RESERVED`, exactly one published `order.confirmed` (type `confirmed` on the order commands topic), numeric order number, 1C registers one document, `erpStatus` SENT_TO_ERP, `erpOrderId` set |
-| ERP reserves less than ours | Local reservation released, `QUANTITY_MISMATCH` issue recorded, `erpStatus` untouched |
-| Re-confirm a submitted order | Second `order.confirmed` row is `skipped`, nothing published |
+| Auto-reserve on placement (auto) | `RESERVED`, exactly one published `order.confirmed` (type `confirmed` on the order commands topic), numeric order number, 1C registers one document, `erpStatus` SENT_TO_ERP, `erpOrderId` set |
+| ERP reserves less than ours (auto: quantities compared) | Local reservation released, `QUANTITY_MISMATCH` issue recorded, `erpStatus` untouched |
+| Re-confirm a submitted order (auto: repeated placement in the UI) | Second `order.confirmed` row is `skipped`, nothing published |
 | Same `eventId` redelivered | One inbox row, one customer order, one ERP document |
 | New `eventId`, same `orderUuid` | New inbox row processed, still one customer order and one ERP document |
 | Same registration result applied twice | State unchanged, no error (re-queue the inbox row) |
@@ -44,9 +47,9 @@ Also exercised, with the ERP side run by the Integration Service owner:
 | Integration Service stopped, then resumed | Message published during the gap is consumed after resume exactly once |
 | Schema registry unreachable | Outbox row stays pending with growing retry delay, visible on the outbox health counts; published exactly once after recovery |
 | Manual confirm racing the placement auto-reserve | One winner, one active reservation, one `order.confirmed`, state RESERVED |
-| Cancel before the confirmed event left the outbox (#194) | The `order.confirmed` row is `skipped`, order `Cancelled`, reservations released, nothing published |
-| Cancel after sending, before the ERP registered it | One `cancel-requested` on the order commands topic and the order `Cancelled` at once; the ERP's `order-cancel-result` is recorded |
-| Cancel of a registered pending order | One `cancel-requested`, order stays until `order-cancel-result` `cancelled`; `rejected` keeps it and notifies staff |
+| Cancel before the confirmed event left the outbox (#194) (auto) | The `order.confirmed` row is `skipped`, order `Cancelled`, reservations released, nothing published |
+| Cancel after sending, before the ERP registered it (auto when the ERP exchange is off) | One `cancel-requested` on the order commands topic and the order `Cancelled` at once; the ERP's `order-cancel-result` is recorded |
+| Cancel of a registered pending order (auto: `cancelled` path, storefront and manager portal) | One `cancel-requested`, order stays until `order-cancel-result` `cancelled`; `rejected` keeps it and notifies staff |
 | Reserve deadline passes (#194) | Pending or unregistered order `Cancelled` (reservations released); registered, in-progress or shipped orders untouched, staff warned after one day |
 
 Late registration result after a local release: the order registers, the released reservation stays released, no new reservation or difference is created.
