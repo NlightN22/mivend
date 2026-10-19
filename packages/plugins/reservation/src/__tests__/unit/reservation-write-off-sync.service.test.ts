@@ -1,5 +1,5 @@
 import { testOrderStatusDictionary } from '@mivend/plugin-erp-order';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { Order } from '@vendure/core';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
@@ -40,7 +40,7 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         count: ReturnType<typeof vi.fn>;
         query: ReturnType<typeof vi.fn>;
     };
-    let rawQuery: ReturnType<typeof vi.fn>;
+    let rawQuery: Mock<(...args: unknown[]) => Promise<unknown>>;
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
         withTransaction: ReturnType<typeof vi.fn>;
@@ -1104,7 +1104,7 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         count: ReturnType<typeof vi.fn>;
         query: ReturnType<typeof vi.fn>;
     };
-    let rawQuery: ReturnType<typeof vi.fn>;
+    let rawQuery: Mock<(...args: unknown[]) => Promise<unknown>>;
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
         withTransaction: ReturnType<typeof vi.fn>;

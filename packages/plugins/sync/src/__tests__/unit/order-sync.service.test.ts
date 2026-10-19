@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { SyncEventByType } from 'shared';
 
 import { OrderSyncService } from '../../order-sync.service';
@@ -19,7 +19,7 @@ describe('OrderSyncService', () => {
         addPaymentToOrder: ReturnType<typeof vi.fn>;
     };
     let requestContextService: { create: ReturnType<typeof vi.fn> };
-    let query: ReturnType<typeof vi.fn>;
+    let query: Mock<(...args: unknown[]) => Promise<unknown>>;
     let update: ReturnType<typeof vi.fn>;
     let findOne: ReturnType<typeof vi.fn>;
     let syncService: { writeToOutbox: ReturnType<typeof vi.fn> };
