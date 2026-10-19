@@ -66,7 +66,7 @@ and leave the contour as it found it.
   the affected projects), one batch at a time under the shared lock. The full `make e2e` is run
   only on an explicit request, when no other session is editing plugin sources.
 - Serialise every run on one lock so runs from different agents never overlap:
-  `flock <scratchpad>/e2e.lock make e2e E2E_ARGS="<dir-or-file> --project=<name>"`.
+  `flock /tmp/mivend-e2e.lock make e2e E2E_ARGS="<dir-or-file> --project=<name>"`.
 - Another session editing plugin sources restarts the dev server; "fetch failed" mid-run is a
   restart, re-run that batch.
 
