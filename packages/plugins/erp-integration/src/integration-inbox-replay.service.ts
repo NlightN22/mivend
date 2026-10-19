@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { Logger } from '@vendure/core';
-import { DataSource, In } from 'typeorm';
+import { Logger, TransactionalConnection } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
+import { In } from 'typeorm';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { IntegrationInboxReplayStateService } from './integration-inbox-replay-state.service';
@@ -35,13 +36,13 @@ interface ClaimedRow {
 @Injectable()
 export class IntegrationInboxReplayService {
     constructor(
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         private readonly replayClient: ResyncReplayClient,
         private readonly state: IntegrationInboxReplayStateService,
     ) {}
 
-    async replayFailed(ids: number[]): Promise<InboxReplayResult[]> {
-        const rows = await this.dataSource.getRepository(IntegrationInboxEvent).find({
+    async replayFailed(ctx: RequestContext, ids: number[]): Promise<InboxReplayResult[]> {
+        const rows = await this.connection.getRepository(ctx, IntegrationInboxEvent).find({
             where: { id: In(ids) },
             select: ['id', 'stream', 'entityId', 'status', 'undecodable'],
         });
@@ -69,7 +70,7 @@ export class IntegrationInboxReplayService {
             }
         }
         // Atomic claim: of two concurrent clicks only one gets the row, so Integration Service is asked once.
-        const claimed = await this.state.claimForReplay(eligible);
+        const claimed = await this.state.claimForReplay(ctx, eligible);
         const claimedIds = new Set(claimed.map(c => c.id));
         for (const id of eligible) {
             const row = rows.find(r => Number(r.id) === id);
@@ -89,12 +90,13 @@ export class IntegrationInboxReplayService {
             byType.set(type, [...(byType.get(type) ?? []), row]);
         }
         for (const [aggregateType, group] of byType) {
-            results.push(...(await this.replayGroup(aggregateType, group)));
+            results.push(...(await this.replayGroup(ctx, aggregateType, group)));
         }
         return results;
     }
 
     private async replayGroup(
+        ctx: RequestContext,
         aggregateType: string,
         group: ClaimedRow[],
     ): Promise<InboxReplayResult[]> {
@@ -124,6 +126,7 @@ export class IntegrationInboxReplayService {
             }
             const reason = failure ?? status ?? 'No answer for this id';
             await this.state.releaseClaim(
+                ctx,
                 [row.id],
                 `Integration Service did not accept the replay: ${reason}`,
             );

@@ -22,26 +22,10 @@ function makeStrategy(options: {
         findBranchStockLocationIds: vi.fn().mockResolvedValue(options.activeLocationIds),
     };
     const connection = {
-        rawConnection: {
-            createQueryBuilder: () => ({
-                select: () => ({
-                    from: () => ({
-                        innerJoin: () => ({
-                            where: () => ({
-                                getRawOne: vi
-                                    .fn()
-                                    .mockResolvedValue(
-                                        options.branchId
-                                            ? { branchId: options.branchId }
-                                            : undefined,
-                                    ),
-                            }),
-                        }),
-                    }),
-                }),
-            }),
-        },
         getRepository: () => ({
+            query: vi
+                .fn()
+                .mockResolvedValue(options.branchId ? [{ branchId: options.branchId }] : []),
             findOne: vi.fn(async ({ where }: { where: { stockLocationId: string } }) => {
                 const level = options.stockLevels[where.stockLocationId];
                 return level ? level : undefined;

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { Logger } from '@vendure/core';
-import { DataSource } from 'typeorm';
-import type { EntityManager } from 'typeorm';
+import { Logger, TransactionalConnection } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
+import { ctxQuery, withAggregateLock } from 'shared';
 
 import { IntegrationOutboxService } from './integration-outbox.service';
 import { OUTBOUND_EVENT_TYPES } from './outbound-event-types';
@@ -31,7 +31,9 @@ export interface OutboundEnqueueInput {
     // Identifies what the event is about (e.g. { orderId, orderCode }); stored on a skipped row so
     // the event can be rebuilt later.
     subject: Record<string, unknown>;
-    build: () => Promise<OutboundBuildResult>;
+    // Aggregate lock held across build + write, so a concurrent enqueue sees this one's row.
+    lockKey?: string;
+    build: (ctx: RequestContext) => Promise<OutboundBuildResult>;
 }
 
 export type OutboundEnqueueOutcome = 'queued' | 'skipped';
@@ -41,49 +43,61 @@ export type OutboundEnqueueOutcome = 'queued' | 'skipped';
 @Injectable()
 export class OutboundGateway {
     constructor(
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         private readonly outbox: IntegrationOutboxService,
     ) {}
 
+    // Writes join the ctx transaction, so they commit or roll back with the caller's change.
     async enqueue(
+        ctx: RequestContext,
         input: OutboundEnqueueInput,
-        em?: EntityManager,
     ): Promise<OutboundEnqueueOutcome> {
-        let result: OutboundBuildResult;
+        let buildError: unknown;
         try {
-            result = await input.build();
+            return await this.inTransaction(ctx, input.lockKey, async txCtx => {
+                let result: OutboundBuildResult;
+                try {
+                    result = await input.build(txCtx);
+                } catch (error) {
+                    buildError = error;
+                    throw error;
+                }
+                if (result.kind === 'send' && result.events.length > 0) {
+                    for (const event of result.events) {
+                        await this.outbox.writeToOutbox(txCtx, {
+                            eventId: event.eventId,
+                            eventType: input.eventType,
+                            payload: event.payload,
+                        });
+                    }
+                    return 'queued';
+                }
+                const reason =
+                    result.kind === 'skip' ? result.reason : 'builder returned no events';
+                await this.recordSkipped(txCtx, input, reason);
+                return 'skipped';
+            });
         } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            // Own connection, not the caller's: the caller rolls back on the rethrow below, and the
-            // record of the failure must survive that.
-            await this.recordSkipped(input, `build failed: ${message}`);
+            if (buildError === undefined) throw error;
+            const message = buildError instanceof Error ? buildError.message : String(buildError);
+            // After the rolled-back transaction, so the failure record survives it.
+            await this.connection.withTransaction(ctx, txCtx =>
+                this.recordSkipped(txCtx, input, `build failed: ${message}`),
+            );
             throw error;
         }
-
-        if (result.kind === 'send' && result.events.length > 0) {
-            await this.inTransaction(em, async manager => {
-                for (const event of result.events) {
-                    await this.outbox.writeToOutbox(manager, {
-                        eventId: event.eventId,
-                        eventType: input.eventType,
-                        payload: event.payload,
-                    });
-                }
-            });
-            return 'queued';
-        }
-
-        const reason = result.kind === 'skip' ? result.reason : 'builder returned no events';
-        await this.recordSkipped(input, reason, em);
-        return 'skipped';
     }
 
     // Guard for the duplicate-publish check (#199): is there a live entry of this type for the
     // subject? Filtered at the SQL level on the type's subject key — this table is never pruned.
-    async hasActiveEntry(eventType: OutboundEventType, subjectValue: string): Promise<boolean> {
+    async hasActiveEntry(
+        ctx: RequestContext,
+        eventType: OutboundEventType,
+        subjectValue: string,
+    ): Promise<boolean> {
         const subjectKey = OUTBOUND_EVENT_TYPES[eventType].subjectKey;
-        const count = await this.dataSource
-            .getRepository(IntegrationOutboxEntry)
+        const count = await this.connection
+            .getRepository(ctx, IntegrationOutboxEntry)
             .createQueryBuilder('outbox')
             .where('outbox.event_type = :eventType', { eventType })
             .andWhere('outbox.payload ->> :subjectKey = :subjectValue', {
@@ -97,8 +111,10 @@ export class OutboundGateway {
 
     // Statuses of the order's confirmed events that still count: published ones were sent, pending
     // and failed ones never reached the broker.
-    async confirmedStatusesForOrder(orderId: string): Promise<string[]> {
-        const rows = await this.dataSource.query<Array<{ status: string }>>(
+    async confirmedStatusesForOrder(ctx: RequestContext, orderId: string): Promise<string[]> {
+        const rows = await ctxQuery<Array<{ status: string }>>(
+            this.connection,
+            ctx,
             `SELECT DISTINCT status FROM integration_outbox
              WHERE event_type = 'order.confirmed' AND payload ->> 'orderId' = $1
                AND status IN ('pending', 'failed', 'published')`,
@@ -109,8 +125,13 @@ export class OutboundGateway {
 
     // Conditional on the row still waiting: it blocks on a publisher's row lock and then matches
     // nothing, so a row can never be both skipped and sent.
-    async skipWaitingConfirmed(orderId: string, reason: string): Promise<number> {
-        const result = await this.dataSource
+    async skipWaitingConfirmed(
+        ctx: RequestContext,
+        orderId: string,
+        reason: string,
+    ): Promise<number> {
+        const result = await this.connection
+            .getRepository(ctx, IntegrationOutboxEntry)
             .createQueryBuilder()
             .update(IntegrationOutboxEntry)
             .set({ status: 'skipped', lastError: reason, lastErrorAt: () => 'now()' })
@@ -124,28 +145,25 @@ export class OutboundGateway {
     }
 
     private async recordSkipped(
+        ctx: RequestContext,
         input: OutboundEnqueueInput,
         reason: string,
-        em?: EntityManager,
     ): Promise<void> {
         Logger.warn(`${input.eventType} skipped: ${reason}`, loggerCtx);
-        await this.inTransaction(em, manager =>
-            this.outbox.writeSkipped(manager, {
-                eventType: input.eventType,
-                subject: input.subject,
-                reason,
-            }),
-        );
+        await this.outbox.writeSkipped(ctx, {
+            eventType: input.eventType,
+            subject: input.subject,
+            reason,
+        });
     }
 
-    private async inTransaction(
-        em: EntityManager | undefined,
-        work: (manager: EntityManager) => Promise<unknown>,
-    ): Promise<void> {
-        if (em) {
-            await work(em);
-            return;
-        }
-        await this.dataSource.transaction(work);
+    private inTransaction<T>(
+        ctx: RequestContext,
+        lockKey: string | undefined,
+        work: (txCtx: RequestContext) => Promise<T>,
+    ): Promise<T> {
+        return lockKey
+            ? withAggregateLock(this.connection, ctx, lockKey, work)
+            : this.connection.withTransaction(ctx, work);
     }
 }

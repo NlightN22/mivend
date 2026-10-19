@@ -11,7 +11,7 @@ import {
     CounterpartyService,
     TradingPointService,
 } from '@mivend/plugin-counterparty';
-import { hasFreightShippingLine } from 'shared';
+import { ctxQuery, hasFreightShippingLine } from 'shared';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 
 import { HELD_SKIP_REASON, OrderSendHoldService } from './order-checks/order-send-hold.service';
@@ -97,6 +97,7 @@ export class OrderSubmittedBuilder {
             return outboundSkip(HELD_SKIP_REASON);
         }
         const productExternalIdByProductId = await this.loadProductExternalIds(
+            ctx,
             order.lines.map(line => line.productVariant?.productId),
         );
 
@@ -179,9 +180,8 @@ export class OrderSubmittedBuilder {
         ]);
     }
 
-    // Only pointOfSaleId makes it a delivery; the address text is for printed documents. A
-    // courier order without a known point, or with a customer-added one that has no ERP id yet, is
-    // never sent as pickup: it is skipped and rebuilt once the point is set or confirmed.
+    // Only pointOfSaleId makes it a delivery. A courier order without a point with an ERP id is never
+    // sent as pickup: it is skipped and rebuilt once the point is set or confirmed.
     private async resolveDelivery(
         ctx: RequestContext,
         order: Order,
@@ -213,7 +213,7 @@ export class OrderSubmittedBuilder {
     ): Promise<boolean> {
         const dictionary = await this.statuses.dictionary(ctx);
         if (dictionary.has(order.customFields?.erpStatus, 'rejected')) return false;
-        return this.outboundGateway.hasActiveEntry('order.confirmed', String(orderId));
+        return this.outboundGateway.hasActiveEntry(ctx, 'order.confirmed', String(orderId));
     }
 
     // Only active reservations count; a released/expired one no longer reflects where the stock sits.
@@ -230,13 +230,13 @@ export class OrderSubmittedBuilder {
         const reserveUntil = new Date(Math.min(...reservations.map(r => r.expiresAt.getTime())));
 
         const stockLocationIds = [...new Set(reservations.map(r => r.stockLocationId))];
-        const rows = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('sl.id', 'id')
-            .addSelect('sl."customFieldsWarehouseerpid"', 'warehouseErpId')
-            .from('stock_location', 'sl')
-            .where('sl.id IN (:...ids)', { ids: stockLocationIds })
-            .getRawMany<{ id: string; warehouseErpId: string | null }>();
+        const rows = await ctxQuery<Array<{ id: string; warehouseErpId: string | null }>>(
+            this.connection,
+            ctx,
+            `SELECT sl.id, sl."customFieldsWarehouseerpid" AS "warehouseErpId"
+               FROM stock_location sl WHERE sl.id = ANY($1::int[])`,
+            [stockLocationIds],
+        );
         const warehouseErpIdByLocationId = new Map<string, string>();
         for (const row of rows) {
             if (row.warehouseErpId)
@@ -252,19 +252,19 @@ export class OrderSubmittedBuilder {
     // Product.customFields.externalId is not visible on the typed entity from this plugin's TS
     // project, so it is read via the raw column like every other handler in this plugin.
     private async loadProductExternalIds(
+        ctx: RequestContext,
         productIds: Array<ID | null | undefined>,
     ): Promise<Map<string, string>> {
         const ids = [...new Set(productIds.filter((id): id is ID => id != null))];
         const result = new Map<string, string>();
         if (ids.length === 0) return result;
 
-        const rows = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('p.id', 'id')
-            .addSelect('p."customFieldsExternalid"', 'externalId')
-            .from('product', 'p')
-            .where('p.id IN (:...ids)', { ids })
-            .getRawMany<{ id: string; externalId: string | null }>();
+        const rows = await ctxQuery<Array<{ id: string; externalId: string | null }>>(
+            this.connection,
+            ctx,
+            `SELECT p.id, p."customFieldsExternalid" AS "externalId" FROM product p WHERE p.id = ANY($1::int[])`,
+            [ids],
+        );
         for (const row of rows) {
             if (row.externalId) result.set(String(row.id), row.externalId);
         }

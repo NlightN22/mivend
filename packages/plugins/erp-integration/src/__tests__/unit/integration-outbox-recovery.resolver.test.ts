@@ -1,3 +1,4 @@
+import { testRequestContext } from 'shared';
 import { describe, expect, it, vi } from 'vitest';
 import { PERMISSIONS_METADATA_KEY, UserInputError } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
@@ -27,9 +28,9 @@ describe('IntegrationOutboxRecoveryResolver', () => {
             const recovery = { requeueFailed: vi.fn() };
             const resolver = new IntegrationOutboxRecoveryResolver(recovery as never, {} as never);
 
-            await expect(resolver.requeueFailedIntegrationOutbox({ ids })).rejects.toThrow(
-                UserInputError,
-            );
+            await expect(
+                resolver.requeueFailedIntegrationOutbox(testRequestContext, { ids }),
+            ).rejects.toThrow(UserInputError);
             expect(recovery.requeueFailed).not.toHaveBeenCalled();
         },
     );
@@ -38,8 +39,10 @@ describe('IntegrationOutboxRecoveryResolver', () => {
         const recovery = { requeueFailed: vi.fn().mockResolvedValue(2) };
         const resolver = new IntegrationOutboxRecoveryResolver(recovery as never, {} as never);
 
-        expect(await resolver.requeueFailedIntegrationOutbox({ ids: ['4', '7'] })).toBe(2);
-        expect(recovery.requeueFailed).toHaveBeenCalledWith([4, 7]);
+        expect(
+            await resolver.requeueFailedIntegrationOutbox(testRequestContext, { ids: ['4', '7'] }),
+        ).toBe(2);
+        expect(recovery.requeueFailed).toHaveBeenCalledWith(testRequestContext, [4, 7]);
     });
 
     it('rebuild rejects an invalid id and maps outcomes to the GraphQL enum', async () => {
@@ -63,9 +66,9 @@ describe('IntegrationOutboxRecoveryResolver', () => {
                 inboxReplay as never,
             );
 
-            await expect(resolver.replayFailedIntegrationInbox({ ids })).rejects.toThrow(
-                UserInputError,
-            );
+            await expect(
+                resolver.replayFailedIntegrationInbox(testRequestContext, { ids }),
+            ).rejects.toThrow(UserInputError);
             expect(inboxReplay.replayFailed).not.toHaveBeenCalled();
         },
     );
@@ -74,8 +77,8 @@ describe('IntegrationOutboxRecoveryResolver', () => {
         const inboxReplay = { replayFailed: vi.fn().mockResolvedValue([]) };
         const resolver = new IntegrationOutboxRecoveryResolver({} as never, inboxReplay as never);
 
-        await resolver.replayFailedIntegrationInbox({ ids: ['3', '9'] });
+        await resolver.replayFailedIntegrationInbox(testRequestContext, { ids: ['3', '9'] });
 
-        expect(inboxReplay.replayFailed).toHaveBeenCalledWith([3, 9]);
+        expect(inboxReplay.replayFailed).toHaveBeenCalledWith(testRequestContext, [3, 9]);
     });
 });

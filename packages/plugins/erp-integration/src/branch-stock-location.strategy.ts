@@ -11,6 +11,7 @@ import {
 } from '@vendure/core';
 import { ID } from '@vendure/common/lib/shared-types';
 import { freeQuantity, ReservationAvailabilityService } from '@mivend/plugin-reservation';
+import { ctxQuery } from 'shared';
 
 const loggerCtx = 'BranchStockLocationStrategy';
 
@@ -92,14 +93,16 @@ export class BranchStockLocationStrategy extends BaseStockLocationStrategy {
         ctx: RequestContext,
         orderLine: OrderLine,
     ): Promise<string | null> {
-        const row = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('o."customFieldsBranchid"', 'branchId')
-            .from('order_line', 'ol')
-            .innerJoin('order', 'o', 'o.id = ol."orderId"')
-            .where('ol.id = :id', { id: orderLine.id })
-            .getRawOne<{ branchId: string | null }>();
-        return row?.branchId ?? null;
+        // On ctx: the order-placement transaction may hold this order's uncommitted branch.
+        const rows = await ctxQuery<Array<{ branchId: string | null }>>(
+            this.connection,
+            ctx,
+            `SELECT o."customFieldsBranchid" AS "branchId"
+               FROM order_line ol INNER JOIN "order" o ON o.id = ol."orderId"
+              WHERE ol.id = $1`,
+            [orderLine.id],
+        );
+        return rows[0]?.branchId ?? null;
     }
 
     private async pickLocationWithMostAvailableStock(

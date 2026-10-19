@@ -1,3 +1,4 @@
+import { testRequestContext } from 'shared';
 import { describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
@@ -11,10 +12,12 @@ function makeGateway(): {
         writeToOutbox: vi.fn().mockResolvedValue(undefined),
         writeSkipped: vi.fn().mockResolvedValue(undefined),
     };
-    const dataSource = {
-        transaction: vi.fn(async (work: (em: unknown) => Promise<void>) => work({})),
+    const connection = {
+        withTransaction: vi.fn(async (ctx: unknown, work: (ctx: unknown) => Promise<unknown>) =>
+            work(ctx),
+        ),
     };
-    return { gateway: new OutboundGateway(dataSource as never, outbox as never), outbox };
+    return { gateway: new OutboundGateway(connection as never, outbox as never), outbox };
 }
 
 const subject = { orderId: 'order-1', orderCode: 'ORD-1' };
@@ -23,7 +26,7 @@ describe('OutboundGateway.enqueue', () => {
     it('writes one pending row per event and reports queued', async () => {
         const { gateway, outbox } = makeGateway();
 
-        const outcome = await gateway.enqueue({
+        const outcome = await gateway.enqueue(testRequestContext, {
             eventType: 'order.confirmed',
             subject,
             build: async () =>
@@ -38,7 +41,7 @@ describe('OutboundGateway.enqueue', () => {
     it('records a skipped row with the reason and the subject, and writes nothing to publish', async () => {
         const { gateway, outbox } = makeGateway();
 
-        const outcome = await gateway.enqueue({
+        const outcome = await gateway.enqueue(testRequestContext, {
             eventType: 'order.confirmed',
             subject,
             build: async () => outboundSkip('no organizationId'),
@@ -56,7 +59,7 @@ describe('OutboundGateway.enqueue', () => {
     it('treats a send with no events as a skip, never as silent success', async () => {
         const { gateway, outbox } = makeGateway();
 
-        const outcome = await gateway.enqueue({
+        const outcome = await gateway.enqueue(testRequestContext, {
             eventType: 'order.confirmed',
             subject,
             build: async () => outboundSend([]),
@@ -73,7 +76,7 @@ describe('OutboundGateway.enqueue', () => {
         const { gateway, outbox } = makeGateway();
 
         await expect(
-            gateway.enqueue({
+            gateway.enqueue(testRequestContext, {
                 eventType: 'order.confirmed',
                 subject,
                 build: async () => {

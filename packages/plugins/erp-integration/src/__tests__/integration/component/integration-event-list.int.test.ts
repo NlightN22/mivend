@@ -6,6 +6,8 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
@@ -31,8 +33,8 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    inbox = new IntegrationInboxService(dataSource);
-    lists = new IntegrationEventListService(dataSource);
+    inbox = new IntegrationInboxService(createTestConnection(dataSource));
+    lists = new IntegrationEventListService(createTestConnection(dataSource));
 });
 
 afterEach(async () => {
@@ -50,7 +52,7 @@ async function seedInbox(
     entityId: string,
     patch: Omit<Partial<IntegrationInboxEvent>, 'payload'>,
 ): Promise<number> {
-    const row = await inbox.enqueue({
+    const row = await inbox.enqueue(testRequestContext, {
         stream,
         entityId,
         version: '1',
@@ -74,7 +76,7 @@ describe('listInboxIssues', () => {
         await seedInbox('bank', 'b-resolved', { status: 'resolved' });
         await seedInbox('bank', 'b-replay', { status: 'replay_requested' });
 
-        const { items, totalItems } = await lists.listInboxIssues();
+        const { items, totalItems } = await lists.listInboxIssues(testRequestContext);
 
         expect(totalItems).toBe(3);
         expect(items.map(i => i.entityId).sort()).toEqual(['b-failed', 'b-noop', 'b-replay']);
@@ -86,13 +88,19 @@ describe('listInboxIssues', () => {
         await seedInbox('bank', 'e2', { status: 'failed', lastError: '500 rows failed' });
         await seedInbox('unit', 'e3', { status: 'failed', lastError: 'x' });
 
-        const byStream = await lists.listInboxIssues({ filter: { stream: { eq: 'unit' } } });
+        const byStream = await lists.listInboxIssues(testRequestContext, {
+            filter: { stream: { eq: 'unit' } },
+        });
         expect(byStream.items.map(i => i.entityId)).toEqual(['e3']);
 
-        const byText = await lists.listInboxIssues({ filter: { lastError: { contains: '50%' } } });
+        const byText = await lists.listInboxIssues(testRequestContext, {
+            filter: { lastError: { contains: '50%' } },
+        });
         expect(byText.items.map(i => i.entityId)).toEqual(['e1']);
 
-        const sorted = await lists.listInboxIssues({ sort: { entityId: 'DESC' } });
+        const sorted = await lists.listInboxIssues(testRequestContext, {
+            sort: { entityId: 'DESC' },
+        });
         expect(sorted.items.map(i => i.entityId)).toEqual(['e3', 'e2', 'e1']);
     });
 
@@ -101,7 +109,7 @@ describe('listInboxIssues', () => {
         await seedInbox('bank', 'other', { status: 'failed', lastError: 'has needle' });
         await seedInbox('bank', 'none', { status: 'failed', lastError: 'zzz' });
 
-        const { items } = await lists.listInboxIssues({
+        const { items } = await lists.listInboxIssues(testRequestContext, {
             filterOperator: 'OR',
             filter: { entityId: { contains: 'needle' }, lastError: { contains: 'needle' } },
         });
@@ -113,7 +121,7 @@ describe('listInboxIssues', () => {
         await seedInbox('bank', 'needle-bank', { status: 'failed', lastError: 'a' });
         await seedInbox('unit', 'needle-unit', { status: 'failed', lastError: 'a' });
 
-        const { items } = await lists.listInboxIssues({
+        const { items } = await lists.listInboxIssues(testRequestContext, {
             filterOperator: 'OR',
             filter: {
                 _and: [{ stream: { eq: 'bank' } }],
@@ -128,7 +136,11 @@ describe('listInboxIssues', () => {
     it('paginates server-side and reports the real total', async () => {
         for (let n = 0; n < 5; n++) await seedInbox('bank', `p${n}`, { status: 'failed' });
 
-        const page = await lists.listInboxIssues({ skip: 2, take: 2, sort: { entityId: 'ASC' } });
+        const page = await lists.listInboxIssues(testRequestContext, {
+            skip: 2,
+            take: 2,
+            sort: { entityId: 'ASC' },
+        });
 
         expect(page.totalItems).toBe(5);
         expect(page.items.map(i => i.entityId)).toEqual(['p2', 'p3']);
@@ -136,7 +148,7 @@ describe('listInboxIssues', () => {
 
     it('rejects a filter on a column that is not whitelisted (payload)', async () => {
         await expect(
-            lists.listInboxIssues({ filter: { payload: { contains: 'x' } } }),
+            lists.listInboxIssues(testRequestContext, { filter: { payload: { contains: 'x' } } }),
         ).rejects.toThrow('Cannot filter on "payload"');
     });
 });
@@ -163,7 +175,7 @@ describe('listOutboxProblems', () => {
         await seedOutbox({ status: 'published' });
         await seedOutbox({ status: 'resolved' });
 
-        const { items, totalItems } = await lists.listOutboxProblems();
+        const { items, totalItems } = await lists.listOutboxProblems(testRequestContext);
 
         expect(totalItems).toBe(2);
         expect(items.map(i => i.subjectId).sort()).toEqual(['order-1', 'order-2']);
@@ -174,10 +186,12 @@ describe('listOutboxProblems', () => {
         await seedOutbox({ status: 'failed' });
         await seedOutbox({ status: 'skipped' });
 
-        const skipped = await lists.listOutboxProblems({ filter: { status: { eq: 'skipped' } } });
+        const skipped = await lists.listOutboxProblems(testRequestContext, {
+            filter: { status: { eq: 'skipped' } },
+        });
         expect(skipped.items.map(i => i.status)).toEqual(['skipped']);
 
-        const none = await lists.listOutboxProblems({
+        const none = await lists.listOutboxProblems(testRequestContext, {
             filter: { eventType: { eq: 'other.type' } },
         });
         expect(none.totalItems).toBe(0);

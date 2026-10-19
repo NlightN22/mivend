@@ -324,7 +324,7 @@ describe('visibility and counters', () => {
             `UPDATE check_result SET stale = true WHERE "subjectId" = (SELECT min(id)::text FROM "order")`,
         );
 
-        const rows = await w.health.getHealth();
+        const rows = await w.health.getHealth(w.ctx);
 
         expect(rows).toEqual(
             expect.arrayContaining([

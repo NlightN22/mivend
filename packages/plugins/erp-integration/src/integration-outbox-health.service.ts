@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { TransactionalConnection } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
+import { ctxQuery } from 'shared';
 
 import { HELD_SKIP_REASON } from './order-checks/order-send-hold.service';
 import { mergeOutboxHealth } from './outbox-health';
@@ -7,10 +9,12 @@ import type { OutboxHealthByEventType } from './outbox-health';
 
 @Injectable()
 export class IntegrationOutboxHealthService {
-    constructor(private readonly dataSource: DataSource) {}
+    constructor(private readonly connection: TransactionalConnection) {}
 
-    async getHealthByEventType(): Promise<OutboxHealthByEventType[]> {
-        const rows: OutboxHealthByEventType[] = await this.dataSource.query(
+    async getHealthByEventType(ctx: RequestContext): Promise<OutboxHealthByEventType[]> {
+        const rows = await ctxQuery<OutboxHealthByEventType[]>(
+            this.connection,
+            ctx,
             `
             SELECT
                 e.event_type AS "eventType",

@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import {
-    Brackets,
-    DataSource,
-    ObjectLiteral,
-    SelectQueryBuilder,
-    WhereExpressionBuilder,
-} from 'typeorm';
+import { TransactionalConnection } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
+import { Brackets, ObjectLiteral, SelectQueryBuilder, WhereExpressionBuilder } from 'typeorm';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
@@ -125,13 +121,14 @@ function applyList(
 // Read model for the integration-health drill-down pages. Never selects payloads.
 @Injectable()
 export class IntegrationEventListService {
-    constructor(private readonly dataSource: DataSource) {}
+    constructor(private readonly connection: TransactionalConnection) {}
 
     async listInboxIssues(
+        ctx: RequestContext,
         options: ListOptionsInput = {},
     ): Promise<IntegrationEventList<IntegrationInboxEvent>> {
-        const qb = this.dataSource
-            .getRepository(IntegrationInboxEvent)
+        const qb = this.connection
+            .getRepository(ctx, IntegrationInboxEvent)
             .createQueryBuilder('e')
             .select([
                 'e.id',
@@ -162,10 +159,11 @@ export class IntegrationEventListService {
     }
 
     async listOutboxProblems(
+        ctx: RequestContext,
         options: ListOptionsInput = {},
     ): Promise<IntegrationEventList<OutboxProblemRow>> {
-        const qb = this.dataSource
-            .getRepository(IntegrationOutboxEntry)
+        const qb = this.connection
+            .getRepository(ctx, IntegrationOutboxEntry)
             .createQueryBuilder('e')
             .where(`e.status IN ('failed', 'skipped')`);
         applyList(qb, options, OUTBOX_FILTER_FIELDS, OUTBOX_SORT_FIELDS, {

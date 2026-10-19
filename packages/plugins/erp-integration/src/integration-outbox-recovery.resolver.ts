@@ -34,11 +34,14 @@ export class IntegrationOutboxRecoveryResolver {
 
     @Mutation()
     @Allow(CustomPermission.RecoverIntegrationEvents.Permission)
-    async requeueFailedIntegrationOutbox(@Args() args: { ids: string[] }): Promise<number> {
+    async requeueFailedIntegrationOutbox(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { ids: string[] },
+    ): Promise<number> {
         if (args.ids.length === 0 || args.ids.length > MAX_REQUEUE_IDS) {
             throw new UserInputError(`Pass between 1 and ${MAX_REQUEUE_IDS} outbox row ids`);
         }
-        return this.recovery.requeueFailed(args.ids.map(parseRowId));
+        return this.recovery.requeueFailed(ctx, args.ids.map(parseRowId));
     }
 
     @Mutation()
@@ -54,11 +57,12 @@ export class IntegrationOutboxRecoveryResolver {
     @Mutation()
     @Allow(CustomPermission.RecoverIntegrationEvents.Permission)
     async replayFailedIntegrationInbox(
+        @Ctx() ctx: RequestContext,
         @Args() args: { ids: string[] },
     ): Promise<InboxReplayResult[]> {
         if (args.ids.length === 0 || args.ids.length > MAX_REPLAY_IDS) {
             throw new UserInputError(`Pass between 1 and ${MAX_REPLAY_IDS} inbox row ids`);
         }
-        return this.inboxReplay.replayFailed(args.ids.map(parseRowId));
+        return this.inboxReplay.replayFailed(ctx, args.ids.map(parseRowId));
     }
 }

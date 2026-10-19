@@ -73,35 +73,19 @@ function makeBuilder(options: {
     linesWithoutIdentity?: string[];
     tradingPoint?: { erpId: string; address: string; customerOwned: boolean } | null;
 }): OrderSubmittedBuilder {
-    const orderRepo = { findOne: vi.fn().mockResolvedValue(options.order) };
-    const connection = {
-        getRepository: vi.fn(() => orderRepo),
-        rawConnection: {
-            createQueryBuilder: vi.fn(() => {
-                const qb = {
-                    __from: '',
-                    select: vi.fn().mockReturnThis(),
-                    addSelect: vi.fn().mockReturnThis(),
-                    from: vi.fn(function (this: typeof qb, table: string) {
-                        this.__from = table;
-                        return this;
-                    }),
-                    where: vi.fn().mockReturnThis(),
-                    getRawMany: vi.fn(async function (this: typeof qb) {
-                        if (qb.__from === 'stock_location') {
-                            return Object.entries(options.warehouseErpIdByLocationId).map(
-                                ([id, warehouseErpId]) => ({ id, warehouseErpId }),
-                            );
-                        }
-                        return Object.entries(options.productExternalIds).map(
-                            ([id, externalId]) => ({ id, externalId }),
-                        );
-                    }),
-                };
-                return qb;
-            }),
-        },
-    };
+    const query = vi.fn(async (sql: string) =>
+        sql.includes('stock_location')
+            ? Object.entries(options.warehouseErpIdByLocationId).map(([id, warehouseErpId]) => ({
+                  id,
+                  warehouseErpId,
+              }))
+            : Object.entries(options.productExternalIds).map(([id, externalId]) => ({
+                  id,
+                  externalId,
+              })),
+    );
+    const orderRepo = { findOne: vi.fn().mockResolvedValue(options.order), query };
+    const connection = { getRepository: vi.fn(() => orderRepo) };
     const counterpartyService = { getForCustomer: vi.fn().mockResolvedValue(options.counterparty) };
     const contractService = {
         resolveOrderContract: vi
@@ -120,7 +104,7 @@ function makeBuilder(options: {
     };
     const priorEntries = options.priorOutboxEntries ?? [];
     const outboundGateway = {
-        hasActiveEntry: vi.fn(async (_eventType: string, orderId: string) =>
+        hasActiveEntry: vi.fn(async (_ctx: unknown, _eventType: string, orderId: string) =>
             priorEntries.some(
                 entry =>
                     entry.payload.orderId === orderId &&
@@ -167,7 +151,7 @@ const build = (builder: OrderSubmittedBuilder): Promise<OutboundBuildResult> =>
     builder.build(ctx, 'order-1', 'ORD-001');
 
 // warehouseId comes from plugin-reservation's Reservation entity (mivend#85); the two customField
-// reads go through raw SQL, mocked via rawConnection.createQueryBuilder by table name.
+// reads go through raw SQL on the ctx, mocked by table name.
 
 describe('OrderSubmittedBuilder', () => {
     const packLine = (): TestLine => ({

@@ -1,3 +1,4 @@
+import type { TransactionalConnection } from '@vendure/core';
 import { randomUUID } from 'crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
@@ -6,6 +7,8 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
 
 import { OrderStatusReference, seedTestOrderStatuses } from '@mivend/plugin-erp-order';
@@ -51,17 +54,19 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     await seedTestOrderStatuses((sql, params) => dataSource.query(sql, params));
-    inbox = new IntegrationInboxService(dataSource);
+    inbox = new IntegrationInboxService(createTestConnection(dataSource));
     const topics = Object.fromEntries(ALL_INBOUND_STREAMS.map(s => [s, `topic-${s}`]));
     resolver = new IntegrationStreamHealthResolver(
         { kafkaConsumer: { topics } } as unknown as ErpIntegrationPluginOptions,
-        { getRepository: () => ({ find: async () => lagRows }) } as unknown as DataSource,
-        new IntegrationInboxHealthService(dataSource),
-        new IntegrationOutboxHealthService(dataSource),
+        {
+            getRepository: () => ({ find: async () => lagRows }),
+        } as unknown as TransactionalConnection,
+        new IntegrationInboxHealthService(createTestConnection(dataSource)),
+        new IntegrationOutboxHealthService(createTestConnection(dataSource)),
         { getLatestVersion: async () => '99.0.0' } as unknown as ContractVersionClient,
-        new VariantUnitHealthService(dataSource),
-        new RejectedOrderHealthService(dataSource),
-        new OrderCheckHealthService(dataSource),
+        new VariantUnitHealthService(createTestConnection(dataSource)),
+        new RejectedOrderHealthService(createTestConnection(dataSource)),
+        new OrderCheckHealthService(createTestConnection(dataSource)),
     );
 });
 
@@ -79,7 +84,7 @@ afterAll(async () => {
 
 describe('integrationStreamHealth', () => {
     it('returns every consumed stream with zero backlog, and the contract-only ignored streams', async () => {
-        const { streams } = await resolver.integrationStreamHealth();
+        const { streams } = await resolver.integrationStreamHealth(testRequestContext);
         const byStream = Object.fromEntries(streams.map(s => [s.stream, s]));
 
         expect(byStream.bank).toMatchObject({ pending: 0, failed: 0, lag: null, drift: null });
@@ -88,7 +93,7 @@ describe('integrationStreamHealth', () => {
     });
 
     it('merges seeded inbox rows and lag rows into the stream row', async () => {
-        await inbox.enqueue({
+        await inbox.enqueue(testRequestContext, {
             stream: 'bank',
             entityId: 'b-1',
             version: '1',
@@ -107,7 +112,7 @@ describe('integrationStreamHealth', () => {
             } as KafkaConsumerLagEntry,
         ];
 
-        const { streams } = await resolver.integrationStreamHealth();
+        const { streams } = await resolver.integrationStreamHealth(testRequestContext);
         const bank = streams.find(s => s.stream === 'bank')!;
 
         expect(bank.pending).toBe(1);
@@ -116,7 +121,7 @@ describe('integrationStreamHealth', () => {
     });
 
     it('counts a handler no-op of the last 24 h on the stream row, with its reason', async () => {
-        const row = await inbox.enqueue({
+        const row = await inbox.enqueue(testRequestContext, {
             stream: 'bank',
             entityId: 'b-noop',
             version: '1',
@@ -124,12 +129,13 @@ describe('integrationStreamHealth', () => {
             payload: {},
         });
         await inbox.markProcessedUnclaimed(
+            testRequestContext,
             row.id,
             'noop',
             'bank b-noop: missing name/bik, skipping',
         );
 
-        const { streams } = await resolver.integrationStreamHealth();
+        const { streams } = await resolver.integrationStreamHealth(testRequestContext);
 
         expect(streams.find(st => st.stream === 'bank')).toMatchObject({
             noop24h: 1,
@@ -144,7 +150,7 @@ describe('integrationStreamHealth', () => {
              VALUES ('ghost-stream', 'g-1', '1', 'evt-ghost', '{}', 'pending')`,
         );
 
-        const { streams } = await resolver.integrationStreamHealth();
+        const { streams } = await resolver.integrationStreamHealth(testRequestContext);
 
         expect(streams.find(s => s.stream === 'ghost-stream')).toMatchObject({
             drift: 'UNKNOWN_STREAM',
@@ -153,7 +159,7 @@ describe('integrationStreamHealth', () => {
     });
 
     it('reports contract version drift against the latest published version', async () => {
-        const { versionDrift } = await resolver.integrationStreamHealth();
+        const { versionDrift } = await resolver.integrationStreamHealth(testRequestContext);
         expect(versionDrift).toMatchObject({ latest: '99.0.0', status: 'BEHIND' });
     });
 });
@@ -181,7 +187,7 @@ describe('integrationOutboxHealth', () => {
             },
         ]);
 
-        const rows = await resolver.integrationOutboxHealth();
+        const rows = await resolver.integrationOutboxHealth(testRequestContext);
         const byType = Object.fromEntries(rows.map(r => [r.eventType, r]));
 
         expect(byType['order.confirmed']).toMatchObject({
@@ -194,7 +200,7 @@ describe('integrationOutboxHealth', () => {
     });
 
     it('lists every registered outbound type with zeros for an empty outbox', async () => {
-        const rows = await resolver.integrationOutboxHealth();
+        const rows = await resolver.integrationOutboxHealth(testRequestContext);
 
         expect(rows.map(row => row.eventType).sort()).toEqual([
             'order.cancel-requested',
@@ -217,7 +223,7 @@ describe('integrationOutboxHealth', () => {
             lastErrorAt: new Date(),
         });
 
-        const row = (await resolver.integrationOutboxHealth()).find(
+        const row = (await resolver.integrationOutboxHealth(testRequestContext)).find(
             r => r.eventType === 'order.confirmed',
         )!;
 
@@ -245,7 +251,7 @@ describe('integrationOutboxHealth', () => {
             });
         }
 
-        const row = (await resolver.integrationOutboxHealth()).find(
+        const row = (await resolver.integrationOutboxHealth(testRequestContext)).find(
             r => r.eventType === 'order.confirmed',
         )!;
 
@@ -262,7 +268,7 @@ describe('integrationOutboxHealth', () => {
             lastErrorAt: new Date(),
         });
 
-        const row = (await resolver.integrationOutboxHealth()).find(
+        const row = (await resolver.integrationOutboxHealth(testRequestContext)).find(
             r => r.eventType === 'order.confirmed',
         )!;
 
@@ -288,7 +294,7 @@ describe('integrationOutboxHealth', () => {
             lastErrorAt: new Date(),
         });
 
-        const row = (await resolver.integrationOutboxHealth()).find(
+        const row = (await resolver.integrationOutboxHealth(testRequestContext)).find(
             r => r.eventType === 'order.confirmed',
         )!;
 
@@ -318,11 +324,17 @@ describe('variantUnitHealth', () => {
         await dataSource.query(`INSERT INTO product_variant ("customFieldsDefaultsalesunitid", "deletedAt") VALUES
             ('u-known', NULL), ('u-missing', NULL), ('u-missing', NULL), (NULL, NULL), ('u-missing', now())`);
 
-        expect(await resolver.variantUnitHealth()).toEqual({ total: 3, unitMissing: 2 });
+        expect(await resolver.variantUnitHealth(testRequestContext)).toEqual({
+            total: 3,
+            unitMissing: 2,
+        });
     });
 
     it('is zero/zero when no variant names a unit', async () => {
-        expect(await resolver.variantUnitHealth()).toEqual({ total: 0, unitMissing: 0 });
+        expect(await resolver.variantUnitHealth(testRequestContext)).toEqual({
+            total: 0,
+            unitMissing: 0,
+        });
     });
 });
 
@@ -340,10 +352,10 @@ describe('rejectedOrderCount', () => {
         await dataSource.query(`INSERT INTO "order" ("customFieldsErpstatus") VALUES
             ('REJECTED'), ('REJECTED'), ('SENT_TO_ERP'), (NULL)`);
 
-        expect(await resolver.rejectedOrderCount()).toBe(2);
+        expect(await resolver.rejectedOrderCount(testRequestContext)).toBe(2);
     });
 
     it('is zero when no order is rejected', async () => {
-        expect(await resolver.rejectedOrderCount()).toBe(0);
+        expect(await resolver.rejectedOrderCount(testRequestContext)).toBe(0);
     });
 });

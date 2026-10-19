@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { TransactionalConnection } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
+import { ctxQuery } from 'shared';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import type { IntegrationInboxEventStatus } from './entities/integration-inbox-event.entity';
@@ -24,13 +26,13 @@ export interface IntegrationInboxBacklogByStream {
 // IntegrationInboxService so the claim/retry code stays small.
 @Injectable()
 export class IntegrationInboxHealthService {
-    constructor(private readonly dataSource: DataSource) {}
+    constructor(private readonly connection: TransactionalConnection) {}
 
     // Unprocessed inbox rows per stream: Postgres-side backlog, deliberately a different number
     // from Kafka lag (docs/integration-health.md).
-    async getBacklogByStream(): Promise<IntegrationInboxBacklogByStream[]> {
-        const rows = await this.dataSource
-            .getRepository(IntegrationInboxEvent)
+    async getBacklogByStream(ctx: RequestContext): Promise<IntegrationInboxBacklogByStream[]> {
+        const rows = await this.connection
+            .getRepository(ctx, IntegrationInboxEvent)
             .createQueryBuilder('event')
             .select('event.stream', 'stream')
             .addSelect('event.status', 'status')
@@ -70,14 +72,18 @@ export class IntegrationInboxHealthService {
     }
 
     // Processed rows whose handler recorded a no-op in the last 24 h, per stream (#200).
-    async getNoopSummaryByStream(): Promise<IntegrationInboxNoopByStream[]> {
-        return this.dataSource.query(`
+    async getNoopSummaryByStream(ctx: RequestContext): Promise<IntegrationInboxNoopByStream[]> {
+        return ctxQuery<IntegrationInboxNoopByStream[]>(
+            this.connection,
+            ctx,
+            `
             SELECT stream,
                    COUNT(*)::int AS count,
                    (ARRAY_AGG(outcome_reason ORDER BY processed_at DESC))[1] AS "lastReason"
             FROM integration_inbox_event
             WHERE outcome = 'noop' AND processed_at > now() - interval '24 hours'
             GROUP BY stream
-        `);
+        `,
+        );
     }
 }

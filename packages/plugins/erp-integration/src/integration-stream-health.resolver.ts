@@ -1,8 +1,7 @@
 import { Inject } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
-import { Allow } from '@vendure/core';
+import { Allow, Ctx, RequestContext, TransactionalConnection } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
-import { DataSource } from 'typeorm';
 
 import { compareContractVersions } from './contract-version-drift';
 import type { ContractVersionDrift } from './contract-version-drift';
@@ -35,7 +34,7 @@ export class IntegrationStreamHealthResolver {
     constructor(
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         private readonly inbox: IntegrationInboxHealthService,
         private readonly outboxHealth: IntegrationOutboxHealthService,
         private readonly contractVersions: ContractVersionClient,
@@ -46,11 +45,13 @@ export class IntegrationStreamHealthResolver {
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
-    async integrationStreamHealth(): Promise<IntegrationStreamHealthReport> {
+    async integrationStreamHealth(
+        @Ctx() ctx: RequestContext,
+    ): Promise<IntegrationStreamHealthReport> {
         const [lagRows, backlog, noops] = await Promise.all([
-            this.dataSource.getRepository(KafkaConsumerLagEntry).find(),
-            this.inbox.getBacklogByStream(),
-            this.inbox.getNoopSummaryByStream(),
+            this.connection.getRepository(ctx, KafkaConsumerLagEntry).find(),
+            this.inbox.getBacklogByStream(ctx),
+            this.inbox.getNoopSummaryByStream(ctx),
         ]);
         const latest = await this.contractVersions.getLatestVersion();
         const topics: Record<string, string> = this.options.kafkaConsumer.topics;
@@ -71,25 +72,25 @@ export class IntegrationStreamHealthResolver {
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
-    async integrationOutboxHealth(): Promise<OutboxHealthByEventType[]> {
-        return this.outboxHealth.getHealthByEventType();
+    async integrationOutboxHealth(@Ctx() ctx: RequestContext): Promise<OutboxHealthByEventType[]> {
+        return this.outboxHealth.getHealthByEventType(ctx);
     }
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
-    async variantUnitHealth(): Promise<VariantUnitHealth> {
-        return this.variantUnits.getHealth();
+    async variantUnitHealth(@Ctx() ctx: RequestContext): Promise<VariantUnitHealth> {
+        return this.variantUnits.getHealth(ctx);
     }
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
-    async rejectedOrderCount(): Promise<number> {
-        return this.rejectedOrders.getRejectedCount();
+    async rejectedOrderCount(@Ctx() ctx: RequestContext): Promise<number> {
+        return this.rejectedOrders.getRejectedCount(ctx);
     }
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
-    async orderCheckHealth(): Promise<OrderCheckHealthRow[]> {
-        return this.orderChecks.getHealth();
+    async orderCheckHealth(@Ctx() ctx: RequestContext): Promise<OrderCheckHealthRow[]> {
+        return this.orderChecks.getHealth(ctx);
     }
 }

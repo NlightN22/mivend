@@ -287,7 +287,6 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
 
     const base = createTestConnection(dataSource);
     const connection = {
-        rawConnection: dataSource,
         withTransaction: base.withTransaction.bind(base),
         getRepository: (c: unknown, entity: { name: string } | string) =>
             base.getRepository(
@@ -350,7 +349,7 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
         orderChecks: new OrderChecksService(connection, checks, registry, registrar),
         stale: new OrderCheckStaleService(connection, checks, writer, requests),
         requests,
-        health: new OrderCheckHealthService(dataSource),
+        health: new OrderCheckHealthService(createTestConnection(dataSource)),
         data,
         visibleBranch,
         async seedOrder(lines, options = {}) {

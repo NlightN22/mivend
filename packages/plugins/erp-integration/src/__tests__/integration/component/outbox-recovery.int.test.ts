@@ -8,7 +8,10 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
+import { testRequestContextService } from '../../test-request-context-service';
 
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
 import { IntegrationOutboxProcessorService } from '../../../integration-outbox-processor.service';
@@ -43,9 +46,13 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    recovery = new IntegrationOutboxRecoveryService(dataSource, new IntegrationOutboxService(), {
-        build,
-    } as never);
+    recovery = new IntegrationOutboxRecoveryService(
+        createTestConnection(dataSource),
+        new IntegrationOutboxService(createTestConnection(dataSource)),
+        {
+            build,
+        } as never,
+    );
 });
 
 afterEach(async () => {
@@ -84,7 +91,7 @@ describe('requeueFailed', () => {
         });
         const published = await insertRow({ status: 'published' });
 
-        const moved = await recovery.requeueFailed([failed.id, published.id]);
+        const moved = await recovery.requeueFailed(testRequestContext, [failed.id, published.id]);
 
         expect(moved).toBe(1);
         const reloaded = await repo().findOneByOrFail({ id: failed.id });
@@ -95,9 +102,13 @@ describe('requeueFailed', () => {
     it('a requeued row is published by the next sweep exactly once', async () => {
         publish.mockResolvedValue(undefined);
         const failed = await insertRow({ status: 'failed' });
-        await recovery.requeueFailed([failed.id]);
+        await recovery.requeueFailed(testRequestContext, [failed.id]);
 
-        const processor = new IntegrationOutboxProcessorService(dataSource, { publish } as never);
+        const processor = new IntegrationOutboxProcessorService(
+            createTestConnection(dataSource),
+            { publish } as never,
+            testRequestContextService,
+        );
         await processor.processPendingBatch();
         await processor.processPendingBatch();
 
@@ -108,25 +119,28 @@ describe('requeueFailed', () => {
 
 describe('rebuildSkipped racing the live enqueue', () => {
     it('a live enqueue and a rebuild of the same order produce exactly one pending row', async () => {
-        const gateway = new OutboundGateway(dataSource, new IntegrationOutboxService());
+        const gateway = new OutboundGateway(
+            createTestConnection(dataSource),
+            new IntegrationOutboxService(createTestConnection(dataSource)),
+        );
         const skipped = await insertRow({ status: 'skipped', lastError: 'held' });
         build.mockResolvedValue(outboundSend([{ payload: { ...subject, rebuilt: true } }]));
 
-        const live = dataSource.transaction(async em => {
-            await em.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
-                `reserve-order:${subject.orderId}`,
-            ]);
-            await gateway.enqueue({
-                eventType: 'order.confirmed',
-                subject,
-                build: async () => {
-                    const sent = await gateway.hasActiveEntry('order.confirmed', subject.orderId);
-                    await new Promise(r => setTimeout(r, 300));
-                    return sent
-                        ? outboundSkip('already submitted')
-                        : outboundSend([{ payload: subject }]);
-                },
-            });
+        const live = gateway.enqueue(testRequestContext, {
+            eventType: 'order.confirmed',
+            subject,
+            lockKey: `reserve-order:${subject.orderId}`,
+            build: async txCtx => {
+                const sent = await gateway.hasActiveEntry(
+                    txCtx,
+                    'order.confirmed',
+                    subject.orderId,
+                );
+                await new Promise(r => setTimeout(r, 300));
+                return sent
+                    ? outboundSkip('already submitted')
+                    : outboundSend([{ payload: subject }]);
+            },
         });
         await new Promise(r => setTimeout(r, 50));
         const rebuilt = recovery.rebuildSkipped(ctx, skipped.id);

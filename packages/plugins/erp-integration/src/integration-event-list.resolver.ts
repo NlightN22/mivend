@@ -1,5 +1,5 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { Allow, UserInputError } from '@vendure/core';
+import { Allow, Ctx, RequestContext, UserInputError } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { IntegrationEventListService } from './integration-event-list.service';
@@ -24,16 +24,18 @@ export class IntegrationEventListResolver {
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
     integrationInboxIssues(
+        @Ctx() ctx: RequestContext,
         @Args() args: { options?: ListOptionsInput },
     ): Promise<IntegrationEventList<IntegrationInboxEvent>> {
-        return guarded(this.lists.listInboxIssues(args.options));
+        return guarded(this.lists.listInboxIssues(ctx, args.options));
     }
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
     integrationOutboxProblems(
+        @Ctx() ctx: RequestContext,
         @Args() args: { options?: ListOptionsInput },
     ): Promise<IntegrationEventList<OutboxProblemRow>> {
-        return guarded(this.lists.listOutboxProblems(args.options));
+        return guarded(this.lists.listOutboxProblems(ctx, args.options));
     }
 }

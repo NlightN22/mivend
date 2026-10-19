@@ -1,7 +1,6 @@
 import { Query, Resolver } from '@nestjs/graphql';
-import { Allow } from '@vendure/core';
+import { Allow, Ctx, RequestContext, TransactionalConnection } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
-import { DataSource } from 'typeorm';
 
 import { KafkaConsumerLagEntry } from './entities/kafka-consumer-lag.entity';
 
@@ -58,12 +57,12 @@ export function groupLagRowsByTopic(rows: KafkaConsumerLagEntry[]): KafkaTopicLa
 
 @Resolver()
 export class KafkaLagResolver {
-    constructor(private dataSource: DataSource) {}
+    constructor(private connection: TransactionalConnection) {}
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
-    async kafkaConsumerLag(): Promise<KafkaTopicLag[]> {
-        const rows = await this.dataSource.getRepository(KafkaConsumerLagEntry).find();
+    async kafkaConsumerLag(@Ctx() ctx: RequestContext): Promise<KafkaTopicLag[]> {
+        const rows = await this.connection.getRepository(ctx, KafkaConsumerLagEntry).find();
         return groupLagRowsByTopic(rows);
     }
 }

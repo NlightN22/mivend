@@ -1,3 +1,4 @@
+import { testRequestContext } from 'shared';
 import { describe, it, expect, vi } from 'vitest';
 
 import { KafkaStatusController } from '../../kafka-status.controller';
@@ -11,7 +12,9 @@ describe('KafkaStatusController', () => {
         };
         const controller = new KafkaStatusController(dataSource as never);
 
-        await expect(controller.getStatus()).resolves.toEqual({ connected: true });
+        await expect(controller.getStatus(testRequestContext)).resolves.toEqual({
+            connected: true,
+        });
     });
 
     it('reports connected: false when the persisted row says so', async () => {
@@ -22,7 +25,9 @@ describe('KafkaStatusController', () => {
         };
         const controller = new KafkaStatusController(dataSource as never);
 
-        await expect(controller.getStatus()).resolves.toEqual({ connected: false });
+        await expect(controller.getStatus(testRequestContext)).resolves.toEqual({
+            connected: false,
+        });
     });
 
     // The consumer may never have run in this environment at all (e.g. kafkaEnabled: false) —
@@ -35,6 +40,8 @@ describe('KafkaStatusController', () => {
         };
         const controller = new KafkaStatusController(dataSource as never);
 
-        await expect(controller.getStatus()).resolves.toEqual({ connected: false });
+        await expect(controller.getStatus(testRequestContext)).resolves.toEqual({
+            connected: false,
+        });
     });
 });

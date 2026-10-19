@@ -1,3 +1,4 @@
+import { testRequestContext } from 'shared';
 import { describe, expect, it, vi } from 'vitest';
 import { PERMISSIONS_METADATA_KEY, UserInputError } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
@@ -28,15 +29,17 @@ describe('IntegrationEventListResolver', () => {
         };
         const resolver = new IntegrationEventListResolver(lists as never);
 
-        await expect(resolver.integrationInboxIssues({ options: {} })).rejects.toThrow(
-            UserInputError,
-        );
+        await expect(
+            resolver.integrationInboxIssues(testRequestContext, { options: {} }),
+        ).rejects.toThrow(UserInputError);
     });
 
     it('lets unexpected errors through untouched', async () => {
         const lists = { listOutboxProblems: vi.fn().mockRejectedValue(new Error('db down')) };
         const resolver = new IntegrationEventListResolver(lists as never);
 
-        await expect(resolver.integrationOutboxProblems({})).rejects.toThrow('db down');
+        await expect(resolver.integrationOutboxProblems(testRequestContext, {})).rejects.toThrow(
+            'db down',
+        );
     });
 });

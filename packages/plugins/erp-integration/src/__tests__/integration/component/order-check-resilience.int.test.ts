@@ -60,7 +60,7 @@ describe('a failing check cannot break the order flow', () => {
         ]);
         expect(order.code).toBe('RESERVED-MARK');
         await new Promise(r => setTimeout(r, 200));
-        const health = await w.health.getHealth();
+        const health = await w.health.getHealth(w.ctx);
         expect(health).toContainEqual({
             checkCode: 'check-run-failed',
             reason: 'pre-reserve',

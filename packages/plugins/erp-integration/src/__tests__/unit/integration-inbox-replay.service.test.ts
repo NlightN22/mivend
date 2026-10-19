@@ -1,3 +1,4 @@
+import { testRequestContext } from 'shared';
 import { describe, expect, it, vi } from 'vitest';
 
 import { IntegrationInboxReplayService } from '../../integration-inbox-replay.service';
@@ -35,7 +36,7 @@ describe('IntegrationInboxReplayService.replayFailed — undecodable rows', () =
             },
         ]);
 
-        const results = await service.replayFailed([1]);
+        const results = await service.replayFailed(testRequestContext, [1]);
 
         expect(results).toEqual([
             {
@@ -48,7 +49,7 @@ describe('IntegrationInboxReplayService.replayFailed — undecodable rows', () =
             },
         ]);
         expect(replayClient.replay).not.toHaveBeenCalled();
-        expect(state.claimForReplay).toHaveBeenCalledWith([]);
+        expect(state.claimForReplay).toHaveBeenCalledWith(testRequestContext, []);
     });
 
     it('still replays a sibling failed row with a real decode error unrelated to it', async () => {
@@ -71,13 +72,13 @@ describe('IntegrationInboxReplayService.replayFailed — undecodable rows', () =
         state.claimForReplay.mockResolvedValue([{ id: 2, stream: 'category', entityId: 'cat-7' }]);
         replayClient.replay.mockResolvedValue([{ entityId: 'cat-7', status: 'replayed' }]);
 
-        const results = await service.replayFailed([1, 2]);
+        const results = await service.replayFailed(testRequestContext, [1, 2]);
 
         const byId = new Map(results.map(r => [r.id, r]));
         expect(byId.get('1')?.outcome).toBe('UNDECODABLE');
         expect(byId.get('2')?.outcome).toBe('REPLAYED');
         expect(replayClient.replay).toHaveBeenCalledWith('category', ['cat-7']);
-        expect(state.claimForReplay).toHaveBeenCalledWith([2]);
+        expect(state.claimForReplay).toHaveBeenCalledWith(testRequestContext, [2]);
     });
 
     // #213 regression: lastError was already overwritten by a prior replay attempt — only the
@@ -95,7 +96,7 @@ describe('IntegrationInboxReplayService.replayFailed — undecodable rows', () =
             },
         ]);
 
-        const results = await service.replayFailed([1]);
+        const results = await service.replayFailed(testRequestContext, [1]);
 
         expect(results).toEqual([
             {
@@ -108,6 +109,6 @@ describe('IntegrationInboxReplayService.replayFailed — undecodable rows', () =
             },
         ]);
         expect(replayClient.replay).not.toHaveBeenCalled();
-        expect(state.claimForReplay).toHaveBeenCalledWith([]);
+        expect(state.claimForReplay).toHaveBeenCalledWith(testRequestContext, []);
     });
 });

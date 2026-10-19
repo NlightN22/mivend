@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { RequestContextService, TransactionalConnection } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
+import { ctxQuery } from 'shared';
 
 import {
     replayDidNotResolve,
@@ -11,14 +13,20 @@ import {
 // processor racing for the same row cannot both win (docs/concurrency.md).
 @Injectable()
 export class IntegrationInboxReplayStateService {
-    constructor(private readonly dataSource: DataSource) {}
+    constructor(
+        private readonly connection: TransactionalConnection,
+        private readonly requestContextService: RequestContextService,
+    ) {}
 
     // failed -> replay_requested; returns the rows this call claimed (a second click gets none).
     async claimForReplay(
+        ctx: RequestContext,
         ids: number[],
     ): Promise<Array<{ id: number; stream: string; entityId: string }>> {
         if (ids.length === 0) return [];
-        const [rows] = await this.dataSource.query(
+        const [rows] = await ctxQuery<[Array<{ id: number; stream: string; entityId: string }>]>(
+            this.connection,
+            ctx,
             `UPDATE integration_inbox_event
                 SET status = 'replay_requested', replay_requested_at = now()
               WHERE id = ANY($1::bigint[]) AND status = 'failed'
@@ -29,9 +37,11 @@ export class IntegrationInboxReplayStateService {
     }
 
     // Replay was not accepted: back to failed, reason annotated.
-    async releaseClaim(ids: number[], reason: string): Promise<void> {
+    async releaseClaim(ctx: RequestContext, ids: number[], reason: string): Promise<void> {
         if (ids.length === 0) return;
-        await this.dataSource.query(
+        await ctxQuery<unknown>(
+            this.connection,
+            ctx,
             `UPDATE integration_inbox_event
                 SET status = 'failed', replay_requested_at = NULL,
                     last_error = $2
@@ -42,7 +52,10 @@ export class IntegrationInboxReplayStateService {
 
     // replay_requested -> failed for rows whose replay produced nothing usable. Returns the count.
     async expireStale(timeoutMs: number = REPLAY_WAIT_TIMEOUT_MS): Promise<number> {
-        const [rows] = await this.dataSource.query(
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const [rows] = await ctxQuery<[Array<{ id: string }>]>(
+            this.connection,
+            ctx,
             `UPDATE integration_inbox_event r
                 SET status = 'failed', replay_requested_at = NULL,
                     last_error = $2 || CASE WHEN EXISTS (

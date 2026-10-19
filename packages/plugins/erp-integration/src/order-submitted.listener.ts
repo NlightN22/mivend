@@ -1,8 +1,8 @@
 import { Injectable, OnApplicationBootstrap, Inject } from '@nestjs/common';
-import { EventBus, TransactionalConnection } from '@vendure/core';
+import { EventBus } from '@vendure/core';
 import type { ID, RequestContext } from '@vendure/core';
 import { OrderReservedEvent } from '@mivend/plugin-reservation';
-import { subscribeAndLog, withAggregateLock } from 'shared';
+import { subscribeAndLog } from 'shared';
 
 import { OrderSubmittedBuilder } from './order-submitted.builder';
 import { OutboundGateway } from './outbound-gateway';
@@ -15,7 +15,6 @@ import type { ErpIntegrationPluginOptions } from './types';
 export class OrderSubmittedListener implements OnApplicationBootstrap {
     constructor(
         private readonly eventBus: EventBus,
-        private readonly connection: TransactionalConnection,
         private readonly gateway: OutboundGateway,
         private readonly builder: OrderSubmittedBuilder,
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
@@ -40,12 +39,11 @@ export class OrderSubmittedListener implements OnApplicationBootstrap {
     // Same `reserve-order:<id>` lock key as order-contract.service.ts's reserveOrder — closes the
     // check-then-insert race a concurrent re-confirm/redelivery would otherwise hit (issue #199).
     async enqueueConfirmed(ctx: RequestContext, orderId: ID, orderCode: string): Promise<void> {
-        await withAggregateLock(this.connection, ctx, `reserve-order:${String(orderId)}`, txCtx =>
-            this.gateway.enqueue({
-                eventType: 'order.confirmed',
-                subject: { orderId: String(orderId), orderCode },
-                build: () => this.builder.build(txCtx, orderId, orderCode),
-            }),
-        );
+        await this.gateway.enqueue(ctx, {
+            eventType: 'order.confirmed',
+            subject: { orderId: String(orderId), orderCode },
+            lockKey: `reserve-order:${String(orderId)}`,
+            build: txCtx => this.builder.build(txCtx, orderId, orderCode),
+        });
     }
 }

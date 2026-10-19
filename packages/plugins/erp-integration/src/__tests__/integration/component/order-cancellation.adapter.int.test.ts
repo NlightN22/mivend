@@ -7,6 +7,7 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
 } from 'shared';
 
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
@@ -35,8 +36,8 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    const outbox = new IntegrationOutboxService();
-    const gateway = new OutboundGateway(dataSource, outbox);
+    const outbox = new IntegrationOutboxService(createTestConnection(dataSource));
+    const gateway = new OutboundGateway(createTestConnection(dataSource), outbox);
     adapter = new OrderCancellationAdapter(gateway, {
         register: () => undefined,
     } as never);

@@ -1,19 +1,27 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import type { RequestContext } from '@vendure/core';
 import { DataSource } from 'typeorm';
+import type { EntityManager } from 'typeorm';
 import {
+    ctxQuery,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
 
 import { IntegrationOutboxEntry } from '../../entities/integration-outbox-entry.entity';
 import { IntegrationOutboxService } from '../../integration-outbox.service';
+import { OutboundGateway, outboundSend } from '../../outbound-gateway';
 
-// Outbox writes take a caller-supplied EntityManager to join the caller's transaction.
+// Outbox writes take the caller's ctx to join its transaction.
 // Dedup relies on the unique eventId index, not on application-level checks.
 let dataSource: DataSource;
 let outboxService: IntegrationOutboxService;
+let gateway: OutboundGateway;
+const txCtx = (em: EntityManager): RequestContext => ({ em }) as unknown as RequestContext;
 
 const { schema, extra } = testSchemaOptions('erp_integration_outbox_atomicity');
 
@@ -28,11 +36,14 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    outboxService = new IntegrationOutboxService();
+    outboxService = new IntegrationOutboxService(createTestConnection(dataSource));
+    gateway = new OutboundGateway(createTestConnection(dataSource), outboxService);
+    await dataSource.query('CREATE TABLE business_change (id serial PRIMARY KEY, note text)');
 });
 
 afterEach(async () => {
     await dataSource.getRepository(IntegrationOutboxEntry).clear();
+    await dataSource.query('DELETE FROM business_change');
 });
 
 afterAll(async () => {
@@ -43,7 +54,7 @@ afterAll(async () => {
 describe('IntegrationOutboxService atomicity (integration, real Postgres)', () => {
     it('writes a row that commits normally', async () => {
         await dataSource.transaction(async em => {
-            await outboxService.writeToOutbox(em, {
+            await outboxService.writeToOutbox(txCtx(em), {
                 eventType: 'order.confirmed',
                 payload: { orderId: 'order-1' },
             });
@@ -60,12 +71,12 @@ describe('IntegrationOutboxService atomicity (integration, real Postgres)', () =
 
         await expect(
             dataSource.transaction(async em => {
-                await outboxService.writeToOutbox(em, {
+                await outboxService.writeToOutbox(txCtx(em), {
                     eventId: duplicateEventId,
                     eventType: 'order.confirmed',
                     payload: { orderId: 'order-a' },
                 });
-                await outboxService.writeToOutbox(em, {
+                await outboxService.writeToOutbox(txCtx(em), {
                     eventId: duplicateEventId,
                     eventType: 'order.confirmed',
                     payload: { orderId: 'order-b' },
@@ -80,7 +91,7 @@ describe('IntegrationOutboxService atomicity (integration, real Postgres)', () =
     it('a transaction that writes to the outbox then throws for an unrelated reason leaves no row behind', async () => {
         await expect(
             dataSource.transaction(async em => {
-                await outboxService.writeToOutbox(em, {
+                await outboxService.writeToOutbox(txCtx(em), {
                     eventType: 'order.confirmed',
                     payload: { orderId: 'order-never-persisted' },
                 });
@@ -90,5 +101,40 @@ describe('IntegrationOutboxService atomicity (integration, real Postgres)', () =
 
         const rows = await dataSource.getRepository(IntegrationOutboxEntry).find();
         expect(rows).toHaveLength(0);
+    });
+});
+
+describe('OutboundGateway atomicity with the business change (integration, real Postgres)', () => {
+    const connection = (): ReturnType<typeof createTestConnection> =>
+        createTestConnection(dataSource);
+    const changeAndEnqueue = async (ctx: RequestContext, fail: boolean): Promise<void> => {
+        await ctxQuery<unknown>(
+            connection(),
+            ctx,
+            'INSERT INTO business_change (note) VALUES ($1)',
+            ['order placed'],
+        );
+        await gateway.enqueue(ctx, {
+            eventType: 'order.confirmed',
+            subject: { orderId: 'order-1' },
+            build: async () => outboundSend([{ payload: { orderId: 'order-1' } }]),
+        });
+        if (fail) throw new Error('business step failed after the enqueue');
+    };
+
+    it('commits the business change and the outbox row together', async () => {
+        await connection().withTransaction(testRequestContext, ctx => changeAndEnqueue(ctx, false));
+
+        expect(await dataSource.getRepository(IntegrationOutboxEntry).count()).toBe(1);
+        expect(await dataSource.query('SELECT 1 FROM business_change')).toHaveLength(1);
+    });
+
+    it('rolls the outbox row back with the business change', async () => {
+        await expect(
+            connection().withTransaction(testRequestContext, ctx => changeAndEnqueue(ctx, true)),
+        ).rejects.toThrow('business step failed after the enqueue');
+
+        expect(await dataSource.getRepository(IntegrationOutboxEntry).count()).toBe(0);
+        expect(await dataSource.query('SELECT 1 FROM business_change')).toHaveLength(0);
     });
 });

@@ -1,6 +1,6 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { DataSource } from 'typeorm';
+import { Ctx, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { KafkaStatusDto } from './dto/kafka-status.dto';
 import { KafkaStatusApiKeyGuard } from './kafka-status-api-key.guard';
@@ -13,16 +13,16 @@ import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
 @UseGuards(KafkaStatusApiKeyGuard)
 @Controller('erp')
 export class KafkaStatusController {
-    constructor(private readonly dataSource: DataSource) {}
+    constructor(private readonly connection: TransactionalConnection) {}
 
     @Get('kafka-status')
     @ApiOperation({
         summary: 'Current connection state of the Integration Service Kafka consumer',
     })
     @ApiResponse({ status: 200, type: KafkaStatusDto })
-    async getStatus(): Promise<KafkaStatusDto> {
-        const row = await this.dataSource
-            .getRepository(KafkaConsumerStatus)
+    async getStatus(@Ctx() ctx: RequestContext): Promise<KafkaStatusDto> {
+        const row = await this.connection
+            .getRepository(ctx, KafkaConsumerStatus)
             .findOne({ where: { key: 'default' } });
         return { connected: row?.connected ?? false };
     }

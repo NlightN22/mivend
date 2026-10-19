@@ -1,14 +1,15 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource } from 'typeorm';
 import type { Repository } from 'typeorm';
-import type { RequestContext } from '@vendure/core';
 import {
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
-    withAggregateLock,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
+import { testRequestContextService } from '../../test-request-context-service';
 
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
 import { IntegrationOutboxProcessorService } from '../../../integration-outbox-processor.service';
@@ -37,7 +38,10 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    gateway = new OutboundGateway(dataSource, new IntegrationOutboxService());
+    gateway = new OutboundGateway(
+        createTestConnection(dataSource),
+        new IntegrationOutboxService(createTestConnection(dataSource)),
+    );
 });
 
 afterEach(async () => {
@@ -52,7 +56,7 @@ afterAll(async () => {
 
 describe('OutboundGateway (integration, real Postgres)', () => {
     it('records a skipped row with the reason and the subject, and the processor never publishes it', async () => {
-        const outcome = await gateway.enqueue({
+        const outcome = await gateway.enqueue(testRequestContext, {
             eventType: 'order.confirmed',
             subject,
             build: async () => outboundSkip('line 1 has no organizationId'),
@@ -68,13 +72,17 @@ describe('OutboundGateway (integration, real Postgres)', () => {
             lastError: 'line 1 has no organizationId',
         });
 
-        const processor = new IntegrationOutboxProcessorService(dataSource, { publish } as never);
+        const processor = new IntegrationOutboxProcessorService(
+            createTestConnection(dataSource),
+            { publish } as never,
+            testRequestContextService,
+        );
         await processor.processPendingBatch();
         expect(publish).not.toHaveBeenCalled();
     });
 
     it('a successful build writes pending rows and no skipped row', async () => {
-        await gateway.enqueue({
+        await gateway.enqueue(testRequestContext, {
             eventType: 'order.confirmed',
             subject,
             build: async () => outboundSend([{ payload: { n: 1 } }, { payload: { n: 2 } }]),
@@ -86,7 +94,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
 
     it('writes all events of one enqueue in one transaction: a failing second write leaves none', async () => {
         await expect(
-            gateway.enqueue({
+            gateway.enqueue(testRequestContext, {
                 eventType: 'order.confirmed',
                 subject,
                 build: async () =>
@@ -102,15 +110,12 @@ describe('OutboundGateway (integration, real Postgres)', () => {
 
     it('joins a caller transaction: rolling it back removes the skipped row too', async () => {
         await expect(
-            dataSource.transaction(async em => {
-                await gateway.enqueue(
-                    {
-                        eventType: 'order.confirmed',
-                        subject,
-                        build: async () => outboundSkip('reason'),
-                    },
-                    em,
-                );
+            createTestConnection(dataSource).withTransaction(testRequestContext, async txCtx => {
+                await gateway.enqueue(txCtx, {
+                    eventType: 'order.confirmed',
+                    subject,
+                    build: async () => outboundSkip('reason'),
+                });
                 throw new Error('rollback business write');
             }),
         ).rejects.toThrow('rollback business write');
@@ -120,7 +125,7 @@ describe('OutboundGateway (integration, real Postgres)', () => {
 
     it('records a skipped row and rethrows when the builder throws', async () => {
         await expect(
-            gateway.enqueue({
+            gateway.enqueue(testRequestContext, {
                 eventType: 'order.confirmed',
                 subject,
                 build: async () => {
@@ -137,19 +142,17 @@ describe('OutboundGateway (integration, real Postgres)', () => {
         });
     });
 
-    it('keeps the skipped row of a builder failure even when the caller transaction rolls back', async () => {
+    it('rolls back what a failing build wrote and records the failure after the rollback', async () => {
+        const outbox = new IntegrationOutboxService(createTestConnection(dataSource));
         await expect(
-            dataSource.transaction(async em => {
-                await gateway.enqueue(
-                    {
-                        eventType: 'order.confirmed',
-                        subject,
-                        build: async () => {
-                            throw new Error('lookup failed');
-                        },
-                    },
-                    em,
-                );
+            gateway.enqueue(testRequestContext, {
+                eventType: 'order.confirmed',
+                subject,
+                lockKey: 'reserve-order:order-1',
+                build: async txCtx => {
+                    await outbox.writeToOutbox(txCtx, { eventType: 'probe', payload: {} });
+                    throw new Error('lookup failed');
+                },
             }),
         ).rejects.toThrow('lookup failed');
 
@@ -162,59 +165,49 @@ describe('OutboundGateway (integration, real Postgres)', () => {
     });
 
     it('hasActiveEntry matches only the given orderId and an active status', async () => {
-        await gateway.enqueue({
+        await gateway.enqueue(testRequestContext, {
             eventType: 'order.confirmed',
             subject: { orderId: 'order-active' },
             build: async () => outboundSend([{ payload: { orderId: 'order-active' } }]),
         });
         const [row] = await repo().find();
         await repo().update({ id: row.id }, { status: 'failed' });
-        await gateway.enqueue({
+        await gateway.enqueue(testRequestContext, {
             eventType: 'order.confirmed',
             subject: { orderId: 'order-other' },
             build: async () => outboundSend([{ payload: { orderId: 'order-other' } }]),
         });
 
-        expect(await gateway.hasActiveEntry('order.confirmed', 'order-active')).toBe(false);
-        expect(await gateway.hasActiveEntry('order.confirmed', 'order-other')).toBe(true);
-        expect(await gateway.hasActiveEntry('order.confirmed', 'order-missing')).toBe(false);
+        expect(
+            await gateway.hasActiveEntry(testRequestContext, 'order.confirmed', 'order-active'),
+        ).toBe(false);
+        expect(
+            await gateway.hasActiveEntry(testRequestContext, 'order.confirmed', 'order-other'),
+        ).toBe(true);
+        expect(
+            await gateway.hasActiveEntry(testRequestContext, 'order.confirmed', 'order-missing'),
+        ).toBe(false);
     });
 
-    // Mirrors OrderSubmittedListener.handle()'s real guard shape (check then enqueue under the
+    // Mirrors OrderSubmittedListener's real guard shape (check in the build, under the gateway's
     // reserve-order:<id> lock) — proves the lock closes the race, not just the guard's read.
-    const withManager = (ctx: RequestContext, manager: EntityManager): RequestContext =>
-        ({ ...ctx, __manager: manager }) as unknown as RequestContext;
-    const lockConnectionShim = {
-        getRepository: (ctx: RequestContext) => {
-            const manager = (ctx as unknown as { __manager: EntityManager }).__manager;
-            return { query: (sql: string, params?: unknown[]) => manager.query(sql, params) };
-        },
-        withTransaction: async (
-            ctx: RequestContext,
-            work: (c: RequestContext) => Promise<unknown>,
-        ) => dataSource.transaction(manager => work(withManager(ctx, manager))),
-    } as unknown as Pick<
-        import('@vendure/core').TransactionalConnection,
-        'withTransaction' | 'getRepository'
-    >;
 
     const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
     // Widens the check-then-insert window to something reliably reproducible (verified: removing
     // the lock below makes this fail every run) — proves the lock, not scheduling luck, closes it.
-    async function guardedSubmit(orderId: string): Promise<'queued' | 'skipped-already'> {
-        const ctx = {} as RequestContext;
-        return withAggregateLock(lockConnectionShim, ctx, `reserve-order:${orderId}`, async () => {
-            if (await gateway.hasActiveEntry('order.confirmed', orderId)) {
-                return 'skipped-already';
-            }
-            await sleep(20);
-            await gateway.enqueue({
-                eventType: 'order.confirmed',
-                subject: { orderId },
-                build: async () => outboundSend([{ payload: { orderId } }]),
-            });
-            return 'queued';
+    function guardedSubmit(orderId: string): Promise<'queued' | 'skipped'> {
+        return gateway.enqueue(testRequestContext, {
+            eventType: 'order.confirmed',
+            subject: { orderId },
+            lockKey: `reserve-order:${orderId}`,
+            build: async txCtx => {
+                if (await gateway.hasActiveEntry(txCtx, 'order.confirmed', orderId)) {
+                    return outboundSkip('already submitted');
+                }
+                await sleep(20);
+                return outboundSend([{ payload: { orderId } }]);
+            },
         });
     }
 
@@ -223,10 +216,11 @@ describe('OutboundGateway (integration, real Postgres)', () => {
 
         const outcomes = await Promise.all([guardedSubmit(orderId), guardedSubmit(orderId)]);
 
-        expect(outcomes.sort()).toEqual(['queued', 'skipped-already']);
+        expect(outcomes.sort()).toEqual(['queued', 'skipped']);
         const rows = await repo()
             .createQueryBuilder('outbox')
             .where("outbox.payload->>'orderId' = :orderId", { orderId })
+            .andWhere("outbox.status = 'pending'")
             .getMany();
         expect(rows).toHaveLength(1);
         expect(rows[0].status).toBe('pending');

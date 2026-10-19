@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { RequestContext } from '@vendure/core';
-import { DataSource, In } from 'typeorm';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { ctxQuery, withAggregateLock } from 'shared';
+import { In } from 'typeorm';
 
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { IntegrationOutboxService } from './integration-outbox.service';
@@ -33,17 +34,17 @@ export class IntegrationOutboxRecoveryService {
     } satisfies Record<OutboundEventType, OutboundRebuilder>;
 
     constructor(
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         private readonly outbox: IntegrationOutboxService,
         private readonly orderSubmitted: OrderSubmittedBuilder,
     ) {}
 
     // Conditional UPDATE: only rows still `failed` move, so a double click or a concurrent
     // requeue cannot resurrect a row the processor already republished.
-    async requeueFailed(ids: number[]): Promise<number> {
+    async requeueFailed(ctx: RequestContext, ids: number[]): Promise<number> {
         if (ids.length === 0) return 0;
-        const result = await this.dataSource
-            .getRepository(IntegrationOutboxEntry)
+        const result = await this.connection
+            .getRepository(ctx, IntegrationOutboxEntry)
             .update(
                 { id: In(ids), status: 'failed' },
                 { status: 'pending', retryCount: 0, firstFailedAt: null, nextRetryAt: null },
@@ -53,9 +54,29 @@ export class IntegrationOutboxRecoveryService {
 
     async rebuildSkipped(ctx: RequestContext, id: number): Promise<RebuildOutcome> {
         let buildFailure: Error | undefined;
-        const outcome = await this.dataSource.transaction(async em => {
-            const row = await em
-                .getRepository(IntegrationOutboxEntry)
+        try {
+            return await this.rebuildInTransaction(ctx, id, error => (buildFailure = error));
+        } catch (error) {
+            if (!buildFailure) throw error;
+            await this.connection.getRepository(ctx, IntegrationOutboxEntry).update(
+                { id, status: 'skipped' },
+                {
+                    lastError: `rebuild failed: ${buildFailure.message}`,
+                    lastErrorAt: new Date(),
+                },
+            );
+            throw buildFailure;
+        }
+    }
+
+    private async rebuildInTransaction(
+        ctx: RequestContext,
+        id: number,
+        onBuildFailure: (error: Error) => void,
+    ): Promise<RebuildOutcome> {
+        return this.connection.withTransaction(ctx, async txCtx => {
+            const repo = this.connection.getRepository(txCtx, IntegrationOutboxEntry);
+            const row = await repo
                 .createQueryBuilder('e')
                 .setLock('pessimistic_write')
                 .where('e.id = :id AND e.status = :status', { id, status: 'skipped' })
@@ -66,7 +87,9 @@ export class IntegrationOutboxRecoveryService {
             const subjectKey = OUTBOUND_EVENT_TYPES[eventType].subjectKey;
             const isAlreadySent = async (): Promise<boolean> =>
                 (
-                    await em.query(
+                    await ctxQuery<unknown[]>(
+                        this.connection,
+                        txCtx,
                         `SELECT 1 FROM integration_outbox
                  WHERE event_type = $1 AND status IN ('pending', 'published')
                    AND payload ->> $2 = $3
@@ -77,50 +100,48 @@ export class IntegrationOutboxRecoveryService {
             const markAlreadySent = async (): Promise<'already-sent'> => {
                 row.status = 'resolved';
                 row.lastError = 'already sent by another outbox row';
-                await em.save(row);
+                await repo.save(row);
                 return 'already-sent';
             };
             if (await isAlreadySent()) return markAlreadySent();
 
-            // The builder reads committed data on its own connection; holding this row lock does
-            // not block it. A throw is recorded on the row (and rethrown after commit), not lost.
+            // A throw rolls this transaction back and is recorded on the row afterwards, not lost.
             let result: OutboundBuildResult;
             try {
-                result = await this.rebuilders[eventType](ctx, row.payload);
+                result = await this.rebuilders[eventType](txCtx, row.payload);
             } catch (error) {
-                buildFailure = error instanceof Error ? error : new Error(String(error));
-                row.lastError = `rebuild failed: ${buildFailure.message}`;
-                row.lastErrorAt = new Date();
-                await em.save(row);
-                return 'still-skipped' as const;
+                const failure = error instanceof Error ? error : new Error(String(error));
+                onBuildFailure(failure);
+                throw failure;
             }
             if (result.kind === 'send' && result.events.length > 0) {
-                // Lock order: outbox row, then the order lock after the build (the build takes it on another connection).
-                // The live enqueue holds it across check + insert, so one of the two sees the other's row.
+                // Lock order: outbox row, then the order lock. The live enqueue holds it across
+                // check + insert, so one of the two sees the other's row.
                 if (eventType === 'order.confirmed') {
-                    await em.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+                    await withAggregateLock(
+                        this.connection,
+                        txCtx,
                         `reserve-order:${String(row.payload.orderId)}`,
-                    ]);
+                        async () => undefined,
+                    );
                     if (await isAlreadySent()) return markAlreadySent();
                 }
                 for (const event of result.events) {
-                    await this.outbox.writeToOutbox(em, {
+                    await this.outbox.writeToOutbox(txCtx, {
                         eventId: event.eventId,
                         eventType: row.eventType,
                         payload: event.payload,
                     });
                 }
                 row.status = 'resolved';
-                await em.save(row);
+                await repo.save(row);
                 return 'queued' as const;
             }
 
             row.lastError = result.kind === 'skip' ? result.reason : 'builder returned no events';
             row.lastErrorAt = new Date();
-            await em.save(row);
+            await repo.save(row);
             return 'still-skipped' as const;
         });
-        if (buildFailure) throw buildFailure;
-        return outcome;
     }
 }

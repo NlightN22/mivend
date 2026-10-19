@@ -23,28 +23,28 @@ export class OrderCancellationAdapter implements OrderCancellationPort, OnApplic
         this.registry.register(this);
     }
 
-    async submissionState(_ctx: RequestContext, orderId: string): Promise<CancelSubmission> {
-        const statuses = await this.gateway.confirmedStatusesForOrder(orderId);
+    async submissionState(ctx: RequestContext, orderId: string): Promise<CancelSubmission> {
+        const statuses = await this.gateway.confirmedStatusesForOrder(ctx, orderId);
         if (statuses.includes('published')) return 'sent';
         return statuses.length > 0 ? 'pending' : 'none';
     }
 
     async skipPendingSubmission(
-        _ctx: RequestContext,
+        ctx: RequestContext,
         orderId: string,
         reason: string,
     ): Promise<boolean> {
-        const skipped = await this.gateway.skipWaitingConfirmed(orderId, reason);
+        const skipped = await this.gateway.skipWaitingConfirmed(ctx, orderId, reason);
         return skipped > 0;
     }
 
-    async requestCancel(_ctx: RequestContext, subject: CancelRequestSubject): Promise<void> {
+    async requestCancel(ctx: RequestContext, subject: CancelRequestSubject): Promise<void> {
         if (
             !subject.repeat &&
-            (await this.gateway.hasActiveEntry('order.cancel-requested', subject.orderUuid))
+            (await this.gateway.hasActiveEntry(ctx, 'order.cancel-requested', subject.orderUuid))
         )
             return;
-        await this.gateway.enqueue({
+        await this.gateway.enqueue(ctx, {
             eventType: 'order.cancel-requested',
             subject: { orderUuid: subject.orderUuid, orderId: subject.orderId },
             build: async () => buildCancelRequested(subject.orderUuid),
