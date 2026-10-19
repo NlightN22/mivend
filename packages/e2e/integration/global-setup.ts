@@ -20,6 +20,7 @@ export default async function globalSetup(): Promise<void> {
     if (previousRunLeftContourBroken()) await restartContour();
     await assertUp(`${contour.serverUrl}/health`);
     await assertUp(contour.storefrontUrl);
+    await assertUp(contour.managerUrl);
     select('SELECT 1');
     startRun();
 

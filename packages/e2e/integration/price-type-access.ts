@@ -96,21 +96,26 @@ export async function openManagerPage(
 
 export interface GraphqlLog {
     bodies: string[];
+    diagnostics: string[];
     pending: () => number;
 }
 
-// Collects the text of every GraphQL response the page receives and counts the calls in flight.
+// Collects the text of every GraphQL response, counts the calls in flight and keeps what a blank page needs explained.
 export function recordGraphql(page: Page): GraphqlLog {
     const bodies: string[] = [];
+    const diagnostics: string[] = [];
     let inFlight = 0;
     const isGraphql = (url: string): boolean => /\/(admin|shop)-api/.test(url);
     page.on('request', request => {
         if (isGraphql(request.url())) inFlight++;
     });
     page.on('requestfailed', request => {
+        diagnostics.push(`requestfailed ${request.url()} ${request.failure()?.errorText}`);
         if (isGraphql(request.url())) inFlight--;
     });
     page.on('response', response => {
+        if (response.status() >= 400)
+            diagnostics.push(`http ${response.status()} ${response.url()}`);
         if (!isGraphql(response.url())) return;
         void response.text().then(
             text => bodies.push(text),
@@ -118,19 +123,29 @@ export function recordGraphql(page: Page): GraphqlLog {
         );
         inFlight--;
     });
-    return { bodies, pending: () => inFlight };
+    page.on('console', message => {
+        if (message.type() === 'error') diagnostics.push(`console.error ${message.text()}`);
+    });
+    page.on('pageerror', error => diagnostics.push(`pageerror ${String(error)}`));
+    return { bodies, diagnostics, pending: () => inFlight };
 }
 
-// A cold dev server can serve a blank first load (re-optimised dependencies): reload once before failing.
+// Navigates and waits until the page's GraphQL calls have been answered and it shows text.
+// A blank page is a defect to explain, not to retry: the failure carries what the browser reported.
 export async function visit(page: Page, log: GraphqlLog, path: string): Promise<string> {
-    const settled = async (): Promise<boolean> =>
-        log.pending() <= 0 && (await page.locator('body').innerText()).length > 0;
     await page.goto(path);
     try {
-        await expect.poll(settled, { timeout: 15_000 }).toBe(true);
-    } catch {
-        await page.reload();
-        await expect.poll(settled, { timeout: 30_000 }).toBe(true);
+        await expect
+            .poll(
+                async () =>
+                    log.pending() <= 0 && (await page.locator('body').innerText()).length > 0,
+                { timeout: 30_000 },
+            )
+            .toBe(true);
+    } catch (error) {
+        throw new Error(
+            `${path} did not render (url ${page.url()}, in flight ${log.pending()}): ${log.diagnostics.slice(-10).join(' | ') || 'no browser errors'}\n${String(error)}`,
+        );
     }
     return page.locator('body').innerText();
 }

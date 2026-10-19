@@ -26,6 +26,11 @@ unless the owner asks. Read `docs/e2e-testing.md` ("Staging-integration order ex
 - Logins come from `contour-env.ts` (`STAGING_TEST_*` in the staging env file); never print or commit secrets.
   A new role gets its own `storageState` next to `customer-session.ts`.
 
+- **No retries, reloads or longer timeouts to make a flake pass.** A blank page, a hang or a one-off failure is a
+  product, contour or test defect: reproduce it, find the cause, fix that. Record browser errors, failed requests
+  and HTTP >= 400 so the failure explains itself (`recordGraphql` diagnostics), and fail fast in `global-setup`
+  when the contour is not ready (a manager portal that is not up, a restarting server).
+
 ## Structure
 
 - One theme per numbered file: `NN-<theme>.spec.ts`, ordered so read-only groups run before order-placing ones.
