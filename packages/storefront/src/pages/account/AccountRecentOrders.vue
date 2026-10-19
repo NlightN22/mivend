@@ -11,7 +11,7 @@ const { t } = useI18n();
 const demoOrders: {
     number: string;
     date: () => string;
-    address: string;
+    address: 'northHwy' | 'miraSt';
     amount: number;
     status: OrderStatus;
     statusType: string;
@@ -21,7 +21,7 @@ const demoOrders: {
     {
         number: '348921',
         date: () => t('account.recentOrders.today', { time: '14:28' }),
-        address: 'North Hwy, 12',
+        address: 'northHwy',
         amount: 42860,
         status: 'awaitingErp',
         statusType: 'warning',
@@ -31,7 +31,7 @@ const demoOrders: {
     {
         number: '348744',
         date: () => t('account.recentOrders.yesterday', { time: '17:12' }),
-        address: 'Mira St, 85',
+        address: 'miraSt',
         amount: 18940,
         status: 'reserveConfirmed',
         statusType: 'success',
@@ -41,7 +41,7 @@ const demoOrders: {
     {
         number: '348510',
         date: () => formatDate('2026-06-24', { day: 'numeric', month: 'short' }),
-        address: 'North Hwy, 12',
+        address: 'northHwy',
         amount: 96300,
         status: 'shipped',
         statusType: 'muted',
@@ -54,6 +54,7 @@ const orders = computed(() =>
     demoOrders.map(order => ({
         ...order,
         date: order.date(),
+        address: t(`demo.addresses.${order.address}`),
         amount: formatMoney(order.amount),
     })),
 );

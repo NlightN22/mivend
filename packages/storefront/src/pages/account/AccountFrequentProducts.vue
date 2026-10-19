@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { formatMoney } from '../../i18n/format';
 const products = [
-    { emoji: '🛢️', sku: 'AR-5812', brand: 'G-Energy', name: 'Motor oil 5W-40, 4 L', price: 2890 },
+    { emoji: '🛢️', sku: 'AR-5812', brand: 'G-Energy', name: 'motorOil' as const, price: 2890 },
     {
         emoji: '🔧',
         sku: 'FL-2201',
         brand: 'Mann',
-        name: 'Oil filter for popular models',
+        name: 'oilFilter' as const,
         price: 640,
     },
-    { emoji: '🧊', sku: 'AF-7710', brand: 'Nord', name: 'Antifreeze G12 red, 5 kg', price: 780 },
-    { emoji: '💡', sku: 'LB-H7', brand: 'Osram', name: 'Auto lamp H7 12V', price: 410 },
+    { emoji: '🧊', sku: 'AF-7710', brand: 'Nord', name: 'antifreeze' as const, price: 780 },
+    { emoji: '💡', sku: 'LB-H7', brand: 'Osram', name: 'lampH7' as const, price: 410 },
 ];
 
 const fmt = (n: number): string => formatMoney(n);
@@ -38,7 +38,7 @@ const fmt = (n: number): string => formatMoney(n);
                         <span>{{ p.sku }}</span
                         ><span>{{ p.brand }}</span>
                     </div>
-                    <div class="frequent-products__name">{{ p.name }}</div>
+                    <div class="frequent-products__name">{{ $t(`demo.products.${p.name}`) }}</div>
                     <div class="frequent-products__bottom">
                         <div class="frequent-products__price">{{ fmt(p.price) }}</div>
                         <button

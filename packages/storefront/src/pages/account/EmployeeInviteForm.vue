@@ -37,7 +37,7 @@ const form = ref({ name: '', contact: '', role: '', allPoints: false, points: []
                     <template v-if="!form.allPoints">
                         <label v-for="pt in DEMO_TRADING_POINTS" :key="pt" class="emp-check-row">
                             <input v-model="form.points" type="checkbox" :value="pt" />
-                            {{ pt }}
+                            {{ $t(`demo.points.${pt}`) }}
                         </label>
                     </template>
                 </div>

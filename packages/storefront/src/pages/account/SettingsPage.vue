@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { endAllSessions } from '../../api/sessions';
 import AccountSidebar from './AccountSidebar.vue';
 import SettingsSecurity from './SettingsSecurity.vue';
+import { DEMO_TRADING_POINTS } from './employeesDemo';
 
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 
 async function signOutAll() {
@@ -15,11 +18,15 @@ async function signOutAll() {
 }
 
 const profile = ref({
-    name: 'Ivan Petrov',
-    position: 'Head of Purchasing',
+    name: t('demo.people.ivanPetrov.name'),
+    position: t('demo.position'),
     email: 'ivan.petrov@example.ru',
     phone: '+7 913 000-00-11',
     defaultPoint: 'main',
+});
+watch(locale, () => {
+    profile.value.name = t('demo.people.ivanPetrov.name');
+    profile.value.position = t('demo.position');
 });
 const profileSaving = ref(false);
 const profileSaved = ref(false);
@@ -40,11 +47,12 @@ const notifications = ref<Record<(typeof NOTIFICATION_KEYS)[number], boolean>>({
     marketing: false,
 });
 
-const DEMO_POINTS = [
-    { value: 'main', label: 'Main service point · Industrial St, 14' },
-    { value: 'north', label: 'North depot · Northern Hwy, 52' },
-    { value: 'warehouse', label: 'Warehouse B · Warehouse Zone, 8' },
-];
+const DEMO_POINTS = computed(() =>
+    DEMO_TRADING_POINTS.map(value => ({
+        value,
+        label: `${t(`demo.points.${value}`)} · ${t(`demo.pointAddresses.${value}`)}`,
+    })),
+);
 
 const catalogView = ref<'grid' | 'list'>('grid');
 </script>

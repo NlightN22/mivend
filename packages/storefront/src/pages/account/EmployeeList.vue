@@ -37,10 +37,10 @@ function activityText(emp: Employee): string {
                 'emp-row--invited': emp.status === 'invited',
             }"
         >
-            <div class="emp-avatar">{{ emp.initials }}</div>
+            <div class="emp-avatar">{{ $t(`demo.people.${emp.person}.initials`) }}</div>
 
             <div class="emp-row__info">
-                <div class="emp-row__name">{{ emp.name }}</div>
+                <div class="emp-row__name">{{ $t(`demo.people.${emp.person}.name`) }}</div>
                 <div class="emp-row__contact">{{ contactLine(emp) }}</div>
                 <div v-if="emp.permissions.length" class="emp-row__perms">
                     <span v-for="p in emp.permissions" :key="p" class="emp-perm">{{
@@ -57,7 +57,7 @@ function activityText(emp: Employee): string {
             <div class="emp-cell">
                 <div class="emp-cell__label">{{ $t('employees.tradingPoints') }}</div>
                 <div class="emp-cell__value">
-                    {{ emp.points ? emp.points.join(' · ') : $t('employees.allPointsShort') }}
+                    {{ emp.points ? emp.points.map(p => $t(`demo.points.${p}`)).join(' · ') : $t('employees.allPointsShort') }}
                 </div>
             </div>
 

@@ -16,15 +16,22 @@ export type EmployeeActivity =
     | { kind: 'date'; date: string }
     | { kind: 'until'; date: string };
 
+export type DemoPerson =
+    | 'ivanPetrov'
+    | 'alexeySmirnov'
+    | 'elenaMorozova'
+    | 'kirillNikitin'
+    | 'sergeyIvanov';
+export type DemoPoint = 'main' | 'north' | 'warehouse';
+
 export interface Employee {
     id: string;
-    initials: string;
-    name: string;
+    person: DemoPerson;
     email: string;
     phone: string | null;
     contactNote: EmployeeContactNote | null;
     role: EmployeeRole;
-    points: string[] | null;
+    points: DemoPoint[] | null;
     status: EmployeeStatus;
     activity: EmployeeActivity;
     permissions: EmployeePermission[];
@@ -32,13 +39,12 @@ export interface Employee {
 
 export const ROLES: EmployeeRole[] = ['admin', 'purchaser', 'accountant', 'observer'];
 
-export const DEMO_TRADING_POINTS = ['Main service point', 'North depot', 'Warehouse B'];
+export const DEMO_TRADING_POINTS: DemoPoint[] = ['main', 'north', 'warehouse'];
 
 export const DEMO_EMPLOYEES: Employee[] = [
     {
         id: '1',
-        initials: 'IP',
-        name: 'Ivan Petrov',
+        person: 'ivanPetrov',
         email: 'ivan.petrov@example.com',
         phone: '+7 913 100 0001',
         contactNote: 'primaryContact',
@@ -50,21 +56,19 @@ export const DEMO_EMPLOYEES: Employee[] = [
     },
     {
         id: '2',
-        initials: 'AS',
-        name: 'Alexey Smirnov',
+        person: 'alexeySmirnov',
         email: 'alexey.smirnov@example.com',
         phone: '+7 913 200 0002',
         contactNote: null,
         role: 'purchaser',
-        points: ['Main service point', 'North depot'],
+        points: ['main', 'north'],
         status: 'active',
         activity: { kind: 'yesterday', time: '18:22' },
         permissions: ['catalog', 'orders', 'favorites'],
     },
     {
         id: '3',
-        initials: 'EM',
-        name: 'Elena Morozova',
+        person: 'elenaMorozova',
         email: 'elena.morozova@example.com',
         phone: '+7 913 300 0003',
         contactNote: null,
@@ -76,26 +80,24 @@ export const DEMO_EMPLOYEES: Employee[] = [
     },
     {
         id: '4',
-        initials: 'KN',
-        name: 'Kirill Nikitin',
+        person: 'kirillNikitin',
         email: 'kirill.nikitin@example.com',
         phone: null,
         contactNote: 'invitationSent',
         role: 'observer',
-        points: ['Main service point'],
+        points: ['main'],
         status: 'invited',
         activity: { kind: 'until', date: '2026-06-30' },
         permissions: ['viewOrders', 'viewDocuments'],
     },
     {
         id: '5',
-        initials: 'SI',
-        name: 'Sergey Ivanov',
+        person: 'sergeyIvanov',
         email: 'sergey.ivanov@example.com',
         phone: null,
         contactNote: 'accessDisabled',
         role: 'purchaser',
-        points: ['Warehouse B'],
+        points: ['warehouse'],
         status: 'disabled',
         activity: { kind: 'date', date: '2026-06-20' },
         permissions: [],
