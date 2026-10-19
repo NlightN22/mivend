@@ -8,7 +8,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-import { ApprovalRequestService } from '../../approval-request.service';
+import { ApprovalRequestQueryService } from '../../approval-request-query.service';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
 
 // Real Postgres, not mocked: a mocked repo can't catch broken JOIN/subquery/param-name collisions
@@ -47,7 +47,7 @@ class TestApprovalStep {
 }
 
 let dataSource: DataSource;
-let service: ApprovalRequestService;
+let queryService: ApprovalRequestQueryService;
 
 const { schema, extra } = testSchemaOptions('approval_request_price_type_gate');
 
@@ -88,7 +88,7 @@ beforeAll(async () => {
     const administratorService = {
         findOneByUserId: vi.fn(async (_ctx: RequestContext, userId: string) => ({ id: userId })),
     } as unknown as AdministratorService;
-    service = new ApprovalRequestService(
+    queryService = new ApprovalRequestQueryService(
         connectionShim,
         workflowDefinitionService,
         administratorService,
@@ -115,16 +115,20 @@ function grantRequest(priceTypeCode: string | null): Promise<TestApprovalRequest
 describe('ApprovalRequest price type gate (integration, real Postgres)', () => {
     it('a role without access to the price type sees neither the request nor its payload', async () => {
         await grantRequest('type-a');
-        const byType = await service.findByRequestType(ctxFor('admin-1'), 'discountGrantApproval', {
-            allowedPriceTypeCodes: ['type-b'],
-        });
-        const inbox = await service.findAwaitingMyDecision(ctxFor('admin-1'), {
+        const byType = await queryService.findByRequestType(
+            ctxFor('admin-1'),
+            'discountGrantApproval',
+            {
+                allowedPriceTypeCodes: ['type-b'],
+            },
+        );
+        const inbox = await queryService.findAwaitingMyDecision(ctxFor('admin-1'), {
             allowedPriceTypeCodes: [],
         });
-        const involved = await service.findAllInvolving(ctxFor('admin-1'), {
+        const involved = await queryService.findAllInvolving(ctxFor('admin-1'), {
             allowedPriceTypeCodes: ['type-b'],
         });
-        const summary = await service.getMySummary(ctxFor('admin-1'), 5, ['type-b']);
+        const summary = await queryService.getMySummary(ctxFor('admin-1'), 5, ['type-b']);
         expect(byType).toEqual({ items: [], totalItems: 0 });
         expect(inbox.totalItems).toBe(0);
         expect(involved.totalItems).toBe(0);
@@ -134,14 +138,14 @@ describe('ApprovalRequest price type gate (integration, real Postgres)', () => {
     it('a role with access sees the request with its payload', async () => {
         const req = await grantRequest('type-a');
         const opts = { allowedPriceTypeCodes: ['type-a'] };
-        const byType = await service.findByRequestType(
+        const byType = await queryService.findByRequestType(
             ctxFor('admin-1'),
             'discountGrantApproval',
             opts,
         );
-        const inbox = await service.findAwaitingMyDecision(ctxFor('admin-1'), opts);
-        const involved = await service.findAllInvolving(ctxFor('admin-1'), opts);
-        const summary = await service.getMySummary(ctxFor('admin-1'), 5, ['type-a']);
+        const inbox = await queryService.findAwaitingMyDecision(ctxFor('admin-1'), opts);
+        const involved = await queryService.findAllInvolving(ctxFor('admin-1'), opts);
+        const summary = await queryService.getMySummary(ctxFor('admin-1'), 5, ['type-a']);
         expect(byType.items.map(r => r.id)).toEqual([req.id]);
         expect(byType.items[0].payload).toContain('type-a');
         expect(inbox.totalItems).toBe(1);
@@ -154,7 +158,7 @@ describe('ApprovalRequest price type gate (integration, real Postgres)', () => {
         const b = await grantRequest('type-b');
         const seen = async (codes: string[]): Promise<string[]> =>
             (
-                await service.findByRequestType(ctxFor('admin-1'), 'discountGrantApproval', {
+                await queryService.findByRequestType(ctxFor('admin-1'), 'discountGrantApproval', {
                     allowedPriceTypeCodes: codes,
                 })
             ).items.map(r => String(r.id));
@@ -164,9 +168,13 @@ describe('ApprovalRequest price type gate (integration, real Postgres)', () => {
 
     it('denies by default a gated request with no price type code in its payload', async () => {
         await grantRequest(null);
-        const result = await service.findByRequestType(ctxFor('admin-1'), 'discountGrantApproval', {
-            allowedPriceTypeCodes: ['type-a'],
-        });
+        const result = await queryService.findByRequestType(
+            ctxFor('admin-1'),
+            'discountGrantApproval',
+            {
+                allowedPriceTypeCodes: ['type-a'],
+            },
+        );
         expect(result.totalItems).toBe(0);
     });
 
@@ -183,14 +191,18 @@ describe('ApprovalRequest price type gate (integration, real Postgres)', () => {
             requestedByAdministratorId: 'admin-1',
         });
         const opts = { allowedPriceTypeCodes: ['type-a'] };
-        const gated = await service.findByRequestType(
+        const gated = await queryService.findByRequestType(
             ctxFor('admin-1'),
             'discountGrantApproval',
             opts,
         );
-        const others = await service.findByRequestType(ctxFor('admin-1'), 'otherApproval', opts);
-        const involved = await service.findAllInvolving(ctxFor('admin-1'), opts);
-        const summary = await service.getMySummary(ctxFor('admin-1'), 5, ['type-a']);
+        const others = await queryService.findByRequestType(
+            ctxFor('admin-1'),
+            'otherApproval',
+            opts,
+        );
+        const involved = await queryService.findAllInvolving(ctxFor('admin-1'), opts);
+        const summary = await queryService.getMySummary(ctxFor('admin-1'), 5, ['type-a']);
         expect(gated.totalItems).toBe(0);
         expect(others.items.map(r => r.id)).toEqual([other.id]);
         expect(involved.items.map(r => r.id)).toEqual([other.id]);

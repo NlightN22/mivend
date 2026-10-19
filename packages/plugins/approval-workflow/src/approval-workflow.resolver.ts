@@ -15,6 +15,7 @@ import { ApprovalRequest } from './entities/approval-request.entity';
 import { ApprovalStep } from './entities/approval-step.entity';
 import { WorkflowDefinition } from './entities/workflow-definition.entity';
 import { ApprovalRequestService } from './approval-request.service';
+import { ApprovalRequestQueryService } from './approval-request-query.service';
 import { WorkflowDefinitionService, ParsedWorkflowDefinition } from './workflow-definition.service';
 import { ApprovalListOptions, ApprovalStepDecision, WorkflowStepDefinition } from './types';
 import { ApprovalStepService } from './approval-step.service';
@@ -32,6 +33,7 @@ const CREATE_PERMISSION_BY_REQUEST_TYPE: Record<string, string> = {
 export class ApprovalRequestResolver {
     constructor(
         private approvalRequestService: ApprovalRequestService,
+        private approvalRequestQueryService: ApprovalRequestQueryService,
         private approvalStepService: ApprovalStepService,
         private workflowDefinitionService: WorkflowDefinitionService,
         private readAccess: ApprovalReadAccessService,
@@ -64,7 +66,7 @@ export class ApprovalRequestResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { recentLimit?: number },
     ): Promise<{ pendingCount: number; recent: ApprovalRequest[] }> {
-        return this.approvalRequestService.getMySummary(
+        return this.approvalRequestQueryService.getMySummary(
             ctx,
             args.recentLimit ?? 5,
             await this.priceTypeAccess.allowedCodes(ctx),
@@ -76,7 +78,7 @@ export class ApprovalRequestResolver {
     @Query()
     @Allow(Permission.ReadOrder)
     async pendingPriceAdjustmentOrderIds(@Ctx() ctx: RequestContext): Promise<string[]> {
-        return this.approvalRequestService.findPendingPriceAdjustmentOrderIds(ctx);
+        return this.approvalRequestQueryService.findPendingPriceAdjustmentOrderIds(ctx);
     }
 
     // Order detail page (docs/ai/manager-portal-pages/03-order-detail.md, "Price adjustment
@@ -87,7 +89,10 @@ export class ApprovalRequestResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: ID },
     ): Promise<ApprovalRequest[]> {
-        return this.approvalRequestService.findPriceAdjustmentRequestsForOrder(ctx, args.orderId);
+        return this.approvalRequestQueryService.findPriceAdjustmentRequestsForOrder(
+            ctx,
+            args.orderId,
+        );
     }
 
     // Gated on ReadCatalog to match discountRules: discount policy is company-wide, not per-branch.
@@ -97,7 +102,7 @@ export class ApprovalRequestResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { requestType: string; options?: ApprovalListOptions },
     ): Promise<PaginatedList<ApprovalRequest>> {
-        return this.approvalRequestService.findByRequestType(
+        return this.approvalRequestQueryService.findByRequestType(
             ctx,
             args.requestType,
             await this.readAccess.withGate(ctx, args.options),
@@ -117,11 +122,11 @@ export class ApprovalRequestResolver {
         allInvolved: PaginatedList<ApprovalRequest>;
     }> {
         const [awaitingMyDecision, allInvolved] = await Promise.all([
-            this.approvalRequestService.findAwaitingMyDecision(
+            this.approvalRequestQueryService.findAwaitingMyDecision(
                 ctx,
                 await this.readAccess.withGate(ctx, args.awaitingOptions),
             ),
-            this.approvalRequestService.findAllInvolving(
+            this.approvalRequestQueryService.findAllInvolving(
                 ctx,
                 await this.readAccess.withGate(ctx, args.allInvolvedOptions),
             ),

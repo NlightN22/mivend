@@ -8,7 +8,7 @@ import {
     Transaction,
     TransactionalConnection,
 } from '@vendure/core';
-import { ApprovalRequestService } from '@mivend/plugin-approval-workflow';
+import { ApprovalRequestQueryService } from '@mivend/plugin-approval-workflow';
 import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 
 import { DiscountRule } from './discount-rule.entity';
@@ -33,7 +33,7 @@ export class DiscountRegistryResolver {
     constructor(
         private discountRegistryService: DiscountRegistryService,
         private connection: TransactionalConnection,
-        private approvalRequestService: ApprovalRequestService,
+        private approvalRequestQueryService: ApprovalRequestQueryService,
         private priceTypeAccess: PriceTypeAccessService,
     ) {}
 
@@ -66,7 +66,7 @@ export class DiscountRegistryResolver {
 
         // DiscountRule does not store justification or counterpartyIds; only the originating request payload does.
         // Fetch once and reuse it for the pending/rejected entries below.
-        const { items: requests } = await this.approvalRequestService.findByRequestType(
+        const { items: requests } = await this.approvalRequestQueryService.findByRequestType(
             ctx,
             DISCOUNT_GRANT_REQUEST_TYPE,
             { take: 10000 },

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ForbiddenError, UserInputError } from '@vendure/core';
 import type { AdministratorService, RequestContext, TransactionalConnection } from '@vendure/core';
 
+import { ApprovalRequestQueryService } from '../../approval-request-query.service';
 import { ApprovalRequestService } from '../../approval-request.service';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
 
@@ -48,6 +49,7 @@ describe('ApprovalRequestService', () => {
         findOneByUserId: ReturnType<typeof vi.fn>;
     };
     let service: ApprovalRequestService;
+    let queryService: ApprovalRequestQueryService;
 
     beforeEach(() => {
         const updateQueryBuilder = {
@@ -88,6 +90,11 @@ describe('ApprovalRequestService', () => {
         };
         administratorService = { findOneByUserId: vi.fn() };
         service = new ApprovalRequestService(
+            connection as unknown as TransactionalConnection,
+            workflowDefinitionService as unknown as WorkflowDefinitionService,
+            administratorService as unknown as AdministratorService,
+        );
+        queryService = new ApprovalRequestQueryService(
             connection as unknown as TransactionalConnection,
             workflowDefinitionService as unknown as WorkflowDefinitionService,
             administratorService as unknown as AdministratorService,
@@ -244,7 +251,7 @@ describe('ApprovalRequestService', () => {
         };
         requestRepo.createQueryBuilder.mockReturnValue(qb as never);
 
-        const result = await service.getMySummary(mockCtx(true), 5, ['code-a']);
+        const result = await queryService.getMySummary(mockCtx(true), 5, ['code-a']);
 
         expect(qb.where).toHaveBeenCalledWith('request.requestedByAdministratorId = :adminId', {
             adminId: 'admin-1',
@@ -259,7 +266,7 @@ describe('ApprovalRequestService', () => {
 
     it('getMySummary returns an empty summary when the caller has no Administrator record', async () => {
         administratorService.findOneByUserId.mockResolvedValue(null);
-        const result = await service.getMySummary(mockCtx(true), 5);
+        const result = await queryService.getMySummary(mockCtx(true), 5);
         expect(result).toEqual({ pendingCount: 0, recent: [] });
     });
 
@@ -270,7 +277,7 @@ describe('ApprovalRequestService', () => {
             { id: 'req-3', payload: JSON.stringify({ orderId: 'order-1' }) },
         ]);
 
-        const result = await service.findPendingPriceAdjustmentOrderIds(mockCtx(true));
+        const result = await queryService.findPendingPriceAdjustmentOrderIds(mockCtx(true));
 
         expect(requestRepo.find).toHaveBeenCalledWith({
             where: { requestType: 'priceAdjustmentApproval', status: 'pending' },
@@ -280,7 +287,7 @@ describe('ApprovalRequestService', () => {
 
     it('findPendingPriceAdjustmentOrderIds skips rows with invalid JSON payload', async () => {
         requestRepo.find.mockResolvedValue([{ id: 'req-1', payload: 'not-json' }]);
-        const result = await service.findPendingPriceAdjustmentOrderIds(mockCtx(true));
+        const result = await queryService.findPendingPriceAdjustmentOrderIds(mockCtx(true));
         expect(result).toEqual([]);
     });
 
@@ -291,7 +298,10 @@ describe('ApprovalRequestService', () => {
             { id: 'req-3', status: 'rejected', payload: JSON.stringify({ orderId: 'order-1' }) },
         ]);
 
-        const result = await service.findPriceAdjustmentRequestsForOrder(mockCtx(true), 'order-1');
+        const result = await queryService.findPriceAdjustmentRequestsForOrder(
+            mockCtx(true),
+            'order-1',
+        );
 
         expect(requestRepo.find).toHaveBeenCalledWith({
             where: { requestType: 'priceAdjustmentApproval' },
@@ -302,7 +312,10 @@ describe('ApprovalRequestService', () => {
 
     it('findPriceAdjustmentRequestsForOrder skips rows with invalid JSON payload', async () => {
         requestRepo.find.mockResolvedValue([{ id: 'req-1', payload: 'not-json' }]);
-        const result = await service.findPriceAdjustmentRequestsForOrder(mockCtx(true), 'order-1');
+        const result = await queryService.findPriceAdjustmentRequestsForOrder(
+            mockCtx(true),
+            'order-1',
+        );
         expect(result).toEqual([]);
     });
 

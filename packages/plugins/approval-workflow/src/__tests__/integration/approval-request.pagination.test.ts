@@ -8,7 +8,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-import { ApprovalRequestService } from '../../approval-request.service';
+import { ApprovalRequestQueryService } from '../../approval-request-query.service';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
 
 // Real Postgres, not mocked: a mocked repo can't catch broken JOIN/subquery/param-name collisions
@@ -47,7 +47,7 @@ class TestApprovalStep {
 }
 
 let dataSource: DataSource;
-let service: ApprovalRequestService;
+let queryService: ApprovalRequestQueryService;
 
 const priceAdjustmentSteps = [
     {
@@ -118,7 +118,7 @@ beforeAll(async () => {
         findOneByUserId: vi.fn(async (_ctx: RequestContext, userId: string) => ({ id: userId })),
     } as unknown as AdministratorService;
 
-    service = new ApprovalRequestService(
+    queryService = new ApprovalRequestQueryService(
         connectionShim,
         workflowDefinitionService,
         administratorService,
@@ -149,11 +149,11 @@ async function createRequest(
     });
 }
 
-describe('ApprovalRequestService pagination (integration, real Postgres)', () => {
+describe('ApprovalRequestQueryService pagination (integration, real Postgres)', () => {
     describe('findAwaitingMyDecision', () => {
         it('includes a pending request whose current-step permission the caller holds', async () => {
             const req = await createRequest();
-            const result = await service.findAwaitingMyDecision(
+            const result = await queryService.findAwaitingMyDecision(
                 ctxWithPermissions(['ApproveDiscountRequest'], 'admin-1'),
             );
             expect(result.items.map(r => r.id)).toEqual([req.id]);
@@ -162,7 +162,9 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
 
         it('excludes a pending request the caller cannot decide (no permission, not escalated to them)', async () => {
             await createRequest();
-            const result = await service.findAwaitingMyDecision(ctxWithPermissions([], 'admin-1'));
+            const result = await queryService.findAwaitingMyDecision(
+                ctxWithPermissions([], 'admin-1'),
+            );
             expect(result.items).toEqual([]);
             expect(result.totalItems).toBe(0);
         });
@@ -176,17 +178,19 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
                 wasEscalated: true,
                 escalatedToAdministratorId: 'admin-2',
             });
-            const result = await service.findAwaitingMyDecision(ctxWithPermissions([], 'admin-2'));
+            const result = await queryService.findAwaitingMyDecision(
+                ctxWithPermissions([], 'admin-2'),
+            );
             expect(result.items.map(r => r.id)).toEqual([req.id]);
         });
 
         it('paginates with take/skip and reports totalItems independent of the page size', async () => {
             const created = await Promise.all(Array.from({ length: 5 }, () => createRequest()));
-            const page1 = await service.findAwaitingMyDecision(
+            const page1 = await queryService.findAwaitingMyDecision(
                 ctxWithPermissions(['ApproveDiscountRequest'], 'admin-1'),
                 { take: 2, skip: 0 },
             );
-            const page2 = await service.findAwaitingMyDecision(
+            const page2 = await queryService.findAwaitingMyDecision(
                 ctxWithPermissions(['ApproveDiscountRequest'], 'admin-1'),
                 { take: 2, skip: 2 },
             );
@@ -202,11 +206,11 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
 
         it('search filters by request id substring', async () => {
             const req = await createRequest();
-            const matching = await service.findAwaitingMyDecision(
+            const matching = await queryService.findAwaitingMyDecision(
                 ctxWithPermissions(['ApproveDiscountRequest'], 'admin-1'),
                 { search: req.id.slice(0, 8) },
             );
-            const nonMatching = await service.findAwaitingMyDecision(
+            const nonMatching = await queryService.findAwaitingMyDecision(
                 ctxWithPermissions(['ApproveDiscountRequest'], 'admin-1'),
                 { search: 'zzz-does-not-exist' },
             );
@@ -217,7 +221,7 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
         it('requestType filter narrows results to the given type only', async () => {
             const priceReq = await createRequest({ requestType: 'priceAdjustmentApproval' });
             await createRequest({ requestType: 'discountGrantApproval', currentStepIndex: 0 });
-            const result = await service.findAwaitingMyDecision(
+            const result = await queryService.findAwaitingMyDecision(
                 ctxWithPermissions(['ApproveDiscountRequest', 'ApproveSecurityLimit'], 'admin-1'),
                 { requestType: 'priceAdjustmentApproval' },
             );
@@ -239,12 +243,14 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
                         ? dataSource.getRepository(TestApprovalRequest)
                         : dataSource.getRepository(TestApprovalStep),
             } as unknown as TransactionalConnection;
-            const noAdminSvc = new ApprovalRequestService(
+            const noAdminQuerySvc = new ApprovalRequestQueryService(
                 connectionShim,
                 workflowDefinitionService,
                 noAdminService,
             );
-            const result = await noAdminSvc.findAllInvolving(ctxWithPermissions([], 'ghost-user'));
+            const result = await noAdminQuerySvc.findAllInvolving(
+                ctxWithPermissions([], 'ghost-user'),
+            );
             expect(result).toEqual({ items: [], totalItems: 0 });
         });
 
@@ -287,7 +293,7 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
                 requestedByAdministratorId: 'admin-9',
             });
 
-            const result = await service.findAllInvolving(
+            const result = await queryService.findAllInvolving(
                 ctxWithPermissions(['ApproveDiscountRequest'], 'admin-1'),
             );
 
@@ -308,7 +314,7 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
                     createRequest({ requestedByAdministratorId: 'admin-1' }),
                 ),
             );
-            const page = await service.findAllInvolving(
+            const page = await queryService.findAllInvolving(
                 ctxWithPermissions(['ApproveDiscountRequest'], 'admin-1'),
                 { take: 2, skip: 0 },
             );
@@ -322,7 +328,7 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
                 status: 'pending',
             });
             await createRequest({ requestedByAdministratorId: 'admin-1', status: 'approved' });
-            const result = await service.findAllInvolving(
+            const result = await queryService.findAllInvolving(
                 ctxWithPermissions(['ApproveDiscountRequest'], 'admin-1'),
                 { status: 'pending' },
             );
@@ -342,7 +348,7 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
             });
             await createRequest({ requestType: 'priceAdjustmentApproval', currentStepIndex: 0 });
 
-            const result = await service.findByRequestType(
+            const result = await queryService.findByRequestType(
                 ctxWithPermissions([], 'admin-1'),
                 'discountGrantApproval',
             );
@@ -357,7 +363,7 @@ describe('ApprovalRequestService pagination (integration, real Postgres)', () =>
                     createRequest({ requestType: 'discountGrantApproval' }),
                 ),
             );
-            const page = await service.findByRequestType(
+            const page = await queryService.findByRequestType(
                 ctxWithPermissions([], 'admin-1'),
                 'discountGrantApproval',
                 { take: 2, skip: 0 },
