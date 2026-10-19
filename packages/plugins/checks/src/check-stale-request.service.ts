@@ -7,7 +7,8 @@ import { ctxQuery } from 'shared';
 import { CHECK_CODE_KIND } from './check-stale-request.writer';
 import { ChecksService } from './checks.service';
 
-const BATCH = 100;
+// Small, so rows claimed together do not outlive their lease while earlier ones are handled.
+const BATCH = 10;
 const LEASE = '5 minutes';
 const loggerCtx = 'CheckStaleRequests';
 

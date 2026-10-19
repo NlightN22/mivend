@@ -227,7 +227,7 @@ export class IntegrationInboxProcessorService {
                 await action(ctx);
             } catch (err) {
                 Logger.error(
-                    `After-commit action for  entityId= failed: ${err instanceof Error ? err.message : String(err)}`,
+                    `After-commit action for ${row.stream} entityId=${row.entityId} failed: ${err instanceof Error ? err.message : String(err)}`,
                     loggerCtx,
                 );
             }

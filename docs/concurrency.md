@@ -112,7 +112,8 @@ Every DB call runs on the RequestContext's transaction: `connection.getRepositor
 using only `txCtx`. A second pool connection taken inside a request transaction (`rawConnection`, an injected
 `DataSource`, ctx-less `getRepository(Entity)`) reads without the transaction's own writes, can block on a row
 the request itself locked, and freezes the server once concurrent requests reach the pool size (#257). Lint rule
-`db/no-raw-connection` forbids all three outside tests and migrations.
+`db/no-raw-connection` flags all three outside tests and migrations. It is a safety net, not a guarantee: a
+ctx-less `getRepository` is caught only on a receiver named `*connection`, so review still checks it.
 
 - Background code (scheduled tasks, jobs, consumers, inbox/outbox processors, bootstrap) creates a ctx with
   `RequestContextService.create({ apiType: 'admin' })` and works the same way.
