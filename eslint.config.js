@@ -9,6 +9,7 @@ import noNullCheckOnPlainProtoScalar from './eslint-rules/no-null-check-on-plain
 import maxCommentLines from './eslint-rules/max-comment-lines.js';
 import noSwallowedHandlerError from './eslint-rules/no-swallowed-handler-error.js';
 import noRawAdvisoryLock from './eslint-rules/no-raw-advisory-lock.js';
+import noRawConnection from './eslint-rules/no-raw-connection.js';
 
 export default [
     js.configs.recommended,
@@ -253,6 +254,13 @@ export default [
         languageOptions: { parser: tsParser },
         plugins: { locks: { rules: { 'no-raw-advisory-lock': noRawAdvisoryLock } } },
         rules: { 'locks/no-raw-advisory-lock': 'warn' },
+    },
+    {
+        files: ['packages/plugins/**/*.ts', 'apps/server/**/*.ts'],
+        ignores: ['**/*.test.ts', '**/__tests__/**', '**/migrations/**', '**/migration*.ts'],
+        languageOptions: { parser: tsParser },
+        plugins: { db: { rules: { 'no-raw-connection': noRawConnection } } },
+        rules: { 'db/no-raw-connection': 'error' },
     },
     prettierConfig, // must be last — disables rules that conflict with prettier
     {

@@ -3,6 +3,7 @@ import { describe, it } from 'vitest';
 
 import noDirectOutbound from '../no-direct-outbound.js';
 import noRawAdvisoryLock from '../no-raw-advisory-lock.js';
+import noRawConnection from '../no-raw-connection.js';
 import noSwallowedHandlerError from '../no-swallowed-handler-error.js';
 
 RuleTester.describe = describe;
@@ -75,5 +76,20 @@ tester.run('no-direct-outbound', noDirectOutbound, {
         { code: "q('INSERT INTO integration_outbox (event_id) VALUES ($1)');", errors: 1 },
         { code: 'q(`UPDATE "integration_outbox" SET status = $1`);', errors: 1 },
         { code: "q('delete from integration_outbox');", errors: 1 },
+    ],
+});
+
+tester.run('no-raw-connection', noRawConnection, {
+    valid: [
+        'this.connection.getRepository(ctx, Order).query(sql);',
+        'manager.getRepository(Order);',
+        "import { Repository } from 'typeorm';",
+    ],
+    invalid: [
+        { code: 'this.connection.rawConnection.query(sql);', errors: 1 },
+        { code: 'this.connection.getRepository(Order);', errors: 1 },
+        { code: 'connection.getRepository(Order);', errors: 1 },
+        { code: "import { DataSource } from 'typeorm';", errors: 1 },
+        { code: "import { InjectDataSource } from '@nestjs/typeorm';", errors: 1 },
     ],
 });
