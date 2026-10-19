@@ -7,7 +7,6 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
-    createTestConnection,
 } from 'shared';
 
 import { CounterpartyPriceTypeResolver } from '../../counterparty.resolver';
@@ -48,7 +47,7 @@ beforeAll(async () => {
         { code: 'price-type-purchase', visibility: 'confidential', externalId: null },
     ]);
     const access = new PriceTypeAccessService(
-        createTestConnection(dataSource),
+        { getRepository: () => dataSource.getRepository(TestPriceType) } as never,
         { getActorIdentity: async () => ({ branchId: 'branch-a' }) } as never,
         {
             getForBranch: async () => ({
