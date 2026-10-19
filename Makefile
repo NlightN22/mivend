@@ -357,7 +357,7 @@ e2e-resilience:
 # Manual order exchange suite against a running `make dev-staging-integration` (#255); never in CI.
 # May restart that contour. Subset: make e2e-integration E2E_ARGS="01-placement".
 e2e-integration:
-	pnpm --filter @mivend/e2e test:integration $(E2E_ARGS)
+	pnpm --filter @mivend/e2e test:erp-exchange $(E2E_ARGS)
 
 e2e-report:
 	pnpm --filter @mivend/e2e report

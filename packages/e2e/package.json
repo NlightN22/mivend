@@ -9,7 +9,7 @@
         "test:cart": "playwright test --project=storefront-cart-totals",
         "test:resilience": "playwright test manager/resilience --project=manager-operator",
         "test:ui": "playwright test --ui",
-        "test:integration": "playwright test --config playwright.integration.config.ts",
+        "test:erp-exchange": "playwright test --config playwright.integration.config.ts",
         "report": "playwright show-report"
     },
     "devDependencies": {
