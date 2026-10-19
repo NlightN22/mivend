@@ -13,7 +13,7 @@ export function formatNumber(
     return new Intl.NumberFormat(locale, options).format(value);
 }
 
-// Every money amount shows the same fraction digits, so equal prices never render differently.
+// Prices are RUB-only and always show kopecks, so equal prices never render differently.
 const MONEY_DIGITS: Intl.NumberFormatOptions = {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

@@ -61,6 +61,7 @@ const ru: typeof en = {
             actions: 'Действия по заказу',
             history: 'История заказа',
             itemsCount: 'Количество позиций',
+            itemsCountValue: '{n} товар | {n} товара | {n} товаров',
             pickupPoint: 'Точка выдачи',
             repeat: 'Повторить заказ',
             reserve: 'Резерв',

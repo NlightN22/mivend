@@ -59,6 +59,7 @@ export default {
             actions: 'Order actions',
             history: 'Order history',
             itemsCount: 'Number of items',
+            itemsCountValue: '{n} item | {n} items',
             pickupPoint: 'Pickup point',
             repeat: 'Repeat order',
             reserve: 'Reserve',

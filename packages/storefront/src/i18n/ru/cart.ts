@@ -67,6 +67,15 @@ const ru: typeof en = {
         shippingFailed: 'Не удалось выбрать способ доставки',
         paymentFailed: 'Не удалось перейти к оплате',
     },
+    shopErrors: {
+        NO_ACTIVE_ORDER_ERROR: 'Корзина пуста или устарела',
+        ORDER_MODIFICATION_ERROR: 'Заказ больше нельзя изменить',
+        INELIGIBLE_SHIPPING_METHOD_ERROR: 'Выбранный способ доставки недоступен для этого заказа',
+        INELIGIBLE_PAYMENT_METHOD_ERROR: 'Выбранный способ оплаты недоступен для этого заказа',
+        ORDER_PAYMENT_STATE_ERROR: 'Заказ ещё не готов к оплате',
+        PAYMENT_FAILED_ERROR: 'Оплата не прошла',
+        PAYMENT_DECLINED_ERROR: 'Оплата отклонена',
+    },
 };
 
 export default ru;

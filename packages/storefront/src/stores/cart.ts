@@ -24,6 +24,7 @@ import {
 } from '../api/generated/graphql';
 import { stockInsufficient } from '../utils/discountMessages';
 import { i18n } from '../i18n';
+import { shopErrorMessage } from '../utils/shopErrorMessage';
 
 const ADJUST_DEBOUNCE_MS = 350;
 const CART_FETCH_RETRIES = 4;
@@ -329,8 +330,10 @@ export const useCartStore = defineStore('cart', () => {
         });
         if (setMethodResult.setOrderShippingMethod.__typename !== 'Order') {
             toast(
-                setMethodResult.setOrderShippingMethod.message ??
-                    i18n.global.t('cartErrors.shippingFailed'),
+                shopErrorMessage(
+                    setMethodResult.setOrderShippingMethod,
+                    'cartErrors.shippingFailed',
+                ),
                 'error',
             );
             return false;
@@ -338,7 +341,7 @@ export const useCartStore = defineStore('cart', () => {
         const transitionResult = await shopApi(TransitionToArrangingPaymentDocument);
         const transition = transitionResult.transitionOrderToState;
         if (!transition || transition.__typename !== 'Order') {
-            toast(transition?.message ?? i18n.global.t('cartErrors.paymentFailed'), 'error');
+            toast(shopErrorMessage(transition, 'cartErrors.paymentFailed'), 'error');
             return false;
         }
         return true;

@@ -41,19 +41,23 @@ function saveLocale(locale: string): void {
     }
 }
 
-async function applyLocale(locale: string): Promise<void> {
+let latestRequest = 0;
+
+async function applyLocale(locale: string): Promise<boolean> {
+    const request = ++latestRequest;
     if (!i18n.global.availableLocales.includes(locale)) {
         i18n.global.setLocaleMessage(locale, await loadCatalogue(locale));
     }
+    if (request !== latestRequest) return false;
     i18n.global.locale.value = locale;
     document.documentElement.lang = locale;
+    return true;
 }
 
 export async function setLocale(locale: string): Promise<void> {
-    await applyLocale(locale);
-    saveLocale(locale);
+    if (await applyLocale(locale)) saveLocale(locale);
 }
 
-export function initLocale(): Promise<void> {
-    return applyLocale(resolveLocale(readSavedLocale(), navigator.languages, SUPPORTED_LOCALES));
+export async function initLocale(): Promise<void> {
+    await applyLocale(resolveLocale(readSavedLocale(), navigator.languages, SUPPORTED_LOCALES));
 }

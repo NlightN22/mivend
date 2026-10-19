@@ -9,15 +9,6 @@ defineProps<{
     pickupPoint: string | null;
 }>();
 const { t } = useI18n();
-
-function productsLabel(n: number): string {
-    const forms = ['товар', 'товара', 'товаров'];
-    const mod100 = n % 100;
-    const mod10 = n % 10;
-    const form =
-        mod100 >= 11 && mod100 <= 14 ? 2 : mod10 === 1 ? 0 : mod10 >= 2 && mod10 <= 4 ? 1 : 2;
-    return `${n} ${forms[form]}`;
-}
 </script>
 
 <template>
@@ -26,7 +17,7 @@ function productsLabel(n: number): string {
             class="oss-item"
             :icon="IconBox"
             :label="t('orders.detail.itemsCount')"
-            :value="productsLabel(count)"
+            :value="t('orders.detail.itemsCountValue', count)"
         />
         <MvIconStat
             class="oss-item"
