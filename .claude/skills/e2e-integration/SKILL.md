@@ -15,8 +15,9 @@ unless the owner asks. Read `docs/e2e-testing.md` ("Staging-integration order ex
 - Never run it in CI or from `make test`/`make test-int`; it is manual, one worker, no retries.
 - **Reads** go through `integration/contour-db.ts` (`select`, read-only by construction) or the product API/UI.
 - **Writes only through the product** (UI or API, as the user would), never SQL inserts. Prefer entities that
-  consume neither stock nor limits (discount grants, price-type settings views, approval requests). Orders are
-  allowed but are tracked in `run-state` and cancelled in teardown (`run-cleanup.ts`).
+  consume neither stock nor limits (discount grants, approval requests). Entities that do consume them (orders,
+  reservations) are allowed, but say so in the plan and release them in teardown (`run-state`, `run-cleanup.ts`).
+  An exception that cannot be released needs the owner's explicit agreement first.
 - Every entity a spec creates gets a per-run suffix, is recorded in the run state and removed or closed in
   `afterAll`/teardown even when the spec fails; a cleanup failure fails the run.
 - Missing ERP-owned data (counterparties, prices, products) is requested from the `sp.auditor` session
