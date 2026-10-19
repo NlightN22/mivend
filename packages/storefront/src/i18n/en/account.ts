@@ -1,0 +1,26 @@
+export default {
+    auth: {
+        login: 'Sign in',
+        logout: 'Sign out',
+        email: 'Email',
+        password: 'Password',
+        loginError: 'Invalid email or password',
+        signIn: 'Sign in',
+        signInSubtitle: 'Enter your email and password to access your account.',
+        emailOrPhone: 'Phone or email',
+        emailPlaceholder: '+7 900 000-00-00 or email',
+        passwordPlaceholder: '••••••••',
+        rememberMe: 'Remember me',
+        forgotPassword: 'Forgot password?',
+        publicCatalog: 'Public catalogue',
+        help: 'Help',
+        security: 'Security',
+    },
+    account: {
+        title: 'Account',
+        companyNameUnknown: 'Company name not specified',
+        creditLimit: 'Credit limit',
+        creditUsed: 'Used',
+        priceType: 'Price type',
+    },
+};

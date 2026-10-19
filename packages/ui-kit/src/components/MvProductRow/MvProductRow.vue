@@ -4,10 +4,42 @@ import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import { type StockVariant, stockVariantFromQuantity } from '../MvStockBadge/stock-variant';
 import { IconInfoCircle } from '@tabler/icons-vue';
-import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
+import MvQtyStepper, { type QtyStepperLabels } from '../MvQtyStepper/MvQtyStepper.vue';
 import MvTooltip from '../MvTooltip/MvTooltip.vue';
 import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 import MvDiscountBadge, { type DiscountTier } from '../MvDiscountBadge/MvDiscountBadge.vue';
+
+export interface ProductRowLabels {
+    sku: string;
+    stock: string;
+    unit: string;
+    defaultUnit: string;
+    multiplicity: string;
+    multiplicityPieces: (multiplicity: number) => string;
+    pack: string;
+    price: string;
+    logIn: string;
+    floorPrice: string;
+    add: string;
+    analogs: string;
+    favorite: string;
+}
+
+const DEFAULT_LABELS: ProductRowLabels = {
+    sku: 'SKU',
+    stock: 'Stock',
+    unit: 'Unit',
+    defaultUnit: 'pc.',
+    multiplicity: 'Multiplicity',
+    multiplicityPieces: (multiplicity: number) => `${multiplicity} pcs.`,
+    pack: 'Pack',
+    price: 'Price',
+    logIn: 'Log in',
+    floorPrice: 'Floor price',
+    add: '+ Add',
+    analogs: 'Analogs',
+    favorite: 'Toggle favorite',
+};
 
 interface Props {
     name: string;
@@ -17,11 +49,7 @@ interface Props {
     price?: number;
     customerPrice?: number;
     oldPrice?: number;
-    // Internal staff-only field (manager portal Catalog) — never passed by the storefront.
-    // showFloorPrice controls whether the column exists at all (a permission check, the same
-    // for every row in a list — set once by the caller, not per-row), so the column stays
-    // aligned across rows even when a given SKU has no floor price yet (renders "—" for that
-    // row instead of the column disappearing/reappearing). floorPrice is just this row's value.
+    // Staff-only: showFloorPrice is a per-list permission so the column stays aligned across rows.
     showFloorPrice?: boolean;
     floorPrice?: number;
     discountTiers?: DiscountTier[];
@@ -47,9 +75,10 @@ interface Props {
     isFavorited?: boolean;
     linkBase?: string;
     showFavorite?: boolean;
-    // Suppresses the qty stepper/"+ Add"/"Analogs" action area entirely — for a view-only,
-    // no-cart consumer (e.g. an internal staff catalog lookup).
+    // false hides the stepper/add/analogs area for view-only consumers.
     showActions?: boolean;
+    labels?: Partial<ProductRowLabels>;
+    stepperLabels?: Partial<QtyStepperLabels>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -79,7 +108,11 @@ const props = withDefaults(defineProps<Props>(), {
     linkBase: '/product',
     showFavorite: true,
     showActions: true,
+    labels: () => ({}),
+    stepperLabels: () => ({}),
 });
+
+const text = computed<ProductRowLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
 
 const emit = defineEmits<{
     'add-to-cart': [variantId: string | undefined];
@@ -144,21 +177,21 @@ function onStepperChange(qty: number): void {
         </div>
 
         <div class="mv-product-row__cell">
-            <div class="mv-product-row__cell-label">SKU</div>
+            <div class="mv-product-row__cell-label">{{ text.sku }}</div>
             <div class="mv-product-row__cell-value mv-product-row__sku">{{ sku }}</div>
         </div>
 
         <div class="mv-product-row__cell">
-            <div class="mv-product-row__cell-label">Stock</div>
+            <div class="mv-product-row__cell-label">{{ text.stock }}</div>
             <MvStockBadge v-if="stock !== undefined" :quantity="stock" />
             <MvStockBadge v-else-if="stockVariant" :variant="stockVariant" />
             <span v-else class="mv-product-row__stock-none">—</span>
         </div>
 
         <div class="mv-product-row__cell">
-            <div class="mv-product-row__cell-label">Unit</div>
+            <div class="mv-product-row__cell-label">{{ text.unit }}</div>
             <div class="mv-product-row__cell-value mv-product-row__unit-value">
-                {{ unitLabel || 'pc.' }}
+                {{ unitLabel || text.defaultUnit }}
                 <MvTooltip v-if="unitNote" placement="top" trigger="hover">
                     <template #trigger>
                         <IconInfoCircle :size="14" class="mv-product-row__unit-info" />
@@ -169,19 +202,22 @@ function onStepperChange(qty: number): void {
         </div>
 
         <div v-if="showMultiplicity" class="mv-product-row__cell">
-            <div class="mv-product-row__cell-label">Multiplicity</div>
+            <div class="mv-product-row__cell-label">{{ text.multiplicity }}</div>
             <div class="mv-product-row__cell-value">
-                {{ multiplicityLabel || (multiplicity > 1 ? `${multiplicity} pcs.` : '—') }}
+                {{
+                    multiplicityLabel ||
+                    (multiplicity > 1 ? text.multiplicityPieces(multiplicity) : '—')
+                }}
             </div>
         </div>
 
         <div v-if="showPack" class="mv-product-row__cell">
-            <div class="mv-product-row__cell-label">Pack</div>
+            <div class="mv-product-row__cell-label">{{ text.pack }}</div>
             <div class="mv-product-row__cell-value">{{ packLabel || '—' }}</div>
         </div>
 
         <div class="mv-product-row__cell">
-            <div class="mv-product-row__cell-label">Price</div>
+            <div class="mv-product-row__cell-label">{{ text.price }}</div>
             <template v-if="showPrices && (price !== undefined || customerPrice !== undefined)">
                 <MvAmountDisplay
                     v-if="customerPrice !== undefined"
@@ -205,7 +241,7 @@ function onStepperChange(qty: number): void {
                     class="mv-product-row__price"
                 />
             </template>
-            <div v-if="!showPrices" class="mv-product-row__price-hint">Log in</div>
+            <div v-if="!showPrices" class="mv-product-row__price-hint">{{ text.logIn }}</div>
             <div
                 v-else-if="price === undefined && customerPrice === undefined"
                 class="mv-product-row__price-hint"
@@ -215,7 +251,7 @@ function onStepperChange(qty: number): void {
         </div>
 
         <div v-if="showFloorPrice" class="mv-product-row__cell">
-            <div class="mv-product-row__cell-label">Floor price</div>
+            <div class="mv-product-row__cell-label">{{ text.floorPrice }}</div>
             <MvAmountDisplay
                 v-if="floorPrice !== undefined"
                 :amount="floorPrice"
@@ -231,6 +267,7 @@ function onStepperChange(qty: number): void {
                 v-if="showFavorite"
                 class="mv-product-row__fav"
                 :is-favorited="isFavorited"
+                :aria-label="text.favorite"
                 @toggle="emit('toggle-favorite', variantId)"
             />
             <div v-if="showActions" class="mv-product-row__control">
@@ -243,6 +280,7 @@ function onStepperChange(qty: number): void {
                             :step="qtyStep"
                             editable
                             size="sm"
+                            :labels="stepperLabels"
                             @update:model-value="onStepperChange"
                         />
                         <button
@@ -252,7 +290,7 @@ function onStepperChange(qty: number): void {
                             :disabled="!showPrices"
                             @click="emit('add-to-cart', variantId)"
                         >
-                            + Add
+                            {{ text.add }}
                         </button>
                     </template>
                     <template v-else>
@@ -261,7 +299,7 @@ function onStepperChange(qty: number): void {
                             type="button"
                             @click="emit('view-analogs')"
                         >
-                            Analogs
+                            {{ text.analogs }}
                         </button>
                     </template>
                 </slot>

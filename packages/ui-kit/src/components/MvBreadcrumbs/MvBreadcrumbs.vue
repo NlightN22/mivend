@@ -4,11 +4,13 @@ interface BreadcrumbItem {
     to?: string;
 }
 
-defineProps<{ items: BreadcrumbItem[] }>();
+withDefaults(defineProps<{ items: BreadcrumbItem[]; ariaLabel?: string }>(), {
+    ariaLabel: 'Breadcrumb',
+});
 </script>
 
 <template>
-    <nav class="mv-breadcrumbs" aria-label="Breadcrumb">
+    <nav class="mv-breadcrumbs" :aria-label="ariaLabel">
         <template v-for="(item, i) in items" :key="i">
             <span v-if="i > 0" class="mv-breadcrumbs__sep" aria-hidden="true">/</span>
             <RouterLink v-if="item.to" :to="item.to" class="mv-breadcrumbs__link">

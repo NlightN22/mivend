@@ -95,7 +95,7 @@ export function parseRub(text: string | null): number {
     const cleaned = (text ?? '')
         .replace(/[^\d,.\-−]/g, '')
         .replace('−', '-')
-        .replace(',', '.');
+        .replace(/,/g, '');
     const value = Number(cleaned);
     if (Number.isNaN(value)) throw new Error(`Cannot parse amount from "${text}"`);
     return value;

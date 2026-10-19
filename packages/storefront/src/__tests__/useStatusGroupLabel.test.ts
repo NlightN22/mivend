@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { createI18n } from 'vue-i18n';
-import ru from '../i18n/ru';
+import ru from '../i18n/ru/index';
 import { useOrderStatusesStore } from '../stores/orderStatuses';
 
 const i18n = createI18n({ legacy: false, locale: 'ru', messages: { ru } });

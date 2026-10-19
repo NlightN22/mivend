@@ -20,7 +20,8 @@ Read the **`frontend-rules`** skill first (common ui-kit conventions shared with
    component that uses it.
 
 4. **No hardcoded UI strings in templates.** Use `$t('key')` from vue-i18n.
-   All strings are defined in `src/i18n/ru.ts`.
+   Strings live in per-domain catalogues `src/i18n/en/*.ts` (source of key types) and
+   `src/i18n/ru/*.ts`; dates/numbers/money go through `src/i18n/format.ts`, never a hardcoded locale.
 
 5. **Virtual scroll for long lists.** Use `ElTableV2` for any list that may exceed 100 rows.
    Standard `ElTable` only for short static lists (e.g. cart items).

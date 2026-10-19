@@ -4,11 +4,13 @@ import { IconHeart, IconHeartFilled } from '@tabler/icons-vue';
 interface Props {
     isFavorited?: boolean;
     overlay?: boolean;
+    ariaLabel?: string;
 }
 
 withDefaults(defineProps<Props>(), {
     isFavorited: false,
     overlay: false,
+    ariaLabel: 'Toggle favorite',
 });
 
 const emit = defineEmits<{
@@ -24,7 +26,7 @@ const emit = defineEmits<{
             'mv-favorite-btn--overlay': overlay,
         }"
         type="button"
-        aria-label="Toggle favorite"
+        :aria-label="ariaLabel"
         @click="emit('toggle')"
     >
         <template v-if="overlay">

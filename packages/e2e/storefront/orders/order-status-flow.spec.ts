@@ -32,7 +32,7 @@ test.describe('ERP order status flow', () => {
         await postStatus(page, code, 'UNDER_APPROVAL');
         await page.goto(`/orders/${orderId}`);
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.locator('.od-status')).toHaveText('На согласовании', {
+        await expect(page.locator('.od-status')).toHaveText('Pending approval', {
             timeout: 10000,
         });
 
@@ -40,12 +40,12 @@ test.describe('ERP order status flow', () => {
         // The callback is applied asynchronously via the event bus.
         await expect(async () => {
             await page.reload();
-            await expect(page.locator('.od-status')).toHaveText('В пути', { timeout: 2000 });
+            await expect(page.locator('.od-status')).toHaveText('In transit', { timeout: 2000 });
         }).toPass({ timeout: 15000 });
 
         await page.goto('/orders');
         await page.waitForLoadState('domcontentloaded');
         const card = page.locator('.order-card', { hasText: code.replace(/^(\d{3})/, '$1-') });
-        await expect(card.locator('.status-pill')).toHaveText('В пути', { timeout: 10000 });
+        await expect(card.locator('.status-pill')).toHaveText('In transit', { timeout: 10000 });
     });
 });

@@ -1,8 +1,28 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import MvSkeleton from '../MvSkeleton/MvSkeleton.vue';
 import MvFacetGroup from '../MvFacetGroup/MvFacetGroup.vue';
 import MvCategoryNav, { type CategoryNavPanel } from '../MvCategoryNav/MvCategoryNav.vue';
+
+export interface CatalogFacetsLabels {
+    category: string;
+    availability: string;
+    inStockOnly: string;
+    price: string;
+    from: string;
+    to: string;
+    reset: string;
+}
+
+const DEFAULT_LABELS: CatalogFacetsLabels = {
+    category: 'Category',
+    availability: 'Availability',
+    inStockOnly: 'In stock only',
+    price: 'Price',
+    from: 'From',
+    to: 'To',
+    reset: 'Reset filters',
+};
 
 // Mirrors shared/characteristicFacet.ts; ui-kit does not depend on shared.
 const CHARACTERISTIC_FACET_PREFIX = 'characteristic:';
@@ -18,14 +38,11 @@ const props = withDefaults(
         selectedFacetValues: Set<string>;
         priceMin: number | null;
         priceMax: number | null;
-        // Facet codes not to render as checkboxes — storefront navigates 'category' via a
-        // separate mega-menu/URL slug, so it hides that group here; manager has no such
-        // navigation and passes an empty array to show every facet group as checkboxes.
+        // Storefront hides 'category' (navigated via mega-menu); manager passes [] to show all.
         hiddenFacetCodes?: string[];
         // False when the active search backend cannot filter by price.
         showPrice?: boolean;
-        // Siblings/current/children of the selected category — one more section
-        // in this widget (MvCategoryNav). Omit to not render it.
+        // Siblings/current/children of the selected category; omit to hide the section.
         categoryPanel?: CategoryNavPanel;
         categoryLoading?: boolean;
         categoryMoreLabel?: string;
@@ -34,6 +51,7 @@ const props = withDefaults(
         facetCollapseLabel?: string;
         facetClearLabel?: string;
         facetSearchPlaceholder?: string;
+        labels?: Partial<CatalogFacetsLabels>;
     }>(),
     {
         hiddenFacetCodes: () => ['category'],
@@ -45,8 +63,11 @@ const props = withDefaults(
         facetCollapseLabel: undefined,
         facetClearLabel: undefined,
         facetSearchPlaceholder: undefined,
+        labels: () => ({}),
     },
 );
+
+const text = computed<CatalogFacetsLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
 
 const emit = defineEmits<{
     'update:inStockOnly': [v: boolean];
@@ -58,7 +79,6 @@ const emit = defineEmits<{
     reset: [];
 }>();
 
-// Local price inputs — debounced before emitting
 const localMin = ref(props.priceMin != null ? String(props.priceMin) : '');
 const localMax = ref(props.priceMax != null ? String(props.priceMax) : '');
 
@@ -102,7 +122,7 @@ function onMaxInput(e: Event): void {
 <template>
     <aside class="catalog-facets">
         <div v-if="categoryPanel" class="catalog-facets__block">
-            <h2 class="catalog-facets__block-title">Category</h2>
+            <h2 class="catalog-facets__block-title">{{ text.category }}</h2>
             <div v-if="categoryLoading" class="catalog-facets__skeleton">
                 <MvSkeleton
                     v-for="w in ['90%', '75%', '82%', '65%', '78%']"
@@ -120,9 +140,8 @@ function onMaxInput(e: Event): void {
             />
         </div>
 
-        <!-- Availability -->
         <div class="catalog-facets__block">
-            <h2 class="catalog-facets__block-title">Availability</h2>
+            <h2 class="catalog-facets__block-title">{{ text.availability }}</h2>
             <label class="catalog-facets__check">
                 <input
                     type="checkbox"
@@ -131,16 +150,15 @@ function onMaxInput(e: Event): void {
                         emit('update:inStockOnly', ($event.target as HTMLInputElement).checked)
                     "
                 />
-                <span>In stock only</span>
+                <span>{{ text.inStockOnly }}</span>
             </label>
         </div>
 
-        <!-- Price range -->
         <div v-if="showPrice" class="catalog-facets__block">
-            <h2 class="catalog-facets__block-title">Price</h2>
+            <h2 class="catalog-facets__block-title">{{ text.price }}</h2>
             <div class="catalog-facets__price-row">
                 <div class="catalog-facets__price-field">
-                    <span class="catalog-facets__price-label">From</span>
+                    <span class="catalog-facets__price-label">{{ text.from }}</span>
                     <input
                         class="catalog-facets__price-input"
                         type="number"
@@ -151,7 +169,7 @@ function onMaxInput(e: Event): void {
                     />
                 </div>
                 <div class="catalog-facets__price-field">
-                    <span class="catalog-facets__price-label">To</span>
+                    <span class="catalog-facets__price-label">{{ text.to }}</span>
                     <input
                         class="catalog-facets__price-input"
                         type="number"
@@ -164,7 +182,6 @@ function onMaxInput(e: Event): void {
             </div>
         </div>
 
-        <!-- Dynamic facet groups (brand, category, etc.) -->
         <div
             v-for="group in facetGroups.filter(g => !hiddenFacetCodes.includes(g.code))"
             :key="group.code"
@@ -186,7 +203,7 @@ function onMaxInput(e: Event): void {
 
         <div class="catalog-facets__block">
             <button class="catalog-facets__reset" type="button" @click="emit('reset')">
-                Reset filters
+                {{ text.reset }}
             </button>
         </div>
     </aside>

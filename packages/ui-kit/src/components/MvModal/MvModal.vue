@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ title?: string }>();
+withDefaults(defineProps<{ title?: string; closeLabel?: string }>(), { closeLabel: 'Close' });
 defineEmits<{ close: [] }>();
 </script>
 
@@ -12,7 +12,7 @@ defineEmits<{ close: [] }>();
                     <button
                         class="mv-modal__close"
                         type="button"
-                        aria-label="Close"
+                        :aria-label="closeLabel"
                         @click="$emit('close')"
                     >
                         ✕

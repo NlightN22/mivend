@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { IconCheck } from '@tabler/icons-vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -50,13 +51,13 @@ const tradingPoint = computed(() => {
 const delivery = computed(() => order.value?.shippingLines?.[0]?.shippingMethod.name ?? null);
 const placedAt = computed(() =>
     order.value?.orderPlacedAt
-        ? new Intl.DateTimeFormat('en-GB', {
+        ? formatDate(order.value.orderPlacedAt, {
               day: '2-digit',
               month: '2-digit',
               year: 'numeric',
               hour: '2-digit',
               minute: '2-digit',
-          }).format(new Date(order.value.orderPlacedAt))
+          })
         : null,
 );
 function proformaInvoiceHref(id: string): string {

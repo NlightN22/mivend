@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { onMounted, ref } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import {
@@ -300,7 +301,7 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
                             <div class="set-session__title">{{ s.deviceLabel }}</div>
                             <div class="set-session__note">
                                 {{ s.current ? 'Current session' : 'Signed in' }} · since
-                                {{ new Date(s.createdAt).toLocaleString() }}
+                                {{ formatDate(s.createdAt, { dateStyle: 'medium', timeStyle: 'short' }) }}
                             </div>
                         </div>
                         <span v-if="s.current" class="set-pill">Current</span>

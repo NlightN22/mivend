@@ -1,11 +1,9 @@
+import { formatMoney as formatLocaleMoney } from '../../i18n/format';
+
 export function formatMoney(cents: number, currency: string): string {
-    const whole = cents % 100 === 0;
-    const options: Intl.NumberFormatOptions = whole
-        ? { maximumFractionDigits: 0 }
-        : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
-    return (
-        new Intl.NumberFormat('ru-RU', options).format(cents / 100) +
-        ' ' +
-        (currency === 'RUB' ? '₽' : currency)
-    );
+    const fractionDigits = cents % 100 === 0 ? 0 : 2;
+    return formatLocaleMoney(cents / 100, currency, {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+    });
 }

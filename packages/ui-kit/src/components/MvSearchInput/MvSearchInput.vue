@@ -29,6 +29,10 @@ interface Props {
     collapsed?: boolean;
     buttonLabel?: string;
     scopeLabel?: string;
+    openSearchLabel?: string;
+    clearLabel?: string;
+    removeScopeLabel?: string;
+    emptyText?: (query: string) => string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -40,6 +44,10 @@ const props = withDefaults(defineProps<Props>(), {
     collapsed: false,
     buttonLabel: 'Search',
     scopeLabel: undefined,
+    openSearchLabel: 'Open search',
+    clearLabel: 'Clear',
+    removeScopeLabel: 'Remove category',
+    emptyText: (query: string) => `No results found for "${query}"`,
 });
 
 const emit = defineEmits<{
@@ -128,7 +136,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
         <button
             v-if="collapsed && !expandedOnMobile"
             class="mv-search__icon-btn"
-            aria-label="Open search"
+            :aria-label="openSearchLabel"
             @click="toggleMobile"
         >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -157,6 +165,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
                 <MvSearchScopeChip
                     v-if="scopeLabel"
                     :label="scopeLabel"
+                    :remove-label="removeScopeLabel"
                     @remove="emit('removeScope')"
                 />
                 <input
@@ -175,7 +184,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
                     v-if="modelValue && !loading"
                     class="mv-search__clear"
                     type="button"
-                    aria-label="Clear"
+                    :aria-label="clearLabel"
                     @click="onClear"
                 >
                     ×
@@ -198,7 +207,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
             />
 
             <div v-if="isEmpty" class="mv-search__empty">
-                No results found for "{{ modelValue }}"
+                {{ emptyText(modelValue) }}
             </div>
         </template>
     </div>

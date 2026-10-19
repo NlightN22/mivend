@@ -1,8 +1,15 @@
 <script setup lang="ts">
+import { formatMoney } from '../i18n/format';
 import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { MvNotificationBell, MvNotificationPanel, type SuggestionItem } from '@mivend/ui-kit';
+import {
+    MvLanguageSwitcher,
+    MvNotificationBell,
+    MvNotificationPanel,
+    type SuggestionItem,
+} from '@mivend/ui-kit';
+import { useLanguageSwitcher } from '../composables/useLanguageSwitcher';
 import {
     buildSearchLocation,
     clearedSearchLocation,
@@ -18,6 +25,7 @@ import { useNotificationsStore } from '../stores/notifications';
 const router = useRouter();
 const route = useRoute();
 const { t } = useI18n();
+const language = useLanguageSwitcher();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
@@ -78,8 +86,7 @@ const inAccountZone = computed(() =>
 
 const cartTotal = computed(() => {
     if (!cartStore.loaded) return '';
-    if (cartStore.totalPrice === 0) return '0 ₽';
-    return new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽';
+    return formatMoney(cartStore.totalPrice, 'RUB', { maximumFractionDigits: 2 });
 });
 
 const scopeSlug = computed(() => (route.query.collection as string) || undefined);
@@ -277,6 +284,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     </template>
                 </nav>
 
+                <MvLanguageSwitcher
+                    class="app-header__language"
+                    :model-value="language.locale.value"
+                    :options="language.options"
+                    :aria-label="t('common.language')"
+                    @update:model-value="language.select"
+                />
+
                 <MvNotificationBell
                     v-if="notificationsStore"
                     :unread-count="notificationsStore.unreadCount"
@@ -399,7 +414,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     margin: 0 auto;
     padding: 12px 28px 8px;
     display: grid;
-    grid-template-columns: 160px 144px minmax(360px, 1fr) auto auto auto;
+    grid-template-columns: 160px 144px minmax(360px, 1fr) auto auto auto auto;
     gap: 12px;
     align-items: center;
 }
@@ -662,7 +677,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     }
 
     .app-header__inner {
-        grid-template-columns: auto 1fr auto auto;
+        grid-template-columns: auto 1fr auto auto auto;
         padding: 10px 16px 8px;
     }
 
@@ -675,8 +690,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         order: 3;
     }
 
-    .app-header__cart {
+    .app-header__language {
         grid-column: 3;
+    }
+
+    .app-header__cart {
+        grid-column: 4;
         min-width: 0;
         min-height: 44px;
         padding: 0 10px;
@@ -688,7 +707,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
     .app-header__hamburger {
         display: flex;
-        grid-column: 4;
+        grid-column: 5;
     }
 
     .app-header__nav {

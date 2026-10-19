@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate, formatMoney } from '../../i18n/format';
 import { useStatusGroupLabel } from './useStatusGroupLabel';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -30,17 +31,11 @@ const statusLabel = useStatusGroupLabel(() => statusKey.value);
 const statusVariant = computed(() => statuses.variant(statusKey.value));
 
 const formattedTotal = computed(() => {
-    return (
-        new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(
-            props.order.totalWithTax / 100,
-        ) +
-        ' ' +
-        (props.order.currencyCode === 'RUB' ? '₽' : props.order.currencyCode)
-    );
+    return formatMoney(props.order.totalWithTax / 100, props.order.currencyCode);
 });
 
 const meta = computed(() => {
-    const date = new Date(props.order.createdAt).toLocaleDateString('ru-RU', {
+    const date = formatDate(props.order.createdAt, {
         day: 'numeric',
         month: 'short',
         hour: '2-digit',

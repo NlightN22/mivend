@@ -1,21 +1,57 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { IconCheck, IconX } from '@tabler/icons-vue';
 import MvButton from '../MvButton/MvButton.vue';
 import MvInput from '../MvInput/MvInput.vue';
 import type { NoticeVariant } from '../MvNotice/MvNotice.vue';
 import type { NotificationItem, NotificationKind } from '../../composables/notificationTypes';
 
-withDefaults(defineProps<{ notifications: NotificationItem[]; loading?: boolean }>(), {
-    loading: false,
-});
+export interface NotificationPanelLabels {
+    title: string;
+    close: string;
+    loading: string;
+    empty: string;
+    markRead: string;
+    resolve: string;
+    resolutionPlaceholder: string;
+    showAll: string;
+    justNow: string;
+    minutesAgo: (minutes: number) => string;
+    hoursAgo: (hours: number) => string;
+    daysAgo: (days: number) => string;
+}
+
+const DEFAULT_LABELS: NotificationPanelLabels = {
+    title: 'Notifications',
+    close: 'Close',
+    loading: 'Loading…',
+    empty: 'No notifications',
+    markRead: 'Mark read',
+    resolve: 'Resolve',
+    resolutionPlaceholder: 'Resolution note',
+    showAll: 'Show all notifications',
+    justNow: 'just now',
+    minutesAgo: (minutes: number) => `${minutes}m ago`,
+    hoursAgo: (hours: number) => `${hours}h ago`,
+    daysAgo: (days: number) => `${days}d ago`,
+};
+
+const props = withDefaults(
+    defineProps<{
+        notifications: NotificationItem[];
+        loading?: boolean;
+        labels?: Partial<NotificationPanelLabels>;
+    }>(),
+    { loading: false, labels: () => ({}) },
+);
+
+const text = computed<NotificationPanelLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
 
 const emit = defineEmits<{
     markRead: [id: string];
     resolve: [id: string, resolution: string];
     close: [];
-    // issue #92: navigates to the portal's own full notifications page — this panel only ever
-    // shows the most recent handful (see useNotifications' PANEL_TAKE), never paginates itself.
+    // Opens the portal's full notifications page; this panel shows only the latest few (#92).
     viewAll: [];
 }>();
 
@@ -51,32 +87,32 @@ function confirmResolve(id: string): void {
 function formatRelativeTime(value: string): string {
     const diffMs = Date.now() - new Date(value).getTime();
     const diffMin = Math.round(diffMs / 60000);
-    if (diffMin < 1) return 'just now';
-    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffMin < 1) return text.value.justNow;
+    if (diffMin < 60) return text.value.minutesAgo(diffMin);
     const diffHours = Math.round(diffMin / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffHours < 24) return text.value.hoursAgo(diffHours);
     const diffDays = Math.round(diffHours / 24);
-    return `${diffDays}d ago`;
+    return text.value.daysAgo(diffDays);
 }
 </script>
 
 <template>
     <div class="mv-notification-panel">
         <div class="mv-notification-panel__header">
-            <h3 class="mv-notification-panel__title">Notifications</h3>
+            <h3 class="mv-notification-panel__title">{{ text.title }}</h3>
             <button
                 type="button"
                 class="mv-notification-panel__close"
-                aria-label="Close"
+                :aria-label="text.close"
                 @click="$emit('close')"
             >
                 <IconX :size="16" />
             </button>
         </div>
 
-        <div v-if="loading" class="mv-notification-panel__empty">Loading…</div>
+        <div v-if="loading" class="mv-notification-panel__empty">{{ text.loading }}</div>
         <div v-else-if="notifications.length === 0" class="mv-notification-panel__empty">
-            No notifications
+            {{ text.empty }}
         </div>
 
         <ul v-else class="mv-notification-panel__list">
@@ -106,7 +142,7 @@ function formatRelativeTime(value: string): string {
                             class="mv-notification-panel__link"
                             @click="$emit('markRead', item.id)"
                         >
-                            Mark read
+                            {{ text.markRead }}
                         </button>
                         <button
                             v-if="item.status !== 'resolved' && resolvingId !== item.id"
@@ -114,7 +150,7 @@ function formatRelativeTime(value: string): string {
                             class="mv-notification-panel__link"
                             @click="startResolve(item.id)"
                         >
-                            Resolve
+                            {{ text.resolve }}
                         </button>
                     </div>
 
@@ -124,7 +160,7 @@ function formatRelativeTime(value: string): string {
                     >
                         <MvInput
                             v-model="resolutionDraft"
-                            placeholder="Resolution note"
+                            :placeholder="text.resolutionPlaceholder"
                             size="sm"
                             @keyup.enter="confirmResolve(item.id)"
                         />
@@ -146,7 +182,7 @@ function formatRelativeTime(value: string): string {
 
         <div v-if="!loading && notifications.length > 0" class="mv-notification-panel__footer">
             <button type="button" class="mv-notification-panel__view-all" @click="$emit('viewAll')">
-                Show all notifications
+                {{ text.showAll }}
             </button>
         </div>
     </div>

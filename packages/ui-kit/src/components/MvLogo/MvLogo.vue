@@ -7,15 +7,16 @@ const props = withDefaults(
     defineProps<{
         name?: string;
         size?: LogoSize;
+        ariaLabel?: string;
     }>(),
-    { name: 'mivend', size: 'md' },
+    { name: 'mivend', size: 'md', ariaLabel: 'Home' },
 );
 
 const letter = computed(() => props.name.charAt(0).toUpperCase());
 </script>
 
 <template>
-    <div :class="['mv-logo', `mv-logo--${size}`]" aria-label="Home">
+    <div :class="['mv-logo', `mv-logo--${size}`]" :aria-label="ariaLabel">
         <span class="mv-logo__mark" aria-hidden="true">{{ letter }}</span>
         <span class="mv-logo__name">{{ name }}</span>
     </div>

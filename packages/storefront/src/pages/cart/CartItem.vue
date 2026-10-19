@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatNumber } from '../../i18n/format';
 import { ref, computed, watch } from 'vue';
 import { IconPackage } from '@tabler/icons-vue';
 import { MvFavoriteButton, MvStatusBadge, MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit';
@@ -127,7 +128,7 @@ function cancelRemove(): void {
             <div class="cart-item__meta">
                 <span>SKU {{ line.productVariant.sku }}</span>
                 <span v-if="brand">{{ brand }}</span>
-                <span v-if="totalWeightKg != null">{{ totalWeightKg.toLocaleString() }} kg</span>
+                <span v-if="totalWeightKg != null">{{ formatNumber(totalWeightKg) }} kg</span>
                 <span v-if="packInfo">Pack {{ packInfo.baseQty }} pcs.</span>
             </div>
             <div class="cart-item__pills">

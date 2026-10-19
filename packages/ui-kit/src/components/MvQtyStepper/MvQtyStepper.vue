@@ -2,6 +2,22 @@
 import { computed, ref, watch } from 'vue';
 import { IconCheck, IconX } from '@tabler/icons-vue';
 
+export interface QtyStepperLabels {
+    cancel: string;
+    decrease: string;
+    quantity: string;
+    confirm: string;
+    increase: string;
+}
+
+const DEFAULT_LABELS: QtyStepperLabels = {
+    cancel: 'Cancel',
+    decrease: 'Decrease',
+    quantity: 'Quantity',
+    confirm: 'Confirm',
+    increase: 'Increase',
+};
+
 interface Props {
     modelValue: number;
     min?: number;
@@ -10,6 +26,7 @@ interface Props {
     size?: 'md' | 'sm';
     editable?: boolean;
     block?: boolean;
+    labels?: Partial<QtyStepperLabels>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -19,7 +36,10 @@ const props = withDefaults(defineProps<Props>(), {
     size: 'md',
     editable: false,
     block: false,
+    labels: () => ({}),
 });
+
+const text = computed<QtyStepperLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
 
 const emit = defineEmits<{ 'update:modelValue': [n: number] }>();
 
@@ -83,7 +103,7 @@ function inc() {
             v-if="editing"
             class="mv-qty-stepper__btn"
             type="button"
-            aria-label="Cancel"
+            :aria-label="text.cancel"
             @click="revert"
         >
             <IconX :size="16" />
@@ -92,7 +112,7 @@ function inc() {
             v-else
             class="mv-qty-stepper__btn"
             type="button"
-            aria-label="Decrease"
+            :aria-label="text.decrease"
             :disabled="disabled || modelValue <= min"
             @click="dec"
         >
@@ -103,7 +123,7 @@ function inc() {
             v-model="draft"
             class="mv-qty-stepper__val mv-qty-stepper__input"
             inputmode="numeric"
-            aria-label="Quantity"
+            :aria-label="text.quantity"
             :disabled="disabled"
             @focus="focused = true"
             @blur="onBlur"
@@ -115,7 +135,7 @@ function inc() {
             v-if="editing"
             class="mv-qty-stepper__btn mv-qty-stepper__confirm"
             type="button"
-            aria-label="Confirm"
+            :aria-label="text.confirm"
             :disabled="!canConfirm"
             @click="confirm"
         >
@@ -125,7 +145,7 @@ function inc() {
             v-else
             class="mv-qty-stepper__btn"
             type="button"
-            aria-label="Increase"
+            :aria-label="text.increase"
             :disabled="disabled"
             @click="inc"
         >

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate as formatLocaleDate } from '../../i18n/format';
 import {
     MvAmountDisplay,
     MvDocumentTypeChip,
@@ -15,7 +16,7 @@ import {
 defineProps<{ rows: SettlementRow[] }>();
 
 const formatDate = (value: string | null | undefined): string =>
-    value ? new Date(value).toLocaleDateString('ru-RU') : '—';
+    value ? formatLocaleDate(value, { dateStyle: 'short' }) : '—';
 </script>
 
 <template>

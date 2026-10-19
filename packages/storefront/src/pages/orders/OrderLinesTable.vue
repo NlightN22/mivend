@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { MvStatusBadge } from '@mivend/ui-kit';
@@ -10,7 +11,7 @@ const { t } = useI18n();
 const anyReserved = computed(() => props.order.lines.some(line => line.reserved));
 
 function formatUntil(iso: string): string {
-    return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    return formatDate(iso, { day: 'numeric', month: 'long' });
 }
 </script>
 

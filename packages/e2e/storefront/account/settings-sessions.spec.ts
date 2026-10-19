@@ -139,7 +139,7 @@ test.describe('Settings page — Security UI', () => {
             await page.goto('/login');
             await page.locator('input[type="email"]').fill(E2E_CUSTOMER.email);
             await page.locator('input[type="password"]').fill(E2E_CUSTOMER.password);
-            await page.getByRole('button', { name: 'Войти' }).click();
+            await page.getByRole('button', { name: 'Sign in' }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
 
             await page.goto('/account/settings');
@@ -168,7 +168,7 @@ test.describe('Settings page — Security UI', () => {
             await page.goto('/login');
             await page.locator('input[type="email"]').fill(E2E_CUSTOMER.email);
             await page.locator('input[type="password"]').fill(E2E_CUSTOMER.password);
-            await page.getByRole('button', { name: 'Войти' }).click();
+            await page.getByRole('button', { name: 'Sign in' }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
 
             await page.goto('/account/settings');

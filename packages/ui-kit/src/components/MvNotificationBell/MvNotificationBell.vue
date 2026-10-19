@@ -2,7 +2,9 @@
 import { IconBell } from '@tabler/icons-vue';
 import MvCountBadge from '../MvCountBadge/MvCountBadge.vue';
 
-defineProps<{ unreadCount: number }>();
+withDefaults(defineProps<{ unreadCount: number; ariaLabel?: string }>(), {
+    ariaLabel: 'Notifications',
+});
 
 defineEmits<{ click: [] }>();
 </script>
@@ -11,7 +13,7 @@ defineEmits<{ click: [] }>();
     <button
         type="button"
         class="mv-notification-bell"
-        aria-label="Notifications"
+        :aria-label="ariaLabel"
         @click="$emit('click')"
     >
         <IconBell :size="20" stroke-width="1.75" />

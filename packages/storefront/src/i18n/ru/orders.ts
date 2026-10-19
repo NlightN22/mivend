@@ -1,36 +1,6 @@
-export default {
-    auth: {
-        login: 'Войти',
-        logout: 'Выйти',
-        email: 'Email',
-        password: 'Пароль',
-        loginError: 'Неверный email или пароль',
-        signIn: 'Вход',
-        signInSubtitle: 'Введите email и пароль для входа в личный кабинет.',
-        emailOrPhone: 'Телефон или email',
-        emailPlaceholder: '+7 900 000-00-00 или email',
-        passwordPlaceholder: '••••••••',
-        rememberMe: 'Запомнить вход',
-        forgotPassword: 'Забыли пароль?',
-        publicCatalog: 'Публичный каталог',
-        help: 'Помощь',
-        security: 'Безопасность',
-    },
-    catalog: {
-        title: 'Каталог',
-        search: 'Поиск по артикулу или названию',
-        noResults: 'Ничего не найдено',
-        addToCart: 'В корзину',
-        inStock: 'В наличии',
-        outOfStock: 'Нет в наличии',
-    },
-    cart: {
-        title: 'Корзина',
-        empty: 'Корзина пуста',
-        total: 'Итого',
-        checkout: 'Оформить заказ',
-        quantity: 'Количество',
-    },
+import type en from '../en/orders';
+
+const ru: typeof en = {
     orders: {
         title: 'Заказы',
         filters: {
@@ -126,40 +96,6 @@ export default {
             },
         },
     },
-    account: {
-        title: 'Личный кабинет',
-        companyNameUnknown: 'Название организации не указано',
-        creditLimit: 'Кредитный лимит',
-        creditUsed: 'Использовано',
-        priceType: 'Тип цен',
-    },
-    nav: {
-        catalog: 'Каталог',
-        cart: 'Корзина',
-        orders: 'Заказы',
-        account: 'Кабинет',
-    },
-    catalogNav: {
-        home: 'Главная',
-        more: 'Ещё',
-        less: 'Свернуть',
-        showAll: 'Посмотреть все',
-        clearSelection: 'Сбросить выбор',
-        search: 'Найти',
-        loading: 'Загрузка категорий…',
-        empty: 'Нет доступных категорий',
-    },
-    catalogFilters: {
-        inStock: 'Только в наличии',
-        price: 'Цена: {range}',
-        clearAll: 'Сбросить всё',
-        remove: 'Убрать фильтр',
-    },
-    common: {
-        loading: 'Загрузка...',
-        error: 'Произошла ошибка',
-        retry: 'Повторить',
-        save: 'Сохранить',
-        cancel: 'Отмена',
-    },
 };
+
+export default ru;

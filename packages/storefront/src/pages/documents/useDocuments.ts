@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { formatDate, formatMoney } from '../../i18n/format';
 import { shopApi } from '../../api/client';
 import { MyDocumentsDocument, type MyDocumentsQuery } from '../../api/generated/graphql';
 import type { DocData } from './DocumentRow.vue';
@@ -51,15 +52,16 @@ export function toDocData(doc: DocumentSummary): DocData {
         icon: '📄',
         iconVariant: 'blue' as const,
     };
-    const date = new Date(doc.issueDate).toLocaleDateString('en-GB', {
+    const date = formatDate(doc.issueDate, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
     });
     const amount =
         doc.amount != null
-            ? new Intl.NumberFormat('en-GB').format(doc.amount / 100) +
-              (doc.currencyCode ? ` ${doc.currencyCode}` : '')
+            ? formatMoney(doc.amount / 100, doc.currencyCode ?? null, {
+                  maximumFractionDigits: 2,
+              })
             : '—';
     const downloadUrl = downloadUrlOf(doc);
     return {

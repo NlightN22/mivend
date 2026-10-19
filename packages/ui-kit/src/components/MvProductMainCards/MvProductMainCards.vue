@@ -5,6 +5,40 @@ import MvStatusBadge from '../MvStatusBadge/MvStatusBadge.vue';
 import type { StockVariant } from '../MvStockBadge/stock-variant';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 
+export interface ProductMainCardsLabels {
+    sku: string;
+    brand: string;
+    category: string;
+    fullName: string;
+    description: string;
+    units: string;
+    unit: string;
+    multiplicity: string;
+    packaging: string;
+    pieces: string;
+    specifications: string;
+    analogs: string;
+    analogsSub: string;
+    addToCart: string;
+}
+
+const DEFAULT_LABELS: ProductMainCardsLabels = {
+    sku: 'SKU',
+    brand: 'Brand',
+    category: 'Category',
+    fullName: 'Full name',
+    description: 'Description',
+    units: 'Units',
+    unit: 'Unit',
+    multiplicity: 'Multiplicity',
+    packaging: 'Packaging',
+    pieces: 'pc.',
+    specifications: 'Specifications',
+    analogs: 'Analogs & Substitutes',
+    analogsSub: 'Quick pick if you need a different manufacturer.',
+    addToCart: 'Add to cart',
+};
+
 interface FacetValue {
     name: string;
     facet: { code: string };
@@ -33,13 +67,12 @@ interface Props {
     extraSpecs?: { label: string; value: string }[];
     stockVariantLabel: StockVariant;
     related: RelatedProduct[];
-    // Whether the caller can see a price for related/analog products at all — storefront passes
-    // authStore.isLoggedIn, manager passes its own catalog-price-read permission check. Kept as a
-    // plain prop (not a store import) so this component has no dependency on either app's stores.
+    // Storefront passes isLoggedIn, manager its price-read permission; no store import here.
     showRelatedPrices?: boolean;
     // Storefront shows "Add to cart" on each analog; manager's catalog is view-only (no cart).
     showAddToCartButton?: boolean;
     linkBase?: string;
+    labels?: Partial<ProductMainCardsLabels>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -54,18 +87,21 @@ const props = withDefaults(defineProps<Props>(), {
     showRelatedPrices: false,
     showAddToCartButton: true,
     linkBase: '/product',
+    labels: () => ({}),
 });
+
+const text = computed<ProductMainCardsLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
 
 const specs = computed(() => {
     const rows = [
-        { label: 'SKU', value: props.sku || '—' },
-        { label: 'Brand', value: props.brand || '—' },
-        { label: 'Category', value: props.category || '—' },
+        { label: text.value.sku, value: props.sku || '—' },
+        { label: text.value.brand, value: props.brand || '—' },
+        { label: text.value.category, value: props.category || '—' },
     ];
     if (props.fullName && props.fullName !== props.name)
-        rows.splice(1, 0, { label: 'Full name', value: props.fullName });
+        rows.splice(1, 0, { label: text.value.fullName, value: props.fullName });
     rows.push(...props.extraSpecs);
-    if (props.description) rows.push({ label: 'Description', value: props.description });
+    if (props.description) rows.push({ label: text.value.description, value: props.description });
     return rows;
 });
 
@@ -76,7 +112,6 @@ function getBrand(p: RelatedProduct) {
 
 <template>
     <section class="pmc">
-        <!-- Title card -->
         <div class="pmc__card">
             <div class="pmc__labels">
                 <MvStockBadge :variant="stockVariantLabel" />
@@ -85,15 +120,15 @@ function getBrand(p: RelatedProduct) {
             <h1 class="pmc__title">{{ name }}</h1>
             <div class="pmc__meta">
                 <span
-                    >SKU: <strong>{{ sku || '—' }}</strong></span
+                    >{{ text.sku }}: <strong>{{ sku || '—' }}</strong></span
                 >
                 <span v-if="brand"
-                    >Brand: <strong>{{ brand }}</strong></span
+                    >{{ text.brand }}: <strong>{{ brand }}</strong></span
                 >
             </div>
             <div class="pmc__mini">
                 <div v-if="units.length" class="pmc__mini-item pmc__mini-item--wide">
-                    <div class="pmc__mini-lbl">Units</div>
+                    <div class="pmc__mini-lbl">{{ text.units }}</div>
                     <div class="pmc__chips">
                         <MvStatusBadge
                             v-for="unit in units"
@@ -102,38 +137,37 @@ function getBrand(p: RelatedProduct) {
                         >
                             {{ unit.name
                             }}<template v-if="unit.ratioToBase !== 1">
-                                · {{ unit.ratioToBase }} pc.</template
+                                · {{ unit.ratioToBase }} {{ text.pieces }}</template
                             >
                         </MvStatusBadge>
                     </div>
                 </div>
                 <div v-else class="pmc__mini-item">
-                    <div class="pmc__mini-lbl">Unit</div>
+                    <div class="pmc__mini-lbl">{{ text.unit }}</div>
                     <div class="pmc__mini-val">{{ unitLabel }}</div>
                 </div>
                 <div v-if="showMultiplicity" class="pmc__mini-item">
-                    <div class="pmc__mini-lbl">Multiplicity</div>
+                    <div class="pmc__mini-lbl">{{ text.multiplicity }}</div>
                     <div class="pmc__mini-val">
-                        {{ multiplicityLabel || `${multiplicity} pc.` }}
+                        {{ multiplicityLabel || `${multiplicity} ${text.pieces}` }}
                     </div>
                 </div>
                 <div
                     v-if="!units.length && packagingLevels.length"
                     class="pmc__mini-item pmc__mini-item--wide"
                 >
-                    <div class="pmc__mini-lbl">Packaging</div>
+                    <div class="pmc__mini-lbl">{{ text.packaging }}</div>
                     <div class="pmc__chips">
                         <MvStatusBadge v-for="level in packagingLevels" :key="level.name">
-                            {{ level.name }} · {{ level.ratioToBase }} pc.
+                            {{ level.name }} · {{ level.ratioToBase }} {{ text.pieces }}
                         </MvStatusBadge>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Specs card -->
         <div class="pmc__card pmc__card--mt">
-            <h2 class="pmc__section-title">Specifications</h2>
+            <h2 class="pmc__section-title">{{ text.specifications }}</h2>
             <div class="pmc__specs">
                 <div v-for="s in specs" :key="s.label" class="pmc__spec-row">
                     <span>{{ s.label }}</span
@@ -142,10 +176,9 @@ function getBrand(p: RelatedProduct) {
             </div>
         </div>
 
-        <!-- Analogs card -->
         <div v-if="related.length" class="pmc__card pmc__card--mt">
-            <h2 class="pmc__section-title">Analogs & Substitutes</h2>
-            <p class="pmc__section-sub">Quick pick if you need a different manufacturer.</p>
+            <h2 class="pmc__section-title">{{ text.analogs }}</h2>
+            <p class="pmc__section-sub">{{ text.analogsSub }}</p>
             <div class="pmc__analogs">
                 <div v-for="p in related.slice(0, 3)" :key="p.id" class="pmc__analog">
                     <div class="pmc__analog-img">📦</div>
@@ -163,7 +196,7 @@ function getBrand(p: RelatedProduct) {
                         class="pmc__analog-price"
                     />
                     <button v-if="showAddToCartButton" class="pmc__analog-btn" type="button">
-                        Add to cart
+                        {{ text.addToCart }}
                     </button>
                 </div>
             </div>

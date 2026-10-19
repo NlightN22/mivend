@@ -16,6 +16,7 @@ const props = withDefaults(
         hiddenLabel?: string;
         loadingLabel?: string;
         emptyLabel?: string;
+        titleLabel?: string;
     }>(),
     {
         moreLabel: 'More',
@@ -23,6 +24,7 @@ const props = withDefaults(
         hiddenLabel: 'Hidden',
         loadingLabel: 'Loading categories…',
         emptyLabel: 'No categories available',
+        titleLabel: 'Catalogue',
     },
 );
 
@@ -46,7 +48,7 @@ function categoryLink(slug: string): { path: string; query: { collection: string
         <div v-if="open" class="mv-catalog-dropdown" @click.self="emit('close')">
             <div class="mv-catalog-dropdown__inner">
                 <aside class="mv-catalog-dropdown__left">
-                    <p class="mv-catalog-dropdown__label">Catalogue</p>
+                    <p class="mv-catalog-dropdown__label">{{ titleLabel }}</p>
                     <nav class="mv-catalog-dropdown__cat-list">
                         <RouterLink
                             v-for="col in collections"

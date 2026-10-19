@@ -1,31 +1,44 @@
 <script setup lang="ts">
-// General-purpose date picker — a plain masked text input (DD.MM.YYYY, ordinary free typing/
-// backspacing, no browser-native segmented widget) plus a click-to-pick calendar grid below it,
-// bundled as one component. Native Date arithmetic, no date library dependency (matches
-// MvSelect's "stay light" convention). The only date-picking UI in ui-kit; reused by
-// MvColumnFilterDate (single-date column filter) and MvColumnFilterDateRange (custom range's
-// From/To) — any future feature needing a date input should use this rather than reaching for
-// `<input type="date">` (whose per-segment navigation/backspace behavior is the reason this
-// input exists) or a new library.
+// Masked DD.MM.YYYY input plus calendar grid; use this instead of <input type="date"> or a library.
 import { computed, ref, watch } from 'vue';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
 
+export interface DatePickerLabels {
+    placeholder: string;
+    invalidDate: string;
+    previousMonth: string;
+    nextMonth: string;
+    clear: string;
+    weekdays: string[];
+}
+
+const DEFAULT_LABELS: DatePickerLabels = {
+    placeholder: 'DD.MM.YYYY',
+    invalidDate: 'Not a real date',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    clear: 'Clear',
+    weekdays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+};
+
 const props = withDefaults(
-    defineProps<{ modelValue: string; hideInput?: boolean; hideClear?: boolean }>(),
+    defineProps<{
+        modelValue: string;
+        hideInput?: boolean;
+        hideClear?: boolean;
+        locale?: string;
+        labels?: Partial<DatePickerLabels>;
+    }>(),
     {
         hideInput: false,
         hideClear: false,
+        locale: 'en-US',
+        labels: () => ({}),
     },
 );
-// `update:modelValue` fires for both typing and calendar clicks (the actual value change).
-// `pick` fires *only* on an explicit calendar-day click — a distinct signal a caller can use to
-// auto-advance/collapse a multi-field UI (e.g. MvColumnFilterDateRange's From→To flow), without
-// that same auto-collapse firing the instant a typed date completes (real incident: it used to
-// share one event, so finishing typing a date closed the calendar immediately, with no chance to
-// fix a typo — see MvColumnFilterDateRange.vue's comment for the full report).
+const text = computed<DatePickerLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
+// `pick` fires only on a calendar click, so callers can auto-advance without closing mid-typing.
 const emit = defineEmits<{ 'update:modelValue': [value: string]; pick: [value: string] }>();
-
-const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 function parseIso(value: string): Date | null {
     if (!value) return null;
@@ -52,11 +65,7 @@ const selected = computed(() => parseIso(props.modelValue));
 const today = new Date();
 const viewMonth = ref(selected.value ?? new Date(today.getFullYear(), today.getMonth(), 1));
 
-// The text field's own state — deliberately separate from `selected`/`modelValue` rather than a
-// computed wrapper around it, so a date that's only half-typed (e.g. "10.07.") doesn't get
-// clobbered back to blank/reformatted on every keystroke. Only re-synced from `modelValue` when
-// it changes from *outside* (a calendar click, or the parent resetting/clearing it) — see the
-// watcher below.
+// Separate from modelValue so a half-typed date is not reformatted on every keystroke.
 const textValue = ref(toDisplay(selected.value));
 watch(
     () => props.modelValue,
@@ -65,18 +74,7 @@ watch(
     },
 );
 
-// Auto-inserts the `.` separators as digits are typed (a plain <input type="text">, not a masked-
-// input library — matches this component's "stay light" convention) and only emits once all 8
-// digits form a real calendar date, so a half-typed value never briefly emits a wrong/clamped
-// date. Deliberately does NOT try to preserve exact cursor position through the reformat — for an
-// 8-digit date the caret lands at the end either way in the overwhelmingly common case (typing
-// left-to-right), and getting this exactly right would need tracking selectionStart across a
-// contenteditable-style diff, not worth it for this input's actual usage pattern.
-// True only once the field has all 8 digits typed and they *don't* form a real calendar date
-// (e.g. "30.02.2026") — a half-typed field ("10.07.") isn't "invalid," it's just incomplete, so
-// this only lights up once there's something concrete and wrong to flag. Real feedback: rejecting
-// the value silently (leaving the invalid text sitting there with no sign anything was wrong) was
-// indistinguishable from it having been accepted.
+// Set only when all 8 digits are typed and do not form a real calendar date.
 const invalid = ref(false);
 
 function onTextInput(event: Event): void {
@@ -93,9 +91,7 @@ function onTextInput(event: Event): void {
     const month = Number(digits.slice(2, 4));
     const year = Number(digits.slice(4));
     const candidate = new Date(year, month - 1, day);
-    // Rejects "35.02.2026"-style overflow instead of silently normalizing it to a nearby real
-    // date (new Date() rolls invalid day/month numbers forward by default) — comparing the
-    // constructed date's own fields back against what was typed is the only way to detect that.
+    // new Date() rolls overflow forward; comparing fields back detects it.
     if (
         candidate.getFullYear() !== year ||
         candidate.getMonth() !== month - 1 ||
@@ -110,7 +106,7 @@ function onTextInput(event: Event): void {
 }
 
 const monthLabel = computed(() =>
-    viewMonth.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    viewMonth.value.toLocaleDateString(props.locale, { month: 'long', year: 'numeric' }),
 );
 
 interface DayCell {
@@ -147,9 +143,6 @@ function pick(day: DayCell): void {
 function clear(): void {
     emit('update:modelValue', '');
 }
-// Selects the whole value on focus (matches native `<input type="date">`'s own affordance) so
-// coming back to an already-filled field is a single Delete + retype, not a manual select-all
-// first.
 function selectAllOnFocus(event: FocusEvent): void {
     (event.target as HTMLInputElement).select();
 }
@@ -163,17 +156,17 @@ function selectAllOnFocus(event: FocusEvent): void {
             :class="{ 'mv-date-picker__input--invalid': invalid }"
             type="text"
             inputmode="numeric"
-            placeholder="DD.MM.YYYY"
+            :placeholder="text.placeholder"
             :value="textValue"
             @input="onTextInput"
             @focus="selectAllOnFocus"
         />
-        <p v-if="invalid" class="mv-date-picker__error">Not a real date</p>
+        <p v-if="invalid" class="mv-date-picker__error">{{ text.invalidDate }}</p>
         <div class="mv-date-picker__header">
             <button
                 type="button"
                 class="mv-date-picker__nav"
-                aria-label="Previous month"
+                :aria-label="text.previousMonth"
                 @click="prevMonth"
             >
                 <ArrowLeft />
@@ -182,14 +175,14 @@ function selectAllOnFocus(event: FocusEvent): void {
             <button
                 type="button"
                 class="mv-date-picker__nav"
-                aria-label="Next month"
+                :aria-label="text.nextMonth"
                 @click="nextMonth"
             >
                 <ArrowRight />
             </button>
         </div>
         <div class="mv-date-picker__weekdays">
-            <span v-for="wd in WEEKDAYS" :key="wd">{{ wd }}</span>
+            <span v-for="wd in text.weekdays" :key="wd">{{ wd }}</span>
         </div>
         <div class="mv-date-picker__grid">
             <button
@@ -213,7 +206,7 @@ function selectAllOnFocus(event: FocusEvent): void {
             class="mv-date-picker__clear"
             @click="clear"
         >
-            Clear
+            {{ text.clear }}
         </button>
     </div>
 </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { ref, toRef, watch } from 'vue';
 import type { Ref } from 'vue';
 import { MvPagination, MvInput, useUrlState } from '@mivend/ui-kit';
@@ -65,15 +66,11 @@ async function onRowClick(item: NotificationItem): Promise<void> {
     await notificationsStore.refresh();
 }
 
-function formatDate(iso: string): string {
+function formatDateTime(iso: string): string {
     return (
-        new Date(iso).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-        }) +
+        formatDate(iso, { day: '2-digit', month: 'short', year: 'numeric' }) +
         ' · ' +
-        new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+        formatDate(iso, { hour: '2-digit', minute: '2-digit' })
     );
 }
 
@@ -145,7 +142,7 @@ void load();
                                     n.title
                                 }}</span>
                                 <span class="account-notifications-page__row-time">{{
-                                    formatDate(n.createdAt)
+                                    formatDateTime(n.createdAt)
                                 }}</span>
                             </div>
                             <p class="account-notifications-page__row-message">{{ n.message }}</p>

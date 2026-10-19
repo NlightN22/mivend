@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMoney } from '../../i18n/format';
 const products = [
     { emoji: '🛢️', sku: 'AR-5812', brand: 'G-Energy', name: 'Motor oil 5W-40, 4 L', price: 2890 },
     {
@@ -12,7 +13,7 @@ const products = [
     { emoji: '💡', sku: 'LB-H7', brand: 'Osram', name: 'Auto lamp H7 12V', price: 410 },
 ];
 
-const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
+const fmt = (n: number): string => formatMoney(n);
 </script>
 
 <template>

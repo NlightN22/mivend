@@ -1,7 +1,9 @@
+import { formatDate as formatLocaleDate } from '../../i18n/format';
+
 export { formatMoney as formatAmount } from '../proforma-invoices/formatMoney';
 
 export function formatDate(iso: string): string {
-    return new Date(iso).toLocaleDateString('ru-RU', {
+    return formatLocaleDate(iso, {
         day: 'numeric',
         month: 'long',
         year: 'numeric',

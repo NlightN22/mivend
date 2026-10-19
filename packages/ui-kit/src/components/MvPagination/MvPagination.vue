@@ -1,19 +1,30 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-const props = defineProps<{ page: number; pageSize: number; total: number }>();
+const props = withDefaults(
+    defineProps<{
+        page: number;
+        pageSize: number;
+        total: number;
+        previousLabel?: string;
+        nextLabel?: string;
+        summaryLabel?: (start: number, end: number, total: number) => string;
+        pageLabel?: (page: number, pageCount: number) => string;
+    }>(),
+    {
+        previousLabel: 'Previous',
+        nextLabel: 'Next',
+        summaryLabel: (start: number, end: number, total: number) => `${start}–${end} of ${total}`,
+        pageLabel: (page: number, pageCount: number) => `Page ${page} of ${pageCount}`,
+    },
+);
 const emit = defineEmits<{ 'update:page': [page: number] }>();
 
 const pageCount = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)));
 const rangeStart = computed(() => (props.total === 0 ? 0 : (props.page - 1) * props.pageSize + 1));
 const rangeEnd = computed(() => Math.min(props.page * props.pageSize, props.total));
 
-// A click that lands on the last/first page makes this same button `disabled` on the next
-// render tick. Chrome un-focuses a control the instant it goes disabled and hands focus to
-// <body>, which sits at the top of the document — the browser then scrolls the whole page to
-// bring <body> into view, which reads as "pagination jumps to the top". Blurring before the
-// state change removes the focused element before Vue disables it, so there's nothing for the
-// browser to re-target focus away from.
+// Blur before the button turns disabled, or Chrome moves focus to <body> and scrolls to the top.
 function goTo(target: number, event: MouseEvent): void {
     (event.currentTarget as HTMLButtonElement).blur();
     emit('update:page', target);
@@ -22,7 +33,9 @@ function goTo(target: number, event: MouseEvent): void {
 
 <template>
     <div class="mv-pagination">
-        <span class="mv-pagination__summary"> {{ rangeStart }}–{{ rangeEnd }} of {{ total }} </span>
+        <span class="mv-pagination__summary">
+            {{ summaryLabel(rangeStart, rangeEnd, total) }}
+        </span>
         <div class="mv-pagination__controls">
             <button
                 type="button"
@@ -30,16 +43,16 @@ function goTo(target: number, event: MouseEvent): void {
                 :disabled="page <= 1"
                 @click="goTo(page - 1, $event)"
             >
-                Previous
+                {{ previousLabel }}
             </button>
-            <span class="mv-pagination__page">Page {{ page }} of {{ pageCount }}</span>
+            <span class="mv-pagination__page">{{ pageLabel(page, pageCount) }}</span>
             <button
                 type="button"
                 class="mv-pagination__btn"
                 :disabled="page >= pageCount"
                 @click="goTo(page + 1, $event)"
             >
-                Next
+                {{ nextLabel }}
             </button>
         </div>
     </div>

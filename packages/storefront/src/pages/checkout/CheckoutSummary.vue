@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMoney } from '../../i18n/format';
 import { ref, computed } from 'vue';
 import { toast } from '@mivend/ui-kit';
 import { useCartStore } from '../../stores/cart';
@@ -36,7 +37,7 @@ const overLimit = computed(() =>
 );
 
 function formatRub(kopecks: number): string {
-    return new Intl.NumberFormat('ru-RU').format(kopecks / 100) + ' ₽';
+    return formatMoney(kopecks / 100, 'RUB', { maximumFractionDigits: 2 });
 }
 
 const subtotal = computed(() =>
@@ -44,7 +45,9 @@ const subtotal = computed(() =>
 );
 const discountLabel = computed(() => `− ${formatRub(cartStore.discountAmount)}`);
 
-const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽');
+const total = computed(() =>
+    formatMoney(cartStore.totalPrice, 'RUB', { maximumFractionDigits: 2 }),
+);
 
 const btnLabel = computed(() => {
     if (checkoutStore.selectedPayment === 'card')

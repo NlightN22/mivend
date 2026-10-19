@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMoney as formatLocaleMoney } from '../../i18n/format';
 import { computed, onMounted, ref } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
@@ -27,11 +28,7 @@ const paymentDelay = computed(() => {
 const advanceBalances = ref<{ amount: number; currencyCode: string }[]>([]);
 
 function formatMoney(cents: number, currency: string): string {
-    return (
-        new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(cents / 100) +
-        ' ' +
-        (currency === 'RUB' ? '₽' : currency)
-    );
+    return formatLocaleMoney(cents / 100, currency);
 }
 
 const advanceTotal = computed(() =>

@@ -9,7 +9,7 @@ test.describe('Login page', () => {
     test('successful login redirects to home @smoke', async ({ page }) => {
         await page.locator('input[type="email"]').fill(E2E_CUSTOMER.email);
         await page.locator('input[type="password"]').fill(E2E_CUSTOMER.password);
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Sign in' }).click();
 
         await page.waitForURL(url => !url.pathname.includes('/login'));
         expect(page.url()).not.toContain('/login');
@@ -18,15 +18,15 @@ test.describe('Login page', () => {
     test('wrong password shows error message', async ({ page }) => {
         await page.locator('input[type="email"]').fill(E2E_CUSTOMER.email);
         await page.locator('input[type="password"]').fill('wrong-password');
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Sign in' }).click();
 
         const error = page.locator('.login-card__error');
         await expect(error).toBeVisible();
-        await expect(error).toContainText('Неверный');
+        await expect(error).toContainText('Invalid');
     });
 
     test('submitting empty fields does not navigate away', async ({ page }) => {
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Sign in' }).click();
 
         await page.waitForTimeout(500);
         expect(page.url()).toContain('/login');
@@ -39,7 +39,7 @@ test.describe('Login page', () => {
         await page.locator('input[type="email"]').fill(E2E_CUSTOMER.email);
         await page.locator('input[type="password"]').fill(E2E_CUSTOMER.password);
         await page.locator('input[type="checkbox"]').check();
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Sign in' }).click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
 
         const cookies = await context.cookies();
@@ -53,7 +53,7 @@ test.describe('Login page', () => {
     test('a transient shop-api outage after login does not force a re-login', async ({ page }) => {
         await page.locator('input[type="email"]').fill(E2E_CUSTOMER.email);
         await page.locator('input[type="password"]').fill(E2E_CUSTOMER.password);
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Sign in' }).click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
 
         // Simulate the shop-api being briefly unreachable (e.g. a dev server restart) for the
@@ -81,7 +81,7 @@ test.describe('Login page', () => {
     }) => {
         await page.locator('input[type="email"]').fill(E2E_CUSTOMER.email);
         await page.locator('input[type="password"]').fill(E2E_CUSTOMER.password);
-        await page.getByRole('button', { name: 'Войти' }).click();
+        await page.getByRole('button', { name: 'Sign in' }).click();
         await page.waitForURL(url => !url.pathname.includes('/login'));
 
         const outageStart = Date.now();

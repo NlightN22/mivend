@@ -1,6 +1,8 @@
 import js from '@eslint/js';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import vueParser from 'vue-eslint-parser';
+import vueI18n from '@intlify/eslint-plugin-vue-i18n';
 import prettierConfig from 'eslint-config-prettier';
 import noRawGraphql from './eslint-rules/no-raw-graphql.js';
 import outboundConfig from './eslint-rules/outbound-config.js';
@@ -261,6 +263,20 @@ export default [
         languageOptions: { parser: tsParser },
         plugins: { db: { rules: { 'no-raw-connection': noRawConnection } } },
         rules: { 'db/no-raw-connection': 'error' },
+    },
+    // #216: storefront .vue files are parsed only for the i18n guard; stages enable
+    // `no-raw-text` per directory as they are translated.
+    {
+        files: ['packages/storefront/src/**/*.vue'],
+        languageOptions: {
+            parser: vueParser,
+            parserOptions: { parser: tsParser, sourceType: 'module' },
+        },
+        plugins: { '@intlify/vue-i18n': vueI18n },
+        rules: {
+            ...Object.fromEntries(Object.keys(js.configs.recommended.rules).map(r => [r, 'off'])),
+            '@intlify/vue-i18n/no-raw-text': 'off',
+        },
     },
     prettierConfig, // must be last — disables rules that conflict with prettier
     {

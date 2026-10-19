@@ -40,6 +40,8 @@ export { default as MvStatusTag } from './components/MvStatusTag/MvStatusTag.vue
 export type { StatusTagVariant } from './components/MvStatusTag/MvStatusTag.vue';
 
 export { default as MvCopyButton } from './components/MvCopyButton/MvCopyButton.vue';
+export { default as MvLanguageSwitcher } from './components/MvLanguageSwitcher/MvLanguageSwitcher.vue';
+export type { LanguageOption } from './components/MvLanguageSwitcher/MvLanguageSwitcher.vue';
 export { default as MvIconStat } from './components/MvIconStat/MvIconStat.vue';
 export { default as MvStatusBadge } from './components/MvStatusBadge/MvStatusBadge.vue';
 export type { StatusBadgeVariant } from './components/MvStatusBadge/MvStatusBadge.vue';

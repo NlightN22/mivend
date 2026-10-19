@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '../../i18n/format';
 import { computed } from 'vue';
 import { IconCheck, IconHourglass, IconX } from '@tabler/icons-vue';
 import { useRoute } from 'vue-router';
@@ -35,13 +36,15 @@ const config = computed(() => {
     };
 });
 
-const today = new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-}).format(new Date());
+const today = computed(() =>
+    formatDate(Date.now(), {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }),
+);
 </script>
 
 <template>

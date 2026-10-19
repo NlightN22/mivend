@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMoney } from '../../i18n/format';
 import { computed } from 'vue';
 import { stockVariantFromLevel } from '@mivend/ui-kit';
 import { baseToPacks, packsToBase, type SalesUnitView } from '../../composables/useSalesUnit';
@@ -41,7 +42,7 @@ const unitPrice = computed(() =>
 );
 const perPieceNote = computed(() =>
     props.price !== undefined && props.salesUnit
-        ? `${new Intl.NumberFormat('ru-RU', { style: 'currency', currency: props.currency }).format(props.price)} per pc.`
+        ? `${formatMoney(props.price, props.currency, { maximumFractionDigits: 2 })} per pc.`
         : null,
 );
 const stepperValue = computed(() =>

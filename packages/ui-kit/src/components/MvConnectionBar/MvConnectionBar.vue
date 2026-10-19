@@ -1,21 +1,26 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
-// After this long stuck reconnecting, "still trying" stops being useful information — the
-// message escalates to something that sets expectations, and a manual "Log in again" escape
-// hatch appears (a full-page navigation to /login, not another retry — the background retry
-// loop this bar reflects is already running and unaffected by this button).
+// Past this, the message escalates and a manual relogin (full navigation to /login) appears.
 const ESCALATE_AFTER_MS = 2 * 60 * 1000;
 
 interface Props {
     since: number | null;
-    // A confirmed dead session (server reachable, just not logged in anymore) — distinct from
-    // "reconnecting": shown immediately, never auto-navigates, always carries the relogin button.
-    // The user decides when to act on it, same as this bar's own outage-escalation button.
+    // Server reachable but session dead: shown immediately with the relogin button, never auto-navigates.
     loggedOut?: boolean;
+    reconnectingLabel?: string;
+    unavailableLabel?: string;
+    loggedOutLabel?: string;
+    reloginLabel?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), { loggedOut: false });
+const props = withDefaults(defineProps<Props>(), {
+    loggedOut: false,
+    reconnectingLabel: 'Reconnecting to the server…',
+    unavailableLabel: 'Server unavailable for a while — try again later.',
+    loggedOutLabel: 'Your session has ended — log in again when you’re ready.',
+    reloginLabel: 'Log in again',
+});
 const emit = defineEmits<{ relogin: [] }>();
 
 const now = ref(Date.now());
@@ -36,9 +41,9 @@ const timedOut = computed(
 const escalated = computed(() => props.loggedOut || timedOut.value);
 
 const message = computed(() => {
-    if (props.loggedOut) return 'Your session has ended — log in again when you’re ready.';
-    if (timedOut.value) return 'Server unavailable for a while — try again later.';
-    return 'Reconnecting to the server…';
+    if (props.loggedOut) return props.loggedOutLabel;
+    if (timedOut.value) return props.unavailableLabel;
+    return props.reconnectingLabel;
 });
 </script>
 
@@ -62,7 +67,7 @@ const message = computed(() => {
                     class="mv-connection-bar__relogin"
                     @click="emit('relogin')"
                 >
-                    Log in again
+                    {{ reloginLabel }}
                 </button>
             </div>
         </div>

@@ -20,6 +20,7 @@ export default defineConfig({
     workers: 1,
     reporter: [['html', { open: 'never' }], ['line']],
     use: {
+        locale: 'en-GB',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'on-first-retry',

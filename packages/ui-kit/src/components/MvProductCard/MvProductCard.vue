@@ -5,10 +5,28 @@ import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import type { StockVariant } from '../MvStockBadge/stock-variant';
 import { IconInfoCircle } from '@tabler/icons-vue';
-import MvQtyStepper from '../MvQtyStepper/MvQtyStepper.vue';
+import MvQtyStepper, { type QtyStepperLabels } from '../MvQtyStepper/MvQtyStepper.vue';
 import MvTooltip from '../MvTooltip/MvTooltip.vue';
 import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 import MvDiscountBadge, { type DiscountTier } from '../MvDiscountBadge/MvDiscountBadge.vue';
+
+export interface ProductCardLabels {
+    previousPhoto: string;
+    nextPhoto: string;
+    addToCart: string;
+    viewAnalogs: string;
+    logInForPrices: string;
+    favorite: string;
+}
+
+const DEFAULT_LABELS: ProductCardLabels = {
+    previousPhoto: 'Previous photo',
+    nextPhoto: 'Next photo',
+    addToCart: 'Add to cart',
+    viewAnalogs: 'View analogs',
+    logInForPrices: 'Log in to see prices',
+    favorite: 'Toggle favorite',
+};
 
 interface Props {
     name: string;
@@ -31,8 +49,7 @@ interface Props {
     isFavorited?: boolean;
     linkBase?: string;
     showFavorite?: boolean;
-    // Suppresses the qty stepper/"Add to cart"/"View analogs" action area entirely — for a
-    // view-only, no-cart consumer (e.g. an internal staff catalog lookup).
+    // false hides the stepper/add/analogs area for view-only consumers.
     showActions?: boolean;
     // Unit the price is for ('pc.', 'pack'); empty hides it. Pack mode also changes the stepper step.
     unitLabel?: string;
@@ -40,6 +57,8 @@ interface Props {
     qtyStep?: number;
     // Short caption such as 'pack of 12'; empty hides it.
     packLabel?: string;
+    labels?: Partial<ProductCardLabels>;
+    stepperLabels?: Partial<QtyStepperLabels>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -63,7 +82,11 @@ const props = withDefaults(defineProps<Props>(), {
     unitNote: '',
     qtyStep: 1,
     packLabel: '',
+    labels: () => ({}),
+    stepperLabels: () => ({}),
 });
+
+const text = computed<ProductCardLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
 
 const emit = defineEmits<{
     'add-to-cart': [variantId: string | undefined];
@@ -97,7 +120,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                     <button
                         class="mv-product-card__arrow mv-product-card__arrow--prev"
                         type="button"
-                        aria-label="Previous photo"
+                        :aria-label="text.previousPhoto"
                         @click.stop.prevent="step(-1)"
                     >
                         <IconChevronLeft :size="16" />
@@ -105,7 +128,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                     <button
                         class="mv-product-card__arrow mv-product-card__arrow--next"
                         type="button"
-                        aria-label="Next photo"
+                        :aria-label="text.nextPhoto"
                         @click.stop.prevent="step(1)"
                     >
                         <IconChevronRight :size="16" />
@@ -136,6 +159,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
             class="mv-product-card__fav"
             overlay
             :is-favorited="isFavorited"
+            :aria-label="text.favorite"
             @toggle="emit('toggle-favorite', variantId)"
         />
 
@@ -203,6 +227,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                             :min="0"
                             :step="qtyStep"
                             editable
+                            :labels="stepperLabels"
                             class="mv-product-card__stepper"
                             @update:model-value="
                                 val => cartLineId && emit('update-cart-qty', cartLineId, val)
@@ -214,7 +239,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                             type="button"
                             @click="emit('add-to-cart', variantId)"
                         >
-                            Add to cart
+                            {{ text.addToCart }}
                         </button>
                     </template>
                     <button
@@ -223,12 +248,12 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                         type="button"
                         @click="emit('view-analogs', variantId)"
                     >
-                        View analogs
+                        {{ text.viewAnalogs }}
                     </button>
                 </template>
             </template>
 
-            <div v-else class="mv-product-card__guest">Log in to see prices</div>
+            <div v-else class="mv-product-card__guest">{{ text.logInForPrices }}</div>
         </div>
     </article>
 </template>

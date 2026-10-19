@@ -17,8 +17,8 @@ test.describe('Orders page', () => {
 
     test('orders page shows filter chips', async ({ page }) => {
         await goToOrders(page);
-        await expect(page.getByRole('button', { name: 'Все', exact: true })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Активные' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'All', exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Active' })).toBeVisible();
     });
 
     test('placed order appears in orders list', async ({ page }) => {
@@ -70,7 +70,7 @@ test.describe('Order detail page', () => {
         await page.waitForLoadState('domcontentloaded');
         await expect(page.locator('.od-title')).toBeVisible({ timeout: 10000 });
         const title = await page.locator('.od-title').textContent();
-        expect(title).toMatch(/Заказ\s+[0-9-]+/);
+        expect(title).toMatch(/Order\s+[0-9-]+/);
     });
 
     test('detail page shows order lines', async ({ page }) => {

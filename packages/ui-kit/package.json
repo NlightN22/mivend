@@ -15,6 +15,7 @@
         "@element-plus/icons-vue": "^2.3.0",
         "@tabler/icons-vue": "^3.45.0",
         "element-plus": "^2.9.0",
+        "flag-icons": "7.5.0",
         "primevue": "^4.5.4",
         "vue": "^3.5.0"
     },

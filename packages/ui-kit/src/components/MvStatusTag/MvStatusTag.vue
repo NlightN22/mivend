@@ -12,6 +12,7 @@ export type StatusTagVariant =
 
 interface Props {
     variant: StatusTagVariant;
+    label?: string;
 }
 
 defineProps<Props>();
@@ -31,7 +32,7 @@ const defaultLabels: Record<StatusTagVariant, string> = {
 
 <template>
     <span :class="['mv-status-tag', `mv-status-tag--${variant}`]">
-        <slot>{{ defaultLabels[variant] }}</slot>
+        <slot>{{ label ?? defaultLabels[variant] }}</slot>
     </span>
 </template>
 

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{ label: string }>();
+withDefaults(defineProps<{ label: string; removeLabel?: string }>(), {
+    removeLabel: 'Remove category',
+});
 defineEmits<{ remove: [] }>();
 </script>
 
@@ -9,7 +11,7 @@ defineEmits<{ remove: [] }>();
         <button
             class="mv-search__scope-remove"
             type="button"
-            aria-label="Remove category"
+            :aria-label="removeLabel"
             @click="$emit('remove')"
         >
             ×

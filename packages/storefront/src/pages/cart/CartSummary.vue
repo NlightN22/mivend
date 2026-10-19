@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMoney } from '../../i18n/format';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
@@ -12,7 +13,7 @@ const packaging = computed(() => useOrderPackaging(cartStore.lines));
 const packagingLabel = computed(() => formatPackaging(packaging.value));
 
 function formatRub(kopecks: number): string {
-    return new Intl.NumberFormat('ru-RU').format(kopecks / 100) + ' ₽';
+    return formatMoney(kopecks / 100, 'RUB', { maximumFractionDigits: 2 });
 }
 
 const subtotal = computed(() =>
@@ -21,7 +22,9 @@ const subtotal = computed(() =>
 
 const discountLabel = computed(() => `− ${formatRub(cartStore.discountAmount)}`);
 
-const total = computed(() => new Intl.NumberFormat('ru-RU').format(cartStore.totalPrice) + ' ₽');
+const total = computed(() =>
+    formatMoney(cartStore.totalPrice, 'RUB', { maximumFractionDigits: 2 }),
+);
 
 const totalQty = computed(() => cartStore.totalQuantity);
 const lineCount = computed(() => cartStore.lines.length);
