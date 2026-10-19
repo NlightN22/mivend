@@ -18,6 +18,7 @@ import { fetchPriceTypeCodes } from '../../api/discounts';
 import type { FacetGroup } from 'shared';
 import { parseCatalogQuery, buildCatalogQuery } from '../../composables/catalogQuery';
 import { useCurrency } from '../../composables/useCurrency';
+import { STOCK_LABELS } from '../../utils/stockLabels';
 import { useCatalogRows } from '../../composables/useCatalogRows';
 import { useCatalogCategories } from '../../composables/useCatalogCategories';
 import CatalogRowExtras from '../../components/catalog/CatalogRowExtras.vue';
@@ -210,6 +211,7 @@ void loadAll();
                             :price="basePrices.get(item.productVariantId)"
                             :currency="currencyCode ?? undefined"
                             :show-favorite="false"
+                            :stock-labels="STOCK_LABELS"
                             :show-actions="false"
                             :show-floor-price="floorPrices !== null"
                             :floor-price="floorPrices?.get(item.productVariantId)"

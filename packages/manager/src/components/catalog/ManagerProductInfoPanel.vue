@@ -2,6 +2,7 @@
 import { MvAmountDisplay, MvStockBadge } from '@mivend/ui-kit';
 import type { PriceRow } from '../../api/productDetail';
 import { useCurrency } from '../../composables/useCurrency';
+import { STOCK_LABELS } from '../../utils/stockLabels';
 
 const { currencyCode } = useCurrency();
 
@@ -38,7 +39,7 @@ defineProps<{
 
         <div class="manager-product-info-panel__card">
             <h2 class="manager-product-info-panel__title">Stock</h2>
-            <MvStockBadge :quantity="stockOnHand" />
+            <MvStockBadge :labels="STOCK_LABELS" :quantity="stockOnHand" />
         </div>
     </div>
 </template>

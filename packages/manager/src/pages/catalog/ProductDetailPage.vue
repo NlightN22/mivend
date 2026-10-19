@@ -15,6 +15,7 @@ import {
     type CrossReferenceRow,
     type PriceRow,
 } from '../../api/productDetail';
+import { STOCK_LABELS } from '../../utils/stockLabels';
 import ManagerProductInfoPanel from '../../components/catalog/ManagerProductInfoPanel.vue';
 import VariantReservationHolders from '../../components/catalog/VariantReservationHolders.vue';
 
@@ -82,6 +83,7 @@ onMounted(async () => {
                     :brand="brand"
                     :category="category"
                     :stock-variant-label="stockVariantLabel"
+                    :stock-labels="STOCK_LABELS"
                     :related="[]"
                     link-base="/catalog"
                 />
