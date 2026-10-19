@@ -2376,6 +2376,7 @@ export type OrderCancelSuccess = {
 
 export type OrderCustomFields = {
     branchId?: Maybe<Scalars['String']['output']>;
+    cancelRequestStatus?: Maybe<Scalars['String']['output']>;
     deliveryAddress?: Maybe<Scalars['String']['output']>;
     erpContractId?: Maybe<Scalars['String']['output']>;
     erpOrderStatus?: Maybe<Scalars['String']['output']>;
@@ -2401,6 +2402,7 @@ export type OrderFilterParameter = {
     /** An order is active as long as the payment process has not been completed */
     active?: InputMaybe<BooleanOperators>;
     branchId?: InputMaybe<StringOperators>;
+    cancelRequestStatus?: InputMaybe<StringOperators>;
     /** True while the customer or staff may still cancel this order. */
     cancellable?: InputMaybe<BooleanOperators>;
     /** A unique code for the Order */
@@ -2576,6 +2578,7 @@ export type OrderPaymentStateError = ErrorResult & {
 
 export type OrderSortParameter = {
     branchId?: InputMaybe<SortOrder>;
+    cancelRequestStatus?: InputMaybe<SortOrder>;
     /** A unique code for the Order */
     code?: InputMaybe<SortOrder>;
     createdAt?: InputMaybe<SortOrder>;
@@ -3002,6 +3005,8 @@ export enum Permission {
     Public = 'Public',
     /** Grants permission to read Administrator */
     ReadAdministrator = 'ReadAdministrator',
+    /** Read customer price types of every branch, beyond the branch allow-list */
+    ReadAllCustomerPriceTypes = 'ReadAllCustomerPriceTypes',
     /** Grants permission to read ApiKey */
     ReadApiKey = 'ReadApiKey',
     /** Grants permission to read Asset */
@@ -3014,6 +3019,8 @@ export enum Permission {
     ReadCheckResults = 'ReadCheckResults',
     /** Grants permission to read Collection */
     ReadCollection = 'ReadCollection',
+    /** Read confidential price types (purchase price, floor price) and values derived from them (layer 4) */
+    ReadConfidentialPriceTypes = 'ReadConfidentialPriceTypes',
     /** Read counterparty records (scope resolved separately by AccessScopeService) */
     ReadCounterparty = 'ReadCounterparty',
     /** Read a counterparty's creditLimit/creditBalance (financial data, layer 4 redaction) */
@@ -3030,8 +3037,6 @@ export enum Permission {
     ReadEntityHistory = 'ReadEntityHistory',
     /** Grants permission to read Facet */
     ReadFacet = 'ReadFacet',
-    /** Read the raw floor-price threshold for a variant (financial data, layer 4 redaction) */
-    ReadFloorPrice = 'ReadFloorPrice',
     /** Grants permission to read Order */
     ReadOrder = 'ReadOrder',
     /** Read payment records for the manager portal — a resource derived from ProformaInvoice, scoped the same way (AccessScopeService.resolveProformaInvoiceScope) */
@@ -4317,6 +4322,7 @@ export type UpdateMultipleOrderItemsResult = {
 
 export type UpdateOrderCustomFieldsInput = {
     branchId?: InputMaybe<Scalars['String']['input']>;
+    cancelRequestStatus?: InputMaybe<Scalars['String']['input']>;
     deliveryAddress?: InputMaybe<Scalars['String']['input']>;
     erpContractId?: InputMaybe<Scalars['String']['input']>;
     erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
@@ -5040,6 +5046,7 @@ export type OrderDetailQuery = {
             country?: string | null;
         } | null;
         customFields?: {
+            cancelRequestStatus?: string | null;
             erpStatus?: string | null;
             erpStatusAt?: any | null;
             erpOrderStatus?: string | null;
@@ -6269,6 +6276,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
       country
     }
     customFields {
+      cancelRequestStatus
       erpStatus
       erpStatusAt
       erpOrderStatus

@@ -112,6 +112,7 @@ export default {
         },
         cancel: {
             button: 'Отменить заказ',
+            requested: 'Отмена запрошена',
             confirmTitle: 'Отменить заказ?',
             confirmText: 'Заказ будет отменён. Это действие нельзя отменить.',
             confirm: 'Да, отменить',

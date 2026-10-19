@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n';
 import { MvButton } from '@mivend/ui-kit';
 
-defineProps<{ repeating: boolean; canCancel: boolean }>();
+defineProps<{ repeating: boolean; canCancel: boolean; cancelRequested: boolean }>();
 defineEmits<{ repeat: []; cancel: [] }>();
 const { t } = useI18n();
 </script>
@@ -16,6 +16,7 @@ const { t } = useI18n();
         <MvButton v-if="canCancel" variant="danger" @click="$emit('cancel')">{{
             t('orders.cancel.button')
         }}</MvButton>
+        <p v-if="cancelRequested" class="oac-note">{{ t('orders.cancel.requested') }}</p>
     </div>
 </template>
 
@@ -27,6 +28,12 @@ const { t } = useI18n();
     border: 1px solid #edf2ef;
     border-radius: 20px;
     padding: 18px 20px;
+}
+.oac-note {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #a45e00;
 }
 .oac-title {
     margin: 0 0 4px;

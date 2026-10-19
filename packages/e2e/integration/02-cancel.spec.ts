@@ -59,6 +59,7 @@ test('4: cancel from the storefront: one cancel-requested, cancel result recorde
             ? await registered(current)
             : await placeSmallOrder(page);
     await cancelInStorefront(page, order.id);
+    await expect(page.getByText('Отмена запрошена')).toBeVisible();
     await expectCancelled(orderByCode(order.code) as OrderRow);
 });
 

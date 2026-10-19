@@ -99,7 +99,7 @@ export function addReservationCustomFields(
             name: 'cancelRequestStatus',
             type: 'string' as const,
             nullable: true,
-            public: false,
+            public: true,
             label: [{ languageCode: LanguageCode.en, value: 'Cancel request status' }],
             description: [
                 {

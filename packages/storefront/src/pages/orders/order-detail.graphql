@@ -49,6 +49,7 @@ query OrderDetail($id: ID!) {
             country
         }
         customFields {
+            cancelRequestStatus
             erpStatus
             erpStatusAt
             erpOrderStatus

@@ -120,6 +120,7 @@ onMounted(() => {
                     <OrderActionsCard
                         :repeating="repeating"
                         :can-cancel="canCancel"
+                        :cancel-requested="order.customFields?.cancelRequestStatus === 'REQUESTED'"
                         @repeat="repeatOrder"
                         @cancel="confirmOpen = true"
                     />
