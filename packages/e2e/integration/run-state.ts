@@ -24,6 +24,10 @@ function writeRun(state: RunState): void {
     fs.writeFileSync(RUN_FILE, JSON.stringify(state, null, 2));
 }
 
+export function previousRunLeftContourBroken(): boolean {
+    return fs.existsSync(RUN_FILE) && readRun().contourBroken;
+}
+
 export function startRun(): void {
     writeRun({
         startedAt: new Date().toISOString(),

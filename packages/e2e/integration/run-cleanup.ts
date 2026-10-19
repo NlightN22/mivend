@@ -59,10 +59,9 @@ export async function cancelRunOrders(): Promise<Leftover[]> {
     for (const order of run.orders) {
         if (orderByCode(order.code)?.state !== 'Cancelled') await staffCancel(order.id);
     }
-    const left: Leftover[] = [];
-    for (const order of run.orders) {
-        await waitFor(() => (leftovers(order).length === 0 ? true : undefined), waitMs);
-        left.push(...leftovers(order));
-    }
-    return left;
+    await waitFor(
+        () => (run.orders.every(o => leftovers(o).length === 0) ? true : undefined),
+        waitMs,
+    );
+    return run.orders.flatMap(leftovers);
 }

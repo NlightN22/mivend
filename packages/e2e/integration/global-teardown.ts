@@ -8,9 +8,16 @@ import { readRun } from './run-state';
 export default async function globalTeardown(): Promise<void> {
     const contour = loadContourEnv();
     const problems: string[] = [];
-    if (readRun().contourBroken) await restartContour();
-    for (const left of await cancelRunOrders())
-        problems.push(`order ${left.code}: ${left.problem}`);
+    const step = async (name: string, run: () => Promise<void>): Promise<void> => {
+        await run().catch((e: unknown) => problems.push(`${name}: ${String(e)}`));
+    };
+    await step('restart contour', async () => {
+        if (readRun().contourBroken) await restartContour();
+    });
+    await step('cancel run orders', async () => {
+        for (const left of await cancelRunOrders())
+            problems.push(`order ${left.code}: ${left.problem}`);
+    });
     const since = new Date(readRun().startedAt);
     const accounts = [
         {
@@ -26,8 +33,10 @@ export default async function globalTeardown(): Promise<void> {
         ...(contour.manager ? [{ api: 'admin-api' as const, ...contour.manager }] : []),
     ];
     for (const account of accounts) {
-        const left = await endRunSessions(account, since);
-        if (left > 0) problems.push(`${account.username}: ${left} session(s) left`);
+        await step(`end ${account.username} sessions`, async () => {
+            const left = await endRunSessions(account, since);
+            if (left > 0) problems.push(`${account.username}: ${left} session(s) left`);
+        });
     }
     if (problems.length > 0)
         throw new Error(`e2e-integration left state behind: ${problems.join('; ')}`);

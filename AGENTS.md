@@ -132,7 +132,9 @@ against `make dev-staging-integration`'s real Integration Service Kafka connecti
 - **Sole exception: `make e2e-integration`** (#255), a short, manually launched suite that places
   real orders on the staging-integration contour through the storefront and manager portal UI and asserts the
   exchange with the ERP. It is never part of `make test`/`make test-int`/`make e2e`/CI, seeds nothing, only reads
-  contour state, tracks and cancels the orders it creates, and fails when the ERP does not answer in time.
+  contour DB state, tracks and cancels the orders it creates (staff cancel as superadmin), and fails when the ERP does
+  not answer in time. It restarts the shared contour (once with a broken schema registry), which kills anyone else's
+  work on it, so announce a run before starting it.
 
 ### Running tests
 

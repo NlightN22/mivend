@@ -224,7 +224,8 @@ automated tests only ever run against the seeded one. If a test needs data the l
 doesn't have yet, extend the seed (`erp-import` record type, `seed-erp.mjs`) or the test's own
 fixtures — don't borrow real data from staging-integration to make a test pass.
 Sole exception: `make e2e-integration` (#255, `docs/e2e-testing.md`), run by hand against a running
-staging-integration contour; it seeds nothing, reads the contour DB with SELECTs only and may restart the contour.
+staging-integration contour; it seeds nothing, reads the contour DB with SELECTs only, cancels its own orders as
+superadmin and restarts the shared contour (once with a broken schema registry), which interrupts anyone else using it.
 
 **Order-edit and held-send states (local only).** `make seed-order-edit-states` (after `make seed-all`,
 server running, idempotent) creates, for the demo customer `credit-limited@buyer.example`: an unsent
