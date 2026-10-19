@@ -25,11 +25,11 @@ export class OrderCheckStaleService implements OnModuleInit {
     ) {}
 
     onModuleInit(): void {
-        this.requests.registerHandler(PRODUCT_KIND, async (ctx, key) => {
-            await this.markForProducts(ctx, [key]);
+        this.requests.registerHandler(PRODUCT_KIND, async (ctx, key, heartbeat) => {
+            await this.markForProducts(ctx, [key], heartbeat);
         });
-        this.requests.registerHandler(CONTRACT_KIND, async (ctx, key) => {
-            await this.markForContract(ctx, key);
+        this.requests.registerHandler(CONTRACT_KIND, async (ctx, key, heartbeat) => {
+            await this.markForContract(ctx, key, heartbeat);
         });
     }
 
@@ -50,7 +50,11 @@ export class OrderCheckStaleService implements OnModuleInit {
         await this.checks.markStale(ctx, ORDER_SUBJECT_TYPE, orderId);
     }
 
-    markForProducts(ctx: RequestContext, productErpIds: string[]): Promise<number> {
+    markForProducts(
+        ctx: RequestContext,
+        productErpIds: string[],
+        heartbeat?: () => Promise<void>,
+    ): Promise<number> {
         if (productErpIds.length === 0) return Promise.resolve(0);
         return this.markPages(
             ctx,
@@ -59,17 +63,23 @@ export class OrderCheckStaleService implements OnModuleInit {
              JOIN product p ON p.id = pv."productId"
              WHERE p."customFieldsExternalid" = ANY($1)`,
             productErpIds,
+            heartbeat,
         );
     }
 
     // By the contract's own row, so a tombstone (which carries no counterparty) works the same.
-    markForContract(ctx: RequestContext, contractErpId: string): Promise<number> {
+    markForContract(
+        ctx: RequestContext,
+        contractErpId: string,
+        heartbeat?: () => Promise<void>,
+    ): Promise<number> {
         return this.markPages(
             ctx,
             `JOIN customer cu ON cu.id = o."customerId"
              JOIN contract c ON c."counterpartyId" = cu."customFieldsCounterpartyid"::text
              WHERE c."erpId" = $1`,
             contractErpId,
+            heartbeat,
         );
     }
 
@@ -77,6 +87,7 @@ export class OrderCheckStaleService implements OnModuleInit {
         ctx: RequestContext,
         joinsAndWhere: string,
         param: unknown,
+        heartbeat?: () => Promise<void>,
     ): Promise<number> {
         let marked = 0;
         let lastId = 0;
@@ -99,6 +110,7 @@ export class OrderCheckStaleService implements OnModuleInit {
             }
             marked += rows.length;
             if (rows.length < PAGE_SIZE) return marked;
+            await heartbeat?.();
             lastId = rows[rows.length - 1].id;
         }
     }

@@ -86,6 +86,8 @@ class CheckStaleRequest extends Base {
     @Column({ type: 'varchar' }) kind!: string;
     @Column({ type: 'varchar' }) key!: string;
     @Column({ type: 'int', default: 1 }) version!: number;
+    @Column({ type: 'timestamptz', nullable: true }) claimedUntil!: Date | null;
+    @Column({ type: 'uuid', nullable: true }) claimToken!: string | null;
 }
 
 const mirrors: Record<string, unknown> = {
@@ -529,6 +531,64 @@ describe('checks framework (real Postgres)', () => {
         await Promise.all([staleRequests.drain(ctx), other.drain(ctx)]);
 
         expect(calls).toBe(1);
+        expect(await dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(0);
+    });
+
+    it('picks up a request whose lease expired in another worker', async () => {
+        const seen: string[] = [];
+        staleRequests.registerHandler('lease', async (_c, key) => void seen.push(key));
+        await dataSource.query(
+            `INSERT INTO check_stale_request (kind, key, "claimedUntil", "claimToken")
+             VALUES ('lease', 'live', now() + interval '10 minutes', gen_random_uuid()),
+                    ('lease', 'expired', now() - interval '1 second', gen_random_uuid())`,
+        );
+
+        await staleRequests.drain(ctx);
+
+        expect(seen).toEqual(['expired']);
+        expect(await dataSource.query('SELECT key FROM check_stale_request')).toEqual([
+            { key: 'live' },
+        ]);
+    });
+
+    it('a late worker whose lease was taken over neither deletes nor keeps marking', async () => {
+        let beats = 0;
+        staleRequests.registerHandler('stolen', async (_c, _k, heartbeat) => {
+            await dataSource.query(
+                `UPDATE check_stale_request SET "claimToken" = gen_random_uuid()`,
+            );
+            await heartbeat();
+            beats += 1;
+        });
+        await dataSource.query(
+            `INSERT INTO check_stale_request (kind, key) VALUES ('stolen', 'k')`,
+        );
+
+        expect(await staleRequests.drain(ctx)).toBe(0);
+
+        expect(beats).toBe(0);
+        expect(await dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(1);
+    });
+
+    it('a re-request made while the handler runs survives and is claimable again', async () => {
+        const writer = new CheckStaleRequestWriter(
+            (staleRequests as unknown as { connection: TransactionalConnection }).connection,
+        );
+        let calls = 0;
+        staleRequests.registerHandler('again', async (c, key) => {
+            calls += 1;
+            if (calls === 1) await writer.request(c, 'again', key);
+        });
+        await writer.request(ctx, 'again', 'k');
+
+        await staleRequests.drain(ctx);
+        const [row] = await dataSource.query(
+            'SELECT version, "claimToken" FROM check_stale_request',
+        );
+        expect(row).toMatchObject({ version: 2, claimToken: null });
+
+        await staleRequests.drain(ctx);
+        expect(calls).toBe(2);
         expect(await dataSource.query('SELECT 1 FROM check_stale_request')).toHaveLength(0);
     });
 

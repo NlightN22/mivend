@@ -195,6 +195,8 @@ class StaleRequestM extends UuidBase {
     @Column({ type: 'varchar' }) kind!: string;
     @Column({ type: 'varchar' }) key!: string;
     @Column({ type: 'int', default: 1 }) version!: number;
+    @Column({ type: 'timestamptz', nullable: true }) claimedUntil!: Date | null;
+    @Column({ type: 'uuid', nullable: true }) claimToken!: string | null;
 }
 
 const mirrors: Record<string, unknown> = {

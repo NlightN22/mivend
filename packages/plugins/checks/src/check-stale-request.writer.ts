@@ -12,7 +12,8 @@ export class CheckStaleRequestWriter {
         await this.connection.getRepository(ctx, 'Channel').query(
             `INSERT INTO check_stale_request ("uuid", "kind", "key") VALUES ($1, $2, $3)
              ON CONFLICT ("kind", "key") DO UPDATE SET "version" = check_stale_request."version" + 1,
-                                                       "updatedAt" = now()`,
+                                                       "updatedAt" = now(),
+                                                       "claimedUntil" = NULL, "claimToken" = NULL`,
             [randomUUID(), kind, key],
         );
     }

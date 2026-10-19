@@ -157,7 +157,11 @@ export class ChecksService {
     }
 
     // Keyset over subjects, each flagged under its own lock: never a mass UPDATE that could wait on a running recompute.
-    async markStaleByCheckCode(ctx: RequestContext, checkCode: string): Promise<void> {
+    async markStaleByCheckCode(
+        ctx: RequestContext,
+        checkCode: string,
+        heartbeat?: () => Promise<void>,
+    ): Promise<void> {
         type SubjectRow = { subjectType: string; subjectId: string };
         let last: SubjectRow | null = null;
         for (;;) {
@@ -175,6 +179,7 @@ export class ChecksService {
                 await this.markStale(ctx, row.subjectType, row.subjectId);
             }
             if (rows.length < 200) return;
+            await heartbeat?.();
             last = rows[rows.length - 1];
         }
     }

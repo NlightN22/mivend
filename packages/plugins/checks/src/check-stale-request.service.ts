@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, RequestContextService, TransactionalConnection } from '@vendure/core';
+import { randomUUID } from 'node:crypto';
 
 import { ctxQuery } from 'shared';
 
@@ -7,31 +8,39 @@ import { CHECK_CODE_KIND } from './check-stale-request.writer';
 import { ChecksService } from './checks.service';
 
 const BATCH = 100;
+const LEASE = '5 minutes';
 const loggerCtx = 'CheckStaleRequests';
 
-export type StaleRequestHandler = (ctx: RequestContext, key: string) => Promise<void>;
+// Extends the claim; throws LeaseLostError once another worker owns the request.
+export type StaleRequestHeartbeat = () => Promise<void>;
+export type StaleRequestHandler = (
+    ctx: RequestContext,
+    key: string,
+    heartbeat: StaleRequestHeartbeat,
+) => Promise<void>;
 
-interface PendingRow {
+export class LeaseLostError extends Error {}
+
+interface ClaimedRow {
     id: number;
     kind: string;
     key: string;
     version: number;
 }
 
-// The handler transaction only writes a request row; marking runs here in short per-subject
-// transactions and is retried until the request is gone, so no lock is held across a bulk load.
+// Lease claim (docs/concurrency.md (i)): no transaction or lock is held while a handler marks subjects
+// in its own short transactions; a token+version fenced delete keeps a re-request made meanwhile.
 @Injectable()
 export class CheckStaleRequestService {
     private readonly handlers = new Map<string, StaleRequestHandler>();
-    private draining = false;
 
     constructor(
         private connection: TransactionalConnection,
         private requestContextService: RequestContextService,
         private checks: ChecksService,
     ) {
-        this.handlers.set(CHECK_CODE_KIND, (ctx, key) =>
-            this.checks.markStaleByCheckCode(ctx, key),
+        this.handlers.set(CHECK_CODE_KIND, (ctx, key, heartbeat) =>
+            this.checks.markStaleByCheckCode(ctx, key, heartbeat),
         );
     }
 
@@ -45,62 +54,83 @@ export class CheckStaleRequestService {
         );
     }
 
-    // One keyset pass over every row, so unprocessable rows (no handler, failing) never starve later ones;
-    // they stay for the next pass. Idempotent; a request repeated meanwhile has a newer version and is kept.
+    // One keyset pass, so unprocessable rows (no handler, failing) never starve later ones.
     async drain(ctx?: RequestContext): Promise<number> {
-        if (this.draining) return 0;
-        this.draining = true;
-        try {
-            const runCtx = ctx ?? (await this.requestContextService.create({ apiType: 'admin' }));
-            let done = 0;
-            let lastId = 0;
-            for (;;) {
-                const rows = await ctxQuery<PendingRow[]>(
-                    this.connection,
-                    runCtx,
-                    `SELECT id, kind, key, version FROM check_stale_request WHERE id > $1 ORDER BY id LIMIT ${BATCH}`,
-                    [lastId],
-                );
-                for (const row of rows) {
-                    if (await this.process(runCtx, row)) done += 1;
-                }
-                if (rows.length < BATCH) return done;
-                lastId = rows[rows.length - 1].id;
+        const runCtx = ctx ?? (await this.requestContextService.create({ apiType: 'admin' }));
+        const token = randomUUID();
+        let done = 0;
+        let lastId = 0;
+        for (;;) {
+            const rows = await this.claim(runCtx, token, lastId);
+            for (const row of rows) {
+                if (await this.process(runCtx, token, row)) done += 1;
             }
-        } finally {
-            this.draining = false;
+            if (rows.length < BATCH) return done;
+            lastId = rows[rows.length - 1].id;
         }
     }
 
-    // A transaction-level advisory try-lock instead of a row lock: another process (the scheduled task vs
-    // the post-commit drain) skips a request being worked on, and the writer's upsert never waits for it.
-    private async process(ctx: RequestContext, row: PendingRow): Promise<boolean> {
+    private async claim(ctx: RequestContext, token: string, lastId: number): Promise<ClaimedRow[]> {
+        const rows = await ctxQuery<[ClaimedRow[], number]>(
+            this.connection,
+            ctx,
+            `UPDATE check_stale_request SET "claimedUntil" = now() + interval '${LEASE}', "claimToken" = $1
+              WHERE id IN (SELECT id FROM check_stale_request
+                            WHERE ("claimedUntil" IS NULL OR "claimedUntil" < now()) AND id > $2
+                            ORDER BY id LIMIT ${BATCH} FOR UPDATE SKIP LOCKED)
+             RETURNING id, kind, key, version`,
+            [token, lastId],
+        );
+        return rows[0].sort((a, b) => a.id - b.id);
+    }
+
+    private async process(ctx: RequestContext, token: string, row: ClaimedRow): Promise<boolean> {
         const handler = this.handlers.get(row.kind);
-        if (!handler) return false;
-        return this.connection.withTransaction(ctx, async txCtx => {
-            const [{ locked }] = await ctxQuery<Array<{ locked: boolean }>>(
-                this.connection,
-                txCtx,
-                `SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS locked`,
-                [`check-stale-request:${row.id}`],
-            );
-            if (!locked) return false;
-            try {
-                await handler(ctx, row.key);
-            } catch (error) {
-                Logger.error(
-                    `Stale request ${row.kind}:${row.key} failed, will retry: ${String(error)}`,
-                    loggerCtx,
-                );
+        if (!handler) {
+            await this.release(ctx, token, row.id);
+            return false;
+        }
+        try {
+            await handler(ctx, row.key, () => this.heartbeat(ctx, token, row.id));
+        } catch (error) {
+            if (error instanceof LeaseLostError) {
+                Logger.warn(`Stale request ${row.kind}:${row.key} claimed elsewhere`, loggerCtx);
                 return false;
             }
-            await ctxQuery<unknown>(
-                this.connection,
-                txCtx,
-                `DELETE FROM check_stale_request WHERE id = $1 AND version = $2`,
-                [row.id, row.version],
+            Logger.error(
+                `Stale request ${row.kind}:${row.key} failed, will retry: ${String(error)}`,
+                loggerCtx,
             );
-            return true;
-        });
+            await this.release(ctx, token, row.id);
+            return false;
+        }
+        const [, deleted] = await ctxQuery<[unknown[], number]>(
+            this.connection,
+            ctx,
+            `DELETE FROM check_stale_request WHERE id = $1 AND "claimToken" = $2 AND version = $3`,
+            [row.id, token, row.version],
+        );
+        return deleted > 0;
+    }
+
+    private async heartbeat(ctx: RequestContext, token: string, id: number): Promise<void> {
+        const [, updated] = await ctxQuery<[unknown[], number]>(
+            this.connection,
+            ctx,
+            `UPDATE check_stale_request SET "claimedUntil" = now() + interval '${LEASE}'
+              WHERE id = $1 AND "claimToken" = $2`,
+            [id, token],
+        );
+        if (updated === 0) throw new LeaseLostError(`check_stale_request ${id}`);
+    }
+
+    private async release(ctx: RequestContext, token: string, id: number): Promise<void> {
+        await ctxQuery<unknown>(
+            this.connection,
+            ctx,
+            `UPDATE check_stale_request SET "claimedUntil" = NULL, "claimToken" = NULL
+              WHERE id = $1 AND "claimToken" = $2`,
+            [id, token],
+        );
     }
 }

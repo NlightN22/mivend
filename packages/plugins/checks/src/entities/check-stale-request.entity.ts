@@ -18,4 +18,11 @@ export class CheckStaleRequest extends UuidEntity {
 
     @Column({ type: 'int', default: 1 })
     version!: number;
+
+    // Lease claim (docs/concurrency.md (i)): a worker owns the row until claimedUntil, fenced by claimToken.
+    @Column({ type: 'timestamptz', nullable: true })
+    claimedUntil!: Date | null;
+
+    @Column({ type: 'uuid', nullable: true })
+    claimToken!: string | null;
 }
