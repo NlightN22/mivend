@@ -121,17 +121,17 @@ export function recordGraphql(page: Page): GraphqlLog {
     return { bodies, pending: () => inFlight };
 }
 
-// Navigates and waits until the page's GraphQL calls have been answered and it shows text.
+// A cold dev server can serve a blank first load (re-optimised dependencies): reload once before failing.
 export async function visit(page: Page, log: GraphqlLog, path: string): Promise<string> {
+    const settled = async (): Promise<boolean> =>
+        log.pending() <= 0 && (await page.locator('body').innerText()).length > 0;
     await page.goto(path);
-    await expect
-        .poll(
-            async () => log.pending() === 0 && (await page.locator('body').innerText()).length > 0,
-            {
-                timeout: 30_000,
-            },
-        )
-        .toBe(true);
+    try {
+        await expect.poll(settled, { timeout: 15_000 }).toBe(true);
+    } catch {
+        await page.reload();
+        await expect.poll(settled, { timeout: 30_000 }).toBe(true);
+    }
     return page.locator('body').innerText();
 }
 
