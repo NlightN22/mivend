@@ -32,7 +32,28 @@ export class ErpOrderService {
     // Writes only the keys it sets: it runs after commit on a stale event.order, and a full save() would
     // overwrite a concurrent writer's key (the reservation state, #241) with that snapshot.
     async onOrderPlaced(ctx: RequestContext, order: Order): Promise<void> {
+        await this.denormalizePlacement(ctx, order);
         const initialStatus = (await this.statusReference.dictionary(ctx)).codeWith('initial');
+        // One transaction: a crash after the claim cannot leave the first status without its history row.
+        // Both placement events call this, so only the run that sets erpStatus from NULL records and publishes.
+        const claimed = await this.connection.withTransaction(ctx, async txCtx => {
+            const result = await this.connection
+                .getRepository(txCtx, Order)
+                .update(
+                    { id: order.id, customFields: { erpStatus: IsNull() } },
+                    { customFields: { erpStatus: initialStatus, erpStatusAt: new Date() } },
+                );
+            if (!result.affected) return false;
+            await this.statusHistory.record(txCtx, order.id, initialStatus);
+            return true;
+        });
+        if (!claimed) return;
+        order.customFields.erpStatus = initialStatus;
+        this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
+    }
+
+    // Runs in the placement transition's own transaction (placementDenormalizeProcess) so allocation sees branchId (#258).
+    async denormalizePlacement(ctx: RequestContext, order: Order): Promise<void> {
         const changed: Record<string, unknown> = {};
 
         const admin =
@@ -78,25 +99,12 @@ export class ErpOrderService {
         // Stays null for storefront checkout: ctx.activeUserId doesn't resolve to an Administrator there.
         if (admin) changed.placedByAdministratorId = String(admin.id);
 
-        // One transaction: a crash after the claim cannot leave the first status without its history row.
-        // Both placement events call this, so only the run that sets erpStatus from NULL records and publishes.
-        const claimed = await this.connection.withTransaction(ctx, async txCtx => {
-            const repo = this.connection.getRepository(txCtx, Order);
-            if (Object.keys(changed).length > 0) {
-                await repo.update(order.id, { customFields: changed });
-            }
-            const result = await repo.update(
-                { id: order.id, customFields: { erpStatus: IsNull() } },
-                { customFields: { erpStatus: initialStatus, erpStatusAt: new Date() } },
-            );
-            if (!result.affected) return false;
-            await this.statusHistory.record(txCtx, order.id, initialStatus);
-            return true;
-        });
+        if (Object.keys(changed).length > 0) {
+            await this.connection
+                .getRepository(ctx, Order)
+                .update(order.id, { customFields: changed });
+        }
         Object.assign(order.customFields, changed);
-        if (!claimed) return;
-        order.customFields.erpStatus = initialStatus;
-        this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
     }
 
     // Re-read: the placement event carries a snapshot that may predate the staff choice (docs/concurrency.md (d)).

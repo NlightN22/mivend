@@ -192,6 +192,27 @@ describe('ErpOrderService', () => {
         });
     });
 
+    describe('denormalizePlacement', () => {
+        it('sets branchId on the transition entity and leaves the erpStatus claim to the subscriber (#258)', async () => {
+            mockAdministratorService.findOneByUserId.mockResolvedValue(null);
+            mockTradingPointService.getPreferredForCustomer.mockResolvedValue({
+                id: 7,
+                address: 'A',
+            });
+            mockTradingPointService.resolveServicingBranchId.mockResolvedValue('branch-b');
+            const order = { id: 1, customFields: {}, customerId: 'cust-1' } as never;
+
+            await service.denormalizePlacement(mockCtx, order);
+
+            expect((order as { customFields: { branchId?: string } }).customFields.branchId).toBe(
+                'branch-b',
+            );
+            expect(mockOrderRepo.update).toHaveBeenCalledTimes(1);
+            expect(mockStatusHistory.record).not.toHaveBeenCalled();
+            expect(mockEventBus.publish).not.toHaveBeenCalled();
+        });
+    });
+
     describe('onOrderPlaced for a staff-created order', () => {
         const preferred = { id: 7, counterpartyId: '5', address: 'Preferred 1' };
         const chosen = { id: 9, counterpartyId: '5', address: 'Chosen 2' };
