@@ -157,7 +157,7 @@ describe('ApprovalRequest price type gate (integration, real Postgres)', () => {
                 await service.findByRequestType(ctxFor('admin-1'), 'discountGrantApproval', {
                     allowedPriceTypeCodes: codes,
                 })
-            ).items.map(r => r.id);
+            ).items.map(r => String(r.id));
         expect(await seen(['type-a'])).toEqual([a.id]);
         expect(await seen(['type-b'])).toEqual([b.id]);
     });
