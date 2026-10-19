@@ -1,9 +1,9 @@
-import { test } from '@playwright/test';
 import { waitFor } from './contour-db';
 import { inboxRows, orderByCode, outboxRows, type InboxRow, type OrderRow } from './order-rows';
-import { readRun, rememberOrder, updateRun } from './run-state';
+import { rememberOrder, updateRun } from './run-state';
 
-export const ERP_ANSWER_TIMEOUT_MS = 5 * 60_000;
+// 1C picks commands up once per exchange cycle (6-10 min).
+export const ERP_ANSWER_TIMEOUT_MS = 20 * 60_000;
 const LOCAL_TIMEOUT_MS = 90_000;
 
 export async function placedOrder(code: string): Promise<OrderRow> {
@@ -35,14 +35,6 @@ export async function waitForPublished(
     return rows ?? outboxRows(orderUuid, eventType);
 }
 
-// The run's preflight: the first ERP wait decides once whether the exchange answers.
-export function skipWhenExchangeOff(): void {
-    test.skip(
-        readRun().exchange === 'off',
-        'ERP exchange did not answer earlier in this run (switched off)',
-    );
-}
-
 export async function waitForInbox(
     stream: string,
     orderUuid: string,
@@ -60,18 +52,9 @@ export async function waitForInbox(
 }
 
 export async function waitForErpAnswer(stream: string, orderUuid: string): Promise<InboxRow> {
-    skipWhenExchangeOff();
     const row = await waitForInbox(stream, orderUuid);
-    if (!row) {
-        if (readRun().exchange === 'on')
-            throw new Error(`ERP answered earlier but sent no ${stream} for ${orderUuid}`);
-        updateRun({ exchange: 'off' });
-        test.skip(
-            true,
-            `no ${stream} from the ERP within ${ERP_ANSWER_TIMEOUT_MS / 1000}s: exchange switched off`,
-        );
-        throw new Error('unreachable');
-    }
+    if (!row)
+        throw new Error(`no ${stream} for ${orderUuid} within ${ERP_ANSWER_TIMEOUT_MS / 1000}s`);
     updateRun({ exchange: 'on' });
     return row;
 }

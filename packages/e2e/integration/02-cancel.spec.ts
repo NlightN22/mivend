@@ -3,25 +3,38 @@ import { test, expect, type Page } from '@playwright/test';
 import { loginAsManager } from '../helpers/manager-auth';
 import { pickMixedCart } from './cart-picker';
 import { loadContourEnv } from './contour-env';
-import { placedOrder, waitForInbox, waitForOrder, waitForPublished } from './erp-wait';
+import {
+    ERP_ANSWER_TIMEOUT_MS,
+    placedOrder,
+    waitForErpAnswer,
+    waitForInbox,
+    waitForOrder,
+    waitForPublished,
+} from './erp-wait';
 import { orderByCode, reservations, type OrderRow } from './order-rows';
 import { cancelInStorefront, fillCart, placeOrderInCheckout } from './storefront-flow';
 import { readRun } from './run-state';
 
-test.describe.configure({ timeout: 12 * 60_000 });
+test.describe.configure({ timeout: 30 * 60_000 });
 keepCustomerSession();
 
-const CANCEL_RESULT_TIMEOUT_MS = 3 * 60_000;
+const CANCEL_RESULT_TIMEOUT_MS = ERP_ANSWER_TIMEOUT_MS;
 
 async function placeSmallOrder(page: Page): Promise<OrderRow> {
     const { lines } = await pickMixedCart(page);
     await fillCart(page, lines.slice(0, 1));
     const order = await placedOrder(await placeOrderInCheckout(page));
     await waitForPublished(order.uuid, 'order.confirmed');
-    return order;
+    return registered(order);
 }
 
-// Registered when the ERP answers; otherwise this is "cancel after sending, before the ERP registered it".
+async function registered(order: OrderRow): Promise<OrderRow> {
+    await waitForErpAnswer('order-registration-result', order.uuid);
+    const row = await waitForOrder(order.code, o => !!o.erpOrderId);
+    expect(row?.erpOrderId, `order ${order.code} registered in the ERP`).toBeTruthy();
+    return row as OrderRow;
+}
+
 async function expectCancelled(order: OrderRow): Promise<void> {
     const requested = await waitForPublished(order.uuid, 'order.cancel-requested');
     expect(requested.filter(r => r.status === 'published')).toHaveLength(1);
@@ -33,14 +46,7 @@ async function expectCancelled(order: OrderRow): Promise<void> {
     );
     expect(final?.state).toBe('Cancelled');
     expect(reservations(order.id).filter(r => r.status === 'active')).toEqual([]);
-    test.skip(
-        !result,
-        `no order-cancel-result within ${CANCEL_RESULT_TIMEOUT_MS / 1000}s (exchange off)`,
-    );
-    test.info().annotations.push({
-        type: 'path',
-        description: order.erpOrderId ? 'registered order' : 'sent, not registered',
-    });
+    expect(result, 'order-cancel-result recorded').toBeTruthy();
 }
 
 test('4: cancel from the storefront: one cancel-requested, cancel result recorded, Cancelled, released', async ({
@@ -48,7 +54,10 @@ test('4: cancel from the storefront: one cancel-requested, cancel result recorde
 }) => {
     const first = readRun().orders[0];
     const current = first ? orderByCode(first.code) : undefined;
-    const order = current && current.state !== 'Cancelled' ? current : await placeSmallOrder(page);
+    const order =
+        current && current.state !== 'Cancelled'
+            ? await registered(current)
+            : await placeSmallOrder(page);
     await cancelInStorefront(page, order.id);
     await expectCancelled(orderByCode(order.code) as OrderRow);
 });

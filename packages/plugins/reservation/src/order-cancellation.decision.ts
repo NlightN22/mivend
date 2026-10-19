@@ -99,7 +99,7 @@ const ACTIVE_CART_STATES = ['AddingItems', 'ArrangingPayment'];
 export function isOrderCancellable(facts: CancelFacts): boolean {
     if (ACTIVE_CART_STATES.includes(facts.orderState)) return false;
     const { action } = decideCancellation(facts);
-    return action !== 'refuse' && action !== 'already-cancelled' && action !== 'leave-to-erp';
+    return !['refuse', 'already-cancelled', 'already-requested', 'leave-to-erp'].includes(action);
 }
 
 export function erpStageFacts(

@@ -5,7 +5,7 @@ import { loadContourEnv } from './contour-env';
 import { orderByCode } from './order-rows';
 import { readRun, type RunOrder } from './run-state';
 
-const CANCEL_WAIT_MS = { on: 180_000, off: 5_000 };
+const CANCEL_WAIT_MS = { on: 20 * 60_000, off: 5_000 };
 
 export async function staffCancel(orderId: string): Promise<string> {
     const { superadmin } = loadContourEnv();

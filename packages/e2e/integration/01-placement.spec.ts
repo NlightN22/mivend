@@ -14,7 +14,7 @@ import {
 import { addLine, fillCart, openCheckout } from './storefront-flow';
 import { readRun } from './run-state';
 
-test.describe.configure({ timeout: 10 * 60_000 });
+test.describe.configure({ timeout: 30 * 60_000 });
 keepCustomerSession();
 
 function mainOrder(): { id: string; code: string } {

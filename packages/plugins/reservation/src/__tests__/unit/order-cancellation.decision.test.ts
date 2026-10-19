@@ -123,6 +123,11 @@ describe('isOrderCancellable', () => {
         ['shipped', { orderState: 'Shipped' }, false],
         ['already cancelled', { orderState: 'Cancelled' }, false],
         [
+            'cancel already requested, waiting for the ERP',
+            { cancelRequestStatus: 'REQUESTED', erpOrderId: 'erp-1' },
+            false,
+        ],
+        [
             'cancel refused by the ERP earlier',
             { cancelRequestStatus: 'REFUSED', erpOrderId: 'erp-1' },
             true,
