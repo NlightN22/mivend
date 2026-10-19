@@ -79,18 +79,17 @@ async function addItem(ctx: RequestContext, variantId: number, log: string[]): P
     for (const line of lines) {
         await query(c, 'UPDATE order_line SET quantity = quantity WHERE id = $1', [line.id]);
     }
-    const updated = await query(
+    const [existing] = await query(
         c,
-        'UPDATE order_line SET quantity = quantity + 1 WHERE "orderId" = $1 AND "variantId" = $2 RETURNING id',
+        'SELECT id FROM order_line WHERE "orderId" = $1 AND "variantId" = $2',
         [order.id, variantId],
     );
-    if (updated.length === 0) {
-        await query(
-            c,
-            'INSERT INTO order_line ("orderId", "variantId", quantity) VALUES ($1, $2, 1)',
-            [order.id, variantId],
-        );
-    }
+    await (existing
+        ? query(c, 'UPDATE order_line SET quantity = quantity + 1 WHERE id = $1', [existing.id])
+        : query(c, 'INSERT INTO order_line ("orderId", "variantId", quantity) VALUES ($1, $2, 1)', [
+              order.id,
+              variantId,
+          ]));
 }
 
 async function removeAll(ctx: RequestContext, log: string[]): Promise<void> {
