@@ -69,7 +69,7 @@ test.describe('Discount rules — compareAtPrice', () => {
         await expect(card.locator('.mv-product-card__base-price--strike')).toContainText('290', {
             timeout: 10000,
         });
-        await expect(card.locator('.mv-product-card__customer-price')).toContainText('267');
+        await expect(card.locator('.mv-product-card__customer-price')).toContainText('266.80');
     });
 });
 
