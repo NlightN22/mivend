@@ -51,6 +51,8 @@ Price type visibility groups (#235, `05`-`07`, read-only except `07`) need the o
 types are derived from the contour DB (branch allow-list and default), never hardcoded. `05` visits
 the manager portal and storefront pages, records every GraphQL response and greps text and JSON
 for the confidential codes and for floor/purchase fields.
+`06` calls the Admin API directly as the test manager (denied prices, floor, rules, registry) and as the superadmin
+to prove the same data exists.
 
 ## Manager portal role projects
 
