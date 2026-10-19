@@ -56,12 +56,16 @@ export function leftovers(order: RunOrder): Leftover[] {
 export async function cancelRunOrders(): Promise<Leftover[]> {
     const run = readRun();
     const waitMs = run.exchange === 'on' ? CANCEL_WAIT_MS.on : CANCEL_WAIT_MS.off;
+    const refused: Leftover[] = [];
     for (const order of run.orders) {
-        if (orderByCode(order.code)?.state !== 'Cancelled') await staffCancel(order.id);
+        if (orderByCode(order.code)?.state === 'Cancelled') continue;
+        await staffCancel(order.id).catch((e: unknown) =>
+            refused.push({ code: order.code, problem: String(e) }),
+        );
     }
     await waitFor(
         () => (run.orders.every(o => leftovers(o).length === 0) ? true : undefined),
         waitMs,
     );
-    return run.orders.flatMap(leftovers);
+    return [...refused, ...run.orders.flatMap(leftovers)];
 }
