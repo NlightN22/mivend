@@ -10,6 +10,7 @@ import {
 } from 'shared';
 
 import { CounterpartyPortalAccessService } from '../../counterparty-portal-access.service';
+import { getInnStatus } from '../../counterparty-inn-guard';
 import { Counterparty } from '../../entities/counterparty.entity';
 
 const { schema, extra } = testSchemaOptions('portal_access_inn');
@@ -134,5 +135,23 @@ describe('portal access INN guard (real Postgres)', () => {
             `INSERT INTO customer ("customFieldsCounterpartyid", "deletedAt") VALUES ('2', now())`,
         );
         await expect(service.activate(ctx, '1')).resolves.toBeDefined();
+    });
+});
+
+describe('getInnStatus (real Postgres)', () => {
+    it('reports ok, duplicate and missing, treating a null inn as missing', async () => {
+        const connection = createTestConnection(dataSource) as never;
+        await dataSource.query(
+            `INSERT INTO counterparty (id, "erpId", "shortName", inn, "isActive") VALUES (4,'erp-4','Four',NULL,true)`,
+        );
+        expect(await getInnStatus(connection, ctx, { id: '1', inn: '77 000-00001' } as never)).toBe(
+            'duplicate',
+        );
+        expect(await getInnStatus(connection, ctx, { id: '3', inn: '7700000003' } as never)).toBe(
+            'ok',
+        );
+        expect(await getInnStatus(connection, ctx, { id: '4', inn: null } as never)).toBe(
+            'missing',
+        );
     });
 });

@@ -66,4 +66,19 @@ export class CounterpartyRecordDto {
             'Free-text group/segment label from the ERP — display and filtering only, not used for access control or business rules.',
     })
     erpGroupLabel?: string | null;
+
+    @ApiPropertyOptional({
+        type: String,
+        nullable: true,
+        description:
+            'Contact phone; required with officialEmail before portal access is activated.',
+    })
+    phone?: string | null;
+
+    @ApiPropertyOptional({
+        type: String,
+        nullable: true,
+        description: 'Login-eligible email; required with phone before portal access is activated.',
+    })
+    officialEmail?: string | null;
 }

@@ -23,6 +23,8 @@ export class CounterpartyHandler {
             // Deliberately unset: a raw ERP-sourced id is not the same value space as Branch.id.
             // Branch assignment must come from the planned counterparty-to-branch worker, not here.
             erpGroupLabel: record.erpGroupLabel ?? null,
+            ...(record.phone !== undefined && { phone: record.phone }),
+            ...(record.officialEmail !== undefined && { officialEmail: record.officialEmail }),
         });
     }
 }

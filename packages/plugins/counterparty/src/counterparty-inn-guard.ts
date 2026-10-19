@@ -15,7 +15,7 @@ export function normalizeInn(inn: string | null | undefined): string {
     return (inn ?? '').replace(/\D/g, '');
 }
 
-export const INN_DIGITS_SQL = `regexp_replace(c.inn, '\\D', '', 'g')`;
+export const INN_DIGITS_SQL = `regexp_replace(coalesce(c.inn, ''), '\\D', '', 'g')`;
 
 // Another active counterparty with this inn that already has a live portal Customer.
 export async function findLinkedInnDuplicate(

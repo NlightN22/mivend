@@ -1,3 +1,5 @@
+import { innSeedRecords } from './seed-inn';
+
 export const E2E_CUSTOMER = {
     email: 'e2e@test.example',
     password: 'E2eTest123!',
@@ -364,4 +366,5 @@ export const seedRecords = [
             isActive: false,
         },
     },
+    ...innSeedRecords,
 ];

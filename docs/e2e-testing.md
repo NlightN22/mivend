@@ -73,7 +73,7 @@ visible) reads `testInfo.project.name` to know which role it's running as — se
 sync with `packages/manager/src/api/dashboard-config.ts` whenever that config changes.
 
 Coverage so far: `manager/dashboard/`, `manager/orders/` (list + detail, including reservation
-confirm/release), `manager/customers/` (list, CSV export, row navigation). All of them read a
+confirm/release), `manager/customers/` (list, CSV export, row navigation), and `manager/customers/counterparty-inn.spec.ts` (#225 inn guard: seeded twin/missing-inn counterparties from `fixtures/seed-inn.ts` through `erp-import`, `manager-portal-admin` only). All of them read a
 single deterministic order created by `global-setup.ts` (`createConfirmedOrder`, see
 `helpers/manager-order.ts`) and written to `.auth/e2e-order.json` (read via
 `helpers/e2e-order.ts`) — this avoids depending on whatever orders already happen to exist in the

@@ -112,6 +112,8 @@ export interface CounterpartyRecord {
     // Display and filtering only; never use for access control or business rules.
     // The ERP's grouping concept is inconsistent, so the label is not a reliable category.
     erpGroupLabel?: string | null;
+    phone?: string | null;
+    officialEmail?: string | null;
 }
 
 export interface ContractRecord {
