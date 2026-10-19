@@ -16,9 +16,13 @@ vi.mock('shared', async importOriginal => ({
 
 function makeConnection(existingId: string | undefined): {
     getRepository: ReturnType<typeof vi.fn>;
+    withTransaction: (c: unknown, work: (c: unknown) => unknown) => unknown;
 } {
     const query = vi.fn().mockResolvedValue(existingId ? [{ id: existingId }] : []);
-    return { getRepository: vi.fn().mockReturnValue({ query }) };
+    return {
+        getRepository: vi.fn().mockReturnValue({ query }),
+        withTransaction: (c, work) => work(c),
+    };
 }
 
 function makeTaxCategoryService(
