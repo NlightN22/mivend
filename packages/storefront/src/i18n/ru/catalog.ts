@@ -73,6 +73,7 @@ const ru: typeof en = {
         favorite: 'В избранное',
         floorPrice: 'Минимальная цена',
         volumeDiscount: 'Скидка за объём',
+        weightThreshold: '≥ {kg} кг',
     },
     stepper: {
         decrease: 'Уменьшить',

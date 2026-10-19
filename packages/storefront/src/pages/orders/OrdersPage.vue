@@ -15,6 +15,9 @@ import {
     sourceIsExternal,
 } from './orderFilters';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
+import { usePaginationLabels } from '../../composables/usePaginationLabels';
+
+const paginationLabels = usePaginationLabels();
 
 const { orders, totalItems, loading, load } = useOrders();
 
@@ -106,6 +109,7 @@ onMounted(() => void reload());
             <div v-else class="orders-page-grid">
                 <div class="orders-page-list">
                     <MvPagination
+                        v-bind="paginationLabels"
                         :page="page"
                         :page-size="PAGE_SIZE"
                         :total="totalItems"
@@ -113,6 +117,7 @@ onMounted(() => void reload());
                     />
                     <OrderCard v-for="order in orders" :key="order.id" :order="order" />
                     <MvPagination
+                        v-bind="paginationLabels"
                         :page="page"
                         :page-size="PAGE_SIZE"
                         :total="totalItems"

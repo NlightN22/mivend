@@ -154,7 +154,11 @@ onMounted(() => {
         <MvNotice v-else-if="!product" variant="error">{{ t('product.notFound') }}</MvNotice>
 
         <template v-else>
-            <MvBreadcrumbs class="product-page__crumbs" :items="breadcrumbItems" />
+            <MvBreadcrumbs
+                :aria-label="$t('common.breadcrumb')"
+                class="product-page__crumbs"
+                :items="breadcrumbItems"
+            />
 
             <div class="product-page__layout">
                 <MvProductGallery

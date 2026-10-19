@@ -7,6 +7,7 @@ import { IconClipboardList, IconHeart, IconUser } from '@tabler/icons-vue';
 import { MvLanguageSwitcher, MvNotificationBell, MvNotificationPanel } from '@mivend/ui-kit';
 import { useLanguageSwitcher } from '../composables/useLanguageSwitcher';
 import { useHeaderSearch } from '../composables/useHeaderSearch';
+import { useNotificationPanelLabels } from '../composables/useNotificationPanelLabels';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
 import { useCatalogStore } from '../stores/catalog';
@@ -22,6 +23,7 @@ const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
 const favoritesStore = useFavoritesStore();
 const notificationPanelOpen = ref(false);
+const notificationLabels = useNotificationPanelLabels();
 const {
     searchQuery,
     scopeLabel,
@@ -88,13 +90,9 @@ function toggleMobileNav(): void {
     mobileNavOpen.value = !mobileNavOpen.value;
 }
 
-function closeMobileNav(): void {
-    mobileNavOpen.value = false;
-}
-
 function closeAll(): void {
     closeCatalog();
-    closeMobileNav();
+    mobileNavOpen.value = false;
 }
 
 function onKeydown(e: KeyboardEvent): void {
@@ -217,6 +215,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 <MvNotificationBell
                     v-if="notificationsStore"
                     :unread-count="notificationsStore.unreadCount"
+                    :aria-label="t('notifications.title')"
                     @click="notificationPanelOpen = !notificationPanelOpen"
                 />
 
@@ -278,6 +277,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
             <MvNotificationPanel
                 :notifications="notificationsStore.notifications"
                 :loading="notificationsStore.loading"
+                :labels="notificationLabels"
                 @mark-read="notificationsStore.markRead"
                 @resolve="notificationsStore.resolve"
                 @close="notificationPanelOpen = false"

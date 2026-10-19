@@ -11,7 +11,12 @@ export default {
         previous: 'Previous',
         next: 'Next',
         help: 'Help',
+        breadcrumb: 'Breadcrumb',
         support: 'Support',
+    },
+    pagination: {
+        summary: '{start}–{end} of {total}',
+        page: 'Page {page} of {count}',
     },
     nav: {
         catalog: 'Catalogue',

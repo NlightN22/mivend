@@ -15,6 +15,7 @@ onMounted(() => cartStore.fetchCart());
 <template>
     <main class="cart-page">
         <MvBreadcrumbs
+            :aria-label="$t('common.breadcrumb')"
             class="cart-page__crumbs"
             :items="[{ label: $t('nav.home'), to: '/' }, { label: $t('cart.title') }]"
         />

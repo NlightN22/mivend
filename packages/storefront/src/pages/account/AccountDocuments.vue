@@ -1,19 +1,44 @@
 <script setup lang="ts">
-const docs = [
-    { title: 'UPD #91384', note: 'Order #348510 · Jun 24', action: 'Download' },
-    { title: 'Proforma invoice #88241', note: 'Order #348744 · Jun 25', action: 'Download' },
-    { title: 'Reconciliation report', note: 'June 2026', action: 'Open' },
-];
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { formatDate } from '../../i18n/format';
+
+const { t } = useI18n();
+const day = (iso: string): string => formatDate(iso, { day: 'numeric', month: 'short' });
+const orderNote = (number: string, iso: string): string =>
+    t('account.recentDocuments.orderNote', { number, date: day(iso) });
+
+const docs = computed(() => [
+    {
+        title: t('account.recentDocuments.upd', { number: '91384' }),
+        note: orderNote('348510', '2026-06-24'),
+        action: t('account.recentDocuments.download'),
+    },
+    {
+        title: t('account.recentDocuments.proformaInvoice', { number: '88241' }),
+        note: orderNote('348744', '2026-06-25'),
+        action: t('account.recentDocuments.download'),
+    },
+    {
+        title: t('account.recentDocuments.reconciliation'),
+        note: formatDate('2026-06-01', { month: 'long', year: 'numeric' }),
+        action: t('account.recentDocuments.open'),
+    },
+]);
 </script>
 
 <template>
     <div class="account-documents">
         <div class="account-documents__header">
             <div>
-                <h2 class="account-documents__title">Documents</h2>
-                <div class="account-documents__subtitle">Latest available documents.</div>
+                <h2 class="account-documents__title">{{ $t('account.recentDocuments.title') }}</h2>
+                <div class="account-documents__subtitle">
+                    {{ $t('account.recentDocuments.subtitle') }}
+                </div>
             </div>
-            <a href="#" class="account-documents__link-more">All</a>
+            <a href="#" class="account-documents__link-more">{{
+                $t('account.recentDocuments.all')
+            }}</a>
         </div>
 
         <div class="account-documents__list">

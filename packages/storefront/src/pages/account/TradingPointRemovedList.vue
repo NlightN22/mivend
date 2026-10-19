@@ -6,7 +6,7 @@ const emit = defineEmits<{ restore: [id: string] }>();
 </script>
 
 <template>
-    <div class="tp-section-label">Removed points</div>
+    <div class="tp-section-label">{{ $t('tradingPoints.removedTitle') }}</div>
     <div class="tp-list">
         <div v-for="pt in points" :key="pt.id" class="tp-removed-card">
             <div>
@@ -14,7 +14,7 @@ const emit = defineEmits<{ restore: [id: string] }>();
                 <div class="tp-removed-addr">{{ pt.address }}</div>
             </div>
             <button class="tp-btn tp-btn--ghost tp-btn--sm" @click="emit('restore', pt.id)">
-                Restore
+                {{ $t('tradingPoints.restore') }}
             </button>
         </div>
     </div>

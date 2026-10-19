@@ -13,7 +13,12 @@ const ru: typeof en = {
         previous: 'Назад',
         next: 'Вперёд',
         help: 'Помощь',
+        breadcrumb: 'Навигационная цепочка',
         support: 'Поддержка',
+    },
+    pagination: {
+        summary: '{start}–{end} из {total}',
+        page: 'Страница {page} из {count}',
     },
     nav: {
         catalog: 'Каталог',

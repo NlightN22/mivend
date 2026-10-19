@@ -4,6 +4,9 @@ import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import ProformaInvoiceRow from './ProformaInvoiceRow.vue';
 import { useProformaInvoices, PROFORMA_INVOICE_STATUS_LABEL } from './useProformaInvoices';
+import { usePaginationLabels } from '../../composables/usePaginationLabels';
+
+const paginationLabels = usePaginationLabels();
 
 const { proformaInvoices, totalItems, loading, load } = useProformaInvoices();
 
@@ -75,6 +78,7 @@ onMounted(reload);
                 </div>
                 <template v-else>
                     <MvPagination
+                        v-bind="paginationLabels"
                         :page="page"
                         :page-size="PAGE_SIZE"
                         :total="totalItems"
@@ -88,6 +92,7 @@ onMounted(reload);
                         />
                     </div>
                     <MvPagination
+                        v-bind="paginationLabels"
                         :page="page"
                         :page-size="PAGE_SIZE"
                         :total="totalItems"

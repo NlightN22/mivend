@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const { formatWhole } = useCurrency();
 
 const limitText = computed(() => {
     const cp = authStore.counterparty;
-    if (!cp) return 'No limit data';
-    const avail = formatWhole(cp.creditLimit - cp.creditBalance);
-    return cp.paymentDelayDays > 0
-        ? `${avail} available, deferred ${cp.paymentDelayDays} days`
-        : `${avail} available`;
+    if (!cp) return t('account.attention.noLimitData');
+    const amount = formatWhole(cp.creditLimit - cp.creditBalance);
+    const n = cp.paymentDelayDays;
+    return n > 0
+        ? t('account.attention.availableDeferred', { amount, n }, n)
+        : t('account.attention.available', { amount });
 });
 </script>
 
@@ -20,9 +23,9 @@ const limitText = computed(() => {
     <div class="quick-actions">
         <div class="quick-actions__header">
             <div>
-                <h2 class="quick-actions__title">Requires Attention</h2>
+                <h2 class="quick-actions__title">{{ $t('account.attention.title') }}</h2>
                 <div class="quick-actions__subtitle">
-                    Quick links without duplicating cart or order repeat.
+                    {{ $t('account.attention.subtitle') }}
                 </div>
             </div>
         </div>
@@ -31,22 +34,30 @@ const limitText = computed(() => {
             <a href="#" class="quick-actions__card">
                 <div>
                     <div class="quick-actions__icon">📄</div>
-                    <div class="quick-actions__card-title">New documents</div>
-                    <div class="quick-actions__card-text">12 documents available this month.</div>
+                    <div class="quick-actions__card-title">
+                        {{ $t('account.attention.newDocuments') }}
+                    </div>
+                    <div class="quick-actions__card-text">
+                        {{ $t('account.attention.newDocumentsText', 12) }}
+                    </div>
                 </div>
             </a>
             <a href="#" class="quick-actions__card">
                 <div>
                     <div class="quick-actions__icon">₽</div>
-                    <div class="quick-actions__card-title">Limit &amp; deferred</div>
+                    <div class="quick-actions__card-title">{{ $t('account.attention.limit') }}</div>
                     <div class="quick-actions__card-text">{{ limitText }}</div>
                 </div>
             </a>
             <a href="#" class="quick-actions__card">
                 <div>
                     <div class="quick-actions__icon">💬</div>
-                    <div class="quick-actions__card-title">Open requests</div>
-                    <div class="quick-actions__card-text">2 requests awaiting response.</div>
+                    <div class="quick-actions__card-title">
+                        {{ $t('account.attention.openRequests') }}
+                    </div>
+                    <div class="quick-actions__card-text">
+                        {{ $t('account.attention.openRequestsText', 2) }}
+                    </div>
                 </div>
             </a>
         </div>

@@ -19,6 +19,7 @@ onMounted(() => Promise.all([cartStore.fetchCart(), checkoutStore.loadDeliveryMe
 <template>
     <main class="checkout-page">
         <MvBreadcrumbs
+            :aria-label="$t('common.breadcrumb')"
             class="checkout-page__crumbs"
             :items="[{ label: $t('nav.cart'), to: '/cart' }, { label: $t('checkout.title') }]"
         />

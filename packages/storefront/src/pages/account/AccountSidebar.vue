@@ -43,6 +43,33 @@ const role = computed(() => authStore.customer?.customFields?.portalRole ?? '—
 
 const isActive = (path: string) => route.path === path;
 
+interface NavItem {
+    to: string;
+    key: string;
+    count?: number;
+}
+const customerLinks = computed<NavItem[]>(() => [
+    { to: '/account', key: 'home' },
+    { to: '/orders', key: 'orders', count: orderCount.value },
+    { to: '/settlements', key: 'statement' },
+]);
+const documentLinks = computed<NavItem[]>(() => [
+    { to: '/proforma-invoices', key: 'proformaInvoices', count: proformaInvoiceCount.value },
+    { to: '/documents', key: 'contracts', count: documentCount.value },
+    { to: '/reconciliation-acts', key: 'reconciliationActs' },
+]);
+const afterDocumentLinks = computed<NavItem[]>(() => [
+    { to: '/favorites', key: 'favorites', count: favoriteCount.value },
+    { to: '/requests', key: 'requests' },
+]);
+const companyLinks = computed<NavItem[]>(() => [
+    { to: '/account/trading-points', key: 'tradingPoints', count: tradingPointCount.value },
+    { to: '/account/balance', key: 'balance' },
+    { to: '/account/employees', key: 'employees' },
+    { to: '/account/settings', key: 'settings' },
+    { to: '/account/notifications', key: 'notifications' },
+]);
+
 const DOCUMENT_PATHS = ['/proforma-invoices', '/documents', '/reconciliation-acts'];
 const inDocuments = computed(() => DOCUMENT_PATHS.some(p => route.path.startsWith(p)));
 const documentsOpen = ref(inDocuments.value);
@@ -57,6 +84,7 @@ watch(inDocuments, inside => {
             type="button"
             class="account-sidebar__mobile-toggle"
             :aria-expanded="mobileOpen"
+            :aria-label="$t('accountNav.menu')"
             @click="mobileOpen = !mobileOpen"
         >
             <span class="account-sidebar__mobile-toggle-icon">{{ mobileOpen ? '✕' : '☰' }}</span>
@@ -72,31 +100,17 @@ watch(inDocuments, inside => {
                 </div>
             </div>
 
-            <div class="account-sidebar__section-title">Customer Zone</div>
+            <div class="account-sidebar__section-title">{{ $t('accountNav.customerZone') }}</div>
             <nav class="account-sidebar__menu">
                 <RouterLink
-                    to="/account"
+                    v-for="link in customerLinks"
+                    :key="link.to"
+                    :to="link.to"
                     class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/account') }"
+                    :class="{ 'account-sidebar__link--active': isActive(link.to) }"
                 >
-                    <span>Home</span>
-                </RouterLink>
-                <RouterLink
-                    to="/orders"
-                    class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/orders') }"
-                >
-                    <span>Orders</span
-                    ><span v-if="orderCount > 0" class="account-sidebar__count">{{
-                        orderCount
-                    }}</span>
-                </RouterLink>
-                <RouterLink
-                    to="/settlements"
-                    class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/settlements') }"
-                >
-                    <span>Account statement</span>
+                    <span>{{ $t(`accountNav.${link.key}`) }}</span
+                    ><span v-if="link.count" class="account-sidebar__count">{{ link.count }}</span>
                 </RouterLink>
                 <button
                     type="button"
@@ -105,7 +119,7 @@ watch(inDocuments, inside => {
                     :aria-expanded="documentsOpen"
                     @click="documentsOpen = !documentsOpen"
                 >
-                    <span>Documents</span>
+                    <span>{{ $t('accountNav.documents') }}</span>
                     <IconChevronDown
                         :size="16"
                         class="account-sidebar__chevron"
@@ -114,268 +128,45 @@ watch(inDocuments, inside => {
                 </button>
                 <div v-show="documentsOpen" class="account-sidebar__submenu">
                     <RouterLink
-                        to="/proforma-invoices"
+                        v-for="link in documentLinks"
+                        :key="link.to"
+                        :to="link.to"
                         class="account-sidebar__link account-sidebar__link--sub"
-                        :class="{ 'account-sidebar__link--active': isActive('/proforma-invoices') }"
+                        :class="{ 'account-sidebar__link--active': isActive(link.to) }"
                     >
-                        <span>Proforma invoices</span
-                        ><span v-if="proformaInvoiceCount > 0" class="account-sidebar__count">{{
-                            proformaInvoiceCount
+                        <span>{{ $t(`accountNav.${link.key}`) }}</span
+                        ><span v-if="link.count" class="account-sidebar__count">{{
+                            link.count
                         }}</span>
-                    </RouterLink>
-                    <RouterLink
-                        to="/documents"
-                        class="account-sidebar__link account-sidebar__link--sub"
-                        :class="{ 'account-sidebar__link--active': isActive('/documents') }"
-                    >
-                        <span>Contracts and files</span
-                        ><span v-if="documentCount > 0" class="account-sidebar__count">{{
-                            documentCount
-                        }}</span>
-                    </RouterLink>
-                    <RouterLink
-                        to="/reconciliation-acts"
-                        class="account-sidebar__link account-sidebar__link--sub"
-                        :class="{
-                            'account-sidebar__link--active': isActive('/reconciliation-acts'),
-                        }"
-                    >
-                        <span>Reconciliation acts</span>
                     </RouterLink>
                 </div>
                 <RouterLink
-                    to="/favorites"
+                    v-for="link in afterDocumentLinks"
+                    :key="link.to"
+                    :to="link.to"
                     class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/favorites') }"
+                    :class="{ 'account-sidebar__link--active': isActive(link.to) }"
                 >
-                    <span>Favorites</span
-                    ><span v-if="favoriteCount > 0" class="account-sidebar__count">{{
-                        favoriteCount
-                    }}</span>
-                </RouterLink>
-                <RouterLink
-                    to="/requests"
-                    class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/requests') }"
-                >
-                    <span>Requests</span>
+                    <span>{{ $t(`accountNav.${link.key}`) }}</span
+                    ><span v-if="link.count" class="account-sidebar__count">{{ link.count }}</span>
                 </RouterLink>
             </nav>
 
-            <div class="account-sidebar__section-title">Company</div>
+            <div class="account-sidebar__section-title">{{ $t('accountNav.company') }}</div>
             <nav class="account-sidebar__menu">
                 <RouterLink
-                    to="/account/trading-points"
+                    v-for="link in companyLinks"
+                    :key="link.to"
+                    :to="link.to"
                     class="account-sidebar__link"
-                    :class="{
-                        'account-sidebar__link--active': isActive('/account/trading-points'),
-                    }"
+                    :class="{ 'account-sidebar__link--active': isActive(link.to) }"
                 >
-                    <span>Trading points</span
-                    ><span v-if="tradingPointCount > 0" class="account-sidebar__count">{{
-                        tradingPointCount
-                    }}</span>
-                </RouterLink>
-                <RouterLink
-                    to="/account/balance"
-                    class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/account/balance') }"
-                >
-                    <span>Balance &amp; Limits</span>
-                </RouterLink>
-                <RouterLink
-                    to="/account/employees"
-                    class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/account/employees') }"
-                >
-                    <span>Employees</span>
-                </RouterLink>
-                <RouterLink
-                    to="/account/settings"
-                    class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/account/settings') }"
-                >
-                    <span>Settings</span>
-                </RouterLink>
-                <RouterLink
-                    to="/account/notifications"
-                    class="account-sidebar__link"
-                    :class="{ 'account-sidebar__link--active': isActive('/account/notifications') }"
-                >
-                    <span>Notifications</span>
+                    <span>{{ $t(`accountNav.${link.key}`) }}</span
+                    ><span v-if="link.count" class="account-sidebar__count">{{ link.count }}</span>
                 </RouterLink>
             </nav>
         </div>
     </aside>
 </template>
 
-<style scoped>
-.account-sidebar {
-    position: sticky;
-    top: 118px;
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    padding: 20px;
-}
-
-.account-sidebar__user-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding-bottom: 18px;
-    margin-bottom: 18px;
-    border-bottom: 1px solid #edf2ef;
-}
-
-.account-sidebar__avatar {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    background: linear-gradient(145deg, #e2f8ef, #f4fbff);
-    color: #008a64;
-    display: grid;
-    place-items: center;
-    font-size: 25px;
-    font-weight: 950;
-    flex-shrink: 0;
-}
-
-.account-sidebar__name {
-    font-weight: 950;
-    letter-spacing: -0.03em;
-    font-size: 18px;
-    margin-bottom: 4px;
-}
-
-.account-sidebar__role {
-    color: #66736e;
-    font-size: 13px;
-    line-height: 1.3;
-}
-
-.account-sidebar__section-title {
-    margin: 18px 0 8px;
-    color: #263732;
-    font-size: 13px;
-    font-weight: 950;
-    text-transform: uppercase;
-    letter-spacing: 0.035em;
-}
-
-.account-sidebar__menu {
-    display: grid;
-    gap: 4px;
-}
-
-.account-sidebar__link {
-    min-height: 38px;
-    padding: 0 10px;
-    border-radius: 11px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    color: #263732;
-    font-weight: 750;
-    font-size: 14px;
-    text-decoration: none;
-}
-
-.account-sidebar__group-toggle {
-    width: 100%;
-    border: 0;
-    background: transparent;
-    font-family: inherit;
-    cursor: pointer;
-    text-align: left;
-}
-
-.account-sidebar__chevron {
-    flex: 0 0 auto;
-    transition: transform 0.14s ease;
-}
-
-.account-sidebar__chevron--open {
-    transform: rotate(180deg);
-}
-
-.account-sidebar__submenu {
-    display: grid;
-    gap: 2px;
-}
-
-.account-sidebar__link--sub {
-    padding-left: 22px;
-}
-
-.account-sidebar__link:hover {
-    background: #f4faf7;
-}
-
-.account-sidebar__link--active {
-    background: #e2f8ef;
-    color: #008a64;
-    font-weight: 950;
-}
-
-.account-sidebar__count {
-    min-width: 22px;
-    height: 22px;
-    border-radius: 999px;
-    display: grid;
-    place-items: center;
-    background: #eef4f1;
-    color: #66736e;
-    font-size: 12px;
-    font-weight: 900;
-}
-
-.account-sidebar__mobile-toggle {
-    display: none;
-}
-
-@media (max-width: 960px) {
-    .account-sidebar {
-        position: static;
-        padding: 12px 16px;
-    }
-
-    .account-sidebar__mobile-toggle {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        border: 0;
-        background: transparent;
-        padding: 6px 2px;
-        font-weight: 900;
-        font-size: 15px;
-        color: #263732;
-    }
-
-    .account-sidebar__mobile-toggle-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 10px;
-        background: #f4faf7;
-        color: #008a64;
-        display: grid;
-        place-items: center;
-        font-size: 16px;
-        flex-shrink: 0;
-    }
-
-    .account-sidebar__body {
-        display: none;
-        margin-top: 14px;
-        padding-top: 14px;
-        border-top: 1px solid #edf2ef;
-    }
-
-    .account-sidebar__body--open {
-        display: block;
-    }
-}
-</style>
+<style scoped src="./AccountSidebar.css"></style>

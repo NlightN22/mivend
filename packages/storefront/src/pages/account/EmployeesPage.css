@@ -1,0 +1,199 @@
+.emp-page {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 24px 28px 56px;
+}
+
+.emp-content {
+    min-width: 0;
+    display: grid;
+    gap: 16px;
+}
+
+.emp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.emp-head__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.emp-title {
+    margin: 0;
+    font-size: clamp(34px, 3.6vw, 50px);
+    line-height: 0.98;
+    letter-spacing: -0.055em;
+}
+
+.emp-roles-btn {
+    border: 1px solid #dde7e2;
+    border-radius: 10px;
+    padding: 0 12px;
+    min-height: 32px;
+    background: #f3f8f6;
+    color: #66736e;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: 0.14s ease;
+}
+.emp-roles-btn--active {
+    background: #e2f8ef;
+    border-color: #00a878;
+    color: #008a64;
+}
+
+.emp-head__right {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.emp-roles-help {
+    background: #fff;
+    border: 1px solid #dde7e2;
+    border-radius: 20px;
+    padding: 18px 20px;
+}
+
+.emp-roles-help__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    font-size: 14px;
+    color: #14231f;
+}
+
+.emp-roles-help__close {
+    border: 0;
+    background: none;
+    font-size: 18px;
+    color: #a8b8b2;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+.emp-roles-help__grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.emp-role-item {
+    background: #f7fbf9;
+    border: 1px solid #edf2ef;
+    border-radius: 14px;
+    padding: 12px 14px;
+}
+.emp-role-item__title {
+    font-size: 13px;
+    font-weight: 900;
+    color: #14231f;
+    margin-bottom: 4px;
+}
+.emp-role-item__note {
+    font-size: 12px;
+    color: #66736e;
+    line-height: 1.4;
+}
+
+/* Invite form */
+
+.emp-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.emp-chip {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid #dde7e2;
+    background: #fff;
+    color: #344640;
+    font: inherit;
+    font-weight: 850;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.14s ease;
+}
+.emp-chip--active {
+    background: #00a878;
+    border-color: #00a878;
+    color: #fff;
+}
+.emp-chip--active .emp-chip__count {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.emp-chip__count {
+    min-width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: #eef4f1;
+    color: #66736e;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+/* Notice */
+.emp-notice {
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 138, 0, 0.22);
+    background: #fff5df;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    color: #573a14;
+    font-size: 13px;
+    line-height: 1.42;
+}
+.emp-notice strong {
+    display: block;
+    color: #33210a;
+    margin-bottom: 2px;
+}
+
+/* Employee list */
+
+@media (max-width: 960px) {
+    .emp-page {
+        grid-template-columns: 1fr;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+    .emp-roles-help__grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .emp-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .emp-roles-help__grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -7,6 +7,9 @@ import SettlementBalanceCards from './SettlementBalanceCards.vue';
 import SettlementFilters from './SettlementFilters.vue';
 import SettlementTable from './SettlementTable.vue';
 import { totalsByCurrency, useSettlementDocuments } from './useSettlementDocuments';
+import { usePaginationLabels } from '../../composables/usePaginationLabels';
+
+const paginationLabels = usePaginationLabels();
 
 const PAGE_SIZE = 20;
 
@@ -120,6 +123,7 @@ onMounted(() => {
             <template v-else>
                 <SettlementTable :rows="rows" />
                 <MvPagination
+                    v-bind="paginationLabels"
                     :page="page"
                     :page-size="PAGE_SIZE"
                     :total="totalItems"

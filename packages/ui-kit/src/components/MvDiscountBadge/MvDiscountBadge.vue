@@ -14,19 +14,21 @@ interface Props {
     // Copy is caller-supplied (not hardcoded here) so ui-kit stays locale-agnostic —
     // same pattern as MvSearchInput's buttonLabel prop.
     title?: string;
+    weightLabel?: (kg: number) => string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     tiers: () => [],
     size: 'md',
     title: 'Volume discount',
+    weightLabel: (kg: number) => `≥ ${kg.toLocaleString()} kg`,
 });
 
 const maxPercent = computed(() => Math.max(0, ...props.tiers.map(t => t.percent)));
 
 function formatThreshold(tier: DiscountTier): string {
     if (tier.minWeightKg !== null) {
-        return `≥ ${tier.minWeightKg.toLocaleString()} kg`;
+        return props.weightLabel(tier.minWeightKg);
     }
     if (tier.minAmount !== null) {
         return `≥ ${(tier.minAmount / 100).toLocaleString()} ₽`;

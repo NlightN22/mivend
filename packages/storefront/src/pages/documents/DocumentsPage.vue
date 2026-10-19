@@ -6,6 +6,9 @@ import DocumentsToolbar from './DocumentsToolbar.vue';
 import DocumentRow from './DocumentRow.vue';
 import { useDocuments, toDocData, DOCUMENT_TYPE_LABEL } from './useDocuments';
 import type { TypeFilterOption } from './DocumentsToolbar.vue';
+import { usePaginationLabels } from '../../composables/usePaginationLabels';
+
+const paginationLabels = usePaginationLabels();
 
 const { documents, totalItems, loading, load } = useDocuments();
 
@@ -76,6 +79,7 @@ const stats = computed(() => [
                 </div>
                 <template v-else>
                     <MvPagination
+                        v-bind="paginationLabels"
                         :page="page"
                         :page-size="PAGE_SIZE"
                         :total="totalItems"
@@ -85,6 +89,7 @@ const stats = computed(() => [
                         <DocumentRow v-for="doc in documents" :key="doc.id" :doc="toDocData(doc)" />
                     </div>
                     <MvPagination
+                        v-bind="paginationLabels"
                         :page="page"
                         :page-size="PAGE_SIZE"
                         :total="totalItems"

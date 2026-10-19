@@ -25,14 +25,14 @@ const limitWarning = computed(() => {
     <div class="trading-point-info">
         <div class="trading-point-info__header">
             <div>
-                <h2 class="trading-point-info__title">Current Point</h2>
+                <h2 class="trading-point-info__title">{{ $t('account.currentPoint.title') }}</h2>
                 <div class="trading-point-info__subtitle">
-                    Default delivery is linked to the trading point.
+                    {{ $t('account.currentPoint.subtitle') }}
                 </div>
             </div>
-            <RouterLink to="/account/trading-points" class="trading-point-info__link-more"
-                >Change</RouterLink
-            >
+            <RouterLink to="/account/trading-points" class="trading-point-info__link-more">{{
+                $t('account.currentPoint.change')
+            }}</RouterLink>
         </div>
 
         <div class="trading-point-info__list">
@@ -46,12 +46,24 @@ const limitWarning = computed(() => {
             </div>
             <div v-if="counterparty" class="trading-point-info__row">
                 <div>
-                    <div class="trading-point-info__row-title">Contract B2B-014</div>
+                    <div class="trading-point-info__row-title">
+                        {{ $t('account.currentPoint.contract', { number: 'B2B-014' }) }}
+                    </div>
                     <div class="trading-point-info__row-note">
-                        <template v-if="counterparty.paymentDelayDays > 0"
-                            >Deferred {{ counterparty.paymentDelayDays }} days ·
-                        </template>
-                        limit {{ formatWhole(counterparty.creditLimit) }}
+                        {{
+                            counterparty.paymentDelayDays > 0
+                                ? $t(
+                                      'account.currentPoint.deferredLimit',
+                                      {
+                                          n: counterparty.paymentDelayDays,
+                                          amount: formatWhole(counterparty.creditLimit),
+                                      },
+                                      counterparty.paymentDelayDays,
+                                  )
+                                : $t('account.currentPoint.limit', {
+                                      amount: formatWhole(counterparty.creditLimit),
+                                  })
+                        }}
                     </div>
                 </div>
             </div>
@@ -60,15 +72,15 @@ const limitWarning = computed(() => {
         <div v-if="limitWarning" class="trading-point-info__notice">
             <div>⚠️</div>
             <div>
-                <strong>Credit limit almost reached</strong>
-                When placing a large order the system will show a warning at checkout.
+                <strong>{{ $t('account.currentPoint.almostReached') }}</strong>
+                {{ $t('account.currentPoint.noticeText') }}
             </div>
         </div>
         <div v-else class="trading-point-info__notice">
             <div>⚠️</div>
             <div>
-                <strong>Credit limit notice</strong>
-                When placing a large order the system will show a warning at checkout.
+                <strong>{{ $t('account.currentPoint.notice') }}</strong>
+                {{ $t('account.currentPoint.noticeText') }}
             </div>
         </div>
     </div>

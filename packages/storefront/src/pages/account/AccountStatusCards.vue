@@ -20,31 +20,33 @@ const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);
     <div class="status-cards">
         <div class="status-cards__card">
             <div class="status-cards__top">
-                <div class="status-cards__title">Active orders</div>
+                <div class="status-cards__title">{{ $t('account.status.activeOrders') }}</div>
                 <div class="status-cards__icon">📦</div>
             </div>
             <div class="status-cards__value">8</div>
-            <div class="status-cards__note">3 awaiting reserve confirmation</div>
+            <div class="status-cards__note">
+                {{ $t('account.status.awaitingReserve', { n: 3 }) }}
+            </div>
         </div>
 
         <div class="status-cards__card status-cards__card--blue">
             <div class="status-cards__top">
-                <div class="status-cards__title">Available limit</div>
+                <div class="status-cards__title">{{ $t('account.status.availableLimit') }}</div>
                 <div class="status-cards__icon">₽</div>
             </div>
             <div class="status-cards__value">{{ availableLimit }}</div>
             <div v-if="delayDays > 0" class="status-cards__note">
-                Payment delay: {{ delayDays }} days
+                {{ $t('account.status.paymentDelay', delayDays) }}
             </div>
         </div>
 
         <div class="status-cards__card status-cards__card--warning">
             <div class="status-cards__top">
-                <div class="status-cards__title">Documents</div>
+                <div class="status-cards__title">{{ $t('account.status.documents') }}</div>
                 <div class="status-cards__icon">📄</div>
             </div>
             <div class="status-cards__value">12</div>
-            <div class="status-cards__note">New documents this month</div>
+            <div class="status-cards__note">{{ $t('account.status.newDocuments') }}</div>
         </div>
     </div>
 </template>

@@ -1,55 +1,85 @@
 <script setup lang="ts">
-const orders = [
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { formatDate, formatMoney } from '../../i18n/format';
+
+type OrderAction = 'open' | 'repeat' | 'documents';
+type OrderStatus = 'awaitingErp' | 'reserveConfirmed' | 'shipped';
+
+const { t } = useI18n();
+
+const demoOrders: {
+    number: string;
+    date: () => string;
+    address: string;
+    amount: number;
+    status: OrderStatus;
+    statusType: string;
+    items: number;
+    actions: OrderAction[];
+}[] = [
     {
         number: '348921',
-        date: 'Today, 14:28',
+        date: () => t('account.recentOrders.today', { time: '14:28' }),
         address: 'North Hwy, 12',
-        amount: '42 860 ₽',
-        status: 'Awaiting ERP',
+        amount: 42860,
+        status: 'awaitingErp',
         statusType: 'warning',
         items: 7,
-        actions: ['Open', 'Repeat'],
+        actions: ['open', 'repeat'],
     },
     {
         number: '348744',
-        date: 'Yesterday, 17:12',
+        date: () => t('account.recentOrders.yesterday', { time: '17:12' }),
         address: 'Mira St, 85',
-        amount: '18 940 ₽',
-        status: 'Reserve confirmed',
+        amount: 18940,
+        status: 'reserveConfirmed',
         statusType: 'success',
         items: 4,
-        actions: ['Open', 'Documents'],
+        actions: ['open', 'documents'],
     },
     {
         number: '348510',
-        date: 'Jun 24',
+        date: () => formatDate('2026-06-24', { day: 'numeric', month: 'short' }),
         address: 'North Hwy, 12',
-        amount: '96 300 ₽',
-        status: 'Shipped',
+        amount: 96300,
+        status: 'shipped',
         statusType: 'muted',
         items: 18,
-        actions: ['Open', 'Repeat'],
+        actions: ['open', 'repeat'],
     },
-] as const;
+];
+
+const orders = computed(() =>
+    demoOrders.map(order => ({
+        ...order,
+        date: order.date(),
+        amount: formatMoney(order.amount),
+    })),
+);
 </script>
 
 <template>
     <div class="recent-orders">
         <div class="recent-orders__header">
             <div>
-                <h2 class="recent-orders__title">Recent Orders</h2>
+                <h2 class="recent-orders__title">{{ $t('account.recentOrders.title') }}</h2>
                 <div class="recent-orders__subtitle">
-                    Short working list, details open separately.
+                    {{ $t('account.recentOrders.subtitle') }}
                 </div>
             </div>
-            <RouterLink to="/orders" class="recent-orders__link-more">All orders</RouterLink>
+            <RouterLink to="/orders" class="recent-orders__link-more">{{
+                $t('account.recentOrders.all')
+            }}</RouterLink>
         </div>
 
         <div class="recent-orders__scroll">
             <div class="recent-orders__list">
                 <div v-for="order in orders" :key="order.number" class="recent-orders__row">
                     <div class="recent-orders__cell recent-orders__cell--main">
-                        <div class="recent-orders__number">Order #{{ order.number }}</div>
+                        <div class="recent-orders__number">
+                            {{ $t('account.recentOrders.order', { number: order.number }) }}
+                        </div>
                         <div class="recent-orders__meta recent-orders__meta--truncate">
                             {{ order.date }} · {{ order.address }}
                         </div>
@@ -60,20 +90,20 @@ const orders = [
                             class="recent-orders__pill"
                             :class="`recent-orders__pill--${order.statusType}`"
                         >
-                            {{ order.status }}
+                            {{ $t(`account.recentOrders.status.${order.status}`) }}
                         </span>
                     </div>
                     <div class="recent-orders__cell recent-orders__meta">
-                        {{ order.items }} items
+                        {{ $t('account.recentOrders.items', order.items) }}
                     </div>
                     <div class="recent-orders__cell recent-orders__actions">
                         <button
                             v-for="action in order.actions"
                             :key="action"
                             class="recent-orders__btn"
-                            :class="{ 'recent-orders__btn--primary': action === 'Open' }"
+                            :class="{ 'recent-orders__btn--primary': action === 'open' }"
                         >
-                            {{ action }}
+                            {{ $t(`account.recentOrders.action.${action}`) }}
                         </button>
                     </div>
                 </div>

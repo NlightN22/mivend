@@ -1,0 +1,36 @@
+.emp-btn {
+    border: 1px solid #dde7e2;
+    border-radius: 12px;
+    padding: 0 14px;
+    min-height: 38px;
+    font: inherit;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    background: #f3f8f6;
+    color: #263732;
+    transition: 0.14s ease;
+}
+.emp-btn--primary {
+    background: #00a878;
+    color: #fff;
+    border-color: transparent;
+}
+.emp-btn--danger {
+    background: #fff2f1;
+    color: #b42318;
+    border-color: #fdd;
+}
+.emp-btn--sm {
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+.emp-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Roles help */

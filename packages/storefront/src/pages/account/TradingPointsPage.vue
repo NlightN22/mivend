@@ -52,9 +52,9 @@ onMounted(loadPoints);
         <section class="tp-content">
             <div class="tp-head">
                 <div>
-                    <h1 class="tp-title">Trading Points</h1>
+                    <h1 class="tp-title">{{ $t('tradingPoints.title') }}</h1>
                     <p class="tp-subtitle">
-                        Delivery addresses for your company. Add, edit or remove them anytime.
+                        {{ $t('tradingPoints.subtitle') }}
                     </p>
                 </div>
                 <div class="tp-head-actions">
@@ -63,9 +63,15 @@ onMounted(loadPoints);
                         class="tp-btn tp-btn--ghost"
                         @click="showHidden = !showHidden"
                     >
-                        {{ showHidden ? 'Hide removed' : `Removed (${hiddenPoints.length})` }}
+                        {{
+                            showHidden
+                                ? $t('tradingPoints.hideRemoved')
+                                : $t('tradingPoints.removedCount', { n: hiddenPoints.length })
+                        }}
                     </button>
-                    <button class="tp-btn tp-btn--primary" @click="openAdd">+ Add point</button>
+                    <button class="tp-btn tp-btn--primary" @click="openAdd">
+                        {{ $t('tradingPoints.add') }}
+                    </button>
                 </div>
             </div>
 
@@ -79,7 +85,7 @@ onMounted(loadPoints);
 
             <div v-if="!loading && !visiblePoints.length && !addOpen" class="tp-empty">
                 <IconMapPin :size="28" stroke-width="1.6" aria-hidden="true" />
-                <div>No delivery addresses yet. Add your first trading point.</div>
+                <div>{{ $t('tradingPoints.empty') }}</div>
             </div>
 
             <div class="tp-list">

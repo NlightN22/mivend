@@ -283,7 +283,9 @@ export default [
             'packages/storefront/src/components/**/*.vue',
             'packages/storefront/src/layouts/**/*.vue',
             'packages/storefront/src/pages/{home,catalog,cart,favorites,error,checkout,orders}/**/*.vue',
+            'packages/storefront/src/pages/account/**/*.vue',
         ],
+        ignores: ['packages/storefront/src/pages/account/BalancePage.vue'],
         rules: {
             '@intlify/vue-i18n/no-raw-text': ['error', { ignorePattern: '^[^A-Za-zА-Яа-яЁё]+$' }],
         },

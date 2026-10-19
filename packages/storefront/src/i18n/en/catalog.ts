@@ -71,6 +71,7 @@ export default {
         favorite: 'Toggle favorite',
         floorPrice: 'Floor price',
         volumeDiscount: 'Volume discount',
+        weightThreshold: '≥ {kg} kg',
     },
     stepper: {
         decrease: 'Decrease',

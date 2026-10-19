@@ -227,7 +227,11 @@ onMounted(() => {
 <template>
     <main class="catalog-page">
         <template v-if="!searchQuery">
-            <MvBreadcrumbs class="catalog-page__crumbs" :items="breadcrumbItems" />
+            <MvBreadcrumbs
+                :aria-label="$t('common.breadcrumb')"
+                class="catalog-page__crumbs"
+                :items="breadcrumbItems"
+            />
             <h1 class="catalog-page__heading">{{ catalogHeading }}</h1>
         </template>
 

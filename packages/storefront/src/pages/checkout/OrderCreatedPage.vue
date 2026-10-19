@@ -24,6 +24,7 @@ const {
 <template>
     <main class="oc-page">
         <MvBreadcrumbs
+            :aria-label="$t('common.breadcrumb')"
             class="oc-crumbs"
             :items="[
                 { label: $t('nav.cart'), to: '/cart' },

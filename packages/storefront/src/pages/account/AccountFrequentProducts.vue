@@ -20,10 +20,14 @@ const fmt = (n: number): string => formatMoney(n);
     <div class="frequent-products">
         <div class="frequent-products__header">
             <div>
-                <h2 class="frequent-products__title">Frequently Bought</h2>
-                <div class="frequent-products__subtitle">Quick add regular items to cart.</div>
+                <h2 class="frequent-products__title">{{ $t('account.frequent.title') }}</h2>
+                <div class="frequent-products__subtitle">
+                    {{ $t('account.frequent.subtitle') }}
+                </div>
             </div>
-            <a href="#" class="frequent-products__link-more">Open order repeat</a>
+            <a href="#" class="frequent-products__link-more">{{
+                $t('account.frequent.openRepeat')
+            }}</a>
         </div>
 
         <div class="frequent-products__grid">
@@ -37,7 +41,12 @@ const fmt = (n: number): string => formatMoney(n);
                     <div class="frequent-products__name">{{ p.name }}</div>
                     <div class="frequent-products__bottom">
                         <div class="frequent-products__price">{{ fmt(p.price) }}</div>
-                        <button class="frequent-products__add">+</button>
+                        <button
+                            class="frequent-products__add"
+                            :aria-label="$t('account.frequent.add')"
+                        >
+                            +
+                        </button>
                     </div>
                 </div>
             </div>

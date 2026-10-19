@@ -94,6 +94,7 @@ export { default as MvFavoriteButton } from './components/MvFavoriteButton/MvFav
 
 export { default as MvProductCard } from './components/MvProductCard/MvProductCard.vue';
 export type { ProductCardLabels } from './components/MvProductCard/MvProductCard.vue';
+export type { NotificationPanelLabels } from './components/MvNotificationPanel/MvNotificationPanel.vue';
 
 export { default as MvProductRow } from './components/MvProductRow/MvProductRow.vue';
 export type { ProductRowLabels } from './components/MvProductRow/MvProductRow.vue';

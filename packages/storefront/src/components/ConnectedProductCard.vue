@@ -8,6 +8,7 @@ import { useCartActions } from '../composables/useCartActions';
 import { useProductQuantity } from '../composables/useProductQuantity';
 import { useProductLabels } from '../composables/useProductLabels';
 import { brandOf } from '../utils/brand';
+import { formatNumber } from '../i18n/format';
 import type { ProductItem } from '../composables/useProductList';
 
 const props = withDefaults(
@@ -63,6 +64,7 @@ const common = computed(() => ({
     qtyStep: unitView(props.item).step,
     discountTiers: variant.value?.discountTiers,
     discountTitle: t('productCard.volumeDiscount'),
+    discountWeightLabel: (kg: number) => t('productCard.weightThreshold', { kg: formatNumber(kg) }),
     stepperLabels: labels.value.stepper,
     stockLabels: labels.value.stock,
     currency: variant.value?.currencyCode ?? 'RUB',

@@ -43,6 +43,7 @@ const config = computed(() => {
 <template>
     <main class="pr-page">
         <MvBreadcrumbs
+            :aria-label="$t('common.breadcrumb')"
             class="pr-crumbs"
             :items="[
                 { label: $t('nav.orders'), to: '/orders' },

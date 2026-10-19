@@ -7,11 +7,12 @@ const { companyName: displayName } = useCompanyName();
 <template>
     <div class="account-hero">
         <div class="account-hero__copy">
-            <div class="account-hero__kicker">Customer workspace</div>
-            <h1 class="account-hero__title">Good afternoon, {{ displayName }}</h1>
+            <div class="account-hero__kicker">{{ $t('account.hero.kicker') }}</div>
+            <h1 class="account-hero__title">
+                {{ $t('account.hero.greeting', { name: displayName }) }}
+            </h1>
             <p class="account-hero__text">
-                Your orders, documents, favorites, limits and requests are here. The catalog and
-                cart remain in the store, and order repeat is available from past orders.
+                {{ $t('account.hero.text') }}
             </p>
         </div>
     </div>

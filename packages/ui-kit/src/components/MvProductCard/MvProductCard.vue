@@ -38,6 +38,7 @@ interface Props {
     customerPrice?: number;
     discountTiers?: DiscountTier[];
     discountTitle?: string;
+    discountWeightLabel?: (kg: number) => string;
     currency?: string;
     stockVariant?: StockVariant;
     stockQuantity?: number;
@@ -151,7 +152,11 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                     class="mv-product-card__discount-badge"
                     @click.stop.prevent
                 >
-                    <MvDiscountBadge :tiers="discountTiers" :title="discountTitle" />
+                    <MvDiscountBadge
+                        :tiers="discountTiers"
+                        :title="discountTitle"
+                        :weight-label="discountWeightLabel"
+                    />
                 </span>
             </div>
         </a>
