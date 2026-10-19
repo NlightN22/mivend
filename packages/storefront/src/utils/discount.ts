@@ -6,5 +6,5 @@ import { formatMoney, formatNumber } from '../i18n/format';
 export function formatTierValue(value: number, metric: 'WEIGHT' | 'AMOUNT'): string {
     return metric === 'WEIGHT'
         ? i18n.global.t('units.kg', { value: formatNumber(value) })
-        : formatMoney(value / 100, 'RUB', { maximumFractionDigits: 2 });
+        : formatMoney(value / 100, 'RUB');
 }

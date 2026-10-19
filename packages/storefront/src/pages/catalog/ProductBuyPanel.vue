@@ -47,7 +47,7 @@ const unitPrice = computed(() =>
 const perPieceNote = computed(() =>
     props.price !== undefined && props.salesUnit
         ? t('buyPanel.perPiece', {
-              price: formatMoney(props.price, props.currency, { maximumFractionDigits: 2 }),
+              price: formatMoney(props.price, props.currency),
           })
         : null,
 );
