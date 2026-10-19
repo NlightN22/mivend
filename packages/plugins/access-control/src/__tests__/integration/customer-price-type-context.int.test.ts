@@ -47,7 +47,7 @@ beforeAll(async () => {
         { code: 'price-type-purchase', visibility: 'confidential', externalId: null },
     ]);
     const access = new PriceTypeAccessService(
-        { rawConnection: dataSource } as never,
+        { getRepository: () => dataSource.getRepository(TestPriceType) } as never,
         { getActorIdentity: async () => ({ branchId: 'branch-a' }) } as never,
         {
             getForBranch: async () => ({

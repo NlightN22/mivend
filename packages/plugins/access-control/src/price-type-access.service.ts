@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ForbiddenError, RequestContext, TransactionalConnection } from '@vendure/core';
+import { PriceType } from '@mivend/plugin-customer-pricing';
 
 import { AccessScopeService } from './access-scope.service';
 import { BranchSettingsService } from './branch-settings.service';
@@ -83,7 +84,7 @@ export class PriceTypeAccessService {
         if (!this.canReadConfidential(ctx)) throw new ForbiddenError();
     }
 
-    // Per-request memo: ResolveFields call list() once per row, so a page of N rows costs one pass.
+    // Per-request memo: ResolveFields call list() once per row. Not invalidated within a request, so a type created earlier in the same ctx is not visible.
     private baseFor(ctx: RequestContext): Promise<PriceTypeBase> {
         let base = this.baseCache.get(ctx);
         if (!base) {
@@ -95,9 +96,15 @@ export class PriceTypeAccessService {
     }
 
     private async loadBase(ctx: RequestContext): Promise<PriceTypeBase> {
-        const rows: AccessiblePriceType[] = await this.connection.rawConnection.query(
-            `SELECT id::varchar AS id, code, "externalId", visibility FROM price_type ORDER BY code`,
-        );
+        const found = await this.connection
+            .getRepository(ctx, PriceType)
+            .find({ select: ['id', 'code', 'externalId', 'visibility'], order: { code: 'ASC' } });
+        const rows: AccessiblePriceType[] = found.map(row => ({
+            id: String(row.id),
+            code: row.code,
+            externalId: row.externalId ?? null,
+            visibility: row.visibility,
+        }));
         return { rows, branchIds: await this.branchAllowedIds(ctx) };
     }
 

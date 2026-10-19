@@ -20,7 +20,7 @@ function make(opts: {
     } as unknown as RequestContext;
     const query = vi.fn(async () => rows);
     const service = new PriceTypeAccessService(
-        { rawConnection: { query } } as never,
+        { getRepository: () => ({ find: query }) } as never,
         {
             getActorIdentity: vi.fn(async () => ({
                 roleCodes: [],
