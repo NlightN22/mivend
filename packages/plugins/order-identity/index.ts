@@ -9,3 +9,4 @@ export type {
     SqlRunner,
     OrderLineIdentityMigrationResult,
 } from './src/order-line-identity.migration-sql';
+export { SerializedActiveOrderStrategy } from './src/serialized-active-order.strategy';

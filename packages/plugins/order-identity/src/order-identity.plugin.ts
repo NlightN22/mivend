@@ -3,6 +3,7 @@ import { PluginCommonModule, RuntimeVendureConfig, VendurePlugin } from '@vendur
 import { OrderLineIdentity } from './entities/order-line-identity.entity';
 import { OrderLineIdentityService } from './order-line-identity.service';
 import { OrderLineIdentitySubscriber } from './order-line-identity.subscriber';
+import { SerializedActiveOrderStrategy } from './serialized-active-order.strategy';
 
 @VendurePlugin({
     imports: [PluginCommonModule],
@@ -18,6 +19,7 @@ import { OrderLineIdentitySubscriber } from './order-line-identity.subscriber';
                 OrderLineIdentitySubscriber,
             ],
         };
+        config.orderOptions.activeOrderStrategy = new SerializedActiveOrderStrategy();
         return config;
     },
     compatibility: '>0.0.0',
