@@ -171,10 +171,12 @@ points (Dashboard `transitionOrderToState`, hub/branch sync) gets the locks from
 `onTransitionStart`, which runs before core's first order save. A capture (`PaymentAttemptService`) takes the order's
 proforma lock before the document rows, so a late capture and a cancel serialize the same way.
 
-
-**Cart mutations (#258).** `SerializedActiveOrderStrategy` (`order-identity`) wraps Vendure's default active-order
-strategy. Inside a transaction (every Shop API cart mutation resolves the active order there) it takes the
-`active-order:<channelId>:<userId>` advisory lock, then the order row (`FOR UPDATE`): mutations of one order run one
-at a time, and concurrent first adds of one customer create one order. Read paths run without a transaction and take
-no lock. Guests are serialized per order only. No partial unique index on active orders: channels are a join table,
-and core flips a Draft order to `active` on `ArrangingPayment` while the customer may hold a cart.
+**Cart mutations (#258).** `SerializedActiveOrderStrategy` (`order-identity`) wraps each configured active-order
+strategy. Inside a transaction (every Shop API cart mutation resolves the active order there) it takes
+`active-order:<channelId>:<userId>`, then `withOrderCancelLocks` (proforma, reserve), then the order row
+(`FOR UPDATE`): the same order as a cancel or capture, so transition hooks that take those locks later are reentrant
+no-ops. Mutations of one order run one at a time, and concurrent first adds of one customer create one order. Read
+paths run without a transaction and take no lock. Guests are serialized per order only. No partial unique index on
+active orders: channels are a join table, and core flips a Draft order to `active` on `ArrangingPayment` while the
+customer may hold a cart. Placement fields (branch, point, address) are written in the placement transition itself
+(`placementDenormalizeProcess`), never only by a post-commit subscriber that a later mutation's lock would delay.

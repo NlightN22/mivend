@@ -3,6 +3,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import type { Injector, Order, RequestContext } from '@vendure/core';
 import {
     createTestSchema,
+    withOrderCancelLocks,
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
@@ -29,6 +30,7 @@ const query = (
 
 // Stand-in for DefaultActiveOrderStrategy: session order first, then the user's newest active order.
 const inner = {
+    name: 'test-inner',
     determineActiveOrder: async (raw: RequestContext): Promise<Order | undefined> => {
         const ctx = raw as unknown as TestCtx;
         const rows = ctx.session.activeOrderId
@@ -70,7 +72,8 @@ function inTx<T>(base: Omit<TestCtx, 'em'>, work: (ctx: RequestContext) => Promi
 
 async function addItem(ctx: RequestContext, variantId: number, log: string[]): Promise<void> {
     const order =
-        (await strategy.determineActiveOrder(ctx)) ?? (await strategy.createActiveOrder(ctx));
+        (await strategy.determineActiveOrder(ctx, {})) ??
+        (await strategy.createActiveOrder!(ctx, {}));
     log.push(`add:${variantId}`);
     const c = ctx as unknown as TestCtx;
     const lines = await query(c, 'SELECT id FROM order_line WHERE "orderId" = $1 ORDER BY id', [
@@ -93,7 +96,7 @@ async function addItem(ctx: RequestContext, variantId: number, log: string[]): P
 }
 
 async function removeAll(ctx: RequestContext, log: string[]): Promise<void> {
-    const order = await strategy.determineActiveOrder(ctx);
+    const order = await strategy.determineActiveOrder(ctx, {});
     if (!order) return;
     log.push('removeAll');
     const c = ctx as unknown as TestCtx;
@@ -190,6 +193,36 @@ describe('SerializedActiveOrderStrategy (#258)', () => {
         expect(count).toBe(10);
     });
 
+    it('takes order locks in the cancel order, so a cart mutation racing a cancel result never deadlocks', async () => {
+        const [{ id }] = await dataSource.query(
+            'INSERT INTO "order" (active, "userId") VALUES (true, 1) RETURNING id',
+        );
+        const base = { activeUserId: 1, channelId: 1, session: { activeOrderId: id } };
+        const cart = (): Promise<void> =>
+            inTx(base, async ctx => {
+                await strategy.determineActiveOrder(ctx, {});
+                await query(ctx as unknown as TestCtx, 'SELECT pg_sleep(0.01)');
+                await withOrderCancelLocks(connection as never, ctx, id, async () => undefined);
+            });
+        const cancelResult = (): Promise<void> =>
+            inTx(base, ctx =>
+                withOrderCancelLocks(connection as never, ctx, id, async txCtx => {
+                    await query(txCtx as unknown as TestCtx, 'SELECT pg_sleep(0.01)');
+                    await query(
+                        txCtx as unknown as TestCtx,
+                        'UPDATE "order" SET active = active WHERE id = $1',
+                        [id],
+                    );
+                }),
+            );
+
+        const results = await Promise.allSettled(
+            Array.from({ length: 12 }, (_, i) => (i % 2 ? cancelResult() : cart())),
+        );
+
+        expect(results.filter(r => r.status === 'rejected')).toEqual([]);
+    });
+
     it('does not lock or wait outside a transaction', async () => {
         const [{ id }] = await dataSource.query(
             'INSERT INTO "order" (active, "userId") VALUES (true, 1) RETURNING id',
@@ -201,18 +234,21 @@ describe('SerializedActiveOrderStrategy (#258)', () => {
         const holder = inTx(
             { activeUserId: 1, channelId: 1, session: { activeOrderId: id } },
             async ctx => {
-                await strategy.determineActiveOrder(ctx);
+                await strategy.determineActiveOrder(ctx, {});
                 locked();
                 await held;
             },
         );
         await isLocked;
 
-        const read = await strategy.determineActiveOrder({
-            activeUserId: 1,
-            channelId: 1,
-            session: { activeOrderId: id },
-        } as unknown as RequestContext);
+        const read = await strategy.determineActiveOrder(
+            {
+                activeUserId: 1,
+                channelId: 1,
+                session: { activeOrderId: id },
+            } as unknown as RequestContext,
+            {},
+        );
 
         expect(read?.id).toBe(id);
         release();

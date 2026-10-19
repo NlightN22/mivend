@@ -72,7 +72,7 @@ describe('ErpOrderService', () => {
             mockAdministratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
             const order = { customFields: {}, customerId: null } as never;
 
-            await service.onOrderPlaced(mockCtx, order);
+            await service.denormalizePlacement(mockCtx, order);
 
             expect(mockAdministratorService.findOneByUserId).toHaveBeenCalledWith(
                 mockCtx,
@@ -99,7 +99,7 @@ describe('ErpOrderService', () => {
                 customerId: null,
             } as never;
 
-            await service.onOrderPlaced(mockCtx, order);
+            await service.denormalizePlacement(mockCtx, order);
 
             const [id, data] = mockOrderRepo.update.mock.calls[0] as [
                 number,
@@ -107,11 +107,6 @@ describe('ErpOrderService', () => {
             ];
             expect(id).toBe(5);
             expect(Object.keys(data.customFields)).toEqual(['placedByAdministratorId']);
-            const [, claim] = mockOrderRepo.update.mock.calls[1] as [
-                unknown,
-                { customFields: Record<string, unknown> },
-            ];
-            expect(Object.keys(claim.customFields).sort()).toEqual(['erpStatus', 'erpStatusAt']);
             expect(mockOrderRepo.save).not.toHaveBeenCalled();
         });
 
@@ -154,7 +149,7 @@ describe('ErpOrderService', () => {
             mockAdministratorService.findOneByUserId.mockResolvedValue(null);
             const order = { customFields: {}, customerId: null } as never;
 
-            await service.onOrderPlaced(mockCtx, order);
+            await service.denormalizePlacement(mockCtx, order);
 
             expect(
                 (order as { customFields: { placedByAdministratorId?: string } }).customFields
@@ -176,7 +171,7 @@ describe('ErpOrderService', () => {
             mockTradingPointService.resolveServicingBranchId.mockResolvedValue('branch-b');
             const order = { customFields: {}, customerId: 'cust-1' } as never;
 
-            await service.onOrderPlaced(mockCtx, order);
+            await service.denormalizePlacement(mockCtx, order);
 
             expect(mockTradingPointService.resolveServicingBranchId).toHaveBeenCalledWith(
                 mockCtx,
@@ -228,7 +223,7 @@ describe('ErpOrderService', () => {
             mockTradingPointService.findById.mockResolvedValue(chosen);
             const order = { id: 1, customFields: {}, customerId: 'cust-1' } as never;
 
-            await service.onOrderPlaced(mockCtx, order);
+            await service.denormalizePlacement(mockCtx, order);
 
             const fields = (order as { customFields: Record<string, unknown> }).customFields;
             expect(fields.tradingPointId).toBe('9');
@@ -243,7 +238,7 @@ describe('ErpOrderService', () => {
             mockOrderRepo.findOne.mockResolvedValue({ customFields: { tradingPointId: null } });
             const order = { id: 1, customFields: {}, customerId: 'cust-1' } as never;
 
-            await service.onOrderPlaced(mockCtx, order);
+            await service.denormalizePlacement(mockCtx, order);
 
             const fields = (order as { customFields: Record<string, unknown> }).customFields;
             expect(fields.tradingPointId).toBeUndefined();

@@ -29,10 +29,8 @@ export class ErpOrderService {
         private readonly statusReference: OrderStatusReferenceService,
     ) {}
 
-    // Writes only the keys it sets: it runs after commit on a stale event.order, and a full save() would
-    // overwrite a concurrent writer's key (the reservation state, #241) with that snapshot.
+    // Runs after commit on a stale event.order, so it writes only its own keys (#241); never save() the entity.
     async onOrderPlaced(ctx: RequestContext, order: Order): Promise<void> {
-        await this.denormalizePlacement(ctx, order);
         const initialStatus = (await this.statusReference.dictionary(ctx)).codeWith('initial');
         // One transaction: a crash after the claim cannot leave the first status without its history row.
         // Both placement events call this, so only the run that sets erpStatus from NULL records and publishes.
@@ -52,7 +50,8 @@ export class ErpOrderService {
         this.eventBus.publish(new OrderReadyForErpEvent(ctx, String(order.id), order.code));
     }
 
-    // Runs in the placement transition's own transaction (placementDenormalizeProcess) so allocation sees branchId (#258).
+    // Runs inside the placement transition (placementDenormalizeProcess) so allocation sees branchId (#258).
+    // Writes only the keys it sets; a full save() would overwrite a concurrent writer's key (#241).
     async denormalizePlacement(ctx: RequestContext, order: Order): Promise<void> {
         const changed: Record<string, unknown> = {};
 
