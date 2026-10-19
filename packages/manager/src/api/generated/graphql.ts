@@ -7730,6 +7730,10 @@ export type QueryFloorPriceArgs = {
     variantId: Scalars['ID']['input'];
 };
 
+export type QueryFloorPricesForVariantsArgs = {
+    variantIds: Array<Scalars['ID']['input']>;
+};
+
 export type QueryGetSettingsStoreValueArgs = {
     key: Scalars['String']['input'];
 };
