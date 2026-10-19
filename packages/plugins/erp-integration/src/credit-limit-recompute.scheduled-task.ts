@@ -1,4 +1,4 @@
-import { Logger, ScheduledTask } from '@vendure/core';
+import { Logger, RequestContextService, ScheduledTask } from '@vendure/core';
 import { CreditLimitRecomputeService } from '@mivend/plugin-counterparty';
 import { cronEveryMs } from 'shared';
 
@@ -18,7 +18,8 @@ export function createCreditLimitRecomputeTask(
         schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
-            const result = await injector.get(CreditLimitRecomputeService).recomputeAll();
+            const ctx = await injector.get(RequestContextService).create({ apiType: 'admin' });
+            const result = await injector.get(CreditLimitRecomputeService).recomputeAll(ctx);
             if (
                 result.contractsUpdated +
                     result.counterpartiesUpdated +

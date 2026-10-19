@@ -8,7 +8,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
-import { withOrderCancelLocks } from 'shared';
+import { withOrderCancelLocks, ctxQuery } from 'shared';
 
 import { Reservation } from './entities/reservation.entity';
 import { findRejectedOrderIdsWithActiveReserve } from './rejected-orders.query';
@@ -31,14 +31,16 @@ export class RejectedOrderReleaseService {
     ) {}
 
     async releaseDue(): Promise<number> {
-        const rejectedCodes: string[] = (
-            await this.connection.rawConnection.query(
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const rejectedCodes = (
+            await ctxQuery<Array<{ code: string }>>(
+                this.connection,
+                ctx,
                 `SELECT code FROM order_status_reference WHERE rejected AND NOT "isDeleted"`,
             )
-        ).map((row: { code: string }) => row.code);
+        ).map(row => row.code);
         if (rejectedCodes.length === 0) return 0;
 
-        const ctx = await this.requestContextService.create({ apiType: 'admin' });
         const cutoff = new Date(Date.now() - this.settings.rejectedOrderReleaseDays() * DAY_MS);
         const orderIds = await findRejectedOrderIdsWithActiveReserve(
             this.connection,

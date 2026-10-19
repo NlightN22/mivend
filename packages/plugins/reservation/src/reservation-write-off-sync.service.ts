@@ -20,7 +20,7 @@ export type {
     OrderChangedInput,
     OrderRegistrationResultInput,
 } from './reservation-write-off-sync.types';
-import { withAggregateLock, withOrderCancelLocks } from 'shared';
+import { withAggregateLock, withOrderCancelLocks, ctxQuery } from 'shared';
 
 // Bridges erp.order.events.v1 `registration-result` and `changed` into the reservation domain (#75).
 // Never publishes ReservationReleasedEvent: that would send a release command back to the ERP that just wrote off.
@@ -42,11 +42,11 @@ export class ReservationWriteOffSyncService {
     ): Promise<void> {
         // Correlation order: orderUuid (mivend#207), localOrderId, then orderEntityId.
         const orderId = input.orderUuid
-            ? await this.findOrderIdByUuid(input.orderUuid)
+            ? await this.findOrderIdByUuid(ctx, input.orderUuid)
             : input.localOrderId
               ? input.localOrderId
               : input.orderEntityId
-                ? await this.findOrderIdByErpId(input.orderEntityId)
+                ? await this.findOrderIdByErpId(ctx, input.orderEntityId)
                 : null;
         if (!orderId) {
             // Never a silent skip: a distinguishable error lets the inbox retry (#211).
@@ -168,8 +168,8 @@ export class ReservationWriteOffSyncService {
     async handleOrderChanged(ctx: RequestContext, input: OrderChangedInput): Promise<void> {
         // Orders not registered through our integration carry no orderUuid.
         const orderId = input.orderUuid
-            ? await this.findOrderIdByUuid(input.orderUuid)
-            : await this.findOrderIdByErpId(input.orderEntityId);
+            ? await this.findOrderIdByUuid(ctx, input.orderUuid)
+            : await this.findOrderIdByErpId(ctx, input.orderEntityId);
         if (!orderId) {
             // Same retryable error as handleOrderRegistrationResult (#211).
             throw new UnknownOrderUuidError(
@@ -375,16 +375,26 @@ export class ReservationWriteOffSyncService {
     }
 
     // Raw SQL: plugin-erp-order's customField augmentation is not visible to this plugin's tsc build.
-    private async findOrderIdByErpId(orderEntityId: string): Promise<string | null> {
-        const result = await this.connection.rawConnection.query(
+    private async findOrderIdByErpId(
+        ctx: RequestContext,
+        orderEntityId: string,
+    ): Promise<string | null> {
+        const result = await ctxQuery<Array<{ id: string | number | null }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM "order" WHERE "customFieldsErporderid" = $1 LIMIT 1`,
             [orderEntityId],
         );
         return result[0]?.id ? String(result[0].id) : null;
     }
 
-    private async findOrderIdByUuid(orderUuid: string): Promise<string | null> {
-        const result = await this.connection.rawConnection.query(
+    private async findOrderIdByUuid(
+        ctx: RequestContext,
+        orderUuid: string,
+    ): Promise<string | null> {
+        const result = await ctxQuery<Array<{ id: string | number | null }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM "order" WHERE "customFieldsUuid" = $1 LIMIT 1`,
             [orderUuid],
         );

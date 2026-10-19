@@ -17,24 +17,27 @@ function service(strongest: string | null | Error) {
     });
     const checks = { runChecks: run, findResults: vi.fn(async () => []) };
     const record = vi.fn(async () => undefined);
+    const failureCtx = { failure: true };
     const connection = {
-        rawConnection: { query: record },
         withTransaction: async (c: unknown, work: (c: unknown) => unknown) => work(c),
-        getRepository: () => ({
-            query: async () => [],
-            count: async () => 0,
-            findOne: async () => ({ customFields: { hasCheckFindings: false } }),
-            update: vi.fn(),
-            createQueryBuilder: () => {
-                const qb = {
-                    delete: () => qb,
-                    where: () => qb,
-                    andWhere: () => qb,
-                    execute: async () => ({}),
-                };
-                return qb;
-            },
-        }),
+        getRepository: (c: unknown) =>
+            c === failureCtx
+                ? { query: record }
+                : {
+                      query: async () => [],
+                      count: async () => 0,
+                      findOne: async () => ({ customFields: { hasCheckFindings: false } }),
+                      update: vi.fn(),
+                      createQueryBuilder: () => {
+                          const qb = {
+                              delete: () => qb,
+                              where: () => qb,
+                              andWhere: () => qb,
+                              execute: async () => ({}),
+                          };
+                          return qb;
+                      },
+                  },
     };
     const registry = { listForStage: () => [{ code: 'erp.organization-stock' }] };
     const registrar = { visibleIds: async (_c: unknown, ids: string[]) => new Set(ids) };
@@ -46,6 +49,7 @@ function service(strongest: string | null | Error) {
             checks as never,
             registry as never,
             registrar as never,
+            { create: async () => failureCtx } as never,
         ),
     };
 }

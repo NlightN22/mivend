@@ -1,9 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EntityNotFoundError, Order, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    EntityNotFoundError,
+    Order,
+    RequestContext,
+    RequestContextService,
+    TransactionalConnection,
+} from '@vendure/core';
 import { CheckRegistry, CheckResult, ChecksService } from '@mivend/plugin-checks';
 import type { CheckRunResult } from '@mivend/plugin-checks';
 import { randomUUID } from 'node:crypto';
-import { withSavepoint } from 'shared';
+import { ctxQuery, withSavepoint } from 'shared';
 
 import { ORDER_SUBJECT_TYPE } from './order-check-subject';
 import type { OrderCheckStage } from './order-check-subject';
@@ -26,6 +32,7 @@ export class OrderChecksService {
         private checks: ChecksService,
         private registry: CheckRegistry,
         private registrar: OrderCheckSubjectRegistrar,
+        private requestContextService: RequestContextService,
     ) {}
 
     async run(
@@ -86,8 +93,7 @@ export class OrderChecksService {
     }
 
     // Best effort: bounded queue, dropped (and counted in the log) when full, lost on shutdown.
-    // Deferred and not awaited: the caller still holds a pool connection, so waiting for a second one
-    // could exhaust the pool under mass failure. Own connection, so a rollback of the caller keeps it.
+    // Deferred, not awaited, on a fresh ctx: the caller never waits for a second connection, and its rollback keeps the record.
     recordFailure(orderId: string, stage: OrderCheckStage, error: unknown): void {
         const message = error instanceof Error ? error.message : String(error);
         Logger.error(
@@ -106,10 +112,15 @@ export class OrderChecksService {
         }
         this.pendingFailureWrites += 1;
         setImmediate(() => {
-            this.connection.rawConnection
-                .query(
-                    `INSERT INTO order_check_failure ("uuid", "orderId", "stage", "message") VALUES ($1, $2, $3, $4)`,
-                    [randomUUID(), orderId, stage, message.slice(0, MAX_FAILURE_MESSAGE)],
+            this.requestContextService
+                .create({ apiType: 'admin' })
+                .then(ctx =>
+                    ctxQuery(
+                        this.connection,
+                        ctx,
+                        `INSERT INTO order_check_failure ("uuid", "orderId", "stage", "message") VALUES ($1, $2, $3, $4)`,
+                        [randomUUID(), orderId, stage, message.slice(0, MAX_FAILURE_MESSAGE)],
+                    ),
                 )
                 .finally(() => (this.pendingFailureWrites -= 1))
                 .catch((recordError: unknown) =>
@@ -122,8 +133,10 @@ export class OrderChecksService {
         });
     }
 
-    async pruneFailures(): Promise<number> {
-        const result: unknown[] = await this.connection.rawConnection.query(
+    async pruneFailures(ctx: RequestContext): Promise<number> {
+        const result = await ctxQuery<unknown[]>(
+            this.connection,
+            ctx,
             `DELETE FROM order_check_failure WHERE "createdAt" < now() - interval '${FAILURE_RETENTION_DAYS} days' RETURNING id`,
         );
         return result.length;

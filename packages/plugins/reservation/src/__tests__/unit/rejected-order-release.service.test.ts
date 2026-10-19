@@ -59,10 +59,13 @@ describe('RejectedOrderReleaseService.releaseDue', () => {
             createQueryBuilder: vi.fn(() => lockedQb),
         };
         const connection = {
-            getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
-                entity?.name === 'Order' ? orderRepo : reservationRepo,
+            getRepository: vi.fn((_ctx: unknown, entity: { name?: string } | string) =>
+                entity === 'Channel'
+                    ? { query: vi.fn(async () => [{ code: 'REJECTED' }]) }
+                    : typeof entity !== 'string' && entity?.name === 'Order'
+                      ? orderRepo
+                      : reservationRepo,
             ),
-            rawConnection: { query: vi.fn(async () => [{ code: 'REJECTED' }]) },
         };
         eventBus = { publish: vi.fn() };
         notifications = { create: vi.fn(async () => ({})) };

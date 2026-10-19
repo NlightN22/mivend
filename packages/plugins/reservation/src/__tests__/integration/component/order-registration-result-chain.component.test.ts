@@ -73,11 +73,13 @@ beforeAll(async () => {
     await dataSource.initialize();
 
     const connection = {
-        rawConnection: dataSource,
         withTransaction: async (c: unknown, work: (x: unknown) => unknown) => work(c),
         getRepository: (_ctx: unknown, entity: unknown) =>
             typeof entity === 'string'
-                ? { query: async () => undefined }
+                ? {
+                      query: async (sql: string, params?: unknown[]) =>
+                          sql.includes('FROM "order"') ? dataSource.query(sql, params) : undefined,
+                  }
                 : dataSource.getRepository(
                       entity === Order
                           ? TestOrder

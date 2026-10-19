@@ -1,4 +1,4 @@
-import { ScheduledTask } from '@vendure/core';
+import { RequestContextService, ScheduledTask } from '@vendure/core';
 import { cronEveryMs } from 'shared';
 
 import { OrderChecksService } from './order-checks.service';
@@ -10,8 +10,9 @@ export function createOrderCheckFailurePruneTask(): ScheduledTask {
         id: 'order-check-failure-prune',
         description: 'Deletes order check failure records past their retention.',
         schedule: cronEveryMs(EVERY_MS),
-        execute: async ({ injector }) => ({
-            pruned: await injector.get(OrderChecksService).pruneFailures(),
-        }),
+        execute: async ({ injector }) => {
+            const ctx = await injector.get(RequestContextService).create({ apiType: 'admin' });
+            return { pruned: await injector.get(OrderChecksService).pruneFailures(ctx) };
+        },
     });
 }

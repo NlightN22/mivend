@@ -44,7 +44,6 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
         withTransaction: ReturnType<typeof vi.fn>;
-        rawConnection: { query: ReturnType<typeof vi.fn> };
     };
     let reservationService: { setOrderReservationState: ReturnType<typeof vi.fn> };
     let reconciliationIssueService: {
@@ -69,10 +68,18 @@ describe('ReservationWriteOffSyncService.handleOrderRegistrationResult', () => {
         };
         rawQuery = vi.fn(async () => [{ id: 'order-1' }]);
         connection = {
-            getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
-                entity?.name === 'Order' ? orderRepo : reservationRepo,
+            getRepository: vi.fn((_ctx: unknown, entity: { name?: string } | string) =>
+                entity === 'Channel'
+                    ? {
+                          query: (sql: string, params?: unknown[]) =>
+                              sql.includes('pg_advisory')
+                                  ? Promise.resolve([])
+                                  : rawQuery(sql, params),
+                      }
+                    : typeof entity !== 'string' && entity?.name === 'Order'
+                      ? orderRepo
+                      : reservationRepo,
             ),
-            rawConnection: { query: rawQuery },
             withTransaction: vi.fn(async (c: unknown, work: (x: unknown) => unknown) => work(c)),
         };
         reservationService = { setOrderReservationState: vi.fn(async () => undefined) };
@@ -1100,7 +1107,6 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
     let rawQuery: ReturnType<typeof vi.fn>;
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
-        rawConnection: { query: ReturnType<typeof vi.fn> };
         withTransaction: ReturnType<typeof vi.fn>;
     };
     let reservationService: { setOrderReservationState: ReturnType<typeof vi.fn> };
@@ -1126,10 +1132,18 @@ describe('ReservationWriteOffSyncService.handleOrderChanged', () => {
         };
         rawQuery = vi.fn(async () => [{ id: 'order-1' }]);
         connection = {
-            getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) =>
-                entity?.name === 'Order' ? orderRepo : reservationRepo,
+            getRepository: vi.fn((_ctx: unknown, entity: { name?: string } | string) =>
+                entity === 'Channel'
+                    ? {
+                          query: (sql: string, params?: unknown[]) =>
+                              sql.includes('pg_advisory')
+                                  ? Promise.resolve([])
+                                  : rawQuery(sql, params),
+                      }
+                    : typeof entity !== 'string' && entity?.name === 'Order'
+                      ? orderRepo
+                      : reservationRepo,
             ),
-            rawConnection: { query: rawQuery },
             withTransaction: vi.fn(async (c: unknown, work: (x: unknown) => unknown) => work(c)),
         };
         reservationService = { setOrderReservationState: vi.fn(async () => undefined) };

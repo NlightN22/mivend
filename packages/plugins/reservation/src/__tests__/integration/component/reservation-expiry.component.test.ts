@@ -70,34 +70,16 @@ const NOT_CANCELLABLE_PAID = { kind: 'not-cancellable', reason: 'paid' } as cons
 
 const { schema, extra } = testSchemaOptions('reservation_expiry_component');
 
-function wrapManager(manager: EntityManager): EntityManager {
-    return new Proxy(manager, {
-        get(target, prop, receiver) {
-            if (prop === 'getRepository') {
-                return (entity: unknown) => {
-                    if (entity === Reservation) return target.getRepository(TestReservation);
-                    if (entity === Order) return target.getRepository(TestOrder);
-                    return target.getRepository(entity as never);
-                };
-            }
-            return Reflect.get(target, prop, receiver);
-        },
-    });
-}
-
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 interface TxContext {
     manager?: EntityManager;
 }
 
-// Real Postgres transactions under the same entity mapping as wrapManager; ctx carries the open transaction.
+// Real Postgres transactions with Test* entities mapped in; ctx carries the open transaction.
 function buildConnectionShim(): TransactionalConnection {
     const managerOf = (ctx: TxContext): EntityManager => ctx.manager ?? realDataSource.manager;
     return {
-        rawConnection: {
-            query: (sql: string, params?: unknown[]) => realDataSource.query(sql, params),
-        },
         withTransaction: async (ctx: TxContext, work: (txCtx: TxContext) => Promise<unknown>) =>
             ctx.manager
                 ? work(ctx)
@@ -128,10 +110,6 @@ beforeAll(async () => {
     await seedTestOrderStatuses((sql, params) => realDataSource.query(sql, params));
 
     connectionShim = buildConnectionShim();
-    const dataSourceShim = {
-        transaction: (work: (manager: EntityManager) => Promise<unknown>) =>
-            realDataSource.transaction(manager => work(wrapManager(manager))),
-    };
 
     // RequestContextService/NotificationService/EventBus are covered by their own plugins'
     // tests — this file is only about the real-Postgres transaction/concurrency behavior.
@@ -148,7 +126,7 @@ beforeAll(async () => {
         new ReservationSettings({}),
     );
     service = new ReservationExpiryService(
-        dataSourceShim as never,
+        connectionShim,
         requestContextServiceShim as never,
         notificationServiceShim as never,
         cancellationShim as never,

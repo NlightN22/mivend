@@ -5,6 +5,8 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
 
 import { CreditLimitRecomputeService } from '../../credit-limit-recompute.service';
@@ -68,7 +70,7 @@ beforeAll(async () => {
         "counterpartyId" varchar NOT NULL, "creditLimit" varchar,
         "controlledIndividually" boolean, "isActive" boolean NOT NULL DEFAULT true,
         "effectiveCreditLimit" numeric(18,2), "updatedAt" timestamp DEFAULT now())`);
-    service = new CreditLimitRecomputeService({ rawConnection: dataSource } as never);
+    service = new CreditLimitRecomputeService(createTestConnection(dataSource));
 });
 
 afterAll(async () => {
@@ -87,7 +89,7 @@ describe('credit limit recompute (real SQL)', () => {
             { limit: '50000.50', flagged: false },
             { limit: '30000', flagged: true },
         ]);
-        await service.recomputeAll();
+        await service.recomputeAll(testRequestContext);
         expect(await poolOf(id)).toBe(150001);
         expect(await effective(id)).toEqual(['100000.00', '50000.50', '30000.00']);
     });
@@ -98,7 +100,7 @@ describe('credit limit recompute (real SQL)', () => {
             { limit: '300', flagged: true },
             { limit: '100', flagged: true },
         ]);
-        await service.recomputeAll();
+        await service.recomputeAll(testRequestContext);
         expect(await poolOf(id)).toBe(100);
         expect(await effective(id)).toEqual(['100.00', '75.00', '25.00']);
     });
@@ -110,7 +112,7 @@ describe('credit limit recompute (real SQL)', () => {
             { limit: 'abc' },
             { limit: null },
         ]);
-        await service.recomputeAll();
+        await service.recomputeAll(testRequestContext);
         expect(await poolOf(id)).toBe(100);
         expect(await effective(id)).toEqual(['100.00', null, null, null]);
     });
@@ -119,7 +121,7 @@ describe('credit limit recompute (real SQL)', () => {
         const noContracts = await addCounterparty([], 5000);
         const onlyFlagged = await addCounterparty([{ limit: '700', flagged: true }], 5000);
         const onlyInactive = await addCounterparty([{ limit: '700', active: false }], 5000);
-        await service.recomputeAll();
+        await service.recomputeAll(testRequestContext);
         expect(await poolOf(noContracts)).toBe(0);
         expect(await poolOf(onlyFlagged)).toBe(0);
         expect(await effective(onlyFlagged)).toEqual(['0.00']);
@@ -129,7 +131,7 @@ describe('credit limit recompute (real SQL)', () => {
     it('keeps counterparties isolated from each other', async () => {
         const a = await addCounterparty([{ limit: '100' }, { limit: '500', flagged: true }]);
         const b = await addCounterparty([{ limit: '1000' }, { limit: '500', flagged: true }]);
-        await service.recomputeAll();
+        await service.recomputeAll(testRequestContext);
         expect(await poolOf(a)).toBe(100);
         expect(await effective(a)).toEqual(['100.00', '100.00']);
         expect(await poolOf(b)).toBe(1000);
@@ -138,12 +140,12 @@ describe('credit limit recompute (real SQL)', () => {
 
     it('is idempotent: a second run writes nothing, a changed input is picked up', async () => {
         const id = await addCounterparty([{ limit: '100' }]);
-        expect(await service.recomputeAll()).toEqual({
+        expect(await service.recomputeAll(testRequestContext)).toEqual({
             contractsUpdated: 1,
             counterpartiesUpdated: 1,
             paymentDelaysUpdated: 0,
         });
-        expect(await service.recomputeAll()).toEqual({
+        expect(await service.recomputeAll(testRequestContext)).toEqual({
             contractsUpdated: 0,
             counterpartiesUpdated: 0,
             paymentDelaysUpdated: 0,
@@ -151,7 +153,7 @@ describe('credit limit recompute (real SQL)', () => {
         await run(`UPDATE contract SET "creditLimit" = '250' WHERE "counterpartyId" = $1`, [
             String(id),
         ]);
-        expect(await service.recomputeAll()).toEqual({
+        expect(await service.recomputeAll(testRequestContext)).toEqual({
             contractsUpdated: 1,
             counterpartiesUpdated: 1,
             paymentDelaysUpdated: 0,
@@ -161,12 +163,12 @@ describe('credit limit recompute (real SQL)', () => {
 
     it('drains more changed rows than one batch', async () => {
         for (let i = 0; i < 5; i++) await addCounterparty([{ limit: '10' }]);
-        expect(await service.recomputeAll(2)).toEqual({
+        expect(await service.recomputeAll(testRequestContext, 2)).toEqual({
             contractsUpdated: 5,
             counterpartiesUpdated: 5,
             paymentDelaysUpdated: 0,
         });
-        expect(await service.recomputeAll(2)).toEqual({
+        expect(await service.recomputeAll(testRequestContext, 2)).toEqual({
             contractsUpdated: 0,
             counterpartiesUpdated: 0,
             paymentDelaysUpdated: 0,
@@ -207,7 +209,7 @@ describe('credit limit recompute (real SQL)', () => {
             const noMain = await addMain(null, null);
             const noDays = await addMain('c-5', { erpId: 'c-5', days: null });
             const dangling = await addMain('c-missing', null);
-            await service.recomputeAll();
+            await service.recomputeAll(testRequestContext);
             expect(await daysOf(active)).toBe(14);
             expect(await daysOf(other)).toBe(3);
             expect(await daysOf(inactive)).toBe(0);
@@ -218,10 +220,10 @@ describe('credit limit recompute (real SQL)', () => {
 
         it('is idempotent and picks up a changed value', async () => {
             const id = await addMain('c-1', { erpId: 'c-1', days: 10 });
-            expect((await service.recomputeAll()).paymentDelaysUpdated).toBe(1);
-            expect((await service.recomputeAll()).paymentDelaysUpdated).toBe(0);
+            expect((await service.recomputeAll(testRequestContext)).paymentDelaysUpdated).toBe(1);
+            expect((await service.recomputeAll(testRequestContext)).paymentDelaysUpdated).toBe(0);
             await run(`UPDATE contract SET "debtDaysLimit" = 25 WHERE "erpId" = 'c-1'`);
-            expect((await service.recomputeAll()).paymentDelaysUpdated).toBe(1);
+            expect((await service.recomputeAll(testRequestContext)).paymentDelaysUpdated).toBe(1);
             expect(await daysOf(id)).toBe(25);
         });
     });

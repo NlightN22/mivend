@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { DataSource } from 'typeorm';
 
 import { ReservationExpiryService } from '../../reservation-expiry.service';
 
@@ -38,15 +37,16 @@ describe('ReservationExpiryService.expireDueReservations', () => {
             findOne: vi.fn(async () => orderRows[0] ?? null),
             update: vi.fn(async (x: unknown) => x),
         };
-        const manager = {
-            getRepository: vi.fn((entity: { name?: string }) =>
-                entity?.name === 'Order' ? txOrderRepo : txReservationRepo,
+        const connection = {
+            withTransaction: vi.fn(async (c: unknown, work: (c: unknown) => unknown) => work(c)),
+            getRepository: vi.fn((_c: unknown, entity: { name?: string } | string) =>
+                entity === 'Channel'
+                    ? { query: vi.fn(async () => []) }
+                    : typeof entity !== 'string' && entity?.name === 'Order'
+                      ? txOrderRepo
+                      : txReservationRepo,
             ),
         };
-        const dataSource = {
-            transaction: vi.fn(async (work: (m: unknown) => unknown) => work(manager)),
-            getRepository: vi.fn(() => txReservationRepo),
-        } as unknown as DataSource;
         const cancellation = {
             cancel: vi.fn(async () => ({ kind: 'cancelled', eventSent: false })),
         };
@@ -55,7 +55,7 @@ describe('ReservationExpiryService.expireDueReservations', () => {
         const rejectedRelease = { releaseDue: vi.fn(async () => rejectedReleased) };
         return {
             service: new ReservationExpiryService(
-                dataSource,
+                connection as never,
                 requestContextService as never,
                 notificationService as never,
                 cancellation as never,

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { withOrderCancelLocks } from 'shared';
+import { withOrderCancelLocks, ctxQuery } from 'shared';
 
 import { OrderCancellationService } from './order-cancellation.service';
 import { UnknownOrderUuidError } from './reservation-errors';
@@ -33,7 +33,7 @@ export class OrderCancelResultService {
         ctx: RequestContext,
         input: OrderCancelResultInput,
     ): Promise<OrderCancelResultOutcome> {
-        const orderId = await this.findOrderIdByUuid(input.orderUuid);
+        const orderId = await this.findOrderIdByUuid(ctx, input.orderUuid);
         if (!orderId) {
             throw new UnknownOrderUuidError(
                 `order-cancel-result: no Order found via orderUuid=${input.orderUuid}`,
@@ -103,8 +103,13 @@ export class OrderCancelResultService {
 
     // Raw SQL: Order.customFields.uuid is declared by another plugin's augmentation, same reason as
     // ReservationWriteOffSyncService.findOrderIdByUuid.
-    private async findOrderIdByUuid(orderUuid: string): Promise<string | null> {
-        const result = await this.connection.rawConnection.query(
+    private async findOrderIdByUuid(
+        ctx: RequestContext,
+        orderUuid: string,
+    ): Promise<string | null> {
+        const result = await ctxQuery<Array<{ id: string | number | null }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM "order" WHERE "customFieldsUuid" = $1 LIMIT 1`,
             [orderUuid],
         );

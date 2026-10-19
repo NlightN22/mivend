@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Order, RequestContext, RequestContextService } from '@vendure/core';
+import {
+    Order,
+    RequestContext,
+    RequestContextService,
+    TransactionalConnection,
+} from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
-import { DataSource, EntityManager, In, LessThanOrEqual } from 'typeorm';
+import { withSavepoint } from 'shared';
+import { In, LessThanOrEqual } from 'typeorm';
 
 import { Reservation } from './entities/reservation.entity';
 import { OrderCancellationService } from './order-cancellation.service';
@@ -13,12 +19,11 @@ import { loggerCtx } from './types';
 // when the reserve is still active this long after the shared deadline.
 const ERP_OWNED_GRACE_MS = 24 * 60 * 60 * 1000;
 
-// Called by the reservation-expiry ScheduledTask; runs outside any HTTP request, so it uses the
-// raw DataSource and a fresh RequestContext. Cancel flow: docs/order-contracts.md.
+// Called by the reservation-expiry ScheduledTask with a fresh RequestContext. Cancel flow: docs/order-contracts.md.
 @Injectable()
 export class ReservationExpiryService {
     constructor(
-        private dataSource: DataSource,
+        private connection: TransactionalConnection,
         private requestContextService: RequestContextService,
         private notificationService: NotificationService,
         private cancellation: OrderCancellationService,
@@ -28,20 +33,21 @@ export class ReservationExpiryService {
     // Rejected orders first (their reserve is released and committed), then the TTL deadline (docs/order-flow.md "On expiry").
     async expireDueReservations(): Promise<number> {
         const rejectedReleased = await this.rejectedRelease.releaseDue();
-        const { flagged, nonPrepaidDue } = await this.dataSource.transaction(manager =>
-            this.sweepDue(manager),
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const { flagged, nonPrepaidDue } = await this.connection.withTransaction(ctx, txCtx =>
+            this.sweepDue(txCtx),
         );
         // Outside the sweep transaction: cancelling takes the order lock and writes the same
         // reservation rows this sweep locked.
-        return rejectedReleased + flagged + (await this.expireNonPrepaid(nonPrepaidDue));
+        return rejectedReleased + flagged + (await this.expireNonPrepaid(ctx, nonPrepaidDue));
     }
 
     // SKIP LOCKED: a concurrent sweep must skip rows another sweep already holds, or both fire the same side effects.
     private async sweepDue(
-        manager: EntityManager,
+        ctx: RequestContext,
     ): Promise<{ flagged: number; nonPrepaidDue: Reservation[] }> {
-        const dueRows = await manager
-            .getRepository(Reservation)
+        const dueRows = await this.connection
+            .getRepository(ctx, Reservation)
             .createQueryBuilder('reservation')
             .setLock('pessimistic_write')
             .setOnLocked('skip_locked')
@@ -54,26 +60,27 @@ export class ReservationExpiryService {
         const prepaidDue = dueRows.filter(
             row => row.creationMethod === 'auto-prepaid' && !row.interventionFlaggedAt,
         );
-        return { flagged: await this.flagPrepaid(manager, prepaidDue), nonPrepaidDue };
+        return { flagged: await this.flagPrepaid(ctx, prepaidDue), nonPrepaidDue };
     }
 
     // A prepaid reserve is never expired automatically; staff are told once. The notification is
-    // idempotent by (sourceType, sourceId), so a rolled-back sweep that re-sends it only updates it.
-    private async flagPrepaid(manager: EntityManager, rows: Reservation[]): Promise<number> {
+    // idempotent by (sourceType, sourceId); the savepoint keeps a failed one from aborting the sweep.
+    private async flagPrepaid(ctx: RequestContext, rows: Reservation[]): Promise<number> {
         if (rows.length === 0) return 0;
         // No signed-in administrator on this timer sweep: broadcast instead of guessing a recipient.
-        const ctx = await this.requestContextService.create({ apiType: 'admin' });
         const notified: Reservation[] = [];
         for (const row of rows) {
             try {
-                await this.notificationService.create(ctx, {
-                    recipientType: 'administrator-broadcast',
-                    kind: 'error',
-                    sourceType: 'reservation-intervention',
-                    sourceId: String(row.id),
-                    title: 'Prepaid reservation needs manual intervention',
-                    message: `Reservation ${String(row.id)} (order ${row.orderId}) expired at ${row.expiresAt.toISOString()} without release.`,
-                });
+                await withSavepoint(this.connection, ctx, () =>
+                    this.notificationService.create(ctx, {
+                        recipientType: 'administrator-broadcast',
+                        kind: 'error',
+                        sourceType: 'reservation-intervention',
+                        sourceId: String(row.id),
+                        title: 'Prepaid reservation needs manual intervention',
+                        message: `Reservation ${String(row.id)} (order ${row.orderId}) expired at ${row.expiresAt.toISOString()} without release.`,
+                    }),
+                );
                 notified.push(row);
             } catch (error) {
                 Logger.error(
@@ -83,8 +90,8 @@ export class ReservationExpiryService {
             }
         }
         if (notified.length === 0) return 0;
-        await manager
-            .getRepository(Reservation)
+        await this.connection
+            .getRepository(ctx, Reservation)
             .update({ id: In(notified.map(row => row.id)) }, { interventionFlaggedAt: new Date() });
         for (const row of notified) {
             Logger.warn(
@@ -97,9 +104,8 @@ export class ReservationExpiryService {
     }
 
     // Pending/unregistered orders are cancelled; a registered or in-progress one is left to the ERP.
-    private async expireNonPrepaid(rows: Reservation[]): Promise<number> {
+    private async expireNonPrepaid(ctx: RequestContext, rows: Reservation[]): Promise<number> {
         if (rows.length === 0) return 0;
-        const ctx = await this.requestContextService.create({ apiType: 'admin' });
         const sweptAt = new Date();
         const rowsByOrder = new Map<string, Reservation[]>();
         for (const row of rows) {
@@ -136,7 +142,7 @@ export class ReservationExpiryService {
                     if (outcome.reason === 'shipped' || outcome.reason === 'in-progress') {
                         await this.flagErpOwned(ctx, orderRows);
                     } else {
-                        await this.returnToConfirmationQueue(orderId, orderRows);
+                        await this.returnToConfirmationQueue(ctx, orderId, orderRows);
                         count += orderRows.length;
                     }
                     break;
@@ -150,9 +156,13 @@ export class ReservationExpiryService {
         return count;
     }
 
-    private async returnToConfirmationQueue(orderId: string, rows: Reservation[]): Promise<void> {
-        await this.dataSource.transaction(async manager => {
-            await manager.getRepository(Reservation).update(
+    private async returnToConfirmationQueue(
+        ctx: RequestContext,
+        orderId: string,
+        rows: Reservation[],
+    ): Promise<void> {
+        await this.connection.withTransaction(ctx, async txCtx => {
+            await this.connection.getRepository(txCtx, Reservation).update(
                 {
                     id: In(rows.map(row => row.id)),
                     status: 'active',
@@ -160,10 +170,12 @@ export class ReservationExpiryService {
                 },
                 { status: 'expired' },
             );
-            const order = await manager.getRepository(Order).findOne({ where: { id: orderId } });
+            const order = await this.connection
+                .getRepository(txCtx, Order)
+                .findOne({ where: { id: orderId } });
             if (order?.customFields?.reservationState === 'RESERVED') {
                 // `repo.update()` of only the changed key (#209).
-                await manager.getRepository(Order).update(order.id, {
+                await this.connection.getRepository(txCtx, Order).update(order.id, {
                     customFields: { reservationState: 'AWAITING_CONFIRMATION' },
                 });
             }
@@ -183,9 +195,9 @@ export class ReservationExpiryService {
                     title: 'Reservation past its deadline, order is in the ERP',
                     message: `Reservation ${String(row.id)} (order ${row.orderId}) is still active after its deadline; the order is registered or in progress in the ERP.`,
                 });
-                await this.dataSource.transaction(manager =>
-                    manager
-                        .getRepository(Reservation)
+                await this.connection.withTransaction(ctx, txCtx =>
+                    this.connection
+                        .getRepository(txCtx, Reservation)
                         .update(
                             { id: row.id, status: 'active' },
                             { interventionFlaggedAt: new Date() },
