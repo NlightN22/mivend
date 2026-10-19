@@ -1,5 +1,6 @@
 -- #235 data step, run with psql -v customer_codes=code-a,code-b: marks those price types as
--- customer-visible and fills every branch allow-list that is still empty with all customer types.-- Fails before changing anything when an administrator's branch has no branch_settings row (it would see no price types).
+-- customer-visible and fills every branch allow-list that is still empty with all customer types.
+-- Fails before changing anything when an administrator's branch has no branch_settings row (it would see no price types).
 DO $$
 DECLARE missing text;
 BEGIN
