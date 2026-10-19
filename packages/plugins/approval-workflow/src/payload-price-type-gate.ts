@@ -32,8 +32,9 @@ export function applyPriceTypeGate(
     qb: SelectQueryBuilder<ApprovalRequest>,
     allowedCodes: string[],
 ): void {
+    // CASE guards the cast (OR does not short-circuit); pg_input_is_valid hides garbage payloads (Postgres 16+).
     qb.andWhere(
-        `(request.requestType NOT IN (:...gatedTypes) OR request.payload::jsonb ->> 'priceTypeCode' IN (:...gateAllowedCodes))`,
+        `(request.requestType NOT IN (:...gatedTypes) OR CASE WHEN request.requestType IN (:...gatedTypes) THEN CASE WHEN pg_input_is_valid(request.payload, 'jsonb') THEN request.payload::jsonb ->> 'priceTypeCode' END END IN (:...gateAllowedCodes))`,
         {
             gatedTypes: PRICE_TYPE_GATED_REQUEST_TYPES,
             gateAllowedCodes: allowedCodes.length ? allowedCodes : [''],

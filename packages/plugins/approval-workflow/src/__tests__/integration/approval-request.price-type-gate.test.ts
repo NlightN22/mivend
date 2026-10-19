@@ -169,4 +169,31 @@ describe('ApprovalRequest price type gate (integration, real Postgres)', () => {
         });
         expect(result.totalItems).toBe(0);
     });
+
+    it('a non-JSON payload is hidden for a gated type and never breaks lists or the summary', async () => {
+        const repo = dataSource.getRepository(TestApprovalRequest);
+        await repo.save({
+            requestType: 'discountGrantApproval',
+            payload: 'not json {',
+            requestedByAdministratorId: 'admin-1',
+        });
+        const other = await repo.save({
+            requestType: 'otherApproval',
+            payload: 'not json {',
+            requestedByAdministratorId: 'admin-1',
+        });
+        const opts = { allowedPriceTypeCodes: ['type-a'] };
+        const gated = await service.findByRequestType(
+            ctxFor('admin-1'),
+            'discountGrantApproval',
+            opts,
+        );
+        const others = await service.findByRequestType(ctxFor('admin-1'), 'otherApproval', opts);
+        const involved = await service.findAllInvolving(ctxFor('admin-1'), opts);
+        const summary = await service.getMySummary(ctxFor('admin-1'), 5, ['type-a']);
+        expect(gated.totalItems).toBe(0);
+        expect(others.items.map(r => r.id)).toEqual([other.id]);
+        expect(involved.items.map(r => r.id)).toEqual([other.id]);
+        expect(summary.recent.map(r => r.requestType)).not.toContain('discountGrantApproval');
+    });
 });
