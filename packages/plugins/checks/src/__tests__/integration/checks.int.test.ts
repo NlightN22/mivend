@@ -119,7 +119,6 @@ beforeAll(async () => {
     await dataSource.initialize();
     const base = createTestConnection(dataSource);
     const connection = {
-        rawConnection: dataSource,
         withTransaction: base.withTransaction.bind(base),
         getRepository: (c: unknown, entity: { name: string } | string) =>
             base.getRepository(

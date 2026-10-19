@@ -28,11 +28,11 @@ const mockRepo = {
     save: vi.fn((entity: unknown) => entity),
     update: vi.fn(),
     createQueryBuilder: vi.fn(() => mockQb),
+    query: vi.fn(),
 };
 
 const mockConnection = {
     getRepository: vi.fn(() => mockRepo),
-    rawConnection: { query: vi.fn() },
 };
 
 const mockCounterpartyService = {
@@ -105,7 +105,7 @@ describe('DocumentsService', () => {
         it('resolves orderId via the raw customFields join when orderErpId is provided', async () => {
             mockCounterpartyService.findByErpId.mockResolvedValue({ id: '1' });
             mockRepo.findOne.mockResolvedValue(null);
-            mockConnection.rawConnection.query.mockResolvedValue([{ id: '42' }]);
+            mockRepo.query.mockResolvedValue([{ id: '42' }]);
             await service.upsertFromErp(mockCtx, {
                 erpId: 'doc-1',
                 type: 'return',
@@ -114,7 +114,7 @@ describe('DocumentsService', () => {
                 number: 'RET-1',
                 issueDate: '2026-07-01',
             });
-            expect(mockConnection.rawConnection.query).toHaveBeenCalledOnce();
+            expect(mockRepo.query).toHaveBeenCalledOnce();
             expect(mockRepo.create).toHaveBeenCalledWith(
                 expect.objectContaining({ orderId: '42' }),
             );

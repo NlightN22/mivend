@@ -45,7 +45,6 @@ beforeAll(async () => {
 
     const connectionShim = {
         getRepository: () => dataSource.getRepository(TestProformaInvoice),
-        rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
     service = new ProformaInvoiceService(connectionShim);

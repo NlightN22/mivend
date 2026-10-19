@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { ctxQuery, withAggregateLock } from 'shared';
 
 import { CheckPolicyService } from './check-policy.service';
 import { CheckRegistry } from './check-registry';
@@ -158,16 +158,18 @@ export class ChecksService {
 
     // Keyset over subjects, each flagged under its own lock: never a mass UPDATE that could wait on a running recompute.
     async markStaleByCheckCode(ctx: RequestContext, checkCode: string): Promise<void> {
-        let last: { subjectType: string; subjectId: string } | null = null;
+        type SubjectRow = { subjectType: string; subjectId: string };
+        let last: SubjectRow | null = null;
         for (;;) {
-            const rows: Array<{ subjectType: string; subjectId: string }> =
-                await this.connection.rawConnection.query(
-                    `SELECT DISTINCT "subjectType", "subjectId" FROM check_result
+            const rows: SubjectRow[] = await ctxQuery<SubjectRow[]>(
+                this.connection,
+                ctx,
+                `SELECT DISTINCT "subjectType", "subjectId" FROM check_result
                       WHERE "checkCode" = $1 AND stale = false
                         AND ($2::text IS NULL OR ("subjectType", "subjectId") > ($2, $3))
                       ORDER BY "subjectType", "subjectId" LIMIT 200`,
-                    [checkCode, last?.subjectType ?? null, last?.subjectId ?? null],
-                );
+                [checkCode, last?.subjectType ?? null, last?.subjectId ?? null],
+            );
             for (const row of rows) {
                 // An unregistered type here throws, so the request is kept until a process that knows it runs.
                 await this.markStale(ctx, row.subjectType, row.subjectId);

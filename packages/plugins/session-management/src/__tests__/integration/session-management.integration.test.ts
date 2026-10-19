@@ -79,7 +79,6 @@ beforeAll(async () => {
 
     const connectionShim = {
         getRepository: () => shimRepo,
-        rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
     deleteFromCache = vi.fn();
@@ -89,14 +88,11 @@ beforeAll(async () => {
     userService = { getUserById: vi.fn() };
     sessionService = { deleteSessionsByUser: vi.fn() };
 
-    // Queries the real Session entity directly, bypassing the shim, which needs a bootstrap-time
-    // EntityIdStrategy absent here; covered by a unit test with a mocked DataSource instead.
     service = new SessionManagementService(
         connectionShim,
         configService,
         userService as unknown as UserService,
         sessionService as unknown as SessionService,
-        {} as unknown as DataSource,
     );
 });
 

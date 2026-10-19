@@ -51,7 +51,6 @@ beforeAll(async () => {
 
     const connectionShim = {
         getRepository: () => dataSource.getRepository(TestPaymentReconciliationIssue),
-        rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
     service = new PaymentReconciliationIssueService(

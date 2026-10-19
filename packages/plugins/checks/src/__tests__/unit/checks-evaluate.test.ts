@@ -29,7 +29,6 @@ function setup(policy: { consequence: Consequence; enabled: boolean; recipient?:
         getRepository: vi.fn(() => {
             throw new Error('an ephemeral run must not touch result rows');
         }),
-        rawConnection: { query: vi.fn() },
     };
     const service = new ChecksService(connection as never, registry, {
         effectiveForStage,

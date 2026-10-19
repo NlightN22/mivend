@@ -6,7 +6,6 @@ import type {
     UserService,
     SessionService,
 } from '@vendure/core';
-import type { DataSource } from 'typeorm';
 
 import { SessionManagementService } from '../../session-management.service';
 
@@ -48,7 +47,6 @@ describe('SessionManagementService', () => {
         where: ReturnType<typeof vi.fn>;
         execute: ReturnType<typeof vi.fn>;
     };
-    let dataSource: { getRepository: ReturnType<typeof vi.fn> };
     let service: SessionManagementService;
 
     function ctxFor(userId: string | undefined, currentToken?: string): RequestContext {
@@ -77,16 +75,15 @@ describe('SessionManagementService', () => {
         queryBuilder.delete.mockReturnValue(queryBuilder);
         queryBuilder.from.mockReturnValue(queryBuilder);
         queryBuilder.where.mockReturnValue(queryBuilder);
-        dataSource = {
-            getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => queryBuilder) })),
-        };
+        connection.getRepository.mockImplementation((_ctx: unknown, entity: { name?: string }) =>
+            entity.name === 'Session' ? { createQueryBuilder: vi.fn(() => queryBuilder) } : repo,
+        );
 
         service = new SessionManagementService(
             connection as unknown as TransactionalConnection,
             configService,
             userService as unknown as UserService,
             sessionService as unknown as SessionService,
-            dataSource as unknown as DataSource,
         );
     });
 
@@ -172,7 +169,7 @@ describe('SessionManagementService', () => {
     it('deleteEndedSessions removes expired and invalidated sessions', async () => {
         queryBuilder.execute.mockResolvedValue({ affected: 3 });
 
-        const deleted = await service.deleteEndedSessions();
+        const deleted = await service.deleteEndedSessions(ctxFor(undefined));
 
         expect(deleted).toBe(3);
         expect(queryBuilder.where).toHaveBeenCalledWith('expires <= :now OR invalidated = true', {
@@ -183,7 +180,7 @@ describe('SessionManagementService', () => {
     it('deleteEndedSessions returns 0 when nothing was affected', async () => {
         queryBuilder.execute.mockResolvedValue({ affected: undefined });
 
-        const deleted = await service.deleteEndedSessions();
+        const deleted = await service.deleteEndedSessions(ctxFor(undefined));
 
         expect(deleted).toBe(0);
     });

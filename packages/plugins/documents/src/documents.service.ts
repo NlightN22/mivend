@@ -8,7 +8,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import { ILike, In } from 'typeorm';
-import { documentNumberSearchTerm } from 'shared';
+import { ctxQuery, documentNumberSearchTerm } from 'shared';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
 import { ProformaInvoice } from '@mivend/plugin-acquiring';
 
@@ -147,7 +147,9 @@ export class DocumentsService {
         if (!counterparty) {
             throw new UserInputError(`Counterparty not found: erpId=${record.counterpartyErpId}`);
         }
-        const orderId = record.orderErpId ? await this.findOrderIdByErpId(record.orderErpId) : null;
+        const orderId = record.orderErpId
+            ? await this.findOrderIdByErpId(ctx, record.orderErpId)
+            : null;
 
         const repo = this.connection.getRepository(ctx, Document);
         let entity = await repo.findOne({ where: { erpId: record.erpId } });
@@ -351,8 +353,13 @@ export class DocumentsService {
 
     // Order.customFields.erpOrderId comes from plugin-erp-order's module augmentation, which this
     // plugin's tsc build cannot see, so it is read via raw customFields (as in getForCustomer()).
-    private async findOrderIdByErpId(erpOrderId: string): Promise<string | null> {
-        const result = await this.connection.rawConnection.query(
+    private async findOrderIdByErpId(
+        ctx: RequestContext,
+        erpOrderId: string,
+    ): Promise<string | null> {
+        const result = await ctxQuery<Array<{ id: string | number }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM "order" WHERE "customFieldsErporderid" = $1 LIMIT 1`,
             [erpOrderId],
         );

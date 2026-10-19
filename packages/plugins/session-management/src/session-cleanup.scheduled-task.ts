@@ -1,4 +1,4 @@
-import { Logger, ScheduledTask } from '@vendure/core';
+import { Logger, RequestContextService, ScheduledTask } from '@vendure/core';
 import { cronEveryMs } from 'shared';
 
 import { SessionManagementService } from './session-management.service';
@@ -14,7 +14,8 @@ export function createSessionCleanupTask(options: SessionManagementPluginOptions
         description: 'Deletes expired and ended customer/administrator sessions.',
         schedule: cronEveryMs(everyMs),
         execute: async ({ injector }) => {
-            const deleted = await injector.get(SessionManagementService).deleteEndedSessions();
+            const ctx = await injector.get(RequestContextService).create({ apiType: 'admin' });
+            const deleted = await injector.get(SessionManagementService).deleteEndedSessions(ctx);
             if (deleted > 0) {
                 Logger.verbose(`Deleted ${deleted} ended session(s)`, loggerCtx);
             }

@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, RequestContextService, TransactionalConnection } from '@vendure/core';
 
+import { ctxQuery } from 'shared';
+
 import { CHECK_CODE_KIND } from './check-stale-request.writer';
 import { ChecksService } from './checks.service';
 
@@ -53,7 +55,9 @@ export class CheckStaleRequestService {
             let done = 0;
             let lastId = 0;
             for (;;) {
-                const rows: PendingRow[] = await this.connection.rawConnection.query(
+                const rows = await ctxQuery<PendingRow[]>(
+                    this.connection,
+                    runCtx,
                     `SELECT id, kind, key, version FROM check_stale_request WHERE id > $1 ORDER BY id LIMIT ${BATCH}`,
                     [lastId],
                 );
@@ -73,8 +77,10 @@ export class CheckStaleRequestService {
     private async process(ctx: RequestContext, row: PendingRow): Promise<boolean> {
         const handler = this.handlers.get(row.kind);
         if (!handler) return false;
-        return this.connection.rawConnection.transaction(async em => {
-            const [{ locked }] = await em.query(
+        return this.connection.withTransaction(ctx, async txCtx => {
+            const [{ locked }] = await ctxQuery<Array<{ locked: boolean }>>(
+                this.connection,
+                txCtx,
                 `SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS locked`,
                 [`check-stale-request:${row.id}`],
             );
@@ -88,10 +94,12 @@ export class CheckStaleRequestService {
                 );
                 return false;
             }
-            await em.query(`DELETE FROM check_stale_request WHERE id = $1 AND version = $2`, [
-                row.id,
-                row.version,
-            ]);
+            await ctxQuery<unknown>(
+                this.connection,
+                txCtx,
+                `DELETE FROM check_stale_request WHERE id = $1 AND version = $2`,
+                [row.id, row.version],
+            );
             return true;
         });
     }

@@ -8,7 +8,6 @@ import {
     TransactionalConnection,
     UserService,
 } from '@vendure/core';
-import { DataSource } from 'typeorm';
 
 import { labelForUserAgent, SessionSummary } from './session.types';
 
@@ -19,7 +18,6 @@ export class SessionManagementService {
         private configService: ConfigService,
         private userService: UserService,
         private sessionService: SessionService,
-        private dataSource: DataSource,
     ) {}
 
     async getMySessions(ctx: RequestContext): Promise<SessionSummary[]> {
@@ -81,11 +79,10 @@ export class SessionManagementService {
         return true;
     }
 
-    // Not a security control: runs outside any request, so no ctx is built.
     // Targets base Session so anonymous cart sessions are swept too (STI shares one table).
-    async deleteEndedSessions(): Promise<number> {
-        const result = await this.dataSource
-            .getRepository(Session)
+    async deleteEndedSessions(ctx: RequestContext): Promise<number> {
+        const result = await this.connection
+            .getRepository(ctx, Session)
             .createQueryBuilder()
             .delete()
             .from(Session)

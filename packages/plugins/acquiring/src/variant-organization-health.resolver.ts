@@ -1,5 +1,5 @@
 import { Query, Resolver } from '@nestjs/graphql';
-import { Allow } from '@vendure/core';
+import { Allow, Ctx, RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { VariantOrganizationHealthService } from './variant-organization-health.service';
@@ -11,7 +11,9 @@ export class VariantOrganizationHealthResolver {
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
-    async variantOrganizationHealth(): Promise<VariantOrganizationHealth> {
-        return this.health.get();
+    async variantOrganizationHealth(
+        @Ctx() ctx: RequestContext,
+    ): Promise<VariantOrganizationHealth> {
+        return this.health.get(ctx);
     }
 }

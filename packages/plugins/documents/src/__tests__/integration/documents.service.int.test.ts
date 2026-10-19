@@ -93,7 +93,10 @@ beforeAll(async () => {
         getRepository: (ctx: RequestContext, entity: { name: string } | string) => {
             const manager = (ctx as unknown as { __manager?: EntityManager }).__manager;
             if (typeof entity === 'string') {
-                return { query: (sql: string, params?: unknown[]) => manager!.query(sql, params) };
+                return {
+                    query: (sql: string, params?: unknown[]) =>
+                        (manager ?? dataSource).query(sql, params),
+                };
             }
             const testEntity =
                 entity.name === 'ProformaInvoice'
@@ -112,7 +115,6 @@ beforeAll(async () => {
                 : dataSource.transaction(manager =>
                       work({ ...ctx, __manager: manager } as unknown as RequestContext),
                   ),
-        rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
     eventService = new OrganizationEventService(connectionShim, {

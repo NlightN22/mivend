@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
-import { TransactionalConnection } from '@vendure/core';
 import {
+    createTestConnection,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
+    testRequestContext,
     testSchemaOptions,
 } from 'shared';
 
@@ -36,9 +37,7 @@ beforeAll(async () => {
     await dataSource.query(`CREATE TABLE product_variant (
         id serial PRIMARY KEY, enabled boolean, "deletedAt" timestamp,
         "customFieldsOrganizationid" int)`);
-    service = new VariantOrganizationHealthService({
-        rawConnection: dataSource,
-    } as unknown as TransactionalConnection);
+    service = new VariantOrganizationHealthService(createTestConnection(dataSource));
 });
 
 beforeEach(async () => {
@@ -58,10 +57,10 @@ describe('VariantOrganizationHealthService (real SQL)', () => {
         await addVariant(null, { enabled: false });
         await addVariant(null, { deleted: true });
 
-        expect(await service.get()).toEqual({ total: 3, withoutOrganization: 2 });
+        expect(await service.get(testRequestContext)).toEqual({ total: 3, withoutOrganization: 2 });
     });
 
     it('reports zeros for an empty catalog', async () => {
-        expect(await service.get()).toEqual({ total: 0, withoutOrganization: 0 });
+        expect(await service.get(testRequestContext)).toEqual({ total: 0, withoutOrganization: 0 });
     });
 });

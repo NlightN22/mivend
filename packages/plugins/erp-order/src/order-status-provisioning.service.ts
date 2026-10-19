@@ -1,5 +1,6 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { TransactionalConnection } from '@vendure/core';
+import { RequestContextService, TransactionalConnection } from '@vendure/core';
+import { ctxQuery } from 'shared';
 
 import { MIVEND_ORDER_STATUSES } from './mivend-order-statuses';
 
@@ -51,11 +52,15 @@ export async function provisionMivendOrderStatuses(query: SqlQuery): Promise<voi
 // Self-provisions the mivend-pipeline dictionary rows at boot, like the default roles.
 @Injectable()
 export class OrderStatusProvisioningService implements OnApplicationBootstrap {
-    constructor(private connection: TransactionalConnection) {}
+    constructor(
+        private connection: TransactionalConnection,
+        private requestContextService: RequestContextService,
+    ) {}
 
     async onApplicationBootstrap(): Promise<void> {
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
         await provisionMivendOrderStatuses((sql, params) =>
-            this.connection.rawConnection.query(sql, params),
+            ctxQuery<unknown>(this.connection, ctx, sql, params),
         );
     }
 }

@@ -4,6 +4,7 @@ import {
     LanguageCode,
     LoginEvent,
     PluginCommonModule,
+    RequestContextService,
     RuntimeVendureConfig,
     Type,
     VendurePlugin,
@@ -69,6 +70,7 @@ export class SessionManagementPlugin implements OnApplicationBootstrap {
         private readonly eventBus: EventBus,
         private readonly loginListenerService: SessionLoginListenerService,
         private readonly sessionCapService: SessionCapService,
+        private readonly requestContextService: RequestContextService,
     ) {}
 
     onApplicationBootstrap(): void {
@@ -82,7 +84,8 @@ export class SessionManagementPlugin implements OnApplicationBootstrap {
             this.eventBus,
             LoginEvent,
             async event => {
-                await this.sessionCapService.enforceCap(event.user.id);
+                const ctx = await this.requestContextService.create({ apiType: 'admin' });
+                await this.sessionCapService.enforceCap(ctx, event.user.id);
             },
             'SessionManagementPlugin',
         );

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ConfigService, ID } from '@vendure/core';
-import { DataSource } from 'typeorm';
+import { ConfigService, ID, RequestContext, TransactionalConnection } from '@vendure/core';
+import { ctxQuery } from 'shared';
 
 import { MAX_ACTIVE_SESSIONS_DEFAULT, SESSION_MANAGEMENT_PLUGIN_OPTIONS } from './session.types';
 import type { SessionManagementPluginOptions } from './session.types';
@@ -11,17 +11,22 @@ export class SessionCapService {
         @Inject(SESSION_MANAGEMENT_PLUGIN_OPTIONS)
         private options: SessionManagementPluginOptions,
         private configService: ConfigService,
-        private dataSource: DataSource,
+        private connection: TransactionalConnection,
     ) {}
 
     // Invalidates the user's oldest active sessions beyond the cap; returns how many were ended.
-    async enforceCap(userId: ID): Promise<number> {
+    async enforceCap(ctx: RequestContext, userId: ID): Promise<number> {
         const cap = this.options.maxActiveSessionsPerUser ?? MAX_ACTIVE_SESSIONS_DEFAULT;
-        const tokens = await this.dataSource.transaction(async manager => {
-            await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
-                `session-cap:${userId}`,
-            ]);
-            const rows: { token: string }[] = await manager.query(
+        const tokens = await this.connection.withTransaction(ctx, async txCtx => {
+            await ctxQuery<unknown>(
+                this.connection,
+                txCtx,
+                'SELECT pg_advisory_xact_lock(hashtext($1))',
+                [`session-cap:${userId}`],
+            );
+            const rows = await ctxQuery<Array<{ token: string }>>(
+                this.connection,
+                txCtx,
                 `WITH ended AS (
                     UPDATE session SET invalidated = true WHERE id IN (
                         SELECT id FROM session

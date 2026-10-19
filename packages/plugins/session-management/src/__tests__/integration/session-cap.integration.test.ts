@@ -2,9 +2,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { DataSource } from 'typeorm';
 import type { ConfigService } from '@vendure/core';
 import {
+    createTestConnection,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
+    testRequestContext,
     testSchemaOptions,
 } from 'shared';
 
@@ -18,7 +20,11 @@ function capService(cap: number): SessionCapService {
     const configService = {
         authOptions: { sessionCacheStrategy: { delete: deleteFromCache } },
     } as unknown as ConfigService;
-    return new SessionCapService({ maxActiveSessionsPerUser: cap }, configService, dataSource);
+    return new SessionCapService(
+        { maxActiveSessionsPerUser: cap },
+        configService,
+        createTestConnection(dataSource),
+    );
 }
 
 async function insertSession(
@@ -83,7 +89,7 @@ describe('SessionCapService (integration, real Postgres)', () => {
         await insertSession('newer', 1, 10);
         await insertSession('newest', 1, 0);
 
-        const ended = await capService(2).enforceCap(1);
+        const ended = await capService(2).enforceCap(testRequestContext, 1);
 
         expect(ended).toBe(2);
         expect(await activeTokens(1)).toEqual(['newer', 'newest']);
@@ -101,7 +107,7 @@ describe('SessionCapService (integration, real Postgres)', () => {
         await insertSession('other-user', 2, 50);
         await insertSession('anonymous', 1, 60, { type: 'AnonymousSession' });
 
-        const ended = await capService(2).enforceCap(1);
+        const ended = await capService(2).enforceCap(testRequestContext, 1);
 
         expect(ended).toBe(0);
         expect(await activeTokens(2)).toEqual(['other-user']);
@@ -112,8 +118,8 @@ describe('SessionCapService (integration, real Postgres)', () => {
         for (let i = 0; i < 6; i++) await insertSession(`s${i}`, 1, 60 - i);
 
         const results = await Promise.all([
-            capService(3).enforceCap(1),
-            capService(3).enforceCap(1),
+            capService(3).enforceCap(testRequestContext, 1),
+            capService(3).enforceCap(testRequestContext, 1),
         ]);
 
         expect(results.reduce((a, b) => a + b, 0)).toBe(3);
