@@ -2,9 +2,11 @@ import { randomUUID } from 'crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DataSource } from 'typeorm';
 import {
+    createTestConnection,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
+    testRequestContext,
     testSchemaOptions,
 } from 'shared';
 
@@ -51,12 +53,17 @@ describe('SyncService.processOutbox claim (integration, real Postgres)', () => {
             },
         });
         const make = (sweep: string) =>
-            new SyncService(dataSource, rabbitFor(sweep) as never, OPTIONS, mockLogger as never);
+            new SyncService(
+                createTestConnection(dataSource),
+                rabbitFor(sweep) as never,
+                OPTIONS,
+                mockLogger as never,
+            );
         const ids = Array.from({ length: 6 }, () => randomUUID());
         for (const eventId of ids) {
             await dataSource.transaction(em =>
                 make('a').writeToOutbox(
-                    em,
+                    { em } as never,
                     {
                         eventId,
                         eventType: 'product.updated',
@@ -67,7 +74,10 @@ describe('SyncService.processOutbox claim (integration, real Postgres)', () => {
             );
         }
 
-        await Promise.all([make('a').processOutbox(), make('b').processOutbox()]);
+        await Promise.all([
+            make('a').processOutbox(testRequestContext),
+            make('b').processOutbox(testRequestContext),
+        ]);
 
         const all = [...publishedBy.a, ...publishedBy.b];
         expect([...all].sort()).toEqual([...ids].sort());

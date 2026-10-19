@@ -9,7 +9,7 @@ describe('ReservationConsumer', () => {
     let subscribers: Map<unknown, (event: unknown) => void>;
     let eventBus: { ofType: ReturnType<typeof vi.fn> };
     let syncService: { writeToOutbox: ReturnType<typeof vi.fn> };
-    let dataSource: { transaction: ReturnType<typeof vi.fn> };
+    let dataSource: { withTransaction: ReturnType<typeof vi.fn> };
     const options: SyncPluginOptions = {
         instanceType: 'central',
         instanceId: 'hub',
@@ -24,12 +24,17 @@ describe('ReservationConsumer', () => {
             })),
         };
         syncService = { writeToOutbox: vi.fn(async () => undefined) };
-        dataSource = { transaction: vi.fn(async (work: (em: unknown) => unknown) => work({})) };
+        dataSource = {
+            withTransaction: vi.fn(async (_ctx: unknown, work: (ctx: unknown) => unknown) =>
+                work({}),
+            ),
+        };
 
         const consumer = new ReservationConsumer(
             eventBus as unknown as EventBus,
             syncService as never,
             dataSource as never,
+            { create: vi.fn(async () => ({})) } as never,
             options,
         );
         consumer.onApplicationBootstrap();

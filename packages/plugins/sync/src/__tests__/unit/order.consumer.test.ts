@@ -40,7 +40,7 @@ describe('OrderConsumer', () => {
     let eventBus: { ofType: ReturnType<typeof vi.fn> };
     let syncService: { writeToOutbox: ReturnType<typeof vi.fn> };
     let dataSource: {
-        transaction: ReturnType<typeof vi.fn>;
+        withTransaction: ReturnType<typeof vi.fn>;
         getRepository: ReturnType<typeof vi.fn>;
     };
     let findOne: ReturnType<typeof vi.fn>;
@@ -55,7 +55,9 @@ describe('OrderConsumer', () => {
         syncService = { writeToOutbox: vi.fn(async () => undefined) };
         findOne = vi.fn();
         dataSource = {
-            transaction: vi.fn(async (work: (em: unknown) => unknown) => work({})),
+            withTransaction: vi.fn(async (_ctx: unknown, work: (ctx: unknown) => unknown) =>
+                work({}),
+            ),
             getRepository: vi.fn(() => ({ findOne })),
         };
     });
@@ -64,6 +66,7 @@ describe('OrderConsumer', () => {
         const consumer = new OrderConsumer(
             eventBus as unknown as EventBus,
             dataSource as never,
+            { create: vi.fn(async () => ({})) } as never,
             syncService as never,
             options,
         );

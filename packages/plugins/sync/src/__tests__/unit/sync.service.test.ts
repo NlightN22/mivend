@@ -13,13 +13,13 @@ const mockOutboxRepo = {
     findOne: vi.fn(),
 };
 
-const mockEm = {
-    getRepository: vi.fn(() => mockOutboxRepo),
-};
+const mockEm = {};
 
-const mockDataSource = {
+const mockConnection = {
     getRepository: vi.fn(() => mockOutboxRepo),
-    transaction: vi.fn((cb: (em: typeof mockEm) => Promise<void>) => cb(mockEm)),
+    withTransaction: vi.fn((_ctx: unknown, cb: (ctx: typeof mockEm) => Promise<void>) =>
+        cb(mockEm),
+    ),
 };
 
 const publishMock = vi.fn().mockResolvedValue(undefined);
@@ -40,7 +40,7 @@ describe('SyncService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         service = new SyncService(
-            mockDataSource as never,
+            mockConnection as never,
             mockRabbitMQ as never,
             options,
             mockLogger as never,
@@ -99,7 +99,7 @@ describe('SyncService', () => {
             };
             mockOutboxRepo.createQueryBuilder.mockReturnValue(mockQb);
 
-            await service.processOutbox();
+            await service.processOutbox({} as never);
 
             expect(publishMock).toHaveBeenCalledWith(
                 'product.updated.all-branches',
@@ -133,7 +133,7 @@ describe('SyncService', () => {
             mockOutboxRepo.createQueryBuilder.mockReturnValue(mockQb);
             publishMock.mockRejectedValueOnce(new Error('Connection refused'));
 
-            await service.processOutbox();
+            await service.processOutbox({} as never);
 
             expect(mockOutboxRepo.update).toHaveBeenCalledWith(
                 2,
@@ -167,7 +167,7 @@ describe('SyncService', () => {
             mockOutboxRepo.createQueryBuilder.mockReturnValue(mockQb);
             publishMock.mockRejectedValueOnce(new Error('AMQP error'));
 
-            await service.processOutbox();
+            await service.processOutbox({} as never);
 
             expect(mockOutboxRepo.update).toHaveBeenCalledWith(
                 3,

@@ -1,12 +1,14 @@
 import { randomUUID } from 'crypto';
 
 import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { DataSource } from 'typeorm';
 import {
     Administrator,
     AdministratorEvent,
     EventBus,
     NativeAuthenticationMethod,
+    RequestContext,
+    RequestContextService,
+    TransactionalConnection,
 } from '@vendure/core';
 
 import { registerOutboxProducer } from '../producer-registry';
@@ -21,24 +23,30 @@ import type { SyncPluginOptions } from '../types';
 export class AdministratorSyncProducer implements OnApplicationBootstrap {
     constructor(
         private readonly eventBus: EventBus,
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
+        private readonly requestContextService: RequestContextService,
         private readonly syncService: SyncService,
         @Inject(SYNC_PLUGIN_OPTIONS) private readonly options: SyncPluginOptions,
     ) {}
 
     onApplicationBootstrap(): void {
         if (this.options.instanceType !== 'central') return;
+        const deps = {
+            eventBus: this.eventBus,
+            connection: this.connection,
+            requestContextService: this.requestContextService,
+            syncService: this.syncService,
+        };
 
-        registerOutboxProducer(
-            this.eventBus,
-            this.dataSource,
-            this.syncService,
-            AdministratorEvent,
-            event => this.toOutboxEntry(event),
+        registerOutboxProducer(deps, AdministratorEvent, (ctx, event) =>
+            this.toOutboxEntry(ctx, event),
         );
     }
 
-    private async toOutboxEntry(event: AdministratorEvent): Promise<OutboxEntry | null> {
+    private async toOutboxEntry(
+        ctx: RequestContext,
+        event: AdministratorEvent,
+    ): Promise<OutboxEntry | null> {
         if (event.type === 'deleted') {
             return {
                 eventId: randomUUID(),
@@ -48,7 +56,7 @@ export class AdministratorSyncProducer implements OnApplicationBootstrap {
             };
         }
 
-        const admin = await this.dataSource.getRepository(Administrator).findOne({
+        const admin = await this.connection.getRepository(ctx, Administrator).findOne({
             where: { id: event.entity.id },
             relations: ['user', 'user.roles'],
         });
@@ -56,8 +64,8 @@ export class AdministratorSyncProducer implements OnApplicationBootstrap {
 
         // passwordHash is select:false in Vendure core; it must be fetched with addSelect.
         // Other loads leave it undefined, and JSON.stringify silently drops it from the outbox payload.
-        const native = await this.dataSource
-            .getRepository(NativeAuthenticationMethod)
+        const native = await this.connection
+            .getRepository(ctx, NativeAuthenticationMethod)
             .createQueryBuilder('nam')
             .addSelect('nam.passwordHash')
             .where('nam.userId = :userId', { userId: admin.user.id })

@@ -1,5 +1,10 @@
-import type { DataSource } from 'typeorm';
-import type { EventBus, VendureEvent } from '@vendure/core';
+import type {
+    EventBus,
+    RequestContext,
+    RequestContextService,
+    TransactionalConnection,
+    VendureEvent,
+} from '@vendure/core';
 import { subscribeAndLog } from 'shared';
 import type { SyncEvent } from 'shared';
 
@@ -15,24 +20,33 @@ export interface OutboxEntry {
     target: string;
 }
 
+export interface OutboxProducerDeps {
+    eventBus: EventBus;
+    connection: TransactionalConnection;
+    requestContextService: RequestContextService;
+    syncService: SyncService;
+}
+
 // Subscribes via subscribeAndLog so subscription failures are never swallowed silently.
-// Each entity supplies only a toOutboxEntry mapping; each write runs in its own transaction.
+// Each write runs in its own transaction on a fresh ctx, never inside the emitting request's one.
 export function registerOutboxProducer<E extends VendureEvent>(
-    eventBus: EventBus,
-    dataSource: DataSource,
-    syncService: SyncService,
+    deps: OutboxProducerDeps,
     EventClass: EventCtor<E>,
-    toOutboxEntry: (event: E) => Promise<OutboxEntry | null> | OutboxEntry | null,
+    toOutboxEntry: (
+        ctx: RequestContext,
+        event: E,
+    ) => Promise<OutboxEntry | null> | OutboxEntry | null,
 ): void {
     subscribeAndLog(
-        eventBus,
+        deps.eventBus,
         EventClass,
         async event => {
-            const entry = await toOutboxEntry(event);
+            const ctx = await deps.requestContextService.create({ apiType: 'admin' });
+            const entry = await toOutboxEntry(ctx, event);
             if (!entry) return;
-            await dataSource.transaction(em =>
-                syncService.writeToOutbox(
-                    em,
+            await deps.connection.withTransaction(ctx, txCtx =>
+                deps.syncService.writeToOutbox(
+                    txCtx,
                     { eventId: entry.eventId, eventType: entry.eventType, payload: entry.payload },
                     entry.target,
                 ),

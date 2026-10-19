@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import type { EventBus } from '@vendure/core';
 import { ReservationConfirmedEvent, ReservationReleasedEvent } from '@mivend/plugin-reservation';
 import {
+    createTestConnection,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
@@ -43,8 +44,19 @@ beforeAll(async () => {
         }),
     } as unknown as EventBus;
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), dlq: vi.fn() };
-    const syncService = new SyncService(dataSource, {} as never, OPTIONS, logger as never);
-    new ReservationConsumer(eventBus, syncService, dataSource, OPTIONS).onApplicationBootstrap();
+    const syncService = new SyncService(
+        createTestConnection(dataSource),
+        {} as never,
+        OPTIONS,
+        logger as never,
+    );
+    new ReservationConsumer(
+        eventBus,
+        syncService,
+        createTestConnection(dataSource),
+        { create: async () => ({}) } as never,
+        OPTIONS,
+    ).onApplicationBootstrap();
 });
 
 afterAll(async () => {

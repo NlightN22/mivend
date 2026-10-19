@@ -1,4 +1,4 @@
-import { ScheduledTask } from '@vendure/core';
+import { RequestContextService, ScheduledTask } from '@vendure/core';
 import { cronEveryMs } from 'shared';
 
 import { SyncLogger } from './sync-logger';
@@ -14,7 +14,10 @@ export function createSyncOutboxTask(options: SyncPluginOptions): ScheduledTask 
         id: 'sync-outbox',
         description: 'Drains sync_outbox to RabbitMQ.',
         schedule: cronEveryMs(everyMs),
-        execute: ({ injector }) => injector.get(SyncService).processOutbox(),
+        execute: async ({ injector }) => {
+            const ctx = await injector.get(RequestContextService).create({ apiType: 'admin' });
+            await injector.get(SyncService).processOutbox(ctx);
+        },
     });
 }
 
@@ -31,10 +34,11 @@ export function createSyncErpPollTask(options: SyncPluginOptions): ScheduledTask
 
             const syncService = injector.get(SyncService);
             const logger = injector.get(SyncLogger);
+            const ctx = await injector.get(RequestContextService).create({ apiType: 'admin' });
             try {
-                const since = await syncService.getErpCursor();
+                const since = await syncService.getErpCursor(ctx);
                 const changeSet = await options.erpAdapter.fetchChanges(since);
-                await syncService.processErpChanges(changeSet);
+                await syncService.processErpChanges(ctx, changeSet);
             } catch (err) {
                 logger.error('ERP poll failed', err);
                 throw err;

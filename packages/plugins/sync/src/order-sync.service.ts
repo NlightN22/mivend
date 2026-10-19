@@ -9,9 +9,8 @@ import {
     TransactionalConnection,
     UserInputError,
 } from '@vendure/core';
-import { DataSource } from 'typeorm';
 import type { ID, OrderState } from '@vendure/core';
-import { withAggregateLock } from 'shared';
+import { ctxQuery, withAggregateLock } from 'shared';
 import type { SyncEventByType } from 'shared';
 
 import { SyncService } from './sync.service';
@@ -27,7 +26,6 @@ export class OrderSyncService {
     constructor(
         private readonly orderService: OrderService,
         private readonly requestContextService: RequestContextService,
-        private readonly dataSource: DataSource,
         private readonly syncService: SyncService,
         private readonly connection: TransactionalConnection,
         @Inject(SYNC_PLUGIN_OPTIONS) private readonly options: SyncPluginOptions,
@@ -116,7 +114,10 @@ export class OrderSyncService {
 
     async applyUpdate(event: SyncEventByType<'order.updated'>): Promise<void> {
         const { payload } = event;
-        const rows: Array<{ id: string }> = await this.dataSource.query(
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const rows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM "order" WHERE "customFieldsSourceorderid" = $1`,
             [payload.sourceOrderId],
         );
@@ -129,7 +130,6 @@ export class OrderSyncService {
             );
         }
 
-        const ctx = await this.requestContextService.create({ apiType: 'admin' });
         const result = await this.orderService.transitionToState(
             ctx,
             orderId,
@@ -147,13 +147,16 @@ export class OrderSyncService {
     // the owning instance applies it as a real payment via the normal Vendure API.
     async applyPaymentRecorded(event: SyncEventByType<'payment.recorded'>): Promise<void> {
         const { payload } = event;
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
 
-        const replicaRows: Array<{ id: string }> = await this.dataSource.query(
+        const replicaRows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM "order" WHERE "customFieldsSourceorderid" = $1`,
             [payload.sourceOrderId],
         );
         if (replicaRows[0]) {
-            await this.dataSource.getRepository(Order).update(replicaRows[0].id, {
+            await this.connection.getRepository(ctx, Order).update(replicaRows[0].id, {
                 customFields: { paymentStatus: payload.state },
             });
             Logger.info(
@@ -163,7 +166,9 @@ export class OrderSyncService {
             return;
         }
 
-        const ownRows: Array<{ id: string }> = await this.dataSource.query(
+        const ownRows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM "order" WHERE id::text = $1 AND "customFieldsSourceorderid" IS NULL`,
             [payload.sourceOrderId],
         );
@@ -176,7 +181,6 @@ export class OrderSyncService {
             );
         }
 
-        const ctx = await this.requestContextService.create({ apiType: 'admin' });
         // addPaymentToOrder asserts an open transaction, unlike create/addItemToOrder/transitionToState.
         // Without it, every payment.recorded fails with 'must be called within a transaction'.
         await this.connection.withTransaction(ctx, async txCtx => {
@@ -210,8 +214,8 @@ export class OrderSyncService {
         outcome?: 'success' | 'pending' | 'fail' | 'cancel',
         rrn?: string,
     ): Promise<void> {
-        const order = await this.dataSource
-            .getRepository(Order)
+        const order = await this.connection
+            .getRepository(ctx, Order)
             .findOne({ where: { id: orderId } });
         if (!order) {
             throw new UserInputError(`Order not found: id=${String(orderId)}`);
@@ -232,9 +236,9 @@ export class OrderSyncService {
             this.options.instanceType === 'branch'
                 ? 'central'
                 : (order.customFields.branchId ?? 'all-branches');
-        await this.dataSource.transaction(em =>
+        await this.connection.withTransaction(ctx, txCtx =>
             this.syncService.writeToOutbox(
-                em,
+                txCtx,
                 {
                     eventType: 'payment.recorded',
                     payload: {

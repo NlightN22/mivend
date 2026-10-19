@@ -1,6 +1,10 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { DataSource, EntityManager } from 'typeorm';
-import { EventBus, RequestContextService } from '@vendure/core';
+import {
+    EventBus,
+    RequestContext,
+    RequestContextService,
+    TransactionalConnection,
+} from '@vendure/core';
 import { SyncEventSchema, assertNever } from 'shared';
 import type { SyncEventByType } from 'shared';
 
@@ -18,7 +22,7 @@ import { BranchKassaPaymentEvent } from '../erp-payment.events';
 export class CentralConsumer implements OnModuleInit {
     constructor(
         private readonly rabbitmq: RabbitMQService,
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         @Inject(SYNC_PLUGIN_OPTIONS) private readonly options: SyncPluginOptions,
         private readonly logger: SyncLogger,
         private readonly orderSyncService: OrderSyncService,
@@ -40,16 +44,17 @@ export class CentralConsumer implements OnModuleInit {
 
         // Defense-in-depth, not load-bearing — see ProductConsumer's identical guard.
         if (event.sourceInstanceId === this.options.instanceId) return;
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
 
         switch (event.eventType) {
             case 'order.created':
-                await this.handleOrderCreated(event);
+                await this.handleOrderCreated(ctx, event);
                 break;
             case 'order.updated':
-                await this.handleOrderUpdated(event);
+                await this.handleOrderUpdated(ctx, event);
                 break;
             case 'payment.recorded':
-                await this.handlePaymentRecorded(event);
+                await this.handlePaymentRecorded(ctx, event);
                 break;
             case 'product.created':
             case 'product.updated':
@@ -71,9 +76,10 @@ export class CentralConsumer implements OnModuleInit {
         }
     }
 
-    private async tryMarkProcessed(em: EntityManager, eventId: string): Promise<boolean> {
-        const result = await em
-            .createQueryBuilder()
+    private async tryMarkProcessed(ctx: RequestContext, eventId: string): Promise<boolean> {
+        const result = await this.connection
+            .getRepository(ctx, SyncProcessedEvent)
+            .manager.createQueryBuilder()
             .insert()
             .into(SyncProcessedEvent)
             .values({ eventId })
@@ -84,31 +90,44 @@ export class CentralConsumer implements OnModuleInit {
 
     // Same reasoning as ProductConsumer's identical pair — a plain existence check, not the
     // atomic insert tryMarkProcessed does, since apply happens before mark here (see below).
-    private async isAlreadyProcessed(eventId: string): Promise<boolean> {
-        const existing = await this.dataSource
-            .getRepository(SyncProcessedEvent)
+    private async isAlreadyProcessed(ctx: RequestContext, eventId: string): Promise<boolean> {
+        const existing = await this.connection
+            .getRepository(ctx, SyncProcessedEvent)
             .findOne({ where: { eventId } });
         return !!existing;
     }
 
     // applyUpdate throws on a missing local replica so the message is retried with backoff,
     // not dropped when it races order.created delivery. Mark only after a successful apply.
-    private async handleOrderCreated(event: SyncEventByType<'order.created'>): Promise<void> {
-        if (await this.isAlreadyProcessed(event.eventId)) return;
+    private async handleOrderCreated(
+        ctx: RequestContext,
+        event: SyncEventByType<'order.created'>,
+    ): Promise<void> {
+        if (await this.isAlreadyProcessed(ctx, event.eventId)) return;
         await this.orderSyncService.applyCreate(event);
-        await this.dataSource.transaction(em => this.tryMarkProcessed(em, event.eventId));
+        await this.connection.withTransaction(ctx, txCtx =>
+            this.tryMarkProcessed(txCtx, event.eventId),
+        );
         this.logger.info(`Applied order.created [${event.payload.sourceOrderId}]`);
     }
 
-    private async handleOrderUpdated(event: SyncEventByType<'order.updated'>): Promise<void> {
-        if (await this.isAlreadyProcessed(event.eventId)) return;
+    private async handleOrderUpdated(
+        ctx: RequestContext,
+        event: SyncEventByType<'order.updated'>,
+    ): Promise<void> {
+        if (await this.isAlreadyProcessed(ctx, event.eventId)) return;
         await this.orderSyncService.applyUpdate(event);
-        await this.dataSource.transaction(em => this.tryMarkProcessed(em, event.eventId));
+        await this.connection.withTransaction(ctx, txCtx =>
+            this.tryMarkProcessed(txCtx, event.eventId),
+        );
         this.logger.info(`Applied order.updated [${event.payload.sourceOrderId}]`);
     }
 
-    private async handlePaymentRecorded(event: SyncEventByType<'payment.recorded'>): Promise<void> {
-        if (await this.isAlreadyProcessed(event.eventId)) return;
+    private async handlePaymentRecorded(
+        ctx: RequestContext,
+        event: SyncEventByType<'payment.recorded'>,
+    ): Promise<void> {
+        if (await this.isAlreadyProcessed(ctx, event.eventId)) return;
         await this.orderSyncService.applyPaymentRecorded(event);
         if (
             event.payload.proformaInvoiceId !== undefined &&
@@ -117,7 +136,6 @@ export class CentralConsumer implements OnModuleInit {
         ) {
             // Publishes only — the risky work (payProformaInvoice) happens later, in
             // plugin-acquiring's inbox worker (the external-integration-rules skill).
-            const ctx = await this.requestContextService.create({ apiType: 'admin' });
             this.eventBus.publish(
                 new BranchKassaPaymentEvent(
                     ctx,
@@ -129,7 +147,9 @@ export class CentralConsumer implements OnModuleInit {
                 ),
             );
         }
-        await this.dataSource.transaction(em => this.tryMarkProcessed(em, event.eventId));
+        await this.connection.withTransaction(ctx, txCtx =>
+            this.tryMarkProcessed(txCtx, event.eventId),
+        );
         this.logger.info(`Applied payment.recorded [${event.payload.sourceOrderId}]`);
     }
 }

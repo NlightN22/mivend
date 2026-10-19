@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto';
 
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource, EntityManager, IsNull } from 'typeorm';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { IsNull } from 'typeorm';
 
 import { SyncOutboxEntry } from './entities/sync-outbox.entity';
 import { RabbitMQService } from './rabbitmq.service';
@@ -25,7 +26,7 @@ export class SyncService {
     private readonly maxRetry: number;
 
     constructor(
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         private readonly rabbitmq: RabbitMQService,
         @Inject(SYNC_PLUGIN_OPTIONS) private readonly options: SyncPluginOptions,
         private readonly logger: SyncLogger,
@@ -33,8 +34,8 @@ export class SyncService {
         this.maxRetry = options.maxRetry ?? MAX_RETRY_DEFAULT;
     }
 
-    async writeToOutbox(em: EntityManager, event: OutboxInput, target: string): Promise<void> {
-        const entry = em.getRepository(SyncOutboxEntry).create({
+    async writeToOutbox(ctx: RequestContext, event: OutboxInput, target: string): Promise<void> {
+        const entry = this.connection.getRepository(ctx, SyncOutboxEntry).create({
             eventId: event.eventId ?? randomUUID(),
             eventType: event.eventType,
             payload: event.payload as Record<string, unknown>,
@@ -45,36 +46,36 @@ export class SyncService {
             lastError: null,
             lastErrorAt: null,
         });
-        await em.getRepository(SyncOutboxEntry).save(entry);
+        await this.connection.getRepository(ctx, SyncOutboxEntry).save(entry);
     }
 
-    async processOutbox(): Promise<void> {
+    async processOutbox(ctx: RequestContext): Promise<void> {
         const seen: number[] = [];
         for (let i = 0; i < BATCH_SIZE; i++) {
-            const more = await this.dataSource.transaction(async em => {
-                const entry = await this.claimNextEntry(em, seen);
+            const more = await this.connection.withTransaction(ctx, async txCtx => {
+                const entry = await this.claimNextEntry(txCtx, seen);
                 if (!entry) return false;
                 seen.push(entry.id);
-                await this.publishEntry(em, entry);
+                await this.publishEntry(txCtx, entry);
                 return true;
             });
             if (!more) return;
         }
     }
 
-    async getErpCursor(): Promise<Date> {
-        const last = await this.dataSource.getRepository(SyncOutboxEntry).findOne({
+    async getErpCursor(ctx: RequestContext): Promise<Date> {
+        const last = await this.connection.getRepository(ctx, SyncOutboxEntry).findOne({
             where: { status: 'delivered', deliveredAt: IsNull() as never },
             order: { deliveredAt: 'DESC' },
         });
         return last?.deliveredAt ?? new Date(0);
     }
 
-    async processErpChanges(changeSet: ErpChangeSet): Promise<void> {
-        await this.dataSource.transaction(async em => {
+    async processErpChanges(ctx: RequestContext, changeSet: ErpChangeSet): Promise<void> {
+        await this.connection.withTransaction(ctx, async txCtx => {
             for (const event of changeSet.events) {
                 await this.writeToOutbox(
-                    em,
+                    txCtx,
                     {
                         eventType: event.type as SyncEvent['eventType'],
                         payload: event.payload as SyncEvent['payload'],
@@ -87,11 +88,11 @@ export class SyncService {
 
     // The row lock is held through publish so overlapping sweeps skip an in-flight entry.
     private async claimNextEntry(
-        em: EntityManager,
+        ctx: RequestContext,
         seen: number[],
     ): Promise<SyncOutboxEntry | null> {
-        const qb = em
-            .getRepository(SyncOutboxEntry)
+        const qb = this.connection
+            .getRepository(ctx, SyncOutboxEntry)
             .createQueryBuilder('e')
             .where("e.status = 'pending'")
             .andWhere('e.retryCount < :max', { max: this.maxRetry });
@@ -120,7 +121,7 @@ export class SyncService {
         }
     }
 
-    private async publishEntry(em: EntityManager, entry: SyncOutboxEntry): Promise<void> {
+    private async publishEntry(ctx: RequestContext, entry: SyncOutboxEntry): Promise<void> {
         try {
             const event = SyncEventSchema.parse({
                 eventId: entry.eventId,
@@ -133,7 +134,7 @@ export class SyncService {
             // Target is part of the routing key because consumers filter at the broker via binding patterns,
             // not in application code, so the key format is load-bearing for every subscriber.
             await this.publishWithTimeout(`${entry.eventType}.${entry.target}`, event);
-            await em.getRepository(SyncOutboxEntry).update(entry.id, {
+            await this.connection.getRepository(ctx, SyncOutboxEntry).update(entry.id, {
                 deliveredAt: new Date(),
                 status: 'delivered',
             });
@@ -142,7 +143,7 @@ export class SyncService {
             const error = String(err);
             const nextRetry = entry.retryCount + 1;
             const failed = nextRetry >= this.maxRetry;
-            await em.getRepository(SyncOutboxEntry).update(entry.id, {
+            await this.connection.getRepository(ctx, SyncOutboxEntry).update(entry.id, {
                 retryCount: nextRetry,
                 lastError: error,
                 lastErrorAt: new Date(),

@@ -2,9 +2,11 @@ import { randomUUID } from 'crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DataSource } from 'typeorm';
 import {
+    createTestConnection,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
+    testRequestContext,
     testSchemaOptions,
 } from 'shared';
 
@@ -89,11 +91,16 @@ beforeAll(async () => {
     branchRabbitMQ = new RabbitMQService(BRANCH_OPTIONS, mockLogger as never);
     await branchRabbitMQ.connect();
 
-    syncService = new SyncService(dataSource, hubRabbitMQ, HUB_OPTIONS, mockLogger as never);
+    syncService = new SyncService(
+        createTestConnection(dataSource),
+        hubRabbitMQ,
+        HUB_OPTIONS,
+        mockLogger as never,
+    );
     // Must not use syncService (sourceInstanceId='hub'): CentralConsumer's self-echo guard
     // would drop it as Central's own echo, since the guard compares sourceInstanceId to its instanceId.
     branchSyncService = new SyncService(
-        dataSource,
+        createTestConnection(dataSource),
         branchRabbitMQ,
         BRANCH_OPTIONS,
         mockLogger as never,
@@ -101,7 +108,8 @@ beforeAll(async () => {
 
     consumer = new ProductConsumer(
         branchRabbitMQ,
-        dataSource,
+        createTestConnection(dataSource),
+        { create: vi.fn(async () => ({}) as never) } as never,
         BRANCH_OPTIONS,
         mockLogger as never,
         { applyUpsert: vi.fn(), applyDeactivation: vi.fn() } as never,
@@ -115,7 +123,7 @@ beforeAll(async () => {
     };
     centralConsumer = new CentralConsumer(
         hubRabbitMQ,
-        dataSource,
+        createTestConnection(dataSource),
         HUB_OPTIONS,
         mockLogger as never,
         centralOrderSyncMock as never,
@@ -153,13 +161,13 @@ describe('outbox publishing', () => {
         const eventId = randomUUID();
         await dataSource.transaction(async em => {
             await syncService.writeToOutbox(
-                em,
+                { em } as never,
                 { eventId, eventType: 'product.updated', payload: { productId: 'p-1' } } as never,
                 'all-branches',
             );
         });
 
-        await syncService.processOutbox();
+        await syncService.processOutbox(testRequestContext);
 
         const entry = await dataSource.getRepository(SyncOutboxEntry).findOneBy({ eventId });
         expect(entry?.status).toBe('delivered');
@@ -169,7 +177,7 @@ describe('outbox publishing', () => {
     it('marks entry failed and calls dlq after maxRetry exhausted', async () => {
         const fastOptions: SyncPluginOptions = { ...HUB_OPTIONS, maxRetry: 2 };
         const fastService = new SyncService(
-            dataSource,
+            createTestConnection(dataSource),
             hubRabbitMQ,
             fastOptions,
             mockLogger as never,
@@ -190,8 +198,8 @@ describe('outbox publishing', () => {
         });
         await repo.save(entry);
 
-        await fastService.processOutbox();
-        await fastService.processOutbox();
+        await fastService.processOutbox(testRequestContext);
+        await fastService.processOutbox(testRequestContext);
 
         const updated = await repo.findOneBy({ eventId: entry.eventId });
         expect(updated?.status).toBe('failed');
@@ -234,13 +242,21 @@ describe('createSyncOutboxTask', () => {
                 rabbitmq: { url: RABBITMQ_URL },
             };
             const rabbitmq = instanceType === 'central' ? hubRabbitMQ : branchRabbitMQ;
-            const svc = new SyncService(dataSource, rabbitmq, options, mockLogger as never);
-            const injector = { get: () => svc } as never;
+            const svc = new SyncService(
+                createTestConnection(dataSource),
+                rabbitmq,
+                options,
+                mockLogger as never,
+            );
+            const injector = {
+                get: (token: unknown) =>
+                    token === SyncService ? svc : { create: async () => ({}) },
+            } as never;
 
             const eventId = randomUUID();
             await dataSource.transaction(em =>
                 svc.writeToOutbox(
-                    em,
+                    { em } as never,
                     {
                         eventId,
                         eventType: 'product.updated',
@@ -272,7 +288,7 @@ describe('branch consumer', () => {
         const eventId = randomUUID();
         await dataSource.transaction(async em => {
             await syncService.writeToOutbox(
-                em,
+                { em } as never,
                 {
                     eventId,
                     eventType: 'product.updated',
@@ -282,7 +298,7 @@ describe('branch consumer', () => {
             );
         });
 
-        await syncService.processOutbox();
+        await syncService.processOutbox(testRequestContext);
 
         await waitFor(async () => {
             const count = await dataSource.getRepository(SyncProcessedEvent).countBy({ eventId });
@@ -402,7 +418,7 @@ describe('batch processing', () => {
 
         await dataSource.transaction(async em => {
             await syncService.writeToOutbox(
-                em,
+                { em } as never,
                 {
                     eventType: 'product.created',
                     payload: { productId, slug: 'test', name: 'Test', enabled: true },
@@ -410,7 +426,7 @@ describe('batch processing', () => {
                 'all-branches',
             );
             await syncService.writeToOutbox(
-                em,
+                { em } as never,
                 {
                     eventType: 'product.updated',
                     payload: { productId, enabled: false },
@@ -418,13 +434,13 @@ describe('batch processing', () => {
                 'all-branches',
             );
             await syncService.writeToOutbox(
-                em,
+                { em } as never,
                 { eventType: 'product.deleted', payload: { productId } } as never,
                 'all-branches',
             );
         });
 
-        await syncService.processOutbox();
+        await syncService.processOutbox(testRequestContext);
 
         await waitFor(async () => {
             const count = await dataSource.getRepository(SyncProcessedEvent).count();
@@ -445,7 +461,7 @@ describe('central consumer', () => {
         const eventId = randomUUID();
         await dataSource.transaction(em =>
             branchSyncService.writeToOutbox(
-                em,
+                { em } as never,
                 {
                     eventId,
                     eventType: 'order.created',
@@ -461,7 +477,7 @@ describe('central consumer', () => {
             ),
         );
 
-        await branchSyncService.processOutbox();
+        await branchSyncService.processOutbox(testRequestContext);
 
         await waitFor(async () => {
             const count = await dataSource.getRepository(SyncProcessedEvent).countBy({ eventId });

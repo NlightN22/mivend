@@ -1,9 +1,11 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DataSource } from 'typeorm';
 import {
+    createTestConnection,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
+    testRequestContext,
     testSchemaOptions,
 } from 'shared';
 
@@ -41,7 +43,12 @@ beforeAll(async () => {
 
     // RabbitMQService is never invoked in this file — processErpChanges/writeToOutbox only write
     // to Postgres, delivery is a separate concern already covered by sync-cycle.test.ts.
-    syncService = new SyncService(dataSource, {} as never, HUB_OPTIONS, mockLogger as never);
+    syncService = new SyncService(
+        createTestConnection(dataSource),
+        {} as never,
+        HUB_OPTIONS,
+        mockLogger as never,
+    );
 });
 
 afterEach(async () => {
@@ -55,7 +62,7 @@ afterAll(async () => {
 
 describe('SyncService outbox atomicity (integration, real Postgres)', () => {
     it('processErpChanges writes every event in the batch atomically — all rows present after a clean commit', async () => {
-        await syncService.processErpChanges({
+        await syncService.processErpChanges(testRequestContext, {
             cursor: new Date(),
             events: [
                 {
@@ -101,7 +108,7 @@ describe('SyncService outbox atomicity (integration, real Postgres)', () => {
         await expect(
             dataSource.transaction(async em => {
                 await syncService.writeToOutbox(
-                    em,
+                    { em } as never,
                     {
                         eventId: duplicateEventId,
                         eventType: 'price.updated',
@@ -117,7 +124,7 @@ describe('SyncService outbox atomicity (integration, real Postgres)', () => {
                 // Same eventId again inside the SAME transaction — sync_outbox's unique index on
                 // event_id rejects it, forcing the whole transaction (both writes) to roll back.
                 await syncService.writeToOutbox(
-                    em,
+                    { em } as never,
                     {
                         eventId: duplicateEventId,
                         eventType: 'price.updated',
@@ -141,7 +148,7 @@ describe('SyncService outbox atomicity (integration, real Postgres)', () => {
         await expect(
             dataSource.transaction(async em => {
                 await syncService.writeToOutbox(
-                    em,
+                    { em } as never,
                     {
                         eventType: 'price.updated',
                         payload: {

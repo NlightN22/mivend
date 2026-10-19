@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { EntityManager } from 'typeorm';
+import { describe, expect, it, vi } from 'vitest';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { SyncEventByType } from 'shared';
 
 import { AdministratorSyncService } from '../../administrator-sync.service';
@@ -9,7 +9,7 @@ function makeEm(overrides: {
     userFindOne?: ReturnType<typeof vi.fn>;
     nativeFindOne?: ReturnType<typeof vi.fn>;
 }): {
-    em: EntityManager;
+    em: TransactionalConnection;
     roleRepo: { find: ReturnType<typeof vi.fn> };
     adminRepo: {
         update: ReturnType<typeof vi.fn>;
@@ -41,15 +41,22 @@ function makeEm(overrides: {
     };
 
     const em = {
-        query: overrides.query,
-        getRepository: vi.fn((entity: { name: string }) => {
+        getRepository: vi.fn((_ctx: unknown, entity: { name: string } | string) => {
+            if (entity === 'Channel') return { query: overrides.query };
+            entity = entity as { name: string };
             if (entity.name === 'Role') return roleRepo;
             if (entity.name === 'Administrator') return adminRepo;
             if (entity.name === 'User') return userRepo;
             return nativeRepo;
         }),
     };
-    return { em: em as unknown as EntityManager, roleRepo, adminRepo, userRepo, nativeRepo };
+    return {
+        em: em as unknown as TransactionalConnection,
+        roleRepo,
+        adminRepo,
+        userRepo,
+        nativeRepo,
+    };
 }
 
 const upsertPayload = {
@@ -62,13 +69,9 @@ const upsertPayload = {
     branchId: 'branch-a',
 };
 
+const ctx = {} as RequestContext;
+
 describe('AdministratorSyncService', () => {
-    let service: AdministratorSyncService;
-
-    beforeEach(() => {
-        service = new AdministratorSyncService();
-    });
-
     it('creates a new local User + NativeAuthenticationMethod + Administrator when no replica exists yet', async () => {
         const { em, adminRepo, userRepo, nativeRepo } = makeEm({ query: vi.fn(async () => []) });
 
@@ -77,7 +80,7 @@ describe('AdministratorSyncService', () => {
             payload: upsertPayload,
         } as unknown as SyncEventByType<'administrator.created'>;
 
-        await service.applyUpsert(em, event);
+        await new AdministratorSyncService(em).applyUpsert(ctx, event);
 
         expect(userRepo.save).toHaveBeenCalled();
         expect(nativeRepo.save).toHaveBeenCalledWith(
@@ -114,7 +117,7 @@ describe('AdministratorSyncService', () => {
             payload: upsertPayload,
         } as unknown as SyncEventByType<'administrator.updated'>;
 
-        await service.applyUpsert(em, event);
+        await new AdministratorSyncService(em).applyUpsert(ctx, event);
 
         expect(adminRepo.update).toHaveBeenCalledWith(
             'local-admin-1',
@@ -138,7 +141,7 @@ describe('AdministratorSyncService', () => {
             payload: { administratorId: 'central-admin-9' },
         } as unknown as SyncEventByType<'administrator.deactivated'>;
 
-        await service.applyDeactivation(em, event);
+        await new AdministratorSyncService(em).applyDeactivation(ctx, event);
 
         expect(query).toHaveBeenCalledWith(expect.stringContaining('UPDATE administrator'), [
             'central-admin-9',

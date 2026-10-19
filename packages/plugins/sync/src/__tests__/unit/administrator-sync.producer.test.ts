@@ -30,7 +30,7 @@ describe('AdministratorSyncProducer', () => {
     let eventBus: { ofType: ReturnType<typeof vi.fn> };
     let syncService: { writeToOutbox: ReturnType<typeof vi.fn> };
     let dataSource: {
-        transaction: ReturnType<typeof vi.fn>;
+        withTransaction: ReturnType<typeof vi.fn>;
         getRepository: ReturnType<typeof vi.fn>;
     };
     let adminFindOne: ReturnType<typeof vi.fn>;
@@ -60,8 +60,10 @@ describe('AdministratorSyncProducer', () => {
         };
 
         dataSource = {
-            transaction: vi.fn(async (work: (em: unknown) => unknown) => work({})),
-            getRepository: vi.fn((entity: { name: string }) => {
+            withTransaction: vi.fn(async (_ctx: unknown, work: (ctx: unknown) => unknown) =>
+                work({}),
+            ),
+            getRepository: vi.fn((_ctx: unknown, entity: { name: string }) => {
                 if (entity.name === 'Administrator') return { findOne: adminFindOne };
                 return { createQueryBuilder: vi.fn(() => nativeQueryBuilder) };
             }),
@@ -72,6 +74,7 @@ describe('AdministratorSyncProducer', () => {
         const producer = new AdministratorSyncProducer(
             eventBus as unknown as EventBus,
             dataSource as never,
+            { create: vi.fn(async () => ({})) } as never,
             syncService as never,
             BRANCH_OPTIONS,
         );
@@ -84,6 +87,7 @@ describe('AdministratorSyncProducer', () => {
         const producer = new AdministratorSyncProducer(
             eventBus as unknown as EventBus,
             dataSource as never,
+            { create: vi.fn(async () => ({})) } as never,
             syncService as never,
             CENTRAL_OPTIONS,
         );
@@ -109,6 +113,7 @@ describe('AdministratorSyncProducer', () => {
         const producer = new AdministratorSyncProducer(
             eventBus as unknown as EventBus,
             dataSource as never,
+            { create: vi.fn(async () => ({})) } as never,
             syncService as never,
             CENTRAL_OPTIONS,
         );
@@ -141,6 +146,7 @@ describe('AdministratorSyncProducer', () => {
         const producer = new AdministratorSyncProducer(
             eventBus as unknown as EventBus,
             dataSource as never,
+            { create: vi.fn(async () => ({})) } as never,
             syncService as never,
             CENTRAL_OPTIONS,
         );

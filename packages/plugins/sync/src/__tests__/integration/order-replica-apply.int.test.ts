@@ -89,7 +89,6 @@ beforeAll(async () => {
     service = new OrderSyncService(
         orderService as never,
         { create: async () => ({}) as RequestContext } as never,
-        dataSource,
         {} as never,
         connection,
         {} as never,

@@ -1,8 +1,10 @@
 import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { DataSource } from 'typeorm';
 import {
     EventBus,
     Order,
+    RequestContext,
+    RequestContextService,
+    TransactionalConnection,
     OrderStateTransitionEvent,
     PaymentStateTransitionEvent,
 } from '@vendure/core';
@@ -22,43 +24,41 @@ export class OrderConsumer implements OnApplicationBootstrap {
 
     constructor(
         private readonly eventBus: EventBus,
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
+        private readonly requestContextService: RequestContextService,
         private readonly syncService: SyncService,
         @Inject(SYNC_PLUGIN_OPTIONS) private readonly options: SyncPluginOptions,
     ) {}
 
     onApplicationBootstrap(): void {
-        registerOutboxProducer(
-            this.eventBus,
-            this.dataSource,
-            this.syncService,
-            OrderReadyForErpEvent,
-            event => this.toOrderCreatedEntry(event),
+        const deps = {
+            eventBus: this.eventBus,
+            connection: this.connection,
+            requestContextService: this.requestContextService,
+            syncService: this.syncService,
+        };
+        registerOutboxProducer(deps, OrderReadyForErpEvent, (ctx, event) =>
+            this.toOrderCreatedEntry(ctx, event),
         );
 
         // The first AddingItems exit fires before OrderPlacedEvent, so its order.updated would race
         // order.created and hit the no-replica no-op; order.created already carries the placed state.
-        registerOutboxProducer(
-            this.eventBus,
-            this.dataSource,
-            this.syncService,
-            OrderStateTransitionEvent,
-            event => this.toOrderUpdatedEntry(event),
+        registerOutboxProducer(deps, OrderStateTransitionEvent, (_ctx, event) =>
+            this.toOrderUpdatedEntry(event),
         );
 
         // Skip sync re-application of incoming payment.recorded (system context, no activeUserId):
         // otherwise its own .echo would ping-pong the same fact back out.
-        registerOutboxProducer(
-            this.eventBus,
-            this.dataSource,
-            this.syncService,
-            PaymentStateTransitionEvent,
-            event => this.toPaymentRecordedEntry(event),
+        registerOutboxProducer(deps, PaymentStateTransitionEvent, (_ctx, event) =>
+            this.toPaymentRecordedEntry(event),
         );
     }
 
-    private async toOrderCreatedEntry(event: OrderReadyForErpEvent): Promise<OutboxEntry | null> {
-        const order = await this.dataSource.getRepository(Order).findOne({
+    private async toOrderCreatedEntry(
+        ctx: RequestContext,
+        event: OrderReadyForErpEvent,
+    ): Promise<OutboxEntry | null> {
+        const order = await this.connection.getRepository(ctx, Order).findOne({
             where: { id: event.orderId },
             relations: ['lines', 'lines.productVariant', 'customer'],
         });

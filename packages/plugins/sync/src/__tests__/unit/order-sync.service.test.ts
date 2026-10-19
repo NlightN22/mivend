@@ -22,11 +22,6 @@ describe('OrderSyncService', () => {
     let query: ReturnType<typeof vi.fn>;
     let update: ReturnType<typeof vi.fn>;
     let findOne: ReturnType<typeof vi.fn>;
-    let dataSource: {
-        query: ReturnType<typeof vi.fn>;
-        getRepository: ReturnType<typeof vi.fn>;
-        transaction: ReturnType<typeof vi.fn>;
-    };
     let syncService: { writeToOutbox: ReturnType<typeof vi.fn> };
     let connection: {
         withTransaction: ReturnType<typeof vi.fn>;
@@ -46,15 +41,17 @@ describe('OrderSyncService', () => {
         query = vi.fn();
         update = vi.fn();
         findOne = vi.fn();
-        dataSource = {
-            query,
-            getRepository: vi.fn(() => ({ update, findOne })),
-            transaction: vi.fn(async (work: (em: unknown) => unknown) => work({})),
-        };
         syncService = { writeToOutbox: vi.fn(async () => undefined) };
         connection = {
             getRepository: vi.fn((_ctx: unknown, entity: unknown) =>
-                typeof entity === 'string' ? { query: vi.fn() } : { query, update },
+                typeof entity === 'string'
+                    ? {
+                          query: (sql: string, params: unknown[]) =>
+                              sql.includes('pg_advisory')
+                                  ? Promise.resolve([])
+                                  : query(sql, params),
+                      }
+                    : { query, update, findOne },
             ),
             withTransaction: vi.fn(async (_ctx: unknown, work: (txCtx: unknown) => unknown) =>
                 work({}),
@@ -64,7 +61,6 @@ describe('OrderSyncService', () => {
         service = new OrderSyncService(
             orderService as never,
             requestContextService as never,
-            dataSource as never,
             syncService as never,
             connection as never,
             options as never,
