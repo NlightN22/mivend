@@ -6,6 +6,7 @@ import {
     adminCall,
     expectedSplit,
     managerToken,
+    splitGap,
     superadminToken,
     type PriceTypeSplit,
 } from './price-type-access';
@@ -25,6 +26,7 @@ test.beforeAll(async () => {
     split = expectedSplit(env.manager.username);
     manager = await managerToken();
     superadmin = await superadminToken();
+    if (splitGap(split) || split.confidential.length === 0) return;
     const confidential = split.confidential.map(c => `'${c}'`).join(',');
     variantId = select<{ id: string }>(
         `SELECT "variantId" AS id FROM product_variant_price_entry WHERE "priceTypeCode" IN (${confidential})
@@ -38,6 +40,8 @@ test.beforeAll(async () => {
 });
 test.beforeEach(() => {
     test.skip(!loadContourEnv().manager, MANAGER_MISSING_REASON);
+    test.skip(!!splitGap(split), splitGap(split));
+    test.skip(split.confidential.length === 0, 'the contour has no confidential price type');
 });
 
 test('6: prices of a confidential type are denied to the manager and exist for the superadmin', async () => {

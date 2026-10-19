@@ -8,6 +8,7 @@ import {
     expectedSplit,
     managerToken,
     openManagerPage,
+    splitGap,
     superadminToken,
     visit,
     type PriceTypeSplit,
@@ -25,8 +26,8 @@ const INBOX = `{ myApprovalsInbox(allInvolvedOptions: { take: 100, requestType: 
 let split: PriceTypeSplit;
 let session: Awaited<ReturnType<typeof openManagerPage>> | undefined;
 let allowedCode: string;
-let hiddenCustomerCode: string;
-let confidentialCode: string;
+let hiddenCustomerCode: string | undefined;
+let confidentialCode: string | undefined;
 const tag = (name: string): string => `${grantMarker()}-${name}-${Date.now().toString(36)}`;
 const justifications = { allowed: '', hidden: '', confidential: '' };
 const requestIds = { allowed: '', hidden: '', confidential: '' };
@@ -52,8 +53,8 @@ test.beforeAll(async ({ browser }) => {
     const { manager } = loadContourEnv();
     if (!manager) return;
     split = expectedSplit(manager.username);
-    allowedCode = split.allowed.find(c => c !== 'roznichnaya') ?? split.allowed[0];
-    hiddenCustomerCode = split.hidden.find(c => !split.confidential.includes(c)) as string;
+    allowedCode = split.allowed.find(c => c !== split.defaultCode) ?? split.allowed[0];
+    hiddenCustomerCode = split.hidden.find(c => !split.confidential.includes(c));
     confidentialCode = split.confidential[0];
     session = await openManagerPage(browser);
 });
@@ -64,6 +65,12 @@ test.afterAll(async () => {
 });
 test.beforeEach(() => {
     test.skip(!loadContourEnv().manager, MANAGER_MISSING_REASON);
+    test.skip(!!splitGap(split), splitGap(split));
+    const needsHidden = !/allowed type in the portal|closing the grants/.test(test.info().title);
+    test.skip(
+        needsHidden && !(hiddenCustomerCode && confidentialCode),
+        'the contour has no hidden customer price type or no confidential price type',
+    );
     test.skip(
         select<{ n: number }>(
             `SELECT count(*)::int AS n FROM workflow_definition WHERE "requestType" = 'discountGrantApproval'`,
@@ -116,7 +123,7 @@ test('7: the manager submits a grant for an allowed type in the portal, and only
 test('7: the manager cannot request a grant for a hidden or confidential type, and nothing is created', async () => {
     const token = await managerToken();
     const before = requestsWithMarker();
-    for (const code of [hiddenCustomerCode, confidentialCode]) {
+    for (const code of [hiddenCustomerCode!, confidentialCode!]) {
         const result = await adminCall(token, REQUEST, {
             i: input(code, tag('denied')),
         });
@@ -131,8 +138,8 @@ test('7: the manager cannot request a grant for a hidden or confidential type, a
 test('7: grants of hidden types created by the superadmin exist but are invisible to the manager', async () => {
     const admin = await superadminToken();
     for (const [key, code] of [
-        ['hidden', hiddenCustomerCode],
-        ['confidential', confidentialCode],
+        ['hidden', hiddenCustomerCode!],
+        ['confidential', confidentialCode!],
     ] as const) {
         justifications[key] = tag(key);
         const created = await adminCall(admin, REQUEST, { i: input(code, justifications[key]) });
@@ -198,22 +205,22 @@ test('7: the portal registry and approvals pages show the allowed grant and none
     expect(registry).toContain(allowedCode);
     await page
         .getByPlaceholder('Price type, product group or customer...')
-        .fill(hiddenCustomerCode);
+        .fill(hiddenCustomerCode!);
     await expect(page.getByText(/No discount grants/i)).toBeVisible();
     const approvals = await visit(page, log, '/approvals');
     const everything = [registry, approvals, ...log.bodies].join('\n');
     expect(everything).not.toContain(justifications.hidden);
     expect(everything).not.toContain(justifications.confidential);
-    expect(everything).not.toContain(confidentialCode);
+    expect(everything).not.toContain(confidentialCode!);
     expect(log.bodies.join('\n')).toContain(justifications.allowed);
 });
 
 test('7: closing the grants leaves nothing pending', async () => {
     expect(await closeRunGrants()).toEqual([]);
-    const ids = Object.values(requestIds).map(Number);
+    const ids = Object.values(requestIds).filter(Boolean).map(Number);
     const rows = select<{ status: string }>(
         `SELECT status FROM approval_request WHERE id IN (${ids.join(',')})`,
     );
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(ids.length);
     expect(rows.every(r => r.status === 'rejected')).toBe(true);
 });

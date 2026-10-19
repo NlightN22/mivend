@@ -57,7 +57,10 @@ to prove the same data exists.
 confidential types after the manager's own attempts are denied), checks the registry, the approvals inbox and the
 pages, and rejects them in `afterAll` and in teardown (found by run id and a per-run marker in the justification;
 rejected rows stay in the registry, they consume nothing). It skips when the contour has no approval workflow for
-discount grants (`workflow_definition` is empty on a fresh staging DB).
+discount grants (`workflow_definition` is empty on a fresh staging DB). The allowed type is the first allowed
+type that is not the branch default; the hidden-type tests skip with a reason when the contour has no hidden customer
+type or no confidential type. `05`-`07` also skip loudly when the manager has no allowed or no hidden type, so a
+denial claim is never vacuous. A failed grant cleanup logs the first GraphQL error.
 
 ## Manager portal role projects
 

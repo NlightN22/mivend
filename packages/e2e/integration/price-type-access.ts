@@ -10,6 +10,7 @@ export const MANAGER_MISSING_REASON =
     'STAGING_TEST_MANAGER_USERNAME/PASSWORD are not set in the staging-integration env file';
 
 export interface PriceTypeSplit {
+    defaultCode: string | undefined;
     allowed: string[];
     hidden: string[];
     confidential: string[];
@@ -33,12 +34,23 @@ export function expectedSplit(managerUsername: string): PriceTypeSplit {
     ]);
     const customer = all.filter(t => t.visibility === 'customer');
     return {
+        defaultCode: all.find(t => t.id === branch.default)?.code,
         allowed: customer.filter(t => listed.has(t.id)).map(t => t.code),
         hidden: all
             .filter(t => !(t.visibility === 'customer' && listed.has(t.id)))
             .map(t => t.code),
         confidential: all.filter(t => t.visibility === 'confidential').map(t => t.code),
     };
+}
+
+// A reason to skip when the contour cannot make a denial claim non-vacuous: needs one allowed and one hidden type.
+export function splitGap(split: PriceTypeSplit | undefined): string | undefined {
+    if (!split) return undefined;
+    if (split.allowed.length === 0)
+        return 'the test manager has no allowed customer price type on this contour';
+    if (split.hidden.length === 0)
+        return 'the contour has no hidden price type for the test manager';
+    return undefined;
 }
 
 export async function managerToken(): Promise<string> {

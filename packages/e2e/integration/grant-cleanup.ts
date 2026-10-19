@@ -1,6 +1,5 @@
-import { adminGql } from '../helpers/api';
 import { literal, select } from './contour-db';
-import { superadminToken } from './price-type-access';
+import { adminCall, superadminToken } from './price-type-access';
 import { grantMarker, readRun } from './run-state';
 
 function runRequestIds(): string[] {
@@ -25,12 +24,14 @@ export async function closeRunGrants(): Promise<string[]> {
     if (pending.length === 0) return [];
     const token = await superadminToken();
     for (const requestId of pending) {
-        await adminGql(
+        const { errors } = await adminCall(
+            token,
             `mutation($id: ID!) { decideDiscountGrantRequest(requestId: $id, decision: "rejected",
                 comment: "e2e-integration cleanup") { id status } }`,
             { id: requestId },
-            token,
         );
+        if (errors.length > 0)
+            console.warn(`closing grant request ${requestId} failed: ${errors[0]}`);
     }
     return pendingIds(pending);
 }
