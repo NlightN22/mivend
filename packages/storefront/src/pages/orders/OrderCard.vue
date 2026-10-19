@@ -43,13 +43,15 @@ const meta = computed(() => {
     });
     const addr = props.order.shippingAddress?.streetLine1 ?? '';
     const count = props.order.lines.length;
-    return [date, addr, `${count} item${count !== 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+    return [date, addr, t('cart.items', count)].filter(Boolean).join(' · ');
 });
 
 const preview = computed(() => {
     const names = props.order.lines.slice(0, 3).map(l => l.productVariant.product.name);
     const rest = props.order.lines.length - names.length;
-    return rest > 0 ? `${names.join(', ')} and ${rest} more` : names.join(', ');
+    return rest > 0
+        ? t('orders.card.preview', { names: names.join(', '), n: rest })
+        : names.join(', ');
 });
 </script>
 
@@ -58,8 +60,10 @@ const preview = computed(() => {
         <div class="order-card-head">
             <div>
                 <div class="order-title">
-                    Order {{ formatDocumentNumber(displayNumber) }}
-                    <MvStatusBadge v-if="isExternal" variant="info">From ERP</MvStatusBadge>
+                    {{ $t('orders.card.title', { number: formatDocumentNumber(displayNumber) }) }}
+                    <MvStatusBadge v-if="isExternal" variant="info">{{
+                        $t('orders.sources.erp')
+                    }}</MvStatusBadge>
                 </div>
                 <div class="order-meta">{{ meta }}</div>
             </div>
@@ -80,11 +84,13 @@ const preview = computed(() => {
                 <div>{{ preview }}</div>
             </div>
             <div v-if="!isExternal" class="order-card-actions">
-                <router-link :to="`/orders/${order.id}`" class="small-btn primary"
-                    >Open</router-link
-                >
-                <button class="small-btn" :disabled="repeating" @click="repeatOrder">Repeat</button>
-                <button class="small-btn">Documents</button>
+                <router-link :to="`/orders/${order.id}`" class="small-btn primary">{{
+                    $t('orders.card.open')
+                }}</router-link>
+                <button class="small-btn" :disabled="repeating" @click="repeatOrder">
+                    {{ $t('orders.card.repeat') }}
+                </button>
+                <button class="small-btn">{{ $t('orders.card.documents') }}</button>
             </div>
         </div>
     </article>

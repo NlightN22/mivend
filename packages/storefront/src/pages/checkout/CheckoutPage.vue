@@ -20,11 +20,11 @@ onMounted(() => Promise.all([cartStore.fetchCart(), checkoutStore.loadDeliveryMe
     <main class="checkout-page">
         <MvBreadcrumbs
             class="checkout-page__crumbs"
-            :items="[{ label: 'Cart', to: '/cart' }, { label: 'Checkout' }]"
+            :items="[{ label: $t('nav.cart'), to: '/cart' }, { label: $t('checkout.title') }]"
         />
 
         <div class="checkout-page__head">
-            <h1 class="checkout-page__title">Checkout</h1>
+            <h1 class="checkout-page__title">{{ $t('checkout.title') }}</h1>
         </div>
 
         <EmptyCartState v-if="cartStore.loaded && cartStore.isEmpty" />
@@ -35,8 +35,7 @@ onMounted(() => Promise.all([cartStore.fetchCart(), checkoutStore.loadDeliveryMe
                 <DeliverySelector />
                 <CheckoutOrderItems />
                 <MvNotice v-if="checkoutStore.selectedPayment === 'card'" variant="info">
-                    After clicking "Pay online" you will be redirected to the payment service. Order
-                    status is updated via webhook, not only on customer return.
+                    {{ $t('checkout.cardNotice') }}
                 </MvNotice>
             </section>
 

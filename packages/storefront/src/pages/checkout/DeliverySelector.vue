@@ -1,15 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { IconBuildingStore, IconCheck, IconMapPin, IconTruckDelivery } from '@tabler/icons-vue';
-import { MvModal } from '@mivend/ui-kit';
+import { IconBuildingStore, IconMapPin, IconTruckDelivery } from '@tabler/icons-vue';
 import { useCheckoutStore } from '../../stores/checkout';
 import { useAuthStore } from '../../stores/auth';
-import { shopApi } from '../../api/client';
-import {
-    MyTradingPointsForDeliverySelectorDocument,
-    SetPreferredTradingPointForDeliverySelectorDocument,
-    type MyTradingPointsForDeliverySelectorQuery,
-} from '../../api/generated/graphql';
+import TradingPointModal from './TradingPointModal.vue';
 
 const checkoutStore = useCheckoutStore();
 const authStore = useAuthStore();
@@ -21,48 +15,15 @@ const tradingPoint = computed(() => authStore.tradingPoint);
 const showPointStrip = computed(
     () => courierAvailable.value && checkoutStore.selectedDelivery === 'courier',
 );
-
-// ── Change point modal ──────────────────────────────────────────────────────
-
-type PointOption = MyTradingPointsForDeliverySelectorQuery['myTradingPoints'][number];
-
 const modalOpen = ref(false);
-const points = ref<PointOption[]>([]);
-const loadingPoints = ref(false);
-const savingId = ref<string | null>(null);
-
-async function openModal(): Promise<void> {
-    modalOpen.value = true;
-    loadingPoints.value = true;
-    try {
-        const result = await shopApi(MyTradingPointsForDeliverySelectorDocument);
-        points.value = result.myTradingPoints ?? [];
-    } finally {
-        loadingPoints.value = false;
-    }
-}
-
-async function selectPoint(id: string): Promise<void> {
-    if (savingId.value) return;
-    savingId.value = id;
-    try {
-        await shopApi(SetPreferredTradingPointForDeliverySelectorDocument, { id });
-        await authStore.fetchCurrentCustomer();
-        modalOpen.value = false;
-    } finally {
-        savingId.value = null;
-    }
-}
-
-const currentId = computed(() => authStore.customer?.customFields?.preferredTradingPointId ?? null);
 </script>
 
 <template>
     <article class="delivery-selector">
         <div class="delivery-selector__head">
             <div>
-                <h2 class="delivery-selector__title">Delivery</h2>
-                <p class="delivery-selector__subtitle">Choose delivery method for your order.</p>
+                <h2 class="delivery-selector__title">{{ $t('delivery.title') }}</h2>
+                <p class="delivery-selector__subtitle">{{ $t('delivery.subtitle') }}</p>
             </div>
         </div>
         <div class="delivery-selector__grid">
@@ -77,14 +38,15 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
                 @click="checkoutStore.setDelivery('courier')"
             >
                 <div class="delivery-selector__card-title">
-                    <IconTruckDelivery :size="20" stroke-width="1.7" aria-hidden="true" /> Courier
+                    <IconTruckDelivery :size="20" stroke-width="1.7" aria-hidden="true" />
+                    {{ $t('delivery.courier') }}
                 </div>
                 <p v-if="!courierAvailable" class="delivery-selector__card-note">
-                    Courier delivery needs a trading point.
-                    <RouterLink :to="addPointLink">Add trading point</RouterLink>
+                    {{ $t('delivery.courierNeedsPoint') }}
+                    <RouterLink :to="addPointLink">{{ $t('delivery.addPoint') }}</RouterLink>
                 </p>
                 <p v-else class="delivery-selector__card-note">
-                    Delivery to the trading point, per contract terms.
+                    {{ $t('delivery.courierNote') }}
                 </p>
             </button>
             <button
@@ -99,9 +61,11 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
             >
                 <div class="delivery-selector__card-title">
                     <IconBuildingStore :size="20" stroke-width="1.7" aria-hidden="true" />
-                    Self-pickup
+                    {{ $t('delivery.pickup') }}
                 </div>
-                <p class="delivery-selector__card-note">Available after assembly confirmation.</p>
+                <p class="delivery-selector__card-note">
+                    {{ $t('delivery.pickupNote') }}
+                </p>
             </button>
         </div>
         <div v-if="showPointStrip" class="delivery-selector__point">
@@ -112,16 +76,18 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
                 aria-hidden="true"
             />
             <div class="delivery-selector__point-body">
-                <div class="delivery-selector__point-label">Trading point for delivery</div>
+                <div class="delivery-selector__point-label">
+                    {{ $t('delivery.point') }}
+                </div>
                 <div class="delivery-selector__point-name">
-                    {{ tradingPoint?.name ?? 'Not selected' }}
+                    {{ tradingPoint?.name ?? $t('delivery.notSelected') }}
                 </div>
                 <div v-if="tradingPoint?.address" class="delivery-selector__point-addr">
                     {{ tradingPoint.address }}
                 </div>
             </div>
-            <button class="delivery-selector__change-btn" type="button" @click="openModal">
-                Change
+            <button class="delivery-selector__change-btn" type="button" @click="modalOpen = true">
+                {{ $t('delivery.change') }}
             </button>
         </div>
         <p v-if="checkoutStore.deliveryBlocker" class="delivery-selector__blocker">
@@ -129,38 +95,7 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
         </p>
     </article>
 
-    <MvModal v-if="modalOpen" title="Select trading point" @close="modalOpen = false">
-        <div v-if="loadingPoints" class="ds-modal-loading">Loading…</div>
-        <div v-else-if="!points.length" class="ds-modal-empty">
-            No trading points found.
-            <RouterLink :to="addPointLink">Add trading point</RouterLink>
-        </div>
-        <ul v-else class="ds-point-list">
-            <li
-                v-for="pt in points"
-                :key="pt.id"
-                class="ds-point-item"
-                :class="{
-                    'ds-point-item--active': pt.id === currentId,
-                    'ds-point-item--saving': savingId === pt.id,
-                }"
-                @click="selectPoint(pt.id)"
-            >
-                <div class="ds-point-item__check">
-                    <IconCheck
-                        v-if="pt.id === currentId"
-                        :size="14"
-                        stroke-width="3"
-                        aria-hidden="true"
-                    />
-                </div>
-                <div>
-                    <div class="ds-point-item__name">{{ pt.name }}</div>
-                    <div class="ds-point-item__addr">{{ pt.address }}</div>
-                </div>
-            </li>
-        </ul>
-    </MvModal>
+    <TradingPointModal v-if="modalOpen" :add-point-link="addPointLink" @close="modalOpen = false" />
 </template>
 
 <style scoped>
@@ -295,80 +230,6 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
     color: #66736e;
     font-size: 13px;
     line-height: 1.4;
-}
-
-/* Modal content */
-.ds-modal-loading,
-.ds-modal-empty {
-    text-align: center;
-    padding: 24px 0;
-    color: #66736e;
-    font-size: 14px;
-}
-
-.ds-point-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 8px;
-}
-
-.ds-point-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border: 1px solid #dde7e2;
-    border-radius: 16px;
-    cursor: pointer;
-    transition: 0.14s ease;
-}
-
-.ds-point-item:hover {
-    background: #f3f8f6;
-    border-color: #b0ccbf;
-}
-
-.ds-point-item--active {
-    border-color: #00a878;
-    background: linear-gradient(135deg, #fff, #f3fff7);
-}
-
-.ds-point-item--saving {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.ds-point-item__check {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: 2px solid #dde7e2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    color: #00a878;
-    flex-shrink: 0;
-}
-
-.ds-point-item--active .ds-point-item__check {
-    border-color: #00a878;
-    background: #00a878;
-    color: #fff;
-}
-
-.ds-point-item__name {
-    font-size: 14px;
-    font-weight: 800;
-    color: #14231f;
-    margin-bottom: 2px;
-}
-
-.ds-point-item__addr {
-    font-size: 13px;
-    color: #66736e;
 }
 
 @media (max-width: 900px) {

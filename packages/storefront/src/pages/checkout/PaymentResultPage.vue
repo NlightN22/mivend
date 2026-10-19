@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { formatDate } from '../../i18n/format';
 import { computed } from 'vue';
 import { IconCheck, IconHourglass, IconX } from '@tabler/icons-vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import PaymentResultDetails from './PaymentResultDetails.vue';
 
+const { t } = useI18n();
 const route = useRoute();
+const DEMO_ORDER = '348744';
 const status = computed(() => {
     const s = route.query.status;
     if (s === 'pending' || s === 'fail') return s;
@@ -16,46 +19,39 @@ const config = computed(() => {
         return {
             icon: IconCheck,
             iconClass: 'pr-icon--green',
-            title: 'Payment successful',
-            text: 'Payment for order #348744 has been processed. The order is confirmed.',
+            title: t('paymentResult.success.title'),
+            text: t('paymentResult.success.text', { number: DEMO_ORDER }),
         };
     }
     if (status.value === 'pending') {
         return {
             icon: IconHourglass,
             iconClass: 'pr-icon--orange',
-            title: 'Awaiting confirmation',
-            text: 'Payment is being processed. This may take a few minutes. Order status will update automatically.',
+            title: t('paymentResult.pending.title'),
+            text: t('paymentResult.pending.text'),
         };
     }
     return {
         icon: IconX,
         iconClass: 'pr-icon--red',
-        title: 'Payment failed',
-        text: 'The payment could not be processed. Your order has not been confirmed. You can try again or choose a different payment method.',
+        title: t('paymentResult.fail.title'),
+        text: t('paymentResult.fail.text'),
     };
 });
-
-const today = computed(() =>
-    formatDate(Date.now(), {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    }),
-);
 </script>
 
 <template>
     <main class="pr-page">
         <MvBreadcrumbs
             class="pr-crumbs"
-            :items="[{ label: 'Orders', to: '/orders' }, { label: 'Payment result' }]"
+            :items="[
+                { label: $t('nav.orders'), to: '/orders' },
+                { label: $t('paymentResult.title') },
+            ]"
         />
 
         <div class="pr-head">
-            <h1 class="pr-title">Payment result</h1>
+            <h1 class="pr-title">{{ $t('paymentResult.title') }}</h1>
         </div>
 
         <div class="pr-status-card" :class="`pr-status-card--${status}`">
@@ -67,46 +63,39 @@ const today = computed(() =>
 
             <div class="pr-actions">
                 <template v-if="status === 'success'">
-                    <RouterLink to="/orders" class="pr-btn pr-btn--primary">Open order</RouterLink>
-                    <a href="#" class="pr-btn pr-btn--secondary">Download receipt</a>
-                    <RouterLink to="/catalog" class="pr-btn pr-btn--ghost"
-                        >Continue shopping</RouterLink
-                    >
+                    <RouterLink to="/orders" class="pr-btn pr-btn--primary">{{
+                        $t('orderCreated.openOrder')
+                    }}</RouterLink>
+                    <a href="#" class="pr-btn pr-btn--secondary">{{
+                        $t('paymentResult.downloadReceipt')
+                    }}</a>
+                    <RouterLink to="/catalog" class="pr-btn pr-btn--ghost">{{
+                        $t('orderCreated.continueShopping')
+                    }}</RouterLink>
                 </template>
                 <template v-else-if="status === 'pending'">
-                    <RouterLink to="/orders" class="pr-btn pr-btn--primary">Open order</RouterLink>
-                    <RouterLink to="/catalog" class="pr-btn pr-btn--ghost"
-                        >Continue shopping</RouterLink
-                    >
+                    <RouterLink to="/orders" class="pr-btn pr-btn--primary">{{
+                        $t('orderCreated.openOrder')
+                    }}</RouterLink>
+                    <RouterLink to="/catalog" class="pr-btn pr-btn--ghost">{{
+                        $t('orderCreated.continueShopping')
+                    }}</RouterLink>
                 </template>
                 <template v-else>
-                    <RouterLink to="/payment-stub" class="pr-btn pr-btn--primary"
-                        >Try again</RouterLink
-                    >
-                    <RouterLink to="/checkout" class="pr-btn pr-btn--secondary"
-                        >Choose another method</RouterLink
-                    >
-                    <RouterLink to="/catalog" class="pr-btn pr-btn--ghost"
-                        >Continue shopping</RouterLink
-                    >
+                    <RouterLink to="/payment-stub" class="pr-btn pr-btn--primary">{{
+                        $t('paymentResult.tryAgain')
+                    }}</RouterLink>
+                    <RouterLink to="/checkout" class="pr-btn pr-btn--secondary">{{
+                        $t('paymentResult.anotherMethod')
+                    }}</RouterLink>
+                    <RouterLink to="/catalog" class="pr-btn pr-btn--ghost">{{
+                        $t('orderCreated.continueShopping')
+                    }}</RouterLink>
                 </template>
             </div>
         </div>
 
-        <div class="pr-details-card">
-            <h3 class="pr-card-title">Payment details</h3>
-            <div class="pr-detail-list">
-                <div class="pr-detail">
-                    <span>Payment ID</span><strong>PAY-20260628-009821</strong>
-                </div>
-                <div class="pr-detail"><span>Order</span><strong>#348744</strong></div>
-                <div class="pr-detail"><span>Amount</span><strong>12 450 ₽</strong></div>
-                <div class="pr-detail"><span>Method</span><strong>Online payment</strong></div>
-                <div class="pr-detail">
-                    <span>Date</span><strong>{{ today }}</strong>
-                </div>
-            </div>
-        </div>
+        <PaymentResultDetails :order-number="DEMO_ORDER" />
     </main>
 </template>
 
@@ -241,47 +230,6 @@ const today = computed(() =>
 .pr-btn--ghost:hover {
     color: #263732;
     background: #f4faf7;
-}
-
-.pr-details-card {
-    max-width: 600px;
-    margin: 0 auto;
-    background: #fff;
-    border: 1px solid #dde7e2;
-    border-radius: 24px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    padding: 22px;
-}
-
-.pr-card-title {
-    margin: 0 0 14px;
-    font-size: 17px;
-    font-weight: 950;
-    letter-spacing: -0.03em;
-}
-
-.pr-detail-list {
-    display: grid;
-    gap: 0;
-}
-
-.pr-detail {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 14px;
-    color: #66736e;
-    padding: 10px 0;
-    border-bottom: 1px solid #edf2ef;
-}
-
-.pr-detail:last-child {
-    border-bottom: none;
-}
-.pr-detail strong {
-    color: #14231f;
-    font-weight: 700;
-    text-align: right;
 }
 
 @media (max-width: 560px) {

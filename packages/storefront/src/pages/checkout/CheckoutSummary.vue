@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatMoney } from '../../i18n/format';
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { toast } from '@mivend/ui-kit';
 import { useCartStore } from '../../stores/cart';
 import { useCheckoutStore, type DeliveryType } from '../../stores/checkout';
@@ -10,6 +11,7 @@ import { useCurrency } from '../../composables/useCurrency';
 import CreditLimitNotice from './CreditLimitNotice.vue';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 
+const { t } = useI18n();
 const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
 const submitting = ref(false);
@@ -52,15 +54,18 @@ const total = computed(() =>
 const btnLabel = computed(() => {
     if (checkoutStore.selectedPayment === 'card')
         return cardPayable.value > 0
-            ? `Pay ${formatRub(cardPayable.value * 100)} →`
-            : 'Pay online →';
+            ? t('checkout.summary.payAmount', { amount: formatRub(cardPayable.value * 100) })
+            : t('checkout.summary.payOnline');
     if (checkoutStore.selectedPayment === 'bank-transfer')
-        return 'Place order & get proforma invoice';
-    return 'Place order';
+        return t('checkout.summary.placeWithProforma');
+    return t('checkout.summary.place');
 });
 
-const DELIVERY_LABELS: Record<DeliveryType, string> = { courier: 'Courier', pickup: 'Self-pickup' };
-const deliveryLabel = computed(() => DELIVERY_LABELS[checkoutStore.selectedDelivery]);
+const DELIVERY_KEYS: Record<DeliveryType, string> = {
+    courier: 'delivery.courier',
+    pickup: 'delivery.pickup',
+};
+const deliveryLabel = computed(() => t(DELIVERY_KEYS[checkoutStore.selectedDelivery]));
 
 const btnOrange = computed(() => checkoutStore.selectedPayment === 'card');
 
@@ -73,7 +78,7 @@ async function handlePrimary(): Promise<void> {
         await place();
     } catch (err) {
         console.error('Checkout failed', err);
-        toast('Could not place order, please try again or contact support', 'error');
+        toast(t('checkout.summary.placeFailedRetry'), 'error');
     } finally {
         submitting.value = false;
     }
@@ -83,50 +88,51 @@ async function handlePrimary(): Promise<void> {
 <template>
     <aside class="checkout-summary">
         <div class="checkout-summary__card">
-            <div class="checkout-summary__title">Your order</div>
-            <div class="checkout-summary__caption">{{ lineCount }} items · {{ totalQty }} pcs.</div>
+            <div class="checkout-summary__title">{{ $t('checkout.yourOrder') }}</div>
+            <div class="checkout-summary__caption">
+                {{ $t('cartSummary.count', { items: $t('cart.items', lineCount), qty: totalQty }) }}
+            </div>
 
             <div v-if="cartStore.discountAmount > 0" class="checkout-summary__line">
-                <span>Goods</span>
+                <span>{{ $t('checkout.summary.goods') }}</span>
                 <strong>{{ subtotal }}</strong>
             </div>
             <div class="checkout-summary__line">
-                <span>Delivery</span>
+                <span>{{ $t('delivery.title') }}</span>
                 <strong>{{ deliveryLabel }}</strong>
             </div>
             <div v-if="cartStore.discountAmount > 0" class="checkout-summary__line">
-                <span>Customer discount</span>
+                <span>{{ $t('cartSummary.discount') }}</span>
                 <strong class="checkout-summary__discount">{{ discountLabel }}</strong>
             </div>
             <div v-if="packagingLabel" class="checkout-summary__line">
-                <span>Weight / volume</span>
+                <span>{{ $t('cartSummary.weightVolume') }}</span>
                 <strong>{{ packagingLabel }}</strong>
             </div>
 
             <template v-if="creditPreview">
                 <div class="checkout-summary__line">
-                    <span>Available credit</span>
+                    <span>{{ $t('checkout.summary.availableCredit') }}</span>
                     <strong>{{ formatWhole(Math.max(creditPreview.availableCredit, 0)) }}</strong>
                 </div>
                 <div v-if="creditPreview.exceeded" class="checkout-summary__line">
-                    <span>Over the limit by</span>
+                    <span>{{ $t('checkout.summary.overLimit') }}</span>
                     <strong class="checkout-summary__discount">{{ formatWhole(overLimit) }}</strong>
                 </div>
             </template>
 
             <template v-if="cardPayable > 0">
                 <div class="checkout-summary__line">
-                    <span>To pay online</span>
+                    <span>{{ $t('checkout.summary.toPayOnline') }}</span>
                     <strong>{{ formatRub(cardPayable * 100) }}</strong>
                 </div>
                 <p v-if="excess > 0" class="checkout-summary__legal">
-                    Includes {{ formatRub(excess * 100) }} of debt above your credit limit; paying
-                    online clears it together with this order.
+                    {{ $t('checkout.summary.includesDebt', { amount: formatRub(excess * 100) }) }}
                 </p>
             </template>
 
             <div class="checkout-summary__total">
-                <span>Total</span>
+                <span>{{ $t('cartSummary.total') }}</span>
                 <strong>{{ total }}</strong>
             </div>
 
@@ -143,12 +149,15 @@ async function handlePrimary(): Promise<void> {
                 :disabled="submitting || !checkoutStore.canPlaceOrder"
                 @click="handlePrimary"
             >
-                {{ submitting ? 'Processing…' : btnLabel }}
+                {{ submitting ? $t('checkout.summary.processing') : btnLabel }}
             </button>
 
             <p v-if="checkoutStore.selectedPayment === 'card'" class="checkout-summary__legal">
-                By clicking the button, you are redirected to the payment service and agree to the
-                <a href="#">payment terms</a>.
+                <i18n-t keypath="checkout.summary.legal">
+                    <template #terms>
+                        <a href="#">{{ $t('checkout.summary.terms') }}</a>
+                    </template>
+                </i18n-t>
             </p>
         </div>
     </aside>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconPackage } from '@tabler/icons-vue';
 import CartLinePrice from '../../components/CartLinePrice.vue';
 import { assetUrl } from '../../composables/assetUrl';
@@ -8,17 +9,21 @@ import { useCartStore, type CartLine } from '../../stores/cart';
 import { usePackagesOnly } from '../../composables/usePackagesOnly';
 import { baseToPacks, salesUnitOf } from '../../composables/useSalesUnit';
 
+const { t } = useI18n();
 const cartStore = useCartStore();
 const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
 void loadPackagesOnly();
 
 function quantityLabel(line: CartLine): string {
     const unit = salesUnitOf(line.productVariant.customFields, packagesOnly.value);
-    return unit ? `${baseToPacks(line.quantity, unit)} ${unit.name}` : `${line.quantity} pcs.`;
+    return unit
+        ? `${baseToPacks(line.quantity, unit)} ${unit.name}`
+        : t('units.pieces', { n: line.quantity });
 }
 
-function getBrand(line: CartLine): string {
-    return brandOf(line.productVariant.product.manufacturer);
+function metaLabel(line: CartLine): string {
+    const brand = brandOf(line.productVariant.product.manufacturer);
+    return [brand, quantityLabel(line), line.productVariant.sku].filter(Boolean).join(' · ');
 }
 
 const lineCount = computed(() => cartStore.lines.length);
@@ -29,10 +34,19 @@ const totalQty = computed(() => cartStore.totalQuantity);
     <article class="checkout-items">
         <div class="checkout-items__head">
             <div>
-                <h2 class="checkout-items__title">Your order</h2>
-                <p class="checkout-items__subtitle">{{ lineCount }} items · {{ totalQty }} pcs.</p>
+                <h2 class="checkout-items__title">{{ $t('checkout.yourOrder') }}</h2>
+                <p class="checkout-items__subtitle">
+                    {{
+                        $t('cartSummary.count', {
+                            items: $t('cart.items', lineCount),
+                            qty: totalQty,
+                        })
+                    }}
+                </p>
             </div>
-            <RouterLink class="checkout-items__edit-btn" to="/cart">Edit</RouterLink>
+            <RouterLink class="checkout-items__edit-btn" to="/cart">{{
+                $t('checkout.edit')
+            }}</RouterLink>
         </div>
 
         <div class="checkout-items__list">
@@ -49,9 +63,7 @@ const totalQty = computed(() => cartStore.totalQuantity);
                 <div class="checkout-items__info">
                     <div class="checkout-items__name">{{ line.productVariant.product.name }}</div>
                     <div class="checkout-items__meta">
-                        {{ getBrand(line) ? getBrand(line) + ' · ' : ''
-                        }}{{ quantityLabel(line) }} ·
-                        {{ line.productVariant.sku }}
+                        {{ metaLabel(line) }}
                     </div>
                 </div>
                 <div class="checkout-items__prices">

@@ -1,91 +1,24 @@
 <script setup lang="ts">
-import { formatDate } from '../../i18n/format';
 import { IconCheck } from '@tabler/icons-vue';
-import { computed, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { MvErrorState, formatDocumentNumber } from '@mivend/ui-kit';
-import { shopApi } from '../../api/client';
-import { useAuthStore } from '../../stores/auth';
-import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
-import { describeOrderCreated, PAYMENT_LABELS } from '../../utils/orderCreatedText';
+import { MvErrorState } from '@mivend/ui-kit';
 import ProformaInvoiceVersionBadge from '../proforma-invoices/ProformaInvoiceVersionBadge.vue';
-import { proformaDocumentUrl } from '../../utils/checkoutPolicy';
-import { OrderCreatedDocument, type OrderCreatedQuery } from '../../api/generated/graphql';
+import OrderCreatedDetails from './OrderCreatedDetails.vue';
+import { useOrderCreated } from './useOrderCreated';
 
-const route = useRoute();
-const authStore = useAuthStore();
-const router = useRouter();
-const code = computed(() => (typeof route.query.code === 'string' ? route.query.code : ''));
-
-const data = ref<OrderCreatedQuery | null>(null);
-const loading = ref(true);
-const error = ref<LoadErrorText | null>(null);
-
-const order = computed(() => data.value?.orderByCode ?? null);
-const payment = computed(() => order.value?.payments?.[0] ?? null);
-const methodCode = computed(() => payment.value?.method ?? '');
-
-const paymentLabel = computed(() => PAYMENT_LABELS[methodCode.value] ?? methodCode.value);
-const text = computed(() => describeOrderCreated(code.value, methodCode.value));
-
-const publicFlags = computed(
-    () =>
-        (
-            payment.value?.metadata as {
-                public?: { creditLimitExceeded?: boolean; awaitingManagerConfirmation?: boolean };
-            } | null
-        )?.public ?? {},
-);
-const awaitingManager = computed(() => publicFlags.value.awaitingManagerConfirmation === true);
-const limitExceeded = computed(() => publicFlags.value.creditLimitExceeded === true);
-
-const tradingPoint = computed(() => {
-    const id = order.value?.customFields?.tradingPointId;
-    if (!id) return null;
-    const point =
-        data.value?.myTradingPoints?.find(p => p.id === id) ??
-        (authStore.tradingPoint?.id === id ? authStore.tradingPoint : null);
-    return point ? (point.address ?? point.name) : null;
-});
-
-const delivery = computed(() => order.value?.shippingLines?.[0]?.shippingMethod.name ?? null);
-const placedAt = computed(() =>
-    order.value?.orderPlacedAt
-        ? formatDate(order.value.orderPlacedAt, {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-          })
-        : null,
-);
-function proformaInvoiceHref(id: string): string {
-    return router.resolve({ path: `/proforma-invoices/${id}`, query: { print: '1' } }).href;
-}
-const proformaInvoices = computed(() =>
-    (data.value?.myProformaInvoices.items ?? [])
-        .filter(i => i.status !== 'superseded')
-        .map(i => ({ ...i, href: proformaDocumentUrl(i) ?? proformaInvoiceHref(i.id) })),
-);
-
-async function load(): Promise<void> {
-    if (!code.value) {
-        await router.replace('/orders');
-        return;
-    }
-    loading.value = true;
-    error.value = null;
-    try {
-        data.value = await shopApi(OrderCreatedDocument, { code: code.value });
-    } catch (e) {
-        error.value = describeLoadError(e);
-    } finally {
-        loading.value = false;
-    }
-}
-
-onMounted(load);
+const {
+    loading,
+    error,
+    order,
+    text,
+    awaitingManager,
+    limitExceeded,
+    proformaInvoices,
+    placedAt,
+    tradingPoint,
+    paymentLabel,
+    delivery,
+    load,
+} = useOrderCreated();
 </script>
 
 <template>
@@ -93,47 +26,45 @@ onMounted(load);
         <MvBreadcrumbs
             class="oc-crumbs"
             :items="[
-                { label: 'Cart', to: '/cart' },
-                { label: 'Checkout', to: '/checkout' },
-                { label: 'Order placed' },
+                { label: $t('nav.cart'), to: '/cart' },
+                { label: $t('checkout.title'), to: '/checkout' },
+                { label: $t('orderCreated.title') },
             ]"
         />
 
         <div class="oc-head">
-            <h1 class="oc-title">Order placed</h1>
+            <h1 class="oc-title">{{ $t('orderCreated.title') }}</h1>
         </div>
 
-        <div v-if="loading" class="oc-state">Loading order…</div>
+        <div v-if="loading" class="oc-state">{{ $t('orderCreated.loading') }}</div>
         <MvErrorState
             v-else-if="error"
             :title="error.title"
             :message="error.message"
             @retry="load"
         />
-        <MvNotice v-else-if="!order" variant="error">Order not found</MvNotice>
+        <MvNotice v-else-if="!order" variant="error">{{ $t('orders.detail.notFound') }}</MvNotice>
 
         <template v-else>
             <div class="oc-status-card">
                 <div class="oc-check">
                     <IconCheck :size="32" stroke-width="3" aria-hidden="true" />
                 </div>
-                <h2 class="oc-status-title">Order created</h2>
+                <h2 class="oc-status-title">{{ $t('orderCreated.statusTitle') }}</h2>
                 <p class="oc-status-text">{{ text.status }}</p>
                 <MvNotice v-if="text.waitingForCashConfirmation" variant="info">
-                    Waiting for the manager to confirm the cash receipt. The order moves on once the
-                    manager has confirmed it.
+                    {{ $t('orderCreated.waitingCash') }}
                 </MvNotice>
                 <MvNotice v-if="awaitingManager" variant="warning">
-                    Your credit limit is exceeded. Please wait for your manager to confirm the
-                    order.
+                    {{ $t('orderCreated.awaitingManager') }}
                 </MvNotice>
                 <MvNotice v-else-if="limitExceeded" variant="warning">
-                    Your credit limit is exceeded; the order was accepted with your acknowledgement.
+                    {{ $t('orderCreated.limitAcknowledged') }}
                 </MvNotice>
                 <div class="oc-actions">
-                    <RouterLink :to="`/orders/${order.id}`" class="oc-btn oc-btn--primary"
-                        >Open order</RouterLink
-                    >
+                    <RouterLink :to="`/orders/${order.id}`" class="oc-btn oc-btn--primary">{{
+                        $t('orderCreated.openOrder')
+                    }}</RouterLink>
                     <a
                         v-for="proformaInvoice in proformaInvoices"
                         :key="proformaInvoice.id"
@@ -141,48 +72,23 @@ onMounted(load);
                         target="_blank"
                         rel="noopener"
                         class="oc-btn oc-btn--secondary"
-                        >Print proforma invoice {{ proformaInvoice.number }}
+                        >{{ $t('orderCreated.printProforma', { number: proformaInvoice.number }) }}
                         <ProformaInvoiceVersionBadge :version="proformaInvoice.version"
                     /></a>
-                    <RouterLink to="/catalog" class="oc-btn oc-btn--ghost"
-                        >Continue shopping</RouterLink
-                    >
+                    <RouterLink to="/catalog" class="oc-btn oc-btn--ghost">{{
+                        $t('orderCreated.continueShopping')
+                    }}</RouterLink>
                 </div>
             </div>
 
-            <div class="oc-details-grid">
-                <div class="oc-card">
-                    <h3 class="oc-card-title">Order details</h3>
-                    <div class="oc-detail-list">
-                        <div class="oc-detail">
-                            <span>Order number</span
-                            ><strong>{{ formatDocumentNumber(order.code) }}</strong>
-                        </div>
-                        <div v-if="placedAt" class="oc-detail">
-                            <span>Date</span><strong>{{ placedAt }}</strong>
-                        </div>
-                        <div v-if="tradingPoint" class="oc-detail">
-                            <span>Trading point</span><strong>{{ tradingPoint }}</strong>
-                        </div>
-                        <div class="oc-detail">
-                            <span>Payment method</span><strong>{{ paymentLabel }}</strong>
-                        </div>
-                        <div v-if="delivery" class="oc-detail">
-                            <span>Delivery</span><strong>{{ delivery }}</strong>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="oc-card">
-                    <h3 class="oc-card-title">What's next</h3>
-                    <ol class="oc-steps">
-                        <li v-for="(step, i) in text.steps" :key="i" class="oc-step">
-                            <span class="oc-step-num">{{ i + 1 }}</span>
-                            <span>{{ step }}</span>
-                        </li>
-                    </ol>
-                </div>
-            </div>
+            <OrderCreatedDetails
+                :code="order.code"
+                :placed-at="placedAt"
+                :trading-point="tradingPoint"
+                :payment-label="paymentLabel"
+                :delivery="delivery"
+                :steps="text.steps"
+            />
         </template>
     </main>
 </template>
@@ -304,89 +210,7 @@ onMounted(load);
     background: #f4faf7;
 }
 
-.oc-details-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-.oc-card {
-    background: #fff;
-    border: 1px solid #dde7e2;
-    border-radius: 24px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    padding: 22px;
-}
-
-.oc-card-title {
-    margin: 0 0 14px;
-    font-size: 17px;
-    font-weight: 950;
-    letter-spacing: -0.03em;
-}
-
-.oc-detail-list {
-    display: grid;
-    gap: 10px;
-}
-
-.oc-detail {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 14px;
-    color: #66736e;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #edf2ef;
-}
-
-.oc-detail:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.oc-detail strong {
-    color: #14231f;
-    font-weight: 700;
-    text-align: right;
-}
-
-.oc-steps {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    gap: 14px;
-}
-
-.oc-step {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    font-size: 14px;
-    color: #263732;
-    line-height: 1.4;
-}
-
-.oc-step-num {
-    flex-shrink: 0;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: #e2f8ef;
-    color: #008a64;
-    font-size: 13px;
-    font-weight: 900;
-    display: grid;
-    place-items: center;
-}
-
 @media (max-width: 760px) {
-    .oc-details-grid {
-        grid-template-columns: 1fr;
-    }
     .oc-page {
         padding-left: 16px;
         padding-right: 16px;

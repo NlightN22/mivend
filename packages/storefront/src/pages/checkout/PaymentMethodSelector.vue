@@ -9,25 +9,16 @@ const methodCards = [
     {
         id: 'bank-transfer' as const,
         icon: IconBuildingBank,
-        title: 'Bank proforma invoice',
-        note: 'We generate a proforma invoice for each organization of the order; pay via bank.',
-        badge: 'Printable proforma invoice',
         badgeOrange: false,
     },
     {
         id: 'card' as const,
         icon: IconCreditCard,
-        title: 'Card online',
-        note: 'Pay by card on the payment page right after placing the order.',
-        badge: 'Quick confirmation',
         badgeOrange: false,
     },
     {
         id: 'cash' as const,
         icon: IconCash,
-        title: 'Cash',
-        note: 'Pay cash on pickup or delivery; a manager confirms the receipt.',
-        badge: 'Manager confirms receipt',
         badgeOrange: true,
     },
 ];
@@ -40,11 +31,11 @@ const methods = computed(() =>
 <template>
     <article class="payment-selector">
         <div class="payment-selector__head">
-            <h2 class="payment-selector__title">Payment method</h2>
-            <p class="payment-selector__subtitle">Choose how to pay for the order.</p>
+            <h2 class="payment-selector__title">{{ $t('payment.title') }}</h2>
+            <p class="payment-selector__subtitle">{{ $t('payment.subtitle') }}</p>
         </div>
         <MvNotice v-if="checkoutStore.methodsLoaded && !methods.length" variant="warning">
-            No payment method is available for your account. Please contact your manager.
+            {{ $t('payment.none') }}
         </MvNotice>
         <div
             v-else-if="!checkoutStore.methodsLoaded"
@@ -76,14 +67,19 @@ const methods = computed(() =>
                     <div class="payment-selector__radio"></div>
                 </div>
                 <div>
-                    <div class="payment-selector__method-title">{{ method.title }}</div>
-                    <div class="payment-selector__method-note">{{ method.note }}</div>
+                    <div class="payment-selector__method-title">
+                        {{ $t(`payment.methods.${method.id}.title`) }}
+                    </div>
+                    <div class="payment-selector__method-note">
+                        {{ $t(`payment.methods.${method.id}.note`) }}
+                    </div>
                 </div>
                 <span
                     class="payment-selector__badge"
                     :class="{ 'payment-selector__badge--orange': method.badgeOrange }"
-                    >{{ method.badge }}</span
                 >
+                    {{ $t(`payment.methods.${method.id}.badge`) }}
+                </span>
             </button>
         </div>
     </article>

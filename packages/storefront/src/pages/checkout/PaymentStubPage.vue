@@ -1,16 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import { formatMoney } from '../../i18n/format';
 import { toast } from '@mivend/ui-kit';
 import { IconAlertTriangle, IconCheck, IconHourglass, IconLock, IconX } from '@tabler/icons-vue';
 import { useCartStore } from '../../stores/cart';
 
+const { t } = useI18n();
 const router = useRouter();
+const demoOrder = computed(() =>
+    t('paymentStub.order', { number: '348744', amount: formatMoney(12450) }),
+);
 const cartStore = useCartStore();
 
 async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
     const outcome = await cartStore.completeOnlinePayment(status);
     if (outcome === 'amount-changed') {
-        toast('The amount to pay has changed. Please review it and confirm again.', 'error');
+        toast(t('paymentStub.amountChanged'), 'error');
         router.push('/checkout');
         return;
     }
@@ -24,31 +31,32 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
             <div class="stub-lock">
                 <IconLock :size="30" stroke-width="1.8" aria-hidden="true" />
             </div>
-            <h1 class="stub-title">Payment</h1>
-            <p class="stub-subtitle">Demo payment service — for testing only</p>
+            <h1 class="stub-title">{{ $t('paymentStub.title') }}</h1>
+            <p class="stub-subtitle">{{ $t('paymentStub.subtitle') }}</p>
 
             <div class="stub-warning">
-                <IconAlertTriangle :size="16" stroke-width="2" aria-hidden="true" /> This is a stub
-                page. In production this will be replaced by a real payment provider redirect.
+                <IconAlertTriangle :size="16" stroke-width="2" aria-hidden="true" />
+                {{ $t('paymentStub.warning') }}
             </div>
 
-            <div class="stub-order">Order #348744 · 12 450 ₽</div>
+            <div class="stub-order">{{ demoOrder }}</div>
 
             <div class="stub-actions">
                 <button class="stub-btn stub-btn--green" @click="choose('success')">
-                    <IconCheck :size="18" stroke-width="2.5" aria-hidden="true" /> Payment
-                    successful
+                    <IconCheck :size="18" stroke-width="2.5" aria-hidden="true" />
+                    {{ $t('paymentStub.success') }}
                 </button>
                 <button class="stub-btn stub-btn--orange" @click="choose('pending')">
-                    <IconHourglass :size="18" stroke-width="2.2" aria-hidden="true" /> Payment
-                    pending
+                    <IconHourglass :size="18" stroke-width="2.2" aria-hidden="true" />
+                    {{ $t('paymentStub.pending') }}
                 </button>
                 <button class="stub-btn stub-btn--red" @click="choose('fail')">
-                    <IconX :size="18" stroke-width="2.5" aria-hidden="true" /> Payment failed
+                    <IconX :size="18" stroke-width="2.5" aria-hidden="true" />
+                    {{ $t('paymentStub.fail') }}
                 </button>
             </div>
 
-            <RouterLink to="/checkout" class="stub-back">← Back to checkout</RouterLink>
+            <RouterLink to="/checkout" class="stub-back">{{ $t('paymentStub.back') }}</RouterLink>
         </div>
     </div>
 </template>

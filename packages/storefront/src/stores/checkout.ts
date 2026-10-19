@@ -11,6 +11,7 @@ import {
 } from '../utils/checkoutPolicy';
 import { SHIPPING_CODE_BY_DELIVERY, type DeliveryType } from '../utils/deliveryMethods';
 import { useAuthStore } from './auth';
+import { i18n } from '../i18n';
 
 export interface CreditPreview extends CreditPolicyPreview {
     availableCredit: number;
@@ -20,14 +21,12 @@ export interface CreditPreview extends CreditPolicyPreview {
 export type { DeliveryType, PaymentForm };
 
 const DELIVERY_ORDER: DeliveryType[] = ['courier', 'pickup'];
-export type ResultState = 'success' | 'pending' | 'fail' | null;
 
 export const useCheckoutStore = defineStore('checkout', () => {
     const selectedPayment = ref<PaymentForm | null>(null);
     const availableDeliveries = ref<DeliveryType[]>([]);
     const deliveryLoaded = ref(false);
     const selectedDelivery = ref<DeliveryType>('courier');
-    const resultState = ref<ResultState>(null);
     const creditPreview = ref<CreditPreview | null>(null);
     const creditAcknowledged = ref(false);
     const creditPreviewReady = ref(false);
@@ -85,10 +84,10 @@ export const useCheckoutStore = defineStore('checkout', () => {
     const deliveryBlocker = computed<string | null>(() => {
         if (!deliveryLoaded.value) return null;
         if (!availableDeliveries.value.includes(selectedDelivery.value)) {
-            return 'Selected delivery type is not available for this order';
+            return i18n.global.t('cartErrors.deliveryUnavailable');
         }
         if (selectedDelivery.value === 'courier' && !useAuthStore().tradingPoint) {
-            return 'Select a trading point to use courier delivery';
+            return i18n.global.t('delivery.courierNeedsPointBlocker');
         }
         return null;
     });
@@ -101,16 +100,11 @@ export const useCheckoutStore = defineStore('checkout', () => {
         selectedDelivery.value = type;
     }
 
-    function setResultState(state: ResultState): void {
-        resultState.value = state;
-    }
-
     function reset(): void {
         selectedPayment.value = null;
         availableDeliveries.value = [];
         deliveryLoaded.value = false;
         selectedDelivery.value = 'courier';
-        resultState.value = null;
         creditPreview.value = null;
         creditAcknowledged.value = false;
         creditPreviewReady.value = false;
@@ -124,7 +118,6 @@ export const useCheckoutStore = defineStore('checkout', () => {
         deliveryLoaded,
         deliveryBlocker,
         selectedDelivery,
-        resultState,
         creditPreview,
         creditAcknowledged,
         creditWarningVisible,
@@ -136,7 +129,6 @@ export const useCheckoutStore = defineStore('checkout', () => {
         loadDeliveryMethods,
         setPayment,
         setDelivery,
-        setResultState,
         reset,
     };
 });

@@ -1,8 +1,15 @@
-export const PAYMENT_LABELS: Record<string, string> = {
-    cash: 'Cash',
-    'offline-terms': 'Bank proforma invoice',
-    'online-stub': 'Card online',
+import { i18n } from '../i18n';
+
+const METHOD_KEYS: Record<string, string> = {
+    cash: 'cash',
+    'offline-terms': 'offlineTerms',
+    'online-stub': 'onlineStub',
 };
+
+export function paymentMethodLabel(methodCode: string): string {
+    const key = METHOD_KEYS[methodCode];
+    return key ? i18n.global.t(`orderCreated.methods.${key}`) : methodCode;
+}
 
 export interface OrderCreatedText {
     status: string;
@@ -11,14 +18,15 @@ export interface OrderCreatedText {
 }
 
 export function describeOrderCreated(code: string, methodCode: string): OrderCreatedText {
-    const created = `Your order ${code} has been created`;
-    const notify = "You'll get a notification when the order is ready.";
+    const t = i18n.global.t;
+    const created = t('orderCreated.created', { code });
+    const notify = t('orderCreated.steps.notify');
     if (methodCode === 'cash') {
         return {
-            status: `${created}. Waiting for the manager to confirm receipt of your cash payment.`,
+            status: t('orderCreated.status.cash', { created }),
             steps: [
-                'Hand the cash over on pickup or delivery.',
-                'The manager confirms the cash receipt.',
+                t('orderCreated.steps.cashHandOver'),
+                t('orderCreated.steps.cashConfirm'),
                 notify,
             ],
             waitingForCashConfirmation: true,
@@ -26,18 +34,14 @@ export function describeOrderCreated(code: string, methodCode: string): OrderCre
     }
     if (methodCode === 'offline-terms') {
         return {
-            status: `${created}. Pay each proforma invoice via your bank; the order is paid once the payment is received.`,
-            steps: [
-                'Print the proforma invoices and send them to your bank.',
-                'The payment is matched to the order when it arrives.',
-                notify,
-            ],
+            status: t('orderCreated.status.offlineTerms', { created }),
+            steps: [t('orderCreated.steps.bankPrint'), t('orderCreated.steps.bankMatch'), notify],
             waitingForCashConfirmation: false,
         };
     }
     return {
-        status: `${created}.`,
-        steps: ['Your order is queued for processing.', 'Goods will be reserved.', notify],
+        status: t('orderCreated.status.default', { created }),
+        steps: [t('orderCreated.steps.queued'), t('orderCreated.steps.reserved'), notify],
         waitingForCashConfirmation: false,
     };
 }

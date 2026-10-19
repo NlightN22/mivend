@@ -8,11 +8,11 @@ const checkoutStore = useCheckoutStore();
 <template>
     <div v-if="checkoutStore.creditWarningVisible" class="deferred-credit-warning">
         <p v-if="checkoutStore.waitsForManagerConfirmation" class="deferred-credit-warning__note">
-            The credit limit is exceeded: the order will wait for your manager to confirm it.
+            {{ $t('checkout.credit.waitsForManager') }}
         </p>
         <MvCheckbox
             v-model="checkoutStore.creditAcknowledged"
-            label="I understand the limit is exceeded"
+            :label="$t('checkout.credit.acknowledge')"
         />
     </div>
 </template>

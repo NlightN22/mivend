@@ -61,15 +61,15 @@ onMounted(() => void reload());
         <section class="orders-content">
             <div class="orders-toolbar">
                 <div>
-                    <h1 class="orders-title">My Orders</h1>
+                    <h1 class="orders-title">{{ $t('orders.myOrders') }}</h1>
                     <p class="orders-subtitle">
-                        Working order list: statuses, amounts, payment, documents and repeat order.
+                        {{ $t('orders.subtitle') }}
                     </p>
                 </div>
                 <input
                     v-model="searchQuery"
                     class="toolbar-search"
-                    placeholder="Search by number, product or address"
+                    :placeholder="$t('orders.searchPlaceholder')"
                 />
             </div>
 
@@ -97,9 +97,11 @@ onMounted(() => void reload());
                 </button>
             </div>
 
-            <div v-if="loading" class="orders-state">Loading orders...</div>
+            <div v-if="loading" class="orders-state">{{ $t('orders.loading') }}</div>
 
-            <div v-else-if="orders.length === 0" class="orders-state">No orders found.</div>
+            <div v-else-if="orders.length === 0" class="orders-state">
+                {{ $t('orders.notFound') }}
+            </div>
 
             <div v-else class="orders-page-grid">
                 <div class="orders-page-list">

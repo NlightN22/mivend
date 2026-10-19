@@ -282,13 +282,10 @@ export default [
         files: [
             'packages/storefront/src/components/**/*.vue',
             'packages/storefront/src/layouts/**/*.vue',
-            'packages/storefront/src/pages/{home,catalog,cart,favorites,error}/**/*.vue',
+            'packages/storefront/src/pages/{home,catalog,cart,favorites,error,checkout,orders}/**/*.vue',
         ],
         rules: {
-            '@intlify/vue-i18n/no-raw-text': [
-                'error',
-                { ignorePattern: '^[^A-Za-zА-Яа-яЁё]+$' },
-            ],
+            '@intlify/vue-i18n/no-raw-text': ['error', { ignorePattern: '^[^A-Za-zА-Яа-яЁё]+$' }],
         },
     },
     prettierConfig, // must be last — disables rules that conflict with prettier

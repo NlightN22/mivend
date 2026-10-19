@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { formatMoney as formatLocaleMoney } from '../../i18n/format';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
 import { shopApi } from '../../api/client';
 import { MyAdvanceBalanceDocument } from '../../api/generated/graphql';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const { formatWhole } = useCurrency();
 
@@ -18,13 +20,10 @@ const availableLimit = computed(() => {
 
 const paymentDelay = computed(() => {
     const days = authStore.counterparty?.paymentDelayDays;
-    return days != null && days > 0 ? `${days} days` : '—';
+    return days != null && days > 0 ? t('orders.aside.days', days) : '—';
 });
 
-// Real payment obligations now live entirely on /proforma-invoices (which can independently span
-// several of our organizations per split order — see docs/payments.md "Organizations") — this
-// sidebar only surfaces an honest summary and links there, rather than duplicating a
-// pay-anything widget with no real backing.
+// Payments live on /proforma-invoices (see docs/payments.md "Organizations"); this only links there.
 const advanceBalances = ref<{ amount: number; currencyCode: string }[]>([]);
 
 function formatMoney(cents: number, currency: string): string {
@@ -44,26 +43,28 @@ onMounted(async () => {
 <template>
     <aside class="orders-aside">
         <div class="aside-card">
-            <div class="aside-title">Payments &amp; proforma invoices</div>
+            <div class="aside-title">{{ $t('orders.aside.paymentsTitle') }}</div>
             <div class="aside-subtitle">
-                Every order can split into several proforma invoices (one per organization) — pay
-                any of them any time from the proforma invoices page.
+                {{ $t('orders.aside.paymentsText') }}
             </div>
-            <router-link to="/proforma-invoices" class="wide-btn orange"
-                >Go to proforma invoices</router-link
-            >
+            <router-link to="/proforma-invoices" class="wide-btn orange">{{
+                $t('orders.aside.goToProformas')
+            }}</router-link>
         </div>
 
         <div class="aside-card">
-            <div class="aside-title">Balance &amp; limits</div>
+            <div class="aside-title">{{ $t('orders.aside.balanceTitle') }}</div>
             <div class="aside-line">
-                <span>Available limit</span><strong>{{ availableLimit }}</strong>
+                <span>{{ $t('orders.aside.availableLimit') }}</span
+                ><strong>{{ availableLimit }}</strong>
             </div>
             <div class="aside-line">
-                <span>Payment delay</span><strong>{{ paymentDelay }}</strong>
+                <span>{{ $t('orders.aside.paymentDelay') }}</span
+                ><strong>{{ paymentDelay }}</strong>
             </div>
             <div v-if="advanceBalances.length" class="aside-line">
-                <span>Advance balance</span><strong>{{ advanceTotal }}</strong>
+                <span>{{ $t('orders.aside.advanceBalance') }}</span
+                ><strong>{{ advanceTotal }}</strong>
             </div>
         </div>
     </aside>

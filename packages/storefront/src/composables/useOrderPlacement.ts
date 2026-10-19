@@ -6,6 +6,7 @@ import {
     CompleteOrderPaymentDocument,
     OrderProformaInvoicesDocument,
 } from '../api/generated/graphql';
+import { i18n } from '../i18n';
 import { useCartStore } from '../stores/cart';
 import { useCheckoutStore } from '../stores/checkout';
 import {
@@ -67,7 +68,7 @@ export function useOrderPlacement(): { place: () => Promise<void> } {
         await cartStore.fetchCart();
         const payment = result.addPaymentToOrder;
         if (payment.__typename !== 'Order') {
-            toast(payment.message ?? 'Could not place order', 'error');
+            toast(payment.message ?? i18n.global.t('checkout.placeFailed'), 'error');
             return;
         }
         // Popup blockers may drop these tabs; the order-created page lists the same links.
