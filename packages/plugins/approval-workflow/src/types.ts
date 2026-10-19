@@ -18,6 +18,8 @@ export interface ApprovalListOptions {
     // IN-filter alternative to `status` — e.g. the Discounts registry wants "pending OR
     // rejected" in one query. If both are set, `statuses` wins.
     statuses?: string[];
+    // Set by the resolver from PriceTypeAccessService; never a client argument.
+    allowedPriceTypeCodes?: string[];
 }
 
 export const loggerCtx = 'ApprovalWorkflowPlugin';

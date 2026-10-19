@@ -25,6 +25,7 @@ import {
     loggerCtx,
 } from './types';
 import { WorkflowDefinitionService } from './workflow-definition.service';
+import { applyPriceTypeGate } from './payload-price-type-gate';
 
 @Injectable()
 export class ApprovalRequestService {
@@ -238,19 +239,23 @@ export class ApprovalRequestService {
     async getMySummary(
         ctx: RequestContext,
         recentLimit: number,
+        allowedPriceTypeCodes?: string[],
     ): Promise<{ pendingCount: number; recent: ApprovalRequest[] }> {
         const adminId = await this.getAdministratorId(ctx);
         if (!adminId) {
             return { pendingCount: 0, recent: [] };
         }
         const repo = this.connection.getRepository(ctx, ApprovalRequest);
+        const own = (): SelectQueryBuilder<ApprovalRequest> => {
+            const qb = repo
+                .createQueryBuilder('request')
+                .where('request.requestedByAdministratorId = :adminId', { adminId });
+            if (allowedPriceTypeCodes) applyPriceTypeGate(qb, allowedPriceTypeCodes);
+            return qb;
+        };
         const [pendingCount, recent] = await Promise.all([
-            repo.count({ where: { requestedByAdministratorId: adminId, status: 'pending' } }),
-            repo.find({
-                where: { requestedByAdministratorId: adminId },
-                order: { createdAt: 'DESC' },
-                take: recentLimit,
-            }),
+            own().andWhere('request.status = :pending', { pending: 'pending' }).getCount(),
+            own().orderBy('request.createdAt', 'DESC').take(recentLimit).getMany(),
         ]);
         return { pendingCount, recent };
     }
@@ -382,6 +387,7 @@ export class ApprovalRequestService {
         qb: SelectQueryBuilder<ApprovalRequest>,
         options: ApprovalListOptions,
     ): void {
+        if (options.allowedPriceTypeCodes) applyPriceTypeGate(qb, options.allowedPriceTypeCodes);
         if (options.requestType) {
             qb.andWhere('request.requestType = :filterRequestType', {
                 filterRequestType: options.requestType,

@@ -234,20 +234,26 @@ describe('ApprovalRequestService', () => {
 
     it('getMySummary returns the pending count and recent requests for the caller only', async () => {
         administratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
-        requestRepo.count.mockResolvedValue(2);
-        requestRepo.find.mockResolvedValue([{ id: 'req-1' }, { id: 'req-2' }]);
+        const qb = {
+            where: vi.fn(() => qb),
+            andWhere: vi.fn(() => qb),
+            orderBy: vi.fn(() => qb),
+            take: vi.fn(() => qb),
+            getCount: vi.fn(async () => 2),
+            getMany: vi.fn(async () => [{ id: 'req-1' }, { id: 'req-2' }]),
+        };
+        requestRepo.createQueryBuilder.mockReturnValue(qb as never);
 
-        const result = await service.getMySummary(mockCtx(true), 5);
+        const result = await service.getMySummary(mockCtx(true), 5, ['code-a']);
 
-        expect(requestRepo.count).toHaveBeenCalledWith({
-            where: { requestedByAdministratorId: 'admin-1', status: 'pending' },
+        expect(qb.where).toHaveBeenCalledWith('request.requestedByAdministratorId = :adminId', {
+            adminId: 'admin-1',
         });
-        expect(requestRepo.find).toHaveBeenCalledWith(
-            expect.objectContaining({
-                where: { requestedByAdministratorId: 'admin-1' },
-                take: 5,
-            }),
+        expect(qb.andWhere).toHaveBeenCalledWith(
+            expect.stringContaining('priceTypeCode'),
+            expect.objectContaining({ gateAllowedCodes: ['code-a'] }),
         );
+        expect(qb.take).toHaveBeenCalledWith(5);
         expect(result).toEqual({ pendingCount: 2, recent: [{ id: 'req-1' }, { id: 'req-2' }] });
     });
 

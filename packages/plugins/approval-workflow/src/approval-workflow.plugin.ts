@@ -6,6 +6,7 @@ import { ApprovalRequest } from './entities/approval-request.entity';
 import { ApprovalStep } from './entities/approval-step.entity';
 import { WorkflowDefinition } from './entities/workflow-definition.entity';
 import { ApprovalRequestService } from './approval-request.service';
+import { ApprovalReadAccessService } from './approval-read-access.service';
 import { ApprovalStepService } from './approval-step.service';
 import { WorkflowDefinitionService } from './workflow-definition.service';
 import { ApprovalRequestResolver, WorkflowDefinitionResolver } from './approval-workflow.resolver';
@@ -112,7 +113,12 @@ const adminApiSchema = gql`
         schema: adminApiSchema,
         resolvers: [ApprovalRequestResolver, WorkflowDefinitionResolver],
     },
-    providers: [ApprovalRequestService, ApprovalStepService, WorkflowDefinitionService],
+    providers: [
+        ApprovalRequestService,
+        ApprovalStepService,
+        ApprovalReadAccessService,
+        WorkflowDefinitionService,
+    ],
     exports: [ApprovalRequestService, WorkflowDefinitionService],
     compatibility: '>0.0.0',
 })

@@ -9,7 +9,7 @@ import {
     RequestContext,
     Transaction,
 } from '@vendure/core';
-import { CustomPermission } from '@mivend/plugin-access-control';
+import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 
 import { ApprovalRequest } from './entities/approval-request.entity';
 import { ApprovalStep } from './entities/approval-step.entity';
@@ -18,6 +18,7 @@ import { ApprovalRequestService } from './approval-request.service';
 import { WorkflowDefinitionService, ParsedWorkflowDefinition } from './workflow-definition.service';
 import { ApprovalListOptions, ApprovalStepDecision, WorkflowStepDefinition } from './types';
 import { ApprovalStepService } from './approval-step.service';
+import { ApprovalReadAccessService } from './approval-read-access.service';
 
 // requestType is a fixed engine identifier, so its create permission is code, not a DB table.
 // Approval chains are data-driven instead (WorkflowDefinition.stepsJson).
@@ -33,6 +34,8 @@ export class ApprovalRequestResolver {
         private approvalRequestService: ApprovalRequestService,
         private approvalStepService: ApprovalStepService,
         private workflowDefinitionService: WorkflowDefinitionService,
+        private readAccess: ApprovalReadAccessService,
+        private priceTypeAccess: PriceTypeAccessService,
     ) {}
 
     @Query()
@@ -47,7 +50,10 @@ export class ApprovalRequestResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { id: ID },
     ): Promise<ApprovalRequest | null> {
-        return this.approvalStepService.findRequest(ctx, args.id);
+        return this.readAccess.visibleOrNull(
+            ctx,
+            await this.approvalStepService.findRequest(ctx, args.id),
+        );
     }
 
     // Gated on Authenticated only: the service scopes results to the caller, so roles that never submit
@@ -58,7 +64,11 @@ export class ApprovalRequestResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { recentLimit?: number },
     ): Promise<{ pendingCount: number; recent: ApprovalRequest[] }> {
-        return this.approvalRequestService.getMySummary(ctx, args.recentLimit ?? 5);
+        return this.approvalRequestService.getMySummary(
+            ctx,
+            args.recentLimit ?? 5,
+            await this.priceTypeAccess.allowedCodes(ctx),
+        );
     }
 
     // Gated on ReadOrder, not an approval permission: any role that sees the order list needs the flag.
@@ -90,7 +100,7 @@ export class ApprovalRequestResolver {
         return this.approvalRequestService.findByRequestType(
             ctx,
             args.requestType,
-            args.options ?? {},
+            await this.readAccess.withGate(ctx, args.options),
         );
     }
 
@@ -107,8 +117,14 @@ export class ApprovalRequestResolver {
         allInvolved: PaginatedList<ApprovalRequest>;
     }> {
         const [awaitingMyDecision, allInvolved] = await Promise.all([
-            this.approvalRequestService.findAwaitingMyDecision(ctx, args.awaitingOptions ?? {}),
-            this.approvalRequestService.findAllInvolving(ctx, args.allInvolvedOptions ?? {}),
+            this.approvalRequestService.findAwaitingMyDecision(
+                ctx,
+                await this.readAccess.withGate(ctx, args.awaitingOptions),
+            ),
+            this.approvalRequestService.findAllInvolving(
+                ctx,
+                await this.readAccess.withGate(ctx, args.allInvolvedOptions),
+            ),
         ]);
         return { awaitingMyDecision, allInvolved };
     }
@@ -214,6 +230,7 @@ export class ApprovalRequestResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { requestId: ID; decision: ApprovalStepDecision; comment?: string },
     ): Promise<ApprovalRequest> {
+        await this.readAccess.assertVisible(ctx, args.requestId);
         return this.approvalRequestService.decide(ctx, args.requestId, args.decision, args.comment);
     }
 
@@ -223,6 +240,7 @@ export class ApprovalRequestResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { requestId: ID; escalateToAdministratorId: ID },
     ): Promise<ApprovalRequest> {
+        await this.readAccess.assertVisible(ctx, args.requestId);
         return this.approvalRequestService.escalate(
             ctx,
             args.requestId,
