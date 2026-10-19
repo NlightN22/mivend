@@ -66,8 +66,12 @@ export class ErpImportController {
     @ApiOperation({ summary: 'Look up the status of a previously submitted import run' })
     @ApiParam({ name: 'exchangeId', description: 'The exchangeId used when submitting the batch' })
     @ApiResponse({ status: 200, type: ImportRunResultDto })
-    async getRun(@Param('exchangeId') exchangeId: string): Promise<ImportRunResult | null> {
-        const run = await this.importRunService.findByExchangeId(exchangeId);
+    async getRun(
+        @Req() req: Request,
+        @Param('exchangeId') exchangeId: string,
+    ): Promise<ImportRunResult | null> {
+        const ctx = await this.requestContextService.create({ apiType: 'admin', req });
+        const run = await this.importRunService.findByExchangeId(ctx, exchangeId);
         if (!run) return null;
         return this.importRunService.toResult(run);
     }

@@ -1,23 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ImportRun } from './entities/import-run.entity';
 import { ImportRunError } from './entities/import-run-error.entity';
 import type { BatchImportBody, ImportRunResult } from './types';
 
 @Injectable()
 export class ImportRunService {
-    constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+    constructor(private readonly connection: TransactionalConnection) {}
 
-    async findByExchangeId(exchangeId: string): Promise<ImportRun | null> {
-        return this.dataSource.getRepository(ImportRun).findOne({
+    async findByExchangeId(ctx: RequestContext, exchangeId: string): Promise<ImportRun | null> {
+        return this.connection.getRepository(ctx, ImportRun).findOne({
             where: { exchangeId },
             relations: ['errors'],
         });
     }
 
-    async createPending(body: BatchImportBody): Promise<ImportRun> {
-        const run = this.dataSource.getRepository(ImportRun).create({
+    async createPending(ctx: RequestContext, body: BatchImportBody): Promise<ImportRun> {
+        const run = this.connection.getRepository(ctx, ImportRun).create({
             exchangeId: body.exchangeId,
             status: 'pending',
             total: body.records.length,
@@ -26,16 +25,18 @@ export class ImportRunService {
             payload: body as unknown as object,
             finishedAt: null,
         });
-        return this.dataSource.getRepository(ImportRun).save(run);
+        return this.connection.getRepository(ctx, ImportRun).save(run);
     }
 
-    async markProcessing(run: ImportRun): Promise<void> {
-        await this.dataSource.getRepository(ImportRun).update(run.id, { status: 'processing' });
+    async markProcessing(ctx: RequestContext, run: ImportRun): Promise<void> {
+        await this.connection
+            .getRepository(ctx, ImportRun)
+            .update(run.id, { status: 'processing' });
     }
 
-    async resetForRetry(run: ImportRun): Promise<void> {
-        await this.dataSource.getRepository(ImportRunError).delete({ run: { id: run.id } });
-        await this.dataSource.getRepository(ImportRun).update(run.id, {
+    async resetForRetry(ctx: RequestContext, run: ImportRun): Promise<void> {
+        await this.connection.getRepository(ctx, ImportRunError).delete({ run: { id: run.id } });
+        await this.connection.getRepository(ctx, ImportRun).update(run.id, {
             status: 'pending',
             processed: 0,
             failed: 0,
@@ -44,12 +45,13 @@ export class ImportRunService {
     }
 
     async complete(
+        ctx: RequestContext,
         run: ImportRun,
         processed: number,
         errors: Array<{ index: number; message: string }>,
     ): Promise<void> {
-        const repo = this.dataSource.getRepository(ImportRun);
-        const errorRepo = this.dataSource.getRepository(ImportRunError);
+        const repo = this.connection.getRepository(ctx, ImportRun);
+        const errorRepo = this.connection.getRepository(ctx, ImportRunError);
 
         if (errors.length > 0) {
             const entities = errors.map(e =>

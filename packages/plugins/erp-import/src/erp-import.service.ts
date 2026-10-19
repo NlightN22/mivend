@@ -57,7 +57,7 @@ export class ErpImportService {
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
-        const existing = await this.importRunService.findByExchangeId(body.exchangeId);
+        const existing = await this.importRunService.findByExchangeId(ctx, body.exchangeId);
         if (existing && existing.status !== 'failed') {
             Logger.verbose(
                 `Duplicate exchangeId=${body.exchangeId}, returning existing run`,
@@ -69,12 +69,12 @@ export class ErpImportService {
         let run: ImportRun;
         if (existing) {
             Logger.verbose(`Retrying previously failed exchangeId=${body.exchangeId}`, loggerCtx);
-            await this.importRunService.resetForRetry(existing);
+            await this.importRunService.resetForRetry(ctx, existing);
             run = existing;
         } else {
-            run = await this.importRunService.createPending(body);
+            run = await this.importRunService.createPending(ctx, body);
         }
-        await this.importRunService.markProcessing(run);
+        await this.importRunService.markProcessing(ctx, run);
 
         const errors: Array<{ index: number; message: string }> = [];
         let processed = 0;
@@ -95,8 +95,8 @@ export class ErpImportService {
             await this.categoryHandler.recomputeFilters(ctx);
         }
 
-        await this.importRunService.complete(run, processed, errors);
-        const updated = await this.importRunService.findByExchangeId(body.exchangeId);
+        await this.importRunService.complete(ctx, run, processed, errors);
+        const updated = await this.importRunService.findByExchangeId(ctx, body.exchangeId);
         return this.importRunService.toResult(updated!);
     }
 

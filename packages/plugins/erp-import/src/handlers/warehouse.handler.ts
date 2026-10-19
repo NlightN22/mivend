@@ -22,8 +22,9 @@ export class WarehouseHandler {
     }
 
     private async ensureStockLocation(ctx: RequestContext, record: WarehouseRecord): Promise<void> {
-        const bound = await this.connection.rawConnection
-            .createQueryBuilder()
+        const bound = await this.connection
+            .getRepository(ctx, 'Channel')
+            .manager.createQueryBuilder()
             .select('sl.id', 'id')
             .from('stock_location', 'sl')
             .where('sl."customFieldsWarehouseerpid" = :erpId', { erpId: record.erpId })
@@ -31,8 +32,9 @@ export class WarehouseHandler {
         if (bound) return;
 
         const adoptable = record.stockLocationName
-            ? await this.connection.rawConnection
-                  .createQueryBuilder()
+            ? await this.connection
+                  .getRepository(ctx, 'Channel')
+                  .manager.createQueryBuilder()
                   .select('sl.id', 'id')
                   .from('stock_location', 'sl')
                   .where('sl.name = :name', { name: record.stockLocationName })

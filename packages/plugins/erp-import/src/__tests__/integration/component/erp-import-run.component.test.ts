@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { DataSource } from 'typeorm';
 import type { RequestContext } from '@vendure/core';
 import {
+    createTestConnection,
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
@@ -72,7 +73,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    importRunService = new ImportRunService(dataSource);
+    importRunService = new ImportRunService(createTestConnection(dataSource));
 });
 
 afterAll(async () => {

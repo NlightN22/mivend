@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ctxQuery } from 'shared';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { StorageLocationRecord } from '../types';
 
@@ -7,8 +8,10 @@ import type { StorageLocationRecord } from '../types';
 export class StorageLocationHandler {
     constructor(private readonly connection: TransactionalConnection) {}
 
-    async upsert(_ctx: RequestContext, record: StorageLocationRecord): Promise<void> {
-        await this.connection.rawConnection.query(
+    async upsert(ctx: RequestContext, record: StorageLocationRecord): Promise<void> {
+        await ctxQuery<unknown>(
+            this.connection,
+            ctx,
             `INSERT INTO storage_location_assignment ("entityId", "productId", "organizationErpId", "warehouseId", priority)
              VALUES ($1, $2, $3, $4, $5)
              ON CONFLICT ("entityId")

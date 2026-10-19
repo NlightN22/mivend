@@ -10,6 +10,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { ManufacturerService } from '@mivend/plugin-erp-integration';
+import { ctxQuery } from 'shared';
 import type { ProductRecord } from '../types';
 
 const loggerCtx = 'ErpProductHandler';
@@ -39,8 +40,9 @@ export class ProductHandler {
             );
         }
 
-        const existing = await this.connection.rawConnection
-            .createQueryBuilder()
+        const existing = await this.connection
+            .getRepository(ctx, 'Channel')
+            .manager.createQueryBuilder()
             .select('p.id', 'id')
             .from('product', 'p')
             .innerJoin('product_translation', 'pt', 'pt."baseId" = p.id')
@@ -50,7 +52,7 @@ export class ProductHandler {
         const priceInCents = Math.round(record.price * 100);
         const enabled = record.enabled ?? true;
         const onSale = record.onSale ?? false;
-        const categoryIds = await this.resolveFacetValueIds(record.categoryCode);
+        const categoryIds = await this.resolveFacetValueIds(ctx, record.categoryCode);
         const brandId = await this.resolveOrCreateBrandFacetValue(ctx, record.brandCode);
         const facetValueIds = [...categoryIds, ...(brandId ? [brandId] : [])];
         const manufacturerFields = record.manufacturerCode
@@ -143,13 +145,15 @@ export class ProductHandler {
     ): Promise<string | undefined> {
         if (!brandCode) return undefined;
 
-        const existing = (await this.connection.rawConnection.query(
+        const existing = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
             `SELECT fv.id FROM facet_value fv
              INNER JOIN facet f ON f.id = fv."facetId"
              WHERE fv.code = $1 AND f.code = $2
              LIMIT 1`,
             [brandCode, BRAND_FACET_CODE],
-        )) as Array<{ id: string }>;
+        );
         if (existing.length > 0) return String(existing[0].id);
 
         let facet = await this.facetService.findByCode(ctx, BRAND_FACET_CODE, LanguageCode.en);
@@ -170,15 +174,20 @@ export class ProductHandler {
         return String(fv.id);
     }
 
-    private async resolveFacetValueIds(categoryCode: string | undefined): Promise<string[]> {
+    private async resolveFacetValueIds(
+        ctx: RequestContext,
+        categoryCode: string | undefined,
+    ): Promise<string[]> {
         if (!categoryCode) return [];
-        const rows = (await this.connection.rawConnection.query(
+        const rows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
             `SELECT fv.id FROM facet_value fv
              INNER JOIN facet f ON f.id = fv."facetId"
              WHERE fv.code = $1 AND f.code = $2
              LIMIT 1`,
             [categoryCode, CATEGORY_FACET_CODE],
-        )) as Array<{ id: string }>;
+        );
         return rows.length > 0 ? [String(rows[0].id)] : [];
     }
 }

@@ -13,8 +13,9 @@ export class CrossReferenceHandler {
     ) {}
 
     async upsert(ctx: RequestContext, record: CrossReferenceRecord): Promise<void> {
-        const row = await this.connection.rawConnection
-            .createQueryBuilder()
+        const row = await this.connection
+            .getRepository(ctx, 'Channel')
+            .manager.createQueryBuilder()
             .select('p.id', 'id')
             .from('product', 'p')
             .where('p."customFieldsExternalid" = :extId', { extId: record.externalId })

@@ -8,7 +8,10 @@ const ctx = {} as RequestContext;
 
 function connection() {
     const query = vi.fn(async () => undefined);
-    return { query, conn: { rawConnection: { query } } as unknown as TransactionalConnection };
+    return {
+        query,
+        conn: { getRepository: () => ({ query }) } as unknown as TransactionalConnection,
+    };
 }
 
 describe('organization data import handlers', () => {

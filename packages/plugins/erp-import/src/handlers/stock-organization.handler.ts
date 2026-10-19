@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ctxQuery } from 'shared';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import type { StockOrganizationRecord } from '../types';
 
@@ -7,8 +8,10 @@ import type { StockOrganizationRecord } from '../types';
 export class StockOrganizationHandler {
     constructor(private readonly connection: TransactionalConnection) {}
 
-    async upsert(_ctx: RequestContext, record: StockOrganizationRecord): Promise<void> {
-        await this.connection.rawConnection.query(
+    async upsert(ctx: RequestContext, record: StockOrganizationRecord): Promise<void> {
+        await ctxQuery<unknown>(
+            this.connection,
+            ctx,
             `INSERT INTO stock_organization ("entityId", "productId", "organizationErpId", quantity, "isActive")
              VALUES ($1, $2, $3, $4, $5)
              ON CONFLICT ("productId", "organizationErpId")

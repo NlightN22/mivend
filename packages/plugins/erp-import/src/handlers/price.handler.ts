@@ -9,8 +9,9 @@ export class PriceHandler {
     constructor(private readonly connection: TransactionalConnection) {}
 
     async upsert(ctx: RequestContext, record: PriceRecord): Promise<void> {
-        const variant = await this.connection.rawConnection
-            .createQueryBuilder()
+        const variant = await this.connection
+            .getRepository(ctx, 'Channel')
+            .manager.createQueryBuilder()
             .select('pv.id', 'id')
             .from('product_variant', 'pv')
             .where('pv.sku = :sku', { sku: record.sku })
@@ -23,8 +24,9 @@ export class PriceHandler {
 
         const priceInCents = Math.round(record.price * 100);
 
-        const existing = await this.connection.rawConnection
-            .createQueryBuilder()
+        const existing = await this.connection
+            .getRepository(ctx, 'Channel')
+            .manager.createQueryBuilder()
             .select('cp.id', 'id')
             .from('product_variant_price_entry', 'cp')
             .where('cp."variantId" = :variantId AND cp."priceTypeCode" = :code', {
@@ -34,15 +36,17 @@ export class PriceHandler {
             .getRawOne<{ id: string }>();
 
         if (existing) {
-            await this.connection.rawConnection
-                .createQueryBuilder()
+            await this.connection
+                .getRepository(ctx, 'Channel')
+                .manager.createQueryBuilder()
                 .update('product_variant_price_entry')
                 .set({ price: priceInCents })
                 .where('id = :id', { id: existing.id })
                 .execute();
         } else {
-            await this.connection.rawConnection
-                .createQueryBuilder()
+            await this.connection
+                .getRepository(ctx, 'Channel')
+                .manager.createQueryBuilder()
                 .insert()
                 .into('product_variant_price_entry')
                 .values({

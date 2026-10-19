@@ -321,9 +321,12 @@ describe('ErpImportService', () => {
             .mockResolvedValueOnce(null)
             .mockResolvedValue(makeRun({ status: 'done' }));
         await service.processBatch(ctx, body);
-        expect(importRunService.complete).toHaveBeenCalledWith(expect.anything(), 1, [
-            { index: 0, message: 'DB error' },
-        ]);
+        expect(importRunService.complete).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.anything(),
+            1,
+            [{ index: 0, message: 'DB error' }],
+        );
         expect(stockHandler.upsert).toHaveBeenCalledOnce();
     });
 
@@ -341,9 +344,12 @@ describe('ErpImportService', () => {
 
         await service.processBatch(ctx, body);
 
-        expect(importRunService.complete).toHaveBeenCalledWith(expect.anything(), 1, [
-            { index: 0, message: 'Unrecognized record type: "bogusType"' },
-        ]);
+        expect(importRunService.complete).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.anything(),
+            1,
+            [{ index: 0, message: 'Unrecognized record type: "bogusType"' }],
+        );
         expect(stockHandler.upsert).toHaveBeenCalledOnce();
     });
 });

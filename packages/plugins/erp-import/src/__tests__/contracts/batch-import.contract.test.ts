@@ -150,6 +150,7 @@ describe('ERP import batch contract: TYPE_TO_SCHEMA <-> ErpImportService agreeme
         ).importRunService.complete;
         expect(completeMock).toHaveBeenCalledWith(
             expect.anything(),
+            expect.anything(),
             0,
             expect.arrayContaining([
                 expect.objectContaining({ message: 'Unrecognized record type: "notARealType"' }),

@@ -25,7 +25,7 @@ function build(rows: Array<{ id: string } | undefined>) {
         create: vi.fn(async () => ({})),
         update: vi.fn(async () => ({})),
     };
-    const connection = { rawConnection: { createQueryBuilder: () => qb } };
+    const connection = { getRepository: () => ({ manager: { createQueryBuilder: () => qb } }) };
     const handler = new WarehouseHandler(
         warehouseService as never,
         stockLocationService as never,

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
-import type { DataSource } from 'typeorm';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ImportRunService } from '../../import-run.service';
 import type { BatchImportBody } from '../../types';
 import type { ImportRun } from '../../entities/import-run.entity';
@@ -40,7 +40,7 @@ function makeDataSource(): MockDataSource {
         save: vi.fn(async () => []),
     };
     return {
-        getRepository: vi.fn((entity: { name?: string }) => {
+        getRepository: vi.fn((_ctx: unknown, entity: { name?: string }) => {
             if (entity.name === 'ImportRunError') return errorRepo;
             return repo;
         }),
@@ -49,18 +49,20 @@ function makeDataSource(): MockDataSource {
     };
 }
 
+const ctx = {} as RequestContext;
+
 describe('ImportRunService', () => {
     let service: ImportRunService;
     let ds: MockDataSource;
 
     beforeEach(() => {
         ds = makeDataSource();
-        service = new ImportRunService(ds as unknown as DataSource);
+        service = new ImportRunService(ds as unknown as TransactionalConnection);
     });
 
     it('findByExchangeId delegates to repository findOne', async () => {
         ds._repo.findOne.mockResolvedValue({ id: 'r1', exchangeId: 'ex1', errors: [] });
-        const result = await service.findByExchangeId('ex1');
+        const result = await service.findByExchangeId(ctx, 'ex1');
         expect(result).toMatchObject({ id: 'r1' });
         expect(ds._repo.findOne).toHaveBeenCalledWith({
             where: { exchangeId: 'ex1' },
@@ -73,7 +75,7 @@ describe('ImportRunService', () => {
             exchangeId: 'ex2',
             records: [{ type: 'stock', data: { sku: 'A', stockOnHand: 5 } }],
         };
-        await service.createPending(body);
+        await service.createPending(ctx, body);
         expect(ds._repo.create).toHaveBeenCalledWith(
             expect.objectContaining({ status: 'pending', total: 1, exchangeId: 'ex2' }),
         );

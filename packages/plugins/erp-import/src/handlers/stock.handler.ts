@@ -9,8 +9,9 @@ export class StockHandler {
     constructor(private readonly connection: TransactionalConnection) {}
 
     async upsert(ctx: RequestContext, record: StockRecord): Promise<void> {
-        const variant = await this.connection.rawConnection
-            .createQueryBuilder()
+        const variant = await this.connection
+            .getRepository(ctx, 'Channel')
+            .manager.createQueryBuilder()
             .select('pv.id', 'id')
             .from('product_variant', 'pv')
             .where('pv.sku = :sku', { sku: record.sku })
@@ -21,8 +22,9 @@ export class StockHandler {
             return;
         }
 
-        await this.connection.rawConnection
-            .createQueryBuilder()
+        await this.connection
+            .getRepository(ctx, 'Channel')
+            .manager.createQueryBuilder()
             .update('stock_level')
             .set({ stockOnHand: record.stockOnHand })
             .where('"productVariantId" = :id', { id: variant.id })

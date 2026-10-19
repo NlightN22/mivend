@@ -21,7 +21,7 @@ function build(existing: { id: string } | undefined) {
         where: vi.fn().mockReturnThis(),
         getRawOne: vi.fn(async () => existing),
     };
-    const connection = { rawConnection: { createQueryBuilder: () => qb } };
+    const connection = { getRepository: () => ({ manager: { createQueryBuilder: () => qb } }) };
     const productService = {
         create: vi.fn(async () => ({ id: '1' })),
         update: vi.fn(async () => ({})),
