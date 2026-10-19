@@ -1,6 +1,12 @@
 # Project Context
 
-Updated: 2026-10-18 21:00
+Updated: 2026-10-19 16:00
+
+## #255 / #257 / #258 (2026-10-19, DONE: audited, pushed `37afb44e`, closed)
+- #255 `make e2e-integration`: manual Playwright suite (`packages/e2e/integration/`, script `test:erp-exchange`, NOT in `make test-int`) driving the real storefront and manager portal UI on staging-integration (:3010/:5183). It covers placement → ERP registration, a repeat placement, reservedQuantity, cancel from both portals, cancel-before-publish (restarts the contour with a broken schema registry) and cleanup. It fails when the ERP gives no answer within 20 min (the 1C cycle is 6-10 min). 9/9 pass. It restarts the shared contour, so announce a run first. The manager login is `STAGING_TEST_MANAGER_*` in the staging env file. The storefront shows "Отмена запрошена" (cancel requested); `isOrderCancellable` refuses `already-requested`.
+- #257: every DB call goes through the RequestContext (`getRepository(ctx)`, `ctxQuery` in `packages/shared`). Lint `db/no-raw-connection` at error level, with no exceptions (rawConnection, DataSource/InjectDataSource, getRepository without ctx on `*connection`). Pool: `DB_POOL_SIZE`, `DB_POOL_ACQUIRE_TIMEOUT_MS`. Inbox handler and the processed mark share one transaction; product review flags are written under a SAVEPOINT; the photo job is enqueued after commit. `CheckStaleRequestService` uses a lease claim: rule (i) in `docs/concurrency.md` (SKIP LOCKED claim, heartbeat, token+version fenced delete). The global audit skill now flags rawConnection in changed code.
+- #258: `SerializedActiveOrderStrategy` (order-identity) wraps the configured strategy. Lock order: advisory `active-order:<channel>:<user>` → `withOrderCancelLocks` → order row FOR UPDATE, so cart mutations of one order run one at a time and concurrent first adds create one active order. Placement fields (branchId, counterparty, tradingPoint, deliveryAddress) are written inside the transition (`placementDenormalizeProcess`), not by an after-commit subscriber. There are no guest carts (login is required).
+- The load repro script (concurrent add/removeAll) now gives 0 deadlocks; the `order_line_identity` FK violation never reproduced.
 
 ## #247 repeat payment delivery (2026-10-18, DONE: audited 2 rounds, pushed, closed)
 - `PaymentAttemptService.payProformaInvoice`: an existing attempt with the same (channel, externalReference) that is `pending` is resolved to `captured`/`failed`/`canceled` (`payment-status-transition.ts`) under `proformaInvoices-for-order:<id>` + row `FOR UPDATE`; only a capture allocates, once. Final statuses never rewind.
@@ -24,27 +30,10 @@ Updated: 2026-10-18 21:00
 - Stuck dev worker child (high CPU, queue not drained) breaks document/PDF specs: kill only that child.
 - Follow-ups: #247 (done 2026-10-18, see above); #248 core Admin API order operations (read and write: `orders`, `order`, `transitionOrderToState`, `modifyOrder`, payments...) bypass mivend order scope; needs one central guard.
 
-## #242 / #243 / #244 manager-action checks (2026-10-17, DONE: audited twice, pushed, closed)
-- Manager actions (`extend-reservation`, `extend-credit-term`, `adjust-price`) run through the checks framework: ephemeral `manager` subject (`ChecksService.evaluate`, no lock, no storage), policy `recipient` in `CheckContext`. Credit-term recipient (`department-head`) comes from migration `1791520000000` or, on `synchronize` contours, `make seed-all` (seed-approvals); unseeded means every request escalates (docs/environments.md).
-- `orderCheckFlagProcess` keeps `hasCheckFindings` through core's trailing order save (#243). `harness-custom-field-columns.test.ts` guards hand-mirrored harness columns (#244).
-- Known flakes logged, not baseline: one-off load failure of erp-integration `integration-inbox-processor.int.test.ts` (not reproduced after batch fixes); manager `auth.store.test.ts` flakes under load; plugin-sync dead-letter wait fixed in 57cceda3.
-
-## #239 / #240 follow-ups (2026-10-17, done, audited, pushed)
-- #239 done except decisions: point-address snapshot at checkout (#238), `erpStatusAt` event time, client-side pack rounding on repeat order, e2e cross-counterparty visibility test.
-- #240: many audit findings were already fixed; new fixes in sync outbox claim, erp-integration inbox guards + `OrderSubmittedReconciler`, price-entry/counterparty locks, reservation (`reserveDueBy`, StockLevel lock order, atomic extension), erp-order `erpStatus` claim, acquiring inbox. Open: #27 (partial allocation over-allocates a proforma), customer-pricing upsert lock (unique indexes make a race fail loudly), reservation-failure.record 300 ms loop, same-variant lines in one order each see full free stock (unverified).
-
-## #230 / #233 / #237 (closed; full text: `.backup/PROJECT_CONTEXT-2026-10-18-230-233-237-full.md`)
-- #230: all stacking uses `--mv-z-*` tokens (`ui-kit/src/styles/tokens.css`, `tokens/layers.ts`); `layers.test.ts` enforces it. Open: dead session found only by the 60 s heartbeat; `handleRelogin` does not await `logout`.
-- #233: manager edits order lines before confirmation (`OrderLineEditService`, `OrderLineAvailabilityService`: available = min(branch warehouse free, own-organization stock); rules in `docs/order-contracts.md`). Open: overpayment after an edit is not credited.
-- #237: checks/policies framework (`packages/plugins/checks`, `docs/checks-and-policies.md`, skill `checks-policy`; controls inventory `docs/controls-inventory.md`). Checkout is never refused by a check; findings hold the automatic reserve/send. Dashboard types come from `vite build` of `packages/dashboard` with the central env. Owner confirmations pending: credit.limit default `hold`, `ManageCheckPolicies` as a global right.
-
-## 2026-10-18 session: #245-#250 follow-ups, central add-to-cart, favorites e2e (DONE, audited, pushed; main synced)
-- Point-confirmation expiry: orders waiting for a courier delivery point expire on the reservation deadline (`reservationDays` else `ReservationSettings.defaultReservationDays()`, from `orderPlacedAt`); `PointConfirmationExpiryService` runs after the held-send sweep (5 min), cancels via `OrderCancellationService` (`point-confirmation-expired`, `stillDue` re-check under the cancel locks), non-cancellable -> one staff notification. Rules: `docs/order-contracts.md`, `docs/order-flow.md`. Accepted risk: LIMIT 200 starvation (`docs/ai/concurrency-audit-2026-10.md`).
-- Storefront has ONE add-to-cart path: `composables/useCartActions.ts` `addToCart(variantId, variant, baseQty?)`; quantity rule in `composables/productQuantity.ts` (one pack when packages-only, else one multiplicity step when enforced, else 1; explicit qty rounds up). `ConnectedProductCard.vue` (modes row/card) is the only product card for catalog, popular/new/sale rows, favorites. `cartEntryPoint.test.ts` is a text guard (no ESLint rule; aliases not detected). Widget fragment carries `customFields { unitName unitRatioToBase multiplicity }`. `pnpm codegen` needs the local server on :3000.
-- Favorites (localStorage `mv_favorites`) e2e: `packages/e2e/storefront/favorites/` (hearts in home/catalog/cart/favorites, favorites -> cart by pack and by piece). Helpers set `E2E-FLT-001` pack data and `branch_settings.packagesOnly` via `docker exec psql` on the local contour and restore it. Cart line heart was missing (`MvFavoriteButton` not imported) - fixed.
-- `@nlightn22/event-contracts` bumped 0.72.1 -> 0.77.1 (additive only). New streams `customer-claim`, `order-correction`, `sales-correction`, `setting` are in `ignored-contract-streams.ts`; consuming them or the new fields (`controlsStock`, product `storageUnitId`/`sourceFields`, settlement/order `accounting`) is a product decision, tracked in #254.
-- `pnpm-lock.yaml` is 2-space and now in `.prettierignore`; never let a formatter reindent it. `make ci` passed on a clean HEAD (408 files / 3009 tests) before the #251/#252 commits of another session.
-- Checked 2026-10-18: migration `1791523000000` runs cleanly on a schema-only copy via `migration:run` (index valid; Vendure's schema-drift note about the expression index is expected, `synchronize` contours drop it). Empty checkout shows one honest message (screenshot checked). Staging worker `no Order found via orderUuid` = events for orders of another contour; by design retried 24 h then closed as noop (`docs/cross-system-verification.md`); optional log-noise reduction only. New streams/fields decision: issue #254. Open: AccountFrequentProducts is a static mock, analogs button a no-op; repeat-order rounds quantity up silently.
+## #242-#244 / #239-#240 / #230 / #233 / #237 / 2026-10-18 session (closed; full text: `.backup/PROJECT_CONTEXT-2026-10-19-242-239-230-1018-full.md`)
+- Manager actions go through the checks framework (`packages/plugins/checks`, `docs/checks-and-policies.md`); a check never refuses checkout; findings hold the automatic reserve/send. Z-index only via `--mv-z-*` tokens. Manager line edits before confirmation: `docs/order-contracts.md`.
+- Storefront has ONE add-to-cart path (`useCartActions.addToCart`, `productQuantity.ts`) and one product card (`ConnectedProductCard.vue`). Point-confirmation expiry cancels on the reservation deadline. event-contracts 0.77.1; new streams are ignored pending #254. `pnpm-lock.yaml` is in `.prettierignore`.
+- Open: #27 partial allocation over-allocates a proforma; overpayment after a line edit is not credited; owner confirmations pending (credit.limit default `hold`, `ManageCheckPolicies` global); AccountFrequentProducts is a mock.
 
 ## #236 / #197 / #175 / #232 / #112 / #238 (2026-10-14..15, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-17-236-197-175-full.md`)
 - #236: local reserve released only for what the ERP holds (per-variant split, `erpHandedOverAt` of current generation; rules in `docs/order-flow.md`). #197: capture must not take an early proforma row lock (`allocate()` locks FIFO; deadlock otherwise); remaining findings in #240.
@@ -294,6 +283,8 @@ Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
 (production preview).
 
 ## Do not redo / do not forget
+
+- Never use `rawConnection`/`DataSource`; never hold a transaction or lock across long background work (lease claim, `docs/concurrency.md` (i)). Never source `apps/server/.env.central.staging-integration` in a shell command that also runs `make e2e-integration`: `dev-kill-staging-integration.sh` pgreps that path and kills the whole tree.
 
 - #215/#224/#227: external orders are ERP-owned and read-only; settlement visibility is reference-driven and fail closed; never read `Contract.paymentDelayDays`; amounts are integer minor units (ERP sends major units); do not sell fractional quantities (small base unit instead).
 - **Decide-then-mutate for any multi-row conditional write**: resolve every outcome first (reads,
