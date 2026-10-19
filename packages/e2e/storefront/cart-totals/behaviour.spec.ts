@@ -3,7 +3,7 @@ import { test, expect } from './fixture';
 import {
     addSku,
     DISCOUNTED_SKUS,
-    PLAIN_SKUS,
+    GRANT_ONLY_SKUS,
     clearCart,
     expectConsistent,
     expectUiMatchesApi,
@@ -31,7 +31,7 @@ test.describe('Cart behaviour @cart-totals', () => {
 
     test('stepper increase, decrease and remove keep the invariants', async ({ page }) => {
         await addSku(page, DISCOUNTED_SKUS[0], 1);
-        await addSku(page, PLAIN_SKUS[0], 1);
+        await addSku(page, GRANT_ONLY_SKUS[0], 1);
         await page.goto('/cart');
         const rows = page.locator('.cart-item');
         await expect(rows).toHaveCount(2);
@@ -68,15 +68,15 @@ test.describe('Cart behaviour @cart-totals', () => {
     });
 
     test('adding the same variant again merges into one line (#221)', async ({ page }) => {
-        await addSku(page, PLAIN_SKUS[0], 1);
-        await addSku(page, PLAIN_SKUS[0], 2);
+        await addSku(page, GRANT_ONLY_SKUS[0], 1);
+        await addSku(page, GRANT_ONLY_SKUS[0], 2);
         await addSku(page, DISCOUNTED_SKUS[0], 1);
         await addSku(page, DISCOUNTED_SKUS[0], 1);
 
         const cart = await settledCart(page);
         expect(cart.lines).toHaveLength(2);
         const bySku = new Map(cart.lines.map(l => [l.productVariant.sku, l.quantity]));
-        expect(bySku.get(PLAIN_SKUS[0])).toBe(3);
+        expect(bySku.get(GRANT_ONLY_SKUS[0])).toBe(3);
         expect(bySku.get(DISCOUNTED_SKUS[0])).toBe(2);
 
         await page.goto('/cart');
@@ -89,7 +89,7 @@ test.describe('Cart behaviour @cart-totals', () => {
             await clearCart(page);
             await addSku(page, DISCOUNTED_SKUS[0], 2);
             await addSku(page, DISCOUNTED_SKUS[1], 3);
-            await addSku(page, PLAIN_SKUS[0], 1);
+            await addSku(page, GRANT_ONLY_SKUS[0], 1);
             const cart = await settledCart(page);
             expectConsistent(cart);
             totals.push({
@@ -102,7 +102,7 @@ test.describe('Cart behaviour @cart-totals', () => {
 
     test('cart shows the same numbers after reload and after re-login', async ({ page }) => {
         await addSku(page, DISCOUNTED_SKUS[0], 2);
-        await addSku(page, PLAIN_SKUS[1], 2);
+        await addSku(page, GRANT_ONLY_SKUS[1], 2);
         const before = await settledCart(page);
         await expectUiMatchesApi(page, before);
 

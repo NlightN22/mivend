@@ -4,7 +4,14 @@ import { clearCart, gql } from '../orders/helpers';
 export { clearCart };
 
 export const DISCOUNTED_SKUS = ['E2E-OIL-001', 'E2E-OIL-002'];
-export const PLAIN_SKUS = ['E2E-FLT-001', 'E2E-AIR-001'];
+// No brand rule matches these; only global-setup's account-wide 8% grant discounts them.
+export const GRANT_ONLY_SKUS = ['E2E-FLT-001', 'E2E-AIR-001'];
+export const ACCOUNT_GRANT_PERCENT = 8;
+
+export function discountPercent(line: CartLine): number {
+    if (line.compareAtPrice == null || line.compareAtPrice <= 0) return 0;
+    return Math.round((1 - line.unitPrice / line.compareAtPrice) * 100);
+}
 
 export interface CartLine {
     id: string;

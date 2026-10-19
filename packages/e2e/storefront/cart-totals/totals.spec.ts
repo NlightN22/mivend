@@ -2,7 +2,9 @@ import { test, expect } from './fixture';
 import {
     addSku,
     DISCOUNTED_SKUS,
-    PLAIN_SKUS,
+    GRANT_ONLY_SKUS,
+    ACCOUNT_GRANT_PERCENT,
+    discountPercent,
     expectConsistent,
     expectUiMatchesApi,
     settledCart,
@@ -10,14 +12,17 @@ import {
 } from './cart-helpers';
 
 test.describe('Cart totals @cart-totals', () => {
-    test('plain cart: totals equal the sum of lines and UI shows no discount', async ({ page }) => {
-        await addSku(page, PLAIN_SKUS[0], 3);
-        await addSku(page, PLAIN_SKUS[1], 2);
+    test('grant-only cart: every line carries just the account-wide grant and totals agree', async ({
+        page,
+    }) => {
+        await addSku(page, GRANT_ONLY_SKUS[0], 3);
+        await addSku(page, GRANT_ONLY_SKUS[1], 2);
         const cart = await settledCart(page);
         expect(cart.lines).toHaveLength(2);
-        expect(
-            cart.lines.every(l => l.compareAtPrice == null || l.compareAtPrice <= l.unitPrice),
-        ).toBe(true);
+        expect(cart.lines.map(discountPercent)).toEqual([
+            ACCOUNT_GRANT_PERCENT,
+            ACCOUNT_GRANT_PERCENT,
+        ]);
         expectConsistent(cart);
         await expectUiMatchesApi(page, cart);
     });
@@ -39,27 +44,28 @@ test.describe('Cart totals @cart-totals', () => {
         expect(ui.discount).not.toBeNull();
     });
 
-    test('mixed cart: only discounted lines are struck through', async ({ page }) => {
+    test('mixed cart: a brand-discounted line beats the account-wide grant on its neighbour', async ({
+        page,
+    }) => {
         await addSku(page, DISCOUNTED_SKUS[0], 1);
-        await addSku(page, PLAIN_SKUS[0], 2);
+        await addSku(page, GRANT_ONLY_SKUS[0], 2);
         const cart = await settledCart(page);
-        const discounted = cart.lines.filter(
-            l => l.compareAtPrice != null && l.compareAtPrice > l.unitPrice,
-        );
-        expect(discounted).toHaveLength(1);
         expect(cart.lines).toHaveLength(2);
+        const bySku = new Map(cart.lines.map(l => [l.productVariant.sku, discountPercent(l)]));
+        expect(bySku.get(GRANT_ONLY_SKUS[0])).toBe(ACCOUNT_GRANT_PERCENT);
+        expect(bySku.get(DISCOUNTED_SKUS[0])).toBeGreaterThan(ACCOUNT_GRANT_PERCENT);
         expectConsistent(cart);
         await expectUiMatchesApi(page, cart);
         const ui = await cartUi(page);
-        expect(ui.struckUnits).toBe(1);
-        expect(ui.struckTotals).toBe(1);
+        expect(ui.struckUnits).toBe(2);
+        expect(ui.struckTotals).toBe(2);
     });
 
     test('price columns: unit price x quantity equals line total on every line', async ({
         page,
     }) => {
         await addSku(page, DISCOUNTED_SKUS[0], 3);
-        await addSku(page, PLAIN_SKUS[0], 4);
+        await addSku(page, GRANT_ONLY_SKUS[0], 4);
         const cart = await settledCart(page);
         for (const line of cart.lines) {
             expect(
