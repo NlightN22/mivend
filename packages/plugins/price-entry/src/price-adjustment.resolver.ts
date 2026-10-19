@@ -20,21 +20,19 @@ export class PriceAdjustmentResolver {
     @Allow(CustomPermission.ReadConfidentialPriceTypes.Permission)
     async floorPrice(
         @Ctx() ctx: RequestContext,
-        @Args() args: { variantId: string },
+        @Args() args: { variantId: ID },
     ): Promise<number | null> {
-        return (
-            (await this.floorPriceService.forVariants(ctx, [args.variantId])).get(args.variantId) ??
-            null
-        );
+        const variantId = String(args.variantId);
+        return (await this.floorPriceService.forVariants(ctx, [variantId])).get(variantId) ?? null;
     }
 
     @Query()
     @Allow(CustomPermission.ReadConfidentialPriceTypes.Permission)
     async floorPricesForVariants(
         @Ctx() ctx: RequestContext,
-        @Args() args: { variantIds: string[] },
+        @Args() args: { variantIds: ID[] },
     ): Promise<{ variantId: string; price: number }[]> {
-        const map = await this.floorPriceService.forVariants(ctx, args.variantIds);
+        const map = await this.floorPriceService.forVariants(ctx, args.variantIds.map(String));
         return [...map.entries()].map(([variantId, price]) => ({ variantId, price }));
     }
 

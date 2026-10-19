@@ -81,6 +81,11 @@ const adminApiSchema = gql`
         price: Int!
     }
 
+    type FloorPriceEntry {
+        variantId: ID!
+        price: Float!
+    }
+
     type VariantPriceEntry {
         variantId: ID!
         price: Int!
@@ -224,7 +229,7 @@ const adminApiSchema = gql`
     extend type Query {
         # Restricted to ReadConfidentialPriceTypes — see PriceAdjustmentResolver.
         floorPrice(variantId: ID!): Float
-        floorPricesForVariants(variantIds: [ID!]!): [VariantPriceEntry!]!
+        floorPricesForVariants(variantIds: [ID!]!): [FloorPriceEntry!]!
         discountRules(priceTypeCode: String): [DiscountRule!]!
         expiringDiscountGrants(withinDays: Int!): [DiscountGrant!]!
         # Only grants that actually apply to this counterparty (company-wide or scoped to it) —

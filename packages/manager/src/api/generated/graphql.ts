@@ -2740,6 +2740,11 @@ export type FloatStructFieldConfig = StructField & {
     ui: Maybe<Scalars['JSON']['output']>;
 };
 
+export type FloorPriceEntry = {
+    price: Scalars['Float']['output'];
+    variantId: Scalars['ID']['output'];
+};
+
 export type FulfillOrderInput = {
     handler: ConfigurableOperationInput;
     lines: Array<OrderLineInput>;
@@ -7379,7 +7384,7 @@ export type Query = {
     /** Dead-lettered inbound Kafka events, newest first — for the manager-portal dashboard's integration-health panel (issue #76). */
     failedIntegrationInboxEvents: FailedIntegrationInboxEventList;
     floorPrice: Maybe<Scalars['Float']['output']>;
-    floorPricesForVariants: Array<VariantPriceEntry>;
+    floorPricesForVariants: Array<FloorPriceEntry>;
     fulfillmentHandlers: Array<ConfigurableOperationDefinition>;
     /** Get value for a specific key (automatically scoped based on field configuration) */
     getSettingsStoreValue: Maybe<Scalars['JSON']['output']>;
