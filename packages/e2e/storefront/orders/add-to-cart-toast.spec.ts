@@ -38,11 +38,18 @@ test.describe('Add-to-cart toast reflects the real applied discount', () => {
         );
 
         await page.goto('/product/engine-oil-5w40-e2e');
-        await page.waitForLoadState('networkidle');
+        const addButton = page.getByRole('button', { name: 'Add to cart' }).last();
+        await expect(addButton).toBeEnabled();
 
         // Vendure rotates the session cookie on this UI mutation; the live jar updates but the static
         // .auth/storefront-user.json does not, so re-save it or later tests lose the customer session.
-        await page.getByRole('button', { name: 'Add to cart' }).last().click();
+        const added = page.waitForResponse(
+            r =>
+                r.url().includes('shop-api') &&
+                (r.request().postData() ?? '').includes('addItemToOrder'),
+        );
+        await addButton.click();
+        await added;
 
         const toast = page.locator('.mv-toast');
         await expect(toast).toBeVisible({ timeout: 10000 });
