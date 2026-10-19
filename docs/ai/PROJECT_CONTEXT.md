@@ -1,6 +1,12 @@
 # Project Context
 
-Updated: 2026-10-19 16:00
+Updated: 2026-10-19 18:00
+
+## #235 price type visibility + #256 below-floor check (2026-10-19, DONE: audited 3 rounds, pushed, both closed)
+- #235: `PriceType.visibility` (customer/confidential); `PriceTypeAccessService` is deny-by-default on every admin path, with a per-ctx memo (a mid-request visibility change is not seen). Access = branch allow-list (`BranchSettings.visiblePriceTypeIds`, customer types only, plus the branch default) union role permissions; confidential types are never granted by a branch rule or customer context. Discount grants, approval requests (`payload-price-type-gate.ts`, `pg_input_is_valid`, Postgres 16+) and the decide path are gated by type. Purchase-flag changes serialize under advisory lock `price-type-purchase-flag`.
+- Data step: `infrastructure/scripts/price-type-visibility.sql` (fails for branches with admins but no `branch_settings`); seed-erp.mjs creates PURCHASE first, bump the `run` version when fixtures change. Staging: 6 customer + 3 confidential types classified; the test manager is assigned to Abakan; staging UI not verified.
+- #256 first slice only: check `order.below-floor-price` (pre-reserve, on-edit, confirm; warn; facts sku+reason), per-line icon/tooltip + header count in manager; visible to every manager (owner decision). Closed on purpose: no recheck on floor change, no pre-send-to-erp, no hold/approval. Blocking + approval routing comes with the future approval-system architecture (new issue then).
+- Follow-ups: `approval-request.service.ts` is 500 lines; price-adjustment requests are not type-filtered (payload has no `priceTypeCode`). Reservation extension is DST-safe (fixed 24h units).
 
 ## #255 / #257 / #258 (2026-10-19, DONE: audited, pushed `37afb44e`, closed)
 - #255 `make e2e-integration`: manual Playwright suite (`packages/e2e/integration/`, script `test:erp-exchange`, NOT in `make test-int`) driving the real storefront and manager portal UI on staging-integration (:3010/:5183). It covers placement → ERP registration, a repeat placement, reservedQuantity, cancel from both portals, cancel-before-publish (restarts the contour with a broken schema registry) and cleanup. It fails when the ERP gives no answer within 20 min (the 1C cycle is 6-10 min). 9/9 pass. It restarts the shared contour, so announce a run first. The manager login is `STAGING_TEST_MANAGER_*` in the staging env file. The storefront shows "Отмена запрошена" (cancel requested); `isOrderCancellable` refuses `already-requested`.
@@ -124,7 +130,7 @@ Over-limit deferred order is NOT rejected (flag `creditLimitExceeded`, manager c
 
 ## #70 guest price, branch stock tiers (compressed, closed/audited — full text: `.backup/PROJECT_CONTEXT.20261005-70-stock-tiers.md`)
 
-- Price type visibility (#235): deny by default via `PriceType.visibility` + `PriceTypeAccessService` (branch allow-list union `ReadAllCustomerPriceTypes`/`ReadConfidentialPriceTypes`); floor is derived (`FloorPriceService`, purchase type x multiplier from the price-type stream), no `FLOOR` code. Classify customer types with `infrastructure/scripts/price-type-visibility.sql` (data step; unclassified stay confidential). Open: #256, decideDiscountGrantRequest/approval payloads not yet type-gated.
+- Price type visibility (#235): deny by default via `PriceType.visibility` + `PriceTypeAccessService` (branch allow-list union `ReadAllCustomerPriceTypes`/`ReadConfidentialPriceTypes`); floor is derived (`FloorPriceService`, purchase type x multiplier from the price-type stream), no `FLOOR` code. Classify customer types with `infrastructure/scripts/price-type-visibility.sql` (data step; unclassified stay confidential).
 - Guests: API resolves default price (branch default `PriceType`); UI hides price AND stock tier. Default branch/price type/RUB currency bootstrapped from options (`BOOTSTRAP_BRANCH_NAMES`, `DEFAULT_PRICE_TYPE_CODE`, `DEFAULT_CURRENCY_CODE`); branch is mivend's own entity.
 
 ## #160/#59/#158 search backend + category tree/hierarchy (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-03-04-160-59-158-full.md`)
