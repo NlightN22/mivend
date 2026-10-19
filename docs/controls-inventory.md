@@ -43,6 +43,7 @@ should be able to relax. No finding, no policy.
 | `externalOrderProcess`, `isExternal` refusals in reserve, edit and proforma issuing | the ERP owns the order |
 | `ReplicaOrderInterceptor` / `replica-order.guard` | a replica is read-only for humans, sync owns it |
 | `decideCancellation`, `decideEdit` (`order-cancellation.decision.ts`), `order-line-edit.guard` | state-transition legality (cancel and edit share one stage-facts rule) |
+| Portal binding needs a unique inn (#225): empty inn, or another active counterparty with the same normalized inn and a live portal Customer, refuses `activateCounterpartyPortalAccess`, the bulk toggle and `assignCustomerToCounterparty` (`counterparty-inn-guard.ts`, lock `counterparty-inn:<digits>`). Staff find cases by the `innStatus` field / list filter; the one-off report is `infrastructure/scripts/report-inn-duplicates.sql` | a data requirement for binding, like the phone/email gate; the fix is in the ERP, not a manager waiver |
 | Proforma issuing preconditions (not external, not cancelled, placed) | state legality |
 | `packagesOnly` (`BranchSettings`) | selects the selling unit; it changes what is offered, it produces no finding |
 | `prepaymentReserveDays`, `proformaPaymentTermDays` | parameters, not controls |

@@ -3,6 +3,7 @@ fragment CustomerListItemFields on Counterparty {
     shortName
     legalName
     inn
+    innStatus
     isActive
     priceType
     assignedManagerId

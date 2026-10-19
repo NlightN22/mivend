@@ -16,6 +16,7 @@ const { schema, extra } = testSchemaOptions('portal_access_race');
 const counterparty = {
     id: '1',
     isActive: true,
+    inn: '7700000001',
     phone: '+10000000000',
     officialEmail: 'office@example.com',
     fullName: 'Counterparty One',
@@ -34,6 +35,8 @@ beforeAll(async () => {
     await dataSource.initialize();
     await dataSource.query(`CREATE TABLE customer (id serial PRIMARY KEY,
         "customFieldsCounterpartyid" varchar, "deletedAt" timestamp)`);
+    await dataSource.query(`CREATE TABLE counterparty (id int PRIMARY KEY, "erpId" varchar,
+        "shortName" varchar, inn varchar, "isActive" boolean)`);
     const base = createTestConnection(dataSource);
     const connection = {
         withTransaction: base.withTransaction.bind(base),

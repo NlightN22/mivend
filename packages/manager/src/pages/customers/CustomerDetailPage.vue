@@ -313,6 +313,12 @@ function initials(name: string | null): string {
             </MvStatusBadge>
         </h1>
         <p v-if="customer.inn" class="customer-detail__subtitle">INN {{ customer.inn }}</p>
+        <MvStatusBadge v-if="customer.innStatus === 'missing'" variant="warning">
+            INN missing — fill it in the ERP before portal access
+        </MvStatusBadge>
+        <MvStatusBadge v-else-if="customer.innStatus === 'duplicate'" variant="warning">
+            INN duplicate — merge the counterparties in the ERP before portal access
+        </MvStatusBadge>
 
         <!-- Info-only row — no edit controls here at all (see AGENTS.md-style rule this page now
              follows: reassigning managers, changing location, adjusting credit limit all belong

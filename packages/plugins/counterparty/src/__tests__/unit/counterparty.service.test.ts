@@ -60,6 +60,7 @@ describe('CounterpartyService', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockRepo.query.mockResolvedValue([]);
         mockRepo.save.mockImplementation(async (entity: unknown) => entity);
         service = new CounterpartyService(
             mockConnection as unknown as TransactionalConnection,
@@ -75,6 +76,7 @@ describe('CounterpartyService', () => {
             mockRepo.findOne.mockResolvedValue({
                 id: 'cp-1',
                 erpId: 'erp-1',
+                inn: '7700000001',
                 priceType: 'WHOLESALE',
             } as Counterparty);
 
@@ -89,6 +91,18 @@ describe('CounterpartyService', () => {
                 'cust-1',
                 'WHOLESALE',
             );
+        });
+
+        it('refuses a counterparty with a linked inn duplicate', async () => {
+            mockRepo.findOne.mockResolvedValue({ id: 'cp-1', erpId: 'erp-1', inn: '7700000001' });
+            mockRepo.query
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([{ id: 'cp-2', shortName: 'Twin', erpId: 'erp-2' }]);
+
+            await expect(
+                service.setCustomerCounterparty(mockCtx, 'cust-1', 'erp-1'),
+            ).rejects.toThrow(/merge the duplicates in the ERP/);
+            expect(mockCustomerService.update).not.toHaveBeenCalled();
         });
 
         it('throws when the counterparty is not found', async () => {

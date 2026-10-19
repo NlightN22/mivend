@@ -84,6 +84,7 @@ interface CustomerFiltersState extends Record<string, string> {
     managerId: string;
     branchId: string;
     groupLabel: string;
+    innStatus: string;
 }
 const DEFAULT_FILTERS: CustomerFiltersState = {
     search: '',
@@ -91,6 +92,7 @@ const DEFAULT_FILTERS: CustomerFiltersState = {
     managerId: '',
     branchId: '',
     groupLabel: '',
+    innStatus: '',
 };
 const filters = reactive<CustomerFiltersState>({ ...DEFAULT_FILTERS });
 
@@ -128,6 +130,17 @@ const groupFilter = computed({
         filters.groupLabel = value;
     },
 });
+const innFilter = computed({
+    get: () => filters.innStatus,
+    set: (value: string) => {
+        filters.innStatus = value;
+    },
+});
+const INN_OPTIONS = [
+    { value: '', label: 'Any INN' },
+    { value: 'missing', label: 'INN missing' },
+    { value: 'duplicate', label: 'INN duplicate' },
+];
 const STATUS_OPTIONS = [
     { value: '', label: 'All statuses' },
     { value: 'active', label: 'Active' },
@@ -234,6 +247,7 @@ async function loadPage(): Promise<void> {
             branchId: branchFilter.value || undefined,
             groupLabel: groupFilter.value.trim() || undefined,
             unassignedOnly: isUnassignedFilter || undefined,
+            innStatus: (innFilter.value || undefined) as 'missing' | 'duplicate' | undefined,
         };
         const [pageResult, creditMap] = await Promise.all([
             fetchCustomersPage(listOptions),
@@ -250,11 +264,11 @@ async function loadPage(): Promise<void> {
     }
 }
 
-watch([search, statusFilter, managerFilter, branchFilter, groupFilter, page], () => {
+watch([search, statusFilter, managerFilter, branchFilter, groupFilter, innFilter, page], () => {
     toQuery(filters, page);
     void loadPage();
 });
-watch([search, statusFilter, managerFilter, branchFilter, groupFilter], () => {
+watch([search, statusFilter, managerFilter, branchFilter, groupFilter, innFilter], () => {
     page.value = 1;
 });
 
@@ -354,6 +368,13 @@ onMounted(async () => {
                             :model-value="branchFilter"
                             :options="branchOptions"
                             @update:model-value="branchFilter = $event as string"
+                        />
+                    </MvFilterField>
+                    <MvFilterField label="INN">
+                        <MvSelect
+                            :model-value="innFilter"
+                            :options="INN_OPTIONS"
+                            @update:model-value="innFilter = $event as string"
                         />
                     </MvFilterField>
                     <MvFilterField label="Group">

@@ -14,6 +14,7 @@ import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 import { withAggregateLock, ctxQuery } from 'shared';
 
+import { getInnStatus, InnStatus, withInnBindingGuard } from './counterparty-inn-guard';
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
 import { CounterpartyCreatedEvent } from './counterparty-created.event';
 import { Counterparty } from './entities/counterparty.entity';
@@ -271,6 +272,10 @@ export class CounterpartyService {
         return result[0]?.id ?? null;
     }
 
+    getInnStatus(ctx: RequestContext, counterparty: Counterparty): Promise<InnStatus> {
+        return getInnStatus(this.connection, ctx, counterparty);
+    }
+
     async setCustomerCounterparty(
         ctx: RequestContext,
         customerId: ID,
@@ -278,11 +283,13 @@ export class CounterpartyService {
     ): Promise<void> {
         const counterparty = await this.findByErpId(ctx, erpId);
         if (!counterparty) throw new UserInputError(`Counterparty not found: erpId=${erpId}`);
-        await this.customerService.update(ctx, {
-            id: customerId,
-            customFields: { counterpartyId: counterparty.id } as Record<string, unknown>,
+        await withInnBindingGuard(this.connection, ctx, counterparty, async txCtx => {
+            await this.customerService.update(txCtx, {
+                id: customerId,
+                customFields: { counterpartyId: counterparty.id } as Record<string, unknown>,
+            });
+            await this.assignPriceType(txCtx, customerId, counterparty.priceType);
         });
-        await this.assignPriceType(ctx, customerId, counterparty.priceType);
     }
 
     async setCustomerRole(ctx: RequestContext, customerId: ID, role: string): Promise<void> {

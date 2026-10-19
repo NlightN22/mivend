@@ -39,6 +39,7 @@ function counterparty(overrides: Record<string, unknown> = {}): Record<string, u
     return {
         id: 'cp-1',
         isActive: true,
+        inn: '7700000001',
         phone: '+7 391 000-00-00',
         officialEmail: 'office@example.ru',
         legalName: 'Internal Name',
@@ -103,9 +104,34 @@ describe('CounterpartyPortalAccessService', () => {
 
         it('rejects when a Customer is already linked', async () => {
             mockCounterpartyRepo.findOne.mockResolvedValue(counterparty());
-            rawQuery.mockResolvedValue([{ id: 'cust-existing' }]);
+            rawQuery
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([{ id: 'cust-existing' }]);
 
             await expect(service.activate(mockCtx, 'cp-1')).rejects.toThrow(UserInputError);
+            expect(mockCustomerService.create).not.toHaveBeenCalled();
+        });
+
+        it.each([null, '', '  ', 'n/a'])('refuses an empty inn (%j)', async inn => {
+            mockCounterpartyRepo.findOne.mockResolvedValue(counterparty({ inn }));
+
+            await expect(service.activate(mockCtx, 'cp-1')).rejects.toThrow(/has no INN/);
+            expect(mockCustomerService.create).not.toHaveBeenCalled();
+        });
+
+        it('refuses a linked duplicate inn, naming it and pointing at the ERP merge', async () => {
+            mockCounterpartyRepo.findOne.mockResolvedValue(counterparty({ inn: '77 000-00001' }));
+            rawQuery
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([{ id: 'cp-2', shortName: 'Twin', erpId: 'erp-2' }]);
+
+            await expect(service.activate(mockCtx, 'cp-1')).rejects.toThrow(
+                /INN 7700000001 .*"Twin" \(erp-2\).*merge the duplicates in the ERP/,
+            );
+            expect(rawQuery.mock.calls[2][1]).toEqual(['cp-1', '7700000001']);
             expect(mockCustomerService.create).not.toHaveBeenCalled();
         });
 
@@ -144,6 +170,25 @@ describe('CounterpartyPortalAccessService', () => {
     });
 
     describe('applyBatch', () => {
+        it('reports the inn refusal as a per-row error without stopping the batch', async () => {
+            mockCounterpartyRepo.findOne.mockImplementation(
+                async ({ where: { id } }: { where: { id: string } }) =>
+                    counterparty({ id, inn: id === 'cp-no-inn' ? null : '7700000001' }),
+            );
+            mockCustomerService.create.mockResolvedValue({ id: 'cust-new' });
+
+            const results = await service.applyBatch(mockCtx, [
+                { counterpartyId: 'cp-no-inn', action: 'activate' },
+                { counterpartyId: 'cp-ok', action: 'activate' },
+            ]);
+
+            expect(results[0]).toMatchObject({
+                success: false,
+                error: expect.stringMatching(/no INN/),
+            });
+            expect(results[1]).toMatchObject({ success: true });
+        });
+
         it('reports success/failure independently per row', async () => {
             mockCounterpartyRepo.findOne.mockImplementation(
                 async ({ where: { id } }: { where: { id: string } }) => {

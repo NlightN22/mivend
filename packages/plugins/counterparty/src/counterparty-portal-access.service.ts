@@ -13,6 +13,7 @@ import { AccessScopeService } from '@mivend/plugin-access-control';
 import { Counterparty } from './entities/counterparty.entity';
 import { loggerCtx } from './types';
 import { ctxQuery, withAggregateLock } from 'shared';
+import { withInnBindingGuard } from './counterparty-inn-guard';
 
 export type PortalAccessAction = 'activate' | 'deactivate';
 
@@ -139,7 +140,9 @@ export class CounterpartyPortalAccessService {
     // The lock serializes the linked-customer check with the create, so two activations cannot both link.
     private doActivate(ctx: RequestContext, counterparty: Counterparty): Promise<Customer> {
         return withAggregateLock(this.connection, ctx, `portal-access:${counterparty.id}`, txCtx =>
-            this.createLinkedCustomer(txCtx, counterparty),
+            withInnBindingGuard(this.connection, txCtx, counterparty, guarded =>
+                this.createLinkedCustomer(guarded, counterparty),
+            ),
         );
     }
 

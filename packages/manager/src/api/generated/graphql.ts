@@ -897,6 +897,8 @@ export type Counterparty = Node & {
     factualAddress: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
     inn: Maybe<Scalars['String']['output']>;
+    /** ok | missing | duplicate (another active counterparty has the same normalized inn) — issue #225 */
+    innStatus: Scalars['String']['output'];
     isActive: Scalars['Boolean']['output'];
     /** Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     legalAddress: Maybe<Scalars['String']['output']>;
@@ -912,6 +914,7 @@ export type Counterparty = Node & {
     phone: Maybe<Scalars['String']['output']>;
     /** Customers linked to this Counterparty via customFields.counterpartyId, active or deactivated — issue #120. */
     portalUsers: Array<Customer>;
+    /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
     priceType: Maybe<Scalars['String']['output']>;
     shortName: Scalars['String']['output'];
     /** Additional managers beyond the Owner (assignedManagerId) — see CounterpartyTeamMember. */
@@ -937,6 +940,8 @@ export type CounterpartyFilterParameter = {
     factualAddress?: InputMaybe<StringOperators>;
     id?: InputMaybe<IdOperators>;
     inn?: InputMaybe<StringOperators>;
+    /** ok | missing | duplicate (another active counterparty has the same normalized inn) — issue #225 */
+    innStatus?: InputMaybe<StringOperators>;
     isActive?: InputMaybe<BooleanOperators>;
     /** Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     legalAddress?: InputMaybe<StringOperators>;
@@ -950,6 +955,7 @@ export type CounterpartyFilterParameter = {
     paymentDelayDays?: InputMaybe<NumberOperators>;
     /** Телефон контрагента (the ERP) — required with officialEmail before #120's portal-access activation. */
     phone?: InputMaybe<StringOperators>;
+    /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
     priceType?: InputMaybe<StringOperators>;
     shortName?: InputMaybe<StringOperators>;
 };
@@ -963,6 +969,8 @@ export type CounterpartyList = PaginatedList & {
 export type CounterpartyListFilter = {
     branchId?: InputMaybe<Scalars['String']['input']>;
     groupLabel?: InputMaybe<Scalars['String']['input']>;
+    /** missing | duplicate — counterparties that cannot be bound to the portal until fixed in the ERP (#225) */
+    innStatus?: InputMaybe<Scalars['String']['input']>;
     managerErpId?: InputMaybe<Scalars['String']['input']>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
@@ -978,6 +986,8 @@ export type CounterpartyListOptions = {
     filterOperator?: InputMaybe<LogicalOperator>;
     /** Exact match against Counterparty.erpGroupLabel */
     groupLabel?: InputMaybe<Scalars['String']['input']>;
+    /** missing | duplicate — counterparties that cannot be bound to the portal until fixed in the ERP (#225) */
+    innStatus?: InputMaybe<Scalars['String']['input']>;
     /** Substring match (case-insensitive) against Counterparty.managerErpId OR the ERP-reported administrator name (access-control's erp_user.fullName) — the raw ERP-side manager assignment, independent of whether it has resolved to an Administrator yet */
     managerErpId?: InputMaybe<Scalars['String']['input']>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
@@ -1020,6 +1030,8 @@ export type CounterpartySortParameter = {
     factualAddress?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
     inn?: InputMaybe<SortOrder>;
+    /** ok | missing | duplicate (another active counterparty has the same normalized inn) — issue #225 */
+    innStatus?: InputMaybe<SortOrder>;
     /** Юридический адрес контрагента (the ERP) — display/completeness only, see issue #120 Decision 1. */
     legalAddress?: InputMaybe<SortOrder>;
     legalName?: InputMaybe<SortOrder>;
@@ -1029,6 +1041,7 @@ export type CounterpartySortParameter = {
     officialEmail?: InputMaybe<SortOrder>;
     paymentDelayDays?: InputMaybe<SortOrder>;
     phone?: InputMaybe<SortOrder>;
+    /** Null when the viewer may not see this price type — see CounterpartyPriceTypeResolver */
     priceType?: InputMaybe<SortOrder>;
     shortName?: InputMaybe<SortOrder>;
 };
@@ -5923,7 +5936,7 @@ export type OrderModificationStateError = ErrorResult & {
 };
 
 export type OrderPaymentSummary = {
-    /** Sum of paymentStatus='captured' PaymentAttempt rows for this order — see PaymentAttemptService.sumCapturedAmountsByOrderIds for what's deliberately not netted out (refunds/disputes). */
+    /** Sum of paymentStatus='captured' PaymentAttempt rows for this order — see PaymentAttemptQueryService.sumCapturedAmountsByOrderIds for what's deliberately not netted out (refunds/disputes). */
     capturedAmount: Scalars['Int']['output'];
     orderId: Scalars['ID']['output'];
 };
@@ -6414,6 +6427,8 @@ export type Permission =
     | 'Public'
     /** Grants permission to read Administrator */
     | 'ReadAdministrator'
+    /** Read customer price types of every branch, beyond the branch allow-list */
+    | 'ReadAllCustomerPriceTypes'
     /** Grants permission to read ApiKey */
     | 'ReadApiKey'
     /** Grants permission to read Asset */
@@ -6426,6 +6441,8 @@ export type Permission =
     | 'ReadCheckResults'
     /** Grants permission to read Collection */
     | 'ReadCollection'
+    /** Read confidential price types (purchase price, floor price) and values derived from them (layer 4) */
+    | 'ReadConfidentialPriceTypes'
     /** Read counterparty records (scope resolved separately by AccessScopeService) */
     | 'ReadCounterparty'
     /** Read a counterparty's creditLimit/creditBalance (financial data, layer 4 redaction) */
@@ -6440,10 +6457,6 @@ export type Permission =
     | 'ReadDashboardGlobalViews'
     /** Read the generic entity-version audit trail (who changed what, when) — leadership roles only, distinct from the operational edit permissions on the versioned entities themselves */
     | 'ReadEntityHistory'
-    /** Read confidential price types (purchase price, floor price) and values derived from them (layer 4) */
-    | 'ReadConfidentialPriceTypes'
-    /** Read customer price types of every branch, beyond the branch allow-list */
-    | 'ReadAllCustomerPriceTypes'
     /** Grants permission to read Facet */
     | 'ReadFacet'
     /** Grants permission to read Order */
@@ -6592,6 +6605,7 @@ export type PriceType = {
     id: Scalars['ID']['output'];
     isActive: Scalars['Boolean']['output'];
     name: Scalars['String']['output'];
+    visibility: Scalars['String']['output'];
 };
 
 export type Product = Node & {
@@ -10226,6 +10240,14 @@ export type CatalogVariantStockQuery = {
     productVariants: { items: Array<{ id: string; stockLevels: Array<{ stockOnHand: number }> }> };
 };
 
+export type CatalogFloorPricesForVariantsQueryVariables = Exact<{
+    ids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+export type CatalogFloorPricesForVariantsQuery = {
+    floorPricesForVariants: Array<{ variantId: string; price: number }>;
+};
+
 export type CatalogPriceEntriesForVariantsQueryVariables = Exact<{
     ids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
     priceTypeCode: Scalars['String']['input'];
@@ -10233,14 +10255,6 @@ export type CatalogPriceEntriesForVariantsQueryVariables = Exact<{
 
 export type CatalogPriceEntriesForVariantsQuery = {
     priceEntriesForVariants: Array<{ variantId: string; price: number }>;
-};
-
-export type CatalogFloorPricesForVariantsQueryVariables = Exact<{
-    ids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
-}>;
-
-export type CatalogFloorPricesForVariantsQuery = {
-    floorPricesForVariants: Array<{ variantId: string; price: number }>;
 };
 
 export type CategoryCollectionFieldsFragment = {
@@ -10399,6 +10413,7 @@ export type CustomerListItemFieldsFragment = {
     shortName: string;
     legalName: string;
     inn: string | null;
+    innStatus: string;
     isActive: boolean;
     priceType: string | null;
     assignedManagerId: string | null;
@@ -10432,6 +10447,7 @@ export type CustomersPageQuery = {
             shortName: string;
             legalName: string;
             inn: string | null;
+            innStatus: string;
             isActive: boolean;
             priceType: string | null;
             assignedManagerId: string | null;
@@ -10488,6 +10504,7 @@ export type HighUsageCustomersQuery = {
         shortName: string;
         legalName: string;
         inn: string | null;
+        innStatus: string;
         isActive: boolean;
         priceType: string | null;
         assignedManagerId: string | null;
@@ -10520,6 +10537,7 @@ export type CustomerByIdQuery = {
         shortName: string;
         legalName: string;
         inn: string | null;
+        innStatus: string;
         isActive: boolean;
         priceType: string | null;
         assignedManagerId: string | null;
@@ -12555,6 +12573,7 @@ export const CustomerListItemFieldsFragmentDoc = new TypedDocumentString(
   shortName
   legalName
   inn
+  innStatus
   isActive
   priceType
   assignedManagerId
@@ -13244,17 +13263,6 @@ export const CatalogVariantStockDocument = new TypedDocumentString(`
     CatalogVariantStockQuery,
     CatalogVariantStockQueryVariables
 >;
-export const CatalogPriceEntriesForVariantsDocument = new TypedDocumentString(`
-    query CatalogPriceEntriesForVariants($ids: [ID!]!, $priceTypeCode: String!) {
-  priceEntriesForVariants(variantIds: $ids, priceTypeCode: $priceTypeCode) {
-    variantId
-    price
-  }
-}
-    `) as unknown as TypedDocumentString<
-    CatalogPriceEntriesForVariantsQuery,
-    CatalogPriceEntriesForVariantsQueryVariables
->;
 export const CatalogFloorPricesForVariantsDocument = new TypedDocumentString(`
     query CatalogFloorPricesForVariants($ids: [ID!]!) {
   floorPricesForVariants(variantIds: $ids) {
@@ -13265,6 +13273,17 @@ export const CatalogFloorPricesForVariantsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     CatalogFloorPricesForVariantsQuery,
     CatalogFloorPricesForVariantsQueryVariables
+>;
+export const CatalogPriceEntriesForVariantsDocument = new TypedDocumentString(`
+    query CatalogPriceEntriesForVariants($ids: [ID!]!, $priceTypeCode: String!) {
+  priceEntriesForVariants(variantIds: $ids, priceTypeCode: $priceTypeCode) {
+    variantId
+    price
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CatalogPriceEntriesForVariantsQuery,
+    CatalogPriceEntriesForVariantsQueryVariables
 >;
 export const CategoryVisibilityCollectionsDocument = new TypedDocumentString(`
     query CategoryVisibilityCollections($skip: Int!, $take: Int!) {
@@ -13441,6 +13460,7 @@ export const CustomersPageDocument = new TypedDocumentString(`
   shortName
   legalName
   inn
+  innStatus
   isActive
   priceType
   assignedManagerId
@@ -13500,6 +13520,7 @@ export const HighUsageCustomersDocument = new TypedDocumentString(`
   shortName
   legalName
   inn
+  innStatus
   isActive
   priceType
   assignedManagerId
@@ -13531,6 +13552,7 @@ export const CustomerByIdDocument = new TypedDocumentString(`
   shortName
   legalName
   inn
+  innStatus
   isActive
   priceType
   assignedManagerId

@@ -1,6 +1,7 @@
 import { ID } from '@vendure/common/lib/shared-types';
 import type { SelectQueryBuilder } from 'typeorm';
 
+import { INN_DIGITS_SQL } from './counterparty-inn-guard';
 import { Counterparty } from './entities/counterparty.entity';
 
 // Mirrors the GraphQL `CounterpartyListFilter` input — the narrowing half of
@@ -13,6 +14,7 @@ export interface CounterpartyListFilter {
     branchId?: string;
     groupLabel?: string;
     unassignedOnly?: boolean;
+    innStatus?: string;
 }
 
 // Narrows on top of the access-scope restriction, never replaces it.
@@ -54,6 +56,13 @@ export function applyCounterpartyListFilter(
     }
     if (filter.groupLabel) {
         qb.andWhere('c.erpGroupLabel = :groupLabel', { groupLabel: filter.groupLabel });
+    }
+    if (filter.innStatus === 'missing') {
+        qb.andWhere(`${INN_DIGITS_SQL} = ''`);
+    } else if (filter.innStatus === 'duplicate') {
+        qb.andWhere(`c.isActive = true AND ${INN_DIGITS_SQL} <> '' AND EXISTS (
+            SELECT 1 FROM counterparty d WHERE d.id <> c.id AND d."isActive" = true
+            AND regexp_replace(d.inn, '\\D', '', 'g') = ${INN_DIGITS_SQL})`);
     }
     return qb;
 }

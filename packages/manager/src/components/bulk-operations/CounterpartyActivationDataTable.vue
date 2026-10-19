@@ -297,6 +297,10 @@ const READINESS_LABEL: Record<Row['readiness'], string> = {
             />
         </template>
 
+        <template #toolbar-end>
+            <slot name="toolbar-end" />
+        </template>
+
         <template #selection-actions="slotProps">
             <slot name="selection-actions" v-bind="slotProps" />
         </template>

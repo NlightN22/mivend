@@ -86,6 +86,14 @@ export class CounterpartyCustomerLinkResolver {
     ): Promise<ID | null> {
         return this.counterpartyService.getLinkedCustomerId(ctx, counterparty.id);
     }
+
+    @ResolveField()
+    async innStatus(
+        @Ctx() ctx: RequestContext,
+        @Parent() counterparty: Counterparty,
+    ): Promise<string> {
+        return this.counterpartyService.getInnStatus(ctx, counterparty);
+    }
 }
 
 @Resolver('Counterparty')
@@ -112,6 +120,7 @@ export class CounterpartyResolver {
                 branchId?: string;
                 groupLabel?: string;
                 unassignedOnly?: boolean;
+                innStatus?: string;
                 sort?: CounterpartySortParameter;
             };
         },

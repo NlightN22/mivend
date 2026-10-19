@@ -50,6 +50,7 @@ export interface CustomersListOptions {
     groupLabel?: string;
     // Overrides managerId — see CounterpartyService.findVisiblePage's doc comment.
     unassignedOnly?: boolean;
+    innStatus?: 'missing' | 'duplicate';
 }
 
 // Server-side paginated (see issue #39) — search/status/manager/branch/group/unassigned are all
