@@ -124,10 +124,21 @@ export function recordGraphql(page: Page): GraphqlLog {
         inFlight--;
     });
     page.on('console', message => {
-        if (message.type() === 'error') diagnostics.push(`console.error ${message.text()}`);
+        const text = message.text();
+        if (message.type() === 'error' || message.type() === 'warning' || text.startsWith('[vite]'))
+            diagnostics.push(`console.${message.type()} ${text}`);
+    });
+    page.on('framenavigated', frame => {
+        if (frame === page.mainFrame()) diagnostics.push(`navigated ${frame.url()}`);
     });
     page.on('pageerror', error => diagnostics.push(`pageerror ${String(error)}`));
     return { bodies, diagnostics, pending: () => inFlight };
+}
+
+function describeDiagnostics(items: string[]): string {
+    if (items.length === 0) return 'no browser errors';
+    const kept = items.length <= 10 ? items : [...items.slice(0, 5), '...', ...items.slice(-5)];
+    return kept.join(' | ');
 }
 
 // Navigates and waits until the page's GraphQL calls have been answered and it shows text.
@@ -144,7 +155,7 @@ export async function visit(page: Page, log: GraphqlLog, path: string): Promise<
             .toBe(true);
     } catch (error) {
         throw new Error(
-            `${path} did not render (url ${page.url()}, in flight ${log.pending()}): ${log.diagnostics.slice(-10).join(' | ') || 'no browser errors'}\n${String(error)}`,
+            `${path} did not render (url ${page.url()}, in flight ${log.pending()}): ${describeDiagnostics(log.diagnostics)}\n${String(error)}`,
         );
     }
     return page.locator('body').innerText();

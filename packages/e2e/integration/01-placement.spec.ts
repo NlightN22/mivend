@@ -80,6 +80,7 @@ test('2: repeating the placement in the UI keeps one order, one publish, one erp
     const { code } = mainOrder();
     const before = orderByCode(code);
     await page.goto(`/order-created?code=${code}`);
+    // Deliberate: reload and back are part of the repeated-submit scenario, not a flake workaround.
     await page.reload();
     await page.goBack();
     await page.goto('/checkout');

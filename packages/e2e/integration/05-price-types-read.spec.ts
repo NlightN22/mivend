@@ -21,6 +21,10 @@ test.describe.configure({ timeout: 120_000 });
 
 const LEAKING_FIELDS = /"(floorPrice|purchasePrice|priceTypeCode|priceTypeErpId)"\s*:/;
 
+function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 test.describe('manager sees only allowed price types', () => {
     let split: PriceTypeSplit;
     let session: Awaited<ReturnType<typeof openManagerPage>> | undefined;
@@ -93,7 +97,7 @@ test.describe('manager sees only allowed price types', () => {
         const everything = [...texts, ...bodies].join('\n');
         expect(codesFoundIn(everything, split.confidential)).toEqual([]);
         const allowedCodePairs = new RegExp(
-            `"priceTypeCode"\\s*:\\s*"(${split.allowed.join('|')})"`,
+            `"priceTypeCode"\\s*:\\s*"(${split.allowed.map(escapeRegExp).join('|')})"`,
             'g',
         );
         expect(everything.replace(allowedCodePairs, '')).not.toMatch(LEAKING_FIELDS);

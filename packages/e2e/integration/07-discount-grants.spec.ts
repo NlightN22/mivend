@@ -63,14 +63,16 @@ test.afterAll(async () => {
     const left = await closeRunGrants();
     expect(left, 'grant requests still pending after cleanup').toEqual([]);
 });
+function skipWithoutHiddenTypes(): void {
+    test.skip(
+        !(hiddenCustomerCode && confidentialCode),
+        'the contour has no hidden customer price type or no confidential price type',
+    );
+}
+
 test.beforeEach(() => {
     test.skip(!loadContourEnv().manager, MANAGER_MISSING_REASON);
     test.skip(!!splitGap(split), splitGap(split));
-    const needsHidden = !/allowed type in the portal|closing the grants/.test(test.info().title);
-    test.skip(
-        needsHidden && !(hiddenCustomerCode && confidentialCode),
-        'the contour has no hidden customer price type or no confidential price type',
-    );
     test.skip(
         select<{ n: number }>(
             `SELECT count(*)::int AS n FROM workflow_definition WHERE "requestType" = 'discountGrantApproval'`,
@@ -121,6 +123,7 @@ test('7: the manager submits a grant for an allowed type in the portal, and only
 });
 
 test('7: the manager cannot request a grant for a hidden or confidential type, and nothing is created', async () => {
+    skipWithoutHiddenTypes();
     const token = await managerToken();
     const before = requestsWithMarker();
     for (const code of [hiddenCustomerCode!, confidentialCode!]) {
@@ -136,6 +139,7 @@ test('7: the manager cannot request a grant for a hidden or confidential type, a
 });
 
 test('7: grants of hidden types created by the superadmin exist but are invisible to the manager', async () => {
+    skipWithoutHiddenTypes();
     const admin = await superadminToken();
     for (const [key, code] of [
         ['hidden', hiddenCustomerCode!],
@@ -170,6 +174,7 @@ test('7: grants of hidden types created by the superadmin exist but are invisibl
 });
 
 test('7: the approvals inbox and request lookups hide the hidden grants from the manager', async () => {
+    skipWithoutHiddenTypes();
     const manager = await managerToken();
     const inbox = await adminCall(manager, INBOX);
     expect(inbox.errors).toEqual([]);
@@ -200,6 +205,7 @@ test('7: the approvals inbox and request lookups hide the hidden grants from the
 });
 
 test('7: the portal registry and approvals pages show the allowed grant and none of the hidden ones', async () => {
+    skipWithoutHiddenTypes();
     const { page, log } = session!;
     const registry = await visit(page, log, '/discounts');
     expect(registry).toContain(allowedCode);
@@ -218,6 +224,7 @@ test('7: the portal registry and approvals pages show the allowed grant and none
 test('7: closing the grants leaves nothing pending', async () => {
     expect(await closeRunGrants()).toEqual([]);
     const ids = Object.values(requestIds).filter(Boolean).map(Number);
+    if (ids.length === 0) return;
     const rows = select<{ status: string }>(
         `SELECT status FROM approval_request WHERE id IN (${ids.join(',')})`,
     );
