@@ -53,6 +53,11 @@ the manager portal and storefront pages, records every GraphQL response and grep
 for the confidential codes and for floor/purchase fields.
 `06` calls the Admin API directly as the test manager (denied prices, floor, rules, registry) and as the superadmin
 to prove the same data exists.
+`07` creates discount grant requests (one in the portal for an allowed type, two as the superadmin for hidden and
+confidential types after the manager's own attempts are denied), checks the registry, the approvals inbox and the
+pages, and rejects them in `afterAll` and in teardown (found by run id and a per-run marker in the justification;
+rejected rows stay in the registry, they consume nothing). It skips when the contour has no approval workflow for
+discount grants (`workflow_definition` is empty on a fresh staging DB).
 
 ## Manager portal role projects
 
