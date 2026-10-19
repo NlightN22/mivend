@@ -264,8 +264,7 @@ export default [
         plugins: { db: { rules: { 'no-raw-connection': noRawConnection } } },
         rules: { 'db/no-raw-connection': 'error' },
     },
-    // #216: storefront .vue files are parsed only for the i18n guard; stages enable
-    // `no-raw-text` per directory as they are translated.
+    // #216: storefront .vue files are parsed only for the i18n guard.
     {
         files: ['packages/storefront/src/**/*.vue'],
         languageOptions: {
@@ -275,18 +274,6 @@ export default [
         plugins: { '@intlify/vue-i18n': vueI18n },
         rules: {
             ...Object.fromEntries(Object.keys(js.configs.recommended.rules).map(r => [r, 'off'])),
-            '@intlify/vue-i18n/no-raw-text': 'off',
-        },
-    },
-    {
-        files: [
-            'packages/storefront/src/components/**/*.vue',
-            'packages/storefront/src/layouts/**/*.vue',
-            'packages/storefront/src/pages/{home,catalog,cart,favorites,error,checkout,orders}/**/*.vue',
-            'packages/storefront/src/pages/account/**/*.vue',
-        ],
-        ignores: ['packages/storefront/src/pages/account/BalancePage.vue'],
-        rules: {
             '@intlify/vue-i18n/no-raw-text': ['error', { ignorePattern: '^[^A-Za-zА-Яа-яЁё]+$' }],
         },
     },

@@ -37,7 +37,7 @@ async function handleSubmit() {
 <template>
     <main class="login-page">
         <div class="login-wrap">
-            <a class="login-logo" href="/" aria-label="Home">
+            <a class="login-logo" href="/" :aria-label="t('nav.home')">
                 <MvLogo name="mivend" size="md" />
             </a>
 

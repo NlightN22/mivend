@@ -1,6 +1,7 @@
 import { ref, watch, type Ref } from 'vue';
 import { useDebouncedCallback, useLatestRequest, type SuggestionGroup } from '@mivend/ui-kit';
 import { shopApi } from '../api/client';
+import { i18n } from '../i18n';
 import { SearchSuggestionsDocument } from '../api/generated/graphql';
 
 const MIN_TERM_LENGTH = 2;
@@ -23,7 +24,10 @@ export function useSearchSuggestions(
                 subtitle: [item.manufacturer?.name, item.sku].filter(Boolean).join(' · '),
                 to: `/product/${item.slug}`,
             }));
-            groups.value = items.length > 0 ? [{ type: 'products', label: 'Products', items }] : [];
+            groups.value =
+                items.length > 0
+                    ? [{ type: 'products', label: i18n.global.t('search.products'), items }]
+                    : [];
         },
     );
 

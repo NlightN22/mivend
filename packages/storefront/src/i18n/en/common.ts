@@ -37,6 +37,7 @@ export default {
         noTradingPoint: 'No trading point selected',
     },
     search: {
+        products: 'Products',
         button: 'Search',
         open: 'Open search',
         clear: 'Clear',

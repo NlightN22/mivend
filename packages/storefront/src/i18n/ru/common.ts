@@ -39,6 +39,7 @@ const ru: typeof en = {
         noTradingPoint: 'Торговая точка не выбрана',
     },
     search: {
+        products: 'Товары',
         button: 'Найти',
         open: 'Открыть поиск',
         clear: 'Очистить',
