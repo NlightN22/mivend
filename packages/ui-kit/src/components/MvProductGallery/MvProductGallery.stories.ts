@@ -7,12 +7,10 @@ const meta: Meta<typeof MvProductGallery> = {
     tags: ['autodocs'],
     argTypes: {
         showFavorite: { control: 'boolean' },
-        showDocuments: { control: 'boolean' },
     },
     args: {
         productName: 'Brake pad set — front axle',
         showFavorite: true,
-        showDocuments: true,
     },
 };
 
@@ -27,8 +25,8 @@ export const Default: Story = {
     }),
 };
 
-export const StaffViewNoDocuments: Story = {
-    args: { showDocuments: false, showFavorite: false },
+export const StaffViewNoFavorite: Story = {
+    args: { showFavorite: false },
     render: args => ({
         components: { MvProductGallery },
         setup: () => ({ args }),
