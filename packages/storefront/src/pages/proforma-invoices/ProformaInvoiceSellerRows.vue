@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 interface Seller {
     legalName: string;
@@ -11,6 +12,7 @@ interface Seller {
 }
 
 const props = defineProps<{ seller?: Seller | null }>();
+const { t } = useI18n();
 const bank = computed(() =>
     [props.seller?.bankName, props.seller?.bankAccount, props.seller?.bankBik]
         .filter(Boolean)
@@ -20,17 +22,20 @@ const bank = computed(() =>
 
 <template>
     <div class="seller-row">
-        <span>Seller</span>
+        <span>{{ t('proformaInvoices.seller.seller') }}</span>
         <span class="seller-val">{{ seller?.legalName ?? '—' }}</span>
     </div>
     <div v-if="seller?.inn" class="seller-row">
-        <span>Tax ID</span><span class="seller-val">{{ seller.inn }}</span>
+        <span>{{ t('proformaInvoices.seller.taxId') }}</span
+        ><span class="seller-val">{{ seller.inn }}</span>
     </div>
     <div v-if="seller?.legalAddress" class="seller-row">
-        <span>Address</span><span class="seller-val">{{ seller.legalAddress }}</span>
+        <span>{{ t('proformaInvoices.seller.address') }}</span
+        ><span class="seller-val">{{ seller.legalAddress }}</span>
     </div>
     <div v-if="bank" class="seller-row">
-        <span>Bank account</span><span class="seller-val">{{ bank }}</span>
+        <span>{{ t('proformaInvoices.seller.bankAccount') }}</span
+        ><span class="seller-val">{{ bank }}</span>
     </div>
 </template>
 

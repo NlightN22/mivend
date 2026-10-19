@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { toRef } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import RequestsToolbar from './RequestsToolbar.vue';
 import RequestCard from './RequestCard.vue';
-import type { RequestData } from './RequestCard.vue';
+import { DEMO_REQUESTS } from './requestsDemo';
+
+const { t } = useI18n();
 
 const { filters: urlState } = useUrlState(
     { status: 'all', topic: '', q: '', sort: 'newest' },
@@ -14,76 +17,6 @@ const activeStatus = toRef(urlState, 'status');
 const activeTopic = toRef(urlState, 'topic');
 const search = toRef(urlState, 'q');
 const sort = toRef(urlState, 'sort');
-
-const requests: RequestData[] = [
-    {
-        id: '1048',
-        title: 'One item missing from shipment',
-        meta: 'Request #1048 · Order #348744 · created today at 15:12',
-        status: 'awaiting',
-        statusLabel: 'Awaiting reply',
-        assignee: 'Sales manager',
-        icon: '📦',
-        iconVariant: 'orange',
-        preview:
-            'Order arrived with 11 of 12 items. Customer asks to check whether the item was excluded during picking or will be shipped separately.',
-        message: {
-            author: 'Manager',
-            time: '15:28',
-            text: "Checking with the warehouse. Preliminary info: item went into a separate reserve, we'll confirm after reconciliation.",
-        },
-        actions: ['Open', 'Reply', 'Order'],
-    },
-    {
-        id: '1042',
-        title: 'Reconciliation report for June needed',
-        meta: 'Request #1042 · Documents · created yesterday at 11:40',
-        status: 'in-progress',
-        statusLabel: 'In progress',
-        assignee: 'Accounting',
-        icon: '🧾',
-        iconVariant: 'blue',
-        preview:
-            'Customer requested a reconciliation report for the main contract and all trading points for the current month.',
-        message: {
-            author: 'Accounting',
-            time: 'yesterday at 13:05',
-            text: 'Report is being generated. After review it will appear in the Documents section and will be sent by email.',
-        },
-        actions: ['Open', 'Documents'],
-    },
-    {
-        id: '1037',
-        title: 'Partial payment for order',
-        meta: 'Request #1037 · Order #348921 · created June 24',
-        status: 'resolved',
-        statusLabel: 'Resolved',
-        assignee: 'Finance dept.',
-        icon: '₽',
-        iconVariant: 'green',
-        preview:
-            'Customer asked whether a partial advance payment is possible and how it would be allocated across orders.',
-        message: {
-            author: 'Finance dept.',
-            time: 'June 24 at 17:20',
-            text: 'Payment accepted as advance. Allocation across orders will be handled internally.',
-        },
-        actions: ['Open', 'Payments'],
-    },
-    {
-        id: '1029',
-        title: 'Return request for antifreeze',
-        meta: 'Request #1029 · Return · created June 21',
-        status: 'closed',
-        statusLabel: 'Closed',
-        assignee: 'Service dept.',
-        icon: '↩',
-        iconVariant: 'orange',
-        preview: 'Return approved, documents generated, goods accepted at warehouse.',
-        message: null,
-        actions: ['Open', 'Documents', 'Repeat request'],
-    },
-];
 
 function handleQuickSubmit(_topic: string, _message: string) {
     // placeholder: send quick request
@@ -97,15 +30,13 @@ function handleQuickSubmit(_topic: string, _message: string) {
         <section class="requests-page__content">
             <div class="requests-page__head">
                 <div>
-                    <h1 class="requests-page__title">Requests</h1>
-                    <p class="requests-page__subtitle">
-                        Questions about orders, returns, documents, payments, and customer service.
-                    </p>
+                    <h1 class="requests-page__title">{{ t('requests.title') }}</h1>
+                    <p class="requests-page__subtitle">{{ t('requests.subtitle') }}</p>
                 </div>
                 <div class="requests-page__head-actions">
-                    <button class="requests-page__btn">Request templates</button>
+                    <button class="requests-page__btn">{{ t('requests.templates') }}</button>
                     <button class="requests-page__btn requests-page__btn--primary">
-                        Create request
+                        {{ t('requests.create') }}
                     </button>
                 </div>
             </div>
@@ -126,14 +57,13 @@ function handleQuickSubmit(_topic: string, _message: string) {
                 <div class="requests-page__notice">
                     <span>ℹ️</span>
                     <div>
-                        <strong>A request can be linked to an order, document, or payment.</strong>
-                        This way the customer doesn't need to re-explain the context, and the
-                        manager can resolve it faster.
+                        <strong>{{ t('requests.notice.title') }}</strong>
+                        {{ t('requests.notice.text') }}
                     </div>
                 </div>
 
                 <div class="requests-page__list">
-                    <RequestCard v-for="req in requests" :key="req.id" :request="req" />
+                    <RequestCard v-for="req in DEMO_REQUESTS" :key="req.id" :request="req" />
                 </div>
             </div>
         </section>

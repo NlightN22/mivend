@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { MvNotice } from '@mivend/ui-kit';
+import { useI18n } from 'vue-i18n';
 import { formatMoney } from './formatMoney';
 
 export interface VersionRef {
@@ -15,26 +16,35 @@ defineProps<{
     supersededBy?: VersionRef | null;
     orderChangedDifference?: number | null;
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
     <div class="version-notices">
         <MvNotice v-if="supersededBy" variant="info">
-            There is a newer version v{{ supersededBy.version }} (№ {{ supersededBy.number }}).
-            <RouterLink :to="`/proforma-invoices/${supersededBy.id}`"
-                >Open newer version</RouterLink
-            >
+            {{
+                t('proformaInvoices.newerVersion', {
+                    version: supersededBy.version,
+                    number: supersededBy.number,
+                })
+            }}.
+            <RouterLink :to="`/proforma-invoices/${supersededBy.id}`">{{
+                t('proformaInvoices.openNewer')
+            }}</RouterLink>
         </MvNotice>
         <MvNotice v-else-if="supersedes" variant="info">
-            Version {{ version }}, follows № {{ supersedes.number }}.
-            <RouterLink :to="`/proforma-invoices/${supersedes.id}`"
-                >Open previous version</RouterLink
-            >
+            {{ t('proformaInvoices.follows', { version, number: supersedes.number }) }}
+            <RouterLink :to="`/proforma-invoices/${supersedes.id}`">{{
+                t('proformaInvoices.openPrevious')
+            }}</RouterLink>
         </MvNotice>
         <MvNotice v-if="orderChangedDifference != null" variant="warning">
-            The order changed after payment, difference
-            {{ formatMoney(orderChangedDifference, currencyCode) }}. It is settled through the ERP;
-            this proforma invoice stays unchanged.
+            {{
+                t('proformaInvoices.orderChanged', {
+                    difference: formatMoney(orderChangedDifference, currencyCode),
+                })
+            }}
         </MvNotice>
     </div>
 </template>

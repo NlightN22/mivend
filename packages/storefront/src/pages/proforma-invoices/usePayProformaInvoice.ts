@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { i18n } from '../../i18n';
 import { shopApi } from '../../api/client';
 import { PayProformaInvoiceDocument } from '../../api/generated/graphql';
 
@@ -28,7 +29,8 @@ export function usePayProformaInvoice(): {
             });
             return result.payProformaInvoice;
         } catch (e) {
-            error.value = e instanceof Error ? e.message : 'Payment failed';
+            error.value =
+                e instanceof Error ? e.message : i18n.global.t('proformaInvoices.pay.fail');
             return null;
         } finally {
             loading.value = false;

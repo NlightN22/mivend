@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
     MvDatePicker,
     MvFilterChips,
@@ -8,7 +9,8 @@ import {
     resolveDateRangePreset,
 } from '@mivend/ui-kit';
 import type { DateRangeFilterValue, SelectOption } from '@mivend/ui-kit';
-import { PERIOD_PRESETS, TYPE_CHIPS } from './settlementChips';
+import { periodOptions as buildPeriodOptions, typeChips } from './settlementChips';
+import { useDatePickerProps } from '../../composables/useDatePickerProps';
 
 const props = defineProps<{
     chip: string;
@@ -25,7 +27,10 @@ const emit = defineEmits<{
     (e: 'update:range', val: DateRangeFilterValue): void;
 }>();
 
-const periodOptions = PERIOD_PRESETS.map(p => ({ value: p.key, label: p.label }));
+const { t } = useI18n();
+const datePicker = useDatePickerProps();
+const chips = computed(typeChips);
+const periodOptions = computed(buildPeriodOptions);
 const isCustom = computed(() => props.range.preset === 'custom');
 
 function selectPreset(key: string): void {
@@ -40,10 +45,10 @@ function setBound(bound: 'from' | 'to', value: string): void {
 
 <template>
     <div class="settlement-filters">
-        <MvFilterChips :chips="TYPE_CHIPS" :active="chip" @select="$emit('update:chip', $event)" />
+        <MvFilterChips :chips="chips" :active="chip" @select="$emit('update:chip', $event)" />
         <div class="settlement-filters__row">
             <label class="settlement-filters__field">
-                <span>Contract</span>
+                <span>{{ t('settlements.filters.contract') }}</span>
                 <MvSelect
                     :model-value="contract"
                     :options="contractOptions"
@@ -51,7 +56,7 @@ function setBound(bound: 'from' | 'to', value: string): void {
                 />
             </label>
             <label class="settlement-filters__field">
-                <span>Organization</span>
+                <span>{{ t('settlements.filters.organization') }}</span>
                 <MvSelect
                     :model-value="organization"
                     :options="organizationOptions"
@@ -59,7 +64,7 @@ function setBound(bound: 'from' | 'to', value: string): void {
                 />
             </label>
             <label class="settlement-filters__field">
-                <span>Period</span>
+                <span>{{ t('settlements.filters.period') }}</span>
                 <MvSelect
                     :model-value="range.preset || 'all'"
                     :options="periodOptions"
@@ -67,10 +72,10 @@ function setBound(bound: 'from' | 'to', value: string): void {
                 />
             </label>
             <label class="settlement-filters__field">
-                <span>Document or order number</span>
+                <span>{{ t('settlements.filters.number') }}</span>
                 <MvInput
                     size="sm"
-                    placeholder="Enter a number"
+                    :placeholder="t('settlements.filters.numberPlaceholder')"
                     :model-value="search"
                     @update:model-value="$emit('update:search', $event)"
                 />
@@ -78,15 +83,17 @@ function setBound(bound: 'from' | 'to', value: string): void {
         </div>
         <div v-if="isCustom" class="settlement-filters__row settlement-filters__row--dates">
             <div class="settlement-filters__field">
-                <span>From</span>
+                <span>{{ t('settlements.filters.from') }}</span>
                 <MvDatePicker
+                    v-bind="datePicker"
                     :model-value="range.from"
                     @update:model-value="setBound('from', $event)"
                 />
             </div>
             <div class="settlement-filters__field">
-                <span>To</span>
+                <span>{{ t('settlements.filters.to') }}</span>
                 <MvDatePicker
+                    v-bind="datePicker"
                     :model-value="range.to"
                     @update:model-value="setBound('to', $event)"
                 />

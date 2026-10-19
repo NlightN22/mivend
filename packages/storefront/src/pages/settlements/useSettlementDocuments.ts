@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { i18n } from '../../i18n';
 import { shopApi } from '../../api/client';
 import {
     SettlementBalancesDocument,
@@ -29,13 +30,15 @@ export interface CurrencyTotals {
     overdue: number;
 }
 
-export const PAYMENT_STATUS_LABEL: Record<string, string> = {
-    paid: 'Paid',
-    partial: 'Partially paid',
-    overdue: 'Overdue',
-    open: 'Open',
-    unknown: 'No balance data yet',
-};
+export function paymentStatusLabel(status: string): string {
+    const key = `settlements.paymentStatus.${status}`;
+    return i18n.global.te(key) ? i18n.global.t(key) : status;
+}
+
+export function categoryLabel(category: string): string | undefined {
+    const key = `settlements.category.${category}`;
+    return i18n.global.te(key) ? i18n.global.t(key) : undefined;
+}
 
 export const PAYMENT_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> =
     { paid: 'success', partial: 'warning', overdue: 'danger', open: 'neutral' };

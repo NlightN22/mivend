@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { i18n } from '../../i18n';
 import { shopApi } from '../../api/client';
 import {
     MyProformaInvoicesDocument,
@@ -14,11 +15,12 @@ export interface MyProformaInvoicesOptions {
 }
 
 // Keyed by the API's displayStatus: a proforma invoice is never shown as paid (payment is shown per order).
-export const PROFORMA_INVOICE_STATUS_LABEL: Record<string, string> = {
-    current: 'Current',
-    superseded: 'Superseded',
-    cancelled: 'Cancelled',
-};
+export const PROFORMA_INVOICE_STATUSES = ['current', 'superseded', 'cancelled'] as const;
+
+export function proformaInvoiceStatusLabel(status: string): string {
+    const key = `proformaInvoices.status.${status}`;
+    return i18n.global.te(key) ? i18n.global.t(key) : status;
+}
 
 export const PROFORMA_INVOICE_STATUS_VARIANT: Record<
     string,

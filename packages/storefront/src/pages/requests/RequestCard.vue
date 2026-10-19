@@ -1,50 +1,38 @@
 <script setup lang="ts">
-export interface RequestMessage {
-    author: string;
-    time: string;
-    text: string;
-}
+import { useI18n } from 'vue-i18n';
+import type { DemoRequest, RequestStatus } from './requestsDemo';
 
-export interface RequestData {
-    id: string;
-    title: string;
-    meta: string;
-    status: 'new' | 'in-progress' | 'awaiting' | 'resolved' | 'closed';
-    statusLabel: string;
-    assignee: string;
-    icon: string;
-    iconVariant: 'blue' | 'green' | 'orange';
-    preview: string;
-    message: RequestMessage | null;
-    actions: string[];
-}
+const props = defineProps<{ request: DemoRequest }>();
+const { t } = useI18n();
 
-defineProps<{ request: RequestData }>();
-
-const statusVariant: Record<RequestData['status'], string> = {
+const statusVariant: Record<RequestStatus, string> = {
     new: 'green',
     'in-progress': 'blue',
     awaiting: 'warning',
     resolved: 'green',
     closed: 'muted',
 };
+
+const text = (field: string): string => t(`requests.demo.r${props.request.id}.${field}`);
 </script>
 
 <template>
     <article class="req-card">
         <div class="req-card__head">
             <div>
-                <div class="req-card__title">{{ request.title }}</div>
-                <div class="req-card__meta">{{ request.meta }}</div>
+                <div class="req-card__title">{{ text('title') }}</div>
+                <div class="req-card__meta">{{ text('meta') }}</div>
             </div>
             <span
                 class="req-card__status"
                 :class="`req-card__status--${statusVariant[request.status]}`"
             >
-                {{ request.statusLabel }}
+                {{ t(`requests.status.${request.status}`) }}
             </span>
             <div class="req-card__meta">
-                Assignee<br /><strong>{{ request.assignee }}</strong>
+                {{ t('requests.assignee') }}<br /><strong>{{
+                    t(`requests.assignees.${request.assignee}`)
+                }}</strong>
             </div>
         </div>
 
@@ -53,14 +41,12 @@ const statusVariant: Record<RequestData['status'], string> = {
                 <div class="req-card__icon" :class="`req-card__icon--${request.iconVariant}`">
                     {{ request.icon }}
                 </div>
-                <div>{{ request.preview }}</div>
+                <div>{{ text('preview') }}</div>
             </div>
 
-            <div v-if="request.message" class="req-card__message">
-                <div class="req-card__msg-author">
-                    {{ request.message.author }} · {{ request.message.time }}
-                </div>
-                <div class="req-card__msg-text">{{ request.message.text }}</div>
+            <div v-if="request.hasMessage" class="req-card__message">
+                <div class="req-card__msg-author">{{ text('author') }} · {{ text('time') }}</div>
+                <div class="req-card__msg-text">{{ text('message') }}</div>
             </div>
 
             <div class="req-card__actions">
@@ -68,9 +54,9 @@ const statusVariant: Record<RequestData['status'], string> = {
                     v-for="action in request.actions"
                     :key="action"
                     class="req-card__btn"
-                    :class="{ 'req-card__btn--primary': action === 'Open' }"
+                    :class="{ 'req-card__btn--primary': action === 'open' }"
                 >
-                    {{ action }}
+                    {{ t(`requests.actions.${action}`) }}
                 </button>
             </div>
         </div>

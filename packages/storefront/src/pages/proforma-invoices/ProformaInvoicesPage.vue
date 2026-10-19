@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { onMounted, toRef, watch } from 'vue';
+import { computed, onMounted, toRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import ProformaInvoiceRow from './ProformaInvoiceRow.vue';
-import { useProformaInvoices, PROFORMA_INVOICE_STATUS_LABEL } from './useProformaInvoices';
+import {
+    useProformaInvoices,
+    PROFORMA_INVOICE_STATUSES,
+    proformaInvoiceStatusLabel,
+} from './useProformaInvoices';
 import { usePaginationLabels } from '../../composables/usePaginationLabels';
 
+const { t } = useI18n();
 const paginationLabels = usePaginationLabels();
 
 const { proformaInvoices, totalItems, loading, load } = useProformaInvoices();
@@ -15,10 +21,10 @@ const PAGE_SIZE = 20;
 const { filters: urlState, page } = useUrlState({ status: 'all' });
 const activeFilter = toRef(urlState, 'status');
 
-const statusFilters = [
-    { key: 'all', label: 'All proforma invoices' },
-    ...Object.entries(PROFORMA_INVOICE_STATUS_LABEL).map(([key, label]) => ({ key, label })),
-];
+const statusFilters = computed(() => [
+    { key: 'all', label: t('proformaInvoices.list.all') },
+    ...PROFORMA_INVOICE_STATUSES.map(key => ({ key, label: proformaInvoiceStatusLabel(key) })),
+]);
 
 function reload(): void {
     void load({
@@ -40,9 +46,11 @@ onMounted(reload);
         <section class="proforma-invoices-page__content">
             <div class="proforma-invoices-page__head">
                 <div>
-                    <h1 class="proforma-invoices-page__title">Proforma invoices</h1>
+                    <h1 class="proforma-invoices-page__title">
+                        {{ t('proformaInvoices.list.title') }}
+                    </h1>
                     <p class="proforma-invoices-page__subtitle">
-                        Payment obligations and links to their orders.
+                        {{ t('proformaInvoices.list.subtitle') }}
                     </p>
                 </div>
             </div>
@@ -50,7 +58,7 @@ onMounted(reload);
             <div class="proforma-invoices-page__stats">
                 <div class="proforma-invoices-page__stat-card">
                     <div class="proforma-invoices-page__stat-title">
-                        Proforma invoices on this page
+                        {{ t('proformaInvoices.list.onPage') }}
                     </div>
                     <div class="proforma-invoices-page__stat-value">{{ totalItems }}</div>
                 </div>
@@ -72,9 +80,11 @@ onMounted(reload);
                     </button>
                 </div>
 
-                <div v-if="loading" class="proforma-invoices-page__state">Loading...</div>
+                <div v-if="loading" class="proforma-invoices-page__state">
+                    {{ t('common.loading') }}
+                </div>
                 <div v-else-if="!proformaInvoices.length" class="proforma-invoices-page__state">
-                    No proforma invoices found.
+                    {{ t('proformaInvoices.list.empty') }}
                 </div>
                 <template v-else>
                     <MvPagination

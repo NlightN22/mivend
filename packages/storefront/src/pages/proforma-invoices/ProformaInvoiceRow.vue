@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { formatMoney } from './formatMoney';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import ProformaInvoiceVersionBadge from './ProformaInvoiceVersionBadge.vue';
 import { formatDate } from './formatDate';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import {
-    PROFORMA_INVOICE_STATUS_LABEL,
+    proformaInvoiceStatusLabel,
     PROFORMA_INVOICE_STATUS_VARIANT,
     type ProformaInvoiceSummary,
 } from './useProformaInvoices';
 
 const props = defineProps<{ proformaInvoice: ProformaInvoiceSummary }>();
 const router = useRouter();
+const { t } = useI18n();
 
 const formatAmount = formatMoney;
 
@@ -35,24 +37,36 @@ const isPayable = props.proformaInvoice.displayStatus !== 'cancelled';
     <article class="proforma-invoice-row">
         <div>
             <div class="proforma-invoice-row__name">
-                Proforma invoice #{{ proformaInvoice.number }}
+                {{ t('proformaInvoices.title', { number: proformaInvoice.number }) }}
                 <ProformaInvoiceVersionBadge :version="proformaInvoice.version" />
             </div>
             <div v-if="proformaInvoice.supersededBy" class="proforma-invoice-row__meta">
-                There is a newer version v{{ proformaInvoice.supersededBy.version }} (№
-                {{ proformaInvoice.supersededBy.number }})
+                {{
+                    t('proformaInvoices.newerVersion', {
+                        version: proformaInvoice.supersededBy.version,
+                        number: proformaInvoice.supersededBy.number,
+                    })
+                }}
             </div>
             <div class="proforma-invoice-row__meta">
-                Issued {{ formatDate(proformaInvoice.issuedAt) }}, pay by
-                {{ formatDate(proformaInvoice.dueDate) }}
+                {{
+                    t('proformaInvoices.issuedPayBy', {
+                        issued: formatDate(proformaInvoice.issuedAt),
+                        due: formatDate(proformaInvoice.dueDate),
+                    })
+                }}
             </div>
             <div class="proforma-invoice-row__meta">
-                Order {{ formatDocumentNumber(proformaInvoice.order.code) }}
+                {{
+                    t('proformaInvoices.order', {
+                        number: formatDocumentNumber(proformaInvoice.order.code),
+                    })
+                }}
             </div>
         </div>
 
         <div>
-            <div class="proforma-invoice-row__cell-title">Amount</div>
+            <div class="proforma-invoice-row__cell-title">{{ t('proformaInvoices.amount') }}</div>
             <div class="proforma-invoice-row__cell-value">
                 {{ formatAmount(proformaInvoice.amount, proformaInvoice.currencyCode) }}
             </div>
@@ -61,18 +75,19 @@ const isPayable = props.proformaInvoice.displayStatus !== 'cancelled';
         <MvStatusBadge
             :variant="PROFORMA_INVOICE_STATUS_VARIANT[proformaInvoice.displayStatus] ?? 'neutral'"
         >
-            {{
-                PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.displayStatus] ??
-                proformaInvoice.displayStatus
-            }}
+            {{ proformaInvoiceStatusLabel(proformaInvoice.displayStatus) }}
         </MvStatusBadge>
 
         <div class="proforma-invoice-row__actions">
-            <MvButton variant="secondary" size="sm" @click="openOrder">Order</MvButton>
-            <MvButton variant="secondary" size="sm" @click="openProformaInvoice">Open</MvButton>
-            <MvButton v-if="isPayable" variant="primary" size="sm" @click="payProformaInvoice"
-                >Pay</MvButton
-            >
+            <MvButton variant="secondary" size="sm" @click="openOrder">{{
+                t('proformaInvoices.actions.order')
+            }}</MvButton>
+            <MvButton variant="secondary" size="sm" @click="openProformaInvoice">{{
+                t('proformaInvoices.actions.open')
+            }}</MvButton>
+            <MvButton v-if="isPayable" variant="primary" size="sm" @click="payProformaInvoice">{{
+                t('proformaInvoices.actions.pay')
+            }}</MvButton>
         </div>
     </article>
 </template>

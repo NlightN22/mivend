@@ -1,0 +1,247 @@
+/* Blocks */
+.bal-block {
+    background: #fff;
+    border: 1px solid #dde7e2;
+    border-radius: 20px;
+    padding: 20px;
+}
+
+.bal-block__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.bal-block__title {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 950;
+    letter-spacing: -0.03em;
+}
+.bal-block__sub {
+    font-size: 13px;
+    color: #66736e;
+}
+
+/* Progress */
+.bal-progress-wrap {
+    margin-bottom: 18px;
+}
+.bal-progress-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #66736e;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.bal-progress {
+    height: 8px;
+    background: #edf2ef;
+    border-radius: 999px;
+    overflow: hidden;
+}
+.bal-progress__fill {
+    height: 100%;
+    background: #00a878;
+    border-radius: 999px;
+}
+.bal-progress-foot {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #a8b8b2;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+/* Table rows */
+.bal-table {
+    display: grid;
+    gap: 8px;
+}
+
+.bal-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 110px 110px 90px auto;
+    gap: 8px;
+    align-items: center;
+    padding: 12px 14px;
+    background: #f7fbf9;
+    border: 1px solid #edf2ef;
+    border-radius: 14px;
+}
+
+.bal-row__title {
+    font-size: 14px;
+    font-weight: 900;
+    color: #14231f;
+    margin-bottom: 2px;
+}
+.bal-row__note {
+    font-size: 12px;
+    color: #66736e;
+}
+
+.bal-cell__label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #a8b8b2;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+}
+.bal-cell__value {
+    font-size: 14px;
+    font-weight: 800;
+    color: #263732;
+}
+
+/* Pills */
+.bal-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    background: #e2f8ef;
+    color: #008a64;
+}
+.bal-pill--warning {
+    background: #fff5df;
+    color: #a05500;
+}
+
+/* Aside panels */
+.bal-aside {
+    display: grid;
+    gap: 14px;
+}
+
+.bal-panel {
+    background: #fff;
+    border: 1px solid #dde7e2;
+    border-radius: 20px;
+    padding: 18px 20px;
+}
+
+.bal-panel__title {
+    font-size: 16px;
+    font-weight: 950;
+    letter-spacing: -0.03em;
+    margin-bottom: 6px;
+}
+.bal-panel__sub {
+    font-size: 13px;
+    color: #66736e;
+    margin-bottom: 14px;
+    line-height: 1.42;
+}
+
+.bal-pay__label {
+    font-size: 12px;
+    font-weight: 800;
+    color: #66736e;
+    margin-bottom: 6px;
+}
+.bal-pay__input {
+    width: 100%;
+    border: 1px solid #dde7e2;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font: inherit;
+    font-size: 18px;
+    font-weight: 950;
+    letter-spacing: -0.03em;
+    outline: none;
+    margin-bottom: 10px;
+}
+
+.bal-wide-btn {
+    width: 100%;
+    min-height: 44px;
+    border: 0;
+    border-radius: 12px;
+    background: #00a878;
+    color: #fff;
+    font: inherit;
+    font-weight: 950;
+    cursor: pointer;
+    margin-bottom: 14px;
+}
+
+.bal-mini-list {
+    display: grid;
+    gap: 10px;
+    border-top: 1px solid #edf2ef;
+    padding-top: 14px;
+}
+.bal-mini-title {
+    font-size: 13px;
+    font-weight: 900;
+    color: #14231f;
+    margin-bottom: 3px;
+}
+.bal-mini-note {
+    font-size: 12px;
+    color: #66736e;
+    line-height: 1.4;
+}
+
+.bal-info-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #edf2ef;
+    font-size: 13px;
+}
+.bal-info-line span {
+    color: #66736e;
+}
+.bal-info-line strong {
+    color: #14231f;
+    font-weight: 900;
+}
+
+@media (max-width: 1100px) {
+    .bal-metrics {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .bal-layout {
+        grid-template-columns: 1fr;
+    }
+    .bal-aside {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 960px) {
+    .bal-page {
+        grid-template-columns: 1fr;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+    .bal-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .bal-head {
+        flex-direction: column;
+    }
+    .bal-metrics {
+        grid-template-columns: 1fr 1fr;
+    }
+    .bal-aside {
+        grid-template-columns: 1fr;
+    }
+    .bal-row {
+        grid-template-columns: 1fr;
+    }
+}

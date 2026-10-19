@@ -5,7 +5,7 @@ import { MvButton, MvStatusBadge } from '@mivend/ui-kit';
 import ProformaInvoiceVersionBadge from '../proforma-invoices/ProformaInvoiceVersionBadge.vue';
 import { formatMoney } from '../proforma-invoices/formatMoney';
 import {
-    PROFORMA_INVOICE_STATUS_LABEL,
+    proformaInvoiceStatusLabel,
     PROFORMA_INVOICE_STATUS_VARIANT,
 } from '../proforma-invoices/useProformaInvoices';
 import { useOrderProformaInvoices } from './useOrderProformaInvoices';
@@ -38,10 +38,7 @@ onMounted(() => void load());
                     PROFORMA_INVOICE_STATUS_VARIANT[proformaInvoice.displayStatus] ?? 'neutral'
                 "
             >
-                {{
-                    PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.displayStatus] ??
-                    proformaInvoice.displayStatus
-                }}
+                {{ proformaInvoiceStatusLabel(proformaInvoice.displayStatus) }}
             </MvStatusBadge>
             <span class="opi-amount">{{
                 formatMoney(proformaInvoice.amount, proformaInvoice.currencyCode)

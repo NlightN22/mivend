@@ -6,7 +6,8 @@ import { resolveDocumentTypeStyle } from './documentTypeStyles';
 // Wraps MvStatusBadge directly (not a parallel colored-pill implementation) so a document type's
 // color is always, structurally, one of MvStatusBadge's own variants — see documentTypeStyles.ts
 // for why. The icon is the only thing this adds on top of a plain MvStatusBadge.
-const props = defineProps<{ type: string }>();
+// `label` lets the portal supply translated text; the built-in labels are the English fallback.
+const props = defineProps<{ type: string; label?: string }>();
 
 const style = computed(() => resolveDocumentTypeStyle(props.type));
 </script>
@@ -19,7 +20,7 @@ const style = computed(() => resolveDocumentTypeStyle(props.type));
             :size="14"
             :stroke-width="2"
         />
-        {{ style.label ?? type }}
+        {{ label ?? style.label ?? type }}
     </MvStatusBadge>
 </template>
 

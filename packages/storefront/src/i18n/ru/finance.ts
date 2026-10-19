@@ -1,5 +1,71 @@
 import type en from '../en/finance';
 
-const ru: typeof en = {};
+const ru: typeof en = {
+    proformaInvoices: {
+        title: 'Счёт на оплату № {number}',
+        order: 'Заказ {number}',
+        versionBadge: 'v{version}',
+        amount: 'Сумма',
+        issuedPayBy: 'Выставлен {issued}, оплатить до {due}',
+        newerVersion: 'Есть более новая версия v{version} (№ {number})',
+        follows: 'Версия {version}, заменяет № {number}.',
+        openNewer: 'Открыть новую версию',
+        openPrevious: 'Открыть предыдущую версию',
+        orderChanged:
+            'Заказ изменился после оплаты, разница {difference}. Она урегулируется через учётную систему; этот счёт на оплату не меняется.',
+        status: { current: 'Действующий', superseded: 'Заменён', cancelled: 'Отменён' },
+        actions: { order: 'Заказ', open: 'Открыть', pay: 'Оплатить' },
+        list: {
+            title: 'Счета на оплату',
+            subtitle: 'Обязательства по оплате и связанные с ними заказы.',
+            onPage: 'Счетов на оплату на странице',
+            all: 'Все счета на оплату',
+            empty: 'Счета на оплату не найдены.',
+        },
+        seller: {
+            seller: 'Продавец',
+            taxId: 'ИНН',
+            address: 'Адрес',
+            bankAccount: 'Банковский счёт',
+        },
+        detail: {
+            back: 'Мои счета на оплату',
+            notFound: 'Счёт на оплату не найден.',
+            total: 'Сумма счёта на оплату',
+            items: 'Позиции счёта на оплату',
+            sku: 'Артикул',
+            product: 'Товар',
+            qty: 'Кол-во',
+            price: 'Цена',
+            lineTotal: 'Сумма',
+            linkedOrder: 'Связанный заказ',
+            openOrder: 'Открыть заказ',
+            payment: 'Оплата',
+            payByNote: 'Оплатить до {date}.',
+            cancelled: 'Этот счёт на оплату отменён.',
+            pay: 'Оплатить счёт',
+            details: 'Реквизиты счёта на оплату',
+            version: 'Версия',
+            basis: 'Основание',
+            byShipment: 'По отгрузке',
+            byShipmentWithInvoice: 'По отгрузке (реализация № {number})',
+            issued: 'Выставлен',
+            payBy: 'Оплатить до',
+            document: 'Документ',
+            downloadPdf: 'Скачать PDF',
+            currency: 'Валюта',
+        },
+        pay: {
+            title: 'Оплата',
+            subtitle: 'Демонстрационный платёжный сервис — только для тестирования',
+            warning:
+                'Это страница-заглушка. В рабочей версии здесь будет переход к настоящему платёжному провайдеру.',
+            success: 'Оплата прошла',
+            pending: 'Оплата в обработке',
+            fail: 'Оплата не прошла',
+            back: 'Вернуться к счёту на оплату',
+        },
+    },
+};
 
 export default ru;

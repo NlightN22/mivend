@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { formatMoney } from './formatMoney';
 import { onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useProformaInvoiceDetail } from './useProformaInvoiceDetail';
 import { usePayProformaInvoice, type PayProformaInvoiceOutcome } from './usePayProformaInvoice';
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const proformaInvoiceId = route.params.id as string;
@@ -28,17 +30,14 @@ async function choose(outcome: PayProformaInvoiceOutcome): Promise<void> {
     <div class="stub-page">
         <div class="stub-card">
             <div class="stub-lock">🔒</div>
-            <h1 class="stub-title">Payment</h1>
-            <p class="stub-subtitle">Demo payment service — for testing only</p>
+            <h1 class="stub-title">{{ t('proformaInvoices.pay.title') }}</h1>
+            <p class="stub-subtitle">{{ t('proformaInvoices.pay.subtitle') }}</p>
 
-            <div class="stub-warning">
-                ⚠️ This is a stub page. In production this will be replaced by a real payment
-                provider redirect.
-            </div>
+            <div class="stub-warning">⚠️ {{ t('proformaInvoices.pay.warning') }}</div>
 
-            <div v-if="loadingProformaInvoice" class="stub-order">Loading…</div>
+            <div v-if="loadingProformaInvoice" class="stub-order">{{ t('common.loading') }}</div>
             <div v-else-if="proformaInvoice" class="stub-order">
-                Proforma invoice #{{ proformaInvoice.number }} ·
+                {{ t('proformaInvoices.title', { number: proformaInvoice.number }) }} ·
                 {{ formatAmount(proformaInvoice.amount, proformaInvoice.currencyCode) }}
             </div>
 
@@ -48,22 +47,22 @@ async function choose(outcome: PayProformaInvoiceOutcome): Promise<void> {
                     :disabled="paying"
                     @click="choose('success')"
                 >
-                    ✓ Payment successful
+                    ✓ {{ t('proformaInvoices.pay.success') }}
                 </button>
                 <button
                     class="stub-btn stub-btn--orange"
                     :disabled="paying"
                     @click="choose('pending')"
                 >
-                    ⏳ Payment pending
+                    ⏳ {{ t('proformaInvoices.pay.pending') }}
                 </button>
                 <button class="stub-btn stub-btn--red" :disabled="paying" @click="choose('fail')">
-                    ✕ Payment failed
+                    ✕ {{ t('proformaInvoices.pay.fail') }}
                 </button>
             </div>
 
             <RouterLink :to="`/proforma-invoices/${proformaInvoiceId}`" class="stub-back"
-                >← Back to proforma invoice</RouterLink
+                >← {{ t('proformaInvoices.pay.back') }}</RouterLink
             >
         </div>
     </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { formatDate as formatLocaleDate } from '../../i18n/format';
 import {
     MvAmountDisplay,
@@ -7,13 +8,15 @@ import {
     formatDocumentNumber,
 } from '@mivend/ui-kit';
 import {
-    PAYMENT_STATUS_LABEL,
     PAYMENT_STATUS_VARIANT,
+    categoryLabel,
+    paymentStatusLabel,
     toMajor,
     type SettlementRow,
 } from './useSettlementDocuments';
 
 defineProps<{ rows: SettlementRow[] }>();
+const { t } = useI18n();
 
 const formatDate = (value: string | null | undefined): string =>
     value ? formatLocaleDate(value, { dateStyle: 'short' }) : '—';
@@ -24,21 +27,24 @@ const formatDate = (value: string | null | undefined): string =>
         <table>
             <thead>
                 <tr>
-                    <th>Type</th>
-                    <th>Document</th>
-                    <th>Date</th>
-                    <th>Contract</th>
-                    <th>Organization</th>
-                    <th class="num">Amount</th>
-                    <th>Order</th>
-                    <th>Due date</th>
-                    <th>Status</th>
+                    <th>{{ t('settlements.table.type') }}</th>
+                    <th>{{ t('settlements.table.document') }}</th>
+                    <th>{{ t('settlements.table.date') }}</th>
+                    <th>{{ t('settlements.table.contract') }}</th>
+                    <th>{{ t('settlements.table.organization') }}</th>
+                    <th class="num">{{ t('settlements.table.amount') }}</th>
+                    <th>{{ t('settlements.table.order') }}</th>
+                    <th>{{ t('settlements.table.dueDate') }}</th>
+                    <th>{{ t('settlements.table.status') }}</th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="row in rows" :key="row.id">
                     <td>
-                        <MvDocumentTypeChip :type="row.category" />
+                        <MvDocumentTypeChip
+                            :type="row.category"
+                            :label="categoryLabel(row.category)"
+                        />
                         <div class="sub">{{ row.documentTypeLabel }}</div>
                     </td>
                     <td class="strong">{{ row.number }}</td>
@@ -62,7 +68,7 @@ const formatDate = (value: string | null | undefined): string =>
                             }}
                         </template>
                         <template v-else-if="row.orders.length > 1">
-                            {{ row.orders.length }} orders
+                            {{ t('settlements.table.orders', row.orders.length) }}
                         </template>
                         <template v-else>—</template>
                     </td>
@@ -70,14 +76,14 @@ const formatDate = (value: string | null | undefined): string =>
                     <td>
                         <span
                             v-if="row.paymentStatus === 'unknown'"
-                            :title="PAYMENT_STATUS_LABEL.unknown"
+                            :title="paymentStatusLabel('unknown')"
                             >—</span
                         >
                         <MvStatusBadge
                             v-else-if="row.paymentStatus"
                             :variant="PAYMENT_STATUS_VARIANT[row.paymentStatus]"
                         >
-                            {{ PAYMENT_STATUS_LABEL[row.paymentStatus] }}
+                            {{ paymentStatusLabel(row.paymentStatus) }}
                         </MvStatusBadge>
                         <span v-else>—</span>
                     </td>

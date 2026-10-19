@@ -173,6 +173,7 @@ export type { UseLatestRequest } from './composables/useLatestRequest';
 export { default as MvScrollFadeOverlay } from './components/MvScrollFadeOverlay/MvScrollFadeOverlay.vue';
 
 export { default as MvDatePicker } from './components/MvDatePicker/MvDatePicker.vue';
+export type { DatePickerLabels } from './components/MvDatePicker/MvDatePicker.vue';
 
 // Every filterable column must declare its filter type explicitly; the table looks up the
 // component in COLUMN_FILTER_REGISTRY instead of building its own popover/input/select.

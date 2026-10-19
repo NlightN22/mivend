@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
 export interface TypeFilterOption {
     key: string;
     label: string;
@@ -9,6 +11,8 @@ defineEmits<{
     (e: 'update:activeFilter', val: string): void;
     (e: 'update:search', val: string): void;
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -16,7 +20,7 @@ defineEmits<{
         <div class="docs-toolbar__line">
             <input
                 class="docs-toolbar__search"
-                placeholder="Find document by number"
+                :placeholder="t('documents.searchPlaceholder')"
                 :value="search"
                 @input="$emit('update:search', ($event.target as HTMLInputElement).value)"
             />

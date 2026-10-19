@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import AccountSidebar from '../account/AccountSidebar.vue';
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -7,8 +10,8 @@ import AccountSidebar from '../account/AccountSidebar.vue';
         <AccountSidebar />
 
         <section class="acts-page__content">
-            <h1 class="acts-page__title">Reconciliation acts</h1>
-            <p class="acts-page__note">Not implemented yet.</p>
+            <h1 class="acts-page__title">{{ t('settlements.acts.title') }}</h1>
+            <p class="acts-page__note">{{ t('settlements.acts.notImplemented') }}</p>
         </section>
     </div>
 </template>

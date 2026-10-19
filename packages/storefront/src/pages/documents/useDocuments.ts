@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { i18n } from '../../i18n';
 import { formatDate, formatMoney } from '../../i18n/format';
 import { shopApi } from '../../api/client';
 import { MyDocumentsDocument, type MyDocumentsQuery } from '../../api/generated/graphql';
@@ -19,25 +20,21 @@ function downloadUrlOf(doc: DocumentSummary): string | null {
     return doc.fileUrl ?? doc.asset?.source ?? null;
 }
 
-export const DOCUMENT_TYPE_LABEL: Record<string, string> = {
-    'proforma-invoice': 'Proforma invoice',
-    contract: 'Contract',
-    return: 'Return',
-    reconciliation: 'Reconciliation report',
-};
+export const DOCUMENT_TYPES = ['proforma-invoice', 'contract', 'return', 'reconciliation'];
+
+function labelOr(key: string, fallback: string): string {
+    return i18n.global.te(key) ? i18n.global.t(key) : fallback;
+}
+
+export function documentTypeLabel(type: string): string {
+    return labelOr(`documents.type.${type}`, type);
+}
 
 const DOCUMENT_TYPE_ICON: Record<string, { icon: string; iconVariant: DocData['iconVariant'] }> = {
     'proforma-invoice': { icon: '₽', iconVariant: 'orange' },
     contract: { icon: '📄', iconVariant: 'blue' },
     return: { icon: '↩', iconVariant: 'green' },
     reconciliation: { icon: '🧾', iconVariant: 'blue' },
-};
-
-const DOCUMENT_STATUS_LABEL: Record<string, string> = {
-    pending: 'Preparing',
-    generating: 'Generating',
-    ready: 'Ready',
-    failed: 'Failed',
 };
 
 const DOCUMENT_STATUS_VARIANT: Record<string, DocData['statusVariant']> = {
@@ -63,11 +60,13 @@ export function toDocData(doc: DocumentSummary): DocData {
     return {
         icon,
         iconVariant,
-        name: `${DOCUMENT_TYPE_LABEL[doc.type] ?? doc.type} ${doc.number}`,
-        meta: doc.orderId ? `Order #${doc.orderId}` : (DOCUMENT_TYPE_LABEL[doc.type] ?? doc.type),
+        name: `${documentTypeLabel(doc.type)} ${doc.number}`,
+        meta: doc.orderId
+            ? i18n.global.t('documents.row.orderRef', { id: doc.orderId })
+            : documentTypeLabel(doc.type),
         date,
         amount,
-        statusLabel: DOCUMENT_STATUS_LABEL[doc.status] ?? doc.status,
+        statusLabel: labelOr(`documents.status.${doc.status}`, doc.status),
         statusVariant: DOCUMENT_STATUS_VARIANT[doc.status] ?? 'muted',
         actions: downloadUrl ? ['download'] : [],
         downloadUrl,

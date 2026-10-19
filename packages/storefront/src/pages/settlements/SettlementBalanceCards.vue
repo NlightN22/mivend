@@ -1,36 +1,38 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { MvAmountDisplay } from '@mivend/ui-kit';
 import { toMajor, type CurrencyTotals } from './useSettlementDocuments';
 
 defineProps<{ totals: CurrencyTotals[] }>();
+const { t } = useI18n();
 </script>
 
 <template>
     <div class="settlement-cards">
-        <div v-for="t in totals" :key="t.currency" class="settlement-cards__group">
+        <div v-for="total in totals" :key="total.currency" class="settlement-cards__group">
             <div class="settlement-cards__card">
-                <div class="settlement-cards__label">Opening balance</div>
+                <div class="settlement-cards__label">{{ t('settlements.cards.opening') }}</div>
                 <MvAmountDisplay
-                    :amount="toMajor(t.openingBalance)"
-                    :currency="t.currency"
+                    :amount="toMajor(total.openingBalance)"
+                    :currency="total.currency"
                     :decimals="2"
                     size="lg"
                 />
             </div>
             <div class="settlement-cards__card">
-                <div class="settlement-cards__label">Current balance</div>
+                <div class="settlement-cards__label">{{ t('settlements.cards.current') }}</div>
                 <MvAmountDisplay
-                    :amount="toMajor(t.currentBalance)"
-                    :currency="t.currency"
+                    :amount="toMajor(total.currentBalance)"
+                    :currency="total.currency"
                     :decimals="2"
                     size="lg"
                 />
             </div>
-            <div class="settlement-cards__card" :class="{ 'is-overdue': t.overdue > 0 }">
-                <div class="settlement-cards__label">Overdue</div>
+            <div class="settlement-cards__card" :class="{ 'is-overdue': total.overdue > 0 }">
+                <div class="settlement-cards__label">{{ t('settlements.cards.overdue') }}</div>
                 <MvAmountDisplay
-                    :amount="toMajor(t.overdue)"
-                    :currency="t.currency"
+                    :amount="toMajor(total.overdue)"
+                    :currency="total.currency"
                     :decimals="2"
                     size="lg"
                 />

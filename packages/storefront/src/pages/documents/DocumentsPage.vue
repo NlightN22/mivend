@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, toRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import DocumentsToolbar from './DocumentsToolbar.vue';
 import DocumentRow from './DocumentRow.vue';
-import { useDocuments, toDocData, DOCUMENT_TYPE_LABEL } from './useDocuments';
+import { useDocuments, toDocData, DOCUMENT_TYPES, documentTypeLabel } from './useDocuments';
 import type { TypeFilterOption } from './DocumentsToolbar.vue';
 import { usePaginationLabels } from '../../composables/usePaginationLabels';
 
+const { t } = useI18n();
 const paginationLabels = usePaginationLabels();
 
 const { documents, totalItems, loading, load } = useDocuments();
@@ -18,10 +20,10 @@ const { filters: urlState, page } = useUrlState({ type: 'all', q: '' }, { typing
 const activeFilter = toRef(urlState, 'type');
 const search = toRef(urlState, 'q');
 
-const typeFilters: TypeFilterOption[] = [
-    { key: 'all', label: 'All documents' },
-    ...Object.entries(DOCUMENT_TYPE_LABEL).map(([key, label]) => ({ key, label })),
-];
+const typeFilters = computed<TypeFilterOption[]>(() => [
+    { key: 'all', label: t('documents.all') },
+    ...DOCUMENT_TYPES.map(key => ({ key, label: documentTypeLabel(key) })),
+]);
 
 function reload(): void {
     void load({
@@ -37,7 +39,11 @@ watch([activeFilter, search, page], reload);
 onMounted(reload);
 
 const stats = computed(() => [
-    { title: 'Total documents', value: String(totalItems.value), note: 'All types' },
+    {
+        title: t('documents.total'),
+        value: String(totalItems.value),
+        note: t('documents.allTypes'),
+    },
 ]);
 </script>
 
@@ -48,11 +54,8 @@ const stats = computed(() => [
         <section class="documents-page__content">
             <div class="documents-page__head">
                 <div>
-                    <h1 class="documents-page__title">Documents</h1>
-                    <p class="documents-page__subtitle">
-                        Proforma invoices, contracts, returns and reconciliation reports linked to
-                        your account.
-                    </p>
+                    <h1 class="documents-page__title">{{ t('documents.title') }}</h1>
+                    <p class="documents-page__subtitle">{{ t('documents.subtitle') }}</p>
                 </div>
             </div>
 
@@ -73,9 +76,9 @@ const stats = computed(() => [
                     @update:search="search = $event"
                 />
 
-                <div v-if="loading" class="documents-page__state">Loading...</div>
+                <div v-if="loading" class="documents-page__state">{{ t('common.loading') }}</div>
                 <div v-else-if="!documents.length" class="documents-page__state">
-                    No documents found.
+                    {{ t('documents.empty') }}
                 </div>
                 <template v-else>
                     <MvPagination

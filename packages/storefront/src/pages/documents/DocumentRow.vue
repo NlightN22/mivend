@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 
 export interface DocData {
@@ -16,6 +17,7 @@ export interface DocData {
 }
 
 defineProps<{ doc: DocData }>();
+const { t } = useI18n();
 </script>
 
 <template>
@@ -28,12 +30,14 @@ defineProps<{ doc: DocData }>();
         </div>
 
         <div>
-            <div class="doc-row__cell-title">Date</div>
+            <div class="doc-row__cell-title">{{ t('documents.row.date') }}</div>
             <div class="doc-row__cell-value">{{ doc.date }}</div>
         </div>
 
         <div>
-            <div class="doc-row__cell-title">{{ doc.amountLabel ?? 'Amount' }}</div>
+            <div class="doc-row__cell-title">
+                {{ doc.amountLabel ?? t('documents.row.amount') }}
+            </div>
             <div class="doc-row__cell-value">{{ doc.amount }}</div>
         </div>
 
@@ -62,7 +66,7 @@ defineProps<{ doc: DocData }>();
                     <path d="M1.5 7.5h15" stroke="currentColor" stroke-width="1.5" />
                     <rect x="3.5" y="10" width="4" height="1.5" rx="0.75" fill="currentColor" />
                 </svg>
-                Pay
+                {{ t('documents.row.pay') }}
             </MvButton>
             <MvButton
                 v-if="doc.actions.includes('download') && doc.downloadUrl"
@@ -93,7 +97,7 @@ defineProps<{ doc: DocData }>();
                         stroke-linecap="round"
                     />
                 </svg>
-                Download
+                {{ t('documents.row.download') }}
             </MvButton>
             <MvButton v-if="doc.actions.includes('email')" variant="secondary" size="sm">
                 <svg
@@ -119,7 +123,7 @@ defineProps<{ doc: DocData }>();
                         stroke-linejoin="round"
                     />
                 </svg>
-                Email
+                {{ t('documents.row.email') }}
             </MvButton>
             <MvButton v-if="doc.actions.includes('order')" variant="secondary" size="sm">
                 <svg
@@ -145,7 +149,7 @@ defineProps<{ doc: DocData }>();
                         stroke-linecap="round"
                     />
                 </svg>
-                Order
+                {{ t('documents.row.order') }}
             </MvButton>
         </div>
     </article>

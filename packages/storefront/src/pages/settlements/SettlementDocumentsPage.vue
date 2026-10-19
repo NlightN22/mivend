@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, toRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { MvPagination, useUrlState } from '@mivend/ui-kit';
 import type { DateRangeFilterValue, SelectOption } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
@@ -9,6 +10,7 @@ import SettlementTable from './SettlementTable.vue';
 import { totalsByCurrency, useSettlementDocuments } from './useSettlementDocuments';
 import { usePaginationLabels } from '../../composables/usePaginationLabels';
 
+const { t } = useI18n();
 const paginationLabels = usePaginationLabels();
 
 const PAGE_SIZE = 20;
@@ -52,10 +54,13 @@ const optionsOf = (
     ];
 };
 const contractOptions = computed(() =>
-    optionsOf(b => [b.contractId, b.contractName], 'All contracts'),
+    optionsOf(b => [b.contractId, b.contractName], t('settlements.filters.allContracts')),
 );
 const organizationOptions = computed(() =>
-    optionsOf(b => [b.organizationId, b.organizationName], 'All organizations'),
+    optionsOf(
+        b => [b.organizationId, b.organizationName],
+        t('settlements.filters.allOrganizations'),
+    ),
 );
 
 const totals = computed(() =>
@@ -98,10 +103,8 @@ onMounted(() => {
 
         <section class="settlement-page__content">
             <div>
-                <h1 class="settlement-page__title">Account statement</h1>
-                <p class="settlement-page__subtitle">
-                    Sales, payments, returns and corrections that make up your balance.
-                </p>
+                <h1 class="settlement-page__title">{{ t('settlements.title') }}</h1>
+                <p class="settlement-page__subtitle">{{ t('settlements.subtitle') }}</p>
             </div>
 
             <SettlementBalanceCards :totals="totals" />
@@ -116,9 +119,11 @@ onMounted(() => {
                 :organization-options="organizationOptions"
             />
 
-            <div v-if="loading" class="settlement-page__state">Loading documents...</div>
+            <div v-if="loading" class="settlement-page__state">
+                {{ t('settlements.loading') }}
+            </div>
             <div v-else-if="rows.length === 0" class="settlement-page__state">
-                No documents found.
+                {{ t('settlements.empty') }}
             </div>
             <template v-else>
                 <SettlementTable :rows="rows" />

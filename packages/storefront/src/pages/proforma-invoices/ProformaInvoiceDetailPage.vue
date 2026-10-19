@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import AccountSidebar from '../account/AccountSidebar.vue';
@@ -10,11 +11,9 @@ import ProformaInvoiceVersionNotice from './ProformaInvoiceVersionNotice.vue';
 import { formatMoney } from './formatMoney';
 import { formatDate } from './formatDate';
 import { useProformaInvoiceDetail } from './useProformaInvoiceDetail';
-import {
-    PROFORMA_INVOICE_STATUS_LABEL,
-    PROFORMA_INVOICE_STATUS_VARIANT,
-} from './useProformaInvoices';
+import { proformaInvoiceStatusLabel, PROFORMA_INVOICE_STATUS_VARIANT } from './useProformaInvoices';
 
+const { t } = useI18n();
 const route = useRoute();
 const { proformaInvoice, loading, load } = useProformaInvoiceDetail();
 const pdfUrl = computed(() => {
@@ -40,22 +39,28 @@ const formatAmount = formatMoney;
 
         <section class="id-content">
             <router-link to="/proforma-invoices" class="id-back id-no-print"
-                >← My proforma invoices</router-link
+                >← {{ t('proformaInvoices.detail.back') }}</router-link
             >
 
-            <div v-if="loading" class="id-state">Loading...</div>
+            <div v-if="loading" class="id-state">{{ t('common.loading') }}</div>
 
-            <div v-else-if="!proformaInvoice" class="id-state">Proforma invoice not found.</div>
+            <div v-else-if="!proformaInvoice" class="id-state">
+                {{ t('proformaInvoices.detail.notFound') }}
+            </div>
 
             <template v-else>
                 <div class="id-head">
                     <div>
                         <h1 class="id-title">
-                            Proforma invoice #{{ proformaInvoice.number }}
+                            {{ t('proformaInvoices.title', { number: proformaInvoice.number }) }}
                             <ProformaInvoiceVersionBadge :version="proformaInvoice.version" />
                         </h1>
                         <div class="id-meta">
-                            Order {{ formatDocumentNumber(proformaInvoice.order.code) }}
+                            {{
+                                t('proformaInvoices.order', {
+                                    number: formatDocumentNumber(proformaInvoice.order.code),
+                                })
+                            }}
                         </div>
                     </div>
                     <MvStatusBadge
@@ -64,10 +69,7 @@ const formatAmount = formatMoney;
                             'neutral'
                         "
                     >
-                        {{
-                            PROFORMA_INVOICE_STATUS_LABEL[proformaInvoice.displayStatus] ??
-                            proformaInvoice.displayStatus
-                        }}
+                        {{ proformaInvoiceStatusLabel(proformaInvoice.displayStatus) }}
                     </MvStatusBadge>
                 </div>
 
@@ -81,7 +83,9 @@ const formatAmount = formatMoney;
 
                 <div class="id-summary">
                     <div class="id-summary-card">
-                        <div class="id-summary-title">Proforma invoice total</div>
+                        <div class="id-summary-title">
+                            {{ t('proformaInvoices.detail.total') }}
+                        </div>
                         <div class="id-summary-value">
                             {{ formatAmount(proformaInvoice.amount, proformaInvoice.currencyCode) }}
                         </div>
@@ -90,15 +94,23 @@ const formatAmount = formatMoney;
 
                 <div class="id-body">
                     <div class="id-lines">
-                        <h2 class="id-section-title">Proforma invoice items</h2>
+                        <h2 class="id-section-title">
+                            {{ t('proformaInvoices.detail.items') }}
+                        </h2>
                         <table class="id-table">
                             <thead>
                                 <tr>
-                                    <th>SKU</th>
-                                    <th>Product</th>
-                                    <th class="id-th-num">Qty</th>
-                                    <th class="id-th-num">Price</th>
-                                    <th class="id-th-num">Total</th>
+                                    <th>{{ t('proformaInvoices.detail.sku') }}</th>
+                                    <th>{{ t('proformaInvoices.detail.product') }}</th>
+                                    <th class="id-th-num">
+                                        {{ t('proformaInvoices.detail.qty') }}
+                                    </th>
+                                    <th class="id-th-num">
+                                        {{ t('proformaInvoices.detail.price') }}
+                                    </th>
+                                    <th class="id-th-num">
+                                        {{ t('proformaInvoices.detail.lineTotal') }}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -132,20 +144,26 @@ const formatAmount = formatMoney;
 
                         <div class="id-linked-order">
                             <div>
-                                <div class="id-linked-order-title">Linked order</div>
+                                <div class="id-linked-order-title">
+                                    {{ t('proformaInvoices.detail.linkedOrder') }}
+                                </div>
                                 <div class="id-linked-order-meta">
                                     {{ formatDocumentNumber(proformaInvoice.order.code) }}
                                 </div>
                             </div>
                             <router-link :to="`/orders/${proformaInvoice.order.id}`">
-                                <MvButton variant="secondary" size="sm">Open order</MvButton>
+                                <MvButton variant="secondary" size="sm">{{
+                                    t('proformaInvoices.detail.openOrder')
+                                }}</MvButton>
                             </router-link>
                         </div>
                     </div>
 
                     <aside class="id-aside">
                         <div class="id-pay-card">
-                            <h2 class="id-section-title">Payment</h2>
+                            <h2 class="id-section-title">
+                                {{ t('proformaInvoices.detail.payment') }}
+                            </h2>
                             <div class="id-pay-amount">
                                 {{
                                     formatAmount(
@@ -155,13 +173,17 @@ const formatAmount = formatMoney;
                                 }}
                             </div>
                             <p class="id-pay-note">
-                                Pay by {{ formatDate(proformaInvoice.dueDate) }}.
+                                {{
+                                    t('proformaInvoices.detail.payByNote', {
+                                        date: formatDate(proformaInvoice.dueDate),
+                                    })
+                                }}
                             </p>
                             <p
                                 v-if="proformaInvoice.displayStatus === 'cancelled'"
                                 class="id-pay-note"
                             >
-                                This proforma invoice is cancelled.
+                                {{ t('proformaInvoices.detail.cancelled') }}
                             </p>
                             <MvButton
                                 v-if="proformaInvoice.displayStatus === 'cancelled'"
@@ -169,52 +191,57 @@ const formatAmount = formatMoney;
                                 size="md"
                                 disabled
                             >
-                                Pay proforma invoice
+                                {{ t('proformaInvoices.detail.pay') }}
                             </MvButton>
                             <RouterLink v-else :to="`/proforma-invoices/${proformaInvoice.id}/pay`">
-                                <MvButton variant="primary" size="md"
-                                    >Pay proforma invoice</MvButton
-                                >
+                                <MvButton variant="primary" size="md">{{
+                                    t('proformaInvoices.detail.pay')
+                                }}</MvButton>
                             </RouterLink>
                         </div>
 
                         <div class="id-details-card">
-                            <h2 class="id-section-title">Proforma invoice details</h2>
+                            <h2 class="id-section-title">
+                                {{ t('proformaInvoices.detail.details') }}
+                            </h2>
                             <ProformaInvoiceSellerRows :seller="proformaInvoice.seller" />
                             <div class="id-detail-row">
-                                <span>Version</span>
+                                <span>{{ t('proformaInvoices.detail.version') }}</span>
                                 <span class="id-detail-val">{{ proformaInvoice.version }}</span>
                             </div>
                             <div
                                 v-if="proformaInvoice.kind === 'by-shipment'"
                                 class="id-detail-row"
                             >
-                                <span>Basis</span>
-                                <span class="id-detail-val"
-                                    >By shipment<template v-if="proformaInvoice.salesInvoiceNumber">
-                                        (realization №
-                                        {{ proformaInvoice.salesInvoiceNumber }})</template
-                                    ></span
-                                >
+                                <span>{{ t('proformaInvoices.detail.basis') }}</span>
+                                <span class="id-detail-val">{{
+                                    proformaInvoice.salesInvoiceNumber
+                                        ? t('proformaInvoices.detail.byShipmentWithInvoice', {
+                                              number: proformaInvoice.salesInvoiceNumber,
+                                          })
+                                        : t('proformaInvoices.detail.byShipment')
+                                }}</span>
                             </div>
                             <div class="id-detail-row">
-                                <span>Issued</span>
+                                <span>{{ t('proformaInvoices.detail.issued') }}</span>
                                 <span class="id-detail-val">{{
                                     formatDate(proformaInvoice.issuedAt)
                                 }}</span>
                             </div>
                             <div class="id-detail-row">
-                                <span>Pay by</span>
+                                <span>{{ t('proformaInvoices.detail.payBy') }}</span>
                                 <span class="id-detail-val">{{
                                     formatDate(proformaInvoice.dueDate)
                                 }}</span>
                             </div>
                             <div v-if="pdfUrl" class="id-detail-row">
-                                <span>Document</span>
-                                <a :href="pdfUrl" target="_blank" rel="noopener">Download PDF</a>
+                                <span>{{ t('proformaInvoices.detail.document') }}</span>
+                                <a :href="pdfUrl" target="_blank" rel="noopener">{{
+                                    t('proformaInvoices.detail.downloadPdf')
+                                }}</a>
                             </div>
                             <div class="id-detail-row">
-                                <span>Currency</span>
+                                <span>{{ t('proformaInvoices.detail.currency') }}</span>
                                 <span class="id-detail-val">{{
                                     proformaInvoice.currencyCode
                                 }}</span>
@@ -227,228 +254,4 @@ const formatAmount = formatMoney;
     </div>
 </template>
 
-<style scoped>
-.id-layout {
-    display: grid;
-    grid-template-columns: 250px minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: 24px 28px 56px;
-}
-
-.id-content {
-    min-width: 0;
-}
-
-.id-back {
-    display: inline-block;
-    margin-bottom: 18px;
-    color: #66736e;
-    font-size: 14px;
-    font-weight: 850;
-    text-decoration: none;
-}
-.id-back:hover {
-    color: #00a878;
-}
-
-.id-state {
-    color: #66736e;
-    font-size: 14px;
-    padding: 32px 0;
-    text-align: center;
-}
-
-.id-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
-}
-
-.id-title {
-    margin: 0 0 4px;
-    font-size: clamp(24px, 2.5vw, 36px);
-    font-weight: 950;
-    letter-spacing: -0.045em;
-}
-
-.id-meta {
-    color: #66736e;
-    font-size: 13px;
-}
-
-.id-summary {
-    margin-bottom: 22px;
-}
-
-.id-summary-card {
-    background: #fff;
-    border: 1px solid #edf2ef;
-    border-radius: 20px;
-    padding: 18px 20px;
-    display: inline-block;
-}
-
-.id-summary-title {
-    color: #66736e;
-    font-size: 13px;
-    font-weight: 850;
-    margin-bottom: 6px;
-}
-.id-summary-value {
-    font-size: 26px;
-    font-weight: 950;
-    letter-spacing: -0.03em;
-}
-
-.id-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 22px;
-    align-items: start;
-}
-
-.id-section-title {
-    margin: 0 0 14px;
-    font-size: 16px;
-    font-weight: 950;
-    letter-spacing: -0.03em;
-}
-
-.id-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-
-.id-table th {
-    text-align: left;
-    padding: 8px 10px;
-    border-bottom: 2px solid #edf2ef;
-    color: #66736e;
-    font-weight: 850;
-    font-size: 12px;
-}
-
-.id-th-num {
-    text-align: right;
-}
-
-.id-row td {
-    padding: 10px 10px;
-    border-bottom: 1px solid #f3f8f6;
-    vertical-align: middle;
-}
-
-.id-sku {
-    color: #66736e;
-    font-size: 12px;
-    font-weight: 850;
-    white-space: nowrap;
-}
-.id-num {
-    text-align: right;
-    white-space: nowrap;
-}
-.id-bold {
-    font-weight: 950;
-}
-
-.id-linked-order {
-    margin-top: 18px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    padding: 15px 16px;
-    border: 1px solid #edf2ef;
-    border-radius: 16px;
-    background: #fbfcfd;
-}
-
-.id-linked-order-title {
-    font-weight: 900;
-}
-.id-linked-order-meta {
-    margin-top: 4px;
-    color: #66736e;
-    font-size: 13px;
-}
-
-.id-aside {
-    display: grid;
-    gap: 14px;
-}
-
-.id-pay-card,
-.id-details-card {
-    background: #fff;
-    border: 1px solid #edf2ef;
-    border-radius: 20px;
-    padding: 18px 20px;
-}
-
-.id-pay-amount {
-    font-size: 28px;
-    font-weight: 950;
-    margin: 6px 0 4px;
-}
-.id-pay-note {
-    margin: 0 0 14px;
-    color: #66736e;
-    font-size: 13px;
-    line-height: 1.45;
-}
-.id-pay-card .mv-button {
-    width: 100%;
-}
-
-.id-detail-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    padding: 5px 0;
-    color: #344640;
-}
-.id-detail-val {
-    font-weight: 850;
-}
-
-@media print {
-    .id-sidebar,
-    .id-no-print {
-        display: none;
-    }
-
-    .id-layout {
-        display: block;
-    }
-}
-
-@media (max-width: 1100px) {
-    .id-body {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 960px) {
-    .id-layout {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 760px) {
-    .id-layout {
-        padding-left: 16px;
-        padding-right: 16px;
-    }
-    .id-head {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-}
-</style>
+<style scoped src="./ProformaInvoiceDetailPage.css"></style>
