@@ -24,6 +24,6 @@ export type { PriceAdjustmentResult } from './src/price-adjustment.service';
 export { FloorPriceService } from './src/floor-price.service';
 export type { PriceAdjustmentDecision } from './src/types';
 export { DiscountGrantService } from './src/discount-grant.service';
-export type { DiscountGrantInput } from './src/discount-grant.service';
+export type { DiscountGrantInput } from './src/discount-grant.types';
 export { DiscountGrant } from './src/discount-grant.entity';
 export type { DiscountGrantScopeType } from './src/discount-grant.entity';

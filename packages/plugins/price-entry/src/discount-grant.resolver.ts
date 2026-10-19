@@ -4,12 +4,12 @@ import { Allow, Ctx, PaginatedList, Permission, RequestContext, Transaction } fr
 import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 import { ApprovalRequest, ApprovalStepDecision } from '@mivend/plugin-approval-workflow';
 
+import { DiscountGrantService } from './discount-grant.service';
 import {
-    DiscountGrantService,
     DiscountGrantInput,
     DiscountGrantForCustomer,
     DiscountGrantsForCounterpartyOptions,
-} from './discount-grant.service';
+} from './discount-grant.types';
 import { DiscountGrant } from './discount-grant.entity';
 
 @Resolver()
