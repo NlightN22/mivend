@@ -89,6 +89,22 @@ extract the token (`req.session?.token`, the auth-token header, or a `Bearer` he
 resolve it with `SessionService.getSessionFromToken(token)`. Reference implementation:
 `packages/plugins/price-entry/src/active-order-settle.interceptor.ts`.
 
+### (i) Lease-based claim for long background work
+
+Use it for background work that several workers (processes, the scheduled task and a post-commit drain) may pick
+up and that outlasts a short transaction. A transaction, row lock or advisory lock held for the whole work keeps a
+pool connection open while the work opens more (see "Connections"), and blocks writers to the claimed rows.
+
+- Claim in one short committed statement: `UPDATE ... SET "claimedUntil" = now() + lease, "claimToken" = $token
+  WHERE id IN (SELECT ... WHERE "claimedUntil" IS NULL OR "claimedUntil" < now() ... FOR UPDATE SKIP LOCKED)`.
+- Work with no transaction open; extend the lease (heartbeat, filtered by token) after each page and stop when it
+  updates nothing: another worker owns the row.
+- Finish with a delete fenced by token and version; on failure clear the claim. A re-request resets the claim and
+  bumps the version, so it survives the old worker. Handlers must be idempotent: an expired lease means a rerun.
+- Tests: two concurrent workers never process one row, an expired lease is picked up, a stale token deletes
+  nothing, a re-request during the work survives.
+- References: `check_stale_request` (`CheckStaleRequestService`), the inbox `claimBatch` (claim token, released claims).
+
 ## Connections
 
 Every DB call runs on the RequestContext's transaction: `connection.getRepository(ctx, Entity)`, raw SQL via
@@ -131,7 +147,7 @@ await withAggregateLock(connection, ctx, `product-photo:${externalId}`, async tx
 3. Does any value come from an event payload or an object read before an `await`?
 4. Can the same code run twice at once for one aggregate? What happens?
 5. Does every failure path log at error level or fail the caller?
-6. Is there a real-Postgres concurrent-writer test for it?
+. Is a transaction or advisory lock held for the duration of background work? That is a violation; use (i).
 
 **Order row vs advisory locks (#233).** An order-line edit takes `proformaInvoices-for-order:<id>`, then
 `reserve-order:<id>`, then the order row (`FOR UPDATE`). Vendure's placement transition (payment mutation) takes the
