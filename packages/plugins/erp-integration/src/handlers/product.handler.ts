@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ctxQuery, withAggregateLock } from 'shared';
+import { ctxQuery, withAggregateLock, withSavepoint } from 'shared';
 import type { ID } from '@vendure/common/lib/shared-types';
 import {
     FacetService,
@@ -309,16 +309,14 @@ export class ProductStreamHandler implements InboundStreamHandler {
         }
 
         if (resolution.flag) {
+            const flag = resolution.flag;
             Logger.log(
                 `product ${entityId}: VAT code '${rawVatCode}' — ${resolution.flag.detail}`,
                 loggerCtx,
             );
             try {
-                await this.productTaxCodeFlagService.report(
-                    ctx,
-                    entityId,
-                    rawVatCode,
-                    resolution.flag,
+                await this.inSavepoint(ctx, txCtx =>
+                    this.productTaxCodeFlagService.report(txCtx, entityId, rawVatCode, flag),
                 );
             } catch (err) {
                 // Flagging is a review aid, not part of the import contract (issue #79) —
@@ -331,6 +329,16 @@ export class ProductStreamHandler implements InboundStreamHandler {
         }
 
         return resolution.taxCategoryId;
+    }
+
+    // A failed flag write rolls back only itself, so the surrounding inbox transaction stays usable.
+    private inSavepoint<T>(
+        ctx: RequestContext,
+        work: (txCtx: RequestContext) => Promise<T>,
+    ): Promise<T> {
+        return this.connection.withTransaction(ctx, txCtx =>
+            withSavepoint(this.connection, txCtx, () => work(txCtx)),
+        );
     }
 
     // Cached behind CATEGORY_FACET_CACHE_TTL_MS; forceRefresh bypasses a stale hit on demand.
@@ -385,13 +393,16 @@ export class ProductStreamHandler implements InboundStreamHandler {
         }
 
         if (resolution.flag) {
+            const flag = resolution.flag;
             Logger.warn(`product ${entityId}: category — ${resolution.flag.detail}`, loggerCtx);
             try {
-                await this.productCategoryFlagService.report(
-                    ctx,
-                    entityId,
-                    rawCategoryId ?? null,
-                    resolution.flag,
+                await this.inSavepoint(ctx, txCtx =>
+                    this.productCategoryFlagService.report(
+                        txCtx,
+                        entityId,
+                        rawCategoryId ?? null,
+                        flag,
+                    ),
                 );
             } catch (err) {
                 Logger.error(
