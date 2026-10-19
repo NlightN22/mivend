@@ -19,6 +19,11 @@ const ru: typeof en = {
         security: 'Безопасность',
     },
     account: {
+        portalRole: {
+            buyer: 'Покупатель',
+            client_admin: 'Администратор компании',
+            accountant: 'Бухгалтер',
+        },
         title: 'Личный кабинет',
         companyNameUnknown: 'Название организации не указано',
         creditLimit: 'Кредитный лимит',

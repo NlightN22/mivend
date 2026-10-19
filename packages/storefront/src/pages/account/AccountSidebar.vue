@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { IconChevronDown } from '@tabler/icons-vue';
 import { useAuthStore } from '../../stores/auth';
 import { useFavoritesStore } from '../../stores/favorites';
@@ -39,7 +40,13 @@ onMounted(() => {
 
 const { companyName, initials } = useCompanyName();
 
-const role = computed(() => authStore.customer?.customFields?.portalRole ?? '—');
+const { t, te } = useI18n();
+const role = computed(() => {
+    const code = authStore.customer?.customFields?.portalRole;
+    if (!code) return '—';
+    const key = `account.portalRole.${code}`;
+    return te(key) ? t(key) : code;
+});
 
 const isActive = (path: string) => route.path === path;
 

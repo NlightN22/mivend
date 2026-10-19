@@ -17,6 +17,11 @@ export default {
         security: 'Security',
     },
     account: {
+        portalRole: {
+            buyer: 'Buyer',
+            client_admin: 'Company administrator',
+            accountant: 'Accountant',
+        },
         title: 'Account',
         companyNameUnknown: 'Company name not specified',
         creditLimit: 'Credit limit',
