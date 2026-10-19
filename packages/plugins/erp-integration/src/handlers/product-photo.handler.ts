@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { ctxQuery } from 'shared';
 
 import { ProductPhoto } from '../entities/product-photo.entity';
 import { ProductPhotoSyncService } from '../product-photo-sync.service';
@@ -29,7 +30,7 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
                 return inboundNoop(`product-photo ${entityId}: deleted, no stored row`);
             }
             await repo.update(existing.id, { isDeleted: true });
-            await this.syncService.enqueue(existing.productExternalId);
+            await this.syncService.enqueue(ctx, existing.productExternalId);
             return inboundApplied();
         }
 
@@ -40,7 +41,7 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
         if (!productExternalId || !contentHash || !mimeType) {
             return inboundNoop(`product-photo ${entityId}: incomplete payload, skipping`);
         }
-        if (!(await this.productExists(productExternalId))) {
+        if (!(await this.productExists(ctx, productExternalId))) {
             throw new MissingDependencyError(`product ${productExternalId} not imported yet`);
         }
 
@@ -69,17 +70,17 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
                 lastError: downloadUrl ? null : 'no download reference in the event',
             }),
         );
-        if (downloadUrl) await this.syncService.enqueue(productExternalId);
+        if (downloadUrl) await this.syncService.enqueue(ctx, productExternalId);
         return inboundApplied();
     }
 
-    private async productExists(externalId: string): Promise<boolean> {
-        const found = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('p.id', 'id')
-            .from('product', 'p')
-            .where('p."customFieldsExternalid" = :externalId', { externalId })
-            .getRawOne<{ id: string }>();
-        return !!found;
+    private async productExists(ctx: RequestContext, externalId: string): Promise<boolean> {
+        const rows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
+            `SELECT p.id FROM product p WHERE p."customFieldsExternalid" = $1 LIMIT 1`,
+            [externalId],
+        );
+        return rows.length > 0;
     }
 }

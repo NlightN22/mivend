@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { PaginatedList } from '@vendure/core';
-import { Logger } from '@vendure/core';
+import type { PaginatedList, RequestContext } from '@vendure/core';
+import { Logger, TransactionalConnection } from '@vendure/core';
 import { randomUUID } from 'crypto';
-import { DataSource, EntityManager, In } from 'typeorm';
+import { ctxQuery } from 'shared';
+import { In } from 'typeorm';
 
 const loggerCtx = 'IntegrationInboxService';
 
@@ -40,12 +41,15 @@ export type ClaimedInboxEvent = IntegrationInboxEvent & { claimToken: string };
 
 @Injectable()
 export class IntegrationInboxService {
-    constructor(private readonly dataSource: DataSource) {}
+    constructor(private readonly connection: TransactionalConnection) {}
 
     // Dedup on (stream, sourceEventId), not version: versions can collide across distinct events.
     // Duplicates return the existing row, so the consumer can ack unconditionally.
-    async enqueue(input: EnqueueInboxEventInput): Promise<IntegrationInboxEvent> {
-        const repo = this.dataSource.getRepository(IntegrationInboxEvent);
+    async enqueue(
+        ctx: RequestContext,
+        input: EnqueueInboxEventInput,
+    ): Promise<IntegrationInboxEvent> {
+        const repo = this.connection.getRepository(ctx, IntegrationInboxEvent);
         const existing = await repo.findOne({
             where: { stream: input.stream, sourceEventId: input.sourceEventId },
         });
@@ -84,14 +88,14 @@ export class IntegrationInboxService {
         }
     }
 
-    async enqueueRejected(message: RejectedInboxMessage): Promise<void> {
-        await insertRejectedInboxRow(this.dataSource, message);
+    async enqueueRejected(ctx: RequestContext, message: RejectedInboxMessage): Promise<void> {
+        await insertRejectedInboxRow(this.connection, ctx, message);
     }
 
     // Conditional UPDATE: only a still-failed row moves, so a double click or sweep race
     // cannot dismiss the same row twice.
-    async dismissFailed(id: number, reason: string): Promise<boolean> {
-        const result = await this.dataSource.getRepository(IntegrationInboxEvent).update(
+    async dismissFailed(ctx: RequestContext, id: number, reason: string): Promise<boolean> {
+        const result = await this.connection.getRepository(ctx, IntegrationInboxEvent).update(
             { id, status: 'failed' },
             {
                 status: 'processed',
@@ -105,11 +109,14 @@ export class IntegrationInboxService {
 
     // Phase 2 repeats the eligibility condition so the lock-time recheck drops rows a competing
     // sweep already claimed (#148, see docs/environments.md's own note for the full incident).
-    async claimBatch(limit = 20, streams?: InboundStream[]): Promise<ClaimedInboxEvent[]> {
-        const outerRepo = this.dataSource.getRepository(IntegrationInboxEvent);
-        return outerRepo.manager.transaction(async manager => {
-            const repo = manager.getRepository(outerRepo.target);
-            const ids = await this.findClaimCandidateIds(manager, limit, streams);
+    async claimBatch(
+        ctx: RequestContext,
+        limit = 20,
+        streams?: InboundStream[],
+    ): Promise<ClaimedInboxEvent[]> {
+        return this.connection.withTransaction(ctx, async txCtx => {
+            const repo = this.connection.getRepository(txCtx, IntegrationInboxEvent);
+            const ids = await this.findClaimCandidateIds(txCtx, limit, streams);
             if (ids.length === 0) return [];
 
             const rows = await repo
@@ -139,7 +146,7 @@ export class IntegrationInboxService {
     // One equality lookup per stream, not an IN-list; the reason is in docs/environments.md.
     // claimBatch rechecks and locks, so this set only needs ids.
     private async findClaimCandidateIds(
-        manager: EntityManager,
+        ctx: RequestContext,
         limit: number,
         streams?: InboundStream[],
     ): Promise<string[]> {
@@ -172,7 +179,9 @@ export class IntegrationInboxService {
 
         // FIFO by the time a row became eligible, not by enqueue time — a backed-off retry queues
         // behind rows that arrived before it came due, so retries can't starve them (#146).
-        const rows = await manager.query<Array<{ id: string }>>(
+        const rows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM (${[...pendingBranches, staleProcessingBranch].join(' UNION ALL ')}) combined
              ORDER BY eligible_at ASC, id ASC LIMIT $1`,
             params,
@@ -183,19 +192,20 @@ export class IntegrationInboxService {
     // Worker path: the claim token restricts the write to the worker that still holds the claim,
     // so a stale worker's late outcome cannot overwrite a row another worker settled or reclaimed.
     async markProcessed(
+        ctx: RequestContext,
         id: number,
         outcome: InboxOutcome,
         outcomeReason: string | null,
         claimToken: string,
     ): Promise<void> {
-        await settleProcessed(this.dataSource, id, outcome, outcomeReason, claimToken);
+        await settleProcessed(this.connection, ctx, id, outcome, outcomeReason, claimToken);
     }
 
     // Releases a deadline-stopped batch's unprocessed rows back to 'pending' (#149).
-    async releaseClaims(ids: number[], claimToken: string): Promise<void> {
+    async releaseClaims(ctx: RequestContext, ids: number[], claimToken: string): Promise<void> {
         if (ids.length === 0) return;
-        await this.dataSource
-            .getRepository(IntegrationInboxEvent)
+        await this.connection
+            .getRepository(ctx, IntegrationInboxEvent)
             .update(
                 { id: In(ids), status: 'processing', claimToken },
                 { status: 'pending', claimToken: null },
@@ -203,43 +213,47 @@ export class IntegrationInboxService {
     }
 
     async markFailed(
+        ctx: RequestContext,
         id: number,
         error: Error,
         random: () => number,
         onBudgetExhausted: BudgetExhaustedNoop | null,
         claimToken: string,
     ): Promise<void> {
-        await settleFailed(this.dataSource, id, error, random, onBudgetExhausted, claimToken);
+        await settleFailed(this.connection, ctx, id, error, random, onBudgetExhausted, claimToken);
     }
 
     // Non-worker path (ops and tests settling a row nobody claimed); guarded by status only.
     async markProcessedUnclaimed(
+        ctx: RequestContext,
         id: number,
         outcome: InboxOutcome = 'applied',
         outcomeReason: string | null = null,
     ): Promise<void> {
-        await settleProcessed(this.dataSource, id, outcome, outcomeReason);
+        await settleProcessed(this.connection, ctx, id, outcome, outcomeReason);
     }
 
     async markFailedUnclaimed(
+        ctx: RequestContext,
         id: number,
         error: Error,
         random: () => number = Math.random,
         onBudgetExhausted: BudgetExhaustedNoop | null = null,
     ): Promise<void> {
-        await settleFailed(this.dataSource, id, error, random, onBudgetExhausted);
+        await settleFailed(this.connection, ctx, id, error, random, onBudgetExhausted);
     }
 
     // Dashboard/ops read model (issue #76) — 'failed' rows are dead-lettered (markFailed above)
     // and need a human to notice and act; never fed back into claimBatch automatically.
     async findFailed(
+        ctx: RequestContext,
         options?: FailedInboxEventListOptions,
     ): Promise<PaginatedList<IntegrationInboxEvent>> {
         const take = Math.min(options?.take ?? 20, FAILED_EVENTS_MAX_TAKE);
         const skip = options?.skip ?? 0;
 
-        const [items, totalItems] = await this.dataSource
-            .getRepository(IntegrationInboxEvent)
+        const [items, totalItems] = await this.connection
+            .getRepository(ctx, IntegrationInboxEvent)
             .createQueryBuilder('event')
             .where('event.status = :status', { status: 'failed' })
             .orderBy('event.updatedAt', 'DESC')

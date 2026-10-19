@@ -24,6 +24,7 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
 } from 'shared';
 
 import { OrderChangedStreamHandler } from '../../../handlers/order-changed.handler';
@@ -144,7 +145,6 @@ beforeAll(async () => {
     const managerOf = (c: RequestContext): EntityManager | undefined =>
         (c as unknown as { __manager?: EntityManager }).__manager;
     const connection = {
-        rawConnection: dataSource,
         withTransaction: async (
             c: RequestContext,
             work: (x: RequestContext) => Promise<unknown>,
@@ -316,7 +316,7 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
         });
         const sync = { handleOrderChanged: vi.fn() };
         const mivendHandler = new OrderChangedStreamHandler(
-            { rawConnection: dataSource } as never,
+            createTestConnection(dataSource),
             sync as never,
             { findByEntityId: vi.fn() } as never,
             externalOrders,

@@ -3,6 +3,7 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ExternalOrderService, OrderStatusReferenceService } from '@mivend/plugin-erp-order';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
 import { SettlementPendingService } from '@mivend/plugin-settlement';
+import { ctxQuery } from 'shared';
 
 import { MissingDependencyError } from '../types';
 import { UnitLookupService } from '../unit-lookup.service';
@@ -68,7 +69,7 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
                 continue;
             }
 
-            const variant = await this.findVariant(productId);
+            const variant = await this.findVariant(ctx, productId);
             if (!variant && isExternal) {
                 unknownProducts += 1;
                 continue;
@@ -166,24 +167,25 @@ export class OrderChangedStreamHandler implements InboundStreamHandler {
         return unit.ratioToBase;
     }
 
-    private async findVariant(productId: string): Promise<{
+    private async findVariant(
+        ctx: RequestContext,
+        productId: string,
+    ): Promise<{
         id: string;
         defaultSalesUnitId: string | null;
         unitRatioToBase: number | null;
     } | null> {
-        const row = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('pv.id', 'id')
-            .addSelect('pv."customFieldsDefaultsalesunitid"', 'defaultSalesUnitId')
-            .addSelect('pv."customFieldsUnitratiotobase"', 'unitRatioToBase')
-            .from('product_variant', 'pv')
-            .innerJoin('product', 'p', 'p.id = pv."productId"')
-            .where('p."customFieldsExternalid" = :productId', { productId })
-            .getRawOne<{
-                id: string;
-                defaultSalesUnitId: string | null;
-                unitRatioToBase: number | null;
-            }>();
+        const [row] = await ctxQuery<
+            Array<{ id: string; defaultSalesUnitId: string | null; unitRatioToBase: number | null }>
+        >(
+            this.connection,
+            ctx,
+            `SELECT pv.id, pv."customFieldsDefaultsalesunitid" AS "defaultSalesUnitId",
+                    pv."customFieldsUnitratiotobase" AS "unitRatioToBase"
+               FROM product_variant pv INNER JOIN product p ON p.id = pv."productId"
+              WHERE p."customFieldsExternalid" = $1`,
+            [productId],
+        );
         return row
             ? {
                   id: String(row.id),

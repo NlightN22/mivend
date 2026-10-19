@@ -15,20 +15,10 @@ vi.mock('shared', async importOriginal => ({
 }));
 
 function makeConnection(existingId: string | undefined): {
-    rawConnection: { createQueryBuilder: ReturnType<typeof vi.fn> };
+    getRepository: ReturnType<typeof vi.fn>;
 } {
-    const getRawOne = vi.fn().mockResolvedValue(existingId ? { id: existingId } : undefined);
-    const qb = {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        getRawOne,
-    };
-    return {
-        rawConnection: {
-            createQueryBuilder: vi.fn().mockReturnValue(qb),
-        },
-    };
+    const query = vi.fn().mockResolvedValue(existingId ? [{ id: existingId }] : []);
+    return { getRepository: vi.fn().mockReturnValue({ query }) };
 }
 
 function makeTaxCategoryService(

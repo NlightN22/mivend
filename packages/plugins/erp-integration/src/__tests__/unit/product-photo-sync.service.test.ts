@@ -44,17 +44,10 @@ function setup(rows: ProductPhoto[], productExists = true) {
             Object.assign(store.find(r => r.id === id) as ProductPhoto, patch);
         }),
         remove: vi.fn(),
-        query: vi.fn(),
+        query: vi.fn(async (sql: string) =>
+            sql.includes('FROM product p') ? (productExists ? [{ id: 7 }] : []) : [],
+        ),
     };
-    const qb = {
-        select: vi.fn(),
-        from: vi.fn(),
-        where: vi.fn(),
-        getRawOne: vi.fn().mockResolvedValue(productExists ? { id: 7 } : undefined),
-    };
-    qb.select.mockReturnValue(qb);
-    qb.from.mockReturnValue(qb);
-    qb.where.mockReturnValue(qb);
     let assetSeq = 100;
     const assetService = {
         createFromFileStream: vi.fn(async () => ({ id: ++assetSeq })),
@@ -67,7 +60,6 @@ function setup(rows: ProductPhoto[], productExists = true) {
             getRepository: () => repo,
             withTransaction: (c: RequestContext, work: (t: RequestContext) => Promise<unknown>) =>
                 work(c),
-            rawConnection: { createQueryBuilder: () => qb },
         } as never,
         assetService as never,
         productService as never,

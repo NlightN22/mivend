@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import type { InboundStream } from './types';
@@ -18,13 +18,14 @@ export interface RejectedInboxMessage {
 // Dead-letters a message that can never be processed as a `failed` inbox row; the synthetic ids
 // make a redelivery of the same offset a no-op (docs/integration-health.md).
 export async function insertRejectedInboxRow(
-    dataSource: DataSource,
+    connection: TransactionalConnection,
+    ctx: RequestContext,
     message: RejectedInboxMessage,
 ): Promise<void> {
     const position = `${message.partition}:${message.offset}`;
     const now = new Date();
-    await dataSource
-        .getRepository(IntegrationInboxEvent)
+    await connection
+        .getRepository(ctx, IntegrationInboxEvent)
         .createQueryBuilder()
         .insert()
         .values({

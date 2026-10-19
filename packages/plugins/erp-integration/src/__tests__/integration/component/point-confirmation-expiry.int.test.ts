@@ -7,6 +7,7 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
 } from 'shared';
 
 import type { CancelOptions } from '@mivend/plugin-reservation';
@@ -104,8 +105,7 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     service = new PointConfirmationExpiryService(
-        dataSource,
-        { getRepository: () => dataSource.getRepository(TestOrder) } as never,
+        createTestConnection(dataSource),
         { create: async () => ctx } as never,
         { cancel } as never,
         notifications as never,

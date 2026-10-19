@@ -5,25 +5,15 @@ import { OrderChangedStreamHandler } from '../../handlers/order-changed.handler'
 import { MissingDependencyError } from '../../types';
 
 function createConnection(rows: Array<Record<string, unknown> | undefined>): {
-    rawConnection: { createQueryBuilder: () => unknown };
+    getRepository: () => { query: () => Promise<unknown[]> };
 } {
     let call = 0;
-    return {
-        rawConnection: {
-            createQueryBuilder: () => {
-                const row = rows[call];
-                call += 1;
-                return {
-                    select: vi.fn().mockReturnThis(),
-                    addSelect: vi.fn().mockReturnThis(),
-                    from: vi.fn().mockReturnThis(),
-                    innerJoin: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    getRawOne: vi.fn().mockResolvedValue(row),
-                };
-            },
-        },
+    const query = async (): Promise<unknown[]> => {
+        const row = rows[call];
+        call += 1;
+        return row ? [row] : [];
     };
+    return { getRepository: () => ({ query }) };
 }
 
 describe('OrderChangedStreamHandler', () => {

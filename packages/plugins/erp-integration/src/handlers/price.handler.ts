@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { PriceEntryService } from '@mivend/plugin-price-entry';
+import { ctxQuery } from 'shared';
 
 import { MissingDependencyError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -53,13 +54,14 @@ export class PriceStreamHandler implements InboundStreamHandler {
             );
         }
 
-        const variant = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('pv.id', 'id')
-            .from('product_variant', 'pv')
-            .innerJoin('product', 'p', 'p.id = pv."productId"')
-            .where('p."customFieldsExternalid" = :productId', { productId })
-            .getRawOne<{ id: string }>();
+        const [variant] = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
+            `SELECT pv.id FROM product_variant pv
+               INNER JOIN product p ON p.id = pv."productId"
+              WHERE p."customFieldsExternalid" = $1`,
+            [productId],
+        );
 
         if (!variant) {
             throw new MissingDependencyError(

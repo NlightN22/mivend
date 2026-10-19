@@ -20,7 +20,7 @@ import {
     PermanentPhotoError,
     photoFileName,
 } from './product-photo-download';
-import { withAggregateLock } from 'shared';
+import { ctxQuery, withAggregateLock } from 'shared';
 import { loggerCtx, MissingDependencyError } from './types';
 
 export const PRODUCT_PHOTO_SYNC_QUEUE = 'product-photo-sync';
@@ -52,9 +52,9 @@ export class ProductPhotoSyncService implements OnModuleInit {
         });
     }
 
-    async enqueue(productExternalId: string): Promise<void> {
-        await this.connection.rawConnection
-            .getRepository(ProductPhoto)
+    async enqueue(ctx: RequestContext, productExternalId: string): Promise<void> {
+        await this.connection
+            .getRepository(ctx, ProductPhoto)
             .update({ productExternalId }, { syncQueuedAt: new Date() });
         await this.queue.add({ productExternalId }, { retries: 3 });
     }
@@ -75,7 +75,7 @@ export class ProductPhotoSyncService implements OnModuleInit {
         productExternalId: string,
     ): Promise<Error | undefined> {
         const repo = this.connection.getRepository(ctx, ProductPhoto);
-        const productId = await this.findProductId(productExternalId);
+        const productId = await this.findProductId(ctx, productExternalId);
         if (!productId) {
             throw new MissingDependencyError(`product ${productExternalId} not imported yet`);
         }
@@ -141,13 +141,13 @@ export class ProductPhotoSyncService implements OnModuleInit {
     }
 
     // Raw numeric id on purpose: a stringified id makes TypeORM insert a duplicate Product (#144).
-    private async findProductId(externalId: string): Promise<ID | undefined> {
-        const found = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('p.id', 'id')
-            .from('product', 'p')
-            .where('p."customFieldsExternalid" = :externalId', { externalId })
-            .getRawOne<{ id: ID }>();
+    private async findProductId(ctx: RequestContext, externalId: string): Promise<ID | undefined> {
+        const [found] = await ctxQuery<Array<{ id: ID }>>(
+            this.connection,
+            ctx,
+            `SELECT p.id FROM product p WHERE p."customFieldsExternalid" = $1`,
+            [externalId],
+        );
         return found?.id;
     }
 }

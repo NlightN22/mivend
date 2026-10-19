@@ -5,7 +5,10 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
+import { testRequestContextService } from '../../test-request-context-service';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import { IntegrationInboxReplayService } from '../../../integration-inbox-replay.service';
@@ -31,8 +34,11 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    inbox = new IntegrationInboxService(dataSource);
-    state = new IntegrationInboxReplayStateService(dataSource);
+    inbox = new IntegrationInboxService(createTestConnection(dataSource));
+    state = new IntegrationInboxReplayStateService(
+        createTestConnection(dataSource),
+        testRequestContextService,
+    );
 });
 
 afterEach(async () => {
@@ -50,7 +56,7 @@ async function seed(
     entityId: string,
     status: 'failed' | 'processed' | 'pending',
 ): Promise<number> {
-    const row = await inbox.enqueue({
+    const row = await inbox.enqueue(testRequestContext, {
         stream,
         entityId,
         version: String(++counter),
@@ -72,7 +78,7 @@ async function lastErrorOf(id: number): Promise<string | null> {
 
 function service(replay: ReturnType<typeof vi.fn>): IntegrationInboxReplayService {
     return new IntegrationInboxReplayService(
-        dataSource,
+        createTestConnection(dataSource),
         { replay } as unknown as ResyncReplayClient,
         state,
     );
@@ -86,7 +92,7 @@ describe('replay request', () => {
         const id = await seed('price-type', 'pt-1', 'failed');
         const replay = accepted('pt-1');
 
-        const results = await service(replay).replayFailed([id]);
+        const results = await service(replay).replayFailed(testRequestContext, [id]);
 
         expect(replay).toHaveBeenCalledWith('priceType', ['pt-1']);
         expect(results).toEqual([
@@ -99,7 +105,7 @@ describe('replay request', () => {
         const id = await seed('bank', 'b-1', 'failed');
         const replay = vi.fn().mockResolvedValue([{ entityId: 'b-1', status: 'not_found' }]);
 
-        const [result] = await service(replay).replayFailed([id]);
+        const [result] = await service(replay).replayFailed(testRequestContext, [id]);
 
         expect(result.outcome).toBe('NOT_FOUND');
         expect(await statusOf(id)).toBe('failed');
@@ -110,7 +116,7 @@ describe('replay request', () => {
         const id = await seed('unit', 'u-1', 'failed');
         const replay = vi.fn().mockRejectedValue(new Error('IS unreachable'));
 
-        const [result] = await service(replay).replayFailed([id]);
+        const [result] = await service(replay).replayFailed(testRequestContext, [id]);
 
         expect(result).toMatchObject({ outcome: 'FAILED', message: 'IS unreachable' });
         expect(await statusOf(id)).toBe('failed');
@@ -121,7 +127,7 @@ describe('replay request', () => {
         const ok = await seed('bank', 'b-2', 'processed');
         const replay = vi.fn();
 
-        const results = await service(replay).replayFailed([vat, ok]);
+        const results = await service(replay).replayFailed(testRequestContext, [vat, ok]);
 
         expect(replay).not.toHaveBeenCalled();
         expect(results.map(r => r.outcome).sort()).toEqual(['NOT_FAILED', 'UNSUPPORTED']);
@@ -132,8 +138,11 @@ describe('replay request', () => {
         const replay = accepted('b-3');
         const svc = service(replay);
 
-        const [a, b] = await Promise.all([svc.replayFailed([id]), svc.replayFailed([id])]);
-        const again = await svc.replayFailed([id]);
+        const [a, b] = await Promise.all([
+            svc.replayFailed(testRequestContext, [id]),
+            svc.replayFailed(testRequestContext, [id]),
+        ]);
+        const again = await svc.replayFailed(testRequestContext, [id]);
 
         expect(replay).toHaveBeenCalledTimes(1);
         expect([a[0].outcome, b[0].outcome].sort()).toEqual(['NOT_FAILED', 'REPLAYED']);
@@ -145,7 +154,7 @@ describe('replay request', () => {
 describe('closing a replay_requested row', () => {
     async function requested(stream: InboundStream, entityId: string): Promise<number> {
         const id = await seed(stream, entityId, 'failed');
-        await service(accepted(entityId)).replayFailed([id]);
+        await service(accepted(entityId)).replayFailed(testRequestContext, [id]);
         return id;
     }
 
@@ -157,7 +166,7 @@ describe('closing a replay_requested row', () => {
         const id = await requested('bank', 'e-1');
         const fresh = await seed('bank', 'e-1', 'pending');
 
-        await inbox.markProcessedUnclaimed(fresh, outcome, reason ?? null);
+        await inbox.markProcessedUnclaimed(testRequestContext, fresh, outcome, reason ?? null);
 
         expect(await statusOf(id)).toBe('resolved');
     });
@@ -166,7 +175,7 @@ describe('closing a replay_requested row', () => {
         const older = await seed('bank', 'e-2', 'pending');
         const id = await requested('bank', 'e-2');
 
-        await inbox.markProcessedUnclaimed(older);
+        await inbox.markProcessedUnclaimed(testRequestContext, older);
 
         expect(await statusOf(id)).toBe('replay_requested');
     });
@@ -176,8 +185,8 @@ describe('closing a replay_requested row', () => {
         const otherEntity = await seed('bank', 'e-other', 'pending');
         const otherStream = await seed('unit', 'e-3', 'pending');
 
-        await inbox.markProcessedUnclaimed(otherEntity);
-        await inbox.markProcessedUnclaimed(otherStream);
+        await inbox.markProcessedUnclaimed(testRequestContext, otherEntity);
+        await inbox.markProcessedUnclaimed(testRequestContext, otherStream);
 
         expect(await statusOf(id)).toBe('replay_requested');
     });
@@ -190,7 +199,11 @@ describe('closing a replay_requested row', () => {
             [fresh],
         );
 
-        await inbox.markFailedUnclaimed(fresh, new Error('counterparty not synced yet'));
+        await inbox.markFailedUnclaimed(
+            testRequestContext,
+            fresh,
+            new Error('counterparty not synced yet'),
+        );
 
         expect(await statusOf(fresh)).toBe('failed');
         expect(await statusOf(id)).toBe('failed');
@@ -203,7 +216,7 @@ describe('closing a replay_requested row', () => {
         const id = await requested('bank', 'e-5');
         const fresh = await seed('bank', 'e-5', 'pending');
 
-        await inbox.markFailedUnclaimed(fresh, new Error('not synced yet'));
+        await inbox.markFailedUnclaimed(testRequestContext, fresh, new Error('not synced yet'));
 
         expect(await statusOf(fresh)).toBe('pending');
         expect(await statusOf(id)).toBe('replay_requested');
@@ -213,7 +226,7 @@ describe('closing a replay_requested row', () => {
 describe('timeout sweep', () => {
     async function requestedAgo(entityId: string, minutes: number): Promise<number> {
         const id = await seed('bank', entityId, 'failed');
-        await service(accepted(entityId)).replayFailed([id]);
+        await service(accepted(entityId)).replayFailed(testRequestContext, [id]);
         await dataSource.query(
             `UPDATE integration_inbox_event
                 SET replay_requested_at = now() - ($2 || ' minutes')::interval
@@ -256,7 +269,7 @@ describe('timeout sweep', () => {
         const id = await requestedAgo('t-5', 5);
         const replay = accepted('t-5');
 
-        const [blocked] = await service(replay).replayFailed([id]);
+        const [blocked] = await service(replay).replayFailed(testRequestContext, [id]);
 
         expect(blocked.outcome).toBe('NOT_FAILED');
         expect(replay).not.toHaveBeenCalled();
@@ -267,7 +280,10 @@ describe('timeout sweep', () => {
             const id = await requestedAgo(`race-${n}`, 90);
             const fresh = await seed('bank', `race-${n}`, 'pending');
 
-            await Promise.all([state.expireStale(), inbox.markProcessedUnclaimed(fresh)]);
+            await Promise.all([
+                state.expireStale(),
+                inbox.markProcessedUnclaimed(testRequestContext, fresh),
+            ]);
 
             const final = await statusOf(id);
             expect(['resolved', 'failed']).toContain(final);

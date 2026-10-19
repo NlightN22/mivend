@@ -11,6 +11,7 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
 } from 'shared';
 
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
@@ -59,8 +60,8 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     const recovery = new IntegrationOutboxRecoveryService(
-        dataSource,
-        new IntegrationOutboxService(),
+        createTestConnection(dataSource),
+        new IntegrationOutboxService(createTestConnection(dataSource)),
         { build } as never,
     );
     const eventBus = {
@@ -70,7 +71,7 @@ beforeAll(async () => {
     };
     service = new HeldSendRedriveService(
         eventBus as never,
-        dataSource,
+        createTestConnection(dataSource),
         recovery,
         { create: async () => ctx } as never,
         { instanceType: 'central' } as never,

@@ -6,7 +6,10 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    testRequestContext,
+    createTestConnection,
 } from 'shared';
+import { testRequestContextService } from '../../test-request-context-service';
 
 import { IntegrationOutboxEntry } from '../../../entities/integration-outbox-entry.entity';
 import { IntegrationOutboxRecoveryService } from '../../../integration-outbox-recovery.service';
@@ -43,7 +46,11 @@ afterAll(async () => {
 });
 
 function makeProcessor(): IntegrationOutboxProcessorService {
-    return new IntegrationOutboxProcessorService(dataSource, { publish } as never);
+    return new IntegrationOutboxProcessorService(
+        createTestConnection(dataSource),
+        { publish } as never,
+        testRequestContextService,
+    );
 }
 
 async function insertPending(
@@ -171,7 +178,11 @@ describe('IntegrationOutboxProcessorService.processPendingBatch (component)', ()
             retryCount: 9,
             firstFailedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
         });
-        const recovery = new IntegrationOutboxRecoveryService(dataSource, {} as never, {} as never);
+        const recovery = new IntegrationOutboxRecoveryService(
+            createTestConnection(dataSource),
+            {} as never,
+            {} as never,
+        );
         const status = async (): Promise<unknown> =>
             (
                 await dataSource
@@ -181,12 +192,12 @@ describe('IntegrationOutboxProcessorService.processPendingBatch (component)', ()
 
         const sweep = makeProcessor().processPendingBatch();
         await vi.waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
-        expect(await recovery.requeueFailed([entry.id])).toBe(0);
+        expect(await recovery.requeueFailed(testRequestContext, [entry.id])).toBe(0);
         rejectPublish(new Error('broker down'));
         await sweep;
 
         expect(await status()).toBe('failed');
-        expect(await recovery.requeueFailed([entry.id])).toBe(1);
+        expect(await recovery.requeueFailed(testRequestContext, [entry.id])).toBe(1);
         expect(await status()).toBe('pending');
     });
 });

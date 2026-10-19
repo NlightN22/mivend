@@ -69,9 +69,6 @@ const connection = {
     withTransaction: (_ctx: unknown, work: (ctx: TestCtx) => Promise<unknown>) =>
         dataSource.transaction(manager => work({ manager })),
     getRepository: (ctx: TestCtx) => ctx.manager.getRepository(photoSchema),
-    get rawConnection() {
-        return dataSource;
-    },
 };
 
 function newService(): ProductPhotoSyncService {

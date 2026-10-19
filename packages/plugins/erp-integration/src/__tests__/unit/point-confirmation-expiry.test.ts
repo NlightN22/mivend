@@ -37,29 +37,25 @@ describe('describeRefusal', () => {
 
 describe('PointConfirmationExpiryService.expireDue', () => {
     const build = (cancel: ReturnType<typeof vi.fn>) => {
-        const manager = {
-            query: vi
-                .fn()
-                .mockImplementation((sql: string) => (sql.includes('SELECT 1') ? [] : [])),
-        };
-        const dataSource = {
-            query: vi.fn().mockResolvedValue([
-                { id: '1', code: 'A' },
-                { id: '2', code: 'B' },
-                { id: '3', code: 'C' },
-            ]),
-            transaction: vi.fn((work: (m: unknown) => unknown) => work(manager)),
+        const due = [
+            { id: '1', code: 'A' },
+            { id: '2', code: 'B' },
+            { id: '3', code: 'C' },
+        ];
+        const query = vi.fn(async (sql: string) => (sql.includes('SELECT DISTINCT') ? due : []));
+        const connection = {
+            getRepository: () => ({ query }),
+            withTransaction: vi.fn((ctx: unknown, work: (c: unknown) => unknown) => work(ctx)),
         };
         const notifications = { create: vi.fn().mockResolvedValue({}) };
         const service = new PointConfirmationExpiryService(
-            dataSource as never,
-            {} as never,
+            connection as never,
             { create: vi.fn().mockResolvedValue({}) } as never,
             { cancel } as never,
             notifications as never,
             { defaultReservationDays: () => 3 } as never,
         );
-        return { service, notifications, dataSource };
+        return { service, notifications, query };
     };
 
     it('passes the default days, cancels with the distinct reason and notifies only for refusals', async () => {
@@ -68,11 +64,11 @@ describe('PointConfirmationExpiryService.expireDue', () => {
             .mockResolvedValueOnce({ kind: 'cancelled', eventSent: false })
             .mockResolvedValueOnce({ kind: 'not-cancellable', reason: 'paid' })
             .mockResolvedValueOnce({ kind: 'already-cancelled' });
-        const { service, notifications, dataSource } = build(cancel);
+        const { service, notifications, query } = build(cancel);
 
         expect(await service.expireDue()).toBe(3);
 
-        expect(dataSource.query.mock.calls[0][1][1]).toBe(3);
+        expect((query.mock.calls[0] as unknown[])[1]).toEqual([expect.anything(), 3]);
         expect(cancel.mock.calls.map(c => c[2])).toEqual(
             Array(3).fill('point-confirmation-expired'),
         );

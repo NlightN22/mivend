@@ -5,6 +5,8 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
@@ -27,7 +29,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    inbox = new IntegrationInboxService(dataSource);
+    inbox = new IntegrationInboxService(createTestConnection(dataSource));
 });
 
 afterEach(async () => {
@@ -49,7 +51,7 @@ describe('enqueueRejected', () => {
     };
 
     it('stores an unprocessable message as a failed row with the reason and the raw payload', async () => {
-        await inbox.enqueueRejected(message);
+        await inbox.enqueueRejected(testRequestContext, message);
 
         const rows = await dataSource.getRepository(IntegrationInboxEvent).find();
         expect(rows).toHaveLength(1);
@@ -65,22 +67,24 @@ describe('enqueueRejected', () => {
     });
 
     it('is idempotent: a redelivery of the same offset does not add a second row', async () => {
-        await inbox.enqueueRejected(message);
-        await inbox.enqueueRejected(message);
+        await inbox.enqueueRejected(testRequestContext, message);
+        await inbox.enqueueRejected(testRequestContext, message);
 
         expect(await dataSource.getRepository(IntegrationInboxEvent).count()).toBe(1);
     });
 
     it('is never claimed for processing and is counted as failed on the health read model', async () => {
-        await inbox.enqueueRejected(message);
+        await inbox.enqueueRejected(testRequestContext, message);
 
-        expect(await inbox.claimBatch(10)).toEqual([]);
-        const backlog = await new IntegrationInboxHealthService(dataSource).getBacklogByStream();
+        expect(await inbox.claimBatch(testRequestContext, 10)).toEqual([]);
+        const backlog = await new IntegrationInboxHealthService(
+            createTestConnection(dataSource),
+        ).getBacklogByStream(testRequestContext);
         expect(backlog.find(b => b.stream === 'bank')).toMatchObject({ failed: 1, pending: 0 });
     });
 
     it('keeps the identity of a decoded message that only lacks an eventId', async () => {
-        await inbox.enqueueRejected({
+        await inbox.enqueueRejected(testRequestContext, {
             ...message,
             entityId: 'bank-1',
             reason: 'missing entityId/eventId',

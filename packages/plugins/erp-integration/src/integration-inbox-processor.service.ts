@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RequestContext, RequestContextService } from '@vendure/core';
-import { DataSource } from 'typeorm';
+import { RequestContext, RequestContextService, TransactionalConnection } from '@vendure/core';
 
 import { CategoryStreamHandler } from './handlers/category.handler';
 import { ContractStreamHandler } from './handlers/contract.handler';
@@ -56,7 +55,7 @@ export class IntegrationInboxProcessorService {
     private readonly handlers: Record<InboundStream, InboundStreamHandler>;
 
     constructor(
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         private readonly inbox: IntegrationInboxService,
         private readonly requestContextService: RequestContextService,
         productHandler: ProductStreamHandler,
@@ -148,7 +147,8 @@ export class IntegrationInboxProcessorService {
         failed: number;
         claimed: number;
     }> {
-        const rows = await this.inbox.claimBatch(batchSize, streams);
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const rows = await this.inbox.claimBatch(ctx, batchSize, streams);
         let processed = 0;
         let failed = 0;
         if (rows.length === 0) return { processed, failed, claimed: 0 };
@@ -163,7 +163,6 @@ export class IntegrationInboxProcessorService {
             return 0;
         });
 
-        const ctx = await this.requestContextService.create({ apiType: 'admin' });
         let stoppedAt = sorted.length;
         for (let i = 0; i < sorted.length; i++) {
             if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
@@ -180,35 +179,15 @@ export class IntegrationInboxProcessorService {
                 `processPendingBatch: deadline reached mid-batch, releasing ${unprocessedIds.length} claimed row(s) back to pending`,
                 loggerCtx,
             );
-            await this.inbox.releaseClaims(unprocessedIds, sorted[stoppedAt].claimToken);
+            await this.inbox.releaseClaims(ctx, unprocessedIds, sorted[stoppedAt].claimToken);
         }
         return { processed, failed, claimed: rows.length };
     }
 
     private async processOne(ctx: RequestContext, row: ClaimedInboxEvent): Promise<boolean> {
         try {
-            // A lower version arriving after a higher one must not regress state.
-            // Such rows are still marked processed: stale replays are expected, not errors.
-            const isStale = await this.isSupersededByNewerVersion(row);
-            if (isStale) {
-                Logger.verbose(
-                    `Skipping stale ${row.stream} entityId=${row.entityId} version=${row.version} (newer version already processed)`,
-                    loggerCtx,
-                );
-                await this.inbox.markProcessed(
-                    row.id,
-                    'superseded',
-                    'a newer version was already processed',
-                    row.claimToken,
-                );
-                return true;
-            }
-            const result = await this.handlers[row.stream].apply(ctx, row.entityId, row.payload);
-            if (result && result.kind === 'noop') {
-                await this.inbox.markProcessed(row.id, 'noop', result.reason, row.claimToken);
-            } else {
-                await this.inbox.markProcessed(row.id, 'applied', null, row.claimToken);
-            }
+            // Handler writes and the processed mark commit together; a throw rolls both back.
+            await this.connection.withTransaction(ctx, txCtx => this.applyAndSettle(txCtx, row));
             return true;
         } catch (err) {
             const error = err instanceof Error ? err : new Error(String(err));
@@ -221,7 +200,9 @@ export class IntegrationInboxProcessorService {
                 error instanceof UnknownOrderUuidError
                     ? { outcome: 'noop' as const, reason: 'unknown order uuid' }
                     : null;
+            // ctx holds no transaction, so this runs after the handler's rollback, on its own.
             await this.inbox.markFailed(
+                ctx,
                 row.id,
                 error,
                 Math.random,
@@ -232,10 +213,38 @@ export class IntegrationInboxProcessorService {
         }
     }
 
-    private async isSupersededByNewerVersion(row: IntegrationInboxEvent): Promise<boolean> {
+    private async applyAndSettle(ctx: RequestContext, row: ClaimedInboxEvent): Promise<void> {
+        // A lower version arriving after a higher one must not regress state.
+        // Such rows are still marked processed: stale replays are expected, not errors.
+        if (await this.isSupersededByNewerVersion(ctx, row)) {
+            Logger.verbose(
+                `Skipping stale ${row.stream} entityId=${row.entityId} version=${row.version} (newer version already processed)`,
+                loggerCtx,
+            );
+            await this.inbox.markProcessed(
+                ctx,
+                row.id,
+                'superseded',
+                'a newer version was already processed',
+                row.claimToken,
+            );
+            return;
+        }
+        const result = await this.handlers[row.stream].apply(ctx, row.entityId, row.payload);
+        if (result && result.kind === 'noop') {
+            await this.inbox.markProcessed(ctx, row.id, 'noop', result.reason, row.claimToken);
+        } else {
+            await this.inbox.markProcessed(ctx, row.id, 'applied', null, row.claimToken);
+        }
+    }
+
+    private async isSupersededByNewerVersion(
+        ctx: RequestContext,
+        row: IntegrationInboxEvent,
+    ): Promise<boolean> {
         // Compared in JS (isVersionNewer): SQL `>` on the varchar version is lexicographic.
         // Only `version` is selected — never the jsonb payload of every historical row.
-        const repo = this.dataSource.getRepository(IntegrationInboxEvent);
+        const repo = this.connection.getRepository(ctx, IntegrationInboxEvent);
         const processedRows = await repo.find({
             select: { version: true },
             where: { stream: row.stream, entityId: row.entityId, status: 'processed' },

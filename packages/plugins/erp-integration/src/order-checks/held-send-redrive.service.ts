@@ -1,9 +1,8 @@
 import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { EventBus, RequestContextService } from '@vendure/core';
+import { EventBus, RequestContextService, TransactionalConnection } from '@vendure/core';
 import { CheckPolicyChangedEvent } from '@mivend/plugin-checks';
 import { OrderDeliveryEditedEvent, OrderStaffConfirmedEvent } from '@mivend/plugin-reservation';
-import { subscribeAndLog } from 'shared';
-import { DataSource } from 'typeorm';
+import { ctxQuery, subscribeAndLog } from 'shared';
 
 import {
     IntegrationOutboxRecoveryService,
@@ -26,7 +25,7 @@ const SWEEP_LIMIT = 200;
 export class HeldSendRedriveService implements OnApplicationBootstrap {
     constructor(
         private readonly eventBus: EventBus,
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         private readonly recovery: IntegrationOutboxRecoveryService,
         private readonly requestContextService: RequestContextService,
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
@@ -69,7 +68,10 @@ export class HeldSendRedriveService implements OnApplicationBootstrap {
     }
 
     private async rebuildHeld(orderId: string | undefined, limit: number): Promise<number> {
-        const rows: Array<{ id: string }> = await this.dataSource.query(
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const rows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM integration_outbox
               WHERE event_type = 'order.confirmed' AND status = 'skipped'
                 AND (last_error IN ($1, $4, $5) OR (last_error LIKE 'rebuild failed:%' AND ($3 OR (
@@ -86,7 +88,6 @@ export class HeldSendRedriveService implements OnApplicationBootstrap {
                 COURIER_POINT_UNCONFIRMED_SKIP_REASON,
             ],
         );
-        const ctx = await this.requestContextService.create({ apiType: 'admin' });
         let queued = 0;
         for (const row of rows) {
             try {

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RequestContextService } from '@vendure/core';
-import { DataSource } from 'typeorm';
+import { RequestContextService, TransactionalConnection } from '@vendure/core';
+import { ctxQuery } from 'shared';
 
 import { OrderSubmittedListener } from './order-submitted.listener';
 
@@ -12,13 +12,16 @@ const SWEEP_LIMIT = 100;
 @Injectable()
 export class OrderSubmittedReconciler {
     constructor(
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         private readonly listener: OrderSubmittedListener,
         private readonly requestContextService: RequestContextService,
     ) {}
 
     async sweep(): Promise<number> {
-        const orders = await this.dataSource.query<Array<{ id: string; code: string }>>(
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const orders = await ctxQuery<Array<{ id: string; code: string }>>(
+            this.connection,
+            ctx,
             `SELECT o.id, o.code FROM "order" o
               WHERE o."customFieldsReservationstate" = 'RESERVED'
                 AND o.state <> 'Cancelled' AND o."customFieldsIsexternal" = false
@@ -28,7 +31,6 @@ export class OrderSubmittedReconciler {
                                    AND x.payload ->> 'orderId' = o.id::text)
               ORDER BY o."updatedAt" ASC LIMIT ${SWEEP_LIMIT}`,
         );
-        const ctx = await this.requestContextService.create({ apiType: 'admin' });
         let redriven = 0;
         for (const order of orders) {
             try {

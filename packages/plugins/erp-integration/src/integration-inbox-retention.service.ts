@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { RequestContextService, TransactionalConnection } from '@vendure/core';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
 import type { InboundStream } from './types';
@@ -12,12 +12,16 @@ const PURGE_SUPERSEDED_GROUP_BATCH_SIZE = 200;
 // Retention of processed inbox rows, split from IntegrationInboxService (claim/retry code).
 @Injectable()
 export class IntegrationInboxRetentionService {
-    constructor(private readonly dataSource: DataSource) {}
+    constructor(
+        private readonly connection: TransactionalConnection,
+        private readonly requestContextService: RequestContextService,
+    ) {}
 
     // Older duplicates keep their row but get payload={}: the row is the enqueue dedup key.
     // Deleting it would let a Kafka redelivery pass dedup as new and reapply stale data.
     async purgeSupersededProcessedRows(): Promise<number> {
-        const repo = this.dataSource.getRepository(IntegrationInboxEvent);
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const repo = this.connection.getRepository(ctx, IntegrationInboxEvent);
         const tombstone = {};
 
         const groups = await repo

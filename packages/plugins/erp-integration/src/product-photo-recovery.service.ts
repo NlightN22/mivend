@@ -50,7 +50,7 @@ export class ProductPhotoRecoveryService {
             take: BATCH,
         });
         const productIds = [...new Set(stale.map(p => p.productExternalId))];
-        for (const productId of productIds) await this.syncService.enqueue(productId);
+        for (const productId of productIds) await this.syncService.enqueue(ctx, productId);
         return productIds.length;
     }
 

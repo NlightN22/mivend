@@ -1,3 +1,5 @@
+import { testRequestContext } from 'shared';
+import { testRequestContextService } from '../test-request-context-service';
 import { create, toBinary } from '@bufbuild/protobuf';
 import { ManufacturerChangedSchema } from '@nlightn22/event-contracts';
 import { describe, expect, it, vi } from 'vitest';
@@ -12,6 +14,7 @@ function setup(
         {} as never,
         { enqueue, enqueueRejected } as never,
         {} as never,
+        testRequestContextService,
     );
     const handle = (value: Uint8Array | null) =>
         (
@@ -35,6 +38,7 @@ describe('KafkaConsumerService.handleMessage', () => {
         const enqueue = vi.fn().mockResolvedValue(undefined);
         await setup(enqueue)(valid);
         expect(enqueue).toHaveBeenCalledWith(
+            testRequestContext,
             expect.objectContaining({
                 stream: 'manufacturer',
                 entityId: 'm-1',
@@ -56,6 +60,7 @@ describe('KafkaConsumerService.handleMessage', () => {
 
         expect(enqueue).not.toHaveBeenCalled();
         expect(enqueueRejected).toHaveBeenCalledWith(
+            testRequestContext,
             expect.objectContaining({
                 stream: 'manufacturer',
                 partition: 2,
@@ -72,6 +77,7 @@ describe('KafkaConsumerService.handleMessage', () => {
         await setup(vi.fn(), enqueueRejected)(null);
 
         expect(enqueueRejected).toHaveBeenCalledWith(
+            testRequestContext,
             expect.objectContaining({ reason: 'message has no value' }),
         );
     });
@@ -88,6 +94,7 @@ describe('KafkaConsumerService.handleMessage', () => {
 
         expect(enqueue).not.toHaveBeenCalled();
         expect(enqueueRejected).toHaveBeenCalledWith(
+            testRequestContext,
             expect.objectContaining({ reason: 'missing entityId/eventId' }),
         );
     });
@@ -103,6 +110,7 @@ describe('KafkaConsumerService.handleMessage', () => {
             {} as never,
             { enqueue: vi.fn() } as never,
             {} as never,
+            testRequestContextService,
         );
         const handle = service as unknown as {
             handleMessage(s: string, p: unknown): Promise<void>;

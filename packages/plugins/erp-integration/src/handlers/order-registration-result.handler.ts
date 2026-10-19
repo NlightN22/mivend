@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { ReservationWriteOffSyncService } from '@mivend/plugin-reservation';
+import { ctxQuery } from 'shared';
 
 import { MissingDependencyError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -38,7 +39,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
                 ? String(payload.requestEntityId)
                 : null;
         const localOrderId = requestEntityId
-            ? await this.findLocalOrderIdByRequestEntityId(requestEntityId)
+            ? await this.findLocalOrderIdByRequestEntityId(ctx, requestEntityId)
             : null;
         const businessRejectionReason = payload.businessRejectionReason as
             | Record<string, unknown>
@@ -77,7 +78,7 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
                 continue;
             }
 
-            const variantId = await this.findVariantId(productId);
+            const variantId = await this.findVariantId(ctx, productId);
             if (!variantId) {
                 // Product not consumed yet (cross-topic race) — retried via the inbox; the whole
                 // order waits, so no line is written half-applied (docs: external-integration-rules).
@@ -126,25 +127,31 @@ export class OrderRegistrationResultHandler implements InboundStreamHandler {
     // integration_outbox.payload (order-submitted.builder.ts) stores the local Vendure orderId
     // under the eventId this result's requestEntityId echoes back.
     private async findLocalOrderIdByRequestEntityId(
+        ctx: RequestContext,
         requestEntityId: string,
     ): Promise<string | null> {
-        const row = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select("outbox.payload->>'orderId'", 'orderId')
-            .from('integration_outbox', 'outbox')
-            .where('outbox.event_id = :requestEntityId', { requestEntityId })
-            .getRawOne<{ orderId: string | null }>();
+        const [row] = await ctxQuery<Array<{ orderId: string | null }>>(
+            this.connection,
+            ctx,
+            `SELECT outbox.payload->>'orderId' AS "orderId" FROM integration_outbox outbox
+              WHERE outbox.event_id = $1`,
+            [requestEntityId],
+        );
         return row?.orderId ?? null;
     }
 
-    private async findVariantId(productId: string): Promise<string | undefined> {
-        const row = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('pv.id', 'id')
-            .from('product_variant', 'pv')
-            .innerJoin('product', 'p', 'p.id = pv."productId"')
-            .where('p."customFieldsExternalid" = :productId', { productId })
-            .getRawOne<{ id: string }>();
+    private async findVariantId(
+        ctx: RequestContext,
+        productId: string,
+    ): Promise<string | undefined> {
+        const [row] = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
+            `SELECT pv.id FROM product_variant pv
+               INNER JOIN product p ON p.id = pv."productId"
+              WHERE p."customFieldsExternalid" = $1`,
+            [productId],
+        );
         return row ? String(row.id) : undefined;
     }
 }

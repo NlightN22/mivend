@@ -5,6 +5,8 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
@@ -30,7 +32,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    inboxService = new IntegrationInboxService(dataSource);
+    inboxService = new IntegrationInboxService(createTestConnection(dataSource));
 });
 
 afterEach(async () => {
@@ -44,7 +46,7 @@ afterAll(async () => {
 
 describe('inbox outcomes (component)', () => {
     it('records outcome applied when the handler returns nothing', async () => {
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-ok',
             version: '1',
@@ -59,7 +61,7 @@ describe('inbox outcomes (component)', () => {
     });
 
     it('records outcome noop with the handler reason, never a bare processed', async () => {
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-noop',
             version: '1',
@@ -80,7 +82,7 @@ describe('inbox outcomes (component)', () => {
 
     it('records outcome superseded, without calling the handler, for a stale version', async () => {
         const repo = dataSource.getRepository(IntegrationInboxEvent);
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-stale',
             version: '5',
@@ -88,7 +90,7 @@ describe('inbox outcomes (component)', () => {
             payload: {},
         });
         await repo.update({ sourceEventId: 'evt-new' }, { status: 'processed' });
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-stale',
             version: '2',

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { withAggregateLock } from 'shared';
+import { ctxQuery, withAggregateLock } from 'shared';
 import type { ID } from '@vendure/common/lib/shared-types';
 import {
     FacetService,
@@ -148,12 +148,12 @@ export class ProductStreamHandler implements InboundStreamHandler {
         };
         const barcodes = extractBarcodes(payload);
 
-        const existing = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('p.id', 'id')
-            .from('product', 'p')
-            .where('p."customFieldsExternalid" = :extId', { extId: entityId })
-            .getRawOne<{ id: string }>();
+        const [existing] = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
+            `SELECT p.id FROM product p WHERE p."customFieldsExternalid" = $1`,
+            [entityId],
+        );
 
         let productId: string;
         let variantId: string;

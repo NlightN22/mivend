@@ -1,5 +1,6 @@
 import { Logger } from '@vendure/core';
-import { DataSource, EntityManager } from 'typeorm';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
+import { ctxQuery } from 'shared';
 
 import { replayDidNotResolve } from './inbox-replay-lifecycle';
 import { NonRetryableInboundError } from './non-retryable-inbound-error';
@@ -22,7 +23,8 @@ const claimGuard = (claimToken: string | null | undefined, param: number): strin
 // One statement: marks the row processed and closes any replay_requested row of the same entity
 // that was requested before this event arrived (any recorded outcome closes it, noop included).
 export async function settleProcessed(
-    runner: Pick<EntityManager, 'query'>,
+    connection: TransactionalConnection,
+    ctx: RequestContext,
     id: number,
     outcome: InboxOutcome,
     outcomeReason: string | null,
@@ -30,7 +32,9 @@ export async function settleProcessed(
 ): Promise<void> {
     const params: unknown[] = [id, outcome, outcomeReason];
     if (claimToken) params.push(claimToken);
-    await runner.query(
+    await ctxQuery<unknown>(
+        connection,
+        ctx,
         `WITH done AS (
             UPDATE integration_inbox_event
                SET status = 'processed', processed_at = now(), outcome = $2, outcome_reason = $3,
@@ -45,21 +49,23 @@ export async function settleProcessed(
     );
 }
 
-// Failures retry with backoff and dead-letter only after 24h from the first failure;
-// NonRetryableInboundError fails at once. onBudgetExhausted can turn a kind into a noop instead.
+// Retries with backoff, dead-letters after 24h (NonRetryableInboundError at once; onBudgetExhausted may noop).
 // The row lock plus the claim guard make the attempt bump and the decision one atomic step.
 export async function settleFailed(
-    dataSource: DataSource,
+    connection: TransactionalConnection,
+    ctx: RequestContext,
     id: number,
     error: Error,
     random: () => number,
     onBudgetExhausted: BudgetExhaustedNoop | null,
     claimToken?: string | null,
 ): Promise<void> {
-    const settled = await dataSource.transaction(async em => {
+    const settled = await connection.withTransaction(ctx, async txCtx => {
         const lockParams: unknown[] = [id];
         if (claimToken) lockParams.push(claimToken);
-        const rows = await em.query<Array<{ attempts: number; first_failed_at: Date | null }>>(
+        const rows = await ctxQuery<Array<{ attempts: number; first_failed_at: Date | null }>>(
+            connection,
+            txCtx,
             `SELECT attempts, first_failed_at FROM integration_inbox_event
               WHERE id = $1 AND status IN ('pending', 'processing') ${claimGuard(claimToken, 2)}
                 FOR UPDATE`,
@@ -75,7 +81,9 @@ export async function settleFailed(
         if (!exhausted) {
             const nextRetryAt = new Date(Date.now() + computeRetryBackoffMs(attempts, random));
             // eligible_at mirrors next_retry_at so claimBatch's ordering column stays in step (#147).
-            await em.query(
+            await ctxQuery<unknown>(
+                connection,
+                txCtx,
                 `UPDATE integration_inbox_event
                     SET attempts = $2, first_failed_at = $3, last_error = $4, status = 'pending',
                         next_retry_at = $5, eligible_at = $5, claim_token = NULL
@@ -85,23 +93,35 @@ export async function settleFailed(
             return true;
         }
         if (retriable && onBudgetExhausted) {
-            await em.query(
+            await ctxQuery<unknown>(
+                connection,
+                txCtx,
                 `UPDATE integration_inbox_event
                     SET attempts = $2, first_failed_at = $3, last_error = $4 WHERE id = $1`,
                 [id, attempts, firstFailedAt, error.message],
             );
             // No token: the claim-guarded row lock above already proved this worker holds the claim.
-            await settleProcessed(em, id, onBudgetExhausted.outcome, onBudgetExhausted.reason);
+            await settleProcessed(
+                connection,
+                txCtx,
+                id,
+                onBudgetExhausted.outcome,
+                onBudgetExhausted.reason,
+            );
             return true;
         }
-        await em.query(
+        await ctxQuery<unknown>(
+            connection,
+            txCtx,
             `UPDATE integration_inbox_event
                 SET attempts = $2, first_failed_at = $3, last_error = $4, status = 'failed',
                     next_retry_at = NULL, claim_token = NULL
               WHERE id = $1`,
             [id, attempts, firstFailedAt, error.message],
         );
-        await em.query(
+        await ctxQuery<unknown>(
+            connection,
+            txCtx,
             `UPDATE integration_inbox_event r
                 SET status = 'failed', replay_requested_at = NULL, last_error = $2
                FROM integration_inbox_event n

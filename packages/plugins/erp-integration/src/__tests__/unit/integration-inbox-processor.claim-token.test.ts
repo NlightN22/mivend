@@ -27,7 +27,8 @@ function makeProcessor(
         markFailed: vi.fn().mockResolvedValue(undefined),
         releaseClaims: vi.fn().mockResolvedValue(undefined),
     };
-    const dataSource = {
+    const connection = {
+        withTransaction: (ctx: unknown, work: (c: unknown) => unknown) => work(ctx),
         getRepository: () => ({
             find: vi.fn().mockResolvedValue(processedVersions.map(version => ({ version }))),
         }),
@@ -37,7 +38,7 @@ function makeProcessor(
         unknown
     >;
     Object.assign(processor, {
-        dataSource,
+        connection,
         inbox,
         requestContextService: { create: vi.fn().mockResolvedValue({}) },
         handlers: { unit: { apply } },
@@ -49,7 +50,13 @@ describe('IntegrationInboxProcessorService settles with the row claim token', ()
     it('passes the token when a row is applied', async () => {
         const { service, inbox } = makeProcessor([row(1)], async () => undefined);
         await service.processPendingBatch();
-        expect(inbox.markProcessed).toHaveBeenCalledWith(1, 'applied', null, TOKEN);
+        expect(inbox.markProcessed).toHaveBeenCalledWith(
+            expect.anything(),
+            1,
+            'applied',
+            null,
+            TOKEN,
+        );
     });
 
     it('passes the token when a handler reports a noop', async () => {
@@ -58,13 +65,20 @@ describe('IntegrationInboxProcessorService settles with the row claim token', ()
             reason: 'nothing to do',
         }));
         await service.processPendingBatch();
-        expect(inbox.markProcessed).toHaveBeenCalledWith(1, 'noop', 'nothing to do', TOKEN);
+        expect(inbox.markProcessed).toHaveBeenCalledWith(
+            expect.anything(),
+            1,
+            'noop',
+            'nothing to do',
+            TOKEN,
+        );
     });
 
     it('passes the token when a row is superseded by a newer version', async () => {
         const { service, inbox } = makeProcessor([row(1, '1')], async () => undefined, ['2']);
         await service.processPendingBatch();
         expect(inbox.markProcessed).toHaveBeenCalledWith(
+            expect.anything(),
             1,
             'superseded',
             expect.any(String),
@@ -78,6 +92,7 @@ describe('IntegrationInboxProcessorService settles with the row claim token', ()
         });
         await service.processPendingBatch();
         expect(inbox.markFailed).toHaveBeenCalledWith(
+            expect.anything(),
             1,
             expect.any(Error),
             expect.any(Function),
@@ -89,6 +104,6 @@ describe('IntegrationInboxProcessorService settles with the row claim token', ()
     it('passes the token when a deadline releases the unprocessed rows', async () => {
         const { service, inbox } = makeProcessor([row(1), row(2)], async () => undefined);
         await service.processPendingBatch(undefined, 20, Date.now() - 1);
-        expect(inbox.releaseClaims).toHaveBeenCalledWith([1, 2], TOKEN);
+        expect(inbox.releaseClaims).toHaveBeenCalledWith(expect.anything(), [1, 2], TOKEN);
     });
 });

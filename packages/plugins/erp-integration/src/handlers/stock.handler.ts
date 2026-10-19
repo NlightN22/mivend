@@ -6,6 +6,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { WarehouseService } from '@mivend/plugin-access-control';
+import { ctxQuery } from 'shared';
 
 import { MissingDependencyError } from '../types';
 import { isWarehouseTombstoned } from './warehouse-tombstone.query';
@@ -43,7 +44,7 @@ export class StockStreamHandler implements InboundStreamHandler {
 
         const warehouse = await this.warehouseService.findByErpId(ctx, warehouseId);
         if (!warehouse) {
-            if (await isWarehouseTombstoned(this.connection.rawConnection, warehouseId)) {
+            if (await isWarehouseTombstoned(this.connection, ctx, warehouseId)) {
                 return inboundNoop(
                     `stock ${entityId}: warehouse ${warehouseId} is deleted upstream, ignoring`,
                 );
@@ -54,14 +55,14 @@ export class StockStreamHandler implements InboundStreamHandler {
             );
         }
 
-        const stockLocationId = await this.findStockLocationId(warehouseId);
+        const stockLocationId = await this.findStockLocationId(ctx, warehouseId);
         if (!stockLocationId) {
             throw new MissingDependencyError(
                 `stock ${entityId}: no StockLocation found for warehouseId=${warehouseId}`,
             );
         }
 
-        const variantId = await this.findVariantId(productId);
+        const variantId = await this.findVariantId(ctx, productId);
         if (!variantId) {
             throw new MissingDependencyError(
                 `stock ${entityId}: variant not found for productId=${productId}`,
@@ -97,24 +98,31 @@ export class StockStreamHandler implements InboundStreamHandler {
         return inboundApplied();
     }
 
-    private async findVariantId(productId: string): Promise<string | undefined> {
-        const row = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('pv.id', 'id')
-            .from('product_variant', 'pv')
-            .innerJoin('product', 'p', 'p.id = pv."productId"')
-            .where('p."customFieldsExternalid" = :productId', { productId })
-            .getRawOne<{ id: string }>();
+    private async findVariantId(
+        ctx: RequestContext,
+        productId: string,
+    ): Promise<string | undefined> {
+        const [row] = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
+            `SELECT pv.id FROM product_variant pv
+               INNER JOIN product p ON p.id = pv."productId"
+              WHERE p."customFieldsExternalid" = $1`,
+            [productId],
+        );
         return row?.id;
     }
 
-    private async findStockLocationId(warehouseErpId: string): Promise<string | undefined> {
-        const row = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('sl.id', 'id')
-            .from('stock_location', 'sl')
-            .where('sl."customFieldsWarehouseerpid" = :erpId', { erpId: warehouseErpId })
-            .getRawOne<{ id: string }>();
+    private async findStockLocationId(
+        ctx: RequestContext,
+        warehouseErpId: string,
+    ): Promise<string | undefined> {
+        const [row] = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
+            `SELECT sl.id FROM stock_location sl WHERE sl."customFieldsWarehouseerpid" = $1`,
+            [warehouseErpId],
+        );
         return row?.id;
     }
 }

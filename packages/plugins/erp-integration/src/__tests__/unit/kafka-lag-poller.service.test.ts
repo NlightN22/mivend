@@ -1,3 +1,4 @@
+import { testRequestContextService } from '../test-request-context-service';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@vendure/core', async importOriginal => {
@@ -76,6 +77,7 @@ describe('KafkaLagPollerService', () => {
                 },
             }),
             dataSource,
+            testRequestContextService,
         );
         vi.spyOn(
             service as unknown as { createAdmin: () => unknown },
@@ -112,6 +114,7 @@ describe('KafkaLagPollerService', () => {
                 },
             }),
             dataSource,
+            testRequestContextService,
         );
         vi.spyOn(
             service as unknown as { createAdmin: () => unknown },
@@ -141,6 +144,7 @@ describe('KafkaLagPollerService', () => {
                 },
             }),
             dataSource,
+            testRequestContextService,
         );
         vi.spyOn(
             service as unknown as { createAdmin: () => unknown },
@@ -161,7 +165,11 @@ describe('KafkaLagPollerService', () => {
             failTopics: ['topic-a'],
         });
         const { dataSource, rows } = makeDataSource();
-        const service = new KafkaLagPollerService(makeOptions(), dataSource);
+        const service = new KafkaLagPollerService(
+            makeOptions(),
+            dataSource,
+            testRequestContextService,
+        );
         vi.spyOn(
             service as unknown as { createAdmin: () => unknown },
             'createAdmin',
@@ -191,6 +199,7 @@ describe('KafkaLagPollerService', () => {
                 },
             }),
             dataSource,
+            testRequestContextService,
         );
         vi.spyOn(
             service as unknown as { createAdmin: () => unknown },
@@ -209,7 +218,11 @@ describe('KafkaLagPollerService', () => {
             failTopics: ['topic-a', 'topic-b'],
         });
         const { dataSource } = makeDataSource();
-        const service = new KafkaLagPollerService(makeOptions(), dataSource);
+        const service = new KafkaLagPollerService(
+            makeOptions(),
+            dataSource,
+            testRequestContextService,
+        );
         vi.spyOn(
             service as unknown as { createAdmin: () => unknown },
             'createAdmin',

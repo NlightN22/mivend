@@ -1,3 +1,4 @@
+import { createTestConnection } from 'shared';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
@@ -52,7 +53,7 @@ beforeAll(async () => {
           "customFieldsReservationstate" text, "customFieldsIsexternal" boolean, "updatedAt" timestamptz)`,
     );
     reconciler = new OrderSubmittedReconciler(
-        dataSource,
+        createTestConnection(dataSource),
         { enqueueConfirmed } as never,
         { create: async () => ({}) as RequestContext } as never,
     );

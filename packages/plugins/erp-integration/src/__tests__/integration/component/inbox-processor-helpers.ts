@@ -1,3 +1,4 @@
+import { createTestConnection } from 'shared';
 import { vi } from 'vitest';
 import type { DataSource } from 'typeorm';
 
@@ -12,7 +13,7 @@ export function makeInboxProcessor(
     const stubHandler = { apply };
     const requestContextService = { create: vi.fn().mockResolvedValue({}) };
     return new IntegrationInboxProcessorService(
-        dataSource,
+        createTestConnection(dataSource),
         inboxService,
         requestContextService as never,
         stubHandler as never,

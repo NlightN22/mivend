@@ -4,44 +4,26 @@ import type { RequestContext } from '@vendure/core';
 import { OrderRegistrationResultHandler } from '../../handlers/order-registration-result.handler';
 import { MissingDependencyError } from '../../types';
 
-// Routes each createQueryBuilder() call by table name, not call order, so tests may set up
+// Routes each query by table name, not call order, so tests may set up
 // 'product_variant' and 'integration_outbox' lookups independently of each other.
 function createConnection(options: {
     variantRows?: Array<Record<string, unknown> | undefined>;
     outboxOrderId?: string | null;
 }): {
-    rawConnection: { createQueryBuilder: () => unknown };
+    getRepository: () => { query: (sql: string) => Promise<unknown[]> };
 } {
     const variantRows = options.variantRows ?? [];
     const outboxOrderId = options.outboxOrderId ?? null;
     let variantCall = 0;
-    return {
-        rawConnection: {
-            createQueryBuilder: () => {
-                let fromTable = '';
-                const builder = {
-                    select: vi.fn().mockReturnThis(),
-                    from: vi.fn((table: string) => {
-                        fromTable = table;
-                        return builder;
-                    }),
-                    innerJoin: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    getRawOne: vi.fn(() => {
-                        if (fromTable === 'integration_outbox') {
-                            return Promise.resolve(
-                                outboxOrderId != null ? { orderId: outboxOrderId } : undefined,
-                            );
-                        }
-                        const row = variantRows[variantCall];
-                        variantCall += 1;
-                        return Promise.resolve(row);
-                    }),
-                };
-                return builder;
-            },
-        },
+    const query = async (sql: string): Promise<unknown[]> => {
+        if (sql.includes('integration_outbox')) {
+            return outboxOrderId != null ? [{ orderId: outboxOrderId }] : [];
+        }
+        const row = variantRows[variantCall];
+        variantCall += 1;
+        return row ? [row] : [];
     };
+    return { getRepository: () => ({ query }) };
 }
 
 describe('OrderRegistrationResultHandler', () => {

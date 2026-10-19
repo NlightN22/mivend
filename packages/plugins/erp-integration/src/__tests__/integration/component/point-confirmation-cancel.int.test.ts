@@ -14,6 +14,7 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
 } from 'shared';
 import { testOrderStatusDictionary } from '@mivend/plugin-erp-order';
 import {
@@ -82,7 +83,10 @@ beforeAll(async () => {
     const connection = {
         getRepository: (ctx: Ctx, entity: { name: string } | string) => {
             if (typeof entity === 'string') {
-                return { query: (sql: string, p?: unknown[]) => ctx.__manager!.query(sql, p) };
+                return {
+                    query: (sql: string, p?: unknown[]) =>
+                        (ctx.__manager ?? dataSource.manager).query(sql, p),
+                };
             }
             return (ctx.__manager ?? dataSource.manager).getRepository(tables[entity.name]);
         },
@@ -102,7 +106,10 @@ beforeAll(async () => {
     const registry = new OrderCancellationPortRegistry();
     registry.register(
         new OrderCancellationAdapter(
-            new OutboundGateway(dataSource, new IntegrationOutboxService()),
+            new OutboundGateway(
+                createTestConnection(dataSource),
+                new IntegrationOutboxService(createTestConnection(dataSource)),
+            ),
             registry,
         ),
     );
@@ -117,7 +124,6 @@ beforeAll(async () => {
         { dictionary: async () => testOrderStatusDictionary() } as never,
     );
     expiry = new PointConfirmationExpiryService(
-        dataSource,
         connection as never,
         { create: async () => ({}) } as never,
         cancellation,

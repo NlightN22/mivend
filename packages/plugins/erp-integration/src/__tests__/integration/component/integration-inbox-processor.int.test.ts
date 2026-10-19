@@ -5,6 +5,8 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
 import { UnknownOrderUuidError } from '@mivend/plugin-reservation';
 
@@ -33,7 +35,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    inboxService = new IntegrationInboxService(dataSource);
+    inboxService = new IntegrationInboxService(createTestConnection(dataSource));
 });
 
 afterEach(async () => {
@@ -48,7 +50,7 @@ afterAll(async () => {
 describe('IntegrationInboxProcessorService.processPendingBatch (component)', () => {
     it('applies a pending row and marks it processed', async () => {
         const apply = vi.fn().mockResolvedValue(undefined);
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-1',
             version: '1',
@@ -69,7 +71,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         const apply = vi
             .fn()
             .mockRejectedValue(new MissingDependencyError('warehouse not found yet'));
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-not-yet',
             version: '1',
@@ -88,7 +90,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         const apply = vi
             .fn()
             .mockRejectedValue(new MissingDependencyError('warehouse not found yet'));
-        const row = await inboxService.enqueue({
+        const row = await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-old',
             version: '1',
@@ -114,16 +116,16 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         const apply = vi.fn().mockResolvedValue(undefined);
 
         // Newer version processed first (simulates out-of-order delivery within a stream).
-        const newer = await inboxService.enqueue({
+        const newer = await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-1',
             version: '5',
             sourceEventId: 'evt-newer',
             payload: { sku: 'SKU-S1', stockOnHand: 10 },
         });
-        await inboxService.markProcessedUnclaimed(newer.id);
+        await inboxService.markProcessedUnclaimed(testRequestContext, newer.id);
 
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-1',
             version: '2',
@@ -145,14 +147,14 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         });
 
         // Reversed enqueue: createdAt order alone yields [v9, v10]; claimBatch must re-sort by version.
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-order',
             version: '9',
             sourceEventId: 'evt-9',
             payload: { sku: 'SKU-ORDER', stockOnHand: 9 },
         });
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-order',
             version: '10',
@@ -174,7 +176,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
     it("processes only the requested lane's streams even with a large backlog of other streams pending", async () => {
         const apply = vi.fn().mockResolvedValue(undefined);
         for (let i = 0; i < 25; i++) {
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId: `bulk-${i}`,
                 version: '1',
@@ -182,7 +184,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
                 payload: { sku: `SKU-${i}` },
             });
         }
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'order-registration-result',
             entityId: 'order-1',
             version: '1',
@@ -209,7 +211,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
     it("reports claimed === batchSize when more pending rows remain, enabling the bulk lane's immediate-reclaim loop", async () => {
         const apply = vi.fn().mockResolvedValue(undefined);
         for (let i = 0; i < 5; i++) {
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId: `p-${i}`,
                 version: '1',
@@ -236,7 +238,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
     it('stops processing a batch once deadlineMs is reached, releasing the rest back to pending', async () => {
         const apply = vi.fn().mockResolvedValue(undefined);
         for (let i = 0; i < 3; i++) {
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId: `p-deadline-${i}`,
                 version: '1',
@@ -261,7 +263,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         expect(rows.every(row => row.status === 'pending')).toBe(true);
 
         // Immediately re-claimable — no need to wait out the stale-processing threshold.
-        const reclaimed = await inboxService.claimBatch(10, ['price']);
+        const reclaimed = await inboxService.claimBatch(testRequestContext, 10, ['price']);
         expect(reclaimed).toHaveLength(3);
     });
 
@@ -272,7 +274,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
             now += 1000;
         });
         for (let i = 0; i < 3; i++) {
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId: `p-partial-${i}`,
                 version: '1',
@@ -305,7 +307,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
         ['a MissingDependencyError', new MissingDependencyError('warehouse not found yet')],
     ])('schedules a backoff retry (not a dead-letter) on %s', async (_label, thrown) => {
         const apply = vi.fn().mockRejectedValue(thrown);
-        const row = await inboxService.enqueue({
+        const row = await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-retry',
             version: '1',
@@ -331,7 +333,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
                 .mockRejectedValue(
                     new UnknownOrderUuidError('no Order found via orderUuid=unknown'),
                 );
-            const row = await inboxService.enqueue({
+            const row = await inboxService.enqueue(testRequestContext, {
                 stream: 'order-registration-result',
                 entityId: 'order-unknown',
                 version: '1',
@@ -355,7 +357,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
                 .mockRejectedValue(
                     new UnknownOrderUuidError('no Order found via orderUuid=unknown'),
                 );
-            const row = await inboxService.enqueue({
+            const row = await inboxService.enqueue(testRequestContext, {
                 stream: 'order-changed',
                 entityId: 'order-unknown-old',
                 version: '1',
@@ -380,7 +382,7 @@ describe('IntegrationInboxProcessorService.processPendingBatch (component)', () 
 
         it('leaves a genuine race (a plain Error, not UnknownOrderUuidError) dead-lettering to failed after the same budget', async () => {
             const apply = vi.fn().mockRejectedValue(new Error('order not yet created locally'));
-            const row = await inboxService.enqueue({
+            const row = await inboxService.enqueue(testRequestContext, {
                 stream: 'order-changed',
                 entityId: 'order-race',
                 version: '1',

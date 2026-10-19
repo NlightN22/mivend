@@ -1,3 +1,5 @@
+import { testRequestContext } from 'shared';
+import { testRequestContextService } from '../test-request-context-service';
 import { EventEmitter } from 'events';
 
 import { create, toBinary } from '@bufbuild/protobuf';
@@ -100,6 +102,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
             makeOptions(),
             { enqueue: vi.fn() } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
         await service.start();
 
@@ -114,6 +117,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
             options,
             { enqueue: vi.fn() } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
         await service.start();
 
@@ -129,6 +133,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
             makeOptions(),
             { enqueue: vi.fn() } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
         const consumerPromise = service.start();
 
@@ -153,6 +158,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
             makeOptions(),
             { enqueue: vi.fn() } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
         const consumerPromise = service.start();
 
@@ -172,6 +178,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
             makeOptions(),
             { enqueue, enqueueRejected } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
         await service.start();
 
@@ -205,6 +212,7 @@ describe('KafkaConsumerService per-topic subscribe isolation', () => {
 
         expect(enqueue).toHaveBeenCalledTimes(1);
         expect(enqueue).toHaveBeenCalledWith(
+            testRequestContext,
             expect.objectContaining({ stream: 'order-changed', entityId: 'e-1' }),
         );
         expect(enqueueRejected).not.toHaveBeenCalled();

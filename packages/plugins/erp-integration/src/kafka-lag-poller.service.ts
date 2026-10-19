@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Logger } from '@vendure/core';
-import { DataSource, In, Not } from 'typeorm';
+import { Logger, RequestContextService, TransactionalConnection } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
+import { In, Not } from 'typeorm';
 import { Kafka } from 'kafkajs';
 import type { Admin, SASLOptions } from 'kafkajs';
 
@@ -24,10 +25,12 @@ export class KafkaLagPollerService {
     constructor(
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
+        private readonly requestContextService: RequestContextService,
     ) {}
 
     async pollAll(): Promise<KafkaLagPollResult> {
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
         const admin = this.createAdmin();
         const failedTopics: string[] = [];
         let polledTopics = 0;
@@ -41,7 +44,7 @@ export class KafkaLagPollerService {
             }
             for (const [topic, stream] of streamByTopic) {
                 try {
-                    await this.pollTopic(admin, stream as InboundStream, topic);
+                    await this.pollTopic(ctx, admin, stream as InboundStream, topic);
                     polledTopics += 1;
                 } catch (err) {
                     failedTopics.push(topic);
@@ -58,8 +61,8 @@ export class KafkaLagPollerService {
         }
         const configuredTopics = [...new Set(Object.values(this.options.kafkaConsumer.topics))];
         if (configuredTopics.length > 0) {
-            await this.dataSource
-                .getRepository(KafkaConsumerLagEntry)
+            await this.connection
+                .getRepository(ctx, KafkaConsumerLagEntry)
                 .delete({ topic: Not(In(configuredTopics)) });
         }
         return { polledTopics, failedTopics };
@@ -75,7 +78,12 @@ export class KafkaLagPollerService {
         return kafka.admin();
     }
 
-    private async pollTopic(admin: Admin, stream: InboundStream, topic: string): Promise<void> {
+    private async pollTopic(
+        ctx: RequestContext,
+        admin: Admin,
+        stream: InboundStream,
+        topic: string,
+    ): Promise<void> {
         const [topicOffsets, groupOffsets] = await Promise.all([
             admin.fetchTopicOffsets(topic),
             admin.fetchOffsets({ groupId: this.options.kafkaConsumer.groupId, topics: [topic] }),
@@ -98,8 +106,8 @@ export class KafkaLagPollerService {
                     ? null
                     : String(BigInt(endOffset) - BigInt(committedOffset));
 
-            await this.dataSource
-                .getRepository(KafkaConsumerLagEntry)
+            await this.connection
+                .getRepository(ctx, KafkaConsumerLagEntry)
                 .upsert(
                     { topic, partition, stream, committedOffset, endOffset, lag, polledAt },
                     { conflictPaths: ['topic', 'partition'] },

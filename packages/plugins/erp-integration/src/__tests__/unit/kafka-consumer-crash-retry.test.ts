@@ -1,3 +1,4 @@
+import { testRequestContextService } from '../test-request-context-service';
 import { EventEmitter } from 'events';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -92,6 +93,7 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
             makeOptions(),
             { enqueue: vi.fn() } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
         await service.start();
         expect(createdConsumers).toHaveLength(1);
@@ -109,6 +111,7 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
             makeOptions(),
             { enqueue: vi.fn() } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
         await service.start();
 
@@ -123,6 +126,7 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
             makeOptions(),
             { enqueue: vi.fn() } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
         await service.start();
 
@@ -140,6 +144,7 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
             makeOptions(),
             { enqueue: vi.fn() } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
         await service.start();
 
@@ -160,6 +165,7 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
             makeOptions(),
             { enqueue: vi.fn() } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
 
         const startPromise = service.start();
@@ -185,6 +191,7 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
             makeOptions(),
             { enqueue: vi.fn() } as never,
             { getRepository: () => ({ upsert: vi.fn().mockResolvedValue(undefined) }) } as never,
+            testRequestContextService,
         );
         await service.start();
         expect(createdConsumers).toHaveLength(1);
@@ -209,6 +216,11 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
 
     // Read from the DB row, not isConnected(): the in-memory flag is invisible to the
     // separate HTTP process that serves KafkaStatusController.
+    // The status write waits for the admin ctx, so let its promise chain settle under fake timers.
+    const flushMicrotasks = async (): Promise<void> => {
+        for (let i = 0; i < 10; i++) await Promise.resolve();
+    };
+
     it('persists connected: true on CONNECT and connected: false on CRASH', async () => {
         const upsert = vi.fn().mockResolvedValue(undefined);
         const dataSource = { getRepository: () => ({ upsert }) };
@@ -216,16 +228,19 @@ describe('KafkaConsumerService crash-retry supervisor', () => {
             makeOptions(),
             { enqueue: vi.fn() } as never,
             dataSource as never,
+            testRequestContextService,
         );
 
         await service.start();
         createdConsumers[0].emitConnect();
+        await flushMicrotasks();
         expect(upsert).toHaveBeenCalledWith(
             { key: 'default', connected: true },
             { conflictPaths: ['key'] },
         );
 
         createdConsumers[0].emitCrash(false);
+        await flushMicrotasks();
         expect(upsert).toHaveBeenCalledWith(
             { key: 'default', connected: false },
             { conflictPaths: ['key'] },

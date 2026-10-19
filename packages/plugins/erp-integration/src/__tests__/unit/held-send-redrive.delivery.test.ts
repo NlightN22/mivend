@@ -14,11 +14,12 @@ describe('HeldSendRedriveService on a staff delivery edit', () => {
                 subscribe: (fn: (e: unknown) => unknown) => handlers.set(cls, fn),
             }),
         };
-        const dataSource = { query: vi.fn().mockResolvedValue([{ id: '11' }]) };
+        const query = vi.fn().mockResolvedValue([{ id: '11' }]);
+        const connection = { getRepository: () => ({ query }) };
         const recovery = { rebuildSkipped: vi.fn().mockResolvedValue('queued') };
         const service = new HeldSendRedriveService(
             eventBus as never,
-            dataSource as never,
+            connection as never,
             recovery as never,
             { create: vi.fn().mockResolvedValue({}) } as never,
             { instanceType: 'central' } as never,
@@ -27,7 +28,7 @@ describe('HeldSendRedriveService on a staff delivery edit', () => {
 
         await handlers.get(OrderDeliveryEditedEvent)?.({ orderId: 7 });
 
-        const params = dataSource.query.mock.calls[0][1] as unknown[];
+        const params = query.mock.calls[0][1] as unknown[];
         expect(params[1]).toBe('7');
         expect(params[3]).toBe(COURIER_WITHOUT_POINT_SKIP_REASON);
         expect(params[4]).toBe(COURIER_POINT_UNCONFIRMED_SKIP_REASON);

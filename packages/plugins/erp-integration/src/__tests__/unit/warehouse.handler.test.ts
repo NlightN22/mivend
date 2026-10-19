@@ -4,20 +4,12 @@ import type { RequestContext } from '@vendure/core';
 import { WarehouseStreamHandler } from '../../handlers/warehouse.handler';
 
 function createConnection(existingLocation: { id: string } | undefined): {
-    rawConnection: { createQueryBuilder: () => unknown };
+    getRepository: () => unknown;
 } {
     return {
-        rawConnection: {
-            createQueryBuilder: () => ({
-                select: () => ({
-                    from: () => ({
-                        where: () => ({
-                            getRawOne: vi.fn().mockResolvedValue(existingLocation),
-                        }),
-                    }),
-                }),
-            }),
-        },
+        getRepository: () => ({
+            query: vi.fn().mockResolvedValue(existingLocation ? [existingLocation] : []),
+        }),
     };
 }
 

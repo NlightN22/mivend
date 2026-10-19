@@ -1,7 +1,7 @@
 import type { fromBinary } from '@bufbuild/protobuf';
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
-import { Logger } from '@vendure/core';
-import { DataSource } from 'typeorm';
+import { Logger, RequestContextService, TransactionalConnection } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
 import {
     CategoryChangedSchema,
     ContractChangedSchema,
@@ -119,8 +119,13 @@ export class KafkaConsumerService implements OnModuleDestroy {
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
         private readonly options: ErpIntegrationPluginOptions,
         private readonly inbox: IntegrationInboxService,
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
+        private readonly requestContextService: RequestContextService,
     ) {}
+
+    private adminCtx(): Promise<RequestContext> {
+        return this.requestContextService.create({ apiType: 'admin' });
+    }
 
     isConnected(): boolean {
         return this.connected;
@@ -129,15 +134,20 @@ export class KafkaConsumerService implements OnModuleDestroy {
     // Fire-and-forget: a DB hiccup here must never crash Kafka message handling — this is a
     // best-effort status mirror, not a business-critical write.
     private persistStatus(connected: boolean): void {
-        const repo = this.dataSource.getRepository(KafkaConsumerStatus);
-        repo.upsert({ key: STATUS_KEY, connected }, { conflictPaths: ['key'] }).catch(err => {
-            Logger.error(
-                `Failed to persist Kafka consumer status: ${
-                    err instanceof Error ? err.message : String(err)
-                }`,
-                loggerCtx,
-            );
-        });
+        this.adminCtx()
+            .then(ctx =>
+                this.connection
+                    .getRepository(ctx, KafkaConsumerStatus)
+                    .upsert({ key: STATUS_KEY, connected }, { conflictPaths: ['key'] }),
+            )
+            .catch(err => {
+                Logger.error(
+                    `Failed to persist Kafka consumer status: ${
+                        err instanceof Error ? err.message : String(err)
+                    }`,
+                    loggerCtx,
+                );
+            });
     }
 
     // A failed start() must still schedule crash-retry before rethrowing, or the consumer stays dead.
@@ -291,10 +301,10 @@ export class KafkaConsumerService implements OnModuleDestroy {
                 `Rejected ${stream} message (offset=${offset}): ${classified.rejected.reason}`,
                 loggerCtx,
             );
-            await this.inbox.enqueueRejected(classified.rejected);
+            await this.inbox.enqueueRejected(await this.adminCtx(), classified.rejected);
             return;
         }
-        await this.inbox.enqueue(classified.input);
+        await this.inbox.enqueue(await this.adminCtx(), classified.input);
     }
 
     private async connectWithBackoff(): Promise<void> {
@@ -333,9 +343,12 @@ export class KafkaConsumerService implements OnModuleDestroy {
                 loggerCtx,
             );
         }
-        await this.dataSource
-            .getRepository(KafkaConsumerStatus)
-            .upsert({ key: STATUS_KEY, connected: false }, { conflictPaths: ['key'] })
+        await this.adminCtx()
+            .then(ctx =>
+                this.connection
+                    .getRepository(ctx, KafkaConsumerStatus)
+                    .upsert({ key: STATUS_KEY, connected: false }, { conflictPaths: ['key'] }),
+            )
             // best-effort: status row is advisory and shutdown must not fail on it.
             .catch(() => undefined);
     }

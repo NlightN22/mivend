@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ProductVariantService, RequestContext, TransactionalConnection } from '@vendure/core';
 import { DocumentsService } from '@mivend/plugin-documents';
 import { OrderCheckStaleService } from '@mivend/plugin-reservation';
-import { withAggregateLock } from 'shared';
+import { ctxQuery, withAggregateLock } from 'shared';
 
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
@@ -82,7 +82,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
             .orderBy('a.priority', 'ASC')
             .addOrderBy('a.entityId', 'ASC')
             .getOne();
-        const variant = await this.findVariant(productId);
+        const variant = await this.findVariant(ctx, productId);
         if (!variant) {
             if (!winner) return;
             // Ordinary eventual-consistency race (product stream not consumed yet): retry.
@@ -126,17 +126,20 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         );
     }
 
-    private async findVariant(productId: string): Promise<VariantOrganization | undefined> {
-        const row = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('pv.id', 'id')
-            .addSelect('pv."customFieldsOrganizationid"', 'organizationId')
-            .addSelect('pv."customFieldsOrganizationpriority"', 'organizationPriority')
-            .addSelect('pv."customFieldsOrganizationsourceentityid"', 'organizationSourceEntityId')
-            .from('product_variant', 'pv')
-            .innerJoin('product', 'p', 'p.id = pv."productId"')
-            .where('p."customFieldsExternalid" = :productId', { productId })
-            .getRawOne<VariantOrganization>();
+    private async findVariant(
+        ctx: RequestContext,
+        productId: string,
+    ): Promise<VariantOrganization | undefined> {
+        const [row] = await ctxQuery<VariantOrganization[]>(
+            this.connection,
+            ctx,
+            `SELECT pv.id, pv."customFieldsOrganizationid" AS "organizationId",
+                    pv."customFieldsOrganizationpriority" AS "organizationPriority",
+                    pv."customFieldsOrganizationsourceentityid" AS "organizationSourceEntityId"
+               FROM product_variant pv INNER JOIN product p ON p.id = pv."productId"
+              WHERE p."customFieldsExternalid" = $1`,
+            [productId],
+        );
         return row;
     }
 }

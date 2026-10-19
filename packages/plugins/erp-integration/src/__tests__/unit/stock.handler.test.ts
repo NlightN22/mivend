@@ -11,26 +11,15 @@ function createConnection(
     rows: Array<Record<string, unknown> | undefined>,
     stockLevelSave = vi.fn(),
 ): {
-    rawConnection: { createQueryBuilder: () => unknown };
-    getRepository: () => { update: typeof stockLevelSave };
+    getRepository: () => { update: typeof stockLevelSave; query: () => Promise<unknown[]> };
 } {
     let call = 0;
-    return {
-        rawConnection: {
-            createQueryBuilder: () => {
-                const row = rows[call];
-                call += 1;
-                return {
-                    select: vi.fn().mockReturnThis(),
-                    from: vi.fn().mockReturnThis(),
-                    innerJoin: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    getRawOne: vi.fn().mockResolvedValue(row),
-                };
-            },
-        },
-        getRepository: () => ({ update: stockLevelSave }),
+    const query = async (): Promise<unknown[]> => {
+        const row = rows[call];
+        call += 1;
+        return row ? [row] : [];
     };
+    return { getRepository: () => ({ update: stockLevelSave, query }) };
 }
 
 describe('StockStreamHandler', () => {

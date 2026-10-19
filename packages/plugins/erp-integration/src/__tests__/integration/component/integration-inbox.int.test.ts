@@ -5,7 +5,10 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
+import { testRequestContextService } from '../../test-request-context-service';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
 import { IntegrationInboxHealthService } from '../../../integration-inbox-health.service';
@@ -33,9 +36,12 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    inboxService = new IntegrationInboxService(dataSource);
-    retention = new IntegrationInboxRetentionService(dataSource);
-    inboxHealth = new IntegrationInboxHealthService(dataSource);
+    inboxService = new IntegrationInboxService(createTestConnection(dataSource));
+    retention = new IntegrationInboxRetentionService(
+        createTestConnection(dataSource),
+        testRequestContextService,
+    );
+    inboxHealth = new IntegrationInboxHealthService(createTestConnection(dataSource));
 });
 
 afterEach(async () => {
@@ -53,12 +59,12 @@ async function deadLetter(id: number): Promise<void> {
         "UPDATE integration_inbox_event SET first_failed_at = now() - interval '25 hours' WHERE id = $1",
         [id],
     );
-    await inboxService.markFailedUnclaimed(id, new Error('boom'));
+    await inboxService.markFailedUnclaimed(testRequestContext, id, new Error('boom'));
 }
 
 describe('IntegrationInboxService (integration, real Postgres)', () => {
     it('enqueues a new (stream, sourceEventId) as a pending row', async () => {
-        const row = await inboxService.enqueue({
+        const row = await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-1',
             version: '1',
@@ -70,14 +76,14 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     });
 
     it('is a no-op on a duplicate (stream, sourceEventId) — dedup key', async () => {
-        const first = await inboxService.enqueue({
+        const first = await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-1',
             version: '1',
             sourceEventId: 'evt-1',
             payload: { sku: 'SKU-1' },
         });
-        const second = await inboxService.enqueue({
+        const second = await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-1',
             version: '1',
@@ -95,14 +101,14 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     // Dedup must not key on (stream, entityId, version): distinct sourceEventIds may share a version.
     // Backfill events can collide on version with unrelated earlier events for the same entity.
     it('does not conflate two distinct events for the same entity that happen to share a version', async () => {
-        const first = await inboxService.enqueue({
+        const first = await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-1',
             version: '2026-09-12T14:13:47Z',
             sourceEventId: 'evt-original-update',
             payload: { sku: 'SKU-1' },
         });
-        const second = await inboxService.enqueue({
+        const second = await inboxService.enqueue(testRequestContext, {
             stream: 'product',
             entityId: 'p-1',
             version: '2026-09-12T14:13:47Z',
@@ -126,8 +132,8 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             payload: { sku: 'SKU-RACE' },
         };
         const [a, b] = await Promise.all([
-            inboxService.enqueue(input),
-            inboxService.enqueue(input),
+            inboxService.enqueue(testRequestContext, input),
+            inboxService.enqueue(testRequestContext, input),
         ]);
         expect(a.id).toBe(b.id);
 
@@ -138,7 +144,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     });
 
     it('claimBatch prevents two concurrent claimers from both taking the same pending row', async () => {
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-1',
             version: '1',
@@ -147,8 +153,8 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         });
 
         const [batchA, batchB] = await Promise.all([
-            inboxService.claimBatch(10),
-            inboxService.claimBatch(10),
+            inboxService.claimBatch(testRequestContext, 10),
+            inboxService.claimBatch(testRequestContext, 10),
         ]);
         const totalClaimed = batchA.length + batchB.length;
         expect(totalClaimed).toBe(1);
@@ -156,7 +162,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
 
     // #148 HIGH regression — see claimBatch's own comment and docs/environments.md's #148 note.
     it('does not re-claim a row a competing sweep already claimed and committed between the two phases', async () => {
-        const row = await inboxService.enqueue({
+        const row = await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-race',
             version: '1',
@@ -177,23 +183,23 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             return ids;
         });
 
-        const claimed = await inboxService.claimBatch(10, ['stock']);
+        const claimed = await inboxService.claimBatch(testRequestContext, 10, ['stock']);
 
         expect(claimed).toHaveLength(0);
     });
 
     it('claimBatch does not reclaim a row still actively processing (not yet stale)', async () => {
-        await inboxService.enqueue({
+        await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-fresh',
             version: '1',
             sourceEventId: 'evt-3',
             payload: { sku: 'SKU-3', stockOnHand: 1 },
         });
-        const [claimed] = await inboxService.claimBatch(10);
+        const [claimed] = await inboxService.claimBatch(testRequestContext, 10);
         expect(claimed).toBeDefined();
 
-        const secondClaim = await inboxService.claimBatch(10);
+        const secondClaim = await inboxService.claimBatch(testRequestContext, 10);
         expect(secondClaim).toHaveLength(0);
     });
 
@@ -201,7 +207,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     // and a retry that came due earlier isn't starved by them.
     describe('claimBatch fairness between retries and fresh rows', () => {
         async function enqueueAt(entityId: string, createdAgo: string): Promise<number> {
-            const row = await inboxService.enqueue({
+            const row = await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId,
                 version: '1',
@@ -223,7 +229,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 [retryId],
             );
 
-            const [first] = await inboxService.claimBatch(1);
+            const [first] = await inboxService.claimBatch(testRequestContext, 1);
 
             expect(first.id).toBe(freshId);
         });
@@ -236,14 +242,14 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 [retryId],
             );
 
-            const [first] = await inboxService.claimBatch(1);
+            const [first] = await inboxService.claimBatch(testRequestContext, 1);
 
             expect(first.id).toBe(retryId);
         });
     });
 
     it('markFailed schedules a backoff retry inside the 24h budget, dead-letters after it', async () => {
-        const row = await inboxService.enqueue({
+        const row = await inboxService.enqueue(testRequestContext, {
             stream: 'price',
             entityId: 'pr-1',
             version: '1',
@@ -251,7 +257,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             payload: { sku: 'SKU-4', priceTypeCode: 'RETAIL', price: 100 },
         });
 
-        await inboxService.markFailedUnclaimed(row.id, new Error('boom'));
+        await inboxService.markFailedUnclaimed(testRequestContext, row.id, new Error('boom'));
         let updated = await dataSource
             .getRepository(IntegrationInboxEvent)
             .findOneOrFail({ where: { id: row.id } });
@@ -269,7 +275,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     });
 
     it('markFailed dead-letters a non-retryable error at once with its reason', async () => {
-        const row = await inboxService.enqueue({
+        const row = await inboxService.enqueue(testRequestContext, {
             stream: 'settlement-document',
             entityId: 'doc-bad',
             version: '1',
@@ -278,6 +284,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         });
 
         await inboxService.markFailedUnclaimed(
+            testRequestContext,
             row.id,
             new NonRetryableInboundError('entry 0 invalid'),
         );
@@ -293,7 +300,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     // #145: the budget starts at the first failure, not at enqueue — a backlog that waited out a
     // long outage must still get retries.
     it('markFailed schedules a retry for a row enqueued more than 24h ago on its first failure', async () => {
-        const row = await inboxService.enqueue({
+        const row = await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-backlog',
             version: '1',
@@ -305,7 +312,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             [row.id],
         );
 
-        await inboxService.markFailedUnclaimed(row.id, new Error('transient'));
+        await inboxService.markFailedUnclaimed(testRequestContext, row.id, new Error('transient'));
 
         const updated = await dataSource
             .getRepository(IntegrationInboxEvent)
@@ -317,7 +324,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
 
     // Issue #211: onBudgetExhausted reroutes a budget-exhausted markFailed to a noop outcome.
     it('markFailed resolves as noop with the given reason once the budget is exhausted, when onBudgetExhausted is passed', async () => {
-        const row = await inboxService.enqueue({
+        const row = await inboxService.enqueue(testRequestContext, {
             stream: 'order-registration-result',
             entityId: 'order-unknown',
             version: '1',
@@ -330,6 +337,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         );
 
         await inboxService.markFailedUnclaimed(
+            testRequestContext,
             row.id,
             new Error('order-registration-result: no Order found'),
             undefined,
@@ -350,7 +358,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
 
     // Default behaviour (no onBudgetExhausted) is unchanged — still dead-letters to failed.
     it('markFailed still dead-letters to failed once the budget is exhausted, when onBudgetExhausted is omitted', async () => {
-        const row = await inboxService.enqueue({
+        const row = await inboxService.enqueue(testRequestContext, {
             stream: 'stock',
             entityId: 's-genuine-failure',
             version: '1',
@@ -362,7 +370,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             [row.id],
         );
 
-        await inboxService.markFailedUnclaimed(row.id, new Error('boom'));
+        await inboxService.markFailedUnclaimed(testRequestContext, row.id, new Error('boom'));
 
         const updated = await dataSource
             .getRepository(IntegrationInboxEvent)
@@ -372,14 +380,14 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     });
 
     it('markProcessed sets status and processedAt', async () => {
-        const row = await inboxService.enqueue({
+        const row = await inboxService.enqueue(testRequestContext, {
             stream: 'category',
             entityId: 'c-1',
             version: '1',
             sourceEventId: 'evt-5',
             payload: { name: 'Widgets' },
         });
-        await inboxService.markProcessedUnclaimed(row.id);
+        await inboxService.markProcessedUnclaimed(testRequestContext, row.id);
         const updated = await dataSource
             .getRepository(IntegrationInboxEvent)
             .findOneOrFail({ where: { id: row.id } });
@@ -390,7 +398,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     // #212: a failed row that can never be replayed (e.g. undecodable) must still have a way out.
     describe('dismissFailed', () => {
         it('moves a failed row out of the failures list, recording the reason', async () => {
-            const row = await inboxService.enqueue({
+            const row = await inboxService.enqueue(testRequestContext, {
                 stream: 'category',
                 entityId: 'rejected@0:7',
                 version: '',
@@ -399,7 +407,11 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             });
             await deadLetter(row.id);
 
-            const dismissed = await inboxService.dismissFailed(row.id, 'undecodable, no entity id');
+            const dismissed = await inboxService.dismissFailed(
+                testRequestContext,
+                row.id,
+                'undecodable, no entity id',
+            );
             expect(dismissed).toBe(true);
 
             const updated = await dataSource
@@ -409,21 +421,25 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             expect(updated.outcome).toBe('dismissed');
             expect(updated.outcomeReason).toBe('undecodable, no entity id');
 
-            const failed = await inboxService.findFailed();
+            const failed = await inboxService.findFailed(testRequestContext);
             expect(failed.items.find(item => item.id === row.id)).toBeUndefined();
         });
 
         it('is a no-op on a row that is not failed, so a double click cannot double-dismiss', async () => {
-            const row = await inboxService.enqueue({
+            const row = await inboxService.enqueue(testRequestContext, {
                 stream: 'category',
                 entityId: 'c-dismiss-noop',
                 version: '1',
                 sourceEventId: 'evt-dismiss-noop',
                 payload: { name: 'Widgets' },
             });
-            await inboxService.markProcessedUnclaimed(row.id, 'applied');
+            await inboxService.markProcessedUnclaimed(testRequestContext, row.id, 'applied');
 
-            const dismissed = await inboxService.dismissFailed(row.id, 'late click');
+            const dismissed = await inboxService.dismissFailed(
+                testRequestContext,
+                row.id,
+                'late click',
+            );
             expect(dismissed).toBe(false);
 
             const updated = await dataSource
@@ -436,7 +452,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     // issue #76's dashboard read model — recent dead-lettered events for a manager to notice.
     describe('findFailed', () => {
         it('returns a failed row', async () => {
-            const row = await inboxService.enqueue({
+            const row = await inboxService.enqueue(testRequestContext, {
                 stream: 'product',
                 entityId: 'p-failed',
                 version: '1',
@@ -445,36 +461,36 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             });
             await deadLetter(row.id);
 
-            const result = await inboxService.findFailed();
+            const result = await inboxService.findFailed(testRequestContext);
             expect(result.items.map(i => i.id)).toContain(row.id);
             expect(result.totalItems).toBe(1);
         });
 
         it('does not return a pending/processed row', async () => {
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'product',
                 entityId: 'p-pending',
                 version: '1',
                 sourceEventId: 'evt-pending',
                 payload: { sku: 'SKU-PENDING' },
             });
-            const processedRow = await inboxService.enqueue({
+            const processedRow = await inboxService.enqueue(testRequestContext, {
                 stream: 'product',
                 entityId: 'p-processed',
                 version: '1',
                 sourceEventId: 'evt-processed',
                 payload: { sku: 'SKU-PROCESSED' },
             });
-            await inboxService.markProcessedUnclaimed(processedRow.id);
+            await inboxService.markProcessedUnclaimed(testRequestContext, processedRow.id);
 
-            const result = await inboxService.findFailed();
+            const result = await inboxService.findFailed(testRequestContext);
             expect(result.items).toEqual([]);
             expect(result.totalItems).toBe(0);
         });
 
         it('paginates with take/skip', async () => {
             for (let i = 0; i < 5; i++) {
-                const row = await inboxService.enqueue({
+                const row = await inboxService.enqueue(testRequestContext, {
                     stream: 'product',
                     entityId: `p-page-${i}`,
                     version: '1',
@@ -484,8 +500,8 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 await deadLetter(row.id);
             }
 
-            const page1 = await inboxService.findFailed({ take: 2, skip: 0 });
-            const page2 = await inboxService.findFailed({ take: 2, skip: 2 });
+            const page1 = await inboxService.findFailed(testRequestContext, { take: 2, skip: 0 });
+            const page2 = await inboxService.findFailed(testRequestContext, { take: 2, skip: 2 });
             expect(page1.totalItems).toBe(5);
             expect(page2.totalItems).toBe(5);
             expect(page1.items).toHaveLength(2);
@@ -498,7 +514,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         it('orders newest-updated first, with id as a tiebreaker', async () => {
             const rows = [];
             for (let i = 0; i < 3; i++) {
-                const row = await inboxService.enqueue({
+                const row = await inboxService.enqueue(testRequestContext, {
                     stream: 'product',
                     entityId: `p-order-${i}`,
                     version: '1',
@@ -509,7 +525,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 rows.push(row);
             }
 
-            const result = await inboxService.findFailed();
+            const result = await inboxService.findFailed(testRequestContext);
             const resultIds = result.items.map(i => i.id);
             expect(resultIds).toEqual([...rows.map(r => r.id)].reverse());
         });
@@ -519,14 +535,14 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     // each lane's ScheduledTask passes its own disjoint stream set.
     describe('claimBatch stream filter', () => {
         it('claims only rows matching the given streams, leaving others pending', async () => {
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId: 'pr-1',
                 version: '1',
                 sourceEventId: 'evt-price-1',
                 payload: {},
             });
-            const critical = await inboxService.enqueue({
+            const critical = await inboxService.enqueue(testRequestContext, {
                 stream: 'order-registration-result',
                 entityId: 'order-1',
                 version: '1',
@@ -534,7 +550,9 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 payload: {},
             });
 
-            const claimed = await inboxService.claimBatch(20, ['order-registration-result']);
+            const claimed = await inboxService.claimBatch(testRequestContext, 20, [
+                'order-registration-result',
+            ]);
             expect(claimed.map(r => r.id)).toEqual([critical.id]);
 
             const priceRow = await dataSource
@@ -544,21 +562,21 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         });
 
         it('claims across all matching streams when given more than one', async () => {
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId: 'pr-2',
                 version: '1',
                 sourceEventId: 'evt-price-2',
                 payload: {},
             });
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'stock',
                 entityId: 'st-1',
                 version: '1',
                 sourceEventId: 'evt-stock-1',
                 payload: {},
             });
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'order-registration-result',
                 entityId: 'order-2',
                 version: '1',
@@ -566,19 +584,22 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 payload: {},
             });
 
-            const claimed = await inboxService.claimBatch(20, ['price', 'stock']);
+            const claimed = await inboxService.claimBatch(testRequestContext, 20, [
+                'price',
+                'stock',
+            ]);
             expect(claimed.map(r => r.stream).sort()).toEqual(['price', 'stock']);
         });
 
         it('claims across every stream when no filter is given (unchanged pre-#93 behavior)', async () => {
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId: 'pr-3',
                 version: '1',
                 sourceEventId: 'evt-price-3',
                 payload: {},
             });
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'order-registration-result',
                 entityId: 'order-3',
                 version: '1',
@@ -586,7 +607,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 payload: {},
             });
 
-            const claimed = await inboxService.claimBatch(20);
+            const claimed = await inboxService.claimBatch(testRequestContext, 20);
             expect(claimed.length).toBe(2);
         });
 
@@ -594,7 +615,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         // Older backlog on one stream must not delay rows on a stream with its own dedicated lane.
         it('claims a newer user row promptly even with a much older counterparty backlog present', async () => {
             for (let i = 0; i < 5; i++) {
-                await inboxService.enqueue({
+                await inboxService.enqueue(testRequestContext, {
                     stream: 'counterparty',
                     entityId: `cp-${i}`,
                     version: '1',
@@ -602,7 +623,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                     payload: {},
                 });
             }
-            const userRow = await inboxService.enqueue({
+            const userRow = await inboxService.enqueue(testRequestContext, {
                 stream: 'user',
                 entityId: 'user-1',
                 version: '1',
@@ -610,7 +631,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 payload: {},
             });
 
-            const claimed = await inboxService.claimBatch(20, ['user']);
+            const claimed = await inboxService.claimBatch(testRequestContext, 20, ['user']);
             expect(claimed.map(r => r.id)).toEqual([userRow.id]);
 
             const counterpartyRows = await dataSource
@@ -624,21 +645,21 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     // Real Postgres: a mocked query builder would not exercise the GROUP BY/aggregate shape.
     describe('getBacklogByStream', () => {
         it('counts pending/processing/failed rows per stream, ignoring processed rows', async () => {
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'product',
                 entityId: 'p-1',
                 version: '1',
                 sourceEventId: 'evt-backlog-1',
                 payload: {},
             });
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'product',
                 entityId: 'p-2',
                 version: '1',
                 sourceEventId: 'evt-backlog-2',
                 payload: {},
             });
-            const processed = await inboxService.enqueue({
+            const processed = await inboxService.enqueue(testRequestContext, {
                 stream: 'product',
                 entityId: 'p-3',
                 version: '1',
@@ -648,14 +669,14 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             await dataSource
                 .getRepository(IntegrationInboxEvent)
                 .update(processed.id, { status: 'processed' });
-            await inboxService.enqueue({
+            await inboxService.enqueue(testRequestContext, {
                 stream: 'stock',
                 entityId: 's-1',
                 version: '1',
                 sourceEventId: 'evt-backlog-4',
                 payload: {},
             });
-            const failed = await inboxService.enqueue({
+            const failed = await inboxService.enqueue(testRequestContext, {
                 stream: 'stock',
                 entityId: 's-2',
                 version: '1',
@@ -666,7 +687,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 .getRepository(IntegrationInboxEvent)
                 .update(failed.id, { status: 'failed' });
 
-            const backlog = await inboxHealth.getBacklogByStream();
+            const backlog = await inboxHealth.getBacklogByStream(testRequestContext);
             const byStream = Object.fromEntries(backlog.map(b => [b.stream, b]));
 
             expect(byStream.product).toEqual({
@@ -688,7 +709,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         });
 
         it('returns an empty array when there is no backlog at all', async () => {
-            const backlog = await inboxHealth.getBacklogByStream();
+            const backlog = await inboxHealth.getBacklogByStream(testRequestContext);
             expect(backlog).toEqual([]);
         });
     });
@@ -701,14 +722,14 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             version: string,
             payload: Record<string, unknown> = { real: 'data' },
         ): Promise<number> {
-            const row = await inboxService.enqueue({
+            const row = await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId,
                 version,
                 sourceEventId: `evt-${entityId}-${version}`,
                 payload,
             });
-            await inboxService.markProcessedUnclaimed(row.id);
+            await inboxService.markProcessedUnclaimed(testRequestContext, row.id);
             return row.id;
         }
 
@@ -736,7 +757,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             await enqueueProcessed('pr-redelivered', '2');
             await retention.purgeSupersededProcessedRows();
 
-            const redelivered = await inboxService.enqueue({
+            const redelivered = await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId: 'pr-redelivered',
                 version: '1',
@@ -770,7 +791,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
 
         it('never touches a pending or processing row, only processed duplicates', async () => {
             const processed = await enqueueProcessed('pr-mixed', '1');
-            const pending = await inboxService.enqueue({
+            const pending = await inboxService.enqueue(testRequestContext, {
                 stream: 'price',
                 entityId: 'pr-mixed',
                 version: '2',
@@ -818,22 +839,22 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
 
         it('keeps entities from different streams independent even sharing an entityId', async () => {
             await enqueueProcessed('shared-id', '1');
-            const stockOlder = await inboxService.enqueue({
+            const stockOlder = await inboxService.enqueue(testRequestContext, {
                 stream: 'stock',
                 entityId: 'shared-id',
                 version: '1',
                 sourceEventId: 'evt-shared-stock',
                 payload: { real: 'data' },
             });
-            await inboxService.markProcessedUnclaimed(stockOlder.id);
-            const stockNewest = await inboxService.enqueue({
+            await inboxService.markProcessedUnclaimed(testRequestContext, stockOlder.id);
+            const stockNewest = await inboxService.enqueue(testRequestContext, {
                 stream: 'stock',
                 entityId: 'shared-id',
                 version: '2',
                 sourceEventId: 'evt-shared-stock-2',
                 payload: { real: 'data' },
             });
-            await inboxService.markProcessedUnclaimed(stockNewest.id);
+            await inboxService.markProcessedUnclaimed(testRequestContext, stockNewest.id);
 
             await retention.purgeSupersededProcessedRows();
 

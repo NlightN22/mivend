@@ -1,3 +1,4 @@
+import { testRequestContext } from 'shared';
 import { describe, expect, it, vi } from 'vitest';
 import { PERMISSIONS_METADATA_KEY, UserInputError } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
@@ -20,7 +21,10 @@ describe('IntegrationInboxEventResolver.dismissFailedIntegrationInbox', () => {
         const resolver = new IntegrationInboxEventResolver(inboxService as never, {} as never);
 
         await expect(
-            resolver.dismissFailedIntegrationInbox({ id, reason: 'no longer actionable' }),
+            resolver.dismissFailedIntegrationInbox(testRequestContext, {
+                id,
+                reason: 'no longer actionable',
+            }),
         ).rejects.toThrow(UserInputError);
         expect(inboxService.dismissFailed).not.toHaveBeenCalled();
     });
@@ -30,7 +34,7 @@ describe('IntegrationInboxEventResolver.dismissFailedIntegrationInbox', () => {
         const resolver = new IntegrationInboxEventResolver(inboxService as never, {} as never);
 
         await expect(
-            resolver.dismissFailedIntegrationInbox({ id: '5', reason: '   ' }),
+            resolver.dismissFailedIntegrationInbox(testRequestContext, { id: '5', reason: '   ' }),
         ).rejects.toThrow(UserInputError);
         expect(inboxService.dismissFailed).not.toHaveBeenCalled();
     });
@@ -39,12 +43,16 @@ describe('IntegrationInboxEventResolver.dismissFailedIntegrationInbox', () => {
         const inboxService = { dismissFailed: vi.fn().mockResolvedValue(true) };
         const resolver = new IntegrationInboxEventResolver(inboxService as never, {} as never);
 
-        const result = await resolver.dismissFailedIntegrationInbox({
+        const result = await resolver.dismissFailedIntegrationInbox(testRequestContext, {
             id: '5',
             reason: 'undecodable, no entity id',
         });
 
         expect(result).toBe(true);
-        expect(inboxService.dismissFailed).toHaveBeenCalledWith(5, 'undecodable, no entity id');
+        expect(inboxService.dismissFailed).toHaveBeenCalledWith(
+            testRequestContext,
+            5,
+            'undecodable, no entity id',
+        );
     });
 });

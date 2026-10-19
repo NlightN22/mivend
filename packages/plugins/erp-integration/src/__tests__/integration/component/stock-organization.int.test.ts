@@ -55,11 +55,13 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     const connection = {
-        rawConnection: dataSource,
         getRepository: (c: RequestContext, entity: unknown) => {
             const manager = (c as unknown as { __manager?: EntityManager }).__manager;
             if (typeof entity === 'string') {
-                return { query: (sql: string, params?: unknown[]) => manager!.query(sql, params) };
+                return {
+                    query: (sql: string, params?: unknown[]) =>
+                        (manager ?? dataSource.manager).query(sql, params),
+                };
             }
             return (manager ?? dataSource).getRepository(TestStockOrganization);
         },

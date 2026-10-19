@@ -17,16 +17,7 @@ const ctx = {} as RequestContext;
 
 function orderConnection(variantId: string): never {
     return {
-        rawConnection: {
-            createQueryBuilder: () => ({
-                select: vi.fn().mockReturnThis(),
-                addSelect: vi.fn().mockReturnThis(),
-                from: vi.fn().mockReturnThis(),
-                innerJoin: vi.fn().mockReturnThis(),
-                where: vi.fn().mockReturnThis(),
-                getRawOne: vi.fn().mockResolvedValue({ id: variantId }),
-            }),
-        },
+        getRepository: () => ({ query: vi.fn().mockResolvedValue([{ id: variantId }]) }),
     } as never;
 }
 

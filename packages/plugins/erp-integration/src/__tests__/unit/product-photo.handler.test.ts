@@ -23,16 +23,10 @@ function setup(opts: { existing?: Partial<ProductPhoto>; productExists?: boolean
         update: vi.fn(),
         create: vi.fn((v: unknown) => v),
     };
-    const getRawOne = vi
-        .fn()
-        .mockResolvedValue(opts.productExists === false ? undefined : { id: '1' });
-    const qb = { select: vi.fn(), from: vi.fn(), where: vi.fn(), getRawOne };
-    qb.select.mockReturnValue(qb);
-    qb.from.mockReturnValue(qb);
-    qb.where.mockReturnValue(qb);
+    const query = vi.fn().mockResolvedValue(opts.productExists === false ? [] : [{ id: '1' }]);
     const connection = {
-        getRepository: () => repo,
-        rawConnection: { createQueryBuilder: () => qb },
+        getRepository: (_ctx: unknown, entity: unknown) =>
+            entity === 'Channel' ? { query } : repo,
     };
     const enqueue = vi.fn();
     const handler = new ProductPhotoStreamHandler(
@@ -55,7 +49,7 @@ describe('ProductPhotoStreamHandler', () => {
                 assetId: null,
             }),
         );
-        expect(enqueue).toHaveBeenCalledWith('p-1');
+        expect(enqueue).toHaveBeenCalledWith(expect.anything(), 'p-1');
     });
 
     it('throws a retryable error when the product has not arrived yet', async () => {
@@ -124,7 +118,7 @@ describe('ProductPhotoStreamHandler', () => {
         });
         await handler.apply(ctx, 'f-1', { isDeleted: true });
         expect(repo.update).toHaveBeenCalledWith(5, { isDeleted: true });
-        expect(enqueue).toHaveBeenCalledWith('p-1');
+        expect(enqueue).toHaveBeenCalledWith(expect.anything(), 'p-1');
     });
 
     it('ignores a tombstone for an unknown photo', async () => {

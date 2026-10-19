@@ -5,6 +5,8 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
@@ -15,7 +17,7 @@ let inbox: IntegrationInboxService;
 const { schema, extra } = testSchemaOptions('erp_inbox_settled_guard');
 
 const enqueue = (n: number) =>
-    inbox.enqueue({
+    inbox.enqueue(testRequestContext, {
         stream: 'price',
         entityId: `pr-${n}`,
         version: '1',
@@ -37,7 +39,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    inbox = new IntegrationInboxService(dataSource);
+    inbox = new IntegrationInboxService(createTestConnection(dataSource));
 });
 
 afterEach(async () => {
@@ -54,8 +56,8 @@ describe('inbox outcome writes (integration, real Postgres)', () => {
         const row = await enqueue(1);
 
         await Promise.all([
-            inbox.markFailedUnclaimed(row.id, new Error('boom')),
-            inbox.markFailedUnclaimed(row.id, new Error('boom')),
+            inbox.markFailedUnclaimed(testRequestContext, row.id, new Error('boom')),
+            inbox.markFailedUnclaimed(testRequestContext, row.id, new Error('boom')),
         ]);
 
         expect((await reload(row.id)).attempts).toBe(2);
@@ -63,10 +65,10 @@ describe('inbox outcome writes (integration, real Postgres)', () => {
 
     it('a late markFailed or markProcessed does not overwrite a row another worker settled', async () => {
         const row = await enqueue(2);
-        await inbox.markProcessedUnclaimed(row.id, 'applied');
+        await inbox.markProcessedUnclaimed(testRequestContext, row.id, 'applied');
 
-        await inbox.markFailedUnclaimed(row.id, new Error('stale worker'));
-        await inbox.markProcessedUnclaimed(row.id, 'noop', 'stale worker');
+        await inbox.markFailedUnclaimed(testRequestContext, row.id, new Error('stale worker'));
+        await inbox.markProcessedUnclaimed(testRequestContext, row.id, 'noop', 'stale worker');
 
         const after = await reload(row.id);
         expect(after.status).toBe('processed');
@@ -76,24 +78,31 @@ describe('inbox outcome writes (integration, real Postgres)', () => {
 
     it("a stale claimant whose claim was reclaimed cannot settle the new claimant's row", async () => {
         const row = await enqueue(3);
-        const [first] = await inbox.claimBatch(1);
+        const [first] = await inbox.claimBatch(testRequestContext, 1);
         await dataSource.query(
             `UPDATE integration_inbox_event SET updated_at = now() - interval '1 hour' WHERE id = $1`,
             [row.id],
         );
-        const [second] = await inbox.claimBatch(1);
+        const [second] = await inbox.claimBatch(testRequestContext, 1);
         expect(second.id).toBe(first.id);
         expect(second.claimToken).not.toBe(first.claimToken);
 
-        await inbox.markFailed(row.id, new Error('stale'), Math.random, null, first.claimToken);
-        await inbox.markProcessed(row.id, 'applied', null, first.claimToken);
+        await inbox.markFailed(
+            testRequestContext,
+            row.id,
+            new Error('stale'),
+            Math.random,
+            null,
+            first.claimToken,
+        );
+        await inbox.markProcessed(testRequestContext, row.id, 'applied', null, first.claimToken);
 
         const untouched = await reload(row.id);
         expect(untouched.status).toBe('processing');
         expect(untouched.attempts).toBe(0);
         expect(untouched.claimToken).toBe(second.claimToken);
 
-        await inbox.markProcessed(row.id, 'applied', null, second.claimToken);
+        await inbox.markProcessed(testRequestContext, row.id, 'applied', null, second.claimToken);
         const settled = await reload(row.id);
         expect(settled.status).toBe('processed');
         expect(settled.claimToken).toBeNull();
@@ -101,9 +110,16 @@ describe('inbox outcome writes (integration, real Postgres)', () => {
 
     it('markFailed with the current claim token bumps attempts and schedules the retry in one step', async () => {
         const row = await enqueue(4);
-        const [claimed] = await inbox.claimBatch(1);
+        const [claimed] = await inbox.claimBatch(testRequestContext, 1);
 
-        await inbox.markFailed(row.id, new Error('boom'), Math.random, null, claimed.claimToken);
+        await inbox.markFailed(
+            testRequestContext,
+            row.id,
+            new Error('boom'),
+            Math.random,
+            null,
+            claimed.claimToken,
+        );
 
         const after = await reload(row.id);
         expect(after.status).toBe('pending');

@@ -5,6 +5,8 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
+    testRequestContext,
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
@@ -57,33 +59,69 @@ async function addWarehouseEvent(
 describe('isWarehouseTombstoned (integration, real Postgres)', () => {
     it('is true when the latest event is a processed tombstone', async () => {
         await addWarehouseEvent('wh-1', 'processed', true);
-        expect(await isWarehouseTombstoned(dataSource, 'wh-1')).toBe(true);
+        expect(
+            await isWarehouseTombstoned(
+                createTestConnection(dataSource),
+                testRequestContext,
+                'wh-1',
+            ),
+        ).toBe(true);
     });
 
     it('is false with no warehouse event at all (ordering race stays retryable)', async () => {
-        expect(await isWarehouseTombstoned(dataSource, 'wh-1')).toBe(false);
+        expect(
+            await isWarehouseTombstoned(
+                createTestConnection(dataSource),
+                testRequestContext,
+                'wh-1',
+            ),
+        ).toBe(false);
     });
 
     it('is false while the tombstone is not processed yet', async () => {
         await addWarehouseEvent('wh-1', 'pending', true);
-        expect(await isWarehouseTombstoned(dataSource, 'wh-1')).toBe(false);
+        expect(
+            await isWarehouseTombstoned(
+                createTestConnection(dataSource),
+                testRequestContext,
+                'wh-1',
+            ),
+        ).toBe(false);
     });
 
     it('is false when a later event revived the warehouse, even if still pending', async () => {
         await addWarehouseEvent('wh-1', 'processed', true);
         await addWarehouseEvent('wh-1', 'pending', false);
-        expect(await isWarehouseTombstoned(dataSource, 'wh-1')).toBe(false);
+        expect(
+            await isWarehouseTombstoned(
+                createTestConnection(dataSource),
+                testRequestContext,
+                'wh-1',
+            ),
+        ).toBe(false);
     });
 
     it('stays tombstoned when a later replay carries an empty payload', async () => {
         await addWarehouseEvent('wh-1', 'processed', true);
         await addWarehouseEvent('wh-1', 'processed', 'empty');
-        expect(await isWarehouseTombstoned(dataSource, 'wh-1')).toBe(true);
+        expect(
+            await isWarehouseTombstoned(
+                createTestConnection(dataSource),
+                testRequestContext,
+                'wh-1',
+            ),
+        ).toBe(true);
     });
 
     it("ignores other warehouses' tombstones and other streams", async () => {
         await addWarehouseEvent('wh-2', 'processed', true);
         await addWarehouseEvent('wh-1', 'processed', true, 'stock');
-        expect(await isWarehouseTombstoned(dataSource, 'wh-1')).toBe(false);
+        expect(
+            await isWarehouseTombstoned(
+                createTestConnection(dataSource),
+                testRequestContext,
+                'wh-1',
+            ),
+        ).toBe(false);
     });
 });

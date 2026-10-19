@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { RequestContextService, TransactionalConnection } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
+import { ctxQuery } from 'shared';
 
 import { IntegrationOutboxEntry } from './entities/integration-outbox-entry.entity';
 import { KafkaProducerService } from './kafka-producer.service';
@@ -12,28 +14,32 @@ const BATCH_SIZE = 50;
 @Injectable()
 export class IntegrationOutboxProcessorService {
     constructor(
-        private readonly dataSource: DataSource,
+        private readonly connection: TransactionalConnection,
         private readonly kafkaProducer: KafkaProducerService,
+        private readonly requestContextService: RequestContextService,
     ) {}
 
     async processPendingBatch(): Promise<void> {
-        const due = await this.dataSource.query<Array<{ id: string }>>(
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const due = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM integration_outbox
              WHERE status = 'pending' AND (next_retry_at IS NULL OR next_retry_at <= now())
              ORDER BY created_at ASC, id ASC LIMIT $1`,
             [BATCH_SIZE],
         );
         for (const { id } of due) {
-            await this.processOne(Number(id));
+            await this.processOne(ctx, Number(id));
         }
     }
 
     // The row lock is held across the publish on purpose (serialized per row, concurrency.md rule
     // g): a concurrent sweep skips it and a concurrent requeue waits for the commit.
-    private async processOne(id: number): Promise<void> {
-        await this.dataSource.transaction(async em => {
-            const entry = await em
-                .getRepository(IntegrationOutboxEntry)
+    private async processOne(ctx: RequestContext, id: number): Promise<void> {
+        await this.connection.withTransaction(ctx, async txCtx => {
+            const repo = this.connection.getRepository(txCtx, IntegrationOutboxEntry);
+            const entry = await repo
                 .createQueryBuilder('e')
                 .setLock('pessimistic_write')
                 .setOnLocked('skip_locked')
@@ -47,7 +53,7 @@ export class IntegrationOutboxProcessorService {
 
             try {
                 await this.kafkaProducer.publish(entry.eventType, entry.payload);
-                await em.update(IntegrationOutboxEntry, entry.id, {
+                await repo.update(entry.id, {
                     status: 'published',
                     publishedAt: new Date(),
                 });
@@ -58,7 +64,7 @@ export class IntegrationOutboxProcessorService {
                 // Backoff over hours; a 'failed' row is terminal until requeued
                 // (IntegrationOutboxRecoveryService), and the sweep never picks it up again.
                 const decision = decideOutboxFailure(now, firstFailedAt, retryCount);
-                await em.update(IntegrationOutboxEntry, entry.id, {
+                await repo.update(entry.id, {
                     retryCount,
                     firstFailedAt,
                     lastError: err instanceof Error ? err.message : String(err),

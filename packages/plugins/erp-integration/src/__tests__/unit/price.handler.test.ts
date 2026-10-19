@@ -5,17 +5,10 @@ import { PriceStreamHandler } from '../../handlers/price.handler';
 import { MissingDependencyError } from '../../types';
 
 function makeConnection(variantId: string | undefined): {
-    rawConnection: { createQueryBuilder: ReturnType<typeof vi.fn> };
+    getRepository: ReturnType<typeof vi.fn>;
 } {
-    const getRawOne = vi.fn().mockResolvedValue(variantId ? { id: variantId } : undefined);
-    const qb = {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        innerJoin: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        getRawOne,
-    };
-    return { rawConnection: { createQueryBuilder: vi.fn().mockReturnValue(qb) } };
+    const query = vi.fn().mockResolvedValue(variantId ? [{ id: variantId }] : []);
+    return { getRepository: vi.fn().mockReturnValue({ query }) };
 }
 
 const priceType = { id: '1', code: 'WHOLESALE', name: 'Wholesale', isActive: true };

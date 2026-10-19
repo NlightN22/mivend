@@ -3,6 +3,7 @@ import { RequestContext, StockLocationService, TransactionalConnection } from '@
 import { WarehouseService } from '@mivend/plugin-access-control';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
+import { ctxQuery } from 'shared';
 
 const loggerCtx = 'IntegrationWarehouseHandler';
 
@@ -67,12 +68,12 @@ export class WarehouseStreamHandler implements InboundStreamHandler {
         warehouseErpId: string,
         name: string,
     ): Promise<InboundOutcome | void> {
-        const existing = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('sl.id', 'id')
-            .from('stock_location', 'sl')
-            .where('sl."customFieldsWarehouseerpid" = :erpId', { erpId: warehouseErpId })
-            .getRawOne<{ id: string }>();
+        const [existing] = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
+            `SELECT sl.id FROM stock_location sl WHERE sl."customFieldsWarehouseerpid" = $1`,
+            [warehouseErpId],
+        );
 
         if (existing) {
             await this.stockLocationService.update(ctx, {

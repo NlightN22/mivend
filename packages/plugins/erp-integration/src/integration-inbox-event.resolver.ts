@@ -1,5 +1,5 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { Allow, PaginatedList, UserInputError } from '@vendure/core';
+import { Allow, Ctx, PaginatedList, RequestContext, UserInputError } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
@@ -27,15 +27,18 @@ export class IntegrationInboxEventResolver {
     @Query()
     @Allow(CustomPermission.ManageAccessControl.Permission)
     async failedIntegrationInboxEvents(
+        @Ctx() ctx: RequestContext,
         @Args() args: { options?: FailedInboxEventListOptions },
     ): Promise<PaginatedList<IntegrationInboxEvent>> {
-        return this.integrationInboxService.findFailed(args.options);
+        return this.integrationInboxService.findFailed(ctx, args.options);
     }
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)
-    async integrationInboxBacklog(): Promise<IntegrationInboxBacklogByStream[]> {
-        return this.inboxHealth.getBacklogByStream();
+    async integrationInboxBacklog(
+        @Ctx() ctx: RequestContext,
+    ): Promise<IntegrationInboxBacklogByStream[]> {
+        return this.inboxHealth.getBacklogByStream(ctx);
     }
 
     // Terminal human resolution for a `failed` row that cannot be replayed (#212) — same
@@ -43,11 +46,12 @@ export class IntegrationInboxEventResolver {
     @Mutation()
     @Allow(CustomPermission.RecoverIntegrationEvents.Permission)
     async dismissFailedIntegrationInbox(
+        @Ctx() ctx: RequestContext,
         @Args() args: { id: string; reason: string },
     ): Promise<boolean> {
         if (!args.reason.trim()) {
             throw new UserInputError('A dismissal reason is required');
         }
-        return this.integrationInboxService.dismissFailed(parseRowId(args.id), args.reason);
+        return this.integrationInboxService.dismissFailed(ctx, parseRowId(args.id), args.reason);
     }
 }

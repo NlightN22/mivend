@@ -8,7 +8,7 @@ import {
 import { NotificationService } from '@mivend/plugin-notification';
 import { OrderCancellationService, ReservationSettings } from '@mivend/plugin-reservation';
 import type { CancelOutcome } from '@mivend/plugin-reservation';
-import { DataSource } from 'typeorm';
+import { ctxQuery, withAggregateLock } from 'shared';
 
 import { COURIER_POINT_UNCONFIRMED_SKIP_REASON } from '../order-submitted.builder';
 
@@ -70,7 +70,6 @@ export function expiryActionFor(outcome: CancelOutcome): ExpiryAction {
 @Injectable()
 export class PointConfirmationExpiryService {
     constructor(
-        private readonly dataSource: DataSource,
         private readonly connection: TransactionalConnection,
         private readonly requestContextService: RequestContextService,
         private readonly cancellation: OrderCancellationService,
@@ -79,9 +78,9 @@ export class PointConfirmationExpiryService {
     ) {}
 
     async expireDue(): Promise<number> {
-        const due = await this.findDue();
-        if (due.length === 0) return 0;
         const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        const due = await this.findDue(ctx);
+        if (due.length === 0) return 0;
         let handled = 0;
         let firstError: unknown;
         for (const order of due) {
@@ -119,8 +118,10 @@ export class PointConfirmationExpiryService {
         return rows.length > 0;
     }
 
-    private findDue(): Promise<WaitingOrder[]> {
-        return this.dataSource.query(
+    private findDue(ctx: RequestContext): Promise<WaitingOrder[]> {
+        return ctxQuery<WaitingOrder[]>(
+            this.connection,
+            ctx,
             `SELECT DISTINCT o.id::text AS id, o.code, o."orderPlacedAt"
                ${DUE_FROM}
               ORDER BY o."orderPlacedAt" LIMIT ${SWEEP_LIMIT}`,
@@ -134,16 +135,16 @@ export class PointConfirmationExpiryService {
         order: WaitingOrder,
         outcome: CancelOutcome,
     ): Promise<void> {
-        await this.dataSource.transaction(async manager => {
-            await manager.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
-                `${POINT_CONFIRMATION_EXPIRED_SOURCE}:${order.id}`,
-            ]);
-            const existing: unknown[] = await manager.query(
+        const lockKey = `${POINT_CONFIRMATION_EXPIRED_SOURCE}:${order.id}`;
+        await withAggregateLock(this.connection, ctx, lockKey, async txCtx => {
+            const existing = await ctxQuery<unknown[]>(
+                this.connection,
+                txCtx,
                 'SELECT 1 FROM notification WHERE "sourceType" = $1 AND "sourceId" = $2 LIMIT 1',
                 [POINT_CONFIRMATION_EXPIRED_SOURCE, order.id],
             );
             if (existing.length > 0) return;
-            await this.notificationService.create(ctx, {
+            await this.notificationService.create(txCtx, {
                 recipientType: 'administrator-broadcast',
                 kind: 'warning',
                 sourceType: POINT_CONFIRMATION_EXPIRED_SOURCE,
