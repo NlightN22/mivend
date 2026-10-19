@@ -1,36 +1,31 @@
-// Hardcoded English on purpose: cart/catalog UI isn't wired through vue-i18n (only login is).
-// Centralized here so the literals aren't repeated per call site.
+import { i18n } from '../i18n';
+
+const { t } = i18n.global;
 
 export function discountAddToCartHint(percent: number, brand: string): string {
-    return `${percent}% discount on ${brand}`;
+    return t('discount.addHint', { percent, brand });
 }
 
 export function discountLineReason(brand: string, percent: number): string {
-    return `${brand} brand discount: −${percent}%`;
+    return t('discount.lineReason', { brand, percent });
 }
 
 export function discountTierReachedReason(brand: string, value: string, percent: number): string {
-    return `${brand} volume reached: ${value} → −${percent}%`;
+    return t('discount.tierReached', { brand, value, percent });
 }
 
 export function discountTierComplete(percent: number): string {
-    return `Maximum discount unlocked: −${percent}%`;
+    return t('discount.tierComplete', { percent });
 }
 
 export function discountTierProgress(current: string, next: string, percent: number): string {
-    return `${current} of ${next} for −${percent}%`;
+    return t('discount.tierProgress', { current, next, percent });
 }
 
 export function discountTierCurrentSuffix(percent: number): string {
-    return `(currently −${percent}%)`;
+    return t('discount.tierCurrent', { percent });
 }
-
-export const discountTooltipTitle = 'Volume discount';
 
 export function stockInsufficient(qty: number): string {
-    return `Only ${qty} pcs. available`;
+    return t('cartErrors.stockInsufficient', { n: qty });
 }
-
-export const stockInsufficientGeneric = 'Not enough stock';
-export const stockAddFailed = 'Could not add item to cart';
-export const stockUpdateFailed = 'Could not update quantity';

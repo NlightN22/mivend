@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { STOCK_VARIANT_LABELS, type StockVariant, stockVariantFromQuantity } from './stock-variant';
+import {
+    STOCK_VARIANT_LABELS,
+    type StockBadgeLabels,
+    type StockVariant,
+    stockVariantFromQuantity,
+} from './stock-variant';
 
 interface Props {
     variant?: StockVariant;
     label?: string;
     quantity?: number;
+    labels?: Partial<StockBadgeLabels>;
 }
 
 const props = defineProps<Props>();
@@ -19,8 +25,10 @@ const resolvedVariant = computed(
 
 const text = computed(() => {
     if (props.label) return props.label;
-    if (props.quantity !== undefined) return `${props.quantity} pcs.`;
-    return STOCK_VARIANT_LABELS[resolvedVariant.value];
+    if (props.quantity !== undefined) {
+        return props.labels?.pieces?.(props.quantity) ?? `${props.quantity} pcs.`;
+    }
+    return props.labels?.[resolvedVariant.value] ?? STOCK_VARIANT_LABELS[resolvedVariant.value];
 });
 </script>
 

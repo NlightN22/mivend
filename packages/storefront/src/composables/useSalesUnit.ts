@@ -1,3 +1,5 @@
+import { i18n } from '../i18n';
+
 export interface SalesUnitVariant {
     unitName?: string | null;
     unitRatioToBase?: number | null;
@@ -105,9 +107,13 @@ export function salesUnitLabels(unit: SalesUnitView | null): {
     unit: string;
     multiplicity: string;
 } {
-    if (!unit) return { unit: 'pc.', multiplicity: '' };
+    if (!unit) return { unit: i18n.global.t('units.pc'), multiplicity: '' };
     return {
         unit: unit.name,
-        multiplicity: `${unit.packStep} ${unit.name} (= ${packsToBase(unit.packStep, unit)} pc.)`,
+        multiplicity: i18n.global.t('product.multiplicityPacks', {
+            packs: unit.packStep,
+            unit: unit.name,
+            pieces: packsToBase(unit.packStep, unit),
+        }),
     };
 }

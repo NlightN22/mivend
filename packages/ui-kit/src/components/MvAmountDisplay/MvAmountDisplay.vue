@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { inject } from 'vue';
+import { AMOUNT_FORMATTER } from './amount-format';
+
 export type AmountSize = 'sm' | 'md' | 'lg';
 
 interface Props {
@@ -26,11 +29,13 @@ function formatAmount(value: number, currency: string, decimals: number): string
         return `${value.toFixed(decimals)} ${currency}`;
     }
 }
+
+const format = inject(AMOUNT_FORMATTER, formatAmount);
 </script>
 
 <template>
     <span :class="['mv-amount', `mv-amount--${size}`]">
-        {{ formatAmount(amount, currency, decimals) }}
+        {{ format(amount, currency, decimals) }}
     </span>
 </template>
 

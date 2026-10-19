@@ -15,15 +15,15 @@ const emit = defineEmits<{ 'update:checked': [id: string, value: boolean] }>();
 <template>
     <div class="line-group__title" :class="{ 'line-group__title--blocked': blocked }">
         <span>{{ title }}</span>
-        <small>{{ lines.length }} items · {{ note }}</small>
+        <small>{{ $t('cart.groupCount', { items: $t('cart.items', lines.length), note }) }}</small>
     </div>
 
     <div class="line-group__items">
         <div v-if="!blocked" class="line-group__columns" aria-hidden="true">
-            <span>Product</span>
-            <span>Price</span>
-            <span>Quantity</span>
-            <span>Total</span>
+            <span>{{ $t('cart.product') }}</span>
+            <span>{{ $t('cart.price') }}</span>
+            <span>{{ $t('cart.quantity') }}</span>
+            <span>{{ $t('cart.total') }}</span>
         </div>
         <CartItem
             v-for="line in lines"

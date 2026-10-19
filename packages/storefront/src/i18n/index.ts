@@ -10,11 +10,19 @@ import {
 
 const STORAGE_KEY = 'mivend.locale';
 
+function slavicPlural(choice: number): number {
+    const n = Math.abs(choice) % 100;
+    if (n >= 11 && n <= 14) return 2;
+    if (n % 10 === 1) return 0;
+    return n % 10 >= 2 && n % 10 <= 4 ? 1 : 2;
+}
+
 export const i18n = createI18n<[MessageSchema], string, false>({
     legacy: false,
     locale: DEFAULT_LOCALE,
     fallbackLocale: DEFAULT_LOCALE,
     messages: { [DEFAULT_LOCALE]: en },
+    pluralRules: { ru: slavicPlural },
 });
 
 function readSavedLocale(): string | null {

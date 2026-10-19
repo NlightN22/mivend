@@ -32,3 +32,10 @@ export function formatDate(
 ): string {
     return new Intl.DateTimeFormat(locale, options).format(new Date(value));
 }
+
+export function formatAmount(amount: number, currency: string, decimals: number): string {
+    return formatMoney(amount, currency, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+    });
+}

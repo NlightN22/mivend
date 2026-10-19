@@ -177,7 +177,9 @@ const breadcrumbItems = computed(() => {
     ];
 });
 
-const catalogHeading = computed(() => categoryPanel.value.current?.name ?? 'All products');
+const catalogHeading = computed(
+    () => categoryPanel.value.current?.name ?? t('catalog.allProducts'),
+);
 
 function navigateCategory(slug: string | undefined): void {
     router.push({ query: { ...route.query, collection: slug, fv: undefined } });
@@ -272,7 +274,11 @@ onMounted(() => {
                     :view-mode="viewMode"
                     :sort-key="sortKey"
                     :sort-options="sortOptions"
-                    :title="searchQuery ? `Search: &quot;${searchQuery}&quot;` : 'Product catalog'"
+                    :title="
+                        searchQuery
+                            ? t('catalog.searchTitle', { query: searchQuery })
+                            : t('catalog.productCatalog')
+                    "
                     :show-prices="authStore.isLoggedIn"
                     @update:view-mode="setViewMode($event)"
                     @update:sort-key="sortKey = $event"

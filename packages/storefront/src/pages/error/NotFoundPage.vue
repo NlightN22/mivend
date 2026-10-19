@@ -13,31 +13,37 @@ function doSearch() {
 <template>
     <div class="nf-page">
         <div class="nf-card">
-            <div class="nf-code">404 · Not found</div>
-            <h1 class="nf-title">We looked, but didn't find it</h1>
+            <div class="nf-code">{{ $t('errorPages.notFoundCode') }}</div>
+            <h1 class="nf-title">{{ $t('errorPages.notFoundTitle') }}</h1>
             <p class="nf-sub">
-                The page may have been moved, deleted, or the link is incorrect. Try searching the
-                catalog or go back to the homepage.
+                {{ $t('errorPages.notFoundText') }}
             </p>
 
             <div class="nf-search">
                 <input
                     v-model="search"
                     class="nf-search__input"
-                    placeholder="Search catalog…"
+                    :placeholder="$t('errorPages.searchPlaceholder')"
                     type="search"
                     @keydown.enter="doSearch"
                 />
-                <button class="nf-search__btn" type="button" @click="doSearch">Find</button>
+                <button class="nf-search__btn" type="button" @click="doSearch">
+                    {{ $t('errorPages.find') }}
+                </button>
             </div>
 
             <div class="nf-actions">
-                <RouterLink to="/" class="nf-btn nf-btn--primary">Home</RouterLink>
-                <RouterLink to="/catalog" class="nf-btn">Open catalog</RouterLink>
-                <RouterLink to="/orders" class="nf-btn">My orders</RouterLink>
+                <RouterLink to="/" class="nf-btn nf-btn--primary">{{ $t('nav.home') }}</RouterLink>
+                <RouterLink to="/catalog" class="nf-btn">{{
+                    $t('errorPages.openCatalog')
+                }}</RouterLink>
+                <RouterLink to="/orders" class="nf-btn">{{ $t('errorPages.myOrders') }}</RouterLink>
             </div>
 
-            <div class="nf-links"><a href="#">Help</a> · <a href="#">Support</a></div>
+            <div class="nf-links">
+                <a href="#">{{ $t('common.help') }}</a> &middot;
+                <a href="#">{{ $t('common.support') }}</a>
+            </div>
         </div>
     </div>
 </template>

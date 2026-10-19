@@ -19,9 +19,13 @@ export function stockVariantFromQuantity(quantity: number): StockVariant {
     return 'high';
 }
 
+export interface StockBadgeLabels extends Record<StockVariant, string> {
+    pieces: (quantity: number) => string;
+}
+
 export const STOCK_VARIANT_LABELS: Record<StockVariant, string> = {
-    high: 'В наличии',
-    medium: 'Достаточно',
-    low: 'Мало',
-    out: 'Нет в наличии',
+    high: 'In stock',
+    medium: 'Sufficient',
+    low: 'Low stock',
+    out: 'Out of stock',
 };

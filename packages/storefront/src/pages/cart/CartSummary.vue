@@ -42,45 +42,52 @@ const unavailableCount = computed(
                 :disabled="unavailableCount > 0"
                 @click="router.push('/checkout')"
             >
-                Proceed to checkout
+                {{ $t('cartSummary.checkout') }}
             </button>
             <p v-if="unavailableCount > 0" class="cart-summary__blocked">
-                Remove the items marked "Not available for order" to continue.
+                {{ $t('cartSummary.blocked') }}
             </p>
 
             <p class="cart-summary__help">
-                Delivery method and order comment are selected at the next step.
+                {{ $t('cartSummary.help') }}
             </p>
 
             <div class="cart-summary__title-row">
-                <div class="cart-summary__title">Your cart</div>
-                <div class="cart-summary__count">{{ lineCount }} items · {{ totalQty }} pcs.</div>
+                <div class="cart-summary__title">{{ $t('cartSummary.title') }}</div>
+                <div class="cart-summary__count">
+                    {{
+                        $t('cartSummary.count', {
+                            items: $t('cart.items', lineCount),
+                            qty: totalQty,
+                        })
+                    }}
+                </div>
             </div>
 
             <div class="cart-summary__lines">
                 <div v-if="cartStore.discountAmount > 0" class="cart-summary__line">
-                    <span>Subtotal</span>
+                    <span>{{ $t('cartSummary.subtotal') }}</span>
                     <strong>{{ subtotal }}</strong>
                 </div>
                 <div
                     v-if="cartStore.discountAmount > 0"
                     class="cart-summary__line cart-summary__line--discount"
                 >
-                    <span>Customer discount</span>
+                    <span>{{ $t('cartSummary.discount') }}</span>
                     <strong>{{ discountLabel }}</strong>
                 </div>
                 <div class="cart-summary__line">
-                    <span>Expected reserve</span>
-                    <strong>after ERP</strong>
+                    <span>{{ $t('cartSummary.reserve') }}</span>
+                    <strong>{{ $t('cartSummary.reserveValue') }}</strong>
                 </div>
                 <div v-if="packagingLabel" class="cart-summary__line">
-                    <span>Weight / volume</span>
+                    <span>{{ $t('cartSummary.weightVolume') }}</span>
                     <strong>{{ packagingLabel }}</strong>
                 </div>
             </div>
 
             <div class="cart-summary__total">
-                <span>Total</span>
+                <span>{{ $t('cartSummary.total') }}</span>
                 <strong>{{ total }}</strong>
             </div>
         </section>

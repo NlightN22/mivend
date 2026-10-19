@@ -52,6 +52,7 @@ export type { DocumentTypeStyle } from './components/MvDocumentTypeChip/document
 
 export { default as MvAmountDisplay } from './components/MvAmountDisplay/MvAmountDisplay.vue';
 export type { AmountSize } from './components/MvAmountDisplay/MvAmountDisplay.vue';
+export { AMOUNT_FORMATTER, type AmountFormatter } from './components/MvAmountDisplay/amount-format';
 
 export { default as MvDateTimeCell } from './components/MvDateTimeCell/MvDateTimeCell.vue';
 
@@ -92,24 +93,29 @@ export type { LogoSize } from './components/MvLogo/MvLogo.vue';
 export { default as MvFavoriteButton } from './components/MvFavoriteButton/MvFavoriteButton.vue';
 
 export { default as MvProductCard } from './components/MvProductCard/MvProductCard.vue';
+export type { ProductCardLabels } from './components/MvProductCard/MvProductCard.vue';
 
 export { default as MvProductRow } from './components/MvProductRow/MvProductRow.vue';
+export type { ProductRowLabels } from './components/MvProductRow/MvProductRow.vue';
 
 export { default as MvCatalogFacets } from './components/MvCatalogFacets/MvCatalogFacets.vue';
 
 export { default as MvProductGallery } from './components/MvProductGallery/MvProductGallery.vue';
 
 export { default as MvProductMainCards } from './components/MvProductMainCards/MvProductMainCards.vue';
+export type { ProductMainCardsLabels } from './components/MvProductMainCards/MvProductMainCards.vue';
 
 export { default as MvStockBadge } from './components/MvStockBadge/MvStockBadge.vue';
 export { default as MvErrorState } from './components/MvErrorState/MvErrorState.vue';
 export {
     STOCK_VARIANT_LABELS,
+    type StockBadgeLabels,
     type StockVariant,
     stockVariantFromLevel,
     stockVariantFromQuantity,
 } from './components/MvStockBadge/stock-variant';
 export { default as MvQtyStepper } from './components/MvQtyStepper/MvQtyStepper.vue';
+export type { QtyStepperLabels } from './components/MvQtyStepper/MvQtyStepper.vue';
 export { default as MvCard } from './components/MvCard/MvCard.vue';
 export { default as MvBreadcrumbs } from './components/MvBreadcrumbs/MvBreadcrumbs.vue';
 export { default as MvIconButton } from './components/MvIconButton/MvIconButton.vue';

@@ -26,7 +26,9 @@ const decimals = computed(() => (props.kind === 'unit' ? 2 : 0));
 
 <template>
     <div :class="['line-price', `line-price--${kind}`]">
-        <span class="line-price__label">{{ kind === 'unit' ? 'Price' : 'Total' }}</span>
+        <span class="line-price__label">{{
+            kind === 'unit' ? $t('cart.price') : $t('cart.total')
+        }}</span>
         <MvAmountDisplay
             v-if="old != null"
             :amount="old"

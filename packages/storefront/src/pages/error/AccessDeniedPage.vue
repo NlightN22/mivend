@@ -7,27 +7,31 @@ const authStore = useAuthStore();
 <template>
     <div class="ad-page">
         <div class="ad-card">
-            <div class="ad-code">Access restricted</div>
-            <h1 class="ad-title">Not allowed here</h1>
+            <div class="ad-code">{{ $t('errorPages.deniedCode') }}</div>
+            <h1 class="ad-title">{{ $t('errorPages.deniedTitle') }}</h1>
             <p class="ad-sub">
-                You don't have permission to view this page. If you believe this is an error,
-                contact your account administrator.
+                {{ $t('errorPages.deniedText') }}
             </p>
 
             <div class="ad-actions">
-                <RouterLink to="/catalog" class="ad-btn ad-btn--primary"
-                    >Back to catalog</RouterLink
-                >
-                <RouterLink v-if="authStore.isLoggedIn" to="/account" class="ad-btn"
-                    >My account</RouterLink
-                >
-                <RouterLink v-else to="/login" class="ad-btn"
-                    >Sign in with another account</RouterLink
-                >
-                <a href="mailto:support@example.com" class="ad-btn">Request access</a>
+                <RouterLink to="/catalog" class="ad-btn ad-btn--primary">{{
+                    $t('errorPages.backToCatalog')
+                }}</RouterLink>
+                <RouterLink v-if="authStore.isLoggedIn" to="/account" class="ad-btn">{{
+                    $t('errorPages.myAccount')
+                }}</RouterLink>
+                <RouterLink v-else to="/login" class="ad-btn">{{
+                    $t('errorPages.otherAccount')
+                }}</RouterLink>
+                <a href="mailto:support@example.com" class="ad-btn">{{
+                    $t('errorPages.requestAccess')
+                }}</a>
             </div>
 
-            <div class="ad-links"><a href="#">Help</a> · <a href="#">Support</a></div>
+            <div class="ad-links">
+                <a href="#">{{ $t('common.help') }}</a> &middot;
+                <a href="#">{{ $t('common.support') }}</a>
+            </div>
         </div>
     </div>
 </template>

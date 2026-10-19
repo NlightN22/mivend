@@ -125,7 +125,7 @@ test.describe('Brand filter combinations', () => {
         await brandLabel(page, 'Castrol').check();
         const countBrand = await waitForCount(page);
 
-        await page.getByLabel('In stock only').check();
+        await page.getByRole('checkbox', { name: 'In stock only' }).check();
         const countBrandAndStock = await waitForCount(page);
 
         expect(countBrandAndStock).toBeLessThanOrEqual(countBrand);

@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
 import MvStatusBadge from '../MvStatusBadge/MvStatusBadge.vue';
-import type { StockVariant } from '../MvStockBadge/stock-variant';
+import type { StockBadgeLabels, StockVariant } from '../MvStockBadge/stock-variant';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 
 export interface ProductMainCardsLabels {
@@ -73,6 +73,7 @@ interface Props {
     showAddToCartButton?: boolean;
     linkBase?: string;
     labels?: Partial<ProductMainCardsLabels>;
+    stockLabels?: Partial<StockBadgeLabels>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -88,6 +89,7 @@ const props = withDefaults(defineProps<Props>(), {
     showAddToCartButton: true,
     linkBase: '/product',
     labels: () => ({}),
+    stockLabels: () => ({}),
 });
 
 const text = computed<ProductMainCardsLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }));
@@ -114,7 +116,7 @@ function getBrand(p: RelatedProduct) {
     <section class="pmc">
         <div class="pmc__card">
             <div class="pmc__labels">
-                <MvStockBadge :variant="stockVariantLabel" />
+                <MvStockBadge :labels="stockLabels" :variant="stockVariantLabel" />
                 <span v-if="brand" class="pmc__label pmc__label--brand">{{ brand }}</span>
             </div>
             <h1 class="pmc__title">{{ name }}</h1>

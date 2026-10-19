@@ -2,7 +2,11 @@
 import { computed } from 'vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
-import { type StockVariant, stockVariantFromQuantity } from '../MvStockBadge/stock-variant';
+import {
+    type StockBadgeLabels,
+    type StockVariant,
+    stockVariantFromQuantity,
+} from '../MvStockBadge/stock-variant';
 import { IconInfoCircle } from '@tabler/icons-vue';
 import MvQtyStepper, { type QtyStepperLabels } from '../MvQtyStepper/MvQtyStepper.vue';
 import MvTooltip from '../MvTooltip/MvTooltip.vue';
@@ -78,6 +82,7 @@ interface Props {
     // false hides the stepper/add/analogs area for view-only consumers.
     showActions?: boolean;
     labels?: Partial<ProductRowLabels>;
+    stockLabels?: Partial<StockBadgeLabels>;
     stepperLabels?: Partial<QtyStepperLabels>;
 }
 
@@ -109,6 +114,7 @@ const props = withDefaults(defineProps<Props>(), {
     showFavorite: true,
     showActions: true,
     labels: () => ({}),
+    stockLabels: () => ({}),
     stepperLabels: () => ({}),
 });
 
@@ -183,8 +189,8 @@ function onStepperChange(qty: number): void {
 
         <div class="mv-product-row__cell">
             <div class="mv-product-row__cell-label">{{ text.stock }}</div>
-            <MvStockBadge v-if="stock !== undefined" :quantity="stock" />
-            <MvStockBadge v-else-if="stockVariant" :variant="stockVariant" />
+            <MvStockBadge :labels="stockLabels" v-if="stock !== undefined" :quantity="stock" />
+            <MvStockBadge :labels="stockLabels" v-else-if="stockVariant" :variant="stockVariant" />
             <span v-else class="mv-product-row__stock-none">—</span>
         </div>
 

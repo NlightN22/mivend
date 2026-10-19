@@ -36,12 +36,12 @@ function next(): void {
 <template>
     <section v-if="loading || items.length > 0" class="psr">
         <h2 class="psr-title">{{ title }}</h2>
-        <div v-if="loading" class="psr-state">Loading...</div>
+        <div v-if="loading" class="psr-state">{{ $t('common.loading') }}</div>
         <div v-else class="psr-wrap">
             <button
                 v-if="items.length > VISIBLE"
                 class="psr-arrow psr-arrow--left"
-                aria-label="Previous"
+                :aria-label="$t('common.previous')"
                 @click="prev"
             >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -70,7 +70,7 @@ function next(): void {
             <button
                 v-if="items.length > VISIBLE"
                 class="psr-arrow psr-arrow--right"
-                aria-label="Next"
+                :aria-label="$t('common.next')"
                 @click="next"
             >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">

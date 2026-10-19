@@ -16,19 +16,18 @@ onMounted(() => cartStore.fetchCart());
     <main class="cart-page">
         <MvBreadcrumbs
             class="cart-page__crumbs"
-            :items="[{ label: 'Home', to: '/' }, { label: 'Cart' }]"
+            :items="[{ label: $t('nav.home'), to: '/' }, { label: $t('cart.title') }]"
         />
 
         <div class="cart-page__title-row">
             <h1 class="cart-page__title">
-                Cart
+                {{ $t('cart.title') }}
                 <span v-if="cartStore.loaded" class="cart-page__count">
-                    {{ cartStore.lines.length }} items
+                    {{ $t('cart.items', cartStore.lines.length) }}
                 </span>
             </h1>
             <p class="cart-page__hint">
-                Prices and stock will be verified before sending the order to ERP. After submission
-                the order awaits confirmation.
+                {{ $t('cart.hint') }}
             </p>
         </div>
 

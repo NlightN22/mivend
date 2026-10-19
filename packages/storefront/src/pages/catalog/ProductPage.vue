@@ -21,11 +21,13 @@ import { ProductDetailDocument, type ProductDetailQuery } from '../../api/genera
 import ProductBuyPanel from './ProductBuyPanel.vue';
 import { nearestPackOf, salesUnitLabels, salesUnitOf } from '../../composables/useSalesUnit';
 import ProductSkeleton from './ProductSkeleton.vue';
+import { useProductLabels } from '../../composables/useProductLabels';
 
 type Product = NonNullable<ProductDetailQuery['product']>;
 
 const route = useRoute();
 const { t } = useI18n();
+const labels = useProductLabels();
 const authStore = useAuthStore();
 const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
 const catalogStore = useCatalogStore();
@@ -54,7 +56,7 @@ const unitChips = computed(() => {
     const own = variant.value?.customFields;
     const soldRatio = salesUnit.value?.ratio ?? 1;
     const all = [
-        { name: 'pc.', ratioToBase: 1 },
+        { name: t('units.pc'), ratioToBase: 1 },
         ...(own?.unitName && own.unitRatioToBase && own.unitRatioToBase !== 1
             ? [{ name: own.unitName, ratioToBase: own.unitRatioToBase }]
             : []),
@@ -97,9 +99,11 @@ const extraSpecs = computed(() => {
     const weight = variant.value?.customFields?.weight;
     const code = product.value?.customFields?.manufacturerPartNumber;
     return [
-        ...(code ? [{ label: 'Manufacturer code', value: code }] : []),
+        ...(code ? [{ label: t('product.manufacturerCode'), value: code }] : []),
         ...facetSpecs(product.value?.facetValues ?? []),
-        ...(weight ? [{ label: 'Weight', value: `${weight} kg` }] : []),
+        ...(weight
+            ? [{ label: t('product.weight'), value: t('units.kg', { value: weight }) }]
+            : []),
     ];
 });
 const category = computed(
@@ -144,9 +148,10 @@ onMounted(() => {
             v-else-if="error"
             :title="error.title"
             :message="error.message"
+            :retry-label="t('common.retry')"
             @retry="fetchData(route.params.slug as string)"
         />
-        <MvNotice v-else-if="!product" variant="error">Товар не найден</MvNotice>
+        <MvNotice v-else-if="!product" variant="error">{{ t('product.notFound') }}</MvNotice>
 
         <template v-else>
             <MvBreadcrumbs class="product-page__crumbs" :items="breadcrumbItems" />
@@ -174,6 +179,8 @@ onMounted(() => {
                     :extra-specs="extraSpecs"
                     :stock-variant-label="stockVariantLabel"
                     :related="[]"
+                    :labels="labels.mainCards"
+                    :stock-labels="labels.stock"
                 />
 
                 <ProductBuyPanel

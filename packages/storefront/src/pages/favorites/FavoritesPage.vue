@@ -65,30 +65,35 @@ function handleClearUnavailable(): void {
         <section class="favorites-page__content">
             <div class="favorites-page__head">
                 <div>
-                    <h1 class="favorites-page__title">Favorites</h1>
+                    <h1 class="favorites-page__title">{{ $t('favorites.title') }}</h1>
                     <p class="favorites-page__subtitle">
-                        Working list of frequently needed items. Quickly add to cart or remove
-                        what's no longer needed.
+                        {{ $t('favorites.subtitle') }}
                     </p>
                 </div>
                 <div class="favorites-page__head-actions">
                     <MvButton variant="secondary" @click="handleClearUnavailable">
-                        Clear unavailable
+                        {{ $t('favorites.clearUnavailable') }}
                     </MvButton>
                     <MvButton @click="handleAddAll">
-                        Add {{ availableCount }} available to cart
+                        {{ $t('favorites.addAvailable', { n: availableCount }) }}
                     </MvButton>
                 </div>
             </div>
 
             <div v-if="favoritesStore.items.length === 0" class="favorites-page__empty">
-                <p>No favorites yet. Click the heart icon on any product to save it here.</p>
+                <p>{{ $t('favorites.empty') }}</p>
             </div>
 
             <template v-else>
                 <div class="favorites-page__search">
-                    <MvSearchInput v-model="search" placeholder="Search favorites" />
-                    <MvCheckbox v-model="inStockOnly" label="In stock only" />
+                    <MvSearchInput
+                        v-model="search"
+                        :placeholder="$t('favorites.search')"
+                        :button-label="$t('search.button')"
+                        :open-search-label="$t('search.open')"
+                        :clear-label="$t('search.clear')"
+                    />
+                    <MvCheckbox v-model="inStockOnly" :label="$t('catalogFilters.inStock')" />
                 </div>
                 <ProductListView
                     :items="shown"
@@ -99,7 +104,7 @@ function handleClearUnavailable(): void {
                     :has-more="false"
                     :view-mode="viewMode"
                     :sort-key="'added'"
-                    :sort-options="[{ value: 'added', label: 'Recently added' }]"
+                    :sort-options="[{ value: 'added', label: $t('sort.recentlyAdded') }]"
                     :show-prices="authStore.isLoggedIn"
                     @update:view-mode="setViewMode($event)"
                 />

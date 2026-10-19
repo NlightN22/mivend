@@ -37,28 +37,24 @@ onMounted(() => {
     <main class="home-page">
         <div class="home-page__inner">
             <ProductScrollRow
-                title="New Arrivals"
+                :title="$t('home.newArrivals')"
                 :items="newArrivals.items.value"
                 :loading="newArrivals.loading.value"
             />
             <ProductScrollRow
-                title="On Sale"
+                :title="$t('home.onSale')"
                 :items="sales.items.value"
                 :loading="sales.loading.value"
             />
             <ProductScrollRow
-                title="Popular products"
+                :title="$t('home.popular')"
                 :items="popular.items.value"
                 :loading="popular.loading.value"
             />
             <div class="home-page__header">
-                <h2 class="home-page__title">Full catalog</h2>
+                <h2 class="home-page__title">{{ $t('home.fullCatalog') }}</h2>
                 <p class="home-page__subtitle">
-                    {{
-                        authStore.isLoggedIn
-                            ? 'Current stock and prices for your trading point'
-                            : 'Log in to see prices and stock'
-                    }}
+                    {{ authStore.isLoggedIn ? $t('home.subtitle') : $t('home.subtitleGuest') }}
                 </p>
             </div>
             <ProductListView

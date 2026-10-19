@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { formatMoney } from '../../i18n/format';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { stockVariantFromLevel } from '@mivend/ui-kit';
+import { useProductLabels } from '../../composables/useProductLabels';
 import { baseToPacks, packsToBase, type SalesUnitView } from '../../composables/useSalesUnit';
 
 interface Props {
@@ -34,6 +36,8 @@ const emit = defineEmits<{
     'update-cart-qty': [lineId: string, qty: number];
 }>();
 
+const { t } = useI18n();
+const labels = useProductLabels();
 const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
 const unitPrice = computed(() =>
     props.price !== undefined && props.salesUnit
@@ -42,7 +46,9 @@ const unitPrice = computed(() =>
 );
 const perPieceNote = computed(() =>
     props.price !== undefined && props.salesUnit
-        ? `${formatMoney(props.price, props.currency, { maximumFractionDigits: 2 })} per pc.`
+        ? t('buyPanel.perPiece', {
+              price: formatMoney(props.price, props.currency, { maximumFractionDigits: 2 }),
+          })
         : null,
 );
 const stepperValue = computed(() =>
@@ -87,13 +93,18 @@ function onStepper(lineId: string | undefined, value: number): void {
                 :decimals="Number.isInteger(unitPrice) ? 0 : 2"
                 class="buy-panel__price"
             />
-            <div v-else-if="!showPrices" class="buy-panel__price-hint">Log in to see prices</div>
-            <div v-else class="buy-panel__price buy-panel__price--on-request">Price on request</div>
+            <div v-else-if="!showPrices" class="buy-panel__price-hint">
+                {{ t('buyPanel.logIn') }}
+            </div>
+            <div v-else class="buy-panel__price buy-panel__price--on-request">
+                {{ t('buyPanel.onRequest') }}
+            </div>
             <div class="buy-panel__price-note">
                 <template v-if="showPrices && salesUnit && price !== undefined">
-                    Price per {{ salesUnit.name }} · {{ perPieceNote }}<br />
+                    {{ t('buyPanel.pricePer', { unit: salesUnit.name }) }} &middot; {{ perPieceNote
+                    }}<br />
                 </template>
-                Price includes customer terms and VAT.
+                {{ t('buyPanel.terms') }}
             </div>
 
             <MvButton
@@ -103,7 +114,7 @@ function onStepper(lineId: string | undefined, value: number): void {
                 class="buy-panel__add-pack"
                 @click="onAddPack"
             >
-                Add {{ nearestPack.name }} (+{{ nearestPack.baseQty }} pc.)
+                {{ t('buyPanel.addPack', { name: nearestPack.name, qty: nearestPack.baseQty }) }}
             </MvButton>
 
             <MvQtyStepper
@@ -113,6 +124,7 @@ function onStepper(lineId: string | undefined, value: number): void {
                 :step="salesUnit?.packStep ?? requiredMultiple"
                 editable
                 block
+                :labels="labels.stepper"
                 @update:model-value="(val: number) => onStepper(cartLineId, val)"
             />
             <RouterLink
@@ -120,7 +132,7 @@ function onStepper(lineId: string | undefined, value: number): void {
                 to="/requests"
                 class="buy-panel__add buy-panel__add--link"
             >
-                Request price
+                {{ t('buyPanel.requestPrice') }}
             </RouterLink>
             <button
                 v-else
@@ -129,7 +141,7 @@ function onStepper(lineId: string | undefined, value: number): void {
                 :disabled="!showPrices || stockVariant === 'out'"
                 @click="emit('add-to-cart', addQty)"
             >
-                Add to cart
+                {{ t('buyPanel.addToCart') }}
             </button>
         </div>
     </div>

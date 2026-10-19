@@ -25,11 +25,13 @@ import {
     MvBreadcrumbs,
     MvCatalogDropdown,
     layers,
+    AMOUNT_FORMATTER,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
 import { router } from './router';
 import { i18n, initLocale } from './i18n';
+import { formatAmount } from './i18n/format';
 
 const app = createApp(App);
 
@@ -55,6 +57,8 @@ app.component('MvQtyStepper', MvQtyStepper);
 app.component('MvCard', MvCard);
 app.component('MvBreadcrumbs', MvBreadcrumbs);
 app.component('MvCatalogDropdown', MvCatalogDropdown);
+
+app.provide(AMOUNT_FORMATTER, formatAmount);
 
 app.use(createPinia());
 app.use(router);

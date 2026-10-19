@@ -26,10 +26,12 @@ import {
     MvCard,
     MvBreadcrumbs,
     MvCatalogDropdown,
+    AMOUNT_FORMATTER,
 } from '@mivend/ui-kit';
 
 import { router } from '../src/router';
 import { i18n } from '../src/i18n';
+import { formatAmount } from '../src/i18n/format';
 import { extractOperationName, resetMocks, resolveMock } from './graphql-mock-registry';
 import { registerDefaultMocks } from './default-mocks';
 
@@ -44,6 +46,7 @@ setup(app => {
     app.use(pinia);
     app.use(router);
     app.use(i18n);
+    app.provide(AMOUNT_FORMATTER, formatAmount);
     app.use(ElementPlus);
     for (const [name, component] of Object.entries(ElementPlusIconsVue)) {
         app.component(name, component);

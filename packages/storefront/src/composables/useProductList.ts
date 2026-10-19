@@ -130,7 +130,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     viewMode: Ref<ViewMode>;
     setViewMode: (mode: ViewMode) => void;
     sortKey: Ref<string>;
-    sortOptions: Ref<SortOption[]>;
+    sortOptions: Readonly<Ref<SortOption[]>>;
     priceRangeSupported: Ref<boolean>;
     loadMore: () => Promise<void>;
     load: () => Promise<void>;

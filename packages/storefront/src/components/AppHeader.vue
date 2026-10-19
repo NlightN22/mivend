@@ -3,19 +3,10 @@ import { formatMoney } from '../i18n/format';
 import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import {
-    MvLanguageSwitcher,
-    MvNotificationBell,
-    MvNotificationPanel,
-    type SuggestionItem,
-} from '@mivend/ui-kit';
+import { IconClipboardList, IconHeart, IconUser } from '@tabler/icons-vue';
+import { MvLanguageSwitcher, MvNotificationBell, MvNotificationPanel } from '@mivend/ui-kit';
 import { useLanguageSwitcher } from '../composables/useLanguageSwitcher';
-import {
-    buildSearchLocation,
-    clearedSearchLocation,
-    resolveScopeLabel,
-} from '../composables/searchScope';
-import { useSearchSuggestions } from '../composables/useSearchSuggestions';
+import { useHeaderSearch } from '../composables/useHeaderSearch';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
 import { useCatalogStore } from '../stores/catalog';
@@ -31,12 +22,16 @@ const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
 const favoritesStore = useFavoritesStore();
 const notificationPanelOpen = ref(false);
-const searchQuery = ref((route.query.q as string) ?? '');
+const {
+    searchQuery,
+    scopeLabel,
+    suggestions,
+    onSelectSuggestion,
+    onSearch: search,
+    onRemoveScope,
+} = useHeaderSearch();
 
-// notifications query/subscription require an authenticated customer (Permission.Owner) —
-// unlike the manager portal (always-authenticated layout), this header also renders for
-// signed-out visitors, so the store (and its eager fetch+subscribe inside useNotifications) is
-// only created once a session exists.
+// The header also renders for guests, and notifications require a signed-in customer.
 const notificationsStore = shallowRef<ReturnType<typeof useNotificationsStore> | null>(null);
 watch(
     () => authStore.isLoggedIn,
@@ -48,26 +43,10 @@ watch(
     { immediate: true },
 );
 
-watch(
-    () => route.query.q,
-    q => {
-        searchQuery.value = (q as string) ?? '';
-    },
-);
-watch(searchQuery, value => {
-    const target = clearedSearchLocation(
-        value,
-        route.query.q as string | undefined,
-        scopeSlug.value,
-    );
-    if (target) router.push(target);
-});
 const catalogOpen = ref(false);
 const mobileNavOpen = ref(false);
 
-// Pages under these prefixes render AccountSidebar (packages/storefront/src/pages/account/AccountSidebar.vue),
-// which already lists Account/Orders/Favourites — duplicating them in the mobile off-canvas nav
-// there is redundant (the sidebar itself is what should collapse on mobile, not this menu).
+// These pages render AccountSidebar, which already lists Account/Orders/Favourites.
 const ACCOUNT_ZONE_PREFIXES = [
     '/account',
     '/orders',
@@ -89,22 +68,9 @@ const cartTotal = computed(() => {
     return formatMoney(cartStore.totalPrice, 'RUB', { maximumFractionDigits: 2 });
 });
 
-const scopeSlug = computed(() => (route.query.collection as string) || undefined);
-const scopeLabel = computed(() => resolveScopeLabel(catalogStore.collections, scopeSlug.value));
-
-const suggestions = useSearchSuggestions(searchQuery, scopeSlug);
-
-function onSelectSuggestion(item: SuggestionItem): void {
-    if (item.to) router.push(item.to);
-}
-
 function onSearch(value: string): void {
     catalogOpen.value = false;
-    router.push(buildSearchLocation(value, scopeSlug.value));
-}
-
-function onRemoveScope(): void {
-    router.push(buildSearchLocation((route.query.q as string) ?? '', undefined));
+    search(value);
 }
 
 function toggleCatalog(): void {
@@ -151,17 +117,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     <div class="app-header-wrap" :class="{ 'app-header-wrap--open': catalogOpen || mobileNavOpen }">
         <div v-if="authStore.isLoggedIn" class="app-header__strip">
             <div class="app-header__strip-inner">
-                <span
-                    ><strong>B2B Portal</strong> for fast ordering of auto parts and
-                    consumables</span
-                >
-                <span>Live stock and prices</span>
+                <i18n-t keypath="header.tagline" tag="span">
+                    <template #portal>
+                        <strong>{{ t('header.portal') }}</strong>
+                    </template>
+                </i18n-t>
+                <span>{{ t('header.liveStock') }}</span>
             </div>
         </div>
 
         <header class="app-header">
             <div class="app-header__inner">
-                <RouterLink to="/" class="app-header__logo-link" aria-label="Home">
+                <RouterLink to="/" class="app-header__logo-link" :aria-label="t('nav.home')">
                     <MvLogo name="mivend" size="md" />
                 </RouterLink>
 
@@ -173,13 +140,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     type="button"
                     @click="toggleCatalog"
                 >
-                    <span>{{ catalogOpen ? '✕' : '☰' }}</span> Catalogue
+                    <span>{{ catalogOpen ? '✕' : '☰' }}</span> {{ t('nav.catalog') }}
                 </button>
 
                 <div class="app-header__search">
                     <MvSearchInput
                         v-model="searchQuery"
-                        placeholder="Article, VIN, brand, name or OEM"
+                        :placeholder="t('header.searchPlaceholder')"
+                        :button-label="t('search.button')"
+                        :open-search-label="t('search.open')"
+                        :clear-label="t('search.clear')"
+                        :remove-scope-label="t('search.removeScope')"
+                        :empty-text="(query: string) => t('search.noResults', { query })"
                         :suggestions="suggestions"
                         :scope-label="scopeLabel"
                         @remove-scope="onRemoveScope"
@@ -200,86 +172,36 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                             to="/account"
                             class="app-header__nav-btn app-header__nav-btn--zone-dup"
                         >
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            >
-                                <circle cx="12" cy="8" r="4" />
-                                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                            </svg>
-                            <span>Account</span>
+                            <IconUser :size="20" aria-hidden="true" />
+                            <span>{{ t('nav.account') }}</span>
                         </RouterLink>
                         <RouterLink
                             to="/orders"
                             class="app-header__nav-btn app-header__nav-btn--zone-dup"
                         >
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            >
-                                <path d="M3 9l1.5-6h15L21 9" />
-                                <rect x="3" y="9" width="18" height="12" rx="2" />
-                                <path d="M9 13h6M9 17h4" />
-                            </svg>
-                            <span>Orders</span>
+                            <IconClipboardList :size="20" aria-hidden="true" />
+                            <span>{{ t('nav.orders') }}</span>
                         </RouterLink>
                         <RouterLink
                             to="/favorites"
                             class="app-header__nav-btn app-header__nav-btn--zone-dup"
                         >
                             <span class="app-header__nav-icon-wrap">
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path
-                                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                                    />
-                                </svg>
+                                <IconHeart :size="20" aria-hidden="true" />
                                 <span
                                     v-if="favoritesStore.count > 0"
                                     class="app-header__fav-badge"
                                     >{{ favoritesStore.count }}</span
                                 >
                             </span>
-                            <span>Favourites</span>
+                            <span>{{ t('nav.favourites') }}</span>
                         </RouterLink>
                     </template>
 
                     <template v-else>
                         <RouterLink to="/login" class="app-header__nav-btn">
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            >
-                                <circle cx="12" cy="8" r="4" />
-                                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                            </svg>
-                            <span>Sign in</span>
+                            <IconUser :size="20" aria-hidden="true" />
+                            <span>{{ t('nav.signIn') }}</span>
                         </RouterLink>
                     </template>
                 </nav>
@@ -301,7 +223,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 <RouterLink v-if="authStore.isLoggedIn" to="/cart" class="app-header__cart">
                     <span>&#128722;</span>
                     <span class="app-header__cart-text">
-                        <small>Cart</small>
+                        <small>{{ t('nav.cart') }}</small>
                         {{ cartTotal }}
                     </span>
                     <span v-if="cartStore.loaded" class="app-header__cart-badge">{{
@@ -313,7 +235,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     type="button"
                     class="app-header__hamburger"
                     :class="{ 'app-header__hamburger--open': mobileNavOpen }"
-                    aria-label="Menu"
+                    :aria-label="t('nav.menu')"
                     @click="toggleMobileNav"
                 >
                     <span></span><span></span><span></span>
@@ -323,14 +245,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
             <div v-if="authStore.isLoggedIn" class="app-header__delivery">
                 <span class="app-header__delivery-line">
                     <template v-if="authStore.tradingPoint">
-                        Trading point &middot;
+                        {{ t('header.tradingPoint') }} &middot;
                         <strong>{{ authStore.tradingPoint.name }}</strong>
                         <span class="app-header__delivery-address"
                             >&nbsp;— {{ authStore.tradingPoint.address }}</span
                         >
                     </template>
                     <template v-else>
-                        <span class="app-header__delivery-hint">No trading point selected</span>
+                        <span class="app-header__delivery-hint">{{
+                            t('header.noTradingPoint')
+                        }}</span>
                     </template>
                 </span>
             </div>
@@ -373,387 +297,4 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     </div>
 </template>
 
-<style scoped>
-.app-header-wrap {
-    position: sticky;
-    top: 0;
-    z-index: var(--mv-z-sticky);
-}
-
-.app-header__strip {
-    background: #14231f;
-    color: #d8eee7;
-    font-size: 13px;
-}
-
-.app-header__strip-inner {
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: 8px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-}
-
-.app-header__strip strong {
-    color: #fff;
-}
-
-.app-header {
-    /* No backdrop-filter here: per spec it creates a new containing block for
-       position:fixed descendants, which trapped .app-header__nav's mobile off-canvas
-       panel inside this element's box instead of the viewport. */
-    position: relative;
-    background: rgba(255, 255, 255, 0.96);
-    border-bottom: 1px solid #dde7e2;
-}
-
-.app-header__inner {
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: 12px 28px 8px;
-    display: grid;
-    grid-template-columns: 160px 144px minmax(360px, 1fr) auto auto auto auto;
-    gap: 12px;
-    align-items: center;
-}
-
-.app-header__logo-link {
-    text-decoration: none;
-    color: inherit;
-}
-
-.app-header__catalog-btn {
-    width: 100%;
-    height: 52px;
-    border: none;
-    border-radius: 14px;
-    background: var(--app-accent-lime, #c8f21a);
-    color: #14231f;
-    font-size: 15px;
-    font-weight: 800;
-    font-family: inherit;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    white-space: nowrap;
-    box-shadow: 0 8px 18px rgba(200, 242, 26, 0.28);
-    transition: background 0.15s;
-}
-
-.app-header__catalog-btn:hover,
-.app-header__catalog-btn--open {
-    background: #b8e010;
-}
-
-.app-header__search {
-    min-width: 0;
-}
-
-.app-header__nav {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.app-header__nav-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    min-width: 58px;
-    padding: 7px 6px 6px;
-    border-radius: 12px;
-    text-decoration: none;
-    color: #66736e;
-    cursor: pointer;
-    transition:
-        background 0.14s,
-        color 0.14s;
-}
-
-.app-header__nav-btn span {
-    font-size: 11px;
-    font-weight: 800;
-    line-height: 1;
-    white-space: nowrap;
-}
-
-.app-header__nav-btn:hover {
-    background: #f4faf7;
-    color: #008a64;
-}
-
-.app-header__nav-btn.router-link-active {
-    background: #e2f8ef;
-    color: #008a64;
-}
-
-.app-header__nav-icon-wrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.app-header__fav-badge {
-    position: absolute;
-    top: -6px;
-    right: -8px;
-    min-width: 16px;
-    height: 16px;
-    border-radius: 999px;
-    background: #ff4f88;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 900;
-    display: grid;
-    place-items: center;
-    padding: 0 3px;
-    line-height: 1;
-}
-
-.app-header__nav-link {
-    min-height: 48px;
-    min-width: 60px;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #7b8984;
-    text-decoration: none;
-    padding: 0 6px;
-}
-
-.app-header__nav-link:hover {
-    background: #f4faf7;
-    color: #008a64;
-}
-.app-header__nav-icon {
-    font-size: 18px;
-    line-height: 1;
-}
-
-.app-header__hamburger {
-    display: none;
-    width: 44px;
-    height: 44px;
-    border: none;
-    border-radius: 12px;
-    background: transparent;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.app-header__hamburger span {
-    display: block;
-    width: 22px;
-    height: 2px;
-    background: #14231f;
-    border-radius: 2px;
-    transition:
-        transform 0.15s,
-        opacity 0.15s;
-}
-
-.app-header__hamburger--open span:nth-child(1) {
-    transform: translateY(7px) rotate(45deg);
-}
-.app-header__hamburger--open span:nth-child(2) {
-    opacity: 0;
-}
-.app-header__hamburger--open span:nth-child(3) {
-    transform: translateY(-7px) rotate(-45deg);
-}
-
-.app-header__cart {
-    min-height: 52px;
-    min-width: 160px;
-    border-radius: 18px;
-    background: var(--app-accent-orange, #ff8a00);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 10px 0 14px;
-    font-weight: 800;
-    font-size: 15px;
-    text-decoration: none;
-    box-shadow: 0 10px 22px rgba(255, 138, 0, 0.22);
-    transition: background 0.15s;
-}
-.app-header__cart:hover {
-    background: var(--app-accent-orange-hover, #e67c00);
-}
-.app-header__cart:active {
-    background: var(--app-accent-orange-active, #cc6e00);
-}
-
-.app-header__cart-text {
-    flex: 1;
-    line-height: 1.1;
-    white-space: nowrap;
-}
-
-.app-header__cart-text small {
-    display: block;
-    font-size: 11px;
-    opacity: 0.9;
-}
-
-.app-header__cart-badge {
-    min-width: 32px;
-    height: 32px;
-    border-radius: 999px;
-    background: #fff;
-    color: var(--app-accent-orange, #ff8a00);
-    display: grid;
-    place-items: center;
-    font-weight: 900;
-    font-size: 14px;
-    flex-shrink: 0;
-}
-
-.app-header__delivery {
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: 0 28px 8px;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.app-header__delivery-line {
-    font-size: 13px;
-    color: #66736e;
-}
-
-.app-header__delivery-line strong {
-    color: #008a64;
-    font-weight: 900;
-}
-
-.app-header__delivery-address {
-    color: #a8b8b2;
-}
-.app-header__delivery-hint {
-    color: #a8b8b2;
-    font-style: italic;
-}
-
-.app-header__notification-panel {
-    position: fixed;
-    top: 72px;
-    right: 24px;
-    z-index: var(--mv-z-overlay);
-    width: 360px;
-    max-width: calc(100vw - 32px);
-}
-
-.app-header__backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(20, 35, 31, 0.06);
-    z-index: -1;
-}
-
-.app-header__backdrop--nav {
-    z-index: var(--mv-z-overlay);
-    background: rgba(20, 35, 31, 0.28);
-}
-
-@media (max-width: 1180px) {
-    .app-header__strip {
-        display: none;
-    }
-
-    .app-header__inner {
-        grid-template-columns: auto 1fr auto auto auto;
-        padding: 10px 16px 8px;
-    }
-
-    .app-header__catalog-btn {
-        display: none;
-    }
-
-    .app-header__search {
-        grid-column: 1 / -1;
-        order: 3;
-    }
-
-    .app-header__language {
-        grid-column: 3;
-    }
-
-    .app-header__cart {
-        grid-column: 4;
-        min-width: 0;
-        min-height: 44px;
-        padding: 0 10px;
-    }
-
-    .app-header__cart-text {
-        display: none;
-    }
-
-    .app-header__hamburger {
-        display: flex;
-        grid-column: 5;
-    }
-
-    .app-header__nav {
-        position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        width: min(280px, 82vw);
-        background: #fff;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 2px;
-        padding: 76px 16px 24px;
-        transform: translateX(100%);
-        transition: transform 0.22s ease;
-        box-shadow: -12px 0 32px rgba(20, 35, 31, 0.14);
-        z-index: calc(var(--mv-z-overlay) + 1);
-        overflow-y: auto;
-    }
-
-    .app-header__nav--open {
-        transform: translateX(0);
-    }
-
-    /* AccountSidebar already lists Account/Orders/Favourites on these pages — no need to
-       duplicate them in the mobile off-canvas nav too. */
-    .app-header__nav--in-zone .app-header__nav-btn--zone-dup {
-        display: none;
-    }
-
-    .app-header__nav-btn {
-        flex-direction: row;
-        justify-content: flex-start;
-        min-width: 0;
-        width: 100%;
-        gap: 12px;
-        padding: 12px 10px;
-        border: none;
-        background: transparent;
-        font-family: inherit;
-        text-align: left;
-    }
-
-    .app-header__delivery {
-        justify-content: flex-start;
-        padding: 0 16px 8px;
-    }
-}
-</style>
+<style scoped src="./AppHeader.css"></style>

@@ -58,22 +58,24 @@ function cancelClear(): void {
                     :checked="allChecked"
                     @change="toggleAll(($event.target as HTMLInputElement).checked)"
                 />
-                <span>Select all</span>
+                <span>{{ $t('cart.selectAll') }}</span>
             </label>
             <div class="item-list__actions">
                 <div v-if="confirmingClear" class="item-list__clear-confirm">
                     <span>{{
-                        hasSelection ? `Remove ${checkedIds.size} selected?` : 'Clear all?'
+                        hasSelection
+                            ? $t('cart.removeSelected', { n: checkedIds.size })
+                            : $t('cart.clearAll')
                     }}</span>
                     <button
                         class="item-list__clear-confirm-yes"
                         type="button"
                         @click="confirmClear"
                     >
-                        Yes
+                        {{ $t('common.yes') }}
                     </button>
                     <button class="item-list__clear-confirm-no" type="button" @click="cancelClear">
-                        No
+                        {{ $t('common.no') }}
                     </button>
                 </div>
                 <button
@@ -83,7 +85,11 @@ function cancelClear(): void {
                     :disabled="cartStore.lines.length === 0"
                     @click="confirmingClear = true"
                 >
-                    {{ hasSelection ? `Clear selected (${checkedIds.size})` : 'Clear' }}
+                    {{
+                        hasSelection
+                            ? $t('cart.clearSelected', { n: checkedIds.size })
+                            : $t('cart.clear')
+                    }}
                 </button>
             </div>
         </div>
@@ -92,8 +98,8 @@ function cancelClear(): void {
 
         <CartLineGroup
             v-if="orderableLines.length > 0"
-            title="Available to order"
-            note="stock reserved after confirmation"
+            :title="$t('cart.available')"
+            :note="$t('cart.availableNote')"
             :lines="orderableLines"
             :checked-ids="checkedIds"
             @update:checked="setChecked"
@@ -102,8 +108,8 @@ function cancelClear(): void {
         <CartLineGroup
             v-if="blockedLines.length > 0"
             blocked
-            title="Not available for order"
-            note="remove them to continue"
+            :title="$t('cart.unavailable')"
+            :note="$t('cart.unavailableNote')"
             :lines="blockedLines"
             :checked-ids="checkedIds"
             @update:checked="setChecked"
@@ -111,10 +117,7 @@ function cancelClear(): void {
 
         <div class="item-list__note">
             <span>ℹ</span>
-            <span
-                >Cart shows the current procurement order for your trading point. Delivery method
-                and final limit checks happen at checkout.</span
-            >
+            <span>{{ $t('cart.note') }}</span>
         </div>
     </section>
 </template>

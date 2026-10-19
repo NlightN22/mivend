@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { stockVariantFromLevel } from '@mivend/ui-kit';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../stores/auth';
 import { useFavoritesStore } from '../stores/favorites';
 import { useCartActions } from '../composables/useCartActions';
 import { useProductQuantity } from '../composables/useProductQuantity';
+import { useProductLabels } from '../composables/useProductLabels';
 import { brandOf } from '../utils/brand';
 import type { ProductItem } from '../composables/useProductList';
 
@@ -18,6 +20,8 @@ const props = withDefaults(
     { showPrices: undefined },
 );
 
+const { t } = useI18n();
+const labels = useProductLabels();
 const authStore = useAuthStore();
 const favoritesStore = useFavoritesStore();
 const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
@@ -41,11 +45,11 @@ const stock = computed(() =>
 const packLabelRow = computed(() => {
     if (multiplicityEnforced.value) return undefined;
     const q = packQty(props.item);
-    return q ? `${q} pcs` : '—';
+    return q ? t('units.pieces', { n: q }) : '—';
 });
 const packLabelCard = computed(() => {
     const q = packQty(props.item);
-    return q ? `pack of ${q}` : '';
+    return q ? t('productList.packOf', { n: q }) : '';
 });
 
 const common = computed(() => ({
@@ -58,6 +62,9 @@ const common = computed(() => ({
     unitNote: unitView(props.item).note,
     qtyStep: unitView(props.item).step,
     discountTiers: variant.value?.discountTiers,
+    discountTitle: t('productCard.volumeDiscount'),
+    stepperLabels: labels.value.stepper,
+    stockLabels: labels.value.stock,
     currency: variant.value?.currencyCode ?? 'RUB',
     slug: props.item.slug,
     showPrices: pricesVisible.value,
@@ -91,6 +98,7 @@ function toggleFavorite(): void {
         :multiplicity-label="unitView(item).multiplicity"
         :show-multiplicity="multiplicityEnforced"
         :pack-label="packLabelRow"
+        :labels="labels.row"
         @add-to-cart="add"
         @update-cart-qty="updateQty"
         @toggle-favorite="toggleFavorite"
@@ -102,6 +110,7 @@ function toggleFavorite(): void {
         :images="item.images"
         :compare-at-price="prices.compareAt"
         :pack-label="packLabelCard"
+        :labels="labels.card"
         @add-to-cart="add"
         @update-cart-qty="updateQty"
         @toggle-favorite="toggleFavorite"

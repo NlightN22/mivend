@@ -278,6 +278,19 @@ export default [
             '@intlify/vue-i18n/no-raw-text': 'off',
         },
     },
+    {
+        files: [
+            'packages/storefront/src/components/**/*.vue',
+            'packages/storefront/src/layouts/**/*.vue',
+            'packages/storefront/src/pages/{home,catalog,cart,favorites,error}/**/*.vue',
+        ],
+        rules: {
+            '@intlify/vue-i18n/no-raw-text': [
+                'error',
+                { ignorePattern: '^[^A-Za-zА-Яа-яЁё]+$' },
+            ],
+        },
+    },
     prettierConfig, // must be last — disables rules that conflict with prettier
     {
         ignores: [

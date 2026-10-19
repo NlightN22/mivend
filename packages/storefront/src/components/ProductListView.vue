@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { MvErrorState } from '@mivend/ui-kit';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import ConnectedProductCard from './ConnectedProductCard.vue';
 import type { ProductItem, ViewMode } from '../composables/useProductList';
 import { useProductQuantity } from '../composables/useProductQuantity';
@@ -29,6 +30,7 @@ const emit = defineEmits<{
     retry: [];
 }>();
 
+const { t } = useI18n();
 const { multiplicityEnforced } = useProductQuantity();
 const sentinel = ref<HTMLElement | null>(null);
 const gridStyle = computed(() =>
@@ -57,7 +59,7 @@ onBeforeUnmount(() => observer?.disconnect());
             <div>
                 <div v-if="title" class="plv-toolbar__title">{{ title }}</div>
                 <div class="plv-toolbar__count">
-                    {{ loading ? 'Loading...' : `${totalItems} products found` }}
+                    {{ loading ? t('common.loading') : t('productList.count', totalItems) }}
                 </div>
             </div>
             <div class="plv-toolbar__right">
@@ -79,7 +81,7 @@ onBeforeUnmount(() => observer?.disconnect());
                         type="button"
                         @click="emit('update:viewMode', 'grid')"
                     >
-                        &#9638; Grid
+                        &#9638; {{ t('productList.grid') }}
                     </button>
                     <button
                         :class="[
@@ -89,28 +91,36 @@ onBeforeUnmount(() => observer?.disconnect());
                         type="button"
                         @click="emit('update:viewMode', 'list')"
                     >
-                        &#9783; List
+                        &#9783; {{ t('productList.list') }}
                     </button>
                 </div>
             </div>
         </div>
 
-        <div v-if="loading" class="plv-state">Loading products...</div>
+        <div v-if="loading" class="plv-state">{{ t('productList.loading') }}</div>
         <MvErrorState
             v-else-if="loadError"
-            :title="errorTitle ?? 'Could not load products'"
-            :message="errorMessage ?? 'Check your connection and try again.'"
+            :title="errorTitle ?? t('productList.errorTitle')"
+            :message="errorMessage ?? t('productList.errorMessage')"
+            :retry-label="t('common.retry')"
             @retry="emit('retry')"
         />
-        <div v-else-if="items.length === 0" class="plv-state">No products found</div>
+        <div v-else-if="items.length === 0" class="plv-state">
+            {{ t('productList.empty') }}
+        </div>
 
         <template v-else-if="viewMode === 'list'">
             <div class="plv-list">
                 <div class="plv-list__header">
-                    <span></span><span>Product</span><span>SKU</span> <span>Stock</span
-                    ><span>Unit</span
-                    ><span>{{ multiplicityEnforced ? 'Multiplicity' : 'Pack' }}</span
-                    ><span>Price</span><span>Order</span>
+                    <span></span><span>{{ t('productList.product') }}</span
+                    ><span>{{ t('productList.sku') }}</span>
+                    <span>{{ t('productList.stock') }}</span
+                    ><span>{{ t('productList.unit') }}</span
+                    ><span>{{
+                        multiplicityEnforced ? t('productList.multiplicity') : t('productList.pack')
+                    }}</span
+                    ><span>{{ t('productList.price') }}</span
+                    ><span>{{ t('productList.order') }}</span>
                 </div>
                 <ConnectedProductCard
                     v-for="p in items"
@@ -137,7 +147,7 @@ onBeforeUnmount(() => observer?.disconnect());
         <div ref="sentinel" class="plv-sentinel" />
         <div v-if="loadingMore" class="plv-loading-more" role="status">
             <span class="plv-loading-more__spinner" aria-hidden="true" />
-            Loading more...
+            {{ t('productList.loadingMore') }}
         </div>
     </div>
 </template>

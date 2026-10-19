@@ -1,3 +1,4 @@
+import { i18n } from '../i18n';
 import { packsToBase, salesUnitOf, type SalesUnitVariant } from './useSalesUnit';
 
 export interface QuantityVariant extends SalesUnitVariant {
@@ -25,11 +26,14 @@ export function unitViewOf(
             factor: unit.ratio,
             step: unit.packStep,
             multiplicity: unit.packStep > 1 ? `${unit.packStep} ${unit.name}` : '—',
-            note: `1 ${unit.name} = ${packsToBase(1, unit)} pc.`,
+            note: i18n.global.t('product.packNote', {
+                unit: unit.name,
+                pieces: packsToBase(1, unit),
+            }),
         };
     }
     const multiple = multiplicityEnforced ? (variant?.multiplicity ?? 1) : 1;
-    return { label: 'pc.', factor: 1, step: multiple > 1 ? multiple : 1 };
+    return { label: i18n.global.t('units.pc'), factor: 1, step: multiple > 1 ? multiple : 1 };
 }
 
 export function addQtyOf(

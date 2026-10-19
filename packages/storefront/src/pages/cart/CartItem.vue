@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { formatNumber } from '../../i18n/format';
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useProductLabels } from '../../composables/useProductLabels';
 import { IconPackage } from '@tabler/icons-vue';
 import { MvFavoriteButton, MvStatusBadge, MvTooltip, stockVariantFromLevel } from '@mivend/ui-kit';
 import { assetUrl } from '../../composables/assetUrl';
@@ -21,6 +23,8 @@ import { discountLineReason, discountTierReachedReason } from '../../utils/disco
 const props = defineProps<{ line: CartLine; checked: boolean }>();
 const emit = defineEmits<{ 'update:checked': [value: boolean] }>();
 
+const { t } = useI18n();
+const labels = useProductLabels();
 const cartStore = useCartStore();
 const favoritesStore = useFavoritesStore();
 const { packagesOnly, load: loadPackagesOnly } = usePackagesOnly();
@@ -126,27 +130,29 @@ function cancelRemove(): void {
                 {{ line.productVariant.product.name }}
             </RouterLink>
             <div class="cart-item__meta">
-                <span>SKU {{ line.productVariant.sku }}</span>
+                <span>{{ t('cartItem.sku', { sku: line.productVariant.sku }) }}</span>
                 <span v-if="brand">{{ brand }}</span>
-                <span v-if="totalWeightKg != null">{{ formatNumber(totalWeightKg) }} kg</span>
-                <span v-if="packInfo">Pack {{ packInfo.baseQty }} pcs.</span>
+                <span v-if="totalWeightKg != null">{{
+                    t('units.kg', { value: formatNumber(totalWeightKg) })
+                }}</span>
+                <span v-if="packInfo">{{ t('cartItem.pack', { n: packInfo.baseQty }) }}</span>
             </div>
             <div class="cart-item__pills">
-                <MvStockBadge :variant="stockVariant" />
+                <MvStockBadge :variant="stockVariant" :labels="labels.stock" />
                 <MvStatusBadge
                     v-if="line.productVariant.availableForOrder === false"
                     variant="danger"
                 >
-                    Not available for order
+                    {{ t('cart.unavailable') }}
                 </MvStatusBadge>
             </div>
             <div class="cart-item__links">
                 <MvFavoriteButton :is-favorited="isFavorited" @toggle="toggleFavorite" />
                 <MvTooltip placement="bottom">
                     <template #trigger>
-                        <MvButton variant="subtle" size="sm">Analogs</MvButton>
+                        <MvButton variant="subtle" size="sm">{{ t('cartItem.analogs') }}</MvButton>
                     </template>
-                    Analogs are not available yet. Coming later.
+                    {{ t('cartItem.analogsSoon') }}
                 </MvTooltip>
             </div>
         </div>
@@ -176,20 +182,20 @@ function cancelRemove(): void {
 
         <div class="cart-item__qty">
             <div v-if="confirmingRemove" class="cart-item__remove-confirm">
-                <span>Remove?</span>
+                <span>{{ t('cartItem.remove') }}</span>
                 <MvButton
                     class="cart-item__remove-confirm-yes"
                     variant="danger"
                     size="sm"
                     @click="confirmRemove"
-                    >Yes</MvButton
+                    >{{ t('common.yes') }}</MvButton
                 >
                 <MvButton
                     class="cart-item__remove-confirm-no"
                     variant="secondary"
                     size="sm"
                     @click="cancelRemove"
-                    >No</MvButton
+                    >{{ t('common.no') }}</MvButton
                 >
             </div>
             <MvQtyStepper
@@ -198,10 +204,11 @@ function cancelRemove(): void {
                 :model-value="stepperQty"
                 :min="0"
                 :step="salesUnit?.packStep ?? 1"
+                :labels="labels.stepper"
                 @update:model-value="onQtyChange"
             />
             <div v-if="salesUnit && !confirmingRemove" class="cart-item__qty-note">
-                {{ salesUnit.name }}, {{ line.quantity }} pcs. total
+                {{ t('cartItem.packTotal', { unit: salesUnit.name, n: line.quantity }) }}
             </div>
         </div>
 

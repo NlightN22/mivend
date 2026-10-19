@@ -22,12 +22,8 @@ import {
     type AddToCartMutation,
     type AddToCartMutationVariables,
 } from '../api/generated/graphql';
-import {
-    stockAddFailed,
-    stockInsufficient,
-    stockInsufficientGeneric,
-    stockUpdateFailed,
-} from '../utils/discountMessages';
+import { stockInsufficient } from '../utils/discountMessages';
+import { i18n } from '../i18n';
 
 const ADJUST_DEBOUNCE_MS = 350;
 const CART_FETCH_RETRIES = 4;
@@ -52,7 +48,7 @@ function mutationErrorMessage(result: MutationResult, fallback: string): string 
     if (result.errorCode === 'INSUFFICIENT_STOCK_ERROR') {
         return result.quantityAvailable != null
             ? stockInsufficient(result.quantityAvailable)
-            : stockInsufficientGeneric;
+            : i18n.global.t('cartErrors.stockGeneric');
     }
     return fallback;
 }
@@ -162,7 +158,13 @@ export const useCartStore = defineStore('cart', () => {
                 }
                 if (result.addItemToOrder.__typename !== 'Order') {
                     // Optimistic line gets discarded below by fetchCart() — surface why.
-                    toast(mutationErrorMessage(result.addItemToOrder, stockAddFailed), 'error');
+                    toast(
+                        mutationErrorMessage(
+                            result.addItemToOrder,
+                            i18n.global.t('cartErrors.addFailed'),
+                        ),
+                        'error',
+                    );
                 } else {
                     const serverLine = result.addItemToOrder.lines?.find(
                         l => l.productVariant.id === variantId,
@@ -257,7 +259,13 @@ export const useCartStore = defineStore('cart', () => {
             if (result.adjustOrderLine.__typename !== 'Order') {
                 // fetchCart() re-syncs to whatever quantity the server actually applied
                 // (InsufficientStockError can be a partial success).
-                toast(mutationErrorMessage(result.adjustOrderLine, stockUpdateFailed), 'error');
+                toast(
+                    mutationErrorMessage(
+                        result.adjustOrderLine,
+                        i18n.global.t('cartErrors.updateFailed'),
+                    ),
+                    'error',
+                );
             }
         } finally {
             pendingMutations--;
@@ -313,7 +321,7 @@ export const useCartStore = defineStore('cart', () => {
         const wantedCode = SHIPPING_CODE_BY_DELIVERY[checkout.selectedDelivery];
         const methodId = eligible.eligibleShippingMethods.find(m => m.code === wantedCode)?.id;
         if (!methodId) {
-            toast('Selected delivery type is not available for this order', 'error');
+            toast(i18n.global.t('cartErrors.deliveryUnavailable'), 'error');
             return false;
         }
         const setMethodResult = await shopApi(SetOrderShippingMethodForCheckoutDocument, {
@@ -321,7 +329,8 @@ export const useCartStore = defineStore('cart', () => {
         });
         if (setMethodResult.setOrderShippingMethod.__typename !== 'Order') {
             toast(
-                setMethodResult.setOrderShippingMethod.message ?? 'Could not set shipping method',
+                setMethodResult.setOrderShippingMethod.message ??
+                    i18n.global.t('cartErrors.shippingFailed'),
                 'error',
             );
             return false;
@@ -329,7 +338,7 @@ export const useCartStore = defineStore('cart', () => {
         const transitionResult = await shopApi(TransitionToArrangingPaymentDocument);
         const transition = transitionResult.transitionOrderToState;
         if (!transition || transition.__typename !== 'Order') {
-            toast(transition?.message ?? 'Could not proceed to payment', 'error');
+            toast(transition?.message ?? i18n.global.t('cartErrors.paymentFailed'), 'error');
             return false;
         }
         return true;

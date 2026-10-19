@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-vue';
 import MvAmountDisplay from '../MvAmountDisplay/MvAmountDisplay.vue';
 import MvStockBadge from '../MvStockBadge/MvStockBadge.vue';
-import type { StockVariant } from '../MvStockBadge/stock-variant';
+import type { StockBadgeLabels, StockVariant } from '../MvStockBadge/stock-variant';
 import { IconInfoCircle } from '@tabler/icons-vue';
 import MvQtyStepper, { type QtyStepperLabels } from '../MvQtyStepper/MvQtyStepper.vue';
 import MvTooltip from '../MvTooltip/MvTooltip.vue';
@@ -58,6 +58,7 @@ interface Props {
     // Short caption such as 'pack of 12'; empty hides it.
     packLabel?: string;
     labels?: Partial<ProductCardLabels>;
+    stockLabels?: Partial<StockBadgeLabels>;
     stepperLabels?: Partial<QtyStepperLabels>;
 }
 
@@ -83,6 +84,7 @@ const props = withDefaults(defineProps<Props>(), {
     qtyStep: 1,
     packLabel: '',
     labels: () => ({}),
+    stockLabels: () => ({}),
     stepperLabels: () => ({}),
 });
 
@@ -209,11 +211,13 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                         />
                     </div>
                     <MvStockBadge
+                        :labels="stockLabels"
                         v-if="stockQuantity !== undefined"
                         :quantity="stockQuantity"
                         class="mv-product-card__stock-badge"
                     />
                     <MvStockBadge
+                        :labels="stockLabels"
                         v-else-if="stockVariant"
                         :variant="stockVariant"
                         class="mv-product-card__stock-badge"

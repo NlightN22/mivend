@@ -1,17 +1,21 @@
 <template>
     <div class="empty-cart">
         <div class="empty-cart__card">
-            <div class="empty-cart__code">Cart · Empty</div>
-            <h2 class="empty-cart__title">Your cart is empty</h2>
+            <div class="empty-cart__code">{{ $t('emptyCart.code') }}</div>
+            <h2 class="empty-cart__title">{{ $t('emptyCart.title') }}</h2>
             <p class="empty-cart__sub">
-                Add products from the catalog or from your favorites to place an order.
+                {{ $t('emptyCart.text') }}
             </p>
             <div class="empty-cart__actions">
                 <RouterLink to="/catalog" class="empty-cart__btn empty-cart__btn--primary">
-                    Open catalog
+                    {{ $t('emptyCart.openCatalog') }}
                 </RouterLink>
-                <RouterLink to="/favorites" class="empty-cart__btn">Favorites</RouterLink>
-                <RouterLink to="/orders" class="empty-cart__btn">My orders</RouterLink>
+                <RouterLink to="/favorites" class="empty-cart__btn">{{
+                    $t('emptyCart.favorites')
+                }}</RouterLink>
+                <RouterLink to="/orders" class="empty-cart__btn">{{
+                    $t('emptyCart.orders')
+                }}</RouterLink>
             </div>
         </div>
     </div>

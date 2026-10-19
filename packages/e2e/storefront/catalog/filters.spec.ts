@@ -26,7 +26,7 @@ test.describe('Catalog filters', () => {
         await waitForProducts(page);
         const countBefore = await getRowCount(page);
 
-        await page.getByLabel('In stock only').check();
+        await page.getByRole('checkbox', { name: 'In stock only' }).check();
         await waitForProducts(page);
         const countAfter = await getRowCount(page);
 
@@ -38,11 +38,11 @@ test.describe('Catalog filters', () => {
         await page.goto('/catalog');
         await waitForProducts(page);
 
-        await page.getByLabel('In stock only').check();
+        await page.getByRole('checkbox', { name: 'In stock only' }).check();
         await waitForProducts(page);
         const countFiltered = await getRowCount(page);
 
-        await page.getByLabel('In stock only').uncheck();
+        await page.getByRole('checkbox', { name: 'In stock only' }).uncheck();
         await waitForProducts(page);
         const countRestored = await getRowCount(page);
 
@@ -77,7 +77,7 @@ test.describe('Catalog filters', () => {
         await page.goto('/catalog');
         await waitForProducts(page);
 
-        await page.getByLabel('In stock only').check();
+        await page.getByRole('checkbox', { name: 'In stock only' }).check();
         await waitForProducts(page);
         const countFiltered = await getRowCount(page);
 
@@ -86,6 +86,6 @@ test.describe('Catalog filters', () => {
         const countAfterReset = await getRowCount(page);
 
         expect(countAfterReset).toBeGreaterThanOrEqual(countFiltered);
-        await expect(page.getByLabel('In stock only')).not.toBeChecked();
+        await expect(page.getByRole('checkbox', { name: 'In stock only' })).not.toBeChecked();
     });
 });
