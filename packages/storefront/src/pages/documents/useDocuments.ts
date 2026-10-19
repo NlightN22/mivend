@@ -58,11 +58,7 @@ export function toDocData(doc: DocumentSummary): DocData {
         year: 'numeric',
     });
     const amount =
-        doc.amount != null
-            ? formatMoney(doc.amount / 100, doc.currencyCode ?? null, {
-                  maximumFractionDigits: 2,
-              })
-            : '—';
+        doc.amount != null ? formatMoney(doc.amount / 100, doc.currencyCode ?? null) : '—';
     const downloadUrl = downloadUrlOf(doc);
     return {
         icon,

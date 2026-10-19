@@ -22,7 +22,7 @@ const packagingLabel = computed(() => formatPackaging(packaging.value));
 const lineCount = computed(() => cartStore.lines.length);
 const totalQty = computed(() => cartStore.totalQuantity);
 
-const { formatWhole } = useCurrency();
+const { formatCurrencyAmount } = useCurrency();
 const creditPreview = computed(() =>
     checkoutStore.creditPreview?.limitControlled ? checkoutStore.creditPreview : null,
 );
@@ -39,7 +39,7 @@ const overLimit = computed(() =>
 );
 
 function formatRub(kopecks: number): string {
-    return formatMoney(kopecks / 100, 'RUB', { maximumFractionDigits: 2 });
+    return formatMoney(kopecks / 100, 'RUB');
 }
 
 const subtotal = computed(() =>
@@ -47,9 +47,7 @@ const subtotal = computed(() =>
 );
 const discountLabel = computed(() => `− ${formatRub(cartStore.discountAmount)}`);
 
-const total = computed(() =>
-    formatMoney(cartStore.totalPrice, 'RUB', { maximumFractionDigits: 2 }),
-);
+const total = computed(() => formatMoney(cartStore.totalPrice, 'RUB'));
 
 const btnLabel = computed(() => {
     if (checkoutStore.selectedPayment === 'card')
@@ -113,11 +111,11 @@ async function handlePrimary(): Promise<void> {
             <template v-if="creditPreview">
                 <div class="checkout-summary__line">
                     <span>{{ $t('checkout.summary.availableCredit') }}</span>
-                    <strong>{{ formatWhole(Math.max(creditPreview.availableCredit, 0)) }}</strong>
+                    <strong>{{ formatCurrencyAmount(Math.max(creditPreview.availableCredit, 0)) }}</strong>
                 </div>
                 <div v-if="creditPreview.exceeded" class="checkout-summary__line">
                     <span>{{ $t('checkout.summary.overLimit') }}</span>
-                    <strong class="checkout-summary__discount">{{ formatWhole(overLimit) }}</strong>
+                    <strong class="checkout-summary__discount">{{ formatCurrencyAmount(overLimit) }}</strong>
                 </div>
             </template>
 

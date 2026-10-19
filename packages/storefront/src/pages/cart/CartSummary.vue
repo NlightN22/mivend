@@ -13,7 +13,7 @@ const packaging = computed(() => useOrderPackaging(cartStore.lines));
 const packagingLabel = computed(() => formatPackaging(packaging.value));
 
 function formatRub(kopecks: number): string {
-    return formatMoney(kopecks / 100, 'RUB', { maximumFractionDigits: 2 });
+    return formatMoney(kopecks / 100, 'RUB');
 }
 
 const subtotal = computed(() =>
@@ -22,9 +22,7 @@ const subtotal = computed(() =>
 
 const discountLabel = computed(() => `− ${formatRub(cartStore.discountAmount)}`);
 
-const total = computed(() =>
-    formatMoney(cartStore.totalPrice, 'RUB', { maximumFractionDigits: 2 }),
-);
+const total = computed(() => formatMoney(cartStore.totalPrice, 'RUB'));
 
 const totalQty = computed(() => cartStore.totalQuantity);
 const lineCount = computed(() => cartStore.lines.length);

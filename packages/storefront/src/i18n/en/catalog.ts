@@ -72,6 +72,7 @@ export default {
         floorPrice: 'Floor price',
         volumeDiscount: 'Volume discount',
         weightThreshold: '≥ {kg} kg',
+        amountThreshold: '≥ {amount}',
     },
     stepper: {
         decrease: 'Decrease',

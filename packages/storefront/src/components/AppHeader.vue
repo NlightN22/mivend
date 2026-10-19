@@ -67,7 +67,7 @@ const inAccountZone = computed(() =>
 
 const cartTotal = computed(() => {
     if (!cartStore.loaded) return '';
-    return formatMoney(cartStore.totalPrice, 'RUB', { maximumFractionDigits: 2 });
+    return formatMoney(cartStore.totalPrice, 'RUB');
 });
 
 function onSearch(value: string): void {

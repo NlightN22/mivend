@@ -6,12 +6,12 @@ import { useCurrency } from '../../composables/useCurrency';
 
 const { t } = useI18n();
 const authStore = useAuthStore();
-const { formatWhole } = useCurrency();
+const { formatCurrencyAmount } = useCurrency();
 
 const limitText = computed(() => {
     const cp = authStore.counterparty;
     if (!cp) return t('account.attention.noLimitData');
-    const amount = formatWhole(cp.creditLimit - cp.creditBalance);
+    const amount = formatCurrencyAmount(cp.creditLimit - cp.creditBalance);
     const n = cp.paymentDelayDays;
     return n > 0
         ? t('account.attention.availableDeferred', { amount, n }, n)

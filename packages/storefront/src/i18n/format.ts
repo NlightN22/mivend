@@ -13,16 +13,21 @@ export function formatNumber(
     return new Intl.NumberFormat(locale, options).format(value);
 }
 
+// Every money amount shows the same fraction digits, so equal prices never render differently.
+const MONEY_DIGITS: Intl.NumberFormatOptions = {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+};
+
 export function formatMoney(
     amount: number,
     currency: string | null = 'RUB',
-    options: Intl.NumberFormatOptions = { maximumFractionDigits: 0 },
     locale: string = activeTag(),
 ): string {
     const style: Intl.NumberFormatOptions = currency
-        ? { style: 'currency', currency, currencyDisplay: 'narrowSymbol', minimumFractionDigits: 0 }
+        ? { style: 'currency', currency, currencyDisplay: 'narrowSymbol' }
         : {};
-    return new Intl.NumberFormat(locale, { ...style, ...options }).format(amount);
+    return new Intl.NumberFormat(locale, { ...style, ...MONEY_DIGITS }).format(amount);
 }
 
 export function formatDate(
@@ -33,9 +38,6 @@ export function formatDate(
     return new Intl.DateTimeFormat(locale, options).format(new Date(value));
 }
 
-export function formatAmount(amount: number, currency: string, decimals: number): string {
-    return formatMoney(amount, currency, {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-    });
+export function formatAmount(amount: number, currency: string): string {
+    return formatMoney(amount, currency);
 }

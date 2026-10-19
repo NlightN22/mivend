@@ -15,6 +15,7 @@ interface Props {
     // same pattern as MvSearchInput's buttonLabel prop.
     title?: string;
     weightLabel?: (kg: number) => string;
+    amountLabel?: (minorUnits: number) => string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -22,6 +23,7 @@ const props = withDefaults(defineProps<Props>(), {
     size: 'md',
     title: 'Volume discount',
     weightLabel: (kg: number) => `≥ ${kg.toLocaleString()} kg`,
+    amountLabel: (minorUnits: number) => `≥ ${(minorUnits / 100).toLocaleString()} ₽`,
 });
 
 const maxPercent = computed(() => Math.max(0, ...props.tiers.map(t => t.percent)));
@@ -31,7 +33,7 @@ function formatThreshold(tier: DiscountTier): string {
         return props.weightLabel(tier.minWeightKg);
     }
     if (tier.minAmount !== null) {
-        return `≥ ${(tier.minAmount / 100).toLocaleString()} ₽`;
+        return props.amountLabel(tier.minAmount);
     }
     return '';
 }

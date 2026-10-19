@@ -4,13 +4,13 @@ import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
 
 const authStore = useAuthStore();
-const { formatWhole } = useCurrency();
+const { formatCurrencyAmount } = useCurrency();
 
 const availableLimit = computed(() => {
     const cp = authStore.counterparty;
     if (!cp) return '—';
     const val = cp.creditLimit - cp.creditBalance;
-    return formatWhole(val);
+    return formatCurrencyAmount(val);
 });
 
 const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);

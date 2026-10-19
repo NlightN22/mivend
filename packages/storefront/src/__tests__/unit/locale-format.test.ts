@@ -10,14 +10,15 @@ describe('locale-aware formatter', () => {
         expect(nbsp(formatNumber(1234567.5, {}, 'ru'))).toBe('1 234 567,5');
     });
 
-    it('formats money with the narrow currency symbol and no forced fraction', () => {
-        expect(formatMoney(1080, 'RUB', undefined, 'en-GB')).toBe('₽1,080');
-        expect(nbsp(formatMoney(1080, 'RUB', undefined, 'ru'))).toBe('1 080 ₽');
-        expect(formatMoney(10.5, 'RUB', { maximumFractionDigits: 2 }, 'en-GB')).toBe('₽10.5');
+    it('formats money with the narrow currency symbol and always two fraction digits', () => {
+        expect(formatMoney(1080, 'RUB', 'en-GB')).toBe('₽1,080.00');
+        expect(nbsp(formatMoney(1080, 'RUB', 'ru'))).toBe('1 080,00 ₽');
+        expect(nbsp(formatMoney(2309.2, 'RUB', 'ru'))).toBe('2 309,20 ₽');
+        expect(formatMoney(10.456, 'RUB', 'en-GB')).toBe('₽10.46');
     });
 
     it('formats a plain number when the currency is unknown', () =>
-        expect(formatMoney(1080, null, undefined, 'en-GB')).toBe('1,080'));
+        expect(formatMoney(1080, null, 'en-GB')).toBe('1,080.00'));
 
     it('formats dates per locale', () => {
         const opts: Intl.DateTimeFormatOptions = { timeZone: 'UTC' };

@@ -18,7 +18,7 @@ function ensureLoaded(): void {
         });
 }
 
-export function useCurrency(): { formatWhole: (amount: number) => string } {
+export function useCurrency(): { formatCurrencyAmount: (amount: number) => string } {
     ensureLoaded();
-    return { formatWhole: amount => formatMoney(amount, currencyCode.value) };
+    return { formatCurrencyAmount: amount => formatMoney(amount, currencyCode.value) };
 }

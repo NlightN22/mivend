@@ -74,6 +74,7 @@ const ru: typeof en = {
         floorPrice: 'Минимальная цена',
         volumeDiscount: 'Скидка за объём',
         weightThreshold: '≥ {kg} кг',
+        amountThreshold: '≥ {amount}',
     },
     stepper: {
         decrease: 'Уменьшить',

@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
 
 const authStore = useAuthStore();
-const { formatWhole } = useCurrency();
+const { formatCurrencyAmount } = useCurrency();
 const tradingPoint = computed(() => authStore.tradingPoint);
 const counterparty = computed(() => authStore.counterparty);
 
@@ -56,12 +56,12 @@ const limitWarning = computed(() => {
                                       'account.currentPoint.deferredLimit',
                                       {
                                           n: counterparty.paymentDelayDays,
-                                          amount: formatWhole(counterparty.creditLimit),
+                                          amount: formatCurrencyAmount(counterparty.creditLimit),
                                       },
                                       counterparty.paymentDelayDays,
                                   )
                                 : $t('account.currentPoint.limit', {
-                                      amount: formatWhole(counterparty.creditLimit),
+                                      amount: formatCurrencyAmount(counterparty.creditLimit),
                                   })
                         }}
                     </div>

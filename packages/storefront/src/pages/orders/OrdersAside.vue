@@ -9,13 +9,13 @@ import { MyAdvanceBalanceDocument } from '../../api/generated/graphql';
 
 const { t } = useI18n();
 const authStore = useAuthStore();
-const { formatWhole } = useCurrency();
+const { formatCurrencyAmount } = useCurrency();
 
 const availableLimit = computed(() => {
     const cp = authStore.counterparty;
     if (!cp) return '—';
     const val = cp.creditLimit - cp.creditBalance;
-    return formatWhole(val);
+    return formatCurrencyAmount(val);
 });
 
 const paymentDelay = computed(() => {

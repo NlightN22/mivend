@@ -59,6 +59,7 @@ interface Props {
     discountTiers?: DiscountTier[];
     discountTitle?: string;
     discountWeightLabel?: (kg: number) => string;
+    discountAmountLabel?: (minorUnits: number) => string;
     currency?: string;
     stock?: number;
     stockVariant?: StockVariant;
@@ -180,6 +181,7 @@ function onStepperChange(qty: number): void {
                     :tiers="discountTiers"
                     :title="discountTitle"
                     :weight-label="discountWeightLabel"
+                    :amount-label="discountAmountLabel"
                 />
             </div>
         </div>

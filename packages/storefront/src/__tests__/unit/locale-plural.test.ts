@@ -28,12 +28,12 @@ describe('catalogue plurals and amount formatter', () => {
             '22 позиции',
             '112 позиций',
         ]);
-        expect(nbsp(formatAmount(1080.5, 'RUB', 2))).toBe('1 080,50 ₽');
+        expect(nbsp(formatAmount(1080.5, 'RUB'))).toBe('1 080,50 ₽');
     });
 
-    it('formats ui-kit amounts with the active locale and fixed decimals', () => {
+    it('formats ui-kit amounts with the active locale and two decimals whatever the caller asks', () => {
         i18n.global.locale.value = 'en';
-        expect(formatAmount(1080.5, 'RUB', 2)).toBe('₽1,080.50');
-        expect(formatAmount(1080, 'RUB', 0)).toBe('₽1,080');
+        expect(formatAmount(1080.5, 'RUB')).toBe('₽1,080.50');
+        expect(formatAmount(1080, 'RUB')).toBe('₽1,080.00');
     });
 });

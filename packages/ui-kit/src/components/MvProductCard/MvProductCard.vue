@@ -39,6 +39,7 @@ interface Props {
     discountTiers?: DiscountTier[];
     discountTitle?: string;
     discountWeightLabel?: (kg: number) => string;
+    discountAmountLabel?: (minorUnits: number) => string;
     currency?: string;
     stockVariant?: StockVariant;
     stockQuantity?: number;
@@ -156,6 +157,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                         :tiers="discountTiers"
                         :title="discountTitle"
                         :weight-label="discountWeightLabel"
+                        :amount-label="discountAmountLabel"
                     />
                 </span>
             </div>
