@@ -56,8 +56,13 @@ export class ReservationExtensionService {
                 .getRepository(txCtx, Reservation)
                 .createQueryBuilder()
                 .update()
-                .set({ expiresAt: () => `"expiresAt" + make_interval(days => :days)` })
-                .setParameter('days', additionalDays)
+                // Extra days are fixed 24h units: shift in the instant domain so a DST change in the process zone adds no hour.
+                .set({
+                    expiresAt: () =>
+                        `("expiresAt" AT TIME ZONE :tz + make_interval(hours => :hours)) AT TIME ZONE :tz`,
+                })
+                .setParameter('tz', Intl.DateTimeFormat().resolvedOptions().timeZone)
+                .setParameter('hours', additionalDays * 24)
                 .where('orderId = :orderId AND status = :status', {
                     orderId: String(orderId),
                     status: 'active',

@@ -55,7 +55,11 @@ describe('ReservationExtensionService', () => {
             'extend-reservation',
         );
         expect(result).toHaveLength(1);
-        expect(qb.setParameter).toHaveBeenCalledWith('days', 2);
+        expect(qb.setParameter).toHaveBeenCalledWith('hours', 48);
+        expect(qb.setParameter).toHaveBeenCalledWith(
+            'tz',
+            Intl.DateTimeFormat().resolvedOptions().timeZone,
+        );
         expect(qb.where).toHaveBeenCalledWith(expect.stringContaining('status = :status'), {
             orderId: 'order-1',
             status: 'active',
