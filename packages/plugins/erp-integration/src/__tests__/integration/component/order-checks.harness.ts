@@ -346,7 +346,9 @@ export async function createOrderChecksWorld(fileTag: string): Promise<OrderChec
         registry,
         policies,
         checks,
-        orderChecks: new OrderChecksService(connection, checks, registry, registrar),
+        orderChecks: new OrderChecksService(connection, checks, registry, registrar, {
+            create: async () => ({}),
+        } as never),
         stale: new OrderCheckStaleService(connection, checks, writer, requests),
         requests,
         health: new OrderCheckHealthService(createTestConnection(dataSource)),
