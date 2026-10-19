@@ -97,7 +97,6 @@ beforeAll(async () => {
 
     const connectionShim = {
         getRepository: () => dataSource.getRepository(TestCounterparty),
-        rawConnection: dataSource,
     } as unknown as TransactionalConnection;
 
     service = new CounterpartyService(

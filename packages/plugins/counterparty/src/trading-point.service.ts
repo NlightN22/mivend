@@ -15,6 +15,7 @@ import { ContactPerson } from './entities/contact-person.entity';
 import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
 import { loggerCtx } from './types';
+import { ctxQuery } from 'shared';
 
 export interface TradingPointDetailsPatch {
     name?: string;
@@ -203,7 +204,9 @@ export class TradingPointService {
     async upsert(ctx: RequestContext, payload: TradingPointUpsertPayload): Promise<TradingPoint> {
         const repo = this.connection.getRepository(ctx, TradingPoint);
 
-        const counterpartyRow = await this.connection.rawConnection.query(
+        const counterpartyRow = await ctxQuery<Array<{ id: string; branchId: string | null }>>(
+            this.connection,
+            ctx,
             `SELECT id, "branchId" FROM counterparty WHERE "erpId" = $1 LIMIT 1`,
             [payload.counterpartyErpId],
         );
@@ -270,7 +273,9 @@ export class TradingPointService {
         ctx: RequestContext,
         erpId: string,
     ): Promise<CounterpartyRef | null> {
-        const rows = await this.connection.rawConnection.query(
+        const rows = await ctxQuery<Array<{ id: string; branchId: string | null }>>(
+            this.connection,
+            ctx,
             `SELECT id, "branchId" FROM counterparty WHERE "erpId" = $1 LIMIT 1`,
             [erpId],
         );
@@ -375,7 +380,9 @@ export class TradingPointService {
         ctx: RequestContext,
         customerId: ID,
     ): Promise<TradingPoint | null> {
-        const rows = await this.connection.rawConnection.query(
+        const rows = await ctxQuery<[Array<{ tpid: string | null }>, number]>(
+            this.connection,
+            ctx,
             `UPDATE customer cu SET "customFieldsPreferredtradingpointid" = COALESCE(
                  (SELECT tp.id::text FROM trading_point tp
                   WHERE tp.id::text = cu."customFieldsPreferredtradingpointid"
@@ -389,7 +396,7 @@ export class TradingPointService {
              RETURNING cu."customFieldsPreferredtradingpointid" AS tpid`,
             [customerId],
         );
-        const tpId: string | undefined = rows[0]?.[0]?.tpid;
+        const tpId: string | null | undefined = rows[0]?.[0]?.tpid;
         if (!tpId) return null;
         return this.findById(ctx, tpId);
     }
@@ -400,7 +407,9 @@ export class TradingPointService {
         tradingPoint: Pick<TradingPoint, 'servicingBranchId' | 'counterpartyId'>,
     ): Promise<string | null> {
         if (tradingPoint.servicingBranchId) return tradingPoint.servicingBranchId;
-        const rows = await this.connection.rawConnection.query(
+        const rows = await ctxQuery<Array<{ branchId: string | null }>>(
+            this.connection,
+            ctx,
             `SELECT "branchId" FROM counterparty WHERE id::text = $1 LIMIT 1`,
             [String(tradingPoint.counterpartyId)],
         );
@@ -465,7 +474,9 @@ export class TradingPointService {
 
     async getCounterpartyIdForUser(ctx: RequestContext): Promise<string | null> {
         if (!ctx.activeUserId) return null;
-        const rows = await this.connection.rawConnection.query(
+        const rows = await ctxQuery<Array<{ cid: string | null }>>(
+            this.connection,
+            ctx,
             `SELECT cu."customFieldsCounterpartyid" AS cid FROM customer cu WHERE cu."userId" = $1 LIMIT 1`,
             [ctx.activeUserId],
         );

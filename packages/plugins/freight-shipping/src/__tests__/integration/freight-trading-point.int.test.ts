@@ -137,10 +137,12 @@ beforeAll(async () => {
         "customFieldsPreferredtradingpointid" varchar)`);
 
     connectionGetRepository = (_ctx: unknown, entity: unknown) =>
-        typeof entity === 'function' && entity.name === 'ShippingMethod'
-            ? { findByIds: async () => [{ code: shippingMethodCode }] }
-            : dataSource.getRepository(TestPoint);
-    const connection = { rawConnection: dataSource, getRepository: connectionGetRepository };
+        entity === 'Channel'
+            ? { query: (sql: string, params?: unknown[]) => dataSource.query(sql, params) }
+            : typeof entity === 'function' && entity.name === 'ShippingMethod'
+              ? { findByIds: async () => [{ code: shippingMethodCode }] }
+              : dataSource.getRepository(TestPoint);
+    const connection = { getRepository: connectionGetRepository };
     tradingPointService = new TradingPointService(
         connection as never,
         {} as never,

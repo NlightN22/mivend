@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
-import type { RequestContext, TransactionalConnection } from '@vendure/core';
+import type { RequestContext } from '@vendure/core';
 import {
     createTestSchema,
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
 } from 'shared';
 
 import { NumberingService } from '../../numbering.service';
@@ -29,9 +30,7 @@ beforeAll(async () => {
     await dataSource.initialize();
     await dataSource.query(`CREATE SEQUENCE IF NOT EXISTS mivend_number_seq_order START 1`);
 
-    const connectionShim = {
-        rawConnection: dataSource,
-    } as unknown as TransactionalConnection;
+    const connectionShim = createTestConnection(dataSource);
 
     service = new NumberingService(connectionShim, { instanceNumberCode: '100' });
 });

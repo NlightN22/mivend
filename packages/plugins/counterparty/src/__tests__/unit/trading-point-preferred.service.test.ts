@@ -5,8 +5,8 @@ import { TradingPointService } from '../../trading-point.service';
 const rawQuery = vi.fn();
 const findOne = vi.fn();
 const connection = {
-    getRepository: () => ({ findOne }),
-    rawConnection: { query: rawQuery },
+    getRepository: (_ctx: unknown, entity: unknown) =>
+        entity === 'Channel' ? { query: rawQuery } : { findOne },
 };
 
 describe('TradingPointService.getPreferredForCustomer', () => {

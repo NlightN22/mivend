@@ -28,9 +28,9 @@ const mockConnection = {
     getRepository: vi.fn((ctx, entity) => {
         if (entity === TradingPoint) return mockTpRepo;
         if (entity === ContactPerson) return mockCpRepo;
+        if (entity === 'Channel') return { query: mockRawQuery };
         return mockTpRepo;
     }),
-    rawConnection: { query: mockRawQuery },
 };
 
 const mockCustomerService = {} as unknown as CustomerService;

@@ -3,6 +3,7 @@ import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { NUMBERING_PLUGIN_OPTIONS, NUMBERING_SEQUENCE_NAMES, NumberingDocumentType } from './types';
 import type { NumberingPluginOptions } from './types';
+import { ctxQuery } from 'shared';
 
 @Injectable()
 export class NumberingService {
@@ -13,8 +14,9 @@ export class NumberingService {
 
     async next(ctx: RequestContext, documentType: NumberingDocumentType): Promise<string> {
         const sequenceName = NUMBERING_SEQUENCE_NAMES[documentType];
-        const rawConnection = this.connection.rawConnection;
-        const result: Array<{ nextval: string }> = await rawConnection.query(
+        const result: Array<{ nextval: string }> = await ctxQuery(
+            this.connection,
+            ctx,
             `SELECT nextval('${sequenceName}') as nextval`,
         );
         const seqValue = result[0].nextval;

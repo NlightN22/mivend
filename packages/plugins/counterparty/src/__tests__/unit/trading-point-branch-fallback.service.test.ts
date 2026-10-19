@@ -4,7 +4,7 @@ import { TradingPointService } from '../../trading-point.service';
 
 const rawQuery = vi.fn();
 const getGlobalDefaultBranchId = vi.fn();
-const connection = { rawConnection: { query: rawQuery } };
+const connection = { getRepository: () => ({ query: rawQuery }) };
 const ctx = {} as RequestContext;
 const point = (servicingBranchId: string | null) => ({ servicingBranchId, counterpartyId: '5' });
 

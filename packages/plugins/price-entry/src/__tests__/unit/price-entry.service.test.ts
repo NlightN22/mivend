@@ -30,8 +30,9 @@ mockQb.andWhere.mockReturnValue(mockQb);
 const mockRawQuery = vi.fn();
 
 const mockConnection = {
-    getRepository: vi.fn(() => mockRepo),
-    rawConnection: { query: mockRawQuery },
+    getRepository: vi.fn((_ctx: unknown, entity: unknown) =>
+        entity === 'Channel' ? { query: mockRawQuery } : mockRepo,
+    ),
 };
 
 const mockCtx = {} as unknown as RequestContext;

@@ -7,7 +7,7 @@ const mockCtx = {} as unknown as RequestContext;
 
 function makeService(nextvalQueue: string[]): NumberingService {
     const query = vi.fn(async () => [{ nextval: nextvalQueue.shift() }]);
-    const connection = { rawConnection: { query } } as unknown as TransactionalConnection;
+    const connection = { getRepository: () => ({ query }) } as unknown as TransactionalConnection;
     return new NumberingService(connection, { instanceNumberCode: '100' });
 }
 

@@ -47,9 +47,8 @@ class TestPriceEntry {
     @Column({ type: 'bigint' }) price!: number;
 }
 
-function mapEntity(base: TransactionalConnection, dataSource: DataSource): TransactionalConnection {
+function mapEntity(base: TransactionalConnection): TransactionalConnection {
     return {
-        rawConnection: dataSource,
         withTransaction: base.withTransaction.bind(base),
         getRepository: (ctx: never, entity: unknown) =>
             base.getRepository(
@@ -80,7 +79,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
-    const connection = mapEntity(createTestConnection(dataSource), dataSource);
+    const connection = mapEntity(createTestConnection(dataSource));
     floor = new FloorPriceService(connection, new PriceEntryService(connection));
     access = new PriceTypeAccessService(connection, {} as never, {} as never);
 });

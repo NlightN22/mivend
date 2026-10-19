@@ -12,6 +12,7 @@ export {
 export { withAggregateLock } from './aggregate-lock';
 export { withOrderCancelLocks } from './order-cancel-locks';
 export { withSavepoint } from './savepoint';
+export { ctxQuery } from './ctx-query';
 
 // Named re-exports, not `export *`: Vite/Rollup CJS interop can't detect the __exportStar loop
 // tsc must emit static `exports.foo = ...` assignments for browser-bundled consumers.

@@ -179,6 +179,11 @@ export const config: VendureConfig = {
         // Production-only (synchronize:false there) — see docs/environments.md's "Migrations".
         migrations: [path.join(__dirname, 'migrations/*.+(js|ts)')],
         subscribers: [OrderUuidSubscriber],
+        // An exhausted pool fails the waiting request after the timeout instead of freezing the server (#257).
+        extra: {
+            max: parseInt(process.env.DB_POOL_SIZE ?? '10'),
+            connectionTimeoutMillis: parseInt(process.env.DB_POOL_ACQUIRE_TIMEOUT_MS ?? '15000'),
+        },
     },
     customFields: {
         TaxCategory: [

@@ -12,7 +12,7 @@ import {
 import type { SelectQueryBuilder } from 'typeorm';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { AccessScopeService } from '@mivend/plugin-access-control';
-import { withAggregateLock } from 'shared';
+import { withAggregateLock, ctxQuery } from 'shared';
 
 import { applyCounterpartyListFilter, CounterpartyListFilter } from './counterparty-list-filter';
 import { CounterpartyCreatedEvent } from './counterparty-created.event';
@@ -248,7 +248,9 @@ export class CounterpartyService {
     }
 
     async getForCustomer(ctx: RequestContext, customerId: ID): Promise<Counterparty | null> {
-        const result = await this.connection.rawConnection.query(
+        const result = await ctxQuery<Counterparty[]>(
+            this.connection,
+            ctx,
             `SELECT c.* FROM counterparty c
              INNER JOIN customer cu ON cu."customFieldsCounterpartyid"::text = c.id::text
              WHERE cu.id = $1`,
@@ -259,7 +261,9 @@ export class CounterpartyService {
 
     // Read-only: shows an existing link only; creating it is the separate activation mutation
     async getLinkedCustomerId(ctx: RequestContext, counterpartyId: ID): Promise<ID | null> {
-        const result = await this.connection.rawConnection.query(
+        const result = await ctxQuery<Array<{ id: ID }>>(
+            this.connection,
+            ctx,
             `SELECT cu.id AS id FROM customer cu
              WHERE cu."customFieldsCounterpartyid"::text = $1`,
             [String(counterpartyId)],

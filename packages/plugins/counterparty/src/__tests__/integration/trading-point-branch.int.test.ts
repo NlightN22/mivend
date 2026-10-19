@@ -6,6 +6,7 @@ import {
     dropTestSchema,
     testDataSourceConnectionOptions,
     testSchemaOptions,
+    createTestConnection,
 } from 'shared';
 import { TradingPointService } from '../../trading-point.service';
 
@@ -33,7 +34,7 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     service = new TradingPointService(
-        { rawConnection: dataSource } as never,
+        createTestConnection(dataSource),
         {} as never,
         {} as never,
         {} as never,

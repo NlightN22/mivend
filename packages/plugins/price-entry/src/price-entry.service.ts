@@ -3,6 +3,7 @@ import { mainContractPriceTypeIdSql } from '@mivend/plugin-customer-pricing';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
+import { ctxQuery } from 'shared';
 
 const loggerCtx = 'PriceEntryPlugin';
 
@@ -84,7 +85,9 @@ export class PriceEntryService {
 
     async getPriceTypeCodeForUser(ctx: RequestContext): Promise<string | null> {
         if (!ctx.activeUserId) return null;
-        const rows = await this.connection.rawConnection.query(
+        const rows = await ctxQuery<Array<{ code: string }>>(
+            this.connection,
+            ctx,
             `SELECT pt.code
              FROM customer cu
              JOIN price_type pt ON pt."isPurchase" = false AND pt.id = COALESCE(
@@ -104,7 +107,9 @@ export class PriceEntryService {
         ctx: RequestContext,
         customerId: string,
     ): Promise<string | null> {
-        const rows = await this.connection.rawConnection.query(
+        const rows = await ctxQuery<Array<{ code: string }>>(
+            this.connection,
+            ctx,
             `SELECT pt.code
              FROM price_type pt
              WHERE pt."isPurchase" = false AND pt.id = COALESCE(
@@ -116,11 +121,11 @@ export class PriceEntryService {
         return rows?.[0]?.code ?? null;
     }
 
-    // A purchase type is never a selling price, so these lookups skip it.
-    // BranchSettings.defaultPriceTypeId stores a PriceType id, not a code, while the price-entry
-    // lookups above are keyed by code, so this needs an extra resolution step.
-    async getPriceTypeCodeById(_ctx: RequestContext, priceTypeId: string): Promise<string | null> {
-        const rows = await this.connection.rawConnection.query(
+    // Skips purchase types (never a selling price); BranchSettings.defaultPriceTypeId is an id, lookups are by code.
+    async getPriceTypeCodeById(ctx: RequestContext, priceTypeId: string): Promise<string | null> {
+        const rows = await ctxQuery<Array<{ code: string }>>(
+            this.connection,
+            ctx,
             `SELECT code FROM price_type WHERE id::varchar = $1 AND "isPurchase" = false LIMIT 1`,
             [priceTypeId],
         );
