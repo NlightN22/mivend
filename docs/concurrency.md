@@ -147,7 +147,8 @@ await withAggregateLock(connection, ctx, `product-photo:${externalId}`, async tx
 3. Does any value come from an event payload or an object read before an `await`?
 4. Can the same code run twice at once for one aggregate? What happens?
 5. Does every failure path log at error level or fail the caller?
-. Is a transaction or advisory lock held for the duration of background work? That is a violation; use (i).
+6. Is there a real-Postgres concurrent-writer test for it?
+7. Is a transaction or advisory lock held for the duration of background work? That is a violation; use (i).
 
 **Order row vs advisory locks (#233).** An order-line edit takes `proformaInvoices-for-order:<id>`, then
 `reserve-order:<id>`, then the order row (`FOR UPDATE`). Vendure's placement transition (payment mutation) takes the

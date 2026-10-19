@@ -389,7 +389,9 @@ Full rules: `docs/concurrency.md`. Hard rules for any read-compute-write of shar
 3. EventBus subscribers never write from `event.order`; re-read inside the lock.
 4. Never swallow errors in handlers; log at error level (`subscribeAndLog`), or mark `// best-effort: <reason>`.
 5. No raw `pg_advisory_xact_lock`; no SERIALIZABLE by default; fixed lock ordering.
-. Every DB call goes through the ctx: `getRepository(ctx, ...)`, `ctxQuery(connection, ctx, sql, params)` from `shared`; no `rawConnection`/`DataSource` (lint `db/no-raw-connection`, `docs/concurrency.md` "Connections").
+6. A real-Postgres concurrent-writer test is mandatory; run the `concurrency-audit` skill on such changes.
+7. Every DB call goes through the ctx: `getRepository(ctx, ...)`, `ctxQuery(connection, ctx, sql, params)` from `shared`; no `rawConnection`/`DataSource` (lint `db/no-raw-connection`, `docs/concurrency.md` "Connections").
+8. Background work picked up by several workers that outlasts a short transaction: lease-based claim, `docs/concurrency.md` (i); never hold a transaction or lock across the work.
 
 ---
 
