@@ -6,7 +6,11 @@ import { ProductPhoto } from '../entities/product-photo.entity';
 import { ProductPhotoSyncService } from '../product-photo-sync.service';
 import { MissingDependencyError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
-import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
+import type {
+    InboundAfterCommit,
+    InboundOutcome,
+    InboundStreamHandler,
+} from './inbound-stream-handler';
 
 // Stores `product-photo` metadata only; ProductPhotoSyncService fetches the binary.
 // position is a plain int32 (absent = 0, the main photo); every field is consumed except envelope ids.
@@ -30,8 +34,7 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
                 return inboundNoop(`product-photo ${entityId}: deleted, no stored row`);
             }
             await repo.update(existing.id, { isDeleted: true });
-            await this.syncService.enqueue(ctx, existing.productExternalId);
-            return inboundApplied();
+            return inboundApplied([this.enqueueSync(existing.productExternalId)]);
         }
 
         const productExternalId = String(payload.productId ?? '');
@@ -70,8 +73,11 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
                 lastError: downloadUrl ? null : 'no download reference in the event',
             }),
         );
-        if (downloadUrl) await this.syncService.enqueue(ctx, productExternalId);
-        return inboundApplied();
+        return inboundApplied(downloadUrl ? [this.enqueueSync(productExternalId)] : undefined);
+    }
+
+    private enqueueSync(productExternalId: string): InboundAfterCommit {
+        return committedCtx => this.syncService.enqueue(committedCtx, productExternalId);
     }
 
     private async productExists(ctx: RequestContext, externalId: string): Promise<boolean> {

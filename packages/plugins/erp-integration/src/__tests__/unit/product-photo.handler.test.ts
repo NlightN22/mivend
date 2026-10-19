@@ -39,7 +39,9 @@ function setup(opts: { existing?: Partial<ProductPhoto>; productExists?: boolean
 describe('ProductPhotoStreamHandler', () => {
     it('stores a new photo as pending and enqueues its product; absent position means 0', async () => {
         const { repo, enqueue, handler } = setup();
-        await handler.apply(ctx, 'f-1', payload);
+        const outcome = await handler.apply(ctx, 'f-1', payload);
+        expect(enqueue).not.toHaveBeenCalled();
+        for (const action of outcome.afterCommit ?? []) await action(ctx);
         expect(repo.save).toHaveBeenCalledWith(
             expect.objectContaining({
                 externalId: 'f-1',
@@ -116,8 +118,10 @@ describe('ProductPhotoStreamHandler', () => {
         const { repo, enqueue, handler } = setup({
             existing: { id: 5, productExternalId: 'p-1' },
         });
-        await handler.apply(ctx, 'f-1', { isDeleted: true });
+        const outcome = await handler.apply(ctx, 'f-1', { isDeleted: true });
         expect(repo.update).toHaveBeenCalledWith(5, { isDeleted: true });
+        expect(enqueue).not.toHaveBeenCalled();
+        for (const action of outcome.afterCommit ?? []) await action(ctx);
         expect(enqueue).toHaveBeenCalledWith(expect.anything(), 'p-1');
     });
 

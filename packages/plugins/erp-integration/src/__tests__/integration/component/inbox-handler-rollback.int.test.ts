@@ -12,6 +12,7 @@ import {
 } from 'shared';
 
 import { IntegrationInboxEvent } from '../../../entities/integration-inbox-event.entity';
+import { inboundApplied } from '../../../handlers/inbound-stream-handler';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { makeInboxProcessor } from './inbox-processor-helpers';
 
@@ -96,5 +97,43 @@ describe('inbox handler transaction (component, real Postgres)', () => {
             attempts: 1,
             lastError: 'handler failed after its write',
         });
+    });
+});
+
+describe('inbox after-commit actions (component, real Postgres)', () => {
+    const writeWithAction = (fail: boolean, seen: number[]) =>
+        vi.fn(async (ctx: RequestContext, entityId: string) => {
+            await writeThen(fail)(ctx, entityId);
+            return inboundApplied([
+                async () => {
+                    seen.push((await dataSource.query('SELECT 1 FROM handler_write')).length);
+                },
+            ]);
+        });
+
+    it('runs the action only after the handler write is committed', async () => {
+        await enqueueOne();
+        const seen: number[] = [];
+
+        await makeInboxProcessor(
+            dataSource,
+            inbox,
+            writeWithAction(false, seen),
+        ).processPendingBatch();
+
+        expect(seen).toEqual([1]);
+    });
+
+    it('never runs the action when the transaction rolls back', async () => {
+        await enqueueOne();
+        const seen: number[] = [];
+
+        await makeInboxProcessor(
+            dataSource,
+            inbox,
+            writeWithAction(true, seen),
+        ).processPendingBatch();
+
+        expect(seen).toEqual([]);
     });
 });

@@ -10,7 +10,7 @@ import { DepartmentStreamHandler } from './handlers/department.handler';
 import { PositionStreamHandler } from './handlers/position.handler';
 import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
 import { GrantedDiscountStreamHandler } from './handlers/granted-discount.handler';
-import type { InboundStreamHandler } from './handlers/inbound-stream-handler';
+import type { InboundAfterCommit, InboundStreamHandler } from './handlers/inbound-stream-handler';
 import { OrderCancelResultHandler } from './handlers/order-cancel-result.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
@@ -187,7 +187,10 @@ export class IntegrationInboxProcessorService {
     private async processOne(ctx: RequestContext, row: ClaimedInboxEvent): Promise<boolean> {
         try {
             // Handler writes and the processed mark commit together; a throw rolls both back.
-            await this.connection.withTransaction(ctx, txCtx => this.applyAndSettle(txCtx, row));
+            const afterCommit = await this.connection.withTransaction(ctx, txCtx =>
+                this.applyAndSettle(txCtx, row),
+            );
+            await this.runAfterCommit(ctx, row, afterCommit);
             return true;
         } catch (err) {
             const error = err instanceof Error ? err : new Error(String(err));
@@ -213,7 +216,28 @@ export class IntegrationInboxProcessorService {
         }
     }
 
-    private async applyAndSettle(ctx: RequestContext, row: ClaimedInboxEvent): Promise<void> {
+    // The row is already processed: a failed action is logged and left to its own recovery sweep.
+    private async runAfterCommit(
+        ctx: RequestContext,
+        row: ClaimedInboxEvent,
+        actions: InboundAfterCommit[],
+    ): Promise<void> {
+        for (const action of actions) {
+            try {
+                await action(ctx);
+            } catch (err) {
+                Logger.error(
+                    `After-commit action for  entityId= failed: ${err instanceof Error ? err.message : String(err)}`,
+                    loggerCtx,
+                );
+            }
+        }
+    }
+
+    private async applyAndSettle(
+        ctx: RequestContext,
+        row: ClaimedInboxEvent,
+    ): Promise<InboundAfterCommit[]> {
         // A lower version arriving after a higher one must not regress state.
         // Such rows are still marked processed: stale replays are expected, not errors.
         if (await this.isSupersededByNewerVersion(ctx, row)) {
@@ -228,7 +252,7 @@ export class IntegrationInboxProcessorService {
                 'a newer version was already processed',
                 row.claimToken,
             );
-            return;
+            return [];
         }
         const result = await this.handlers[row.stream].apply(ctx, row.entityId, row.payload);
         if (result && result.kind === 'noop') {
@@ -236,6 +260,7 @@ export class IntegrationInboxProcessorService {
         } else {
             await this.inbox.markProcessed(ctx, row.id, 'applied', null, row.claimToken);
         }
+        return result?.afterCommit ?? [];
     }
 
     private async isSupersededByNewerVersion(
