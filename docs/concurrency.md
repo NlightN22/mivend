@@ -89,6 +89,22 @@ extract the token (`req.session?.token`, the auth-token header, or a `Bearer` he
 resolve it with `SessionService.getSessionFromToken(token)`. Reference implementation:
 `packages/plugins/price-entry/src/active-order-settle.interceptor.ts`.
 
+## Connections
+
+Every DB call runs on the RequestContext's transaction: `connection.getRepository(ctx, Entity)`, raw SQL via
+`ctxQuery(connection, ctx, sql, params)` from `shared`, nested work via `connection.withTransaction(ctx, txCtx => ...)`
+using only `txCtx`. A second pool connection taken inside a request transaction (`rawConnection`, an injected
+`DataSource`, ctx-less `getRepository(Entity)`) reads without the transaction's own writes, can block on a row
+the request itself locked, and freezes the server once concurrent requests reach the pool size (#257). Lint rule
+`db/no-raw-connection` forbids all three outside tests and migrations.
+
+- Background code (scheduled tasks, jobs, consumers, inbox/outbox processors, bootstrap) creates a ctx with
+  `RequestContextService.create({ apiType: 'admin' })` and works the same way.
+- A write that must survive the request's rollback runs on a fresh ctx in its own transaction after (or detached
+  from) the request transaction, and the request never awaits it.
+- `dbConnectionOptions.extra` sets the pool size (`DB_POOL_SIZE`, default 10) and the acquire timeout
+  (`DB_POOL_ACQUIRE_TIMEOUT_MS`, default 15000): an exhausted pool fails a request instead of hanging it.
+
 ## Helper
 
 ```ts
