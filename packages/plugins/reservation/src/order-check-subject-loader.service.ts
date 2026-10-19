@@ -7,6 +7,7 @@ import { pickOrderWarehouse } from './order-check-subject';
 import type { OrderCheckSubject } from './order-check-subject';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { pickLocationWithMostFreeStock } from './reservation-location-picker';
+import { ctxQuery } from 'shared';
 
 @Injectable()
 export class OrderCheckSubjectLoader {
@@ -25,8 +26,8 @@ export class OrderCheckSubjectLoader {
         const counterparty = order.customerId
             ? await this.counterpartyService.getForCustomer(ctx, order.customerId)
             : null;
-        const erpIdByProductId = await this.productErpIds(order);
-        const organizationErpIds = await this.organizationErpIds(order);
+        const erpIdByProductId = await this.productErpIds(ctx, order);
+        const organizationErpIds = await this.organizationErpIds(ctx, order);
         return {
             orderId: String(order.id),
             orderCode: order.code,
@@ -83,19 +84,20 @@ export class OrderCheckSubjectLoader {
             }
         }
         if (quantityByLocation.size === 0) return null;
-        return pickOrderWarehouse(await this.warehouseByLocation(quantityByLocation));
+        return pickOrderWarehouse(await this.warehouseByLocation(ctx, quantityByLocation));
     }
 
     private async warehouseByLocation(
+        ctx: RequestContext,
         quantityByLocation: Map<string, number>,
     ): Promise<Map<string, number>> {
-        const rows = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('sl.id', 'id')
-            .addSelect('sl."customFieldsWarehouseerpid"', 'warehouseErpId')
-            .from('stock_location', 'sl')
-            .where('sl.id IN (:...ids)', { ids: [...quantityByLocation.keys()] })
-            .getRawMany<{ id: string; warehouseErpId: string | null }>();
+        const rows = await ctxQuery<Array<{ id: string; warehouseErpId: string | null }>>(
+            this.connection,
+            ctx,
+            `SELECT sl.id, sl."customFieldsWarehouseerpid" AS "warehouseErpId"
+               FROM stock_location sl WHERE sl.id = ANY($1)`,
+            [[...quantityByLocation.keys()].map(Number)],
+        );
         const quantityByWarehouse = new Map<string, number>();
         for (const row of rows) {
             if (!row.warehouseErpId) continue;
@@ -108,7 +110,10 @@ export class OrderCheckSubjectLoader {
         return quantityByWarehouse;
     }
 
-    private async organizationErpIds(order: Order): Promise<Map<string, string>> {
+    private async organizationErpIds(
+        ctx: RequestContext,
+        order: Order,
+    ): Promise<Map<string, string>> {
         const ids = [
             ...new Set(
                 order.lines
@@ -118,17 +123,16 @@ export class OrderCheckSubjectLoader {
             ),
         ];
         if (ids.length === 0) return new Map();
-        const rows = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('o.id', 'id')
-            .addSelect('o."erpId"', 'erpId')
-            .from('organization_requisites', 'o')
-            .where('o.id IN (:...ids)', { ids })
-            .getRawMany<{ id: number; erpId: string }>();
+        const rows = await ctxQuery<Array<{ id: number; erpId: string }>>(
+            this.connection,
+            ctx,
+            `SELECT o.id, o."erpId" FROM organization_requisites o WHERE o.id = ANY($1)`,
+            [ids],
+        );
         return new Map(rows.map(r => [String(r.id), r.erpId]));
     }
 
-    private async productErpIds(order: Order): Promise<Map<string, string>> {
+    private async productErpIds(ctx: RequestContext, order: Order): Promise<Map<string, string>> {
         const ids = [
             ...new Set(
                 order.lines
@@ -139,13 +143,12 @@ export class OrderCheckSubjectLoader {
         ];
         const result = new Map<string, string>();
         if (ids.length === 0) return result;
-        const rows = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('p.id', 'id')
-            .addSelect('p."customFieldsExternalid"', 'externalId')
-            .from('product', 'p')
-            .where('p.id IN (:...ids)', { ids })
-            .getRawMany<{ id: string; externalId: string | null }>();
+        const rows = await ctxQuery<Array<{ id: string; externalId: string | null }>>(
+            this.connection,
+            ctx,
+            `SELECT p.id, p."customFieldsExternalid" AS "externalId" FROM product p WHERE p.id = ANY($1)`,
+            [ids.map(Number)],
+        );
         for (const row of rows) {
             if (row.externalId) result.set(String(row.id), row.externalId);
         }

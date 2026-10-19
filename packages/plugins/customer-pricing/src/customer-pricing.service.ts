@@ -8,7 +8,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 
-import { withAggregateLock } from 'shared';
+import { withAggregateLock, ctxQuery } from 'shared';
 
 import { CUSTOMER_PRICING_PLUGIN_OPTIONS, loggerCtx } from './constants';
 import { CustomerPriceType } from './entities/customer-price-type.entity';
@@ -79,7 +79,9 @@ export class CustomerPricingService {
         ctx: RequestContext,
         customerId: ID,
     ): Promise<PriceType | null> {
-        const rows: Array<{ id: string }> = await this.connection.rawConnection.query(
+        const rows = await ctxQuery<Array<{ id: string | null }>>(
+            this.connection,
+            ctx,
             `SELECT ${mainContractPriceTypeIdSql('$1')} AS id`,
             [String(customerId)],
         );

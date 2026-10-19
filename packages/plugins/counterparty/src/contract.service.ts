@@ -5,6 +5,7 @@ import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Contract } from './entities/contract.entity';
 import { chooseOrderContract } from './order-contract-rule';
 import { loggerCtx } from './types';
+import { ctxQuery } from 'shared';
 
 // Fields from the `contract` Kafka stream (ContractChanged, issue #105) — `undefined` means "not
 // sent, leave unchanged" on update, mirroring CounterpartyService.upsertActiveState.
@@ -119,19 +120,20 @@ export class ContractService {
         const settled = chooseOrderContract(counterpartyId, selected, main);
         if (settled) return settled;
         const candidates = await this.findActiveForCounterparty(ctx, counterparty.id);
-        const priceTypeId = customerId ? await this.customerPriceTypeId(customerId) : null;
+        const priceTypeId = customerId ? await this.customerPriceTypeId(ctx, customerId) : null;
         return chooseOrderContract(counterpartyId, null, null, candidates, priceTypeId);
     }
 
     // Customer-pricing's explicit price type (customer_price_type), as the ERP price type id.
-    private async customerPriceTypeId(customerId: ID): Promise<string | null> {
-        const rows: Array<{ externalId: string | null }> =
-            await this.connection.rawConnection.query(
-                `SELECT pt."externalId" FROM customer_price_type cpt
+    private async customerPriceTypeId(ctx: RequestContext, customerId: ID): Promise<string | null> {
+        const rows = await ctxQuery<Array<{ externalId: string | null }>>(
+            this.connection,
+            ctx,
+            `SELECT pt."externalId" FROM customer_price_type cpt
                  JOIN price_type pt ON pt.id = cpt."priceTypeId"
                  WHERE cpt."customerId"::text = $1 LIMIT 1`,
-                [String(customerId)],
-            );
+            [String(customerId)],
+        );
         return rows[0]?.externalId ?? null;
     }
 

@@ -54,7 +54,6 @@ beforeAll(async () => {
     }
     const connection = {
         getRepository: () => ({ query: dataSource.query.bind(dataSource) }),
-        rawConnection: dataSource,
         withTransaction: async (c: unknown, fn: (c: unknown) => Promise<void>) => fn(c),
     } as unknown as TransactionalConnection;
     const visibility = {

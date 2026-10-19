@@ -59,7 +59,6 @@ beforeEach(() => {
     const connection = {
         withTransaction: async (_ctx: unknown, work: (c: unknown) => unknown) => work(ctx),
         getRepository: () => repo,
-        rawConnection: { query: vi.fn(async () => []) },
     };
     contractService = {
         findByErpId: vi.fn(async (_c: unknown, erpId: string) => contract(erpId)),

@@ -10,6 +10,7 @@ import {
     CustomerTradingPointInput,
     TradingPointDetailsPatch,
 } from './trading-point.service';
+import { ctxQuery } from 'shared';
 
 @Resolver('Customer')
 export class CustomerTradingPointResolver {
@@ -59,7 +60,9 @@ export class TradingPointResolver {
         @Args() args: { tradingPointId: string },
     ): Promise<boolean> {
         if (!ctx.activeUserId) return false;
-        const rows = await this.connection.rawConnection.query(
+        const rows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
             `SELECT id FROM customer WHERE "userId" = $1 LIMIT 1`,
             [ctx.activeUserId],
         );

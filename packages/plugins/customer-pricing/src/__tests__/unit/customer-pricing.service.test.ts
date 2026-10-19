@@ -1,6 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CustomerService, RequestContext, TransactionalConnection } from '@vendure/core';
 vi.mock('shared', () => ({
+    ctxQuery: (
+        c: {
+            getRepository: (
+                ctx: unknown,
+                e: string,
+            ) => { query: (s: string, p?: unknown[]) => unknown };
+        },
+        ctx: unknown,
+        sql: string,
+        params?: unknown[],
+    ) => c.getRepository(ctx, 'Channel').query(sql, params),
     withAggregateLock: (_c: unknown, ctx: unknown, _k: unknown, work: (c: unknown) => unknown) =>
         work(ctx),
 }));
@@ -23,8 +34,8 @@ const mockCustomerPriceTypeRepo = {
 };
 const mockRawQuery = vi.fn();
 const mockConnection = {
-    rawConnection: { query: mockRawQuery },
     getRepository: vi.fn((ctx, entity) => {
+        if (entity === 'Channel') return { query: mockRawQuery };
         const name = entity?.name ?? '';
         return name === 'PriceType' ? mockPriceTypeRepo : mockCustomerPriceTypeRepo;
     }),

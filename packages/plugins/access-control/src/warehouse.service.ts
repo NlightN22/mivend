@@ -5,6 +5,7 @@ import { In } from 'typeorm';
 import { Branch } from './entities/branch.entity';
 import { Warehouse } from './entities/warehouse.entity';
 import { loggerCtx } from './types';
+import { ctxQuery } from 'shared';
 
 export interface WarehouseRecordInput {
     erpId: string;
@@ -94,12 +95,12 @@ export class WarehouseService {
         const warehouseErpIds = warehouses.map(w => w.erpId);
         if (warehouseErpIds.length === 0) return [];
 
-        const rows = await this.connection.rawConnection
-            .createQueryBuilder()
-            .select('sl.id', 'id')
-            .from('stock_location', 'sl')
-            .where('sl."customFieldsWarehouseerpid" IN (:...erpIds)', { erpIds: warehouseErpIds })
-            .getRawMany<{ id: string }>();
+        const rows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
+            `SELECT sl.id FROM stock_location sl WHERE sl."customFieldsWarehouseerpid" = ANY($1)`,
+            [warehouseErpIds],
+        );
         if (rows.length === 0) return [];
 
         // Stable id order prevents deadlock: reserveOrder() FOR UPDATE-locks candidate StockLevel rows,

@@ -212,31 +212,22 @@ export function useReserveOrderHarness(
         });
         await h.dataSource.initialize();
 
-        h.connection = {
-            // Only the mivend#85 ERP-export-readiness gate reads rawConnection.createQueryBuilder()
-            // (Product.customFields.externalId): every productId resolves to a fake externalId.
-            rawConnection: {
-                createQueryBuilder: () => {
-                    const qb = {
-                        select: () => qb,
-                        addSelect: () => qb,
-                        from: () => qb,
-                        where: () => qb,
-                        getRawMany: async () => [{ id: 'product-x', externalId: 'ext-product-x' }],
-                    };
-                    return qb;
-                },
-                query: (_sql: string, params: unknown[]) =>
-                    h.dataSource.query(
+        // The mivend#85 export gate reads Product.customFields.externalId: every product gets a fake one.
+        const rawQuery = (manager: EntityManager | undefined, sql: string, params?: unknown[]) =>
+            sql.includes('FROM product p')
+                ? Promise.resolve([{ id: 'product-x', externalId: 'ext-product-x' }])
+                : sql.includes('"customFieldsUuid"')
+                  ? h.dataSource.query(
                         `SELECT id FROM reservation_test_order WHERE "customFieldsUuid" = $1`,
                         params,
-                    ),
-            },
+                    )
+                  : (manager ?? h.dataSource.manager).query(sql, params);
+        h.connection = {
             getRepository: (ctx: RequestContext, entity: { name: string } | string) => {
                 const manager = (ctx as unknown as { __manager?: EntityManager }).__manager;
                 if (typeof entity === 'string') {
                     return {
-                        query: (sql: string, params?: unknown[]) => manager!.query(sql, params),
+                        query: (sql: string, params?: unknown[]) => rawQuery(manager, sql, params),
                     };
                 }
                 const target =

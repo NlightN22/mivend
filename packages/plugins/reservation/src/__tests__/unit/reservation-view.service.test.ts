@@ -45,7 +45,7 @@ describe('ReservationViewService.holders', () => {
 
     function create(pages: Array<Array<{ orderId: string }>>, visible: Set<string>) {
         const query = vi.fn(async () => pages.shift() ?? []);
-        const connection = { rawConnection: { query } };
+        const connection = { getRepository: () => ({ query }) };
         const visibility = {
             buildVisibleOrdersQuery: async () => {
                 const qb = {

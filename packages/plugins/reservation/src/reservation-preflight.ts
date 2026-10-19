@@ -3,6 +3,7 @@ import { ContractService, CounterpartyService } from '@mivend/plugin-counterpart
 import { PackagingPolicyService } from '@mivend/plugin-moq';
 
 import type { ErpExportDataMissingLine, InvalidMultiplicityLine } from './reservation-errors';
+import { ctxQuery } from 'shared';
 
 export async function findMultiplicityViolations(
     packagingPolicyService: PackagingPolicyService,
@@ -69,7 +70,7 @@ export async function findErpExportGaps(
         }
     }
 
-    const externalIds = await productExternalIds(deps.connection, order);
+    const externalIds = await productExternalIds(deps.connection, ctx, order);
     const lines: ErpExportDataMissingLine[] = [];
     for (const line of order.lines) {
         const missing: ErpExportDataMissingLine['missing'] = [];
@@ -91,6 +92,7 @@ export async function findErpExportGaps(
 // Product.customFields.externalId is not on the typed entity here, so it is read through raw SQL.
 async function productExternalIds(
     connection: TransactionalConnection,
+    ctx: RequestContext,
     order: Order,
 ): Promise<Set<string>> {
     const productIds = [
@@ -99,12 +101,11 @@ async function productExternalIds(
         ),
     ];
     if (productIds.length === 0) return new Set();
-    const rows = await connection.rawConnection
-        .createQueryBuilder()
-        .select('p.id', 'id')
-        .addSelect('p."customFieldsExternalid"', 'externalId')
-        .from('product', 'p')
-        .where('p.id IN (:...ids)', { ids: productIds })
-        .getRawMany<{ id: string; externalId: string | null }>();
+    const rows = await ctxQuery<Array<{ id: string; externalId: string | null }>>(
+        connection,
+        ctx,
+        `SELECT p.id, p."customFieldsExternalid" AS "externalId" FROM product p WHERE p.id = ANY($1)`,
+        [productIds.map(Number)],
+    );
     return new Set(rows.filter(r => r.externalId).map(r => String(r.id)));
 }

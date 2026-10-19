@@ -32,18 +32,12 @@ describe('WarehouseService', () => {
         stockLocationRepo = createMockRepo();
         rawQueryBuilder = createRawQueryBuilderMock();
         const connection = {
-            getRepository: (_ctx: unknown, entity: { name: string }) => {
+            getRepository: (_ctx: unknown, entity: { name: string } | string) => {
+                if (entity === 'Channel') return { query: rawQueryBuilder.getRawMany };
+                if (typeof entity === 'string') throw new Error(entity);
                 if (entity.name === 'Branch') return branchRepo;
                 if (entity.name === 'StockLocation') return stockLocationRepo;
                 return warehouseRepo;
-            },
-            rawConnection: {
-                createQueryBuilder: () => ({
-                    select: vi.fn().mockReturnThis(),
-                    from: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    getRawMany: rawQueryBuilder.getRawMany,
-                }),
             },
         };
         service = new WarehouseService(connection as unknown as TransactionalConnection);

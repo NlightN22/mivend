@@ -12,6 +12,7 @@ import { AccessScopeService } from '@mivend/plugin-access-control';
 
 import { Counterparty } from './entities/counterparty.entity';
 import { loggerCtx } from './types';
+import { ctxQuery, withAggregateLock } from 'shared';
 
 export type PortalAccessAction = 'activate' | 'deactivate';
 
@@ -43,7 +44,9 @@ export class CounterpartyPortalAccessService {
 
         // Raw SQL: the link lives in a JSONB custom-field column, not a TypeORM-mapped relation.
         // QueryBuilder dot-path filters can't traverse it.
-        const rows: Array<{ id: ID }> = await this.connection.rawConnection.query(
+        const rows = await ctxQuery<Array<{ id: ID }>>(
+            this.connection,
+            ctx,
             `SELECT cu.id AS id FROM customer cu
              WHERE cu."customFieldsCounterpartyid"::text = $1
              ORDER BY cu."createdAt" ASC`,
@@ -133,7 +136,17 @@ export class CounterpartyPortalAccessService {
         return results;
     }
 
-    private async doActivate(ctx: RequestContext, counterparty: Counterparty): Promise<Customer> {
+    // The lock serializes the linked-customer check with the create, so two activations cannot both link.
+    private doActivate(ctx: RequestContext, counterparty: Counterparty): Promise<Customer> {
+        return withAggregateLock(this.connection, ctx, `portal-access:${counterparty.id}`, txCtx =>
+            this.createLinkedCustomer(txCtx, counterparty),
+        );
+    }
+
+    private async createLinkedCustomer(
+        ctx: RequestContext,
+        counterparty: Counterparty,
+    ): Promise<Customer> {
         if (!counterparty.isActive) {
             throw new UserInputError(
                 `Counterparty ${counterparty.id} is inactive in the ERP — portal access cannot be activated`,
@@ -188,7 +201,9 @@ export class CounterpartyPortalAccessService {
     }
 
     private async getLinkedCustomerId(ctx: RequestContext, counterpartyId: ID): Promise<ID | null> {
-        const result = await this.connection.rawConnection.query(
+        const result = await ctxQuery<Array<{ id: ID }>>(
+            this.connection,
+            ctx,
             `SELECT cu.id AS id FROM customer cu
              WHERE cu."customFieldsCounterpartyid"::text = $1 AND cu."deletedAt" IS NULL`,
             [String(counterpartyId)],

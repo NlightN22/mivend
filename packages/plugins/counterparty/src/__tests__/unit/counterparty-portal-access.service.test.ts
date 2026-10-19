@@ -14,10 +14,14 @@ const mockCustomerRepo = {
 const rawQuery = vi.fn();
 
 const mockConnection = {
-    getRepository: vi.fn((_ctx: unknown, entity: { name: string }) =>
-        entity.name === 'Counterparty' ? mockCounterpartyRepo : mockCustomerRepo,
+    withTransaction: vi.fn((ctx: unknown, work: (c: unknown) => unknown) => work(ctx)),
+    getRepository: vi.fn((_ctx: unknown, entity: { name: string } | string) =>
+        entity === 'Channel'
+            ? { query: rawQuery }
+            : typeof entity !== 'string' && entity.name === 'Counterparty'
+              ? mockCounterpartyRepo
+              : mockCustomerRepo,
     ),
-    rawConnection: { query: rawQuery },
 };
 
 const mockCustomerService = {

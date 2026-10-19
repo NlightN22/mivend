@@ -7,6 +7,7 @@ import {
 } from '@mivend/plugin-checks';
 
 import { ORDER_SUBJECT_TYPE } from './order-check-subject';
+import { ctxQuery } from 'shared';
 
 const PAGE_SIZE = 200;
 const PRODUCT_KIND = 'order-product';
@@ -80,7 +81,9 @@ export class OrderCheckStaleService implements OnModuleInit {
         let marked = 0;
         let lastId = 0;
         for (;;) {
-            const rows: Array<{ id: number }> = await this.connection.rawConnection.query(
+            const rows = await ctxQuery<Array<{ id: number }>>(
+                this.connection,
+                ctx,
                 `WITH cand AS (
                      SELECT DISTINCT "subjectId"::int AS id FROM check_result
                       WHERE "subjectType" = '${ORDER_SUBJECT_TYPE}' AND stale = false)

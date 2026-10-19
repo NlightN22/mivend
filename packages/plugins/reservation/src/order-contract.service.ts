@@ -15,7 +15,7 @@ import {
 } from '@mivend/plugin-counterparty';
 import type { Contract, Counterparty } from '@mivend/plugin-counterparty';
 import { OrderStatusReferenceService, OrderVisibilityService } from '@mivend/plugin-erp-order';
-import { withAggregateLock } from 'shared';
+import { withAggregateLock, ctxQuery } from 'shared';
 
 import { ReservationService } from './reservation.service';
 
@@ -118,7 +118,7 @@ export class OrderContractService {
                 customerId,
             ),
         ]);
-        const names = await this.organizationNames(contracts);
+        const names = await this.organizationNames(ctx, contracts);
         return contracts
             .filter(c => c.organizationId.length > 0)
             .map(c => ({
@@ -132,14 +132,18 @@ export class OrderContractService {
             }));
     }
 
-    private async organizationNames(contracts: Contract[]): Promise<Map<string, string>> {
+    private async organizationNames(
+        ctx: RequestContext,
+        contracts: Contract[],
+    ): Promise<Map<string, string>> {
         const ids = [...new Set(contracts.map(c => c.organizationId).filter(Boolean))];
         if (ids.length === 0) return new Map();
-        const rows: Array<{ erpId: string; legalName: string }> =
-            await this.connection.rawConnection.query(
-                `SELECT "erpId", "legalName" FROM organization_requisites WHERE "erpId" = ANY($1)`,
-                [ids],
-            );
+        const rows = await ctxQuery<Array<{ erpId: string; legalName: string }>>(
+            this.connection,
+            ctx,
+            `SELECT "erpId", "legalName" FROM organization_requisites WHERE "erpId" = ANY($1)`,
+            [ids],
+        );
         return new Map(rows.map(row => [row.erpId, row.legalName]));
     }
 

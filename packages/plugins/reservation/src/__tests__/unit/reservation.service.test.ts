@@ -78,18 +78,8 @@ function createMockStockLevelRepo(
 
 // Stands in for the raw-SQL Product.customFields.externalId lookup the ERP export gate runs;
 // tests needing a missing externalId must override getRawMany to omit that row.
-function createMockRawQueryBuilder(
-    productExternalIds: Record<string, string>,
-): ReturnType<typeof vi.fn> {
-    return vi.fn(() => ({
-        select: vi.fn().mockReturnThis(),
-        addSelect: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        getRawMany: vi.fn(async () =>
-            Object.entries(productExternalIds).map(([id, externalId]) => ({ id, externalId })),
-        ),
-    }));
+function productRows(productExternalIds: Record<string, string>): unknown[] {
+    return Object.entries(productExternalIds).map(([id, externalId]) => ({ id, externalId }));
 }
 
 describe('ReservationService', () => {
@@ -99,10 +89,6 @@ describe('ReservationService', () => {
     let connection: {
         getRepository: ReturnType<typeof vi.fn>;
         withTransaction: ReturnType<typeof vi.fn>;
-        rawConnection: {
-            query: ReturnType<typeof vi.fn>;
-            createQueryBuilder: ReturnType<typeof vi.fn>;
-        };
     };
     let eventBus: { publish: ReturnType<typeof vi.fn> };
     let warehouseService: { findBranchStockLocationIds: ReturnType<typeof vi.fn> };
@@ -137,6 +123,8 @@ describe('ReservationService', () => {
 
     let branchSettings: { packagesOnly: boolean; enforceMultiplicity: boolean } | null;
 
+    let productExternalIds: Record<string, string>;
+
     beforeEach(() => {
         branchSettings = { packagesOnly: false, enforceMultiplicity: true };
         reservationRepo = createMockReservationRepo();
@@ -154,7 +142,13 @@ describe('ReservationService', () => {
         };
         connection = {
             getRepository: vi.fn((_ctx: unknown, entity: { name?: string } | string) => {
-                if (typeof entity === 'string') return { query: vi.fn(async () => []) };
+                if (typeof entity === 'string') {
+                    return {
+                        query: vi.fn(async (sql: string) =>
+                            sql.includes('FROM product p') ? productRows(productExternalIds) : [],
+                        ),
+                    };
+                }
                 switch (entity?.name) {
                     case 'Order':
                         return orderRepo;
@@ -167,21 +161,8 @@ describe('ReservationService', () => {
             withTransaction: vi.fn(async (txCtx: unknown, work: (c: unknown) => unknown) =>
                 work(txCtx),
             ),
-            rawConnection: {
-                // setOrderReservationState's retry loop reads back state: echo the last update() target
-                // so the first attempt matches and the real setTimeout delay is skipped.
-                query: vi.fn(async () => {
-                    const lastCall = orderRepo.update.mock.calls.at(-1) as
-                        | [unknown, { customFields?: { reservationState?: string } }]
-                        | undefined;
-                    return [{ state: lastCall?.[1]?.customFields?.reservationState }];
-                }),
-                createQueryBuilder: createMockRawQueryBuilder({
-                    'product-1': 'ext-product-1',
-                    'product-2': 'ext-product-2',
-                }),
-            },
         };
+        productExternalIds = { 'product-1': 'ext-product-1', 'product-2': 'ext-product-2' };
         orderChecks = { isHeld: vi.fn(async () => false) };
         service = new ReservationService(
             connection as unknown as TransactionalConnection,
@@ -575,10 +556,10 @@ describe('ReservationService', () => {
         });
 
         it('rejects only the line whose product has no ERP externalId', async () => {
-            connection.rawConnection.createQueryBuilder = createMockRawQueryBuilder({
+            productExternalIds = {
                 'product-1': 'ext-product-1',
                 // product-2 deliberately omitted — not yet ERP-synced.
-            });
+            };
 
             const error = await service
                 .confirmOrder(ctx, 'order-1', 3)

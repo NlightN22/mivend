@@ -6,6 +6,7 @@ import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import { distributeErpReserve } from './erp-reserve-distribution';
 import { batchedLineFlag } from './reservation-line-flags';
 import type { LineReservationFlag, RawQuery, Row } from './reservation-line-flags';
+import { ctxQuery } from 'shared';
 
 export type { LineReservationFlag } from './reservation-line-flags';
 
@@ -43,7 +44,7 @@ export class ReservationViewService {
 
     async details(ctx: RequestContext, orderId: ID): Promise<OrderReservationDetail[]> {
         if (!(await this.visibleIds(ctx, [String(orderId)])).has(String(orderId))) return [];
-        const query = this.rawQuery();
+        const query = this.rawQuery(ctx);
         const id = String(orderId);
         const local = await query(
             `SELECT r."orderLineId", r."productVariantId", v.sku, r.quantity, r."expiresAt" AS until, r.status
@@ -68,11 +69,11 @@ export class ReservationViewService {
     }
 
     lineFlag(ctx: RequestContext, lineId: ID): Promise<LineReservationFlag> {
-        return batchedLineFlag(ctx, this.rawQuery(), String(lineId));
+        return batchedLineFlag(ctx, this.rawQuery(ctx), String(lineId));
     }
 
-    private rawQuery(): RawQuery {
-        return this.connection.rawConnection.query.bind(this.connection.rawConnection);
+    private rawQuery(ctx: RequestContext): RawQuery {
+        return (sql, params) => ctxQuery<Row[]>(this.connection, ctx, sql, params);
     }
 
     // Visibility is applied per page of rows, so foreign reservations never crowd out visible ones.
@@ -81,7 +82,7 @@ export class ReservationViewService {
         let page = 0;
         for (let offset = 0; result.length < HOLDERS_LIMIT; offset += HOLDERS_LIMIT, page += 1) {
             if (page >= HOLDERS_MAX_PAGES) break;
-            const rows = await this.holderPage(String(variantId), offset);
+            const rows = await this.holderPage(ctx, String(variantId), offset);
             const visible = await this.visibleIds(
                 ctx,
                 rows.map(r => String(r.orderId)),
@@ -92,8 +93,8 @@ export class ReservationViewService {
         return result.slice(0, HOLDERS_LIMIT);
     }
 
-    private holderPage(variantId: string, offset: number): Promise<Row[]> {
-        return this.rawQuery()(
+    private holderPage(ctx: RequestContext, variantId: string, offset: number): Promise<Row[]> {
+        return this.rawQuery(ctx)(
             `SELECT * FROM (
                SELECT o.id::text AS "orderId", o.code AS "orderCode", 'LOCAL' AS source, r.id::text AS rid,
                       r.quantity, r."expiresAt" AS until, c."shortName" AS "counterpartyName",
