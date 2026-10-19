@@ -99,6 +99,7 @@ export { default as MvProductRow } from './components/MvProductRow/MvProductRow.
 export type { ProductRowLabels } from './components/MvProductRow/MvProductRow.vue';
 
 export { default as MvCatalogFacets } from './components/MvCatalogFacets/MvCatalogFacets.vue';
+export type { CatalogFacetsLabels } from './components/MvCatalogFacets/MvCatalogFacets.vue';
 
 export { default as MvProductGallery } from './components/MvProductGallery/MvProductGallery.vue';
 

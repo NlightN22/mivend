@@ -14,6 +14,18 @@ export default {
         loading: 'Loading categories…',
         empty: 'No categories available',
     },
+    catalogFacets: {
+        category: 'Category',
+        availability: 'Availability',
+        price: 'Price',
+        from: 'From',
+        to: 'To',
+        reset: 'Reset filters',
+        groups: {
+            category: 'Category',
+            brand: 'Brand',
+        },
+    },
     catalogFilters: {
         inStock: 'In stock only',
         price: 'Price: {range}',

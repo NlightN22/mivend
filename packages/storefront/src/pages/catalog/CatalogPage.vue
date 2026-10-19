@@ -8,6 +8,7 @@ import { useCategoryPanel } from '../../composables/useCategoryPanel';
 import { useProductList, type FilterState } from '../../composables/useProductList';
 import { MvCatalogFacets, MvBreadcrumbs, MvActiveFilters } from '@mivend/ui-kit';
 import { useActiveFilterChips } from '../../composables/useActiveFilterChips';
+import { useCatalogFacetLabels } from '../../composables/useCatalogFacetLabels';
 import ProductListView from '../../components/ProductListView.vue';
 import { useCatalogSortUrl } from './useCatalogSortUrl';
 // Imports the TS source directly — see the comment in useProductList.ts for why 'shared''s
@@ -149,6 +150,8 @@ const {
         t('catalogFilters.price', { range: `${formatBound(min)} – ${formatBound(max)}` }),
 }));
 
+const { labels: facetLabels, groups: facetGroupsLabelled } = useCatalogFacetLabels(facetGroups);
+
 const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds));
 
 const selectedCategorySlug = computed(() => (route.query.collection as string) || undefined);
@@ -230,7 +233,8 @@ onMounted(() => {
 
         <div class="catalog-page__inner">
             <MvCatalogFacets
-                :facet-groups="facetGroups"
+                :facet-groups="facetGroupsLabelled"
+                :labels="facetLabels"
                 :in-stock-only="filters.inStock"
                 :selected-facet-values="selectedFacetValues"
                 :price-min="filters.priceMin"

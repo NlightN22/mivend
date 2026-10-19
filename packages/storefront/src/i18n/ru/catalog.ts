@@ -16,6 +16,18 @@ const ru: typeof en = {
         loading: 'Загрузка категорий…',
         empty: 'Нет доступных категорий',
     },
+    catalogFacets: {
+        category: 'Категория',
+        availability: 'Наличие',
+        price: 'Цена',
+        from: 'От',
+        to: 'До',
+        reset: 'Сбросить фильтры',
+        groups: {
+            category: 'Категория',
+            brand: 'Бренд',
+        },
+    },
     catalogFilters: {
         inStock: 'Только в наличии',
         price: 'Цена: {range}',
