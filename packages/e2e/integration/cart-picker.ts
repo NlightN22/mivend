@@ -29,10 +29,10 @@ interface VariantInfo {
 const MAX_LINES = 4;
 const MAX_STOCK_LOOKUPS = 80;
 
-async function searchVariantIds(page: Page): Promise<string[]> {
+async function searchVariantIds(page: Page, inStock: boolean): Promise<string[]> {
     const data = (await gql(
         page,
-        `query { search(input: { take: 300, inStock: true, groupByProduct: false }) { items { productVariantId } } }`,
+        `query { search(input: { take: 300, inStock: ${inStock}, groupByProduct: false }) { items { productVariantId } } }`,
     )) as { search: { items: { productVariantId: string }[] } };
     return data.search.items.map(i => i.productVariantId);
 }
@@ -78,8 +78,26 @@ function addsVariety(line: VariantInfo, picked: CartLine[]): boolean {
     );
 }
 
+// The in-stock search hides exactly these variants, so they come from an unfiltered search.
+async function findNoStockVariant(
+    page: Page,
+    inStockIds: string[],
+    refOrderId: string | null,
+): Promise<string | null> {
+    const seen = new Set(inStockIds);
+    const candidates = (await searchVariantIds(page, false)).filter(id => !seen.has(id));
+    const info = variantInfo(candidates.length > 0 ? candidates : ['0']);
+    let lookups = 0;
+    for (const id of candidates) {
+        if (!info.get(id)?.organizationId) continue;
+        if (++lookups > MAX_STOCK_LOOKUPS) return null;
+        if ((await freeStock(id, refOrderId)) <= 0) return id;
+    }
+    return null;
+}
+
 export async function pickMixedCart(page: Page): Promise<PickedCart> {
-    const ids = await searchVariantIds(page);
+    const ids = await searchVariantIds(page, true);
     if (ids.length === 0)
         throw new Error('The contour catalog search returned no in-stock variants');
     const info = variantInfo(ids);
@@ -110,6 +128,7 @@ export async function pickMixedCart(page: Page): Promise<PickedCart> {
             unitName: v.unitName,
         });
     }
+    if (!noStockVariantId) noStockVariantId = await findNoStockVariant(page, ids, refOrderId);
     if (lines.length === 0)
         throw new Error('No in-stock variant with an organization found for the test customer');
     const skipped: string[] = [];
