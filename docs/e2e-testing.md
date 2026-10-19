@@ -46,6 +46,12 @@ does not. Teardown restores the contour, cancels every order of the run (staff c
 sessions. A summary with skip reasons is printed at the end. Subset:
 `make e2e-integration E2E_ARGS="01-placement"`.
 
+Price type visibility groups (#235, `05`-`07`, read-only except `07`) need the optional test manager
+(`STAGING_TEST_MANAGER_*`) and skip with a reason without it; the manager's allowed and hidden
+types are derived from the contour DB (branch allow-list and default), never hardcoded. `05` visits
+the manager portal and storefront pages, records every GraphQL response and greps text and JSON
+for the confidential codes and for floor/purchase fields.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —
