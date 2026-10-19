@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { activeAdministratorId } from './active-administrator-id';
 import { ID } from '@vendure/common/lib/shared-types';
 import { Permission } from '@vendure/common/lib/generated-types';
 import {
@@ -31,7 +32,7 @@ export class ApprovalRequestQueryService {
         recentLimit: number,
         allowedPriceTypeCodes?: string[],
     ): Promise<{ pendingCount: number; recent: ApprovalRequest[] }> {
-        const adminId = await this.getAdministratorId(ctx);
+        const adminId = await activeAdministratorId(this.administratorService, ctx);
         if (!adminId) {
             return { pendingCount: 0, recent: [] };
         }
@@ -203,7 +204,7 @@ export class ApprovalRequestQueryService {
         ctx: RequestContext,
         options: ApprovalListOptions = {},
     ): Promise<PaginatedList<ApprovalRequest>> {
-        const adminId = await this.getAdministratorId(ctx);
+        const adminId = await activeAdministratorId(this.administratorService, ctx);
         const pairs = await this.getEligibleStepPairs(ctx);
         const qb = this.connection
             .getRepository(ctx, ApprovalRequest)
@@ -226,7 +227,7 @@ export class ApprovalRequestQueryService {
         ctx: RequestContext,
         options: ApprovalListOptions = {},
     ): Promise<PaginatedList<ApprovalRequest>> {
-        const adminId = await this.getAdministratorId(ctx);
+        const adminId = await activeAdministratorId(this.administratorService, ctx);
         if (!adminId) return { items: [], totalItems: 0 };
 
         const pairs = await this.getEligibleStepPairs(ctx);
@@ -270,11 +271,5 @@ export class ApprovalRequestQueryService {
             .skip(options.skip ?? 0)
             .getMany();
         return { items, totalItems };
-    }
-
-    private async getAdministratorId(ctx: RequestContext): Promise<string | null> {
-        if (!ctx.activeUserId) return null;
-        const admin = await this.administratorService.findOneByUserId(ctx, ctx.activeUserId);
-        return admin ? String(admin.id) : null;
     }
 }
