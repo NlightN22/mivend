@@ -1,3 +1,4 @@
+import { UserInputError } from '@vendure/core';
 import { ID } from '@vendure/common/lib/shared-types';
 import type { SelectQueryBuilder } from 'typeorm';
 
@@ -56,6 +57,9 @@ export function applyCounterpartyListFilter(
     }
     if (filter.groupLabel) {
         qb.andWhere('c.erpGroupLabel = :groupLabel', { groupLabel: filter.groupLabel });
+    }
+    if (filter.innStatus && filter.innStatus !== 'missing' && filter.innStatus !== 'duplicate') {
+        throw new UserInputError(`Unknown innStatus filter: ${filter.innStatus}`);
     }
     if (filter.innStatus === 'missing') {
         qb.andWhere(`${INN_DIGITS_SQL} = ''`);

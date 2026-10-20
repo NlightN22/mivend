@@ -4,6 +4,7 @@ import { ctxQuery, withAggregateLock } from 'shared';
 import type { Counterparty } from './entities/counterparty.entity';
 
 type InnHolder = Pick<Counterparty, 'id' | 'inn' | 'shortName'>;
+type InnStatusHolder = InnHolder & Pick<Counterparty, 'isActive'>;
 
 export interface InnDuplicate {
     id: string;
@@ -67,10 +68,11 @@ export type InnStatus = 'ok' | 'missing' | 'duplicate';
 export async function getInnStatus(
     connection: Pick<TransactionalConnection, 'getRepository'>,
     ctx: RequestContext,
-    counterparty: InnHolder,
+    counterparty: InnStatusHolder,
 ): Promise<InnStatus> {
     const inn = normalizeInn(counterparty.inn);
     if (!inn) return 'missing';
+    if (!counterparty.isActive) return 'ok';
     const rows = await ctxQuery<unknown[]>(
         connection,
         ctx,

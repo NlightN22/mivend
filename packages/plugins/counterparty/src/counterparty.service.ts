@@ -283,13 +283,22 @@ export class CounterpartyService {
     ): Promise<void> {
         const counterparty = await this.findByErpId(ctx, erpId);
         if (!counterparty) throw new UserInputError(`Counterparty not found: erpId=${erpId}`);
-        await withInnBindingGuard(this.connection, ctx, counterparty, async txCtx => {
+        const bind = async (txCtx: RequestContext): Promise<void> => {
             await this.customerService.update(txCtx, {
                 id: customerId,
                 customFields: { counterpartyId: counterparty.id } as Record<string, unknown>,
             });
             await this.assignPriceType(txCtx, customerId, counterparty.priceType);
-        });
+        };
+        const rows = await ctxQuery<{ id: string }[]>(
+            this.connection,
+            ctx,
+            `SELECT id::text AS id FROM customer
+             WHERE id::text = $1 AND "customFieldsCounterpartyid"::text = $2`,
+            [String(customerId), String(counterparty.id)],
+        );
+        if (rows.length > 0) return this.connection.withTransaction(ctx, bind);
+        await withInnBindingGuard(this.connection, ctx, counterparty, bind);
     }
 
     async setCustomerRole(ctx: RequestContext, customerId: ID, role: string): Promise<void> {

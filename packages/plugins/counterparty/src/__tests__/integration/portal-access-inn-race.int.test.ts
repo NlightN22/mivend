@@ -144,14 +144,29 @@ describe('getInnStatus (real Postgres)', () => {
         await dataSource.query(
             `INSERT INTO counterparty (id, "erpId", "shortName", inn, "isActive") VALUES (4,'erp-4','Four',NULL,true)`,
         );
-        expect(await getInnStatus(connection, ctx, { id: '1', inn: '77 000-00001' } as never)).toBe(
-            'duplicate',
-        );
-        expect(await getInnStatus(connection, ctx, { id: '3', inn: '7700000003' } as never)).toBe(
-            'ok',
-        );
-        expect(await getInnStatus(connection, ctx, { id: '4', inn: null } as never)).toBe(
-            'missing',
-        );
+        expect(
+            await getInnStatus(connection, ctx, {
+                id: '1',
+                inn: '77 000-00001',
+                isActive: true,
+            } as never),
+        ).toBe('duplicate');
+        expect(
+            await getInnStatus(connection, ctx, {
+                id: '1',
+                inn: '77 000-00001',
+                isActive: false,
+            } as never),
+        ).toBe('ok');
+        expect(
+            await getInnStatus(connection, ctx, {
+                id: '3',
+                inn: '7700000003',
+                isActive: true,
+            } as never),
+        ).toBe('ok');
+        expect(
+            await getInnStatus(connection, ctx, { id: '4', inn: null, isActive: true } as never),
+        ).toBe('missing');
     });
 });

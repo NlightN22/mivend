@@ -97,12 +97,23 @@ describe('CounterpartyService', () => {
             mockRepo.findOne.mockResolvedValue({ id: 'cp-1', erpId: 'erp-1', inn: '7700000001' });
             mockRepo.query
                 .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
                 .mockResolvedValueOnce([{ id: 'cp-2', shortName: 'Twin', erpId: 'erp-2' }]);
 
             await expect(
                 service.setCustomerCounterparty(mockCtx, 'cust-1', 'erp-1'),
             ).rejects.toThrow(/merge the duplicates in the ERP/);
             expect(mockCustomerService.update).not.toHaveBeenCalled();
+        });
+
+        it('re-binding the same pair skips the inn guard', async () => {
+            mockRepo.findOne.mockResolvedValue({ id: 'cp-1', erpId: 'erp-1', inn: null });
+            mockRepo.query.mockResolvedValueOnce([{ id: 'cust-1' }]);
+
+            await service.setCustomerCounterparty(mockCtx, 'cust-1', 'erp-1');
+
+            expect(mockCustomerService.update).toHaveBeenCalled();
+            expect(mockRepo.query).toHaveBeenCalledTimes(1);
         });
 
         it('throws when the counterparty is not found', async () => {
