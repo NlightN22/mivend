@@ -26,7 +26,12 @@ const names = new Map<string, string>();
 
 test.beforeAll(async () => {
     superadmin = await superadminToken();
-    all = fixtureIds([...FIXTURES.branchA, ...FIXTURES.branchB, ...FIXTURES.noBranch]);
+    all = fixtureIds([
+        ...FIXTURES.branchA,
+        ...FIXTURES.branchB,
+        ...FIXTURES.noBranch,
+        ...FIXTURES.inactive,
+    ]);
     for (const row of select<{ id: string; name: string }>(
         `SELECT id::text AS id, "shortName" AS name FROM counterparty WHERE id IN (${all.join(',')})`,
     ))

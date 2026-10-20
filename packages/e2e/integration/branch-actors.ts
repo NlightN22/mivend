@@ -47,6 +47,7 @@ export const FIXTURES = {
     branchA: ['8c4f416b-c192-11e1-8a03-f46d0490adee', '8c4f41aa-c192-11e1-8a03-f46d0490adee'],
     branchB: ['c9c66220-45a2-11e2-bda5-f46d0490adee', '027028bf-372a-11e4-8c55-64700210df32'],
     noBranch: ['be68b8f2-c192-11e1-8a03-f46d0490adee'],
+    inactive: ['7f382ccb-58e0-11ed-a023-da2dec3fdf49', '2cc91e61-87ac-11e7-a3f6-00155d28010b'],
 };
 
 export function actorCredentials(key: ActorKey): { username: string; password: string } | null {

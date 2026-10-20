@@ -23,7 +23,12 @@ let fixtures: Fixture[];
 
 test.beforeAll(async () => {
     await superadminToken();
-    const ids = fixtureIds([...FIXTURES.branchA, ...FIXTURES.branchB, ...FIXTURES.noBranch]);
+    const ids = fixtureIds([
+        ...FIXTURES.branchA,
+        ...FIXTURES.branchB,
+        ...FIXTURES.noBranch,
+        ...FIXTURES.inactive,
+    ]);
     fixtures = select<Fixture>(
         `SELECT id::text AS id, "erpId", "shortName" AS name FROM counterparty WHERE id IN (${ids.join(',')}) ORDER BY id`,
     );
