@@ -85,9 +85,11 @@ beforeAll(async () => {
     const listQueryBuilder = {
         build: () => dataSource.getRepository(TestOrder).createQueryBuilder('order'),
     };
+    const realScope = new AccessScopeService({} as never, {} as never, {} as never);
     const accessScope = {
         resolveOrderScope: async () => scope,
-        applyOwnCounterpartyFilter: AccessScopeService.prototype.applyOwnCounterpartyFilter,
+        applyOwnCounterpartyFilter: realScope.applyOwnCounterpartyFilter.bind(realScope),
+        managerClause: realScope.managerClause.bind(realScope),
     };
     service = new OrderVisibilityService(
         listQueryBuilder as unknown as ListQueryBuilder,
