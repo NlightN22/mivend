@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '../../stores/auth';
+import { useDemoMode } from '../../composables/useDemoMode';
 import { endAllSessions } from '../../api/sessions';
 import AccountSidebar from './AccountSidebar.vue';
 import SettingsSecurity from './SettingsSecurity.vue';
@@ -7,6 +8,7 @@ import SettingsProfile from './SettingsProfile.vue';
 import SettingsPreferences from './SettingsPreferences.vue';
 
 const authStore = useAuthStore();
+const { demoAllowed } = useDemoMode();
 
 async function signOutAll() {
     // Ends every session including this one; logout() sets the local mv_logged_out guard.
@@ -34,7 +36,7 @@ async function signOutAll() {
                 <span>ℹ️</span>
                 <div>
                     <strong>{{ $t('settings.noticeTitle') }}</strong>
-                    {{ $t('settings.noticeText') }}
+                    {{ $t(demoAllowed ? 'settings.noticeText' : 'settings.noticeTextNoEmployees') }}
                 </div>
             </div>
 
@@ -48,7 +50,13 @@ async function signOutAll() {
                     <div>
                         <h2 class="set-block__title">{{ $t('settings.signOut.title') }}</h2>
                         <div class="set-block__sub">
-                            {{ $t('settings.signOut.sub') }}
+                            {{
+                                $t(
+                                    demoAllowed
+                                        ? 'settings.signOut.sub'
+                                        : 'settings.signOut.subNoEmployees',
+                                )
+                            }}
                         </div>
                     </div>
                     <button class="set-btn set-btn--danger" @click="signOutAll">

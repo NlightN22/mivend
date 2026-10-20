@@ -106,6 +106,7 @@ export default {
         noticeTitle: 'These are settings for your account only.',
         noticeText:
             'Employee management is in the Employees section. Credit limits and contracts are not editable here.',
+        noticeTextNoEmployees: 'Credit limits and contracts are not editable here.',
         profile: {
             title: 'Profile',
             sub: 'Contact details for notifications, requests and communication with your manager.',
@@ -117,6 +118,7 @@ export default {
             phone: 'Phone',
             defaultPoint: 'Default trading point',
             noPoints: 'No trading points yet',
+            choosePoint: 'Choose a trading point',
             saveFailed: 'Could not save profile',
             loadFailed: 'Could not load profile',
             saving: 'Saving…',
@@ -167,6 +169,7 @@ export default {
         signOut: {
             title: 'Sign out',
             sub: 'Sign out from all devices. Manage employees in the Employees section.',
+            subNoEmployees: 'Sign out from all devices.',
             everywhere: 'Sign out everywhere',
         },
     },

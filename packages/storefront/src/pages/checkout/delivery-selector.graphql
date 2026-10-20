@@ -3,6 +3,7 @@ query MyTradingPointsForDeliverySelector {
         id
         name
         address
+        isActive
     }
 }
 

@@ -10,11 +10,17 @@ export interface PasswordForm {
     confirm: string;
 }
 
-export function profileUpdateInput(form: ProfileForm): ProfileForm {
+export interface ProfileUpdateInput {
+    firstName: string;
+    lastName: string;
+    phoneNumber: string | null;
+}
+
+export function profileUpdateInput(form: ProfileForm): ProfileUpdateInput {
     return {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
-        phoneNumber: form.phoneNumber.trim(),
+        phoneNumber: form.phoneNumber.trim() || null,
     };
 }
 

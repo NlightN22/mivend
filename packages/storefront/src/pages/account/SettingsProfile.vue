@@ -45,6 +45,9 @@ const { form, email, pointId, points, loading, saving, save } = useSettingsProfi
                     <option v-if="!points.length" value="">
                         {{ $t('settings.profile.noPoints') }}
                     </option>
+                    <option v-else value="" disabled>
+                        {{ $t('settings.profile.choosePoint') }}
+                    </option>
                     <option v-for="p in points" :key="p.id" :value="p.id">
                         {{ p.address ? `${p.name} · ${p.address}` : p.name }}
                     </option>

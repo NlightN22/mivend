@@ -21,6 +21,10 @@ function required(values: Record<string, string>, key: string): string {
     return value;
 }
 
+export function envValue(key: string): string | undefined {
+    return parseEnvFile()[key];
+}
+
 export interface ContourEnv {
     serverUrl: string;
     storefrontUrl: string;

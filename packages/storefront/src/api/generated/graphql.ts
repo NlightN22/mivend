@@ -4880,7 +4880,7 @@ export type CreditPreviewQuery = {
 export type MyTradingPointsForDeliverySelectorQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MyTradingPointsForDeliverySelectorQuery = {
-    myTradingPoints: Array<{ id: string; name: string; address: string }>;
+    myTradingPoints: Array<{ id: string; name: string; address: string; isActive: boolean }>;
 };
 
 export type SetPreferredTradingPointForDeliverySelectorMutationVariables = Exact<{
@@ -6138,6 +6138,7 @@ export const MyTradingPointsForDeliverySelectorDocument = new TypedDocumentStrin
     id
     name
     address
+    isActive
   }
 }
     `) as unknown as TypedDocumentString<

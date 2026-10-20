@@ -11,6 +11,7 @@ import {
 } from '../../api/generated/graphql';
 import { useAuthStore } from '../../stores/auth';
 import { profileUpdateInput, type ProfileForm } from './settingsForms';
+import { selectableTradingPoints } from '../checkout/selectableTradingPoints';
 
 type PointOption = MyTradingPointsForDeliverySelectorQuery['myTradingPoints'][number];
 
@@ -45,8 +46,9 @@ export function useSettingsProfile(): {
                 phoneNumber: c?.phoneNumber ?? '',
             };
             email.value = c?.emailAddress ?? '';
-            points.value = tp.myTradingPoints ?? [];
-            pointId.value = authStore.customer?.customFields?.preferredTradingPointId ?? '';
+            points.value = selectableTradingPoints(tp.myTradingPoints ?? []);
+            const preferred = authStore.customer?.customFields?.preferredTradingPointId ?? '';
+            pointId.value = points.value.some(p => p.id === preferred) ? preferred : '';
         } catch {
             toast(t('settings.profile.loadFailed'), 'error');
         } finally {

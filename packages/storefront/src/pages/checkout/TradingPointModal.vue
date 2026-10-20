@@ -9,6 +9,7 @@ import {
     SetPreferredTradingPointForDeliverySelectorDocument,
     type MyTradingPointsForDeliverySelectorQuery,
 } from '../../api/generated/graphql';
+import { selectableTradingPoints } from './selectableTradingPoints';
 
 defineProps<{ addPointLink: { path: string; query: Record<string, string> } }>();
 const emit = defineEmits<{ close: [] }>();
@@ -24,7 +25,7 @@ const currentId = computed(() => authStore.customer?.customFields?.preferredTrad
 onMounted(async () => {
     try {
         const result = await shopApi(MyTradingPointsForDeliverySelectorDocument);
-        points.value = result.myTradingPoints ?? [];
+        points.value = selectableTradingPoints(result.myTradingPoints ?? []);
     } finally {
         loadingPoints.value = false;
     }

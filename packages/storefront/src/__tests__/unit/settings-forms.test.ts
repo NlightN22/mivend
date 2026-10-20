@@ -10,6 +10,11 @@ describe('profileUpdateInput', () => {
         expect(profileUpdateInput({ firstName: ' A ', lastName: 'B ', phoneNumber: ' 1' })).toEqual(
             { firstName: 'A', lastName: 'B', phoneNumber: '1' },
         ));
+
+    it('sends a cleared phone as null so Vendure removes it', () =>
+        expect(
+            profileUpdateInput({ firstName: 'A', lastName: 'B', phoneNumber: '  ' }).phoneNumber,
+        ).toBeNull());
 });
 
 describe('passwordFormError', () => {
