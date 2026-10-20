@@ -50,7 +50,7 @@ function balanceDemoRecords(now) {
                 shortName: 'Balance Demo',
                 inn: '000000000090',
                 creditLimit: 150000,
-                creditBalance: 0,
+                creditBalance: 60000,
                 paymentDelayDays: 30,
                 priceType: 'WHOLESALE',
                 isActive: true,
@@ -67,7 +67,7 @@ function balanceDemoRecords(now) {
             data: {
                 erpId: CONTRACT,
                 counterpartyErpId: COUNTERPARTY,
-                name: 'Balance demo supply contract',
+                name: 'Основной договор поставки',
                 organizationId: ORGANIZATION,
                 priceTypeId: 'WHOLESALE',
                 creditLimit: '150000',
@@ -78,13 +78,13 @@ function balanceDemoRecords(now) {
                 isActive: true,
             },
         },
-        documentType('balance-demo-sales-invoice', 'Sales invoice', 'sale', 1),
+        documentType('balance-demo-sales-invoice', 'Реализация', 'sale', 1),
         documentType('balance-demo-payment', 'Payment', 'payment', 2),
         // FIFO: the payment covers 900001 fully and 900002 partly; 900003 is not due yet.
         document(
             'balance-demo-inv-1',
             'balance-demo-sales-invoice',
-            'Sales invoice',
+            'Реализация',
             '900001',
             -60,
             30000,
@@ -93,7 +93,7 @@ function balanceDemoRecords(now) {
         document(
             'balance-demo-inv-2',
             'balance-demo-sales-invoice',
-            'Sales invoice',
+            'Реализация',
             '900002',
             -40,
             50000,
@@ -102,7 +102,7 @@ function balanceDemoRecords(now) {
         document(
             'balance-demo-inv-3',
             'balance-demo-sales-invoice',
-            'Sales invoice',
+            'Реализация',
             '900003',
             -5,
             40000,
