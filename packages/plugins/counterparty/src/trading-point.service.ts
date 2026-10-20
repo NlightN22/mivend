@@ -38,18 +38,18 @@ export interface CounterpartyRef {
     branchId: string | null;
 }
 
-// Partial fields from the `point-of-sale` Kafka stream (issue #100) — `undefined` means "not
-// sent, leave unchanged"; see upsertFromStream's own comment for the create-time exception.
+// Fields from the `point-of-sale` Kafka stream (issue #100). `undefined` = leave unchanged
+// (tombstone); on a named event the handler sends '' / null for a cleared value (#259).
 export interface TradingPointStreamFields {
     name: string | null;
     counterpartyId: string;
     servicingBranchId: string | null;
     isActive: boolean;
     address?: string;
-    latitude?: number;
-    longitude?: number;
+    latitude?: number | null;
+    longitude?: number | null;
     // Never used to create a ContactPerson — see upsertFromStream's own comment.
-    contactPhone?: string;
+    contactPhone?: string | null;
 }
 
 export interface TradingPointUpsertPayload {
@@ -300,7 +300,7 @@ export class TradingPointService {
                 );
                 return;
             }
-            if (fields.address === undefined) {
+            if (!fields.address) {
                 // Not a silent skip: if the ERP never sends an event with an address for this
                 // erpId, this point never appears at all and nothing else surfaces that.
                 Logger.warn(

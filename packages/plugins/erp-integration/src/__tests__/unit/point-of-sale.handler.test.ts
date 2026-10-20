@@ -113,22 +113,27 @@ describe('PointOfSaleStreamHandler', () => {
         );
     });
 
-    // Real optional-scalar fields — absence must read as undefined ("leave unchanged" on update,
-    // "not yet available" on create), never coerced to a fabricated value.
-    it('passes undefined for address/latitude/longitude/contactPhone when absent', async () => {
+    // A named event is full state: absent/empty address, coordinates and phone mean cleared (#259).
+    it('sends cleared values for address/latitude/longitude/contactPhone when absent or empty', async () => {
         const { handler, tradingPointService } = makeHandler();
-
-        await handler.apply(ctx, 'pos-1', {
+        const payload = {
             name: 'Kiosk A',
             counterpartyId: 'cp-erp-1',
             isActive: true,
-        });
+            contactPhone: '',
+        };
 
-        const call = tradingPointService.upsertFromStream.mock.calls[0][2];
-        expect(call.address).toBeUndefined();
-        expect(call.latitude).toBeUndefined();
-        expect(call.longitude).toBeUndefined();
-        expect(call.contactPhone).toBeUndefined();
+        await handler.apply(ctx, 'pos-1', payload);
+        await handler.apply(ctx, 'pos-1', payload);
+
+        for (const [, , fields] of tradingPointService.upsertFromStream.mock.calls) {
+            expect(fields).toMatchObject({
+                address: '',
+                latitude: null,
+                longitude: null,
+                contactPhone: null,
+            });
+        }
     });
 
     // Ordinary eventual-consistency race (the counterparty's own event hasn't arrived yet) —

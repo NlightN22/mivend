@@ -164,11 +164,13 @@ export class ProductStreamHandler implements InboundStreamHandler {
                 id: productId,
                 enabled: isActive,
                 translations: [{ languageCode: LanguageCode.en, name, slug: sku, description: '' }],
-                // Omit unset fields so an already-resolved relation or stored value is never cleared.
-                // Key must be ${field.name}Id for CustomFieldRelationService; its 'not found' warning is harmless.
-                ...(Object.keys(optionalCustomFields).length > 0
-                    ? { customFields: optionalCustomFields }
-                    : {}),
+                // The manufacturer relation is omitted when unset (key must be ${field.name}Id); the
+                // text fields are full state, so absent clears them (#259).
+                customFields: {
+                    ...optionalCustomFields,
+                    manufacturerPartNumber: manufacturerPartNumber ?? null,
+                    fullName: fullName ?? null,
+                },
             });
             const variants = await this.productVariantService.getVariantsByProductId(
                 ctx,

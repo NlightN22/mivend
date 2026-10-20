@@ -147,10 +147,10 @@ describe('CounterpartyStreamHandler', () => {
             departmentId: 'dept-1',
             assignedManagerId: undefined,
             managerErpId: undefined,
-            legalAddress: undefined,
-            factualAddress: undefined,
-            phone: undefined,
-            officialEmail: undefined,
+            legalAddress: null,
+            factualAddress: null,
+            phone: null,
+            officialEmail: null,
         });
     });
 
@@ -187,10 +187,10 @@ describe('CounterpartyStreamHandler', () => {
             departmentId: null,
             assignedManagerId: undefined,
             managerErpId: undefined,
-            legalAddress: undefined,
-            factualAddress: undefined,
-            phone: undefined,
-            officialEmail: undefined,
+            legalAddress: null,
+            factualAddress: null,
+            phone: null,
+            officialEmail: null,
         });
     });
 
@@ -220,16 +220,21 @@ describe('CounterpartyStreamHandler', () => {
         );
     });
 
-    it('passes undefined for legalAddress/factualAddress/phone/officialEmail when absent from the payload', async () => {
+    // Named event = full state: absent or empty contact fields clear; a tombstone leaves them alone (#259).
+    it('clears legalAddress/factualAddress/phone/officialEmail when absent or empty on a named event', async () => {
         const { handler, counterpartyService } = makeHandler();
 
-        await handler.apply(ctx, 'cp-1', { name: 'Acme Corp', isActive: true });
+        await handler.apply(ctx, 'cp-1', { name: 'Acme Corp', isActive: true, phone: '' });
+        await handler.apply(ctx, 'cp-1', { name: 'Acme Corp', isActive: true, phone: '' });
 
-        const call = counterpartyService.upsertActiveState.mock.calls[0][2];
-        expect(call.legalAddress).toBeUndefined();
-        expect(call.factualAddress).toBeUndefined();
-        expect(call.phone).toBeUndefined();
-        expect(call.officialEmail).toBeUndefined();
+        for (const [, , call] of counterpartyService.upsertActiveState.mock.calls) {
+            expect(call).toMatchObject({
+                legalAddress: null,
+                factualAddress: null,
+                phone: null,
+                officialEmail: null,
+            });
+        }
     });
 
     it('passes through an explicit null for legalAddress/factualAddress/phone/officialEmail', async () => {

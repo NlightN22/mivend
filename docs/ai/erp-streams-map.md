@@ -100,6 +100,22 @@ before implementing or before trusting this table's status column.
 
 ---
 
+## Cleared vs not sent (#259)
+
+Decoding is `toJson(fromBinary(...))`: an unset `optional` field has no key, a set one is emitted even when `''`;
+null never appears. So absent and `''` are both possible encodings of "cleared" and the handler cannot tell
+them apart. The integration service re-publishes the whole entity, so on a **named** event (name present,
+not a tombstone) one rule applies per stream; a tombstone (no name) never touches field values.
+Real-message encoding of a cleared field is unconfirmed (needs the staging runbook).
+
+| Stream | Cleared fields (absent or empty = clear) | Kept as before (absent = keep) |
+| --- | --- | --- |
+| `counterparty` | legalAddress, factualAddress, phone, officialEmail | inn, group, department, manager, ERP reference ids |
+| `point-of-sale` | address, latitude, longitude, contactPhone (the existing primary contact's phone) | name, counterparty, active flag |
+| `organization` | phone | legal requisites (inn, kpp, ogrn, address, bank): proforma invoices need them, an empty one never wipes; signatory list (an empty list keeps it) |
+| `product` | manufacturerPartNumber, fullName; barcodes, characteristics, manufacturer codes were already full-replace | manufacturer reference |
+| contact person | no consumer (`counterparty-contact` is ignored) | n/a |
+
 ## Non-trivial design decisions (so they don't need re-explaining next session)
 
 ### Per-contract credit limits — "facility + sublimits" model (issue #50)

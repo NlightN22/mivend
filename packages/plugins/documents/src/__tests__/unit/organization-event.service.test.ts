@@ -240,4 +240,23 @@ describe('OrganizationEventService.upsertFromEvent', () => {
         });
         expect(orgRepo.save).toHaveBeenLastCalledWith(expect.objectContaining({ phone: '+0 1' }));
     });
+
+    it('clears a stored phone on a named event with an empty phone, keeps legal requisites', async () => {
+        orgRepo.findOne.mockResolvedValue({
+            erpId: 'org-1',
+            legalName: 'A',
+            phone: '+0 1',
+            inn: '123',
+        });
+        for (let i = 0; i < 2; i++) {
+            await service.upsertFromEvent(ctx, 'org-1', {
+                legalName: 'A',
+                isActive: true,
+                fields: { phone: null, inn: null },
+            });
+        }
+        expect(orgRepo.save).toHaveBeenLastCalledWith(
+            expect.objectContaining({ phone: null, inn: '123' }),
+        );
+    });
 });

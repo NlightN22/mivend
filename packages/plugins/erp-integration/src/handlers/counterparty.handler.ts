@@ -47,8 +47,8 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                 this.counterpartyService.upsertActiveState(ctx, entityId, {
                     name,
                     isActive,
-                    // Use `in` to check presence: an intentional null or empty string must be applied,
-                    // not treated as 'leave unchanged' (undefined means the ERP did not send the field).
+                    // inn/group/department: absent keeps the stored value. Contact fields below are
+                    // full state on a named event: absent or empty clears (#259).
                     inn: 'inn' in payload ? ((payload.inn as string | null) ?? null) : undefined,
                     erpGroupLabel:
                         'erpGroupLabel' in payload
@@ -60,20 +60,11 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
                             : undefined,
                     assignedManagerId,
                     managerErpId,
-                    legalAddress:
-                        'legalAddress' in payload
-                            ? ((payload.legalAddress as string | null) ?? null)
-                            : undefined,
-                    factualAddress:
-                        'factualAddress' in payload
-                            ? ((payload.factualAddress as string | null) ?? null)
-                            : undefined,
-                    phone:
-                        'phone' in payload ? ((payload.phone as string | null) ?? null) : undefined,
-                    officialEmail:
-                        'officialEmail' in payload
-                            ? ((payload.officialEmail as string | null) ?? null)
-                            : undefined,
+                    legalAddress: contact(name, payload.legalAddress),
+                    factualAddress: contact(name, payload.factualAddress),
+                    phone: contact(name, payload.phone),
+                    officialEmail: contact(name, payload.officialEmail),
+
                     ...optionalErpDetails(payload),
                     // notificationPhone: deliberately unread — see this file's own top-of-file field
                     // accounting comment.
@@ -129,4 +120,9 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         }
         return { assignedManagerId: String(resolution.administratorId), managerErpId };
     }
+}
+
+function contact(name: string | null, value: unknown): string | null | undefined {
+    if (!name) return undefined;
+    return typeof value === 'string' && value.trim() !== '' ? value : null;
 }

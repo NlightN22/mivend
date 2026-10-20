@@ -52,14 +52,18 @@ export class PointOfSaleStreamHandler implements InboundStreamHandler {
             counterpartyId: counterparty.id,
             servicingBranchId: counterparty.branchId,
             isActive,
-            address: payload.address !== undefined ? String(payload.address) : undefined,
-            latitude: typeof payload.latitude === 'number' ? payload.latitude : undefined,
-            longitude: typeof payload.longitude === 'number' ? payload.longitude : undefined,
-            contactPhone:
-                payload.contactPhone !== undefined ? String(payload.contactPhone) : undefined,
+            // A named event is full state: absent or empty means the ERP cleared it (#259).
+            address: text(payload.address) ?? '',
+            latitude: typeof payload.latitude === 'number' ? payload.latitude : null,
+            longitude: typeof payload.longitude === 'number' ? payload.longitude : null,
+            contactPhone: text(payload.contactPhone),
         });
 
         Logger.verbose(`Upserted trading point erpId=${entityId}`, loggerCtx);
         return inboundApplied();
     }
+}
+
+function text(value: unknown): string | null {
+    return typeof value === 'string' && value.trim() !== '' ? value : null;
 }

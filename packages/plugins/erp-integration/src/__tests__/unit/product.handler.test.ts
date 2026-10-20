@@ -308,22 +308,25 @@ describe('ProductStreamHandler', () => {
             expect(deps.productService.update).toHaveBeenCalledWith(
                 ctx,
                 expect.objectContaining({
-                    customFields: { manufacturerPartNumber: 'KT 100511' },
+                    customFields: { manufacturerPartNumber: 'KT 100511', fullName: null },
                 }),
             );
         });
 
-        it('on update, never clears stored values when the fields are absent or empty', async () => {
+        it('on update, clears the part number and full name when absent or empty; redelivery is identical', async () => {
             const deps = updateDeps();
             const { handler } = makeHandler(deps);
+            const payload = { sku: 'SKU-1', name: 'Widget', manufacturerPartNumber: '' };
 
-            await handler.apply(ctx, 'p-1', {
-                sku: 'SKU-1',
-                name: 'Widget',
-                manufacturerPartNumber: '',
-            });
+            await handler.apply(ctx, 'p-1', payload);
+            await handler.apply(ctx, 'p-1', payload);
 
-            expect(deps.productService.update.mock.calls[0][1]).not.toHaveProperty('customFields');
+            for (const call of deps.productService.update.mock.calls) {
+                expect(call[1].customFields).toEqual({
+                    manufacturerPartNumber: null,
+                    fullName: null,
+                });
+            }
         });
     });
 
@@ -621,7 +624,9 @@ describe('ProductStreamHandler', () => {
 
             expect(productService.update).toHaveBeenCalledWith(
                 ctx,
-                expect.not.objectContaining({ customFields: expect.anything() }),
+                expect.not.objectContaining({
+                    customFields: expect.objectContaining({ manufacturerId: expect.anything() }),
+                }),
             );
         });
     });

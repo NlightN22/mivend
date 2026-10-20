@@ -31,8 +31,8 @@ export interface OrganizationEventInput {
     signatories?: OrganizationSignatory[];
 }
 
-// Applies the `organization` stream. An empty field means "not provided": it never wipes a
-// stored value, a non-empty one always overwrites (signatories: the whole list). Docs: docs/payments.md "Organizations".
+// Applies the `organization` stream. Legal requisites are sticky: an empty one never wipes a stored
+// value. The phone is contact info: a named event is full state, so an empty phone clears it.
 @Injectable()
 export class OrganizationEventService {
     constructor(
@@ -83,6 +83,7 @@ export class OrganizationEventService {
             const value = input.fields[field];
             if (value) entity[field] = value;
         }
+        if (input.legalName) entity.phone = input.fields.phone ?? null;
         if (input.signatories?.length) entity.signatories = input.signatories;
         return repo.save(entity);
     }
