@@ -52,7 +52,7 @@ const limitWarning = computed(() => {
                         {{
                             demoAllowed
                                 ? $t('account.currentPoint.contract', { number: 'B2B-014' })
-                                : $t('account.creditLimit')
+                                : $t('account.currentPoint.terms')
                         }}
                     </div>
                     <div class="trading-point-info__row-note">

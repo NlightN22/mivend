@@ -4,7 +4,7 @@ import { useOrders } from '../orders/useOrders';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import { countIssuedThisMonth, monthCountLabel } from './dashboardCounts';
 
-const DOCUMENTS_SCAN = 50;
+const DOCUMENTS_SCAN = 10;
 const IN_PROCESSING_GROUP = 'pending';
 
 export interface AccountSummary {

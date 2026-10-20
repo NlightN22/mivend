@@ -83,6 +83,7 @@ export default {
             subtitle: 'Default delivery is linked to the trading point.',
             change: 'Change',
             contract: 'Contract {number}',
+            terms: 'Payment terms',
             deferredLimit: 'Deferred {n} day · limit {amount} | Deferred {n} days · limit {amount}',
             limit: 'limit {amount}',
             almostReached: 'Credit limit almost reached',

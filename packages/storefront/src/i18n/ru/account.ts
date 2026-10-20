@@ -87,6 +87,7 @@ const ru: typeof en = {
             subtitle: 'Доставка по умолчанию привязана к торговой точке.',
             change: 'Изменить',
             contract: 'Договор {number}',
+            terms: 'Условия оплаты',
             deferredLimit:
                 'Отсрочка {n} день · лимит {amount} | Отсрочка {n} дня · лимит {amount} | Отсрочка {n} дней · лимит {amount}',
             limit: 'лимит {amount}',
