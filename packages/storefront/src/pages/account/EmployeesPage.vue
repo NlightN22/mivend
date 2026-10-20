@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { MvNotImplemented } from '@mivend/ui-kit';
+import { useDemoMode } from '../../composables/useDemoMode';
 import { ref, computed, toRef } from 'vue';
 import type { Ref } from 'vue';
 import { useUrlState } from '@mivend/ui-kit';
@@ -23,13 +25,21 @@ const filtered = computed(() =>
         ? DEMO_EMPLOYEES
         : DEMO_EMPLOYEES.filter(e => e.status === activeFilter.value),
 );
+const { demoAllowed } = useDemoMode();
 </script>
 
 <template>
     <div class="emp-page">
         <AccountSidebar />
 
-        <section class="emp-content">
+        <section v-if="!demoAllowed" class="emp-content">
+            <h1 class="emp-title emp-title--stub">{{ $t('employees.title') }}</h1>
+            <MvNotImplemented
+                :title="$t('common.notImplemented.title')"
+                :message="$t('common.notImplemented.message')"
+            />
+        </section>
+        <section v-else class="emp-content">
             <div class="emp-head">
                 <div class="emp-head__left">
                     <h1 class="emp-title">{{ $t('employees.title') }}</h1>

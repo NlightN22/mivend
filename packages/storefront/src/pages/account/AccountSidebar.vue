@@ -10,6 +10,8 @@ import { useProformaInvoices } from '../proforma-invoices/useProformaInvoices';
 import { useOrders } from '../orders/useOrders';
 import { useCompanyName } from './useCompanyName';
 import { useTradingPoints } from './useTradingPoints';
+import { withoutDemoOnly } from './demoOnlyLinks';
+import { useDemoMode } from '../../composables/useDemoMode';
 
 const authStore = useAuthStore();
 const route = useRoute();
@@ -48,6 +50,7 @@ const role = computed(() => {
     return te(key) ? t(key) : code;
 });
 
+const { demoAllowed } = useDemoMode();
 const isActive = (path: string) => route.path === path;
 
 interface NavItem {
@@ -60,25 +63,43 @@ const customerLinks = computed<NavItem[]>(() => [
     { to: '/orders', key: 'orders', count: orderCount.value },
     { to: '/settlements', key: 'statement' },
 ]);
-const documentLinks = computed<NavItem[]>(() => [
-    { to: '/proforma-invoices', key: 'proformaInvoices', count: proformaInvoiceCount.value },
-    { to: '/documents', key: 'contracts', count: documentCount.value },
-    { to: '/reconciliation-acts', key: 'reconciliationActs' },
-]);
-const afterDocumentLinks = computed<NavItem[]>(() => [
-    { to: '/favorites', key: 'favorites', count: favoriteCount.value },
-    { to: '/requests', key: 'requests' },
-]);
-const companyLinks = computed<NavItem[]>(() => [
-    { to: '/account/trading-points', key: 'tradingPoints', count: tradingPointCount.value },
-    { to: '/account/balance', key: 'balance' },
-    { to: '/account/employees', key: 'employees' },
-    { to: '/account/settings', key: 'settings' },
-    { to: '/account/notifications', key: 'notifications' },
-]);
+const documentLinks = computed<NavItem[]>(() =>
+    withoutDemoOnly(
+        [
+            {
+                to: '/proforma-invoices',
+                key: 'proformaInvoices',
+                count: proformaInvoiceCount.value,
+            },
+            { to: '/documents', key: 'contracts', count: documentCount.value },
+            { to: '/reconciliation-acts', key: 'reconciliationActs' },
+        ],
+        demoAllowed,
+    ),
+);
+const afterDocumentLinks = computed<NavItem[]>(() =>
+    withoutDemoOnly(
+        [
+            { to: '/favorites', key: 'favorites', count: favoriteCount.value },
+            { to: '/requests', key: 'requests' },
+        ],
+        demoAllowed,
+    ),
+);
+const companyLinks = computed<NavItem[]>(() =>
+    withoutDemoOnly(
+        [
+            { to: '/account/trading-points', key: 'tradingPoints', count: tradingPointCount.value },
+            { to: '/account/balance', key: 'balance' },
+            { to: '/account/employees', key: 'employees' },
+            { to: '/account/settings', key: 'settings' },
+            { to: '/account/notifications', key: 'notifications' },
+        ],
+        demoAllowed,
+    ),
+);
 
-const DOCUMENT_PATHS = ['/proforma-invoices', '/documents', '/reconciliation-acts'];
-const inDocuments = computed(() => DOCUMENT_PATHS.some(p => route.path.startsWith(p)));
+const inDocuments = computed(() => documentLinks.value.some(l => route.path.startsWith(l.to)));
 const documentsOpen = ref(inDocuments.value);
 watch(inDocuments, inside => {
     if (inside) documentsOpen.value = true;

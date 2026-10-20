@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { useDemoMode } from '../../composables/useDemoMode';
 import { toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useUrlState } from '@mivend/ui-kit';
+import { MvNotImplemented, useUrlState } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import RequestsToolbar from './RequestsToolbar.vue';
 import RequestCard from './RequestCard.vue';
@@ -21,13 +22,23 @@ const sort = toRef(urlState, 'sort');
 function handleQuickSubmit(_topic: string, _message: string) {
     // placeholder: send quick request
 }
+const { demoAllowed } = useDemoMode();
 </script>
 
 <template>
     <div class="requests-page">
         <AccountSidebar />
 
-        <section class="requests-page__content">
+        <section v-if="!demoAllowed" class="requests-page__content">
+            <h1 class="requests-page__title requests-page__title--stub">
+                {{ t('requests.title') }}
+            </h1>
+            <MvNotImplemented
+                :title="t('common.notImplemented.title')"
+                :message="t('common.notImplemented.message')"
+            />
+        </section>
+        <section v-else class="requests-page__content">
             <div class="requests-page__head">
                 <div>
                     <h1 class="requests-page__title">{{ t('requests.title') }}</h1>
@@ -98,6 +109,10 @@ function handleQuickSubmit(_topic: string, _message: string) {
     font-size: clamp(34px, 3.6vw, 50px);
     line-height: 0.98;
     letter-spacing: -0.055em;
+}
+
+.requests-page__title--stub {
+    margin-bottom: 20px;
 }
 
 .requests-page__subtitle {

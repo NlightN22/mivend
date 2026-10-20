@@ -4,6 +4,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { stockVariantFromLevel } from '@mivend/ui-kit';
 import { useProductLabels } from '../../composables/useProductLabels';
+import { useDemoMode } from '../../composables/useDemoMode';
+import { noPriceAction } from './noPriceAction';
 import { baseToPacks, packsToBase, type SalesUnitView } from '../../composables/useSalesUnit';
 
 interface Props {
@@ -38,6 +40,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const labels = useProductLabels();
+const noPrice = noPriceAction(useDemoMode().demoAllowed);
 const stockVariant = computed(() => stockVariantFromLevel(props.stockLevel));
 const unitPrice = computed(() =>
     props.price !== undefined && props.salesUnit
@@ -128,12 +131,19 @@ function onStepper(lineId: string | undefined, value: number): void {
                 @update:model-value="(val: number) => onStepper(cartLineId, val)"
             />
             <RouterLink
-                v-else-if="showPrices && price === undefined"
-                to="/requests"
+                v-else-if="showPrices && price === undefined && noPrice.to"
+                :to="noPrice.to"
                 class="buy-panel__add buy-panel__add--link"
             >
-                {{ t('buyPanel.requestPrice') }}
+                {{ t(noPrice.labelKey) }}
             </RouterLink>
+            <span
+                v-else-if="showPrices && price === undefined"
+                class="buy-panel__add buy-panel__add--link buy-panel__add--inactive"
+                aria-disabled="true"
+            >
+                {{ t(noPrice.labelKey) }}
+            </span>
             <button
                 v-else
                 class="buy-panel__add"
@@ -187,6 +197,10 @@ function onStepper(lineId: string | undefined, value: number): void {
     align-items: center;
     justify-content: center;
     text-decoration: none;
+}
+.buy-panel__add--inactive {
+    opacity: 0.45;
+    cursor: default;
 }
 .buy-panel__price-hint {
     font-size: 14px;
