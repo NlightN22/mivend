@@ -1,3 +1,4 @@
+import { ApiNetworkError } from '../api/client';
 import { orderDisplayNumber } from '../pages/orders/orderFormat';
 
 export type PaymentResultStatus = 'success' | 'pending' | 'fail';
@@ -33,6 +34,15 @@ export interface PaymentResultView {
 
 export function parsePaymentResultStatus(value: unknown): PaymentResultStatus {
     return value === 'pending' || value === 'fail' ? value : 'success';
+}
+
+// Shop API answers FORBIDDEN for a code that is unknown or not the customer's; transport failures are not a 404.
+export function isMissingOrderError(error: unknown): boolean {
+    return (
+        error instanceof Error &&
+        !(error instanceof ApiNetworkError) &&
+        !error.message.startsWith('Shop API error:')
+    );
 }
 
 export function parseOrderCode(value: unknown): string | null {

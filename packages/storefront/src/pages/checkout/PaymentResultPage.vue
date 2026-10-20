@@ -4,12 +4,13 @@ import { MvNotImplemented, formatDocumentNumber } from '@mivend/ui-kit';
 import { IconCheck, IconHourglass, IconX } from '@tabler/icons-vue';
 import { useI18n } from 'vue-i18n';
 import { useDemoMode } from '../../composables/useDemoMode';
+import NotFoundPage from '../error/NotFoundPage.vue';
 import PaymentResultDetails from './PaymentResultDetails.vue';
 import { usePaymentResult } from './usePaymentResult';
 
 const { t } = useI18n();
 const { demoAllowed } = useDemoMode();
-const { status, loading, view } = usePaymentResult();
+const { status, loading, view, notFound } = usePaymentResult();
 const orderLink = computed(() => (view.value ? `/orders/${view.value.orderId}` : '/orders'));
 
 const config = computed(() => {
@@ -43,7 +44,8 @@ const config = computed(() => {
 </script>
 
 <template>
-    <main class="pr-page">
+    <NotFoundPage v-if="notFound" />
+    <main v-else class="pr-page">
         <MvBreadcrumbs
             :aria-label="$t('common.breadcrumb')"
             class="pr-crumbs"

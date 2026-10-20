@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { ApiNetworkError } from '../../api/client';
 import {
     describePaymentResult,
+    isMissingOrderError,
     parseOrderCode,
     parsePaymentResultStatus,
 } from '../../utils/paymentResultView';
@@ -72,5 +74,16 @@ describe('describePaymentResult', () => {
             customFields: { isExternal: true, erpRegistrationDocumentNumber: '000123' },
         });
         expect(view.orderNumber).toBe('000123');
+    });
+});
+
+describe('isMissingOrderError', () => {
+    it('treats a GraphQL error as a missing order', () => {
+        expect(isMissingOrderError(new Error('You are not currently authorized'))).toBe(true);
+    });
+
+    it('does not treat transport failures as a missing order', () => {
+        expect(isMissingOrderError(new ApiNetworkError('timeout'))).toBe(false);
+        expect(isMissingOrderError(new Error('Shop API error: 502'))).toBe(false);
     });
 });
