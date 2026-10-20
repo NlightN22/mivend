@@ -90,6 +90,8 @@ const menuItems = computed<AppSidebarItem[]>(() => {
     // Vendure admin UI (any role) is enough, no manager-portal code change needed.
     if (authStore.hasPermission('ManageAccessControl')) {
         items.push({ label: 'Settings', path: '/settings' });
+    } else if (authStore.hasPermission('ManageVisibilityGrants')) {
+        items.push({ label: 'Settings', path: '/settings/visibility-grants' });
     }
     return items;
 });
@@ -131,6 +133,8 @@ const moreSheetItems = computed<AppMobileSheetItem[]>(() => {
     );
     if (authStore.hasPermission('ManageAccessControl')) {
         items.push({ key: 'settings', label: 'Settings', path: '/settings' });
+    } else if (authStore.hasPermission('ManageVisibilityGrants')) {
+        items.push({ key: 'settings', label: 'Settings', path: '/settings/visibility-grants' });
     }
     return items;
 });

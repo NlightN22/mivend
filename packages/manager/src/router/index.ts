@@ -138,6 +138,18 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'settings/visibility-grants',
+                    name: 'settings-visibility-grants',
+                    component: () => import('../pages/settings/VisibilityGrantsPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
+                    path: 'settings/unsorted',
+                    name: 'settings-unsorted',
+                    component: () => import('../pages/settings/UnsortedPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'settings/organizations',
                     name: 'settings-organizations',
                     component: () => import('../pages/settings/OrganizationsPage.vue'),

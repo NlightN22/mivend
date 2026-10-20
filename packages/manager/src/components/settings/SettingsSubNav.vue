@@ -11,12 +11,17 @@ defineProps<{
         | 'security'
         | 'branches'
         | 'department-branch'
+        | 'visibility-grants'
+        | 'unsorted'
         | 'organizations'
         | 'category-visibility'
         | 'system-health'
         | 'check-policies';
 }>();
 const authStore = useAuthStore();
+const canManageVisibility =
+    authStore.hasPermission('ManageVisibilityGrants') ||
+    authStore.hasPermission('ManageAccessControl');
 </script>
 
 <template>
@@ -33,6 +38,18 @@ const authStore = useAuthStore();
             to="/settings/department-branch"
             :class="{ active: active === 'department-branch' }"
             >Departments to branch</RouterLink
+        >
+        <RouterLink
+            v-if="canManageVisibility"
+            to="/settings/visibility-grants"
+            :class="{ active: active === 'visibility-grants' }"
+            >Visibility grants</RouterLink
+        >
+        <RouterLink
+            v-if="canManageVisibility"
+            to="/settings/unsorted"
+            :class="{ active: active === 'unsorted' }"
+            >Unsorted</RouterLink
         >
         <RouterLink to="/settings/organizations" :class="{ active: active === 'organizations' }">
             Organizations

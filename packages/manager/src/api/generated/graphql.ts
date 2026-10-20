@@ -4074,6 +4074,7 @@ export type Mutation = {
     extendOrderReservation: Array<Reservation>;
     flushBufferedJobs: Success;
     generateContract: Scalars['Boolean']['output'];
+    grantManagerVisibility: VisibilityGrant;
     importProducts: Maybe<ImportInfo>;
     /**
      * Authenticates the user using the native authentication strategy. This mutation is an alias for authenticate({ native: { ... }})
@@ -4159,6 +4160,7 @@ export type Mutation = {
     /** Marks an open ErpReconciliationIssue as resolved by a human, with a required free-text resolution note — never auto-resolved. */
     resolveErpReconciliationIssue: ErpReconciliationIssue;
     resolveNotification: Notification;
+    revokeVisibilityGrant: VisibilityGrant;
     /**
      * Replaces the old with a new API-Key.
      * This is a convenience method to invalidate an API-Key without
@@ -4172,6 +4174,7 @@ export type Mutation = {
     saveTableView: SavedTableView;
     setAdministratorActive: Scalars['Boolean']['output'];
     setBranchSettings: BranchSettings;
+    /** Manual branch pick that the automatic department rule never overwrites; null clears it. */
     setCounterpartyBranchOverride: Scalars['Boolean']['output'];
     setCreditTermLimit: CreditTermLimit;
     setCustomerForDraftOrder: SetCustomerForDraftOrderResult;
@@ -4841,6 +4844,14 @@ export type MutationGenerateContractArgs = {
     counterpartyId: Scalars['ID']['input'];
 };
 
+export type MutationGrantManagerVisibilityArgs = {
+    granteeAdministratorId: Scalars['ID']['input'];
+    managerAdministratorId: Scalars['ID']['input'];
+    reason: Scalars['String']['input'];
+    validFrom?: InputMaybe<Scalars['DateTime']['input']>;
+    validTo?: InputMaybe<Scalars['DateTime']['input']>;
+};
+
 export type MutationImportProductsArgs = {
     csvFile: Scalars['Upload']['input'];
 };
@@ -5046,6 +5057,11 @@ export type MutationResolveErpReconciliationIssueArgs = {
 export type MutationResolveNotificationArgs = {
     id: Scalars['ID']['input'];
     resolution: Scalars['String']['input'];
+};
+
+export type MutationRevokeVisibilityGrantArgs = {
+    id: Scalars['ID']['input'];
+    reason?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MutationRotateApiKeyArgs = {
@@ -5369,7 +5385,6 @@ export type MutationUpdateZoneArgs = {
 };
 
 export type MutationUpsertCounterpartyArgs = {
-    branchId?: InputMaybe<Scalars['String']['input']>;
     creditBalance: Scalars['Int']['input'];
     creditLimit: Scalars['Int']['input'];
     departmentId?: InputMaybe<Scalars['String']['input']>;
@@ -6450,6 +6465,8 @@ export type Permission =
     | 'ManageCounterpartyTeam'
     /** Read reconciliation discrepancies against Integration Service and manually trigger a re-check (issue #84) */
     | 'ManageErpIntegration'
+    /** Grant/revoke visibility of other managers' clients and read the unsorted list (issue #123); a holder without ManageAccessControl can grant only managers they see themselves */
+    | 'ManageVisibilityGrants'
     /** Owner means the user owns this entity, e.g. a Customer's own Order */
     | 'Owner'
     /** Public means any unauthenticated user may perform the operation */
@@ -7563,12 +7580,15 @@ export type Query = {
     testShippingMethod: TestShippingMethodResult;
     tradingPoint: Maybe<TradingPoint>;
     unassignedCounterpartyCount: Scalars['Int']['output'];
+    unsortedAdministrators: UnsortedAdministratorPage;
+    unsortedCounterparties: UnsortedCounterpartyPage;
     /** Enabled variants and how many have no organization (cannot be ordered). Integration health. */
     variantOrganizationHealth: VariantOrganizationHealth;
     /** Visible orders that currently hold stock of this variant, earliest expiry first (#112). */
     variantReservationHolders: Array<VariantReservationHolder>;
     /** How many variants reference a unit that has not arrived (soft link, issue #200). */
     variantUnitHealth: VariantUnitHealth;
+    visibilityGrants: VisibilityGrantPage;
     visibleOrders: OrderList;
     /** Manager-portal payment list — derived-from-ProformaInvoice scoping, see PaymentVisibilityService. */
     visiblePayments: PaymentAttemptList;
@@ -8080,8 +8100,27 @@ export type QueryTradingPointArgs = {
     id: Scalars['ID']['input'];
 };
 
+export type QueryUnsortedAdministratorsArgs = {
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryUnsortedCounterpartiesArgs = {
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type QueryVariantReservationHoldersArgs = {
     productVariantId: Scalars['ID']['input'];
+};
+
+export type QueryVisibilityGrantsArgs = {
+    granteeAdministratorId?: InputMaybe<Scalars['ID']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    status?: InputMaybe<Scalars['String']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryVisibleOrdersArgs = {
@@ -9260,6 +9299,25 @@ export type TransitionOrderToStateResult = Order | OrderStateTransitionError;
 
 export type TransitionPaymentToStateResult = Payment | PaymentStateTransitionError;
 
+export type UnsortedAdministrator = {
+    departmentId: Maybe<Scalars['String']['output']>;
+    emailAddress: Scalars['String']['output'];
+    firstName: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    lastName: Scalars['String']['output'];
+    roleCodes: Array<Scalars['String']['output']>;
+};
+
+export type UnsortedAdministratorPage = {
+    items: Array<UnsortedAdministrator>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type UnsortedCounterpartyPage = {
+    items: Array<Counterparty>;
+    totalItems: Scalars['Int']['output'];
+};
+
 export type UpdateActiveAdministratorInput = {
     customFields?: InputMaybe<Scalars['JSON']['input']>;
     emailAddress?: InputMaybe<Scalars['String']['input']>;
@@ -9745,6 +9803,31 @@ export type VariantUnitHealth = {
     total: Scalars['Int']['output'];
     /** Of those, variants whose unit has not arrived on the unit stream (unit fields stay empty until it does). */
     unitMissing: Scalars['Int']['output'];
+};
+
+/** A grant of one more manager's clients to an administrator; status is active | scheduled | expired | revoked. */
+export type VisibilityGrant = {
+    createdAt: Scalars['DateTime']['output'];
+    grantedByAdministratorId: Maybe<Scalars['ID']['output']>;
+    grantedByName: Maybe<Scalars['String']['output']>;
+    granteeAdministratorId: Scalars['ID']['output'];
+    granteeName: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    managerAdministratorId: Scalars['ID']['output'];
+    managerName: Scalars['String']['output'];
+    reason: Scalars['String']['output'];
+    revokedAt: Maybe<Scalars['DateTime']['output']>;
+    revokedByAdministratorId: Maybe<Scalars['ID']['output']>;
+    status: Scalars['String']['output'];
+    subjectKind: Scalars['String']['output'];
+    uuid: Scalars['String']['output'];
+    validFrom: Maybe<Scalars['DateTime']['output']>;
+    validTo: Maybe<Scalars['DateTime']['output']>;
+};
+
+export type VisibilityGrantPage = {
+    items: Array<VisibilityGrant>;
+    totalItems: Scalars['Int']['output'];
 };
 
 export type Warehouse = {
@@ -12450,6 +12533,140 @@ export type AdministratorForPasswordResetTokenQuery = {
     } | null;
 };
 
+export type VisibilityGrantFieldsFragment = {
+    id: string;
+    granteeAdministratorId: string;
+    granteeName: string;
+    managerAdministratorId: string;
+    managerName: string;
+    validFrom: any | null;
+    validTo: any | null;
+    reason: string;
+    grantedByName: string | null;
+    revokedAt: any | null;
+    createdAt: any;
+    status: string;
+};
+
+export type VisibilityGrantsQueryVariables = Exact<{
+    status?: InputMaybe<Scalars['String']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type VisibilityGrantsQuery = {
+    visibilityGrants: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            granteeAdministratorId: string;
+            granteeName: string;
+            managerAdministratorId: string;
+            managerName: string;
+            validFrom: any | null;
+            validTo: any | null;
+            reason: string;
+            grantedByName: string | null;
+            revokedAt: any | null;
+            createdAt: any;
+            status: string;
+        }>;
+    };
+};
+
+export type VisibilityGrantPickersQueryVariables = Exact<{ [key: string]: never }>;
+
+export type VisibilityGrantPickersQuery = {
+    teamMembers: Array<{ id: string; firstName: string; lastName: string }>;
+};
+
+export type GrantManagerVisibilityMutationVariables = Exact<{
+    granteeAdministratorId: Scalars['ID']['input'];
+    managerAdministratorId: Scalars['ID']['input'];
+    validFrom?: InputMaybe<Scalars['DateTime']['input']>;
+    validTo?: InputMaybe<Scalars['DateTime']['input']>;
+    reason: Scalars['String']['input'];
+}>;
+
+export type GrantManagerVisibilityMutation = {
+    grantManagerVisibility: {
+        id: string;
+        granteeAdministratorId: string;
+        granteeName: string;
+        managerAdministratorId: string;
+        managerName: string;
+        validFrom: any | null;
+        validTo: any | null;
+        reason: string;
+        grantedByName: string | null;
+        revokedAt: any | null;
+        createdAt: any;
+        status: string;
+    };
+};
+
+export type RevokeVisibilityGrantMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+    reason?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type RevokeVisibilityGrantMutation = {
+    revokeVisibilityGrant: {
+        id: string;
+        granteeAdministratorId: string;
+        granteeName: string;
+        managerAdministratorId: string;
+        managerName: string;
+        validFrom: any | null;
+        validTo: any | null;
+        reason: string;
+        grantedByName: string | null;
+        revokedAt: any | null;
+        createdAt: any;
+        status: string;
+    };
+};
+
+export type UnsortedCounterpartiesQueryVariables = Exact<{
+    take?: InputMaybe<Scalars['Int']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type UnsortedCounterpartiesQuery = {
+    unsortedCounterparties: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            shortName: string;
+            legalName: string;
+            inn: string | null;
+            assignedManagerId: string | null;
+            departmentId: string | null;
+        }>;
+    };
+};
+
+export type UnsortedAdministratorsQueryVariables = Exact<{
+    take?: InputMaybe<Scalars['Int']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type UnsortedAdministratorsQuery = {
+    unsortedAdministrators: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            firstName: string;
+            lastName: string;
+            emailAddress: string;
+            departmentId: string | null;
+            roleCodes: Array<string>;
+        }>;
+    };
+};
+
 export class TypedDocumentString<TResult, TVariables>
     extends String
     implements DocumentTypeDecoration<TResult, TVariables>
@@ -12935,6 +13152,25 @@ export const OrderContractOptionFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'OrderContractOptionFields' },
 ) as unknown as TypedDocumentString<OrderContractOptionFieldsFragment, unknown>;
+export const VisibilityGrantFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment VisibilityGrantFields on VisibilityGrant {
+  id
+  granteeAdministratorId
+  granteeName
+  managerAdministratorId
+  managerName
+  validFrom
+  validTo
+  reason
+  grantedByName
+  revokedAt
+  createdAt
+  status
+}
+    `,
+    { fragmentName: 'VisibilityGrantFields' },
+) as unknown as TypedDocumentString<VisibilityGrantFieldsFragment, unknown>;
 export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     mutation ChangeOwnPassword($password: String!) {
   updateActiveAdministrator(input: {password: $password}) {
@@ -15739,4 +15975,127 @@ export const AdministratorForPasswordResetTokenDocument = new TypedDocumentStrin
     `) as unknown as TypedDocumentString<
     AdministratorForPasswordResetTokenQuery,
     AdministratorForPasswordResetTokenQueryVariables
+>;
+export const VisibilityGrantsDocument = new TypedDocumentString(`
+    query VisibilityGrants($status: String, $search: String, $take: Int, $skip: Int) {
+  visibilityGrants(status: $status, search: $search, take: $take, skip: $skip) {
+    totalItems
+    items {
+      ...VisibilityGrantFields
+    }
+  }
+}
+    fragment VisibilityGrantFields on VisibilityGrant {
+  id
+  granteeAdministratorId
+  granteeName
+  managerAdministratorId
+  managerName
+  validFrom
+  validTo
+  reason
+  grantedByName
+  revokedAt
+  createdAt
+  status
+}`) as unknown as TypedDocumentString<VisibilityGrantsQuery, VisibilityGrantsQueryVariables>;
+export const VisibilityGrantPickersDocument = new TypedDocumentString(`
+    query VisibilityGrantPickers {
+  teamMembers {
+    id
+    firstName
+    lastName
+  }
+}
+    `) as unknown as TypedDocumentString<
+    VisibilityGrantPickersQuery,
+    VisibilityGrantPickersQueryVariables
+>;
+export const GrantManagerVisibilityDocument = new TypedDocumentString(`
+    mutation GrantManagerVisibility($granteeAdministratorId: ID!, $managerAdministratorId: ID!, $validFrom: DateTime, $validTo: DateTime, $reason: String!) {
+  grantManagerVisibility(
+    granteeAdministratorId: $granteeAdministratorId
+    managerAdministratorId: $managerAdministratorId
+    validFrom: $validFrom
+    validTo: $validTo
+    reason: $reason
+  ) {
+    ...VisibilityGrantFields
+  }
+}
+    fragment VisibilityGrantFields on VisibilityGrant {
+  id
+  granteeAdministratorId
+  granteeName
+  managerAdministratorId
+  managerName
+  validFrom
+  validTo
+  reason
+  grantedByName
+  revokedAt
+  createdAt
+  status
+}`) as unknown as TypedDocumentString<
+    GrantManagerVisibilityMutation,
+    GrantManagerVisibilityMutationVariables
+>;
+export const RevokeVisibilityGrantDocument = new TypedDocumentString(`
+    mutation RevokeVisibilityGrant($id: ID!, $reason: String) {
+  revokeVisibilityGrant(id: $id, reason: $reason) {
+    ...VisibilityGrantFields
+  }
+}
+    fragment VisibilityGrantFields on VisibilityGrant {
+  id
+  granteeAdministratorId
+  granteeName
+  managerAdministratorId
+  managerName
+  validFrom
+  validTo
+  reason
+  grantedByName
+  revokedAt
+  createdAt
+  status
+}`) as unknown as TypedDocumentString<
+    RevokeVisibilityGrantMutation,
+    RevokeVisibilityGrantMutationVariables
+>;
+export const UnsortedCounterpartiesDocument = new TypedDocumentString(`
+    query UnsortedCounterparties($take: Int, $skip: Int, $search: String) {
+  unsortedCounterparties(take: $take, skip: $skip, search: $search) {
+    totalItems
+    items {
+      id
+      shortName
+      legalName
+      inn
+      assignedManagerId
+      departmentId
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    UnsortedCounterpartiesQuery,
+    UnsortedCounterpartiesQueryVariables
+>;
+export const UnsortedAdministratorsDocument = new TypedDocumentString(`
+    query UnsortedAdministrators($take: Int, $skip: Int) {
+  unsortedAdministrators(take: $take, skip: $skip) {
+    totalItems
+    items {
+      id
+      firstName
+      lastName
+      emailAddress
+      departmentId
+      roleCodes
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    UnsortedAdministratorsQuery,
+    UnsortedAdministratorsQueryVariables
 >;

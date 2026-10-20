@@ -1,0 +1,83 @@
+fragment VisibilityGrantFields on VisibilityGrant {
+    id
+    granteeAdministratorId
+    granteeName
+    managerAdministratorId
+    managerName
+    validFrom
+    validTo
+    reason
+    grantedByName
+    revokedAt
+    createdAt
+    status
+}
+
+query VisibilityGrants($status: String, $search: String, $take: Int, $skip: Int) {
+    visibilityGrants(status: $status, search: $search, take: $take, skip: $skip) {
+        totalItems
+        items {
+            ...VisibilityGrantFields
+        }
+    }
+}
+
+query VisibilityGrantPickers {
+    teamMembers {
+        id
+        firstName
+        lastName
+    }
+}
+
+mutation GrantManagerVisibility(
+    $granteeAdministratorId: ID!
+    $managerAdministratorId: ID!
+    $validFrom: DateTime
+    $validTo: DateTime
+    $reason: String!
+) {
+    grantManagerVisibility(
+        granteeAdministratorId: $granteeAdministratorId
+        managerAdministratorId: $managerAdministratorId
+        validFrom: $validFrom
+        validTo: $validTo
+        reason: $reason
+    ) {
+        ...VisibilityGrantFields
+    }
+}
+
+mutation RevokeVisibilityGrant($id: ID!, $reason: String) {
+    revokeVisibilityGrant(id: $id, reason: $reason) {
+        ...VisibilityGrantFields
+    }
+}
+
+query UnsortedCounterparties($take: Int, $skip: Int, $search: String) {
+    unsortedCounterparties(take: $take, skip: $skip, search: $search) {
+        totalItems
+        items {
+            id
+            shortName
+            legalName
+            inn
+            assignedManagerId
+            departmentId
+        }
+    }
+}
+
+query UnsortedAdministrators($take: Int, $skip: Int) {
+    unsortedAdministrators(take: $take, skip: $skip) {
+        totalItems
+        items {
+            id
+            firstName
+            lastName
+            emailAddress
+            departmentId
+            roleCodes
+        }
+    }
+}
