@@ -374,6 +374,17 @@ export class TradingPointService {
             .findOne({ where: { id: String(id) }, relations: ['contacts'] });
     }
 
+    // Shop API: only the caller's own counterparty. A hidden own point is returned (myHiddenTradingPoints
+    // lists it too); a staff-deactivated one never is, as in findByCounterparty.
+    async findOwnById(ctx: RequestContext, id: ID): Promise<TradingPoint | null> {
+        const counterpartyId = await this.getCounterpartyIdForUser(ctx);
+        if (!counterpartyId) return null;
+        return this.connection.getRepository(ctx, TradingPoint).findOne({
+            where: { id: String(id), counterpartyId, isActive: true },
+            relations: ['contacts'],
+        });
+    }
+
     // Self-heals a missing/inactive/hidden preferred point (first active one wins); the postgres
     // driver returns [rows, rowCount] for UPDATE, hence rows[0][0].
     async getPreferredForCustomer(
@@ -447,10 +458,11 @@ export class TradingPointService {
         comment: string | null,
     ): Promise<TradingPoint> {
         const repo = this.connection.getRepository(ctx, TradingPoint);
+        const point = await this.findById(ctx, tradingPointId);
+        if (!point) throw new UserInputError(`TradingPoint not found: id=${tradingPointId}`);
+        await this.assertStaffCanEdit(ctx, point);
         await repo.update({ id: String(tradingPointId) }, { deliveryComment: comment });
-        const updated = await this.findById(ctx, tradingPointId);
-        if (!updated) throw new UserInputError(`TradingPoint not found: id=${tradingPointId}`);
-        return updated;
+        return (await this.findById(ctx, tradingPointId)) ?? point;
     }
 
     async findVisibleForCounterparty(

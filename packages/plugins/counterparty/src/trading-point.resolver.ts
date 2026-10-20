@@ -10,6 +10,7 @@ import {
     CustomerTradingPointInput,
     TradingPointDetailsPatch,
 } from './trading-point.service';
+import { CounterpartyService } from './counterparty.service';
 import { ctxQuery } from 'shared';
 
 @Resolver('Customer')
@@ -44,14 +45,6 @@ export class TradingPointResolver {
         private tradingPointService: TradingPointService,
         private connection: TransactionalConnection,
     ) {}
-
-    @Query()
-    async tradingPoint(
-        @Ctx() ctx: RequestContext,
-        @Args() args: { id: string },
-    ): Promise<TradingPoint | null> {
-        return this.tradingPointService.findById(ctx, args.id);
-    }
 
     @Transaction()
     @Mutation()
@@ -90,6 +83,14 @@ export class TradingPointResolver {
 @Resolver('Query')
 export class CustomerTradingPointsQueryResolver {
     constructor(private tradingPointService: TradingPointService) {}
+
+    @Query()
+    async tradingPoint(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string },
+    ): Promise<TradingPoint | null> {
+        return this.tradingPointService.findOwnById(ctx, args.id);
+    }
 
     @Query()
     async myTradingPoints(@Ctx() ctx: RequestContext): Promise<TradingPoint[]> {
@@ -158,7 +159,22 @@ export class CustomerTradingPointsMutationResolver {
 
 @Resolver('TradingPoint')
 export class TradingPointAdminResolver {
-    constructor(private tradingPointService: TradingPointService) {}
+    constructor(
+        private tradingPointService: TradingPointService,
+        private counterpartyService: CounterpartyService,
+    ) {}
+
+    @Query()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    async tradingPoint(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { id: string },
+    ): Promise<TradingPoint | null> {
+        const point = await this.tradingPointService.findById(ctx, args.id);
+        if (!point) return null;
+        const visible = await this.counterpartyService.findOneVisible(ctx, point.counterpartyId);
+        return visible ? point : null;
+    }
 
     @Transaction()
     @Mutation()
