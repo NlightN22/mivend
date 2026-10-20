@@ -2157,6 +2157,18 @@ export type Department = {
     parentErpId: Maybe<Scalars['String']['output']>;
 };
 
+export type DepartmentBranchNode = {
+    counterpartyCount: Scalars['Int']['output'];
+    departmentErpId: Scalars['String']['output'];
+    effectiveBranchId: Maybe<Scalars['String']['output']>;
+    inheritedFromErpId: Maybe<Scalars['String']['output']>;
+    isActive: Scalars['Boolean']['output'];
+    name: Scalars['String']['output'];
+    ownBranchId: Maybe<Scalars['String']['output']>;
+    parentErpId: Maybe<Scalars['String']['output']>;
+    userCount: Scalars['Int']['output'];
+};
+
 export type Discount = {
     adjustmentSource: Scalars['String']['output'];
     amount: Scalars['Money']['output'];
@@ -3885,6 +3897,7 @@ export type Mutation = {
     cancelPayment: CancelPaymentResult;
     /** Staff edits before confirmation (#233); need ConfirmOrder, refused after a reservation, ERP registration or payment. */
     changeOrderLineQuantity: Scalars['Boolean']['output'];
+    clearDepartmentBranch: Scalars['Boolean']['output'];
     confirmOrder: Array<Reservation>;
     /** Marks the order's cash or bank-transfer payment (or the one given by paymentId) as received (Settled), recording who and when; a repeat is a no-op. */
     confirmPaymentReceived: Order;
@@ -4159,8 +4172,10 @@ export type Mutation = {
     saveTableView: SavedTableView;
     setAdministratorActive: Scalars['Boolean']['output'];
     setBranchSettings: BranchSettings;
+    setCounterpartyBranchOverride: Scalars['Boolean']['output'];
     setCreditTermLimit: CreditTermLimit;
     setCustomerForDraftOrder: SetCustomerForDraftOrderResult;
+    setDepartmentBranch: Scalars['Boolean']['output'];
     /** Sets the billing address for a draft Order */
     setDraftOrderBillingAddress: Order;
     /** Allows any custom fields to be set for the active order */
@@ -4421,6 +4436,10 @@ export type MutationChangeOrderLineQuantityArgs = {
     orderId: Scalars['ID']['input'];
     orderLineId: Scalars['ID']['input'];
     quantity: Scalars['Int']['input'];
+};
+
+export type MutationClearDepartmentBranchArgs = {
+    departmentErpId: Scalars['String']['input'];
 };
 
 export type MutationConfirmOrderArgs = {
@@ -5060,6 +5079,11 @@ export type MutationSetBranchSettingsArgs = {
     visibleWarehouseIds?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+export type MutationSetCounterpartyBranchOverrideArgs = {
+    branchId?: InputMaybe<Scalars['String']['input']>;
+    counterpartyId: Scalars['ID']['input'];
+};
+
 export type MutationSetCreditTermLimitArgs = {
     maxAmount?: InputMaybe<Scalars['Int']['input']>;
     maxExtraDays: Scalars['Int']['input'];
@@ -5070,6 +5094,11 @@ export type MutationSetCustomerForDraftOrderArgs = {
     customerId?: InputMaybe<Scalars['ID']['input']>;
     input?: InputMaybe<CreateCustomerInput>;
     orderId: Scalars['ID']['input'];
+};
+
+export type MutationSetDepartmentBranchArgs = {
+    branchId: Scalars['String']['input'];
+    departmentErpId: Scalars['String']['input'];
 };
 
 export type MutationSetDraftOrderBillingAddressArgs = {
@@ -7378,6 +7407,7 @@ export type Query = {
     /** Get metrics for the given date range and metric types. */
     dashboardMetricSummary: Array<DashboardMetricSummary>;
     deactivatedAdministrators: AdministratorList;
+    departmentBranchOverview: Array<DepartmentBranchNode>;
     departments: Array<Department>;
     discountGrantsForCounterparty: DiscountGrantForCustomerList;
     discountRegistryPage: DiscountRegistryEntryList;
@@ -10844,6 +10874,47 @@ export type ManagerDashboardQuery = {
     myApprovalsInbox: { awaitingMyDecision: { totalItems: number } };
 };
 
+export type DepartmentBranchNodeFieldsFragment = {
+    departmentErpId: string;
+    name: string;
+    parentErpId: string | null;
+    isActive: boolean;
+    ownBranchId: string | null;
+    effectiveBranchId: string | null;
+    inheritedFromErpId: string | null;
+    userCount: number;
+    counterpartyCount: number;
+};
+
+export type DepartmentBranchOverviewQueryVariables = Exact<{ [key: string]: never }>;
+
+export type DepartmentBranchOverviewQuery = {
+    departmentBranchOverview: Array<{
+        departmentErpId: string;
+        name: string;
+        parentErpId: string | null;
+        isActive: boolean;
+        ownBranchId: string | null;
+        effectiveBranchId: string | null;
+        inheritedFromErpId: string | null;
+        userCount: number;
+        counterpartyCount: number;
+    }>;
+};
+
+export type SetDepartmentBranchMutationVariables = Exact<{
+    departmentErpId: Scalars['String']['input'];
+    branchId: Scalars['String']['input'];
+}>;
+
+export type SetDepartmentBranchMutation = { setDepartmentBranch: boolean };
+
+export type ClearDepartmentBranchMutationVariables = Exact<{
+    departmentErpId: Scalars['String']['input'];
+}>;
+
+export type ClearDepartmentBranchMutation = { clearDepartmentBranch: boolean };
+
 export type DiscountRegistryPageQueryVariables = Exact<{
     options?: InputMaybe<DiscountRegistryListOptions>;
 }>;
@@ -12621,6 +12692,22 @@ export const CustomerOrderItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'CustomerOrderItemFields' },
 ) as unknown as TypedDocumentString<CustomerOrderItemFieldsFragment, unknown>;
+export const DepartmentBranchNodeFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment DepartmentBranchNodeFields on DepartmentBranchNode {
+  departmentErpId
+  name
+  parentErpId
+  isActive
+  ownBranchId
+  effectiveBranchId
+  inheritedFromErpId
+  userCount
+  counterpartyCount
+}
+    `,
+    { fragmentName: 'DepartmentBranchNodeFields' },
+) as unknown as TypedDocumentString<DepartmentBranchNodeFieldsFragment, unknown>;
 export const EntityVersionRowFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment EntityVersionRowFields on EntityVersion {
@@ -13954,6 +14041,42 @@ export const ManagerDashboardDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<ManagerDashboardQuery, ManagerDashboardQueryVariables>;
+export const DepartmentBranchOverviewDocument = new TypedDocumentString(`
+    query DepartmentBranchOverview {
+  departmentBranchOverview {
+    ...DepartmentBranchNodeFields
+  }
+}
+    fragment DepartmentBranchNodeFields on DepartmentBranchNode {
+  departmentErpId
+  name
+  parentErpId
+  isActive
+  ownBranchId
+  effectiveBranchId
+  inheritedFromErpId
+  userCount
+  counterpartyCount
+}`) as unknown as TypedDocumentString<
+    DepartmentBranchOverviewQuery,
+    DepartmentBranchOverviewQueryVariables
+>;
+export const SetDepartmentBranchDocument = new TypedDocumentString(`
+    mutation SetDepartmentBranch($departmentErpId: String!, $branchId: String!) {
+  setDepartmentBranch(departmentErpId: $departmentErpId, branchId: $branchId)
+}
+    `) as unknown as TypedDocumentString<
+    SetDepartmentBranchMutation,
+    SetDepartmentBranchMutationVariables
+>;
+export const ClearDepartmentBranchDocument = new TypedDocumentString(`
+    mutation ClearDepartmentBranch($departmentErpId: String!) {
+  clearDepartmentBranch(departmentErpId: $departmentErpId)
+}
+    `) as unknown as TypedDocumentString<
+    ClearDepartmentBranchMutation,
+    ClearDepartmentBranchMutationVariables
+>;
 export const DiscountRegistryPageDocument = new TypedDocumentString(`
     query DiscountRegistryPage($options: DiscountRegistryListOptions) {
   discountRegistryPage(options: $options) {

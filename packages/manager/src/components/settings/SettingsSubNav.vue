@@ -10,6 +10,7 @@ defineProps<{
         | 'users'
         | 'security'
         | 'branches'
+        | 'department-branch'
         | 'organizations'
         | 'category-visibility'
         | 'system-health'
@@ -26,6 +27,12 @@ const authStore = useAuthStore();
         <RouterLink to="/settings/users" :class="{ active: active === 'users' }">Users</RouterLink>
         <RouterLink to="/settings/branches" :class="{ active: active === 'branches' }"
             >Branches</RouterLink
+        >
+        <RouterLink
+            v-if="authStore.hasPermission('ManageAccessControl')"
+            to="/settings/department-branch"
+            :class="{ active: active === 'department-branch' }"
+            >Departments to branch</RouterLink
         >
         <RouterLink to="/settings/organizations" :class="{ active: active === 'organizations' }">
             Organizations

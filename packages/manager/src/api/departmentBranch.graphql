@@ -1,0 +1,25 @@
+fragment DepartmentBranchNodeFields on DepartmentBranchNode {
+    departmentErpId
+    name
+    parentErpId
+    isActive
+    ownBranchId
+    effectiveBranchId
+    inheritedFromErpId
+    userCount
+    counterpartyCount
+}
+
+query DepartmentBranchOverview {
+    departmentBranchOverview {
+        ...DepartmentBranchNodeFields
+    }
+}
+
+mutation SetDepartmentBranch($departmentErpId: String!, $branchId: String!) {
+    setDepartmentBranch(departmentErpId: $departmentErpId, branchId: $branchId)
+}
+
+mutation ClearDepartmentBranch($departmentErpId: String!) {
+    clearDepartmentBranch(departmentErpId: $departmentErpId)
+}

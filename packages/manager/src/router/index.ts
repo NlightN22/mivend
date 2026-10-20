@@ -132,6 +132,12 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'settings/department-branch',
+                    name: 'settings-department-branch',
+                    component: () => import('../pages/settings/DepartmentBranchPage.vue'),
+                    meta: { requiresAuth: true },
+                },
+                {
                     path: 'settings/organizations',
                     name: 'settings-organizations',
                     component: () => import('../pages/settings/OrganizationsPage.vue'),
