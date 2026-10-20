@@ -1,53 +1,89 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { MvErrorState, MvSkeleton } from '@mivend/ui-kit';
 import { formatDate } from '../../i18n/format';
+import { toDocData, type DocumentSummary } from '../documents/useDocuments';
+import { describeLoadError } from '../../api/describeLoadError';
+import { useDemoMode } from '../../composables/useDemoMode';
+
+const LATEST_COUNT = 3;
+
+const props = defineProps<{ documents: DocumentSummary[]; loading: boolean; error: unknown }>();
+defineEmits<{ retry: [] }>();
 
 const { t } = useI18n();
-const day = (iso: string): string => formatDate(iso, { day: 'numeric', month: 'short' });
-const orderNote = (number: string, iso: string): string =>
-    t('account.recentDocuments.orderNote', { number, date: day(iso) });
+const { demoAllowed } = useDemoMode();
+const errorText = computed(() => (props.error ? describeLoadError(props.error) : null));
 
-const docs = computed(() => [
-    {
-        title: t('account.recentDocuments.upd', { number: '91384' }),
-        note: orderNote('348510', '2026-06-24'),
-        action: t('account.recentDocuments.download'),
-    },
-    {
-        title: t('account.recentDocuments.proformaInvoice', { number: '88241' }),
-        note: orderNote('348744', '2026-06-25'),
-        action: t('account.recentDocuments.download'),
-    },
-    {
-        title: t('account.recentDocuments.reconciliation'),
-        note: formatDate('2026-06-01', { month: 'long', year: 'numeric' }),
-        action: t('account.recentDocuments.open'),
-    },
-]);
+const rows = computed(() =>
+    props.documents.slice(0, LATEST_COUNT).map(doc => {
+        const data = toDocData(doc);
+        return {
+            id: doc.id,
+            title: data.name,
+            note: `${data.meta} · ${data.date}`,
+            url: data.downloadUrl,
+        };
+    }),
+);
+const demoReconciliationNote = computed(() =>
+    formatDate('2026-06-01', { month: 'long', year: 'numeric' }),
+);
 </script>
 
 <template>
     <div class="account-documents">
         <div class="account-documents__header">
             <div>
-                <h2 class="account-documents__title">{{ $t('account.recentDocuments.title') }}</h2>
+                <h2 class="account-documents__title">{{ t('account.recentDocuments.title') }}</h2>
                 <div class="account-documents__subtitle">
-                    {{ $t('account.recentDocuments.subtitle') }}
+                    {{ t('account.recentDocuments.subtitle') }}
                 </div>
             </div>
-            <a href="#" class="account-documents__link-more">{{
-                $t('account.recentDocuments.all')
-            }}</a>
+            <RouterLink to="/documents" class="account-documents__link-more">{{
+                t('account.recentDocuments.all')
+            }}</RouterLink>
         </div>
 
-        <div class="account-documents__list">
-            <div v-for="doc in docs" :key="doc.title" class="account-documents__row">
+        <div v-if="loading && !documents.length" class="account-documents__list">
+            <MvSkeleton v-for="n in 3" :key="n" height="58px" radius="16px" />
+        </div>
+        <MvErrorState
+            v-else-if="errorText"
+            :title="errorText.title"
+            :message="errorText.message"
+            :retry-label="t('common.retry')"
+            @retry="$emit('retry')"
+        />
+        <div v-else class="account-documents__list">
+            <div v-if="!rows.length" class="account-documents__empty">
+                {{ t('account.recentDocuments.empty') }}
+            </div>
+            <div v-for="doc in rows" :key="doc.id" class="account-documents__row">
                 <div>
                     <div class="account-documents__doc-title">{{ doc.title }}</div>
                     <div class="account-documents__doc-note">{{ doc.note }}</div>
                 </div>
-                <a href="#" class="account-documents__action">{{ doc.action }}</a>
+                <a
+                    v-if="doc.url"
+                    :href="doc.url"
+                    target="_blank"
+                    download
+                    class="account-documents__action"
+                    >{{ t('account.recentDocuments.download') }}</a
+                >
+            </div>
+            <div v-if="demoAllowed" class="account-documents__row">
+                <div>
+                    <div class="account-documents__doc-title">
+                        {{ t('account.recentDocuments.reconciliation') }}
+                    </div>
+                    <div class="account-documents__doc-note">{{ demoReconciliationNote }}</div>
+                </div>
+                <RouterLink to="/reconciliation-acts" class="account-documents__action">{{
+                    t('account.recentDocuments.open')
+                }}</RouterLink>
             </div>
         </div>
     </div>
@@ -116,6 +152,15 @@ const docs = computed(() => [
     color: #66736e;
     font-size: 13px;
     line-height: 1.3;
+}
+
+.account-documents__empty {
+    padding: 22px 16px;
+    border: 1px dashed #dde7e2;
+    border-radius: 18px;
+    color: #66736e;
+    font-size: 14px;
+    text-align: center;
 }
 
 .account-documents__action {

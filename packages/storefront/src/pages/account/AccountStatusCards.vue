@@ -3,7 +3,14 @@ import { computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
 
+const props = defineProps<{
+    activeOrders: number | null;
+    inProcessingOrders: number | null;
+    documentsThisMonth: { n: number; label: string } | null;
+}>();
+
 const authStore = useAuthStore();
+const shown = (value: number | null): string => (value === null ? '—' : String(value));
 const { formatCurrencyAmount } = useCurrency();
 
 const availableLimit = computed(() => {
@@ -23,9 +30,9 @@ const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);
                 <div class="status-cards__title">{{ $t('account.status.activeOrders') }}</div>
                 <div class="status-cards__icon">📦</div>
             </div>
-            <div class="status-cards__value">8</div>
-            <div class="status-cards__note">
-                {{ $t('account.status.awaitingReserve', { n: 3 }) }}
+            <div class="status-cards__value">{{ shown(props.activeOrders) }}</div>
+            <div v-if="props.inProcessingOrders !== null" class="status-cards__note">
+                {{ $t('account.status.inProcessing', { n: props.inProcessingOrders }) }}
             </div>
         </div>
 
@@ -45,7 +52,9 @@ const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);
                 <div class="status-cards__title">{{ $t('account.status.documents') }}</div>
                 <div class="status-cards__icon">📄</div>
             </div>
-            <div class="status-cards__value">12</div>
+            <div class="status-cards__value">
+                {{ props.documentsThisMonth?.label ?? '—' }}
+            </div>
             <div class="status-cards__note">{{ $t('account.status.newDocuments') }}</div>
         </div>
     </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted } from 'vue';
 import AccountSidebar from './AccountSidebar.vue';
 import AccountHero from './AccountHero.vue';
 import AccountStatusCards from './AccountStatusCards.vue';
@@ -7,6 +8,22 @@ import AccountQuickActions from './AccountQuickActions.vue';
 import AccountDocuments from './AccountDocuments.vue';
 import AccountTradingPointInfo from './AccountTradingPointInfo.vue';
 import AccountFrequentProducts from './AccountFrequentProducts.vue';
+import { useAccountSummary } from './useAccountSummary';
+import { useDemoMode } from '../../composables/useDemoMode';
+
+const { demoAllowed } = useDemoMode();
+const {
+    documents,
+    documentsLoading,
+    documentsError,
+    documentsThisMonth,
+    activeOrders,
+    inProcessingOrders,
+    loadDocuments,
+    load,
+} = useAccountSummary();
+
+onMounted(load);
 </script>
 
 <template>
@@ -16,16 +33,25 @@ import AccountFrequentProducts from './AccountFrequentProducts.vue';
 
             <section class="account-page__content">
                 <AccountHero />
-                <AccountStatusCards />
+                <AccountStatusCards
+                    :active-orders="activeOrders"
+                    :in-processing-orders="inProcessingOrders"
+                    :documents-this-month="documentsThisMonth"
+                />
                 <AccountRecentOrders />
-                <AccountQuickActions />
+                <AccountQuickActions :documents-this-month="documentsThisMonth" />
 
                 <div class="account-page__two-col">
-                    <AccountDocuments />
+                    <AccountDocuments
+                        :documents="documents"
+                        :loading="documentsLoading"
+                        :error="documentsError"
+                        @retry="loadDocuments"
+                    />
                     <AccountTradingPointInfo />
                 </div>
 
-                <AccountFrequentProducts />
+                <AccountFrequentProducts v-if="demoAllowed" />
             </section>
         </div>
     </div>

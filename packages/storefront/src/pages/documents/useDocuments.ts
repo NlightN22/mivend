@@ -77,24 +77,28 @@ export function useDocuments(): {
     documents: Ref<DocumentSummary[]>;
     totalItems: Ref<number>;
     loading: Ref<boolean>;
+    error: Ref<unknown>;
     load: (options: MyDocumentsOptions) => Promise<void>;
 } {
     const documents = ref<DocumentSummary[]>([]);
     const totalItems = ref(0);
     const loading = ref(false);
+    const error = ref<unknown>(null);
 
     async function load(options: MyDocumentsOptions): Promise<void> {
         loading.value = true;
+        error.value = null;
         try {
             const result = await shopApi(MyDocumentsDocument, { options });
             documents.value = result.myDocuments.items;
             totalItems.value = result.myDocuments.totalItems;
         } catch (e) {
+            error.value = e;
             console.error('[useDocuments]', e);
         } finally {
             loading.value = false;
         }
     }
 
-    return { documents, totalItems, loading, load };
+    return { documents, totalItems, loading, error, load };
 }

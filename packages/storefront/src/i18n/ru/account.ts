@@ -36,7 +36,7 @@ const ru: typeof en = {
         },
         status: {
             activeOrders: 'Активные заказы',
-            awaitingReserve: 'Ожидают подтверждения резерва: {n}',
+            inProcessing: 'В обработке: {n}',
             availableLimit: 'Доступный лимит',
             paymentDelay:
                 'Отсрочка платежа: {n} день | Отсрочка платежа: {n} дня | Отсрочка платежа: {n} дней',
@@ -62,10 +62,8 @@ const ru: typeof en = {
             title: 'Документы',
             subtitle: 'Последние доступные документы.',
             all: 'Все',
-            upd: 'УПД № {number}',
-            proformaInvoice: 'Счёт на оплату № {number}',
             reconciliation: 'Акт сверки',
-            orderNote: 'Заказ № {number} · {date}',
+            empty: 'Документов пока нет.',
             download: 'Скачать',
             open: 'Открыть',
         },

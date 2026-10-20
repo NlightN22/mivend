@@ -2,7 +2,9 @@
 import { computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
+import { useDemoMode } from '../../composables/useDemoMode';
 
+const { demoAllowed } = useDemoMode();
 const authStore = useAuthStore();
 const { formatCurrencyAmount } = useCurrency();
 const tradingPoint = computed(() => authStore.tradingPoint);
@@ -47,7 +49,11 @@ const limitWarning = computed(() => {
             <div v-if="counterparty" class="trading-point-info__row">
                 <div>
                     <div class="trading-point-info__row-title">
-                        {{ $t('account.currentPoint.contract', { number: 'B2B-014' }) }}
+                        {{
+                            demoAllowed
+                                ? $t('account.currentPoint.contract', { number: 'B2B-014' })
+                                : $t('account.creditLimit')
+                        }}
                     </div>
                     <div class="trading-point-info__row-note">
                         {{

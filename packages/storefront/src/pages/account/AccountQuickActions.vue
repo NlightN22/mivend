@@ -3,8 +3,16 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
+import { useDemoMode } from '../../composables/useDemoMode';
+
+const props = defineProps<{ documentsThisMonth: { n: number; label: string } | null }>();
 
 const { t } = useI18n();
+const { demoAllowed } = useDemoMode();
+const documentsText = computed(() => {
+    const value = props.documentsThisMonth;
+    return value ? t('account.attention.newDocumentsText', { n: value.label }, value.n) : '—';
+});
 const authStore = useAuthStore();
 const { formatCurrencyAmount } = useCurrency();
 
@@ -30,26 +38,26 @@ const limitText = computed(() => {
             </div>
         </div>
 
-        <div class="quick-actions__grid">
-            <a href="#" class="quick-actions__card">
+        <div class="quick-actions__grid" :class="{ 'quick-actions__grid--two': !demoAllowed }">
+            <RouterLink to="/documents" class="quick-actions__card">
                 <div>
                     <div class="quick-actions__icon">📄</div>
                     <div class="quick-actions__card-title">
                         {{ $t('account.attention.newDocuments') }}
                     </div>
                     <div class="quick-actions__card-text">
-                        {{ $t('account.attention.newDocumentsText', 12) }}
+                        {{ documentsText }}
                     </div>
                 </div>
-            </a>
-            <a href="#" class="quick-actions__card">
+            </RouterLink>
+            <RouterLink to="/account/balance" class="quick-actions__card">
                 <div>
                     <div class="quick-actions__icon">₽</div>
                     <div class="quick-actions__card-title">{{ $t('account.attention.limit') }}</div>
                     <div class="quick-actions__card-text">{{ limitText }}</div>
                 </div>
-            </a>
-            <a href="#" class="quick-actions__card">
+            </RouterLink>
+            <RouterLink v-if="demoAllowed" to="/requests" class="quick-actions__card">
                 <div>
                     <div class="quick-actions__icon">💬</div>
                     <div class="quick-actions__card-title">
@@ -59,7 +67,7 @@ const limitText = computed(() => {
                         {{ $t('account.attention.openRequestsText', 2) }}
                     </div>
                 </div>
-            </a>
+            </RouterLink>
         </div>
     </div>
 </template>
@@ -141,6 +149,10 @@ const limitText = computed(() => {
     color: #66736e;
     font-size: 13px;
     line-height: 1.35;
+}
+
+.quick-actions__grid--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 @media (max-width: 1240px) {
