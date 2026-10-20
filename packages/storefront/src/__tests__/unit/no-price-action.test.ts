@@ -6,7 +6,7 @@ describe('noPriceAction', () => {
         expect(noPriceAction(true)).toEqual({ labelKey: 'buyPanel.requestPrice', to: '/requests' });
     });
 
-    it('is an inactive price-on-request label in production', () => {
-        expect(noPriceAction(false)).toEqual({ labelKey: 'buyPanel.onRequest', to: null });
+    it('offers no action in production', () => {
+        expect(noPriceAction(false)).toBeNull();
     });
 });

@@ -131,19 +131,13 @@ function onStepper(lineId: string | undefined, value: number): void {
                 @update:model-value="(val: number) => onStepper(cartLineId, val)"
             />
             <RouterLink
-                v-else-if="showPrices && price === undefined && noPrice.to"
+                v-else-if="showPrices && price === undefined && noPrice"
                 :to="noPrice.to"
                 class="buy-panel__add buy-panel__add--link"
             >
                 {{ t(noPrice.labelKey) }}
             </RouterLink>
-            <span
-                v-else-if="showPrices && price === undefined"
-                class="buy-panel__add buy-panel__add--link buy-panel__add--inactive"
-                aria-disabled="true"
-            >
-                {{ t(noPrice.labelKey) }}
-            </span>
+            <template v-else-if="showPrices && price === undefined" />
             <button
                 v-else
                 class="buy-panel__add"
@@ -197,10 +191,6 @@ function onStepper(lineId: string | undefined, value: number): void {
     align-items: center;
     justify-content: center;
     text-decoration: none;
-}
-.buy-panel__add--inactive {
-    opacity: 0.45;
-    cursor: default;
 }
 .buy-panel__price-hint {
     font-size: 14px;
