@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { seedBalanceDemo } from './seed-balance-demo.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
@@ -1505,6 +1506,8 @@ async function main() {
     }
 
     seedPriceTypeVisibility();
+
+    await seedBalanceDemo(postBatch);
 
     console.log('Done.');
 }

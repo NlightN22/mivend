@@ -51,6 +51,7 @@ const HANDLER_METHOD_BY_INDEX = [
     'upsert', // stockOrganization
     'upsert', // storageLocation
     'upsert', // manufacturer
+    'settlement', // settlementDocument, settlementBalance, settlementDocumentType
 ] as const;
 
 function buildService(): ErpImportService {
@@ -74,10 +75,15 @@ function buildService(): ErpImportService {
             finishedAt: null,
         })),
     };
-    const handlers = HANDLER_METHOD_BY_INDEX.map(method => ({
-        [method]: vi.fn(async () => {}),
-        recomputeFilters: vi.fn(async () => {}),
-    }));
+    const handlers = HANDLER_METHOD_BY_INDEX.map(method =>
+        method === 'settlement'
+            ? {
+                  upsertDocument: vi.fn(async () => {}),
+                  upsertBalance: vi.fn(async () => {}),
+                  upsertDocumentType: vi.fn(async () => {}),
+              }
+            : { [method]: vi.fn(async () => {}), recomputeFilters: vi.fn(async () => {}) },
+    );
     return new (ErpImportService as unknown as new (
         importRunService: unknown,
         ...handlers: unknown[]
@@ -85,7 +91,7 @@ function buildService(): ErpImportService {
 }
 
 describe('ERP import batch contract: TYPE_TO_SCHEMA <-> ErpImportService agreement', () => {
-    it('has exactly the 23 record types this codebase currently documents (guards against an accidental add/remove going unnoticed)', () => {
+    it('has exactly the 26 record types this codebase currently documents (guards against an accidental add/remove going unnoticed)', () => {
         expect(Object.keys(TYPE_TO_SCHEMA).sort()).toEqual(
             [
                 'product',
@@ -111,6 +117,9 @@ describe('ERP import batch contract: TYPE_TO_SCHEMA <-> ErpImportService agreeme
                 'stockOrganization',
                 'storageLocation',
                 'manufacturer',
+                'settlementDocument',
+                'settlementBalance',
+                'settlementDocumentType',
             ].sort(),
         );
     });

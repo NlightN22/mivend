@@ -7,6 +7,11 @@ import type {
     EmployeeRecordInput,
 } from '@mivend/plugin-access-control';
 import type { DepartmentBranchRecordInput } from './handlers/department-branch.handler';
+import type {
+    SettlementBalanceRecord,
+    SettlementDocumentRecord,
+    SettlementDocumentTypeRecord,
+} from './settlement-types';
 
 export interface OrderStatusRecord {
     code: string;
@@ -124,6 +129,9 @@ export interface ContractRecord {
     debtDaysLimit?: number | null;
     isActive: boolean;
     controlledIndividually?: boolean;
+    isCustomerContract?: boolean;
+    paymentDelayDays?: number | null;
+    currency?: string | null;
 }
 
 export interface CustomerCounterpartyRecord {
@@ -188,7 +196,10 @@ export type ImportRecord =
     | { type: 'orderStatus'; data: OrderStatusRecord }
     | { type: 'stockOrganization'; data: StockOrganizationRecord }
     | { type: 'storageLocation'; data: StorageLocationRecord }
-    | { type: 'manufacturer'; data: ManufacturerRecord };
+    | { type: 'manufacturer'; data: ManufacturerRecord }
+    | { type: 'settlementDocument'; data: SettlementDocumentRecord }
+    | { type: 'settlementBalance'; data: SettlementBalanceRecord }
+    | { type: 'settlementDocumentType'; data: SettlementDocumentTypeRecord };
 
 export interface BatchImportBody {
     exchangeId: string;

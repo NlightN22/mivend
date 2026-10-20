@@ -57,6 +57,35 @@ describe('ContractHandler', () => {
         );
     });
 
+    it('passes the customer-contract flag, payment delay and currency through', async () => {
+        const { handler, contractService } = build({ id: 7 });
+        await handler.upsert(ctx, {
+            ...record,
+            isCustomerContract: true,
+            paymentDelayDays: 30,
+            currency: 'RUB',
+        });
+        expect(contractService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'ctr-1',
+            expect.objectContaining({
+                isCustomerContract: true,
+                paymentDelayDays: 30,
+                currency: 'RUB',
+            }),
+        );
+    });
+
+    it('leaves the stored customer-contract flag alone when the record omits it', async () => {
+        const { handler, contractService } = build({ id: 7 });
+        await handler.upsert(ctx, record);
+        expect(contractService.upsertActiveState).toHaveBeenCalledWith(
+            ctx,
+            'ctr-1',
+            expect.objectContaining({ isCustomerContract: undefined, currency: undefined }),
+        );
+    });
+
     it('fails the record when the counterparty is not imported yet', async () => {
         const { handler, contractService } = build(null);
         await expect(handler.upsert(ctx, record)).rejects.toThrow(/cnt-1/);

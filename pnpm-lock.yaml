@@ -845,6 +845,9 @@ importers:
       '@mivend/plugin-price-entry':
         specifier: workspace:*
         version: link:../price-entry
+      '@mivend/plugin-settlement':
+        specifier: workspace:*
+        version: link:../settlement
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)

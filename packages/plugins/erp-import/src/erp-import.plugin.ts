@@ -35,6 +35,8 @@ import { StorageLocationHandler } from './handlers/storage-location.handler';
 import { ContractHandler } from './handlers/contract.handler';
 import { OrderStatusHandler } from './handlers/order-status.handler';
 import { ManufacturerHandler } from './handlers/manufacturer.handler';
+import { SettlementHandler } from './handlers/settlement.handler';
+import { SettlementPlugin } from '@mivend/plugin-settlement';
 
 @VendurePlugin({
     imports: [
@@ -46,6 +48,7 @@ import { ManufacturerHandler } from './handlers/manufacturer.handler';
         AccessControlPlugin,
         ErpOrderPlugin,
         ErpIntegrationPlugin,
+        SettlementPlugin,
     ],
     entities: [ImportRun, ImportRunError],
     controllers: [ErpImportController],
@@ -76,6 +79,7 @@ import { ManufacturerHandler } from './handlers/manufacturer.handler';
         StockOrganizationHandler,
         StorageLocationHandler,
         ManufacturerHandler,
+        SettlementHandler,
     ],
     compatibility: '>0.0.0',
 })

@@ -21,3 +21,8 @@ export { WarehouseRecordDto } from './warehouse-record.dto';
 export { StockOrganizationRecordDto } from './stock-organization-record.dto';
 export { StorageLocationRecordDto } from './storage-location-record.dto';
 export { ManufacturerRecordDto } from './manufacturer-record.dto';
+export {
+    SettlementDocumentRecordDto,
+    SettlementBalanceRecordDto,
+    SettlementDocumentTypeRecordDto,
+} from './settlement-record.dto';

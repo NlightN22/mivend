@@ -13,6 +13,7 @@
         { "path": "../price-entry" },
         { "path": "../access-control" },
         { "path": "../erp-order" },
-        { "path": "../erp-integration" }
+        { "path": "../erp-integration" },
+        { "path": "../settlement" }
     ]
 }

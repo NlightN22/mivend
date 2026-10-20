@@ -32,4 +32,15 @@ export class ContractRecordDto {
 
     @ApiPropertyOptional({ description: 'Excludes the limit from the shared pool when true.' })
     controlledIndividually?: boolean;
+
+    @ApiPropertyOptional({
+        description: 'Customer (sale) contract; omitted keeps the stored flag.',
+    })
+    isCustomerContract?: boolean;
+
+    @ApiPropertyOptional({ type: Number, nullable: true })
+    paymentDelayDays?: number | null;
+
+    @ApiPropertyOptional({ type: String, nullable: true, example: 'RUB' })
+    currency?: string | null;
 }

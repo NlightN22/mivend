@@ -31,7 +31,9 @@ export class ContractHandler {
             creditLimit: record.creditLimit ?? null,
             controlledIndividually: record.controlledIndividually ?? false,
             debtDaysLimit: record.debtDaysLimit ?? null,
-            paymentDelayDays: null,
+            paymentDelayDays: record.paymentDelayDays ?? null,
+            isCustomerContract: record.isCustomerContract,
+            currency: record.currency ?? undefined,
         });
     }
 }

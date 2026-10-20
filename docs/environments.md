@@ -227,6 +227,12 @@ Sole exception: `make e2e-integration` (#255, `docs/e2e-testing.md`), run by han
 staging-integration contour; it seeds nothing, reads the contour DB with SELECTs only, cancels its own orders as
 superadmin and restarts the shared contour (once with a broken schema registry), which interrupts anyone else using it.
 
+**Balance page demo (local only).** `make seed` also imports, through the `erp-import` record types
+`contract` (with `isCustomerContract`), `settlementDocumentType`, `settlementDocument` and `settlementBalance`,
+a customer that no e2e spec uses: `balance-demo@test.example` / `BalanceDemo123!` (counterparty
+`cnt-balance-demo`, contract `ctr-balance-demo`). It has one paid, one partly paid and overdue, and one not yet
+due sales invoice; dates are relative to the seed time, so every `make seed` re-applies them.
+
 **Order-edit and held-send states (local only).** `make seed-order-edit-states` (after `make seed-all`,
 server running, idempotent) creates, for the demo customer `credit-limited@buyer.example`: an unsent
 order with three lines whose middle line is short on its own organization's stock (exercises "Cut lines to

@@ -19,6 +19,7 @@
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-erp-order": "workspace:*",
         "@mivend/plugin-erp-integration": "workspace:*",
+        "@mivend/plugin-settlement": "workspace:*",
         "@nestjs/common": "^11.0.0",
         "@nestjs/core": "^11.0.0",
         "@nestjs/swagger": "^11.0.0",
