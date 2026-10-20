@@ -38,19 +38,4 @@ export class DepartmentBranchResolver {
         await this.mappingService.clear(ctx, args.departmentErpId);
         return true;
     }
-
-    @Transaction()
-    @Mutation()
-    @Allow(CustomPermission.ManageAccessControl.Permission)
-    async setCounterpartyBranchOverride(
-        @Ctx() ctx: RequestContext,
-        @Args() args: { counterpartyId: string; branchId?: string | null },
-    ): Promise<boolean> {
-        await this.mappingService.setCounterpartyOverride(
-            ctx,
-            args.counterpartyId,
-            args.branchId ?? null,
-        );
-        return true;
-    }
 }

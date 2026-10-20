@@ -226,14 +226,11 @@ describe('CounterpartyService', () => {
             };
             mockRepo.findOne.mockResolvedValue(entity);
             await service.upsertActiveState(mockCtx, 'cp-1', { name: 'New Name', isActive: false });
-            expect(mockRepo.save).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    legalAddress: 'Legal St 1',
-                    factualAddress: 'Actual Ave 2',
-                    phone: '+70000000000',
-                    officialEmail: 'contact@acme.example',
-                }),
-            );
+            const patch = mockRepo.update.mock.calls[0][1];
+            expect(patch).not.toHaveProperty('officialEmail');
+            expect(patch).not.toHaveProperty('legalAddress');
+            expect(patch).not.toHaveProperty('factualAddress');
+            expect(patch).not.toHaveProperty('phone');
         });
 
         it('stores ERP reference details; omitted keep, null clears', async () => {
@@ -253,13 +250,9 @@ describe('CounterpartyService', () => {
                 mainContractId: 'contract-1',
                 kpp: null,
             });
-            expect(mockRepo.save).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    mainContractId: 'contract-1',
-                    kpp: null,
-                    regionId: 'region-1',
-                }),
-            );
+            const patch = mockRepo.update.mock.calls[0][1];
+            expect(patch).toMatchObject({ mainContractId: 'contract-1', kpp: null });
+            expect(patch).not.toHaveProperty('regionId');
         });
 
         it('applies an explicit null for legalAddress/factualAddress/phone/officialEmail', async () => {
@@ -283,14 +276,13 @@ describe('CounterpartyService', () => {
                 phone: null,
                 officialEmail: null,
             });
-            expect(mockRepo.save).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    legalAddress: null,
-                    factualAddress: null,
-                    phone: null,
-                    officialEmail: null,
-                }),
-            );
+            const patch = mockRepo.update.mock.calls[0][1];
+            expect(patch).toMatchObject({
+                legalAddress: null,
+                factualAddress: null,
+                phone: null,
+                officialEmail: null,
+            });
         });
 
         it('updates legalName/shortName/isActive on an existing row, never touching REST-only fields', async () => {
@@ -306,16 +298,15 @@ describe('CounterpartyService', () => {
             };
             mockRepo.findOne.mockResolvedValue(entity);
             await service.upsertActiveState(mockCtx, 'cp-1', { name: 'New Name', isActive: false });
-            expect(mockRepo.save).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    legalName: 'New Name',
-                    shortName: 'New Name',
-                    isActive: false,
-                    inn: '123456',
-                    creditLimit: 1000,
-                    priceType: 'wholesale',
-                }),
-            );
+            const patch = mockRepo.update.mock.calls[0][1];
+            expect(patch).toMatchObject({
+                legalName: 'New Name',
+                shortName: 'New Name',
+                isActive: false,
+            });
+            expect(patch).not.toHaveProperty('priceType');
+            expect(patch).not.toHaveProperty('inn');
+            expect(patch).not.toHaveProperty('creditLimit');
         });
 
         // `undefined` (field absent from the payload) means "leave unchanged" — must not
@@ -333,13 +324,10 @@ describe('CounterpartyService', () => {
             };
             mockRepo.findOne.mockResolvedValue(entity);
             await service.upsertActiveState(mockCtx, 'cp-1', { name: 'New Name', isActive: false });
-            expect(mockRepo.save).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    inn: '123456',
-                    erpGroupLabel: 'Wholesale',
-                    departmentId: 'dept-1',
-                }),
-            );
+            const patch = mockRepo.update.mock.calls[0][1];
+            expect(patch).not.toHaveProperty('departmentId');
+            expect(patch).not.toHaveProperty('inn');
+            expect(patch).not.toHaveProperty('erpGroupLabel');
         });
 
         // An explicit null (ERP cleared the field) must be applied, distinct from `undefined`.
@@ -362,9 +350,8 @@ describe('CounterpartyService', () => {
                 erpGroupLabel: null,
                 departmentId: null,
             });
-            expect(mockRepo.save).toHaveBeenCalledWith(
-                expect.objectContaining({ inn: null, erpGroupLabel: null, departmentId: null }),
-            );
+            const patch = mockRepo.update.mock.calls[0][1];
+            expect(patch).toMatchObject({ inn: null, erpGroupLabel: null, departmentId: null });
         });
 
         // A deletion tombstone never carries a name — must still update isActive on an
@@ -379,13 +366,10 @@ describe('CounterpartyService', () => {
             };
             mockRepo.findOne.mockResolvedValue(entity);
             await service.upsertActiveState(mockCtx, 'cp-1', { name: null, isActive: false });
-            expect(mockRepo.save).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    legalName: 'Existing Name',
-                    shortName: 'Existing Name',
-                    isActive: false,
-                }),
-            );
+            const patch = mockRepo.update.mock.calls[0][1];
+            expect(patch).toMatchObject({ isActive: false });
+            expect(patch).not.toHaveProperty('legalName');
+            expect(patch).not.toHaveProperty('shortName');
         });
 
         // Never fabricate a brand-new counterparty with a blank name — a deletion tombstone for
@@ -414,9 +398,8 @@ describe('CounterpartyService', () => {
                 isActive: true,
                 assignedManagerId: 'admin-1',
             });
-            expect(mockRepo.save).toHaveBeenCalledWith(
-                expect.objectContaining({ assignedManagerId: 'admin-1' }),
-            );
+            const patch = mockRepo.update.mock.calls[0][1];
+            expect(patch).toMatchObject({ assignedManagerId: 'admin-1' });
         });
 
         // undefined means the caller found no manager: keep an existing REST/portal-assigned manager
@@ -432,9 +415,8 @@ describe('CounterpartyService', () => {
             };
             mockRepo.findOne.mockResolvedValue(entity);
             await service.upsertActiveState(mockCtx, 'cp-1', { name: 'Acme Corp', isActive: true });
-            expect(mockRepo.save).toHaveBeenCalledWith(
-                expect.objectContaining({ assignedManagerId: 'admin-existing' }),
-            );
+            const patch = mockRepo.update.mock.calls[0][1];
+            expect(patch).not.toHaveProperty('assignedManagerId');
         });
 
         it('creates a row with assignedManagerId when provided', async () => {

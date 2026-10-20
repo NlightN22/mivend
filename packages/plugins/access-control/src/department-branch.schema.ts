@@ -21,6 +21,5 @@ export const departmentBranchSdl: DocumentNode = gql`
     extend type Mutation {
         setDepartmentBranch(departmentErpId: String!, branchId: String!): Boolean!
         clearDepartmentBranch(departmentErpId: String!): Boolean!
-        setCounterpartyBranchOverride(counterpartyId: ID!, branchId: String): Boolean!
     }
 `;

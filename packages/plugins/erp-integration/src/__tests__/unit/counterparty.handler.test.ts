@@ -17,7 +17,11 @@ function makeHandler(
     const handler = new CounterpartyStreamHandler(
         counterpartyService as never,
         userEnrichmentService as never,
-        { assignCounterparties: vi.fn() } as never,
+        {
+            assignCounterpartyIfInputsChanged: vi.fn(
+                async (_c: unknown, _e: string, write: () => unknown) => write(),
+            ),
+        } as never,
     );
     return { handler, counterpartyService, userEnrichmentService };
 }

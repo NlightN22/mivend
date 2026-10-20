@@ -19,7 +19,7 @@ export class DepartmentBranchMapping extends VendureEntity {
     @Column({ type: 'int' })
     branchId!: number;
 
-    @ManyToOne(() => Branch, { nullable: false, onDelete: 'CASCADE' })
+    @ManyToOne(() => Branch, { nullable: false, onDelete: 'RESTRICT' })
     @JoinColumn({ name: 'branchId' })
     branch?: Branch;
 }

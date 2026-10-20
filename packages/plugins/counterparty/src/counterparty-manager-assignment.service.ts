@@ -50,7 +50,8 @@ export class CounterpartyManagerAssignmentService {
 
         const previousManagerId = counterparty.assignedManagerId;
         counterparty.assignedManagerId = String(administratorId);
-        const saved = await repo.save(counterparty);
+        await repo.update(counterparty.id, { assignedManagerId: counterparty.assignedManagerId });
+        const saved = counterparty;
         await this.recordReassignment(ctx, saved.id, previousManagerId, saved.assignedManagerId);
         await this.branchAssignment.assignCounterparties(ctx, { ids: [String(saved.id)] });
         return saved;

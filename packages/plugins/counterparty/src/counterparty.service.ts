@@ -20,7 +20,7 @@ import { CounterpartyCreatedEvent } from './counterparty-created.event';
 import { Counterparty } from './entities/counterparty.entity';
 import {
     ActiveStateFields,
-    applyActiveStateFields,
+    activeStatePatch,
     newCounterpartyFromActiveState,
 } from './counterparty-active-state';
 import { selectHighUsage, summarizeCounterparties } from './counterparty-credit-queries';
@@ -46,15 +46,15 @@ export class CounterpartyService {
             `counterparty:${payload.erpId}`,
             async txCtx => {
                 const repo = this.connection.getRepository(txCtx, Counterparty);
-                let record = await repo.findOne({ where: { erpId: payload.erpId } });
-                const isNew = !record;
+                const record = await repo.findOne({ where: { erpId: payload.erpId } });
+                let saved: Counterparty;
                 if (record) {
-                    Object.assign(record, payload);
+                    await repo.update(record.id, payload);
+                    saved = Object.assign(record, payload);
                 } else {
-                    record = repo.create(payload);
+                    saved = await repo.save(repo.create(payload));
+                    this.publishCreated(txCtx, saved);
                 }
-                const saved = await repo.save(record);
-                if (isNew) this.publishCreated(txCtx, saved);
                 Logger.verbose(`Upserted counterparty erpId=${payload.erpId}`, loggerCtx);
                 return saved;
             },
@@ -81,8 +81,7 @@ export class CounterpartyService {
         const repo = this.connection.getRepository(ctx, Counterparty);
         const entity = await repo.findOne({ where: { erpId } });
         if (entity) {
-            applyActiveStateFields(entity, fields);
-            await repo.save(entity);
+            await repo.update(entity.id, activeStatePatch(fields));
             return true;
         }
         if (!fields.name) return false;

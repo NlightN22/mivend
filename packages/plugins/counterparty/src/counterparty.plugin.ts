@@ -31,6 +31,8 @@ import {
     CounterpartyTeamFieldResolver,
     CounterpartyTeamMutationResolver,
 } from './counterparty-team.resolver';
+import { CounterpartyBranchOverrideResolver } from './counterparty-branch-override.resolver';
+import { CounterpartyBranchOverrideService } from './counterparty-branch-override.service';
 import { CounterpartyManagerAssignmentService } from './counterparty-manager-assignment.service';
 import { CounterpartyTeamService } from './counterparty-team.service';
 import {
@@ -65,6 +67,7 @@ const shopResolvers = [
 ];
 
 const adminResolvers = [
+    CounterpartyBranchOverrideResolver,
     CounterpartyPriceTypeResolver,
     CustomerCounterpartyResolver,
     CustomerTradingPointResolver,
@@ -108,6 +111,7 @@ const adminResolvers = [
         CreditTermService,
         CounterpartyTeamService,
         CounterpartyManagerAssignmentService,
+        CounterpartyBranchOverrideService,
         AdministratorLinkedListener,
         CounterpartyPortalAccessService,
         ContractService,

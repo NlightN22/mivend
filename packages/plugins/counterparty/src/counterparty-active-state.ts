@@ -16,26 +16,23 @@ export interface ActiveStateFields extends CounterpartyErpDetails {
     officialEmail?: string | null;
 }
 
-export function applyActiveStateFields(entity: Counterparty, fields: ActiveStateFields): void {
+// Only the columns the stream owns: a full-entity save would write a stale branchId over a concurrent reconcile.
+export function activeStatePatch(fields: ActiveStateFields): Partial<Counterparty> {
+    const patch: Partial<Counterparty> = { isActive: fields.isActive };
     if (fields.name) {
-        entity.legalName = fields.name;
-        entity.shortName = fields.name;
+        patch.legalName = fields.name;
+        patch.shortName = fields.name;
     }
-    entity.isActive = fields.isActive;
-    if (fields.inn !== undefined) entity.inn = fields.inn;
-    if (fields.erpGroupLabel !== undefined) entity.erpGroupLabel = fields.erpGroupLabel;
-    if (fields.departmentId !== undefined) entity.departmentId = fields.departmentId;
-    if (fields.assignedManagerId !== undefined) {
-        entity.assignedManagerId = fields.assignedManagerId;
-    }
-    if (fields.managerErpId !== undefined) entity.managerErpId = fields.managerErpId;
-    if (fields.legalAddress !== undefined) entity.legalAddress = fields.legalAddress;
-    if (fields.factualAddress !== undefined) {
-        entity.factualAddress = fields.factualAddress;
-    }
-    if (fields.phone !== undefined) entity.phone = fields.phone;
-    if (fields.officialEmail !== undefined) entity.officialEmail = fields.officialEmail;
-    Object.assign(entity, definedErpDetails(fields));
+    if (fields.inn !== undefined) patch.inn = fields.inn;
+    if (fields.erpGroupLabel !== undefined) patch.erpGroupLabel = fields.erpGroupLabel;
+    if (fields.departmentId !== undefined) patch.departmentId = fields.departmentId;
+    if (fields.assignedManagerId !== undefined) patch.assignedManagerId = fields.assignedManagerId;
+    if (fields.managerErpId !== undefined) patch.managerErpId = fields.managerErpId;
+    if (fields.legalAddress !== undefined) patch.legalAddress = fields.legalAddress;
+    if (fields.factualAddress !== undefined) patch.factualAddress = fields.factualAddress;
+    if (fields.phone !== undefined) patch.phone = fields.phone;
+    if (fields.officialEmail !== undefined) patch.officialEmail = fields.officialEmail;
+    return { ...patch, ...definedErpDetails(fields) };
 }
 
 export function newCounterpartyFromActiveState(

@@ -18,7 +18,7 @@ import {
 } from '../../counterparty-manager-assignment.service';
 import type { CounterpartyService } from '../../counterparty.service';
 
-const mockRepo = { findOne: vi.fn(), save: vi.fn() };
+const mockRepo = { findOne: vi.fn(), save: vi.fn(), update: vi.fn() };
 const mockConnection = { getRepository: vi.fn(() => mockRepo) };
 const mockCounterpartyService = { visibleFilteredQb: vi.fn() };
 const mockTeamAdministratorService = { findInBranch: vi.fn() };
@@ -92,7 +92,7 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
         await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
             ForbiddenError,
         );
-        expect(mockRepo.save).not.toHaveBeenCalled();
+        expect(mockRepo.update).not.toHaveBeenCalled();
         expect(mockVersioningService.recordChange).not.toHaveBeenCalled();
     });
 
@@ -113,7 +113,7 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
         await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
             ForbiddenError,
         );
-        expect(mockRepo.save).not.toHaveBeenCalled();
+        expect(mockRepo.update).not.toHaveBeenCalled();
     });
 
     it('allows "department" scope for a same-branch target', async () => {
@@ -134,7 +134,7 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
         await expect(service.reassignManager(mockCtx, 'cp-1', 'admin-9')).rejects.toThrow(
             ForbiddenError,
         );
-        expect(mockRepo.save).not.toHaveBeenCalled();
+        expect(mockRepo.update).not.toHaveBeenCalled();
     });
 
     it('rejects a branchless target administrator even when the counterparty itself is writable', async () => {

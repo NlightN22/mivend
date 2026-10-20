@@ -40,40 +40,45 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
         const { assignedManagerId, managerErpId, unresolvedReason } =
             await this.resolveAssignedManagerId(entityId, ctx, payload);
 
-        const stored = await this.counterpartyService.upsertActiveState(ctx, entityId, {
-            name,
-            isActive,
-            // Use `in` to check presence: an intentional null or empty string must be applied,
-            // not treated as 'leave unchanged' (undefined means the ERP did not send the field).
-            inn: 'inn' in payload ? ((payload.inn as string | null) ?? null) : undefined,
-            erpGroupLabel:
-                'erpGroupLabel' in payload
-                    ? ((payload.erpGroupLabel as string | null) ?? null)
-                    : undefined,
-            departmentId:
-                'departmentId' in payload
-                    ? ((payload.departmentId as string | null) ?? null)
-                    : undefined,
-            assignedManagerId,
-            managerErpId,
-            legalAddress:
-                'legalAddress' in payload
-                    ? ((payload.legalAddress as string | null) ?? null)
-                    : undefined,
-            factualAddress:
-                'factualAddress' in payload
-                    ? ((payload.factualAddress as string | null) ?? null)
-                    : undefined,
-            phone: 'phone' in payload ? ((payload.phone as string | null) ?? null) : undefined,
-            officialEmail:
-                'officialEmail' in payload
-                    ? ((payload.officialEmail as string | null) ?? null)
-                    : undefined,
-            ...optionalErpDetails(payload),
-            // notificationPhone: deliberately unread — see this file's own top-of-file field
-            // accounting comment.
-        });
-        await this.branchAssignment.assignCounterparties(ctx, { erpId: entityId });
+        const stored = await this.branchAssignment.assignCounterpartyIfInputsChanged(
+            ctx,
+            entityId,
+            () =>
+                this.counterpartyService.upsertActiveState(ctx, entityId, {
+                    name,
+                    isActive,
+                    // Use `in` to check presence: an intentional null or empty string must be applied,
+                    // not treated as 'leave unchanged' (undefined means the ERP did not send the field).
+                    inn: 'inn' in payload ? ((payload.inn as string | null) ?? null) : undefined,
+                    erpGroupLabel:
+                        'erpGroupLabel' in payload
+                            ? ((payload.erpGroupLabel as string | null) ?? null)
+                            : undefined,
+                    departmentId:
+                        'departmentId' in payload
+                            ? ((payload.departmentId as string | null) ?? null)
+                            : undefined,
+                    assignedManagerId,
+                    managerErpId,
+                    legalAddress:
+                        'legalAddress' in payload
+                            ? ((payload.legalAddress as string | null) ?? null)
+                            : undefined,
+                    factualAddress:
+                        'factualAddress' in payload
+                            ? ((payload.factualAddress as string | null) ?? null)
+                            : undefined,
+                    phone:
+                        'phone' in payload ? ((payload.phone as string | null) ?? null) : undefined,
+                    officialEmail:
+                        'officialEmail' in payload
+                            ? ((payload.officialEmail as string | null) ?? null)
+                            : undefined,
+                    ...optionalErpDetails(payload),
+                    // notificationPhone: deliberately unread — see this file's own top-of-file field
+                    // accounting comment.
+                }),
+        );
         if (!name) {
             Logger.verbose(
                 `counterparty ${entityId}: no name (deletion tombstone) — updated active ` +

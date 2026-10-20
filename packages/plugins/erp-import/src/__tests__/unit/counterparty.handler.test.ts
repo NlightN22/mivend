@@ -21,7 +21,11 @@ describe('CounterpartyHandler', () => {
         const service = { upsert: vi.fn(async () => ({})) };
         const handler = new CounterpartyHandler(
             service as never,
-            { assignCounterparties: vi.fn() } as never,
+            {
+                assignCounterpartyIfInputsChanged: vi.fn(
+                    async (_c: unknown, _e: string, write: () => unknown) => write(),
+                ),
+            } as never,
         );
         await handler.upsert({} as RequestContext, { ...base, mainContractErpId: input });
         expect(service.upsert).toHaveBeenCalledWith(

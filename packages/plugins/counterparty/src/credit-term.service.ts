@@ -129,7 +129,9 @@ export class CreditTermService {
                 where: { erpId: payload.counterpartyErpId },
             });
             counterparty.creditTermOverrideExtraDays = payload.requestedExtraDays;
-            await repo.save(counterparty);
+            await repo.update(counterparty.id, {
+                creditTermOverrideExtraDays: payload.requestedExtraDays,
+            });
             this.eventBus.publish(
                 new CreditTermApprovedEvent(
                     ctx,

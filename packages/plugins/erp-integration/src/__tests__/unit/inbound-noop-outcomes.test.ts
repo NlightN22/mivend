@@ -73,7 +73,11 @@ describe.each([
             new CounterpartyStreamHandler(
                 { upsertActiveState: vi.fn().mockResolvedValue(m) } as never,
                 { findAdministratorByErpId: vi.fn(), resolveByErpId: vi.fn() } as never,
-                { assignCounterparties: vi.fn() } as never,
+                {
+                    assignCounterpartyIfInputsChanged: vi.fn(
+                        async (_c: unknown, _e: string, write: () => unknown) => write(),
+                    ),
+                } as never,
             ),
         { isDeleted: true },
     ],

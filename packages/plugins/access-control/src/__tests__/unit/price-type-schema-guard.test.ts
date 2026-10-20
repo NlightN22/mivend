@@ -9,9 +9,9 @@ const FIELD =
     /^\s*([A-Za-z_]*(?:[Pp]rice|[Ff]loor|[Mm]argin|[Mm]arkup|[Pp]rofit)[A-Za-z_]*)\s*(?:\([^)]*\))?\s*:/gm;
 
 const INVENTORY: Record<string, string> = {
-    'access-control/src/access-control.plugin.ts::defaultPriceTypeId':
+    'access-control/src/access-control.schema.ts::defaultPriceTypeId':
         'branch settings, ReadSettings editor; id only',
-    'access-control/src/access-control.plugin.ts::visiblePriceTypeIds':
+    'access-control/src/access-control.schema.ts::visiblePriceTypeIds':
         'branch settings, ReadSettings editor; ids only',
     'acquiring/src/api/admin.schema.ts::linePriceWithTax':
         'order line amount of the order own type',

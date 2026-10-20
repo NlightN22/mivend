@@ -65,6 +65,21 @@ describe('AdministratorProvisioningService', () => {
         expect(administratorService.create).not.toHaveBeenCalled();
     });
 
+    it('refuses an ERP user with no department at all', async () => {
+        erpUserService.findByErpId.mockResolvedValue({
+            erpId: 'erp-2',
+            email: 'b@example.com',
+            fullName: 'B C',
+            departmentId: null,
+        });
+        branchAssignment.resolveBranchId.mockResolvedValue(null);
+        await expect(service.createFromPending(ctx, 'erp-2')).rejects.toThrow(
+            /not mapped to a branch/,
+        );
+        expect(branchAssignment.resolveBranchId).toHaveBeenCalledWith(ctx, null);
+        expect(administratorService.create).not.toHaveBeenCalled();
+    });
+
     it('throws when no ErpUser row exists for the given erpId', async () => {
         erpUserService.findByErpId.mockResolvedValue(null);
 

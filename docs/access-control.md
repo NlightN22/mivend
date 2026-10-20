@@ -293,10 +293,24 @@ wins. Cross-branch containers (tree roots, the office subtree) stay unmapped, so
 - **Triggers**: user event and administrator link, counterparty event, manager reassignment, mapping
   set/clear (reconcile of the affected subtree in the same transaction), a department created or
   reparented, and the scheduled backstop `access-control-branch-assignment` (every 15 minutes).
-- **Concurrency**: every writer takes the advisory lock `branch-assignment` inside its transaction and
+- **Concurrency**: every reconcile takes the advisory lock `branch-assignment` inside its transaction and
   re-reads the department tree and mapping under it, so a user event racing a mapping edit ends on the
-  final mapping (`docs/concurrency.md`). The result is a pure function of (department, mapping,
-  override), so a repeat is a no-op.
+  final mapping (`docs/concurrency.md`). A writer may hold a row (its own write) while it waits for the
+  lock, so reconcile selects rows `FOR UPDATE SKIP LOCKED`: a row held by an in-flight writer is skipped
+  and that writer reconciles it right after its own write (a skipped row held by anything else is repaired
+  by the backstop). That removes the lock-order cycle without a global row-lock order.
+- **Cheap paths**: counterparty and user events reconcile only when a branch input changed (department,
+  manager, override; a new row always does), because unchanged inputs stay correct through the mapping
+  edits' own reconcile. A full reconcile (backstop) runs in ascending-id batches of 500, one lock per batch,
+  so events never queue behind a whole scan. Stream writes touch only their own columns
+  (`repo.update`), never `branchId`/`branchOverrideId`, so a stale full-entity save cannot revert a reconcile.
+- **Override write path**: `setCounterpartyBranchOverride` lives in the counterparty plugin
+  (`CounterpartyBranchOverrideService`): it checks the row with `assertCounterpartyWritableInScope` (so a
+  branch-scoped caller cannot touch a foreign row; `ManageAccessControl` holders are portal-admin and
+  superadmin, which resolve to the `all` scope), writes through `DepartmentBranchMappingService`, and records a
+  Counterparty version entry (`branchOverrideId`) like a manager reassignment.
+- **Branch deletion**: the mapping FK is `ON DELETE RESTRICT`, so a branch referenced by a mapping cannot be
+  deleted. `branchOverrideId` has no FK (varchar); no code path deletes a branch.
 - `TradingPoint.servicingBranchId` still defaults from the counterparty's branch at creation only.
 - Dev seed: erp-import record type `departmentBranch` (synthetic mapping rows); real contours are
   never seeded.

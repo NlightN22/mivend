@@ -27,6 +27,12 @@ export interface UserEnrichmentInput {
     isActive?: boolean;
 }
 
+function adminDepartment(admin: Administrator | null): string | null {
+    return (
+        (admin?.customFields as { departmentId?: string | null } | undefined)?.departmentId ?? null
+    );
+}
+
 // Each case here has a distinct caller obligation; see findManagerLink's doc for how
 // counterparty.handler.ts and manager-erpId-dependent handlers must interpret them.
 export type ManagerLinkResolution = { found: false } | { found: true; administratorId: ID | null };
@@ -47,8 +53,14 @@ export class UserEnrichmentService {
         ctx: RequestContext,
         input: UserEnrichmentInput,
     ): Promise<Administrator | null> {
-        const admin = await this.enrich(ctx, input);
-        if (input.departmentId !== undefined) {
+        const before = (await this.erpUserService.findByErpId(ctx, input.erpId))?.departmentId;
+        const state = { adminDepartmentChanged: false };
+        const admin = await this.enrich(ctx, input, state);
+        const after = (await this.erpUserService.findByErpId(ctx, input.erpId))?.departmentId;
+        if (
+            input.departmentId !== undefined &&
+            (state.adminDepartmentChanged || before !== after)
+        ) {
             await this.branchAssignment.assignCounterparties(ctx, { managerErpId: input.erpId });
         }
         return admin;
@@ -57,9 +69,11 @@ export class UserEnrichmentService {
     private async enrich(
         ctx: RequestContext,
         input: UserEnrichmentInput,
+        state: { adminDepartmentChanged: boolean },
     ): Promise<Administrator | null> {
         const repo = this.connection.getRepository(ctx, Administrator);
         let admin = await this.findByErpId(ctx, input.erpId);
+        const departmentBefore = adminDepartment(admin);
         const linkedNow = !admin;
         if (!admin) {
             if (input.isActive === false) {
@@ -126,7 +140,9 @@ export class UserEnrichmentService {
             admin.customFields = { ...admin.customFields, departmentId: input.departmentId };
             await repo.update(admin.id, { customFields: { departmentId: input.departmentId } });
         }
-        if (linkedNow || input.departmentId !== undefined) {
+        state.adminDepartmentChanged =
+            input.departmentId !== undefined && input.departmentId !== departmentBefore;
+        if (linkedNow || state.adminDepartmentChanged) {
             await this.branchAssignment.assignAdministrator(ctx, admin.id);
         }
         if (!linkedNow && input.positionErpId !== undefined) {

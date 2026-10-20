@@ -23,7 +23,7 @@ const validInput = {
 describe('CreditTermService', () => {
     let counterpartyRepo: {
         findOneOrFail: ReturnType<typeof vi.fn>;
-        save: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
     };
     let counterpartyService: { findByErpId: ReturnType<typeof vi.fn> };
     let checks: { evaluate: ReturnType<typeof vi.fn> };
@@ -37,7 +37,7 @@ describe('CreditTermService', () => {
     beforeEach(() => {
         counterpartyRepo = {
             findOneOrFail: vi.fn(async () => ({ id: '1', erpId: 'cnt-001' })),
-            save: vi.fn(async (x: unknown) => x),
+            update: vi.fn(async () => undefined),
         };
         const connection = { getRepository: () => counterpartyRepo };
         counterpartyService = { findByErpId: vi.fn(async () => ({ id: '1', erpId: 'cnt-001' })) };
@@ -164,9 +164,9 @@ describe('CreditTermService', () => {
 
             await service.decideAndApply(ctx, 'req-1', 'approved', 'ok');
 
-            expect(counterpartyRepo.save).toHaveBeenCalledWith(
-                expect.objectContaining({ creditTermOverrideExtraDays: 10 }),
-            );
+            expect(counterpartyRepo.update).toHaveBeenCalledWith('1', {
+                creditTermOverrideExtraDays: 10,
+            });
             expect(eventBus.publish).toHaveBeenCalled();
         });
 
@@ -181,7 +181,7 @@ describe('CreditTermService', () => {
 
             await service.decideAndApply(ctx, 'req-1', 'rejected');
 
-            expect(counterpartyRepo.save).not.toHaveBeenCalled();
+            expect(counterpartyRepo.update).not.toHaveBeenCalled();
             expect(eventBus.publish).not.toHaveBeenCalled();
         });
 
@@ -196,7 +196,7 @@ describe('CreditTermService', () => {
 
             await service.decideAndApply(ctx, 'req-2', 'approved');
 
-            expect(counterpartyRepo.save).not.toHaveBeenCalled();
+            expect(counterpartyRepo.update).not.toHaveBeenCalled();
         });
     });
 });

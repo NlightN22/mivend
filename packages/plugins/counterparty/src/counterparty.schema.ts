@@ -141,6 +141,9 @@ export const adminApiSchema = gql`
     }
 
     extend type Mutation {
+        "Manual branch pick that the automatic department rule never overwrites; null clears it."
+        setCounterpartyBranchOverride(counterpartyId: ID!, branchId: String): Boolean!
+
         upsertCounterparty(
             erpId: String!
             legalName: String!

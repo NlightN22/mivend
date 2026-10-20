@@ -1,5 +1,13 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { Column, DataSource, DeleteDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    Column,
+    DataSource,
+    DeleteDateColumn,
+    Entity,
+    JoinColumn,
+    ManyToOne,
+    PrimaryGeneratedColumn,
+} from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { Administrator } from '@vendure/core';
 import {
@@ -56,6 +64,9 @@ class TestMapping {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'varchar', unique: true }) departmentErpId!: string;
     @Column({ type: 'int' }) branchId!: number;
+    @ManyToOne(() => TestBranch, { onDelete: 'RESTRICT' })
+    @JoinColumn({ name: 'branchId' })
+    branch?: TestBranch;
     @Column({ type: 'timestamp', default: () => 'now()' }) createdAt!: Date;
     @Column({ type: 'timestamp', default: () => 'now()' }) updatedAt!: Date;
 }
@@ -280,5 +291,71 @@ describe('BranchAssignmentService (real DB)', () => {
             ]);
             expect(await adminBranch(id)).toBe(String(target));
         }
+    });
+});
+
+describe('BranchAssignmentService hardening (real DB)', () => {
+    it('counterparty event (row write then assign) racing reconcileAll and a mapping edit: no deadlock, final state matches the mapping', async () => {
+        const id = await counterparty({ departmentId: 'dept-1a' });
+        const erpId = (await counterpartyRow(id)).erpId;
+        for (let round = 0; round < 8; round++) {
+            const target = round % 2 === 0 ? branchA : branchB;
+            await Promise.all([
+                dataSource.transaction(async em => {
+                    await em.query(
+                        `UPDATE "${schema}".counterparty SET "departmentId" = 'dept-1a' WHERE id = $1`,
+                        [id],
+                    );
+                    await assignment.assignCounterparties({ em } as unknown as RequestContext, {
+                        erpId,
+                    });
+                }),
+                assignment.reconcileAll(ctx),
+                mappings.set(ctx, 'dept-1', String(target)),
+            ]);
+            expect((await counterpartyRow(id)).branchId).toBe(String(target));
+        }
+    });
+
+    it('a full reconcile batches by id: every row beyond one batch is assigned', async () => {
+        await dataSource.query(
+            `INSERT INTO "${schema}".counterparty ("erpId", "departmentId")
+             SELECT 'bulk-' || g, 'dept-1' FROM generate_series(1, 1100) g`,
+        );
+        await mappings.set(ctx, 'dept-1', String(branchA));
+        const unassigned = await dataSource
+            .getRepository(TestCounterparty)
+            .createQueryBuilder('c')
+            .where('c.branchId IS NULL')
+            .getCount();
+        expect(unassigned).toBe(0);
+    });
+
+    it('terminates and inherits across a cycle in the parent chain', async () => {
+        await dataSource.getRepository(TestDepartment).save([
+            { erpId: 'cyc-a', name: 'Cycle A', parentErpId: 'cyc-b' },
+            { erpId: 'cyc-b', name: 'Cycle B', parentErpId: 'cyc-a' },
+        ]);
+        const id = await admin('cyc-b');
+        await mappings.set(ctx, 'cyc-a', String(branchA));
+        expect(await adminBranch(id)).toBe(String(branchA));
+        await mappings.clear(ctx, 'cyc-a');
+        expect(await adminBranch(id)).toBeNull();
+    });
+
+    it('a branch referenced by a mapping cannot be deleted', async () => {
+        await mappings.set(ctx, 'dept-1', String(branchA));
+        await expect(dataSource.getRepository(TestBranch).delete({ id: branchA })).rejects.toThrow(
+            /foreign key|violates/i,
+        );
+    });
+
+    it('a replica rejects set and clear', async () => {
+        const replica = new BranchAssignmentService(makeConnection(), { instanceType: 'branch' });
+        const replicaMappings = new DepartmentBranchMappingService(makeConnection(), replica);
+        await expect(replicaMappings.set(ctx, 'dept-1', String(branchA))).rejects.toThrow(
+            /central/,
+        );
+        await expect(replicaMappings.clear(ctx, 'dept-1')).rejects.toThrow(/central/);
     });
 });
