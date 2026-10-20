@@ -1,86 +1,110 @@
 import { expect, test } from '@playwright/test';
-import { shopGql, shopLoginCookie } from '../helpers/api';
+import { shopLoginCookie } from '../helpers/api';
 import { select } from './contour-db';
 import { envValue, loadContourEnv } from './contour-env';
 
+const SERVER = (): string => loadContourEnv().serverUrl;
+
 interface Customer {
     label: string;
-    erpId: string;
     login: { email: string; password: string } | null;
 }
 
-const ABAKAN_ERP = '8c4f416b-c192-11e1-8a03-f46d0490adee';
-const KRASNOYARSK_ERP = 'c9c66220-45a2-11e2-bda5-f46d0490adee';
-
 function customers(): Customer[] {
-    const abakan = loadContourEnv().customer;
-    const email = envValue('STAGING_TEST_KRASNOYARSK_CUSTOMER_EMAIL');
-    const password = envValue('STAGING_TEST_KRASNOYARSK_CUSTOMER_PASSWORD');
+    const emailB = envValue('STAGING_TEST_CUSTOMER_B_EMAIL');
+    const passwordB = envValue('STAGING_TEST_CUSTOMER_B_PASSWORD');
     return [
-        { label: 'branch-a customer', erpId: ABAKAN_ERP, login: abakan },
+        { label: 'branch-a customer', login: loadContourEnv().customer },
         {
             label: 'branch-b customer',
-            erpId: KRASNOYARSK_ERP,
-            login: email && password ? { email, password } : null,
+            login: emailB && passwordB ? { email: emailB, password: passwordB } : null,
         },
     ];
 }
 
-const pointsOf = (erpId: string): string[] =>
+const counterpartyOf = (email: string): string =>
     select<{ id: string }>(
-        `SELECT tp.id::text AS id FROM trading_point tp JOIN counterparty c ON c.id = tp."counterpartyId" WHERE c."erpId" = '${erpId}' ORDER BY tp.id`,
+        `SELECT "customFieldsCounterpartyid" AS id FROM customer WHERE "emailAddress" = '${email.replace(/'/g, "''")}'`,
+    )[0].id;
+
+const pointsOf = (counterpartyId: string): string[] =>
+    select<{ id: string }>(
+        `SELECT id::text AS id FROM trading_point WHERE "counterpartyId" = ${counterpartyId} ORDER BY id`,
     ).map(r => r.id);
 
-for (const customer of customers()) {
-    const other = customer.erpId === ABAKAN_ERP ? KRASNOYARSK_ERP : ABAKAN_ERP;
+async function shop<T>(
+    query: string,
+    variables?: Record<string, unknown>,
+    cookie?: string,
+): Promise<{ data: T | null; errors: string[] }> {
+    const res = await fetch(`${SERVER()}/shop-api`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+        body: JSON.stringify({ query, variables }),
+    });
+    const json = (await res.json()) as { data: T | null; errors?: { message: string }[] };
+    return { data: json.data, errors: (json.errors ?? []).map(e => e.message) };
+}
+
+const BY_ID = `query($id: ID!) { tradingPoint(id: $id) { id } }`;
+type ById = { tradingPoint: { id: string } | null };
+
+const all = customers();
+for (const customer of all) {
+    const other = all.find(c => c !== customer)!;
     test.describe(`11: ${customer.label} in the storefront`, () => {
         let cookie: string;
+        let mine: string[];
+        let foreign: string[];
 
         test.beforeAll(async () => {
-            if (customer.login)
-                cookie = await shopLoginCookie(customer.login.email, customer.login.password);
+            if (!customer.login || !other.login) return;
+            cookie = await shopLoginCookie(customer.login.email, customer.login.password);
+            mine = pointsOf(counterpartyOf(customer.login.email));
+            foreign = pointsOf(counterpartyOf(other.login.email));
         });
         test.beforeEach(() => {
             test.skip(
-                !customer.login,
-                `the ${customer.label} login is not set in the staging-integration env file`,
+                !customer.login || !other.login,
+                'a customer login is not set in the staging-integration env file',
             );
         });
 
-        test('sees only its own counterparty and its own trading points', async () => {
-            const mine = pointsOf(customer.erpId);
-            const foreign = pointsOf(other);
+        test('sees only its own counterparty and its own trading points in the lists', async () => {
             expect(mine.length, 'the customer has a trading point').toBeGreaterThan(0);
             expect(
                 foreign.length,
                 'the other counterparty has a trading point to protect',
             ).toBeGreaterThan(0);
-
-            const own = await shopGql<{
-                activeCustomer: { counterparty: { erpId: string } | null };
-            }>(`query { activeCustomer { counterparty { erpId } } }`, undefined, cookie);
-            expect(own.activeCustomer.counterparty?.erpId).toBe(customer.erpId);
-
-            const listed = await shopGql<{ myTradingPoints: { id: string }[] }>(
+            const listed = await shop<{ myTradingPoints: { id: string }[] }>(
                 `query { myTradingPoints { id } }`,
                 undefined,
                 cookie,
             );
-            const ids = listed.myTradingPoints.map(p => p.id);
+            expect(listed.errors).toEqual([]);
+            const ids = listed.data!.myTradingPoints.map(p => p.id);
             expect(ids.length).toBeGreaterThan(0);
             for (const id of ids) expect(mine, `point ${id} is its own`).toContain(id);
             for (const id of foreign)
                 expect(ids, `foreign point ${id} is not listed`).not.toContain(id);
         });
 
-        test('a trading point of another counterparty is not returned by id', async () => {
-            for (const id of pointsOf(other)) {
-                const result = await shopGql<{ tradingPoint: { id: string } | null }>(
-                    `query($id: ID!) { tradingPoint(id: $id) { id } }`,
-                    { id },
-                    cookie,
-                ).catch(() => ({ tradingPoint: null }));
-                expect(result.tradingPoint, `foreign point ${id}`).toBeNull();
+        test('by id: its own point is returned, a point of another counterparty is not, even to a guest', async () => {
+            const own = await shop<ById>(BY_ID, { id: mine[0] }, cookie);
+            expect(own.errors).toEqual([]);
+            expect(own.data!.tradingPoint?.id, 'the own point is returned').toBe(mine[0]);
+            for (const id of foreign) {
+                const asCustomer = await shop<ById>(BY_ID, { id }, cookie);
+                expect(asCustomer.errors, 'no error that confirms the id exists').toEqual([]);
+                expect(
+                    asCustomer.data!.tradingPoint,
+                    `foreign point ${id} as the customer`,
+                ).toBeNull();
+                const asGuest = await shop<ById>(BY_ID, { id });
+                expect(
+                    asGuest.data?.tradingPoint ?? null,
+                    `foreign point ${id} as a guest`,
+                ).toBeNull();
             }
         });
     });

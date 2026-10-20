@@ -4,7 +4,7 @@ import { select } from './contour-db';
 import { superadminToken } from './price-type-access';
 import {
     ACTORS,
-    FIXTURES,
+    allFixtureErpIds,
     actorCredentials,
     actorState,
     expectedIds,
@@ -23,12 +23,7 @@ let fixtures: Fixture[];
 
 test.beforeAll(async () => {
     await superadminToken();
-    const ids = fixtureIds([
-        ...FIXTURES.branchA,
-        ...FIXTURES.branchB,
-        ...FIXTURES.noBranch,
-        ...FIXTURES.inactive,
-    ]);
+    const ids = fixtureIds(allFixtureErpIds());
     fixtures = select<Fixture>(
         `SELECT id::text AS id, "erpId", "shortName" AS name FROM counterparty WHERE id IN (${ids.join(',')}) ORDER BY id`,
     );
@@ -47,7 +42,7 @@ for (const actor of ACTORS) {
         test.beforeEach(() => {
             test.skip(
                 !actorCredentials(actor.key),
-                `STAGING_TEST_${actor.key.toUpperCase()}_* is not set`,
+                `the ${actor.key} login is not set in the staging-integration env file`,
             );
         });
 

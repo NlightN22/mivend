@@ -62,6 +62,19 @@ type that is not the branch default; the hidden-type tests skip with a reason wh
 type or no confidential type. `05`-`07` also skip loudly when the manager has no allowed or no hidden type, so a
 denial claim is never vacuous. A failed grant cleanup logs the first GraphQL error.
 
+Counterparty visibility groups (#262, `08`-`11`) check who sees which counterparty on the contour, against the branch scope of
+`docs/access-control.md`. Fixed actors by role (`manager` own-scope per branch, `department-head` per branch, `operator`,
+a central `general-director`) and fixed fixture counterparties (two per branch, one without a branch, two permanently
+inactive) are a standing baseline: the ERP ids and logins are read from the staging-integration env file
+(`STAGING_FIXTURE_*_ERPIDS`, `STAGING_TEST_{HEAD_A,OPERATOR_A,HEAD_B,MANAGER_B,DIRECTOR}_*`, `STAGING_TEST_CUSTOMER_B_*`) and
+never committed. Expected sets are computed from the contour data (own, team rows, active grants, branch), never hardcoded.
+`08` calls the Admin API as each actor (list total, summary, by id, by search), `09` opens the manager portal (list size, KPI,
+search, detail page, CSV export, no hidden row in any GraphQL response), `10` checks write denials and a branch move
+(rows a spec changes are restored in `finally`), `11` calls the Shop API as a customer of each branch. Every "hidden" claim is
+paired with proof that the superadmin sees the row, and the groups skip with a reason when a login or fixture list is missing.
+Roles without `ReassignCounterpartyManager` are refused by permission, not by scope; the scope refusal is tested with the
+roles that hold it.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —

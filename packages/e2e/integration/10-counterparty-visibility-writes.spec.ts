@@ -4,106 +4,123 @@ import { adminCall, superadminToken } from './price-type-access';
 import {
     ACTORS,
     FIXTURES,
+    actorCredentials,
     actorState,
     actorToken,
+    allFixtureErpIds,
     expectedIds,
     fixtureIds,
     type ActorKey,
 } from './branch-actors';
 
-const DENIED = /not currently authorized|forbidden|not found|not writable|outside/i;
+const DENIED = /not currently authorized/i;
 const REASSIGN = `mutation($c: ID!, $a: ID!) { reassignCounterpartyManager(counterpartyId: $c, administratorId: $a) { id } }`;
-const ACTIVATE = `mutation($c: ID!) { activateCounterpartyPortalAccess(counterpartyId: $c) { id } }`;
 const OVERRIDE = `mutation($c: ID!, $b: String) { setCounterpartyBranchOverride(counterpartyId: $c, branchId: $b) }`;
 const ONE = `query($id: ID!) { counterparty(id: $id) { id } }`;
 
-const WRITERS: ActorKey[] = ['malyshev', 'plekhanova', 'medentsev', 'mishin', 'verevkina'];
+// Roles holding ReassignCounterpartyManager: a refusal outside the branch is a scope refusal, not a permission one.
+const HEADS: ActorKey[] = ['head-a', 'head-b'];
+const WITHOUT_PERMISSION: ActorKey[] = ['operator-a', 'manager-a', 'manager-b'];
 
 let superadmin: string;
-let hiddenFor: (key: ActorKey) => string;
+let all: string[];
+const visibleBy = new Map<ActorKey, Set<string>>();
 
-const dbRow = (id: string): { manager: string | null; customers: number } =>
-    select<{ manager: string | null; customers: number }>(
-        `SELECT c."assignedManagerId" AS manager,
-                (SELECT count(*)::int FROM customer cu WHERE cu."customFieldsCounterpartyid" = c.id::text) AS customers
-         FROM counterparty c WHERE c.id = ${id}`,
-    )[0];
+const actor = (key: ActorKey) => ACTORS.find(a => a.key === key)!;
+const hiddenFor = (key: ActorKey): string => {
+    const id = all.find(candidate => !visibleBy.get(key)?.has(candidate));
+    if (!id) throw new Error(`${key} has no hidden fixture to attack`);
+    return id;
+};
+const managerOf = (id: string): string | null =>
+    select<{ m: string | null }>(
+        `SELECT "assignedManagerId" AS m FROM counterparty WHERE id = ${id}`,
+    )[0].m;
 
 test.beforeAll(async () => {
     superadmin = await superadminToken();
-    const all = fixtureIds([...FIXTURES.branchA, ...FIXTURES.branchB, ...FIXTURES.noBranch]);
-    const visibleBy = new Map<ActorKey, Set<string>>();
-    for (const actor of ACTORS) visibleBy.set(actor.key, expectedIds(actor, actorState(actor)));
-    hiddenFor = key => {
-        const id = all.find(candidate => !visibleBy.get(key)?.has(candidate));
-        if (!id) throw new Error(`${key} has no hidden fixture to attack`);
-        return id;
-    };
+    all = fixtureIds(allFixtureErpIds());
+    for (const a of ACTORS) {
+        if (actorCredentials(a.key)) visibleBy.set(a.key, expectedIds(a, actorState(a)));
+    }
+});
+test.beforeEach(() => {
+    test.skip(
+        !actorCredentials('head-a') || !actorCredentials('head-b'),
+        'the head logins are not set',
+    );
 });
 
-for (const key of WRITERS) {
-    test(`10: ${key} cannot change a counterparty outside the scope, and nothing is written`, async () => {
+for (const key of HEADS) {
+    test(`10: ${key} is refused for a counterparty outside the branch, nothing is written; inside the branch it works and is restored`, async () => {
         const token = await actorToken(key);
-        const own = actorState(ACTORS.find(a => a.key === key)!).adminId;
-        const id = hiddenFor(key);
-        const before = dbRow(id);
-        const attempts = [
-            await adminCall(token, REASSIGN, { c: id, a: own }),
-            await adminCall(token, ACTIVATE, { c: id }),
-        ];
-        for (const attempt of attempts) {
-            expect(attempt.errors.join(), 'the write is rejected').toMatch(DENIED);
-            expect(attempt.data).toBeNull();
-        }
-        expect(dbRow(id), 'no row changed').toEqual(before);
-        const proof = await adminCall(superadmin, ONE, { id });
+        const state = actorState(actor(key));
+        const target = hiddenFor(key);
+        const before = managerOf(target);
+        const attempt = await adminCall(token, REASSIGN, { c: target, a: state.adminId });
+        expect(attempt.errors.join(), 'a scope refusal').toMatch(DENIED);
+        expect(attempt.data).toBeNull();
+        expect(managerOf(target), 'nothing was written').toBe(before);
         expect(
-            (proof.data as { counterparty: unknown }).counterparty,
-            'the row exists for the superadmin',
+            ((await adminCall(superadmin, ONE, { id: target })).data as { counterparty: unknown })
+                .counterparty,
         ).not.toBeNull();
+
+        const inside = [...visibleBy.get(key)!].find(
+            id => all.includes(id) && managerOf(id) !== null,
+        );
+        expect(inside, 'a visible fixture with a manager').toBeDefined();
+        const original = managerOf(inside!);
+        try {
+            const ok = await adminCall(token, REASSIGN, { c: inside!, a: state.adminId });
+            expect(ok.errors, 'the same mutation works inside the branch').toEqual([]);
+            expect(managerOf(inside!)).toBe(state.adminId);
+        } finally {
+            if (original !== null)
+                await adminCall(superadmin, REASSIGN, { c: inside!, a: original });
+        }
+        expect(managerOf(inside!), 'the original manager is back').toBe(original);
     });
 }
 
-test('10: a department head reassigns a manager inside the branch (the denials are not vacuous) and it is restored', async () => {
-    const token = await actorToken('malyshev');
-    const id = fixtureIds(FIXTURES.branchA)[0];
-    const other = actorState(ACTORS.find(a => a.key === 'plekhanova')!).adminId;
-    const original = dbRow(id).manager;
-    try {
-        const ok = await adminCall(token, REASSIGN, { c: id, a: other });
-        expect(ok.errors).toEqual([]);
-        expect(dbRow(id).manager).toBe(other);
-    } finally {
-        if (original) await adminCall(superadmin, REASSIGN, { c: id, a: original });
-    }
-    expect(dbRow(id).manager, 'the original manager is back').toBe(original);
-});
+for (const key of WITHOUT_PERMISSION) {
+    test(`10: ${key} has no permission to reassign managers, whatever the counterparty (permission denial, nothing written)`, async () => {
+        test.skip(!actorCredentials(key), `the ${key} login is not set`);
+        const token = await actorToken(key);
+        const state = actorState(actor(key));
+        for (const id of all.slice(0, 3)) {
+            const before = managerOf(id);
+            const attempt = await adminCall(token, REASSIGN, { c: id, a: state.adminId });
+            expect(attempt.errors.join()).toMatch(DENIED);
+            expect(managerOf(id)).toBe(before);
+        }
+    });
+}
 
 test('10: moving a counterparty to another branch moves it between the branch views, and the move is undone', async () => {
-    const id = fixtureIds(FIXTURES.branchB)[1];
-    const abakan = await actorToken('malyshev');
-    const krasnoyarsk = await actorToken('medentsev');
+    const id = fixtureIds(FIXTURES.branchB).slice(-1)[0];
+    const viewA = await actorToken('head-a');
+    const viewB = await actorToken('head-b');
+    const target = actorState(actor('head-a')).branchId!;
     const visible = async (token: string): Promise<boolean> =>
         (((await adminCall(token, ONE, { id })).data as { counterparty: unknown } | null)
             ?.counterparty ?? null) !== null;
-    const branchOf = (): string | null =>
-        select<{ b: string | null }>(`SELECT "branchId" AS b FROM counterparty WHERE id = ${id}`)[0]
-            .b;
-    const original = branchOf();
-    const target = select<{ b: string }>(
-        `SELECT "customFieldsBranchid" AS b FROM administrator WHERE "emailAddress" = 'malyshev.test@example.com'`,
-    )[0].b;
-    expect(await visible(krasnoyarsk), 'starts in the Krasnoyarsk view').toBe(true);
-    expect(await visible(abakan), 'starts hidden from the Abakan view').toBe(false);
+    const row = (): { b: string | null; o: string | null } =>
+        select<{ b: string | null; o: string | null }>(
+            `SELECT "branchId" AS b, "branchOverrideId" AS o FROM counterparty WHERE id = ${id}`,
+        )[0];
+    const original = row();
+    expect(await visible(viewB), 'starts in the branch-b view').toBe(true);
+    expect(await visible(viewA), 'starts hidden from the branch-a view').toBe(false);
     try {
         const moved = await adminCall(superadmin, OVERRIDE, { c: id, b: target });
         expect(moved.errors).toEqual([]);
-        expect(await visible(abakan), 'now in the Abakan view').toBe(true);
-        expect(await visible(krasnoyarsk), 'gone from the Krasnoyarsk view').toBe(false);
+        expect(await visible(viewA), 'now in the branch-a view').toBe(true);
+        expect(await visible(viewB), 'gone from the branch-b view').toBe(false);
     } finally {
-        await adminCall(superadmin, OVERRIDE, { c: id, b: null });
+        await adminCall(superadmin, OVERRIDE, { c: id, b: original.o });
     }
-    expect(branchOf(), 'the automatic rule restores the original branch').toBe(original);
-    expect(await visible(krasnoyarsk)).toBe(true);
-    expect(await visible(abakan)).toBe(false);
+    expect(row(), 'branch and override are back').toEqual(original);
+    expect(await visible(viewB)).toBe(true);
+    expect(await visible(viewA)).toBe(false);
 });

@@ -3,7 +3,7 @@ import { select } from './contour-db';
 import { adminCall, superadminToken } from './price-type-access';
 import {
     ACTORS,
-    FIXTURES,
+    allFixtureErpIds,
     actorCredentials,
     actorState,
     actorToken,
@@ -26,12 +26,7 @@ const names = new Map<string, string>();
 
 test.beforeAll(async () => {
     superadmin = await superadminToken();
-    all = fixtureIds([
-        ...FIXTURES.branchA,
-        ...FIXTURES.branchB,
-        ...FIXTURES.noBranch,
-        ...FIXTURES.inactive,
-    ]);
+    all = fixtureIds(allFixtureErpIds());
     for (const row of select<{ id: string; name: string }>(
         `SELECT id::text AS id, "shortName" AS name FROM counterparty WHERE id IN (${all.join(',')})`,
     ))
@@ -59,7 +54,7 @@ for (const actor of ACTORS) {
         test.beforeEach(() => {
             test.skip(
                 !actorCredentials(actor.key),
-                `STAGING_TEST_${actor.key.toUpperCase()}_* is not set`,
+                `the ${actor.key} login is not set in the staging-integration env file`,
             );
         });
 
