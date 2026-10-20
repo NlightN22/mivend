@@ -36,6 +36,7 @@ import { OrderContractService } from './order-contract.service';
 import { addReservationCustomFields } from './reservation-custom-fields';
 import { adminApiSchema } from './reservation.schema';
 import { ReservationSettings } from './reservation-settings';
+import { ReservationAccessService } from './reservation-access.service';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { ProductVariantStockResolver } from './product-variant-stock.resolver';
 import { StockLevelService } from './stock-level.service';
@@ -107,6 +108,7 @@ import type { ReservationPluginOptions } from './types';
     ],
     providers: [
         OrderContractService,
+        ReservationAccessService,
         OrderLineEditService,
         OrderDeliveryEditService,
         OrderLineShortfallService,

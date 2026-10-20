@@ -461,6 +461,14 @@ becomes a real requirement, not preemptively.
 
 ---
 
+### Scope guards on permission-only reads
+
+A permission alone never exposes another scope's rows. These Admin API reads re-check scope in the backend:
+
+- `orderReservations(orderId)` and `availableStock(orderId)` resolve the order through `OrderVisibilityService` first (`ReservationAccessService`); an order outside the caller's scope is "Order not found".
+- `entityVersions` / `entityVersionsForEntities` drop refs the caller may not see. Owning plugins register a per-entity rule in `EntityVersionScopeRegistry` (counterparty plugin: `Counterparty`, `TradingPoint` via counterparty scope, `VisibilityGrant` via the grant-management permissions). An entity name with no rule is visible only with counterparty scope `all` (deny by default).
+- `reservationExtensionLimit(roleCode)` returns a limit only for one of the caller's own roles, or to a caller with `ManageAccessControl`; otherwise null.
+
 ## Layer 4: field-level redaction
 
 **Rule: a field that must never reach a role (e.g. the purchase or floor price) is protected

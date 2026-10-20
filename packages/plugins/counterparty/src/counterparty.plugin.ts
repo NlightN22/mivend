@@ -48,6 +48,7 @@ import { CounterpartyService } from './counterparty.service';
 import { TradingPointService } from './trading-point.service';
 import { CreditTermExtensionCheck } from './credit-term-extension.check';
 import { CreditTermService } from './credit-term.service';
+import { EntityVersionScopeRegistrar } from './entity-version-scope.registrar';
 import { AdministratorLinkedListener } from './administrator-linked.listener';
 import { CounterpartyPortalAccessService } from './counterparty-portal-access.service';
 import {
@@ -127,6 +128,7 @@ const adminResolvers = [
         CounterpartyManagerAssignmentService,
         CounterpartyBranchOverrideService,
         AdministratorLinkedListener,
+        EntityVersionScopeRegistrar,
         CounterpartyPortalAccessService,
         ContractService,
         CreditLimitCheckService,

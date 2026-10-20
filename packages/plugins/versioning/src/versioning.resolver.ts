@@ -4,6 +4,7 @@ import { Allow, Ctx, PaginatedList, RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { EntityVersion } from './entities/entity-version.entity';
+import { EntityVersionScopeRegistry } from './entity-version-scope.registry';
 import { VersioningService } from './versioning.service';
 
 interface EntityVersionListOptions {
@@ -18,7 +19,10 @@ interface EntityVersionListOptions {
 
 @Resolver()
 export class VersioningResolver {
-    constructor(private versioningService: VersioningService) {}
+    constructor(
+        private versioningService: VersioningService,
+        private scopeRegistry: EntityVersionScopeRegistry,
+    ) {}
 
     @Query()
     @Allow(CustomPermission.ReadEntityHistory.Permission)
@@ -26,6 +30,8 @@ export class VersioningResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { entityName: string; entityId: ID },
     ): Promise<EntityVersion[]> {
+        const allowed = await this.scopeRegistry.filterRefs(ctx, [args]);
+        if (allowed.length === 0) return [];
         return this.versioningService.findForEntity(ctx, args.entityName, args.entityId);
     }
 
@@ -41,6 +47,7 @@ export class VersioningResolver {
             options?: EntityVersionListOptions;
         },
     ): Promise<PaginatedList<EntityVersion>> {
-        return this.versioningService.findForEntities(ctx, args.refs, args.options ?? {});
+        const refs = await this.scopeRegistry.filterRefs(ctx, args.refs);
+        return this.versioningService.findForEntities(ctx, refs, args.options ?? {});
     }
 }

@@ -3,6 +3,7 @@ import gql from 'graphql-tag';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 
 import { EntityVersion } from './entities/entity-version.entity';
+import { EntityVersionScopeRegistry } from './entity-version-scope.registry';
 import { VersioningResolver } from './versioning.resolver';
 import { VersioningService } from './versioning.service';
 
@@ -51,8 +52,8 @@ const adminApiSchema = gql`
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin],
     entities: [EntityVersion],
-    providers: [VersioningService],
-    exports: [VersioningService],
+    providers: [VersioningService, EntityVersionScopeRegistry],
+    exports: [VersioningService, EntityVersionScopeRegistry],
     adminApiExtensions: {
         schema: adminApiSchema,
         resolvers: [VersioningResolver],

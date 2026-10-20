@@ -1,21 +1,13 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import {
-    Allow,
-    Ctx,
-    Order,
-    PaginatedList,
-    Permission,
-    RequestContext,
-    Transaction,
-    TransactionalConnection,
-} from '@vendure/core';
+import { Allow, Ctx, PaginatedList, Permission, RequestContext, Transaction } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
 import { ReservationExtensionLimit } from './entities/reservation-extension-limit.entity';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationReconciliationIssue } from './entities/reservation-reconciliation-issue.entity';
 import { OrderContractOption, OrderContractService } from './order-contract.service';
+import { ReservationAccessService } from './reservation-access.service';
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import { ReservationExtensionLimitService } from './reservation-extension-limit.service';
 import { ReservationFailureService } from './reservation-failure.service';
@@ -29,7 +21,6 @@ import { ReservationService } from './reservation.service';
 @Resolver()
 export class ReservationResolver {
     constructor(
-        private connection: TransactionalConnection,
         private reservationService: ReservationService,
         private availabilityService: ReservationAvailabilityService,
         private extensionService: ReservationExtensionService,
@@ -37,6 +28,7 @@ export class ReservationResolver {
         private reconciliationIssueService: ReservationReconciliationIssueService,
         private orderContractService: OrderContractService,
         private failureService: ReservationFailureService,
+        private accessService: ReservationAccessService,
     ) {}
 
     @Query()
@@ -45,6 +37,7 @@ export class ReservationResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { orderId: ID },
     ): Promise<Reservation[]> {
+        await this.accessService.findVisibleOrder(ctx, args.orderId);
         return this.reservationService.findForOrder(ctx, args.orderId);
     }
 
@@ -66,13 +59,11 @@ export class ReservationResolver {
         if (args.orderId == null) {
             return this.availabilityService.getAvailableToPromise(ctx, args.productVariantId);
         }
-        const order = await this.connection
-            .getRepository(ctx, Order)
-            .findOne({ where: { id: args.orderId } });
+        const order = await this.accessService.findVisibleOrder(ctx, args.orderId);
         const reservable = await this.availabilityService.getReservableBatch(
             ctx,
             [args.productVariantId],
-            order?.customFields.branchId ?? null,
+            order.customFields?.branchId ?? null,
         );
         return reservable.get(String(args.productVariantId)) ?? 0;
     }
@@ -83,6 +74,7 @@ export class ReservationResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { roleCode: string },
     ): Promise<ReservationExtensionLimit | null> {
+        if (!(await this.accessService.canReadExtensionLimit(ctx, args.roleCode))) return null;
         return this.extensionLimitService.getLimit(ctx, args.roleCode);
     }
 
