@@ -159,7 +159,7 @@ interface ProformaInvoiceRow {
     status: string;
     statusVariant: StatusBadgeVariant;
     amount: string;
-    orderCode: string;
+    orderCode: string | null;
 }
 const rows = computed<ProformaInvoiceRow[]>(() =>
     props.proformaInvoices.map(proformaInvoice => ({
@@ -172,14 +172,14 @@ const rows = computed<ProformaInvoiceRow[]>(() =>
         statusVariant:
             PROFORMA_INVOICE_STATUS_BADGE_VARIANT[proformaInvoice.displayStatus] ?? 'neutral',
         amount: money(proformaInvoice),
-        orderCode: proformaInvoice.order.code,
+        orderCode: proformaInvoice.order?.code ?? null,
     })),
 );
 
 // No dedicated proforma-invoice-detail page exists yet — clicking a row goes to the underlying order,
 // same as ProformaInvoicesTable.vue's existing (non-compact) behavior.
 function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>): void {
-    router.push(`/orders/${event.row.orderCode}`);
+    if (event.row.orderCode) router.push(`/orders/${event.row.orderCode}`);
 }
 </script>
 
@@ -220,7 +220,9 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<ProformaInvoiceRow>)
             formatDocumentNumber((data as ProformaInvoiceRow).number)
         }}</template>
         <template #cell-order="{ data }">{{
-            formatDocumentNumber((data as ProformaInvoiceRow).orderCode)
+            (data as ProformaInvoiceRow).orderCode
+                ? formatDocumentNumber((data as ProformaInvoiceRow).orderCode as string)
+                : '—'
         }}</template>
     </MvAdvancedDataTable>
 </template>

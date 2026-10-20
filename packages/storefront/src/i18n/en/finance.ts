@@ -3,6 +3,8 @@ export default {
         title: 'Proforma invoice #{number}',
         order: 'Order {number}',
         versionBadge: 'v{version}',
+        contract: 'Contract {name}',
+        kind: { 'debt-repayment': 'Debt repayment', advance: 'Advance' },
         amount: 'Amount',
         issuedPayBy: 'Issued {issued}, pay by {due}',
         newerVersion: 'There is a newer version v{version} (no. {number})',

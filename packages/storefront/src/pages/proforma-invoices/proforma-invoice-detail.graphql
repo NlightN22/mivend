@@ -11,6 +11,7 @@ query ProformaInvoiceDetail($id: ID!) {
         issuedAt
         dueDate
         kind
+        contractName
         salesInvoiceNumber
         orderChangedDifference
         supersedes {

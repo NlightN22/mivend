@@ -1,0 +1,18 @@
+mutation IssueContractProformaInvoice($input: IssueContractProformaInvoiceInput!) {
+    issueContractProformaInvoice(input: $input) {
+        id
+        number
+    }
+}
+
+query ContractProformaDocument($id: ID!) {
+    proformaInvoice(id: $id) {
+        id
+        document {
+            status
+            asset {
+                source
+            }
+        }
+    }
+}

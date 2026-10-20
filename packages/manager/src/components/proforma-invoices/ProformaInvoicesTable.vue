@@ -97,16 +97,16 @@ const rows = computed<TableRow[]>(() =>
         statusVariant:
             PROFORMA_INVOICE_STATUS_BADGE_VARIANT[proformaInvoice.displayStatus] ?? 'neutral',
         amount: money(proformaInvoice),
-        order: proformaInvoice.order.code,
-        orderDisplay: formatDocumentNumber(proformaInvoice.order.code),
+        order: proformaInvoice.order?.code ?? null,
+        orderDisplay: proformaInvoice.order
+            ? formatDocumentNumber(proformaInvoice.order.code)
+            : '—',
     })),
 );
 
 function openOrder(payload: { rowData: TableRow }): void {
-    if (props.compact) return;
-    // Real incident: this used to push proforma invoice.orderId (the numeric internal Order id) into a
-    // route that expects Order.code (see router's 'orders/:code') — every click landed on a
-    // broken order-detail page. order.code now comes from the real ProformaInvoice.order resolve field.
+    if (props.compact || !payload.rowData.order) return;
+    // The route expects Order.code, never the numeric order id.
     router.push(`/orders/${payload.rowData.order as string}`);
 }
 </script>

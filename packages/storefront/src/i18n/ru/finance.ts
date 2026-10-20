@@ -5,6 +5,8 @@ const ru: typeof en = {
         title: 'Счёт на оплату № {number}',
         order: 'Заказ {number}',
         versionBadge: 'v{version}',
+        contract: 'Договор {name}',
+        kind: { 'debt-repayment': 'Погашение долга', advance: 'Аванс' },
         amount: 'Сумма',
         issuedPayBy: 'Выставлен {issued}, оплатить до {due}',
         newerVersion: 'Есть более новая версия v{version} (№ {number})',

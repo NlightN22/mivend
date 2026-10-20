@@ -14,6 +14,8 @@ query MyProformaInvoices($options: ProformaInvoiceListOptions) {
             amount
             currencyCode
             displayStatus
+            kind
+            contractName
             issuedAt
             dueDate
             order {

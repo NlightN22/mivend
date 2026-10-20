@@ -7137,6 +7137,8 @@ export type ProductVariantTranslationInput = {
 export type ProformaInvoice = {
     amount: Scalars['Int']['output'];
     branchId: Maybe<Scalars['ID']['output']>;
+    /** Set only on contract payment kinds. */
+    contractName: Maybe<Scalars['String']['output']>;
     counterpartyId: Scalars['ID']['output'];
     createdAt: Scalars['DateTime']['output'];
     currencyCode: Scalars['String']['output'];
@@ -7149,17 +7151,18 @@ export type ProformaInvoice = {
     id: Scalars['ID']['output'];
     /** When this version was issued; each version has its own date. */
     issuedAt: Scalars['DateTime']['output'];
-    /** order-placed | order-changed | by-shipment */
+    /** order-placed | order-changed | by-shipment | debt-repayment | advance */
     kind: Scalars['String']['output'];
     /** Snapshot lines, resolved via ProformaInvoiceFieldResolver.lines. */
     lines: Array<ProformaInvoiceLine>;
     /** Human-facing business number — generated at creation, distinct from the order's own code — see ProformaInvoice.number's own doc comment (proforma-invoice.entity.ts). */
     number: Scalars['String']['output'];
-    /** Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: ProformaInvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page). */
-    order: ProformaInvoiceOrder;
+    /** The proforma's order; null for contract payment kinds. */
+    order: Maybe<ProformaInvoiceOrder>;
     /** Current order content minus this paid snapshot; null unless the order changed after payment. */
     orderChangedDifference: Maybe<Scalars['Int']['output']>;
-    orderId: Scalars['ID']['output'];
+    /** Null for contract payment kinds (debt-repayment, advance). */
+    orderId: Maybe<Scalars['ID']['output']>;
     organizationId: Scalars['ID']['output'];
     /** ERP sales invoice (realization) number; set only on a by-shipment version. */
     salesInvoiceNumber: Maybe<Scalars['String']['output']>;
@@ -12079,7 +12082,7 @@ export type ProformaInvoiceListItemFieldsFragment = {
     number: string;
     version: number;
     createdAt: any;
-    orderId: string;
+    orderId: string | null;
     counterpartyId: string;
     amount: number;
     currencyCode: string;
@@ -12088,7 +12091,7 @@ export type ProformaInvoiceListItemFieldsFragment = {
     dueDate: any;
     branchId: string | null;
     supersededBy: { number: string; version: number } | null;
-    order: { code: string };
+    order: { code: string } | null;
 };
 
 export type ProformaInvoicesPageQueryVariables = Exact<{
@@ -12104,7 +12107,7 @@ export type ProformaInvoicesPageQuery = {
             number: string;
             version: number;
             createdAt: any;
-            orderId: string;
+            orderId: string | null;
             counterpartyId: string;
             amount: number;
             currencyCode: string;
@@ -12113,7 +12116,7 @@ export type ProformaInvoicesPageQuery = {
             dueDate: any;
             branchId: string | null;
             supersededBy: { number: string; version: number } | null;
-            order: { code: string };
+            order: { code: string } | null;
         }>;
     };
 };

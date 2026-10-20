@@ -7,6 +7,8 @@ import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import ProformaInvoiceSellerRows from './ProformaInvoiceSellerRows.vue';
 import ProformaInvoiceVersionBadge from './ProformaInvoiceVersionBadge.vue';
+import ProformaInvoiceKindBadge from './ProformaInvoiceKindBadge.vue';
+import { isContractKind } from './proformaKind';
 import ProformaInvoiceVersionNotice from './ProformaInvoiceVersionNotice.vue';
 import { formatMoney } from './formatMoney';
 import { formatDate } from './formatDate';
@@ -31,6 +33,10 @@ onMounted(async () => {
 });
 
 const formatAmount = formatMoney;
+function openPdf(url: string): void {
+    window.open(url, '_blank', 'noopener');
+}
+const contractKind = computed(() => isContractKind(proformaInvoice.value?.kind));
 </script>
 
 <template>
@@ -54,11 +60,19 @@ const formatAmount = formatMoney;
                         <h1 class="id-title">
                             {{ t('proformaInvoices.title', { number: proformaInvoice.number }) }}
                             <ProformaInvoiceVersionBadge :version="proformaInvoice.version" />
+                            <ProformaInvoiceKindBadge :kind="proformaInvoice.kind" />
                         </h1>
-                        <div class="id-meta">
+                        <div v-if="proformaInvoice.order" class="id-meta">
                             {{
                                 t('proformaInvoices.order', {
                                     number: formatDocumentNumber(proformaInvoice.order.code),
+                                })
+                            }}
+                        </div>
+                        <div v-else-if="proformaInvoice.contractName" class="id-meta">
+                            {{
+                                t('proformaInvoices.contract', {
+                                    name: proformaInvoice.contractName,
                                 })
                             }}
                         </div>
@@ -142,7 +156,7 @@ const formatAmount = formatMoney;
                             </tbody>
                         </table>
 
-                        <div class="id-linked-order">
+                        <div v-if="proformaInvoice.order" class="id-linked-order">
                             <div>
                                 <div class="id-linked-order-title">
                                     {{ t('proformaInvoices.detail.linkedOrder') }}
@@ -186,7 +200,16 @@ const formatAmount = formatMoney;
                                 {{ t('proformaInvoices.detail.cancelled') }}
                             </p>
                             <MvButton
-                                v-if="proformaInvoice.displayStatus === 'cancelled'"
+                                v-if="contractKind"
+                                variant="primary"
+                                size="md"
+                                :disabled="!pdfUrl"
+                                @click="pdfUrl && openPdf(pdfUrl)"
+                            >
+                                {{ t('proformaInvoices.detail.downloadPdf') }}
+                            </MvButton>
+                            <MvButton
+                                v-else-if="proformaInvoice.displayStatus === 'cancelled'"
                                 variant="primary"
                                 size="md"
                                 disabled

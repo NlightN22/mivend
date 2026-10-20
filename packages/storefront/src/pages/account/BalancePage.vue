@@ -95,7 +95,7 @@ onMounted(load);
                 </div>
 
                 <aside class="bal-aside">
-                    <BalancePayPanel />
+                    <BalancePayPanel :contracts="contracts" :unpaid="unpaid" />
                     <BalanceNextPayment :next="next" />
                     <BalanceRestrictions :items="restrictionKeys" :overdue="overdueText" />
                 </aside>

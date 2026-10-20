@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
 import ProformaInvoiceVersionBadge from './ProformaInvoiceVersionBadge.vue';
+import ProformaInvoiceKindBadge from './ProformaInvoiceKindBadge.vue';
+import { isContractKind } from './proformaKind';
 import { formatDate } from './formatDate';
 import MvButton from '@mivend/ui-kit/src/components/MvButton/MvButton.vue';
 import {
@@ -18,8 +20,10 @@ const { t } = useI18n();
 
 const formatAmount = formatMoney;
 
+const order = props.proformaInvoice.order;
+
 function openOrder(): void {
-    void router.push(`/orders/${props.proformaInvoice.order.id}`);
+    if (order) void router.push(`/orders/${order.id}`);
 }
 
 function openProformaInvoice(): void {
@@ -30,7 +34,9 @@ function payProformaInvoice(): void {
     void router.push(`/proforma-invoices/${props.proformaInvoice.id}/pay`);
 }
 
-const isPayable = props.proformaInvoice.displayStatus !== 'cancelled';
+const isPayable =
+    props.proformaInvoice.displayStatus !== 'cancelled' &&
+    !isContractKind(props.proformaInvoice.kind);
 </script>
 
 <template>
@@ -39,6 +45,7 @@ const isPayable = props.proformaInvoice.displayStatus !== 'cancelled';
             <div class="proforma-invoice-row__name">
                 {{ t('proformaInvoices.title', { number: proformaInvoice.number }) }}
                 <ProformaInvoiceVersionBadge :version="proformaInvoice.version" />
+                <ProformaInvoiceKindBadge :kind="proformaInvoice.kind" />
             </div>
             <div v-if="proformaInvoice.supersededBy" class="proforma-invoice-row__meta">
                 {{
@@ -56,12 +63,11 @@ const isPayable = props.proformaInvoice.displayStatus !== 'cancelled';
                     })
                 }}
             </div>
-            <div class="proforma-invoice-row__meta">
-                {{
-                    t('proformaInvoices.order', {
-                        number: formatDocumentNumber(proformaInvoice.order.code),
-                    })
-                }}
+            <div v-if="order" class="proforma-invoice-row__meta">
+                {{ t('proformaInvoices.order', { number: formatDocumentNumber(order.code) }) }}
+            </div>
+            <div v-else-if="proformaInvoice.contractName" class="proforma-invoice-row__meta">
+                {{ t('proformaInvoices.contract', { name: proformaInvoice.contractName }) }}
             </div>
         </div>
 
@@ -79,7 +85,7 @@ const isPayable = props.proformaInvoice.displayStatus !== 'cancelled';
         </MvStatusBadge>
 
         <div class="proforma-invoice-row__actions">
-            <MvButton variant="secondary" size="sm" @click="openOrder">{{
+            <MvButton v-if="order" variant="secondary" size="sm" @click="openOrder">{{
                 t('proformaInvoices.actions.order')
             }}</MvButton>
             <MvButton variant="secondary" size="sm" @click="openProformaInvoice">{{

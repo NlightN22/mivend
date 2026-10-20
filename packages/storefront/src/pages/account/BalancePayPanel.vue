@@ -1,42 +1,156 @@
 <script setup lang="ts">
-import { MvNotImplemented } from '@mivend/ui-kit';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { formatMoney } from '../../i18n/format';
-import { useDemoMode } from '../../composables/useDemoMode';
-import { DEMO_DUE } from './balanceDemo';
+import {
+    MvButton,
+    MvFilterChips,
+    MvFormField,
+    MvInput,
+    MvNotice,
+    MvSelect,
+    type FilterChip,
+} from '@mivend/ui-kit';
+import type { SettlementRow } from '../settlements/useSettlementDocuments';
+import { formatMinor } from './balanceFormat';
+import {
+    contractDebt,
+    initialAmountText,
+    parseAmountMinor,
+    type ContractPayMode,
+} from './contractPayment';
+import type { BalanceContract } from './useBalance';
+import { useContractProforma } from './useContractProforma';
 
+const props = defineProps<{ contracts: BalanceContract[]; unpaid: SettlementRow[] }>();
 const { t } = useI18n();
-const { demoAllowed } = useDemoMode();
+const { issuing, failed, issued, pdfUrl, pdfPending, issue, reset } = useContractProforma();
+
+const mode = ref<ContractPayMode>('debt-repayment');
+const contractId = ref(props.contracts[0]?.id ?? '');
+const amountText = ref('');
+
+const contract = computed(() => props.contracts.find(c => c.id === contractId.value) ?? null);
+const currency = computed(() => contract.value?.currency ?? 'RUB');
+const debt = computed(() => contractDebt(contractId.value, props.unpaid));
+const amountMinor = computed(() => parseAmountMinor(amountText.value));
+const modes = computed<FilterChip[]>(() => [
+    { key: 'debt-repayment', label: t('balance.pay.modeDebt') },
+    { key: 'advance', label: t('balance.pay.modeAdvance') },
+]);
+const contractOptions = computed(() =>
+    props.contracts.map(c => ({ value: c.id, label: c.name ?? c.id })),
+);
+
+watch(
+    [mode, contractId],
+    () => {
+        amountText.value = initialAmountText(mode.value, debt.value);
+    },
+    { immediate: true },
+);
+watch([mode, contractId, amountText], () => {
+    if (!issued.value) reset();
+});
+
+function submit(): void {
+    if (contract.value && amountMinor.value) {
+        void issue(contract.value.id, mode.value, amountMinor.value);
+    }
+}
+
+function another(): void {
+    reset();
+    amountText.value = initialAmountText(mode.value, debt.value);
+}
 </script>
 
 <template>
     <div class="bal-panel">
         <div class="bal-panel__title">{{ t('balance.pay.title') }}</div>
-        <MvNotImplemented
-            v-if="!demoAllowed"
-            size="widget"
-            :title="t('common.notImplemented.title')"
-            :message="t('common.notImplemented.message')"
-        />
-        <template v-else>
-            <div class="bal-panel__sub">{{ t('balance.pay.sub') }}</div>
-            <div class="bal-pay">
-                <div class="bal-pay__label">{{ t('balance.pay.amountDue') }}</div>
-                <input class="bal-pay__input" :value="formatMoney(DEMO_DUE)" />
-                <button class="bal-wide-btn">{{ t('balance.pay.proceed') }}</button>
-            </div>
-            <div class="bal-mini-list">
-                <div>
-                    <div class="bal-mini-title">{{ t('balance.pay.advanceTitle') }}</div>
-                    <div class="bal-mini-note">{{ t('balance.pay.advanceNote') }}</div>
+        <div v-if="!contracts.length" class="bal-panel__sub">
+            {{ t('balance.pay.noContracts') }}
+        </div>
+        <template v-else-if="issued">
+            <MvNotice variant="success">
+                {{ t('balance.pay.issued', { number: issued.number }) }}
+            </MvNotice>
+            <div class="bal-pay__actions">
+                <a v-if="pdfUrl" :href="pdfUrl" target="_blank" rel="noopener">
+                    <MvButton variant="primary" size="md">{{ t('balance.pay.openPdf') }}</MvButton>
+                </a>
+                <div v-else class="bal-mini-note">
+                    {{ pdfPending ? t('balance.pay.pdfPending') : t('balance.pay.pdfLater') }}
                 </div>
-                <div>
-                    <div class="bal-mini-title">{{ t('balance.pay.documentsTitle') }}</div>
-                    <div class="bal-mini-note">{{ t('balance.pay.documentsNote') }}</div>
-                </div>
+                <router-link to="/proforma-invoices" class="bal-pay__link">{{ t('balance.pay.toList') }}</router-link>
+                <MvButton variant="secondary" size="sm" @click="another">
+                    {{ t('balance.pay.another') }}
+                </MvButton>
             </div>
         </template>
+        <form v-else class="bal-pay" @submit.prevent="submit">
+            <div class="bal-panel__sub">{{ t('balance.pay.sub') }}</div>
+            <MvFilterChips
+                :chips="modes"
+                :active="mode"
+                @select="mode = $event as ContractPayMode"
+            />
+            <MvFormField :label="t('balance.pay.contract')">
+                <MvSelect v-model="contractId" :options="contractOptions" />
+            </MvFormField>
+            <div class="bal-mini-note">
+                {{ t('balance.pay.debt', { amount: formatMinor(debt.minor, currency) }) }}
+                <span v-if="debt.overdueMinor > 0" class="bal-pay__overdue">
+                    {{
+                        t('balance.pay.overdue', {
+                            amount: formatMinor(debt.overdueMinor, currency),
+                        })
+                    }}
+                </span>
+            </div>
+            <MvFormField
+                :label="t('balance.pay.amount', { currency })"
+                :error="amountText && !amountMinor ? t('balance.pay.amountInvalid') : undefined"
+            >
+                <MvInput v-model="amountText" />
+            </MvFormField>
+            <MvNotice v-if="failed" variant="error">{{ t('balance.pay.failed') }}</MvNotice>
+            <MvButton
+                variant="primary"
+                size="md"
+                native-type="submit"
+                :disabled="!amountMinor"
+                :loading="issuing"
+            >
+                {{ t('balance.pay.issue') }}
+            </MvButton>
+        </form>
     </div>
 </template>
 
 <style scoped src="./BalancePanels.css"></style>
+<style scoped>
+.bal-pay {
+    display: grid;
+    gap: 12px;
+}
+.bal-pay .bal-panel__sub {
+    margin-bottom: 0;
+}
+.bal-pay__overdue {
+    display: block;
+    color: #b42318;
+    font-weight: 800;
+}
+.bal-pay__link {
+    color: #008a64;
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+}
+.bal-pay__actions {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+    justify-items: start;
+}
+</style>

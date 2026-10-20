@@ -2,6 +2,7 @@ query MyContracts {
     myContracts {
         id
         name
+        currency
         creditLimit
         paymentDelayDays
         debtDaysLimit
