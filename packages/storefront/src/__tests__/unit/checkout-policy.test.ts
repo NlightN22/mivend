@@ -5,6 +5,7 @@ import {
     isCardAmountChanged,
     orderedForms,
     placementMetadata,
+    proformaPrintRoute,
     proformaPrintTargets,
 } from '../../utils/checkoutPolicy';
 import { describeOrderCreated } from '../../utils/orderCreatedText';
@@ -92,5 +93,14 @@ describe('proformaPrintTargets documents and versions', () => {
             { id: '3', status: 'issued' },
         ]);
         expect(targets).toEqual([{ kind: 'page', id: '3' }]);
+    });
+});
+
+describe('proformaPrintRoute', () => {
+    it('points at the existing proforma invoice detail route with the print flag', () => {
+        expect(proformaPrintRoute('42')).toEqual({
+            path: '/proforma-invoices/42',
+            query: { print: '1' },
+        });
     });
 });

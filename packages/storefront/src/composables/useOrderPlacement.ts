@@ -13,6 +13,7 @@ import {
     METHOD_CODE_BY_FORM,
     placementMetadata,
     proformaDocumentUrl,
+    proformaPrintRoute,
     proformaPrintTargets,
     type ProformaInvoiceRef,
 } from '../utils/checkoutPolicy';
@@ -44,10 +45,7 @@ export function useOrderPlacement(): { place: () => Promise<void> } {
             const href =
                 target.kind === 'pdf'
                     ? target.url
-                    : router.resolve({
-                          path: `/proforma-proformas/${target.id}`,
-                          query: { print: '1' },
-                      }).href;
+                    : router.resolve(proformaPrintRoute(target.id)).href;
             window.open(href, '_blank');
         }
     }

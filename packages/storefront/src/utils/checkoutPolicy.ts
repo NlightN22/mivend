@@ -79,6 +79,10 @@ export function proformaPrintTargets(
         });
 }
 
+export function proformaPrintRoute(id: string): { path: string; query: { print: string } } {
+    return { path: `/proforma-invoices/${id}`, query: { print: '1' } };
+}
+
 // Mirror EXPECTED_AMOUNT_KEY and CARD_AMOUNT_CHANGED_CODE in `shared` (same runtime-import reason as above).
 export const EXPECTED_AMOUNT_KEY = 'expectedAmountKopecks';
 export const CARD_AMOUNT_CHANGED_CODE = 'CARD_AMOUNT_CHANGED';
