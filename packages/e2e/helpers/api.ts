@@ -84,3 +84,21 @@ export async function shopGql<T>(
     if (json.errors?.length) throw new Error(json.errors[0].message);
     return json.data;
 }
+
+export async function shopLoginCookie(username: string, password: string): Promise<string> {
+    const res = await fetch(`${SERVER_URL}/shop-api`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': E2E_API_USER_AGENT },
+        body: JSON.stringify({
+            query: `mutation($u: String!, $p: String!) { login(username: $u, password: $p) { __typename } }`,
+            variables: { u: username, p: password },
+        }),
+    });
+    const json = (await res.json()) as { data?: { login: { __typename: string } } };
+    if (json.data?.login.__typename !== 'CurrentUser')
+        throw new Error(`Shop login failed for ${username}`);
+    return res.headers
+        .getSetCookie()
+        .map(c => c.split(';')[0])
+        .join('; ');
+}

@@ -1,7 +1,7 @@
 import { chromium } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { adminGql, postBatch, waitForRun } from './helpers/api';
+import { adminGql, postBatch, shopGql, shopLoginCookie, waitForRun } from './helpers/api';
 import { adminTokenFor } from './helpers/api-tokens';
 import { loginAs } from './helpers/storefront-auth';
 import { loginAsManager } from './helpers/manager-auth';
@@ -205,11 +205,13 @@ export default async function globalSetup(): Promise<void> {
 
     // The order's branch (and so its stock allocation) is resolved from the customer's preferred
     // trading point at placement time.
-    await adminGql(
-        `mutation($input: UpdateCustomerInput!) { updateCustomer(input: $input) { __typename } }`,
-        { input: { id: customerId, customFields: { preferredTradingPointId } } },
-        adminToken,
+    const customerCookie = await shopLoginCookie(E2E_CUSTOMER.email, E2E_CUSTOMER.password);
+    const preferred = await shopGql<{ setPreferredTradingPoint: boolean }>(
+        `mutation($id: ID!) { setPreferredTradingPoint(tradingPointId: $id) }`,
+        { id: preferredTradingPointId },
+        customerCookie,
     );
+    if (!preferred.setPreferredTradingPoint) throw new Error('setPreferredTradingPoint failed');
 
     const order = await createConfirmedOrder(operatorToken, customerId, productVariantId);
     fs.writeFileSync(path.join(AUTH_DIR, 'e2e-order.json'), JSON.stringify(order));

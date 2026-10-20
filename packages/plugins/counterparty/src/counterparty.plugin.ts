@@ -139,12 +139,14 @@ const adminResolvers = [
             {
                 name: 'counterpartyId',
                 type: 'string' as const,
+                readonly: true,
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Counterparty ID' }],
             },
             {
                 name: 'portalRole',
                 type: 'string' as const,
+                readonly: true,
                 nullable: true,
                 defaultValue: 'buyer',
                 label: [{ languageCode: LanguageCode.en, value: 'Portal role' }],
@@ -152,6 +154,7 @@ const adminResolvers = [
             {
                 name: 'preferredTradingPointId',
                 type: 'string' as const,
+                readonly: true,
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Preferred trading point ID' }],
             },
