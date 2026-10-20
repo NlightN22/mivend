@@ -1,0 +1,27 @@
+query SettingsProfile {
+    activeCustomer {
+        id
+        firstName
+        lastName
+        phoneNumber
+        emailAddress
+    }
+}
+
+mutation UpdateCustomerForSettings($input: UpdateCustomerInput!) {
+    updateCustomer(input: $input) {
+        id
+    }
+}
+
+mutation UpdateCustomerPasswordForSettings($currentPassword: String!, $newPassword: String!) {
+    updateCustomerPassword(currentPassword: $currentPassword, newPassword: $newPassword) {
+        ... on Success {
+            success
+        }
+        ... on ErrorResult {
+            errorCode
+            message
+        }
+    }
+}

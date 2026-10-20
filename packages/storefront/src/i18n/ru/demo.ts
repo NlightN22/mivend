@@ -9,7 +9,6 @@ const ru: typeof en = {
             kirillNikitin: { name: 'Кирилл Никитин', initials: 'КН' },
             sergeyIvanov: { name: 'Сергей Иванов', initials: 'СИ' },
         },
-        position: 'Руководитель отдела закупок',
         points: {
             main: 'Основная точка обслуживания',
             north: 'Северный склад',

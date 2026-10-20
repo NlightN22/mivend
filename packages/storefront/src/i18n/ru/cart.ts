@@ -75,6 +75,9 @@ const ru: typeof en = {
         ORDER_PAYMENT_STATE_ERROR: 'Заказ ещё не готов к оплате',
         PAYMENT_FAILED_ERROR: 'Оплата не прошла',
         PAYMENT_DECLINED_ERROR: 'Оплата отклонена',
+        INVALID_CREDENTIALS_ERROR: 'Текущий пароль указан неверно',
+        PASSWORD_VALIDATION_ERROR: 'Новый пароль не соответствует требованиям',
+        NATIVE_AUTH_STRATEGY_ERROR: 'Вход по паролю для этой учётной записи недоступен',
     },
 };
 

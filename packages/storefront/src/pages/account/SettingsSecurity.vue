@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatDate } from '../../i18n/format';
 import { endSession, fetchMySessions, type SessionSummary } from '../../api/sessions';
+import { usePasswordChange } from './usePasswordChange';
 
 const { t } = useI18n();
 const sessions = ref<SessionSummary[]>([]);
@@ -29,7 +30,12 @@ async function handleEndSession(id: string) {
 }
 
 const showPasswordForm = ref(false);
-const passwordForm = ref({ current: '', next: '', confirm: '' });
+const {
+    form: passwordForm,
+    error: passwordError,
+    submitting: passwordSubmitting,
+    submit: submitPassword,
+} = usePasswordChange(() => (showPasswordForm.value = false));
 </script>
 
 <template>
@@ -50,25 +56,45 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
             </button>
         </div>
 
-        <div v-if="showPasswordForm" class="set-form set-form--narrow set-form--password">
+        <form
+            v-if="showPasswordForm"
+            class="set-form set-form--narrow set-form--password"
+            @submit.prevent="submitPassword"
+        >
             <label class="set-field set-field--wide">
                 <span>{{ $t('settings.security.currentPassword') }}</span>
-                <input v-model="passwordForm.current" type="password" />
+                <input
+                    v-model="passwordForm.current"
+                    type="password"
+                    autocomplete="current-password"
+                />
             </label>
             <label class="set-field">
                 <span>{{ $t('settings.security.newPassword') }}</span>
-                <input v-model="passwordForm.next" type="password" />
+                <input v-model="passwordForm.next" type="password" autocomplete="new-password" />
             </label>
             <label class="set-field">
                 <span>{{ $t('settings.security.confirmPassword') }}</span>
-                <input v-model="passwordForm.confirm" type="password" />
+                <input v-model="passwordForm.confirm" type="password" autocomplete="new-password" />
             </label>
             <div class="set-field set-field--wide">
-                <button class="set-btn set-btn--primary" style="width: fit-content">
-                    {{ $t('settings.security.updatePassword') }}
+                <div v-if="passwordError" class="set-password-error" role="alert">
+                    {{ passwordError }}
+                </div>
+                <button
+                    type="submit"
+                    class="set-btn set-btn--primary"
+                    style="width: fit-content"
+                    :disabled="passwordSubmitting"
+                >
+                    {{
+                        passwordSubmitting
+                            ? $t('settings.security.updating')
+                            : $t('settings.security.updatePassword')
+                    }}
                 </button>
             </div>
-        </div>
+        </form>
 
         <div class="set-sessions" :class="{ 'set-sessions--spaced': showPasswordForm }">
             <div v-if="sessionsError" class="set-session__note">{{ sessionsError }}</div>
@@ -111,6 +137,10 @@ const passwordForm = ref({ current: '', next: '', confirm: '' });
     margin-bottom: 4px;
     padding-bottom: 16px;
     border-bottom: 1px solid #edf2ef;
+}
+.set-password-error {
+    font-size: 13px;
+    color: #c0392b;
 }
 .set-sessions {
     display: grid;

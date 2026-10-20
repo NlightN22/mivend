@@ -4790,6 +4790,37 @@ export type PopularProductsQuery = {
     };
 };
 
+export type SettingsProfileQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SettingsProfileQuery = {
+    activeCustomer?: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        phoneNumber?: string | null;
+        emailAddress: string;
+    } | null;
+};
+
+export type UpdateCustomerForSettingsMutationVariables = Exact<{
+    input: UpdateCustomerInput;
+}>;
+
+export type UpdateCustomerForSettingsMutation = { updateCustomer: { id: string } };
+
+export type UpdateCustomerPasswordForSettingsMutationVariables = Exact<{
+    currentPassword: Scalars['String']['input'];
+    newPassword: Scalars['String']['input'];
+}>;
+
+export type UpdateCustomerPasswordForSettingsMutation = {
+    updateCustomerPassword:
+        | { errorCode: ErrorCode; message: string }
+        | { errorCode: ErrorCode; message: string }
+        | { errorCode: ErrorCode; message: string }
+        | { success: boolean };
+};
+
 export type ProductDetailQueryVariables = Exact<{
     slug: Scalars['String']['input'];
 }>;
@@ -5989,6 +6020,46 @@ export const PopularProductsDocument = new TypedDocumentString(`
     }
   }
 }`) as unknown as TypedDocumentString<PopularProductsQuery, PopularProductsQueryVariables>;
+export const SettingsProfileDocument = new TypedDocumentString(`
+    query SettingsProfile {
+  activeCustomer {
+    id
+    firstName
+    lastName
+    phoneNumber
+    emailAddress
+  }
+}
+    `) as unknown as TypedDocumentString<SettingsProfileQuery, SettingsProfileQueryVariables>;
+export const UpdateCustomerForSettingsDocument = new TypedDocumentString(`
+    mutation UpdateCustomerForSettings($input: UpdateCustomerInput!) {
+  updateCustomer(input: $input) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    UpdateCustomerForSettingsMutation,
+    UpdateCustomerForSettingsMutationVariables
+>;
+export const UpdateCustomerPasswordForSettingsDocument = new TypedDocumentString(`
+    mutation UpdateCustomerPasswordForSettings($currentPassword: String!, $newPassword: String!) {
+  updateCustomerPassword(
+    currentPassword: $currentPassword
+    newPassword: $newPassword
+  ) {
+    ... on Success {
+      success
+    }
+    ... on ErrorResult {
+      errorCode
+      message
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    UpdateCustomerPasswordForSettingsMutation,
+    UpdateCustomerPasswordForSettingsMutationVariables
+>;
 export const ProductDetailDocument = new TypedDocumentString(`
     query ProductDetail($slug: String!) {
   packagesOnlySales

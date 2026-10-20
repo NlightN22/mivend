@@ -7,7 +7,6 @@ export default {
             kirillNikitin: { name: 'Kirill Nikitin', initials: 'KN' },
             sergeyIvanov: { name: 'Sergey Ivanov', initials: 'SI' },
         },
-        position: 'Head of Purchasing',
         points: {
             main: 'Main service point',
             north: 'North depot',

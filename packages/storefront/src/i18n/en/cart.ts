@@ -73,5 +73,8 @@ export default {
         ORDER_PAYMENT_STATE_ERROR: 'The order is not ready for payment',
         PAYMENT_FAILED_ERROR: 'Payment failed',
         PAYMENT_DECLINED_ERROR: 'Payment was declined',
+        INVALID_CREDENTIALS_ERROR: 'Current password is incorrect',
+        PASSWORD_VALIDATION_ERROR: 'The new password does not meet the requirements',
+        NATIVE_AUTH_STRATEGY_ERROR: 'Password sign-in is not available for this account',
     },
 };
