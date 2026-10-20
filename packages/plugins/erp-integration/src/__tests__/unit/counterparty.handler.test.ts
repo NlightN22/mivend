@@ -64,10 +64,10 @@ describe('CounterpartyStreamHandler', () => {
             departmentId: undefined,
             assignedManagerId: undefined,
             managerErpId: undefined,
-            legalAddress: undefined,
-            factualAddress: undefined,
-            phone: undefined,
-            officialEmail: undefined,
+            legalAddress: null,
+            factualAddress: null,
+            phone: null,
+            officialEmail: null,
         });
     });
 
