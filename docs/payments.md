@@ -805,7 +805,8 @@ These are real, acknowledged gaps — not guessed at here, tracked for a future 
   disables its PaymentMethod row.
 - `online-stub` PaymentMethod is enabled by `OnlinePaymentPlugin`'s bootstrap only when
   `ONLINE_PAYMENT_STUB_ENABLED=true` (`apps/server/.env.central`; the staging-integration contour leaves
-  it unset, so it is disabled there).
+  it unset, so it is disabled there). Under `NODE_ENV=production` the flag is refused (logged error, method
+  disabled), so the stub never accepts payments in production.
 
 ### Target model: form of payment vs terms (issue #222, decided 2026-10-12, backend built in stages 1-2a)
 

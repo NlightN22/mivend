@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type {
     ChannelService,
     PaymentMethodService,
@@ -16,6 +16,10 @@ function createMockRepo() {
 }
 
 describe('OnlineStubBootstrapService', () => {
+    afterEach(() => {
+        vi.unstubAllEnvs();
+    });
+
     let repo: ReturnType<typeof createMockRepo>;
     let connection: { getRepository: (...args: unknown[]) => ReturnType<typeof createMockRepo> };
     let channelService: { getDefaultChannel: ReturnType<typeof vi.fn> };
@@ -90,5 +94,22 @@ describe('OnlineStubBootstrapService', () => {
     it('swallows a provisioning failure rather than crashing bootstrap', async () => {
         repo.findOne.mockRejectedValue(new Error('db down'));
         await expect(service.onApplicationBootstrap()).resolves.toBeUndefined();
+    });
+
+    it('refuses to enable the stub under NODE_ENV=production and disables an existing one', async () => {
+        vi.stubEnv('NODE_ENV', 'production');
+        repo.findOne.mockResolvedValue({ id: 1, code: ONLINE_STUB_METHOD_CODE, enabled: true });
+        await service.onApplicationBootstrap();
+        expect(paymentMethodService.update).toHaveBeenCalledWith(expect.anything(), {
+            id: 1,
+            enabled: false,
+        });
+    });
+
+    it('does not create the stub under NODE_ENV=production', async () => {
+        vi.stubEnv('NODE_ENV', 'production');
+        repo.findOne.mockResolvedValue(null);
+        await service.onApplicationBootstrap();
+        expect(paymentMethodService.create).not.toHaveBeenCalled();
     });
 });
