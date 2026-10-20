@@ -419,8 +419,15 @@ export class TradingPointService {
     }
 
     async setPreferred(ctx: RequestContext, customerId: ID, tradingPointId: ID): Promise<void> {
-        const tp = await this.findById(ctx, tradingPointId);
-        if (!tp) throw new UserInputError(`TradingPoint not found: id=${tradingPointId}`);
+        const rows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
+            `SELECT tp.id FROM trading_point tp
+             JOIN customer cu ON tp."counterpartyId"::text = cu."customFieldsCounterpartyid"::text
+             WHERE cu.id = $1 AND tp.id::text = $2 AND tp."isActive" AND tp."customerStatus" = 'active'`,
+            [customerId, String(tradingPointId)],
+        );
+        if (!rows[0]) throw new UserInputError(`TradingPoint not found or access denied`);
         await this.customerService.update(ctx, {
             id: customerId,
             customFields: { preferredTradingPointId: String(tradingPointId) } as Record<

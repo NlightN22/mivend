@@ -41,3 +41,35 @@ describe('TradingPointService.getPreferredForCustomer', () => {
         expect(await service.getPreferredForCustomer({} as RequestContext, 99)).toBeNull();
     });
 });
+
+describe('TradingPointService.setPreferred', () => {
+    const update = vi.fn();
+    let service: TradingPointService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        service = new TradingPointService(
+            connection as unknown as TransactionalConnection,
+            { update } as unknown as CustomerService,
+            {} as never,
+            {} as never,
+            {} as never,
+        );
+    });
+
+    it("stores a visible point of the customer's own counterparty", async () => {
+        rawQuery.mockResolvedValue([{ id: '7' }]);
+        await service.setPreferred({} as RequestContext, 2, 7);
+        expect(rawQuery.mock.calls[0][1]).toEqual([2, '7']);
+        expect(update).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ id: 2, customFields: { preferredTradingPointId: '7' } }),
+        );
+    });
+
+    it('rejects a point outside the visible set and changes nothing', async () => {
+        rawQuery.mockResolvedValue([]);
+        await expect(service.setPreferred({} as RequestContext, 2, 9)).rejects.toThrow();
+        expect(update).not.toHaveBeenCalled();
+    });
+});
