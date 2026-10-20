@@ -109,6 +109,7 @@ export type { ProductMainCardsLabels } from './components/MvProductMainCards/MvP
 
 export { default as MvStockBadge } from './components/MvStockBadge/MvStockBadge.vue';
 export { default as MvErrorState } from './components/MvErrorState/MvErrorState.vue';
+export { default as MvNotImplemented } from './components/MvNotImplemented/MvNotImplemented.vue';
 export {
     STOCK_VARIANT_LABELS,
     type StockBadgeLabels,

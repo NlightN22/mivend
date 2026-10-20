@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { MvNotImplemented } from '@mivend/ui-kit';
 import { useI18n } from 'vue-i18n';
 import AccountSidebar from '../account/AccountSidebar.vue';
 
@@ -11,7 +12,10 @@ const { t } = useI18n();
 
         <section class="acts-page__content">
             <h1 class="acts-page__title">{{ t('settlements.acts.title') }}</h1>
-            <p class="acts-page__note">{{ t('settlements.acts.notImplemented') }}</p>
+            <MvNotImplemented
+                :title="t('common.notImplemented.title')"
+                :message="t('common.notImplemented.message')"
+            />
         </section>
     </div>
 </template>
@@ -28,16 +32,10 @@ const { t } = useI18n();
 }
 
 .acts-page__title {
-    margin: 0 0 6px;
+    margin: 0 0 20px;
     font-size: clamp(32px, 3vw, 44px);
     line-height: 1;
     letter-spacing: -0.055em;
-}
-
-.acts-page__note {
-    margin: 0;
-    color: #66736e;
-    font-size: 14px;
 }
 
 @media (max-width: 960px) {

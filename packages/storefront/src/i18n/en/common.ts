@@ -3,6 +3,10 @@ export default {
         loading: 'Loading...',
         error: 'Something went wrong',
         retry: 'Retry',
+        notImplemented: {
+            title: 'Not implemented yet',
+            message: 'This section is under development and will be available soon.',
+        },
         save: 'Save',
         cancel: 'Cancel',
         language: 'Language',

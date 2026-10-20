@@ -5,6 +5,10 @@ const ru: typeof en = {
         loading: 'Загрузка...',
         error: 'Произошла ошибка',
         retry: 'Повторить',
+        notImplemented: {
+            title: 'Пока не реализовано',
+            message: 'Раздел в разработке и скоро станет доступен.',
+        },
         save: 'Сохранить',
         cancel: 'Отмена',
         language: 'Язык',

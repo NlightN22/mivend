@@ -91,7 +91,7 @@ export default {
             status: 'Status',
             orders: '{n} order | {n} orders',
         },
-        acts: { title: 'Reconciliation acts', notImplemented: 'Not implemented yet.' },
+        acts: { title: 'Reconciliation acts' },
     },
     datePicker: {
         placeholder: 'DD.MM.YYYY',

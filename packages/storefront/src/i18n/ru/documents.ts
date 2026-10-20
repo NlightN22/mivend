@@ -92,7 +92,7 @@ const ru: typeof en = {
             status: 'Статус',
             orders: '{n} заказ | {n} заказа | {n} заказов',
         },
-        acts: { title: 'Акты сверки', notImplemented: 'Пока не реализовано.' },
+        acts: { title: 'Акты сверки' },
     },
     datePicker: {
         placeholder: 'ДД.ММ.ГГГГ',
