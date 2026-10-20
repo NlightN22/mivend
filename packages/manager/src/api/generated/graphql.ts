@@ -1274,12 +1274,6 @@ export type CreateCountryInput = {
     translations: Array<CountryTranslationInput>;
 };
 
-export type CreateCustomerCustomFieldsInput = {
-    counterpartyId?: InputMaybe<Scalars['String']['input']>;
-    portalRole?: InputMaybe<Scalars['String']['input']>;
-    preferredTradingPointId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type CreateCustomerGroupInput = {
     customFields?: InputMaybe<Scalars['JSON']['input']>;
     customerIds?: InputMaybe<Array<Scalars['ID']['input']>>;
@@ -1287,7 +1281,7 @@ export type CreateCustomerGroupInput = {
 };
 
 export type CreateCustomerInput = {
-    customFields?: InputMaybe<CreateCustomerCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     emailAddress: Scalars['String']['input'];
     firstName: Scalars['String']['input'];
     lastName: Scalars['String']['input'];
@@ -7588,6 +7582,8 @@ export type Query = {
     variantReservationHolders: Array<VariantReservationHolder>;
     /** How many variants reference a unit that has not arrived (soft link, issue #200). */
     variantUnitHealth: VariantUnitHealth;
+    /** Administrators the caller may pick in a grant: everyone for ManageAccessControl, else their team and granted managers. */
+    visibilityGrantCandidates: Array<VisibilityCandidate>;
     visibilityGrants: VisibilityGrantPage;
     visibleOrders: OrderList;
     /** Manager-portal payment list — derived-from-ProformaInvoice scoping, see PaymentVisibilityService. */
@@ -9449,12 +9445,6 @@ export type UpdateCountryInput = {
     translations?: InputMaybe<Array<CountryTranslationInput>>;
 };
 
-export type UpdateCustomerCustomFieldsInput = {
-    counterpartyId?: InputMaybe<Scalars['String']['input']>;
-    portalRole?: InputMaybe<Scalars['String']['input']>;
-    preferredTradingPointId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type UpdateCustomerGroupInput = {
     customFields?: InputMaybe<Scalars['JSON']['input']>;
     id: Scalars['ID']['input'];
@@ -9462,7 +9452,7 @@ export type UpdateCustomerGroupInput = {
 };
 
 export type UpdateCustomerInput = {
-    customFields?: InputMaybe<UpdateCustomerCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     emailAddress?: InputMaybe<Scalars['String']['input']>;
     firstName?: InputMaybe<Scalars['String']['input']>;
     id: Scalars['ID']['input'];
@@ -9803,6 +9793,12 @@ export type VariantUnitHealth = {
     total: Scalars['Int']['output'];
     /** Of those, variants whose unit has not arrived on the unit stream (unit fields stay empty until it does). */
     unitMissing: Scalars['Int']['output'];
+};
+
+export type VisibilityCandidate = {
+    firstName: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    lastName: Scalars['String']['output'];
 };
 
 /** A grant of one more manager's clients to an administrator; status is active | scheduled | expired | revoked. */
@@ -12578,7 +12574,7 @@ export type VisibilityGrantsQuery = {
 export type VisibilityGrantPickersQueryVariables = Exact<{ [key: string]: never }>;
 
 export type VisibilityGrantPickersQuery = {
-    teamMembers: Array<{ id: string; firstName: string; lastName: string }>;
+    visibilityGrantCandidates: Array<{ id: string; firstName: string; lastName: string }>;
 };
 
 export type GrantManagerVisibilityMutationVariables = Exact<{
@@ -16001,7 +15997,7 @@ export const VisibilityGrantsDocument = new TypedDocumentString(`
 }`) as unknown as TypedDocumentString<VisibilityGrantsQuery, VisibilityGrantsQueryVariables>;
 export const VisibilityGrantPickersDocument = new TypedDocumentString(`
     query VisibilityGrantPickers {
-  teamMembers {
+  visibilityGrantCandidates {
     id
     firstName
     lastName

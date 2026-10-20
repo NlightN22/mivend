@@ -59,7 +59,7 @@ export interface AdministratorOption {
 
 export async function fetchAdministratorOptions(): Promise<AdministratorOption[]> {
     const result = await adminApi(VisibilityGrantPickersDocument);
-    return result.teamMembers.map(a => ({
+    return result.visibilityGrantCandidates.map(a => ({
         value: a.id,
         label: `${a.firstName} ${a.lastName}`.trim(),
     }));

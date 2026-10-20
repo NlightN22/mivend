@@ -141,13 +141,19 @@ export const router = createRouter({
                     path: 'settings/visibility-grants',
                     name: 'settings-visibility-grants',
                     component: () => import('../pages/settings/VisibilityGrantsPage.vue'),
-                    meta: { requiresAuth: true },
+                    meta: {
+                        requiresAuth: true,
+                        requiresAnyPermission: ['ManageVisibilityGrants', 'ManageAccessControl'],
+                    },
                 },
                 {
                     path: 'settings/unsorted',
                     name: 'settings-unsorted',
                     component: () => import('../pages/settings/UnsortedPage.vue'),
-                    meta: { requiresAuth: true },
+                    meta: {
+                        requiresAuth: true,
+                        requiresAnyPermission: ['ManageVisibilityGrants', 'ManageAccessControl'],
+                    },
                 },
                 {
                     path: 'settings/organizations',
@@ -210,6 +216,13 @@ export const router = createRouter({
     ],
 });
 
+function isMissingPermission(
+    required: unknown,
+    authStore: { hasPermission: (name: string) => boolean },
+): boolean {
+    return Array.isArray(required) && !required.some(name => authStore.hasPermission(String(name)));
+}
+
 router.beforeEach(async (to, _from, next) => {
     const authStore = useAuthStore();
     await authStore.init();
@@ -217,6 +230,8 @@ router.beforeEach(async (to, _from, next) => {
     // exhausted) proceeds so a prolonged outage never bounces a valid session to login.
     if (to.meta.requiresAuth && authStore.authStatus === 'unauthenticated') {
         next({ path: '/login', query: { redirect: to.fullPath } });
+    } else if (isMissingPermission(to.meta.requiresAnyPermission, authStore)) {
+        next({ path: '/' });
     } else {
         next();
     }

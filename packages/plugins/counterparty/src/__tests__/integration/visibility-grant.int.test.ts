@@ -1,5 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, DeleteDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    Column,
+    DataSource,
+    DeleteDateColumn,
+    Entity,
+    IsNull,
+    PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Administrator } from '@vendure/core';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import {
@@ -251,6 +258,31 @@ describe('grant and revoke against concurrent writers and readers (real Postgres
         granteeAdministratorId: adminIds.viewer,
         managerAdministratorId: adminIds.m7,
         reason: 'race',
+    });
+
+    it('re-grants the same manager after an expiry and after a revoke', async () => {
+        await insertGrant({ validTo: new Date(Date.now() - DAY) });
+        await expect(grants.grant(ctx, input())).resolves.toBeDefined();
+        const [open] = await dataSource
+            .getRepository(TestGrant)
+            .find({ where: { validTo: IsNull(), revokedAt: IsNull() } });
+        await grants.revoke(ctx, open.id);
+        await expect(grants.grant(ctx, input())).resolves.toBeDefined();
+    });
+
+    it('still rejects a genuinely overlapping grant', async () => {
+        await insertGrant({ validTo: new Date(Date.now() + DAY) });
+        await expect(grants.grant(ctx, input())).rejects.toThrow(/overlapping/);
+    });
+
+    it('two concurrent re-grants after an expiry leave exactly one new row', async () => {
+        await insertGrant({ validTo: new Date(Date.now() - DAY) });
+        const results = await Promise.allSettled([
+            grants.grant(ctx, input()),
+            grants.grant(ctx, input()),
+        ]);
+        expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+        expect(await dataSource.getRepository(TestGrant).count()).toBe(2);
     });
 
     it('two identical grants at once leave exactly one row and one audit entry', async () => {

@@ -167,6 +167,7 @@ export class VisibilityGrantService {
             .where('g.granteeAdministratorId = :grantee', { grantee })
             .andWhere("g.subjectKind = 'manager' AND g.subjectRef = :manager", { manager })
             .andWhere('g.revokedAt IS NULL')
+            .andWhere('(g.validTo IS NULL OR g.validTo > :now)', { now: new Date() })
             .andWhere(
                 `COALESCE(g.validFrom, '-infinity'::timestamp) < COALESCE(CAST(:to AS timestamp), 'infinity'::timestamp)`,
                 { to: validTo },

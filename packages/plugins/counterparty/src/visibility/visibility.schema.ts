@@ -27,6 +27,12 @@ export const visibilitySchema: DocumentNode = gql`
         totalItems: Int!
     }
 
+    type VisibilityCandidate {
+        id: ID!
+        firstName: String!
+        lastName: String!
+    }
+
     type UnsortedAdministrator {
         id: ID!
         firstName: String!
@@ -54,6 +60,8 @@ export const visibilitySchema: DocumentNode = gql`
             take: Int
             skip: Int
         ): VisibilityGrantPage!
+        "Administrators the caller may pick in a grant: everyone for ManageAccessControl, else their team and granted managers."
+        visibilityGrantCandidates: [VisibilityCandidate!]!
         unsortedCounterparties(take: Int, skip: Int, search: String): UnsortedCounterpartyPage!
         unsortedAdministrators(take: Int, skip: Int): UnsortedAdministratorPage!
     }

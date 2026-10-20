@@ -31,6 +31,19 @@ export class VisibilityResolver {
 
     @Query()
     @Allow(MANAGE, MANAGE_ACCESS)
+    async visibilityGrantCandidates(
+        @Ctx() ctx: RequestContext,
+    ): Promise<Array<{ id: string; firstName: string; lastName: string }>> {
+        const admins = await this.query.findCandidates(ctx);
+        return admins.map(a => ({
+            id: String(a.id),
+            firstName: a.firstName,
+            lastName: a.lastName,
+        }));
+    }
+
+    @Query()
+    @Allow(MANAGE, MANAGE_ACCESS)
     unsortedCounterparties(
         @Ctx() ctx: RequestContext,
         @Args() args: { take?: number; skip?: number; search?: string },

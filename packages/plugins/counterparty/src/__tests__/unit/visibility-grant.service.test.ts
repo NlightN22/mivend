@@ -15,7 +15,7 @@ function setup(options: {
     const saved: Array<Record<string, unknown>> = [];
     const qb = {
         where: () => qb,
-        andWhere: () => qb,
+        andWhere: vi.fn((..._args: unknown[]) => qb),
         getCount: vi.fn().mockResolvedValue(0),
     };
     const repo = {
@@ -120,6 +120,13 @@ describe('VisibilityGrantService.grant', () => {
         const { service, ctx, saved } = setup({ unrestricted: true });
         await expect(service.grant(ctx, input(over))).rejects.toBeInstanceOf(UserInputError);
         expect(saved).toHaveLength(0);
+    });
+
+    it('ignores expired grants in the overlap check', async () => {
+        const { service, ctx, qb } = setup({ unrestricted: true });
+        await service.grant(ctx, input());
+        const clauses = qb.andWhere.mock.calls.map(c => String(c[0]));
+        expect(clauses).toContain('(g.validTo IS NULL OR g.validTo > :now)');
     });
 
     it('rejects an overlapping grant of the same manager', async () => {

@@ -162,3 +162,37 @@ describe('external orders in the manager order list (real Postgres)', () => {
         expect(await visibleCodes()).toEqual(['EXT-B']);
     });
 });
+
+describe('granted managers in the order scope SQL (#123, real Postgres)', () => {
+    it('a branch-scoped caller sees the orders of a granted manager outside the branch', async () => {
+        scope = {
+            kind: 'department',
+            branchId: 'branch-b',
+            administratorId: 'admin-9',
+            grantedManagerIds: ['admin-1'],
+        };
+        expect(await visibleCodes()).toEqual(['EXT-A', 'EXT-B']);
+    });
+
+    it('a manager that is not granted stays hidden', async () => {
+        scope = {
+            kind: 'department',
+            branchId: 'branch-b',
+            administratorId: 'admin-9',
+            grantedManagerIds: ['admin-7'],
+        };
+        expect(await visibleCodes()).toEqual(['EXT-B']);
+    });
+
+    it('the caller sees their own clients outside the branch', async () => {
+        scope = { kind: 'department', branchId: 'branch-b', administratorId: 'admin-1' };
+        expect(await visibleCodes()).toEqual(['EXT-A', 'EXT-B']);
+    });
+
+    it('an own-scoped caller gains exactly the granted manager', async () => {
+        scope = { kind: 'own', administratorId: 'admin-3', grantedManagerIds: ['admin-1'] };
+        expect(await visibleCodes()).toEqual(['EXT-A']);
+        scope = { kind: 'own', administratorId: 'admin-3', grantedManagerIds: [] };
+        expect(await visibleCodes()).toEqual([]);
+    });
+});

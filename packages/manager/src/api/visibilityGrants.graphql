@@ -23,7 +23,7 @@ query VisibilityGrants($status: String, $search: String, $take: Int, $skip: Int)
 }
 
 query VisibilityGrantPickers {
-    teamMembers {
+    visibilityGrantCandidates {
         id
         firstName
         lastName

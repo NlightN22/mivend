@@ -11,6 +11,7 @@ import {
     CustomPermission,
     TeamAdministratorService,
     VisibilityGrant,
+    VisibilityGrantReader,
 } from '@mivend/plugin-access-control';
 
 export type VisibilityGrantStatus = 'active' | 'scheduled' | 'expired' | 'revoked';
@@ -44,6 +45,7 @@ export interface VisibilityGrantListArgs {
 }
 
 const MAX_TAKE = 100;
+const CANDIDATE_LIMIT = 500;
 const ADMIN_MATCH = `(a."firstName" || ' ' || a."lastName") ILIKE :term OR a."emailAddress" ILIKE :term`;
 
 export function grantStatus(row: VisibilityGrant, now: Date): VisibilityGrantStatus {
@@ -83,6 +85,7 @@ export class VisibilityGrantQueryService {
         private connection: TransactionalConnection,
         private administratorService: AdministratorService,
         private teamService: TeamAdministratorService,
+        private reader: VisibilityGrantReader,
     ) {}
 
     async findPage(
@@ -142,6 +145,23 @@ export class VisibilityGrantQueryService {
             createdAt: row.createdAt,
             status: grantStatus(row, now),
         }));
+    }
+
+    // Same rule as the writer: everyone for ManageAccessControl, else the caller's team and own granted managers.
+    async findCandidates(ctx: RequestContext): Promise<Administrator[]> {
+        const repo = this.connection.getRepository(ctx, Administrator);
+        if (ctx.userHasPermissions([CustomPermission.ManageAccessControl.Permission])) {
+            return repo.find({ order: { id: 'ASC' }, take: CANDIDATE_LIMIT });
+        }
+        const actor = ctx.activeUserId
+            ? await this.administratorService.findOneByUserId(ctx, ctx.activeUserId)
+            : undefined;
+        const team = await this.teamService.findTeam(ctx);
+        const granted = actor ? await this.reader.activeManagerIds(ctx, String(actor.id)) : [];
+        const known = new Set(team.map(a => String(a.id)));
+        const extra = granted.filter(id => !known.has(id));
+        const grantedAdmins = extra.length ? await repo.find({ where: { id: In(extra) } }) : [];
+        return [...team, ...grantedAdmins];
     }
 
     // Read back after a write by the writer itself, so no caller restriction applies.
