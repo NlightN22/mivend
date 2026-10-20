@@ -90,7 +90,8 @@ Read the **`storefront-rules`** skill in full before implementing. Highlights:
 - Pages are thin — logic goes in composables/stores, never in `pages/`.
 - Never edit `src/api/generated/` — run codegen after changing `.graphql` files.
 - All GraphQL operations typed via codegen, no raw string queries.
-- No hardcoded UI strings — `$t('key')` from vue-i18n, strings in `src/i18n/ru.ts`.
+- No hardcoded UI strings — `$t('key')` from vue-i18n, strings in `src/i18n/{en,ru}/*.ts`
+  (Step 6 audits it).
 - `ElTableV2` (via ui-kit) for any list that may exceed 100 rows; plain `ElTable` only for short
   static lists.
 - One Pinia store per domain; stores don't import each other.
@@ -120,6 +121,22 @@ changed files against it:
 - run the audit grep from that doc and explain or fix every hit in the files you touched;
 - hover the element in a real browser (Playwright `hover()` + computed `background-color`) — a
   screenshot alone does not show hover.
+
+## Step 6 — two-language audit (mandatory, storefront and ui-kit)
+
+The lint rule `no-raw-text` sees only template text, so check every changed file by hand:
+
+- every user-visible string has a key in both `src/i18n/en/*.ts` and `src/i18n/ru/*.ts` — template
+  text, but also strings in `<script>`, stores, composables, utils, toasts, aria-labels,
+  placeholders, `title`/`alt`, option labels, status/role labels mapped from codes, and demo data;
+- counts use plural keys (`'{n} item | {n} items'`, three ru forms), never string concatenation;
+- dates, numbers and money go through `src/i18n/format.ts`, never `toLocale*`/`Intl` with a fixed locale;
+- server errors are shown by `errorCode` (`utils/shopErrorMessage.ts`), never the raw message;
+- a new ui-kit text is a prop with an English default; storefront passes the translation, and
+  manager (no vue-i18n, Russian UI) passes its Russian text explicitly so its screens don't change;
+- DB data (product, brand, category, trading point names) is shown as is, never translated;
+- switch the language in the header and screenshot the changed screens in EN and RU: no text
+  stays in the other language.
 
 ## What this skill does not cover
 
