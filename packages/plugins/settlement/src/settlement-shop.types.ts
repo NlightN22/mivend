@@ -6,6 +6,7 @@ export interface SettlementDocumentFilter {
     search?: string | null;
     category?: string | null;
     overdueOnly?: boolean | null;
+    unpaidOnly?: boolean | null;
 }
 
 export interface SettlementOrderRef {
@@ -30,6 +31,7 @@ export interface SettlementDocumentRow {
     amount: number;
     dueDate: Date | null;
     paymentStatus: string | null;
+    openAmount: number | null;
     orders: SettlementOrderRef[];
 }
 

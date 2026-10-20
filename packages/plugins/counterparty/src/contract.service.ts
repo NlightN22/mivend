@@ -106,6 +106,21 @@ export class ContractService {
         });
     }
 
+    // Settlement shows only isCustomerContract IS TRUE contracts; null is never a customer contract.
+    async findActiveCustomerContracts(
+        ctx: RequestContext,
+        counterpartyId: ID,
+    ): Promise<Contract[]> {
+        return this.connection.getRepository(ctx, Contract).find({
+            where: {
+                counterpartyId: String(counterpartyId),
+                isActive: true,
+                isCustomerContract: true,
+            },
+            order: { name: 'ASC', erpId: 'ASC' },
+        });
+    }
+
     async resolveOrderContract(
         ctx: RequestContext,
         counterparty: { id: ID; mainContractId: string | null },

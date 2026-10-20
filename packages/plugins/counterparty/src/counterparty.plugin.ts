@@ -59,8 +59,11 @@ import { adminApiSchema } from './counterparty.schema';
 import { visibilityBundle } from './visibility/visibility.bundle';
 import { visibilitySchema } from './visibility/visibility.schema';
 import { shopApiSchema } from './trading-point.schema';
+import { myContractsSchema } from './my-contracts.schema';
+import { MyContractsResolver } from './my-contracts.resolver';
 
 const shopResolvers = [
+    MyContractsResolver,
     CustomerCounterpartyResolver,
     CustomerTradingPointResolver,
     CounterpartyTradingPointResolver,
@@ -99,7 +102,10 @@ const adminResolvers = [
     ],
     entities: [Counterparty, TradingPoint, ContactPerson, CounterpartyTeamMember, Contract],
     shopApiExtensions: {
-        schema: shopApiSchema,
+        schema: gql`
+            ${shopApiSchema}
+            ${myContractsSchema}
+        `,
         resolvers: shopResolvers,
     },
     adminApiExtensions: {

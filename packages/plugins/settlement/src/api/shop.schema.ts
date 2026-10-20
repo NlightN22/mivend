@@ -23,6 +23,8 @@ export const shopApiExtensions = gql`
         amount: Money!
         dueDate: DateTime
         paymentStatus: String
+        "Still owed on this entry (FIFO); null when the contract has no balance fact."
+        openAmount: Money
         orders: [SettlementOrderRef!]!
     }
 
@@ -50,6 +52,7 @@ export const shopApiExtensions = gql`
         search: String
         category: String
         overdueOnly: Boolean
+        unpaidOnly: Boolean
     }
 
     extend type Query {

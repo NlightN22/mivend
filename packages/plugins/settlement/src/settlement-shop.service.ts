@@ -103,6 +103,7 @@ export class SettlementShopService {
         }
         if (filter.category) where.push(`${CATEGORY_SQL} = ${bind(filter.category)}`);
         if (filter.overdueOnly) where.push('aged.open > 0 AND aged.due < now()');
+        if (filter.unpaidOnly) where.push('aged.open > 0');
         const from = `FROM settlement_document_entry e
             JOIN settlement_document d ON d.id = e."documentId"
             JOIN settlement_document_type t ON t."documentType" = d."documentType" AND NOT t."isDeleted"
@@ -166,6 +167,7 @@ export class SettlementShopService {
             amount,
             dueDate,
             paymentStatus: paymentStatusOf(amount, r.hasBalance ? open : null, dueDate, now),
+            openAmount: r.hasBalance ? open : null,
             orders,
         };
     }

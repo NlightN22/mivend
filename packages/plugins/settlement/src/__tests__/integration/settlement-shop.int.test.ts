@@ -198,6 +198,8 @@ describe('settlement shop queries (real Postgres)', () => {
         expect(card).toMatchObject({ currentBalance: 60000, overdue: 60000, currency: 'RUB' });
         const overdue = await shop.documents(ctx, '1', { overdueOnly: true }, 0, 20);
         expect(overdue.items.map(i => i.number)).toEqual(['1']);
+        const unpaid = await shop.documents(ctx, '1', { unpaidOnly: true }, 0, 20);
+        expect(unpaid.items.map(i => [i.number, i.openAmount])).toEqual([['1', 60000]]);
     });
 
     it('takes the payment term from the counterparty and never invents a zero term', async () => {
