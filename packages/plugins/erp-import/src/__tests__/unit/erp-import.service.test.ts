@@ -125,6 +125,9 @@ describe('ErpImportService', () => {
                 typeof import('../../handlers/branch.handler').BranchHandler
             >,
             makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/department-branch.handler').DepartmentBranchHandler
+            >,
+            makeHandler() as unknown as InstanceType<
                 typeof import('../../handlers/employee.handler').EmployeeHandler
             >,
             makeHandler() as unknown as InstanceType<
@@ -255,6 +258,9 @@ describe('ErpImportService', () => {
             >,
             makeHandler() as unknown as InstanceType<
                 typeof import('../../handlers/branch.handler').BranchHandler
+            >,
+            makeHandler() as unknown as InstanceType<
+                typeof import('../../handlers/department-branch.handler').DepartmentBranchHandler
             >,
             makeHandler() as unknown as InstanceType<
                 typeof import('../../handlers/employee.handler').EmployeeHandler

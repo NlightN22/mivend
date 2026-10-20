@@ -2,6 +2,11 @@
 
 Updated: 2026-10-20 10:00
 
+## #65 department -> branch mapping (2026-10-20, implemented; audit and `make test-int` pending)
+- `department_branch_mapping` table (staff-edited, subtree inheritance) + `Counterparty.branchOverrideId`; migration `1791528000000`. `BranchAssignmentService` (access-control) is the only writer of `Administrator.customFields.branchId` and `Counterparty.branchId`, under the global advisory lock `branch-assignment`, central only; backstop task every 15 min. Rules and triggers: `docs/access-control.md` "Automatic branch assignment (#65)".
+- `createAdministratorFromErpUser` refuses an unmapped department; manager portal Settings > "Departments to branch" (`/settings/department-branch`); dev seed record type `departmentBranch`. Legacy `upsertCounterparty(branchId)` and the e2e global-setup still write `Counterparty.branchId` directly (to be folded in or removed).
+- Staging-integration needs the migration applied before its server (shared plugin dist) touches the new column/table.
+
 ## #216 storefront i18n (2026-10-19..20, DONE: audited 2 rounds, pushed, closed; follow-ups #260, #261)
 - Storefront locales en (default + fallback) and ru; resolution saved (localStorage) → browser → en; header `MvLanguageSwitcher` (flag-icons 7.5.0 via the locale region, en = en-GB; names via `Intl.DisplayNames`). Typed per-domain catalogues `packages/storefront/src/i18n/{en,ru}/*.ts` (en is the key type), ru lazy-loaded, Russian plural rules, `setLocale` guarded by a request counter.
 - One formatter `i18n/format.ts`: money always two fraction digits (RUB-only, deliberate), dates/numbers per locale; ui-kit `MvAmountDisplay` takes it via `AMOUNT_FORMATTER`.

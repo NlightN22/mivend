@@ -15,7 +15,9 @@ describe('AdministratorLinkedListener', () => {
         const counterpartyService = {
             backfillAssignedManager: vi.fn(),
         } as unknown as CounterpartyService;
-        const listener = new AdministratorLinkedListener(eventBus, counterpartyService);
+        const listener = new AdministratorLinkedListener(eventBus, counterpartyService, {
+            assignCounterparties: vi.fn(),
+        } as never);
 
         listener.onApplicationBootstrap();
 
@@ -26,7 +28,9 @@ describe('AdministratorLinkedListener', () => {
         const eventBus = { ofType: vi.fn() } as unknown as EventBus;
         const backfillAssignedManager = vi.fn().mockResolvedValue(2);
         const counterpartyService = { backfillAssignedManager } as unknown as CounterpartyService;
-        const listener = new AdministratorLinkedListener(eventBus, counterpartyService);
+        const listener = new AdministratorLinkedListener(eventBus, counterpartyService, {
+            assignCounterparties: vi.fn(),
+        } as never);
 
         const event = new AdministratorLinkedEvent(ctx, 'user-erp-1', 'admin-1');
         await (

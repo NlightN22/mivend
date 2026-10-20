@@ -51,6 +51,10 @@ export class Counterparty extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     branchId!: string | null;
 
+    // Manual branch pick; BranchAssignmentService (access-control) never overwrites it and writes branchId from it.
+    @Column({ type: 'varchar', nullable: true })
+    branchOverrideId!: string | null;
+
     // Display and filtering only; never used for access control or business rules.
     // ERP's 'group' meaning is inconsistent (department, manager, or function), so kept opaque.
     @Column({ type: 'varchar', nullable: true })

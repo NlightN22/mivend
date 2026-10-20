@@ -4,6 +4,7 @@ import type { EventBus, RequestContext, TransactionalConnection } from '@vendure
 import type { AdministratorActivationService } from '../../administrator-activation.service';
 import type { ErpUserService } from '../../erp-user.service';
 import { AdministratorLinkedEvent } from '../../administrator-linked.event';
+import type { BranchAssignmentService } from '../../branch-assignment.service';
 import { UserEnrichmentService } from '../../user-enrichment.service';
 
 function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
@@ -24,6 +25,10 @@ describe('UserEnrichmentService', () => {
     };
     let administratorActivationService: { syncFromErp: ReturnType<typeof vi.fn> };
     let eventBus: { publish: ReturnType<typeof vi.fn> };
+    let branchAssignment: {
+        assignAdministrator: ReturnType<typeof vi.fn>;
+        assignCounterparties: ReturnType<typeof vi.fn>;
+    };
     const ctx = {} as unknown as RequestContext;
 
     beforeEach(() => {
@@ -32,11 +37,13 @@ describe('UserEnrichmentService', () => {
         erpUserService = { upsert: vi.fn(), markLinked: vi.fn(), findByErpId: vi.fn() };
         administratorActivationService = { syncFromErp: vi.fn() };
         eventBus = { publish: vi.fn() };
+        branchAssignment = { assignAdministrator: vi.fn(), assignCounterparties: vi.fn() };
         service = new UserEnrichmentService(
             connection as unknown as TransactionalConnection,
             erpUserService as unknown as ErpUserService,
             administratorActivationService as unknown as AdministratorActivationService,
             eventBus as unknown as EventBus,
+            branchAssignment as unknown as BranchAssignmentService,
         );
     });
 

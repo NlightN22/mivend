@@ -13,6 +13,7 @@ export { OrganizationRequisitesRecordDto } from './organization-requisites-recor
 export { DepartmentRecordDto } from './department-record.dto';
 export { PositionRecordDto } from './position-record.dto';
 export { BranchRecordDto } from './branch-record.dto';
+export { DepartmentBranchRecordDto } from './department-branch-record.dto';
 export { EmployeeRecordDto } from './employee-record.dto';
 export { ContractRecordDto } from './contract-record.dto';
 export { OrderStatusRecordDto } from './order-status-record.dto';

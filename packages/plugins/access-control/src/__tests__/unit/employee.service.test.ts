@@ -9,6 +9,7 @@ import type {
 } from '@vendure/core';
 
 import { EmployeeService } from '../../employee.service';
+import type { BranchAssignmentService } from '../../branch-assignment.service';
 import type { ErpUserService } from '../../erp-user.service';
 
 function createMockAdministratorService(): Record<string, ReturnType<typeof vi.fn>> {
@@ -55,6 +56,7 @@ describe('EmployeeService', () => {
     let administratorService: ReturnType<typeof createMockAdministratorService>;
     let roleService: ReturnType<typeof createMockRoleService>;
     let requestContextService: ReturnType<typeof createMockRequestContextService>;
+    let branchAssignment: { assignAdministrator: ReturnType<typeof vi.fn> };
     let service: EmployeeService;
     let erpUserService: { setPositionIfExists: ReturnType<typeof vi.fn> };
     const ctx = {} as unknown as RequestContext;
@@ -78,12 +80,14 @@ describe('EmployeeService', () => {
         roleService = createMockRoleService();
         requestContextService = createMockRequestContextService(systemCtx);
         erpUserService = { setPositionIfExists: vi.fn().mockResolvedValue(true) };
+        branchAssignment = { assignAdministrator: vi.fn() };
         service = new EmployeeService(
             connection as unknown as TransactionalConnection,
             administratorService as unknown as AdministratorService,
             requestContextService as unknown as RequestContextService,
             roleService as unknown as RoleService,
             erpUserService as unknown as ErpUserService,
+            branchAssignment as unknown as BranchAssignmentService,
         );
     });
 
@@ -99,7 +103,7 @@ describe('EmployeeService', () => {
         expect(administratorService.update).toHaveBeenCalledWith(
             systemCtx,
             expect.objectContaining({
-                customFields: { departmentId: 'dept-sales', branchId: null },
+                customFields: { departmentId: 'dept-sales' },
             }),
         );
     });
@@ -114,59 +118,18 @@ describe('EmployeeService', () => {
         expect(administratorService.update).not.toHaveBeenCalled();
     });
 
-    it('resolves branchErpId to the mivend Branch.id before assigning departmentId/branchId customFields', async () => {
-        adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
-        branchRepo.findOne.mockResolvedValue({ id: 'branch-row-5', erpId: 'branch-a' });
-        await service.upsert(ctx, {
-            erpId: 'emp-1',
-            email: 'admin@example.com',
-            departmentErpId: 'dept-sales',
-            branchErpId: 'branch-a',
-        });
-        expect(branchRepo.findOne).toHaveBeenCalledWith({ where: { erpId: 'branch-a' } });
-        expect(administratorService.update).toHaveBeenCalledWith(
-            systemCtx,
-            expect.objectContaining({
-                id: 'admin-1',
-                customFields: {
-                    departmentId: 'dept-sales',
-                    branchId: 'branch-row-5',
-                },
-            }),
-        );
-    });
-
-    it('leaves branchId null (never fabricated) when branchErpId does not resolve to a known Branch', async () => {
-        adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
-        branchRepo.findOne.mockResolvedValue(null);
-        await service.upsert(ctx, {
-            erpId: 'emp-1',
-            email: 'admin@example.com',
-            departmentErpId: 'dept-sales',
-            branchErpId: 'branch-unknown',
-        });
-        expect(administratorService.update).toHaveBeenCalledWith(
-            systemCtx,
-            expect.objectContaining({
-                customFields: { departmentId: 'dept-sales', branchId: null },
-            }),
-        );
-    });
-
-    it('leaves branchId null without querying Branch when branchErpId is omitted', async () => {
+    it('writes only departmentId and delegates branchId to BranchAssignmentService', async () => {
         adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
         await service.upsert(ctx, {
             erpId: 'emp-1',
             email: 'admin@example.com',
             departmentErpId: 'dept-sales',
         });
-        expect(branchRepo.findOne).not.toHaveBeenCalled();
         expect(administratorService.update).toHaveBeenCalledWith(
             systemCtx,
-            expect.objectContaining({
-                customFields: { departmentId: 'dept-sales', branchId: null },
-            }),
+            expect.objectContaining({ customFields: { departmentId: 'dept-sales' } }),
         );
+        expect(branchAssignment.assignAdministrator).toHaveBeenCalledWith(ctx, 'admin-1');
     });
 
     it('assigns roleIds when roleCode matches a registered Role', async () => {

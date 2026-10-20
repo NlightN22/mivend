@@ -263,11 +263,8 @@ interchangeable id spaces:
   Vendure-generated primary key), never a raw ERP id** — `Warehouse.branchId`
   (`WarehouseService.upsert`), `BranchSettings.branchId`, and the `AccessScopeService`/
   `RoleScopeConfigService` scope-config UI all use and compare `Branch.id` values.
-  `Administrator.customFields.branchId` (via `EmployeeService.upsert`) resolves an incoming ERP
-  branch code the same way before storing it — never store an ERP id there directly.
-  `Counterparty.branchId` currently has **no automatic assignment at all** (deliberately left
-  unset — see issue #65, "Counterparty→Branch auto-assignment worker"); a future writer of that
-  field must follow the same resolve-to-`Branch.id` rule.
+  `Administrator.customFields.branchId` and `Counterparty.branchId` are written only by
+  `BranchAssignmentService` (see "Automatic branch assignment (#65)" below), never from a raw ERP id.
   An order's/proforma invoice's branch is resolved at read time (`TradingPointService.resolveServicingBranchId`):
   the point's `servicingBranchId`, else the counterparty's `branchId`, else the global default branch (#198).
 - **Unrelated naming collision, don't confuse the two**: `docs/architecture.md` also uses the
@@ -275,6 +272,34 @@ interchangeable id spaces:
   (`INSTANCE_TYPE=branch`, the "Central Hub / Branch Instance" topology). That has nothing to do
   with the `Branch` _entity_ described here; it's the same English word for two unrelated ideas
   in two different parts of this codebase's own vocabulary.
+
+### Automatic branch assignment (#65)
+
+Staff map ERP departments to mivend branches in one table (`department_branch_mapping`: unique
+`departmentErpId`, `branchId` FK to `Branch`), edited in the manager portal under Settings >
+"Departments to branch" (permission `ManageAccessControl`, central only). No heuristics: a mapping
+applies to its department and is inherited by every descendant, the nearest mapped ancestor-or-self
+wins. Cross-branch containers (tree roots, the office subtree) stay unmapped, so deny by default.
+
+- **Administrator**: `branchId` is resolved from `customFields.departmentId`; an unmapped department
+  gives `null` (branch-scoped roles see nothing). `createAdministratorFromErpUser` refuses to create
+  a login while the user's department is unmapped.
+- **Counterparty**, first match wins: manual override (`Counterparty.branchOverrideId`, set by
+  `setCounterpartyBranchOverride`, never overwritten, clearing it re-runs the rule), the primary
+  manager's department through the mapping, the counterparty's own stream `departmentId` through the
+  mapping, otherwise `null`. There is no default-branch fallback for visibility.
+- **One writer**: `BranchAssignmentService` (access-control) writes both fields, only that key, on the
+  central instance only (a replica receives the result). `EmployeeService.upsert` calls it too.
+- **Triggers**: user event and administrator link, counterparty event, manager reassignment, mapping
+  set/clear (reconcile of the affected subtree in the same transaction), a department created or
+  reparented, and the scheduled backstop `access-control-branch-assignment` (every 15 minutes).
+- **Concurrency**: every writer takes the advisory lock `branch-assignment` inside its transaction and
+  re-reads the department tree and mapping under it, so a user event racing a mapping edit ends on the
+  final mapping (`docs/concurrency.md`). The result is a pure function of (department, mapping,
+  override), so a repeat is a no-op.
+- `TradingPoint.servicingBranchId` still defaults from the counterparty's branch at creation only.
+- Dev seed: erp-import record type `departmentBranch` (synthetic mapping rows); real contours are
+  never seeded.
 
 ### Branch scope is the only real filtering axis — `departmentId` never gates anything
 
@@ -317,7 +342,7 @@ scope.branchId` anyway. It "worked" only by accident — `Administrator.customFi
   (2) The first fix's replacement — filtering by `departmentId` instead — was itself wrong per
   the corrected rule above (`departmentId` must never filter anything). That round's replacement
   — applying **no filter at all** for `'department'`-kind scope, on the reasoning that
-  `Counterparty.branchId` has no automatic-assignment worker yet (issue #65/#123) so filtering by
+  `Counterparty.branchId` had no automatic-assignment worker yet (issue #65, now implemented; see "Automatic branch assignment") so filtering by
   it would show zero counterparties to every branch-scoped role — was itself rejected as a
   security regression (round 3, same day, explicit product decision): a branch-scoped manager
   must never see a Counterparty that isn't theirs, full stop, even if that means they see none

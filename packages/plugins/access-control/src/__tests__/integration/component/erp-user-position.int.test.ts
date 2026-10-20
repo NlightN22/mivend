@@ -16,6 +16,7 @@ import {
 
 import type { AdministratorActivationService } from '../../../administrator-activation.service';
 import { ErpUserService } from '../../../erp-user.service';
+import type { BranchAssignmentService } from '../../../branch-assignment.service';
 import { UserEnrichmentService } from '../../../user-enrichment.service';
 
 class TestAdminCustomFields {
@@ -93,6 +94,10 @@ beforeAll(async () => {
         erpUserService,
         { syncFromErp: vi.fn() } as unknown as AdministratorActivationService,
         { publish: vi.fn() } as unknown as EventBus,
+        {
+            assignAdministrator: vi.fn(),
+            assignCounterparties: vi.fn(),
+        } as unknown as BranchAssignmentService,
     );
 });
 

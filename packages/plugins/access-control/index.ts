@@ -30,3 +30,6 @@ export type { BranchSettingsInput } from './src/branch-settings.service';
 export type { AccessControlPluginOptions, AccessScope, AccessScopeKind } from './src/types';
 export { PriceTypeAccessService } from './src/price-type-access.service';
 export type { AccessiblePriceType, PriceTypeAccessContext } from './src/price-type-access.service';
+export { BranchAssignmentService } from './src/branch-assignment.service';
+export { DepartmentBranchMappingService } from './src/department-branch-mapping.service';
+export { DepartmentBranchMapping } from './src/entities/department-branch-mapping.entity';

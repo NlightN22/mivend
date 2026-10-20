@@ -7,6 +7,7 @@ import type {
     UserService,
 } from '@vendure/core';
 
+import type { BranchAssignmentService } from '../../branch-assignment.service';
 import { AdministratorProvisioningService } from '../../administrator-provisioning.service';
 import { AdministratorLinkedEvent } from '../../administrator-linked.event';
 import type { ErpUserService } from '../../erp-user.service';
@@ -23,6 +24,10 @@ describe('AdministratorProvisioningService', () => {
         markLinked: ReturnType<typeof vi.fn>;
     };
     let connection: { getRepository: ReturnType<typeof vi.fn> };
+    let branchAssignment: {
+        resolveBranchId: ReturnType<typeof vi.fn>;
+        assignAdministrator: ReturnType<typeof vi.fn>;
+    };
     let service: AdministratorProvisioningService;
     const ctx = {} as unknown as RequestContext;
 
@@ -32,13 +37,32 @@ describe('AdministratorProvisioningService', () => {
         eventBus = { publish: vi.fn() };
         erpUserService = { findByErpId: vi.fn(), markLinked: vi.fn() };
         connection = { getRepository: vi.fn() };
+        branchAssignment = {
+            resolveBranchId: vi.fn().mockResolvedValue('1'),
+            assignAdministrator: vi.fn(),
+        };
         service = new AdministratorProvisioningService(
             administratorService as unknown as AdministratorService,
             userService as unknown as UserService,
             eventBus as unknown as EventBus,
             erpUserService as unknown as ErpUserService,
             connection as unknown as TransactionalConnection,
+            branchAssignment as unknown as BranchAssignmentService,
         );
+    });
+
+    it('refuses to create a login for a department that is not mapped to a branch', async () => {
+        erpUserService.findByErpId.mockResolvedValue({
+            erpId: 'erp-1',
+            email: 'a@example.com',
+            fullName: 'A B',
+            departmentId: 'dept-unmapped',
+        });
+        branchAssignment.resolveBranchId.mockResolvedValue(null);
+        await expect(service.createFromPending(ctx, 'erp-1')).rejects.toThrow(
+            /not mapped to a branch/,
+        );
+        expect(administratorService.create).not.toHaveBeenCalled();
     });
 
     it('throws when no ErpUser row exists for the given erpId', async () => {

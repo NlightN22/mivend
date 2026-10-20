@@ -65,6 +65,7 @@ describe('CounterpartyManagerAssignmentService.reassignManager', () => {
             accessScopeService,
             mockTeamAdministratorService as unknown as TeamAdministratorService,
             mockVersioningService as unknown as VersioningService,
+            { assignCounterparties: vi.fn() } as never,
         );
     });
 

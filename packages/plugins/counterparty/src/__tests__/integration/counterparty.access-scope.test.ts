@@ -112,6 +112,7 @@ beforeAll(async () => {
         mockAccessScopeService as unknown as AccessScopeService,
         mockTeamAdministratorService as never,
         mockVersioningService as never,
+        { assignCounterparties: vi.fn() } as never,
     );
 });
 

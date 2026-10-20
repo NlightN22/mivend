@@ -14,7 +14,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 
-import { Branch } from './entities/branch.entity';
+import { BranchAssignmentService } from './branch-assignment.service';
 import { ErpUserService } from './erp-user.service';
 import { loggerCtx } from './types';
 
@@ -22,9 +22,6 @@ export interface EmployeeRecordInput {
     erpId: string;
     email: string;
     departmentErpId: string;
-    // ERP branch code (Branch.erpId), not a mivend Branch.id: must be resolved to Branch.id first
-    // Raw ERP ids are a different value space; every branchId consumer expects Branch.id.
-    branchErpId?: string | null;
     roleCode?: string | null;
     // ErpPosition.erpId, stored on the ERP user, not on the Administrator.
     positionErpId?: string | null;
@@ -40,6 +37,7 @@ export class EmployeeService {
         private requestContextService: RequestContextService,
         private roleService: RoleService,
         private erpUserService: ErpUserService,
+        private branchAssignment: BranchAssignmentService,
     ) {}
 
     async upsert(ctx: RequestContext, record: EmployeeRecordInput): Promise<void> {
@@ -54,13 +52,10 @@ export class EmployeeService {
             return;
         }
 
-        const branchId = await this.resolveBranchId(ctx, record);
-
         const updateInput: UpdateAdministratorInput = {
             id: admin.id,
             customFields: {
                 departmentId: record.departmentErpId,
-                branchId,
             },
         };
 
@@ -78,6 +73,7 @@ export class EmployeeService {
         // Elevate to the bootstrap SuperAdmin only for this call, not the whole batch.
         const systemCtx = await this.getSystemContext(ctx);
         await this.administratorService.update(systemCtx, updateInput);
+        await this.branchAssignment.assignAdministrator(ctx, admin.id);
         const positionStored = await this.erpUserService.setPositionIfExists(
             ctx,
             record.erpId,
@@ -90,29 +86,9 @@ export class EmployeeService {
             );
         }
         Logger.verbose(
-            `Assigned department=${record.departmentErpId} branch=${branchId ?? 'null'} to administrator ${record.email}`,
+            `Assigned department=${record.departmentErpId} to administrator ${record.email}`,
             loggerCtx,
         );
-    }
-
-    // Resolves the ERP branch code to Branch.id the same way WarehouseService.upsert does.
-    // Unresolved codes leave branchId null instead of skipping, so other org fields still import.
-    private async resolveBranchId(
-        ctx: RequestContext,
-        record: EmployeeRecordInput,
-    ): Promise<string | null> {
-        if (!record.branchErpId) return null;
-        const branch = await this.connection
-            .getRepository(ctx, Branch)
-            .findOne({ where: { erpId: record.branchErpId } });
-        if (!branch) {
-            Logger.warn(
-                `employee erpId=${record.erpId}: branch erpId=${record.branchErpId} not found — leaving branchId unassigned`,
-                loggerCtx,
-            );
-            return null;
-        }
-        return String(branch.id);
     }
 
     private async getSystemContext(ctx: RequestContext): Promise<RequestContext> {

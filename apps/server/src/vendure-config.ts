@@ -579,7 +579,12 @@ export const config: VendureConfig = {
         // Defense in depth: backstops AccessControlPlugin's bootstrap-time self-provisioning.
         RoleProvisioningDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode }),
-        AccessControlPlugin.init({ branchNames, defaultPriceTypeCode, defaultCurrencyCode }),
+        AccessControlPlugin.init({
+            branchNames,
+            defaultPriceTypeCode,
+            defaultCurrencyCode,
+            instanceType,
+        }),
         SessionManagementPlugin.init({
             maxActiveSessionsPerUser: sessionOptions.maxActiveSessionsPerUser,
         }),

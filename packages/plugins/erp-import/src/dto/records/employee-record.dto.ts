@@ -18,16 +18,6 @@ export class EmployeeRecordDto {
         type: String,
         nullable: true,
         description:
-            'erpId of the branch/point this employee works at (see Branch) — resolved to a ' +
-            'mivend Branch.id before being stored, same as WarehouseChanged.branchId. ' +
-            'Operational visibility, independent of departmentId.',
-    })
-    branchErpId?: string | null;
-
-    @ApiPropertyOptional({
-        type: String,
-        nullable: true,
-        description:
             'Code of an existing Vendure Role to assign to this Administrator, if provided.',
     })
     roleCode?: string | null;

@@ -1448,12 +1448,25 @@ async function main() {
         `  → status=${orderStatusResult.status} processed=${orderStatusResult.processed} failed=${orderStatusResult.failed}`,
     );
 
+    // Synthetic department -> branch mapping (#65); employees and counterparties inherit the branch from it.
+    const departmentBranches = [{ departmentErpId: 'dept-sales', branchErpId: 'branch-central' }];
+    console.log(`Sending ${departmentBranches.length} department-branch mappings...`);
+    const departmentBranchResult = await postBatch(
+        `seed-department-branches-${run}`,
+        departmentBranches.map(data => ({ type: 'departmentBranch', data })),
+    );
+    console.log(
+        `  → status=${departmentBranchResult.status} processed=${departmentBranchResult.processed} failed=${departmentBranchResult.failed}`,
+    );
+    if (departmentBranchResult.errors?.length > 0) {
+        for (const e of departmentBranchResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
     const employees = [
         {
             erpId: 'emp-001',
             email: 'ivan.operator@mivend.dev',
             departmentErpId: 'dept-sales',
-            branchErpId: 'branch-central',
             roleCode: 'operator',
             positionErpId: 'pos-operator',
         },
@@ -1461,7 +1474,6 @@ async function main() {
             erpId: 'emp-002',
             email: 'petr.manager@mivend.dev',
             departmentErpId: 'dept-sales',
-            branchErpId: 'branch-central',
             roleCode: 'manager',
             positionErpId: 'pos-manager',
         },
@@ -1469,7 +1481,6 @@ async function main() {
             erpId: 'emp-003',
             email: 'olga.depthead@mivend.dev',
             departmentErpId: 'dept-sales',
-            branchErpId: 'branch-central',
             roleCode: 'department-head',
             positionErpId: 'pos-head',
         },
@@ -1477,7 +1488,6 @@ async function main() {
             erpId: 'emp-004',
             email: 'nikolai.director@mivend.dev',
             departmentErpId: 'dept-sales',
-            branchErpId: 'branch-central',
             roleCode: 'general-director',
             positionErpId: 'pos-director',
         },

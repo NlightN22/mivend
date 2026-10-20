@@ -17,4 +17,5 @@ export interface AccessControlPluginOptions {
     branchNames?: string[];
     defaultPriceTypeCode?: string;
     defaultCurrencyCode?: string;
+    instanceType?: 'central' | 'branch';
 }

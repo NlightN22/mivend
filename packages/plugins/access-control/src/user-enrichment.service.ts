@@ -10,6 +10,7 @@ import {
 
 import { AdministratorActivationService } from './administrator-activation.service';
 import { AdministratorLinkedEvent } from './administrator-linked.event';
+import { BranchAssignmentService } from './branch-assignment.service';
 import { ErpUserService } from './erp-user.service';
 import { loggerCtx } from './types';
 
@@ -39,9 +40,21 @@ export class UserEnrichmentService {
         private erpUserService: ErpUserService,
         private administratorActivationService: AdministratorActivationService,
         private eventBus: EventBus,
+        private branchAssignment: BranchAssignmentService,
     ) {}
 
     async linkAndEnrich(
+        ctx: RequestContext,
+        input: UserEnrichmentInput,
+    ): Promise<Administrator | null> {
+        const admin = await this.enrich(ctx, input);
+        if (input.departmentId !== undefined) {
+            await this.branchAssignment.assignCounterparties(ctx, { managerErpId: input.erpId });
+        }
+        return admin;
+    }
+
+    private async enrich(
         ctx: RequestContext,
         input: UserEnrichmentInput,
     ): Promise<Administrator | null> {
@@ -112,6 +125,9 @@ export class UserEnrichmentService {
         if (input.departmentId !== undefined) {
             admin.customFields = { ...admin.customFields, departmentId: input.departmentId };
             await repo.update(admin.id, { customFields: { departmentId: input.departmentId } });
+        }
+        if (linkedNow || input.departmentId !== undefined) {
+            await this.branchAssignment.assignAdministrator(ctx, admin.id);
         }
         if (!linkedNow && input.positionErpId !== undefined) {
             await this.erpUserService.setPositionIfExists(ctx, input.erpId, input.positionErpId);

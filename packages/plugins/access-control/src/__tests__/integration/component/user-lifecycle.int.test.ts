@@ -24,6 +24,7 @@ import {
 
 import { AdministratorActivationService } from '../../../administrator-activation.service';
 import { ErpUserService } from '../../../erp-user.service';
+import type { BranchAssignmentService } from '../../../branch-assignment.service';
 import { UserEnrichmentService } from '../../../user-enrichment.service';
 
 // Vendure's real Administrator/User need bootstrap()'s EntityIdStrategy; use mirror tables.
@@ -148,6 +149,10 @@ describe('UserEnrichmentService.linkAndEnrich (real DB)', () => {
             erpUserService,
             { syncFromErp: vi.fn() } as unknown as AdministratorActivationService,
             eventBus as unknown as EventBus,
+            {
+                assignAdministrator: vi.fn(),
+                assignCounterparties: vi.fn(),
+            } as unknown as BranchAssignmentService,
         );
     });
 

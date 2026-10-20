@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
-import { UserEnrichmentService } from '@mivend/plugin-access-control';
+import { BranchAssignmentService, UserEnrichmentService } from '@mivend/plugin-access-control';
 
 import { optionalErpDetails } from './counterparty-erp-details';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -22,6 +22,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
     constructor(
         private readonly counterpartyService: CounterpartyService,
         private readonly userEnrichmentService: UserEnrichmentService,
+        private readonly branchAssignment: BranchAssignmentService,
     ) {}
 
     async apply(
@@ -72,6 +73,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
             // notificationPhone: deliberately unread — see this file's own top-of-file field
             // accounting comment.
         });
+        await this.branchAssignment.assignCounterparties(ctx, { erpId: entityId });
         if (!name) {
             Logger.verbose(
                 `counterparty ${entityId}: no name (deletion tombstone) — updated active ` +

@@ -15,6 +15,7 @@ import { OrganizationRequisitesHandler } from './handlers/organization-requisite
 import { DepartmentHandler } from './handlers/department.handler';
 import { PositionHandler } from './handlers/position.handler';
 import { OrderStatusHandler } from './handlers/order-status.handler';
+import { DepartmentBranchHandler } from './handlers/department-branch.handler';
 import { BranchHandler } from './handlers/branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
 import { WarehouseHandler } from './handlers/warehouse.handler';
@@ -46,6 +47,7 @@ export class ErpImportService {
         private readonly organizationRequisitesHandler: OrganizationRequisitesHandler,
         private readonly departmentHandler: DepartmentHandler,
         private readonly branchHandler: BranchHandler,
+        private readonly departmentBranchHandler: DepartmentBranchHandler,
         private readonly employeeHandler: EmployeeHandler,
         private readonly positionHandler: PositionHandler,
         private readonly orderStatusHandler: OrderStatusHandler,
@@ -143,6 +145,9 @@ export class ErpImportService {
                 break;
             case 'position':
                 await this.positionHandler.upsert(ctx, record.data);
+                break;
+            case 'departmentBranch':
+                await this.departmentBranchHandler.upsert(ctx, record.data);
                 break;
             case 'branch':
                 await this.branchHandler.upsert(ctx, record.data);

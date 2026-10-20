@@ -6,6 +6,7 @@ import type {
     WarehouseRecordInput,
     EmployeeRecordInput,
 } from '@mivend/plugin-access-control';
+import type { DepartmentBranchRecordInput } from './handlers/department-branch.handler';
 
 export interface OrderStatusRecord {
     code: string;
@@ -183,6 +184,7 @@ export type ImportRecord =
     | { type: 'department'; data: DepartmentRecordInput }
     | { type: 'position'; data: PositionRecordInput }
     | { type: 'branch'; data: BranchRecordInput }
+    | { type: 'departmentBranch'; data: DepartmentBranchRecordInput }
     | { type: 'employee'; data: EmployeeRecordInput }
     | { type: 'warehouse'; data: WarehouseRecord }
     | { type: 'contract'; data: ContractRecord }

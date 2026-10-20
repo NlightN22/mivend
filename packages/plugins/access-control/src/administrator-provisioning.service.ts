@@ -9,9 +9,11 @@ import {
     RequestContext,
     TransactionalConnection,
     User,
+    UserInputError,
     UserService,
 } from '@vendure/core';
 
+import { BranchAssignmentService } from './branch-assignment.service';
 import { AdministratorLinkedEvent } from './administrator-linked.event';
 import { parseErpFullName } from './erp-full-name';
 import { ErpUserService } from './erp-user.service';
@@ -26,6 +28,7 @@ export class AdministratorProvisioningService {
         private eventBus: EventBus,
         private erpUserService: ErpUserService,
         private connection: TransactionalConnection,
+        private branchAssignment: BranchAssignmentService,
     ) {}
 
     // Created with zero roles and a random, never-surfaced password (create requires one).
@@ -42,6 +45,11 @@ export class AdministratorProvisioningService {
                 `Pending ERP user erpId=${erpId} has no email address — cannot create a login without one`,
             );
         }
+        if (!(await this.branchAssignment.resolveBranchId(ctx, pending.departmentId))) {
+            throw new UserInputError(
+                `Department ${pending.departmentId ?? '(none)'} of ERP user erpId=${erpId} is not mapped to a branch — map it under Settings > Departments to branch first`,
+            );
+        }
         const { firstName, lastName } = parseErpFullName(pending.fullName, pending.email);
         const throwawayPassword = randomBytes(32).toString('hex');
 
@@ -56,6 +64,7 @@ export class AdministratorProvisioningService {
 
         // Row is flipped to linked in place, never deleted; see ErpUserService.markLinked.
         // The event backfills any Counterparty left without a manager while this erpId was unlinked.
+        await this.branchAssignment.assignAdministrator(ctx, admin.id);
         await this.erpUserService.markLinked(ctx, erpId, admin.id);
         await this.eventBus.publish(new AdministratorLinkedEvent(ctx, erpId, admin.id));
 

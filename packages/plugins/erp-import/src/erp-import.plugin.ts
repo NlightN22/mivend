@@ -27,6 +27,7 @@ import { OrganizationRequisitesHandler } from './handlers/organization-requisite
 import { DepartmentHandler } from './handlers/department.handler';
 import { PositionHandler } from './handlers/position.handler';
 import { BranchHandler } from './handlers/branch.handler';
+import { DepartmentBranchHandler } from './handlers/department-branch.handler';
 import { EmployeeHandler } from './handlers/employee.handler';
 import { WarehouseHandler } from './handlers/warehouse.handler';
 import { StockOrganizationHandler } from './handlers/stock-organization.handler';
@@ -67,6 +68,7 @@ import { ManufacturerHandler } from './handlers/manufacturer.handler';
         DepartmentHandler,
         PositionHandler,
         BranchHandler,
+        DepartmentBranchHandler,
         EmployeeHandler,
         WarehouseHandler,
         ContractHandler,

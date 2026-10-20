@@ -10,6 +10,7 @@ import {
 import {
     AccessScope,
     AccessScopeService,
+    BranchAssignmentService,
     TeamAdministratorService,
 } from '@mivend/plugin-access-control';
 import { VersioningService } from '@mivend/plugin-versioning';
@@ -31,6 +32,7 @@ export class CounterpartyManagerAssignmentService {
         private accessScopeService: AccessScopeService,
         private teamAdministratorService: TeamAdministratorService,
         private versioningService: VersioningService,
+        private branchAssignment: BranchAssignmentService,
     ) {}
 
     async reassignManager(
@@ -50,6 +52,7 @@ export class CounterpartyManagerAssignmentService {
         counterparty.assignedManagerId = String(administratorId);
         const saved = await repo.save(counterparty);
         await this.recordReassignment(ctx, saved.id, previousManagerId, saved.assignedManagerId);
+        await this.branchAssignment.assignCounterparties(ctx, { ids: [String(saved.id)] });
         return saved;
     }
 
@@ -87,6 +90,9 @@ export class CounterpartyManagerAssignmentService {
         for (const { id, previous } of changed) {
             await this.recordReassignment(ctx, id, previous, to);
         }
+        await this.branchAssignment.assignCounterparties(ctx, {
+            ids: changed.map(({ id }) => String(id)),
+        });
         Logger.verbose(
             `Reassigned ${changed.length} counterparties to administrator=${to}`,
             loggerCtx,

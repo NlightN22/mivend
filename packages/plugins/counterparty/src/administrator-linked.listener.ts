@@ -1,6 +1,6 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { EventBus } from '@vendure/core';
-import { AdministratorLinkedEvent } from '@mivend/plugin-access-control';
+import { AdministratorLinkedEvent, BranchAssignmentService } from '@mivend/plugin-access-control';
 import { subscribeAndLog } from 'shared';
 
 import { CounterpartyService } from './counterparty.service';
@@ -14,6 +14,7 @@ export class AdministratorLinkedListener implements OnApplicationBootstrap {
     constructor(
         private readonly eventBus: EventBus,
         private readonly counterpartyService: CounterpartyService,
+        private readonly branchAssignment: BranchAssignmentService,
     ) {}
 
     onApplicationBootstrap(): void {
@@ -31,5 +32,6 @@ export class AdministratorLinkedListener implements OnApplicationBootstrap {
             event.erpId,
             event.administratorId,
         );
+        await this.branchAssignment.assignCounterparties(event.ctx, { managerErpId: event.erpId });
     }
 }

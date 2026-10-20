@@ -6,6 +6,12 @@ import {
 } from '@vendure/core';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import gql from 'graphql-tag';
+import { departmentBranchSdl } from './department-branch.schema';
+import { DepartmentBranchResolver } from './department-branch.resolver';
+import { DepartmentBranchMappingService } from './department-branch-mapping.service';
+import { BranchAssignmentService } from './branch-assignment.service';
+import { createBranchAssignmentTask } from './branch-assignment.scheduled-task';
+import { DepartmentBranchMapping } from './entities/department-branch-mapping.entity';
 
 import { AccessControlResolver, AdministratorStatusResolver } from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
@@ -41,6 +47,7 @@ import { WarehouseService } from './warehouse.service';
 
 const adminApiSchema = gql`
     ${priceTypeSdl}
+    ${departmentBranchSdl}
 
     type ErpPosition {
         id: ID!
@@ -265,8 +272,11 @@ const adminApiSchema = gql`
         BranchSettings,
         CreditTermLimit,
         ErpUser,
+        DepartmentBranchMapping,
     ],
     providers: [
+        BranchAssignmentService,
+        DepartmentBranchMappingService,
         AccessScopeService,
         TeamAdministratorService,
         RoleScopeConfigService,
@@ -291,6 +301,8 @@ const adminApiSchema = gql`
         },
     ],
     exports: [
+        BranchAssignmentService,
+        DepartmentBranchMappingService,
         AccessScopeService,
         TeamAdministratorService,
         RoleScopeConfigService,
@@ -314,10 +326,15 @@ const adminApiSchema = gql`
             AdministratorStatusResolver,
             ErpUserResolver,
             PriceTypeAdminResolver,
+            DepartmentBranchResolver,
             CustomerPriceTypeResolver,
         ],
     },
     configuration: (config: RuntimeVendureConfig) => {
+        config.schedulerOptions.tasks = [
+            ...(config.schedulerOptions.tasks ?? []),
+            createBranchAssignmentTask(),
+        ];
         // System-managed: hand edits break the correlation/sync that owns each field.
         // readonly only filters the GraphQL input; direct AdministratorService.update/create() bypasses it.
         config.customFields.Administrator = [

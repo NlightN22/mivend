@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
+import type { BranchAssignmentService } from '../../branch-assignment.service';
 import { DepartmentService } from '../../department.service';
 
 function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
@@ -14,13 +15,18 @@ function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
 
 describe('DepartmentService', () => {
     let repo: ReturnType<typeof createMockRepo>;
+    let branchAssignment: { reconcileSubtree: ReturnType<typeof vi.fn> };
     let service: DepartmentService;
     const ctx = {} as unknown as RequestContext;
 
     beforeEach(() => {
         repo = createMockRepo();
         const connection = { getRepository: () => repo };
-        service = new DepartmentService(connection as unknown as TransactionalConnection);
+        branchAssignment = { reconcileSubtree: vi.fn() };
+        service = new DepartmentService(
+            connection as unknown as TransactionalConnection,
+            branchAssignment as unknown as BranchAssignmentService,
+        );
     });
 
     it('creates a new department when no row matches the erpId', async () => {
