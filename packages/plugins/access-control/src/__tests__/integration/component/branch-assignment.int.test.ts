@@ -259,7 +259,7 @@ describe('BranchAssignmentService (real DB)', () => {
         const replica = new BranchAssignmentService(makeConnection(), { instanceType: 'branch' });
         await mappings.set(ctx, 'dept-1', String(branchA));
         const id = await admin('dept-1');
-        await replica.reconcileAll(ctx);
+        await assignment.reconcileAll(ctx);
         expect(await adminBranch(id)).toBe(String(branchA));
         await dataSource.query(
             `UPDATE "${schema}".administrator SET "customFieldsBranchid" = NULL WHERE id = $1`,
