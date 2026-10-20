@@ -1,0 +1,20 @@
+query PaymentResultOrder($code: String!) {
+    orderByCode(code: $code) {
+        id
+        code
+        totalWithTax
+        currencyCode
+        customFields {
+            isExternal
+            erpRegistrationDocumentNumber
+        }
+        payments {
+            id
+            method
+            amount
+            state
+            transactionId
+            createdAt
+        }
+    }
+}

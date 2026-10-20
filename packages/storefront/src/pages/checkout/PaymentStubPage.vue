@@ -1,33 +1,55 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { formatMoney } from '../../i18n/format';
-import { toast } from '@mivend/ui-kit';
+import { MvNotImplemented, formatDocumentNumber, toast } from '@mivend/ui-kit';
 import { IconAlertTriangle, IconCheck, IconHourglass, IconLock, IconX } from '@tabler/icons-vue';
 import { useCartStore } from '../../stores/cart';
+import { useCheckoutStore } from '../../stores/checkout';
+import { useDemoMode } from '../../composables/useDemoMode';
 
 const { t } = useI18n();
 const router = useRouter();
-const demoOrder = computed(() =>
-    t('paymentStub.order', { number: '348744', amount: formatMoney(12450) }),
-);
+const { demoAllowed } = useDemoMode();
 const cartStore = useCartStore();
+const checkoutStore = useCheckoutStore();
+
+const orderCode = computed(() => (cartStore.isEmpty ? null : (cartStore.order?.code ?? null)));
+const orderSummary = computed(() => {
+    if (!orderCode.value) return null;
+    const amount = checkoutStore.creditPreview?.payableCardAmount ?? cartStore.totalPrice;
+    return t('paymentStub.order', {
+        number: formatDocumentNumber(orderCode.value),
+        amount: formatMoney(amount),
+    });
+});
+
+onMounted(() => {
+    if (demoAllowed && !cartStore.loaded) void cartStore.fetchCart();
+});
 
 async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
+    const code = orderCode.value;
+    if (!code) return;
     const outcome = await cartStore.completeOnlinePayment(status);
     if (outcome === 'amount-changed') {
         toast(t('paymentStub.amountChanged'), 'error');
         router.push('/checkout');
         return;
     }
-    router.push(`/payment-result?status=${status}`);
+    router.push({ path: '/payment-result', query: { status, order: code } });
 }
 </script>
 
 <template>
     <div class="stub-page">
-        <div class="stub-card">
+        <MvNotImplemented
+            v-if="!demoAllowed"
+            :title="t('common.notImplemented.title')"
+            :message="t('common.notImplemented.message')"
+        />
+        <div v-else class="stub-card">
             <div class="stub-lock">
                 <IconLock :size="30" stroke-width="1.8" aria-hidden="true" />
             </div>
@@ -39,18 +61,33 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
                 {{ $t('paymentStub.warning') }}
             </div>
 
-            <div class="stub-order">{{ demoOrder }}</div>
+            <div v-if="orderSummary" class="stub-order">{{ orderSummary }}</div>
+            <div v-else-if="cartStore.loaded" class="stub-order">
+                {{ $t('paymentStub.noOrder') }}
+            </div>
 
             <div class="stub-actions">
-                <button class="stub-btn stub-btn--green" @click="choose('success')">
+                <button
+                    class="stub-btn stub-btn--green"
+                    :disabled="!orderCode"
+                    @click="choose('success')"
+                >
                     <IconCheck :size="18" stroke-width="2.5" aria-hidden="true" />
                     {{ $t('paymentStub.success') }}
                 </button>
-                <button class="stub-btn stub-btn--orange" @click="choose('pending')">
+                <button
+                    class="stub-btn stub-btn--orange"
+                    :disabled="!orderCode"
+                    @click="choose('pending')"
+                >
                     <IconHourglass :size="18" stroke-width="2.2" aria-hidden="true" />
                     {{ $t('paymentStub.pending') }}
                 </button>
-                <button class="stub-btn stub-btn--red" @click="choose('fail')">
+                <button
+                    class="stub-btn stub-btn--red"
+                    :disabled="!orderCode"
+                    @click="choose('fail')"
+                >
                     <IconX :size="18" stroke-width="2.5" aria-hidden="true" />
                     {{ $t('paymentStub.fail') }}
                 </button>
@@ -155,8 +192,12 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
     cursor: pointer;
     transition: opacity 0.15s;
 }
-.stub-btn:hover {
+.stub-btn:hover:not(:disabled) {
     opacity: 0.88;
+}
+.stub-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .stub-btn--green {

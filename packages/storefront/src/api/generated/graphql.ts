@@ -829,6 +829,11 @@ export type CustomFieldConfig =
     | StructCustomFieldConfig
     | TextCustomFieldConfig;
 
+export type CustomProductMappings = {
+    fullName?: Maybe<Scalars['String']['output']>;
+    oemCodes?: Maybe<Array<Scalars['String']['output']>>;
+};
+
 export type Customer = Node & {
     addresses?: Maybe<Array<Address>>;
     counterparty?: Maybe<Counterparty>;
@@ -3137,6 +3142,11 @@ export type PriceRange = {
     min: Scalars['Money']['output'];
 };
 
+export type PriceRangeBucket = {
+    count: Scalars['Int']['output'];
+    to: Scalars['Int']['output'];
+};
+
 export type PriceRangeInput = {
     max: Scalars['Int']['input'];
     min: Scalars['Int']['input'];
@@ -3840,7 +3850,9 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
+    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
     inStock?: InputMaybe<Scalars['Boolean']['input']>;
+    priceRange?: InputMaybe<PriceRangeInput>;
     priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
@@ -3856,7 +3868,15 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
+    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
+};
+
+export type SearchResponsePriceData = {
+    buckets: Array<PriceRangeBucket>;
+    bucketsWithTax: Array<PriceRangeBucket>;
+    range: PriceRange;
+    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -3864,6 +3884,9 @@ export type SearchResult = {
     collectionIds: Array<Scalars['ID']['output']>;
     compareAtPrice?: Maybe<Scalars['Int']['output']>;
     currencyCode: CurrencyCode;
+    /** @deprecated Use customProductMappings or customProductVariantMappings */
+    customMappings: CustomProductMappings;
+    customProductMappings: CustomProductMappings;
     customerPrice?: Maybe<Scalars['Int']['output']>;
     description: Scalars['String']['output'];
     discountTiers: Array<DiscountTier>;
@@ -3871,6 +3894,7 @@ export type SearchResult = {
     facetValueIds: Array<Scalars['ID']['output']>;
     /** Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels. */
     galleryPreviews: Array<Scalars['String']['output']>;
+    inStock?: Maybe<Scalars['Boolean']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
     /** Order quantity step of the variant, in base units. */
     multiplicity?: Maybe<Scalars['Int']['output']>;
@@ -4896,6 +4920,31 @@ export type RequestProformaInvoicesMutation = {
     }>;
 };
 
+export type PaymentResultOrderQueryVariables = Exact<{
+    code: Scalars['String']['input'];
+}>;
+
+export type PaymentResultOrderQuery = {
+    orderByCode?: {
+        id: string;
+        code: string;
+        totalWithTax: any;
+        currencyCode: CurrencyCode;
+        customFields?: {
+            isExternal?: boolean | null;
+            erpRegistrationDocumentNumber?: string | null;
+        } | null;
+        payments?: Array<{
+            id: string;
+            method: string;
+            amount: any;
+            state: string;
+            transactionId?: string | null;
+            createdAt: any;
+        }> | null;
+    } | null;
+};
+
 export type MyDocumentsQueryVariables = Exact<{
     options?: InputMaybe<DocumentListOptions>;
 }>;
@@ -5244,6 +5293,7 @@ export type ActiveOrderQueryVariables = Exact<{ [key: string]: never }>;
 export type ActiveOrderQuery = {
     activeOrder?: {
         id: string;
+        code: string;
         state: string;
         totalWithTax: any;
         subTotalWithTax: any;
@@ -6115,6 +6165,28 @@ export const RequestProformaInvoicesDocument = new TypedDocumentString(`
     RequestProformaInvoicesMutation,
     RequestProformaInvoicesMutationVariables
 >;
+export const PaymentResultOrderDocument = new TypedDocumentString(`
+    query PaymentResultOrder($code: String!) {
+  orderByCode(code: $code) {
+    id
+    code
+    totalWithTax
+    currencyCode
+    customFields {
+      isExternal
+      erpRegistrationDocumentNumber
+    }
+    payments {
+      id
+      method
+      amount
+      state
+      transactionId
+      createdAt
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<PaymentResultOrderQuery, PaymentResultOrderQueryVariables>;
 export const MyDocumentsDocument = new TypedDocumentString(`
     query MyDocuments($options: DocumentListOptions) {
   myDocuments(options: $options) {
@@ -6507,6 +6579,7 @@ export const ActiveOrderDocument = new TypedDocumentString(`
     query ActiveOrder {
   activeOrder {
     id
+    code
     state
     totalWithTax
     subTotalWithTax

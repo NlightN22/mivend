@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { MvNotImplemented, formatDocumentNumber } from '@mivend/ui-kit';
 import { IconCheck, IconHourglass, IconX } from '@tabler/icons-vue';
-import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useDemoMode } from '../../composables/useDemoMode';
 import PaymentResultDetails from './PaymentResultDetails.vue';
+import { usePaymentResult } from './usePaymentResult';
 
 const { t } = useI18n();
-const route = useRoute();
-const DEMO_ORDER = '348744';
-const status = computed(() => {
-    const s = route.query.status;
-    if (s === 'pending' || s === 'fail') return s;
-    return 'success';
-});
+const { demoAllowed } = useDemoMode();
+const { status, loading, view } = usePaymentResult();
+const orderLink = computed(() => (view.value ? `/orders/${view.value.orderId}` : '/orders'));
 
 const config = computed(() => {
     if (status.value === 'success') {
@@ -20,7 +18,11 @@ const config = computed(() => {
             icon: IconCheck,
             iconClass: 'pr-icon--green',
             title: t('paymentResult.success.title'),
-            text: t('paymentResult.success.text', { number: DEMO_ORDER }),
+            text: view.value
+                ? t('paymentResult.success.text', {
+                      number: formatDocumentNumber(view.value.orderNumber),
+                  })
+                : t('paymentResult.success.textNoNumber'),
         };
     }
     if (status.value === 'pending') {
@@ -55,48 +57,53 @@ const config = computed(() => {
             <h1 class="pr-title">{{ $t('paymentResult.title') }}</h1>
         </div>
 
-        <div class="pr-status-card" :class="`pr-status-card--${status}`">
-            <div class="pr-icon" :class="config.iconClass">
-                <component :is="config.icon" :size="32" stroke-width="2.5" aria-hidden="true" />
-            </div>
-            <h2 class="pr-status-title">{{ config.title }}</h2>
-            <p class="pr-status-text">{{ config.text }}</p>
+        <MvNotImplemented
+            v-if="!demoAllowed"
+            :title="t('common.notImplemented.title')"
+            :message="t('common.notImplemented.message')"
+        />
+        <template v-else>
+            <div class="pr-status-card" :class="`pr-status-card--${status}`">
+                <div class="pr-icon" :class="config.iconClass">
+                    <component :is="config.icon" :size="32" stroke-width="2.5" aria-hidden="true" />
+                </div>
+                <h2 class="pr-status-title">{{ config.title }}</h2>
+                <p class="pr-status-text">{{ config.text }}</p>
 
-            <div class="pr-actions">
-                <template v-if="status === 'success'">
-                    <RouterLink to="/orders" class="pr-btn pr-btn--primary">{{
-                        $t('orderCreated.openOrder')
-                    }}</RouterLink>
-                    <a href="#" class="pr-btn pr-btn--secondary">{{
-                        $t('paymentResult.downloadReceipt')
-                    }}</a>
-                    <RouterLink to="/catalog" class="pr-btn pr-btn--ghost">{{
-                        $t('orderCreated.continueShopping')
-                    }}</RouterLink>
-                </template>
-                <template v-else-if="status === 'pending'">
-                    <RouterLink to="/orders" class="pr-btn pr-btn--primary">{{
-                        $t('orderCreated.openOrder')
-                    }}</RouterLink>
-                    <RouterLink to="/catalog" class="pr-btn pr-btn--ghost">{{
-                        $t('orderCreated.continueShopping')
-                    }}</RouterLink>
-                </template>
-                <template v-else>
-                    <RouterLink to="/payment-stub" class="pr-btn pr-btn--primary">{{
-                        $t('paymentResult.tryAgain')
-                    }}</RouterLink>
-                    <RouterLink to="/checkout" class="pr-btn pr-btn--secondary">{{
-                        $t('paymentResult.anotherMethod')
-                    }}</RouterLink>
-                    <RouterLink to="/catalog" class="pr-btn pr-btn--ghost">{{
-                        $t('orderCreated.continueShopping')
-                    }}</RouterLink>
-                </template>
+                <div class="pr-actions">
+                    <template v-if="status === 'success'">
+                        <RouterLink :to="orderLink" class="pr-btn pr-btn--primary">{{
+                            $t('orderCreated.openOrder')
+                        }}</RouterLink>
+                        <RouterLink to="/catalog" class="pr-btn pr-btn--ghost">{{
+                            $t('orderCreated.continueShopping')
+                        }}</RouterLink>
+                    </template>
+                    <template v-else-if="status === 'pending'">
+                        <RouterLink :to="orderLink" class="pr-btn pr-btn--primary">{{
+                            $t('orderCreated.openOrder')
+                        }}</RouterLink>
+                        <RouterLink to="/catalog" class="pr-btn pr-btn--ghost">{{
+                            $t('orderCreated.continueShopping')
+                        }}</RouterLink>
+                    </template>
+                    <template v-else>
+                        <RouterLink to="/payment-stub" class="pr-btn pr-btn--primary">{{
+                            $t('paymentResult.tryAgain')
+                        }}</RouterLink>
+                        <RouterLink to="/checkout" class="pr-btn pr-btn--secondary">{{
+                            $t('paymentResult.anotherMethod')
+                        }}</RouterLink>
+                        <RouterLink to="/catalog" class="pr-btn pr-btn--ghost">{{
+                            $t('orderCreated.continueShopping')
+                        }}</RouterLink>
+                    </template>
+                </div>
             </div>
-        </div>
 
-        <PaymentResultDetails :order-number="DEMO_ORDER" />
+            <PaymentResultDetails v-if="view" :view="view" />
+            <p v-else-if="!loading" class="pr-unknown">{{ $t('paymentResult.orderUnknown') }}</p>
+        </template>
     </main>
 </template>
 
@@ -105,6 +112,14 @@ const config = computed(() => {
     max-width: 1440px;
     margin: 0 auto;
     padding: 24px 28px 70px;
+}
+
+.pr-unknown {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+    color: #66736e;
+    font-size: 14px;
 }
 
 .pr-crumbs {

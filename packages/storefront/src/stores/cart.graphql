@@ -1,6 +1,7 @@
 query ActiveOrder {
     activeOrder {
         id
+        code
         state
         totalWithTax
         subTotalWithTax

@@ -109,6 +109,7 @@ export default {
         success: {
             title: 'Payment successful',
             text: 'Payment for order #{number} has been processed. The order is confirmed.',
+            textNoNumber: 'The payment has been processed. The order is confirmed.',
         },
         pending: {
             title: 'Awaiting confirmation',
@@ -118,7 +119,6 @@ export default {
             title: 'Payment failed',
             text: 'The payment could not be processed. Your order has not been confirmed. You can try again or choose a different payment method.',
         },
-        downloadReceipt: 'Download receipt',
         tryAgain: 'Try again',
         anotherMethod: 'Choose another method',
         details: 'Payment details',
@@ -126,7 +126,7 @@ export default {
         order: 'Order',
         amount: 'Amount',
         method: 'Method',
-        online: 'Online payment',
+        orderUnknown: 'Order details are unavailable. Open the order list to check its status.',
     },
     paymentStub: {
         title: 'Payment',
@@ -138,6 +138,7 @@ export default {
         pending: 'Payment pending',
         fail: 'Payment failed',
         back: '← Back to checkout',
+        noOrder: 'There is no order to pay. Return to the cart.',
         amountChanged: 'The amount to pay has changed. Please review it and confirm again.',
     },
 };

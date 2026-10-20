@@ -1,19 +1,24 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { formatDocumentNumber } from '@mivend/ui-kit';
 import { formatDate, formatMoney } from '../../i18n/format';
+import { paymentMethodLabel } from '../../utils/orderCreatedText';
+import type { PaymentResultView } from '../../utils/paymentResultView';
 
-defineProps<{ orderNumber: string }>();
+const props = defineProps<{ view: PaymentResultView }>();
 
-const DEMO_PAYMENT_ID = 'PAY-20260628-009821';
-const demoAmount = computed(() => formatMoney(12450));
-const today = computed(() =>
-    formatDate(Date.now(), {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    }),
+const amount = computed(() => formatMoney(props.view.amountKopecks / 100));
+const method = computed(() => (props.view.method ? paymentMethodLabel(props.view.method) : null));
+const paidAt = computed(() =>
+    props.view.paidAt
+        ? formatDate(props.view.paidAt, {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+          })
+        : null,
 );
 </script>
 
@@ -21,25 +26,25 @@ const today = computed(() =>
     <div class="pr-details-card">
         <h3 class="pr-card-title">{{ $t('paymentResult.details') }}</h3>
         <div class="pr-detail-list">
-            <div class="pr-detail">
+            <div v-if="view.transactionId" class="pr-detail">
                 <span>{{ $t('paymentResult.paymentId') }}</span
-                ><strong>{{ DEMO_PAYMENT_ID }}</strong>
+                ><strong>{{ view.transactionId }}</strong>
             </div>
             <div class="pr-detail">
                 <span>{{ $t('paymentResult.order') }}</span
-                ><strong>#{{ orderNumber }}</strong>
+                ><strong>{{ formatDocumentNumber(view.orderNumber) }}</strong>
             </div>
             <div class="pr-detail">
                 <span>{{ $t('paymentResult.amount') }}</span
-                ><strong>{{ demoAmount }}</strong>
+                ><strong>{{ amount }}</strong>
             </div>
-            <div class="pr-detail">
+            <div v-if="method" class="pr-detail">
                 <span>{{ $t('paymentResult.method') }}</span
-                ><strong>{{ $t('paymentResult.online') }}</strong>
+                ><strong>{{ method }}</strong>
             </div>
-            <div class="pr-detail">
+            <div v-if="paidAt" class="pr-detail">
                 <span>{{ $t('orders.date') }}</span
-                ><strong>{{ today }}</strong>
+                ><strong>{{ paidAt }}</strong>
             </div>
         </div>
     </div>
