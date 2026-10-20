@@ -354,7 +354,7 @@ For a `department` scope the caller's own clients are part of the union too.
 - **Unsorted list**: counterparties with no `branchId` and live administrators with no `branchId` whose roles do
   not already see everything. Ordinary branch-scoped roles do not see it. Assigning a branch override still goes
   through `setCounterpartyBranchOverride` (audited, `ManageAccessControl`).
-- Not replicated: grants live on the central instance; branch instances do not read them yet.
+- Not replicated: grants live on the central instance; branch instances do not read them yet (tracked in #267).
 
 ### Branch scope is the only real filtering axis — `departmentId` never gates anything
 
@@ -467,6 +467,7 @@ A permission alone never exposes another scope's rows. These Admin API reads re-
 
 - `orderReservations(orderId)` and `availableStock(orderId)` resolve the order through `OrderVisibilityService` first (`ReservationAccessService`); an order outside the caller's scope is "Order not found".
 - `entityVersions` / `entityVersionsForEntities` drop refs the caller may not see. Owning plugins register a per-entity rule in `EntityVersionScopeRegistry` (counterparty plugin: `Counterparty`, `TradingPoint` via counterparty scope, `VisibilityGrant` via the grant-management permissions). An entity name with no rule is visible only with counterparty scope `all` (deny by default).
+- `availableStock` without an `orderId` stays unscoped on purpose: stock is not branch-scoped data.
 - `reservationExtensionLimit(roleCode)` returns a limit only for one of the caller's own roles, or to a caller with `ManageAccessControl`; otherwise null.
 
 ## Layer 4: field-level redaction

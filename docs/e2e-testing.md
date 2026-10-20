@@ -70,7 +70,7 @@ inactive) are a standing baseline: the ERP ids and logins are read from the stag
 never committed. Expected sets are computed from the contour data (own, team rows, active grants, branch), never hardcoded.
 `08` calls the Admin API as each actor (list total, summary, by id, by search), `09` opens the manager portal (list size, KPI,
 search, detail page, CSV export, no hidden row in any GraphQL response), `10` checks write denials and a branch move
-(rows a spec changes are restored in `finally`), `11` calls the Shop API as a customer of each branch. Every "hidden" claim is
+(rows a spec changes are restored in `finally`), `11` calls the Shop API as a customer of each branch, `12` checks a visibility grant (#123): a head sees the clients of a manager of another branch while the grant is active, the grant is revoked in `finally`, and a head with only the grant permission cannot grant to themselves or to someone outside their team. Every "hidden" claim is
 paired with proof that the superadmin sees the row, and the groups skip with a reason when a login or fixture list is missing.
 Roles without `ReassignCounterpartyManager` are refused by permission, not by scope; the scope refusal is tested with the
 roles that hold it.
