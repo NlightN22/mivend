@@ -68,29 +68,33 @@ export class DepartmentBranchMappingService {
         await this.set(ctx, departmentErpId, String(branch.id));
     }
 
-    // Null clears the override and re-runs the automatic rule.
+    // Null clears the override and re-runs the automatic rule; returns the value it replaced.
     async setCounterpartyOverride(
         ctx: RequestContext,
         counterpartyId: string,
         branchId: string | null,
-    ): Promise<void> {
+    ): Promise<{ previous: string | null }> {
         this.assertCentral();
-        await this.connection.withTransaction(ctx, async txCtx => {
+        return this.connection.withTransaction(ctx, async txCtx => {
             if (branchId !== null) {
                 const branch = await this.connection
                     .getRepository(txCtx, Branch)
                     .findOne({ where: { id: branchId } });
                 if (!branch) throw new UserInputError(`Branch ${branchId} does not exist`);
             }
-            const updated = await ctxQuery<unknown[]>(
+            // The previous value is read under the row lock taken by the same statement.
+            const [rows] = await ctxQuery<[Array<{ previous: string | null }>, number]>(
                 this.connection,
                 txCtx,
-                `UPDATE counterparty SET "branchOverrideId" = $2 WHERE id::text = $1 RETURNING id`,
+                `WITH old AS (SELECT id, "branchOverrideId" FROM counterparty WHERE id::text = $1 FOR UPDATE)
+                 UPDATE counterparty c SET "branchOverrideId" = $2 FROM old WHERE c.id = old.id
+                 RETURNING old."branchOverrideId" AS previous`,
                 [counterpartyId, branchId],
             );
-            if (updated.length === 0)
+            if (rows.length === 0)
                 throw new UserInputError(`Counterparty ${counterpartyId} not found`);
             await this.branchAssignment.assignCounterparties(txCtx, { ids: [counterpartyId] });
+            return { previous: rows[0].previous };
         });
     }
 

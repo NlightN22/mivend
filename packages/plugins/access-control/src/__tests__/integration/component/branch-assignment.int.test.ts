@@ -8,7 +8,7 @@ import {
     ManyToOne,
     PrimaryGeneratedColumn,
 } from 'typeorm';
-import type { RequestContext, TransactionalConnection } from '@vendure/core';
+import type { EventBus, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Administrator } from '@vendure/core';
 import {
     createTestConnection,
@@ -19,6 +19,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import type { BranchAssignmentRetryEvent } from '../../../branch-assignment-retry.event';
 import { BranchAssignmentService } from '../../../branch-assignment.service';
 import { DepartmentBranchMappingService } from '../../../department-branch-mapping.service';
 import { DepartmentService } from '../../../department.service';
@@ -96,6 +97,12 @@ let dataSource: DataSource;
 let assignment: BranchAssignmentService;
 let mappings: DepartmentBranchMappingService;
 let departments: DepartmentService;
+const events: BranchAssignmentRetryEvent[] = [];
+const eventBus = {
+    publish: (event: BranchAssignmentRetryEvent) => {
+        events.push(event);
+    },
+} as unknown as EventBus;
 let branchA: number;
 let branchB: number;
 
@@ -159,7 +166,7 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     const connection = makeConnection();
-    assignment = new BranchAssignmentService(connection, { instanceType: 'central' });
+    assignment = new BranchAssignmentService(connection, { instanceType: 'central' }, eventBus);
     mappings = new DepartmentBranchMappingService(connection, assignment);
     departments = new DepartmentService(connection, assignment);
 });
@@ -170,6 +177,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+    events.length = 0;
     const branches = dataSource.getRepository(TestBranch);
     branchA = (await branches.save({ erpId: 'branch-a', name: 'Branch A' })).id;
     branchB = (await branches.save({ erpId: 'branch-b', name: 'Branch B' })).id;
@@ -267,7 +275,11 @@ describe('BranchAssignmentService (real DB)', () => {
     });
 
     it('a replica never writes', async () => {
-        const replica = new BranchAssignmentService(makeConnection(), { instanceType: 'branch' });
+        const replica = new BranchAssignmentService(
+            makeConnection(),
+            { instanceType: 'branch' },
+            eventBus,
+        );
         await mappings.set(ctx, 'dept-1', String(branchA));
         const id = await admin('dept-1');
         await assignment.reconcileAll(ctx);
@@ -351,11 +363,78 @@ describe('BranchAssignmentService hardening (real DB)', () => {
     });
 
     it('a replica rejects set and clear', async () => {
-        const replica = new BranchAssignmentService(makeConnection(), { instanceType: 'branch' });
+        const replica = new BranchAssignmentService(
+            makeConnection(),
+            { instanceType: 'branch' },
+            eventBus,
+        );
         const replicaMappings = new DepartmentBranchMappingService(makeConnection(), replica);
         await expect(replicaMappings.set(ctx, 'dept-1', String(branchA))).rejects.toThrow(
             /central/,
         );
         await expect(replicaMappings.clear(ctx, 'dept-1')).rejects.toThrow(/central/);
+    });
+});
+
+describe('rows locked during a mapping edit are retried after release (real DB)', () => {
+    it('a counterparty and an administrator held by an open transaction are reconciled by the retry, not the backstop', async () => {
+        const counterpartyId = await counterparty({ departmentId: 'dept-1' });
+        const adminId = await admin('dept-1');
+        let release: () => void = () => undefined;
+        const held = new Promise<void>(resolve => (release = resolve));
+        let locked: () => void = () => undefined;
+        const lockedSignal = new Promise<void>(resolve => (locked = resolve));
+        const holder = dataSource.transaction(async em => {
+            await em.query(`SELECT 1 FROM "${schema}".counterparty WHERE id = $1 FOR UPDATE`, [
+                counterpartyId,
+            ]);
+            await em.query(`SELECT 1 FROM "${schema}".administrator WHERE id = $1 FOR UPDATE`, [
+                adminId,
+            ]);
+            locked();
+            await held;
+        });
+        await lockedSignal;
+
+        await mappings.set(ctx, 'dept-1', String(branchA));
+        expect((await counterpartyRow(counterpartyId)).branchId).toBeNull();
+        expect(await adminBranch(adminId)).toBeNull();
+        expect(events).toHaveLength(1);
+
+        release();
+        await holder;
+        await assignment.retrySkipped(ctx, events[0].skipped, events[0].attempt);
+
+        expect((await counterpartyRow(counterpartyId)).branchId).toBe(String(branchA));
+        expect(await adminBranch(adminId)).toBe(String(branchA));
+    });
+
+    it('gives up after the attempt limit instead of publishing forever', async () => {
+        const counterpartyId = await counterparty({ departmentId: 'dept-1' });
+        await mappings.set(ctx, 'dept-1', String(branchA));
+        await dataSource.query(
+            `UPDATE "${schema}".counterparty SET "branchId" = NULL WHERE id = $1`,
+            [counterpartyId],
+        );
+        let release: () => void = () => undefined;
+        const held = new Promise<void>(resolve => (release = resolve));
+        let locked: () => void = () => undefined;
+        const lockedSignal = new Promise<void>(resolve => (locked = resolve));
+        const holder = dataSource.transaction(async em => {
+            await em.query(`SELECT 1 FROM "${schema}".counterparty WHERE id = $1 FOR UPDATE`, [
+                counterpartyId,
+            ]);
+            locked();
+            await held;
+        });
+        await lockedSignal;
+        await assignment.retrySkipped(
+            ctx,
+            { administratorIds: [], counterpartyIds: [String(counterpartyId)] },
+            5,
+        );
+        expect(events).toHaveLength(0);
+        release();
+        await holder;
     });
 });

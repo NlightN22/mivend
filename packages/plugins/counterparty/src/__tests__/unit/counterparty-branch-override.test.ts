@@ -20,7 +20,9 @@ describe('setCounterpartyBranchOverride', () => {
         const connection = {
             getRepository: () => ({ findOne: vi.fn().mockResolvedValue(counterparty) }),
         } as unknown as TransactionalConnection;
-        const mapping = { setCounterpartyOverride: vi.fn() };
+        const mapping = {
+            setCounterpartyOverride: vi.fn().mockResolvedValue({ previous: '2' }),
+        };
         const scope = { kind: 'all' };
         const access = {
             resolveCounterpartyScope: vi.fn().mockResolvedValue(scope),
@@ -43,7 +45,7 @@ describe('setCounterpartyBranchOverride', () => {
             ctx,
             expect.objectContaining({
                 entityName: 'Counterparty',
-                changedFields: { branchOverrideId: { from: null, to: '3' } },
+                changedFields: { branchOverrideId: { from: '2', to: '3' } },
             }),
         );
     });

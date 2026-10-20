@@ -1,3 +1,4 @@
+import { BranchAssignmentRetryListener } from './branch-assignment-retry.listener';
 import { BranchAssignmentService } from './branch-assignment.service';
 import { createBranchAssignmentTask } from './branch-assignment.scheduled-task';
 import { DepartmentBranchMappingService } from './department-branch-mapping.service';
@@ -7,7 +8,11 @@ import { DepartmentBranchMapping } from './entities/department-branch-mapping.en
 // Registrations of the department -> branch feature (#65), spread into AccessControlPlugin.
 export const departmentBranchBundle = {
     entities: [DepartmentBranchMapping],
-    providers: [BranchAssignmentService, DepartmentBranchMappingService],
+    providers: [
+        BranchAssignmentService,
+        DepartmentBranchMappingService,
+        BranchAssignmentRetryListener,
+    ],
     resolvers: [DepartmentBranchResolver],
     scheduledTasks: () => [createBranchAssignmentTask()],
 };

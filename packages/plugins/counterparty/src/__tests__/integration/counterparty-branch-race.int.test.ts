@@ -3,6 +3,7 @@ import { Column, DataSource, DeleteDateColumn, Entity, PrimaryGeneratedColumn } 
 import type { TransactionalConnection } from '@vendure/core';
 import { Administrator } from '@vendure/core';
 import {
+    BranchAssignmentRetryEvent,
     BranchAssignmentService,
     Department,
     DepartmentBranchMapping,
@@ -89,6 +90,7 @@ let dataSource: DataSource;
 let service: CounterpartyService;
 let assignment: BranchAssignmentService;
 let mappings: DepartmentBranchMappingService;
+const retries: BranchAssignmentRetryEvent[] = [];
 
 function connection(): TransactionalConnection {
     const base = createTestConnection(dataSource);
@@ -125,7 +127,11 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     const conn = connection();
-    assignment = new BranchAssignmentService(conn, { instanceType: 'central' });
+    assignment = new BranchAssignmentService(conn, { instanceType: 'central' }, {
+        publish: (event: BranchAssignmentRetryEvent) => {
+            retries.push(event);
+        },
+    } as never);
     mappings = new DepartmentBranchMappingService(conn, assignment);
     service = new CounterpartyService(
         conn,
@@ -181,6 +187,11 @@ describe('applyActiveState vs reconcile (real Postgres)', () => {
                 ),
                 mappings.set(ctx, 'dept-1', String(target)),
             ]);
+            // Stands in for the post-commit listener: rows skipped under a lock are retried.
+            while (retries.length > 0) {
+                const event = retries.shift() as BranchAssignmentRetryEvent;
+                await assignment.retrySkipped(ctx, event.skipped, event.attempt);
+            }
             const row = await dataSource
                 .getRepository(TestCounterparty)
                 .findOneByOrFail({ erpId: 'cp-1' });

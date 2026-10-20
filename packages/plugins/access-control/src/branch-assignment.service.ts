@@ -1,7 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Administrator, Logger, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    Administrator,
+    EventBus,
+    Logger,
+    RequestContext,
+    TransactionalConnection,
+} from '@vendure/core';
+import { In } from 'typeorm';
 import { ctxQuery, withAggregateLock } from 'shared';
 
+import { BranchAssignmentRetryEvent, SkippedRows } from './branch-assignment-retry.event';
 import {
     CounterpartyBranchSignals,
     resolveCounterpartyBranch,
@@ -25,6 +33,7 @@ interface CounterpartyRow extends CounterpartyBranchSignals {
 
 const BRANCH_LOCK = 'branch-assignment';
 const COUNTERPARTY_BATCH = 500;
+const MAX_RETRY_ATTEMPTS = 5;
 
 // The single writer of Administrator.customFields.branchId and Counterparty.branchId. One global
 // lock serializes every writer; each run re-reads mapping and tree under it (docs/concurrency.md).
@@ -33,6 +42,7 @@ export class BranchAssignmentService {
     constructor(
         private connection: TransactionalConnection,
         @Inject(ACCESS_CONTROL_PLUGIN_OPTIONS) private options: AccessControlPluginOptions,
+        private eventBus: EventBus,
     ) {}
 
     get isReplica(): boolean {
@@ -52,82 +62,125 @@ export class BranchAssignmentService {
         ctx: RequestContext,
         administratorId: string | number,
     ): Promise<void> {
-        await this.reconcile(ctx, { administratorId: String(administratorId) });
+        await this.reconcile(ctx, { admins: { ids: [String(administratorId)] } });
     }
 
     async assignCounterparties(ctx: RequestContext, scope: CounterpartyScope): Promise<void> {
         if (scope.ids?.length === 0) return;
-        await this.reconcile(ctx, { counterparty: scope });
+        await this.reconcile(ctx, { counterparties: scope });
     }
 
     async reconcileSubtree(ctx: RequestContext, departmentErpId: string): Promise<void> {
-        await this.reconcile(ctx, { subtreeRoot: departmentErpId });
+        await this.reconcile(ctx, { admins: {}, counterparties: {}, subtreeRoot: departmentErpId });
     }
 
     async reconcileAll(ctx: RequestContext): Promise<void> {
-        await this.reconcile(ctx, {});
+        await this.reconcile(ctx, { admins: {}, counterparties: {} });
     }
 
-    // Runs `write`, then reconciles only if a branch input of the counterparty changed (or the row is new);
-    // unchanged inputs stay correct because every mapping edit reconciles its subtree.
+    // Re-runs exactly the rows an earlier pass skipped because a writer held them (after that commit).
+    async retrySkipped(ctx: RequestContext, skipped: SkippedRows, attempt: number): Promise<void> {
+        await this.reconcile(
+            ctx,
+            {
+                admins: skipped.administratorIds.length
+                    ? { ids: skipped.administratorIds }
+                    : undefined,
+                counterparties: skipped.counterpartyIds.length
+                    ? { ids: skipped.counterpartyIds }
+                    : undefined,
+            },
+            attempt,
+        );
+    }
+
+    // Runs `write`, then reconciles if a branch input changed, the row is new, or the stored branch differs
+    // from the resolved one. Rows locked by a mapping edit are caught by the retry, not by this check.
     async assignCounterpartyIfInputsChanged<T>(
         ctx: RequestContext,
         erpId: string,
         write: () => Promise<T>,
     ): Promise<T> {
         if (this.isReplica) return write();
-        const before = await this.counterpartyInputs(ctx, erpId);
+        const before = await this.counterpartyState(ctx, erpId);
         const result = await write();
-        if (before === null || before !== (await this.counterpartyInputs(ctx, erpId))) {
+        const after = await this.counterpartyState(ctx, erpId);
+        if (before === null || after === null || before.inputs !== after.inputs || !after.settled) {
             await this.assignCounterparties(ctx, { erpId });
         }
         return result;
     }
 
-    private async counterpartyInputs(ctx: RequestContext, erpId: string): Promise<string | null> {
-        const rows = await ctxQuery<Array<{ inputs: string }>>(
+    private async counterpartyState(
+        ctx: RequestContext,
+        erpId: string,
+    ): Promise<{ inputs: string; settled: boolean } | null> {
+        const rows = await ctxQuery<Array<CounterpartyRow & { inputs: string }>>(
             this.connection,
             ctx,
-            `SELECT concat_ws('|', c."branchOverrideId", c."departmentId", c."managerErpId", c."assignedManagerId",
-                    COALESCE(a."customFieldsDepartmentid", eu."departmentId")) AS inputs
+            `SELECT c.id, c."branchId", c."branchOverrideId" AS override, c."departmentId" AS "ownDepartmentErpId",
+                    COALESCE(a."customFieldsDepartmentid", eu."departmentId") AS "managerDepartmentErpId",
+                    jsonb_build_array(c."branchOverrideId", c."departmentId", c."managerErpId",
+                        c."assignedManagerId", COALESCE(a."customFieldsDepartmentid", eu."departmentId"))::text AS inputs
                FROM counterparty c
                LEFT JOIN administrator a ON a.id::text = c."assignedManagerId"
                LEFT JOIN erp_user eu ON eu."erpId" = c."managerErpId"
               WHERE c."erpId" = $1`,
             [erpId],
         );
-        return rows[0]?.inputs ?? null;
+        const row = rows[0];
+        if (!row) return null;
+        const { parentOf, mapping } = await this.loadTree(ctx);
+        const resolved = resolveCounterpartyBranch(row, parentOf, mapping);
+        return { inputs: row.inputs, settled: (row.branchId ?? null) === resolved };
     }
 
     private async reconcile(
         ctx: RequestContext,
-        scope: { administratorId?: string; counterparty?: CounterpartyScope; subtreeRoot?: string },
+        scope: {
+            admins?: { ids?: string[] };
+            counterparties?: CounterpartyScope;
+            subtreeRoot?: string;
+        },
+        attempt = 0,
     ): Promise<void> {
         if (this.isReplica) return;
-        if (!scope.counterparty) {
-            await this.withLock(ctx, async txCtx => {
+        const skipped: SkippedRows = { administratorIds: [], counterpartyIds: [] };
+        if (scope.admins) {
+            skipped.administratorIds = await this.withLock(ctx, async txCtx => {
                 const { parentOf, mapping } = await this.loadTree(txCtx);
-                await this.reconcileAdministrators(txCtx, parentOf, mapping, {
-                    id: scope.administratorId,
+                return this.reconcileAdministrators(txCtx, parentOf, mapping, {
+                    ids: scope.admins?.ids,
                     departments: this.subtree(scope.subtreeRoot, parentOf),
                 });
             });
         }
-        if (scope.administratorId) return;
-        // One lock per batch so a full scan never queues events behind it.
-        let afterId = 0;
-        for (;;) {
-            const batch = await this.withLock(ctx, async txCtx => {
-                const { parentOf, mapping } = await this.loadTree(txCtx);
-                return this.reconcileCounterparties(txCtx, parentOf, mapping, {
-                    scope: scope.counterparty,
-                    departments: this.subtree(scope.subtreeRoot, parentOf),
-                    afterId,
+        if (scope.counterparties) {
+            // One lock per batch so a full scan never queues events behind it.
+            let afterId = 0;
+            for (;;) {
+                const batch = await this.withLock(ctx, async txCtx => {
+                    const { parentOf, mapping } = await this.loadTree(txCtx);
+                    return this.reconcileCounterparties(txCtx, parentOf, mapping, {
+                        scope: scope.counterparties,
+                        departments: this.subtree(scope.subtreeRoot, parentOf),
+                        afterId,
+                    });
                 });
-            });
-            if (batch.scanned < COUNTERPARTY_BATCH) return;
-            afterId = batch.lastId;
+                skipped.counterpartyIds.push(...batch.skipped);
+                if (batch.scanned < COUNTERPARTY_BATCH) break;
+                afterId = batch.lastId;
+            }
         }
+        if (skipped.administratorIds.length === 0 && skipped.counterpartyIds.length === 0) return;
+        if (attempt >= MAX_RETRY_ATTEMPTS) {
+            Logger.error(
+                `branch assignment: ${skipped.administratorIds.length} administrator(s) and ${skipped.counterpartyIds.length} counterparty row(s) still locked after ${attempt} retries; the scheduled backstop will repair them`,
+                loggerCtx,
+            );
+            return;
+        }
+        await this.eventBus.publish(new BranchAssignmentRetryEvent(ctx, skipped, attempt + 1));
     }
 
     private subtree(
@@ -161,16 +214,24 @@ export class BranchAssignmentService {
         ctx: RequestContext,
         parentOf: Map<string, string | null>,
         mapping: Map<string, number>,
-        filter: { id?: string; departments: Set<string> | null },
-    ): Promise<void> {
+        filter: { ids?: string[]; departments: Set<string> | null },
+    ): Promise<string[]> {
         const repo = this.connection.getRepository(ctx, Administrator);
-        // A row locked by an in-flight writer is skipped: that writer reconciles it right after its own write.
+        const candidates = await repo.find({
+            where: filter.ids ? { id: In(filter.ids) } : {},
+            select: ['id'],
+            withDeleted: true,
+            loadEagerRelations: false,
+        });
+        if (candidates.length === 0) return [];
+        // A locked row is skipped and reported: its writer's commit may predate this pass's mapping.
         const admins = await repo.find({
-            where: filter.id ? { id: filter.id } : {},
+            where: { id: In(candidates.map(c => c.id)) },
             withDeleted: true,
             loadEagerRelations: false,
             lock: { mode: 'pessimistic_write', onLocked: 'skip_locked' },
         });
+        const locked = new Set(admins.map(a => String(a.id)));
         for (const admin of admins) {
             const fields = admin.customFields as {
                 departmentId?: string | null;
@@ -187,6 +248,7 @@ export class BranchAssignmentService {
                 loggerCtx,
             );
         }
+        return candidates.map(c => String(c.id)).filter(id => !locked.has(id));
     }
 
     private async reconcileCounterparties(
@@ -194,12 +256,11 @@ export class BranchAssignmentService {
         parentOf: Map<string, string | null>,
         mapping: Map<string, number>,
         filter: { scope?: CounterpartyScope; departments: Set<string> | null; afterId: number },
-    ): Promise<{ scanned: number; lastId: number }> {
-        const rows = await ctxQuery<CounterpartyRow[]>(
+    ): Promise<{ scanned: number; lastId: number; skipped: string[] }> {
+        const candidates = await ctxQuery<Array<{ id: number }>>(
             this.connection,
             ctx,
-            `SELECT c.id, c."branchId", c."branchOverrideId" AS override, c."departmentId" AS "ownDepartmentErpId",
-                    COALESCE(a."customFieldsDepartmentid", eu."departmentId") AS "managerDepartmentErpId"
+            `SELECT c.id
                FROM counterparty c
                LEFT JOIN administrator a ON a.id::text = c."assignedManagerId"
                LEFT JOIN erp_user eu ON eu."erpId" = c."managerErpId"
@@ -209,8 +270,7 @@ export class BranchAssignmentService {
                 AND ($4::text[] IS NULL OR c."departmentId" = ANY($4)
                      OR COALESCE(a."customFieldsDepartmentid", eu."departmentId") = ANY($4))
                 AND c.id > $5
-              ORDER BY c.id LIMIT ${COUNTERPARTY_BATCH}
-                FOR UPDATE OF c SKIP LOCKED`,
+              ORDER BY c.id LIMIT ${COUNTERPARTY_BATCH}`,
             [
                 filter.scope?.ids ?? null,
                 filter.scope?.erpId ?? null,
@@ -219,6 +279,25 @@ export class BranchAssignmentService {
                 filter.afterId,
             ],
         );
+        const ids = candidates.map(c => c.id);
+        const result = { scanned: ids.length, lastId: ids.length ? ids[ids.length - 1] : 0 };
+        if (ids.length === 0) return { ...result, skipped: [] };
+        // Rows held by an in-flight writer are skipped and reported for a post-commit retry.
+        const rows = await ctxQuery<CounterpartyRow[]>(
+            this.connection,
+            ctx,
+            `SELECT c.id, c."branchId", c."branchOverrideId" AS override, c."departmentId" AS "ownDepartmentErpId",
+                    COALESCE(a."customFieldsDepartmentid", eu."departmentId") AS "managerDepartmentErpId"
+               FROM counterparty c
+               LEFT JOIN administrator a ON a.id::text = c."assignedManagerId"
+               LEFT JOIN erp_user eu ON eu."erpId" = c."managerErpId"
+              WHERE c.id = ANY($1::int[])
+              ORDER BY c.id
+                FOR UPDATE OF c SKIP LOCKED`,
+            [ids],
+        );
+        const lockedIds = new Set(rows.map(r => r.id));
+        const skipped = ids.filter(id => !lockedIds.has(id)).map(String);
         const changed = rows
             .map(row => ({
                 id: row.id,
@@ -226,8 +305,7 @@ export class BranchAssignmentService {
                 row,
             }))
             .filter(({ next, row }) => (row.branchId ?? null) !== next);
-        const result = { scanned: rows.length, lastId: rows.length ? rows[rows.length - 1].id : 0 };
-        if (changed.length === 0) return result;
+        if (changed.length === 0) return { ...result, skipped };
         await ctxQuery(
             this.connection,
             ctx,
@@ -237,6 +315,6 @@ export class BranchAssignmentService {
             [changed.map(c => c.id), changed.map(c => c.next)],
         );
         Logger.verbose(`counterparty branchId reassigned for ${changed.length} row(s)`, loggerCtx);
-        return result;
+        return { ...result, skipped };
     }
 }

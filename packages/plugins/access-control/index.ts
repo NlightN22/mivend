@@ -33,3 +33,4 @@ export type { AccessiblePriceType, PriceTypeAccessContext } from './src/price-ty
 export { BranchAssignmentService } from './src/branch-assignment.service';
 export { DepartmentBranchMappingService } from './src/department-branch-mapping.service';
 export { DepartmentBranchMapping } from './src/entities/department-branch-mapping.entity';
+export { BranchAssignmentRetryEvent } from './src/branch-assignment-retry.event';

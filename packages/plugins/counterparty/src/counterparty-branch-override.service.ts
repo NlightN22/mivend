@@ -29,13 +29,17 @@ export class CounterpartyBranchOverrideService {
         const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
         this.accessScopeService.assertCounterpartyWritableInScope(scope, counterparty);
 
-        await this.mappingService.setCounterpartyOverride(ctx, String(counterpartyId), branchId);
+        const { previous } = await this.mappingService.setCounterpartyOverride(
+            ctx,
+            String(counterpartyId),
+            branchId,
+        );
         await this.versioningService.recordChange(ctx, {
             entityName: 'Counterparty',
             entityId: counterpartyId,
             action: 'update',
             changedFields: {
-                branchOverrideId: { from: counterparty.branchOverrideId, to: branchId },
+                branchOverrideId: { from: previous, to: branchId },
             },
         });
     }
