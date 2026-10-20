@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
-import type { AccessScopeService } from '@mivend/plugin-access-control';
+import { AccessScopeService } from '@mivend/plugin-access-control';
 import { ProformaInvoiceVisibilityService } from '../../proforma-invoice-visibility.service';
 
 // Don't annotate: an explicit type defeats TS's inference of each mock's real call signature
@@ -33,12 +33,14 @@ const mockCtx = {} as unknown as RequestContext;
 function mockAccessScopeService() {
     return {
         resolveProformaInvoiceScope: vi.fn(),
+        managerClause: (...args: Parameters<AccessScopeService['managerClause']>) =>
+            new AccessScopeService({} as never, {} as never, {} as never).managerClause(...args),
         // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter).
         applyOwnCounterpartyFilter: vi.fn(
             (
                 builder: { andWhere: (sql: string, params: Record<string, unknown>) => void },
                 alias: string,
-                administratorId: string | undefined,
+                scope: { administratorId?: string },
             ) => {
                 builder.andWhere(
                     `(${alias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
@@ -46,7 +48,7 @@ function mockAccessScopeService() {
                 WHERE ctm."counterpartyId" = ${alias}.id
                 AND ctm."administratorId" = :ownScopeAdminId
             ))`,
-                    { ownScopeAdminId: administratorId ?? null },
+                    { ownScopeAdminId: scope.administratorId ?? null },
                 );
             },
         ),
@@ -81,7 +83,7 @@ describe('ProformaInvoiceVisibilityService', () => {
         expect(accessScopeService.applyOwnCounterpartyFilter).toHaveBeenCalledWith(
             qb,
             'counterparty',
-            'admin-1',
+            { kind: 'own', administratorId: 'admin-1' },
         );
     });
 
@@ -94,7 +96,7 @@ describe('ProformaInvoiceVisibilityService', () => {
 
         await service.findVisible(mockCtx);
 
-        expect(qb.andWhere).toHaveBeenCalledWith('proformaInvoice.branchId = :branchId', {
+        expect(qb.andWhere).toHaveBeenCalledWith('(proformaInvoice.branchId = :branchId)', {
             branchId: 'branch-1',
         });
     });

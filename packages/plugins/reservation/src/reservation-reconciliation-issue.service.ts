@@ -87,15 +87,12 @@ export class ReservationReconciliationIssueService {
                 'o."customFieldsCounterpartyid" = counterparty.id::text',
             );
             if (scope.kind === 'own') {
-                this.accessScopeService.applyOwnCounterpartyFilter(
-                    qb,
-                    'counterparty',
-                    scope.administratorId,
-                );
+                this.accessScopeService.applyOwnCounterpartyFilter(qb, 'counterparty', scope);
             } else {
+                const managers = this.accessScopeService.managerClause(scope, 'counterparty');
                 qb.andWhere(
-                    `counterparty.departmentId = :departmentId AND ("o"."customFieldsBranchid" = :branchId OR "o"."customFieldsBranchid" IS NULL)`,
-                    { departmentId: scope.departmentId ?? null, branchId: scope.branchId ?? null },
+                    `("o"."customFieldsBranchid" = :branchId OR "o"."customFieldsBranchid" IS NULL${managers ? ` OR ${managers.sql}` : ''})`,
+                    { branchId: scope.branchId ?? null, ...managers?.params },
                 );
             }
         }

@@ -120,6 +120,11 @@ export const CustomPermission = {
         description:
             'Decide who has an Administrator login at all — review ErpUser candidates, create an Administrator anchored on erpId, and manually activate/deactivate one (issue #119); distinct from ManageAccessControl, which is RBAC role/scope configuration once a login already exists',
     }),
+    ManageVisibilityGrants: new PermissionDefinition({
+        name: 'ManageVisibilityGrants',
+        description:
+            "Grant/revoke visibility of other managers' clients and read the unsorted list (issue #123); a holder without ManageAccessControl can grant only managers they see themselves",
+    }),
     ManageCounterpartyPortalAccess: new PermissionDefinition({
         name: 'ManageCounterpartyPortalAccess',
         description:

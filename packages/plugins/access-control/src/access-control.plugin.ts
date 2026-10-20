@@ -6,6 +6,7 @@ import {
 } from '@vendure/core';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { departmentBranchBundle } from './department-branch.bundle';
+import { visibilityGrantBundle } from './visibility-grant.bundle';
 import { adminApiSchema } from './access-control.schema';
 
 import { AccessControlResolver, AdministratorStatusResolver } from './access-control.resolver';
@@ -51,9 +52,11 @@ import { WarehouseService } from './warehouse.service';
         CreditTermLimit,
         ErpUser,
         ...departmentBranchBundle.entities,
+        ...visibilityGrantBundle.entities,
     ],
     providers: [
         ...departmentBranchBundle.providers,
+        ...visibilityGrantBundle.providers,
         AccessScopeService,
         TeamAdministratorService,
         RoleScopeConfigService,
@@ -79,6 +82,7 @@ import { WarehouseService } from './warehouse.service';
     ],
     exports: [
         ...departmentBranchBundle.providers,
+        ...visibilityGrantBundle.providers,
         AccessScopeService,
         TeamAdministratorService,
         RoleScopeConfigService,

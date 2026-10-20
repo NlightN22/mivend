@@ -148,6 +148,7 @@ describe('ReservationReconciliationIssueService', () => {
         let accessScopeService: {
             resolveOrderScope: ReturnType<typeof vi.fn>;
             applyOwnCounterpartyFilter: ReturnType<typeof vi.fn>;
+            managerClause: ReturnType<typeof vi.fn>;
         };
 
         beforeEach(() => {
@@ -156,6 +157,7 @@ describe('ReservationReconciliationIssueService', () => {
             accessScopeService = {
                 resolveOrderScope: vi.fn(),
                 applyOwnCounterpartyFilter: vi.fn(),
+                managerClause: vi.fn(() => null),
             };
             service = new ReservationReconciliationIssueService(
                 connection as unknown as TransactionalConnection,
@@ -184,7 +186,7 @@ describe('ReservationReconciliationIssueService', () => {
             expect(accessScopeService.applyOwnCounterpartyFilter).toHaveBeenCalledWith(
                 qb,
                 'counterparty',
-                'admin-1',
+                { kind: 'own', administratorId: 'admin-1' },
             );
         });
 
@@ -198,14 +200,12 @@ describe('ReservationReconciliationIssueService', () => {
             await service.findOpen(ctx);
 
             expect(qb.andWhere).toHaveBeenCalledWith(
-                expect.stringContaining('counterparty.departmentId = :departmentId'),
-                { departmentId: 'dept-1', branchId: 'branch-1' },
+                expect.stringContaining('"o"."customFieldsBranchid" = :branchId'),
+                { branchId: 'branch-1' },
             );
-            const [sql] = qb.andWhere.mock.calls.find(
-                (call: unknown[]) =>
-                    typeof call[0] === 'string' && call[0].includes('departmentId'),
-            ) as [string, unknown];
+            const [sql] = qb.andWhere.mock.calls[0] as [string, unknown];
             expect(sql).toContain('IS NULL');
+            expect(sql).not.toContain('departmentId');
         });
     });
 });

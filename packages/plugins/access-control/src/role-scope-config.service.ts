@@ -54,6 +54,17 @@ export class RoleScopeConfigService {
         return best;
     }
 
+    async roleCodesWithScope(
+        ctx: RequestContext,
+        resource: string,
+        kind: AccessScopeKind,
+    ): Promise<string[]> {
+        const rows = await this.connection.getRepository(ctx, RoleAccessScope).find();
+        return rows
+            .filter(row => parseAccessScopeConfig(row)?.[resource] === kind)
+            .map(row => row.roleCode);
+    }
+
     // setScopeFor writes config unvalidated, so reads must go through parseAccessScopeConfig.
     async getScopeFor(ctx: RequestContext, roleCode: string): Promise<AccessScopeConfig | null> {
         const row = await this.connection

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Brackets } from 'typeorm';
 import type { ListQueryBuilder, RequestContext } from '@vendure/core';
-import type { AccessScopeService } from '@mivend/plugin-access-control';
+import { AccessScopeService } from '@mivend/plugin-access-control';
 import { OrderVisibilityService } from '../../order-visibility.service';
 
 function mockQueryBuilder(): Record<string, ReturnType<typeof vi.fn>> {
@@ -30,18 +30,24 @@ describe('OrderVisibilityService', () => {
         listQueryBuilder = { build: vi.fn(() => qb) };
         accessScopeService = {
             resolveOrderScope: vi.fn(),
+            managerClause: (...args: Parameters<AccessScopeService['managerClause']>) =>
+                new AccessScopeService({} as never, {} as never, {} as never).managerClause(
+                    ...args,
+                ),
             // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter) rather
             // than a no-op stub — these tests assert the actual SQL fragment produced.
-            applyOwnCounterpartyFilter: vi.fn((builder, alias, administratorId) => {
-                builder.andWhere(
-                    `(${alias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
+            applyOwnCounterpartyFilter: vi.fn(
+                (builder, alias, scope: { administratorId?: string }) => {
+                    builder.andWhere(
+                        `(${alias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
                 SELECT 1 FROM counterparty_team_member ctm
                 WHERE ctm."counterpartyId" = ${alias}.id
                 AND ctm."administratorId" = :ownScopeAdminId
             ))`,
-                    { ownScopeAdminId: administratorId ?? null },
-                );
-            }),
+                        { ownScopeAdminId: scope.administratorId ?? null },
+                    );
+                },
+            ),
         };
         service = new OrderVisibilityService(
             listQueryBuilder as unknown as ListQueryBuilder,
@@ -60,7 +66,7 @@ describe('OrderVisibilityService', () => {
         expect(accessScopeService.applyOwnCounterpartyFilter).toHaveBeenCalledWith(
             qb,
             'counterparty',
-            'admin-1',
+            { kind: 'own', administratorId: 'admin-1' },
         );
     });
 

@@ -7,6 +7,8 @@ export interface AccessScope {
     administratorId?: ID;
     departmentId?: string;
     branchId?: string;
+    // Administrator ids of managers whose clients are also visible, from active visibility grants.
+    grantedManagerIds?: string[];
 }
 
 export const loggerCtx = 'AccessControlPlugin';

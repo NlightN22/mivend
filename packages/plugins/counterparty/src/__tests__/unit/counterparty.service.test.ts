@@ -6,7 +6,7 @@ import {
     UserInputError,
 } from '@vendure/core';
 import type { CustomerPricingService } from '@mivend/plugin-customer-pricing';
-import type { AccessScopeService } from '@mivend/plugin-access-control';
+import { AccessScopeService } from '@mivend/plugin-access-control';
 import { CounterpartyService } from '../../counterparty.service';
 import { Counterparty } from '../../entities/counterparty.entity';
 
@@ -34,13 +34,15 @@ const mockCustomerPricingService = {
 
 const mockAccessScopeService = {
     resolveCounterpartyScope: vi.fn(async () => ({ kind: 'all' })),
+    managerClause: (...args: Parameters<AccessScopeService['managerClause']>) =>
+        new AccessScopeService({} as never, {} as never, {} as never).managerClause(...args),
     // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter) rather than a
     // no-op stub — assigning-manager-OR-team-member is asserted directly, not just a bare call.
     applyOwnCounterpartyFilter: vi.fn(
         (
             qb: { andWhere: (sql: string, params: Record<string, unknown>) => unknown },
             alias: string,
-            administratorId: string | undefined,
+            scope: { administratorId?: string },
         ) =>
             qb.andWhere(
                 `(${alias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
@@ -48,7 +50,7 @@ const mockAccessScopeService = {
                 WHERE ctm."counterpartyId" = ${alias}.id
                 AND ctm."administratorId" = :ownScopeAdminId
             ))`,
-                { ownScopeAdminId: administratorId ?? null },
+                { ownScopeAdminId: scope.administratorId ?? null },
             ),
     ),
 } as unknown as AccessScopeService;
@@ -537,7 +539,7 @@ describe('CounterpartyService', () => {
             expect(mockAccessScopeService.applyOwnCounterpartyFilter).toHaveBeenCalledWith(
                 qb,
                 'c',
-                'admin-1',
+                { kind: 'own', administratorId: 'admin-1' },
             );
         });
 
@@ -558,7 +560,7 @@ describe('CounterpartyService', () => {
 
             await service.findVisible(mockCtx);
 
-            expect(qb.andWhere).toHaveBeenCalledWith('c.branchId = :scopeBranch', {
+            expect(qb.andWhere).toHaveBeenCalledWith('(c.branchId = :scopeBranch)', {
                 scopeBranch: 'branch-a',
             });
         });

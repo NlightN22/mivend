@@ -34,3 +34,7 @@ export { BranchAssignmentService } from './src/branch-assignment.service';
 export { DepartmentBranchMappingService } from './src/department-branch-mapping.service';
 export { DepartmentBranchMapping } from './src/entities/department-branch-mapping.entity';
 export { BranchAssignmentRetryEvent } from './src/branch-assignment-retry.event';
+export { VisibilityGrant } from './src/entities/visibility-grant.entity';
+export type { VisibilitySubjectKind } from './src/entities/visibility-grant.entity';
+export { VisibilityGrantReader } from './src/visibility-grant-reader.service';
+export { UnsortedAdministratorService } from './src/unsorted-administrator.service';

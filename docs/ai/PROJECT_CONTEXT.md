@@ -2,6 +2,9 @@
 
 Updated: 2026-10-20 10:00
 
+## #123 visibility grants (2026-10-20, implemented; audit and `make test-int` pending)
+- `VisibilityGrant` (access-control, never deleted, revoke = `revokedAt`) adds a manager's clients to an administrator's scope: union of own + granted managers + primary branch (`AccessScope.grantedManagerIds`, `AccessScopeService.managerClause`). Wired into counterparty/order/proforma/reconciliation visibility. Permission `ManageVisibilityGrants` (department-head, general-director, portal-admin); writer `VisibilityGrantService` (counterparty plugin) audits to `EntityVersion`; migration `1791530000000`. Manager portal: Settings > "Visibility grants" and "Unsorted". Details and limits (grants not replicated to branch instances): `docs/access-control.md` "Visibility grants (#123)".
+
 ## #65 department -> branch mapping (2026-10-20, implemented; audit and `make test-int` pending)
 - `department_branch_mapping` table (staff-edited, subtree inheritance) + `Counterparty.branchOverrideId`; migration `1791528000000`. `BranchAssignmentService` (access-control) is the only writer of `Administrator.customFields.branchId` and `Counterparty.branchId`, under the advisory lock `branch-assignment` (rows `SKIP LOCKED`, batched full scan), central only; backstop task every 15 min. Rules and triggers: `docs/access-control.md` "Automatic branch assignment (#65)".
 - `createAdministratorFromErpUser` refuses an unmapped department; manager portal Settings > "Departments to branch" (`/settings/department-branch`); dev seed record type `departmentBranch`. Legacy `upsertCounterparty(branchId)` and the e2e global-setup still write `Counterparty.branchId` directly (to be folded in or removed).

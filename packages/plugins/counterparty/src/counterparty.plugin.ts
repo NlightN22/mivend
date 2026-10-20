@@ -54,7 +54,10 @@ import {
     CounterpartyPortalAccessFieldResolver,
     CounterpartyPortalAccessMutationResolver,
 } from './counterparty-portal-access.resolver';
+import gql from 'graphql-tag';
 import { adminApiSchema } from './counterparty.schema';
+import { visibilityBundle } from './visibility/visibility.bundle';
+import { visibilitySchema } from './visibility/visibility.schema';
 import { shopApiSchema } from './trading-point.schema';
 
 const shopResolvers = [
@@ -82,6 +85,7 @@ const adminResolvers = [
     CounterpartyTeamMutationResolver,
     CounterpartyPortalAccessFieldResolver,
     CounterpartyPortalAccessMutationResolver,
+    ...visibilityBundle.resolvers,
 ];
 
 @VendurePlugin({
@@ -99,10 +103,14 @@ const adminResolvers = [
         resolvers: shopResolvers,
     },
     adminApiExtensions: {
-        schema: adminApiSchema,
+        schema: gql`
+            ${adminApiSchema}
+            ${visibilitySchema}
+        `,
         resolvers: adminResolvers,
     },
     providers: [
+        ...visibilityBundle.providers,
         CounterpartyService,
         CounterpartyConsumer,
         TradingPointService,

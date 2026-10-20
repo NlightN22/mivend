@@ -70,20 +70,18 @@ export class OrderVisibilityService {
             case 'own':
                 // Deliberately no branch restriction: key-account managers must see all orders for their accounts,
                 // even those serviced at another branch (chain customers span branches).
-                this.accessScopeService.applyOwnCounterpartyFilter(
-                    qb,
-                    'counterparty',
-                    scope.administratorId,
-                );
+                this.accessScopeService.applyOwnCounterpartyFilter(qb, 'counterparty', scope);
                 break;
-            case 'department':
-                // Filter by the order's denormalized branch, not Counterparty.branchId; never by departmentId.
-                // Quote "order" alias (reserved word); the IS NULL branch keeps branch-less orders visible.
+            case 'department': {
+                // Order's denormalized branch, never departmentId; "order" is quoted (reserved word).
+                // IS NULL keeps branch-less orders visible; managers add own and granted clients (#123).
+                const managers = this.accessScopeService.managerClause(scope, 'counterparty');
                 qb.andWhere(
-                    `("${qb.alias}"."customFieldsBranchid" = :branchId OR "${qb.alias}"."customFieldsBranchid" IS NULL)`,
-                    { branchId: scope.branchId ?? null },
+                    `("${qb.alias}"."customFieldsBranchid" = :branchId OR "${qb.alias}"."customFieldsBranchid" IS NULL${managers ? ` OR ${managers.sql}` : ''})`,
+                    { branchId: scope.branchId ?? null, ...managers?.params },
                 );
                 break;
+            }
             case 'all':
                 break;
         }

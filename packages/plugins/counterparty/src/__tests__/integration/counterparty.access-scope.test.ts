@@ -62,13 +62,14 @@ function targetInBranch(branchId: string): void {
 const mockAccessScopeService = {
     resolveCounterpartyScope: vi.fn(),
     assertCounterpartyWritableInScope: vi.fn(),
+    managerClause: vi.fn(() => null),
     // Real implementation (mirrors AccessScopeService.applyOwnCounterpartyFilter) so these real-
     // Postgres tests exercise the actual EXISTS-subquery SQL, not a no-op.
     applyOwnCounterpartyFilter: vi.fn(
         (
             qb: { andWhere: (sql: string, params: Record<string, unknown>) => unknown },
             alias: string,
-            administratorId: string | undefined,
+            scope: { administratorId?: string },
         ) =>
             qb.andWhere(
                 `(${alias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
@@ -76,7 +77,7 @@ const mockAccessScopeService = {
                 WHERE ctm."counterpartyId" = ${alias}.id::text
                 AND ctm."administratorId" = :ownScopeAdminId
             ))`,
-                { ownScopeAdminId: administratorId ?? null },
+                { ownScopeAdminId: scope.administratorId ?? null },
             ),
     ),
 };

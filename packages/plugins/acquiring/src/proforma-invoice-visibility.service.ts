@@ -91,19 +91,17 @@ export class ProformaInvoiceVisibilityService {
             case 'own':
                 // Intentional exception: key account managers read all invoices for their assigned accounts,
                 // regardless of which branch serviced the order (see docs/access-control.md).
-                this.accessScopeService.applyOwnCounterpartyFilter(
-                    qb,
-                    counterpartyAlias,
-                    scope.administratorId,
+                this.accessScopeService.applyOwnCounterpartyFilter(qb, counterpartyAlias, scope);
+                break;
+            case 'department': {
+                // The invoice's own branchId, never departmentId; plus own and granted managers' clients (#123).
+                const managers = this.accessScopeService.managerClause(scope, counterpartyAlias);
+                qb.andWhere(
+                    `(${proformaInvoiceAlias}.branchId = :branchId${managers ? ` OR ${managers.sql}` : ''})`,
+                    { branchId: scope.branchId ?? null, ...managers?.params },
                 );
                 break;
-            case 'department':
-                // Filter by the invoice's own branchId, not Counterparty.branchId (chain accounts can differ).
-                // departmentId is display-only, never an access gate; only Branch is (docs/access-control.md).
-                qb.andWhere(`${proformaInvoiceAlias}.branchId = :branchId`, {
-                    branchId: scope.branchId ?? null,
-                });
-                break;
+            }
             case 'all':
                 break;
         }

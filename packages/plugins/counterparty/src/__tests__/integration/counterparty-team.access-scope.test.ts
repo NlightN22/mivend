@@ -50,7 +50,7 @@ beforeAll(async () => {
 
     // applyOwnCounterpartyFilter doesn't need AdministratorService/RoleScopeConfigService —
     // it's a pure query-builder helper, so those constructor deps are unused stubs here.
-    accessScopeService = new AccessScopeService({} as never, {} as never);
+    accessScopeService = new AccessScopeService({} as never, {} as never, {} as never);
 });
 
 afterAll(async () => {
@@ -65,7 +65,7 @@ beforeEach(async () => {
 
 async function findVisibleErpIdsForOwnScope(administratorId: string): Promise<string[]> {
     const qb = dataSource.getRepository(TestCounterparty).createQueryBuilder('c');
-    accessScopeService.applyOwnCounterpartyFilter(qb, 'c', administratorId);
+    accessScopeService.applyOwnCounterpartyFilter(qb, 'c', { kind: 'own', administratorId });
     const rows = await qb.getMany();
     return rows.map(r => r.erpId).sort();
 }

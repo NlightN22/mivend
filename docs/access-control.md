@@ -239,8 +239,7 @@ interchangeable id spaces:
   version of this doc/several services that did filter by it — see "Branch scope" below). The
   `AccessScopeKind` enum still has a `'department'` value for historical reasons — its cases in
   `AccessScopeService`/`CounterpartyService`/`OrderVisibilityService`/`ProformaInvoiceVisibilityService`
-  no longer compare `departmentId` at all; renaming the enum value itself (e.g. to `'branch'`) is
-  an open question for issue #123, not done yet.
+  no longer compare `departmentId` at all; renaming the enum value itself (e.g. to `'branch'`) stays open.
   **Confirmed against the real Kafka contracts** (`@nlightn22/event-contracts`,
   `counterparty_changed.proto`/`user_changed.proto`): ERP only ever sends `department_id` for
   both `Counterparty` and `Administrator`(`user`) — there is no `branch_id` field in either
@@ -321,6 +320,41 @@ wins. Cross-branch containers (tree roots, the office subtree) stay unmapped, so
 - `TradingPoint.servicingBranchId` still defaults from the counterparty's branch at creation only.
 - Dev seed: erp-import record type `departmentBranch` (synthetic mapping rows); real contours are
   never seeded.
+
+### Visibility grants (#123)
+
+Effective visibility is an additive union, deny by default: own clients, plus the clients of the managers
+granted to the caller, plus (branch-scoped roles) the primary branch, plus everything for `all`. A grant never
+removes base access. `AccessScope.grantedManagerIds` carries the granted managers (Administrator ids as
+strings); `AccessScopeService.managerClause` / `applyOwnCounterpartyFilter` turn the set into SQL, and every
+consumer (`CounterpartyService` lists, KPIs, totals and `findOneVisible`, `assertCounterpartyWritable`,
+`OrderVisibilityService`, `ProformaInvoiceVisibilityService` and payments through it, the reservation and
+payment reconciliation lists) uses them, so counters and pagination totals cover the same rows as the list.
+For a `department` scope the caller's own clients are part of the union too.
+
+- **Entity** `VisibilityGrant` (access-control, `UuidEntity`): grantee Administrator id, subject as
+  `subjectKind` + `subjectRef` (only `manager`, a closed technical discriminator; later kinds such as a branch
+  plug in by extending `VisibilityGrantReader`), optional `validFrom`/`validTo` (null = open; `validTo` is
+  exclusive), `reason`, `grantedByAdministratorId`, `revokedAt`/`revokedByAdministratorId`. Rows are never
+  deleted: revoke sets `revokedAt`, an expired grant just stops matching. Status is derived: active,
+  scheduled, expired, revoked.
+- **Permission** `ManageVisibilityGrants` (default roles: department-head, general-director, portal-admin).
+  `ManageAccessControl` holders may grant any manager to anyone. A holder of only the new permission can
+  grant only when both the grantee and the manager are in the caller's visible team (`TeamAdministratorService`,
+  the own branch) or, for the manager, among the caller's own granted managers, and never to themselves. A
+  grant to oneself is refused, so a caller cannot widen their own scope. The same rule limits revoking (the
+  granter may always revoke their own grant) and which grants the list shows.
+- **Writer** `VisibilityGrantService` (counterparty plugin, next to the other audited writers; central only):
+  an advisory lock `visibility-grant:<grantee>` serializes grants of one grantee, so an overlapping period of the
+  same manager is refused race-free; revoke locks the row (`FOR UPDATE`), a second revoke is a no-op. Every grant
+  and revoke is one `EntityVersion` entry (`VisibilityGrant`, actor, reason as the comment).
+- **API** (admin, `ManageVisibilityGrants` or `ManageAccessControl`): `visibilityGrants` (paginated, status and
+  name search), `grantManagerVisibility`, `revokeVisibilityGrant`, `unsortedCounterparties`,
+  `unsortedAdministrators`. Manager portal: Settings > "Visibility grants" and "Unsorted".
+- **Unsorted list**: counterparties with no `branchId` and live administrators with no `branchId` whose roles do
+  not already see everything. Ordinary branch-scoped roles do not see it. Assigning a branch override still goes
+  through `setCounterpartyBranchOverride` (audited, `ManageAccessControl`).
+- Not replicated: grants live on the central instance; branch instances do not read them yet.
 
 ### Branch scope is the only real filtering axis — `departmentId` never gates anything
 

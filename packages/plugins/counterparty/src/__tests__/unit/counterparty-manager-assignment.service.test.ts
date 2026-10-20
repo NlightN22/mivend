@@ -34,7 +34,7 @@ const mockVersioningService = { recordChange: vi.fn() };
 const mockCtx = {} as RequestContext;
 
 // Real AccessScopeService so the writable check runs its actual own/department/all rules.
-const accessScopeService = new AccessScopeService({} as never, {} as never);
+const accessScopeService = new AccessScopeService({} as never, {} as never, {} as never);
 const resolveScope = vi.spyOn(accessScopeService, 'resolveCounterpartyScope');
 
 const departmentScope: AccessScope = {

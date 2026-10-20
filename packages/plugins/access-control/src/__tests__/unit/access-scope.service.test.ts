@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AdministratorService, RequestContext } from '@vendure/core';
 
 import { AccessScopeService } from '../../access-scope.service';
+import { VisibilityGrantReader } from '../../visibility-grant-reader.service';
 import { RoleScopeConfigService } from '../../role-scope-config.service';
 
 function mockAdmin(
@@ -18,15 +19,18 @@ function mockAdmin(
 describe('AccessScopeService', () => {
     let administratorService: { findOneByUserId: ReturnType<typeof vi.fn> };
     let roleScopeConfigService: { maxScopeFor: ReturnType<typeof vi.fn> };
+    let grantReader: { activeManagerIds: ReturnType<typeof vi.fn> };
     let service: AccessScopeService;
     const ctx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
     beforeEach(() => {
         administratorService = { findOneByUserId: vi.fn() };
         roleScopeConfigService = { maxScopeFor: vi.fn() };
+        grantReader = { activeManagerIds: vi.fn().mockResolvedValue([]) };
         service = new AccessScopeService(
             administratorService as unknown as AdministratorService,
             roleScopeConfigService as unknown as RoleScopeConfigService,
+            grantReader as unknown as VisibilityGrantReader,
         );
     });
 
@@ -34,7 +38,7 @@ describe('AccessScopeService', () => {
         administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-1'));
         roleScopeConfigService.maxScopeFor.mockResolvedValue('own');
         const scope = await service.resolveCounterpartyScope(ctx);
-        expect(scope).toEqual({ kind: 'own', administratorId: 'admin-1' });
+        expect(scope).toEqual({ kind: 'own', administratorId: 'admin-1', grantedManagerIds: [] });
     });
 
     it('resolves "department" scope with department/branch ids attached', async () => {
@@ -48,6 +52,7 @@ describe('AccessScopeService', () => {
             administratorId: 'admin-2',
             departmentId: 'dept-1',
             branchId: 'branch-a',
+            grantedManagerIds: [],
         });
     });
 

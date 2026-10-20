@@ -12,13 +12,18 @@ export async function applyCounterpartyVisibilityScope(
     const scope = await accessScopeService.resolveCounterpartyScope(ctx);
     switch (scope.kind) {
         case 'own':
-            accessScopeService.applyOwnCounterpartyFilter(qb, 'c', scope.administratorId);
+            accessScopeService.applyOwnCounterpartyFilter(qb, 'c', scope);
             break;
-        case 'department':
-            // Only Branch gates visibility; Department is display-only and departmentId is never compared
-            // Null branchId hides the row from branch-scoped roles (deny-by-default); no IS NULL carve-out
-            qb.andWhere('c.branchId = :scopeBranch', { scopeBranch: scope.branchId ?? null });
+        case 'department': {
+            // Only Branch gates visibility (never departmentId); no IS NULL carve-out, so unassigned rows are denied.
+            // Union with the caller's own and granted managers' clients (#123).
+            const managers = accessScopeService.managerClause(scope, 'c');
+            qb.andWhere(`(c.branchId = :scopeBranch${managers ? ` OR ${managers.sql}` : ''})`, {
+                scopeBranch: scope.branchId ?? null,
+                ...managers?.params,
+            });
             break;
+        }
         case 'all':
             break;
     }

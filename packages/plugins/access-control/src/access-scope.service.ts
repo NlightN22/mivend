@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { ID } from '@vendure/common/lib/shared-types';
 import { Administrator, AdministratorService, ForbiddenError, RequestContext } from '@vendure/core';
 import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
 import { RoleScopeConfigService } from './role-scope-config.service';
+import { VisibilityGrantReader } from './visibility-grant-reader.service';
 import { AccessScope } from './types';
 
 // Single row-level visibility resolver; do not copy role checks into resolvers or services.
@@ -19,6 +19,7 @@ export class AccessScopeService {
     constructor(
         private administratorService: AdministratorService,
         private roleScopeConfigService: RoleScopeConfigService,
+        private grantReader: VisibilityGrantReader,
     ) {}
 
     async resolveCounterpartyScope(ctx: RequestContext): Promise<AccessScope> {
@@ -81,14 +82,18 @@ export class AccessScopeService {
                 // Numeric ID strategy can make administratorId a number; assignedManagerId is varchar.
                 if (
                     counterparty.assignedManagerId !==
-                    (scope.administratorId != null ? String(scope.administratorId) : null)
+                        (scope.administratorId != null ? String(scope.administratorId) : null) &&
+                    !this.isGrantedManager(scope, counterparty.assignedManagerId)
                 ) {
                     throw new ForbiddenError();
                 }
                 break;
             case 'department':
                 // Mirrors the list's SQL `= NULL`: a branchless caller writes nothing.
-                if (scope.branchId == null || counterparty.branchId !== scope.branchId) {
+                if (
+                    (scope.branchId == null || counterparty.branchId !== scope.branchId) &&
+                    !this.managerIdsOf(scope).includes(String(counterparty.assignedManagerId))
+                ) {
                     throw new ForbiddenError();
                 }
                 break;
@@ -98,20 +103,53 @@ export class AccessScopeService {
     }
 
     // Raw SQL EXISTS, not an entity import: access-control cannot depend on the counterparty plugin.
-    // 'Own' = assignedManagerId OR a counterparty_team_member row; names match TypeORM defaults.
+    // 'Own' = assignedManagerId OR a counterparty_team_member row OR a granted manager's client.
     applyOwnCounterpartyFilter<T extends ObjectLiteral>(
         qb: SelectQueryBuilder<T>,
         counterpartyAlias: string,
-        administratorId: ID | undefined,
+        scope: AccessScope,
     ): void {
+        const granted = this.managerClause(scope, counterpartyAlias, 'ownGrantedManagerIds');
         qb.andWhere(
             `(${counterpartyAlias}."assignedManagerId" = :ownScopeAdminId OR EXISTS (
                 SELECT 1 FROM counterparty_team_member ctm
                 WHERE ctm."counterpartyId" = ${counterpartyAlias}.id::text
                 AND ctm."administratorId" = :ownScopeAdminId
-            ))`,
-            { ownScopeAdminId: administratorId != null ? String(administratorId) : null },
+            )${granted ? ` OR ${granted.sql}` : ''})`,
+            {
+                ownScopeAdminId:
+                    scope.administratorId != null ? String(scope.administratorId) : null,
+                ...granted?.params,
+            },
         );
+    }
+
+    // SQL for "the counterparty belongs to one of the scope's managers" (own clients for a
+    // branch-scoped caller, plus granted managers); null when there is no such manager.
+    managerClause(
+        scope: AccessScope,
+        counterpartyAlias: string,
+        param = 'visibleManagerIds',
+    ): { sql: string; params: Record<string, string[]> } | null {
+        const ids = this.managerIdsOf(scope);
+        if (ids.length === 0) return null;
+        return {
+            sql: `${counterpartyAlias}."assignedManagerId" IN (:...${param})`,
+            params: { [param]: ids },
+        };
+    }
+
+    // The union set besides the primary branch: granted managers, and the caller itself for 'department'.
+    private managerIdsOf(scope: AccessScope): string[] {
+        const own =
+            scope.kind === 'department' && scope.administratorId != null
+                ? [String(scope.administratorId)]
+                : [];
+        return [...own, ...(scope.grantedManagerIds ?? [])];
+    }
+
+    private isGrantedManager(scope: AccessScope, managerId: string | null): boolean {
+        return managerId != null && (scope.grantedManagerIds ?? []).includes(managerId);
     }
 
     private async resolveScope(ctx: RequestContext, resource: string): Promise<AccessScope> {
@@ -124,19 +162,18 @@ export class AccessScopeService {
         const customFields = admin.customFields as
             | { departmentId?: string | null; branchId?: string | null }
             | undefined;
-        switch (maxScope) {
-            case 'all':
-                return { kind: 'all' };
-            case 'department':
-                return {
-                    kind: 'department',
-                    administratorId: admin.id,
-                    departmentId: customFields?.departmentId ?? undefined,
-                    branchId: customFields?.branchId ?? undefined,
-                };
-            default:
-                return { kind: 'own', administratorId: admin.id };
+        if (maxScope === 'all') return { kind: 'all' };
+        const grantedManagerIds = await this.grantReader.activeManagerIds(ctx, String(admin.id));
+        if (maxScope === 'department') {
+            return {
+                kind: 'department',
+                administratorId: admin.id,
+                departmentId: customFields?.departmentId ?? undefined,
+                branchId: customFields?.branchId ?? undefined,
+                grantedManagerIds,
+            };
         }
+        return { kind: 'own', administratorId: admin.id, grantedManagerIds };
     }
 
     private async getAdministrator(ctx: RequestContext): Promise<Administrator | null> {

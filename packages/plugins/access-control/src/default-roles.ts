@@ -75,6 +75,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ApproveDiscountRequest',
             'ReassignCounterpartyManager',
             'ManageCounterpartyTeam',
+            'ManageVisibilityGrants',
             'ReadEntityHistory',
         ],
         accessScopeConfig: {
@@ -118,6 +119,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ReassignCounterpartyManager',
             'ManageCounterpartyTeam',
             'ManageCounterpartyPortalAccess',
+            'ManageVisibilityGrants',
         ],
         accessScopeConfig: {
             counterparty: 'all',
@@ -172,6 +174,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ReassignCounterpartyManager',
             'ManageCounterpartyTeam',
             'ManageCounterpartyPortalAccess',
+            'ManageVisibilityGrants',
             'ReadEntityHistory',
             'ReadAdministrator',
             'UpdateAdministrator',
