@@ -28,16 +28,11 @@ export class PriceStreamHandler implements InboundStreamHandler {
         const productId = String(payload.productId ?? '');
         const priceTypeId = String(payload.priceTypeId ?? '');
         const value = Number.parseFloat(String(payload.value ?? ''));
-        // Absent isActive means false, not true — see types.ts's InboundStream comment (proto3 bool
-        // zero-value omission).
-        const isActive = payload.isActive === true;
-        const isDeleted = payload.isDeleted === true;
+        const removal = payload.isActive !== true || payload.isDeleted === true;
 
-        if (!productId || !priceTypeId || Number.isNaN(value)) {
+        // Absent isActive means false (proto3 zero-value omission, see types.ts), so it removes too.
+        if (!productId || !priceTypeId || (!removal && Number.isNaN(value))) {
             return inboundNoop(`price ${entityId}: missing productId/priceTypeId/value, skipping`);
-        }
-        if (!isActive || isDeleted) {
-            return inboundNoop(`price ${entityId}: inactive/deleted, skipping`);
         }
 
         // Out-of-order stream delivery: the price-type event for this GUID may not have been
@@ -47,6 +42,7 @@ export class PriceStreamHandler implements InboundStreamHandler {
             priceTypeId,
         );
         if (!priceType) {
+            if (removal) return inboundNoop(`price ${entityId}: tombstone for unknown price type`);
             // Issue #96: ordinary eventual-consistency race (price-type stream not consumed yet),
             // not a malformed payload — retry via MissingDependencyError instead of dropping.
             throw new MissingDependencyError(
@@ -64,9 +60,17 @@ export class PriceStreamHandler implements InboundStreamHandler {
         );
 
         if (!variant) {
+            if (removal) return inboundNoop(`price ${entityId}: tombstone for unknown product`);
             throw new MissingDependencyError(
                 `price ${entityId}: variant not found for productId=${productId}`,
             );
+        }
+
+        if (removal) {
+            const removed = await this.priceEntryService.remove(ctx, variant.id, priceType.code);
+            return removed
+                ? inboundApplied()
+                : inboundNoop(`price ${entityId}: tombstone, no stored price`);
         }
 
         const priceInCents = Math.round(value * 100);

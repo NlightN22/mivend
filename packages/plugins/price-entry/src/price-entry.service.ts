@@ -33,6 +33,13 @@ export class PriceEntryService {
         return repo.save(record);
     }
 
+    async remove(ctx: RequestContext, variantId: string, priceTypeCode: string): Promise<boolean> {
+        const { affected } = await this.connection
+            .getRepository(ctx, ProductVariantPriceEntry)
+            .delete({ variantId, priceTypeCode });
+        return !!affected;
+    }
+
     async bulkUpsert(ctx: RequestContext, entries: PriceEntryInput[]): Promise<number> {
         if (entries.length === 0) return 0;
         const repo = this.connection.getRepository(ctx, ProductVariantPriceEntry);

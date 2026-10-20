@@ -32,47 +32,49 @@ describe('PriceStreamHandler', () => {
         expect(priceEntryService.upsert).not.toHaveBeenCalled();
     });
 
-    it('skips an inactive/deleted price without writing', async () => {
-        const connection = makeConnection('variant-1');
-        const customerPricingService = { findPriceTypeByExternalId: vi.fn() };
-        const priceEntryService = { upsert: vi.fn() };
+    const build = (variantId: string | undefined, type: unknown = priceType) => {
+        const priceEntryService = { upsert: vi.fn(), remove: vi.fn().mockResolvedValue(true) };
         const handler = new PriceStreamHandler(
-            connection as never,
-            customerPricingService as never,
+            makeConnection(variantId) as never,
+            { findPriceTypeByExternalId: vi.fn().mockResolvedValue(type) } as never,
             priceEntryService as never,
         );
+        return { handler, priceEntryService };
+    };
+    const key = { productId: 'prod-1', priceTypeId: 'guid-1' };
 
-        await handler.apply(ctx, 'price-1', {
-            productId: 'prod-1',
-            priceTypeId: 'guid-1',
-            value: '199.90',
-            isActive: false,
-        });
-
-        expect(customerPricingService.findPriceTypeByExternalId).not.toHaveBeenCalled();
+    // proto3 omits false/zero scalars: a tombstone may carry no value and no isActive at all.
+    it.each([
+        ['isDeleted', { isActive: true, isDeleted: true, value: '10' }],
+        ['isActive false', { isActive: false, value: '10' }],
+        ['isActive absent and no value', {}],
+    ])('removes the stored price on a tombstone (%s)', async (_n, extra) => {
+        const { handler, priceEntryService } = build('variant-1');
+        const outcome = await handler.apply(ctx, 'price-1', { ...key, ...extra });
+        expect(priceEntryService.remove).toHaveBeenCalledWith(ctx, 'variant-1', 'WHOLESALE');
         expect(priceEntryService.upsert).not.toHaveBeenCalled();
+        expect(outcome).toMatchObject({ kind: 'applied' });
     });
 
-    // proto3 JSON omits zero-value scalars, so isActive:false is never sent, only absent.
-    // Absent isActive must be read as false (inactive), not true.
-    it('skips a price with isActive absent from the payload (proto3 omits the false zero-value)', async () => {
-        const connection = makeConnection('variant-1');
-        const customerPricingService = { findPriceTypeByExternalId: vi.fn() };
-        const priceEntryService = { upsert: vi.fn() };
-        const handler = new PriceStreamHandler(
-            connection as never,
-            customerPricingService as never,
-            priceEntryService as never,
-        );
+    it('is a noop (no retry) for a tombstone of an unknown price type or product', async () => {
+        const unknownType = build('variant-1', null);
+        await expect(
+            unknownType.handler.apply(ctx, 'price-1', { ...key, isDeleted: true }),
+        ).resolves.toMatchObject({ kind: 'noop' });
+        const unknownProduct = build(undefined);
+        await expect(
+            unknownProduct.handler.apply(ctx, 'price-1', { ...key, isDeleted: true }),
+        ).resolves.toMatchObject({ kind: 'noop' });
+        expect(unknownType.priceEntryService.remove).not.toHaveBeenCalled();
+        expect(unknownProduct.priceEntryService.remove).not.toHaveBeenCalled();
+    });
 
-        await handler.apply(ctx, 'price-1', {
-            productId: 'prod-1',
-            priceTypeId: 'guid-1',
-            value: '199.90',
-        });
-
-        expect(customerPricingService.findPriceTypeByExternalId).not.toHaveBeenCalled();
-        expect(priceEntryService.upsert).not.toHaveBeenCalled();
+    it('is a noop when the tombstone finds no stored price', async () => {
+        const { handler, priceEntryService } = build('variant-1');
+        priceEntryService.remove.mockResolvedValue(false);
+        await expect(
+            handler.apply(ctx, 'price-1', { ...key, isDeleted: true }),
+        ).resolves.toMatchObject({ kind: 'noop' });
     });
 
     it('throws MissingDependencyError when no PriceType is found for priceTypeId (issue #96: retry, not silent drop)', async () => {
