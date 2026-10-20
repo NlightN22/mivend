@@ -197,7 +197,6 @@ export class CounterpartyResolver {
             priceType: string;
             isActive: boolean;
             departmentId?: string;
-            branchId?: string;
             erpGroupLabel?: string;
         },
     ): Promise<Counterparty> {

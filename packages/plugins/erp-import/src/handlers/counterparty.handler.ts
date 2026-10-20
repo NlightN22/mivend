@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { BranchAssignmentService } from '@mivend/plugin-access-control';
 import type { CounterpartyRecord } from '../types';
 
 @Injectable()
 export class CounterpartyHandler {
-    constructor(private readonly counterpartyService: CounterpartyService) {}
+    constructor(
+        private readonly counterpartyService: CounterpartyService,
+        private readonly branchAssignment: BranchAssignmentService,
+    ) {}
 
     async upsert(ctx: RequestContext, record: CounterpartyRecord): Promise<void> {
         await this.counterpartyService.upsert(ctx, {
@@ -20,11 +24,10 @@ export class CounterpartyHandler {
             isActive: record.isActive,
             mainContractId: record.mainContractErpId ?? null,
             departmentId: record.departmentId ?? null,
-            // Deliberately unset: a raw ERP-sourced id is not the same value space as Branch.id.
-            // Branch assignment must come from the planned counterparty-to-branch worker, not here.
             erpGroupLabel: record.erpGroupLabel ?? null,
             ...(record.phone !== undefined && { phone: record.phone }),
             ...(record.officialEmail !== undefined && { officialEmail: record.officialEmail }),
         });
+        await this.branchAssignment.assignCounterparties(ctx, { erpId: record.erpId });
     }
 }

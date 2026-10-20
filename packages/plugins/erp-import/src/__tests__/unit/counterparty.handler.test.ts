@@ -19,7 +19,10 @@ describe('CounterpartyHandler', () => {
         [undefined, null],
     ])('maps mainContractErpId %s to mainContractId %s', async (input, expected) => {
         const service = { upsert: vi.fn(async () => ({})) };
-        const handler = new CounterpartyHandler(service as never);
+        const handler = new CounterpartyHandler(
+            service as never,
+            { assignCounterparties: vi.fn() } as never,
+        );
         await handler.upsert({} as RequestContext, { ...base, mainContractErpId: input });
         expect(service.upsert).toHaveBeenCalledWith(
             expect.anything(),

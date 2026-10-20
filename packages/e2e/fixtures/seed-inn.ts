@@ -24,7 +24,6 @@ function innCounterparty(
             priceType: 'WHOLESALE',
             isActive: true,
             departmentId: 'dept-sales',
-            branchId: 'branch-central',
         },
     };
 }

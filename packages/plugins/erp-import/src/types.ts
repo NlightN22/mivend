@@ -107,9 +107,6 @@ export interface CounterpartyRecord {
     // departmentId: erpId of the ERP Department this counterparty belongs to — pure ERP org data,
     // mirrored as-is (informational; see docs/access-control.md's "Branch vs Department" note).
     departmentId?: string | null;
-    // Accepted on the wire but intentionally never written: no branch-assignment rule exists yet.
-    // Any future value must be resolved to a Branch.id first, never passed through raw.
-    branchId?: string | null;
     // Display and filtering only; never use for access control or business rules.
     // The ERP's grouping concept is inconsistent, so the label is not a reliable category.
     erpGroupLabel?: string | null;

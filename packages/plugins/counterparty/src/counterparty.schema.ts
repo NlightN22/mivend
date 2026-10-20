@@ -152,7 +152,6 @@ export const adminApiSchema = gql`
             priceType: String!
             isActive: Boolean!
             departmentId: String
-            branchId: String
             erpGroupLabel: String
         ): Counterparty!
 

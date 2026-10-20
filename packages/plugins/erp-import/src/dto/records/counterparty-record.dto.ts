@@ -53,16 +53,6 @@ export class CounterpartyRecordDto {
         type: String,
         nullable: true,
         description:
-            'Accepted but currently never persisted — no automatic branch-assignment rule ' +
-            'exists yet (issue #65). A future value must resolve to a mivend Branch.id, not be ' +
-            'passed through raw.',
-    })
-    branchId?: string | null;
-
-    @ApiPropertyOptional({
-        type: String,
-        nullable: true,
-        description:
             'Free-text group/segment label from the ERP — display and filtering only, not used for access control or business rules.',
     })
     erpGroupLabel?: string | null;

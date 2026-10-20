@@ -41,7 +41,6 @@ export const seedRecords = [
             // Must exactly match the seeded department/branch and department-scoped roles, or scoped test
             // accounts won't see it: AccessScopeService 'department' scope needs an exact match.
             departmentId: 'dept-sales',
-            branchId: 'branch-central',
         },
     },
     {
@@ -322,7 +321,6 @@ export const seedRecords = [
             priceType: 'WHOLESALE',
             isActive: true,
             departmentId: 'dept-sales',
-            branchId: 'branch-central',
         },
     },
     {

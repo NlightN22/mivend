@@ -83,8 +83,8 @@ behind).
 `global-setup.ts` also assigns the e2e counterparty (`e2e-cnt-001`) to `petr.manager@mivend.dev`
 via the real `reassignCounterpartyManager` mutation (logged in as `anna.portaladmin@mivend.dev`:
 since Vendure 3.7.3 a department head cannot read other administrators, so her own reassignment
-is refused), and sets both e2e counterparties' `branchId` to the central `Branch.id` through
-`upsertCounterparty` (erp-import never writes it) — this is what makes
+is refused), and relies on `make seed`'s `departmentBranch` mapping (`dept-sales` to the central branch): both e2e
+counterparties carry `departmentId: 'dept-sales'` and get their branch from `BranchAssignmentService` (#65) — this is what makes
 `manager-manager`'s `"own"` access scope see the same test data as `manager-operator`/
 `manager-department-head`'s `"department"` scope. All three role projects run the exact same
 spec files with no skips.

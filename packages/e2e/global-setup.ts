@@ -107,33 +107,6 @@ export default async function globalSetup(): Promise<void> {
     if (!centralBranchId)
         throw new Error('Seeded branch "branch-central" not found; run make seed');
 
-    // erp-import never writes Counterparty.branchId either; department scope needs the Branch row id.
-    for (const record of seedRecords) {
-        if (record.type !== 'counterparty') continue;
-        await adminGql(
-            `mutation($erpId: String!, $legalName: String!, $shortName: String!, $creditLimit: Int!,
-                $creditBalance: Int!, $paymentDelayDays: Int!, $priceType: String!, $isActive: Boolean!,
-                $branchId: String) {
-                upsertCounterparty(erpId: $erpId, legalName: $legalName, shortName: $shortName,
-                    creditLimit: $creditLimit, creditBalance: $creditBalance,
-                    paymentDelayDays: $paymentDelayDays, priceType: $priceType, isActive: $isActive,
-                    branchId: $branchId) { id }
-            }`,
-            {
-                erpId: record.data.erpId,
-                legalName: record.data.legalName,
-                shortName: record.data.shortName,
-                creditLimit: record.data.creditLimit,
-                creditBalance: record.data.creditBalance,
-                paymentDelayDays: record.data.paymentDelayDays,
-                priceType: record.data.priceType,
-                isActive: record.data.isActive,
-                branchId: centralBranchId,
-            },
-            adminToken,
-        );
-    }
-
     const warehousesResult = await adminGql<{ warehouses: { branchId: string | null }[] }>(
         `query { warehouses { branchId } }`,
         undefined,

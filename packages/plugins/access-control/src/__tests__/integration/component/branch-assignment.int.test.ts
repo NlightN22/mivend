@@ -30,7 +30,7 @@ class TestAdminCustomFields {
 class TestAdministrator {
     @PrimaryGeneratedColumn() id!: number;
     @DeleteDateColumn({ type: 'timestamp', nullable: true }) deletedAt!: Date | null;
-    @Column(() => TestAdminCustomFields) customFields!: TestAdminCustomFields;
+    @Column(() => TestAdminCustomFields, { prefix: false }) customFields!: TestAdminCustomFields;
 }
 
 @Entity('department')

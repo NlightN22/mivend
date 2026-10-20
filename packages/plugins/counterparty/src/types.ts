@@ -24,10 +24,8 @@ export interface CounterpartyUpsertPayload {
     priceType: string;
     isActive: boolean;
     mainContractId?: string | null;
-    // departmentId is the raw ERP id (display only). branchId is mivend's Branch.id, never an ERP id;
-    // Resolve branchId to Branch.id like WarehouseService.upsert; never pass ERP values through raw.
+    // departmentId is the raw ERP id; branchId is written only by BranchAssignmentService.
     departmentId?: string | null;
-    branchId?: string | null;
     // Free-text group/segment label from the ERP — display and filtering only, see
     // Counterparty.erpGroupLabel's doc comment for why this is opaque, not a new hierarchy.
     erpGroupLabel?: string | null;
