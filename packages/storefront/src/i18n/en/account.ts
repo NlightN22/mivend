@@ -70,15 +70,9 @@ export default {
             subtitle: 'Short working list, details open separately.',
             all: 'All orders',
             order: 'Order #{number}',
-            today: 'Today, {time}',
-            yesterday: 'Yesterday, {time}',
             items: '{n} item | {n} items',
-            status: {
-                awaitingErp: 'Awaiting ERP',
-                reserveConfirmed: 'Reserve confirmed',
-                shipped: 'Shipped',
-            },
-            action: { open: 'Open', repeat: 'Repeat', documents: 'Documents' },
+            empty: 'You have no orders yet.',
+            action: { open: 'Open', repeat: 'Repeat' },
         },
         frequent: {
             title: 'Frequently Bought',

@@ -3,27 +3,18 @@ import { formatDate, formatMoney } from '../../i18n/format';
 import { useStatusGroupLabel } from './useStatusGroupLabel';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { MvStatusBadge, formatDocumentNumber, toast } from '@mivend/ui-kit';
-import { useRepeatOrder } from './useRepeatOrder';
+import { MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
+import { useRepeatOrderAction } from './useRepeatOrderAction';
+import { orderDisplayNumber } from './orderFormat';
 import type { OrderSummary } from './useOrders';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
 
 const props = defineProps<{ order: OrderSummary }>();
 const { t } = useI18n();
-const { repeating, repeat } = useRepeatOrder();
-
-async function repeatOrder(): Promise<void> {
-    const { added, skipped, roundedUp } = await repeat(props.order.lines);
-    if (added) toast(t('orders.detail.repeatDone', { added }), 'success');
-    if (skipped) toast(t('orders.detail.repeatSkipped', { skipped }), 'error');
-    if (roundedUp) toast(t('orders.detail.repeatRounded', { rounded: roundedUp }), 'info');
-}
+const { repeating, repeatOrder } = useRepeatOrderAction();
 
 const isExternal = computed(() => props.order.customFields?.isExternal === true);
-const displayNumber = computed(() => {
-    const erpNumber = props.order.customFields?.erpRegistrationDocumentNumber;
-    return isExternal.value && erpNumber ? erpNumber : props.order.code;
-});
+const displayNumber = computed(() => orderDisplayNumber(props.order));
 const statuses = useOrderStatusesStore();
 const statusKey = computed(() => props.order.customFields?.erpStatus);
 const statusName = computed(() => statuses.label(statusKey.value));
@@ -87,7 +78,7 @@ const preview = computed(() => {
                 <router-link :to="`/orders/${order.id}`" class="small-btn primary">{{
                     $t('orders.card.open')
                 }}</router-link>
-                <button class="small-btn" :disabled="repeating" @click="repeatOrder">
+                <button class="small-btn" :disabled="repeating" @click="repeatOrder(order.lines)">
                     {{ $t('orders.card.repeat') }}
                 </button>
                 <button class="small-btn">{{ $t('orders.card.documents') }}</button>

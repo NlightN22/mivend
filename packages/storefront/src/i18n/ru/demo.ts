@@ -20,10 +20,6 @@ const ru: typeof en = {
             north: 'Северное шоссе, 52',
             warehouse: 'Складская зона, 8',
         },
-        addresses: {
-            northHwy: 'Северное шоссе, 12',
-            miraSt: 'ул. Мира, 85',
-        },
         products: {
             motorOil: 'Моторное масло 5W-40, 4 л',
             oilFilter: 'Масляный фильтр для популярных моделей',

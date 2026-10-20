@@ -74,15 +74,9 @@ const ru: typeof en = {
             subtitle: 'Короткий рабочий список, подробности открываются отдельно.',
             all: 'Все заказы',
             order: 'Заказ № {number}',
-            today: 'Сегодня, {time}',
-            yesterday: 'Вчера, {time}',
             items: '{n} позиция | {n} позиции | {n} позиций',
-            status: {
-                awaitingErp: 'Ожидает ERP',
-                reserveConfirmed: 'Резерв подтверждён',
-                shipped: 'Отгружен',
-            },
-            action: { open: 'Открыть', repeat: 'Повторить', documents: 'Документы' },
+            empty: 'У вас пока нет заказов.',
+            action: { open: 'Открыть', repeat: 'Повторить' },
         },
         frequent: {
             title: 'Часто покупаете',

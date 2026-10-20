@@ -2,11 +2,11 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { MvButton, MvModal, toast, formatDocumentNumber } from '@mivend/ui-kit';
+import { MvButton, MvModal, formatDocumentNumber } from '@mivend/ui-kit';
 import AccountSidebar from '../account/AccountSidebar.vue';
 import { useCancelOrder } from './useCancelOrder';
 import { useOrderDetail } from './useOrderDetail';
-import { useRepeatOrder } from './useRepeatOrder';
+import { useRepeatOrderAction } from './useRepeatOrderAction';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import { formatAmount } from './orderFormat';
 import OrderAddressCard from './OrderAddressCard.vue';
@@ -23,7 +23,7 @@ const route = useRoute();
 const { t } = useI18n();
 const statuses = useOrderStatusesStore();
 const { order, tradingPoints, loading, load } = useOrderDetail();
-const { repeating, repeat } = useRepeatOrder();
+const { repeating, repeatOrder: repeatLines } = useRepeatOrderAction();
 
 const confirmOpen = ref(false);
 const title = computed(() =>
@@ -48,10 +48,7 @@ async function confirmCancel(): Promise<void> {
 
 async function repeatOrder(): Promise<void> {
     if (!order.value) return;
-    const { added, skipped, roundedUp } = await repeat(order.value.lines);
-    if (added) toast(t('orders.detail.repeatDone', { added }), 'success');
-    if (skipped) toast(t('orders.detail.repeatSkipped', { skipped }), 'error');
-    if (roundedUp) toast(t('orders.detail.repeatRounded', { rounded: roundedUp }), 'info');
+    await repeatLines(order.value.lines);
 }
 
 onMounted(() => {

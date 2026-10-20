@@ -18,10 +18,6 @@ export default {
             north: 'Northern Hwy, 52',
             warehouse: 'Warehouse Zone, 8',
         },
-        addresses: {
-            northHwy: 'North Hwy, 12',
-            miraSt: 'Mira St, 85',
-        },
         products: {
             motorOil: 'Motor oil 5W-40, 4 L',
             oilFilter: 'Oil filter for popular models',

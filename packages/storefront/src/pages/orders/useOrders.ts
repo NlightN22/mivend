@@ -27,14 +27,17 @@ export function useOrders(): {
     orders: Ref<OrderSummary[]>;
     totalItems: Ref<number>;
     loading: Ref<boolean>;
+    error: Ref<unknown>;
     load: (options: MyOrdersOptions) => Promise<void>;
 } {
     const orders = ref<OrderSummary[]>([]);
     const totalItems = ref(0);
     const loading = ref(false);
+    const error = ref<unknown>(null);
 
     async function load(options: MyOrdersOptions): Promise<void> {
         loading.value = true;
+        error.value = null;
         try {
             const result = await shopApi(MyOrdersDocument, {
                 options: {
@@ -47,11 +50,12 @@ export function useOrders(): {
             orders.value = result.myOrders.items;
             totalItems.value = result.myOrders.totalItems;
         } catch (e) {
+            error.value = e;
             console.error('[useOrders]', e);
         } finally {
             loading.value = false;
         }
     }
 
-    return { orders, totalItems, loading, load };
+    return { orders, totalItems, loading, error, load };
 }

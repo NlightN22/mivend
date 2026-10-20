@@ -1,63 +1,25 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { formatDate, formatMoney } from '../../i18n/format';
+import { computed, onMounted } from 'vue';
+import { MvErrorState, MvSkeleton } from '@mivend/ui-kit';
+import { useOrders } from '../orders/useOrders';
+import { useOrderStatusesStore } from '../../stores/orderStatuses';
+import { describeLoadError } from '../../api/describeLoadError';
+import AccountRecentOrderRow from './AccountRecentOrderRow.vue';
 
-type OrderAction = 'open' | 'repeat' | 'documents';
-type OrderStatus = 'awaitingErp' | 'reserveConfirmed' | 'shipped';
+const RECENT_ORDERS_COUNT = 5;
 
-const { t } = useI18n();
+const { orders, loading, error, load } = useOrders();
+const statuses = useOrderStatusesStore();
+const errorText = computed(() => (error.value ? describeLoadError(error.value) : null));
 
-const demoOrders: {
-    number: string;
-    date: () => string;
-    address: 'northHwy' | 'miraSt';
-    amount: number;
-    status: OrderStatus;
-    statusType: string;
-    items: number;
-    actions: OrderAction[];
-}[] = [
-    {
-        number: '348921',
-        date: () => t('account.recentOrders.today', { time: '14:28' }),
-        address: 'northHwy',
-        amount: 42860,
-        status: 'awaitingErp',
-        statusType: 'warning',
-        items: 7,
-        actions: ['open', 'repeat'],
-    },
-    {
-        number: '348744',
-        date: () => t('account.recentOrders.yesterday', { time: '17:12' }),
-        address: 'miraSt',
-        amount: 18940,
-        status: 'reserveConfirmed',
-        statusType: 'success',
-        items: 4,
-        actions: ['open', 'documents'],
-    },
-    {
-        number: '348510',
-        date: () => formatDate('2026-06-24', { day: 'numeric', month: 'short' }),
-        address: 'northHwy',
-        amount: 96300,
-        status: 'shipped',
-        statusType: 'muted',
-        items: 18,
-        actions: ['open', 'repeat'],
-    },
-];
+function reload(): void {
+    void load({ take: RECENT_ORDERS_COUNT, skip: 0 });
+}
 
-const orders = computed(() =>
-    demoOrders.map(order => ({
-        ...order,
-        date: order.date(),
-        address: t(`demo.addresses.${order.address}`),
-        amount: formatMoney(order.amount),
-    })),
-);
+onMounted(() => {
+    void statuses.load();
+    reload();
+});
 </script>
 
 <template>
@@ -74,40 +36,22 @@ const orders = computed(() =>
             }}</RouterLink>
         </div>
 
-        <div class="recent-orders__scroll">
-            <div class="recent-orders__list">
-                <div v-for="order in orders" :key="order.number" class="recent-orders__row">
-                    <div class="recent-orders__cell recent-orders__cell--main">
-                        <div class="recent-orders__number">
-                            {{ $t('account.recentOrders.order', { number: order.number }) }}
-                        </div>
-                        <div class="recent-orders__meta recent-orders__meta--truncate">
-                            {{ order.date }} · {{ order.address }}
-                        </div>
-                    </div>
-                    <div class="recent-orders__cell recent-orders__amount">{{ order.amount }}</div>
-                    <div class="recent-orders__cell">
-                        <span
-                            class="recent-orders__pill"
-                            :class="`recent-orders__pill--${order.statusType}`"
-                        >
-                            {{ $t(`account.recentOrders.status.${order.status}`) }}
-                        </span>
-                    </div>
-                    <div class="recent-orders__cell recent-orders__meta">
-                        {{ $t('account.recentOrders.items', order.items) }}
-                    </div>
-                    <div class="recent-orders__cell recent-orders__actions">
-                        <button
-                            v-for="action in order.actions"
-                            :key="action"
-                            class="recent-orders__btn"
-                            :class="{ 'recent-orders__btn--primary': action === 'open' }"
-                        >
-                            {{ $t(`account.recentOrders.action.${action}`) }}
-                        </button>
-                    </div>
-                </div>
+        <div v-if="loading && !orders.length" class="recent-orders__list">
+            <MvSkeleton v-for="n in 3" :key="n" height="76px" radius="18px" />
+        </div>
+        <MvErrorState
+            v-else-if="errorText"
+            :title="errorText.title"
+            :message="errorText.message"
+            :retry-label="$t('common.retry')"
+            @retry="reload"
+        />
+        <div v-else-if="!orders.length" class="recent-orders__empty">
+            {{ $t('account.recentOrders.empty') }}
+        </div>
+        <div v-else class="recent-orders__scroll">
+            <div class="recent-orders__list recent-orders__list--rows">
+                <AccountRecentOrderRow v-for="order in orders" :key="order.id" :order="order" />
             </div>
         </div>
     </div>
@@ -158,98 +102,18 @@ const orders = computed(() =>
 .recent-orders__list {
     display: grid;
     gap: 10px;
+}
+
+.recent-orders__list--rows {
     min-width: 720px;
 }
 
-.recent-orders__row {
-    min-height: 76px;
-    display: grid;
-    grid-template-columns: minmax(180px, 1.1fr) 120px 160px 100px 180px;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 16px;
-    border: 1px solid #edf2ef;
+.recent-orders__empty {
+    padding: 22px 16px;
+    border: 1px dashed #dde7e2;
     border-radius: 18px;
-    background: #fbfdfc;
-}
-
-.recent-orders__cell {
-    min-width: 0;
-}
-
-.recent-orders__number {
-    font-weight: 950;
-    margin-bottom: 4px;
-    letter-spacing: -0.02em;
-}
-
-.recent-orders__meta {
     color: #66736e;
-    font-size: 13px;
-    line-height: 1.32;
-}
-
-.recent-orders__meta--truncate {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.recent-orders__amount {
-    font-size: 18px;
-    font-weight: 950;
-    letter-spacing: -0.035em;
-}
-
-.recent-orders__pill {
-    display: inline-flex;
-    min-height: 30px;
-    align-items: center;
-    justify-content: center;
-    padding: 0 10px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 950;
-    white-space: nowrap;
-}
-
-.recent-orders__pill--success {
-    background: #e2f8ef;
-    color: #008a64;
-}
-.recent-orders__pill--muted {
-    background: #eef4f1;
-    color: #5f6e68;
-}
-.recent-orders__pill--warning {
-    background: #fff4e3;
-    color: #a45e00;
-}
-
-.recent-orders__actions {
-    display: flex;
-    justify-content: flex-start;
-    gap: 8px;
-}
-
-.recent-orders__btn {
-    border: 0;
-    min-height: 38px;
-    min-width: 86px;
-    border-radius: 12px;
-    padding: 0 13px;
-    background: #f3f8f6;
-    color: #263732;
-    font-weight: 950;
-    font-size: 13px;
-    white-space: nowrap;
+    font-size: 14px;
     text-align: center;
-    cursor: pointer;
-    font: inherit;
-}
-
-.recent-orders__btn--primary {
-    background: #00a878;
-    color: #fff;
 }
 </style>
