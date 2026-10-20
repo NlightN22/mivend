@@ -142,3 +142,17 @@
     color: #33210a;
     margin-bottom: 2px;
 }
+
+.bal-btn--wide {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 14px;
+    text-decoration: none;
+}
+
+.bal-state {
+    padding: 24px 0;
+    color: #66736e;
+}

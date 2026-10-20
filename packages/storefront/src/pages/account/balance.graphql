@@ -1,0 +1,9 @@
+query MyContracts {
+    myContracts {
+        id
+        name
+        creditLimit
+        paymentDelayDays
+        debtDaysLimit
+    }
+}

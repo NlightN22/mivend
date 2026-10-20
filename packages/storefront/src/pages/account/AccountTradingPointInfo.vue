@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrency } from '../../composables/useCurrency';
 import { useDemoMode } from '../../composables/useDemoMode';
+import { isLimitAlmostExhausted } from '../../utils/creditLimit';
 
 const { demoAllowed } = useDemoMode();
 const authStore = useAuthStore();
@@ -10,16 +11,9 @@ const { formatCurrencyAmount } = useCurrency();
 const tradingPoint = computed(() => authStore.tradingPoint);
 const counterparty = computed(() => authStore.counterparty);
 
-const availableLimit = computed(() => {
-    const cp = counterparty.value;
-    if (!cp || cp.creditLimit === 0) return null;
-    return (cp.creditLimit - cp.creditBalance) / 100;
-});
-
 const limitWarning = computed(() => {
-    if (!availableLimit.value) return false;
-    const cp = counterparty.value!;
-    return availableLimit.value < (cp.creditLimit / 100) * 0.2;
+    const cp = counterparty.value;
+    return !!cp && isLimitAlmostExhausted(cp.creditBalance, cp.creditLimit);
 });
 </script>
 

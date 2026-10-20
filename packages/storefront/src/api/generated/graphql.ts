@@ -451,14 +451,8 @@ export type CreateAddressInput = {
     streetLine2?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type CreateCustomerCustomFieldsInput = {
-    counterpartyId?: InputMaybe<Scalars['String']['input']>;
-    portalRole?: InputMaybe<Scalars['String']['input']>;
-    preferredTradingPointId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type CreateCustomerInput = {
-    customFields?: InputMaybe<CreateCustomerCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     emailAddress: Scalars['String']['input'];
     firstName: Scalars['String']['input'];
     lastName: Scalars['String']['input'];
@@ -3590,6 +3584,7 @@ export type Query = {
     me?: Maybe<CurrentUser>;
     multiplicityEnforced: Scalars['Boolean']['output'];
     myAdvanceBalance: Array<MoneyAmount>;
+    myContracts: Array<ShopContract>;
     myDocuments: DocumentList;
     myHiddenTradingPoints: Array<TradingPoint>;
     myOrders: OrderList;
@@ -3772,14 +3767,7 @@ export type RegisterCustomerAccountResult =
     | PasswordValidationError
     | Success;
 
-export type RegisterCustomerCustomFieldsInput = {
-    counterpartyId?: InputMaybe<Scalars['String']['input']>;
-    portalRole?: InputMaybe<Scalars['String']['input']>;
-    preferredTradingPointId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type RegisterCustomerInput = {
-    customFields?: InputMaybe<RegisterCustomerCustomFieldsInput>;
     emailAddress: Scalars['String']['input'];
     firstName?: InputMaybe<Scalars['String']['input']>;
     lastName?: InputMaybe<Scalars['String']['input']>;
@@ -3981,6 +3969,7 @@ export type SettlementDocumentFilter = {
     organizationId?: InputMaybe<Scalars['String']['input']>;
     overdueOnly?: InputMaybe<Scalars['Boolean']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
+    unpaidOnly?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type SettlementDocumentPage = {
@@ -4000,6 +3989,8 @@ export type SettlementDocumentRow = {
     dueDate?: Maybe<Scalars['DateTime']['output']>;
     id: Scalars['ID']['output'];
     number: Scalars['String']['output'];
+    /** Still owed on this entry (FIFO); null when the contract has no balance fact. */
+    openAmount?: Maybe<Scalars['Money']['output']>;
     orders: Array<SettlementOrderRef>;
     organizationId: Scalars['String']['output'];
     organizationName?: Maybe<Scalars['String']['output']>;
@@ -4063,6 +4054,16 @@ export type ShippingMethodTranslation = {
     languageCode: LanguageCode;
     name: Scalars['String']['output'];
     updatedAt: Scalars['DateTime']['output'];
+};
+
+export type ShopContract = {
+    /** Whole currency units; the effective limit when computed, else the ERP limit. */
+    creditLimit?: Maybe<Scalars['Float']['output']>;
+    currency?: Maybe<Scalars['String']['output']>;
+    debtDaysLimit?: Maybe<Scalars['Int']['output']>;
+    id: Scalars['ID']['output'];
+    name?: Maybe<Scalars['String']['output']>;
+    paymentDelayDays?: Maybe<Scalars['Int']['output']>;
 };
 
 /** The price value where the result has a single price */
@@ -4309,12 +4310,6 @@ export type UpdateAddressInput = {
     streetLine2?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type UpdateCustomerCustomFieldsInput = {
-    counterpartyId?: InputMaybe<Scalars['String']['input']>;
-    portalRole?: InputMaybe<Scalars['String']['input']>;
-    preferredTradingPointId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type UpdateCustomerEmailAddressResult =
     | IdentifierChangeTokenExpiredError
     | IdentifierChangeTokenInvalidError
@@ -4322,7 +4317,7 @@ export type UpdateCustomerEmailAddressResult =
     | Success;
 
 export type UpdateCustomerInput = {
-    customFields?: InputMaybe<UpdateCustomerCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     firstName?: InputMaybe<Scalars['String']['input']>;
     lastName?: InputMaybe<Scalars['String']['input']>;
     phoneNumber?: InputMaybe<Scalars['String']['input']>;
@@ -4790,6 +4785,18 @@ export type PopularProductsQuery = {
     };
 };
 
+export type MyContractsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type MyContractsQuery = {
+    myContracts: Array<{
+        id: string;
+        name?: string | null;
+        creditLimit?: number | null;
+        paymentDelayDays?: number | null;
+        debtDaysLimit?: number | null;
+    }>;
+};
+
 export type SettingsProfileQueryVariables = Exact<{ [key: string]: never }>;
 
 export type SettingsProfileQuery = {
@@ -5242,6 +5249,7 @@ export type SettlementDocumentsQuery = {
             amount: any;
             dueDate?: any | null;
             paymentStatus?: string | null;
+            openAmount?: any | null;
             orders: Array<{
                 orderId?: string | null;
                 orderCode?: string | null;
@@ -6020,6 +6028,17 @@ export const PopularProductsDocument = new TypedDocumentString(`
     }
   }
 }`) as unknown as TypedDocumentString<PopularProductsQuery, PopularProductsQueryVariables>;
+export const MyContractsDocument = new TypedDocumentString(`
+    query MyContracts {
+  myContracts {
+    id
+    name
+    creditLimit
+    paymentDelayDays
+    debtDaysLimit
+  }
+}
+    `) as unknown as TypedDocumentString<MyContractsQuery, MyContractsQueryVariables>;
 export const SettingsProfileDocument = new TypedDocumentString(`
     query SettingsProfile {
   activeCustomer {
@@ -6563,6 +6582,7 @@ export const SettlementDocumentsDocument = new TypedDocumentString(`
       amount
       dueDate
       paymentStatus
+      openAmount
       orders {
         orderId
         orderCode

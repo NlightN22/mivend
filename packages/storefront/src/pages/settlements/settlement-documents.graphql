@@ -15,6 +15,7 @@ query SettlementDocuments($filter: SettlementDocumentFilter, $skip: Int, $take: 
             amount
             dueDate
             paymentStatus
+            openAmount
             orders {
                 orderId
                 orderCode
