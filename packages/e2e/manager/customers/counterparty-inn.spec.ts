@@ -4,7 +4,8 @@ import { INN_MISSING, INN_TWIN_A, INN_TWIN_B, INN_UNIQUE } from '../../fixtures/
 // #225: a counterparty needs a unique inn before portal binding. Twin A is seeded already bound,
 // so the refusals below create nothing and the specs are idempotent.
 test.describe('counterparty INN guard (#225)', () => {
-    test.beforeEach((_fixtures, testInfo) => {
+    // eslint-disable-next-line no-empty-pattern
+    test.beforeEach(({}, testInfo) => {
         test.skip(testInfo.project.name !== 'manager-portal-admin', 'needs portal access rights');
     });
 
@@ -56,7 +57,7 @@ test.describe('counterparty INN guard (#225)', () => {
     });
 
     for (const [who, badge] of [
-        [INN_TWIN_B, 'INN duplicate'],
+        [INN_TWIN_B, 'INN duplicate (ERP)'],
         [INN_MISSING, 'INN missing'],
         [INN_UNIQUE, null],
     ] as const) {
@@ -69,7 +70,7 @@ test.describe('counterparty INN guard (#225)', () => {
             await listRow.click({ position: { x: 20, y: 10 } });
             await expect(page).toHaveURL(/\/customers\/.+/);
             await expect(page.getByRole('heading', { name: who.shortName })).toBeVisible();
-            const notice = page.getByText(/INN (duplicate|missing) —/);
+            const notice = page.getByText(/INN (duplicate \(ERP\)|missing) —/);
             if (badge) await expect(notice).toContainText(badge);
             else await expect(notice).toHaveCount(0);
         });

@@ -317,7 +317,7 @@ function initials(name: string | null): string {
             INN missing — fill it in the ERP before portal access
         </MvStatusBadge>
         <MvStatusBadge v-else-if="customer.innStatus === 'duplicate'" variant="warning">
-            INN duplicate — merge the counterparties in the ERP before portal access
+            INN duplicate (ERP) — merge the counterparties in the ERP before portal access
         </MvStatusBadge>
 
         <!-- Info-only row — no edit controls here at all (see AGENTS.md-style rule this page now

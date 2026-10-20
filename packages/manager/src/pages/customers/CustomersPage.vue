@@ -139,7 +139,7 @@ const innFilter = computed({
 const INN_OPTIONS = [
     { value: '', label: 'Any INN' },
     { value: 'missing', label: 'INN missing' },
-    { value: 'duplicate', label: 'INN duplicate' },
+    { value: 'duplicate', label: 'INN duplicate (ERP)' },
 ];
 const STATUS_OPTIONS = [
     { value: '', label: 'All statuses' },
