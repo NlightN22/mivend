@@ -21,6 +21,7 @@ describe('OrderVisibilityService', () => {
     let accessScopeService: {
         resolveOrderScope: ReturnType<typeof vi.fn>;
         applyOwnCounterpartyFilter: ReturnType<typeof vi.fn>;
+        managerClause: AccessScopeService['managerClause'];
     };
     let service: OrderVisibilityService;
     let qb: ReturnType<typeof mockQueryBuilder>;
