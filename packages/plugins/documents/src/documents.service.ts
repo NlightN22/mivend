@@ -275,7 +275,7 @@ export class DocumentsService {
         const entity = repo.create({
             type: 'proforma-invoice',
             counterpartyId: String(proformaInvoice.counterpartyId),
-            orderId: String(proformaInvoice.orderId),
+            orderId: proformaInvoice.orderId == null ? null : String(proformaInvoice.orderId),
             proformaInvoiceId: String(proformaInvoice.id),
             number: proformaInvoice.number,
             issueDate: proformaInvoice.issuedAt,

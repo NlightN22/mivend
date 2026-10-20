@@ -364,6 +364,11 @@ redeliver.
   ERP: a contract designed with the integration side), and FIFO over the balance can drive a computed "paid"
   display. Overpayment is an advance that offsets the next sales invoice.
 
+- **Contract payment proformas (#260):** the Balance page issues a proforma under an own active customer contract,
+  `kind` `debt-repayment` (amount prefilled with the contract's open debt from ERP settlement documents) or `advance`
+  (free amount). It is paper with the contract organization's requisites: no order, no payment link, no paid status,
+  not sent to the ERP. Every allocation/open-document query excludes these kinds and `payProformaInvoice` refuses them.
+
 ## Payment allocation
 
 How an ERP-reported payment fact is applied (`PaymentInboxProcessorService` -> `PaymentAttemptService` ->

@@ -9,7 +9,12 @@ import { loggerCtx } from '../constants';
 import { Document } from '../entities/document.entity';
 import { DocumentsService } from '../documents.service';
 import { resolveBuyerLegalName } from './buyer-legal-name';
-import { PartyInput, ProformaInvoiceSource, printedRowsTotal } from './proforma-invoice-data';
+import {
+    contractPaymentPurpose,
+    PartyInput,
+    ProformaInvoiceSource,
+    printedRowsTotal,
+} from './proforma-invoice-data';
 import {
     buildProformaInvoiceTemplateData,
     renderProformaInvoiceHtml,
@@ -27,22 +32,6 @@ export class ProformaInvoiceHtmlBuilder {
         ctx: RequestContext,
         document: Document,
     ): Promise<{ html: string; noted: boolean }> {
-        if (!document.orderId) {
-            throw new Error(
-                `Document ${document.id} has no orderId — cannot render a proforma invoice`,
-            );
-        }
-        const order = await this.connection
-            .getRepository(ctx, Order)
-            .createQueryBuilder('order')
-            .leftJoinAndSelect('order.lines', 'lines')
-            .leftJoinAndSelect('lines.productVariant', 'variant')
-            .where('order.id = :id', { id: document.orderId })
-            .getOne();
-        if (!order) {
-            throw new Error(`Order ${document.orderId} not found for document ${document.id}`);
-        }
-
         // Legacy documents with no proformaInvoiceId predate invoice splitting: they render the whole
         // order against the single active organization.
         let requisites;
@@ -76,6 +65,9 @@ export class ProformaInvoiceHtmlBuilder {
                 kind: proformaInvoice.kind,
                 salesInvoiceNumber: proformaInvoice.salesInvoiceNumber,
                 hasNewerVersion: proformaInvoice.status === 'superseded',
+                paymentPurpose: proformaInvoice.contractName
+                    ? contractPaymentPurpose(proformaInvoice.number, proformaInvoice.contractName)
+                    : null,
                 lines: proformaInvoice.lines.map(line => ({
                     quantity: line.quantity,
                     unitPriceWithTax: line.unitPriceWithTax,
@@ -92,7 +84,7 @@ export class ProformaInvoiceHtmlBuilder {
                 source.lines,
                 await this.loadConfirmedRates(ctx, source.lines),
             );
-            if (source.lines.some(l => l.taxRate === undefined)) {
+            if (!source.paymentPurpose && source.lines.some(l => l.taxRate === undefined)) {
                 Logger.warn(
                     `Document ${document.number}: snapshot has no tax data, VAT printed as not specified`,
                     loggerCtx,
@@ -106,6 +98,7 @@ export class ProformaInvoiceHtmlBuilder {
                 );
             }
         } else {
+            const order = await this.loadOrder(ctx, document);
             requisites = await this.documentsService.getActiveRequisites(ctx);
             this.documentsService.assertRequisitesComplete(requisites);
             const units = await this.loadUnitNames(
@@ -122,6 +115,7 @@ export class ProformaInvoiceHtmlBuilder {
                 kind: 'order-placed',
                 salesInvoiceNumber: null,
                 hasNewerVersion: false,
+                paymentPurpose: null,
                 lines: order.lines.map(line => ({
                     quantity: line.quantity,
                     unitPriceWithTax: line.unitPriceWithTax,
@@ -142,6 +136,23 @@ export class ProformaInvoiceHtmlBuilder {
             );
         }
         return { html: renderProformaInvoiceHtml(data), noted: source.hasNewerVersion };
+    }
+
+    private async loadOrder(ctx: RequestContext, document: Document): Promise<Order> {
+        if (!document.orderId) {
+            throw new Error(`Document ${document.id} has neither a proforma invoice nor an order`);
+        }
+        const order = await this.connection
+            .getRepository(ctx, Order)
+            .createQueryBuilder('order')
+            .leftJoinAndSelect('order.lines', 'lines')
+            .leftJoinAndSelect('lines.productVariant', 'variant')
+            .where('order.id = :id', { id: document.orderId })
+            .getOne();
+        if (!order) {
+            throw new Error(`Order ${document.orderId} not found for document ${document.id}`);
+        }
+        return order;
     }
 
     async buyer(ctx: RequestContext, counterpartyId: string): Promise<PartyInput> {

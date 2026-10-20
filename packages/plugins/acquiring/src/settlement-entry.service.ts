@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
-import { ProformaInvoice } from './entities/proforma-invoice.entity';
+import { CONTRACT_PAYMENT_KINDS, ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt } from './entities/payment-attempt.entity';
 import { SettlementEntry } from './entities/settlement-entry.entity';
 import { ProformaInvoiceService } from './proforma-invoice.service';
@@ -174,6 +174,9 @@ export class SettlementEntryService {
             .andWhere('proformaInvoice.status IN (:...statuses)', {
                 statuses: ['pending', 'issued'],
             })
+            .andWhere('proformaInvoice.kind NOT IN (:...contractKinds)', {
+                contractKinds: CONTRACT_PAYMENT_KINDS,
+            })
             .orderBy('proformaInvoice.createdAt', 'ASC')
             .take(SettlementEntryService.FIFO_SCAN_LIMIT)
             .setLock('pessimistic_write')
@@ -195,6 +198,9 @@ export class SettlementEntryService {
                     })
                     .andWhere('proformaInvoice.organizationId = :organizationId', {
                         organizationId,
+                    })
+                    .andWhere('proformaInvoice.kind NOT IN (:...contractKinds)', {
+                        contractKinds: CONTRACT_PAYMENT_KINDS,
                     })
                     .setLock('pessimistic_write')
                     .getOne();

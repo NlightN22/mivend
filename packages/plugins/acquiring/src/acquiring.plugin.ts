@@ -60,6 +60,7 @@ import { AdminOrderPaymentViewResolver } from './admin-order-payment-view.resolv
 import { PaymentReconciliationIssueResolver } from './payment-reconciliation-issue.resolver';
 import { adminApiExtensions } from './api/admin.schema';
 import { shopApiExtensions } from './api/shop.schema';
+import { ContractProformaInvoiceService } from './contract-proforma-invoice.service';
 import { VariantOrganizationHealthResolver } from './variant-organization-health.resolver';
 import { VariantOrganizationHealthService } from './variant-organization-health.service';
 import { ProductVariantAvailabilityResolver } from './variant-availability.resolver';
@@ -91,6 +92,7 @@ import type { AcquiringPluginOptions } from './types';
         IncomingPaymentEvent,
     ],
     providers: [
+        ContractProformaInvoiceService,
         IdempotencyService,
         InboxService,
         ProformaInvoiceService,

@@ -97,7 +97,8 @@ export class ProformaInvoiceIssuingService {
         ctx: RequestContext,
         invoice: ProformaInvoice,
     ): Promise<number | null> {
-        if (invoice.status !== 'paid' || invoice.supersededById != null) return null;
+        if (invoice.status !== 'paid' || invoice.supersededById != null || invoice.orderId == null)
+            return null;
         const order = await this.loadOrder(ctx, invoice.orderId);
         const content = this.contentFor(order).find(
             c => c.organizationId === invoice.organizationId,

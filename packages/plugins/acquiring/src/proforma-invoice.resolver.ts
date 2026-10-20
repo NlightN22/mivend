@@ -23,6 +23,8 @@ import { PaymentAttemptService, PayProformaInvoiceOutcome } from './payment-atte
 import { PaymentChannel } from './entities/payment-attempt.entity';
 import { PaymentInboxProcessorService } from './payment-inbox-processor.service';
 import { MoneyAmount, SettlementEntryService } from './settlement-entry.service';
+import { ContractProformaInvoiceService } from './contract-proforma-invoice.service';
+import type { IssueContractProformaInvoiceInput } from './contract-proforma-invoice';
 
 @Resolver()
 export class ProformaInvoiceAdminResolver {
@@ -43,10 +45,13 @@ export class ProformaInvoiceAdminResolver {
     ): Promise<ProformaInvoice> {
         const invoice = await this.proformaInvoiceService.findOne(ctx, Number(args.id));
         const qb = await this.orderVisibility.buildVisibleOrdersQuery(ctx);
-        const visible = invoice
-            ? await qb.andWhere(`${qb.alias}.id = :orderId`, { orderId: invoice.orderId }).getOne()
-            : null;
-        if (!invoice || !visible) throw new ForbiddenError();
+        const visible =
+            invoice?.orderId != null
+                ? await qb
+                      .andWhere(`${qb.alias}.id = :orderId`, { orderId: invoice.orderId })
+                      .getOne()
+                : null;
+        if (!invoice || invoice.orderId == null || !visible) throw new ForbiddenError();
         if (visible.state === 'Cancelled') {
             await this.orderCancelService.closeForCancelledOrder(ctx, invoice.orderId);
             return (await this.proformaInvoiceService.findOne(ctx, Number(invoice.id)))!;
@@ -92,7 +97,17 @@ export class ProformaInvoiceShopResolver {
         private counterpartyService: CounterpartyService,
         private paymentAttemptService: PaymentAttemptService,
         private settlementEntryService: SettlementEntryService,
+        private contractProformaInvoiceService: ContractProformaInvoiceService,
     ) {}
+
+    @Mutation()
+    @Allow(Permission.Owner)
+    async issueContractProformaInvoice(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { input: IssueContractProformaInvoiceInput },
+    ): Promise<ProformaInvoice> {
+        return this.contractProformaInvoiceService.issue(ctx, args.input);
+    }
 
     @Query()
     @Allow(Permission.Owner)
@@ -223,7 +238,8 @@ export class ProformaInvoiceFieldResolver {
     async order(
         @Ctx() ctx: RequestContext,
         @Parent() proformaInvoice: ProformaInvoice,
-    ): Promise<{ id: string; code: string }> {
+    ): Promise<{ id: string; code: string } | null> {
+        if (proformaInvoice.orderId == null) return null;
         const order = await this.orderService.findOne(ctx, proformaInvoice.orderId);
         if (!order) {
             throw new Error(

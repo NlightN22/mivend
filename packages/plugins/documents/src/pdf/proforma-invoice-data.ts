@@ -29,6 +29,8 @@ export interface ProformaInvoiceSource {
     kind: string;
     salesInvoiceNumber: string | null;
     hasNewerVersion: boolean;
+    // Set only for contract payment kinds; replaces the default purpose in the payment QR.
+    paymentPurpose?: string | null;
     lines: ProformaInvoiceSourceLine[];
 }
 
@@ -72,6 +74,7 @@ export interface ProformaInvoiceTemplateData {
     versionLabel: string | null;
     dueLine: string | null;
     newerVersionNote: string | null;
+    purposeLine: string | null;
     supplier: string;
     buyer: string;
     rows: ProformaInvoiceRow[];
@@ -176,6 +179,7 @@ export function buildProformaInvoiceTemplateData(
         versionLabel: versionLabel(source),
         dueLine: source.dueDate ? `Срок оплаты до ${dateInWords(source.dueDate)}` : null,
         newerVersionNote: source.hasNewerVersion ? 'Есть более новая версия' : null,
+        purposeLine: source.paymentPurpose ? `Назначение платежа: ${source.paymentPurpose}` : null,
         supplier: partyLine(supplier),
         buyer: partyLine(buyer),
         rows: source.lines.map((line, i) => ({
@@ -213,6 +217,11 @@ export function buildProformaInvoiceTemplateData(
             correspondentAccount: requisites.correspondentAccount,
             inn: requisites.inn,
             kpp: requisites.kpp,
+            purpose: source.paymentPurpose ?? null,
         }),
     };
+}
+
+export function contractPaymentPurpose(documentNumber: string, contractName: string): string {
+    return `Оплата по счету № ${documentNumber} по договору ${contractName}`;
 }

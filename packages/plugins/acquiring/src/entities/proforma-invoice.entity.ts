@@ -2,7 +2,15 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
-export type ProformaInvoiceKind = 'order-placed' | 'order-changed' | 'by-shipment';
+export type ProformaInvoiceKind =
+    | 'order-placed'
+    | 'order-changed'
+    | 'by-shipment'
+    | 'debt-repayment'
+    | 'advance';
+
+// Contract payment requests (#260): paper with requisites, never an open document for payment allocation.
+export const CONTRACT_PAYMENT_KINDS: ProformaInvoiceKind[] = ['debt-repayment', 'advance'];
 
 export type ProformaInvoiceStatus = 'pending' | 'issued' | 'paid' | 'cancelled' | 'superseded';
 
@@ -28,16 +36,21 @@ export interface ProformaInvoiceLineSnapshot {
 @Index('UQ_proforma_invoice_order_org_version', ['orderId', 'organizationId', 'version'], {
     unique: true,
 })
+@Index('UQ_proforma_invoice_idempotency', ['counterpartyId', 'idempotencyKey'], {
+    unique: true,
+    where: '"idempotencyKey" IS NOT NULL',
+})
 export class ProformaInvoice extends UuidEntity {
     constructor(input?: DeepPartial<ProformaInvoice>) {
         super(input);
     }
 
+    // Null only for contract payment kinds, which belong to a contract, not an order.
     @Index()
-    @Column({ type: 'int' })
-    orderId!: number;
+    @Column({ type: 'int', nullable: true })
+    orderId!: number | null;
 
-    // `<order number>-<NN>-<version>`: `<order number>-<NN>` is the stable document id per (order, organization).
+    // `<order number>-<NN>-<version>` (stable id `<order number>-<NN>`); a flat sequence number for contract kinds.
     @Column({ type: 'varchar' })
     number!: string;
 
@@ -97,4 +110,15 @@ export class ProformaInvoice extends UuidEntity {
 
     @Column({ type: 'varchar', nullable: true })
     withdrawnByAdministratorId!: string | null;
+
+    // Contract payment kinds only.
+    @Column({ type: 'varchar', nullable: true })
+    contractId!: string | null;
+
+    // Issue-time contract name, printed in the payment purpose even if the ERP renames the contract later.
+    @Column({ type: 'varchar', nullable: true })
+    contractName!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    idempotencyKey!: string | null;
 }

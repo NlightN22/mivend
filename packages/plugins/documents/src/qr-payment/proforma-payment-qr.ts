@@ -13,6 +13,7 @@ export interface ProformaQrSource {
     correspondentAccount: string | null;
     inn: string;
     kpp: string | null;
+    purpose?: string | null;
 }
 
 export interface ProformaPaymentQr {
@@ -35,7 +36,9 @@ export function buildProformaPaymentQr(source: ProformaQrSource): ProformaPaymen
         bic: source.bik,
         correspAcc: source.correspondentAccount ?? '',
         sumKopecks: source.amountKopecks,
-        purpose: `Оплата по счету № ${source.documentNumber} от ${formatDate(source.issueDate)}${vat}`,
+        purpose:
+            source.purpose ??
+            `Оплата по счету № ${source.documentNumber} от ${formatDate(source.issueDate)}${vat}`,
         payeeInn: source.inn,
         kpp: source.kpp,
     });

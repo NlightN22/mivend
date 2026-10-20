@@ -2,6 +2,7 @@ export { AcquiringPlugin } from './src/acquiring.plugin';
 export { cashPaymentHandler, CASH_METHOD_CODE } from './src/cash-handler';
 export {
     ProformaInvoice,
+    CONTRACT_PAYMENT_KINDS,
     type ProformaInvoiceStatus,
 } from './src/entities/proforma-invoice.entity';
 export {

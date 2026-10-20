@@ -38,7 +38,8 @@ export const adminApiExtensions: DocumentNode = gql`
         "Human-facing business number — generated at creation, distinct from the order's own code — see ProformaInvoice.number's own doc comment (proforma-invoice.entity.ts)."
         number: String!
         createdAt: DateTime!
-        orderId: ID!
+        "Null for contract payment kinds (debt-repayment, advance)."
+        orderId: ID
         organizationId: ID!
         counterpartyId: ID!
         amount: Int!
@@ -48,15 +49,17 @@ export const adminApiExtensions: DocumentNode = gql`
         issuedAt: DateTime!
         "Pay-by date of this version: issue date plus the branch's payment term."
         dueDate: DateTime!
-        "order-placed | order-changed | by-shipment"
+        "order-placed | order-changed | by-shipment | debt-repayment | advance"
         kind: String!
+        "Set only on contract payment kinds."
+        contractName: String
         "ERP sales invoice (realization) number; set only on a by-shipment version."
         salesInvoiceNumber: String
         "User-facing status: current | superseded | cancelled. Never 'paid': payment is shown at order level."
         displayStatus: String!
         branchId: ID
-        "Resolved via ProformaInvoiceFieldResolver.order — was previously registered only for shopApiExtensions, so no admin client could ever request it (real bug: ProformaInvoicesTable.vue linked to /orders/<orderId> instead of /orders/<order.code>, landing on a broken page)."
-        order: ProformaInvoiceOrder!
+        "The proforma's order; null for contract payment kinds."
+        order: ProformaInvoiceOrder
         "Snapshot lines, resolved via ProformaInvoiceFieldResolver.lines."
         lines: [ProformaInvoiceLine!]!
     }

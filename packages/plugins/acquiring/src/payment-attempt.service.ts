@@ -3,7 +3,7 @@ import { RequestContext, TransactionalConnection, UserInputError } from '@vendur
 import { withAggregateLock } from 'shared';
 import { NumberingService } from '@mivend/plugin-numbering';
 
-import { ProformaInvoice } from './entities/proforma-invoice.entity';
+import { CONTRACT_PAYMENT_KINDS, ProformaInvoice } from './entities/proforma-invoice.entity';
 import { PaymentAttempt, PaymentChannel, PaymentStatus } from './entities/payment-attempt.entity';
 import { ProformaInvoiceService } from './proforma-invoice.service';
 import { PaymentReconciliationIssueService } from './payment-reconciliation-issue.service';
@@ -92,6 +92,9 @@ export class PaymentAttemptService {
         const proformaInvoice = await this.proformaInvoiceService.findOne(ctx, proformaInvoiceId);
         if (!proformaInvoice) {
             throw new UserInputError(`ProformaInvoice ${proformaInvoiceId} not found`);
+        }
+        if (CONTRACT_PAYMENT_KINDS.includes(proformaInvoice.kind)) {
+            throw new UserInputError(`ProformaInvoice ${proformaInvoiceId} takes no payments`);
         }
         if (
             expectedOrganizationId !== undefined &&

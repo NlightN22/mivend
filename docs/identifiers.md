@@ -123,6 +123,9 @@ and is never an idempotency key for a business entity.
     from the sequence", unlike ProformaInvoice which this doc explicitly calls out as `<order number>-NN`; `providerPaymentId`/
     `providerRefundId` already carry the acquirer/kassa reference separately. Revisit if this reading turns out wrong.
   - **DiscountGrant**: flat per-instance sequence — it has no `orderId`, so `<order number>-NN` does not apply.
+  - **Contract payment proforma** (`kind` `debt-repayment`/`advance`, #260): no order, so a flat per-instance number
+    from the `proforma-invoice` sequence (`1000000123`); it never collides with `<order>-NN-<version>`. Idempotency of
+    issuing is a client key per form open, unique per counterparty.
 - Done: `order.submitted` carries `orderUuid`/`orderNumber`/`lineUuid` in mivend's own producer-side mirror
   (`packages/plugins/erp-integration/src/schemas/order-submitted.schema.ts`, `OrderSubmittedBuilder.build()`).
   `orderNumber` is `order.code` as-is (today's `ORD-YYYYMM-XXXXXXXX` format, see the deferred item below — not

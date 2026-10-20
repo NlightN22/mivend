@@ -171,6 +171,7 @@ export function renderProformaInvoiceHtml(data: ProformaInvoiceTemplateData): st
         ${renderBank(data.bank, data.paymentQr.payload)}
         <h1>${esc(data.title)}</h1>
         ${data.dueLine ? `<p class="due">${esc(data.dueLine)}</p>` : ''}
+        ${data.purposeLine ? `<p class="due">${esc(data.purposeLine)}</p>` : ''}
         ${data.versionLabel ? `<p class="version">${esc(data.versionLabel)}</p>` : ''}
         ${data.newerVersionNote ? `<p class="newer">${esc(data.newerVersionNote)}</p>` : ''}
         <table class="parties">

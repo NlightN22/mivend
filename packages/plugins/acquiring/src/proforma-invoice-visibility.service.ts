@@ -5,7 +5,7 @@ import { AccessScopeService, AccessScope } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
-import { ProformaInvoice } from './entities/proforma-invoice.entity';
+import { CONTRACT_PAYMENT_KINDS, ProformaInvoice } from './entities/proforma-invoice.entity';
 import { applyStatusFilter } from './proforma-invoice-display';
 import { ProformaInvoiceListOptions } from './proforma-invoice.service';
 
@@ -58,6 +58,9 @@ export class ProformaInvoiceVisibilityService {
             .andWhere('proformaInvoice.counterpartyId = :counterpartyId', { counterpartyId })
             .andWhere('proformaInvoice.status IN (:...statuses)', {
                 statuses: ['pending', 'issued'],
+            })
+            .andWhere('proformaInvoice.kind NOT IN (:...contractKinds)', {
+                contractKinds: CONTRACT_PAYMENT_KINDS,
             });
         this.applyScope(qb, scope);
         const rows = await qb
