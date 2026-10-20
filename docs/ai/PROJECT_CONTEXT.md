@@ -1,6 +1,13 @@
 # Project Context
 
-Updated: 2026-10-19 18:00
+Updated: 2026-10-20 10:00
+
+## #216 storefront i18n (2026-10-19..20, DONE: audited 2 rounds, pushed, closed; follow-ups #260, #261)
+- Storefront locales en (default + fallback) and ru; resolution saved (localStorage) → browser → en; header `MvLanguageSwitcher` (flag-icons 7.5.0 via the locale region, en = en-GB; names via `Intl.DisplayNames`). Typed per-domain catalogues `packages/storefront/src/i18n/{en,ru}/*.ts` (en is the key type), ru lazy-loaded, Russian plural rules, `setLocale` guarded by a request counter.
+- One formatter `i18n/format.ts`: money always two fraction digits (RUB-only, deliberate), dates/numbers per locale; ui-kit `MvAmountDisplay` takes it via `AMOUNT_FORMATTER`.
+- ui-kit never imports vue-i18n: texts come via props with English defaults; the portal passes translations through composables (`useProductLabels`, `usePaginationLabels`, ...). Manager has no vue-i18n and passes Russian labels explicitly (e.g. `utils/stockLabels.ts`) — any ui-kit default change must keep manager text.
+- Guards: `@intlify/vue-i18n/no-raw-text` on the whole storefront (template text only); unit test forbids Cyrillic outside `i18n/ru`. Script-side English strings are not caught — review them by hand. Shop `ErrorResult`s are shown by `errorCode` (`utils/shopErrorMessage.ts`), never the raw server message. DB data (product/brand/category names) is never translated. e2e run in `en-GB`.
+- Follow-ups: #260 demo data in non-production vs "not implemented" in production; #261 UI component tests via Storybook 10 + addon-vitest (low).
 
 ## #235 price type visibility + #256 below-floor check (2026-10-19, DONE: audited 3 rounds, pushed, both closed)
 - #235: `PriceType.visibility` (customer/confidential); `PriceTypeAccessService` is deny-by-default on every admin path, with a per-ctx memo (a mid-request visibility change is not seen). Access = branch allow-list (`BranchSettings.visiblePriceTypeIds`, customer types only, plus the branch default) union role permissions; confidential types are never granted by a branch rule or customer context. Discount grants, approval requests (`payload-price-type-gate.ts`, `pg_input_is_valid`, Postgres 16+) and the decide path are gated by type. Purchase-flag changes serialize under advisory lock `price-type-purchase-flag`.
@@ -33,7 +40,7 @@ Updated: 2026-10-19 18:00
 - Sessions: per-user active-session cap, sweep of ended sessions, e2e teardown ends marked run sessions.
 - Cancel: every path into `Cancelled` (mivend, Dashboard, ERP) releases reservations once and withdraws open proformas under `withOrderCancelLocks` (`packages/shared/src/order-cancel-locks.ts`; order: proformas -> reserve-order -> order row, `docs/concurrency.md`). Cancel is never refused over payments; money received becomes the customer's advance (`docs/payments.md`). Superseded proforma PDFs re-render with the newer-version note (stale-render race closed).
 - Access: department-head has `ConfirmOrder` and can reassign managers; operator/manager see the whole branch team; teamDirectory/approval escalation bypass Vendure 3.7.3 `restrictToVisibleAdministrators`.
-- e2e: skill `.claude/skills/e2e-rules` (seed data via `make seed`, tests follow UI, idempotent cleanup of orders/reservations, scoped batches under flock, checklist + audit). Full `make e2e` only on explicit request. Cart specs open `/catalog?inStock=1` (seed has an intentional zero-stock item). erp-import has a `manufacturer` record + product `manufacturerCode` (seed: manufacturer-a/-b). Nameless placeholder manufacturer before its record = designed (#164).
+- e2e: skill `.claude/skills/e2e-rules` (seed data via `make seed`, tests follow UI, idempotent cleanup of orders/reservations, scoped batches under `flock /tmp/mivend-e2e.lock` (one fixed path for all sessions), checklist + audit). Full `make e2e` only on explicit request. Cart specs open `/catalog?inStock=1` (seed has an intentional zero-stock item). erp-import has a `manufacturer` record + product `manufacturerCode` (seed: manufacturer-a/-b). Nameless placeholder manufacturer before its record = designed (#164).
 - Stuck dev worker child (high CPU, queue not drained) breaks document/PDF specs: kill only that child.
 - Follow-ups: #247 (done 2026-10-18, see above); #248 core Admin API order operations (read and write: `orders`, `order`, `transitionOrderToState`, `modifyOrder`, payments...) bypass mivend order scope; needs one central guard.
 
@@ -68,7 +75,7 @@ Updated: 2026-10-19 18:00
 
 ## #194 reserve deadline / order cancel (2026-10-11, DONE: audited, pushed, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-13-sections-full.md`)
 
-- One topic `mivend.orders.events.v1.order-events` (key `orderUuid`; types `confirmed` with `reserveUntil`, `cancel-requested`), ERP answers on `order-cancel-result`; statuses derive from ERP facts into `erpStatus` (forward-only). Rules in `docs/order-contracts.md`. Open: #216 translations, terminal ERP refusal, lost-answer auto-retry, deadline warning for registered orders.
+- One topic `mivend.orders.events.v1.order-events` (key `orderUuid`; types `confirmed` with `reserveUntil`, `cancel-requested`), ERP answers on `order-cancel-result`; statuses derive from ERP facts into `erpStatus` (forward-only). Rules in `docs/order-contracts.md`. Open: terminal ERP refusal, lost-answer auto-retry, deadline warning for registered orders.
 
 ## #208/#209/#211/#212/#213 (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-11-208-213-full.md`)
 
