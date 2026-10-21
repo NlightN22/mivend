@@ -122,6 +122,19 @@ in `finally` and verified with a SELECT. Customers A and B see only their own po
 `myHiddenTradingPoints`, and every Shop write on the other's point is refused with the point and the preferred point
 unchanged (by-id and list reads stay in `11`).
 
+Contract visibility (#263 stage 5, `19`, read-only apart from restored moves) samples one placed order per
+counterparty branch (the `13` set, branch-less included) plus the newest order of each client whose customer has
+active contracts, and checks for every actor that `orderContracts` (contracts with their organizations) and
+`orderLineAvailability` (per-organization stock) answer exactly when the order is visible by the read-time branch
+rule, and "Order not found" otherwise while the superadmin gets the same contracts. On a hidden order
+`setOrderContract` is refused (selected contract and order notes unchanged) and `generateContract` is refused (no
+contract document added). `priceTypeGapCounterparties` (clients whose main contract gives no price type) is checked
+for list, count and search when the contour has such a client and skips with a reason otherwise. A branch-B client
+moved to branch A takes its order contracts along (undone and verified). Customers A and B get exactly their own
+`myContracts`, a guest none. `organizationRequisites` lists our own legal entities, not client data, and is not
+scoped. A branch-less client has no customer and no order with contracts on the contour, so the default-branch rule
+for contract content is only checked on order visibility.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —
