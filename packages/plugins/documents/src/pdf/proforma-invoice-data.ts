@@ -4,10 +4,7 @@ import { summarizeVat, type VatSourceLine, type VatTotal } from './proforma-invo
 import { buildProformaPaymentQr, type ProformaPaymentQr } from '../qr-payment/proforma-payment-qr';
 import { dateInWords, formatMoneyRu, rublesInWords } from './russian-words';
 
-export const PAYMENT_NOTICE =
-    'Внимание! Оплата данного счета означает согласие с условиями поставки товара. ' +
-    'Уведомление об оплате обязательно, в противном случае не гарантируется наличие товара на складе. ' +
-    'Товар отпускается по факту прихода денег на р/с поставщика.';
+export const PAYMENT_NOTICE = 'Оплата данного счета означает согласие с условиями поставки товара.';
 
 export interface ProformaInvoiceSourceLine extends VatSourceLine {
     quantity: number;

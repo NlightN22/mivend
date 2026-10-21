@@ -290,6 +290,15 @@ describe('renderProformaInvoiceHtml', () => {
         expect(html).toContain('В том числе НДС');
     });
 
+    it('prints only the consent sentence as the payment notice', () => {
+        const html = render(makeSource());
+        expect(html).toContain(
+            'Оплата данного счета означает согласие с условиями поставки товара.',
+        );
+        expect(html).not.toContain('Товар отпускается');
+        expect(html).not.toContain('Уведомление об оплате');
+    });
+
     it('prints the due date under the title and the shipment basis when present', () => {
         const html = render(
             makeSource({ kind: 'by-shipment', salesInvoiceNumber: 'R-77', version: 3 }),
