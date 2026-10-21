@@ -2,7 +2,7 @@ import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/g
 import { Transaction } from '@vendure/core';
 import { Allow, Ctx, RequestContext, TransactionalConnection } from '@vendure/core';
 import { Permission } from '@vendure/common/lib/generated-types';
-import { CustomPermission } from '@mivend/plugin-access-control';
+import { AccessScopeService, CustomPermission } from '@mivend/plugin-access-control';
 
 import { TradingPoint } from './entities/trading-point.entity';
 import {
@@ -162,8 +162,11 @@ export class TradingPointAdminResolver {
     constructor(
         private tradingPointService: TradingPointService,
         private counterpartyService: CounterpartyService,
+        private accessScopeService: AccessScopeService,
     ) {}
 
+    // Read-time branch (#263): a branch scope also reads points serviced by its branch, so the
+    // default branch reads the points of a branch-less client. Writes stay counterparty-scoped.
     @Query()
     @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
     async tradingPoint(
@@ -172,8 +175,11 @@ export class TradingPointAdminResolver {
     ): Promise<TradingPoint | null> {
         const point = await this.tradingPointService.findById(ctx, args.id);
         if (!point) return null;
-        const visible = await this.counterpartyService.findOneVisible(ctx, point.counterpartyId);
-        return visible ? point : null;
+        if (await this.counterpartyService.findOneVisible(ctx, point.counterpartyId)) return point;
+        const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
+        if (scope.kind !== 'department' || !scope.branchId) return null;
+        const branchId = await this.tradingPointService.resolveServicingBranchId(ctx, point);
+        return branchId === scope.branchId ? point : null;
     }
 
     @Transaction()

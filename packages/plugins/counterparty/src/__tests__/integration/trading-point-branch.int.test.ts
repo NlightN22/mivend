@@ -9,6 +9,7 @@ import {
     createTestConnection,
 } from 'shared';
 import { TradingPointService } from '../../trading-point.service';
+import { TradingPointAdminResolver } from '../../trading-point.resolver';
 
 @Entity('counterparty')
 class TestCounterparty {
@@ -88,5 +89,32 @@ describe('TradingPointService.resolveServicingBranchId (real Postgres)', () => {
         expect(await service.resolveServicingBranchId(ctx, await point(null))).toBe(
             'branch-default',
         );
+    });
+});
+
+describe('TradingPointAdminResolver.tradingPoint for a hidden client (real Postgres, #263)', () => {
+    const headOf = (branchId: string) => ({
+        resolveCounterpartyScope: async () => ({ kind: 'department', branchId }),
+    });
+    const read = async (p: Awaited<ReturnType<typeof point>>, branchId: string) =>
+        new TradingPointAdminResolver(
+            {
+                findById: async () => ({ id: '1', ...p }),
+                resolveServicingBranchId: service.resolveServicingBranchId.bind(service),
+            } as never,
+            { findOneVisible: async () => null } as never,
+            headOf(branchId) as never,
+        ).tradingPoint(ctx, { id: '1' });
+
+    it('the default branch reads the point of a branch-less client, another branch does not', async () => {
+        const p = await point(null);
+        expect(await read(p, 'branch-default')).not.toBeNull();
+        expect(await read(p, 'branch-b')).toBeNull();
+    });
+
+    it('a point override moves the read to the servicing branch', async () => {
+        const p = await point('branch-a', 'branch-b');
+        expect(await read(p, 'branch-b')).not.toBeNull();
+        expect(await read(p, 'branch-a')).toBeNull();
     });
 });

@@ -110,6 +110,18 @@ and a guest or the other customer gets 404 for a PDF. Settlement documents have 
 API, so they are checked in the storefront only. Only the branch-A client has documents on the contour (proforma
 PDFs); `generateContract` would add documents for the others but leaves rows the product cannot remove.
 
+Trading point visibility (#263 stage 4, `18`) samples every point of the fixture counterparties plus one point of a
+branch-less client and checks, for every actor, `tradingPoint(id)` with contacts against the read-time branch rule
+(visible counterparty, or a branch scope whose resolved branch is the point's: override, else counterparty branch,
+else the default branch), the points nested on `counterparty(id)` and on a `counterparties` search, and a refused
+`updateTradingPointDetails`/`setTradingPointActive`/`updateTradingPointComment` on a point of a hidden counterparty
+(row unchanged). Shared cases: head-a adds a contact on a branch-A point that head-b and manager-b cannot read; a
+servicing override to branch B lets head-b read the point but not edit it; a branch-B counterparty moved to branch A
+takes its point along; the default-branch head reads the branch-less point and cannot edit it. Every change is undone
+in `finally` and verified with a SELECT. Customers A and B see only their own points nested on `activeCustomer` and in
+`myHiddenTradingPoints`, and every Shop write on the other's point is refused with the point and the preferred point
+unchanged (by-id and list reads stay in `11`).
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —

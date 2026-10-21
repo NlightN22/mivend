@@ -59,9 +59,12 @@ describe('TradingPointService.findOwnById (Shop API)', () => {
 describe('TradingPointAdminResolver.tradingPoint (Admin API)', () => {
     const findById = vi.fn();
     const findOneVisible = vi.fn();
+    const resolveServicingBranchId = vi.fn();
+    const resolveCounterpartyScope = vi.fn();
     const resolver = new TradingPointAdminResolver(
-        { findById } as unknown as TradingPointService,
+        { findById, resolveServicingBranchId } as unknown as TradingPointService,
         { findOneVisible } as unknown as CounterpartyService,
+        { resolveCounterpartyScope } as never,
     );
 
     beforeEach(() => vi.clearAllMocks());
@@ -75,9 +78,41 @@ describe('TradingPointAdminResolver.tradingPoint (Admin API)', () => {
         });
     });
 
+    it('returns a hidden client point serviced by the caller branch (read-time branch, #263)', async () => {
+        findById.mockResolvedValue({ id: '1', counterpartyId: 'cp-2' });
+        findOneVisible.mockResolvedValue(null);
+        resolveCounterpartyScope.mockResolvedValue({ kind: 'department', branchId: 'b-1' });
+        resolveServicingBranchId.mockResolvedValue('b-1');
+        expect(await resolver.tradingPoint(customer, { id: '1' })).toEqual({
+            id: '1',
+            counterpartyId: 'cp-2',
+        });
+    });
+
+    it('returns null when a hidden client point is serviced by another branch', async () => {
+        findById.mockResolvedValue({ id: '1', counterpartyId: 'cp-2' });
+        findOneVisible.mockResolvedValue(null);
+        resolveCounterpartyScope.mockResolvedValue({ kind: 'department', branchId: 'b-1' });
+        resolveServicingBranchId.mockResolvedValue('b-2');
+        expect(await resolver.tradingPoint(customer, { id: '1' })).toBeNull();
+    });
+
+    it('never widens an own scope or a branchless department scope by branch', async () => {
+        findById.mockResolvedValue({ id: '1', counterpartyId: 'cp-2' });
+        findOneVisible.mockResolvedValue(null);
+        resolveServicingBranchId.mockResolvedValue(null);
+        resolveCounterpartyScope.mockResolvedValue({ kind: 'own', administratorId: '5' });
+        expect(await resolver.tradingPoint(customer, { id: '1' })).toBeNull();
+        resolveCounterpartyScope.mockResolvedValue({ kind: 'department' });
+        expect(await resolver.tradingPoint(customer, { id: '1' })).toBeNull();
+        expect(resolveServicingBranchId).not.toHaveBeenCalled();
+    });
+
     it('returns null when the counterparty is outside the caller scope', async () => {
         findById.mockResolvedValue({ id: '1', counterpartyId: 'cp-2' });
         findOneVisible.mockResolvedValue(null);
+        resolveCounterpartyScope.mockResolvedValue({ kind: 'department', branchId: 'b-1' });
+        resolveServicingBranchId.mockResolvedValue('b-2');
         expect(await resolver.tradingPoint(customer, { id: '1' })).toBeNull();
     });
 
