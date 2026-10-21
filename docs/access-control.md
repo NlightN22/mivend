@@ -421,6 +421,8 @@ scope.branchId` anyway. It "worked" only by accident — `Administrator.customFi
   proforma without an order resolves via its counterparty. `OrderVisibilityService`, the reservation
   reconciliation issue list and `ProformaInvoiceVisibilityService` share `readTimeBranchClause`. `TradingPoint.servicingBranchId` defaults to the
   counterparty's `branchId` at creation and is overridable per point for chain accounts.
+  With no default branch set the chain ends in NULL and such orders are hidden from every branch scope.
+  The snapshot is still written and read by stock location, MOQ, reservation and sync code; only scope ignores it.
 - **The preferred trading point is self-healing, and reading it can write.**
   `TradingPointService.getPreferredForCustomer` — used by the Shop API `preferredTradingPoint`
   field, proforma invoices, MOQ and order placement — runs one atomic `UPDATE ... RETURNING` on the
