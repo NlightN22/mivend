@@ -2,6 +2,14 @@
 
 Updated: 2026-10-21 15:00
 
+## #260 storefront demo data (2026-10-20..21, DONE: audited 2 rounds, pushed, closed)
+- `useDemoMode()` = `!import.meta.env.PROD`: dev keeps demo pages/widgets, production shows `MvNotImplemented` or hides links (`demoOnlyLinks.ts`). Stubbed in prod: reconciliation acts, requests, employees, frequent products, notification prefs. Real now: account dashboard/orders, settings (profile, password), payment result, Balance page.
+- Balance: Shop `myContracts`, `settlementDocuments(filter.unpaidOnly)` + `openAmount`; demo seed `infrastructure/scripts/seed-balance-demo.mjs` (balance-demo@test.example, not used by e2e).
+- Contract proformas: `ProformaInvoice.kind` `debt-repayment`/`advance`, orderId null, per contract, unlimited, idempotency key (mismatch rejected), excluded from FIFO/payment; default VAT from the default TaxCategory (local 22%, staging НДС20 left as is); amount Int cap 2147483647 kopecks validated front+back; worker task `contract-proforma-cleanup` deletes them after 6 months (1 Jan/1 Jul).
+- Security: Customer customFields `counterpartyId/portalRole/preferredTradingPointId` readonly; `setPreferredTradingPoint` ownership check; rest is #266 (separate session). Online payment stub refused under NODE_ENV=production.
+- Cart bug found: storefront compared gross compareAtPrice with net `unitPrice`; now `unitPriceWithTax`; e2e `cart-totals/vat-rate.spec.ts` switches the default rate and restores it.
+- Open: checkout terms link `href="#"` (CheckoutSummary.vue, owned by another session's uncommitted work).
+
 ## #259 ERP deletion/clearing events (2026-10-21, DONE: pushed to main, closed; follow-up #254 deferred)
 - Price tombstone removes the `ProductVariantPriceEntry` (`PriceEntryService.remove`); storage-location tombstone deletes by `entityId`. REAL tombstones have an EMPTY body (no productId/priceTypeId/storageLocationId/value): identity is only the envelope `entityId` (price `productId:priceTypeId`, storage-location `productId:warehouseId:priority`), equal to the upsert's. Handlers read the key from `entityId`; test payloads must use the real empty shape.
 - Cleared fields: a NAMED event is full state (never partial); an absent key (rarely `''`) clears. Rule per stream in `docs/ai/erp-streams-map.md` "Cleared vs not sent (#259)": counterparty phone/email/addresses, point-of-sale address/coords/contact phone, organization phone, product part number/full name are cleared; legal requisites and signatories stay sticky; a tombstone never touches values. Point `contactPhone` is stored only on an existing contact person.
