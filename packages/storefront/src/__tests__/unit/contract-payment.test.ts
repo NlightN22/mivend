@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-    contractDebt,
-    initialAmountText,
-    parseAmountMinor,
-} from '../../pages/account/contractPayment';
+import { contractDebt, initialAmountText } from '../../pages/account/contractPayment';
 
 const now = new Date('2026-10-20T00:00:00Z');
 const doc = (contractId: string, openAmount: number, dueDate: string | null) => ({
@@ -34,23 +30,11 @@ describe('contractDebt', () => {
 describe('initialAmountText', () => {
     it('prefills the debt only in debt mode', () => {
         const debt = { minor: 6_000_050, overdueMinor: 0 };
-        expect(initialAmountText('debt-repayment', debt)).toBe('60000.50');
-        expect(initialAmountText('advance', debt)).toBe('');
-        expect(initialAmountText('debt-repayment', { minor: 0, overdueMinor: 0 })).toBe('');
-    });
-});
-
-describe('parseAmountMinor', () => {
-    it.each([
-        ['60 000,50', 6_000_050],
-        ['15000', 1_500_000],
-        ['0.01', 1],
-        ['100000000', 10_000_000_000],
-    ])('parses %s', (text, minor) => {
-        expect(parseAmountMinor(text)).toBe(minor);
-    });
-
-    it.each(['', '0', '-5', '1.234', 'abc', '1e5'])('rejects %s', text => {
-        expect(parseAmountMinor(text)).toBeNull();
+        expect(initialAmountText('debt-repayment', debt, 'en-GB')).toBe('60,000.50');
+        expect(initialAmountText('debt-repayment', debt, 'ru').replace(/\s/g, ' ')).toBe(
+            '60 000,50',
+        );
+        expect(initialAmountText('advance', debt, 'ru')).toBe('');
+        expect(initialAmountText('debt-repayment', { minor: 0, overdueMinor: 0 }, 'ru')).toBe('');
     });
 });

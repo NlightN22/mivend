@@ -62,6 +62,7 @@ const ru: typeof en = {
             overdue: 'Просрочено: {amount}',
             amount: 'Сумма, {currency}',
             amountInvalid: 'Введите сумму больше нуля',
+            amountTooLarge: 'Сумма не может превышать {max}',
             issue: 'Выставить счёт на оплату',
             failed: 'Не удалось выставить счёт на оплату. Попробуйте ещё раз.',
             issued: 'Счёт на оплату № {number} выставлен.',

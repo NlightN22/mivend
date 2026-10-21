@@ -12,17 +12,14 @@ import {
 } from '@mivend/ui-kit';
 import type { SettlementRow } from '../settlements/useSettlementDocuments';
 import { formatMinor } from './balanceFormat';
-import {
-    contractDebt,
-    initialAmountText,
-    parseAmountMinor,
-    type ContractPayMode,
-} from './contractPayment';
+import { regionalTag } from '../../i18n/locales';
+import { MAX_AMOUNT_MINOR, parseAmountInput } from './amountInput';
+import { contractDebt, initialAmountText, type ContractPayMode } from './contractPayment';
 import type { BalanceContract } from './useBalance';
 import { useContractProforma } from './useContractProforma';
 
 const props = defineProps<{ contracts: BalanceContract[]; unpaid: SettlementRow[] }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { issuing, failed, issued, pdfUrl, pdfPending, issue, reset } = useContractProforma();
 
 const mode = ref<ContractPayMode>('debt-repayment');
@@ -32,7 +29,16 @@ const amountText = ref('');
 const contract = computed(() => props.contracts.find(c => c.id === contractId.value) ?? null);
 const currency = computed(() => contract.value?.currency ?? 'RUB');
 const debt = computed(() => contractDebt(contractId.value, props.unpaid));
-const amountMinor = computed(() => parseAmountMinor(amountText.value));
+const localeTag = computed(() => regionalTag(locale.value));
+const parsed = computed(() => parseAmountInput(amountText.value, localeTag.value));
+const amountMinor = computed(() => (parsed.value.kind === 'ok' ? parsed.value.minor : null));
+const amountError = computed(() => {
+    if (parsed.value.kind === 'invalid') return t('balance.pay.amountInvalid');
+    if (parsed.value.kind === 'tooLarge') {
+        return t('balance.pay.amountTooLarge', { max: formatMinor(MAX_AMOUNT_MINOR, currency.value) });
+    }
+    return undefined;
+});
 const modes = computed<FilterChip[]>(() => [
     { key: 'debt-repayment', label: t('balance.pay.modeDebt') },
     { key: 'advance', label: t('balance.pay.modeAdvance') },
@@ -42,9 +48,9 @@ const contractOptions = computed(() =>
 );
 
 watch(
-    [mode, contractId],
+    [mode, contractId, localeTag],
     () => {
-        amountText.value = initialAmountText(mode.value, debt.value);
+        amountText.value = initialAmountText(mode.value, debt.value, localeTag.value);
     },
     { immediate: true },
 );
@@ -60,7 +66,7 @@ function submit(): void {
 
 function another(): void {
     reset();
-    amountText.value = initialAmountText(mode.value, debt.value);
+    amountText.value = initialAmountText(mode.value, debt.value, localeTag.value);
 }
 </script>
 
@@ -109,7 +115,7 @@ function another(): void {
             </div>
             <MvFormField
                 :label="t('balance.pay.amount', { currency })"
-                :error="amountText && !amountMinor ? t('balance.pay.amountInvalid') : undefined"
+                :error="amountError"
             >
                 <MvInput v-model="amountText" />
             </MvFormField>

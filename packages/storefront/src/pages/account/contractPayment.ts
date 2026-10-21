@@ -1,3 +1,4 @@
+import { formatAmountInput } from './amountInput';
 import { isOverdue, owed, type UnpaidDoc } from './balanceView';
 
 export type ContractPayMode = 'debt-repayment' | 'advance';
@@ -22,14 +23,10 @@ export function contractDebt(
     return { minor, overdueMinor };
 }
 
-export function initialAmountText(mode: ContractPayMode, debt: ContractDebt): string {
-    return mode === 'debt-repayment' && debt.minor > 0 ? (debt.minor / 100).toFixed(2) : '';
-}
-
-// Accepts "60 000,50" or "60000.5"; null unless a positive amount with at most two decimals.
-export function parseAmountMinor(text: string): number | null {
-    const normalized = text.replace(/\s/g, '').replace(',', '.');
-    if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
-    const minor = Math.round(Number(normalized) * 100);
-    return minor > 0 && Number.isSafeInteger(minor) ? minor : null;
+export function initialAmountText(
+    mode: ContractPayMode,
+    debt: ContractDebt,
+    locale: string,
+): string {
+    return mode === 'debt-repayment' && debt.minor > 0 ? formatAmountInput(debt.minor, locale) : '';
 }

@@ -60,6 +60,7 @@ export default {
             overdue: 'Overdue: {amount}',
             amount: 'Amount, {currency}',
             amountInvalid: 'Enter an amount greater than zero',
+            amountTooLarge: 'The amount cannot exceed {max}',
             issue: 'Issue proforma invoice',
             failed: 'Could not issue the proforma invoice. Try again.',
             issued: 'Proforma invoice No {number} issued.',
