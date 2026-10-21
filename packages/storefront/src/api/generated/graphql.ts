@@ -2405,7 +2405,6 @@ export type OrderCustomFields = {
     isExternal?: Maybe<Scalars['Boolean']['output']>;
     latestFulfillmentState?: Maybe<Scalars['String']['output']>;
     paymentStatus?: Maybe<Scalars['String']['output']>;
-    placedByAdministratorId?: Maybe<Scalars['String']['output']>;
     sourceOrderId?: Maybe<Scalars['String']['output']>;
     tradingPointId?: Maybe<Scalars['String']['output']>;
     uuid?: Maybe<Scalars['String']['output']>;
@@ -2443,7 +2442,6 @@ export type OrderFilterParameter = {
      */
     orderPlacedAt?: InputMaybe<DateOperators>;
     paymentStatus?: InputMaybe<StringOperators>;
-    placedByAdministratorId?: InputMaybe<StringOperators>;
     shipping?: InputMaybe<NumberOperators>;
     shippingWithTax?: InputMaybe<NumberOperators>;
     sourceOrderId?: InputMaybe<StringOperators>;
@@ -2552,12 +2550,10 @@ export type OrderLine = Node & {
 };
 
 export type OrderLineCustomFields = {
-    manualPriceReason?: Maybe<Scalars['String']['output']>;
     manualUnitPrice?: Maybe<Scalars['Int']['output']>;
 };
 
 export type OrderLineCustomFieldsInput = {
-    manualPriceReason?: InputMaybe<Scalars['String']['input']>;
     manualUnitPrice?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -2616,7 +2612,6 @@ export type OrderSortParameter = {
      */
     orderPlacedAt?: InputMaybe<SortOrder>;
     paymentStatus?: InputMaybe<SortOrder>;
-    placedByAdministratorId?: InputMaybe<SortOrder>;
     shipping?: InputMaybe<SortOrder>;
     shippingWithTax?: InputMaybe<SortOrder>;
     sourceOrderId?: InputMaybe<SortOrder>;
@@ -4360,29 +4355,8 @@ export type UpdateMultipleOrderItemsResult = {
     order: Order;
 };
 
-export type UpdateOrderCustomFieldsInput = {
-    branchId?: InputMaybe<Scalars['String']['input']>;
-    cancelRequestStatus?: InputMaybe<Scalars['String']['input']>;
-    deliveryAddress?: InputMaybe<Scalars['String']['input']>;
-    erpContractId?: InputMaybe<Scalars['String']['input']>;
-    erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
-    erpRegistrationDocumentNumber?: InputMaybe<Scalars['String']['input']>;
-    erpRegistrationStatus?: InputMaybe<Scalars['String']['input']>;
-    erpRejectionReasonCode?: InputMaybe<Scalars['String']['input']>;
-    erpRejectionReasonText?: InputMaybe<Scalars['String']['input']>;
-    erpStatus?: InputMaybe<Scalars['String']['input']>;
-    erpStatusAt?: InputMaybe<Scalars['DateTime']['input']>;
-    isExternal?: InputMaybe<Scalars['Boolean']['input']>;
-    latestFulfillmentState?: InputMaybe<Scalars['String']['input']>;
-    paymentStatus?: InputMaybe<Scalars['String']['input']>;
-    placedByAdministratorId?: InputMaybe<Scalars['String']['input']>;
-    sourceOrderId?: InputMaybe<Scalars['String']['input']>;
-    tradingPointId?: InputMaybe<Scalars['String']['input']>;
-    uuid?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type UpdateOrderInput = {
-    customFields?: InputMaybe<UpdateOrderCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
 };
 
 /** Union type of all possible errors that can occur when adding or removing items from an Order. */
