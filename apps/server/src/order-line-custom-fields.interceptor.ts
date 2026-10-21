@@ -3,7 +3,7 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import type { GraphQLResolveInfo } from 'graphql';
 import { UserInputError } from '@vendure/core';
 
-// Vendure validates OrderLine custom fields only in a top-level `customFields` arg, so these Admin inputs skip the readonly check.
+// Vendure validates OrderLine custom fields only in a top-level `customFields` arg, so these Admin inputs skip the readonly check. Re-check this list on every Vendure upgrade.
 const NESTED_ORDER_LINE_MUTATIONS = new Set([
     'addItemToDraftOrder',
     'adjustDraftOrderLine',
