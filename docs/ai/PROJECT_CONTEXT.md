@@ -8,7 +8,7 @@ Updated: 2026-10-21 15:00
 - Contract proformas: `ProformaInvoice.kind` `debt-repayment`/`advance`, orderId null, per contract, unlimited, idempotency key (mismatch rejected), excluded from FIFO/payment; default VAT from the default TaxCategory (local 22%, staging НДС20 left as is); amount Int cap 2147483647 kopecks validated front+back; worker task `contract-proforma-cleanup` deletes them after 6 months (1 Jan/1 Jul).
 - Security: Customer customFields `counterpartyId/portalRole/preferredTradingPointId` readonly; `setPreferredTradingPoint` ownership check; rest is #266 (separate session). Online payment stub refused under NODE_ENV=production.
 - Cart bug found: storefront compared gross compareAtPrice with net `unitPrice`; now `unitPriceWithTax`; e2e `cart-totals/vat-rate.spec.ts` switches the default rate and restores it.
-- Open: checkout terms link `href="#"` (CheckoutSummary.vue, owned by another session's uncommitted work).
+- Checkout card-payment terms sentence (dead link) hidden in production; the terms page itself is #268 (open). All #260 commits audited (3 rounds), last nits accepted.
 
 ## #259 ERP deletion/clearing events (2026-10-21, DONE: pushed to main, closed; follow-up #254 deferred)
 - Price tombstone removes the `ProductVariantPriceEntry` (`PriceEntryService.remove`); storage-location tombstone deletes by `entityId`. REAL tombstones have an EMPTY body (no productId/priceTypeId/storageLocationId/value): identity is only the envelope `entityId` (price `productId:priceTypeId`, storage-location `productId:warehouseId:priority`), equal to the upsert's. Handlers read the key from `entityId`; test payloads must use the real empty shape.
