@@ -89,6 +89,7 @@ counterparty (total and search by number), `proformaInvoicesForOrder`, `proforma
 `visiblePayments` when the contour has payments, and for hidden proformas a `withdrawProformaInvoice` denial on the
 cancelled one (status unchanged). Payments, payment reconciliation issues and refunds have no rows on the contour and
 cannot be created through the product without an acquirer, so they stay covered by int tests only.
+The only counterparty with proformas is manager-a's own client, so manager-a has no hidden proforma (annotated `gap`).
 
 ## Manager portal role projects
 
