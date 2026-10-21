@@ -35,7 +35,9 @@ const amountMinor = computed(() => (parsed.value.kind === 'ok' ? parsed.value.mi
 const amountError = computed(() => {
     if (parsed.value.kind === 'invalid') return t('balance.pay.amountInvalid');
     if (parsed.value.kind === 'tooLarge') {
-        return t('balance.pay.amountTooLarge', { max: formatMinor(MAX_AMOUNT_MINOR, currency.value) });
+        return t('balance.pay.amountTooLarge', {
+            max: formatMinor(MAX_AMOUNT_MINOR, currency.value),
+        });
     }
     return undefined;
 });
@@ -87,7 +89,9 @@ function another(): void {
                 <div v-else class="bal-mini-note">
                     {{ pdfPending ? t('balance.pay.pdfPending') : t('balance.pay.pdfLater') }}
                 </div>
-                <router-link to="/proforma-invoices" class="bal-pay__link">{{ t('balance.pay.toList') }}</router-link>
+                <router-link to="/proforma-invoices" class="bal-pay__link">{{
+                    t('balance.pay.toList')
+                }}</router-link>
                 <MvButton variant="secondary" size="sm" @click="another">
                     {{ t('balance.pay.another') }}
                 </MvButton>
@@ -113,10 +117,7 @@ function another(): void {
                     }}
                 </span>
             </div>
-            <MvFormField
-                :label="t('balance.pay.amount', { currency })"
-                :error="amountError"
-            >
+            <MvFormField :label="t('balance.pay.amount', { currency })" :error="amountError">
                 <MvInput v-model="amountText" />
             </MvFormField>
             <MvNotice v-if="failed" variant="error">{{ t('balance.pay.failed') }}</MvNotice>

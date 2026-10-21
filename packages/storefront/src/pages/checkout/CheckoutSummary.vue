@@ -113,11 +113,15 @@ async function handlePrimary(): Promise<void> {
             <template v-if="creditPreview">
                 <div class="checkout-summary__line">
                     <span>{{ $t('checkout.summary.availableCredit') }}</span>
-                    <strong>{{ formatCurrencyAmount(Math.max(creditPreview.availableCredit, 0)) }}</strong>
+                    <strong>{{
+                        formatCurrencyAmount(Math.max(creditPreview.availableCredit, 0))
+                    }}</strong>
                 </div>
                 <div v-if="creditPreview.exceeded" class="checkout-summary__line">
                     <span>{{ $t('checkout.summary.overLimit') }}</span>
-                    <strong class="checkout-summary__discount">{{ formatCurrencyAmount(overLimit) }}</strong>
+                    <strong class="checkout-summary__discount">{{
+                        formatCurrencyAmount(overLimit)
+                    }}</strong>
                 </div>
             </template>
 
@@ -152,7 +156,10 @@ async function handlePrimary(): Promise<void> {
                 {{ submitting ? $t('checkout.summary.processing') : btnLabel }}
             </button>
 
-            <p v-if="demoAllowed && checkoutStore.selectedPayment === 'card'" class="checkout-summary__legal">
+            <p
+                v-if="demoAllowed && checkoutStore.selectedPayment === 'card'"
+                class="checkout-summary__legal"
+            >
                 <i18n-t keypath="checkout.summary.legal">
                     <template #terms>
                         <a href="#">{{ $t('checkout.summary.terms') }}</a>

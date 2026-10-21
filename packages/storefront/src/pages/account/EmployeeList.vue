@@ -57,7 +57,11 @@ function activityText(emp: Employee): string {
             <div class="emp-cell">
                 <div class="emp-cell__label">{{ $t('employees.tradingPoints') }}</div>
                 <div class="emp-cell__value">
-                    {{ emp.points ? emp.points.map(p => $t(`demo.points.${p}`)).join(' · ') : $t('employees.allPointsShort') }}
+                    {{
+                        emp.points
+                            ? emp.points.map(p => $t(`demo.points.${p}`)).join(' · ')
+                            : $t('employees.allPointsShort')
+                    }}
                 </div>
             </div>
 

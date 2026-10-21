@@ -1460,7 +1460,8 @@ async function main() {
         `  → status=${departmentBranchResult.status} processed=${departmentBranchResult.processed} failed=${departmentBranchResult.failed}`,
     );
     if (departmentBranchResult.errors?.length > 0) {
-        for (const e of departmentBranchResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+        for (const e of departmentBranchResult.errors)
+            console.warn(`    [${e.index}] ${e.message}`);
     }
 
     const employees = [
