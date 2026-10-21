@@ -1,6 +1,7 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Allow, Ctx, PaginatedList, RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
+import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import { PaymentAttempt } from './entities/payment-attempt.entity';
 import { PaymentVisibilityService } from './payment-visibility.service';
@@ -18,6 +19,7 @@ export class AdminPaymentVisibilityResolver {
     constructor(
         private paymentVisibilityService: PaymentVisibilityService,
         private paymentAttemptQueryService: PaymentAttemptQueryService,
+        private orderVisibility: OrderVisibilityService,
     ) {}
 
     @Query()
@@ -37,7 +39,9 @@ export class AdminPaymentVisibilityResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { orderIds: string[] },
     ): Promise<OrderPaymentSummary[]> {
-        const numericIds = args.orderIds.map(Number);
+        // A hidden order answers like a missing one: zero captured (#263).
+        const visible = await this.orderVisibility.visibleIds(ctx, args.orderIds);
+        const numericIds = [...visible].map(Number);
         const sums = await this.paymentAttemptQueryService.sumCapturedAmountsByOrderIds(
             ctx,
             numericIds,
