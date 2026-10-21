@@ -53,3 +53,27 @@ export function noteCount(orderId: string): number {
     return select<{ n: number }>(`SELECT count(*)::int AS n FROM history_entry
         WHERE "orderId" = ${orderId} AND type = 'ORDER_NOTE'`)[0].n;
 }
+
+// A placed order on a point without an override whose counterparty has a branch: the test overrides that point.
+export function orderOnPlainPoint(): {
+    id: string;
+    code: string;
+    pointId: string;
+    branchId: string;
+} {
+    const row = select<{ id: string; code: string; pointId: string; branchId: string }>(
+        `SELECT o.id::text AS id, o.code, tp.id::text AS "pointId", cp."branchId" AS "branchId"
+         FROM "order" o JOIN trading_point tp ON tp.id::text = o."customFieldsTradingpointid"
+         JOIN counterparty cp ON cp.id = tp."counterpartyId"
+         WHERE o."orderPlacedAt" IS NOT NULL AND tp."servicingBranchId" IS NULL AND cp."branchId" IS NOT NULL
+         ORDER BY o.id DESC LIMIT 1`,
+    )[0];
+    if (!row) throw new Error('No placed order on a point without a servicing branch override');
+    return row;
+}
+
+export function pointOverride(pointId: string): string | null {
+    return select<{ b: string | null }>(
+        `SELECT "servicingBranchId" AS b FROM trading_point WHERE id = ${pointId}`,
+    )[0].b;
+}

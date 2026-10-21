@@ -78,7 +78,9 @@ roles that hold it.
 Order visibility (#263 stage 1, `13`, read-only) takes one real placed order per counterparty branch (and one
 without a branch) and checks, for every actor, `order(id)`, the `orders` list and, for hidden orders,
 `orderReservations` and `addNoteToOrder` against the read-time branch rule of `docs/access-control.md`. A hidden order
-answers exactly like a missing id. Orders whose point overrides the branch are not sampled (no such data yet).
+answers exactly like a missing id. `14` sets a servicing branch override on the point of a real order through
+`updateTradingPointDetails`, checks the order moves to that branch's head and away from the home one, and removes the
+override in `finally`.
 
 ## Manager portal role projects
 
