@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { documentNumberSearchTerm } from 'shared';
-import { AccessScopeService, AccessScope } from '@mivend/plugin-access-control';
+import {
+    AccessScopeService,
+    AccessScope,
+    BranchSettingsService,
+} from '@mivend/plugin-access-control';
+import { proformaBranchClause } from '@mivend/plugin-erp-order';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
@@ -10,12 +15,14 @@ import { applyStatusFilter } from './proforma-invoice-display';
 import { ProformaInvoiceListOptions } from './proforma-invoice.service';
 
 // Mirrors erp-order's order visibility; no Customer join needed since counterpartyId is direct.
-// branchId is denormalized onto the invoice at issue time, so it is filtered directly.
+export type ProformaInvoiceScope = AccessScope & { defaultBranchId: string | null };
+
 @Injectable()
 export class ProformaInvoiceVisibilityService {
     constructor(
         private connection: TransactionalConnection,
         private accessScopeService: AccessScopeService,
+        private branchSettingsService: BranchSettingsService,
     ) {}
 
     async findVisible(
@@ -23,7 +30,7 @@ export class ProformaInvoiceVisibilityService {
         options?: ProformaInvoiceListOptions,
         counterpartyId?: string,
     ): Promise<PaginatedList<ProformaInvoice>> {
-        const scope = await this.accessScopeService.resolveProformaInvoiceScope(ctx);
+        const scope = await this.resolveScope(ctx);
         const take = options?.take ?? 50;
         const skip = options?.skip ?? 0;
 
@@ -46,7 +53,7 @@ export class ProformaInvoiceVisibilityService {
         ctx: RequestContext,
         counterpartyId: string,
     ): Promise<{ amount: number; currencyCode: string } | null> {
-        const scope = await this.accessScopeService.resolveProformaInvoiceScope(ctx);
+        const scope = await this.resolveScope(ctx);
         const qb = this.connection
             .getRepository(ctx, ProformaInvoice)
             .createQueryBuilder('proformaInvoice')
@@ -79,14 +86,19 @@ export class ProformaInvoiceVisibilityService {
 
     // Shared by PaymentVisibilityService, which joins PaymentAttempt -> ProformaInvoice and needs the
     // exact same counterparty scope resolved/applied to the joined proforma invoice row, not duplicated.
-    async resolveScope(ctx: RequestContext): Promise<AccessScope> {
-        return this.accessScopeService.resolveProformaInvoiceScope(ctx);
+    async resolveScope(ctx: RequestContext): Promise<ProformaInvoiceScope> {
+        const scope = await this.accessScopeService.resolveProformaInvoiceScope(ctx);
+        const defaultBranchId =
+            scope.kind === 'department'
+                ? await this.branchSettingsService.getGlobalDefaultBranchId(ctx)
+                : null;
+        return { ...scope, defaultBranchId };
     }
 
     // Generic over the entity type so PaymentVisibilityService can reuse it on a PaymentAttempt query.
     applyScope<T extends ObjectLiteral>(
         qb: SelectQueryBuilder<T>,
-        scope: AccessScope,
+        scope: ProformaInvoiceScope,
         proformaInvoiceAlias = 'proformaInvoice',
         counterpartyAlias = 'counterparty',
     ): void {
@@ -97,12 +109,18 @@ export class ProformaInvoiceVisibilityService {
                 this.accessScopeService.applyOwnCounterpartyFilter(qb, counterpartyAlias, scope);
                 break;
             case 'department': {
-                // The invoice's own branchId, never departmentId; plus own and granted managers' clients (#123).
-                const managers = this.accessScopeService.managerClause(scope, counterpartyAlias);
-                qb.andWhere(
-                    `(${proformaInvoiceAlias}.branchId = :branchId${managers ? ` OR ${managers.sql}` : ''})`,
-                    { branchId: scope.branchId ?? null, ...managers?.params },
+                // Read-time branch, never the issue-time snapshot (#263); plus own and granted managers' clients.
+                const branch = proformaBranchClause(
+                    proformaInvoiceAlias,
+                    counterpartyAlias,
+                    scope.branchId ?? null,
+                    scope.defaultBranchId,
                 );
+                const managers = this.accessScopeService.managerClause(scope, counterpartyAlias);
+                qb.andWhere(`(${branch.sql}${managers ? ` OR ${managers.sql}` : ''})`, {
+                    ...branch.params,
+                    ...managers?.params,
+                });
                 break;
             }
             case 'all':
@@ -112,7 +130,7 @@ export class ProformaInvoiceVisibilityService {
 
     private buildScopedQuery(
         ctx: RequestContext,
-        scope: AccessScope,
+        scope: ProformaInvoiceScope,
         options?: ProformaInvoiceListOptions,
     ): SelectQueryBuilder<ProformaInvoice> {
         const qb = this.connection

@@ -71,8 +71,7 @@ export class ProformaInvoice extends UuidEntity {
     @Column({ type: 'varchar', default: 'pending' })
     status!: ProformaInvoiceStatus;
 
-    // Real access-scope filter for the manager portal. Not Counterparty.branchId: chain customers
-    // span branches, so the parent record's branch would be wrong. Null when no trading point.
+    // Issue-time snapshot only; visibility resolves the branch at read time (#263).
     @Index()
     @Column({ type: 'varchar', nullable: true })
     branchId!: string | null;

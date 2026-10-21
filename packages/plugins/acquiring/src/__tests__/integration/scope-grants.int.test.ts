@@ -38,6 +38,7 @@ const invoiceSchema = new EntitySchema({
     columns: {
         id: { type: Number, primary: true, generated: true },
         counterpartyId: { type: Number },
+        orderId: { type: Number, nullable: true },
         branchId: { type: String, nullable: true },
     },
 });
@@ -49,6 +50,7 @@ const counterpartySchema = new EntitySchema({
         id: { type: Number, primary: true, generated: true },
         erpId: { type: String },
         assignedManagerId: { type: String, nullable: true },
+        branchId: { type: String, nullable: true },
     },
 });
 
@@ -70,6 +72,10 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
+    await dataSource.query(`CREATE TABLE trading_point (id serial, "servicingBranchId" varchar)`);
+    await dataSource.query(
+        `CREATE TABLE "order" (id serial PRIMARY KEY, "customFieldsTradingpointid" varchar)`,
+    );
     const connection = {
         getRepository: (_ctx: unknown, entity: unknown) =>
             entity === PaymentReconciliationIssue
@@ -78,7 +84,9 @@ beforeAll(async () => {
     } as unknown as TransactionalConnection;
     const accessScope = new AccessScopeService({} as never, {} as never, {} as never);
     accessScope.resolveProformaInvoiceScope = async () => scope;
-    visibility = new ProformaInvoiceVisibilityService(connection, accessScope);
+    visibility = new ProformaInvoiceVisibilityService(connection, accessScope, {
+        getGlobalDefaultBranchId: async () => null,
+    } as never);
     issues = new PaymentReconciliationIssueService(connection, {} as never, visibility);
 });
 
@@ -93,8 +101,8 @@ beforeEach(async () => {
     );
     const invoice = async (manager: string, branchId: string | null): Promise<number> => {
         const [cp]: Array<{ id: number }> = await dataSource.query(
-            `INSERT INTO counterparty ("erpId", "assignedManagerId") VALUES ($1, $2) RETURNING id`,
-            [`cp-${manager}`, manager],
+            `INSERT INTO counterparty ("erpId", "assignedManagerId", "branchId") VALUES ($1, $2, $3) RETURNING id`,
+            [`cp-${manager}`, manager, branchId],
         );
         const [inv]: Array<{ id: number }> = await dataSource.query(
             `INSERT INTO proforma_invoice ("counterpartyId", "branchId") VALUES ($1, $2) RETURNING id`,
@@ -121,7 +129,7 @@ async function scopedInvoiceBranches(): Promise<Array<string | null>> {
             'counterparty',
             'counterparty.id::text = "proformaInvoice"."counterpartyId"::text',
         );
-    visibility.applyScope(qb, scope);
+    visibility.applyScope(qb, { ...scope, defaultBranchId: null });
     return (await qb.orderBy('proformaInvoice.id').getMany()).map(i => i.branchId);
 }
 

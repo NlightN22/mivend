@@ -416,8 +416,10 @@ scope.branchId` anyway. It "worked" only by accident — `Administrator.customFi
   `servicingBranchId`, else its counterparty's `branchId`, else the global default branch. A
   `'department'` scope sees orders whose resolved branch equals `scope.branchId`, plus own and
   granted managers' clients. External (ERP) orders have no snapshot, and a counterparty that moves
-  branch takes its orders along. `OrderVisibilityService` and the reservation reconciliation issue
-  list share this clause (`orderBranchClause`). `TradingPoint.servicingBranchId` defaults to the
+  branch takes its orders along. Proforma invoices (and payments and payment reconciliation issues,
+  which inherit their scope) follow the same chain through their order's trading point; a contract
+  proforma without an order resolves via its counterparty. `OrderVisibilityService`, the reservation
+  reconciliation issue list and `ProformaInvoiceVisibilityService` share `readTimeBranchClause`. `TradingPoint.servicingBranchId` defaults to the
   counterparty's `branchId` at creation and is overridable per point for chain accounts.
 - **The preferred trading point is self-healing, and reading it can write.**
   `TradingPointService.getPreferredForCustomer` — used by the Shop API `preferredTradingPoint`
@@ -467,6 +469,7 @@ custom field `readonly: true` unless it is listed in `CLIENT_WRITABLE_CUSTOM_FIE
 - Guard: `apps/server/src/__tests__/unit/custom-field-write-policy.test.ts` builds the Shop and Admin schemas from the real
   config and fails if any Create/Update input exposes a field outside the allow-list.
 - `public` only controls reading in the Shop API; it never makes a field writable.
+- Internal fields written by staff (the manual price reason, the placing administrator) are `public: false`, hidden from the Shop API.
 - Shop/Admin introspection is off when `NODE_ENV=production` (it lists every writable input).
 
 ### Scope guards on permission-only reads

@@ -69,6 +69,7 @@ describe('ProformaInvoiceVisibilityService', () => {
         service = new ProformaInvoiceVisibilityService(
             connection as unknown as TransactionalConnection,
             accessScopeService as unknown as AccessScopeService,
+            { getGlobalDefaultBranchId: vi.fn(async () => 'branch-default') } as never,
         );
     });
 
@@ -83,11 +84,11 @@ describe('ProformaInvoiceVisibilityService', () => {
         expect(accessScopeService.applyOwnCounterpartyFilter).toHaveBeenCalledWith(
             qb,
             'counterparty',
-            { kind: 'own', administratorId: 'admin-1' },
+            expect.objectContaining({ kind: 'own', administratorId: 'admin-1' }),
         );
     });
 
-    it('filters by the proforma invoice\'s own denormalized branch for "department" scope, ignoring departmentId entirely', async () => {
+    it('resolves the proforma branch at read time for "department" scope, ignoring the snapshot and departmentId', async () => {
         accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({
             kind: 'department',
             departmentId: 'dept-1',
@@ -96,9 +97,12 @@ describe('ProformaInvoiceVisibilityService', () => {
 
         await service.findVisible(mockCtx);
 
-        expect(qb.andWhere).toHaveBeenCalledWith('(proformaInvoice.branchId = :branchId)', {
-            branchId: 'branch-1',
-        });
+        const [sql, params] = qb.andWhere.mock.calls[0];
+        expect(sql).toContain('"proformaInvoice"."orderId"');
+        expect(sql).toContain('counterparty."branchId"');
+        expect(sql).not.toContain('proformaInvoice.branchId');
+        expect(sql).not.toContain('IS NULL');
+        expect(params).toEqual({ branchId: 'branch-1', orderDefaultBranchId: 'branch-default' });
     });
 
     it('applies no scope filter for "all" scope', async () => {

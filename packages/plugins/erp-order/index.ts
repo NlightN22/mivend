@@ -2,7 +2,7 @@ export { ErpOrderPlugin } from './src/erp-order.plugin';
 export { ErpOrderService } from './src/erp-order.service';
 export { ErpOrderResolver } from './src/erp-order.resolver';
 export { OrderVisibilityService } from './src/order-visibility.service';
-export { orderBranchClause } from './src/order-branch-clause';
+export { orderBranchClause, proformaBranchClause } from './src/order-branch-clause';
 export { OrderReadyForErpEvent, ErpOrderStatusEvent } from './src/erp-order.events';
 export type { ErpStatusUpdatePayload } from './src/types';
 export { OrderStatusDictionary } from './src/order-status-dictionary';
