@@ -1,4 +1,11 @@
-import { VendurePlugin, type CustomFields, type RuntimeVendureConfig } from '@vendure/core';
+import type { OnApplicationBootstrap } from '@nestjs/common';
+import {
+    ConfigService,
+    PluginCommonModule,
+    VendurePlugin,
+    type CustomFields,
+    type RuntimeVendureConfig,
+} from '@vendure/core';
 
 // The only custom fields a client may set through the Shop/Admin API; every other field is service-written.
 export const CLIENT_WRITABLE_CUSTOM_FIELDS: Readonly<Record<string, readonly string[]>> = {
@@ -27,12 +34,37 @@ export function applyCustomFieldWritePolicy(customFields: CustomFields): CustomF
     return guarded;
 }
 
+export function findUnguardedCustomFields(customFields: CustomFields): string[] {
+    const unguarded: string[] = [];
+    for (const [entity, fields] of Object.entries(customFields)) {
+        const writable = CLIENT_WRITABLE_CUSTOM_FIELDS[entity] ?? [];
+        for (const f of fields ?? []) {
+            if (!f.readonly && !writable.includes(f.name)) unguarded.push(`${entity}.${f.name}`);
+        }
+    }
+    return unguarded;
+}
+
 // Keep it last in `plugins`: it must see the custom fields every other plugin registers.
 @VendurePlugin({
+    imports: [PluginCommonModule],
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
         config.customFields = applyCustomFieldWritePolicy(config.customFields);
         return config;
     },
     compatibility: '^3.0.0',
 })
-export class CustomFieldWritePolicyPlugin {}
+export class CustomFieldWritePolicyPlugin implements OnApplicationBootstrap {
+    constructor(private readonly configService: ConfigService) {}
+
+    // Refuses to start if a plugin ordered after this one left a custom field client-writable.
+    onApplicationBootstrap(): void {
+        const unguarded = findUnguardedCustomFields(this.configService.customFields);
+        if (unguarded.length > 0) {
+            throw new Error(
+                `Custom fields writable by clients but not in CLIENT_WRITABLE_CUSTOM_FIELDS: ${unguarded.join(', ')}. ` +
+                    'Keep CustomFieldWritePolicyPlugin last in `plugins`.',
+            );
+        }
+    }
+}

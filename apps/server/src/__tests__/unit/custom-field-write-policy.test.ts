@@ -3,7 +3,11 @@ import type { CustomFields } from '@vendure/core';
 import { preBootstrapConfig } from '@vendure/core/dist/bootstrap';
 import { addGraphQLCustomFields } from '@vendure/core/dist/api/config/graphql-custom-fields';
 
-import { CLIENT_WRITABLE_CUSTOM_FIELDS } from '../../custom-field-write-policy.plugin';
+import {
+    CLIENT_WRITABLE_CUSTOM_FIELDS,
+    applyCustomFieldWritePolicy,
+    findUnguardedCustomFields,
+} from '../../custom-field-write-policy.plugin';
 
 type Schema = ReturnType<typeof addGraphQLCustomFields>;
 
@@ -66,6 +70,16 @@ describe('client-writable custom fields (#266)', () => {
     it('keeps every OrderLine field readonly: Vendure does not strip them from the addItemToOrder input', () => {
         const writable = (customFields.OrderLine ?? []).filter(f => !f.readonly).map(f => f.name);
         expect(writable).toEqual([]);
+    });
+
+    it('reports a field registered after the policy ran, so bootstrap can refuse to start', () => {
+        expect(findUnguardedCustomFields(customFields)).toEqual([]);
+        const late = {
+            ...customFields,
+            Order: [...(customFields.Order ?? []), { name: 'late', type: 'string' as const }],
+        };
+        expect(findUnguardedCustomFields(late)).toEqual(['Order.late']);
+        expect(findUnguardedCustomFields(applyCustomFieldWritePolicy(late))).toEqual([]);
     });
 
     it('lists only entities and fields that exist', () => {

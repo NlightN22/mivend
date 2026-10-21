@@ -468,6 +468,7 @@ custom field `readonly: true` unless it is listed in `CLIENT_WRITABLE_CUSTOM_FIE
 `Create/Update<Entity>CustomFieldsInput` types and the interceptor rejects it ("is readonly"); services still write it.
 `OrderLineCustomFieldsInput` keeps readonly fields in the schema, so the interceptor is the only barrier there.
 
+- Startup refuses to run (`onApplicationBootstrap`) if any custom field is writable and not in the allow-list, e.g. a plugin ordered after the policy plugin.
 - A new custom field needs no flag: it is service-only. To let a client set it, add it to the allow-list with the reason.
 - Guard: `apps/server/src/__tests__/unit/custom-field-write-policy.test.ts` builds the Shop and Admin schemas from the real
   config and fails if any Create/Update input exposes a field outside the allow-list.
