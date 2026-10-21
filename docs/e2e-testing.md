@@ -82,6 +82,14 @@ answers exactly like a missing id. `14` sets a servicing branch override on the 
 `updateTradingPointDetails`, checks the order moves to that branch's head and away from the home one, and removes the
 override in `finally`.
 
+Proforma visibility (#263 stage 2, `15`) takes the newest issued and cancelled proforma of one point and runs every
+actor twice: with the point at its counterparty's branch, and with the point overridden to the other head's branch
+(set through `updateTradingPointDetails`, removed in `afterAll`). Each run checks `visibleProformaInvoices` for the
+counterparty (total and search by number), `proformaInvoicesForOrder`, `proformaInvoiceOutstandingBalance`,
+`visiblePayments` when the contour has payments, and for hidden proformas a `withdrawProformaInvoice` denial on the
+cancelled one (status unchanged). Payments, payment reconciliation issues and refunds have no rows on the contour and
+cannot be created through the product without an acquirer, so they stay covered by int tests only.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —
