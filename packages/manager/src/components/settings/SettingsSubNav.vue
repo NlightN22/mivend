@@ -13,6 +13,7 @@ defineProps<{
         | 'department-branch'
         | 'visibility-grants'
         | 'unsorted'
+        | 'price-type-gaps'
         | 'organizations'
         | 'category-visibility'
         | 'system-health'
@@ -50,6 +51,12 @@ const canManageVisibility =
             to="/settings/unsorted"
             :class="{ active: active === 'unsorted' }"
             >Unsorted</RouterLink
+        >
+        <RouterLink
+            v-if="authStore.hasPermission('ReadCounterparty')"
+            to="/settings/price-type-gaps"
+            :class="{ active: active === 'price-type-gaps' }"
+            >Price type gaps</RouterLink
         >
         <RouterLink to="/settings/organizations" :class="{ active: active === 'organizations' }">
             Organizations

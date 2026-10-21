@@ -156,6 +156,12 @@ export const router = createRouter({
                     },
                 },
                 {
+                    path: 'settings/price-type-gaps',
+                    name: 'settings-price-type-gaps',
+                    component: () => import('../pages/settings/PriceTypeGapsPage.vue'),
+                    meta: { requiresAuth: true, requiresAnyPermission: ['ReadCounterparty'] },
+                },
+                {
                     path: 'settings/organizations',
                     name: 'settings-organizations',
                     component: () => import('../pages/settings/OrganizationsPage.vue'),

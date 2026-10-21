@@ -1,0 +1,13 @@
+query PriceTypeGapCounterparties($take: Int, $skip: Int, $search: String) {
+    priceTypeGapCounterparties(take: $take, skip: $skip, search: $search) {
+        totalItems
+        items {
+            id
+            shortName
+            legalName
+            inn
+            mainContractId
+            reason
+        }
+    }
+}

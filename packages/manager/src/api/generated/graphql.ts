@@ -1332,17 +1332,9 @@ export type CreatePaymentMethodInput = {
     translations: Array<PaymentMethodTranslationInput>;
 };
 
-export type CreateProductCustomFieldsInput = {
-    externalId?: InputMaybe<Scalars['String']['input']>;
-    fullName?: InputMaybe<Scalars['String']['input']>;
-    manufacturerId?: InputMaybe<Scalars['ID']['input']>;
-    manufacturerPartNumber?: InputMaybe<Scalars['String']['input']>;
-    onSale?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
 export type CreateProductInput = {
     assetIds?: InputMaybe<Array<Scalars['ID']['input']>>;
-    customFields?: InputMaybe<CreateProductCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     enabled?: InputMaybe<Scalars['Boolean']['input']>;
     facetValueIds?: InputMaybe<Array<Scalars['ID']['input']>>;
     featuredAssetId?: InputMaybe<Scalars['ID']['input']>;
@@ -1363,17 +1355,9 @@ export type CreateProductOptionInput = {
     translations: Array<ProductOptionGroupTranslationInput>;
 };
 
-export type CreateProductVariantCustomFieldsInput = {
-    multiplicity?: InputMaybe<Scalars['Int']['input']>;
-    organizationId?: InputMaybe<Scalars['Int']['input']>;
-    organizationPriority?: InputMaybe<Scalars['Int']['input']>;
-    organizationSourceEntityId?: InputMaybe<Scalars['String']['input']>;
-    weight?: InputMaybe<Scalars['Float']['input']>;
-};
-
 export type CreateProductVariantInput = {
     assetIds?: InputMaybe<Array<Scalars['ID']['input']>>;
-    customFields?: InputMaybe<CreateProductVariantCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     enabled?: InputMaybe<Scalars['Boolean']['input']>;
     facetValueIds?: InputMaybe<Array<Scalars['ID']['input']>>;
     featuredAssetId?: InputMaybe<Scalars['ID']['input']>;
@@ -1446,12 +1430,8 @@ export type CreateShippingMethodInput = {
     translations: Array<ShippingMethodTranslationInput>;
 };
 
-export type CreateStockLocationCustomFieldsInput = {
-    warehouseErpId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type CreateStockLocationInput = {
-    customFields?: InputMaybe<CreateStockLocationCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     description?: InputMaybe<Scalars['String']['input']>;
     name: Scalars['String']['input'];
 };
@@ -1460,12 +1440,8 @@ export type CreateTagInput = {
     value: Scalars['String']['input'];
 };
 
-export type CreateTaxCategoryCustomFieldsInput = {
-    erpVatCode?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type CreateTaxCategoryInput = {
-    customFields?: InputMaybe<CreateTaxCategoryCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     isDefault?: InputMaybe<Scalars['Boolean']['input']>;
     name: Scalars['String']['input'];
 };
@@ -3774,7 +3750,6 @@ export type ModifyOrderInput = {
     addItems?: InputMaybe<Array<AddItemInput>>;
     adjustOrderLines?: InputMaybe<Array<OrderLineInput>>;
     couponCodes?: InputMaybe<Array<Scalars['String']['input']>>;
-    customFields?: InputMaybe<UpdateOrderCustomFieldsInput>;
     dryRun: Scalars['Boolean']['input'];
     note?: InputMaybe<Scalars['String']['input']>;
     options?: InputMaybe<ModifyOrderOptions>;
@@ -6649,6 +6624,21 @@ export type PriceType = {
     visibility: Scalars['String']['output'];
 };
 
+export type PriceTypeGapCounterparty = {
+    id: Scalars['ID']['output'];
+    inn: Maybe<Scalars['String']['output']>;
+    legalName: Scalars['String']['output'];
+    mainContractId: Maybe<Scalars['String']['output']>;
+    /** no-main-contract | contract-not-found | contract-inactive | price-type-not-synced */
+    reason: Scalars['String']['output'];
+    shortName: Scalars['String']['output'];
+};
+
+export type PriceTypeGapPage = {
+    items: Array<PriceTypeGapCounterparty>;
+    totalItems: Scalars['Int']['output'];
+};
+
 export type Product = Node & {
     assets: Array<Asset>;
     channels: Array<Channel>;
@@ -7517,6 +7507,8 @@ export type Query = {
     priceAdjustmentRequestsForOrder: Array<ApprovalRequest>;
     priceEntriesForVariants: Array<VariantPriceEntry>;
     priceTypeCodes: Array<Scalars['String']['output']>;
+    /** Counterparties of the caller's scope whose price type cannot be resolved from the main contract (#192). */
+    priceTypeGapCounterparties: PriceTypeGapPage;
     priceTypes: Array<PriceType>;
     /** Product photos still pending or failed, newest first (issue #181). */
     problemProductPhotos: ProductPhotoList;
@@ -7938,6 +7930,12 @@ export type QueryPriceAdjustmentRequestsForOrderArgs = {
 export type QueryPriceEntriesForVariantsArgs = {
     priceTypeCode: Scalars['String']['input'];
     variantIds: Array<Scalars['ID']['input']>;
+};
+
+export type QueryPriceTypeGapCounterpartiesArgs = {
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryProblemProductPhotosArgs = {
@@ -9518,43 +9516,8 @@ export type UpdateOrderAddressInput = {
     streetLine2?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type UpdateOrderCustomFieldsInput = {
-    branchId?: InputMaybe<Scalars['String']['input']>;
-    cancelReason?: InputMaybe<Scalars['String']['input']>;
-    cancelRefusalReason?: InputMaybe<Scalars['String']['input']>;
-    cancelRequestStatus?: InputMaybe<Scalars['String']['input']>;
-    cancelRequestedAt?: InputMaybe<Scalars['DateTime']['input']>;
-    counterpartyId?: InputMaybe<Scalars['String']['input']>;
-    deliveryAddress?: InputMaybe<Scalars['String']['input']>;
-    erpContractId?: InputMaybe<Scalars['String']['input']>;
-    erpOrderId?: InputMaybe<Scalars['String']['input']>;
-    erpOrderStatus?: InputMaybe<Scalars['String']['input']>;
-    erpRegistrationDocumentNumber?: InputMaybe<Scalars['String']['input']>;
-    erpRegistrationStatus?: InputMaybe<Scalars['String']['input']>;
-    erpRejectionReasonCode?: InputMaybe<Scalars['String']['input']>;
-    erpRejectionReasonText?: InputMaybe<Scalars['String']['input']>;
-    erpStatus?: InputMaybe<Scalars['String']['input']>;
-    erpStatusAt?: InputMaybe<Scalars['DateTime']['input']>;
-    externalLinesIncomplete?: InputMaybe<Scalars['Boolean']['input']>;
-    hasCheckFindings?: InputMaybe<Scalars['Boolean']['input']>;
-    isExternal?: InputMaybe<Scalars['Boolean']['input']>;
-    latestFulfillmentState?: InputMaybe<Scalars['String']['input']>;
-    paymentStatus?: InputMaybe<Scalars['String']['input']>;
-    pendingCounterpartyErpId?: InputMaybe<Scalars['String']['input']>;
-    placedByAdministratorId?: InputMaybe<Scalars['String']['input']>;
-    reservationDays?: InputMaybe<Scalars['Int']['input']>;
-    reservationFailedAt?: InputMaybe<Scalars['DateTime']['input']>;
-    reservationFailureDetail?: InputMaybe<Scalars['String']['input']>;
-    reservationFailureReason?: InputMaybe<Scalars['String']['input']>;
-    reservationState?: InputMaybe<Scalars['String']['input']>;
-    selectedContractId?: InputMaybe<Scalars['String']['input']>;
-    sourceOrderId?: InputMaybe<Scalars['String']['input']>;
-    tradingPointId?: InputMaybe<Scalars['String']['input']>;
-    uuid?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type UpdateOrderInput = {
-    customFields?: InputMaybe<UpdateOrderCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     id: Scalars['ID']['input'];
 };
 
@@ -9590,17 +9553,9 @@ export type UpdatePaymentMethodInput = {
     translations?: InputMaybe<Array<PaymentMethodTranslationInput>>;
 };
 
-export type UpdateProductCustomFieldsInput = {
-    externalId?: InputMaybe<Scalars['String']['input']>;
-    fullName?: InputMaybe<Scalars['String']['input']>;
-    manufacturerId?: InputMaybe<Scalars['ID']['input']>;
-    manufacturerPartNumber?: InputMaybe<Scalars['String']['input']>;
-    onSale?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
 export type UpdateProductInput = {
     assetIds?: InputMaybe<Array<Scalars['ID']['input']>>;
-    customFields?: InputMaybe<UpdateProductCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     enabled?: InputMaybe<Scalars['Boolean']['input']>;
     facetValueIds?: InputMaybe<Array<Scalars['ID']['input']>>;
     featuredAssetId?: InputMaybe<Scalars['ID']['input']>;
@@ -9622,17 +9577,9 @@ export type UpdateProductOptionInput = {
     translations?: InputMaybe<Array<ProductOptionGroupTranslationInput>>;
 };
 
-export type UpdateProductVariantCustomFieldsInput = {
-    multiplicity?: InputMaybe<Scalars['Int']['input']>;
-    organizationId?: InputMaybe<Scalars['Int']['input']>;
-    organizationPriority?: InputMaybe<Scalars['Int']['input']>;
-    organizationSourceEntityId?: InputMaybe<Scalars['String']['input']>;
-    weight?: InputMaybe<Scalars['Float']['input']>;
-};
-
 export type UpdateProductVariantInput = {
     assetIds?: InputMaybe<Array<Scalars['ID']['input']>>;
-    customFields?: InputMaybe<UpdateProductVariantCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     enabled?: InputMaybe<Scalars['Boolean']['input']>;
     facetValueIds?: InputMaybe<Array<Scalars['ID']['input']>>;
     featuredAssetId?: InputMaybe<Scalars['ID']['input']>;
@@ -9716,12 +9663,8 @@ export type UpdateShippingMethodInput = {
     translations: Array<ShippingMethodTranslationInput>;
 };
 
-export type UpdateStockLocationCustomFieldsInput = {
-    warehouseErpId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type UpdateStockLocationInput = {
-    customFields?: InputMaybe<UpdateStockLocationCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     description?: InputMaybe<Scalars['String']['input']>;
     id: Scalars['ID']['input'];
     name?: InputMaybe<Scalars['String']['input']>;
@@ -9732,12 +9675,8 @@ export type UpdateTagInput = {
     value?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type UpdateTaxCategoryCustomFieldsInput = {
-    erpVatCode?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type UpdateTaxCategoryInput = {
-    customFields?: InputMaybe<UpdateTaxCategoryCustomFieldsInput>;
+    customFields?: InputMaybe<Scalars['JSON']['input']>;
     id: Scalars['ID']['input'];
     isDefault?: InputMaybe<Scalars['Boolean']['input']>;
     name?: InputMaybe<Scalars['String']['input']>;
@@ -12051,6 +11990,26 @@ export type PaymentsPageQuery = {
             currencyCode: string;
             proformaInvoiceId: string | null;
             counterpartyId: string | null;
+        }>;
+    };
+};
+
+export type PriceTypeGapCounterpartiesQueryVariables = Exact<{
+    take?: InputMaybe<Scalars['Int']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type PriceTypeGapCounterpartiesQuery = {
+    priceTypeGapCounterparties: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            shortName: string;
+            legalName: string;
+            inn: string | null;
+            mainContractId: string | null;
+            reason: string;
         }>;
     };
 };
@@ -15425,6 +15384,24 @@ export const PaymentsPageDocument = new TypedDocumentString(`
   proformaInvoiceId
   counterpartyId
 }`) as unknown as TypedDocumentString<PaymentsPageQuery, PaymentsPageQueryVariables>;
+export const PriceTypeGapCounterpartiesDocument = new TypedDocumentString(`
+    query PriceTypeGapCounterparties($take: Int, $skip: Int, $search: String) {
+  priceTypeGapCounterparties(take: $take, skip: $skip, search: $search) {
+    totalItems
+    items {
+      id
+      shortName
+      legalName
+      inn
+      mainContractId
+      reason
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    PriceTypeGapCounterpartiesQuery,
+    PriceTypeGapCounterpartiesQueryVariables
+>;
 export const ProductBySlugDocument = new TypedDocumentString(`
     query ProductBySlug($slug: String) {
   product(slug: $slug) {

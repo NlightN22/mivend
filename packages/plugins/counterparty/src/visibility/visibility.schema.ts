@@ -52,7 +52,24 @@ export const visibilitySchema: DocumentNode = gql`
         totalItems: Int!
     }
 
+    type PriceTypeGapCounterparty {
+        id: ID!
+        shortName: String!
+        legalName: String!
+        inn: String
+        mainContractId: String
+        "no-main-contract | contract-not-found | contract-inactive | price-type-not-synced"
+        reason: String!
+    }
+
+    type PriceTypeGapPage {
+        items: [PriceTypeGapCounterparty!]!
+        totalItems: Int!
+    }
+
     extend type Query {
+        "Counterparties of the caller's scope whose price type cannot be resolved from the main contract (#192)."
+        priceTypeGapCounterparties(take: Int, skip: Int, search: String): PriceTypeGapPage!
         visibilityGrants(
             granteeAdministratorId: ID
             status: String

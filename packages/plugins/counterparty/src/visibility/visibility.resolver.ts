@@ -1,8 +1,9 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import { Allow, Ctx, RequestContext, Transaction } from '@vendure/core';
+import { Allow, Ctx, Permission, RequestContext, Transaction } from '@vendure/core';
 import { CustomPermission, UnsortedAdministratorService } from '@mivend/plugin-access-control';
 
+import { PriceTypeGapService } from '../price-type-gap.service';
 import { UnsortedCounterpartyService } from './unsorted-counterparty.service';
 import {
     VisibilityGrantListArgs,
@@ -21,6 +22,7 @@ export class VisibilityResolver {
         private query: VisibilityGrantQueryService,
         private counterpartiesService: UnsortedCounterpartyService,
         private administratorsService: UnsortedAdministratorService,
+        private priceTypeGaps: PriceTypeGapService,
     ) {}
 
     @Query()
@@ -49,6 +51,15 @@ export class VisibilityResolver {
         @Args() args: { take?: number; skip?: number; search?: string },
     ) {
         return this.counterpartiesService.findPage(ctx, args);
+    }
+
+    @Query()
+    @Allow(Permission.ReadCustomer, CustomPermission.ReadCounterparty.Permission)
+    priceTypeGapCounterparties(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { take?: number; skip?: number; search?: string },
+    ) {
+        return this.priceTypeGaps.findPage(ctx, args);
     }
 
     @Query()

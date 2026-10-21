@@ -25,6 +25,8 @@ const INVENTORY: Record<string, string> = {
         'requested price, floor never in payload',
     'counterparty/src/counterparty.schema.ts::priceType':
         'admin: CounterpartyPriceTypeResolver (null without access)',
+    'counterparty/src/visibility/visibility.schema.ts::priceTypeGapCounterparties':
+        'lists counterparties without a resolved type; exposes no price type',
     'counterparty/src/trading-point.schema.ts::priceType':
         'storefront: the customer own counterparty type',
     'price-entry/src/price-entry.plugin.ts::bulkUpsertPriceEntries':
