@@ -178,8 +178,8 @@ seed-order-edit-states:
 seed-all: seed seed-approvals seed-payment-refunds seed-customer-detail
 
 # E2E verification of branch-scope access control against an already-running, already-seeded
-# central instance (make dev + make seed-all first). Safe to run repeatedly — creates its own
-# disposable test data and cleans it up.
+# central instance (make dev + make seed-all first). Safe to run repeatedly — imports one
+# counterparty and clears the branch override it sets.
 verify-branch-scope:
 	@echo "Waiting for server on :3000..."
 	@until curl -sf http://localhost:3000/health >/dev/null 2>&1; do sleep 2; done

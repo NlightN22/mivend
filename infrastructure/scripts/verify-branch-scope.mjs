@@ -8,6 +8,7 @@
 const BASE_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 const ERP_TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-import-token-change-me-0000';
 const PASSWORD = 'Password123!';
+const SEEDED_BRANCH_ERP_ID = 'cnt-001';
 const VERIFY_ERP_ID = 'cnt-dept-purchasing-verify';
 const VISIBLE_BRANCH_ERP_ID = 'branch-central';
 
@@ -56,7 +57,7 @@ async function loginAs(email, password = PASSWORD) {
 
 async function listCounterparties(cookie) {
     const { data } = await adminGraphqlWithSession(
-        `{ counterparties(options: { take: 50 }) { totalItems items { erpId departmentId branchId } } }`,
+        `{ counterparties(options: { take: 500 }) { totalItems items { erpId departmentId branchId } } }`,
         undefined,
         cookie,
     );
@@ -78,7 +79,7 @@ async function postBatch(exchangeId, records) {
 
 async function findVerifyCounterpartyId(cookie) {
     const { data } = await adminGraphqlWithSession(
-        `{ counterparties(options: { take: 200 }) { items { id erpId } } }`,
+        `{ counterparties(options: { take: 500 }) { items { id erpId } } }`,
         undefined,
         cookie,
     );
@@ -135,7 +136,10 @@ async function main() {
 
         console.log('Scenario: branch-scoped head, counterparty in an unmapped department...');
         const before = await listCounterparties(olgaCookie);
-        check(before.totalItems >= 3, 'sees its own branch counterparties');
+        check(
+            before.items.some(c => c.erpId === SEEDED_BRANCH_ERP_ID),
+            `sees its own branch counterparty ${SEEDED_BRANCH_ERP_ID}`,
+        );
         check(
             before.items.every(c => c.erpId !== VERIFY_ERP_ID),
             'does NOT see the unmapped-department counterparty (no branch, deny by default)',
@@ -158,7 +162,9 @@ async function main() {
         );
     } finally {
         console.log('\nCleaning up...');
-        await setBranchOverride(superadminCookie, verifyId, null);
+        await setBranchOverride(superadminCookie, verifyId, null).catch(err =>
+            console.error('Cleanup failed:', err.message),
+        );
     }
 
     console.log(`\n${failures === 0 ? '✓ All checks passed' : `✗ ${failures} check(s) failed`}`);
