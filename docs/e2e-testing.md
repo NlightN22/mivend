@@ -75,6 +75,11 @@ paired with proof that the superadmin sees the row, and the groups skip with a r
 Roles without `ReassignCounterpartyManager` are refused by permission, not by scope; the scope refusal is tested with the
 roles that hold it.
 
+Order visibility (#263 stage 1, `13`, read-only) takes one real placed order per counterparty branch (and one
+without a branch) and checks, for every actor, `order(id)`, the `orders` list and, for hidden orders,
+`orderReservations` and `addNoteToOrder` against the read-time branch rule of `docs/access-control.md`. A hidden order
+answers exactly like a missing id. Orders whose point overrides the branch are not sampled (no such data yet).
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —
