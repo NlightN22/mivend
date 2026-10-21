@@ -25,10 +25,12 @@ export class PriceStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
-        const productId = String(payload.productId ?? '');
-        const priceTypeId = String(payload.priceTypeId ?? '');
-        const value = Number.parseFloat(String(payload.value ?? ''));
         const removal = payload.isActive !== true || payload.isDeleted === true;
+        // A tombstone carries identity only in entityId ("productId:priceTypeId"); its body fields are empty.
+        const [keyProductId = '', keyPriceTypeId = ''] = entityId.split(':');
+        const productId = String(payload.productId || (removal ? keyProductId : ''));
+        const priceTypeId = String(payload.priceTypeId || (removal ? keyPriceTypeId : ''));
+        const value = Number.parseFloat(String(payload.value ?? ''));
 
         // Absent isActive means false (proto3 zero-value omission, see types.ts), so it removes too.
         if (!productId || !priceTypeId || (!removal && Number.isNaN(value))) {

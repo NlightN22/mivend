@@ -176,15 +176,15 @@ describe('StorageLocationStreamHandler winner election (real Postgres)', () => {
         expect(await variant()).toEqual({ org: null, source: null });
     });
 
-    // The tombstone has an empty storage_location_id and still carries the organization; only the envelope entityId keys the row.
+    // A real tombstone has empty productId and storageLocationId; only the envelope entityId identifies the row.
     it('a tombstone with an empty storageLocationId removes its row, and an unknown one creates nothing', async () => {
         await apply('loc-a', 'org-a', 1);
-        const tombstone = { storageLocationId: '', isDeleted: true };
+        const tombstone = { isDeleted: true };
 
-        expect(await apply('loc-a', 'org-a', 1, tombstone)).toMatchObject({ kind: 'applied' });
+        expect(await handler.apply(ctx, 'loc-a', tombstone)).toMatchObject({ kind: 'applied' });
         expect(await variant()).toEqual({ org: null, source: null });
 
-        expect(await apply('loc-zzz', 'org-a', 1, tombstone)).toMatchObject({ kind: 'noop' });
+        expect(await handler.apply(ctx, 'loc-zzz', tombstone)).toMatchObject({ kind: 'noop' });
         expect(await dataSource.query(`SELECT 1 FROM "StorageLocationAssignment"`)).toHaveLength(0);
     });
 

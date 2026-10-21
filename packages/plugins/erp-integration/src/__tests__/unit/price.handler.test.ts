@@ -56,6 +56,13 @@ describe('PriceStreamHandler', () => {
         expect(outcome).toMatchObject({ kind: 'applied' });
     });
 
+    it('resolves the product and price type from the entityId when the tombstone body is empty', async () => {
+        const { handler, priceEntryService } = build('variant-1');
+        const outcome = await handler.apply(ctx, 'prod-1:guid-1', { isDeleted: true });
+        expect(priceEntryService.remove).toHaveBeenCalledWith(ctx, 'variant-1', 'WHOLESALE');
+        expect(outcome).toMatchObject({ kind: 'applied' });
+    });
+
     it('is a noop (no retry) for a tombstone of an unknown price type or product', async () => {
         const unknownType = build('variant-1', null);
         await expect(

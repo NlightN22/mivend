@@ -106,7 +106,10 @@ Decoding is `toJson(fromBinary(...))`: an unset `optional` field has no key, a s
 null never appears. So absent and `''` are both possible encodings of "cleared" and the handler cannot tell
 them apart. The integration service re-publishes the whole entity, so on a **named** event (name present,
 not a tombstone) one rule applies per stream; a tombstone (no name) never touches field values.
-Real-message encoding of a cleared field is unconfirmed (needs the staging runbook).
+Confirmed by the integration service owner (2026-10-21, from its outbox): every event is full state, never partial;
+a cleared field arrives as an absent key (one product has a literal `''`), so both mean cleared. A tombstone has an
+empty body (price: no productId/priceTypeId; storage-location: no productId/storageLocationId); identity is only the
+envelope `entity_id` = Kafka key (`productId:priceTypeId`, `productId:warehouseId:priority`), identical to the upsert's.
 
 | Stream | Cleared fields (absent or empty = clear) | Kept as before (absent = keep) |
 | --- | --- | --- |

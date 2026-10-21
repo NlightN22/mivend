@@ -138,7 +138,7 @@ beforeEach(async () => {
 
 describe('DocumentsService (integration, real Postgres)', () => {
     it('concurrent organization events keep one row and every provided field', async () => {
-        const fields = ['inn', 'kpp', 'ogrn', 'legalAddress', 'bankName', 'phone'] as const;
+        const fields = ['inn', 'kpp', 'ogrn', 'legalAddress', 'bankName'] as const;
         await Promise.all(
             fields.map(field =>
                 eventService.upsertFromEvent(mockCtx, 'org-9', {

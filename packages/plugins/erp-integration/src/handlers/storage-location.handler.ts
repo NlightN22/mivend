@@ -34,7 +34,11 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
-        const productId = String(payload.productId ?? '');
+        // A tombstone has an empty productId; the stored row (same entityId) knows it.
+        const productId = String(
+            payload.productId ||
+                (payload.isDeleted === true ? await this.storedProductId(ctx, entityId) : ''),
+        );
         if (!productId) {
             return inboundNoop(`storage-location ${entityId}: missing productId, skipping`);
         }
@@ -72,6 +76,13 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         );
         if (outcome.kind === 'applied') this.orderCheckStale.drainSoon();
         return outcome;
+    }
+
+    private async storedProductId(ctx: RequestContext, entityId: string): Promise<string> {
+        const row = await this.connection
+            .getRepository(ctx, StorageLocationAssignment)
+            .findOne({ where: { entityId } });
+        return row?.productId ?? '';
     }
 
     private async applyWinner(ctx: RequestContext, productId: string): Promise<void> {

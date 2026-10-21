@@ -31,7 +31,8 @@ let inbox: IntegrationInboxService;
 let sourceSeq = 0;
 const key = { productId: 'prod-1', priceTypeId: 'guid-1' };
 const live = { ...key, value: '199.90', isActive: true };
-const tombstone = { ...key, isDeleted: true };
+// A real tombstone has an empty body; identity is only the entityId "productId:priceTypeId".
+const tombstone = { isDeleted: true };
 
 beforeAll(async () => {
     await createTestSchema(schema);
