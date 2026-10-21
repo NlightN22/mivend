@@ -7,6 +7,8 @@ import {
     type RuntimeVendureConfig,
 } from '@vendure/core';
 
+import { OrderLineCustomFieldsInterceptor } from './order-line-custom-fields.interceptor';
+
 // The only custom fields a client may set through the Shop/Admin API; every other field is service-written.
 export const CLIENT_WRITABLE_CUSTOM_FIELDS: Readonly<Record<string, readonly string[]>> = {
     // Staff category settings, written by the manager portal.
@@ -50,6 +52,7 @@ export function findUnguardedCustomFields(customFields: CustomFields): string[] 
 // Keep it last in `plugins`: it must see the custom fields every other plugin registers.
 @VendurePlugin({
     imports: [PluginCommonModule],
+    providers: [{ provide: 'APP_INTERCEPTOR', useClass: OrderLineCustomFieldsInterceptor }],
     configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
         config.customFields = applyCustomFieldWritePolicy(config.customFields);
         return config;
