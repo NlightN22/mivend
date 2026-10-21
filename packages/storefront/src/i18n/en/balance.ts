@@ -9,7 +9,7 @@ export default {
         metrics: {
             available: { label: 'Available limit', note: 'Order without upfront payment' },
             used: { label: 'Used', note: '{percent}% of the credit limit' },
-            deferral: { label: 'Deferral', note: 'Under main contract' },
+            deferral: { label: 'Max debt term', note: 'Under main contract' },
             due: {
                 label: 'Due',
                 note: 'Nearest due by {date}',

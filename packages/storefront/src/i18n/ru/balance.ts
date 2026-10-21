@@ -11,7 +11,7 @@ const ru: typeof en = {
         metrics: {
             available: { label: 'Доступный лимит', note: 'Заказ без предоплаты' },
             used: { label: 'Использовано', note: '{percent}% от кредитного лимита' },
-            deferral: { label: 'Отсрочка', note: 'По основному договору' },
+            deferral: { label: 'Макс. срок долга', note: 'По основному договору' },
             due: {
                 label: 'К оплате',
                 note: 'Ближайший срок до {date}',
