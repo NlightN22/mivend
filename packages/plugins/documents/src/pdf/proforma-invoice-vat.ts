@@ -9,6 +9,8 @@ export interface VatSourceLine {
 export interface VatTotal {
     kind: 'amount' | 'none' | 'zero' | 'unavailable';
     amount: number;
+    // Set when every line carries the same non-zero rate, so the total can name it.
+    rate: number | null;
 }
 
 const ZERO_RATE_CATEGORY = 'ндс0';
@@ -38,12 +40,18 @@ function isZeroRateCategory(name: string | null | undefined): boolean {
 // Legacy snapshots (no tax data) are never guessed; an unconfirmed rate fails generation so no wrong invoice is issued.
 // One tax line per order line is the norm; several would be summed (snapshotTax).
 export function summarizeVat(lines: VatSourceLine[]): VatTotal {
-    if (lines.some(l => l.taxRate === undefined)) return { kind: 'unavailable', amount: 0 };
+    if (lines.some(l => l.taxRate === undefined))
+        return { kind: 'unavailable', amount: 0, rate: null };
     const unconfirmed = lines.find(l => l.taxRate === null);
     if (unconfirmed) throw new Error(unconfirmedVatError(unconfirmed.taxCategoryName));
     if (lines.every(l => l.taxRate === 0)) {
         const zeroRated = lines.some(l => isZeroRateCategory(l.taxCategoryName));
-        return { kind: zeroRated ? 'zero' : 'none', amount: 0 };
+        return { kind: zeroRated ? 'zero' : 'none', amount: 0, rate: null };
     }
-    return { kind: 'amount', amount: lines.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0) };
+    const rates = new Set(lines.map(l => l.taxRate));
+    return {
+        kind: 'amount',
+        amount: lines.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0),
+        rate: rates.size === 1 ? (lines[0].taxRate ?? null) : null,
+    };
 }

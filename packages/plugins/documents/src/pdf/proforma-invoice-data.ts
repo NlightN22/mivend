@@ -79,6 +79,7 @@ export interface ProformaInvoiceTemplateData {
     totals: {
         subtotal: string;
         discount: string;
+        vatLabel: string;
         vat: string;
         payable: string;
         summary: string;
@@ -194,6 +195,10 @@ export function buildProformaInvoiceTemplateData(
         totals: {
             subtotal: formatMoneyRu(subtotal),
             discount: formatMoneyRu(totalDiscount),
+            vatLabel:
+                vat.rate === null
+                    ? 'В том числе НДС:'
+                    : `В том числе НДС ${formatQuantity(vat.rate)}%:`,
             vat: formatVat(vat),
             payable: formatMoneyRu(source.totalAmount),
             summary:

@@ -1,6 +1,8 @@
 import { UserInputError } from '@vendure/core';
 
+import type { DefaultVatRate } from './default-vat-rate';
 import type { ProformaInvoiceLineSnapshot } from './entities/proforma-invoice.entity';
+import { extractVat } from './proforma-invoice-tax';
 
 export type ContractProformaMode = 'debt-repayment' | 'advance';
 
@@ -31,11 +33,12 @@ export function assertContractProformaInput(input: IssueContractProformaInvoiceI
     }
 }
 
-// The single printed row, Russian like all proforma PDF text; no tax data, so VAT prints as not specified.
+// The single printed row, Russian like all proforma PDF text; the amount includes VAT at the default rate.
 export function contractProformaLine(
     mode: ContractProformaMode,
     contractName: string,
     amount: number,
+    vat: DefaultVatRate | null,
 ): ProformaInvoiceLineSnapshot {
     const name =
         mode === 'debt-repayment'
@@ -49,5 +52,10 @@ export function contractProformaLine(
         unitPriceWithTax: amount,
         linePriceWithTax: amount,
         discounts: [],
+        ...(vat && {
+            taxRate: vat.taxRate,
+            taxCategoryName: vat.taxCategoryName,
+            taxAmount: vat.taxRate === null ? 0 : extractVat(amount, vat.taxRate),
+        }),
     };
 }

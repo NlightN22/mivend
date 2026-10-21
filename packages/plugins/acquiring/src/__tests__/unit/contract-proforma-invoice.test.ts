@@ -43,11 +43,32 @@ describe('assertContractProformaInput', () => {
 
 describe('contractProformaLine', () => {
     it('prints one line per mode with the contract name and the full amount', () => {
-        expect(contractProformaLine('debt-repayment', 'K-1', 500)).toMatchObject({
+        expect(contractProformaLine('debt-repayment', 'K-1', 500, null)).toMatchObject({
             name: 'Погашение задолженности по договору K-1',
             quantity: 1,
             linePriceWithTax: 500,
         });
-        expect(contractProformaLine('advance', 'K-1', 500).name).toBe('Аванс по договору K-1');
+        expect(contractProformaLine('advance', 'K-1', 500, null).name).toBe(
+            'Аванс по договору K-1',
+        );
+    });
+
+    it('carries the default VAT rate with VAT extracted from the inclusive amount', () => {
+        expect(
+            contractProformaLine('advance', 'K-1', 6_000_000, {
+                taxRate: 22,
+                taxCategoryName: 'НДС22',
+            }),
+        ).toMatchObject({ taxRate: 22, taxCategoryName: 'НДС22', taxAmount: 1_081_967 });
+    });
+
+    it('keeps an unconfirmed default rate null and no tax data without a default', () => {
+        expect(
+            contractProformaLine('advance', 'K-1', 500, {
+                taxRate: null,
+                taxCategoryName: 'НДС22',
+            }),
+        ).toMatchObject({ taxRate: null, taxAmount: 0 });
+        expect(contractProformaLine('advance', 'K-1', 500, null)).not.toHaveProperty('taxRate');
     });
 });

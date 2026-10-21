@@ -153,14 +153,14 @@ async function ensureTaxSetup() {
         taxCategoryId = newCat.data.createTaxCategory.id;
     }
 
-    // Create 0% tax rate
+    // Default VAT rate: contract payment proformas print it (#260); prices stay tax-inclusive.
     await adminGraphqlWithSession(
         `
         mutation($zoneId: ID!, $catId: ID!) {
             createTaxRate(input: {
-                name: "Standard 0%"
+                name: "Standard 22%"
                 enabled: true
-                value: 0
+                value: 22
                 categoryId: $catId
                 zoneId: $zoneId
             }) { id }
@@ -194,7 +194,7 @@ async function ensureTaxSetup() {
         );
     }
 
-    console.log('  Created default tax zone and 0% tax rate.');
+    console.log('  Created default tax zone and 22% tax rate.');
 }
 
 // Demo administrators for the org-structure import below. The manager-portal roles are

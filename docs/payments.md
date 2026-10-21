@@ -368,6 +368,9 @@ redeliver.
   `kind` `debt-repayment` (amount prefilled with the contract's open debt from ERP settlement documents) or `advance`
   (free amount). It is paper with the contract organization's requisites: no order, no payment link, no paid status,
   not sent to the ERP. Every allocation/open-document query excludes these kinds and `payProformaInvoice` refuses them.
+  The single line includes VAT at the default rate: the enabled rate of the default `TaxCategory` (`isDefault`, set
+  from `INTEGRATION_DEFAULT_VAT_CODE` on ERP contours) in the channel's default tax zone, snapshotted at issue like
+  an order line (a placeholder rate stays `null` and is confirmed at print time). No such rate prints "не указан".
 
 ## Payment allocation
 
@@ -464,7 +467,8 @@ cells and only rows may break across pages (totals and signatures stay together)
   confirmed rate; while it is still unknown, generation fails with "VAT rate not confirmed for category X".
   The `vat-rate` handler renames the rate on confirmation and requeues failed documents of that category.
   An order line normally has one tax line; several would be summed. Snapshots issued before tax data
-  was stored print "не указан" with a logged warning; nothing is derived for them.
+  was stored print "не указан" with a logged warning; nothing is derived for them. When every line has the same
+  non-zero rate the label names it ("В том числе НДС 22%:").
 - Payment QR (`plugin-documents/src/qr-payment/`): GOST R 56042-2014 format ST00012 ("ST0001" +
   encoding digit, 2 = UTF-8; 1 = windows-1251, 3 = KOI8-R), plain bank details, no SBP. Payload
   `ST00012|Name|PersonalAcc|BankName|BIC|CorrespAcc|Sum|Purpose|PayeeINN[|KPP]`, `Sum` in kopecks.

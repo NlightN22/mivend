@@ -123,7 +123,7 @@ describe('buildProformaInvoiceTemplateData', () => {
             buildProformaInvoiceTemplateData(makeSource(), makeRequisites(), buyer),
         ).toMatchObject({
             versionLabel: null,
-            totals: { vat: '33,33' },
+            totals: { vatLabel: 'В том числе НДС 20%:', vat: '33,33' },
         });
         expect(
             buildProformaInvoiceTemplateData(makeSource({ version: 3 }), makeRequisites(), buyer)
@@ -144,7 +144,33 @@ describe('buildProformaInvoiceTemplateData', () => {
             buyer,
         );
         expect(data.totals.vat).toBe('51,51');
+        expect(data.totals.vatLabel).toBe('В том числе НДС:');
         expect(render(makeSource({ lines })).match(/В том числе НДС/g)).toHaveLength(1);
+    });
+
+    it('names the default rate on a single-line contract payment proforma', () => {
+        const source = makeSource({
+            kind: 'debt-repayment',
+            totalAmount: 6000000,
+            paymentPurpose: 'Оплата по счету № 1 по договору K-1',
+            lines: [
+                {
+                    quantity: 1,
+                    unitPriceWithTax: 6000000,
+                    linePriceWithTax: 6000000,
+                    discounts: [],
+                    taxRate: 22,
+                    taxCategoryName: 'НДС22',
+                    taxAmount: 1081967,
+                    unitName: null,
+                    productVariant: { name: 'Погашение задолженности по договору K-1', sku: '' },
+                },
+            ],
+        });
+        const html = render(source);
+        expect(html).toContain('В том числе НДС 22%:');
+        expect(html).toMatch(/10\s819,67/);
+        expect(html).not.toContain('не указан');
     });
 
     it('prints "Без НДС" when every line is 0%', () => {

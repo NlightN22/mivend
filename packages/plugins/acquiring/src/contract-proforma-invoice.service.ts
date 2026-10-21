@@ -12,6 +12,7 @@ import { BranchSettingsService } from '@mivend/plugin-access-control';
 import { ContractService, TradingPointService } from '@mivend/plugin-counterparty';
 import { NumberingService } from '@mivend/plugin-numbering';
 
+import { findDefaultVatRate } from './default-vat-rate';
 import { ProformaInvoice } from './entities/proforma-invoice.entity';
 import { addDays } from './proforma-invoice-number';
 import { ProformaInvoiceIssuedEvent } from './proforma-invoice-issued.event';
@@ -66,6 +67,7 @@ export class ContractProformaInvoiceService {
                 if (existing) return { invoice: existing, created: false };
                 const settings = await this.branchSettingsService.resolveEffective(txCtx, branchId);
                 const issuedAt = new Date();
+                const vat = await findDefaultVatRate(this.connection, txCtx);
                 const saved = await repo.save(
                     repo.create({
                         orderId: null,
@@ -76,7 +78,7 @@ export class ContractProformaInvoiceService {
                         amount: input.amount,
                         currencyCode: contract.currency ?? ctx.channel.defaultCurrencyCode,
                         status: 'issued',
-                        lines: [contractProformaLine(input.mode, contractName, input.amount)],
+                        lines: [contractProformaLine(input.mode, contractName, input.amount, vat)],
                         version: 1,
                         kind: input.mode,
                         issuedAt,
