@@ -373,8 +373,8 @@ redeliver.
   an order line (a placeholder rate stays `null` and is confirmed at print time). No such rate prints "не указан".
   Retention: the worker task `contract-proforma-cleanup` (documents plugin, 1 January and 1 July) deletes contract-kind
   proformas older than `DocumentsPlugin.init({ contractProformaRetentionMonths })` (default 6) in batches of 500,
-  with their `document` rows in the same transaction and their PDF assets after commit. Order proformas are never touched.
-  The retention is a plugin option only (no env variable); `vendure-config` uses the default. A failed asset delete
+  with their `document` rows in the same transaction and their PDF files after commit. Order proformas are never touched.
+  The retention is a plugin option only (no env variable); `vendure-config` uses the default. A failed file delete
   is logged and the purge continues: an orphaned PDF file is accepted.
 
 ## Payment allocation

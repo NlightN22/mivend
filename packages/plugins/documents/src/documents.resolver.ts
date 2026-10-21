@@ -1,8 +1,6 @@
 import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import {
     Allow,
-    Asset,
-    AssetService,
     Ctx,
     CustomerService,
     PaginatedList,
@@ -111,14 +109,12 @@ export class DocumentsAdminResolver {
 
 @Resolver('Document')
 export class DocumentFieldResolver {
-    constructor(private assetService: AssetService) {}
-
-    // Return the real Asset type, not a hand-built URL: Vendure's resolver chain (AssetServerPlugin)
-    // it prefixes source/preview paths with protocol/host; a manual URL stays a bare relative path.
+    // Root-relative: each portal proxies /document-pdf to the server, so its session cookie goes along.
     @ResolveField()
-    async asset(@Ctx() ctx: RequestContext, @Parent() doc: Document): Promise<Asset | undefined> {
-        if (!doc.assetId) return undefined;
-        return this.assetService.findOne(ctx, doc.assetId);
+    pdfUrl(@Parent() doc: Document): string | null {
+        return doc.source === 'generated' && doc.status === 'ready'
+            ? `/document-pdf/${doc.uuid}`
+            : null;
     }
 }
 

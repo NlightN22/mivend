@@ -456,6 +456,8 @@ enabling flag, and even when enabled requires an API key header (`X-Api-Key`, or
 refuses every call (401) and logs a startup error. Payment-provider webhooks would use provider
 signatures instead. Shared guard: `packages/shared/src/api-key.ts`; the controller allow-list test
 is `apps/server/src/__tests__/unit/rest-controller-allowlist.test.ts`.
+Exception: `GET /document-pdf/<uuid>` (#263) is a portal download, always on, authorized by the caller's own
+session and the document's counterparty scope instead of a key (see `docs/access-control.md`, "Scope guards").
 
 | Variable | Default | What it opens | Why | Must be true in | Key requirement | Used by | If on in production |
 | --- | --- | --- | --- | --- | --- | --- | --- |

@@ -74,13 +74,13 @@ describe('proformaPrintTargets documents and versions', () => {
             {
                 id: '1',
                 status: 'issued',
-                document: { status: 'ready', asset: { source: 'http://x/a.pdf' } },
+                document: { status: 'ready', pdfUrl: '/document-pdf/a' },
             },
-            { id: '2', status: 'issued', document: { status: 'generating', asset: null } },
+            { id: '2', status: 'issued', document: { status: 'generating', pdfUrl: null } },
             { id: '3', status: 'issued', document: null },
         ]);
         expect(targets).toEqual([
-            { kind: 'pdf', url: 'http://x/a.pdf' },
+            { kind: 'pdf', url: '/document-pdf/a' },
             { kind: 'page', id: '2' },
             { kind: 'page', id: '3' },
         ]);

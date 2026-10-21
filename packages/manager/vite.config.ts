@@ -49,6 +49,11 @@ export default defineConfig(() => {
                     changeOrigin: true,
                     ws: true,
                 },
+                // Authorized document PDFs (#263): same-origin, so the portal's session cookie is sent.
+                '/document-pdf': {
+                    target: apiTarget,
+                    changeOrigin: true,
+                },
                 // See packages/storefront/vite.config.ts for why this needs to be proxied
                 // through the app's own dev origin rather than hit directly.
                 '/assets': {

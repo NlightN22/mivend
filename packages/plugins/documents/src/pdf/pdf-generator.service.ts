@@ -1,5 +1,4 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { Readable } from 'stream';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
     AssetService,
@@ -16,6 +15,7 @@ import { Document } from '../entities/document.entity';
 import { DocumentsService } from '../documents.service';
 import { SupersededProformaRerenderService } from '../superseded-proforma-rerender.service';
 import { buildContractTemplateData, renderContractHtml } from './contract-template';
+import { DocumentPdfStorageService } from './document-pdf-storage.service';
 import { PdfBrowserService } from './pdf-browser.service';
 import { ProformaInvoiceHtmlBuilder } from './proforma-invoice-html.builder';
 
@@ -38,16 +38,19 @@ export class PdfGeneratorService implements OnModuleInit {
         private pdfBrowserService: PdfBrowserService,
         private supersededRerender: SupersededProformaRerenderService,
         private proformaInvoiceHtml: ProformaInvoiceHtmlBuilder,
+        private storage: DocumentPdfStorageService,
     ) {}
 
     async onModuleInit(): Promise<void> {
         this.queue = await this.jobQueueService.createQueue({
             name: GENERATE_DOCUMENT_QUEUE,
-            process: async job => {
-                const ctx = await this.requestContextService.create({ apiType: 'admin' });
-                await this.generate(ctx, job.data.documentId);
-            },
+            process: job => this.generateNow(job.data.documentId),
         });
+    }
+
+    async generateNow(documentId: ID): Promise<void> {
+        const ctx = await this.requestContextService.create({ apiType: 'admin' });
+        await this.generate(ctx, documentId);
     }
 
     async enqueue(documentId: ID): Promise<void> {
@@ -69,17 +72,8 @@ export class PdfGeneratorService implements OnModuleInit {
                     : await this.proformaInvoiceHtml.build(ctx, document);
             const pdfBuffer = await this.pdfBrowserService.renderPdf(html);
 
-            const asset = await this.assetService.createFromFileStream(
-                Readable.from(pdfBuffer),
-                `${document.number}.pdf`,
-                ctx,
-            );
-            if (!('id' in asset)) {
-                throw new Error(
-                    `Asset creation failed for document ${documentId}: mime type not recognized`,
-                );
-            }
-            await this.documentsService.markReady(ctx, documentId, asset.id);
+            await this.storage.write(document.uuid, pdfBuffer);
+            await this.documentsService.markReady(ctx, documentId);
             if (await this.supersededRerender.missedNote(ctx, document, noted)) {
                 await this.enqueue(documentId);
             }

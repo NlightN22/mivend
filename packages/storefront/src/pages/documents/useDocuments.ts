@@ -14,10 +14,8 @@ export interface MyDocumentsOptions {
     search?: string;
 }
 
-// ERP-pushed docs set fileUrl directly; self-generated docs set asset instead.
-// Asset source is already an absolute URL from Vendure's resolver; never build URLs client-side.
 function downloadUrlOf(doc: DocumentSummary): string | null {
-    return doc.fileUrl ?? doc.asset?.source ?? null;
+    return doc.fileUrl ?? doc.pdfUrl ?? null;
 }
 
 export const DOCUMENT_TYPES = ['proforma-invoice', 'contract', 'return', 'reconciliation'];

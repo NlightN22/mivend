@@ -47,6 +47,11 @@ export default defineConfig(() => {
                     changeOrigin: true,
                     ws: true,
                 },
+                // Authorized document PDFs (#263): same-origin, so the portal's session cookie is sent.
+                '/document-pdf': {
+                    target: apiTarget,
+                    changeOrigin: true,
+                },
                 // Assets use a root-relative assetUrlPrefix so they resolve against the browser's origin.
                 // This proxy makes that origin the storefront's own in dev.
                 '/assets': {

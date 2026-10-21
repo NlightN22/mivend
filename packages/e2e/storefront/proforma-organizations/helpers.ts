@@ -10,10 +10,10 @@ export interface ProformaRow {
     amount: number;
     organizationId: string;
     supersededBy: { id: string; number: string; version: number } | null;
-    document: { status: string; asset: { source: string } | null } | null;
+    document: { status: string; pdfUrl: string | null } | null;
 }
 
-const FIELDS = `id number version status amount organizationId supersededBy { id number version } document { status asset { source } }`;
+const FIELDS = `id number version status amount organizationId supersededBy { id number version } document { status pdfUrl }`;
 
 export async function placeBankOrder(page: Page, skus: string[]): Promise<string> {
     for (const sku of skus) await addSku(page, sku, 1);

@@ -6,7 +6,12 @@ const ROOT = resolve(__dirname, '../../../../..');
 
 // Every REST controller must carry a key guard and be flag-gated; a new one must be listed here
 // with its reason, so it cannot ship unguarded by accident (docs/environments.md, REST policy).
-const ALLOW_LIST: Record<string, { reason: string }> = {
+// `session`: a portal download authorized per row by the caller's own Vendure session (#263), not a key.
+const ALLOW_LIST: Record<string, { reason: string; session?: true }> = {
+    'packages/plugins/documents/src/document-pdf.controller.ts': {
+        reason: 'Vendure session + DocumentPdfAccessService scope check; 404 for guest/hidden/missing',
+        session: true,
+    },
     'packages/plugins/sync/src/erp-callback.controller.ts': {
         reason: 'ErpCallbackApiKeyGuard + ERP_CALLBACK_ENABLED gate in sync.plugin.ts',
     },
@@ -46,8 +51,10 @@ describe('REST controllers', () => {
     });
 
     it('every allow-listed controller declares a guard', () => {
-        for (const f of Object.keys(ALLOW_LIST)) {
-            expect(readFileSync(join(ROOT, f), 'utf8'), f).toMatch(/@UseGuards\(/);
+        for (const [f, entry] of Object.entries(ALLOW_LIST)) {
+            expect(readFileSync(join(ROOT, f), 'utf8'), f).toMatch(
+                entry.session ? /@Allow\(/ : /@UseGuards\(/,
+            );
         }
     });
 });

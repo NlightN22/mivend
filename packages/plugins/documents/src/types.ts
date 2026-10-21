@@ -30,3 +30,13 @@ export interface OrganizationRequisitesRecord {
     signatoryTitle?: string | null;
     phone?: string | null;
 }
+
+export interface DocumentsPluginOptions {
+    contractProformaRetentionMonths?: number;
+    // Private PDF directory; must never be under AssetServerPlugin's assetUploadDir.
+    pdfDir?: string;
+}
+
+export interface ResolvedDocumentsPluginOptions extends DocumentsPluginOptions {
+    pdfDir: string;
+}

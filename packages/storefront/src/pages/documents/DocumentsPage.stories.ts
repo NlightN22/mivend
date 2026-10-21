@@ -30,7 +30,7 @@ export const Default: Story = {
                             status: 'issued',
                             orderId: '1',
                             fileUrl: '#',
-                            asset: null,
+                            pdfUrl: null,
                         },
                     ],
                     totalItems: 1,

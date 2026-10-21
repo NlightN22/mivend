@@ -56,13 +56,13 @@ export function placementMetadata(acknowledged: boolean): Record<string, boolean
 export interface ProformaInvoiceRef {
     id: string;
     status: string;
-    document?: { status: string; asset?: { source: string } | null } | null;
+    document?: { status: string; pdfUrl?: string | null } | null;
 }
 
 export type ProformaPrintTarget = { kind: 'pdf'; url: string } | { kind: 'page'; id: string };
 
 export function proformaDocumentUrl(proforma: ProformaInvoiceRef): string | null {
-    return proforma.document?.status === 'ready' ? (proforma.document.asset?.source ?? null) : null;
+    return proforma.document?.status === 'ready' ? (proforma.document.pdfUrl ?? null) : null;
 }
 
 // Bank transfer opens each current proforma invoice: its PDF when ready, otherwise the printable page.

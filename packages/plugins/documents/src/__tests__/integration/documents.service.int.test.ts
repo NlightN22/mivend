@@ -30,7 +30,6 @@ class TestDocument {
     @Column({ type: 'varchar', nullable: true }) currencyCode!: string | null;
     @Column({ type: 'varchar', default: 'pending' }) status!: string;
     @Column({ type: 'varchar' }) source!: string;
-    @Column({ type: 'varchar', nullable: true }) assetId!: string | null;
     @Column({ type: 'varchar', nullable: true }) fileUrl!: string | null;
     @Column({ type: 'varchar', nullable: true }) erpId!: string | null;
     @Column({ type: 'simple-json', nullable: true }) metadata!: Record<string, unknown> | null;
@@ -256,7 +255,6 @@ describe('DocumentsService (integration, real Postgres)', () => {
             issueDate: new Date(),
             status: 'ready',
             source: 'generated',
-            assetId: 'asset-1',
         });
 
         const claims = await Promise.all([1, 2, 3].map(() => rerender.claim(mockCtx, 41)));

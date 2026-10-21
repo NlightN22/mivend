@@ -2295,7 +2295,6 @@ export type Dispute = {
 
 export type Document = {
     amount: Maybe<Scalars['Int']['output']>;
-    asset: Maybe<Asset>;
     counterpartyId: Scalars['ID']['output'];
     currencyCode: Maybe<Scalars['String']['output']>;
     fileUrl: Maybe<Scalars['String']['output']>;
@@ -2303,6 +2302,8 @@ export type Document = {
     issueDate: Scalars['DateTime']['output'];
     number: Scalars['String']['output'];
     orderId: Maybe<Scalars['ID']['output']>;
+    /** Authorized download path of a generated PDF; null until ready. */
+    pdfUrl: Maybe<Scalars['String']['output']>;
     status: Scalars['String']['output'];
     type: Scalars['String']['output'];
 };
@@ -11798,7 +11799,7 @@ export type OrderProformaInvoicesQuery = {
         seller: { legalName: string } | null;
         supersedes: { id: string; number: string; version: number } | null;
         supersededBy: { id: string; number: string; version: number } | null;
-        document: { status: string; asset: { source: string } | null } | null;
+        document: { status: string; pdfUrl: string | null } | null;
     }>;
 };
 
@@ -15169,9 +15170,7 @@ export const OrderProformaInvoicesDocument = new TypedDocumentString(`
     }
     document {
       status
-      asset {
-        source
-      }
+      pdfUrl
     }
   }
 }

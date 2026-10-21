@@ -47,10 +47,6 @@ export class Document extends UuidEntity {
     @Column({ type: 'varchar' })
     source!: 'generated' | 'erp';
 
-    // Vendure Asset.id once a self-generated PDF exists.
-    @Column({ type: 'varchar', nullable: true })
-    assetId!: string | null;
-
     // ERP-hosted file passthrough for return/reconciliation documents — ERP already
     // serves the file, no need to re-upload it into Vendure's asset storage.
     @Column({ type: 'varchar', nullable: true })

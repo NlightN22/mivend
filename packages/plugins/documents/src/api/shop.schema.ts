@@ -10,13 +10,10 @@ export const shopApiExtensions = gql`
         currencyCode: String
         status: String!
         orderId: ID
-        # ERP-pushed documents (return/reconciliation) carry a direct fileUrl (ERP
-        # already hosts the file). Self-generated documents (proforma invoice/contract) expose
-        # \`asset\` instead — Vendure's own Asset.source resolver (registered by
-        # AssetServerPlugin) builds the correct absolute URL from the live request,
-        # so the storefront should NOT construct download URLs itself in either case.
+        "ERP-hosted file of an ERP-pushed document (return/reconciliation)."
         fileUrl: String
-        asset: Asset
+        "Authorized download path of a generated PDF (proforma invoice/contract); null until ready."
+        pdfUrl: String
     }
 
     type DocumentList {

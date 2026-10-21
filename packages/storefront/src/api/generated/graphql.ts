@@ -1025,13 +1025,15 @@ export type Dispute = {
 
 export type Document = {
     amount?: Maybe<Scalars['Int']['output']>;
-    asset?: Maybe<Asset>;
     currencyCode?: Maybe<Scalars['String']['output']>;
+    /** ERP-hosted file of an ERP-pushed document (return/reconciliation). */
     fileUrl?: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
     issueDate: Scalars['DateTime']['output'];
     number: Scalars['String']['output'];
     orderId?: Maybe<Scalars['ID']['output']>;
+    /** Authorized download path of a generated PDF (proforma invoice/contract); null until ready. */
+    pdfUrl?: Maybe<Scalars['String']['output']>;
     status: Scalars['String']['output'];
     type: Scalars['String']['output'];
 };
@@ -4808,7 +4810,7 @@ export type ContractProformaDocumentQueryVariables = Exact<{
 export type ContractProformaDocumentQuery = {
     proformaInvoice?: {
         id: string;
-        document?: { status: string; asset?: { source: string } | null } | null;
+        document?: { status: string; pdfUrl?: string | null } | null;
     } | null;
 };
 
@@ -4933,7 +4935,7 @@ export type OrderCreatedQuery = {
             number: string;
             version: number;
             status: string;
-            document?: { status: string; asset?: { source: string } | null } | null;
+            document?: { status: string; pdfUrl?: string | null } | null;
         }>;
     };
 };
@@ -4954,7 +4956,7 @@ export type OrderProformaInvoicesQuery = {
             currencyCode: string;
             orderChangedDifference?: number | null;
             supersededBy?: { id: string; number: string; version: number } | null;
-            document?: { status: string; asset?: { source: string } | null } | null;
+            document?: { status: string; pdfUrl?: string | null } | null;
         }>;
     };
 };
@@ -5015,7 +5017,7 @@ export type MyDocumentsQuery = {
             status: string;
             orderId?: string | null;
             fileUrl?: string | null;
-            asset?: { source: string } | null;
+            pdfUrl?: string | null;
         }>;
     };
 };
@@ -5232,7 +5234,7 @@ export type ProformaInvoiceDetailQuery = {
             bankBik?: string | null;
             correspondentAccount?: string | null;
         } | null;
-        document?: { status: string; asset?: { source: string } | null } | null;
+        document?: { status: string; pdfUrl?: string | null } | null;
         order?: { id: string; code: string } | null;
         lines: Array<{
             quantity: number;
@@ -6075,9 +6077,7 @@ export const ContractProformaDocumentDocument = new TypedDocumentString(`
     id
     document {
       status
-      asset {
-        source
-      }
+      pdfUrl
     }
   }
 }
@@ -6250,9 +6250,7 @@ export const OrderCreatedDocument = new TypedDocumentString(`
       status
       document {
         status
-        asset {
-          source
-        }
+        pdfUrl
       }
     }
   }
@@ -6277,9 +6275,7 @@ export const OrderProformaInvoicesDocument = new TypedDocumentString(`
       }
       document {
         status
-        asset {
-          source
-        }
+        pdfUrl
       }
     }
   }
@@ -6337,9 +6333,7 @@ export const MyDocumentsDocument = new TypedDocumentString(`
       status
       orderId
       fileUrl
-      asset {
-        source
-      }
+      pdfUrl
     }
     totalItems
   }
@@ -6590,9 +6584,7 @@ export const ProformaInvoiceDetailDocument = new TypedDocumentString(`
     }
     document {
       status
-      asset {
-        source
-      }
+      pdfUrl
     }
     order {
       id

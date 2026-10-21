@@ -10,9 +10,7 @@ query MyDocuments($options: DocumentListOptions) {
             status
             orderId
             fileUrl
-            asset {
-                source
-            }
+            pdfUrl
         }
         totalItems
     }

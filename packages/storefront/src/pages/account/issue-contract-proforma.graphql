@@ -10,9 +10,7 @@ query ContractProformaDocument($id: ID!) {
         id
         document {
             status
-            asset {
-                source
-            }
+            pdfUrl
         }
     }
 }

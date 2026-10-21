@@ -52,9 +52,9 @@ onMounted(() => void load());
                 <a
                     v-if="
                         proformaInvoice.document?.status === 'ready' &&
-                        proformaInvoice.document.asset
+                        proformaInvoice.document.pdfUrl
                     "
-                    :href="proformaInvoice.document.asset.source"
+                    :href="proformaInvoice.document.pdfUrl"
                     target="_blank"
                     rel="noopener"
                     >PDF</a

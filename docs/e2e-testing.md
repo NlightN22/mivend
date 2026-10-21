@@ -95,18 +95,18 @@ captured demo-stub payment per test customer (A and B, different branches) throu
 (customer B first places a one-line order and calls `requestProformaInvoices`; the order is staff-cancelled in
 teardown) and one refund per payment through the superadmin `recordPaymentRefund` (stable `providerRefundId`). Payments
 and refunds stay on the contour by the owner's decision. Every actor is checked against the read-time branch rule for
-`visibleProformaInvoices` and `visiblePayments` per counterparty and `openPaymentReconciliationIssues`, and is refused
+`visibleProformaInvoices` and `visiblePayments` per counterparty, and is refused
 `recordPaymentRefund` (row count unchanged) and, on a hidden sample, `withdrawProformaInvoice`; every scoped actor must
-have a hidden sample. Uncovered: no payment reconciliation issue can arise through the product here (the ERP payment
-callback stays off on this contour and the Shop stub gives every payment a new reference), so the issue list is only
-compared with an empty set (annotated `gap`); the Admin API has no refund read, so refund visibility is not checked.
+have a hidden sample. Payment reconciliation issues and refund reads belong to the online acquirer, which is not
+implemented yet (only a demo stub): they stay covered by int tests until a real acquirer is wired in.
 
-Document visibility (#263 stage 3, `17`, read-only) takes the newest ready PDF document per counterparty and checks,
-for every actor against the counterparty scope, the `documents` list (total, by counterparty, by order, search by
-number), `documentTypes`, and that a hidden document's PDF `asset(id)` does not resolve; the superadmin proves each
-sample exists. Customers A and B each see only their own `myDocuments`, `settlementDocuments` (sales invoices
+Document visibility (#263 stage 3, `17`, read-only apart from the lazy PDF render on first download) takes the newest
+ready generated document per counterparty and checks, for every actor against the counterparty scope, the `documents`
+list (total, by counterparty, by order, search by number), `documentTypes`, and `GET /document-pdf/<uuid>` (200 PDF
+when visible, 404 when hidden); the superadmin proves each sample exists and that a PDF rendered during the run never
+becomes a public asset. Customers A and B each see only their own `myDocuments`, `settlementDocuments` (sales invoices
 included) and `settlementBalances`, and find nothing of the other by number or contract; a guest gets none of them,
-and neither a guest nor the other customer may download a PDF from `/assets/`. Settlement documents have no Admin
+and a guest or the other customer gets 404 for a PDF. Settlement documents have no Admin
 API, so they are checked in the storefront only. Only the branch-A client has documents on the contour (proforma
 PDFs); `generateContract` would add documents for the others but leaves rows the product cannot remove.
 

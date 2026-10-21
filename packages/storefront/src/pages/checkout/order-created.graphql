@@ -29,9 +29,7 @@ query OrderCreated($code: String!) {
             status
             document {
                 status
-                asset {
-                    source
-                }
+                pdfUrl
             }
         }
     }

@@ -156,9 +156,9 @@ describe('DocumentsService', () => {
             expect(mockRepo.update).toHaveBeenCalledWith('1', { status: 'generating' });
         });
 
-        it('markReady sets status to ready and stores the assetId', async () => {
-            await service.markReady(mockCtx, '1', '99');
-            expect(mockRepo.update).toHaveBeenCalledWith('1', { status: 'ready', assetId: '99' });
+        it('markReady sets status to ready', async () => {
+            await service.markReady(mockCtx, '1');
+            expect(mockRepo.update).toHaveBeenCalledWith('1', { status: 'ready' });
         });
 
         it('markFailed sets status to failed and records the error message', async () => {

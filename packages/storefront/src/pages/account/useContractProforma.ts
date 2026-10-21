@@ -50,8 +50,8 @@ export function useContractProforma(): {
             for (let i = 0; i < PDF_POLL_TRIES && issued.value?.id === id; i++) {
                 const { proformaInvoice } = await shopApi(ContractProformaDocumentDocument, { id });
                 const document = proformaInvoice?.document;
-                if (document?.status === 'ready' && document.asset?.source) {
-                    pdfUrl.value = document.asset.source;
+                if (document?.status === 'ready' && document.pdfUrl) {
+                    pdfUrl.value = document.pdfUrl;
                     return;
                 }
                 if (document?.status === 'failed') return;

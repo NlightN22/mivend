@@ -20,7 +20,7 @@ const route = useRoute();
 const { proformaInvoice, loading, load } = useProformaInvoiceDetail();
 const pdfUrl = computed(() => {
     const document = proformaInvoice.value?.document;
-    return document?.status === 'ready' ? (document.asset?.source ?? null) : null;
+    return document?.status === 'ready' ? (document.pdfUrl ?? null) : null;
 });
 
 // `?print=1` (opened in a new tab after checkout) shows the browser print dialog once loaded.

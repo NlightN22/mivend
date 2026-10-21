@@ -36,9 +36,7 @@ query ProformaInvoiceDetail($id: ID!) {
         }
         document {
             status
-            asset {
-                source
-            }
+            pdfUrl
         }
         order {
             id

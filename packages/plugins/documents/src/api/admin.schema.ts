@@ -12,7 +12,8 @@ export const adminApiExtensions = gql`
         counterpartyId: ID!
         orderId: ID
         fileUrl: String
-        asset: Asset
+        "Authorized download path of a generated PDF; null until ready."
+        pdfUrl: String
     }
 
     type DocumentList {

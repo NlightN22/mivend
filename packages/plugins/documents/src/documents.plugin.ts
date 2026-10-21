@@ -1,3 +1,4 @@
+import path from 'path';
 import { ID } from '@vendure/common/lib/shared-types';
 import { OnApplicationBootstrap } from '@nestjs/common';
 import {
@@ -20,7 +21,11 @@ import {
 } from '@mivend/plugin-acquiring';
 import { subscribeAndLog } from 'shared';
 
-import { loggerCtx } from './constants';
+import { DOCUMENTS_PLUGIN_OPTIONS, loggerCtx } from './constants';
+import type { DocumentsPluginOptions, ResolvedDocumentsPluginOptions } from './types';
+import { DocumentPdfController } from './document-pdf.controller';
+import { DocumentPdfAccessService } from './document-pdf-access.service';
+import { DocumentPdfStorageService } from './pdf/document-pdf-storage.service';
 import { Document } from './entities/document.entity';
 import { OrganizationRequisites } from './entities/organization-requisites.entity';
 import { DocumentsService } from './documents.service';
@@ -45,9 +50,7 @@ import {
 } from './contract-proforma-cleanup.service';
 import { createContractProformaCleanupTask } from './contract-proforma-cleanup.scheduled-task';
 
-export interface DocumentsPluginOptions {
-    contractProformaRetentionMonths?: number;
-}
+export type { DocumentsPluginOptions } from './types';
 
 // Offline-terms payments settle to Authorized, which Vendure maps to PaymentAuthorized;
 // online-stub payments settle to PaymentSettled and must be excluded from proforma generation.
@@ -70,8 +73,20 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
             ProformaInvoiceDocumentFieldResolver,
         ],
     },
+    controllers: [DocumentPdfController],
     providers: [
+        {
+            provide: DOCUMENTS_PLUGIN_OPTIONS,
+            useFactory: (): ResolvedDocumentsPluginOptions => ({
+                ...DocumentsPlugin.options,
+                pdfDir:
+                    DocumentsPlugin.options.pdfDir ??
+                    path.join(process.cwd(), 'static/document-pdfs'),
+            }),
+        },
         ContractProformaCleanupService,
+        DocumentPdfAccessService,
+        DocumentPdfStorageService,
         DocumentsService,
         SupersededProformaRerenderService,
         PdfBrowserService,

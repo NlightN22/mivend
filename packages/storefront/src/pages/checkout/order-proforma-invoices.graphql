@@ -16,9 +16,7 @@ query OrderProformaInvoices($orderCode: String!) {
             }
             document {
                 status
-                asset {
-                    source
-                }
+                pdfUrl
             }
         }
     }

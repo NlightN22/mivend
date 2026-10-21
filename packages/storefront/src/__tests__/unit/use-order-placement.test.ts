@@ -41,14 +41,14 @@ describe('useOrderPlacement', () => {
                         {
                             id: '7',
                             status: 'issued',
-                            document: { status: 'ready', asset: { source: '/assets/a.pdf' } },
+                            document: { status: 'ready', pdfUrl: '/document-pdf/a' },
                         },
                     ],
                 },
             } as never);
         useCheckoutStore().setPayment('bank-transfer');
         await useOrderPlacement().place();
-        expect(open).toHaveBeenCalledWith('/assets/a.pdf', '_blank');
+        expect(open).toHaveBeenCalledWith('/document-pdf/a', '_blank');
         expect(push).toHaveBeenCalledWith({ path: '/order-created', query: { code: 'ORD-1' } });
     });
 

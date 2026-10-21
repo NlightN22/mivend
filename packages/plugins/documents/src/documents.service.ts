@@ -285,7 +285,6 @@ export class DocumentsService {
             source: 'generated' as const,
             erpId: null,
             fileUrl: null,
-            assetId: null,
             metadata: null,
         });
         const saved = await repo.save(entity);
@@ -316,7 +315,6 @@ export class DocumentsService {
             source: 'generated' as const,
             erpId: null,
             fileUrl: null,
-            assetId: null,
             metadata: null,
         });
         const saved = await repo.save(entity);
@@ -333,10 +331,8 @@ export class DocumentsService {
             .update(documentId, { status: 'generating' });
     }
 
-    async markReady(ctx: RequestContext, documentId: ID, assetId: ID): Promise<void> {
-        await this.connection
-            .getRepository(ctx, Document)
-            .update(documentId, { status: 'ready', assetId: String(assetId) });
+    async markReady(ctx: RequestContext, documentId: ID): Promise<void> {
+        await this.connection.getRepository(ctx, Document).update(documentId, { status: 'ready' });
     }
 
     async markFailed(ctx: RequestContext, documentId: ID, error: string): Promise<void> {

@@ -103,7 +103,7 @@ test.describe('proformas per organization', () => {
         const rows = await waitForReadyDocument(page, code);
         requirePdfWorker(rows);
         const [row] = rows as ProformaRow[];
-        const { text, pages } = await pdfTextAndPages(page, row.document?.asset?.source as string);
+        const { text, pages } = await pdfTextAndPages(page, row.document?.pdfUrl as string);
         expect(pages).toBe(1);
         expect(text).toContain(row.number);
         expect(text).toContain('Отсканируйте для оплаты');
@@ -123,21 +123,20 @@ test.describe('proformas per organization', () => {
         const { id: orderId } = await orderTotal(code);
         await modifyOrderQuantity(orderId, 2);
         await requestProformas(page, code);
-        const firstSource = v1.document?.asset?.source;
-        let rerendered: string | undefined;
+        // The file keeps its uuid path across re-renders, so the new render is told apart by its note.
+        let text = '';
         await expect
             .poll(
                 async () => {
                     const old = (await proformasOf(page, code)).find(r => r.id === v1.id);
                     expect(old?.status).toBe('superseded');
-                    if (old?.document?.status !== 'ready') return undefined;
-                    rerendered = old.document.asset?.source;
-                    return Boolean(rerendered) && rerendered !== firstSource;
+                    if (old?.document?.status !== 'ready' || !old.document.pdfUrl) return false;
+                    text = (await pdfTextAndPages(page, old.document.pdfUrl)).text;
+                    return text.includes('Есть более новая версия');
                 },
                 { timeout: 20000 },
             )
             .toBe(true);
-        const { text } = await pdfTextAndPages(page, rerendered as string);
         expect(text).toContain('Есть более новая версия');
         expect(text).not.toContain('не действителен');
         expect(text).toContain('Отсканируйте для оплаты');

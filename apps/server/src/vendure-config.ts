@@ -603,7 +603,7 @@ export const config: VendureConfig = {
         SettlementPlugin,
         // Before DocumentsPlugin: its schema extends ProformaInvoice, and Vendure applies extensions in plugin order.
         ...instancePlugins,
-        DocumentsPlugin,
+        DocumentsPlugin.init({ pdfDir: path.join(__dirname, '../static/document-pdfs') }),
         DeferredPaymentPlugin,
         OnlinePaymentPlugin,
         PickupShippingPlugin,

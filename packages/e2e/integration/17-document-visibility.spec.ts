@@ -3,11 +3,14 @@ import { shopLoginCookie } from '../helpers/api';
 import { adminCall, superadminToken } from './price-type-access';
 import { ACTORS, actorCredentials, actorState, actorToken, expectedIds } from './branch-actors';
 import { envValue, loadContourEnv } from './contour-env';
+import { select } from './contour-db';
 import {
+    assetStatus,
     balanceContracts,
     customerCounterparty,
     documentCount,
-    downloadStatus,
+    download,
+    publicPdfAssets,
     sampleDocuments,
     settlementEntryIds,
     settlementSample,
@@ -18,14 +21,15 @@ import {
 const LIST = `query($cp: ID, $order: ID, $search: String) { documents(counterpartyId: $cp, orderId: $order,
     options: { take: 1, search: $search }) { totalItems items { id } } }`;
 const TYPES = `query($cp: ID) { documentTypes(counterpartyId: $cp) }`;
-const ASSET = `query($id: ID!) { asset(id: $id) { id } }`;
 
 type List = { totalItems: number; items: { id: string }[] };
 
 let superadmin: string;
 let samples: SampleDocument[];
+let startedAt: string;
 
 test.beforeAll(async () => {
+    startedAt = select<{ now: string }>('SELECT now()::text AS now')[0].now;
     superadmin = await superadminToken();
     samples = sampleDocuments();
     expect(samples.length, 'a counterparty with a generated PDF document').toBeGreaterThan(0);
@@ -45,12 +49,25 @@ test.describe('17: documents in the manager portal API', () => {
             expect(
                 (await documents(superadmin, { search: s.number })).items.map(i => i.id),
             ).toContain(s.id);
-            expect(await downloadStatus(s.source, { token: superadmin })).toBe(200);
+            const file = await download(s.uuid, { token: superadmin });
+            expect(file.status, `PDF of ${s.number}`).toBe(200);
+            expect(file.type).toBe('application/pdf');
+            expect(file.disposition).toBe(`attachment; filename="${s.number}.pdf"`);
+            expect(file.body.subarray(0, 5).toString()).toBe('%PDF-');
+        }
+    });
+
+    test('a PDF rendered now never becomes a public asset', async () => {
+        for (const s of samples) {
+            expect((await download(s.uuid, { token: superadmin })).status).toBe(200);
+            const leaked = publicPdfAssets(s, startedAt);
+            for (const source of leaked) expect(await assetStatus(source), source).not.toBe(200);
+            expect(leaked, `public asset of ${s.number}`).toEqual([]);
         }
     });
 
     for (const actor of ACTORS) {
-        test(`${actor.key} (${actor.role}, ${actor.scope}): list, search, order, types, asset`, async () => {
+        test(`${actor.key} (${actor.role}, ${actor.scope}): list, search, order, types, PDF`, async () => {
             test.skip(!actorCredentials(actor.key), `the ${actor.key} login is not set`);
             const visible = expectedIds(actor, actorState(actor));
             const token = await actorToken(actor.key);
@@ -85,11 +102,8 @@ test.describe('17: documents in the manager portal API', () => {
                     'types',
                 ).toBe(shown);
 
-                // The file record carries the PDF link, so a hidden document's asset must not resolve either.
-                const asset = await adminCall(token, ASSET, { id: s.assetId });
-                const resolved =
-                    (asset.data as { asset: { id: string } | null } | null)?.asset ?? null;
-                if (!shown) expect(resolved, `asset of hidden ${s.counterpartyId}`).toBeNull();
+                const file = await download(s.uuid, { token });
+                expect(file.status, `PDF of ${s.counterpartyId}`).toBe(shown ? 200 : 404);
             }
         });
     }
@@ -147,11 +161,13 @@ for (const customer of all) {
             }
         });
 
-        test('cannot download a PDF of another counterparty', async () => {
+        test('downloads its own PDFs and gets 404 for another counterparty', async () => {
             const foreignPdfs = samples.filter(d => d.counterpartyId !== mine);
             test.skip(foreignPdfs.length === 0, 'no PDF of another counterparty on the contour');
             for (const s of foreignPdfs)
-                expect(await downloadStatus(s.source, { cookie }), s.id).not.toBe(200);
+                expect((await download(s.uuid, { cookie })).status, s.id).toBe(404);
+            for (const s of samples.filter(d => d.counterpartyId === mine))
+                expect((await download(s.uuid, { cookie })).status, s.id).toBe(200);
         });
 
         test('sees only its own settlement documents, sales invoices and balances', async () => {
@@ -204,7 +220,6 @@ test.describe('17: a guest', () => {
         expect(settlement.data?.settlementDocuments?.items ?? []).toEqual([]);
         const balances = await shop<Balances>(BALANCES);
         expect(balances.data?.settlementBalances ?? []).toEqual([]);
-        for (const s of samples)
-            expect(await downloadStatus(s.source), `PDF ${s.id}`).not.toBe(200);
+        for (const s of samples) expect((await download(s.uuid)).status, `PDF ${s.id}`).toBe(404);
     });
 });

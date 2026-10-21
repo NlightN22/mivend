@@ -137,14 +137,13 @@ test.describe('Documents page — all document types', () => {
         await page.waitForLoadState('domcontentloaded');
         await expect(page.getByText(proformaInvoice.number)).toBeVisible({ timeout: 10000 });
 
-        // Asset-backed PDFs trigger a native browser download (not a new tab) —
-        // unlike ERP-pushed fileUrl documents, which open as a normal page.
+        // Generated PDFs are sent as an attachment, so they trigger a native browser download.
         const proformaInvoiceRow = page.locator('.doc-row', { hasText: proformaInvoice.number });
         const [download] = await Promise.all([
             page.waitForEvent('download'),
             proformaInvoiceRow.getByRole('link', { name: 'Download' }).click(),
         ]);
-        expect(download.url()).toContain('/assets/source/');
+        expect(download.url()).toContain('/document-pdf/');
     });
 
     test('the Admin generateContract mutation produces a real, downloadable contract document', async ({
@@ -186,7 +185,7 @@ test.describe('Documents page — all document types', () => {
             page.waitForEvent('download'),
             contractRow.getByRole('link', { name: 'Download' }).click(),
         ]);
-        expect(download.url()).toContain('/assets/source/');
+        expect(download.url()).toContain('/document-pdf/');
     });
 
     test('type filter chip narrows the list to matching documents only', async ({ page }) => {

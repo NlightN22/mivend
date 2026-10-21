@@ -3,19 +3,26 @@ import { loadContourEnv } from './contour-env';
 
 export interface SampleDocument {
     id: string;
+    uuid: string;
     number: string;
     counterpartyId: string;
     orderId: string | null;
-    assetId: string;
-    source: string;
 }
 
-// The newest ready document with a PDF per counterparty that has any.
+// The newest ready generated (PDF) document per counterparty that has any.
 export function sampleDocuments(): SampleDocument[] {
-    return select<SampleDocument>(`SELECT DISTINCT ON (d."counterpartyId") d.id::text AS id, d.number,
-            d."counterpartyId" AS "counterpartyId", d."orderId" AS "orderId", a.id::text AS "assetId", a.source
-        FROM document d JOIN asset a ON a.id::text = d."assetId"::text
-        WHERE d.status = 'ready' ORDER BY d."counterpartyId", d.id DESC`);
+    return select<SampleDocument>(`SELECT DISTINCT ON (d."counterpartyId") d.id::text AS id, d.uuid::text AS uuid,
+            d.number, d."counterpartyId" AS "counterpartyId", d."orderId" AS "orderId"
+        FROM document d WHERE d.status = 'ready' AND d.source = 'generated'
+        ORDER BY d."counterpartyId", d.id DESC`);
+}
+
+// Public asset rows named after the document, created since `since`: a PDF must never become one.
+export function publicPdfAssets(doc: SampleDocument, since: string): string[] {
+    return select<{ source: string }>(`SELECT source FROM asset WHERE "createdAt" >= '${since}'
+        AND (source LIKE '%/${doc.number}%.pdf' OR source LIKE '%${doc.uuid}%')`).map(
+        r => r.source,
+    );
 }
 
 export function documentCount(counterpartyIds: string[]): number {
@@ -75,15 +82,26 @@ export async function shop<T>(
     return { data: json.data, errors: (json.errors ?? []).map(e => e.message) };
 }
 
-// The PDF link the portals render: the asset server path of the document's file.
-export async function downloadStatus(
-    source: string,
+// The PDF link the portals render: the authorized endpoint by document uuid (#263).
+export async function download(
+    uuid: string,
     auth?: { cookie?: string; token?: string },
-): Promise<number> {
+): Promise<{ status: number; type: string | null; disposition: string | null; body: Buffer }> {
     const headers: Record<string, string> = {};
     if (auth?.cookie) headers.Cookie = auth.cookie;
     if (auth?.token) headers.Authorization = `Bearer ${auth.token}`;
-    const res = await fetch(`${loadContourEnv().serverUrl}/assets/${source}`, { headers });
+    const res = await fetch(`${loadContourEnv().serverUrl}/document-pdf/${uuid}`, { headers });
+    const body = Buffer.from(await res.arrayBuffer());
+    return {
+        status: res.status,
+        type: res.headers.get('content-type'),
+        disposition: res.headers.get('content-disposition'),
+        body,
+    };
+}
+
+export async function assetStatus(source: string): Promise<number> {
+    const res = await fetch(`${loadContourEnv().serverUrl}/assets/${source}`);
     await res.arrayBuffer();
     return res.status;
 }

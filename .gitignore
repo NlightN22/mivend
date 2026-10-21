@@ -20,6 +20,7 @@ docs/ai/.backup/
 # Generated assets — no leading slash and a trailing /** so this matches at
 # any depth (apps/server/static/assets/, etc.), not just repo-root static/assets/
 **/static/assets/**
+**/static/document-pdfs/**
 storybook-static/
 
 # devMode EmailPlugin output (issue #121) — real generated emails, never source
