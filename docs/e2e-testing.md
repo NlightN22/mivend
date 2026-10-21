@@ -91,6 +91,15 @@ cancelled one (status unchanged). Payments, payment reconciliation issues and re
 cannot be created through the product without an acquirer, so they stay covered by int tests only.
 The only counterparty with proformas is manager-a's own client, so manager-a has no hidden proforma (annotated `gap`).
 
+Document visibility (#263 stage 3, `17`, read-only) takes the newest ready PDF document per counterparty and checks,
+for every actor against the counterparty scope, the `documents` list (total, by counterparty, by order, search by
+number), `documentTypes`, and that a hidden document's PDF `asset(id)` does not resolve; the superadmin proves each
+sample exists. Customers A and B each see only their own `myDocuments`, `settlementDocuments` (sales invoices
+included) and `settlementBalances`, and find nothing of the other by number or contract; a guest gets none of them,
+and neither a guest nor the other customer may download a PDF from `/assets/`. Settlement documents have no Admin
+API, so they are checked in the storefront only. Only the branch-A client has documents on the contour (proforma
+PDFs); `generateContract` would add documents for the others but leaves rows the product cannot remove.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —
