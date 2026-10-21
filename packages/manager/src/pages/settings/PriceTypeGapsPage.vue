@@ -23,7 +23,8 @@ onMounted(() => void g.load());
 
         <MvNotice variant="info">
             These counterparties fall back to the branch default price type because the price type
-            cannot be taken from their main contract. Fix the contract data in the ERP.
+            cannot be taken from their main contract. Fix the contract data in the ERP. A price type
+            set manually for a client is not taken into account here.
         </MvNotice>
         <MvNotice v-if="g.error.value" variant="error">{{ g.error.value }}</MvNotice>
 

@@ -2,6 +2,9 @@
 
 Updated: 2026-10-21 21:00
 
+## #192 price type gaps list (2026-10-21, DONE: audited, local commits `f4bfe9b3` + follow-up)
+- Admin `priceTypeGapCounterparties` (`price-type-gap.service.ts`, scoped by `visibleFilteredQb`, `ReadCustomer`/`ReadCounterparty`) lists active portal counterparties whose main contract chain gives no active PriceType; reasons `no-main-contract`/`contract-not-found`/`contract-inactive`/`price-type-not-synced`. Manager page Settings > "Price type gaps". The SQL predicate is tied to `mainContractPriceTypeIdSql` by an int test; a manual per-customer `CustomerPriceType` is ignored (stated on the page). Local contour logins: `superadmin`/`superadmin`, seeded managers in `packages/e2e/manual-driver.mjs`.
+
 ## #260 storefront demo data (2026-10-20..21, DONE: audited 2 rounds, pushed, closed)
 - `useDemoMode()` = `!import.meta.env.PROD`: dev keeps demo pages/widgets, production shows `MvNotImplemented` or hides links (`demoOnlyLinks.ts`). Stubbed in prod: reconciliation acts, requests, employees, frequent products, notification prefs. Real now: account dashboard/orders, settings (profile, password), payment result, Balance page.
 - Balance: Shop `myContracts`, `settlementDocuments(filter.unpaidOnly)` + `openAmount`; demo seed `infrastructure/scripts/seed-balance-demo.mjs` (balance-demo@test.example, not used by e2e).

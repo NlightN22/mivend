@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { mainContractPriceTypeIdSql } from '@mivend/plugin-customer-pricing';
 import {
     createTestSchema,
     dropTestSchema,
@@ -103,6 +104,28 @@ describe('price type gap predicate', () => {
             'no-contract-id',
             'unknown-price-type',
         ]);
+    });
+
+    it('lists exactly the counterparties whose customer resolves no price type', async () => {
+        await dataSource.getRepository(TestPriceType).save([{ externalId: 'pt-ok' }]);
+        await dataSource.getRepository(TestContract).save([
+            { erpId: 'k-ok', priceTypeId: 'pt-ok' },
+            { erpId: 'k-off', priceTypeId: 'pt-ok', isActive: false },
+        ]);
+        for (const [name, contract] of [
+            ['a', 'k-ok'],
+            ['b', null],
+            ['c', 'k-off'],
+            ['d', 'k-missing'],
+        ] as const) {
+            await seed(name, contract);
+        }
+        const unresolved: Array<{ shortName: string }> = await dataSource.query(
+            `SELECT cp."shortName" FROM customer cu
+             JOIN counterparty cp ON cp.id::text = cu."customFieldsCounterpartyid"::text
+             WHERE ${mainContractPriceTypeIdSql('cu.id')} IS NULL ORDER BY cp."shortName"`,
+        );
+        expect(await gaps()).toEqual(unresolved.map(r => r.shortName));
     });
 
     it('skips counterparties without a portal customer', async () => {

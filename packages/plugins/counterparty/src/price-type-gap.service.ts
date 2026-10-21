@@ -46,14 +46,14 @@ export class PriceTypeGapService {
         if (options?.search?.trim()) {
             qb.andWhere(
                 '(c.shortName ILIKE :term OR c.legalName ILIKE :term OR c.inn ILIKE :term)',
-                { term: `%${options.search.trim()}%` },
+                { term: `%${options.search.trim().replace(/[\\%_]/g, '\\$&')}%` },
             );
         }
         const [counterparties, totalItems] = await qb
             .orderBy('c.shortName', 'ASC')
             .addOrderBy('c.id', 'ASC')
-            .take(Math.min(options?.take ?? 25, MAX_TAKE))
-            .skip(options?.skip ?? 0)
+            .take(Math.min(Math.max(options?.take ?? 25, 1), MAX_TAKE))
+            .skip(Math.max(options?.skip ?? 0, 0))
             .getManyAndCount();
 
         const contractIds = counterparties.flatMap(c =>

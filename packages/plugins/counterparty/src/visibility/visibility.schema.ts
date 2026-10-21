@@ -58,7 +58,7 @@ export const visibilitySchema: DocumentNode = gql`
         legalName: String!
         inn: String
         mainContractId: String
-        "no-main-contract | contract-not-found | contract-inactive | price-type-not-synced"
+        "no-main-contract | contract-not-found | contract-inactive | price-type-not-synced (the price type is missing, inactive or not set on an active contract)"
         reason: String!
     }
 
