@@ -87,9 +87,19 @@ actor twice: with the point at its counterparty's branch, and with the point ove
 (set through `updateTradingPointDetails`, removed in `afterAll`). Each run checks `visibleProformaInvoices` for the
 counterparty (total and search by number), `proformaInvoicesForOrder`, `proformaInvoiceOutstandingBalance`,
 `visiblePayments` when the contour has payments, and for hidden proformas a `withdrawProformaInvoice` denial on the
-cancelled one (status unchanged). Payments, payment reconciliation issues and refunds have no rows on the contour and
-cannot be created through the product without an acquirer, so they stay covered by int tests only.
-The only counterparty with proformas is manager-a's own client, so manager-a has no hidden proforma (annotated `gap`).
+cancelled one (status unchanged). Its samples belong to manager-a's own client, so manager-a has no hidden proforma
+here (annotated `gap`); `16` adds the branch-B proforma that gives manager-a and head-a a hidden one.
+
+Payment visibility (#263 stage 2, `16`): `payment-fixtures.ts` makes, once per contour and reused by later runs, one
+captured demo-stub payment per test customer (A and B, different branches) through Shop `payProformaInvoice`
+(customer B first places a one-line order and calls `requestProformaInvoices`; the order is staff-cancelled in
+teardown) and one refund per payment through the superadmin `recordPaymentRefund` (stable `providerRefundId`). Payments
+and refunds stay on the contour by the owner's decision. Every actor is checked against the read-time branch rule for
+`visibleProformaInvoices` and `visiblePayments` per counterparty and `openPaymentReconciliationIssues`, and is refused
+`recordPaymentRefund` (row count unchanged) and, on a hidden sample, `withdrawProformaInvoice`; every scoped actor must
+have a hidden sample. Uncovered: no payment reconciliation issue can arise through the product here (the ERP payment
+callback stays off on this contour and the Shop stub gives every payment a new reference), so the issue list is only
+compared with an empty set (annotated `gap`); the Admin API has no refund read, so refund visibility is not checked.
 
 Document visibility (#263 stage 3, `17`, read-only) takes the newest ready PDF document per counterparty and checks,
 for every actor against the counterparty scope, the `documents` list (total, by counterparty, by order, search by
