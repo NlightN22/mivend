@@ -34,9 +34,10 @@ test.describe('Account statement section', () => {
         await expect(page.getByText('No documents found.')).toBeVisible();
     });
 
-    test('reconciliation acts is a placeholder', async ({ page }) => {
+    // e2e runs the dev build, which keeps the demo page; production shows a stub (#260).
+    test('reconciliation acts page opens in the dev build', async ({ page }) => {
         await page.goto('/reconciliation-acts');
 
-        await expect(page.getByText('Not implemented yet.')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Reconciliation acts' })).toBeVisible();
     });
 });
