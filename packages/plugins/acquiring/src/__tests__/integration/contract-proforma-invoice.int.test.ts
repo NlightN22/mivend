@@ -64,6 +64,12 @@ class TestContract {
     @Column({ type: 'boolean', nullable: true }) isCustomerContract!: boolean | null;
 }
 
+@Entity('counterparty')
+class TestCounterparty {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar', nullable: true }) branchId!: string | null;
+}
+
 @Entity('organization_requisites')
 class TestOrganization {
     @PrimaryGeneratedColumn() id!: number;
@@ -109,7 +115,13 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestProformaInvoice, TestContract, TestOrganization, TestSettlementEntry],
+        entities: [
+            TestProformaInvoice,
+            TestContract,
+            TestOrganization,
+            TestSettlementEntry,
+            TestCounterparty,
+        ],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -150,11 +162,12 @@ let foreignContractId: string;
 
 beforeEach(async () => {
     await dataSource.query(
-        'TRUNCATE proforma_invoice, contract, organization_requisites, settlement_entry RESTART IDENTITY',
+        'TRUNCATE proforma_invoice, contract, organization_requisites, settlement_entry, counterparty RESTART IDENTITY',
     );
     published = [];
     callerCounterparty = '1';
     await dataSource.getRepository(TestOrganization).save({ erpId: 'org-a' });
+    await dataSource.getRepository(TestCounterparty).save({ branchId: 'branch-a' });
     const contract = (erpId: string, counterpartyId: string, isActive: boolean) => ({
         erpId,
         counterpartyId,
@@ -197,6 +210,7 @@ describe('ContractProformaInvoiceService (real Postgres)', () => {
             amount: 6_000_000,
             contractId: ownContractId,
             contractName: 'Contract own',
+            branchId: 'branch-a',
         });
         expect(advance).toMatchObject({ kind: 'advance', amount: 1_500_000 });
         expect(debt.number).toBe('1000000001');
@@ -222,6 +236,13 @@ describe('ContractProformaInvoiceService (real Postgres)', () => {
         expect(new Set([a.id, b.id, c.id]).size).toBe(1);
         expect(await rows()).toHaveLength(1);
         expect(published).toHaveLength(1);
+    });
+
+    it('rejects a reused idempotency key with a different request', async () => {
+        await issue(ownContractId, 'debt-repayment', 'key-reuse-001');
+        await expect(issue(ownContractId, 'advance', 'key-reuse-001')).rejects.toThrow();
+        await expect(issue(ownContractId, 'debt-repayment', 'key-reuse-001', 1)).rejects.toThrow();
+        expect(await rows()).toHaveLength(1);
     });
 
     it('is never picked by payment allocation', async () => {

@@ -49,7 +49,7 @@ export class ContractProformaInvoiceService {
         const contract = contracts.find(c => String(c.id) === String(input.contractId));
         if (!contract) throw new ForbiddenError();
         const organizationId = await this.organizationIdOf(ctx, contract.organizationId);
-        const branchId = await this.branchOf(ctx);
+        const branchId = await this.branchOf(ctx, counterpartyId);
         const contractName = contract.name ?? contract.erpId;
 
         const { invoice, created } = await withAggregateLock(
@@ -64,7 +64,18 @@ export class ContractProformaInvoiceService {
                         idempotencyKey: input.idempotencyKey,
                     },
                 });
-                if (existing) return { invoice: existing, created: false };
+                if (existing) {
+                    if (
+                        existing.contractId !== String(contract.id) ||
+                        existing.kind !== input.mode ||
+                        Number(existing.amount) !== input.amount
+                    ) {
+                        throw new UserInputError(
+                            'The idempotency key was used for another request',
+                        );
+                    }
+                    return { invoice: existing, created: false };
+                }
                 const settings = await this.branchSettingsService.resolveEffective(txCtx, branchId);
                 const issuedAt = new Date();
                 const vat = await findDefaultVatRate(this.connection, txCtx);
@@ -110,12 +121,23 @@ export class ContractProformaInvoiceService {
         return Number(rows[0].id);
     }
 
-    private async branchOf(ctx: RequestContext): Promise<string | null> {
+    private async branchOf(
+        ctx: RequestContext,
+        counterpartyId: string | number,
+    ): Promise<string | null> {
         const customer = ctx.activeUserId
             ? await this.customerService.findOneByUserId(ctx, ctx.activeUserId)
             : undefined;
-        if (!customer) return null;
-        const point = await this.tradingPointService.getPreferredForCustomer(ctx, customer.id);
-        return point ? this.tradingPointService.resolveServicingBranchId(ctx, point) : null;
+        const point = customer
+            ? await this.tradingPointService.getPreferredForCustomer(ctx, customer.id)
+            : null;
+        if (point) return this.tradingPointService.resolveServicingBranchId(ctx, point);
+        const rows = await ctxQuery<Array<{ branchId: string | null }>>(
+            this.connection,
+            ctx,
+            `SELECT "branchId" FROM counterparty WHERE id = $1`,
+            [counterpartyId],
+        );
+        return rows[0]?.branchId ?? null;
     }
 }
