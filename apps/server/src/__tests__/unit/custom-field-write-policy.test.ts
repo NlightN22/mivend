@@ -67,6 +67,21 @@ describe('client-writable custom fields (#266)', () => {
         },
     );
 
+    it('hides staff-written internal fields from the Shop API but keeps them in Admin', () => {
+        const entities = Object.keys(customFields).filter(e => e !== 'OrderLine');
+        const sdl = `${baseSdl(entities)}\ntype OrderLine { id: ID! }`;
+        const shop = addGraphQLCustomFields(sdl, customFields, true);
+        const admin = addGraphQLCustomFields(sdl, customFields, false);
+        const cases: Array<[string, string]> = [
+            ['OrderLineCustomFields', 'manualPriceReason'],
+            ['OrderCustomFields', 'placedByAdministratorId'],
+        ];
+        for (const [type, field] of cases) {
+            expect(inputFieldNames(shop, type), `shop ${type}`).not.toContain(field);
+            expect(inputFieldNames(admin, type), `admin ${type}`).toContain(field);
+        }
+    });
+
     it('keeps every OrderLine field readonly: Vendure does not strip them from the addItemToOrder input', () => {
         const writable = (customFields.OrderLine ?? []).filter(f => !f.readonly).map(f => f.name);
         expect(writable).toEqual([]);

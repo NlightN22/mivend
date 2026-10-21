@@ -353,6 +353,7 @@ const adminApiSchema = gql`
             {
                 name: 'manualPriceReason',
                 type: 'string' as const,
+                public: false,
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Manual price override reason' }],
             },

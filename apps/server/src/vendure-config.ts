@@ -275,6 +275,7 @@ export const config: VendureConfig = {
                 // Null when a storefront customer placed the order; denormalized so it sorts server-side.
                 name: 'placedByAdministratorId',
                 type: 'string',
+                public: false,
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'Placed By (Administrator)' }],
             },
