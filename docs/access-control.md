@@ -461,6 +461,19 @@ becomes a real requirement, not preemptively.
 
 ---
 
+### Custom fields are read-only to clients by default (#266)
+
+`CustomFieldWritePolicyPlugin` (`apps/server/src/custom-field-write-policy.plugin.ts`, last in `plugins`) marks every
+custom field `readonly: true` unless it is listed in `CLIENT_WRITABLE_CUSTOM_FIELDS`. Readonly strips the field from the
+`Create/Update<Entity>CustomFieldsInput` types and the interceptor rejects it ("is readonly"); services still write it.
+`OrderLineCustomFieldsInput` keeps readonly fields in the schema, so the interceptor is the only barrier there.
+
+- A new custom field needs no flag: it is service-only. To let a client set it, add it to the allow-list with the reason.
+- Guard: `apps/server/src/__tests__/unit/custom-field-write-policy.test.ts` builds the Shop and Admin schemas from the real
+  config and fails if any Create/Update input exposes a field outside the allow-list.
+- `public` only controls reading in the Shop API; it never makes a field writable.
+- Shop/Admin introspection is off when `NODE_ENV=production` (it lists every writable input).
+
 ### Scope guards on permission-only reads
 
 A permission alone never exposes another scope's rows. These Admin API reads re-check scope in the backend:

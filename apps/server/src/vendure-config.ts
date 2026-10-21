@@ -67,6 +67,7 @@ import { ErpUsersDashboardPlugin } from './erp-users-dashboard.plugin';
 import { ProductPhotosDashboardPlugin } from './product-photos-dashboard.plugin';
 import { CounterpartyDashboardPlugin } from './counterparty-dashboard.plugin';
 import { RoleProvisioningDashboardPlugin } from './role-provisioning-dashboard.plugin';
+import { CustomFieldWritePolicyPlugin } from './custom-field-write-policy.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
 const instanceNumberCode = process.env.INSTANCE_NUMBER_CODE ?? '';
@@ -149,6 +150,7 @@ export const config: VendureConfig = {
         port: parseInt(process.env.PORT ?? '3000'),
         adminApiPath: 'admin-api',
         shopApiPath: 'shop-api',
+        introspection: process.env.NODE_ENV !== 'production',
     },
     importExportOptions: {
         importAssetsDir: path.join(__dirname, '../../../infrastructure/fixtures/category-icons'),
@@ -798,5 +800,6 @@ export const config: VendureConfig = {
         NotificationPlugin,
         MoqPlugin,
         SavedViewsPlugin,
+        CustomFieldWritePolicyPlugin,
     ],
 };
