@@ -4,7 +4,7 @@ import { clearCart, gql } from './helpers';
 interface OrderLine {
     id: string;
     quantity: number;
-    unitPrice: number;
+    unitPriceWithTax: number;
     productVariant: { sku: string };
 }
 
@@ -38,14 +38,14 @@ async function waitForUnitPrice(
     while (Date.now() < deadline) {
         const result = await gql(
             page,
-            `query { activeOrder { lines { id quantity unitPrice productVariant { sku } } } }`,
+            `query { activeOrder { lines { id quantity unitPriceWithTax productVariant { sku } } } }`,
         );
         const line = lineFor((result.activeOrder as { lines: OrderLine[] }).lines, sku);
-        last = line.unitPrice;
+        last = line.unitPriceWithTax;
         if (last === expected) return;
         await new Promise(r => setTimeout(r, 200));
     }
-    throw new Error(`Timed out waiting for ${sku} unitPrice=${expected}, last seen ${last}`);
+    throw new Error(`Timed out waiting for ${sku} unitPriceWithTax=${expected}, last seen ${last}`);
 }
 
 // Vendure only recalculates the mutated OrderLine; without TierRebalanceService,
@@ -64,7 +64,7 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { id quantity unitPrice productVariant { sku } } }
+                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: oil1 },
@@ -73,7 +73,7 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
             (add1.addItemToOrder as { lines: OrderLine[] }).lines,
             'E2E-OIL-001',
         );
-        expect(oil1LineAfterAdd1.unitPrice).toBe(Math.round(76500 * 0.9));
+        expect(oil1LineAfterAdd1.unitPriceWithTax).toBe(Math.round(76500 * 0.9));
 
         // Add oil2 at qty 1: aggregate weight 100 + 50 = 150kg — still under 200kg.
         const add2 = await gql(
@@ -81,14 +81,14 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { id quantity unitPrice productVariant { sku } } }
+                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: oil2 },
         );
         let lines = (add2.addItemToOrder as { lines: OrderLine[] }).lines;
-        expect(lineFor(lines, 'E2E-OIL-002').unitPrice).toBe(Math.round(49500 * 0.9));
-        expect(lineFor(lines, 'E2E-OIL-001').unitPrice).toBe(Math.round(76500 * 0.9));
+        expect(lineFor(lines, 'E2E-OIL-002').unitPriceWithTax).toBe(Math.round(49500 * 0.9));
+        expect(lineFor(lines, 'E2E-OIL-001').unitPriceWithTax).toBe(Math.round(76500 * 0.9));
 
         // oil1 is not touched by this mutation but must still move to the 25% tier.
         const oil2LineId = lineFor(lines, 'E2E-OIL-002').id;
@@ -97,7 +97,7 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
             `mutation($lineId: ID!) {
                 adjustOrderLine(orderLineId: $lineId, quantity: 3) {
                     __typename
-                    ... on Order { lines { id quantity unitPrice productVariant { sku } } }
+                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { lineId: oil2LineId },
@@ -106,7 +106,7 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
 
         const oil2Line = lineFor(lines, 'E2E-OIL-002');
         expect(oil2Line.quantity).toBe(3);
-        expect(oil2Line.unitPrice).toBe(Math.round(49500 * 0.75));
+        expect(oil2Line.unitPriceWithTax).toBe(Math.round(49500 * 0.75));
 
         // oil1 — untouched by this mutation — must also land on the 25% tier, via the
         // async rebalance subscriber (runs after this mutation's transaction commits).

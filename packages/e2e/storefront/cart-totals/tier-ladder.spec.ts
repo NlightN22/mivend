@@ -80,9 +80,10 @@ test.describe('Cart tier ladder @cart-totals', () => {
         await expectUiMatchesApi(page, up);
         const upSibling = up.lines.find(l => l.productVariant.sku === LADDER_SKUS[1])!;
         const baseSibling = base.lines.find(l => l.productVariant.sku === LADDER_SKUS[1])!;
-        expect(upSibling.unitPrice, 'sibling unit price drops after the tier unlocks').toBeLessThan(
-            baseSibling.unitPrice,
-        );
+        expect(
+            upSibling.unitPriceWithTax,
+            'sibling unit price drops after the tier unlocks',
+        ).toBeLessThan(baseSibling.unitPriceWithTax);
 
         await setQuantity(page, up, LADDER_SKUS[0], 1);
         const down = await settledCart(page);

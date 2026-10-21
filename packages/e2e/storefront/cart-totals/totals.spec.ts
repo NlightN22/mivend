@@ -34,7 +34,9 @@ test.describe('Cart totals @cart-totals', () => {
         await addSku(page, DISCOUNTED_SKUS[1], 2);
         const cart = await settledCart(page);
         expect(
-            cart.lines.every(l => l.compareAtPrice != null && l.compareAtPrice > l.unitPrice),
+            cart.lines.every(
+                l => l.compareAtPrice != null && l.compareAtPrice > l.unitPriceWithTax,
+            ),
         ).toBe(true);
         expectConsistent(cart);
         await expectUiMatchesApi(page, cart);
@@ -69,7 +71,7 @@ test.describe('Cart totals @cart-totals', () => {
         const cart = await settledCart(page);
         for (const line of cart.lines) {
             expect(
-                Math.abs(line.unitPrice * line.quantity - line.linePriceWithTax),
+                Math.abs(line.unitPriceWithTax * line.quantity - line.linePriceWithTax),
                 `API ${line.productVariant.sku}`,
             ).toBeLessThanOrEqual(line.quantity);
         }

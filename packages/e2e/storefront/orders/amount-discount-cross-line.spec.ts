@@ -4,7 +4,7 @@ import { clearCart, gql } from './helpers';
 interface OrderLine {
     id: string;
     quantity: number;
-    unitPrice: number;
+    unitPriceWithTax: number;
     productVariant: { sku: string };
 }
 
@@ -38,14 +38,14 @@ async function waitForUnitPrice(
     while (Date.now() < deadline) {
         const result = await gql(
             page,
-            `query { activeOrder { lines { id quantity unitPrice productVariant { sku } } } }`,
+            `query { activeOrder { lines { id quantity unitPriceWithTax productVariant { sku } } } }`,
         );
         const line = lineFor((result.activeOrder as { lines: OrderLine[] }).lines, sku);
-        last = line.unitPrice;
+        last = line.unitPriceWithTax;
         if (last === expected) return;
         await new Promise(r => setTimeout(r, 200));
     }
-    throw new Error(`Timed out waiting for ${sku} unitPrice=${expected}, last seen ${last}`);
+    throw new Error(`Timed out waiting for ${sku} unitPriceWithTax=${expected}, last seen ${last}`);
 }
 
 // Same coverage as volume-discount-cross-line.spec.ts, but for the spend-amount metric
@@ -65,13 +65,14 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { id quantity unitPrice productVariant { sku } } }
+                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: brk1 },
         );
         expect(
-            lineFor((add1.addItemToOrder as { lines: OrderLine[] }).lines, 'E2E-BRK-001').unitPrice,
+            lineFor((add1.addItemToOrder as { lines: OrderLine[] }).lines, 'E2E-BRK-001')
+                .unitPriceWithTax,
         ).toBe(Math.round(108000 * 0.92));
 
         // Add brk2 at qty 1: aggregate spend 1080 + 720 = 1800₽ — still under 2000₽, same 8%
@@ -81,14 +82,14 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { id quantity unitPrice productVariant { sku } } }
+                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: brk2 },
         );
         let lines = (add2.addItemToOrder as { lines: OrderLine[] }).lines;
-        expect(lineFor(lines, 'E2E-BRK-002').unitPrice).toBe(Math.round(72000 * 0.92));
-        expect(lineFor(lines, 'E2E-BRK-001').unitPrice).toBe(Math.round(108000 * 0.92));
+        expect(lineFor(lines, 'E2E-BRK-002').unitPriceWithTax).toBe(Math.round(72000 * 0.92));
+        expect(lineFor(lines, 'E2E-BRK-001').unitPriceWithTax).toBe(Math.round(108000 * 0.92));
 
         // Bump brk2 to qty 2: aggregate spend 1080 + 720*2 = 2520₽ — crosses the 2000₽
         // tier (30%). brk1 — untouched by this mutation — must also drop to the tier.
@@ -98,7 +99,7 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
             `mutation($lineId: ID!) {
                 adjustOrderLine(orderLineId: $lineId, quantity: 2) {
                     __typename
-                    ... on Order { lines { id quantity unitPrice productVariant { sku } } }
+                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { lineId: brk2LineId },
@@ -107,7 +108,7 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
 
         const brk2Line = lineFor(lines, 'E2E-BRK-002');
         expect(brk2Line.quantity).toBe(2);
-        expect(brk2Line.unitPrice).toBe(Math.round(72000 * 0.7));
+        expect(brk2Line.unitPriceWithTax).toBe(Math.round(72000 * 0.7));
 
         // brk1 — untouched by this mutation — must also drop to the tier, via the async
         // rebalance subscriber (runs after this mutation's transaction commits).

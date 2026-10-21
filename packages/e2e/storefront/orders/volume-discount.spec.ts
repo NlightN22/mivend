@@ -3,7 +3,7 @@ import { clearCart, gql } from './helpers';
 
 interface OrderLine {
     quantity: number;
-    unitPrice: number;
+    unitPriceWithTax: number;
     productVariant: { sku: string };
 }
 
@@ -40,13 +40,13 @@ test.describe('Volume-tiered discount', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { quantity unitPrice productVariant { sku } } }
+                    ... on Order { lines { quantity unitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: variantId },
         );
         const firstLines = (firstAdd.addItemToOrder as { lines: OrderLine[] }).lines;
-        const flatDiscountedPrice = lineFor(firstLines, 'E2E-OIL-001').unitPrice;
+        const flatDiscountedPrice = lineFor(firstLines, 'E2E-OIL-001').unitPriceWithTax;
         expect(flatDiscountedPrice).toBe(Math.round(76500 * 0.9));
 
         // Second unit crosses the 200kg threshold (2 * 100kg) — the 25% tier now wins.
@@ -55,7 +55,7 @@ test.describe('Volume-tiered discount', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { quantity unitPrice productVariant { sku } } }
+                    ... on Order { lines { quantity unitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: variantId },
@@ -63,7 +63,7 @@ test.describe('Volume-tiered discount', () => {
         const secondLines = (secondAdd.addItemToOrder as { lines: OrderLine[] }).lines;
         const line = lineFor(secondLines, 'E2E-OIL-001');
         expect(line.quantity).toBe(2);
-        expect(line.unitPrice).toBe(Math.round(76500 * 0.75));
-        expect(line.unitPrice).toBeLessThan(flatDiscountedPrice);
+        expect(line.unitPriceWithTax).toBe(Math.round(76500 * 0.75));
+        expect(line.unitPriceWithTax).toBeLessThan(flatDiscountedPrice);
     });
 });

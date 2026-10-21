@@ -10,13 +10,13 @@ export const ACCOUNT_GRANT_PERCENT = 8;
 
 export function discountPercent(line: CartLine): number {
     if (line.compareAtPrice == null || line.compareAtPrice <= 0) return 0;
-    return Math.round((1 - line.unitPrice / line.compareAtPrice) * 100);
+    return Math.round((1 - line.unitPriceWithTax / line.compareAtPrice) * 100);
 }
 
 export interface CartLine {
     id: string;
     quantity: number;
-    unitPrice: number;
+    unitPriceWithTax: number;
     linePriceWithTax: number;
     compareAtPrice: number | null;
     productVariant: { sku: string };
@@ -29,7 +29,7 @@ export interface Cart {
 }
 
 const ORDER_FIELDS = `totalWithTax subTotalWithTax
-    lines { id quantity unitPrice linePriceWithTax compareAtPrice productVariant { sku } }`;
+    lines { id quantity unitPriceWithTax linePriceWithTax compareAtPrice productVariant { sku } }`;
 
 export async function fetchCart(page: Page): Promise<Cart> {
     const data = await gql(page, `query { activeOrder { ${ORDER_FIELDS} } }`);
@@ -83,8 +83,8 @@ export function sumLines(cart: Cart): number {
 
 export function expectedDiscount(cart: Cart): number {
     return cart.lines.reduce((sum, l) => {
-        if (l.compareAtPrice == null || l.compareAtPrice <= l.unitPrice) return sum;
-        const ratio = (l.compareAtPrice - l.unitPrice) / l.unitPrice;
+        if (l.compareAtPrice == null || l.compareAtPrice <= l.unitPriceWithTax) return sum;
+        const ratio = (l.compareAtPrice - l.unitPriceWithTax) / l.unitPriceWithTax;
         return sum + Math.round(l.linePriceWithTax * ratio);
     }, 0);
 }

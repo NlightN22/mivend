@@ -86,9 +86,14 @@ export const useCartStore = defineStore('cart', () => {
     // so each line's discount is added back to show the pre-discount subtotal.
     const discountAmount = computed(() =>
         lines.value.reduce((sum, line) => {
-            if (line.compareAtPrice == null || line.unitPrice == null || line.unitPrice === 0)
+            if (
+                line.compareAtPrice == null ||
+                line.unitPriceWithTax == null ||
+                line.unitPriceWithTax === 0
+            )
                 return sum;
-            const discountRatio = (line.compareAtPrice - line.unitPrice) / line.unitPrice;
+            const discountRatio =
+                (line.compareAtPrice - line.unitPriceWithTax) / line.unitPriceWithTax;
             return sum + Math.round(line.linePriceWithTax * discountRatio);
         }, 0),
     );
@@ -180,9 +185,9 @@ export const useCartStore = defineStore('cart', () => {
                             ),
                         };
                     }
-                    if (serverLine?.compareAtPrice != null && serverLine.unitPrice != null) {
+                    if (serverLine?.compareAtPrice != null && serverLine.unitPriceWithTax != null) {
                         const percent = Math.round(
-                            (1 - serverLine.unitPrice / serverLine.compareAtPrice) * 100,
+                            (1 - serverLine.unitPriceWithTax / serverLine.compareAtPrice) * 100,
                         );
                         const brand = brandOf(serverLine.productVariant.product.manufacturer);
                         if (percent > 0 && brand) discountResult = { brand, percent };

@@ -13,7 +13,7 @@ query ActiveOrder {
             }
             linePrice
             linePriceWithTax
-            unitPrice
+            unitPriceWithTax
             compareAtPrice
             tierProgress {
                 facetName
@@ -64,7 +64,7 @@ mutation AddToCart($variantId: ID!, $qty: Int!) {
             lines {
                 id
                 quantity
-                unitPrice
+                unitPriceWithTax
                 compareAtPrice
                 productVariant {
                     id

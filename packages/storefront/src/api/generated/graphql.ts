@@ -5385,7 +5385,7 @@ export type ActiveOrderQuery = {
             quantity: number;
             linePrice: any;
             linePriceWithTax: any;
-            unitPrice: any;
+            unitPriceWithTax: any;
             compareAtPrice?: number | null;
             featuredAsset?: { preview: string } | null;
             tierProgress?: {
@@ -5444,7 +5444,7 @@ export type AddToCartMutation = {
               lines: Array<{
                   id: string;
                   quantity: number;
-                  unitPrice: any;
+                  unitPriceWithTax: any;
                   compareAtPrice?: number | null;
                   productVariant: {
                       id: string;
@@ -6758,7 +6758,7 @@ export const ActiveOrderDocument = new TypedDocumentString(`
       }
       linePrice
       linePriceWithTax
-      unitPrice
+      unitPriceWithTax
       compareAtPrice
       tierProgress {
         facetName
@@ -6810,7 +6810,7 @@ export const AddToCartDocument = new TypedDocumentString(`
       lines {
         id
         quantity
-        unitPrice
+        unitPriceWithTax
         compareAtPrice
         productVariant {
           id
