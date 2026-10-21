@@ -59,7 +59,7 @@ export class ProformaInvoiceVisibilityService {
             .andWhere('proformaInvoice.status IN (:...statuses)', {
                 statuses: ['pending', 'issued'],
             })
-            .andWhere('proformaInvoice.kind NOT IN (:...contractKinds)', {
+            .andWhere('"proformaInvoice"."kind" NOT IN (:...contractKinds)', {
                 contractKinds: CONTRACT_PAYMENT_KINDS,
             });
         this.applyScope(qb, scope);

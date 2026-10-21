@@ -18,6 +18,7 @@ class TestProformaInvoice {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'int' }) orderId!: number;
     @Column({ type: 'varchar', default: 'pending' }) status!: string;
+    @Column({ type: 'varchar', default: 'order' }) kind!: string;
     @Column({ type: 'int', nullable: true }) supersededById!: number | null;
     @Column({ type: 'timestamptz', nullable: true }) withdrawnAt!: Date | null;
     @Column({ type: 'varchar', nullable: true }) withdrawnByAdministratorId!: string | null;

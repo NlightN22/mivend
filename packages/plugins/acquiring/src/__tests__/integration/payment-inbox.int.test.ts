@@ -66,6 +66,7 @@ class TestProformaInvoice {
     @Column({ type: 'int' }) amount!: number;
     @Column({ type: 'varchar' }) currencyCode!: string;
     @Column({ type: 'varchar', default: 'pending' }) status!: string;
+    @Column({ type: 'varchar', default: 'order' }) kind!: string;
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }) createdAt!: Date;
     @Column({ type: 'int', nullable: true }) supersededById!: number | null;
 }
