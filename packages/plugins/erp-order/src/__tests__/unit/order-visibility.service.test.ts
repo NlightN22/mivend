@@ -53,6 +53,7 @@ describe('OrderVisibilityService', () => {
         service = new OrderVisibilityService(
             listQueryBuilder as unknown as ListQueryBuilder,
             accessScopeService as unknown as AccessScopeService,
+            { getGlobalDefaultBranchId: vi.fn(async () => 'branch-default') } as never,
         );
     });
 
@@ -71,7 +72,7 @@ describe('OrderVisibilityService', () => {
         );
     });
 
-    it('filters by the order\'s own servicing branch for "department" scope, ignoring departmentId entirely', async () => {
+    it('resolves the order branch at read time for "department" scope, with no IS NULL carve-out', async () => {
         accessScopeService.resolveOrderScope.mockResolvedValue({
             kind: 'department',
             departmentId: 'dept-1',
@@ -80,27 +81,13 @@ describe('OrderVisibilityService', () => {
 
         await service.findVisible(mockCtx);
 
-        // Scope by the order's own customFieldsBranchid, not Counterparty.branchId: chain accounts' orders
-        // may be serviced by another branch. departmentId is display-only; the NULL clause is required.
-        expect(qb.andWhere).toHaveBeenCalledWith(
-            '("order"."customFieldsBranchid" = :branchId OR "order"."customFieldsBranchid" IS NULL)',
-            { branchId: 'branch-1' },
-        );
-    });
-
-    it('does not exclude a branch-less order (customFieldsBranchid IS NULL) from department scope', async () => {
-        // Without the explicit OR ... IS NULL, `column = :branchId` yields NULL for null columns and drops
-        // branch-less orders for all scoped viewers; null branchId is normal (optional field).
-        accessScopeService.resolveOrderScope.mockResolvedValue({
-            kind: 'department',
-            departmentId: 'dept-1',
-            branchId: 'branch-1',
-        });
-
-        await service.findVisible(mockCtx);
-
-        const [sql] = qb.andWhere.mock.calls[0];
-        expect(sql).toContain('IS NULL');
+        const [sql, params] = qb.andWhere.mock.calls[0];
+        expect(sql).toContain('tp."servicingBranchId"');
+        expect(sql).toContain('counterparty."branchId"');
+        expect(sql).not.toContain('customFieldsBranchid');
+        expect(sql).not.toContain('IS NULL');
+        expect(sql).not.toContain('departmentId');
+        expect(params).toEqual({ branchId: 'branch-1', orderDefaultBranchId: 'branch-default' });
     });
 
     it('applies no extra filter for "all" scope', async () => {

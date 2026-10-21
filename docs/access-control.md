@@ -407,31 +407,25 @@ scope.branchId` anyway. It "worked" only by accident — `Administrator.customFi
   Deliberately **no** `OR c.branchId IS NULL` carve-out — an unassigned Counterparty is invisible
   to every branch-scoped role (deny-by-default), visible only to `'all'`-scope roles
   (general-director, portal-admin), until issue #65/#123's real assignment/triage workflow
-  populates `branchId` for real accounts. This intentionally differs from Order/ProformaInvoice's own
-  `OR branchId IS NULL` carve-out below — those resources denormalize a _different_, more
-  reliably-populated `branchId` (from `TradingPoint.servicingBranchId`/an order's placement-time
-  snapshot), where the permissive carve-out was itself a targeted bug fix (a real order silently
-  invisible to its own department). Counterparty's own `branchId` has no such reliable population
-  path yet, so the safe default is deny, not allow.
+  populates `branchId` for real accounts.
   A user-supplied narrowing filter (`findVisiblePage`'s `options.branchId` — e.g. a manager-portal
   UI dropdown) is applied in addition to this scope filter, never instead of it; it cannot widen
   what a branch-scoped caller sees.
-- **`TradingPoint.servicingBranchId`** is the real access-scope filter for a customer's locations
-  and everything derived from them (`Order`, `Reservation` inherit `branchId` from the
-  `TradingPoint` selected at creation time, denormalized onto the row for filtering without a
-  join — same pattern as `Reservation.stockLocationId`). Defaults to the parent `Counterparty`'s
-  `branchId` at `TradingPoint` creation time (covers the ~90–95% single-branch case with zero
-  manual work); explicitly overridable per point for chain accounts. `OrderVisibilityService`/
-  `ProformaInvoiceVisibilityService` already correctly filtered by this denormalized `branchId` (never
-  `Counterparty.branchId`) before today's fix — the only change there was dropping the
-  additional, wrong `departmentId` comparison they also used to apply.
+- **An order's branch is resolved at read time (#263)**, never from its placement-time
+  `customFieldsBranchid` snapshot and with no `IS NULL` carve-out: the order's trading point
+  `servicingBranchId`, else its counterparty's `branchId`, else the global default branch. A
+  `'department'` scope sees orders whose resolved branch equals `scope.branchId`, plus own and
+  granted managers' clients. External (ERP) orders have no snapshot, and a counterparty that moves
+  branch takes its orders along. `OrderVisibilityService` and the reservation reconciliation issue
+  list share this clause (`orderBranchClause`). `TradingPoint.servicingBranchId` defaults to the
+  counterparty's `branchId` at creation and is overridable per point for chain accounts.
 - **The preferred trading point is self-healing, and reading it can write.**
   `TradingPointService.getPreferredForCustomer` — used by the Shop API `preferredTradingPoint`
   field, proforma invoices, MOQ and order placement — runs one atomic `UPDATE ... RETURNING` on the
   customer row. If the stored preferred point is missing, inactive or hidden by the customer, it
   is replaced by the counterparty's first active, visible point (ordered by name); a working
   choice is never touched. A customer never has to pick a point by hand, and the placement-time
-  `branchId` above is therefore resolvable for any customer whose counterparty has a point. The
+  order branch above is therefore resolvable for any customer whose counterparty has a point. The
   point always comes from the customer's own counterparty, so it cannot widen scope. If the
   counterparty has no usable point, the stored value is left as is.
 

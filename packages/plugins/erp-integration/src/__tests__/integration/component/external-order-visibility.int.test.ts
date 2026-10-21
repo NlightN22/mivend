@@ -40,6 +40,8 @@ class TestOrder {
     counterpartyId!: string | null;
     @Column({ name: 'customFieldsBranchid', type: 'varchar', nullable: true })
     branchId!: string | null;
+    @Column({ name: 'customFieldsTradingpointid', type: 'varchar', nullable: true })
+    tradingPointId!: string | null;
     @Column({ type: 'int', nullable: true }) customerId!: number | null;
     @ManyToOne(() => TestCustomer, { createForeignKeyConstraints: false })
     @JoinColumn({ name: 'customerId' })
@@ -82,6 +84,7 @@ beforeAll(async () => {
     await dataSource.query(
         `CREATE TABLE counterparty_team_member ("counterpartyId" varchar, "administratorId" varchar)`,
     );
+    await dataSource.query(`CREATE TABLE trading_point (id serial, "servicingBranchId" varchar)`);
     const listQueryBuilder = {
         build: () => dataSource.getRepository(TestOrder).createQueryBuilder('order'),
     };
@@ -94,6 +97,7 @@ beforeAll(async () => {
     service = new OrderVisibilityService(
         listQueryBuilder as unknown as ListQueryBuilder,
         accessScope as unknown as AccessScopeService,
+        { getGlobalDefaultBranchId: async () => null } as never,
     );
 });
 
@@ -157,9 +161,9 @@ describe('external orders in the manager order list (real Postgres)', () => {
         expect(await visibleCodes()).toEqual(['EXT-A', 'EXT-B']);
     });
 
-    it('a branch-less external order follows the documented branch-less carve-out (#123)', async () => {
+    it('a branch-less external order is not visible to every branch (#263)', async () => {
         scope = { kind: 'department', departmentId: 'dept-1', branchId: 'branch-b' };
-        expect(await visibleCodes()).toEqual(['EXT-B']);
+        expect(await visibleCodes()).toEqual([]);
     });
 });
 
@@ -171,7 +175,7 @@ describe('granted managers in the order scope SQL (#123, real Postgres)', () => 
             administratorId: 'admin-9',
             grantedManagerIds: ['admin-1'],
         };
-        expect(await visibleCodes()).toEqual(['EXT-A', 'EXT-B']);
+        expect(await visibleCodes()).toEqual(['EXT-A']);
     });
 
     it('a manager that is not granted stays hidden', async () => {
@@ -181,12 +185,12 @@ describe('granted managers in the order scope SQL (#123, real Postgres)', () => 
             administratorId: 'admin-9',
             grantedManagerIds: ['admin-7'],
         };
-        expect(await visibleCodes()).toEqual(['EXT-B']);
+        expect(await visibleCodes()).toEqual([]);
     });
 
     it('the caller sees their own clients outside the branch', async () => {
         scope = { kind: 'department', branchId: 'branch-b', administratorId: 'admin-1' };
-        expect(await visibleCodes()).toEqual(['EXT-A', 'EXT-B']);
+        expect(await visibleCodes()).toEqual(['EXT-A']);
     });
 
     it('an own-scoped caller gains exactly the granted manager', async () => {

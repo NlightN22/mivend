@@ -34,8 +34,8 @@ class TestOrder {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ name: 'customFieldsCounterpartyid', type: 'varchar', nullable: true })
     counterpartyId!: string | null;
-    @Column({ name: 'customFieldsBranchid', type: 'varchar', nullable: true })
-    branchId!: string | null;
+    @Column({ name: 'customFieldsTradingpointid', type: 'varchar', nullable: true })
+    tradingPointId!: string | null;
 }
 
 @Entity('counterparty_team_member')
@@ -73,6 +73,7 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
+    await dataSource.query(`CREATE TABLE trading_point (id serial, "servicingBranchId" varchar)`);
     const connection = {
         getRepository: (_ctx: unknown, entity: unknown) =>
             entity === ReservationReconciliationIssue
@@ -81,7 +82,9 @@ beforeAll(async () => {
     } as unknown as TransactionalConnection;
     const accessScope = new AccessScopeService({} as never, {} as never, {} as never);
     accessScope.resolveOrderScope = async () => scope;
-    service = new ReservationReconciliationIssueService(connection, {} as never, accessScope);
+    service = new ReservationReconciliationIssueService(connection, {} as never, accessScope, {
+        getGlobalDefaultBranchId: async () => 'branch-a',
+    } as never);
 });
 
 afterAll(async () => {
@@ -93,20 +96,20 @@ beforeEach(async () => {
     await dataSource.query(
         'TRUNCATE reservation_reconciliation_issue, "order", counterparty, counterparty_team_member RESTART IDENTITY CASCADE',
     );
-    const cp = async (erpId: string, manager: string): Promise<string> => {
+    const cp = async (erpId: string, manager: string, branch: string | null): Promise<string> => {
         const [row]: Array<{ id: number }> = await dataSource.query(
-            `INSERT INTO counterparty ("erpId", "assignedManagerId") VALUES ($1, $2) RETURNING id`,
-            [erpId, manager],
+            `INSERT INTO counterparty ("erpId", "assignedManagerId", "branchId") VALUES ($1, $2, $3) RETURNING id`,
+            [erpId, manager, branch],
         );
         return String(row.id);
     };
-    const orders: Array<[string, string, string | null, string]> = [
-        ['issue-granted', await cp('cp-1', 'm-1'), 'branch-b', 'm-1'],
-        ['issue-other', await cp('cp-2', 'm-2'), 'branch-b', 'm-2'],
-        ['issue-branchless', await cp('cp-3', 'm-3'), null, 'm-3'],
+    const orders: Array<[string, string]> = [
+        ['issue-granted', await cp('cp-1', 'm-1', 'branch-b')],
+        ['issue-other', await cp('cp-2', 'm-2', 'branch-b')],
+        ['issue-branchless', await cp('cp-3', 'm-3', null)],
     ];
-    for (const [orderEntityId, counterpartyId, branchId] of orders) {
-        const saved = await dataSource.getRepository(TestOrder).save({ counterpartyId, branchId });
+    for (const [orderEntityId, counterpartyId] of orders) {
+        const saved = await dataSource.getRepository(TestOrder).save({ counterpartyId });
         await dataSource.getRepository(TestIssue).save({
             issueType: 'QUANTITY_MISMATCH',
             orderId: String(saved.id),
@@ -120,12 +123,12 @@ const open = async (): Promise<string[]> =>
     (await service.findOpen(ctx)).items.map(i => i.orderEntityId).sort();
 
 describe('reservation reconciliation scope SQL with grants (#123, real Postgres)', () => {
-    it('shows branch, branch-less and granted-manager issues, hides the rest', async () => {
+    it('shows branch (incl. default-branch) and granted-manager issues, hides the rest', async () => {
         scope = { kind: 'department', branchId: 'branch-a', grantedManagerIds: ['m-1'] };
         expect(await open()).toEqual(['issue-branchless', 'issue-granted']);
     });
 
-    it('an empty grant set (expired or revoked) shows only the branch-less issue', async () => {
+    it('an empty grant set (expired or revoked) shows only the default-branch issue', async () => {
         scope = { kind: 'department', branchId: 'branch-a', grantedManagerIds: [] };
         expect(await open()).toEqual(['issue-branchless']);
     });

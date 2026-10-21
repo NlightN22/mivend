@@ -3,8 +3,9 @@ import { ID, ListQueryBuilder, Order, PaginatedList, RequestContext } from '@ven
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 import { Brackets, SelectQueryBuilder, WhereExpressionBuilder } from 'typeorm';
 import { documentNumberSearchTerm } from 'shared';
-import { AccessScopeService } from '@mivend/plugin-access-control';
+import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
 import { Counterparty } from '@mivend/plugin-counterparty';
+import { orderBranchClause } from './order-branch-clause';
 
 // Must stay in sync with CounterpartyService.findVisible (access-control layer 3).
 @Injectable()
@@ -12,6 +13,7 @@ export class OrderVisibilityService {
     constructor(
         private listQueryBuilder: ListQueryBuilder,
         private accessScopeService: AccessScopeService,
+        private branchSettingsService: BranchSettingsService,
     ) {}
 
     // Split out so plugin-acquiring can add its payment-status filter before executing.
@@ -73,13 +75,18 @@ export class OrderVisibilityService {
                 this.accessScopeService.applyOwnCounterpartyFilter(qb, 'counterparty', scope);
                 break;
             case 'department': {
-                // Order's denormalized branch, never departmentId; "order" is quoted (reserved word).
-                // IS NULL keeps branch-less orders visible; managers add own and granted clients (#123).
-                const managers = this.accessScopeService.managerClause(scope, 'counterparty');
-                qb.andWhere(
-                    `("${qb.alias}"."customFieldsBranchid" = :branchId OR "${qb.alias}"."customFieldsBranchid" IS NULL${managers ? ` OR ${managers.sql}` : ''})`,
-                    { branchId: scope.branchId ?? null, ...managers?.params },
+                // Never the placement snapshot: external orders have none and counterparties move (#263).
+                const branch = orderBranchClause(
+                    qb.alias,
+                    'counterparty',
+                    scope.branchId ?? null,
+                    await this.branchSettingsService.getGlobalDefaultBranchId(ctx),
                 );
+                const managers = this.accessScopeService.managerClause(scope, 'counterparty');
+                qb.andWhere(`(${branch.sql}${managers ? ` OR ${managers.sql}` : ''})`, {
+                    ...branch.params,
+                    ...managers?.params,
+                });
                 break;
             }
             case 'all':

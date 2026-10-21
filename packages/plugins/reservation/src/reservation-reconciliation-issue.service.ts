@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedList, RequestContext, TransactionalConnection } from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
-import { AccessScopeService } from '@mivend/plugin-access-control';
+import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
+import { orderBranchClause } from '@mivend/plugin-erp-order';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { IsNull } from 'typeorm';
 
@@ -21,6 +22,7 @@ export class ReservationReconciliationIssueService {
         private connection: TransactionalConnection,
         private notificationService: NotificationService,
         private accessScopeService: AccessScopeService,
+        private branchSettingsService: BranchSettingsService,
     ) {}
 
     async reportQuantityMismatch(
@@ -89,11 +91,17 @@ export class ReservationReconciliationIssueService {
             if (scope.kind === 'own') {
                 this.accessScopeService.applyOwnCounterpartyFilter(qb, 'counterparty', scope);
             } else {
-                const managers = this.accessScopeService.managerClause(scope, 'counterparty');
-                qb.andWhere(
-                    `("o"."customFieldsBranchid" = :branchId OR "o"."customFieldsBranchid" IS NULL${managers ? ` OR ${managers.sql}` : ''})`,
-                    { branchId: scope.branchId ?? null, ...managers?.params },
+                const branch = orderBranchClause(
+                    'o',
+                    'counterparty',
+                    scope.branchId ?? null,
+                    await this.branchSettingsService.getGlobalDefaultBranchId(ctx),
                 );
+                const managers = this.accessScopeService.managerClause(scope, 'counterparty');
+                qb.andWhere(`(${branch.sql}${managers ? ` OR ${managers.sql}` : ''})`, {
+                    ...branch.params,
+                    ...managers?.params,
+                });
             }
         }
 
