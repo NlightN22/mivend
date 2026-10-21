@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AssetService, ID, RequestContext, TransactionalConnection } from '@vendure/core';
+import { AssetService, ID, Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { ContractProformaPurgeService } from '@mivend/plugin-acquiring';
 import { In } from 'typeorm';
 
@@ -7,6 +7,7 @@ import { Document } from './entities/document.entity';
 
 export const CONTRACT_PROFORMA_RETENTION_MONTHS_DEFAULT = 6;
 const BATCH_SIZE = 500;
+const loggerCtx = 'ContractProformaCleanup';
 
 @Injectable()
 export class ContractProformaCleanupService {
@@ -16,14 +17,18 @@ export class ContractProformaCleanupService {
         private assetService: AssetService,
     ) {}
 
-    async run(ctx: RequestContext, retentionMonths: number): Promise<number> {
+    async run(
+        ctx: RequestContext,
+        retentionMonths: number,
+        batchSize = BATCH_SIZE,
+    ): Promise<number> {
         let total = 0;
         for (;;) {
             const assetIds: ID[] = [];
             const deleted = await this.purge.purgeBatch(
                 ctx,
                 retentionMonths,
-                BATCH_SIZE,
+                batchSize,
                 async (txCtx, ids) => {
                     const repo = this.connection.getRepository(txCtx, Document);
                     const where = {
@@ -36,9 +41,18 @@ export class ContractProformaCleanupService {
                 },
             );
             // Files go after commit: a rolled-back batch must not lose a PDF that is still referenced.
-            if (assetIds.length > 0) await this.assetService.delete(ctx, assetIds, true, true);
+            if (assetIds.length > 0) await this.deleteAssets(ctx, assetIds);
             total += deleted;
-            if (deleted < BATCH_SIZE) return total;
+            if (deleted < batchSize) return total;
+        }
+    }
+
+    private async deleteAssets(ctx: RequestContext, assetIds: ID[]): Promise<void> {
+        try {
+            await this.assetService.delete(ctx, assetIds, true, true);
+        } catch (e) {
+            // The rows are already gone; an orphaned PDF is accepted rather than stopping the purge.
+            Logger.error(`Failed to delete assets ${assetIds.join(',')}: ${String(e)}`, loggerCtx);
         }
     }
 }
