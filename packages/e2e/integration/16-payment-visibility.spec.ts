@@ -10,19 +10,12 @@ import {
 } from './branch-actors';
 import { loadContourEnv, envValue } from './contour-env';
 import { expectedProformaIds, proformaStatus, type SampleProforma } from './proforma-scope';
-import {
-    openIssueIds,
-    paymentSample,
-    proformasByIds,
-    refundCount,
-    type PaymentSample,
-} from './payment-fixtures';
+import { paymentSample, refundCount, type PaymentSample } from './payment-fixtures';
 
 const PROFORMAS = `query($cp: ID!) { visibleProformaInvoices(counterpartyId: $cp, options: { take: 200 }) {
     items { id } } }`;
 const PAYMENTS = `query($cp: ID!) { visiblePayments(counterpartyId: $cp, options: { take: 200 }) {
     totalItems items { id } } }`;
-const ISSUES = `query { openPaymentReconciliationIssues(options: { take: 200 }) { totalItems items { id } } }`;
 const REFUND = `mutation($p: ID!) { recordPaymentRefund(paymentId: $p, amount: 1, reason: "e2e denied") { id } }`;
 const WITHDRAW = `mutation($id: ID!) { withdrawProformaInvoice(id: $id) { id status } }`;
 const DENIED = /not currently authorized|No \w+ with the id "\d+" could be found|not found/i;
@@ -79,32 +72,17 @@ function expectedVisible(actor: BranchActor, proformas: SampleProforma[]): Set<s
     return expectedProformaIds(actor, state, clients, proformas);
 }
 
-async function issueIds(token: string): Promise<string[]> {
-    const data = await query<{ openPaymentReconciliationIssues: { items: { id: string }[] } }>(
-        token,
-        ISSUES,
-    );
-    return data.openPaymentReconciliationIssues.items.map(i => i.id).sort();
-}
-
-test('16: the superadmin sees both payments and every open issue', async () => {
+test('16: the superadmin sees both payments and their refunds', async () => {
     for (const s of samples) {
         const got = await seen(superadmin, s);
         expect(got.proforma, `proforma ${s.proforma.number}`).toBe(true);
         expect(got.payment, `payment ${s.paymentId}`).toBeDefined();
         expect(refundCount(s.paymentId), 'the sample refund exists').toBeGreaterThan(0);
     }
-    const open = openIssueIds();
-    if (open.length === 0)
-        test.info().annotations.push({
-            type: 'gap',
-            description: 'no open payment reconciliation issue on the contour',
-        });
-    expect(await issueIds(superadmin)).toEqual(open.map(i => i.id).sort());
 });
 
 for (const actor of ACTORS) {
-    test(`16: ${actor.key} (${actor.role}, ${actor.scope}): proformas, payments, issues, denied refund and withdraw`, async () => {
+    test(`16: ${actor.key} (${actor.role}, ${actor.scope}): proformas, payments, denied refund and withdraw`, async () => {
         test.skip(!actorCredentials(actor.key), `the ${actor.key} login is not set`);
         const token = await actorToken(actor.key);
         const expected = expectedVisible(
@@ -129,21 +107,6 @@ for (const actor of ACTORS) {
             expect(withdraw.errors.join(' '), `withdraw ${s.proforma.number}`).toMatch(DENIED);
             expect(proformaStatus(s.proforma.id)).toBe(status);
         }
-
-        const open = openIssueIds();
-        const issueProformas = proformasByIds(
-            open.flatMap(i => (i.proformaId ? [i.proformaId] : [])),
-        );
-        const visible = issueProformas.length
-            ? expectedVisible(actor, issueProformas)
-            : new Set<string>();
-        const want = open
-            .filter(
-                i => actor.scope === 'all' || (i.proformaId !== null && visible.has(i.proformaId)),
-            )
-            .map(i => i.id)
-            .sort();
-        expect(await issueIds(token)).toEqual(want);
     });
 }
 

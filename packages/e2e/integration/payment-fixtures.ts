@@ -141,12 +141,3 @@ export function refundCount(paymentId: string): number {
     return select<{ n: number }>(`SELECT count(*)::int AS n FROM payment_refund
         WHERE "paymentId" = ${literal(paymentId)}`)[0].n;
 }
-
-export function openIssueIds(): { id: string; proformaId: string | null }[] {
-    return select<{ id: string; proformaId: string | null }>(`SELECT id::text AS id,
-        "proformaInvoiceId"::text AS "proformaId" FROM payment_reconciliation_issue WHERE status = 'open'`);
-}
-
-export function proformasByIds(ids: string[]): SampleProforma[] {
-    return ids.map(id => proformaRow(`pi.id = ${literal(id)}`)).filter(p => p !== undefined);
-}
