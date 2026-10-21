@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertContractProformaInput, contractProformaLine } from '../../contract-proforma-invoice';
+import {
+    assertContractProformaInput,
+    contractProformaLine,
+    MAX_CONTRACT_PROFORMA_AMOUNT,
+} from '../../contract-proforma-invoice';
 
 const input = {
     contractId: '1',
@@ -10,19 +14,25 @@ const input = {
 };
 
 describe('assertContractProformaInput', () => {
-    it('accepts a positive amount in either mode with no upper limit', () => {
+    it('accepts a positive amount in either mode up to the Int limit', () => {
         expect(() => assertContractProformaInput(input)).not.toThrow();
         expect(() =>
             assertContractProformaInput({
                 ...input,
                 mode: 'debt-repayment',
-                amount: 2_000_000_000,
+                amount: MAX_CONTRACT_PROFORMA_AMOUNT,
             }),
         ).not.toThrow();
     });
 
     it.each([0, -5, 1.5, Number.NaN])('rejects amount %s', amount => {
         expect(() => assertContractProformaInput({ ...input, amount })).toThrow();
+    });
+
+    it('rejects an amount above the Int limit with a clear message', () => {
+        expect(() =>
+            assertContractProformaInput({ ...input, amount: MAX_CONTRACT_PROFORMA_AMOUNT + 1 }),
+        ).toThrow('Amount must not exceed 2147483647 minor units');
     });
 
     it('rejects an unknown mode and a malformed idempotency key', () => {

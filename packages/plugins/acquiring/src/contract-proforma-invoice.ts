@@ -11,6 +11,8 @@ export interface IssueContractProformaInvoiceInput {
     idempotencyKey: string;
 }
 
+// GraphQL Int carries the amount in kopecks; this is the largest amount it can express.
+export const MAX_CONTRACT_PROFORMA_AMOUNT = 2147483647;
 const MODES: ContractProformaMode[] = ['debt-repayment', 'advance'];
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9-]{8,64}$/;
 
@@ -18,6 +20,11 @@ export function assertContractProformaInput(input: IssueContractProformaInvoiceI
     if (!MODES.includes(input.mode)) throw new UserInputError(`Unknown mode ${input.mode}`);
     if (!Number.isSafeInteger(input.amount) || input.amount <= 0) {
         throw new UserInputError('Amount must be a positive whole number of minor units');
+    }
+    if (input.amount > MAX_CONTRACT_PROFORMA_AMOUNT) {
+        throw new UserInputError(
+            `Amount must not exceed ${MAX_CONTRACT_PROFORMA_AMOUNT} minor units`,
+        );
     }
     if (!IDEMPOTENCY_KEY.test(input.idempotencyKey)) {
         throw new UserInputError('Invalid idempotency key');
