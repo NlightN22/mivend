@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useDemoMode } from '../../composables/useDemoMode';
 import { useAuthStore } from '../../stores/auth';
 
 const authStore = useAuthStore();
+const { demoAllowed } = useDemoMode();
 </script>
 
 <template>
@@ -28,7 +30,7 @@ const authStore = useAuthStore();
                 }}</a>
             </div>
 
-            <div class="ad-links">
+            <div v-if="demoAllowed" class="ad-links">
                 <a href="#">{{ $t('common.help') }}</a> &middot;
                 <a href="#">{{ $t('common.support') }}</a>
             </div>

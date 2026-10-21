@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useDemoMode } from '../../composables/useDemoMode';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -8,6 +9,7 @@ const search = ref('');
 function doSearch() {
     if (search.value.trim()) router.push({ path: '/catalog', query: { q: search.value.trim() } });
 }
+const { demoAllowed } = useDemoMode();
 </script>
 
 <template>
@@ -40,7 +42,7 @@ function doSearch() {
                 <RouterLink to="/orders" class="nf-btn">{{ $t('errorPages.myOrders') }}</RouterLink>
             </div>
 
-            <div class="nf-links">
+            <div v-if="demoAllowed" class="nf-links">
                 <a href="#">{{ $t('common.help') }}</a> &middot;
                 <a href="#">{{ $t('common.support') }}</a>
             </div>
