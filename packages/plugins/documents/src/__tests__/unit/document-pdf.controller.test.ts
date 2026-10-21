@@ -56,6 +56,15 @@ describe('DocumentPdfController', () => {
         expect(res.send).toHaveBeenCalled();
     });
 
+    it('answers 404, not 500, when the lazy render throws', async () => {
+        access.findDownloadable.mockResolvedValue(doc);
+        storage.read.mockResolvedValue(null);
+        generator.generateNow.mockRejectedValue(new Error('browser down'));
+        await expect(controller.download(ctx, UUID, response())).rejects.toBeInstanceOf(
+            NotFoundException,
+        );
+    });
+
     it('answers 404 when the render fails to produce a file', async () => {
         access.findDownloadable.mockResolvedValue(doc);
         storage.read.mockResolvedValue(null);

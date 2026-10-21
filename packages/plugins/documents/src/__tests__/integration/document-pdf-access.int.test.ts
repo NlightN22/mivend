@@ -18,6 +18,7 @@ class TestDocument {
     @Column({ type: 'uuid' }) uuid!: string;
     @Column({ type: 'varchar' }) counterpartyId!: string;
     @Column({ type: 'varchar' }) source!: string;
+    @Column({ type: 'varchar', default: 'ready' }) status!: string;
 }
 
 // Counterparty scope itself is CounterpartyService's own tested query; here it is the branch-a set.
@@ -55,12 +56,13 @@ beforeAll(async () => {
     });
     await dataSource.initialize();
     const repo = dataSource.getRepository(TestDocument);
-    for (const [key, counterpartyId, source] of [
-        ['a', 'cp-a', 'generated'],
-        ['b', 'cp-b', 'generated'],
-        ['erp', 'cp-a', 'erp'],
+    for (const [key, counterpartyId, source, status] of [
+        ['a', 'cp-a', 'generated', 'ready'],
+        ['b', 'cp-b', 'generated', 'ready'],
+        ['erp', 'cp-a', 'erp', 'ready'],
+        ['pending', 'cp-a', 'generated', 'generating'],
     ]) {
-        docs[key] = (await repo.save({ uuid: randomUUID(), counterpartyId, source })).uuid;
+        docs[key] = (await repo.save({ uuid: randomUUID(), counterpartyId, source, status })).uuid;
     }
     const connection = {
         getRepository: () => dataSource.getRepository(TestDocument),
@@ -121,5 +123,9 @@ describe('DocumentPdfAccessService (integration, real Postgres)', () => {
 
     it('never serves an ERP document, which has no generated file', async () => {
         expect(await allowed(staffCtx(Permission.ReadCustomer), docs.erp)).toBe(false);
+    });
+
+    it('serves only what Document.pdfUrl exposes: a generated document not yet ready is 404', async () => {
+        expect(await allowed(staffCtx(Permission.ReadCustomer), docs.pending)).toBe(false);
     });
 });

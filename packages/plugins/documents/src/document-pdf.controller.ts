@@ -1,7 +1,9 @@
 import { Controller, Get, NotFoundException, Param, Res } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
+import { Allow, Ctx, Logger, Permission, RequestContext } from '@vendure/core';
+
+import { loggerCtx } from './constants';
 
 import { DocumentPdfAccessService } from './document-pdf-access.service';
 import { DocumentPdfStorageService } from './pdf/document-pdf-storage.service';
@@ -34,8 +36,15 @@ export class DocumentPdfController {
         let pdf = await this.storage.read(document.uuid);
         // Files predating private storage are rendered on first download.
         if (!pdf) {
-            await this.generator.generateNow(document.id);
-            pdf = await this.storage.read(document.uuid);
+            try {
+                await this.generator.generateNow(document.id);
+                pdf = await this.storage.read(document.uuid);
+            } catch (e) {
+                Logger.error(
+                    `Lazy PDF render of document ${document.id} failed: ${String(e)}`,
+                    loggerCtx,
+                );
+            }
         }
         if (!pdf) throw new NotFoundException();
         res.set({

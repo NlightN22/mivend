@@ -458,6 +458,7 @@ signatures instead. Shared guard: `packages/shared/src/api-key.ts`; the controll
 is `apps/server/src/__tests__/unit/rest-controller-allowlist.test.ts`.
 Exception: `GET /document-pdf/<uuid>` (#263) is a portal download, always on, authorized by the caller's own
 session and the document's counterparty scope instead of a key (see `docs/access-control.md`, "Scope guards").
+In a deployment, `static/document-pdfs` must be a persistent volume shared by every server and worker replica, not the container filesystem.
 
 | Variable | Default | What it opens | Why | Must be true in | Key requirement | Used by | If on in production |
 | --- | --- | --- | --- | --- | --- | --- | --- |

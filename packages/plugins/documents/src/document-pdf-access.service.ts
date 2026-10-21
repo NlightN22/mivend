@@ -11,7 +11,7 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 import { Document } from './entities/document.entity';
 import { UUID_RE } from './pdf/document-pdf-storage.service';
 
-// Missing and hidden documents both yield null, so the endpoint cannot be used to probe uuids.
+// Same rule as Document.pdfUrl (generated + ready); missing and hidden both yield null.
 @Injectable()
 export class DocumentPdfAccessService {
     constructor(
@@ -24,7 +24,7 @@ export class DocumentPdfAccessService {
         if (!ctx.activeUserId || !UUID_RE.test(uuid)) return null;
         const document = await this.connection
             .getRepository(ctx, Document)
-            .findOne({ where: { uuid: uuid.toLowerCase(), source: 'generated' } });
+            .findOne({ where: { uuid: uuid.toLowerCase(), source: 'generated', status: 'ready' } });
         if (!document) return null;
         return (await this.canSee(ctx, document.counterpartyId)) ? document : null;
     }
