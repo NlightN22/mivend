@@ -1,4 +1,4 @@
-export { DocumentsPlugin } from './src/documents.plugin';
+export { DocumentsPlugin, type DocumentsPluginOptions } from './src/documents.plugin';
 export { Document } from './src/entities/document.entity';
 export { OrganizationRequisites } from './src/entities/organization-requisites.entity';
 export { DocumentsService } from './src/documents.service';

@@ -69,6 +69,7 @@ import { ProformaInvoiceOrderCancelService } from './proforma-invoice-order-canc
 import { proformaInvoiceCancelProcess } from './proforma-invoice-cancel.process';
 import { ACQUIRING_PLUGIN_OPTIONS } from './types';
 import type { AcquiringPluginOptions } from './types';
+import { ContractProformaPurgeService } from './contract-proforma-purge.service';
 
 @VendurePlugin({
     imports: [
@@ -92,6 +93,7 @@ import type { AcquiringPluginOptions } from './types';
         IncomingPaymentEvent,
     ],
     providers: [
+        ContractProformaPurgeService,
         ContractProformaInvoiceService,
         IdempotencyService,
         InboxService,
@@ -120,6 +122,7 @@ import type { AcquiringPluginOptions } from './types';
         },
     ],
     exports: [
+        ContractProformaPurgeService,
         IdempotencyService,
         InboxService,
         ProformaInvoiceService,

@@ -33,6 +33,10 @@ export {
 } from './src/entities/incoming-payment-event.entity';
 export { IdempotencyService } from './src/idempotency.service';
 export { InboxService } from './src/inbox.service';
+export {
+    ContractProformaPurgeService,
+    type BeforeContractProformaDelete,
+} from './src/contract-proforma-purge.service';
 export { ProformaInvoiceService } from './src/proforma-invoice.service';
 export { ProformaInvoiceIssuingService } from './src/proforma-invoice-issuing.service';
 export { extractVat } from './src/proforma-invoice-tax';

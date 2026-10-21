@@ -5,6 +5,7 @@ import {
     Order,
     OrderStateTransitionEvent,
     PluginCommonModule,
+    RuntimeVendureConfig,
     RequestContext,
     TransactionalConnection,
     VendurePlugin,
@@ -38,6 +39,15 @@ import { shopApiExtensions } from './api/shop.schema';
 import { adminApiExtensions } from './api/admin.schema';
 import { PdfBrowserService } from './pdf/pdf-browser.service';
 import { PdfGeneratorService } from './pdf/pdf-generator.service';
+import {
+    ContractProformaCleanupService,
+    CONTRACT_PROFORMA_RETENTION_MONTHS_DEFAULT,
+} from './contract-proforma-cleanup.service';
+import { createContractProformaCleanupTask } from './contract-proforma-cleanup.scheduled-task';
+
+export interface DocumentsPluginOptions {
+    contractProformaRetentionMonths?: number;
+}
 
 // Offline-terms payments settle to Authorized, which Vendure maps to PaymentAuthorized;
 // online-stub payments settle to PaymentSettled and must be excluded from proforma generation.
@@ -61,6 +71,7 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
         ],
     },
     providers: [
+        ContractProformaCleanupService,
         DocumentsService,
         SupersededProformaRerenderService,
         PdfBrowserService,
@@ -75,9 +86,26 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
         ProformaRequeueService,
         OrganizationEventService,
     ],
+    configuration: (config: RuntimeVendureConfig): RuntimeVendureConfig => {
+        config.schedulerOptions.tasks = [
+            ...(config.schedulerOptions.tasks ?? []),
+            createContractProformaCleanupTask(
+                DocumentsPlugin.options.contractProformaRetentionMonths ??
+                    CONTRACT_PROFORMA_RETENTION_MONTHS_DEFAULT,
+            ),
+        ];
+        return config;
+    },
     compatibility: '>0.0.0',
 })
 export class DocumentsPlugin implements OnApplicationBootstrap {
+    static options: DocumentsPluginOptions = {};
+
+    static init(options: DocumentsPluginOptions): typeof DocumentsPlugin {
+        this.options = options;
+        return DocumentsPlugin;
+    }
+
     constructor(
         private eventBus: EventBus,
         private connection: TransactionalConnection,

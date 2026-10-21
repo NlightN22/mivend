@@ -371,6 +371,9 @@ redeliver.
   The single line includes VAT at the default rate: the enabled rate of the default `TaxCategory` (`isDefault`, set
   from `INTEGRATION_DEFAULT_VAT_CODE` on ERP contours) in the channel's default tax zone, snapshotted at issue like
   an order line (a placeholder rate stays `null` and is confirmed at print time). No such rate prints "не указан".
+  Retention: the worker task `contract-proforma-cleanup` (documents plugin, 1 January and 1 July) deletes contract-kind
+  proformas older than `DocumentsPlugin.init({ contractProformaRetentionMonths })` (default 6) in batches of 500,
+  with their `document` rows in the same transaction and their PDF assets after commit. Order proformas are never touched.
 
 ## Payment allocation
 
