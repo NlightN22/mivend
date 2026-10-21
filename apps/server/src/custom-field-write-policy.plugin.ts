@@ -23,8 +23,10 @@ export const CLIENT_WRITABLE_CUSTOM_FIELDS: Readonly<Record<string, readonly str
     ],
 };
 
-export function applyCustomFieldWritePolicy(customFields: CustomFields): CustomFields {
-    const guarded: CustomFields = {};
+export function applyCustomFieldWritePolicy(
+    customFields: Required<CustomFields>,
+): Required<CustomFields> {
+    const guarded = {} as Required<CustomFields>;
     for (const [entity, fields] of Object.entries(customFields)) {
         const writable = CLIENT_WRITABLE_CUSTOM_FIELDS[entity] ?? [];
         guarded[entity as keyof CustomFields] = fields?.map(f =>

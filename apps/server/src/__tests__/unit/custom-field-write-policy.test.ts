@@ -11,7 +11,7 @@ import {
 
 type Schema = ReturnType<typeof addGraphQLCustomFields>;
 
-let customFields: CustomFields;
+let customFields: Required<CustomFields>;
 
 beforeAll(async () => {
     vi.stubEnv('INSTANCE_TYPE', 'central');
@@ -74,7 +74,7 @@ describe('client-writable custom fields (#266)', () => {
 
     it('reports a field registered after the policy ran, so bootstrap can refuse to start', () => {
         expect(findUnguardedCustomFields(customFields)).toEqual([]);
-        const late = {
+        const late: Required<CustomFields> = {
             ...customFields,
             Order: [...(customFields.Order ?? []), { name: 'late', type: 'string' as const }],
         };
