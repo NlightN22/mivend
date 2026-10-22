@@ -116,7 +116,8 @@ branch-less client and checks, for every actor, `tradingPoint(id)` with contacts
 else the default branch), the points nested on `counterparty(id)` and on a `counterparties` search, and a refused
 `updateTradingPointDetails`/`setTradingPointActive`/`updateTradingPointComment` on a point of a hidden counterparty
 (row unchanged). Shared cases: head-a adds a contact on a branch-A point that head-b and manager-b cannot read; a
-servicing override to branch B lets head-b read the point but not edit it; a branch-B counterparty moved to branch A
+servicing override to branch B lets head-b read the point by id (address and contacts, on purpose) but not list or
+edit it, since the counterparty's data stays with its own branch; a branch-B counterparty moved to branch A
 takes its point along; the default-branch head reads the branch-less point and cannot edit it. Every change is undone
 in `finally` and verified with a SELECT. Customers A and B see only their own points nested on `activeCustomer` and in
 `myHiddenTradingPoints`, and every Shop write on the other's point is refused with the point and the preferred point

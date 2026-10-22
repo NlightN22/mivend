@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { CustomerService, RequestContext, TransactionalConnection } from '@vendure/core';
 import { TradingPointService } from '../../trading-point.service';
-import { TradingPointAdminResolver } from '../../trading-point.resolver';
+import {
+    CounterpartyTradingPointResolver,
+    TradingPointAdminResolver,
+} from '../../trading-point.resolver';
+import { CounterpartyTeamFieldResolver } from '../../counterparty-team.resolver';
+import type { CounterpartyTeamService } from '../../counterparty-team.service';
 import type { CounterpartyService } from '../../counterparty.service';
 
 const findOne = vi.fn();
@@ -152,5 +157,42 @@ describe('TradingPointService.updateDeliveryComment scope', () => {
         assertCounterpartyWritable.mockResolvedValue(undefined);
         await service.updateDeliveryComment(customer, '1', 'x');
         expect(update).toHaveBeenCalledWith({ id: '1' }, { deliveryComment: 'x' });
+    });
+});
+
+describe('nested point and team lists of a hidden counterparty (Admin API, #263)', () => {
+    const findByCounterparty = vi.fn().mockResolvedValue([{ id: '1' }]);
+    const getTeamMembers = vi.fn().mockResolvedValue([{ id: 't' }]);
+    const findOneVisible = vi.fn();
+    const counterparties = { findOneVisible } as unknown as CounterpartyService;
+    const points = new CounterpartyTradingPointResolver(
+        { findByCounterparty } as unknown as TradingPointService,
+        counterparties,
+    );
+    const team = new CounterpartyTeamFieldResolver(
+        { getTeamMembers } as unknown as CounterpartyTeamService,
+        counterparties,
+    );
+    const admin = { apiType: 'admin' } as unknown as RequestContext;
+    const shop = { apiType: 'shop' } as unknown as RequestContext;
+    const cp = { id: 'cp-2' } as never;
+
+    beforeEach(() => vi.clearAllMocks());
+
+    it('returns no points and no team to a staff member who cannot see the counterparty', async () => {
+        findOneVisible.mockResolvedValue(null);
+        expect(await points.tradingPoints(admin, cp)).toEqual([]);
+        expect(await team.teamMembers(admin, cp)).toEqual([]);
+        expect(findByCounterparty).not.toHaveBeenCalled();
+        expect(getTeamMembers).not.toHaveBeenCalled();
+    });
+
+    it('returns them when the counterparty is visible, and never gates the Shop API', async () => {
+        findOneVisible.mockResolvedValue({ id: 'cp-2' });
+        expect(await points.tradingPoints(admin, cp)).toEqual([{ id: '1' }]);
+        expect(await team.teamMembers(admin, cp)).toEqual([{ id: 't' }]);
+        findOneVisible.mockClear();
+        expect(await points.tradingPoints(shop, cp)).toEqual([{ id: '1' }]);
+        expect(findOneVisible).not.toHaveBeenCalled();
     });
 });

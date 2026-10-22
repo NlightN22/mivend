@@ -5,18 +5,29 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyTeamMember } from './entities/counterparty-team-member.entity';
 import { CounterpartyTeamService } from './counterparty-team.service';
+import { CounterpartyService } from './counterparty.service';
 
 // A counterparty's team is structurally bounded (Owner + a few backup/observer members),
 // so no pagination; see the backend-plugin-rules pagination exemption for bounded lists.
 @Resolver('Counterparty')
 export class CounterpartyTeamFieldResolver {
-    constructor(private counterpartyTeamService: CounterpartyTeamService) {}
+    constructor(
+        private counterpartyTeamService: CounterpartyTeamService,
+        private counterpartyService: CounterpartyService,
+    ) {}
 
+    // An order's customer exposes a hidden counterparty to the branch servicing the point (#263).
     @ResolveField()
     async teamMembers(
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: Counterparty,
     ): Promise<CounterpartyTeamMember[]> {
+        if (
+            ctx.apiType === 'admin' &&
+            !(await this.counterpartyService.findOneVisible(ctx, counterparty.id))
+        ) {
+            return [];
+        }
         return this.counterpartyTeamService.getTeamMembers(ctx, counterparty.id);
     }
 }

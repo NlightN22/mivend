@@ -28,13 +28,23 @@ export class CustomerTradingPointResolver {
 
 @Resolver('Counterparty')
 export class CounterpartyTradingPointResolver {
-    constructor(private tradingPointService: TradingPointService) {}
+    constructor(
+        private tradingPointService: TradingPointService,
+        private counterpartyService: CounterpartyService,
+    ) {}
 
+    // An order's customer exposes a hidden counterparty to the branch servicing the point (#263).
     @ResolveField()
     async tradingPoints(
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: { id: string },
     ): Promise<TradingPoint[]> {
+        if (
+            ctx.apiType === 'admin' &&
+            !(await this.counterpartyService.findOneVisible(ctx, counterparty.id))
+        ) {
+            return [];
+        }
         return this.tradingPointService.findByCounterparty(ctx, counterparty.id);
     }
 }
