@@ -53,10 +53,20 @@ describe.each(STAFF.map(s => s.key))('order visibility for %s', (key: ActorKey) 
         expect(result.data!.orders.totalItems).toBe(expected.size);
     });
 
-    // Scope 'all' sees every order, so it has no hidden case to probe.
-    it.skipIf(staff(key).scope === 'all')(
-        'a hidden order gives away nothing through reservations or a note',
-        async () => {
+    // Scope 'all' has no hidden order; it must see exactly the superadmin's set instead.
+    if (staff(key).scope === 'all')
+        it("sees exactly the superadmin's orders", async () => {
+            const ids = { ids: ALL_ORDERS.map(o => orderOf(o).id) };
+            const listOf = async (t: string): Promise<string[]> =>
+                (await admin<{ orders: { items: { id: string }[] } }>(t, LIST, ids))
+                    .data!.orders.items.map(i => i.id)
+                    .sort();
+            const all = await listOf(superadmin);
+            expect(all.length, 'the superadmin sees seeded orders').toBeGreaterThan(0);
+            expect(await listOf(token)).toEqual(all);
+        });
+    else
+        it('a hidden order gives away nothing through reservations or a note', async () => {
             expect(hidden.length, 'a hidden order exists').toBeGreaterThan(0);
             for (const o of hidden) {
                 const reservations = await admin(token, RESERVATIONS, { id: orderOf(o).id });
@@ -68,6 +78,5 @@ describe.each(STAFF.map(s => s.key))('order visibility for %s', (key: ActorKey) 
                 );
                 expect(await noteCount(o), `no note written on ${o}`).toBe(before);
             }
-        },
-    );
+        });
 });

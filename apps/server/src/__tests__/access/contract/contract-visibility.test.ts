@@ -97,10 +97,20 @@ describe.each(STAFF.map(s => s.key))('contracts for %s', (key: ActorKey) => {
         }
     });
 
-    // Scope 'all' sees every order, so it has no hidden case to probe.
-    it.skipIf(staff(key).scope === 'all')(
-        'a hidden order contract cannot be changed and a contract cannot be generated',
-        async () => {
+    // Scope 'all' has no hidden order; it must see exactly the superadmin's contracts instead.
+    if (staff(key).scope === 'all')
+        it("sees exactly the superadmin's order contracts", async () => {
+            const superadmin = await staffToken('superadmin');
+            let seen = 0;
+            for (const o of ALL_ORDERS) {
+                const proof = await contractsOf(superadmin, o);
+                seen += proof?.length ?? 0;
+                expect(await contractsOf(token, o), o).toEqual(proof);
+            }
+            expect(seen, 'the superadmin sees seeded contracts').toBeGreaterThan(0);
+        });
+    else
+        it('a hidden order contract cannot be changed and a contract cannot be generated', async () => {
             expect(hidden.length, 'a hidden order exists').toBeGreaterThan(0);
             const target = hidden[0];
             const before = await untouched(target);
@@ -116,8 +126,7 @@ describe.each(STAFF.map(s => s.key))('contracts for %s', (key: ActorKey) => {
             });
             expect(generated.errors.join(' ')).toMatch(DENIED);
             expect(await untouched(target), 'nothing was written').toEqual(before);
-        },
-    );
+        });
 });
 
 // A point is pinned to its counterparty's branch at creation, so the order follows the client only once unpinned.
