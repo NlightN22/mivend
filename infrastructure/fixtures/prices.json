@@ -348,5 +348,25 @@
         "sku": "BAT-90-AGM",
         "priceTypeCode": "PURCHASE",
         "price": 7580
+    },
+    {
+        "sku": "SHOW-LADDER-ONLY",
+        "priceTypeCode": "WHOLESALE",
+        "price": 1000
+    },
+    {
+        "sku": "SHOW-FLAT-PLUS-LADDER",
+        "priceTypeCode": "WHOLESALE",
+        "price": 1000
+    },
+    {
+        "sku": "SHOW-FLAT-BEATS-LADDER",
+        "priceTypeCode": "WHOLESALE",
+        "price": 1000
+    },
+    {
+        "sku": "SHOW-AMOUNT-LADDER",
+        "priceTypeCode": "WHOLESALE",
+        "price": 1000
     }
 ]

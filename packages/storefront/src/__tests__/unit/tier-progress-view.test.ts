@@ -16,7 +16,7 @@ describe('flatPercentOf', () => {
 describe('useTierProgressView', () => {
     function view(tp: object, flat: number) {
         store.byVariant = { v1: tp };
-        return useTierProgressView(ref('v1'), ref(flat)).value;
+        return useTierProgressView(ref('p1'), ref('v1'), ref(flat)).value;
     }
     const base = { facetName: 'b', metric: 'WEIGHT', current: 0, currentPercent: null };
 

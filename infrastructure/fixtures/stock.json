@@ -6,5 +6,9 @@
     { "sku": "BAT-60-AGM", "stockOnHand": 15 },
     { "sku": "BAT-90-AGM", "stockOnHand": 0 },
     { "sku": "SUS-SHOCK-F801", "stockOnHand": 33 },
-    { "sku": "WIPER-BLADE-24", "stockOnHand": 130 }
+    { "sku": "WIPER-BLADE-24", "stockOnHand": 130 },
+    { "sku": "SHOW-LADDER-ONLY", "stockOnHand": 500 },
+    { "sku": "SHOW-FLAT-PLUS-LADDER", "stockOnHand": 500 },
+    { "sku": "SHOW-FLAT-BEATS-LADDER", "stockOnHand": 500 },
+    { "sku": "SHOW-AMOUNT-LADDER", "stockOnHand": 500 }
 ]

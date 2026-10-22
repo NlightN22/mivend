@@ -19,7 +19,6 @@ export const useTierProgressStore = defineStore('tierProgress', () => {
             try {
                 const result = await shopApi(VariantTierProgressDocument, { ids: chunk });
                 const next = { ...byVariant.value };
-                for (const id of chunk) next[id] = null;
                 for (const product of result.products.items) {
                     for (const v of product.variants) next[v.id] = v.tierProgress ?? null;
                 }
@@ -33,9 +32,9 @@ export const useTierProgressStore = defineStore('tierProgress', () => {
     let queued: string[] = [];
 
     // Cards mount in bulk; one request per tick covers all of them.
-    function track(id: string): void {
-        if (!auth.isLoggedIn || tracked.has(id)) return;
-        tracked.add(id);
+    function track(productId: string): void {
+        if (!auth.isLoggedIn || tracked.has(productId)) return;
+        tracked.add(productId);
         if (queued.length === 0) {
             setTimeout(() => {
                 const ids = queued;
@@ -43,7 +42,7 @@ export const useTierProgressStore = defineStore('tierProgress', () => {
                 void load(ids);
             }, 0);
         }
-        queued.push(id);
+        queued.push(productId);
     }
 
     watch(

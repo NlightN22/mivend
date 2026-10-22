@@ -45,6 +45,7 @@ const galleryImages = computed(() =>
 );
 const variant = computed(() => product.value?.variants[0]);
 const tierProgress = useTierProgressView(
+    computed(() => product.value?.id),
     computed(() => variant.value?.id),
     computed(() => flatPercentOf(variant.value?.customerPrice, variant.value?.compareAtPrice)),
 );

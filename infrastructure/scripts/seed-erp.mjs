@@ -414,12 +414,10 @@ async function ensureBranchSettingsSeeded() {
         return;
     }
 
-    // One row per seeded branch (user request, 2026-09-05: branch-east added alongside
-    // branch-central) — defaultWarehouseId stays a placeholder per-branch id here too, matching
-    // the comment above: this column is a raw, non-FK string, and each branch's real warehouse(s)
-    // get seeded separately via seed-warehouses-via-inbox.mjs, which does not depend on this
-    // placeholder value at all.
-    const branchIds = ['branch-central', 'branch-east', '1'];
+    // Keyed by the Branch row id, which administrators' branchId points at; defaultWarehouseId is
+    // a raw placeholder, the real warehouses come from the warehouse batch.
+    const branchesRes = await adminGraphqlWithSession(`{ branches { id } }`, undefined, cookie);
+    const branchIds = branchesRes.data.branches.map(b => b.id);
     for (const branchId of branchIds) {
         await adminGraphqlWithSession(
             `mutation SetBranchSettings($branchId: String!, $defaultPriceTypeId: String!, $defaultWarehouseId: String!) {
@@ -440,7 +438,7 @@ async function ensureBranchSettingsSeeded() {
     }
 }
 
-const PSQL = `docker exec -i docker-postgres-central-1 psql -U postgres -d mivend_central -v ON_ERROR_STOP=1`;
+const PSQL = `docker exec -i docker-postgres-central-1 psql -U postgres -d ${process.env.SEED_DB_NAME ?? 'mivend_central'} -v ON_ERROR_STOP=1`;
 
 // Must exist before the price batch, or the purchase entries are rejected (#235).
 function seedPurchasePriceType() {
@@ -482,7 +480,7 @@ async function main() {
     // v11: contract records — the scheduled credit-limit job derives limit/days from contracts.
     // v12: the checkout buyers' contracts carry a seeded organization, so the contract guard passes.
     // v13 (#231): manufacturer records; products reference one via manufacturerCode.
-    const run = 'v15';
+    const run = 'v16';
 
     // Tax zone is Vendure system config — cannot go through erp-import plugin
     console.log('Ensuring tax zone...');
@@ -640,6 +638,14 @@ async function main() {
         price: Math.round(p.price * 0.9 * 100) / 100,
     }));
     seedPurchasePriceType();
+    const priceTypeResult = await postBatch(
+        `seed-price-types-${run}`,
+        ['WHOLESALE', 'RETAIL', 'SPECIAL'].map(code => ({
+            type: 'priceType',
+            data: { code, name: code, visibility: 'customer' },
+        })),
+    );
+    console.log(`  → price types status=${priceTypeResult.status} failed=${priceTypeResult.failed}`);
     const allPrices = [...prices, ...retailPrices, ...specialPrices];
     console.log(`Sending ${allPrices.length} prices...`);
     const priceResult = await postBatch(
@@ -805,6 +811,75 @@ async function main() {
             validFrom: discountValidFrom,
             validTo: discountValidTo,
             minWeightKg: null,
+        },
+        // Dev showcase for the catalog tier ladder: no flat discount, flat below the ladder, flat above it.
+        {
+            erpId: 'discount-ladder-only-wholesale-volume-300',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'ladder-only',
+            percent: 10,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+            minWeightKg: 300,
+        },
+        {
+            erpId: 'discount-ladder-only-wholesale-volume-600',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'ladder-only',
+            percent: 15,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+            minWeightKg: 600,
+        },
+        {
+            erpId: 'discount-flat-plus-ladder-wholesale',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'flat-plus-ladder',
+            percent: 5,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+        },
+        {
+            erpId: 'discount-flat-plus-ladder-wholesale-volume-300',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'flat-plus-ladder',
+            percent: 12,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+            minWeightKg: 300,
+        },
+        {
+            erpId: 'discount-flat-beats-ladder-wholesale',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'flat-beats-ladder',
+            percent: 20,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+        },
+        {
+            erpId: 'discount-flat-beats-ladder-wholesale-volume-300',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'flat-beats-ladder',
+            percent: 10,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+            minWeightKg: 300,
+        },
+        {
+            erpId: 'discount-amount-ladder-wholesale-spend-30000',
+            priceTypeCode: 'WHOLESALE',
+            facetCode: 'brand',
+            facetValueCode: 'amount-ladder',
+            percent: 8,
+            validFrom: discountValidFrom,
+            validTo: discountValidTo,
+            minAmount: 30000,
         },
     ];
     console.log(`Sending ${discountRules.length} discount rules...`);
@@ -1148,8 +1223,10 @@ async function main() {
     ];
     // Every seeded counterparty gets a main contract with a seeded organization: checkout is
     // blocked without one (#205).
-    const withMainContract = counterparties.map(c => ({
+    // A unique INN as well: binding a portal customer requires one (#225).
+    const withMainContract = counterparties.map((c, index) => ({
         ...c,
+        inn: c.inn ?? `50000000${String(index).padStart(2, '0')}`,
         mainContractErpId: c.mainContractErpId ?? `ctr-${c.erpId}`,
     }));
     console.log(`Sending ${counterparties.length} counterparties...`);
@@ -1238,9 +1315,6 @@ async function main() {
     if (assignResult.errors?.length > 0) {
         for (const e of assignResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
-
-    console.log('Ensuring branch-central BranchSettings (default price type RETAIL)...');
-    await ensureBranchSettingsSeeded();
 
     const tradingPoints = [
         {
@@ -1506,6 +1580,9 @@ async function main() {
         for (const e of employeeResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
+    // After the branch batch: every branch needs a settings row before the visibility step.
+    console.log('Ensuring BranchSettings for every branch (default price type RETAIL)...');
+    await ensureBranchSettingsSeeded();
     seedPriceTypeVisibility();
 
     await seedBalanceDemo(postBatch);

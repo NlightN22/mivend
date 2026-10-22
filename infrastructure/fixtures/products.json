@@ -436,5 +436,57 @@
         "stockOnHand": 9,
         "categoryCode": "cat-electrical-batteries",
         "brandCode": "bosch"
+    },
+    {
+        "externalId": "ext-show-1",
+        "sku": "SHOW-LADDER-ONLY",
+        "name": "Showcase Oil, ladder only",
+        "fullName": "Showcase Oil, ladder only",
+        "slug": "showcase-ladder-only",
+        "description": "Dev showcase for the catalog tier ladder",
+        "price": 1000,
+        "stockOnHand": 500,
+        "categoryCode": "cat-engine-oils-semi-synthetic",
+        "brandCode": "ladder-only",
+        "weight": 25
+    },
+    {
+        "externalId": "ext-show-2",
+        "sku": "SHOW-FLAT-PLUS-LADDER",
+        "name": "Showcase Oil, flat discount and ladder",
+        "fullName": "Showcase Oil, flat discount and ladder",
+        "slug": "showcase-flat-plus-ladder",
+        "description": "Dev showcase for the catalog tier ladder",
+        "price": 1000,
+        "stockOnHand": 500,
+        "categoryCode": "cat-engine-oils-semi-synthetic",
+        "brandCode": "flat-plus-ladder",
+        "weight": 25
+    },
+    {
+        "externalId": "ext-show-3",
+        "sku": "SHOW-FLAT-BEATS-LADDER",
+        "name": "Showcase Oil, flat discount above ladder",
+        "fullName": "Showcase Oil, flat discount above ladder",
+        "slug": "showcase-flat-beats-ladder",
+        "description": "Dev showcase for the catalog tier ladder",
+        "price": 1000,
+        "stockOnHand": 500,
+        "categoryCode": "cat-engine-oils-semi-synthetic",
+        "brandCode": "flat-beats-ladder",
+        "weight": 25
+    },
+    {
+        "externalId": "ext-show-4",
+        "sku": "SHOW-AMOUNT-LADDER",
+        "name": "Showcase Oil, amount ladder only",
+        "fullName": "Showcase Oil, amount ladder only",
+        "slug": "showcase-amount-ladder",
+        "description": "Dev showcase for the catalog tier ladder",
+        "price": 1000,
+        "stockOnHand": 500,
+        "categoryCode": "cat-engine-oils-semi-synthetic",
+        "brandCode": "amount-ladder",
+        "weight": 25
     }
 ]

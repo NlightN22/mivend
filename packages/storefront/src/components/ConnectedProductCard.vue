@@ -31,6 +31,7 @@ const { multiplicityEnforced, unitView, packQty, shownQty, toBaseQty } = useProd
 
 const variant = computed(() => props.item.variants[0]);
 const tierProgress = useTierProgressView(
+    computed(() => props.item.id),
     computed(() => variant.value?.id),
     computed(() => flatPercentOf(variant.value?.customerPrice, variant.value?.compareAtPrice)),
 );

@@ -55,7 +55,7 @@ export class ProductVariantPriceResolver {
         const line = order?.lines.find(l => String(l.productVariantId) === String(variant.id));
         return this.priceResolutionService.resolveTierProgress(
             ctx,
-            variant.id,
+            String(variant.id),
             { order: order ?? ({ lines: [] } as unknown as Order), quantity: line?.quantity ?? 0 },
             this.memoFor(ctx),
         );

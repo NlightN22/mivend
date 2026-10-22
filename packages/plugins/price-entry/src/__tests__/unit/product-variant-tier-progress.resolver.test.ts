@@ -48,7 +48,7 @@ describe('ProductVariant.tierProgress', () => {
         };
         const { resolver, resolveTierProgress } = setup(order);
         const ctx = { activeUserId: 'u1' } as RequestContext;
-        await resolver.tierProgress(ctx, { id: '1' });
+        await resolver.tierProgress(ctx, { id: 1 as unknown as string });
         expect(resolveTierProgress).toHaveBeenCalledWith(
             ctx,
             '1',

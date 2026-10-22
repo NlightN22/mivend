@@ -16,12 +16,13 @@ export function flatPercentOf(
 }
 
 export function useTierProgressView(
+    productId: Ref<string | undefined>,
     variantId: Ref<string | undefined>,
     flatPercent: Ref<number> = ref(0),
 ): ComputedRef<TierLadder | null> {
     const store = useTierProgressStore();
     watchEffect(() => {
-        if (variantId.value) store.track(variantId.value);
+        if (productId.value) store.track(productId.value);
     });
     return computed(() => {
         const tp = variantId.value ? store.byVariant[variantId.value] : null;
