@@ -1,5 +1,11 @@
 import { gqlOk } from '../harness/graphql';
-import { COUNTERPARTIES, POINT_OVERRIDE, STANDING_GRANT, TEAM_OBSERVER } from './fixture-plan';
+import {
+    BRANCH_TEAMS,
+    COUNTERPARTIES,
+    POINT_OVERRIDE,
+    STANDING_GRANT,
+    TEAM_OBSERVER,
+} from './fixture-plan';
 import type { BaseSeedIds } from './seed-ids';
 
 // Manager, team, grant and servicing branch are staff decisions, made through the real Admin API.
@@ -17,10 +23,11 @@ export async function seedRelations(
             { c: ids.counterparties[c.key], a: ids.admins[c.manager] },
         );
     }
-    await call(
-        `mutation($c: ID!, $a: ID!) { addCounterpartyTeamMember(counterpartyId: $c, administratorId: $a, role: "observer") { id } }`,
-        { c: ids.counterparties[TEAM_OBSERVER.counterparty], a: ids.admins[TEAM_OBSERVER.actor] },
-    );
+    for (const t of [TEAM_OBSERVER, ...BRANCH_TEAMS])
+        await call(
+            `mutation($c: ID!, $a: ID!) { addCounterpartyTeamMember(counterpartyId: $c, administratorId: $a, role: "observer") { id } }`,
+            { c: ids.counterparties[t.counterparty], a: ids.admins[t.actor] },
+        );
     await call(
         `mutation($g: ID!, $m: ID!) { grantManagerVisibility(granteeAdministratorId: $g, managerAdministratorId: $m, reason: "access seed") { id } }`,
         { g: ids.admins[STANDING_GRANT.grantee], m: ids.admins[STANDING_GRANT.manager] },

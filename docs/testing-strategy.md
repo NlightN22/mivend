@@ -47,9 +47,13 @@ end, so it never touches a contour or needs an external service.
 
 Seed (`apps/server/src/__tests__/access/seed/fixture-plan.ts`): branches A/B plus the default,
 departments, counterparties (branch A, branch B, branch-less, a point serviced by branch B, a team
-observer, a standing grant), staff per role and scope, customers A/B, contracts, points, documents.
+observer, a standing grant), staff per role and scope (a head in the default branch too), customers
+A/B, contracts, points, documents, settlement documents and balances, branch teams, price-type gap
+clients.
 Expected sets are spelled out there, not recomputed. Specs live by entity under
 `apps/server/src/__tests__/access/`; files run one at a time and restore what they change.
+No skips; missing data is seeded, never worked around. Every restricted actor has a hidden row per
+entity, and scope `all` must see exactly the superadmin's set.
 Not part of `make test-int`.
 
 ### Component

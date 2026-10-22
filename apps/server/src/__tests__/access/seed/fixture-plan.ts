@@ -67,6 +67,11 @@ export const counterpartyErpId = (key: CounterpartyKey): string => `access-cp-${
 export const counterpartyName = (key: CounterpartyKey): string => `Access client ${key}`;
 
 export const TEAM_OBSERVER = { counterparty: 'b-team', actor: 'manager-a' } as const;
+// Teams on clients their member already sees, so each scoped actor misses at least one team.
+export const BRANCH_TEAMS: { counterparty: CounterpartyKey; actor: ActorKey }[] = [
+    { counterparty: 'a-own', actor: 'head-a' },
+    { counterparty: 'b-own', actor: 'head-b' },
+];
 export const STANDING_GRANT = { grantee: 'operator-a', manager: 'manager-b' } as const;
 export const POINT_OVERRIDE = { counterparty: 'a-point', branch: BRANCHES.b } as const;
 
@@ -133,7 +138,7 @@ export const VISIBLE_COUNTERPARTIES: Record<ActorKey, CounterpartyKey[]> = {
 // Orders, proformas and payments (#263 groups 13-16, 19, 20); every order goes through the Shop API checkout.
 export type OrderKey = 'a-own' | 'a-own-paid' | 'a-point' | 'none' | 'b-own';
 export type OrderCustomerKey = CustomerKey | 'customer-a-point' | 'customer-branchless';
-export type PaymentKey = 'a-own-paid' | 'b-own';
+export type PaymentKey = 'a-own-paid' | 'a-point' | 'b-own';
 
 // Portal customers of the a-point and branch-less clients; customer-branchless is also a PORTAL_CUSTOMERS row.
 export const ORDER_CUSTOMERS: { key: OrderCustomerKey; counterparty: CounterpartyKey }[] = [
@@ -156,7 +161,7 @@ export interface OrderPlan {
 export const ORDERS: OrderPlan[] = [
     { key: 'a-own', customer: 'customer-a', counterparty: 'a-own', proformas: 'issued-cancelled' },
     { key: 'a-own-paid', customer: 'customer-a', counterparty: 'a-own', proformas: 'paid' },
-    { key: 'a-point', customer: 'customer-a-point', counterparty: 'a-point', proformas: 'none' },
+    { key: 'a-point', customer: 'customer-a-point', counterparty: 'a-point', proformas: 'paid' },
     { key: 'none', customer: 'customer-branchless', counterparty: 'none', proformas: 'none' },
     { key: 'b-own', customer: 'customer-b', counterparty: 'b-own', proformas: 'paid' },
 ];
@@ -193,13 +198,13 @@ export const VISIBLE_A_OWN_PROFORMAS: Record<'home' | 'moved', ActorKey[]> = {
 
 // A payment follows its proforma, which follows its order.
 export const VISIBLE_PAYMENTS: Record<ActorKey, PaymentKey[]> = {
-    'manager-a': ['a-own-paid'],
+    'manager-a': ['a-own-paid', 'a-point'],
     'manager-b': ['b-own'],
     'head-a': ['a-own-paid'],
     'operator-a': ['a-own-paid', 'b-own'],
-    'head-b': ['b-own'],
+    'head-b': ['a-point', 'b-own'],
     'head-default': [],
-    director: ['a-own-paid', 'b-own'],
+    director: ['a-own-paid', 'a-point', 'b-own'],
 };
 
 // Settlement documents and balances (#263 group 17) on the customer contracts; numbers are unique per run.

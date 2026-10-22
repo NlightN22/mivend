@@ -2,12 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { admin, seed, staff, staffToken } from '../harness/actors';
 import { orderOf, pointState, setPointBranch } from '../order/order-queries';
-import {
-    COUNTERPARTIES,
-    STAFF,
-    VISIBLE_A_OWN_PROFORMAS,
-    type ActorKey,
-} from '../seed/fixture-plan';
+import { COUNTERPARTIES, STAFF, VISIBLE_A_OWN_PROFORMAS } from '../seed/fixture-plan';
 import type { OrderSeedIds } from '../seed/orders-seed';
 import { DENIED_OR_MISSING, proformaStatus } from './proforma-queries';
 
@@ -22,7 +17,6 @@ type List = { totalItems: number; items: { id: string }[] };
 
 const cp = (): string => seed().counterparties['a-own'];
 const samples = (): OrderSeedIds['aOwnProformas'] => seed().ordering.aOwnProformas;
-const hiddenSeen = new Set<ActorKey>();
 
 async function listFor(token: string, search?: string): Promise<List> {
     const result = await admin<{ visibleProformaInvoices: List }>(token, LIST, {
@@ -103,7 +97,6 @@ describe.each(['home', 'moved'] as const)('proformas of a-own, point %s', phase 
             expect(balance.data!.proformaInvoiceOutstandingBalance !== null, 'balance').toBe(shown);
             expect(await paymentTotal(token)).toBe(shown ? payments : 0);
             if (shown) return;
-            hiddenSeen.add(key);
             // A cancelled proforma: a withdraw that slipped through would return it unchanged.
             const withdraw = await admin(token, WITHDRAW, { id: samples().cancelled.id });
             expect(withdraw.errors.join(' '), 'withdraw').toMatch(DENIED_OR_MISSING);
@@ -112,8 +105,25 @@ describe.each(['home', 'moved'] as const)('proformas of a-own, point %s', phase 
     );
 });
 
-it('every scoped actor but the a-own manager misses the samples in one of the phases', () => {
-    const owner = COUNTERPARTIES.find(c => c.key === 'a-own')!.manager;
-    for (const s of STAFF.filter(a => staff(a.key).scope !== 'all' && a.key !== owner))
-        expect(hiddenSeen.has(s.key), `${s.key} had a hidden case`).toBe(true);
+async function proformaIds(token: string): Promise<string[]> {
+    const ids: string[] = [];
+    for (const c of COUNTERPARTIES) {
+        const result = await admin<{ visibleProformaInvoices: List }>(token, LIST, {
+            cp: seed().counterparties[c.key],
+        });
+        expect(result.errors).toEqual([]);
+        ids.push(...result.data!.visibleProformaInvoices.items.map(i => i.id));
+    }
+    return ids.sort();
+}
+
+describe.each(STAFF.map(s => s.key))('all seeded proformas for %s', key => {
+    it('a scoped actor misses one the superadmin sees; scope all sees exactly the same', async () => {
+        const all = await proformaIds(await staffToken('superadmin'));
+        expect(all.length, 'seeded proformas').toBeGreaterThan(0);
+        const own = await proformaIds(await staffToken(key));
+        for (const id of own) expect(all).toContain(id);
+        if (staff(key).scope === 'all') expect(own).toEqual(all);
+        else expect(own.length, 'a hidden proforma').toBeLessThan(all.length);
+    });
 });

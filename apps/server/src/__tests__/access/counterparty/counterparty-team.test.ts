@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { admin, seed, staffToken } from '../harness/actors';
-import { STAFF, TEAM_OBSERVER, VISIBLE_COUNTERPARTIES, type ActorKey } from '../seed/fixture-plan';
+import { admin, seed, staff, staffToken } from '../harness/actors';
+import {
+    BRANCH_TEAMS,
+    STAFF,
+    TEAM_OBSERVER,
+    VISIBLE_COUNTERPARTIES,
+    type ActorKey,
+} from '../seed/fixture-plan';
 import {
     ADD,
     HIDDEN_WRITE,
@@ -99,5 +105,29 @@ describe('a counterparty team follows the counterparty', () => {
         }
         expect(await memberIds(), 'the team is restored').toEqual(before);
         expect(await visibleById(observer, target)).toBe(true);
+    });
+});
+
+describe.each(STAFF.map(s => s.key))('teams for %s', (key: ActorKey) => {
+    it('reads every seeded team exactly when it sees the client; a scoped actor misses one', async () => {
+        const token = await staffToken(key);
+        const superadmin = await staffToken('superadmin');
+        const teams = [TEAM_OBSERVER, ...BRANCH_TEAMS];
+        let hidden = 0;
+        for (const t of teams) {
+            const proof = await counterpartyField<Team>(superadmin, TEAM, t.counterparty);
+            const ids = proof.value!.teamMembers.map(m => m.administratorId);
+            expect(ids, `${t.counterparty} team`).toContain(seed().admins[t.actor]);
+            const got = await counterpartyField<Team>(token, TEAM, t.counterparty);
+            expect(got.errors).toEqual([]);
+            if (VISIBLE_COUNTERPARTIES[key].includes(t.counterparty))
+                expect(got.value, t.counterparty).toEqual(proof.value);
+            else {
+                expect(got.value, `${t.counterparty}: hidden`).toBeNull();
+                hidden++;
+            }
+        }
+        if (staff(key).scope === 'all') expect(hidden).toBe(0);
+        else expect(hidden, 'a hidden team').toBeGreaterThan(0);
     });
 });

@@ -20,7 +20,7 @@ const REFUND = `mutation($p: ID!, $r: String!) { recordPaymentRefund(paymentId: 
 const REFUND_EXISTS = `query($r: String!) { paymentRefundExists(providerRefundId: $r) }`;
 const WITHDRAW = `mutation($id: ID!) { withdrawProformaInvoice(id: $id) { id status } }`;
 
-const KEYS: PaymentKey[] = ['a-own-paid', 'b-own'];
+const KEYS: PaymentKey[] = ['a-own-paid', 'a-point', 'b-own'];
 const counterpartyOf = (key: PaymentKey): string =>
     seed().counterparties[ORDERS.find(o => o.key === key)!.counterparty];
 const sample = (key: PaymentKey): SeedPayment => seed().ordering.payments[key];
@@ -55,7 +55,7 @@ async function seen(
     };
 }
 
-it('the superadmin sees both payments, their proformas and refunds', async () => {
+it('the superadmin sees every payment, their proformas and refunds', async () => {
     const superadmin = await staffToken('superadmin');
     for (const key of KEYS) {
         expect(await seen(superadmin, key), key).toEqual({ proforma: true, payment: true });
@@ -72,8 +72,7 @@ describe.each(STAFF.map(s => s.key))('payments for %s', (key: ActorKey) => {
     });
 
     it('proformas and payments follow the order scope; a refund is superadmin only', async () => {
-        // operator-a's standing grant over manager-b covers b-own, so it sees both payments.
-        if (staff(key).scope !== 'all' && key !== 'operator-a')
+        if (staff(key).scope !== 'all')
             expect(
                 KEYS.some(k => !expected.has(k)),
                 'a hidden payment',
