@@ -13,7 +13,6 @@ function markSessions(
 export default defineConfig({
     testDir: '.',
     globalSetup: './global-setup.ts',
-    globalTeardown: './global-teardown.ts',
     fullyParallel: false,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 1 : 0,

@@ -5,9 +5,8 @@ import { adminGql, postBatch, shopGql, shopLoginCookie, waitForRun } from './hel
 import { adminTokenFor } from './helpers/api-tokens';
 import { loginAs } from './helpers/storefront-auth';
 import { loginAsManager } from './helpers/manager-auth';
-import { cancelTestOrder, createConfirmedOrder } from './helpers/manager-order';
+import { createConfirmedOrder } from './helpers/manager-order';
 import { MANAGER_ACCOUNTS, SUPERADMIN } from './fixtures/accounts';
-import { markRunStart } from './helpers/session-cleanup';
 import { E2E_BROWSER_USER_AGENT } from './helpers/user-agent';
 import { seedRecords, E2E_CUSTOMER, E2E_OTHER_COUNTERPARTY_ID } from './fixtures/seed';
 import { seedVisibility } from './fixtures/visibility/seed-visibility';
@@ -64,21 +63,22 @@ async function ensureCountry(token: string, code: string, name: string): Promise
 
 export default async function globalSetup(): Promise<void> {
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
-    markRunStart();
+    // Cached admin tokens belong to the previous run's database.
+    fs.rmSync(path.join(AUTH_DIR, 'admin-tokens.json'), { force: true });
 
     const adminToken = await adminTokenFor(SUPERADMIN.identifier, SUPERADMIN.password);
     await ensureCountry(adminToken, 'RU', 'Russia');
     await ensureShippingMethod(adminToken);
 
     // erp-import rejects products without organizationId, which requires organizationSplitEnabled
-    // (turned on by `make seed`). Query the seeded organizations instead of creating duplicates.
+    // (turned on by seed-erp.mjs). Query the seeded organizations instead of creating duplicates.
     const organizationsResult = await adminGql<{
         organizationRequisites: { id: string }[];
     }>(`query { organizationRequisites { id } }`, undefined, adminToken);
     const organizationIds = organizationsResult.data.organizationRequisites.map(o => Number(o.id));
     if (organizationIds.length === 0) {
         throw new Error(
-            'No OrganizationRequisites found — run `make seed` before the e2e suite so ' +
+            'No OrganizationRequisites found — the e2e stack seed (seed-erp.mjs) must provide them so ' +
                 'product fixtures can be assigned a real organizationId (organizationSplitEnabled ' +
                 'is on, see docs/payments.md "Organizations")',
         );
@@ -106,7 +106,9 @@ export default async function globalSetup(): Promise<void> {
         b => b.erpId === 'branch-central',
     )?.id;
     if (!centralBranchId)
-        throw new Error('Seeded branch "branch-central" not found; run make seed');
+        throw new Error(
+            'Seeded branch "branch-central" not found; the e2e stack seed (seed-erp.mjs) must provide it',
+        );
 
     const warehousesResult = await adminGql<{ warehouses: { branchId: string | null }[] }>(
         `query { warehouses { branchId } }`,
@@ -114,7 +116,9 @@ export default async function globalSetup(): Promise<void> {
         adminToken,
     );
     if (!warehousesResult.data.warehouses.some(w => w.branchId === centralBranchId))
-        throw new Error('No warehouse seeded for branch-central; run make seed');
+        throw new Error(
+            'No warehouse seeded for branch-central; the e2e stack seed (seed-erp.mjs) must provide it',
+        );
 
     const tradingPointFixResult = await adminGql<{
         counterparties: {
@@ -177,32 +181,6 @@ export default async function globalSetup(): Promise<void> {
     );
     const productVariantId = variantsResult.data.productVariants.items[0]?.id;
     if (!productVariantId) throw new Error('Could not find product variant E2E-OIL-001');
-
-    // Cancelling prior runs' orders is what releases allocated stock: seed resets only stockOnHand,
-    // so stockAllocated creeps up. Page through all non-cancelled orders, not just the first 100.
-    const pageSize = 100;
-    for (;;) {
-        // Keep skip at 0: cancelling removes orders from the state-filtered set, so the next page
-        // shifts into view. Advancing skip would skip over them.
-        const priorOrdersResult = await adminGql<{
-            customer: { orders: { items: { id: string; state: string }[] } } | null;
-        }>(
-            `query($id: ID!, $take: Int!) {
-                customer(id: $id) {
-                    orders(options: { skip: 0, take: $take, filter: { state: { notEq: "Cancelled" } } }) {
-                        items { id state }
-                    }
-                }
-            }`,
-            { id: customerId, take: pageSize },
-            operatorToken,
-        );
-        const orders = priorOrdersResult.data.customer?.orders.items ?? [];
-        if (orders.length === 0) break;
-        for (const priorOrder of orders) {
-            await cancelTestOrder(operatorToken, priorOrder.id);
-        }
-    }
 
     // The order's branch (and so its stock allocation) is resolved from the customer's preferred
     // trading point at placement time.
@@ -290,53 +268,34 @@ export default async function globalSetup(): Promise<void> {
         c => c.erpId === E2E_OTHER_COUNTERPARTY_ID,
     )?.id;
 
-    if (e2eCounterpartyId && otherCounterpartyId) {
-        // requestDiscountGrant has no natural key to upsert on and always creates a new ApprovalRequest,
-        // so check for an existing grant first; duplicates break the specs' strict-mode text locators.
-        const existingGrants = await adminGql<{
-            discountGrantsForCounterparty: { items: { percent: number }[] };
-        }>(
-            `query($counterpartyId: ID!) { discountGrantsForCounterparty(counterpartyId: $counterpartyId) { items { percent } } }`,
-            { counterpartyId: e2eCounterpartyId },
+    if (!otherCounterpartyId) throw new Error(`${E2E_OTHER_COUNTERPARTY_ID} not found`);
+    // The 99% grant on the other counterparty must not leak onto the e2e customer's prices.
+    const validTo = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+    for (const [counterpartyId, percent] of [
+        [e2eCounterpartyId, 8],
+        [otherCounterpartyId, 99],
+    ] as const) {
+        const requested = await adminGql<{ requestDiscountGrant: { id: string } }>(
+            `mutation($input: DiscountGrantInput!) { requestDiscountGrant(input: $input) { id } }`,
+            {
+                input: {
+                    priceTypeCode: 'WHOLESALE',
+                    percent,
+                    validFrom: new Date().toISOString(),
+                    validTo,
+                    justification: 'e2e seed grant',
+                    counterpartyIds: [counterpartyId],
+                },
+            },
+            managerToken,
+        );
+        await adminGql(
+            `mutation($requestId: ID!) {
+                decideDiscountGrantRequest(requestId: $requestId, decision: "approved") { id status }
+            }`,
+            { requestId: requested.data.requestDiscountGrant.id },
             deptHeadToken,
         );
-        const alreadySeeded = existingGrants.data.discountGrantsForCounterparty.items.some(
-            g => g.percent === 8,
-        );
-
-        if (!alreadySeeded) {
-            const validTo = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
-            const grantInput = (
-                counterpartyIds: string[],
-                percent: number,
-            ): Record<string, unknown> => ({
-                priceTypeCode: 'WHOLESALE',
-                percent,
-                validFrom: new Date().toISOString(),
-                validTo,
-                justification: 'e2e seed grant',
-                counterpartyIds,
-            });
-
-            for (const [counterpartyIds, percent] of [
-                [[e2eCounterpartyId], 8],
-                [[otherCounterpartyId], 99],
-            ] as const) {
-                const requested = await adminGql<{ requestDiscountGrant: { id: string } }>(
-                    `mutation($input: DiscountGrantInput!) { requestDiscountGrant(input: $input) { id } }`,
-                    { input: grantInput([...counterpartyIds], percent) },
-                    managerToken,
-                );
-                const requestId = requested.data.requestDiscountGrant.id;
-                await adminGql(
-                    `mutation($requestId: ID!) {
-                        decideDiscountGrantRequest(requestId: $requestId, decision: "approved") { id status }
-                    }`,
-                    { requestId },
-                    deptHeadToken,
-                );
-            }
-        }
     }
 
     await seedVisibility(adminToken);

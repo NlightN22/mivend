@@ -1,11 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
 import { E2E_API_USER_AGENT, E2E_USER_AGENT_MARK } from './user-agent';
 
 const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:3000';
-const AUTH_DIR = path.join(__dirname, '../.auth');
-const RUN_START_FILE = path.join(AUTH_DIR, 'run-start.json');
 
 export type ApiName = 'admin-api' | 'shop-api';
 
@@ -40,20 +35,6 @@ async function call<T>(
     const json = (await res.json()) as { data: T; errors?: Array<{ message: string }> };
     if (json.errors?.length) throw new Error(`${api}: ${json.errors[0].message}`);
     return { data: json.data, token: res.headers.get('vendure-auth-token') };
-}
-
-export function markRunStart(): void {
-    fs.rmSync(path.join(AUTH_DIR, 'admin-tokens.json'), { force: true });
-    fs.writeFileSync(RUN_START_FILE, JSON.stringify({ startedAt: new Date().toISOString() }));
-}
-
-// Undefined when global setup did not run (e.g. a single project launched with --no-deps).
-export function runStart(): Date | undefined {
-    if (!fs.existsSync(RUN_START_FILE)) return undefined;
-    const { startedAt } = JSON.parse(fs.readFileSync(RUN_START_FILE, 'utf8')) as {
-        startedAt: string;
-    };
-    return new Date(startedAt);
 }
 
 async function runSessions(api: ApiName, token: string, since: Date): Promise<SessionRow[]> {

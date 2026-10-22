@@ -10,7 +10,7 @@ import {
 } from './plan';
 
 // Manager, team, grant, servicing branch and branch settings are staff decisions, made through the Admin API.
-export async function ensureRelations(superadmin: string, ids: VisIds): Promise<void> {
+export async function seedRelations(superadmin: string, ids: VisIds): Promise<void> {
     const call = <T>(query: string, variables?: Record<string, unknown>): Promise<T> =>
         adminGql<T>(query, variables, superadmin).then(r => r.data);
 
@@ -41,31 +41,16 @@ export async function ensureRelations(superadmin: string, ids: VisIds): Promise<
         );
     }
 
-    const team = await call<{ counterparty: { teamMembers: { administratorId: string }[] } }>(
-        `query($id: ID!) { counterparty(id: $id) { teamMembers { administratorId } } }`,
-        { id: ids.clients[TEAM_OBSERVER.client] },
+    await call(
+        `mutation($c: ID!, $a: ID!) { addCounterpartyTeamMember(counterpartyId: $c, administratorId: $a, role: "observer") { id } }`,
+        { c: ids.clients[TEAM_OBSERVER.client], a: ids.admins[TEAM_OBSERVER.actor] },
     );
-    const observer = ids.admins[TEAM_OBSERVER.actor];
-    if (!team.counterparty.teamMembers.some(m => m.administratorId === observer))
-        await call(
-            `mutation($c: ID!, $a: ID!) { addCounterpartyTeamMember(counterpartyId: $c, administratorId: $a, role: "observer") { id } }`,
-            { c: ids.clients[TEAM_OBSERVER.client], a: observer },
-        );
 
-    const grants = await call<{
-        visibilityGrants: { items: { managerAdministratorId: string }[] };
-    }>(
-        `query($g: ID!) { visibilityGrants(granteeAdministratorId: $g, status: "active", take: 50) {
-            items { managerAdministratorId } } }`,
-        { g: ids.admins[STANDING_GRANT.grantee] },
+    await call(
+        `mutation($g: ID!, $m: ID!) { grantManagerVisibility(granteeAdministratorId: $g,
+            managerAdministratorId: $m, reason: "e2e visibility seed") { id } }`,
+        { g: ids.admins[STANDING_GRANT.grantee], m: ids.admins[STANDING_GRANT.manager] },
     );
-    const manager = ids.admins[STANDING_GRANT.manager];
-    if (!grants.visibilityGrants.items.some(g => g.managerAdministratorId === manager))
-        await call(
-            `mutation($g: ID!, $m: ID!) { grantManagerVisibility(granteeAdministratorId: $g,
-                managerAdministratorId: $m, reason: "e2e visibility seed") { id } }`,
-            { g: ids.admins[STANDING_GRANT.grantee], m: manager },
-        );
 
     await call(
         `mutation($id: ID!, $b: String) { updateTradingPointDetails(id: $id, input: { servicingBranchId: $b }) { id } }`,
