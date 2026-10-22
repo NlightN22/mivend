@@ -26,7 +26,7 @@ export async function freePort(): Promise<number> {
 export async function waitForUrl(url: string, child: ChildProcess, logPath: string): Promise<void> {
     const deadline = Date.now() + BOOT_TIMEOUT_MS;
     while (Date.now() < deadline) {
-        if (child.exitCode !== null)
+        if (exited(child))
             throw new Error(`${url}: the process exited with ${child.exitCode}, see ${logPath}`);
         const healthy = await fetch(url).then(
             r => r.ok,
@@ -38,22 +38,34 @@ export async function waitForUrl(url: string, child: ChildProcess, logPath: stri
     throw new Error(`${url} did not become healthy in time, see ${logPath}`);
 }
 
+export const exited = (child: ChildProcess): boolean =>
+    child.exitCode !== null || child.signalCode !== null;
+
+// Resolves even when the leader is gone: its group may still hold children, and 'exit' never re-fires.
 export function stopGroup(child: ChildProcess): Promise<void> {
-    if (child.exitCode !== null || child.pid === undefined) return Promise.resolve();
+    if (child.pid === undefined) return Promise.resolve();
     const pid = child.pid;
+    const kill = (signal: NodeJS.Signals): void => {
+        try {
+            process.kill(-pid, signal);
+        } catch {
+            // already gone
+        }
+    };
+    if (exited(child)) {
+        kill('SIGKILL');
+        return Promise.resolve();
+    }
     return new Promise(done => {
         const force = setTimeout(() => {
-            try {
-                process.kill(-pid, 'SIGKILL');
-            } catch {
-                // already gone
-            }
+            kill('SIGKILL');
+            done();
         }, 15_000);
         child.once('exit', () => {
             clearTimeout(force);
             done();
         });
-        process.kill(-pid, 'SIGTERM');
+        kill('SIGTERM');
     });
 }
 

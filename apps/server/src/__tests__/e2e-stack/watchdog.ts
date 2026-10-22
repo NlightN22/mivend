@@ -1,5 +1,7 @@
 import type { ChildProcess } from 'child_process';
 
+import { exited } from '../access/harness/server-process';
+
 // Calls onFail once: when a stack process dies while tests run, or when the run outlives timeoutMs.
 export function watchStack(
     stack: ChildProcess[],
@@ -17,7 +19,7 @@ export function watchStack(
         const listener = (code: number | null, signal: string | null): void =>
             fail(`stack process ${child.pid} exited (${code ?? signal}) during the run`);
         child.once('exit', listener);
-        if (child.exitCode !== null) fail(`stack process ${child.pid} was already gone`);
+        if (exited(child)) fail(`stack process ${child.pid} was already gone`);
         return { child, listener };
     });
     const timer = setTimeout(() => fail(`run exceeded ${timeoutMs / 60_000} min`), timeoutMs);

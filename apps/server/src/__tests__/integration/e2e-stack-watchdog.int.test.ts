@@ -49,4 +49,16 @@ describe('e2e stack watchdog', () => {
         expect(alive(grandchild)).toBe(false);
         await stopGroup(server);
     });
+
+    it('stopGroup resolves and kills the group when its leader already died of a signal', async () => {
+        const { leader, grandchild } = await spawnTree();
+        await new Promise(done => {
+            leader.once('exit', done);
+            leader.kill('SIGTERM');
+        });
+        expect(alive(grandchild)).toBe(true);
+        await stopGroup(leader);
+        await new Promise(r => setTimeout(r, 200));
+        expect(alive(grandchild)).toBe(false);
+    });
 });
