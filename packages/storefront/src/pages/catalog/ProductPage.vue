@@ -13,7 +13,7 @@ import {
 import { useAuthStore } from '../../stores/auth';
 import { assetUrl } from '../../composables/assetUrl';
 import { useCartActions } from '../../composables/useCartActions';
-import { useTierProgressView } from '../../composables/useTierProgressView';
+import { flatPercentOf, useTierProgressView } from '../../composables/useTierProgressView';
 import { useCatalogStore } from '../../stores/catalog';
 import { filterVisibleCrumbs } from '../../../../shared/src/collectionTree';
 import { shopApi } from '../../api/client';
@@ -44,7 +44,10 @@ const galleryImages = computed(() =>
     })),
 );
 const variant = computed(() => product.value?.variants[0]);
-const tierProgress = useTierProgressView(computed(() => variant.value?.id));
+const tierProgress = useTierProgressView(
+    computed(() => variant.value?.id),
+    computed(() => flatPercentOf(variant.value?.customerPrice, variant.value?.compareAtPrice)),
+);
 const packagesOnly = ref(false);
 const multiplicityEnforced = ref(false);
 const nearestPack = computed(() =>

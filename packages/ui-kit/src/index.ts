@@ -135,6 +135,8 @@ export { default as MvTooltip } from './components/MvTooltip/MvTooltip.vue';
 export { default as MvDiscountBadge } from './components/MvDiscountBadge/MvDiscountBadge.vue';
 export type { DiscountTier } from './components/MvDiscountBadge/MvDiscountBadge.vue';
 export { default as MvProgressBar } from './components/MvProgressBar/MvProgressBar.vue';
+export { default as MvTierLadder } from './components/MvTierLadder/MvTierLadder.vue';
+export type { TierLadder } from './components/MvTierLadder/MvTierLadder.vue';
 export type { ProgressBarVariant } from './components/MvProgressBar/MvProgressBar.vue';
 
 export { default as MvKpiCard } from './components/MvKpiCard/MvKpiCard.vue';

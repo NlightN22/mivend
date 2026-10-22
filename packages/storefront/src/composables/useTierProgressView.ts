@@ -1,21 +1,24 @@
-import { computed, watchEffect, type ComputedRef, type Ref } from 'vue';
+import { computed, ref, watchEffect, type ComputedRef, type Ref } from 'vue';
+import type { TierLadder } from '@mivend/ui-kit';
 import { useTierProgressStore } from '../stores/tierProgress';
 import { formatTierValue } from '../utils/discount';
-import { discountTierComplete, discountTierRemaining } from '../utils/discountMessages';
+import { discountTierComplete } from '../utils/discountMessages';
 
-export interface TierProgressView {
-    label: string;
-    value: number;
-    max: number;
-    variant: 'normal' | 'warn';
+// Keeps the pin visibly off the start at 0, so an untouched ladder still reads as unfinished.
+const MIN_FILL = 0.06;
+
+// The catalog price already carries the flat facet discount; discounts never stack, the best one wins.
+export function flatPercentOf(
+    price: number | null | undefined,
+    compareAt: number | null | undefined,
+): number {
+    return price != null && compareAt ? Math.round((1 - price / compareAt) * 100) : 0;
 }
-
-// Keeps the bar visibly started at 0, so an untouched ladder still reads as unfinished.
-const MIN_FILL = 0.08;
 
 export function useTierProgressView(
     variantId: Ref<string | undefined>,
-): ComputedRef<TierProgressView | null> {
+    flatPercent: Ref<number> = ref(0),
+): ComputedRef<TierLadder | null> {
     const store = useTierProgressStore();
     watchEffect(() => {
         if (variantId.value) store.track(variantId.value);
@@ -23,22 +26,23 @@ export function useTierProgressView(
     return computed(() => {
         const tp = variantId.value ? store.byVariant[variantId.value] : null;
         if (!tp) return null;
+        const current = Math.max(flatPercent.value, tp.currentPercent ?? 0);
+        const currentLabel = current ? `−${current}%` : '0%';
         if (tp.nextThreshold == null) {
             return {
-                label: discountTierComplete(tp.currentPercent ?? 0),
+                currentLabel,
+                targetLabel: discountTierComplete(current),
                 value: 1,
                 max: 1,
-                variant: 'normal',
+                complete: true,
             };
         }
+        if ((tp.nextPercent ?? 0) <= current) return null;
         return {
-            label: discountTierRemaining(
-                formatTierValue(tp.nextThreshold - tp.current, tp.metric),
-                tp.nextPercent ?? 0,
-            ),
+            currentLabel,
+            targetLabel: `${formatTierValue(tp.nextThreshold, tp.metric)} → −${tp.nextPercent}%`,
             value: Math.max(tp.current, tp.nextThreshold * MIN_FILL),
             max: tp.nextThreshold,
-            variant: 'warn',
         };
     });
 }

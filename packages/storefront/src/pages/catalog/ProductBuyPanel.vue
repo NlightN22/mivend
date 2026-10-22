@@ -2,10 +2,9 @@
 import { formatMoney } from '../../i18n/format';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { MvProgressBar, stockVariantFromLevel } from '@mivend/ui-kit';
+import { MvTierLadder, stockVariantFromLevel, type TierLadder } from '@mivend/ui-kit';
 import { useProductLabels } from '../../composables/useProductLabels';
 import { useDemoMode } from '../../composables/useDemoMode';
-import type { TierProgressView } from '../../composables/useTierProgressView';
 import { noPriceAction } from './noPriceAction';
 import { baseToPacks, packsToBase, type SalesUnitView } from '../../composables/useSalesUnit';
 
@@ -20,7 +19,7 @@ interface Props {
     salesUnit?: SalesUnitView | null;
     requiredMultiple?: number;
     nearestPack?: { name: string; ratio: number; baseQty: number } | null;
-    tierProgress?: TierProgressView | null;
+    tierProgress?: TierLadder | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -105,13 +104,10 @@ function onStepper(lineId: string | undefined, value: number): void {
             <div v-else class="buy-panel__price buy-panel__price--on-request">
                 {{ t('buyPanel.onRequest') }}
             </div>
-            <MvProgressBar
+            <MvTierLadder
                 v-if="showPrices && tierProgress"
                 class="buy-panel__tier-progress"
-                :label="tierProgress.label"
-                :value="tierProgress.value"
-                :max="tierProgress.max"
-                :variant="tierProgress.variant"
+                :ladder="tierProgress"
             />
             <div class="buy-panel__price-note">
                 <template v-if="showPrices && salesUnit && price !== undefined">

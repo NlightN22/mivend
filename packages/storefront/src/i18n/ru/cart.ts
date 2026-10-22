@@ -56,7 +56,6 @@ const ru: typeof en = {
         tierReached: 'Объём {brand} достигнут: {value} → −{percent}%',
         tierComplete: 'Открыта максимальная скидка: −{percent}%',
         tierProgress: '{current} из {next} для −{percent}%',
-        tierRemaining: 'Ещё {remaining} — и скидка −{percent}%',
         tierCurrent: '(сейчас −{percent}%)',
     },
     cartErrors: {

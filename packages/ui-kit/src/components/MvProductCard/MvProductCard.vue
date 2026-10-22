@@ -9,7 +9,7 @@ import MvQtyStepper, { type QtyStepperLabels } from '../MvQtyStepper/MvQtySteppe
 import MvTooltip from '../MvTooltip/MvTooltip.vue';
 import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 import MvDiscountBadge, { type DiscountTier } from '../MvDiscountBadge/MvDiscountBadge.vue';
-import MvProgressBar from '../MvProgressBar/MvProgressBar.vue';
+import MvTierLadder, { type TierLadder } from '../MvTierLadder/MvTierLadder.vue';
 
 export interface ProductCardLabels {
     previousPhoto: string;
@@ -38,12 +38,7 @@ interface Props {
     compareAtPrice?: number;
     customerPrice?: number;
     discountTiers?: DiscountTier[];
-    tierProgress?: {
-        label: string;
-        value: number;
-        max: number;
-        variant?: 'normal' | 'warn';
-    } | null;
+    tierProgress?: TierLadder | null;
     discountTitle?: string;
     discountWeightLabel?: (kg: number) => string;
     discountAmountLabel?: (minorUnits: number) => string;
@@ -188,13 +183,10 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 
             <a :href="`/product/${slug}`" class="mv-product-card__name">{{ name }}</a>
             <div v-if="packLabel" class="mv-product-card__pack">{{ packLabel }}</div>
-            <MvProgressBar
+            <MvTierLadder
                 v-if="showPrices && tierProgress"
                 class="mv-product-card__tier-progress"
-                :label="tierProgress.label"
-                :value="tierProgress.value"
-                :max="tierProgress.max"
-                :variant="tierProgress.variant"
+                :ladder="tierProgress"
             />
 
             <template v-if="showPrices">
