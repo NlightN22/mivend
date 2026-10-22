@@ -380,4 +380,14 @@ Vendure promotion, not part of the line's list price:
 - Consumers read the price a customer pays from `discounted*`/`prorated*` fields (`discountedLinePriceWithTax`,
   `proratedUnitPriceWithTax`); `unitPrice`/`linePrice` are before the promotion. `OrderLine.compareAtPrice`
   is the price before every discount. The floor-price check compares the prorated price.
+- Any OTHER enabled Vendure promotion (a coupon, one an admin creates) stacks additively on top of this one,
+  which could not happen while the price was baked into `listPrice`; create no such promotion without a decision.
+- Amount thresholds (`minAmount`, counterparty amount rules) are measured BEFORE discounts (list-price line
+  totals, shipping and surcharges excluded). A manual-price line gets no discount but still counts toward its
+  siblings' weight, amount and quantity (pinned by a unit test).
+- The bootstrap re-enables the promotion at every boot if staff disabled it (warn log): that is intended, a disabled
+  promotion silently removes every order-dependent discount.
+- Size: the evaluation is linear, about 60 ms per line per mutation (measured on the local contour: 41 lines add
+  ~2.5 s, adjust ~2.4 s, read ~1.9 s). Carts above roughly 100 lines are not measured; batch the rule queries
+  per order before supporting them.
 - Progress (`tierProgress`) is derived from the order's quantities, independent of prices.

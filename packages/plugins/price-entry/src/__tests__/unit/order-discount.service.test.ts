@@ -33,7 +33,7 @@ function line(
 }
 
 function orderOf(...lines: FakeLine[]): Order {
-    return { lines } as unknown as Order;
+    return { lines, customerId: 'cust-1', customFields: {} } as unknown as Order;
 }
 
 function setup(customerPriceByVariant: Record<string, number | null>) {
@@ -104,5 +104,30 @@ describe('OrderDiscountService', () => {
         const second = await service.stateFor(ctx, orderOf(line('b', 1000)));
         expect([...first.keys()]).toEqual(['a']);
         expect([...second.keys()]).toEqual(['b']);
+    });
+
+    it('recomputes when the customer or the contract of the same order changes', async () => {
+        const { service, resolve } = setup({ 'v-a': 900 });
+        const order = orderOf(line('a', 1000));
+        await service.stateFor(ctx, order);
+
+        (order as unknown as { customerId: string }).customerId = 'cust-2';
+        await service.stateFor(ctx, order);
+        expect(resolve).toHaveBeenCalledTimes(2);
+
+        (order as unknown as { customFields: object }).customFields = { erpContractId: 'ctr-9' };
+        await service.stateFor(ctx, order);
+        expect(resolve).toHaveBeenCalledTimes(3);
+    });
+
+    it('lets a manual-price line count toward its siblings tiers while getting no discount itself', async () => {
+        const { service, resolve } = setup({ 'v-b': 900 });
+        const manual = line('a', 1000, 4, { customFields: { manualUnitPrice: 1000 } });
+        const sibling = line('b', 1000);
+        const order = orderOf(manual, sibling);
+        const state = await service.stateFor(ctx, order);
+        expect(state).toEqual(new Map([['b', 100]]));
+        const passedOrder = resolve.mock.calls[0][2] as { order: Order };
+        expect(passedOrder.order.lines).toContain(manual);
     });
 });

@@ -24,9 +24,11 @@ export class OrderDiscountService {
     constructor(private priceResolution: PriceResolutionService) {}
 
     stateFor(ctx: RequestContext, order: Order): Promise<OrderDiscountState> {
-        const signature = order.lines
+        const lines = order.lines
             .map(l => `${String(l.id)}:${l.quantity}:${l.listPrice}:${hasManualPrice(l)}`)
             .join('|');
+        // customer and contract pick the price type and the counterparty rules, so they belong to the snapshot.
+        const signature = `${String(order.customerId)}:${String(order.customFields?.erpContractId)}|${lines}`;
         const cached = this.cache.get(order);
         if (cached?.signature === signature) return cached.state;
         const state = this.compute(ctx, order);

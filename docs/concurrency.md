@@ -158,7 +158,7 @@ always proforma, reserve, row. Nothing takes `reserve-order` or `proformaInvoice
 inside that transaction. Checked: the `OrderProcess` hooks (`contract-order-guard`, `organization-order-guard`,
 `freight-order-guard`, `external-order.guard`, `replica-order.guard`) take no advisory lock; there is no blocking event
 handler; `ReservationPaymentService`, `OrderSubmittedListener` and the check
-listeners run from `eventBus.ofType` subscribers, which fire after commit; order-dependent discounts are a promotion computed inside the mutation's own transaction (#196), with no lock of their own. The payment handlers (`offline-terms-handler`, `online-stub-handler`) are the only
+listeners run from `eventBus.ofType` subscribers, which fire after commit; order-dependent discounts are a promotion computed inside the mutation's own transaction (#196), with no lock of their own. Residual race (Vendure core's): two concurrent mutations of one order each compute promotions on their own snapshot and the last writer of the line adjustments wins; the Shop API serializes a customer's cart mutations (#258 active-order lock) and `storefront/cart-totals/concurrent-mutations.spec.ts` (parallel calls vs a sequential build) is the only guard, probabilistic evidence rather than proof. The payment handlers (`offline-terms-handler`, `online-stub-handler`) are the only
 in-transaction advisory takers and take the proforma lock first.
 
 **Cancel (#231).** Every path into `Cancelled` takes `withOrderCancelLocks` (`shared`: proforma, then reserve) before
