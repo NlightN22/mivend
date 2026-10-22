@@ -12,6 +12,10 @@ unless the owner asks. Read `docs/e2e-testing.md` ("Staging-integration order ex
 
 ## Rules
 
+- **Only the ERP exchange and a few real-data end-to-end scenarios belong here.** A role x entity visibility
+  matrix (list/detail/id guess/denied write per actor) goes to `make test-access`, a see-own/cannot-see-other
+  browser check to `make e2e` (#263). Do not add new visibility groups to this suite.
+
 - Never run it in CI or from `make test`/`make test-int`; it is manual, one worker, no retries.
 - **Reads** go through `integration/contour-db.ts` (`select`, read-only by construction) or the product API/UI.
 - **Writes only through the product** (UI or API, as the user would), never SQL inserts. Prefer entities that

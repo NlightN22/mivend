@@ -144,6 +144,7 @@ Always run tests via Makefile, not directly through pnpm:
 
 - `make test` — unit tests (offline, no infrastructure needed)
 - `make test-int` — integration/component/contract tests (starts dev infrastructure via `make up` automatically)
+- `make test-access` — role x entity API visibility matrix on a throwaway server and database (no contour needed)
 - `make e2e` — Playwright E2E (requires `make dev` + `make seed`)
 
 Never use `pnpm test` or `pnpm --filter ... test` directly — use the Makefile targets.

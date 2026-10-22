@@ -46,6 +46,12 @@ does not. Teardown restores the contour, cancels every order of the run (staff c
 sessions. A summary with skip reasons is printed at the end. Subset:
 `make e2e-integration E2E_ARGS="01-placement"`.
 
+**What stays here (#263).** This suite validates the real ERP exchange plus a few end-to-end
+scenarios on real data. Role x entity visibility matrices are integration tests and move to
+`make test-access` (`docs/testing-strategy.md`); a thin see-own/cannot-see-other browser layer
+moves to `make e2e`. Groups `08`, `10` and `12` are already ported
+(`apps/server/src/__tests__/access/counterparty/`); the staging copies are removed after the full port.
+
 Price type visibility groups (#235, `05`-`07`, read-only except `07`) need the optional test manager
 (`STAGING_TEST_MANAGER_*`) and skip with a reason without it; the manager's allowed and hidden
 types are derived from the contour DB (branch allow-list and default), never hardcoded. `05` visits

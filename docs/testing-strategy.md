@@ -37,6 +37,21 @@ Does not automatically become a full user scenario.
 Location: `src/__tests__/integration/`. Runner: Vitest, per-plugin `vitest.integration.config.ts`
 (`make test-int`).
 
+### Access integration (`make test-access`)
+
+The role x entity visibility matrix over the real Admin/Shop API: list, detail, id guess, nested
+field and denied write per role and scope, every hidden claim paired with a superadmin proof that
+the row exists. It boots the real server (`ts-node`) against a throwaway database and RabbitMQ vhost
+on the test infra, seeds a fixed set through erp-import and the Admin API, and drops both at the
+end, so it never touches a contour or needs an external service.
+
+Seed (`apps/server/src/__tests__/access/seed/fixture-plan.ts`): branches A/B plus the default,
+departments, counterparties (branch A, branch B, branch-less, a point serviced by branch B, a team
+observer, a standing grant), staff per role and scope, customers A/B, contracts, points, documents.
+Expected sets are spelled out there, not recomputed. Specs live by entity under
+`apps/server/src/__tests__/access/`; files run one at a time and restore what they change.
+Not part of `make test-int`.
+
 ### Component
 
 A complete chain within one plugin/service, e.g.:
@@ -75,6 +90,11 @@ every validation error, status combination, retry scenario, overlap, isolation v
 internal branch — those belong at lower levels.
 
 Location: `packages/e2e/`. Runner: Playwright (`make e2e`).
+
+Visibility split (#263): the API matrix lives in `make test-access`; `make e2e` (local contour, same
+seed shape) keeps one see-own and one cannot-see-other browser check per entity, mostly in the
+storefront; `make e2e-integration` (staging) keeps only the real ERP exchange and a few end-to-end
+scenarios on real data.
 
 ## Level selection rule
 
@@ -326,6 +346,7 @@ A change is not done until:
 
 - `make test` — unit tests, offline.
 - `make test-int` — integration/component/contract tests (starts infra via `make up`).
+- `make test-access` — access integration matrix on a throwaway server and database (about 1 min).
 - `make ci` — the push CI pipeline (lint, format, type check, unit, contract) on a clean HEAD checkout with an empty pnpm store; run before pushing.
 - `make e2e` — Playwright E2E (requires `make dev` + `make seed`).
 
