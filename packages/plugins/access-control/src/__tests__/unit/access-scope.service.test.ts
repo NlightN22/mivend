@@ -64,6 +64,16 @@ describe('AccessScopeService', () => {
         expect(roleScopeConfigService.maxScopeFor).not.toHaveBeenCalled();
     });
 
+    it('widens a mixed-role admin holding the superadmin role, but no other admin', async () => {
+        const mixed = mockAdmin('admin-m');
+        mixed.user.roles = [{ code: 'test-role' }, { code: '__super_admin_role__' }];
+        administratorService.findOneByUserId.mockResolvedValue(mixed);
+        expect(await service.resolveOrderScope(ctx)).toEqual({ kind: 'all' });
+        administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-o'));
+        roleScopeConfigService.maxScopeFor.mockResolvedValue('own');
+        expect((await service.resolveOrderScope(ctx)).kind).toBe('own');
+    });
+
     it('resolves "all" scope with no ownership identifiers', async () => {
         administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-3'));
         roleScopeConfigService.maxScopeFor.mockResolvedValue('all');
