@@ -169,6 +169,18 @@ portal customer; head-a gets null). Head-a, who may manage teams, is refused add
 hidden client (no row changed). In the manager portal head-b's Team tab shows the observer and head-a gets
 "Customer not found". Head-b then removes the member through the API and the client leaves manager-a again.
 
+## Visibility browser layer (#263)
+
+`packages/e2e/visibility/` (projects `visibility-manager` and `visibility-storefront`) is the thin
+see-own/cannot-see-other layer that replaces the browser parts of staging groups `05`-`22`.
+`global-setup.ts` seeds its data idempotently through erp-import and the Admin API
+(`fixtures/visibility/`): branches A/B, one actor per role and scope, clients `a-own`, `a-free`,
+`a-point` (point serviced by branch B), `b-own`, `b-team` (manager-a observer), `none` (no branch),
+a standing visibility grant, branch price type allow-lists, three pending discount grants and one
+placed, paid order per customer. Orders older than 3 days are cancelled and replaced, because the
+manager orders list shows only the last 7 days. Run:
+`flock /tmp/mivend-e2e.lock make e2e E2E_ARGS="visibility --project=visibility-manager --project=visibility-storefront"`.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —

@@ -54,6 +54,22 @@ export default defineConfig({
             },
         },
         {
+            name: 'visibility-storefront',
+            testDir: './visibility/storefront',
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: process.env.STOREFRONT_URL ?? 'http://localhost:5173',
+            },
+        },
+        {
+            name: 'visibility-manager',
+            testDir: './visibility/manager',
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
+            },
+        },
+        {
             name: 'manager-noauth',
             testDir: './manager/auth',
             use: {
