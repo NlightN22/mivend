@@ -14,12 +14,17 @@ export interface ImportTarget {
     token: string;
 }
 
-async function postBatch(target: ImportTarget, type: string, records: object[]): Promise<void> {
+export async function postBatch(
+    target: ImportTarget,
+    type: string,
+    records: object[],
+    exchange = type,
+): Promise<void> {
     const response = await fetch(`${target.baseUrl}/erp/import/batch`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${target.token}` },
         body: JSON.stringify({
-            exchangeId: `access-seed-${type}`,
+            exchangeId: `access-seed-${exchange}`,
             records: records.map(data => ({ type, data })),
         }),
     });

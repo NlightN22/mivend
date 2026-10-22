@@ -1,12 +1,12 @@
 import { gqlOk } from '../harness/graphql';
 import { COUNTERPARTIES, POINT_OVERRIDE, STANDING_GRANT, TEAM_OBSERVER } from './fixture-plan';
-import type { SeedIds } from './seed-ids';
+import type { BaseSeedIds } from './seed-ids';
 
 // Manager, team, grant and servicing branch are staff decisions, made through the real Admin API.
 export async function seedRelations(
     baseUrl: string,
     superadmin: string,
-    ids: SeedIds,
+    ids: BaseSeedIds,
 ): Promise<void> {
     const call = (query: string, variables: Record<string, unknown>): Promise<unknown> =>
         gqlOk(baseUrl, 'admin-api', query, variables, superadmin);

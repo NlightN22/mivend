@@ -65,3 +65,73 @@ export const VISIBLE_COUNTERPARTIES: Record<ActorKey, CounterpartyKey[]> = {
     'head-b': ['b-own', 'b-team'],
     director: ['a-own', 'a-free', 'a-point', 'b-own', 'b-team', 'none'],
 };
+
+// Orders, proformas and payments (#263 groups 13-16, 19, 20); every order goes through the Shop API checkout.
+export type OrderKey = 'a-own' | 'a-own-paid' | 'a-point' | 'none' | 'b-own';
+export type OrderCustomerKey = CustomerKey | 'customer-a-point' | 'customer-branchless';
+export type PaymentKey = 'a-own-paid' | 'b-own';
+
+// Portal customers of the a-point and branch-less clients; customer-branchless is also a PORTAL_CUSTOMERS row.
+export const ORDER_CUSTOMERS: { key: OrderCustomerKey; counterparty: CounterpartyKey }[] = [
+    { key: 'customer-a-point', counterparty: 'a-point' },
+    { key: 'customer-branchless', counterparty: 'none' },
+];
+export const orderCustomerEmail = (key: OrderCustomerKey): string => `${key}@access.test`;
+
+export const PRODUCT = { sku: 'ACCESS-SKU-1', price: 1000, stock: 1000 } as const;
+export const WAREHOUSE_PREFIX = 'access-wh-';
+
+export interface OrderPlan {
+    key: OrderKey;
+    customer: OrderCustomerKey;
+    counterparty: CounterpartyKey;
+    // issued-cancelled: one withdrawn and one current issued proforma; paid: one paid proforma with a refund.
+    proformas: 'none' | 'issued-cancelled' | 'paid';
+}
+
+export const ORDERS: OrderPlan[] = [
+    { key: 'a-own', customer: 'customer-a', counterparty: 'a-own', proformas: 'issued-cancelled' },
+    { key: 'a-own-paid', customer: 'customer-a', counterparty: 'a-own', proformas: 'paid' },
+    { key: 'a-point', customer: 'customer-a-point', counterparty: 'a-point', proformas: 'none' },
+    { key: 'none', customer: 'customer-branchless', counterparty: 'none', proformas: 'none' },
+    { key: 'b-own', customer: 'customer-b', counterparty: 'b-own', proformas: 'paid' },
+];
+
+// Customer (sale) contracts listed by myContracts, next to every counterparty's main contract.
+export const CUSTOMER_CONTRACTS: Partial<Record<CounterpartyKey, string>> = {
+    'a-own': 'access-cp-a-own-sale',
+    'b-own': 'access-cp-b-own-sale',
+};
+export const saleContractName = (key: CounterpartyKey): string => `Sale contract ${key}`;
+// What orderContracts lists for an order: the client's main contract and its sale contract.
+export const orderContractErpIds = (key: CounterpartyKey): string[] =>
+    [`${counterpartyErpId(key)}-contract`, CUSTOMER_CONTRACTS[key]]
+        .filter((c): c is string => c !== undefined)
+        .sort();
+
+// Read-time order branch: point override, else counterparty branch (docs/access-control.md).
+// Branch scope sees its branch's orders plus own, team and granted clients' orders anywhere.
+export const VISIBLE_ORDERS: Record<ActorKey, OrderKey[]> = {
+    'manager-a': ['a-own', 'a-own-paid', 'a-point'],
+    'manager-b': ['b-own'],
+    'head-a': ['a-own', 'a-own-paid'],
+    'operator-a': ['a-own', 'a-own-paid', 'b-own'],
+    'head-b': ['a-point', 'b-own'],
+    director: ['a-own', 'a-own-paid', 'a-point', 'none', 'b-own'],
+};
+
+// The a-own proformas follow their orders' point: home in branch A, moved when the point is serviced by B.
+export const VISIBLE_A_OWN_PROFORMAS: Record<'home' | 'moved', ActorKey[]> = {
+    home: ['manager-a', 'head-a', 'operator-a', 'director'],
+    moved: ['manager-a', 'head-b', 'director'],
+};
+
+// A payment follows its proforma, which follows its order.
+export const VISIBLE_PAYMENTS: Record<ActorKey, PaymentKey[]> = {
+    'manager-a': ['a-own-paid'],
+    'manager-b': ['b-own'],
+    'head-a': ['a-own-paid'],
+    'operator-a': ['a-own-paid', 'b-own'],
+    'head-b': ['b-own'],
+    director: ['a-own-paid', 'b-own'],
+};

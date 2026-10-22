@@ -11,6 +11,7 @@ import {
     type CounterpartyKey,
     type CustomerKey,
 } from './fixture-plan';
+import type { OrderSeedIds } from './orders-seed';
 
 export interface SeedIds {
     branches: { a: string; b: string };
@@ -18,7 +19,10 @@ export interface SeedIds {
     counterparties: Record<CounterpartyKey, string>;
     points: Record<CounterpartyKey, string>;
     customers: Record<CustomerKey, string>;
+    ordering: OrderSeedIds;
 }
+
+export type BaseSeedIds = Omit<SeedIds, 'ordering'>;
 
 interface Lists {
     branches: { id: string; erpId: string }[];
@@ -44,7 +48,7 @@ function pick<K extends string, T>(keys: K[], find: (key: K) => T | undefined): 
     return out;
 }
 
-export async function readSeedIds(baseUrl: string, superadmin: string): Promise<SeedIds> {
+export async function readSeedIds(baseUrl: string, superadmin: string): Promise<BaseSeedIds> {
     const lists = await gqlOk<Lists>(baseUrl, 'admin-api', LISTS, undefined, superadmin);
     const branch = (erpId: string): string => {
         const found = lists.branches.find(b => b.erpId === erpId);
