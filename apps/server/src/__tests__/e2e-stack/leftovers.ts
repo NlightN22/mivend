@@ -12,7 +12,8 @@ export function recordGroups(pgids: number[]): void {
     writeFileSync(STATE_FILE, JSON.stringify(pgids));
 }
 
-function killRecordedGroups(): void {
+// Also the last teardown step: a group whose leader exited can still hold Playwright or Chrome.
+export function killRecordedGroups(): void {
     if (!existsSync(STATE_FILE)) return;
     for (const pgid of JSON.parse(readFileSync(STATE_FILE, 'utf8')) as number[]) {
         try {
@@ -31,8 +32,4 @@ export async function sweepLeftovers(env: Record<string, string>): Promise<void>
     for (const name of (await listVhosts()).filter(n => n.startsWith(E2E_PREFIX)))
         await deleteVhost(name);
     await deleteIndices(env, E2E_PREFIX);
-}
-
-export function clearRecordedGroups(): void {
-    rmSync(STATE_FILE, { force: true });
 }

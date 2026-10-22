@@ -60,10 +60,12 @@ export function runForeground(
     onSpawn?: (child: ChildProcess) => void,
 ): Promise<number> {
     return new Promise((done, fail) => {
+        // Own group, so teardown kills the whole tree (pnpm, Playwright, Chrome), not just pnpm.
         const child = spawn(command[0], command.slice(1), {
             cwd: REPO_ROOT,
             env: { ...process.env, ...env },
             stdio: 'inherit',
+            detached: true,
         });
         onSpawn?.(child);
         child.once('error', fail);

@@ -5,7 +5,7 @@ import { resolve } from 'path';
 import { createVhost, deleteVhost } from '../access/harness/rabbit-vhost';
 import { stopGroup } from '../access/harness/server-process';
 import { createDatabase, dropDatabase } from '../access/harness/test-database';
-import { clearRecordedGroups, recordGroups, sweepLeftovers } from './leftovers';
+import { killRecordedGroups, recordGroups, sweepLeftovers } from './leftovers';
 import {
     assertPortsFree,
     runForeground,
@@ -15,6 +15,7 @@ import {
     waitForServer,
 } from './processes';
 import { deleteIndices } from './search-indices';
+import { watchStack } from './watchdog';
 import {
     E2E_PORTS,
     E2E_PREFIX,
@@ -34,15 +35,22 @@ const elapsed = (since: number): string => `${((Date.now() - since) / 1000).toFi
 
 function track(...spawned: ChildProcess[]): void {
     children.push(...spawned);
-    recordGroups(children.map(c => c.pid).filter((pid): pid is number => pid !== undefined));
+    record();
+}
+
+function record(): void {
+    const all = foreground ? [...children, foreground] : children;
+    recordGroups(all.map(c => c.pid).filter((pid): pid is number => pid !== undefined));
 }
 
 let tornDown: Promise<void> | undefined;
 const teardown = (): Promise<void> => (tornDown ??= stopAndDrop());
 
+const RUN_TIMEOUT_MS = Number(process.env.E2E_RUN_TIMEOUT_MIN ?? 120) * 60_000;
+
 async function stopAndDrop(): Promise<void> {
-    if (foreground?.exitCode === null) foreground.kill('SIGTERM');
     const steps = [
+        () => (foreground ? stopGroup(foreground) : Promise.resolve()),
         () => Promise.all(children.map(stopGroup)),
         () => deleteVhost(name),
         () => dropDatabase(name),
@@ -50,7 +58,7 @@ async function stopAndDrop(): Promise<void> {
         async () => rmSync(resolve(STACK_DIR, `pdfs-${name}`), { recursive: true, force: true }),
     ];
     for (const step of steps) await step().catch(error => console.error('e2e teardown:', error));
-    clearRecordedGroups();
+    killRecordedGroups();
 }
 
 async function bootAndSeed(): Promise<void> {
@@ -90,16 +98,29 @@ async function main(): Promise<number> {
     await sweepLeftovers(base);
     try {
         await bootAndSeed();
-        return await runForeground(command, testRunEnv(base, name), child => {
+        let failure: string | undefined;
+        let stopWatch = (): void => undefined;
+        const code = await runForeground(command, testRunEnv(base, name), child => {
             foreground = child;
+            record();
+            stopWatch = watchStack(children, RUN_TIMEOUT_MS, reason => {
+                failure = reason;
+                console.error(`e2e stack: ${reason}; stopping the test run`);
+                void stopGroup(child);
+            });
         });
+        stopWatch();
+        return failure ? 1 : code;
     } finally {
         await teardown();
     }
 }
 
-for (const signal of ['SIGINT', 'SIGTERM'] as const)
-    process.once(signal, () => void teardown().finally(() => process.exit(130)));
+// A dead parent closes our stdout; an EPIPE must not abort teardown halfway.
+for (const stream of [process.stdout, process.stderr]) stream.on('error', () => undefined);
+
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const)
+    process.on(signal, () => void teardown().finally(() => process.exit(130)));
 
 main().then(
     code => process.exit(code),
