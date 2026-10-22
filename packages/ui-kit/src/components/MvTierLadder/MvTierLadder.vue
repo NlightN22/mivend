@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { IconCircleCheckFilled } from '@tabler/icons-vue';
 
 export interface TierLadder {
     currentLabel: string;
@@ -11,28 +12,37 @@ export interface TierLadder {
 
 const props = defineProps<{ ladder: TierLadder }>();
 
-const percent = computed(() =>
-    props.ladder.max <= 0
-        ? 0
-        : Math.min(100, Math.max(0, (props.ladder.value / props.ladder.max) * 100)),
+const fraction = computed(() =>
+    props.ladder.max <= 0 ? 0 : Math.min(1, Math.max(0, props.ladder.value / props.ladder.max)),
 );
 </script>
 
 <template>
-    <div class="mv-tier-ladder" :class="{ 'mv-tier-ladder--complete': ladder.complete }">
+    <div v-if="ladder.complete" class="mv-tier-ladder mv-tier-ladder--complete">
+        <IconCircleCheckFilled :size="22" />
+        <span class="mv-tier-ladder__achieved">{{ ladder.currentLabel }}</span>
+    </div>
+    <div v-else class="mv-tier-ladder" :style="{ '--tier-progress': fraction }">
         <div class="mv-tier-ladder__labels">
             <span class="mv-tier-ladder__current">{{ ladder.currentLabel }}</span>
             <span class="mv-tier-ladder__target">{{ ladder.targetLabel }}</span>
         </div>
         <div class="mv-tier-ladder__track">
-            <div class="mv-tier-ladder__fill" :style="{ width: `${percent}%` }" />
-            <span class="mv-tier-ladder__pin" :style="{ left: `${percent}%` }" />
+            <div class="mv-tier-ladder__fill" :style="{ width: `${fraction * 100}%` }" />
+            <span class="mv-tier-ladder__pin" :style="{ left: `${fraction * 100}%` }" />
         </div>
     </div>
 </template>
 
 <style scoped>
 .mv-tier-ladder {
+    --tier-orange: var(--app-accent-orange, #ff8a00);
+    --tier-green: #00a878;
+    --tier-color: color-mix(
+        in srgb,
+        var(--tier-green) calc(var(--tier-progress, 0) * 100%),
+        var(--tier-orange)
+    );
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -54,11 +64,7 @@ const percent = computed(() =>
 
 .mv-tier-ladder__target {
     font-weight: 600;
-    color: #b45309;
-}
-
-.mv-tier-ladder--complete .mv-tier-ladder__target {
-    color: #00875f;
+    color: color-mix(in srgb, var(--tier-color) 70%, #000);
 }
 
 .mv-tier-ladder__track {
@@ -71,12 +77,10 @@ const percent = computed(() =>
 .mv-tier-ladder__fill {
     height: 100%;
     border-radius: 4px;
-    background: #d97706;
-    transition: width 0.25s ease;
-}
-
-.mv-tier-ladder--complete .mv-tier-ladder__fill {
-    background: #00a878;
+    background: var(--tier-color);
+    transition:
+        width 0.25s ease,
+        background-color 0.25s ease;
 }
 
 .mv-tier-ladder__pin {
@@ -88,12 +92,22 @@ const percent = computed(() =>
     box-sizing: border-box;
     border: 2px solid #fff;
     border-radius: 50%;
-    background: #92400e;
+    background: color-mix(in srgb, var(--tier-color) 70%, #000);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     transition: left 0.25s ease;
 }
 
-.mv-tier-ladder--complete .mv-tier-ladder__pin {
-    background: #007a55;
+.mv-tier-ladder--complete {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #00875f;
+}
+
+.mv-tier-ladder__achieved {
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1;
 }
 </style>

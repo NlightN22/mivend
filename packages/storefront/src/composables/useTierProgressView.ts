@@ -2,7 +2,6 @@ import { computed, ref, watchEffect, type ComputedRef, type Ref } from 'vue';
 import type { TierLadder } from '@mivend/ui-kit';
 import { useTierProgressStore } from '../stores/tierProgress';
 import { formatTierValue } from '../utils/discount';
-import { discountTierComplete } from '../utils/discountMessages';
 
 // Keeps the pin visibly off the start at 0, so an untouched ladder still reads as unfinished.
 const MIN_FILL = 0.06;
@@ -32,7 +31,7 @@ export function useTierProgressView(
         if (tp.nextThreshold == null) {
             return {
                 currentLabel,
-                targetLabel: discountTierComplete(current),
+                targetLabel: '',
                 value: 1,
                 max: 1,
                 complete: true,
