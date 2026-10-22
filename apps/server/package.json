@@ -8,6 +8,7 @@
         "dev:worker-email": "ts-node-dev --respawn --transpile-only --debounce 500 src/worker-email.ts",
         "build": "tsc",
         "test:integration": "vitest run --config vitest.integration.config.ts",
+        "test:access": "vitest run --config vitest.access.config.ts",
         "start": "node dist/main.js",
         "start:worker": "node dist/worker.js",
         "migration:generate": "ts-node --transpile-only src/migration.ts generate",

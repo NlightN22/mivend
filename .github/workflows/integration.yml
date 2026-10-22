@@ -37,6 +37,7 @@ jobs:
                     RABBITMQ_DEFAULT_PASS: mivend
                 ports:
                     - 5672:5672
+                    - 15672:15672
                 options: >-
                     --health-cmd "rabbitmq-diagnostics ping"
                     --health-interval 10s
@@ -78,6 +79,12 @@ jobs:
 
             - name: Run integration tests
               run: pnpm --filter "{packages/**}" --no-bail test:integration
+
+            # Boots the real server: plugin-documents launches Chrome at bootstrap.
+            - name: Run access integration tests
+              run: |
+                  pnpm --filter @mivend/plugin-documents exec puppeteer browsers install chrome
+                  pnpm --filter server test:access
 
             # Component tests (docs/testing-strategy.md's "Component" level — a full
             # enqueue->claim->process->persist chain) already ran as part of the step above (same

@@ -57,3 +57,4 @@ packages/e2e/test-results/
 # StrykerJS mutation testing output (docs/testing-strategy.md "Mutation testing")
 reports/mutation/
 .stryker-tmp/
+apps/server/.access-test/

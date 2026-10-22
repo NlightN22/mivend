@@ -11,7 +11,7 @@ export
 
 .PHONY: up up-rebuild down logs ps restart \
         build lint fmt ci \
-        test test-int test-e2e mutation-pilot \
+        test test-int test-access test-e2e mutation-pilot \
         e2e e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
         docker-build docker-push \
         preview-build preview-up preview-down \
@@ -257,6 +257,11 @@ test:
 
 test-int: up
 	pnpm --filter "{packages/**}" --filter server --no-bail test:integration
+
+# Role x entity API matrix against a throwaway server, database and RabbitMQ vhost (docs/testing-strategy.md).
+test-access: up
+	pnpm build:plugins
+	pnpm --filter server test:access
 
 # Mutation testing pilot (docs/testing-strategy.md "Mutation testing") — ad hoc only, not part
 # of CI or `make test`. Scoped in stryker.config.mjs to one small module at a time.

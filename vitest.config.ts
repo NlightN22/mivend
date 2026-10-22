@@ -11,6 +11,11 @@ export default defineConfig({
         globals: true,
         environment: 'node',
         include: ['packages/**/*.test.ts', 'apps/**/*.test.ts', 'eslint-rules/**/*.test.ts'],
-        exclude: ['**/node_modules/**', '**/dist/**', '**/__tests__/integration/**'],
+        exclude: [
+            '**/node_modules/**',
+            '**/dist/**',
+            '**/__tests__/integration/**',
+            '**/__tests__/access/**',
+        ],
     },
 });
