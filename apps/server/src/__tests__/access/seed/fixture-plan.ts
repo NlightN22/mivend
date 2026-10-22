@@ -56,6 +56,48 @@ export const CUSTOMERS: { key: CustomerKey; counterparty: CounterpartyKey }[] = 
 ];
 export const customerEmail = (key: CustomerKey): string => `${key}@access.test`;
 
+// Price types and discount grants (#263 groups 05-07): each branch lists only its own customer type.
+export const PRICE_TYPES = {
+    a: 'access-pt-a',
+    b: 'access-pt-b',
+    purchase: 'access-pt-purchase',
+} as const;
+export const PRICED_PRODUCT = {
+    sku: 'ACCESS-PT-SKU',
+    prices: { a: 120, b: 110, purchase: 80 },
+    floorMultiplier: 1.5,
+} as const;
+export const BRANCH_PRICE_TYPE = { a: PRICE_TYPES.a, b: PRICE_TYPES.b } as const;
+export const ALLOWED_PRICE_TYPES: Partial<Record<ActorKey, string[]>> = {
+    'manager-a': [PRICE_TYPES.a],
+    'operator-a': [PRICE_TYPES.a],
+    'manager-b': [PRICE_TYPES.b],
+};
+export type GrantKey = 'allowed' | 'hidden' | 'confidential';
+export const GRANTS: Record<GrantKey, { code: string; by: 'manager-a' | 'superadmin' }> = {
+    allowed: { code: PRICE_TYPES.a, by: 'manager-a' },
+    hidden: { code: PRICE_TYPES.b, by: 'superadmin' },
+    confidential: { code: PRICE_TYPES.purchase, by: 'superadmin' },
+};
+export const grantJustification = (key: GrantKey): string => `access-grant-${key}`;
+
+// Trading points (#263 group 18): read-time branch is the point override, else the counterparty branch.
+export const VISIBLE_POINTS: Record<ActorKey, CounterpartyKey[]> = {
+    'manager-a': ['a-own', 'a-point', 'b-team'],
+    'manager-b': ['b-own'],
+    'head-a': ['a-own', 'a-free', 'a-point'],
+    'operator-a': ['a-own', 'a-free', 'a-point', 'b-own'],
+    'head-b': ['a-point', 'b-own', 'b-team'],
+    director: ['a-own', 'a-free', 'a-point', 'b-own', 'b-team', 'none'],
+};
+
+// Portal customers (#263 groups 21-22): a customer of the team client and of the branch-less client.
+export const PORTAL_CUSTOMERS: { email: string; counterparty: CounterpartyKey }[] = [
+    { email: 'customer-team@access.test', counterparty: 'b-team' },
+    { email: 'customer-branchless@access.test', counterparty: 'none' },
+];
+export const PORTAL_ACCESS_MANAGERS: ActorKey[] = ['director'];
+
 // The union of docs/access-control.md for this seed, spelled out instead of recomputed.
 export const VISIBLE_COUNTERPARTIES: Record<ActorKey, CounterpartyKey[]> = {
     'manager-a': ['a-own', 'a-point', 'b-team'],
