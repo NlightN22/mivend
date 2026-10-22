@@ -111,6 +111,7 @@ function onStepper(lineId: string | undefined, value: number): void {
                 :label="tierProgress.label"
                 :value="tierProgress.value"
                 :max="tierProgress.max"
+                :variant="tierProgress.variant"
             />
             <div class="buy-panel__price-note">
                 <template v-if="showPrices && salesUnit && price !== undefined">

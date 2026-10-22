@@ -54,6 +54,7 @@ export default {
         tierReached: '{brand} volume reached: {value} → −{percent}%',
         tierComplete: 'Maximum discount unlocked: −{percent}%',
         tierProgress: '{current} of {next} for −{percent}%',
+        tierRemaining: 'Add {remaining} more to unlock −{percent}%',
         tierCurrent: '(currently −{percent}%)',
     },
     cartErrors: {

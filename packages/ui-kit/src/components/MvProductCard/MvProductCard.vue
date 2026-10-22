@@ -38,7 +38,12 @@ interface Props {
     compareAtPrice?: number;
     customerPrice?: number;
     discountTiers?: DiscountTier[];
-    tierProgress?: { label: string; value: number; max: number } | null;
+    tierProgress?: {
+        label: string;
+        value: number;
+        max: number;
+        variant?: 'normal' | 'warn';
+    } | null;
     discountTitle?: string;
     discountWeightLabel?: (kg: number) => string;
     discountAmountLabel?: (minorUnits: number) => string;
@@ -189,6 +194,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                 :label="tierProgress.label"
                 :value="tierProgress.value"
                 :max="tierProgress.max"
+                :variant="tierProgress.variant"
             />
 
             <template v-if="showPrices">

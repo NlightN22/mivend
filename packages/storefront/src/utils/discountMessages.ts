@@ -22,6 +22,10 @@ export function discountTierProgress(current: string, next: string, percent: num
     return t('discount.tierProgress', { current, next, percent });
 }
 
+export function discountTierRemaining(remaining: string, percent: number): string {
+    return t('discount.tierRemaining', { remaining, percent });
+}
+
 export function discountTierCurrentSuffix(percent: number): string {
     return t('discount.tierCurrent', { percent });
 }

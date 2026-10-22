@@ -58,7 +58,12 @@ interface Props {
     showFloorPrice?: boolean;
     floorPrice?: number;
     discountTiers?: DiscountTier[];
-    tierProgress?: { label: string; value: number; max: number } | null;
+    tierProgress?: {
+        label: string;
+        value: number;
+        max: number;
+        variant?: 'normal' | 'warn';
+    } | null;
     discountTitle?: string;
     discountWeightLabel?: (kg: number) => string;
     discountAmountLabel?: (minorUnits: number) => string;
@@ -193,6 +198,7 @@ function onStepperChange(qty: number): void {
                 :label="tierProgress.label"
                 :value="tierProgress.value"
                 :max="tierProgress.max"
+                :variant="tierProgress.variant"
             />
         </div>
 
