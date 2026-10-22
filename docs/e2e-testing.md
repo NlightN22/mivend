@@ -136,6 +136,16 @@ moved to branch A takes its order contracts along (undone and verified). Custome
 scoped. A branch-less client has no customer and no order with contracts on the contour, so the default-branch rule
 for contract content is only checked on order visibility.
 
+Servicing branch (#263, `20`) sets, as superadmin, the servicing branch of the newest order's point to the other
+head's branch and resets it in `afterAll` (checked in the DB). The servicing head sees the order and its customer
+name, but the counterparty reached through it has no points, team, portal users (or the field is denied without
+`ManageCounterpartyPortalAccess`) and no linked customer; it reads the point by id, gets null for
+`counterparty(id)`, finds neither the point nor the client in the portal's counterparty lists, and its
+details/active/comment writes on the point are denied with the row unchanged. The owner head loses the order but
+keeps the counterparty with the superadmin's points, team and portal users, and a no-op `updateTradingPointDetails`
+on the point succeeds. In the manager portal the servicing head's order card shows the customer name and the
+customer card says "Customer not found"; the owner's customer card shows the point.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —
