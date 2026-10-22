@@ -57,21 +57,32 @@ function stopGroup(child: ChildProcess): Promise<void> {
     });
 }
 
-export async function startServer(
-    env: Record<string, string>,
-    logPath: string,
-): Promise<RunningServer> {
-    const port = await freePort();
+function spawnGroup(script: string, env: Record<string, string>, logPath: string): ChildProcess {
     const log = createWriteStream(logPath);
-    // Detached: the server and the Chrome it launches form one process group, stopped together.
-    const child = spawn('node_modules/.bin/ts-node', ['--transpile-only', 'src/main.ts'], {
+    // Detached: the process and the Chrome it launches form one process group, stopped together.
+    const child = spawn('node_modules/.bin/ts-node', ['--transpile-only', script], {
         cwd: SERVER_DIR,
-        env: { ...process.env, ...env, PORT: String(port) },
+        env: { ...process.env, ...env },
         detached: true,
         stdio: ['ignore', 'pipe', 'pipe'],
     });
     child.stdout?.pipe(log);
     child.stderr?.pipe(log);
+    return child;
+}
+
+// Not awaited: the worker has no health endpoint; the seed waits for the PDFs it renders.
+export function startPdfWorker(env: Record<string, string>, logPath: string): () => Promise<void> {
+    const child = spawnGroup('src/__tests__/access/harness/pdf-worker.ts', env, logPath);
+    return () => stopGroup(child);
+}
+
+export async function startServer(
+    env: Record<string, string>,
+    logPath: string,
+): Promise<RunningServer> {
+    const port = await freePort();
+    const child = spawnGroup('src/main.ts', { ...env, PORT: String(port) }, logPath);
     const baseUrl = `http://127.0.0.1:${port}`;
     try {
         await waitForHealth(baseUrl, child, logPath);
