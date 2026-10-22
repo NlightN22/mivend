@@ -23,12 +23,12 @@ describe.each(CUSTOMERS.map(c => c.key))('storefront price for %s', (key: Custom
         const variant = result.data!.product.variants.find(v => v.sku === PRICED_PRODUCT.sku)!;
         const own = PRICED_PRODUCT.prices[BRANCH_OF[key]];
         expect(BRANCH_PRICE_TYPE[BRANCH_OF[key]]).toBe(PRICE_TYPES[BRANCH_OF[key]]);
-        expect([own, own * 100], 'the own type price').toContain(variant.customerPrice);
+        // erp-import stores prices in minor units (price.handler.ts).
+        expect(variant.customerPrice, 'the own type price').toBe(own * 100);
         const body = JSON.stringify(result.data);
         expect(body).not.toContain(PRICE_TYPES.purchase);
         expect(body).not.toMatch(LEAKING_FIELDS);
-        const unit = variant.customerPrice === own ? 1 : 100;
-        expect(body).not.toContain(`:${PRICED_PRODUCT.prices.purchase * unit},`);
-        expect(body).not.toContain(`:${PRICED_PRODUCT.prices.purchase * unit}}`);
+        expect(body).not.toContain(`:${PRICED_PRODUCT.prices.purchase * 100},`);
+        expect(body).not.toContain(`:${PRICED_PRODUCT.prices.purchase * 100}}`);
     });
 });

@@ -1,4 +1,5 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { createHash } from 'crypto';
+import { beforeAll, describe, expect, inject, it } from 'vitest';
 
 import { admin, customerToken, seed, shop, staff, staffToken } from '../harness/actors';
 import {
@@ -13,6 +14,13 @@ import { TYPES, documents, download, samples, type SampleDocument } from './docu
 
 const MY_DOCS = `query($search: String) { myDocuments(options: { take: 200, search: $search }) { totalItems items { id } } }`;
 type MyDocs = { myDocuments: { totalItems: number; items: { id: string }[] } };
+
+// Where AssetServerPlugin's hashed naming put a document PDF before #263 served it only by uuid.
+function formerAssetPath(number: string): string {
+    const file = `${number}.pdf`;
+    const dir = createHash('md5').update(file).digest('hex').slice(0, 2);
+    return `/assets/source/${dir}/${file}`;
+}
 
 let all: SampleDocument[];
 
@@ -47,6 +55,8 @@ describe('documents for the superadmin', () => {
                 expect(assets.errors).toEqual([]);
                 expect(assets.data!.assets.totalItems, `asset named ${name}`).toBe(0);
             }
+            const res = await fetch(`${inject('accessBaseUrl')}${formerAssetPath(s.number)}`);
+            expect(res.status, `former public URL of ${s.number}`).toBe(404);
         }
     });
 });

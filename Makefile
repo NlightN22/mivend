@@ -258,7 +258,7 @@ test:
 test-int: up
 	pnpm --filter "{packages/**}" --filter server --no-bail test:integration
 
-# Role x entity API matrix against a throwaway server, database and RabbitMQ vhost, about 2.5 min (docs/testing-strategy.md).
+# Role x entity API matrix against a throwaway server, database and RabbitMQ vhost, about 4 min (docs/testing-strategy.md).
 test-access: up
 	pnpm build:plugins
 	pnpm --filter server test:access
