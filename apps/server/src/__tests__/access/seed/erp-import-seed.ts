@@ -3,6 +3,7 @@ import {
     COUNTERPARTIES,
     CUSTOMER_PASSWORD,
     CUSTOMERS,
+    DEFAULT_BRANCH_ERP_ID,
     DEPARTMENTS,
     counterpartyErpId,
     counterpartyName,
@@ -40,6 +41,11 @@ export async function seedMasterData(target: ImportTarget): Promise<void> {
         { erpId: DEPARTMENTS.root, name: 'Access root department' },
         { erpId: DEPARTMENTS.a, name: 'Access department A', parentErpId: DEPARTMENTS.root },
         { erpId: DEPARTMENTS.b, name: 'Access department B', parentErpId: DEPARTMENTS.root },
+        {
+            erpId: DEPARTMENTS.default,
+            name: 'Access default department',
+            parentErpId: DEPARTMENTS.root,
+        },
     ]);
     await postBatch(target, 'branch', [
         { erpId: BRANCHES.a, name: 'Access branch A' },
@@ -48,6 +54,7 @@ export async function seedMasterData(target: ImportTarget): Promise<void> {
     await postBatch(target, 'departmentBranch', [
         { departmentErpId: DEPARTMENTS.a, branchErpId: BRANCHES.a },
         { departmentErpId: DEPARTMENTS.b, branchErpId: BRANCHES.b },
+        { departmentErpId: DEPARTMENTS.default, branchErpId: DEFAULT_BRANCH_ERP_ID },
     ]);
     await postBatch(target, 'organizationRequisites', [
         {

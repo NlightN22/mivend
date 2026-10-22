@@ -1,6 +1,7 @@
 import { gqlOk } from '../harness/graphql';
 import {
     BRANCHES,
+    DEFAULT_BRANCH_ERP_ID,
     COUNTERPARTIES,
     CUSTOMERS,
     STAFF,
@@ -14,7 +15,7 @@ import {
 import type { OrderSeedIds } from './orders-seed';
 
 export interface SeedIds {
-    branches: { a: string; b: string };
+    branches: { a: string; b: string; default: string };
     admins: Record<ActorKey, string>;
     counterparties: Record<CounterpartyKey, string>;
     points: Record<CounterpartyKey, string>;
@@ -59,7 +60,11 @@ export async function readSeedIds(baseUrl: string, superadmin: string): Promise<
         lists.counterparties.items.find(c => c.erpId === counterpartyErpId(key));
     const cpKeys = COUNTERPARTIES.map(c => c.key);
     return {
-        branches: { a: branch(BRANCHES.a), b: branch(BRANCHES.b) },
+        branches: {
+            a: branch(BRANCHES.a),
+            b: branch(BRANCHES.b),
+            default: branch(DEFAULT_BRANCH_ERP_ID),
+        },
         admins: pick(
             STAFF.map(s => s.key),
             key => lists.administrators.items.find(a => a.emailAddress === staffEmail(key))?.id,

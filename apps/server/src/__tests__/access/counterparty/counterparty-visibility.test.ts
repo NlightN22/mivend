@@ -34,7 +34,9 @@ describe.each(STAFF.map(s => s.key))('counterparty visibility for %s', (key: Act
             ? seed().branches.a
             : staff(key).department.endsWith('-b')
               ? seed().branches.b
-              : null;
+              : staff(key).department.endsWith('-default')
+                ? seed().branches.default
+                : null;
         expect(state.customFields.branchId).toBe(branch);
     });
 

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { DENIED, admin, customerToken, seed, shop, staffToken } from '../harness/actors';
+import { DENIED, admin, customerToken, seed, shop, staff, staffToken } from '../harness/actors';
 import {
     COUNTERPARTIES,
     CUSTOMERS,
@@ -72,22 +72,36 @@ describe.each(STAFF.map(s => s.key))('trading points for %s', (key: ActorKey) =>
         }
     });
 
-    it('a point of a hidden counterparty cannot be edited, deactivated or commented', async () => {
-        const target = ALL.find(cp => !counterparties.has(cp));
-        if (!target) return;
-        const id = pointOf(target);
-        const before = await pointRow(id);
-        const writes = [
-            await admin(token, DETAILS, {
-                id,
-                input: { deliveryComment: 'access probe', contacts: [{ name: 'access probe' }] },
-            }),
-            await admin(token, ACTIVE, { id, a: false }),
-            await admin(token, COMMENT, { id }),
-        ];
-        for (const w of writes) expect(w.errors.join(' '), target).toMatch(DENIED);
-        expect(await pointRow(id), 'nothing was written').toEqual(before);
-    });
+    // Scope 'all' has no hidden counterparty; it must read exactly the superadmin's points instead.
+    if (staff(key).scope === 'all')
+        it("reads exactly the superadmin's points", async () => {
+            const superadmin = await staffToken('superadmin');
+            expect(ALL.length, 'seeded points').toBeGreaterThan(0);
+            for (const cp of ALL)
+                expect(await read(token, pointOf(cp)), cp).toEqual(
+                    await read(superadmin, pointOf(cp)),
+                );
+        });
+    else
+        it('a point of a hidden counterparty cannot be edited, deactivated or commented', async () => {
+            const target = ALL.find(cp => !counterparties.has(cp));
+            expect(target, 'a hidden counterparty').toBeDefined();
+            const id = pointOf(target!);
+            const before = await pointRow(id);
+            const writes = [
+                await admin(token, DETAILS, {
+                    id,
+                    input: {
+                        deliveryComment: 'access probe',
+                        contacts: [{ name: 'access probe' }],
+                    },
+                }),
+                await admin(token, ACTIVE, { id, a: false }),
+                await admin(token, COMMENT, { id }),
+            ];
+            for (const w of writes) expect(w.errors.join(' '), target).toMatch(DENIED);
+            expect(await pointRow(id), 'nothing was written').toEqual(before);
+        });
 });
 
 describe('moves between branches', () => {
@@ -180,7 +194,17 @@ describe('moves between branches', () => {
         expect(await readAs('head-a', point)).toBeNull();
     });
 
-    it('the point of a branch-less client is read by no branch head and edited by none', async () => {
+    it("the default branch reads a branch-less client's point and cannot edit it", async () => {
+        const point = pointOf('none');
+        expect(await readAs('head-default', point), 'head-default reads it').not.toBeNull();
+        const write = await admin(await staffToken('head-default'), DETAILS, {
+            id: point,
+            input: { deliveryComment: 'access probe' },
+        });
+        expect(write.errors.join(' '), 'and cannot edit it').toMatch(DENIED);
+    });
+
+    it('the point of a branch-less client is read by no other branch head and edited by none', async () => {
         const point = pointOf('none');
         expect(await readAs('superadmin', point)).not.toBeNull();
         for (const head of ['head-a', 'head-b'] as const) {

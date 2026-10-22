@@ -1,4 +1,11 @@
-export type ActorKey = 'manager-a' | 'manager-b' | 'head-a' | 'head-b' | 'operator-a' | 'director';
+export type ActorKey =
+    | 'manager-a'
+    | 'manager-b'
+    | 'head-a'
+    | 'head-b'
+    | 'head-default'
+    | 'operator-a'
+    | 'director';
 export type ScopeKind = 'own' | 'branch' | 'all';
 export type CounterpartyKey = 'a-own' | 'a-free' | 'a-point' | 'b-own' | 'b-team' | 'none';
 export type CustomerKey = 'customer-a' | 'customer-b';
@@ -7,7 +14,14 @@ export const STAFF_PASSWORD = 'access-test-password';
 export const CUSTOMER_PASSWORD = 'access-test-password';
 
 export const BRANCHES = { a: 'access-branch-a', b: 'access-branch-b' } as const;
-export const DEPARTMENTS = { a: 'access-dept-a', b: 'access-dept-b', root: 'access-dept-root' };
+export const DEPARTMENTS = {
+    a: 'access-dept-a',
+    b: 'access-dept-b',
+    default: 'access-dept-default',
+    root: 'access-dept-root',
+};
+// The server bootstraps this branch from BOOTSTRAP_BRANCH_NAMES and makes it the global default.
+export const DEFAULT_BRANCH_ERP_ID = 'mivend-bootstrap:Default';
 
 export interface StaffPlan {
     key: ActorKey;
@@ -22,6 +36,12 @@ export const STAFF: StaffPlan[] = [
     { key: 'head-a', role: 'department-head', scope: 'branch', department: DEPARTMENTS.a },
     { key: 'operator-a', role: 'operator', scope: 'branch', department: DEPARTMENTS.a },
     { key: 'head-b', role: 'department-head', scope: 'branch', department: DEPARTMENTS.b },
+    {
+        key: 'head-default',
+        role: 'department-head',
+        scope: 'branch',
+        department: DEPARTMENTS.default,
+    },
     { key: 'director', role: 'general-director', scope: 'all', department: DEPARTMENTS.root },
 ];
 
@@ -88,6 +108,7 @@ export const VISIBLE_POINTS: Record<ActorKey, CounterpartyKey[]> = {
     'head-a': ['a-own', 'a-free', 'a-point'],
     'operator-a': ['a-own', 'a-free', 'a-point', 'b-own'],
     'head-b': ['a-point', 'b-own', 'b-team'],
+    'head-default': ['none'],
     director: ['a-own', 'a-free', 'a-point', 'b-own', 'b-team', 'none'],
 };
 
@@ -105,6 +126,7 @@ export const VISIBLE_COUNTERPARTIES: Record<ActorKey, CounterpartyKey[]> = {
     'head-a': ['a-own', 'a-free', 'a-point'],
     'operator-a': ['a-own', 'a-free', 'a-point', 'b-own'],
     'head-b': ['b-own', 'b-team'],
+    'head-default': [],
     director: ['a-own', 'a-free', 'a-point', 'b-own', 'b-team', 'none'],
 };
 
@@ -159,6 +181,7 @@ export const VISIBLE_ORDERS: Record<ActorKey, OrderKey[]> = {
     'head-a': ['a-own', 'a-own-paid'],
     'operator-a': ['a-own', 'a-own-paid', 'b-own'],
     'head-b': ['a-point', 'b-own'],
+    'head-default': ['none'],
     director: ['a-own', 'a-own-paid', 'a-point', 'none', 'b-own'],
 };
 
@@ -175,5 +198,6 @@ export const VISIBLE_PAYMENTS: Record<ActorKey, PaymentKey[]> = {
     'head-a': ['a-own-paid'],
     'operator-a': ['a-own-paid', 'b-own'],
     'head-b': ['b-own'],
+    'head-default': [],
     director: ['a-own-paid', 'b-own'],
 };
