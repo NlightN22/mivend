@@ -28,6 +28,7 @@ Three contours, always for a **central** instance (branches never touch Integrat
 | Contour                                  | Env file                                       | Makefile target                | Database                                 | Real Integration Service Kafka?                                                                            |
 | ---------------------------------------- | ---------------------------------------------- | ------------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | **local** (isolated dev)                 | `apps/server/.env.central`                     | `make dev`                     | `mivend_central`                         | Never — `INTEGRATION_KAFKA_ENABLED=false`. Only synthetic data via `make seed-all` (`erp-import`).         |
+| **e2e** (throwaway, #274)                | `apps/server/.env.central` + overrides         | `make e2e-dev`/`e2e-cart`/`e2e-smoke` | `mivend_e2e_<timestamp>`, dropped after the run | Never — same settings as local, own database, vhost and search index prefix. |
 | **staging-integration** (external Kafka) | `apps/server/.env.central.staging-integration` | `make dev-staging-integration` | `mivend_central_staging_integration`     | Yes, deliberately — validates the real Kafka contract against Integration Service's actual staging broker. |
 | **production**                           | `infrastructure/docker/.env.production`        | `make prod-up`                 | `postgres` service, `docker-compose.yml` | Yes, real prod Integration Service.                                                                        |
 
@@ -194,6 +195,13 @@ Makefile targets each creating/expecting their own database (`mivend_central` vs
 same `DB_NAME` as `.env.central` — doing so would let real Integration Service data intermix with
 `make seed-all`'s synthetic data, which is the exact bug this document exists to prevent.
 
+The e2e targets never use `mivend_central` (#274): each run creates `mivend_e2e_<timestamp>`, a RabbitMQ
+vhost of the same name and an Elasticsearch index prefix `<name>-` (`ELASTICSEARCH_INDEX_PREFIX`), seeds it with
+`seed-erp.mjs` plus the e2e fixtures, and drops all three at the end. The code is in
+`apps/server/src/__tests__/e2e-stack/` (it reuses the `make test-access` harness); logs go to
+`apps/server/.e2e-stack/`. Runs are serialised on `/tmp/mivend-e2e.lock`, and the next run removes the
+leftovers of a killed one.
+
 Postgres has its own container/port per instance type (`mivend_central`/`mivend_central_staging_integration`
 both live in `docker-postgres-central-1`, distinguished by `DB_NAME`; the branch instance's own
 `docker-postgres-branch-1` is separate again). Since issue #128 (job queue migrated off
@@ -214,8 +222,8 @@ contour (idempotent), then put `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCE
 
 ## Testing must stay within the local contour
 
-**`make test`/`make test-int`/`make e2e-dev` run exclusively against the local contour's seeded,
-synthetic data.** Never against staging-integration's real Integration Service data — see
+**`make test`/`make test-int`/`make e2e-dev` run exclusively against seeded, synthetic data
+(`make e2e-dev` on its own throwaway e2e database, see "Database isolation").** Never against staging-integration's real Integration Service data — see
 AGENTS.md's Testing requirements ("Rule: automated tests run only against the local contour's
 seeded/synthetic data") for the full rule. In short: local is seed-only (no external source,
 `INTEGRATION_KAFKA_ENABLED=false`); staging-integration is real-source-only (no manual seeding,
@@ -291,6 +299,9 @@ directly from outside (no `ufw allow` for them).
 | Storefront       | staging-integration | `5183`                 | `8014`                                           |
 | Manager          | staging-integration | `5184`                 | `8015`                                           |
 | Dashboard        | staging-integration | `5185`                 | `8016`                                           |
+| API (Admin+Shop) | e2e (during a run)  | `3020`                 | not published                                    |
+| Storefront       | e2e (during a run)  | `5193`                 | not published                                    |
+| Manager          | e2e (during a run)  | `5194`                 | not published                                    |
 | Storefront       | **prod preview**    | `18024`                | `8024`                                           |
 | Manager          | **prod preview**    | `18025`                | `8025`                                           |
 | Dashboard        | **prod preview**    | `18026`                | `8026`                                           |

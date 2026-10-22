@@ -93,10 +93,13 @@ Only critical user and cross-system routes (see "E2E strategy" below). Never use
 every validation error, status combination, retry scenario, overlap, isolation variant, or
 internal branch — those belong at lower levels.
 
-Location: `packages/e2e/`. Runner: Playwright (`make e2e-dev`).
+Location: `packages/e2e/`. Runner: Playwright (`make e2e-dev`). Every e2e target boots a throwaway
+stack on its own database (server `:3020`, storefront `:5193`, manager `:5194`), seeds it and drops it
+after the run (#274, `docs/environments.md` "Database isolation"); `make dev`'s database is never touched.
+About 75 s of boot and seed per run.
 
-Visibility split (#263): the API matrix lives in `make test-access`; `make e2e-dev` (local contour, same
-seed shape) keeps one see-own and one cannot-see-other browser check per entity, mostly in the
+Visibility split (#263): the API matrix lives in `make test-access`; `make e2e-dev` (throwaway e2e
+database, same seed shape) keeps one see-own and one cannot-see-other browser check per entity, mostly in the
 storefront; `make e2e-integration` (staging) keeps only the real ERP exchange and a few end-to-end
 scenarios on real data.
 
@@ -238,13 +241,13 @@ separate workflow if runtime requires it.
 `packages/e2e/storefront/cart-totals/` (Playwright project `storefront-cart-totals`, `make e2e-cart`)
 asserts cart money invariants through the Shop API and the rendered cart/checkout UI: order total ==
 sum of lines, discount line == sum of struck-through differences, determinism of identical carts,
-stability across reload/re-login. Runs against the local seeded contour only, never places orders,
+stability across reload/re-login. Runs on the throwaway e2e database, never places orders,
 and empties the cart after each test. Run it about every 10 commits and after any pricing change.
 
 A minimal `@smoke`-tagged subset (storefront login, deferred-payment order creation — see
 `packages/e2e/package.json`'s `test:smoke` / `make e2e-smoke`) runs via
 `.github/workflows/integration.yml`'s `e2e-smoke` job, booted non-interactively by
-`infrastructure/scripts/ci-e2e-smoke.sh`. **Verified green end to end** (`workflow_dispatch` run
+`infrastructure/scripts/ci-e2e-smoke.sh` (infra up, build, `make e2e-smoke`). **Verified green end to end** (`workflow_dispatch` run
 `29812146992`, 2026-07-21 — `integration` job ~2min, `e2e-smoke` job ~3min) after 11 iterative
 `workflow_dispatch` attempts that found and fixed 7 real, previously-unknown bugs in the boot
 path (see "Known technical debt" below for the full list — CI build scoping, a manager circular
@@ -352,7 +355,7 @@ A change is not done until:
 - `make test-int` — integration/component/contract tests (starts infra via `make up`).
 - `make test-access` — access integration matrix on a throwaway server and database (about 4 min).
 - `make ci` — the push CI pipeline (lint, format, type check, unit, contract) on a clean HEAD checkout with an empty pnpm store; run before pushing.
-- `make e2e-dev` — Playwright E2E (requires `make dev` + `make seed`).
+- `make e2e-dev` — Playwright E2E on its own throwaway stack and database (needs no `make dev`).
 
 ## Diagnosing failing tests
 
@@ -365,7 +368,7 @@ A change is not done until:
   timeout assertion: suspect a real-time race against `make test-int`'s full parallel load
   before suspecting a real defect — see "Retry/backoff testing" above.
 - E2E failure: check the Playwright trace/screenshot artifact first, not the assertion message —
-  most failures are stale auth state, seed drift, or a missing `make dev`/`make seed`, per
+  most failures are stale auth state, seed drift, or a missing seed record in `seed-erp.mjs`/the e2e fixtures, per
   `docs/e2e-testing.md`.
 
 ## Known technical debt
