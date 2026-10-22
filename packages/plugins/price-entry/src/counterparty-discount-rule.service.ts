@@ -7,6 +7,7 @@ import {
     DiscountRuleRecipientType,
 } from './discount-rule.entity';
 import { Counterparty } from '@mivend/plugin-counterparty';
+import { LookupMemo, memoized } from './lookup-memo';
 import { loggerCtx } from './types';
 
 export interface CounterpartyDiscountRuleInput {
@@ -189,6 +190,7 @@ export class CounterpartyDiscountRuleService {
         quantityByProductErpId: Map<string, number>,
         documentAmount: number,
         now: Date,
+        memo?: LookupMemo,
     ): Promise<number | null> {
         if (!order) return null;
         const recipients: Array<{ type: DiscountRuleRecipientType; erpId: string }> = [];
@@ -198,7 +200,37 @@ export class CounterpartyDiscountRuleService {
         }
         if (recipients.length === 0) return null;
 
-        const rules = await this.connection
+        const rules = await memoized(
+            memo,
+            `cdr:${recipients.map(r => `${r.type}/${r.erpId}`).join(',')}`,
+            () => this.loadRecipientRules(ctx, recipients, now),
+        );
+
+        const productQuantity = quantityByProductErpId.get(productErpId ?? '') ?? 0;
+        const totalQuantity = [...quantityByProductErpId.values()].reduce((a, b) => a + b, 0);
+
+        const matching = rules.filter(rule => {
+            // Safe default until limitAmount enforcement exists (mivend#154) — never apply uncapped.
+            if (rule.limitAmount !== null) return false;
+            if (rule.productErpId !== null && rule.productErpId !== productErpId) return false;
+            if (rule.condition === 'byQuantity') {
+                const qty = rule.productErpId !== null ? productQuantity : totalQuantity;
+                return qty >= (rule.conditionValue ?? 0);
+            }
+            // documentAmount is kopecks; conditionValue is rubles (price.handler.ts's own convention).
+            return documentAmount >= Math.round((rule.conditionValue ?? 0) * 100);
+        });
+
+        if (matching.length === 0) return null;
+        return Math.max(...matching.map(r => r.percent));
+    }
+
+    private loadRecipientRules(
+        ctx: RequestContext,
+        recipients: Array<{ type: DiscountRuleRecipientType; erpId: string }>,
+        now: Date,
+    ): Promise<DiscountRule[]> {
+        return this.connection
             .getRepository(ctx, DiscountRule)
             .createQueryBuilder('dr')
             .where('dr.active = true')
@@ -219,23 +251,5 @@ export class CounterpartyDiscountRuleService {
                 ),
             )
             .getMany();
-
-        const productQuantity = quantityByProductErpId.get(productErpId ?? '') ?? 0;
-        const totalQuantity = [...quantityByProductErpId.values()].reduce((a, b) => a + b, 0);
-
-        const matching = rules.filter(rule => {
-            // Safe default until limitAmount enforcement exists (mivend#154) — never apply uncapped.
-            if (rule.limitAmount !== null) return false;
-            if (rule.productErpId !== null && rule.productErpId !== productErpId) return false;
-            if (rule.condition === 'byQuantity') {
-                const qty = rule.productErpId !== null ? productQuantity : totalQuantity;
-                return qty >= (rule.conditionValue ?? 0);
-            }
-            // documentAmount is kopecks; conditionValue is rubles (price.handler.ts's own convention).
-            return documentAmount >= Math.round((rule.conditionValue ?? 0) * 100);
-        });
-
-        if (matching.length === 0) return null;
-        return Math.max(...matching.map(r => r.percent));
     }
 }

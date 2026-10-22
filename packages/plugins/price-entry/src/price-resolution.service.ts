@@ -15,6 +15,7 @@ import { DiscountRuleService, DiscountTierVM, VariantFacetValue } from './discou
 import { PromoDiscountRuleService } from './promo-discount-rule.service';
 import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.service';
 import { getProductErpId, buildProductErpQuantities } from './promo-product-lookup';
+import { LookupMemo, memoized } from './lookup-memo';
 import './types';
 
 export interface ResolvedPrice {
@@ -32,6 +33,8 @@ export interface OrderPricingContext {
 export interface ResolveOptions {
     // false: the order only identifies the customer; tier, promo and counterparty rules are skipped.
     orderRules?: boolean;
+    // Shared across the lines of one order so sibling lookups run once per order, not once per line.
+    memo?: LookupMemo;
 }
 
 export interface TierProgressVM {
@@ -83,23 +86,26 @@ export class PriceResolutionService {
         const ruleContext = options?.orderRules === false ? undefined : orderContext;
         // Order's customer, not the caller, sets the price type: admin-created orders have an admin
         // as activeUserId, who has no customer_price_type row.
+        const memo = options?.memo;
         const priceTypeCode = orderContext?.order.customerId
-            ? await this.priceEntryService.getPriceTypeCodeForCustomer(
-                  ctx,
-                  String(orderContext.order.customerId),
+            ? await memoized(memo, `ptc:${String(orderContext.order.customerId)}`, () =>
+                  this.priceEntryService.getPriceTypeCodeForCustomer(
+                      ctx,
+                      String(orderContext.order.customerId),
+                  ),
               )
             : await this.priceEntryService.getPriceTypeCodeForUser(ctx);
 
         // Customer-scoped grants must only discount their granted counterparties. order.customerId is
         // authoritative on real order lines, as for priceTypeCode.
-        const counterparty = await this.resolveCounterparty(ctx, orderContext);
+        const counterparty = await this.resolveCounterparty(ctx, orderContext, memo);
         const counterpartyId = counterparty ? String(counterparty.id) : null;
 
         let basePrice: number | null = null;
         let effectivePriceTypeCode: string | null = null;
         let effectiveCounterpartyId: string | null = null;
         if (priceTypeCode) {
-            basePrice = await this.priceEntryService.getForVariant(ctx, variantId, priceTypeCode);
+            basePrice = await this.forVariant(ctx, variantId, priceTypeCode, memo);
             if (basePrice !== null) {
                 effectivePriceTypeCode = priceTypeCode;
                 effectiveCounterpartyId = counterpartyId;
@@ -110,7 +116,9 @@ export class PriceResolutionService {
         // Only general discounts apply here, so effectiveCounterpartyId stays null.
         if (effectivePriceTypeCode === null) {
             const branchId = counterparty?.branchId ?? undefined;
-            const branchSettings = await this.branchSettingsService.resolveEffective(ctx, branchId);
+            const branchSettings = await memoized(memo, `bs:${String(branchId)}`, () =>
+                this.branchSettingsService.resolveEffective(ctx, branchId),
+            );
             const defaultPriceTypeCode = branchSettings
                 ? await this.priceEntryService.getPriceTypeCodeById(
                       ctx,
@@ -118,11 +126,7 @@ export class PriceResolutionService {
                   )
                 : null;
             if (defaultPriceTypeCode) {
-                basePrice = await this.priceEntryService.getForVariant(
-                    ctx,
-                    variantId,
-                    defaultPriceTypeCode,
-                );
+                basePrice = await this.forVariant(ctx, variantId, defaultPriceTypeCode, memo);
                 effectivePriceTypeCode = basePrice !== null ? defaultPriceTypeCode : null;
             }
         }
@@ -132,7 +136,7 @@ export class PriceResolutionService {
         }
         const priceTypeCodeForDiscount = effectivePriceTypeCode;
 
-        const { facetValues, weight } = await this.getVariantFacetsAndWeight(ctx, variantId);
+        const { facetValues, weight } = await this.getVariantFacetsAndWeight(ctx, variantId, memo);
         const { weightByFacet, amountByFacet } = ruleContext
             ? await this.buildAggregates(
                   ctx,
@@ -142,6 +146,7 @@ export class PriceResolutionService {
                   basePrice,
                   priceTypeCodeForDiscount,
                   ruleContext,
+                  memo,
               )
             : {
                   weightByFacet: new Map<string, number>(),
@@ -156,6 +161,7 @@ export class PriceResolutionService {
             weightByFacet,
             amountByFacet,
             effectiveCounterpartyId,
+            memo,
         );
 
         // Promo rules need real order context; with no line quantities no promo can qualify.
@@ -167,14 +173,16 @@ export class PriceResolutionService {
                   variantId,
                   ruleContext.order,
                   ruleContext.quantity,
+                  memo,
               )
             : null;
         const promoPercent = ruleContext
             ? await this.promoDiscountRuleService.getBestPromoPercent(
                   ctx,
-                  await getProductErpId(this.connection, ctx, variantId),
+                  await getProductErpId(this.connection, ctx, variantId, memo),
                   new Date(),
                   productErpQuantities!,
+                  memo,
               )
             : null;
         // totalWithTax excludes this priced line's own contribution — accepted approximation, same as the tier ladder's aggregates.
@@ -183,10 +191,11 @@ export class PriceResolutionService {
                   ctx,
                   ruleContext.order,
                   counterparty,
-                  await getProductErpId(this.connection, ctx, variantId),
+                  await getProductErpId(this.connection, ctx, variantId, memo),
                   productErpQuantities!,
                   ruleContext.documentAmount ?? ruleContext.order.totalWithTax,
                   new Date(),
+                  memo,
               )
             : null;
 
@@ -207,6 +216,7 @@ export class PriceResolutionService {
     private async resolveCounterparty(
         ctx: RequestContext,
         orderContext?: OrderPricingContext,
+        memo?: LookupMemo,
     ): Promise<Counterparty | null> {
         let customerId: string | undefined;
         if (orderContext?.order.customerId) {
@@ -216,7 +226,8 @@ export class PriceResolutionService {
             customerId = customer ? String(customer.id) : undefined;
         }
         if (!customerId) return null;
-        return this.counterpartyService.getForCustomer(ctx, customerId);
+        const id = customerId;
+        return memoized(memo, `cp:${id}`, () => this.counterpartyService.getForCustomer(ctx, id));
     }
 
     // Skips the variant's own existing line: on adjustOrderLine orderContext.quantity is already
@@ -229,6 +240,7 @@ export class PriceResolutionService {
         thisBasePrice: number,
         priceTypeCode: string,
         orderContext: OrderPricingContext,
+        memo?: LookupMemo,
     ): Promise<FacetAggregates> {
         const weightByFacet = new Map<string, number>();
         const amountByFacet = new Map<string, number>();
@@ -255,8 +267,8 @@ export class PriceResolutionService {
             const lineVariantId = String(line.productVariantId);
             if (lineVariantId === variantId) continue;
             const [{ facetValues, weight }, price] = await Promise.all([
-                this.getVariantFacetsAndWeight(ctx, lineVariantId),
-                this.priceEntryService.getForVariant(ctx, lineVariantId, priceTypeCode),
+                this.getVariantFacetsAndWeight(ctx, lineVariantId, memo),
+                this.forVariant(ctx, lineVariantId, priceTypeCode, memo),
             ]);
             addContribution(facetValues, weight * line.quantity, (price ?? 0) * line.quantity);
         }
@@ -264,7 +276,26 @@ export class PriceResolutionService {
         return { weightByFacet, amountByFacet };
     }
 
-    private async getVariantFacetsAndWeight(
+    private forVariant(
+        ctx: RequestContext,
+        variantId: string,
+        priceTypeCode: string,
+        memo?: LookupMemo,
+    ): Promise<number | null> {
+        return memoized(memo, `price:${variantId}:${priceTypeCode}`, () =>
+            this.priceEntryService.getForVariant(ctx, variantId, priceTypeCode),
+        );
+    }
+
+    private getVariantFacetsAndWeight(
+        ctx: RequestContext,
+        variantId: string,
+        memo?: LookupMemo,
+    ): Promise<VariantFacetsAndWeight> {
+        return memoized(memo, `fw:${variantId}`, () => this.loadFacetsAndWeight(ctx, variantId));
+    }
+
+    private async loadFacetsAndWeight(
         ctx: RequestContext,
         variantId: string,
     ): Promise<VariantFacetsAndWeight> {
@@ -310,14 +341,15 @@ export class PriceResolutionService {
         ctx: RequestContext,
         variantId: string,
         orderContext: OrderPricingContext,
+        memo?: LookupMemo,
     ): Promise<TierProgressVM | null> {
         const priceTypeCode = await this.priceEntryService.getPriceTypeCodeForUser(ctx);
         if (!priceTypeCode) return null;
 
-        const basePrice = await this.priceEntryService.getForVariant(ctx, variantId, priceTypeCode);
+        const basePrice = await this.forVariant(ctx, variantId, priceTypeCode, memo);
         if (basePrice === null) return null;
 
-        const { facetValues, weight } = await this.getVariantFacetsAndWeight(ctx, variantId);
+        const { facetValues, weight } = await this.getVariantFacetsAndWeight(ctx, variantId, memo);
         const tiers = await this.discountRuleService.getTiers(
             ctx,
             priceTypeCode,
@@ -334,6 +366,7 @@ export class PriceResolutionService {
             basePrice,
             priceTypeCode,
             orderContext,
+            memo,
         );
 
         // A ladder is always scoped to one facetCode+facetValueCode (see docs/pricing.md) —

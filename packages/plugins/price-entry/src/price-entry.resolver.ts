@@ -15,6 +15,7 @@ import { ProductVariantPriceEntry } from './price-entry.entity';
 import { PriceEntryInput, PriceEntryService } from './price-entry.service';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountRuleInput, DiscountRuleService, DiscountTierVM } from './discount-rule.service';
+import { LookupMemo } from './lookup-memo';
 import { PriceResolutionService, TierProgressVM } from './price-resolution.service';
 
 @Resolver('ProductVariant')
@@ -48,10 +49,22 @@ export class ProductVariantPriceResolver {
 
 @Resolver('OrderLine')
 export class OrderLineDiscountResolver {
+    // Catalog data only (facets, weights, prices, identity): safe to share by every line of one request.
+    private memos = new WeakMap<RequestContext, LookupMemo>();
+
     constructor(
         private priceResolutionService: PriceResolutionService,
         private connection: TransactionalConnection,
     ) {}
+
+    private memoFor(ctx: RequestContext): LookupMemo {
+        let memo = this.memos.get(ctx);
+        if (!memo) {
+            memo = new LookupMemo();
+            this.memos.set(ctx, memo);
+        }
+        return memo;
+    }
 
     // Display only: unitPrice already has the discount applied; do not re-derive it here.
     @ResolveField()
@@ -68,6 +81,7 @@ export class OrderLineDiscountResolver {
             ctx,
             String(line.productVariantId),
             { order: line.order, quantity: line.quantity },
+            { memo: this.memoFor(ctx) },
         );
         return compareAtPrice;
     }
@@ -84,10 +98,12 @@ export class OrderLineDiscountResolver {
             relations: ['order', 'order.lines'],
         });
         if (!line) return null;
-        return this.priceResolutionService.resolveTierProgress(ctx, String(line.productVariantId), {
-            order: line.order,
-            quantity: line.quantity,
-        });
+        return this.priceResolutionService.resolveTierProgress(
+            ctx,
+            String(line.productVariantId),
+            { order: line.order, quantity: line.quantity },
+            this.memoFor(ctx),
+        );
     }
 }
 

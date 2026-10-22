@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { PriceResolutionService } from '../../price-resolution.service';
+import { LookupMemo } from '../../lookup-memo';
 import type { PriceEntryService } from '../../price-entry.service';
 import type { DiscountRuleService } from '../../discount-rule.service';
 
@@ -125,6 +126,7 @@ describe('PriceResolutionService', () => {
             new Map(),
             new Map(),
             null,
+            undefined,
         );
     });
 
@@ -144,6 +146,7 @@ describe('PriceResolutionService', () => {
             expect.anything(),
             expect.anything(),
             '7',
+            undefined,
         );
     });
 
@@ -167,6 +170,7 @@ describe('PriceResolutionService', () => {
             new Map(),
             new Map(),
             '7',
+            undefined,
         );
         expect(promoDiscountRuleService.getBestPromoPercent).not.toHaveBeenCalled();
         expect(counterpartyDiscountRuleService.getBestPercent).not.toHaveBeenCalled();
@@ -186,7 +190,30 @@ describe('PriceResolutionService', () => {
             expect.any(Map),
             5000,
             expect.any(Date),
+            undefined,
         );
+    });
+
+    it('reads a sibling variant price and facets once for the whole order when a memo is shared (#196)', async () => {
+        variantsById.v1 = brandVariant('v1', 'lukoil', 100);
+        variantsById.v2 = brandVariant('v2', 'lukoil', 500);
+        const order = {
+            customerId: 'cust-42',
+            lines: [
+                { productVariantId: 'v1', quantity: 1 },
+                { productVariantId: 'v2', quantity: 5 },
+            ],
+        } as unknown as Order;
+        const memo = new LookupMemo();
+
+        await service.resolve(mockCtx, 'v1', { order, quantity: 1 }, { memo });
+        await service.resolve(mockCtx, 'v2', { order, quantity: 5 }, { memo });
+
+        const priceReads = priceEntryService.getForVariant.mock.calls.filter(
+            ([, id]) => id === 'v2',
+        );
+        expect(priceReads).toHaveLength(1);
+        expect(counterpartyService.getForCustomer).toHaveBeenCalledTimes(1);
     });
 
     it('sums weight across this variant and other order lines sharing the facet', async () => {
@@ -304,6 +331,7 @@ describe('PriceResolutionService', () => {
                 expect.anything(),
                 expect.anything(),
                 null,
+                undefined,
             );
             delete (mockCtx as unknown as { activeUserId?: string }).activeUserId;
         });
@@ -354,6 +382,7 @@ describe('PriceResolutionService', () => {
             expect.anything(),
             expect.anything(),
             null,
+            undefined,
         );
     });
 
@@ -541,6 +570,7 @@ describe('PriceResolutionService', () => {
                 'prod-trigger',
                 expect.any(Date),
                 new Map([['prod-trigger', 4]]),
+                undefined,
             );
         });
 

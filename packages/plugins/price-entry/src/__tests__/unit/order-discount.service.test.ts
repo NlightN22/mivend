@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Order, RequestContext } from '@vendure/core';
 
+import { LookupMemo } from '../../lookup-memo';
 import { OrderDiscountService } from '../../order-discount.service';
 import type { PriceResolutionService } from '../../price-resolution.service';
 
@@ -69,16 +70,19 @@ describe('OrderDiscountService', () => {
         const { service, resolve } = setup({ 'v-a': 900, 'v-b': 900 });
         const order = orderOf(line('a', 1000, 2), line('b', 1000, 3));
         await service.stateFor(ctx, order);
-        expect(resolve).toHaveBeenCalledWith(ctx, 'v-a', {
-            order,
-            quantity: 2,
-            documentAmount: 5000,
-        });
-        expect(resolve).toHaveBeenCalledWith(ctx, 'v-b', {
-            order,
-            quantity: 3,
-            documentAmount: 5000,
-        });
+        const memo = { memo: expect.any(LookupMemo) };
+        expect(resolve).toHaveBeenCalledWith(
+            ctx,
+            'v-a',
+            { order, quantity: 2, documentAmount: 5000 },
+            memo,
+        );
+        expect(resolve).toHaveBeenCalledWith(
+            ctx,
+            'v-b',
+            { order, quantity: 3, documentAmount: 5000 },
+            memo,
+        );
     });
 
     it('computes once per order snapshot and again after a quantity change', async () => {

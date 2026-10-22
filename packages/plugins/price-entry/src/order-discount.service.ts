@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Order, OrderLine, RequestContext } from '@vendure/core';
 
+import { LookupMemo } from './lookup-memo';
 import { PriceResolutionService } from './price-resolution.service';
 
 // Per unit, in the same tax terms as OrderLine.listPrice; absent lines get no discount.
@@ -37,12 +38,14 @@ export class OrderDiscountService {
         const state: OrderDiscountState = new Map();
         // Before any promotion of this pass: the persisted total still carries the previous discounts.
         const documentAmount = order.lines.reduce((sum, l) => sum + l.linePriceWithTax, 0);
+        const memo = new LookupMemo();
         for (const line of order.lines) {
             if (hasManualPrice(line)) continue;
             const { customerPrice } = await this.priceResolution.resolve(
                 ctx,
                 String(line.productVariantId),
                 { order, quantity: line.quantity, documentAmount },
+                { memo },
             );
             if (customerPrice !== null && customerPrice < line.listPrice) {
                 state.set(String(line.id), line.listPrice - customerPrice);

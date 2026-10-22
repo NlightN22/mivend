@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { DiscountRule, DiscountRuleOperationKind } from './discount-rule.entity';
+import { LookupMemo, memoized } from './lookup-memo';
 
 // Issue #107 — see DiscountRuleService.upsertPromoRule.
 export interface PromoDiscountRuleInput {
@@ -59,17 +60,20 @@ export class PromoDiscountRuleService {
         productErpId: string,
         now: Date,
         quantityInOrderByProductErpId: Map<string, number>,
+        memo?: LookupMemo,
     ): Promise<number | null> {
         if (quantityInOrderByProductErpId.size === 0) return null;
-        const rules = await this.connection
-            .getRepository(ctx, DiscountRule)
-            .createQueryBuilder('dr')
-            .where(
-                '(dr.triggerProductErpId = :productErpId OR dr.giftProductErpId = :productErpId)',
-                { productErpId },
-            )
-            .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
-            .getMany();
+        const rules = await memoized(memo, `promo:${productErpId}`, () =>
+            this.connection
+                .getRepository(ctx, DiscountRule)
+                .createQueryBuilder('dr')
+                .where(
+                    '(dr.triggerProductErpId = :productErpId OR dr.giftProductErpId = :productErpId)',
+                    { productErpId },
+                )
+                .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
+                .getMany(),
+        );
 
         const matching = rules.filter(rule => {
             const triggerQty =

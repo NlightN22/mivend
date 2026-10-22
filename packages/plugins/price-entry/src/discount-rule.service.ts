@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 import { In } from 'typeorm';
 
+import { LookupMemo, memoized } from './lookup-memo';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountGrant } from './discount-grant.entity';
 import { DiscountRegistryService } from './discount-registry.service';
@@ -155,13 +156,16 @@ export class DiscountRuleService {
         weightByFacet: Map<string, number> = new Map(),
         amountByFacet: Map<string, number> = new Map(),
         counterpartyId: string | null = null,
+        memo?: LookupMemo,
     ): Promise<number | null> {
-        const rules = await this.connection
-            .getRepository(ctx, DiscountRule)
-            .createQueryBuilder('dr')
-            .where('dr.priceTypeCode = :priceTypeCode', { priceTypeCode })
-            .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
-            .getMany();
+        const rules = await memoized(memo, `dr:${priceTypeCode}`, () =>
+            this.connection
+                .getRepository(ctx, DiscountRule)
+                .createQueryBuilder('dr')
+                .where('dr.priceTypeCode = :priceTypeCode', { priceTypeCode })
+                .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
+                .getMany(),
+        );
 
         const matching = rules.filter(rule => {
             const facetMatches =
@@ -180,7 +184,7 @@ export class DiscountRuleService {
         });
 
         if (matching.length === 0) return null;
-        const scoped = await this.filterByGrantScope(ctx, matching, counterpartyId);
+        const scoped = await this.filterByGrantScope(ctx, matching, counterpartyId, memo);
         if (scoped.length === 0) return null;
         return Math.max(...scoped.map(r => r.percent));
     }
@@ -191,13 +195,16 @@ export class DiscountRuleService {
         ctx: RequestContext,
         rules: DiscountRule[],
         counterpartyId: string | null,
+        memo?: LookupMemo,
     ): Promise<DiscountRule[]> {
         if (rules.length === 0) return rules;
         const ruleIds = rules.map(r => String(r.id));
-        const grants = await this.connection.getRepository(ctx, DiscountGrant).find({
-            where: { discountRuleId: In(ruleIds) },
-            relations: ['counterparties'],
-        });
+        const grants = await memoized(memo, `grants:${ruleIds.join(',')}`, () =>
+            this.connection.getRepository(ctx, DiscountGrant).find({
+                where: { discountRuleId: In(ruleIds) },
+                relations: ['counterparties'],
+            }),
+        );
         const grantByRuleId = new Map<string, DiscountGrant>();
         for (const grant of grants ?? []) {
             grantByRuleId.set(grant.discountRuleId, grant);
