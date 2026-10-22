@@ -1,8 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { admin, customerToken, seed, shop, staffToken } from '../harness/actors';
+import { admin, customerToken, seed, shop, staff, staffToken } from '../harness/actors';
 import {
     CUSTOMERS,
+    ORDERS,
     STAFF,
     VISIBLE_COUNTERPARTIES,
     type ActorKey,
@@ -59,8 +60,16 @@ describe.each(STAFF.map(s => s.key))('documents for %s', (key: ActorKey) => {
             .filter(s => visible.has(s.counterparty))
             .reduce((n, s) => n + s.total, 0);
         const page = await documents(token);
-        if (key === 'director') expect(page.totalItems).toBeGreaterThanOrEqual(expected);
+        if (staff(key).scope === 'all')
+            expect(page.totalItems).toBe(
+                (await documents(await staffToken('superadmin'))).totalItems,
+            );
         else expect(page.totalItems).toBe(expected);
+        if (staff(key).scope !== 'all')
+            expect(
+                all.some(s => !visible.has(s.counterparty)),
+                'a hidden document',
+            ).toBe(true);
         for (const s of all) {
             const shown = visible.has(s.counterparty);
             const cp = seed().counterparties[s.counterparty];
@@ -78,6 +87,20 @@ describe.each(STAFF.map(s => s.key))('documents for %s', (key: ActorKey) => {
             expect(types.data!.documentTypes.length > 0, `types of ${s.counterparty}`).toBe(shown);
             expect((await download(s.pdfUrl, token)).status, `PDF of ${s.counterparty}`).toBe(
                 shown ? 200 : 404,
+            );
+        }
+    });
+
+    it('documents filtered by an order follow the counterparty scope', async () => {
+        const token = await staffToken(key);
+        const superadmin = await staffToken('superadmin');
+        for (const o of ORDERS.filter(p => p.proformas !== 'none')) {
+            const order = { order: seed().ordering.orders[o.key].id };
+            const proof = await documents(superadmin, order);
+            expect(proof.totalItems, `documents of order ${o.key}`).toBeGreaterThan(0);
+            const got = await documents(token, order);
+            expect(got.totalItems, `documents of order ${o.key}`).toBe(
+                visible.has(o.counterparty) ? proof.totalItems : 0,
             );
         }
     });

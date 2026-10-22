@@ -3,7 +3,7 @@ import { expect, inject } from 'vitest';
 import { admin, seed, staffToken } from '../harness/actors';
 import { COUNTERPARTIES, type CounterpartyKey } from '../seed/fixture-plan';
 
-export const LIST = `query($cp: ID, $search: String) { documents(counterpartyId: $cp,
+export const LIST = `query($cp: ID, $order: ID, $search: String) { documents(counterpartyId: $cp, orderId: $order,
     options: { take: 100, search: $search }) { totalItems items { id type number pdfUrl } } }`;
 export const TYPES = `query($cp: ID) { documentTypes(counterpartyId: $cp) }`;
 

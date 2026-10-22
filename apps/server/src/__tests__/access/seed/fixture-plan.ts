@@ -201,3 +201,14 @@ export const VISIBLE_PAYMENTS: Record<ActorKey, PaymentKey[]> = {
     'head-default': [],
     director: ['a-own-paid', 'b-own'],
 };
+
+// Settlement documents and balances (#263 group 17) on the customer contracts; numbers are unique per run.
+export type SettlementCategory = 'sale' | 'payment';
+export const SETTLEMENT_TYPES: Record<SettlementCategory, string> = {
+    sale: 'access-sale',
+    payment: 'access-payment',
+};
+export const SETTLEMENT_NUMBERS: Record<CustomerKey, Record<SettlementCategory, string>> = {
+    'customer-a': { sale: '9511', payment: '9512' },
+    'customer-b': { sale: '9521', payment: '9522' },
+};

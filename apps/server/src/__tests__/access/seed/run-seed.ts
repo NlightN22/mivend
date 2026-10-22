@@ -5,6 +5,7 @@ import { seedPortalCustomers } from './portal-customer-seed';
 import { seedPriceTypes } from './price-type-seed';
 import { seedOrders } from './orders-seed';
 import { seedRelations } from './relations-seed';
+import { seedSettlements } from './settlement-seed';
 import { readSeedIds, type SeedIds } from './seed-ids';
 import { seedStaff } from './staff-seed';
 
@@ -20,6 +21,7 @@ export async function runAccessSeed(baseUrl: string, importToken: string): Promi
     await seedPortalCustomers(target);
     const ordering = await seedOrders(target, superadmin, ids.points);
     await seedPriceTypes(target, superadmin);
+    await seedSettlements(target);
     await seedDocuments(target, superadmin, ids.counterparties);
     return { ...ids, ordering };
 }
