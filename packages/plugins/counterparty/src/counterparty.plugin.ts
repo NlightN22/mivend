@@ -62,6 +62,7 @@ import { visibilitySchema } from './visibility/visibility.schema';
 import { shopApiSchema } from './trading-point.schema';
 import { myContractsSchema } from './my-contracts.schema';
 import { MyContractsResolver } from './my-contracts.resolver';
+import { ScopedCustomerResolver } from './scoped-customer.resolver';
 
 const shopResolvers = [
     MyContractsResolver,
@@ -89,6 +90,7 @@ const adminResolvers = [
     CounterpartyTeamMutationResolver,
     CounterpartyPortalAccessFieldResolver,
     CounterpartyPortalAccessMutationResolver,
+    ScopedCustomerResolver,
     ...visibilityBundle.resolvers,
 ];
 
