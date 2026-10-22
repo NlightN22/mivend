@@ -35,6 +35,7 @@ import { StorageLocationHandler } from './handlers/storage-location.handler';
 import { ContractHandler } from './handlers/contract.handler';
 import { OrderStatusHandler } from './handlers/order-status.handler';
 import { ManufacturerHandler } from './handlers/manufacturer.handler';
+import { PriceTypeHandler } from './handlers/price-type.handler';
 import { SettlementHandler } from './handlers/settlement.handler';
 import { SettlementPlugin } from '@mivend/plugin-settlement';
 
@@ -80,6 +81,7 @@ import { SettlementPlugin } from '@mivend/plugin-settlement';
         StorageLocationHandler,
         ManufacturerHandler,
         SettlementHandler,
+        PriceTypeHandler,
     ],
     compatibility: '>0.0.0',
 })

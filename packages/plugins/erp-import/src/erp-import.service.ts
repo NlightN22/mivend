@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
 import { ProductHandler } from './handlers/product.handler';
 import { PriceHandler } from './handlers/price.handler';
+import { PriceTypeHandler } from './handlers/price-type.handler';
 import { StockHandler } from './handlers/stock.handler';
 import { CustomerHandler } from './handlers/customer.handler';
 import { CounterpartyHandler } from './handlers/counterparty.handler';
@@ -58,6 +59,7 @@ export class ErpImportService {
         private readonly storageLocationHandler: StorageLocationHandler,
         private readonly manufacturerHandler: ManufacturerHandler,
         private readonly settlementHandler: SettlementHandler,
+        private readonly priceTypeHandler: PriceTypeHandler,
     ) {}
 
     async processBatch(ctx: RequestContext, body: BatchImportBody): Promise<ImportRunResult> {
@@ -111,6 +113,9 @@ export class ErpImportService {
                 break;
             case 'price':
                 await this.priceHandler.upsert(ctx, record.data);
+                break;
+            case 'priceType':
+                await this.priceTypeHandler.upsert(ctx, record.data);
                 break;
             case 'stock':
                 await this.stockHandler.upsert(ctx, record.data);

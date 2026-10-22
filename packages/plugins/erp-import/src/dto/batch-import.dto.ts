@@ -3,6 +3,7 @@ import {
     ProductRecordDto,
     CrossReferenceRecordDto,
     PriceRecordDto,
+    PriceTypeRecordDto,
     StockRecordDto,
     CustomerRecordDto,
     CounterpartyRecordDto,
@@ -31,6 +32,7 @@ import {
 const RECORD_TYPE_DTOS = [
     ProductRecordDto,
     PriceRecordDto,
+    PriceTypeRecordDto,
     StockRecordDto,
     CustomerRecordDto,
     CounterpartyRecordDto,
@@ -62,6 +64,7 @@ const RECORD_TYPE_DTOS = [
 export const TYPE_TO_SCHEMA: Record<string, (typeof RECORD_TYPE_DTOS)[number]> = {
     product: ProductRecordDto,
     price: PriceRecordDto,
+    priceType: PriceTypeRecordDto,
     stock: StockRecordDto,
     customer: CustomerRecordDto,
     counterparty: CounterpartyRecordDto,

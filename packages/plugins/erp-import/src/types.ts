@@ -69,6 +69,14 @@ export interface PriceRecord {
     price: number;
 }
 
+export interface PriceTypeRecord {
+    code: string;
+    name: string;
+    visibility: 'customer' | 'confidential';
+    isPurchase?: boolean;
+    ceilingMultiplier?: number;
+}
+
 export interface StockOrganizationRecord {
     entityId: string;
     productErpId: string;
@@ -176,6 +184,7 @@ export interface DiscountRuleRecord {
 export type ImportRecord =
     | { type: 'product'; data: ProductRecord }
     | { type: 'price'; data: PriceRecord }
+    | { type: 'priceType'; data: PriceTypeRecord }
     | { type: 'stock'; data: StockRecord }
     | { type: 'customer'; data: CustomerRecord }
     | { type: 'counterparty'; data: CounterpartyRecord }

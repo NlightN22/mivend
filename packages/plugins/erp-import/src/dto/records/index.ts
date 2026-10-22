@@ -1,6 +1,7 @@
 export { ProductRecordDto } from './product-record.dto';
 export { CrossReferenceRecordDto } from './cross-reference-record.dto';
 export { PriceRecordDto } from './price-record.dto';
+export { PriceTypeRecordDto } from './price-type-record.dto';
 export { StockRecordDto } from './stock-record.dto';
 export { CustomerRecordDto } from './customer-record.dto';
 export { CounterpartyRecordDto } from './counterparty-record.dto';
