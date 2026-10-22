@@ -60,6 +60,8 @@ function buildElasticsearchPlugin(): Type<unknown> {
     return ElasticsearchPlugin.init({
         host,
         port,
+        // A separate prefix keeps a throwaway e2e stack's indices away from the dev contour's.
+        indexPrefix: process.env.ELASTICSEARCH_INDEX_PREFIX || 'vendure-',
         indexSettings: {
             analysis: {
                 analyzer: {

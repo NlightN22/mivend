@@ -58,3 +58,4 @@ packages/e2e/test-results/
 reports/mutation/
 .stryker-tmp/
 apps/server/.access-test/
+apps/server/.e2e-stack/

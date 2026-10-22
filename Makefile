@@ -12,7 +12,7 @@ export
 .PHONY: up up-rebuild down logs ps restart \
         build lint fmt ci \
         test test-int test-access test-e2e mutation-pilot \
-        e2e-dev e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
+        e2e-dev e2e-stack-build e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
         docker-build docker-push \
         preview-build preview-up preview-down \
         prod-up prod-down \
@@ -338,21 +338,28 @@ preview-down:
 
 # ── E2E tests ──────────────────────────────────────────────────────────────────
 
+# Every run gets a throwaway stack on its own database (#274): server :3020, storefront :5193,
+# manager :5194, seeded from scratch, dropped afterwards. make dev's database is never touched.
+E2E_STACK = flock /tmp/mivend-e2e.lock pnpm --filter server exec ts-node --transpile-only src/__tests__/e2e-stack/run.ts
+
+e2e-stack-build: up
+	pnpm build:plugins
+
 # Subset: make e2e-dev E2E_ARGS="--project=storefront manager/catalog"
-e2e-dev test-e2e:
-	pnpm --filter @mivend/e2e test $(E2E_ARGS)
+e2e-dev test-e2e: e2e-stack-build
+	$(E2E_STACK) pnpm --filter @mivend/e2e test $(E2E_ARGS)
 
 # Minimal critical-route subset (login, order creation) — see docs/testing-strategy.md's
-# "E2E strategy". Requires the same `make dev` + `make seed` stack as `make e2e-dev`.
-e2e-smoke:
-	pnpm --filter @mivend/e2e test:smoke
+# "E2E strategy".
+e2e-smoke: e2e-stack-build
+	$(E2E_STACK) pnpm --filter @mivend/e2e test:smoke
 
 # Cart totals invariants group (storefront/cart-totals) — see docs/testing-strategy.md.
-e2e-cart:
-	pnpm --filter @mivend/e2e test:cart $(E2E_ARGS)
+e2e-cart: e2e-stack-build
+	$(E2E_STACK) pnpm --filter @mivend/e2e test:cart $(E2E_ARGS)
 
-e2e-ui:
-	pnpm --filter @mivend/e2e test:ui
+e2e-ui: e2e-stack-build
+	$(E2E_STACK) pnpm --filter @mivend/e2e test:ui
 
 # Recovery-after-transient-failure scenario — see manager/resilience/connection-recovery.spec.ts.
 # Not part of `make e2e-dev`/CI; SIGSTOPs the real local dev server, takes a few minutes.

@@ -23,22 +23,22 @@ export async function freePort(): Promise<number> {
     });
 }
 
-async function waitForHealth(baseUrl: string, child: ChildProcess, logPath: string): Promise<void> {
+export async function waitForUrl(url: string, child: ChildProcess, logPath: string): Promise<void> {
     const deadline = Date.now() + BOOT_TIMEOUT_MS;
     while (Date.now() < deadline) {
         if (child.exitCode !== null)
-            throw new Error(`The access test server exited with ${child.exitCode}, see ${logPath}`);
-        const healthy = await fetch(`${baseUrl}/health`).then(
+            throw new Error(`${url}: the process exited with ${child.exitCode}, see ${logPath}`);
+        const healthy = await fetch(url).then(
             r => r.ok,
             () => false,
         );
         if (healthy) return;
         await new Promise(r => setTimeout(r, 1000));
     }
-    throw new Error(`The access test server did not become healthy in time, see ${logPath}`);
+    throw new Error(`${url} did not become healthy in time, see ${logPath}`);
 }
 
-function stopGroup(child: ChildProcess): Promise<void> {
+export function stopGroup(child: ChildProcess): Promise<void> {
     if (child.exitCode !== null || child.pid === undefined) return Promise.resolve();
     const pid = child.pid;
     return new Promise(done => {
@@ -57,18 +57,40 @@ function stopGroup(child: ChildProcess): Promise<void> {
     });
 }
 
-function spawnGroup(script: string, env: Record<string, string>, logPath: string): ChildProcess {
-    const log = createWriteStream(logPath);
-    // Detached: the process and the Chrome it launches form one process group, stopped together.
-    const child = spawn('node_modules/.bin/ts-node', ['--transpile-only', script], {
-        cwd: SERVER_DIR,
-        env: { ...process.env, ...env },
+export interface GroupSpawn {
+    command: string;
+    args: string[];
+    cwd: string;
+    env: Record<string, string>;
+    logPath: string;
+}
+
+// Detached: the process and the Chrome it launches form one process group, stopped together.
+export function spawnCommandGroup(spec: GroupSpawn): ChildProcess {
+    const log = createWriteStream(spec.logPath);
+    const child = spawn(spec.command, spec.args, {
+        cwd: spec.cwd,
+        env: { ...process.env, ...spec.env },
         detached: true,
         stdio: ['ignore', 'pipe', 'pipe'],
     });
     child.stdout?.pipe(log);
     child.stderr?.pipe(log);
     return child;
+}
+
+export function spawnGroup(
+    script: string,
+    env: Record<string, string>,
+    logPath: string,
+): ChildProcess {
+    return spawnCommandGroup({
+        command: 'node_modules/.bin/ts-node',
+        args: ['--transpile-only', script],
+        cwd: SERVER_DIR,
+        env,
+        logPath,
+    });
 }
 
 // Not awaited: the worker has no health endpoint; the seed waits for the PDFs it renders.
@@ -85,7 +107,7 @@ export async function startServer(
     const child = spawnGroup('src/main.ts', { ...env, PORT: String(port) }, logPath);
     const baseUrl = `http://127.0.0.1:${port}`;
     try {
-        await waitForHealth(baseUrl, child, logPath);
+        await waitForUrl(`${baseUrl}/health`, child, logPath);
     } catch (error) {
         await stopGroup(child);
         throw error;

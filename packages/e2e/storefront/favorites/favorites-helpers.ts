@@ -22,7 +22,7 @@ function psql(sql: string): string {
             '-U',
             'postgres',
             '-d',
-            'mivend_central',
+            process.env.E2E_DB_NAME ?? 'mivend_central',
             '-tA',
             '-c',
             sql,
