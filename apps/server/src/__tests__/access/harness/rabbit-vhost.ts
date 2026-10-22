@@ -52,3 +52,12 @@ export async function createVhost(vhost: string): Promise<string> {
 export async function deleteVhost(vhost: string): Promise<void> {
     await call(target(vhost), 'DELETE', `/vhosts/${encodeURIComponent(vhost)}`);
 }
+
+export async function listVhosts(): Promise<string[]> {
+    const rabbit = target('/');
+    const response = await fetch(`${rabbit.managementUrl}/vhosts`, {
+        headers: { authorization: rabbit.authorization },
+    });
+    if (!response.ok) throw new Error(`RabbitMQ management GET /vhosts: ${response.status}`);
+    return ((await response.json()) as { name: string }[]).map(v => v.name);
+}

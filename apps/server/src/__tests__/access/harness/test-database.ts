@@ -43,3 +43,13 @@ export async function createDatabase(name: string): Promise<void> {
 export async function dropDatabase(name: string): Promise<void> {
     await onMaintenanceDb(client => client.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`));
 }
+
+export async function listDatabases(prefix: string): Promise<string[]> {
+    const { rows } = await onMaintenanceDb(client =>
+        client.query<{ datname: string }>(
+            `SELECT datname FROM pg_database WHERE starts_with(datname, $1)`,
+            [prefix],
+        ),
+    );
+    return rows.map(r => r.datname);
+}

@@ -53,9 +53,11 @@ describe.each(STAFF.map(s => s.key))('order visibility for %s', (key: ActorKey) 
         expect(result.data!.orders.totalItems).toBe(expected.size);
     });
 
-    it.skipIf(hidden.length === 0)(
+    // Scope 'all' sees every order, so it has no hidden case to probe.
+    it.skipIf(staff(key).scope === 'all')(
         'a hidden order gives away nothing through reservations or a note',
         async () => {
+            expect(hidden.length, 'a hidden order exists').toBeGreaterThan(0);
             for (const o of hidden) {
                 const reservations = await admin(token, RESERVATIONS, { id: orderOf(o).id });
                 expect(reservations.errors.join(' '), `reservations of ${o}`).toMatch(NOT_FOUND);

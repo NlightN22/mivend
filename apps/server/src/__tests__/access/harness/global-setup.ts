@@ -7,6 +7,7 @@ import { runAccessSeed, SUPERADMIN } from '../seed/run-seed';
 import type { SeedIds } from '../seed/seed-ids';
 import { createVhost, deleteVhost } from './rabbit-vhost';
 import { startPdfWorker, startServer } from './server-process';
+import { ACCESS_PREFIX, sweepStaleRuns } from './stale-sweep';
 import { createDatabase, dropDatabase, testDbConnection } from './test-database';
 
 declare module 'vitest' {
@@ -19,7 +20,8 @@ declare module 'vitest' {
 const LOG_DIR = resolve(__dirname, '../../../../.access-test');
 
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
-    const name = `mivend_access_${Date.now()}_${process.pid}`;
+    await sweepStaleRuns();
+    const name = `${ACCESS_PREFIX}${Date.now()}_${process.pid}`;
     const importToken = randomBytes(24).toString('hex');
     const db = testDbConnection();
     mkdirSync(LOG_DIR, { recursive: true });
@@ -29,11 +31,22 @@ export default async function setup(project: TestProject): Promise<() => Promise
     let stop = async (): Promise<void> => {};
     let stopWorker = async (): Promise<void> => {};
     const teardown = async (): Promise<void> => {
-        await stopWorker();
-        await stop();
-        await deleteVhost(name);
-        await dropDatabase(name);
-        rmSync(pdfDir, { recursive: true, force: true });
+        const errors: unknown[] = [];
+        const steps = [
+            stopWorker,
+            stop,
+            () => deleteVhost(name),
+            () => dropDatabase(name),
+            async () => rmSync(pdfDir, { recursive: true, force: true }),
+        ];
+        for (const step of steps) {
+            try {
+                await step();
+            } catch (error) {
+                errors.push(error);
+            }
+        }
+        if (errors.length > 0) throw errors[0];
     };
     try {
         const env = {

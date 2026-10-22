@@ -97,9 +97,11 @@ describe.each(STAFF.map(s => s.key))('contracts for %s', (key: ActorKey) => {
         }
     });
 
-    it.skipIf(hidden.length === 0)(
+    // Scope 'all' sees every order, so it has no hidden case to probe.
+    it.skipIf(staff(key).scope === 'all')(
         'a hidden order contract cannot be changed and a contract cannot be generated',
         async () => {
+            expect(hidden.length, 'a hidden order exists').toBeGreaterThan(0);
             const target = hidden[0];
             const before = await untouched(target);
             const set = await admin(token, SET, {

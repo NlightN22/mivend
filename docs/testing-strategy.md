@@ -346,7 +346,7 @@ A change is not done until:
 
 - `make test` — unit tests, offline.
 - `make test-int` — integration/component/contract tests (starts infra via `make up`).
-- `make test-access` — access integration matrix on a throwaway server and database (about 1 min).
+- `make test-access` — access integration matrix on a throwaway server and database (about 2.5 min).
 - `make ci` — the push CI pipeline (lint, format, type check, unit, contract) on a clean HEAD checkout with an empty pnpm store; run before pushing.
 - `make e2e` — Playwright E2E (requires `make dev` + `make seed`).
 
