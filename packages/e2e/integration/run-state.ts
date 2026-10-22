@@ -11,7 +11,6 @@ export interface RunOrder {
 export interface RunState {
     startedAt: string;
     orders: RunOrder[];
-    grantRequestIds: string[];
     exchange: 'unknown' | 'on' | 'off';
     contourBroken: boolean;
 }
@@ -33,7 +32,6 @@ export function startRun(): void {
     writeRun({
         startedAt: new Date().toISOString(),
         orders: [],
-        grantRequestIds: [],
         exchange: 'unknown',
         contourBroken: false,
     });
@@ -47,15 +45,4 @@ export function rememberOrder(order: RunOrder): void {
     const state = readRun();
     if (!state.orders.some(o => o.id === order.id))
         writeRun({ ...state, orders: [...state.orders, order] });
-}
-
-export function rememberGrantRequest(requestId: string): void {
-    const state = readRun();
-    if (!state.grantRequestIds.includes(requestId))
-        writeRun({ ...state, grantRequestIds: [...state.grantRequestIds, requestId] });
-}
-
-// Goes into every grant justification of the run, so cleanup also finds a request whose id was lost.
-export function grantMarker(): string {
-    return `e2e-int-${readRun().startedAt.replace(/\D/g, '')}`;
 }

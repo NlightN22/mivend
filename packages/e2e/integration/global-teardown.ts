@@ -1,7 +1,6 @@
 import { endRunSessions } from '../helpers/session-cleanup';
 import { loadContourEnv } from './contour-env';
 import { restartContour } from './contour-control';
-import { closeRunGrants } from './grant-cleanup';
 import { cancelRunOrders } from './run-cleanup';
 import { readRun } from './run-state';
 
@@ -18,9 +17,6 @@ export default async function globalTeardown(): Promise<void> {
     await step('cancel run orders', async () => {
         for (const left of await cancelRunOrders())
             problems.push(`order ${left.code}: ${left.problem}`);
-    });
-    await step('close run discount grants', async () => {
-        for (const id of await closeRunGrants()) problems.push(`grant request ${id} still pending`);
     });
     const since = new Date(readRun().startedAt);
     const accounts = [
