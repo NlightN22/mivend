@@ -82,19 +82,20 @@ export const useCartStore = defineStore('cart', () => {
     const itemCount = computed(() => lines.value.length);
     const totalQuantity = computed(() => lines.value.reduce((sum, line) => sum + line.quantity, 0));
     const totalPrice = computed(() => (order.value?.totalWithTax ?? 0) / 100);
-    // subTotalWithTax already reflects discounted unit prices (CustomerPriceCalculationStrategy),
-    // so each line's discount is added back to show the pre-discount subtotal.
+    // discounted* prices already include every discount (flat in the list price, order-dependent
+    // ones as a promotion), so each line's discount is added back to show the pre-discount subtotal.
     const discountAmount = computed(() =>
         lines.value.reduce((sum, line) => {
             if (
                 line.compareAtPrice == null ||
-                line.unitPriceWithTax == null ||
-                line.unitPriceWithTax === 0
+                line.discountedUnitPriceWithTax == null ||
+                line.discountedUnitPriceWithTax === 0
             )
                 return sum;
             const discountRatio =
-                (line.compareAtPrice - line.unitPriceWithTax) / line.unitPriceWithTax;
-            return sum + Math.round(line.linePriceWithTax * discountRatio);
+                (line.compareAtPrice - line.discountedUnitPriceWithTax) /
+                line.discountedUnitPriceWithTax;
+            return sum + Math.round(line.discountedLinePriceWithTax * discountRatio);
         }, 0),
     );
     const isEmpty = computed(() => lines.value.length === 0);
@@ -185,9 +186,14 @@ export const useCartStore = defineStore('cart', () => {
                             ),
                         };
                     }
-                    if (serverLine?.compareAtPrice != null && serverLine.unitPriceWithTax != null) {
+                    if (
+                        serverLine?.compareAtPrice != null &&
+                        serverLine.discountedUnitPriceWithTax != null
+                    ) {
                         const percent = Math.round(
-                            (1 - serverLine.unitPriceWithTax / serverLine.compareAtPrice) * 100,
+                            (1 -
+                                serverLine.discountedUnitPriceWithTax / serverLine.compareAtPrice) *
+                                100,
                         );
                         const brand = brandOf(serverLine.productVariant.product.manufacturer);
                         if (percent > 0 && brand) discountResult = { brand, percent };
@@ -214,8 +220,10 @@ export const useCartStore = defineStore('cart', () => {
                         return {
                             ...l,
                             quantity: qty,
-                            linePrice: Math.round(l.linePrice * ratio),
-                            linePriceWithTax: Math.round(l.linePriceWithTax * ratio),
+                            discountedLinePrice: Math.round(l.discountedLinePrice * ratio),
+                            discountedLinePriceWithTax: Math.round(
+                                l.discountedLinePriceWithTax * ratio,
+                            ),
                         };
                     })
                     .filter(l => l.quantity > 0),

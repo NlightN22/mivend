@@ -62,7 +62,7 @@ function toggleAdjust(lineId: string): void {
                             "
                         />
                     </td>
-                    <td>{{ money(line.unitPriceWithTax) }}</td>
+                    <td>{{ money(line.discountedUnitPriceWithTax) }}</td>
                     <td>
                         <button
                             type="button"
@@ -76,7 +76,7 @@ function toggleAdjust(lineId: string): void {
                             }}
                         </button>
                     </td>
-                    <td>{{ money(line.linePriceWithTax) }}</td>
+                    <td>{{ money(line.discountedLinePriceWithTax) }}</td>
                     <td>
                         <button
                             type="button"

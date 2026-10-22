@@ -11,9 +11,9 @@ import { AdjustCartLineDocument } from '../../api/generated/graphql';
 
 interface TestLine {
     quantity: number;
-    unitPriceWithTax: number | null;
+    discountedUnitPriceWithTax: number | null;
     compareAtPrice: number | null;
-    linePriceWithTax: number;
+    discountedLinePriceWithTax: number;
 }
 
 function setLines(store: ReturnType<typeof useCartStore>, lines: TestLine[]): void {
@@ -26,8 +26,18 @@ describe('cart store totals', () => {
     it('totalQuantity sums line quantities, not the number of lines', () => {
         const store = useCartStore();
         setLines(store, [
-            { quantity: 1, unitPriceWithTax: 100, compareAtPrice: null, linePriceWithTax: 100 },
-            { quantity: 4, unitPriceWithTax: 100, compareAtPrice: null, linePriceWithTax: 400 },
+            {
+                quantity: 1,
+                discountedUnitPriceWithTax: 100,
+                compareAtPrice: null,
+                discountedLinePriceWithTax: 100,
+            },
+            {
+                quantity: 4,
+                discountedUnitPriceWithTax: 100,
+                compareAtPrice: null,
+                discountedLinePriceWithTax: 400,
+            },
         ]);
 
         expect(store.itemCount).toBe(2);
@@ -38,9 +48,19 @@ describe('cart store totals', () => {
         const store = useCartStore();
         setLines(store, [
             // 10% off: paid 9000, list 10000 -> discount 1000
-            { quantity: 1, unitPriceWithTax: 9000, compareAtPrice: 10000, linePriceWithTax: 9000 },
+            {
+                quantity: 1,
+                discountedUnitPriceWithTax: 9000,
+                compareAtPrice: 10000,
+                discountedLinePriceWithTax: 9000,
+            },
             // fractional: 3 x 333 paid, list 400 -> 999 * (67/333) = 201.0 rounds per line
-            { quantity: 3, unitPriceWithTax: 333, compareAtPrice: 400, linePriceWithTax: 999 },
+            {
+                quantity: 3,
+                discountedUnitPriceWithTax: 333,
+                compareAtPrice: 400,
+                discountedLinePriceWithTax: 999,
+            },
         ]);
 
         expect(store.discountAmount).toBe(1000 + Math.round(999 * (67 / 333)));
@@ -50,9 +70,24 @@ describe('cart store totals', () => {
     it('ignores lines without a list price or with a zero unit price', () => {
         const store = useCartStore();
         setLines(store, [
-            { quantity: 1, unitPriceWithTax: 100, compareAtPrice: null, linePriceWithTax: 100 },
-            { quantity: 1, unitPriceWithTax: 0, compareAtPrice: 50, linePriceWithTax: 0 },
-            { quantity: 1, unitPriceWithTax: null, compareAtPrice: 50, linePriceWithTax: 0 },
+            {
+                quantity: 1,
+                discountedUnitPriceWithTax: 100,
+                compareAtPrice: null,
+                discountedLinePriceWithTax: 100,
+            },
+            {
+                quantity: 1,
+                discountedUnitPriceWithTax: 0,
+                compareAtPrice: 50,
+                discountedLinePriceWithTax: 0,
+            },
+            {
+                quantity: 1,
+                discountedUnitPriceWithTax: null,
+                compareAtPrice: 50,
+                discountedLinePriceWithTax: 0,
+            },
         ]);
 
         expect(store.discountAmount).toBe(0);
@@ -69,7 +104,12 @@ describe('cart store fetchCart', () => {
     it('keeps the known cart when the fetch fails, then recovers on retry', async () => {
         const store = useCartStore();
         setLines(store, [
-            { quantity: 4, unitPriceWithTax: 100, compareAtPrice: null, linePriceWithTax: 400 },
+            {
+                quantity: 4,
+                discountedUnitPriceWithTax: 100,
+                compareAtPrice: null,
+                discountedLinePriceWithTax: 400,
+            },
         ]);
         vi.mocked(shopApi)
             .mockRejectedValueOnce(new Error('network'))
@@ -131,8 +171,8 @@ describe('cart store mutation queue', () => {
             lines: ['a', 'b'].map(id => ({
                 id,
                 quantity: 1,
-                linePrice: 100,
-                linePriceWithTax: 100,
+                discountedLinePrice: 100,
+                discountedLinePriceWithTax: 100,
             })),
         } as never;
     }

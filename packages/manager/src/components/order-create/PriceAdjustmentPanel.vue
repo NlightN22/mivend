@@ -21,7 +21,7 @@ async function submit(): Promise<void> {
     submitting.value = true;
     error.value = '';
     try {
-        const requestedPrice = props.line.unitPriceWithTax + Math.round(delta * 100);
+        const requestedPrice = props.line.discountedUnitPriceWithTax + Math.round(delta * 100);
         const outcome = await requestPriceAdjustment(
             props.orderId,
             props.line.id,

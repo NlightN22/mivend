@@ -6629,7 +6629,7 @@ export type PriceTypeGapCounterparty = {
     inn: Maybe<Scalars['String']['output']>;
     legalName: Scalars['String']['output'];
     mainContractId: Maybe<Scalars['String']['output']>;
-    /** no-main-contract | contract-not-found | contract-inactive | price-type-not-synced */
+    /** no-main-contract | contract-not-found | contract-inactive | price-type-not-synced (the price type is missing, inactive or not set on an active contract) */
     reason: Scalars['String']['output'];
     shortName: Scalars['String']['output'];
 };
@@ -10051,7 +10051,7 @@ export type ApprovalOrderReferencesQuery = {
             lines: Array<{
                 id: string;
                 quantity: number;
-                unitPriceWithTax: any;
+                discountedUnitPriceWithTax: any;
                 productVariant: { name: string; sku: string };
             }>;
         }>;
@@ -11278,8 +11278,8 @@ export type DraftOrderFieldsFragment = {
     lines: Array<{
         id: string;
         quantity: number;
-        unitPriceWithTax: any;
-        linePriceWithTax: any;
+        discountedUnitPriceWithTax: any;
+        discountedLinePriceWithTax: any;
         productVariant: { id: string; name: string; sku: string };
     }>;
 };
@@ -11300,8 +11300,8 @@ export type OrderCreateOrderQuery = {
         lines: Array<{
             id: string;
             quantity: number;
-            unitPriceWithTax: any;
-            linePriceWithTax: any;
+            discountedUnitPriceWithTax: any;
+            discountedLinePriceWithTax: any;
             productVariant: { id: string; name: string; sku: string };
         }>;
     } | null;
@@ -11321,8 +11321,8 @@ export type CreateDraftOrderMutation = {
         lines: Array<{
             id: string;
             quantity: number;
-            unitPriceWithTax: any;
-            linePriceWithTax: any;
+            discountedUnitPriceWithTax: any;
+            discountedLinePriceWithTax: any;
             productVariant: { id: string; name: string; sku: string };
         }>;
     };
@@ -11348,8 +11348,8 @@ export type SetCustomerForDraftOrderMutation = {
               lines: Array<{
                   id: string;
                   quantity: number;
-                  unitPriceWithTax: any;
-                  linePriceWithTax: any;
+                  discountedUnitPriceWithTax: any;
+                  discountedLinePriceWithTax: any;
                   productVariant: { id: string; name: string; sku: string };
               }>;
           };
@@ -11376,8 +11376,8 @@ export type AddItemToDraftOrderMutation = {
               lines: Array<{
                   id: string;
                   quantity: number;
-                  unitPriceWithTax: any;
-                  linePriceWithTax: any;
+                  discountedUnitPriceWithTax: any;
+                  discountedLinePriceWithTax: any;
                   productVariant: { id: string; name: string; sku: string };
               }>;
           }
@@ -11407,8 +11407,8 @@ export type AdjustDraftOrderLineQuantityMutation = {
               lines: Array<{
                   id: string;
                   quantity: number;
-                  unitPriceWithTax: any;
-                  linePriceWithTax: any;
+                  discountedUnitPriceWithTax: any;
+                  discountedLinePriceWithTax: any;
                   productVariant: { id: string; name: string; sku: string };
               }>;
           }
@@ -11436,8 +11436,8 @@ export type RemoveDraftOrderLineMutation = {
               lines: Array<{
                   id: string;
                   quantity: number;
-                  unitPriceWithTax: any;
-                  linePriceWithTax: any;
+                  discountedUnitPriceWithTax: any;
+                  discountedLinePriceWithTax: any;
                   productVariant: { id: string; name: string; sku: string };
               }>;
           }
@@ -11559,8 +11559,8 @@ export type OrderDetailQuery = {
             lines: Array<{
                 id: string;
                 quantity: number;
-                unitPriceWithTax: any;
-                linePriceWithTax: any;
+                discountedUnitPriceWithTax: any;
+                discountedLinePriceWithTax: any;
                 productVariant: {
                     id: string;
                     name: string;
@@ -12946,8 +12946,8 @@ export const DraftOrderFieldsFragmentDoc = new TypedDocumentString(
   lines {
     id
     quantity
-    unitPriceWithTax
-    linePriceWithTax
+    discountedUnitPriceWithTax
+    discountedLinePriceWithTax
     productVariant {
       id
       name
@@ -13288,7 +13288,7 @@ export const ApprovalOrderReferencesDocument = new TypedDocumentString(`
       lines {
         id
         quantity
-        unitPriceWithTax
+        discountedUnitPriceWithTax
         productVariant {
           name
           sku
@@ -14629,8 +14629,8 @@ export const OrderCreateOrderDocument = new TypedDocumentString(`
   lines {
     id
     quantity
-    unitPriceWithTax
-    linePriceWithTax
+    discountedUnitPriceWithTax
+    discountedLinePriceWithTax
     productVariant {
       id
       name
@@ -14655,8 +14655,8 @@ export const CreateDraftOrderDocument = new TypedDocumentString(`
   lines {
     id
     quantity
-    unitPriceWithTax
-    linePriceWithTax
+    discountedUnitPriceWithTax
+    discountedLinePriceWithTax
     productVariant {
       id
       name
@@ -14688,8 +14688,8 @@ export const SetCustomerForDraftOrderDocument = new TypedDocumentString(`
   lines {
     id
     quantity
-    unitPriceWithTax
-    linePriceWithTax
+    discountedUnitPriceWithTax
+    discountedLinePriceWithTax
     productVariant {
       id
       name
@@ -14724,8 +14724,8 @@ export const AddItemToDraftOrderDocument = new TypedDocumentString(`
   lines {
     id
     quantity
-    unitPriceWithTax
-    linePriceWithTax
+    discountedUnitPriceWithTax
+    discountedLinePriceWithTax
     productVariant {
       id
       name
@@ -14760,8 +14760,8 @@ export const AdjustDraftOrderLineQuantityDocument = new TypedDocumentString(`
   lines {
     id
     quantity
-    unitPriceWithTax
-    linePriceWithTax
+    discountedUnitPriceWithTax
+    discountedLinePriceWithTax
     productVariant {
       id
       name
@@ -14796,8 +14796,8 @@ export const RemoveDraftOrderLineDocument = new TypedDocumentString(`
   lines {
     id
     quantity
-    unitPriceWithTax
-    linePriceWithTax
+    discountedUnitPriceWithTax
+    discountedLinePriceWithTax
     productVariant {
       id
       name
@@ -14953,8 +14953,8 @@ export const OrderDetailDocument = new TypedDocumentString(`
       lines {
         id
         quantity
-        unitPriceWithTax
-        linePriceWithTax
+        discountedUnitPriceWithTax
+        discountedLinePriceWithTax
         productVariant {
           id
           name

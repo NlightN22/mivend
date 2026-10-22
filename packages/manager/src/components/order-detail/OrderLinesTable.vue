@@ -168,7 +168,7 @@ function toggleAdjust(lineId: string): void {
                         />
                         <td class="order-lines__num">
                             <OrderLineUnitPrice
-                                :price="money(line.unitPriceWithTax)"
+                                :price="money(line.discountedUnitPriceWithTax)"
                                 :below-floor="isBelowFloor(findingsByLineId.get(line.id) ?? [])"
                             />
                         </td>
@@ -196,7 +196,7 @@ function toggleAdjust(lineId: string): void {
                                 Adjust price
                             </button>
                         </td>
-                        <td class="order-lines__num">{{ money(line.linePriceWithTax) }}</td>
+                        <td class="order-lines__num">{{ money(line.discountedLinePriceWithTax) }}</td>
                         <td v-if="canEditLines" class="order-lines__edit">
                             <OrderLineEditCell
                                 :quantity="line.quantity"

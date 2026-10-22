@@ -4,7 +4,7 @@ import { clearCart, gql } from './helpers';
 interface OrderLine {
     id: string;
     quantity: number;
-    unitPriceWithTax: number;
+    discountedUnitPriceWithTax: number;
     productVariant: { sku: string };
 }
 
@@ -25,33 +25,10 @@ function lineFor(lines: OrderLine[], sku: string): OrderLine {
     return line;
 }
 
-// Runs as an async EventBus subscriber after the mutation's transaction commits,
-// so the sibling line may lag: poll instead of asserting on a single read.
-async function waitForUnitPrice(
-    page: import('@playwright/test').Page,
-    sku: string,
-    expected: number,
-    timeoutMs = 5000,
-): Promise<void> {
-    const deadline = Date.now() + timeoutMs;
-    let last: number | undefined;
-    while (Date.now() < deadline) {
-        const result = await gql(
-            page,
-            `query { activeOrder { lines { id quantity unitPriceWithTax productVariant { sku } } } }`,
-        );
-        const line = lineFor((result.activeOrder as { lines: OrderLine[] }).lines, sku);
-        last = line.unitPriceWithTax;
-        if (last === expected) return;
-        await new Promise(r => setTimeout(r, 200));
-    }
-    throw new Error(`Timed out waiting for ${sku} unitPriceWithTax=${expected}, last seen ${last}`);
-}
-
-// Vendure only recalculates the mutated OrderLine; without TierRebalanceService,
-// a sibling line of the same brand keeps a stale price after a facet tier change.
-test.describe('Volume-tiered discount — cross-line rebalance', () => {
-    test('crossing the tier threshold on one line also rebalances a different pre-existing line of the same brand', async ({
+// Vendure only reprices the mutated OrderLine's list price; the order-dependent discount is a promotion
+// evaluated for every line in the same transaction, so a sibling moves tier in the mutation's own response.
+test.describe('Volume-tiered discount — cross-line repricing', () => {
+    test('crossing the tier threshold on one line also reprices a different pre-existing line of the same brand', async ({
         page,
     }) => {
         await clearCart(page);
@@ -64,7 +41,7 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
+                    ... on Order { lines { id quantity discountedUnitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: oil1 },
@@ -73,7 +50,7 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
             (add1.addItemToOrder as { lines: OrderLine[] }).lines,
             'E2E-OIL-001',
         );
-        expect(oil1LineAfterAdd1.unitPriceWithTax).toBe(Math.round(76500 * 0.9));
+        expect(oil1LineAfterAdd1.discountedUnitPriceWithTax).toBe(Math.round(76500 * 0.9));
 
         // Add oil2 at qty 1: aggregate weight 100 + 50 = 150kg — still under 200kg.
         const add2 = await gql(
@@ -81,14 +58,18 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
+                    ... on Order { lines { id quantity discountedUnitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: oil2 },
         );
         let lines = (add2.addItemToOrder as { lines: OrderLine[] }).lines;
-        expect(lineFor(lines, 'E2E-OIL-002').unitPriceWithTax).toBe(Math.round(49500 * 0.9));
-        expect(lineFor(lines, 'E2E-OIL-001').unitPriceWithTax).toBe(Math.round(76500 * 0.9));
+        expect(lineFor(lines, 'E2E-OIL-002').discountedUnitPriceWithTax).toBe(
+            Math.round(49500 * 0.9),
+        );
+        expect(lineFor(lines, 'E2E-OIL-001').discountedUnitPriceWithTax).toBe(
+            Math.round(76500 * 0.9),
+        );
 
         // oil1 is not touched by this mutation but must still move to the 25% tier.
         const oil2LineId = lineFor(lines, 'E2E-OIL-002').id;
@@ -97,7 +78,7 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
             `mutation($lineId: ID!) {
                 adjustOrderLine(orderLineId: $lineId, quantity: 3) {
                     __typename
-                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
+                    ... on Order { lines { id quantity discountedUnitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { lineId: oil2LineId },
@@ -106,10 +87,11 @@ test.describe('Volume-tiered discount — cross-line rebalance', () => {
 
         const oil2Line = lineFor(lines, 'E2E-OIL-002');
         expect(oil2Line.quantity).toBe(3);
-        expect(oil2Line.unitPriceWithTax).toBe(Math.round(49500 * 0.75));
+        expect(oil2Line.discountedUnitPriceWithTax).toBe(Math.round(49500 * 0.75));
 
-        // oil1 — untouched by this mutation — must also land on the 25% tier, via the
-        // async rebalance subscriber (runs after this mutation's transaction commits).
-        await waitForUnitPrice(page, 'E2E-OIL-001', Math.round(76500 * 0.75));
+        // Untouched by this mutation, yet already on the new tier in the same response.
+        expect(lineFor(lines, 'E2E-OIL-001').discountedUnitPriceWithTax).toBe(
+            Math.round(76500 * 0.75),
+        );
     });
 });

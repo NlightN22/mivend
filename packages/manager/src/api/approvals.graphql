@@ -92,7 +92,7 @@ query ApprovalOrderReferences($ids: [String!]!) {
             lines {
                 id
                 quantity
-                unitPriceWithTax
+                discountedUnitPriceWithTax
                 productVariant {
                     name
                     sku

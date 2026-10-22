@@ -49,8 +49,8 @@ fragment DraftOrderFields on Order {
     lines {
         id
         quantity
-        unitPriceWithTax
-        linePriceWithTax
+        discountedUnitPriceWithTax
+        discountedLinePriceWithTax
         productVariant {
             id
             name

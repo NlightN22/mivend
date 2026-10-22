@@ -4,7 +4,7 @@ import { clearCart, gql } from './helpers';
 interface OrderLine {
     id: string;
     quantity: number;
-    unitPriceWithTax: number;
+    discountedUnitPriceWithTax: number;
     productVariant: { sku: string };
 }
 
@@ -25,33 +25,10 @@ function lineFor(lines: OrderLine[], sku: string): OrderLine {
     return line;
 }
 
-// Runs as an async EventBus subscriber after the mutation's transaction commits,
-// so the sibling line may lag: poll for it instead of asserting on one immediate read.
-async function waitForUnitPrice(
-    page: import('@playwright/test').Page,
-    sku: string,
-    expected: number,
-    timeoutMs = 5000,
-): Promise<void> {
-    const deadline = Date.now() + timeoutMs;
-    let last: number | undefined;
-    while (Date.now() < deadline) {
-        const result = await gql(
-            page,
-            `query { activeOrder { lines { id quantity unitPriceWithTax productVariant { sku } } } }`,
-        );
-        const line = lineFor((result.activeOrder as { lines: OrderLine[] }).lines, sku);
-        last = line.unitPriceWithTax;
-        if (last === expected) return;
-        await new Promise(r => setTimeout(r, 200));
-    }
-    throw new Error(`Timed out waiting for ${sku} unitPriceWithTax=${expected}, last seen ${last}`);
-}
-
 // Same coverage as volume-discount-cross-line.spec.ts, but for the spend-amount metric
 // ('e2e-amount-brand') instead of weight.
-test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
-    test('crossing the spend threshold on one line also rebalances a different pre-existing line of the same brand', async ({
+test.describe('Spend-amount-tiered discount — cross-line repricing', () => {
+    test('crossing the spend threshold on one line also reprices a different pre-existing line of the same brand', async ({
         page,
     }) => {
         await clearCart(page);
@@ -65,14 +42,14 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
+                    ... on Order { lines { id quantity discountedUnitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: brk1 },
         );
         expect(
             lineFor((add1.addItemToOrder as { lines: OrderLine[] }).lines, 'E2E-BRK-001')
-                .unitPriceWithTax,
+                .discountedUnitPriceWithTax,
         ).toBe(Math.round(108000 * 0.92));
 
         // Add brk2 at qty 1: aggregate spend 1080 + 720 = 1800₽ — still under 2000₽, same 8%
@@ -82,14 +59,18 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
+                    ... on Order { lines { id quantity discountedUnitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: brk2 },
         );
         let lines = (add2.addItemToOrder as { lines: OrderLine[] }).lines;
-        expect(lineFor(lines, 'E2E-BRK-002').unitPriceWithTax).toBe(Math.round(72000 * 0.92));
-        expect(lineFor(lines, 'E2E-BRK-001').unitPriceWithTax).toBe(Math.round(108000 * 0.92));
+        expect(lineFor(lines, 'E2E-BRK-002').discountedUnitPriceWithTax).toBe(
+            Math.round(72000 * 0.92),
+        );
+        expect(lineFor(lines, 'E2E-BRK-001').discountedUnitPriceWithTax).toBe(
+            Math.round(108000 * 0.92),
+        );
 
         // Bump brk2 to qty 2: aggregate spend 1080 + 720*2 = 2520₽ — crosses the 2000₽
         // tier (30%). brk1 — untouched by this mutation — must also drop to the tier.
@@ -99,7 +80,7 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
             `mutation($lineId: ID!) {
                 adjustOrderLine(orderLineId: $lineId, quantity: 2) {
                     __typename
-                    ... on Order { lines { id quantity unitPriceWithTax productVariant { sku } } }
+                    ... on Order { lines { id quantity discountedUnitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { lineId: brk2LineId },
@@ -108,10 +89,11 @@ test.describe('Spend-amount-tiered discount — cross-line rebalance', () => {
 
         const brk2Line = lineFor(lines, 'E2E-BRK-002');
         expect(brk2Line.quantity).toBe(2);
-        expect(brk2Line.unitPriceWithTax).toBe(Math.round(72000 * 0.7));
+        expect(brk2Line.discountedUnitPriceWithTax).toBe(Math.round(72000 * 0.7));
 
-        // brk1 — untouched by this mutation — must also drop to the tier, via the async
-        // rebalance subscriber (runs after this mutation's transaction commits).
-        await waitForUnitPrice(page, 'E2E-BRK-001', Math.round(108000 * 0.7));
+        // Untouched by this mutation, yet already on the new tier in the same response.
+        expect(lineFor(lines, 'E2E-BRK-001').discountedUnitPriceWithTax).toBe(
+            Math.round(108000 * 0.7),
+        );
     });
 });

@@ -27,9 +27,9 @@ export const Default: Story = {
                         {
                             id: 'line-1',
                             quantity: 2,
-                            linePrice: 400000,
-                            linePriceWithTax: 440000,
-                            unitPriceWithTax: 200000,
+                            discountedLinePrice: 400000,
+                            discountedLinePriceWithTax: 440000,
+                            discountedUnitPriceWithTax: 200000,
                             compareAtPrice: 250000,
                             tierProgress: null,
                             productVariant: {

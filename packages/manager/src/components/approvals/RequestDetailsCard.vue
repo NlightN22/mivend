@@ -37,8 +37,8 @@ const orderLine = computed(() => {
 const priceDeltaPercent = computed<number | null>(() => {
     const line = orderLine.value;
     const requestedPrice = payload.value.requestedPrice as number | undefined;
-    if (!line || requestedPrice == null || line.unitPriceWithTax === 0) return null;
-    return ((requestedPrice - line.unitPriceWithTax) / line.unitPriceWithTax) * 100;
+    if (!line || requestedPrice == null || line.discountedUnitPriceWithTax === 0) return null;
+    return ((requestedPrice - line.discountedUnitPriceWithTax) / line.discountedUnitPriceWithTax) * 100;
 });
 
 const rows = computed<DetailRow[]>(() => {
@@ -101,7 +101,7 @@ const rows = computed<DetailRow[]>(() => {
         </div>
         <div class="request-details__line-prices">
             <span class="request-details__line-original">{{
-                money(orderLine.unitPriceWithTax)
+                money(orderLine.discountedUnitPriceWithTax)
             }}</span>
             <span>→</span>
             <span class="request-details__line-requested">{{

@@ -11,9 +11,9 @@ query ActiveOrder {
             featuredAsset {
                 preview
             }
-            linePrice
-            linePriceWithTax
-            unitPriceWithTax
+            discountedLinePrice
+            discountedLinePriceWithTax
+            discountedUnitPriceWithTax
             compareAtPrice
             tierProgress {
                 facetName
@@ -64,7 +64,7 @@ mutation AddToCart($variantId: ID!, $qty: Int!) {
             lines {
                 id
                 quantity
-                unitPriceWithTax
+                discountedUnitPriceWithTax
                 compareAtPrice
                 productVariant {
                     id

@@ -47,10 +47,10 @@ function formatUntil(iso: string): string {
                     </td>
                     <td class="olt-num">{{ line.quantity }}</td>
                     <td class="olt-num">
-                        {{ formatAmount(line.unitPriceWithTax, order.currencyCode) }}
+                        {{ formatAmount(line.discountedUnitPriceWithTax, order.currencyCode) }}
                     </td>
                     <td class="olt-num olt-bold">
-                        {{ formatAmount(line.linePriceWithTax, order.currencyCode) }}
+                        {{ formatAmount(line.discountedLinePriceWithTax, order.currencyCode) }}
                     </td>
                 </tr>
             </tbody>

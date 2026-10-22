@@ -45,7 +45,7 @@ function mockDetailData(): void {
                         {
                             id: '1',
                             quantity: 2,
-                            unitPriceWithTax: 200000,
+                            discountedUnitPriceWithTax: 200000,
                             productVariant: { name: 'Brake pad set', sku: 'SKU-001' },
                         },
                     ],

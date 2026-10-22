@@ -3,7 +3,7 @@ import { clearCart, gql } from './helpers';
 
 interface OrderLine {
     quantity: number;
-    unitPriceWithTax: number;
+    discountedUnitPriceWithTax: number;
     productVariant: { sku: string };
 }
 
@@ -38,7 +38,7 @@ test.describe('Spend-amount-tiered discount', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { quantity unitPriceWithTax productVariant { sku } } }
+                    ... on Order { lines { quantity discountedUnitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: variantId },
@@ -47,7 +47,7 @@ test.describe('Spend-amount-tiered discount', () => {
             (firstAdd.addItemToOrder as { lines: OrderLine[] }).lines,
             'E2E-BRK-001',
         );
-        expect(firstLine.unitPriceWithTax).toBe(Math.round(108000 * 0.92));
+        expect(firstLine.discountedUnitPriceWithTax).toBe(Math.round(108000 * 0.92));
 
         // Second unit: 2160₽ spent, crosses the 2000₽ threshold — 30% tier kicks in.
         const secondAdd = await gql(
@@ -55,7 +55,7 @@ test.describe('Spend-amount-tiered discount', () => {
             `mutation($id: ID!) {
                 addItemToOrder(productVariantId: $id, quantity: 1) {
                     __typename
-                    ... on Order { lines { quantity unitPriceWithTax productVariant { sku } } }
+                    ... on Order { lines { quantity discountedUnitPriceWithTax productVariant { sku } } }
                 }
             }`,
             { id: variantId },
@@ -65,6 +65,6 @@ test.describe('Spend-amount-tiered discount', () => {
             'E2E-BRK-001',
         );
         expect(line.quantity).toBe(2);
-        expect(line.unitPriceWithTax).toBe(Math.round(108000 * 0.7));
+        expect(line.discountedUnitPriceWithTax).toBe(Math.round(108000 * 0.7));
     });
 });

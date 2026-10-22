@@ -12,8 +12,8 @@ query OrderDetail($id: ID!) {
         lines {
             id
             quantity
-            unitPriceWithTax
-            linePriceWithTax
+            discountedUnitPriceWithTax
+            discountedLinePriceWithTax
             reserved
             reservedUntil
             productVariant {

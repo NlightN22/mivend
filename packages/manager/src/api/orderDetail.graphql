@@ -41,8 +41,8 @@ query OrderDetail($code: String!) {
             lines {
                 id
                 quantity
-                unitPriceWithTax
-                linePriceWithTax
+                discountedUnitPriceWithTax
+                discountedLinePriceWithTax
                 productVariant {
                     id
                     name

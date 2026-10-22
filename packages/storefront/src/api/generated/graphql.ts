@@ -5077,7 +5077,7 @@ export type MyOrdersQuery = {
             lines: Array<{
                 id: string;
                 quantity: number;
-                linePriceWithTax: any;
+                discountedLinePriceWithTax: any;
                 productVariant: {
                     id: string;
                     sku: string;
@@ -5123,8 +5123,8 @@ export type OrderDetailQuery = {
         lines: Array<{
             id: string;
             quantity: number;
-            unitPriceWithTax: any;
-            linePriceWithTax: any;
+            discountedUnitPriceWithTax: any;
+            discountedLinePriceWithTax: any;
             reserved: boolean;
             reservedUntil?: any | null;
             productVariant: {
@@ -5359,9 +5359,9 @@ export type ActiveOrderQuery = {
         lines: Array<{
             id: string;
             quantity: number;
-            linePrice: any;
-            linePriceWithTax: any;
-            unitPriceWithTax: any;
+            discountedLinePrice: any;
+            discountedLinePriceWithTax: any;
+            discountedUnitPriceWithTax: any;
             compareAtPrice?: number | null;
             featuredAsset?: { preview: string } | null;
             tierProgress?: {
@@ -5420,7 +5420,7 @@ export type AddToCartMutation = {
               lines: Array<{
                   id: string;
                   quantity: number;
-                  unitPriceWithTax: any;
+                  discountedUnitPriceWithTax: any;
                   compareAtPrice?: number | null;
                   productVariant: {
                       id: string;
@@ -6395,7 +6395,7 @@ export const MyOrdersDocument = new TypedDocumentString(`
       lines {
         id
         quantity
-        linePriceWithTax
+        discountedLinePriceWithTax
         productVariant {
           id
           customFields {
@@ -6442,8 +6442,8 @@ export const OrderDetailDocument = new TypedDocumentString(`
     lines {
       id
       quantity
-      unitPriceWithTax
-      linePriceWithTax
+      discountedUnitPriceWithTax
+      discountedLinePriceWithTax
       reserved
       reservedUntil
       productVariant {
@@ -6722,9 +6722,9 @@ export const ActiveOrderDocument = new TypedDocumentString(`
       featuredAsset {
         preview
       }
-      linePrice
-      linePriceWithTax
-      unitPriceWithTax
+      discountedLinePrice
+      discountedLinePriceWithTax
+      discountedUnitPriceWithTax
       compareAtPrice
       tierProgress {
         facetName
@@ -6776,7 +6776,7 @@ export const AddToCartDocument = new TypedDocumentString(`
       lines {
         id
         quantity
-        unitPriceWithTax
+        discountedUnitPriceWithTax
         compareAtPrice
         productVariant {
           id

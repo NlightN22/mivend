@@ -7,9 +7,9 @@ import { parseRub } from './cart-helpers';
 
 export interface TaxedLine {
     quantity: number;
-    unitPrice: number;
-    unitPriceWithTax: number;
-    linePriceWithTax: number;
+    discountedUnitPrice: number;
+    discountedUnitPriceWithTax: number;
+    discountedLinePriceWithTax: number;
     compareAtPrice: number | null;
     taxRate: number;
     productVariant: { sku: string };
@@ -18,7 +18,7 @@ export interface TaxedLine {
 export async function fetchTaxedLines(page: Page): Promise<TaxedLine[]> {
     const data = await gql(
         page,
-        `query { activeOrder { lines { quantity unitPrice unitPriceWithTax linePriceWithTax
+        `query { activeOrder { lines { quantity discountedUnitPrice discountedUnitPriceWithTax discountedLinePriceWithTax
             compareAtPrice taxRate productVariant { sku } } } }`,
     );
     return (data.activeOrder as { lines: TaxedLine[] } | null)?.lines ?? [];
@@ -64,7 +64,7 @@ export async function setTaxRate(id: string, value: number): Promise<void> {
 const rub = (kopecks: number): number => kopecks / 100;
 
 function expectedPercent(line: TaxedLine): number {
-    return Math.round((1 - line.unitPriceWithTax / line.compareAtPrice!) * 100);
+    return Math.round((1 - line.discountedUnitPriceWithTax / line.compareAtPrice!) * 100);
 }
 
 export function expectGrossApi(lines: TaxedLine[], rate: number): void {
@@ -72,14 +72,14 @@ export function expectGrossApi(lines: TaxedLine[], rate: number): void {
         const label = line.productVariant.sku;
         expect(line.taxRate, `${label}: line tax rate`).toBe(rate);
         expect(
-            Math.abs(line.unitPrice * (1 + rate / 100) - line.unitPriceWithTax),
-            `${label}: unitPriceWithTax = unitPrice x (1 + rate)`,
+            Math.abs(line.discountedUnitPrice * (1 + rate / 100) - line.discountedUnitPriceWithTax),
+            `${label}: discountedUnitPriceWithTax = discountedUnitPrice x (1 + rate)`,
         ).toBeLessThanOrEqual(1);
         expect(
             line.compareAtPrice,
             `${label}: discounted line has a gross list price`,
         ).not.toBeNull();
-        expect(line.compareAtPrice!).toBeGreaterThan(line.unitPriceWithTax);
+        expect(line.compareAtPrice!).toBeGreaterThan(line.discountedUnitPriceWithTax);
     }
 }
 
@@ -96,7 +96,7 @@ export async function expectGrossUi(page: Page, lines: TaxedLine[]): Promise<voi
             parseRub(await loc.first().textContent());
         const listTotal = line.compareAtPrice! * line.quantity;
         expect(await amount(unit.locator('.line-price__unit')), `${label}: unit price`).toBeCloseTo(
-            rub(line.unitPriceWithTax),
+            rub(line.discountedUnitPriceWithTax),
             1,
         );
         expect(
@@ -105,7 +105,8 @@ export async function expectGrossUi(page: Page, lines: TaxedLine[]): Promise<voi
         ).toBeCloseTo(rub(line.compareAtPrice!), 1);
         expect(
             Math.abs(
-                (await amount(total.locator('.line-price__total'))) - rub(line.linePriceWithTax),
+                (await amount(total.locator('.line-price__total'))) -
+                    rub(line.discountedLinePriceWithTax),
             ),
             `${label}: line total`,
         ).toBeLessThanOrEqual(0.5);
@@ -120,7 +121,7 @@ export async function expectGrossUi(page: Page, lines: TaxedLine[]): Promise<voi
         );
         await page.locator('.cart-summary').click({ position: { x: 1, y: 1 } });
         await expect(tooltip).toBeHidden();
-        expectedDiscount += listTotal - line.linePriceWithTax;
+        expectedDiscount += listTotal - line.discountedLinePriceWithTax;
     }
     const summary = page.locator('.cart-summary');
     const discount = Math.abs(
@@ -135,6 +136,6 @@ export async function expectGrossUi(page: Page, lines: TaxedLine[]): Promise<voi
         lines.length,
     );
     const total = parseRub(await summary.locator('.cart-summary__total strong').textContent());
-    const sum = lines.reduce((s, l) => s + l.linePriceWithTax, 0);
+    const sum = lines.reduce((s, l) => s + l.discountedLinePriceWithTax, 0);
     expect(total, 'cart total').toBeCloseTo(rub(sum), 2);
 }

@@ -40,7 +40,7 @@ export const Default: Story = {
                                 {
                                     id: 'line-1',
                                     quantity: 2,
-                                    linePriceWithTax: 460000,
+                                    discountedLinePriceWithTax: 460000,
                                     productVariant: {
                                         id: 'var-1',
                                         sku: 'sku-10021',

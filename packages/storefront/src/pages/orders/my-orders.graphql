@@ -10,7 +10,7 @@ query MyOrders($options: OrderListOptions, $search: String) {
             lines {
                 id
                 quantity
-                linePriceWithTax
+                discountedLinePriceWithTax
                 productVariant {
                     id
                     customFields {

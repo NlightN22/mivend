@@ -94,7 +94,7 @@ test.describe('Cart behaviour @cart-totals', () => {
             expectConsistent(cart);
             totals.push({
                 total: cart.totalWithTax,
-                lines: cart.lines.map(l => l.linePriceWithTax).sort((a, b) => a - b),
+                lines: cart.lines.map(l => l.discountedLinePriceWithTax).sort((a, b) => a - b),
             });
         }
         for (const t of totals) expect(t).toEqual(totals[0]);
@@ -113,8 +113,8 @@ test.describe('Cart behaviour @cart-totals', () => {
         await loginAs(page, E2E_CUSTOMER.email, E2E_CUSTOMER.password);
         const after = await settledCart(page);
         expect(after.totalWithTax).toBe(before.totalWithTax);
-        expect(after.lines.map(l => l.linePriceWithTax).sort()).toEqual(
-            before.lines.map(l => l.linePriceWithTax).sort(),
+        expect(after.lines.map(l => l.discountedLinePriceWithTax).sort()).toEqual(
+            before.lines.map(l => l.discountedLinePriceWithTax).sort(),
         );
         await expectUiMatchesApi(page, after);
     });

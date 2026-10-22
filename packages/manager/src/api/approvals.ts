@@ -85,7 +85,7 @@ export interface OrderReferenceLine {
     productName: string;
     sku: string;
     quantity: number;
-    unitPriceWithTax: number;
+    discountedUnitPriceWithTax: number;
 }
 
 export interface OrderReference {
@@ -114,7 +114,7 @@ export async function fetchOrderReferences(
                     productName: l.productVariant.name,
                     sku: l.productVariant.sku,
                     quantity: l.quantity,
-                    unitPriceWithTax: l.unitPriceWithTax,
+                    discountedUnitPriceWithTax: l.discountedUnitPriceWithTax,
                 })),
             },
         ]),

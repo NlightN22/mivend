@@ -61,7 +61,7 @@ test.describe('Cart tier ladder @cart-totals', () => {
             expectConsistent(settled, 'settled read');
             seen.push({
                 total: settled.totalWithTax,
-                lines: settled.lines.map(l => l.linePriceWithTax).sort((a, b) => a - b),
+                lines: settled.lines.map(l => l.discountedLinePriceWithTax).sort((a, b) => a - b),
             });
         }
         for (const s of seen) expect(s).toEqual(seen[0]);
@@ -81,9 +81,9 @@ test.describe('Cart tier ladder @cart-totals', () => {
         const upSibling = up.lines.find(l => l.productVariant.sku === LADDER_SKUS[1])!;
         const baseSibling = base.lines.find(l => l.productVariant.sku === LADDER_SKUS[1])!;
         expect(
-            upSibling.unitPriceWithTax,
+            upSibling.discountedUnitPriceWithTax,
             'sibling unit price drops after the tier unlocks',
-        ).toBeLessThan(baseSibling.unitPriceWithTax);
+        ).toBeLessThan(baseSibling.discountedUnitPriceWithTax);
 
         await setQuantity(page, up, LADDER_SKUS[0], 1);
         const down = await settledCart(page);

@@ -63,9 +63,9 @@ const totalWeightKg = computed(() => {
 });
 
 const discountPercent = computed(() => {
-    const { unitPriceWithTax, compareAtPrice } = props.line;
-    if (compareAtPrice == null || unitPriceWithTax == null) return null;
-    const percent = Math.round((1 - unitPriceWithTax / compareAtPrice) * 100);
+    const { discountedUnitPriceWithTax, compareAtPrice } = props.line;
+    if (compareAtPrice == null || discountedUnitPriceWithTax == null) return null;
+    const percent = Math.round((1 - discountedUnitPriceWithTax / compareAtPrice) * 100);
     return percent > 0 ? percent : null;
 });
 

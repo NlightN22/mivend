@@ -10,14 +10,14 @@ export const ACCOUNT_GRANT_PERCENT = 8;
 
 export function discountPercent(line: CartLine): number {
     if (line.compareAtPrice == null || line.compareAtPrice <= 0) return 0;
-    return Math.round((1 - line.unitPriceWithTax / line.compareAtPrice) * 100);
+    return Math.round((1 - line.discountedUnitPriceWithTax / line.compareAtPrice) * 100);
 }
 
 export interface CartLine {
     id: string;
     quantity: number;
-    unitPriceWithTax: number;
-    linePriceWithTax: number;
+    discountedUnitPriceWithTax: number;
+    discountedLinePriceWithTax: number;
     compareAtPrice: number | null;
     productVariant: { sku: string };
 }
@@ -29,7 +29,7 @@ export interface Cart {
 }
 
 const ORDER_FIELDS = `totalWithTax subTotalWithTax
-    lines { id quantity unitPriceWithTax linePriceWithTax compareAtPrice productVariant { sku } }`;
+    lines { id quantity discountedUnitPriceWithTax discountedLinePriceWithTax compareAtPrice productVariant { sku } }`;
 
 export async function fetchCart(page: Page): Promise<Cart> {
     const data = await gql(page, `query { activeOrder { ${ORDER_FIELDS} } }`);
@@ -78,14 +78,16 @@ export async function settledCart(page: Page): Promise<Cart> {
 }
 
 export function sumLines(cart: Cart): number {
-    return cart.lines.reduce((sum, l) => sum + l.linePriceWithTax, 0);
+    return cart.lines.reduce((sum, l) => sum + l.discountedLinePriceWithTax, 0);
 }
 
 export function expectedDiscount(cart: Cart): number {
     return cart.lines.reduce((sum, l) => {
-        if (l.compareAtPrice == null || l.compareAtPrice <= l.unitPriceWithTax) return sum;
-        const ratio = (l.compareAtPrice - l.unitPriceWithTax) / l.unitPriceWithTax;
-        return sum + Math.round(l.linePriceWithTax * ratio);
+        if (l.compareAtPrice == null || l.compareAtPrice <= l.discountedUnitPriceWithTax)
+            return sum;
+        const ratio =
+            (l.compareAtPrice - l.discountedUnitPriceWithTax) / l.discountedUnitPriceWithTax;
+        return sum + Math.round(l.discountedLinePriceWithTax * ratio);
     }, 0);
 }
 
@@ -160,7 +162,7 @@ export async function expectUiMatchesApi(page: Page, cart: Cart): Promise<void> 
     const rub = (kopecks: number): number => kopecks / 100;
     expect(ui.badge, 'header badge counts lines').toBe(cart.lines.length);
     expect(ui.total, 'cart summary total').toBeCloseTo(rub(cart.totalWithTax), 2);
-    const apiTotals = cart.lines.map(l => rub(l.linePriceWithTax)).sort((a, b) => a - b);
+    const apiTotals = cart.lines.map(l => rub(l.discountedLinePriceWithTax)).sort((a, b) => a - b);
     const uiTotals = [...ui.lineTotals].sort((a, b) => a - b);
     apiTotals.forEach((expected, i) =>
         expect(Math.abs(uiTotals[i] - expected)).toBeLessThanOrEqual(0.5 + 1e-9),
