@@ -20,7 +20,6 @@ import {
 
 const OVERRIDE = `mutation($id: ID!, $b: String) { updateTradingPointDetails(id: $id, input: { servicingBranchId: $b }) { id } }`;
 const HEADS: ActorKey[] = ['head-a', 'head-b'];
-const SHOTS = '/tmp/claude-0/-opt-mivend/74dbfb53-b5dd-43bf-8a1c-b90b093ff31e/scratchpad/shots';
 const branchOf = (key: ActorKey): string =>
     actorState(ACTORS.find(a => a.key === key)!).branchId as string;
 
@@ -45,6 +44,7 @@ test.describe('20: a trading point serviced by another branch', () => {
         test.skip(!home || !other, 'the order counterparty belongs to neither head branch');
         owner = home!;
         servicing = other!;
+        expect(pointOverride(order.pointId), 'the point starts without an override').toBeNull();
         cpId = counterpartyOfPoint(order.pointId);
         superadmin = await superadminToken();
         const set = await adminCall(superadmin, OVERRIDE, {
@@ -98,16 +98,28 @@ test.describe('20: a trading point serviced by another branch', () => {
     test('servicing head: point writes are denied and change nothing', async () => {
         const token = await actorToken(servicing);
         const before = pointRow(order.pointId);
-        const writes = [
-            await adminCall(token, DETAILS, {
-                id: order.pointId,
-                input: { deliveryComment: 'e2e-int probe' },
-            }),
-            await adminCall(token, ACTIVE, { id: order.pointId, a: !before.isActive }),
-            await adminCall(token, COMMENT, { id: order.pointId, c: 'e2e-int probe' }),
-        ];
-        for (const w of writes) expect(w.errors.join(' ')).toMatch(DENIED);
-        expect(pointRow(order.pointId), 'nothing was written').toEqual(before);
+        try {
+            const writes = [
+                await adminCall(token, DETAILS, {
+                    id: order.pointId,
+                    input: { deliveryComment: 'e2e-int probe' },
+                }),
+                await adminCall(token, ACTIVE, { id: order.pointId, a: !before.isActive }),
+                await adminCall(token, COMMENT, { id: order.pointId, c: 'e2e-int probe' }),
+            ];
+            for (const w of writes) expect(w.errors.join(' ')).toMatch(DENIED);
+            expect(pointRow(order.pointId), 'nothing was written').toEqual(before);
+        } finally {
+            const back = [
+                await adminCall(superadmin, ACTIVE, { id: order.pointId, a: before.isActive }),
+                await adminCall(superadmin, DETAILS, {
+                    id: order.pointId,
+                    input: { deliveryComment: before.deliveryComment },
+                }),
+            ];
+            for (const r of back) expect(r.errors, 'restored by the superadmin').toEqual([]);
+        }
+        expect(pointRow(order.pointId), 'the row is as before').toEqual(before);
     });
 
     test('owner head: loses the order, keeps the counterparty and can edit the point', async () => {
@@ -135,16 +147,17 @@ test.describe('20: a trading point serviced by another branch', () => {
 
     test('manager portal: order card for the servicing head, customer card for the owner', async ({
         browser,
-    }) => {
+    }, testInfo) => {
+        const shots = testInfo.outputPath('shots');
         const s = await openManagerAs(browser, servicing);
         try {
             await s.page.goto(`/orders/${order.code}`);
             await expect(s.page.getByText(full.shortName).first()).toBeVisible({ timeout: 15000 });
-            await s.page.screenshot({ path: `${SHOTS}/g20-servicing-order.png`, fullPage: true });
+            await s.page.screenshot({ path: `${shots}/g20-servicing-order.png`, fullPage: true });
             await s.page.goto(`/customers/${cpId}`);
             await expect(s.page.getByText('Customer not found')).toBeVisible({ timeout: 15000 });
             await s.page.screenshot({
-                path: `${SHOTS}/g20-servicing-customer.png`,
+                path: `${shots}/g20-servicing-customer.png`,
                 fullPage: true,
             });
         } finally {
@@ -156,7 +169,7 @@ test.describe('20: a trading point serviced by another branch', () => {
             await expect(o.page.getByText(pointRow(order.pointId).name).first()).toBeVisible({
                 timeout: 15000,
             });
-            await o.page.screenshot({ path: `${SHOTS}/g20-owner-customer.png`, fullPage: true });
+            await o.page.screenshot({ path: `${shots}/g20-owner-customer.png`, fullPage: true });
         } finally {
             await o.context.close();
         }
