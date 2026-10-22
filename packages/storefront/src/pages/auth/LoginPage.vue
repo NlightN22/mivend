@@ -90,7 +90,6 @@ async function handleSubmit() {
 
             <nav class="login-footer">
                 <a href="/">{{ t('auth.publicCatalog') }}</a>
-                <RouterLink to="/terms">{{ t('terms.title') }}</RouterLink>
                 <a href="#">{{ t('auth.help') }}</a>
                 <a href="#">{{ t('auth.security') }}</a>
             </nav>
