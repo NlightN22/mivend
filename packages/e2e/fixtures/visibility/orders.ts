@@ -1,6 +1,13 @@
 import { adminGql, shopGql, shopLoginCookie } from '../../helpers/api';
 import type { VisIds } from './ids';
-import { CUSTOMERS, PRODUCT, VIS_PASSWORD, customerEmail, type CustomerKey } from './plan';
+import {
+    CUSTOMERS,
+    PRODUCT,
+    VIS_PASSWORD,
+    customerEmail,
+    type ClientKey,
+    type CustomerKey,
+} from './plan';
 
 type Shop = <T>(query: string, variables?: Record<string, unknown>) => Promise<T>;
 
@@ -115,8 +122,46 @@ async function freshOrder(
         o => o.orderPlacedAt && Date.now() - Date.parse(o.orderPlacedAt) < FRESH_MS,
     );
     if (fresh) return fresh.code;
-    for (const order of placed) await cancelOrder(superadmin, order.id);
+    for (const order of placed) {
+        await refundOrder(superadmin, ids.clients[clientOf(key)], order.id);
+        await cancelOrder(superadmin, order.id);
+    }
     return undefined;
+}
+
+const clientOf = (key: CustomerKey): ClientKey => CUSTOMERS.find(c => c.key === key)!.client;
+
+// A replaced order must not leave a captured demo payment behind: refund it in full first.
+async function refundOrder(superadmin: string, clientId: string, orderId: string): Promise<void> {
+    const call = <T>(query: string, variables: Record<string, unknown>): Promise<T> =>
+        adminGql<T>(query, variables, superadmin).then(r => r.data);
+    const proformas = await call<{ proformaInvoicesForOrder: { id: string }[] }>(
+        `query($o: ID!) { proformaInvoicesForOrder(orderId: $o) { id } }`,
+        { o: orderId },
+    );
+    const ofOrder = new Set(proformas.proformaInvoicesForOrder.map(p => p.id));
+    const payments = await call<{
+        visiblePayments: {
+            items: {
+                id: string;
+                amount: number;
+                paymentStatus: string;
+                proformaInvoiceId: string | null;
+            }[];
+        };
+    }>(
+        `query($c: ID!) { visiblePayments(counterpartyId: $c, options: { take: 100 }) {
+            items { id amount paymentStatus proformaInvoiceId } } }`,
+        { c: clientId },
+    );
+    for (const p of payments.visiblePayments.items) {
+        if (p.paymentStatus !== 'captured' || !ofOrder.has(p.proformaInvoiceId ?? '')) continue;
+        await call(
+            `mutation($p: ID!, $a: Int!, $r: String!) { recordPaymentRefund(paymentId: $p, amount: $a,
+                reason: "e2e visibility seed order replaced", providerRefundId: $r) { id } }`,
+            { p: p.id, a: p.amount, r: `e2e-vis-refund-${p.id}` },
+        );
+    }
 }
 
 async function cancelOrder(superadmin: string, orderId: string): Promise<void> {
