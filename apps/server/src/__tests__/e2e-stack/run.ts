@@ -46,7 +46,7 @@ function record(): void {
 let tornDown: Promise<void> | undefined;
 const teardown = (): Promise<void> => (tornDown ??= stopAndDrop());
 
-const RUN_TIMEOUT_MS = Number(process.env.E2E_RUN_TIMEOUT_MIN ?? 120) * 60_000;
+const RUN_TIMEOUT_MS = Number(process.env.E2E_RUN_TIMEOUT_MIN ?? 30) * 60_000;
 
 async function stopAndDrop(): Promise<void> {
     const steps = [
