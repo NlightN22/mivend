@@ -132,6 +132,10 @@ export const router = createRouter({
                     meta: { requiresAuth: true },
                 },
                 {
+                    path: 'terms',
+                    component: () => import('../pages/terms/TermsPage.vue'),
+                },
+                {
                     path: 'access-denied',
                     component: () => import('../pages/error/AccessDeniedPage.vue'),
                 },

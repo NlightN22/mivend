@@ -10,6 +10,7 @@ import finance from './finance';
 import orders from './orders';
 import requests from './requests';
 import demo from './demo';
+import terms from './terms';
 
 export default {
     ...common,
@@ -24,4 +25,5 @@ export default {
     ...documents,
     ...requests,
     ...demo,
+    ...terms,
 };

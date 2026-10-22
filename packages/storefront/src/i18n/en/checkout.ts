@@ -25,7 +25,7 @@ export default {
             place: 'Place order',
             placeFailedRetry: 'Could not place order, please try again or contact support',
             legal: 'By clicking the button, you are redirected to the payment service and agree to the {terms}.',
-            terms: 'payment terms',
+            terms: 'terms of supply',
         },
     },
     delivery: {
