@@ -127,7 +127,7 @@ describe('OrderDiscountService', () => {
         const order = orderOf(manual, sibling);
         const state = await service.stateFor(ctx, order);
         expect(state).toEqual(new Map([['b', 100]]));
-        const passedOrder = resolve.mock.calls[0][2] as { order: Order };
+        const passedOrder = (resolve.mock.calls[0] as unknown[])[2] as { order: Order };
         expect(passedOrder.order.lines).toContain(manual);
     });
 });
