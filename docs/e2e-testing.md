@@ -146,6 +146,23 @@ keeps the counterparty with the superadmin's points, team and portal users, and 
 on the point succeeds. In the manager portal the servicing head's order card shows the customer name and the
 customer card says "Customer not found"; the owner's customer card shows the point.
 
+Portal customers (#263 stage 6, `21`, read-only) take the clients of customers A and B and a branch-less client
+with a portal customer. For every actor Admin `customer(id)`, the `customers` list (whole list, and filtered by the
+client) and `Counterparty.linkedCustomerId` answer exactly when the client is visible, null or empty otherwise, while
+the superadmin reads the same customers. `Counterparty.portalUsers` is the client's customers for an actor with
+`ManageCounterpartyPortalAccess`, denied for one without it and null for a hidden client (paired with the
+superadmin). `deactivateCounterpartyPortalAccess` and `applyCounterpartyPortalAccessChanges` on a hidden client are
+refused and the customer stays active (DB). Customers A and B read only their own customer and client in the
+storefront, a guest none. Favorites live only in the browser (no server surface); delivery data are the trading
+points (address, delivery comment, contacts) covered by `18`.
+
+Counterparty team (#263 stage 6, `22`) adds, as superadmin, manager-a (branch A) as an observer to the branch-B
+client and removes it at the end (the team rows are checked back in the DB). Every actor reads that team exactly
+when the client is visible (the team row itself makes the client visible to manager-a, who then also reads its
+portal customer; head-a gets null). Head-a, who may manage teams, is refused adding or removing members of the
+hidden client (no row changed). In the manager portal head-b's Team tab shows the observer and head-a gets
+"Customer not found". Head-b then removes the member through the API and the client leaves manager-a again.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —
