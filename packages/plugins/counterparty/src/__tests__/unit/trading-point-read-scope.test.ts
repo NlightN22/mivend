@@ -8,6 +8,9 @@ import {
 import { CounterpartyTeamFieldResolver } from '../../counterparty-team.resolver';
 import type { CounterpartyTeamService } from '../../counterparty-team.service';
 import type { CounterpartyService } from '../../counterparty.service';
+import { CounterpartyPortalAccessFieldResolver } from '../../counterparty-portal-access.resolver';
+import type { CounterpartyPortalAccessService } from '../../counterparty-portal-access.service';
+import { CounterpartyCustomerLinkResolver } from '../../counterparty.resolver';
 
 const findOne = vi.fn();
 const rawQuery = vi.fn();
@@ -160,11 +163,16 @@ describe('TradingPointService.updateDeliveryComment scope', () => {
     });
 });
 
-describe('nested point and team lists of a hidden counterparty (Admin API, #263)', () => {
+describe('nested fields of a hidden counterparty (Admin API, #263)', () => {
     const findByCounterparty = vi.fn().mockResolvedValue([{ id: '1' }]);
     const getTeamMembers = vi.fn().mockResolvedValue([{ id: 't' }]);
+    const findPortalUsers = vi.fn().mockResolvedValue([{ id: 'u' }]);
+    const getLinkedCustomerId = vi.fn().mockResolvedValue('7');
     const findOneVisible = vi.fn();
-    const counterparties = { findOneVisible } as unknown as CounterpartyService;
+    const counterparties = {
+        findOneVisible,
+        getLinkedCustomerId,
+    } as unknown as CounterpartyService;
     const points = new CounterpartyTradingPointResolver(
         { findByCounterparty } as unknown as TradingPointService,
         counterparties,
@@ -173,25 +181,41 @@ describe('nested point and team lists of a hidden counterparty (Admin API, #263)
         { getTeamMembers } as unknown as CounterpartyTeamService,
         counterparties,
     );
-    const admin = { apiType: 'admin' } as unknown as RequestContext;
-    const shop = { apiType: 'shop' } as unknown as RequestContext;
+    const portal = new CounterpartyPortalAccessFieldResolver(
+        { findPortalUsers } as unknown as CounterpartyPortalAccessService,
+        counterparties,
+    );
+    const link = new CounterpartyCustomerLinkResolver(counterparties);
+    const admin = (): RequestContext => ({ apiType: 'admin' }) as unknown as RequestContext;
     const cp = { id: 'cp-2' } as never;
 
     beforeEach(() => vi.clearAllMocks());
 
-    it('returns no points and no team to a staff member who cannot see the counterparty', async () => {
+    it('returns no points, team, portal users or link to a staff member who cannot see it', async () => {
         findOneVisible.mockResolvedValue(null);
-        expect(await points.tradingPoints(admin, cp)).toEqual([]);
-        expect(await team.teamMembers(admin, cp)).toEqual([]);
+        const ctx = admin();
+        expect(await points.tradingPoints(ctx, cp)).toEqual([]);
+        expect(await team.teamMembers(ctx, cp)).toEqual([]);
+        expect(await portal.portalUsers(ctx, cp)).toEqual([]);
+        expect(await link.linkedCustomerId(ctx, cp)).toBeNull();
         expect(findByCounterparty).not.toHaveBeenCalled();
         expect(getTeamMembers).not.toHaveBeenCalled();
+        expect(findPortalUsers).not.toHaveBeenCalled();
+        expect(getLinkedCustomerId).not.toHaveBeenCalled();
+        expect(findOneVisible).toHaveBeenCalledTimes(1);
     });
 
-    it('returns them when the counterparty is visible, and never gates the Shop API', async () => {
+    it('returns them when the counterparty is visible', async () => {
         findOneVisible.mockResolvedValue({ id: 'cp-2' });
-        expect(await points.tradingPoints(admin, cp)).toEqual([{ id: '1' }]);
-        expect(await team.teamMembers(admin, cp)).toEqual([{ id: 't' }]);
-        findOneVisible.mockClear();
+        const ctx = admin();
+        expect(await points.tradingPoints(ctx, cp)).toEqual([{ id: '1' }]);
+        expect(await team.teamMembers(ctx, cp)).toEqual([{ id: 't' }]);
+        expect(await portal.portalUsers(ctx, cp)).toEqual([{ id: 'u' }]);
+        expect(await link.linkedCustomerId(ctx, cp)).toBe('7');
+    });
+
+    it('never gates the Shop API', async () => {
+        const shop = { apiType: 'shop' } as unknown as RequestContext;
         expect(await points.tradingPoints(shop, cp)).toEqual([{ id: '1' }]);
         expect(findOneVisible).not.toHaveBeenCalled();
     });

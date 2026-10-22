@@ -15,6 +15,7 @@ import type { CounterpartyListFilter } from './counterparty-list-filter';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyManagerAssignmentService } from './counterparty-manager-assignment.service';
 import { CounterpartyService } from './counterparty.service';
+import { hiddenOnAdmin } from './hidden-on-admin';
 import { CounterpartySortParameter } from './types';
 
 @Resolver('Customer')
@@ -84,6 +85,7 @@ export class CounterpartyCustomerLinkResolver {
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: Counterparty,
     ): Promise<ID | null> {
+        if (await hiddenOnAdmin(this.counterpartyService, ctx, counterparty.id)) return null;
         return this.counterpartyService.getLinkedCustomerId(ctx, counterparty.id);
     }
 

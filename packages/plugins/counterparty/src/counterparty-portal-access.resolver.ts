@@ -3,7 +3,9 @@ import { ID } from '@vendure/common/lib/shared-types';
 import { Allow, Ctx, Customer, RequestContext, Transaction, UserInputError } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
+import { CounterpartyService } from './counterparty.service';
 import { Counterparty } from './entities/counterparty.entity';
+import { hiddenOnAdmin } from './hidden-on-admin';
 import {
     CounterpartyPortalAccessService,
     PortalAccessChangeInput,
@@ -25,7 +27,10 @@ function toPortalAccessChanges(
 // a handful of sub-roles), same pagination-exemption reasoning as CounterpartyTeamMember.
 @Resolver('Counterparty')
 export class CounterpartyPortalAccessFieldResolver {
-    constructor(private portalAccessService: CounterpartyPortalAccessService) {}
+    constructor(
+        private portalAccessService: CounterpartyPortalAccessService,
+        private counterpartyService: CounterpartyService,
+    ) {}
 
     @ResolveField()
     @Allow(CustomPermission.ManageCounterpartyPortalAccess.Permission)
@@ -33,6 +38,7 @@ export class CounterpartyPortalAccessFieldResolver {
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: Counterparty,
     ): Promise<Customer[]> {
+        if (await hiddenOnAdmin(this.counterpartyService, ctx, counterparty.id)) return [];
         return this.portalAccessService.findPortalUsers(ctx, counterparty.id);
     }
 }

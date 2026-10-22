@@ -11,6 +11,7 @@ import {
     TradingPointDetailsPatch,
 } from './trading-point.service';
 import { CounterpartyService } from './counterparty.service';
+import { hiddenOnAdmin } from './hidden-on-admin';
 import { ctxQuery } from 'shared';
 
 @Resolver('Customer')
@@ -33,18 +34,12 @@ export class CounterpartyTradingPointResolver {
         private counterpartyService: CounterpartyService,
     ) {}
 
-    // An order's customer exposes a hidden counterparty to the branch servicing the point (#263).
     @ResolveField()
     async tradingPoints(
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: { id: string },
     ): Promise<TradingPoint[]> {
-        if (
-            ctx.apiType === 'admin' &&
-            !(await this.counterpartyService.findOneVisible(ctx, counterparty.id))
-        ) {
-            return [];
-        }
+        if (await hiddenOnAdmin(this.counterpartyService, ctx, counterparty.id)) return [];
         return this.tradingPointService.findByCounterparty(ctx, counterparty.id);
     }
 }
