@@ -162,7 +162,7 @@ async function handlePrimary(): Promise<void> {
             >
                 <i18n-t keypath="checkout.summary.legal">
                     <template #terms>
-                        <RouterLink to="/terms" target="_blank">{{
+                        <RouterLink to="/terms" target="_blank" rel="noopener">{{
                             $t('checkout.summary.terms')
                         }}</RouterLink>
                     </template>

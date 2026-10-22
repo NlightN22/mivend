@@ -27,7 +27,7 @@ export default {
                 title: 'Payment',
                 items: [
                     'The available payment forms (proforma invoice with bank transfer, online card payment, cash) depend on the contract and the buyer’s settings. The payment term and deferred payment terms are set by the contract.',
-                    'A proforma invoice is paid when the money reaches the supplier’s bank account. State the invoice or order number in the payment purpose.',
+                    'A proforma invoice is paid when the money reaches the supplier’s bank account. State the proforma invoice or order number in the payment purpose.',
                     'For card payments the payment goes through a payment service and card data is not passed to the supplier. The receipt is sent to the email or phone given before payment.',
                     'An order that exceeds the buyer’s credit limit waits for a manager’s confirmation. If the buyer explicitly acknowledged the excess at checkout and it is allowed, the order is accepted. A card payment covers the excess and the order is confirmed automatically.',
                     'A proforma invoice is a payment request, not an accounting document. The sale is recorded by the sales invoice that the supplier issues at shipment.',
