@@ -38,6 +38,7 @@ import { ManufacturerHandler } from './handlers/manufacturer.handler';
 import { PriceTypeHandler } from './handlers/price-type.handler';
 import { SettlementHandler } from './handlers/settlement.handler';
 import { SettlementPlugin } from '@mivend/plugin-settlement';
+import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 
 @VendurePlugin({
     imports: [
@@ -50,6 +51,7 @@ import { SettlementPlugin } from '@mivend/plugin-settlement';
         ErpOrderPlugin,
         ErpIntegrationPlugin,
         SettlementPlugin,
+        CustomerPricingPlugin,
     ],
     entities: [ImportRun, ImportRunError],
     controllers: [ErpImportController],

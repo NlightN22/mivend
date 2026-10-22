@@ -12,7 +12,7 @@ import { withAggregateLock, ctxQuery } from 'shared';
 
 import { CUSTOMER_PRICING_PLUGIN_OPTIONS, loggerCtx } from './constants';
 import { CustomerPriceType } from './entities/customer-price-type.entity';
-import { PriceType } from './entities/price-type.entity';
+import { PriceType, PriceTypeVisibility } from './entities/price-type.entity';
 import { mainContractPriceTypeIdSql } from './main-contract-price-type.sql';
 import { CustomerPricingPluginOptions } from './types';
 
@@ -176,18 +176,12 @@ export class CustomerPricingService {
         purchaseRule: PurchaseRule,
     ): Promise<PriceType> {
         const repo = this.connection.getRepository(txCtx, PriceType);
-        const rule = {
-            isPurchase: purchaseRule.isPurchase,
-            ceilingMultiplier: purchaseRule.isPurchase ? purchaseRule.ceilingMultiplier : null,
-        };
-        if (rule.isPurchase) {
-            await repo
-                .createQueryBuilder()
-                .update()
-                .set({ isPurchase: false, ceilingMultiplier: null })
-                .where('"isPurchase" = true AND "externalId" <> :externalId', { externalId })
-                .execute();
-        }
+        const rule = await this.applyPurchaseRule(
+            txCtx,
+            purchaseRule,
+            '"externalId" <> :key',
+            externalId,
+        );
         const existing = await repo.findOne({ where: { externalId } });
         if (existing) {
             Object.assign(existing, { name, isActive }, rule);
@@ -195,6 +189,54 @@ export class CustomerPricingService {
         }
         const code = await this.generateUniqueCode(txCtx, name);
         return repo.save(repo.create({ externalId, code, name, isActive, ...rule }));
+    }
+
+    // Seed/import path keyed by code; the ERP stream keys by externalId and never sets visibility.
+    async upsertPriceTypeByCode(
+        ctx: RequestContext,
+        code: string,
+        name: string,
+        visibility: PriceTypeVisibility,
+        purchaseRule: PurchaseRule,
+    ): Promise<PriceType> {
+        const upsert = (lockCtx: RequestContext): Promise<PriceType> =>
+            withAggregateLock(this.connection, lockCtx, `price-type-code:${code}`, async txCtx => {
+                const repo = this.connection.getRepository(txCtx, PriceType);
+                const rule = await this.applyPurchaseRule(
+                    txCtx,
+                    purchaseRule,
+                    'code <> :key',
+                    code,
+                );
+                const existing = await repo.findOne({ where: { code } });
+                const fields = { name, isActive: true, visibility, ...rule };
+                return repo.save(
+                    existing ? Object.assign(existing, fields) : repo.create({ code, ...fields }),
+                );
+            });
+        return purchaseRule.isPurchase
+            ? withAggregateLock(this.connection, ctx, PURCHASE_FLAG_LOCK_KEY, upsert)
+            : upsert(ctx);
+    }
+
+    private async applyPurchaseRule(
+        txCtx: RequestContext,
+        purchaseRule: PurchaseRule,
+        exceptSelf: string,
+        key: string,
+    ): Promise<PurchaseRule> {
+        if (purchaseRule.isPurchase)
+            await this.connection
+                .getRepository(txCtx, PriceType)
+                .createQueryBuilder()
+                .update()
+                .set({ isPurchase: false, ceilingMultiplier: null })
+                .where(`"isPurchase" = true AND ${exceptSelf}`, { key })
+                .execute();
+        return {
+            isPurchase: purchaseRule.isPurchase,
+            ceilingMultiplier: purchaseRule.isPurchase ? purchaseRule.ceilingMultiplier : null,
+        };
     }
 
     private async generateUniqueCode(ctx: RequestContext, name: string): Promise<string> {

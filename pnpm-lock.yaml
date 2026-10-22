@@ -836,6 +836,9 @@ importers:
       '@mivend/plugin-cross-reference':
         specifier: workspace:*
         version: link:../cross-reference
+      '@mivend/plugin-customer-pricing':
+        specifier: workspace:*
+        version: link:../customer-pricing
       '@mivend/plugin-documents':
         specifier: workspace:*
         version: link:../documents

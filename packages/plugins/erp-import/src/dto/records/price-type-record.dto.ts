@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { PriceTypeVisibility } from '@mivend/plugin-customer-pricing';
 
 // Mirrors PriceTypeRecord in ../../types.ts.
 export class PriceTypeRecordDto {
@@ -13,7 +14,7 @@ export class PriceTypeRecordDto {
         description:
             'customer: may be shown to staff by branch; confidential: never shown outside its permission.',
     })
-    visibility!: 'customer' | 'confidential';
+    visibility!: PriceTypeVisibility;
 
     @ApiProperty({
         required: false,

@@ -336,4 +336,37 @@ describe('CustomerPricingService', () => {
             expect(result).toBeNull();
         });
     });
+
+    describe('upsertPriceTypeByCode', () => {
+        const noPurchase = { isPurchase: false, ceilingMultiplier: 5 };
+
+        it('creates a missing type with its visibility and drops a stray multiplier', async () => {
+            mockPriceTypeRepo.findOne.mockResolvedValueOnce(null);
+            mockPriceTypeRepo.create.mockImplementation((v: unknown) => v);
+            mockPriceTypeRepo.save.mockImplementation(async (v: unknown) => v);
+            const result = await service.upsertPriceTypeByCode(
+                mockCtx,
+                'pt-a',
+                'A',
+                'customer',
+                noPurchase,
+            );
+            expect(result).toEqual({
+                code: 'pt-a',
+                name: 'A',
+                isActive: true,
+                visibility: 'customer',
+                isPurchase: false,
+                ceilingMultiplier: null,
+            });
+        });
+
+        it('updates visibility of an existing type in place', async () => {
+            const existing = { id: '7', code: 'pt-a', name: 'Old', visibility: 'customer' };
+            mockPriceTypeRepo.findOne.mockResolvedValueOnce(existing);
+            mockPriceTypeRepo.save.mockImplementation(async (v: unknown) => v);
+            await service.upsertPriceTypeByCode(mockCtx, 'pt-a', 'New', 'confidential', noPurchase);
+            expect(existing).toMatchObject({ id: '7', name: 'New', visibility: 'confidential' });
+        });
+    });
 });

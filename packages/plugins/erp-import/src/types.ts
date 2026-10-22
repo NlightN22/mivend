@@ -1,3 +1,4 @@
+import type { PriceTypeVisibility } from '@mivend/plugin-customer-pricing';
 import type { DocumentRecord, OrganizationRequisitesRecord } from '@mivend/plugin-documents';
 import type {
     DepartmentRecordInput,
@@ -72,7 +73,7 @@ export interface PriceRecord {
 export interface PriceTypeRecord {
     code: string;
     name: string;
-    visibility: 'customer' | 'confidential';
+    visibility: PriceTypeVisibility;
     isPurchase?: boolean;
     ceilingMultiplier?: number;
 }

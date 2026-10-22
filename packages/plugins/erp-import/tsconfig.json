@@ -14,6 +14,7 @@
         { "path": "../access-control" },
         { "path": "../erp-order" },
         { "path": "../erp-integration" },
-        { "path": "../settlement" }
+        { "path": "../settlement" },
+        { "path": "../customer-pricing" }
     ]
 }
