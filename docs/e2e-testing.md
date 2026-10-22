@@ -32,7 +32,7 @@ them via `global-setup`.
 
 ## Staging-integration order exchange suite (`make e2e-integration`, #255)
 
-Manual only, never in `make e2e`/CI: `packages/e2e/integration/` with its own
+Manual only, never in `make e2e-dev`/CI: `packages/e2e/integration/` with its own
 `playwright.integration.config.ts`. Needs a running `make dev-staging-integration`; reads URLs,
 the test customer (`STAGING_TEST_CUSTOMER_*`), the superadmin and the optional manager login
 (`STAGING_TEST_MANAGER_*`) from `apps/server/.env.central.staging-integration`. It builds a mixed
@@ -50,7 +50,7 @@ sessions. A summary with skip reasons is printed at the end. Subset:
 scenarios on real data: groups `01`-`04` only. The former visibility groups `05`-`22` were removed:
 role x entity visibility matrices are integration tests in `make test-access`
 (`apps/server/src/__tests__/access/`, see `docs/testing-strategy.md`), and the thin
-see-own/cannot-see-other browser layer runs in `make e2e` (below). Do not add visibility groups here.
+see-own/cannot-see-other browser layer runs in `make e2e-dev` (below). Do not add visibility groups here.
 
 ## Visibility browser layer (#263)
 
@@ -64,7 +64,7 @@ whose database is never seeded (`docs/environments.md`).
 a standing visibility grant, branch price type allow-lists, three pending discount grants and one
 placed, paid order per customer. Orders older than 3 days are cancelled and replaced, because the
 manager orders list shows only the last 7 days. Run:
-`flock /tmp/mivend-e2e.lock make e2e E2E_ARGS="visibility --project=visibility-manager --project=visibility-storefront"`.
+`flock /tmp/mivend-e2e.lock make e2e-dev E2E_ARGS="visibility --project=visibility-manager --project=visibility-storefront"`.
 
 ## Manager portal role projects
 

@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 import { loadContourEnv } from './integration/contour-env';
 import { E2E_BROWSER_USER_AGENT } from './helpers/user-agent';
 
-// Manual staging-integration suite (#255); never part of make e2e or CI.
+// Manual staging-integration suite (#255); never part of make e2e-dev or CI.
 const contour = loadContourEnv();
 process.env.SERVER_URL = contour.serverUrl;
 process.env.STOREFRONT_URL = contour.storefrontUrl;

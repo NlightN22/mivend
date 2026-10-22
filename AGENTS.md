@@ -104,7 +104,7 @@ E2E. No unjustified duplication across levels.
 
 **Rule: automated tests run only against the local contour's seeded/synthetic data — never
 against a real external source.** This follows directly from issue #68's contour separation (see
-`docs/environments.md`): `make test`/`make test-int`/`make e2e` all run against `make dev`'s local
+`docs/environments.md`): `make test`/`make test-int`/`make e2e-dev` all run against `make dev`'s local
 contour (`INTEGRATION_KAFKA_ENABLED=false`, synthetic `erp-import`/`seed-erp.mjs` data), never
 against `make dev-staging-integration`'s real Integration Service Kafka connection. Concretely:
 
@@ -131,7 +131,7 @@ against `make dev-staging-integration`'s real Integration Service Kafka connecti
   applicable, not either/or.
 - **Sole exception: `make e2e-integration`** (#255), a short, manually launched suite that places
   real orders on the staging-integration contour through the storefront and manager portal UI and asserts the
-  exchange with the ERP. It is never part of `make test`/`make test-int`/`make e2e`/CI, seeds nothing, reads
+  exchange with the ERP. It is never part of `make test`/`make test-int`/`make e2e-dev`/CI, seeds nothing, reads
   contour DB state with SELECTs only, and fails when the ERP does not answer in time. It may create entities through
   the product (UI/API, never SQL), including ones that consume stock or limits, but every one is tracked and
   removed or released at the end (orders: staff cancel as superadmin); a spec that cannot release what it takes
@@ -145,7 +145,7 @@ Always run tests via Makefile, not directly through pnpm:
 - `make test` — unit tests (offline, no infrastructure needed)
 - `make test-int` — integration/component/contract tests (starts dev infrastructure via `make up` automatically)
 - `make test-access` — role x entity API visibility matrix on a throwaway server and database (no contour needed)
-- `make e2e` — Playwright E2E (requires `make dev` + `make seed`)
+- `make e2e-dev` — Playwright E2E (requires `make dev` + `make seed`)
 
 Never use `pnpm test` or `pnpm --filter ... test` directly — use the Makefile targets.
 

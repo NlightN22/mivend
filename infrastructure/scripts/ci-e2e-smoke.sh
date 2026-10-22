@@ -6,7 +6,7 @@ set -euo pipefail
 # infra-up -> migrate -> seed sequence, but backgrounds `pnpm dev:all` instead of leaving it in
 # the foreground, and always cleans up background processes on exit.
 #
-# Heavy/full E2E stays local-only (`make e2e`) per docs/testing-strategy.md's "E2E strategy" —
+# Heavy/full E2E stays local-only (`make e2e-dev`) per docs/testing-strategy.md's "E2E strategy" —
 # this script only exists to run the small @smoke subset in CI.
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"

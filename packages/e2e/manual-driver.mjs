@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Manual/exploratory Playwright driver for the manager portal (packages/manager) — NOT part of
-// the real e2e suite (`make e2e`, driven by playwright.config.ts's testDir/testMatch, which only
+// the real e2e suite (`make e2e-dev`, driven by playwright.config.ts's testDir/testMatch, which only
 // picks up `**/*.spec.ts` under ./manager and ./storefront). This is a throwaway-script
 // replacement: a fast way to log in, navigate, screenshot, and inspect the live dev server during
 // a session, without hand-writing the login/navigation boilerplate each time. See this directory's

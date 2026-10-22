@@ -214,7 +214,7 @@ contour (idempotent), then put `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCE
 
 ## Testing must stay within the local contour
 
-**`make test`/`make test-int`/`make e2e` run exclusively against the local contour's seeded,
+**`make test`/`make test-int`/`make e2e-dev` run exclusively against the local contour's seeded,
 synthetic data.** Never against staging-integration's real Integration Service data — see
 AGENTS.md's Testing requirements ("Rule: automated tests run only against the local contour's
 seeded/synthetic data") for the full rule. In short: local is seed-only (no external source,

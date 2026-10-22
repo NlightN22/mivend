@@ -6,7 +6,7 @@ description: Use when asked to write, extend or fix end-to-end tests for the sta
 # e2e-integration: Playwright suite for the staging-integration contour
 
 Scope is only `make e2e-integration` (`packages/e2e/integration/`, config `playwright.integration.config.ts`).
-The local contour (`make e2e`, `e2e-rules` skill) is a different suite; do not mix them or move scenarios there
+The local contour (`make e2e-dev`, `e2e-rules` skill) is a different suite; do not mix them or move scenarios there
 unless the owner asks. Read `docs/e2e-testing.md` ("Staging-integration order exchange suite"),
 `docs/environments.md` and `test-design` first.
 
@@ -14,7 +14,7 @@ unless the owner asks. Read `docs/e2e-testing.md` ("Staging-integration order ex
 
 - **Only the ERP exchange and a few real-data end-to-end scenarios belong here.** A role x entity visibility
   matrix (list/detail/id guess/denied write per actor) goes to `make test-access`, a see-own/cannot-see-other
-  browser check to `make e2e` (#263). Do not add new visibility groups to this suite.
+  browser check to `make e2e-dev` (#263). Do not add new visibility groups to this suite.
 
 - Never run it in CI or from `make test`/`make test-int`; it is manual, one worker, no retries.
 - **Reads** go through `integration/contour-db.ts` (`select`, read-only by construction) or the product API/UI.

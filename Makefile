@@ -12,7 +12,7 @@ export
 .PHONY: up up-rebuild down logs ps restart \
         build lint fmt ci \
         test test-int test-access test-e2e mutation-pilot \
-        e2e e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
+        e2e-dev e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
         docker-build docker-push \
         preview-build preview-up preview-down \
         prod-up prod-down \
@@ -338,12 +338,12 @@ preview-down:
 
 # ── E2E tests ──────────────────────────────────────────────────────────────────
 
-# Subset: make e2e E2E_ARGS="--project=storefront manager/catalog"
-e2e test-e2e:
+# Subset: make e2e-dev E2E_ARGS="--project=storefront manager/catalog"
+e2e-dev test-e2e:
 	pnpm --filter @mivend/e2e test $(E2E_ARGS)
 
 # Minimal critical-route subset (login, order creation) — see docs/testing-strategy.md's
-# "E2E strategy". Requires the same `make dev` + `make seed` stack as `make e2e`.
+# "E2E strategy". Requires the same `make dev` + `make seed` stack as `make e2e-dev`.
 e2e-smoke:
 	pnpm --filter @mivend/e2e test:smoke
 
@@ -355,7 +355,7 @@ e2e-ui:
 	pnpm --filter @mivend/e2e test:ui
 
 # Recovery-after-transient-failure scenario — see manager/resilience/connection-recovery.spec.ts.
-# Not part of `make e2e`/CI; SIGSTOPs the real local dev server, takes a few minutes.
+# Not part of `make e2e-dev`/CI; SIGSTOPs the real local dev server, takes a few minutes.
 e2e-resilience:
 	E2E_RESILIENCE=1 pnpm --filter @mivend/e2e test:resilience
 

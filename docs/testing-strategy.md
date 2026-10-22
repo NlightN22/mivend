@@ -93,9 +93,9 @@ Only critical user and cross-system routes (see "E2E strategy" below). Never use
 every validation error, status combination, retry scenario, overlap, isolation variant, or
 internal branch — those belong at lower levels.
 
-Location: `packages/e2e/`. Runner: Playwright (`make e2e`).
+Location: `packages/e2e/`. Runner: Playwright (`make e2e-dev`).
 
-Visibility split (#263): the API matrix lives in `make test-access`; `make e2e` (local contour, same
+Visibility split (#263): the API matrix lives in `make test-access`; `make e2e-dev` (local contour, same
 seed shape) keeps one see-own and one cannot-see-other browser check per entity, mostly in the
 storefront; `make e2e-integration` (staging) keeps only the real ERP exchange and a few end-to-end
 scenarios on real data.
@@ -256,7 +256,7 @@ storefront+manager) costs several minutes end to end for what is, on purpose, on
 cost is real and was explicitly weighed against running it routinely (see `AGENTS.md`'s "Do not
 include heavy E2E on every push without a time estimate" — this is that estimate). Re-run
 manually via `gh workflow run integration.yml -f run_e2e_smoke=true` when touching the boot path
-itself, or periodically as a health check — not as a per-PR gate. The full suite (`make e2e`)
+itself, or periodically as a health check — not as a per-PR gate. The full suite (`make e2e-dev`)
 stays local-only.
 
 ## CI
@@ -352,7 +352,7 @@ A change is not done until:
 - `make test-int` — integration/component/contract tests (starts infra via `make up`).
 - `make test-access` — access integration matrix on a throwaway server and database (about 4 min).
 - `make ci` — the push CI pipeline (lint, format, type check, unit, contract) on a clean HEAD checkout with an empty pnpm store; run before pushing.
-- `make e2e` — Playwright E2E (requires `make dev` + `make seed`).
+- `make e2e-dev` — Playwright E2E (requires `make dev` + `make seed`).
 
 ## Diagnosing failing tests
 

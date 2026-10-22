@@ -1,6 +1,6 @@
 ---
 name: run-manager
-description: Run, drive, and screenshot the mivend manager portal (Vue 3 + Vite, packages/manager) — log in as a seeded test account, navigate to a page, take a screenshot, and check for console/page errors. Use when asked to run/start the manager portal, take a screenshot of a manager page, verify a manager-portal fix works in the browser, or debug a "click does nothing" style UI bug there. Not for the real automated e2e suite (`make e2e`) — this is for manual/exploratory driving during a session.
+description: Run, drive, and screenshot the mivend manager portal (Vue 3 + Vite, packages/manager) — log in as a seeded test account, navigate to a page, take a screenshot, and check for console/page errors. Use when asked to run/start the manager portal, take a screenshot of a manager page, verify a manager-portal fix works in the browser, or debug a "click does nothing" style UI bug there. Not for the real automated e2e suite (`make e2e-dev`) — this is for manual/exploratory driving during a session.
 ---
 
 All paths below are relative to the repo root (`/projects/mivend`), not to this skill directory.
@@ -46,7 +46,7 @@ succeeds from a file under `packages/e2e/` and fails from a file under `packages
 with `cwd` set to `packages/e2e`. So the driver is graduated into `packages/e2e/manual-driver.mjs`
 from the start, not as an afterthought — this `SKILL.md` just points at it.
 
-It's deliberately **not** a `.spec.ts` file and won't be picked up by `make e2e` — that command's
+It's deliberately **not** a `.spec.ts` file and won't be picked up by `make e2e-dev` — that command's
 `playwright.config.ts` only matches `**/*.spec.ts` under `./manager`/`./storefront` project
 `testDir`s.
 
@@ -96,7 +96,7 @@ can render its shell while a data fetch silently 500s.
 ## Test
 
 ```bash
-make e2e
+make e2e-dev
 ```
 
 Requires `make dev` + `make seed` first (see `docs/e2e-testing.md`). This is the real, CI-relevant

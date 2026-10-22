@@ -1,6 +1,6 @@
 ---
 name: e2e-rules
-description: Use before writing, changing, fixing or reviewing any Playwright test in packages/e2e (storefront or manager portal), and before fixing a failing make e2e run. Rules for seed data, keeping tests in step with the UI, idempotent cleanup of orders/reservations/sessions, running only your own specs, plus a mandatory checklist and a final audit of that checklist.
+description: Use before writing, changing, fixing or reviewing any Playwright test in packages/e2e (storefront or manager portal), and before fixing a failing make e2e-dev run. Rules for seed data, keeping tests in step with the UI, idempotent cleanup of orders/reservations/sessions, running only your own specs, plus a mandatory checklist and a final audit of that checklist.
 ---
 
 # e2e-rules: Playwright tests in packages/e2e
@@ -56,17 +56,17 @@ and leave the contour as it found it.
 
 ## 4. Run only your own specs
 
-- A full `make e2e` takes over an hour. While fixing, run one spec file and one project:
-  `make e2e E2E_ARGS="<path/to/file.spec.ts> --project=<name>"`.
+- A full `make e2e-dev` takes over an hour. While fixing, run one spec file and one project:
+  `make e2e-dev E2E_ARGS="<path/to/file.spec.ts> --project=<name>"`.
 - Before starting, check no other `playwright test` is running (`ps -eo args | grep "playwright test"`
   — not `pgrep -f`, which matches itself). Never run in parallel with another agent.
 - Do not restart the contour or reseed while someone else's run is active.
 - Final verification of a change is scoped, not the full suite: run in batches only the spec
   groups the change touches (a directory such as `storefront/orders` or `manager/customers`, with
-  the affected projects), one batch at a time under the shared lock. The full `make e2e` is run
+  the affected projects), one batch at a time under the shared lock. The full `make e2e-dev` is run
   only on an explicit request, when no other session is editing plugin sources.
 - Serialise every run on one lock so runs from different agents never overlap:
-  `flock /tmp/mivend-e2e.lock make e2e E2E_ARGS="<dir-or-file> --project=<name>"`.
+  `flock /tmp/mivend-e2e.lock make e2e-dev E2E_ARGS="<dir-or-file> --project=<name>"`.
 - Another session editing plugin sources restarts the dev server; "fetch failed" mid-run is a
   restart, re-run that batch.
 

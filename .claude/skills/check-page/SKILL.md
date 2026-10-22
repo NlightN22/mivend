@@ -1,6 +1,6 @@
 ---
 name: check-page
-description: Use to visually/functionally check whether a storefront or manager page actually renders — no Claude in Chrome extension needed, no login required for a public page. Good for "why is the page empty/broken", verifying a fix after a dev-stack restart, or a quick screenshot without asking the user to check manually. Not a replacement for packages/e2e's real auth-gated Playwright suite (make e2e) — this is a fast, fixture-free sanity check.
+description: Use to visually/functionally check whether a storefront or manager page actually renders — no Claude in Chrome extension needed, no login required for a public page. Good for "why is the page empty/broken", verifying a fix after a dev-stack restart, or a quick screenshot without asking the user to check manually. Not a replacement for packages/e2e's real auth-gated Playwright suite (make e2e-dev) — this is a fast, fixture-free sanity check.
 ---
 
 # check-page: headless Playwright sanity check
@@ -14,7 +14,7 @@ just "does this URL actually render right now."
 Use this instead of asking the user to open the page and describe what they see, whenever the
 question is answerable by looking at the page yourself (empty catalog, blank screen, a
 suspected stale dev-server/proxy issue after a `make dev` restart, confirming a UI fix). It is
-**not** a substitute for `packages/e2e`'s real Playwright suite (`make e2e`) — that covers
+**not** a substitute for `packages/e2e`'s real Playwright suite (`make e2e-dev`) — that covers
 authenticated flows across manager-operator/manager/department-head/portal-admin roles with real
 fixtures; this script has none of that and is for a quick look, not a regression suite.
 
