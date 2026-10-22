@@ -33,6 +33,7 @@ class TestCounterparty {
 class TestCustomer {
     @PrimaryGeneratedColumn() id!: number;
     @Column({ type: 'varchar' }) lastName!: string;
+    @Column({ type: 'varchar', default: '' }) emailAddress!: string;
     @Column({ type: 'varchar', nullable: true }) customFieldsCounterpartyid!: string | null;
 }
 
@@ -84,9 +85,22 @@ beforeAll(async () => {
         },
     ]);
     const saved = await dataSource.getRepository(TestCustomer).save([
-        { lastName: 'in-a', customFieldsCounterpartyid: String(a.id) },
-        { lastName: 'in-b', customFieldsCounterpartyid: String(b.id) },
-        { lastName: 'none', customFieldsCounterpartyid: null },
+        {
+            lastName: 'in-a',
+            emailAddress: 'a@test.example',
+            customFieldsCounterpartyid: String(a.id),
+        },
+        {
+            lastName: 'in-a2',
+            emailAddress: 'a2@other.example',
+            customFieldsCounterpartyid: String(a.id),
+        },
+        {
+            lastName: 'in-b',
+            emailAddress: 'b@test.example',
+            customFieldsCounterpartyid: String(b.id),
+        },
+        { lastName: 'none', emailAddress: 'n@test.example', customFieldsCounterpartyid: null },
     ]);
     for (const c of saved) ids[c.lastName] = c.id;
 });
@@ -113,7 +127,7 @@ describe('applyCustomerScope on real Postgres', () => {
             kind: 'department',
             branchId: 'branch-a',
         });
-        expect(await visibleNames()).toEqual(['in-a']);
+        expect(await visibleNames()).toEqual(['in-a', 'in-a2']);
     });
 
     it('an OR filter in its own brackets cannot widen the scope', async () => {
@@ -131,6 +145,27 @@ describe('applyCustomerScope on real Postgres', () => {
             ),
         );
         expect(names).toEqual([]);
+    });
+
+    it('a department scope combines with a contains filter on emailAddress', async () => {
+        accessScope.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'department',
+            branchId: 'branch-a',
+        });
+        const names = await visibleNames(qb =>
+            qb.where('customer.emailAddress ILIKE :arg1', { arg1: '%test.example%' }),
+        );
+        expect(names).toEqual(['in-a']);
+    });
+
+    it('refuses a parameter name used by both queries instead of overwriting it', async () => {
+        accessScope.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'department',
+            branchId: 'branch-a',
+        });
+        const qb = base().where('customer.lastName = :scopeBranch', { scopeBranch: 'x' });
+        const visible = await service.visibleFilteredQb(ctx, {});
+        expect(() => applyCustomerScope(qb, visible)).toThrow(/scopeBranch/);
     });
 
     it('a branch without clients sees no customer, and counts agree', async () => {

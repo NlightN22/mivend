@@ -7,7 +7,12 @@ import { ScopedCustomerResolver } from '../../scoped-customer.resolver';
 
 const ctx = { channelId: 1 } as unknown as RequestContext;
 const customerService = { findAll: vi.fn(), findOne: vi.fn() };
-const listQb = { alias: 'customer', andWhere: vi.fn(), getManyAndCount: vi.fn() };
+const listQb = {
+    alias: 'customer',
+    andWhere: vi.fn(),
+    getManyAndCount: vi.fn(),
+    getParameters: (): Record<string, unknown> => ({ arg1: '%x%' }),
+};
 const listQueryBuilder = {
     build: vi.fn(() => listQb),
     filterObjectHasProperty: vi.fn(() => false),
