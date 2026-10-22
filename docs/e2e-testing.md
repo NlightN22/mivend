@@ -173,6 +173,8 @@ hidden client (no row changed). In the manager portal head-b's Team tab shows th
 
 `packages/e2e/visibility/` (projects `visibility-manager` and `visibility-storefront`) is the thin
 see-own/cannot-see-other layer that replaces the browser parts of staging groups `05`-`22`.
+Its seed is for the local contour (`make dev`) only and must never run against staging-integration,
+whose database is never seeded (`docs/environments.md`).
 `global-setup.ts` seeds its data idempotently through erp-import and the Admin API
 (`fixtures/visibility/`): branches A/B, one actor per role and scope, clients `a-own`, `a-free`,
 `a-point` (point serviced by branch B), `b-own`, `b-team` (manager-a observer), `none` (no branch),
