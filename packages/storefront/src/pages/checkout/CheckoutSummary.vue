@@ -8,12 +8,10 @@ import { useCheckoutStore, type DeliveryType } from '../../stores/checkout';
 import { useOrderPlacement } from '../../composables/useOrderPlacement';
 import { cardExcess } from '../../utils/checkoutPolicy';
 import { useCurrency } from '../../composables/useCurrency';
-import { useDemoMode } from '../../composables/useDemoMode';
 import CreditLimitNotice from './CreditLimitNotice.vue';
 import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
 
 const { t } = useI18n();
-const { demoAllowed } = useDemoMode();
 const cartStore = useCartStore();
 const checkoutStore = useCheckoutStore();
 const submitting = ref(false);
@@ -156,11 +154,14 @@ async function handlePrimary(): Promise<void> {
                 {{ submitting ? $t('checkout.summary.processing') : btnLabel }}
             </button>
 
-            <p
-                v-if="demoAllowed && checkoutStore.selectedPayment === 'card'"
-                class="checkout-summary__legal"
-            >
-                <i18n-t keypath="checkout.summary.legal">
+            <p class="checkout-summary__legal">
+                <i18n-t
+                    :keypath="
+                        checkoutStore.selectedPayment === 'card'
+                            ? 'checkout.summary.legal'
+                            : 'checkout.summary.legalOrder'
+                    "
+                >
                     <template #terms>
                         <RouterLink to="/terms" target="_blank" rel="noopener">{{
                             $t('checkout.summary.terms')
