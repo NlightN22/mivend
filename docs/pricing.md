@@ -278,8 +278,7 @@ lines.
   plus every other line already in the order that shares a facet value (skipping the
   line being priced itself if it already exists, to avoid double-counting on
   `adjustOrderLine`).
-- `CustomerPriceCalculationStrategy.calculateUnitPrice()` passes `{ order, quantity }` as
-  `orderContext` — this is the _only_ call site that does; catalog/product-page/search
+- `OrderDiscountService` passes `{ order, quantity }` as `orderContext` (see "Order-dependent discounts"); it is the _only_ call site that does; catalog/product-page/search
   resolvers still call `resolve()` with no order context, so tiers are correctly invisible
   while browsing.
 
@@ -319,9 +318,8 @@ currency unit in `discount-rule.handler.ts`. Verified end-to-end via
 - A static promo block in the cart (`CartPromoBanner.vue`,
   `packages/storefront/src/pages/cart/`), which _does_ reflect the real active discount
   including a reached tier — via a new `OrderLine.compareAtPrice` field
-  (`OrderLineDiscountResolver` in `price-entry.resolver.ts`) that re-exposes what
-  `CustomerPriceCalculationStrategy` already computed for that line's `unitPrice`, using
-  the same `PriceResolutionService.resolve(ctx, variantId, { order, quantity })` call —
+  (`OrderLineDiscountResolver` in `price-entry.resolver.ts`): the price before every discount, from the
+  same `PriceResolutionService.resolve(ctx, variantId, { order, quantity })` call the promotion uses —
   zero new pricing logic, just a read-only view of it.
 - The toast itself (`MvToast`/`MvToastContainer`/`useToast`) lives in `ui-kit` as a
   general-purpose primitive (queue-based, module-level state, no Pinia dependency) —
@@ -361,25 +359,25 @@ not in stock) has no price row at all (staging, 2026-10-06: ~38% of variants), w
 upstream data, not a sync loss. A logged-in customer sees "Price on request" with a "Request
 price" action instead of a dash; guests see "Log in to see prices".
 
-## Tier rebalance (sibling line repricing)
+## Order-dependent discounts (one pass, #196)
 
-Vendure re-runs `calculateUnitPrice()` only for the mutated line, so `TierRebalanceService`
-re-adjusts sibling lines after each `OrderLineEvent`. It is a non-blocking subscriber: a blocking
-handler nests `adjustOrderLine()` in the mutation's transaction and corrupts price resolution
-(lines fell back to undiscounted list price). The rebalanced price therefore lands just after the
-mutation response.
+Tier ladders (weight/amount), promo rules and counterparty rules depend on the whole order, so they are a
+Vendure promotion, not part of the line's list price:
 
-Events arriving while a rebalance of the same order runs mark it dirty and trigger another pass
-(bounded), instead of being dropped. Events from the service's own calls are ignored via a tagged
-context. After the last pass `applyPriceAdjustments` recomputes and persists order totals, because
-concurrent line saves from the user's next mutation and the rebalance could leave `Order` totals
-computed from a stale line set. A blocking handler records only a per-order marker (no order mutation) before the mutation responds;
-`ActiveOrderSettleInterceptor` makes Shop API `activeOrder` wait (3 s max, never throwing) until
-the rebalance clears it. Mutation responses themselves are not delayed, so they may show pre-rebalance
-prices; the following `activeOrder` read is settled. The wait is per process.
-
-Deployment constraint: the `running`, `pending` and marker maps are in-process, so the coalescing
-and the `activeOrder` settle wait assume a single API process (events are handled in the process
-that served the mutation). Writes stay correct on several processes (each adjust and the totals
-refresh re-read under the order row lock); only the coalescing and the settle wait degrade, so
-`activeOrder` can briefly show pre-rebalance prices.
+- `CustomerPriceCalculationStrategy` prices a line with the flat facet+period discount only
+  (`resolve(..., { orderRules: false })`); `OrderLine.unitPrice` is that price.
+- One automatic `Promotion` (provisioned at boot by `OrderDiscountPromotionBootstrapService`, re-enabled if a
+  staff member disables it) carries the condition `mivend-order-discount-condition` and the item action
+  `mivend-order-discount`. Vendure runs it for every line inside every order mutation's own transaction, so
+  there is no background pass, no marker and no `activeOrder` wait; totals are always consistent.
+- `OrderDiscountService.stateFor` evaluates the order once per snapshot (cached per `Order` object and line
+  signature) with the full `PriceResolutionService.resolve`; the per-unit discount is `listPrice - bestPrice`.
+  ONE action means the highest percent among all sources wins (never stacked, as before); never add a second
+  promotion for these rules, Vendure would stack it.
+- Skipped: lines with a manual unit price (`manualUnitPrice`) and read-only ERP orders (`isExternal`).
+- The counterparty amount rule compares the pre-promotion line total (`documentAmount`), not the persisted
+  order total, which still carries the previous pass's discounts.
+- Consumers read the price a customer pays from `discounted*`/`prorated*` fields (`discountedLinePriceWithTax`,
+  `proratedUnitPriceWithTax`); `unitPrice`/`linePrice` are before the promotion. `OrderLine.compareAtPrice`
+  is the price before every discount. The floor-price check compares the prorated price.
+- Progress (`tierProgress`) is derived from the order's quantities, independent of prices.

@@ -1,0 +1,104 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { Order, RequestContext } from '@vendure/core';
+
+import { OrderDiscountService } from '../../order-discount.service';
+import type { PriceResolutionService } from '../../price-resolution.service';
+
+const ctx = {} as RequestContext;
+
+interface FakeLine {
+    id: string;
+    productVariantId: string;
+    quantity: number;
+    listPrice: number;
+    linePriceWithTax: number;
+    customFields?: { manualUnitPrice?: number | null };
+}
+
+function line(
+    id: string,
+    listPrice: number,
+    quantity = 1,
+    extra: Partial<FakeLine> = {},
+): FakeLine {
+    return {
+        id,
+        productVariantId: `v-${id}`,
+        quantity,
+        listPrice,
+        linePriceWithTax: listPrice * quantity,
+        ...extra,
+    };
+}
+
+function orderOf(...lines: FakeLine[]): Order {
+    return { lines } as unknown as Order;
+}
+
+function setup(customerPriceByVariant: Record<string, number | null>) {
+    const resolve = vi.fn(async (_ctx: RequestContext, variantId: string) => ({
+        customerPrice: customerPriceByVariant[variantId] ?? null,
+        compareAtPrice: null,
+    }));
+    const service = new OrderDiscountService({ resolve } as unknown as PriceResolutionService);
+    return { service, resolve };
+}
+
+describe('OrderDiscountService', () => {
+    it('discounts each line by listPrice minus the best price, per unit', async () => {
+        const { service } = setup({ 'v-a': 800, 'v-b': 1000 });
+        const state = await service.stateFor(ctx, orderOf(line('a', 1000, 3), line('b', 1000)));
+        expect(state).toEqual(new Map([['a', 200]]));
+    });
+
+    it('gives no discount when the best price is not below the list price or unknown', async () => {
+        const { service } = setup({ 'v-a': 1200, 'v-b': null });
+        const state = await service.stateFor(ctx, orderOf(line('a', 1000), line('b', 1000)));
+        expect(state.size).toBe(0);
+    });
+
+    it('skips lines with a manual unit price', async () => {
+        const { service, resolve } = setup({ 'v-a': 500 });
+        const manual = line('a', 1000, 1, { customFields: { manualUnitPrice: 1000 } });
+        const state = await service.stateFor(ctx, orderOf(manual));
+        expect(state.size).toBe(0);
+        expect(resolve).not.toHaveBeenCalled();
+    });
+
+    it('prices every line against the pre-promotion order total and the live quantities', async () => {
+        const { service, resolve } = setup({ 'v-a': 900, 'v-b': 900 });
+        const order = orderOf(line('a', 1000, 2), line('b', 1000, 3));
+        await service.stateFor(ctx, order);
+        expect(resolve).toHaveBeenCalledWith(ctx, 'v-a', {
+            order,
+            quantity: 2,
+            documentAmount: 5000,
+        });
+        expect(resolve).toHaveBeenCalledWith(ctx, 'v-b', {
+            order,
+            quantity: 3,
+            documentAmount: 5000,
+        });
+    });
+
+    it('computes once per order snapshot and again after a quantity change', async () => {
+        const { service, resolve } = setup({ 'v-a': 900 });
+        const order = orderOf(line('a', 1000, 1));
+        await service.stateFor(ctx, order);
+        await service.stateFor(ctx, order);
+        await service.stateFor(ctx, order);
+        expect(resolve).toHaveBeenCalledTimes(1);
+
+        (order.lines[0] as unknown as FakeLine).quantity = 2;
+        await service.stateFor(ctx, order);
+        expect(resolve).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps two orders apart', async () => {
+        const { service } = setup({ 'v-a': 900, 'v-b': 700 });
+        const first = await service.stateFor(ctx, orderOf(line('a', 1000)));
+        const second = await service.stateFor(ctx, orderOf(line('b', 1000)));
+        expect([...first.keys()]).toEqual(['a']);
+        expect([...second.keys()]).toEqual(['b']);
+    });
+});

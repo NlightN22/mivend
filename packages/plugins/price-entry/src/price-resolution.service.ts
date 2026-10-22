@@ -25,6 +25,13 @@ export interface ResolvedPrice {
 export interface OrderPricingContext {
     order: Order;
     quantity: number;
+    // Pre-promotion order total for the counterparty amount rules; defaults to the persisted order total.
+    documentAmount?: number;
+}
+
+export interface ResolveOptions {
+    // false: the order only identifies the customer; tier, promo and counterparty rules are skipped.
+    orderRules?: boolean;
 }
 
 export interface TierProgressVM {
@@ -71,7 +78,9 @@ export class PriceResolutionService {
         ctx: RequestContext,
         variantId: string,
         orderContext?: OrderPricingContext,
+        options?: ResolveOptions,
     ): Promise<ResolvedPrice> {
+        const ruleContext = options?.orderRules === false ? undefined : orderContext;
         // Order's customer, not the caller, sets the price type: admin-created orders have an admin
         // as activeUserId, who has no customer_price_type row.
         const priceTypeCode = orderContext?.order.customerId
@@ -124,7 +133,7 @@ export class PriceResolutionService {
         const priceTypeCodeForDiscount = effectivePriceTypeCode;
 
         const { facetValues, weight } = await this.getVariantFacetsAndWeight(ctx, variantId);
-        const { weightByFacet, amountByFacet } = orderContext
+        const { weightByFacet, amountByFacet } = ruleContext
             ? await this.buildAggregates(
                   ctx,
                   variantId,
@@ -132,7 +141,7 @@ export class PriceResolutionService {
                   weight,
                   basePrice,
                   priceTypeCodeForDiscount,
-                  orderContext,
+                  ruleContext,
               )
             : {
                   weightByFacet: new Map<string, number>(),
@@ -151,16 +160,16 @@ export class PriceResolutionService {
 
         // Promo rules need real order context; with no line quantities no promo can qualify.
         // Counterparty-scoped rules share this requirement and the same product quantity map.
-        const productErpQuantities = orderContext
+        const productErpQuantities = ruleContext
             ? await buildProductErpQuantities(
                   this.connection,
                   ctx,
                   variantId,
-                  orderContext.order,
-                  orderContext.quantity,
+                  ruleContext.order,
+                  ruleContext.quantity,
               )
             : null;
-        const promoPercent = orderContext
+        const promoPercent = ruleContext
             ? await this.promoDiscountRuleService.getBestPromoPercent(
                   ctx,
                   await getProductErpId(this.connection, ctx, variantId),
@@ -169,14 +178,14 @@ export class PriceResolutionService {
               )
             : null;
         // totalWithTax excludes this priced line's own contribution — accepted approximation, same as the tier ladder's aggregates.
-        const counterpartyRulePercent = orderContext
+        const counterpartyRulePercent = ruleContext
             ? await this.counterpartyDiscountRuleService.getBestPercent(
                   ctx,
-                  orderContext.order,
+                  ruleContext.order,
                   counterparty,
                   await getProductErpId(this.connection, ctx, variantId),
                   productErpQuantities!,
-                  orderContext.order.totalWithTax,
+                  ruleContext.documentAmount ?? ruleContext.order.totalWithTax,
                   new Date(),
               )
             : null;

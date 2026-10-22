@@ -31,8 +31,9 @@ import { DiscountRuleService } from './discount-rule.service';
 import { PromoDiscountRuleService } from './promo-discount-rule.service';
 import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.service';
 import { PriceResolutionService } from './price-resolution.service';
-import { ActiveOrderSettleInterceptor } from './active-order-settle.interceptor';
-import { TierRebalanceService } from './tier-rebalance.service';
+import { OrderDiscountService } from './order-discount.service';
+import { OrderDiscountPromotionBootstrapService } from './order-discount-promotion-bootstrap.service';
+import { orderDiscountAction, orderDiscountCondition } from './order-discount.promotion';
 import { OrderFloorPriceCheck } from './order-floor-price.check';
 import { PriceAdjustmentFloorCheck } from './price-adjustment-floor.check';
 import { PriceAdjustmentService } from './price-adjustment.service';
@@ -318,8 +319,8 @@ const adminApiSchema = gql`
         PromoDiscountRuleService,
         CounterpartyDiscountRuleService,
         PriceResolutionService,
-        TierRebalanceService,
-        { provide: 'APP_INTERCEPTOR', useClass: ActiveOrderSettleInterceptor },
+        OrderDiscountService,
+        OrderDiscountPromotionBootstrapService,
         PriceAdjustmentFloorCheck,
         OrderFloorPriceCheck,
         PriceAdjustmentService,
@@ -336,6 +337,14 @@ const adminApiSchema = gql`
         PriceResolutionService,
     ],
     configuration: (config: RuntimeVendureConfig) => {
+        config.promotionOptions.promotionConditions = [
+            ...(config.promotionOptions.promotionConditions ?? []),
+            orderDiscountCondition,
+        ];
+        config.promotionOptions.promotionActions = [
+            ...(config.promotionOptions.promotionActions ?? []),
+            orderDiscountAction,
+        ];
         config.customFields.OrderLine = [
             ...(config.customFields.OrderLine ?? []),
             {

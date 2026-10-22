@@ -11,7 +11,7 @@ export const organizationOrderGuard: OrderProcess<OrderState> = {
     },
     async onTransitionEnd(_fromState, toState, { ctx, order }) {
         if (toState !== 'ArrangingPayment') return;
-        // Order row lock first: a tier-rebalance refresh holding stale lines must commit before this stamp.
+        // Order row lock first: a concurrent mutation holding stale lines must commit before this stamp.
         await connection
             .getRepository(ctx, OrderLine)
             .query('SELECT id FROM "order" WHERE id = $1 FOR UPDATE', [order.id]);

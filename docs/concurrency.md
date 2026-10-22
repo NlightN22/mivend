@@ -16,7 +16,7 @@ Test requirements: `docs/testing-patterns.md` ("Concurrency"). Audit procedure:
   competes with that request.
 - **Swallowed errors.** A failing refresh step hidden by `catch {}` or `.catch(() => undefined)`
   turns a deterministic bug into a race that "sometimes works". The tier-rebalance totals bug
-  (#188) stayed undiscovered for a long time because of exactly this.
+  (#188, removed by #196) stayed undiscovered for a long time because of exactly this.
 
 ## Rules
 
@@ -156,10 +156,9 @@ await withAggregateLock(connection, ctx, `product-photo:${externalId}`, async tx
 payment handlers' locks (proforma issuing, credit exposure) and only later updates the order row, so the order is
 always proforma, reserve, row. Nothing takes `reserve-order` or `proformaInvoices-for-order` after an order-row write
 inside that transaction. Checked: the `OrderProcess` hooks (`contract-order-guard`, `organization-order-guard`,
-`freight-order-guard`, `external-order.guard`, `replica-order.guard`) take no advisory lock; the only blocking event
-handler is the tier-rebalance marker (no lock); `ReservationPaymentService`, `OrderSubmittedListener` and the check
-listeners run from `eventBus.ofType` subscribers, which fire after commit; `TierRebalanceService` takes the order row
-and never an advisory lock. The payment handlers (`offline-terms-handler`, `online-stub-handler`) are the only
+`freight-order-guard`, `external-order.guard`, `replica-order.guard`) take no advisory lock; there is no blocking event
+handler; `ReservationPaymentService`, `OrderSubmittedListener` and the check
+listeners run from `eventBus.ofType` subscribers, which fire after commit; order-dependent discounts are a promotion computed inside the mutation's own transaction (#196), with no lock of their own. The payment handlers (`offline-terms-handler`, `online-stub-handler`) are the only
 in-transaction advisory takers and take the proforma lock first.
 
 **Cancel (#231).** Every path into `Cancelled` takes `withOrderCancelLocks` (`shared`: proforma, then reserve) before

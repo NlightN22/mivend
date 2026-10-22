@@ -32,10 +32,12 @@ export class CustomerPriceCalculationStrategy implements OrderItemPriceCalculati
             };
         }
 
+        // Order-dependent rules arrive as a promotion adjustment (OrderDiscountService), not in the list price.
         const { customerPrice } = await this.priceResolutionService.resolve(
             ctx,
             String(productVariant.id),
             { order, quantity },
+            { orderRules: false },
         );
         return {
             price: customerPrice ?? productVariant.listPrice,

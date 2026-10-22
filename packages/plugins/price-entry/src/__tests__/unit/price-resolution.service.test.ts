@@ -147,6 +147,48 @@ describe('PriceResolutionService', () => {
         );
     });
 
+    it('orderRules:false keeps the order identity but skips tier, promo and counterparty rules (#196)', async () => {
+        variantsById.v1 = brandVariant('v1', 'lukoil', 100);
+        variantsById.v2 = brandVariant('v2', 'lukoil', 500);
+        counterpartyService.getForCustomer.mockResolvedValue({ id: '7' });
+        const order = {
+            customerId: 'cust-42',
+            lines: [{ productVariantId: 'v2', quantity: 5 }],
+        } as unknown as Order;
+
+        await service.resolve(mockCtx, 'v1', { order, quantity: 1 }, { orderRules: false });
+
+        expect(counterpartyService.getForCustomer).toHaveBeenCalledWith(mockCtx, 'cust-42');
+        expect(discountRuleService.getBestPercent).toHaveBeenCalledWith(
+            mockCtx,
+            'RETAIL',
+            expect.any(Array),
+            expect.any(Date),
+            new Map(),
+            new Map(),
+            '7',
+        );
+        expect(promoDiscountRuleService.getBestPromoPercent).not.toHaveBeenCalled();
+        expect(counterpartyDiscountRuleService.getBestPercent).not.toHaveBeenCalled();
+    });
+
+    it('uses documentAmount instead of the persisted order total for counterparty amount rules (#196)', async () => {
+        variantsById.v1 = brandVariant('v1', 'lukoil', 100);
+        const order = { customerId: 'cust-42', totalWithTax: 99, lines: [] } as unknown as Order;
+
+        await service.resolve(mockCtx, 'v1', { order, quantity: 1, documentAmount: 5000 });
+
+        expect(counterpartyDiscountRuleService.getBestPercent).toHaveBeenCalledWith(
+            mockCtx,
+            order,
+            null,
+            expect.any(String),
+            expect.any(Map),
+            5000,
+            expect.any(Date),
+        );
+    });
+
     it('sums weight across this variant and other order lines sharing the facet', async () => {
         variantsById.v1 = brandVariant('v1', 'lukoil', 100);
         variantsById.v2 = brandVariant('v2', 'lukoil', 50);

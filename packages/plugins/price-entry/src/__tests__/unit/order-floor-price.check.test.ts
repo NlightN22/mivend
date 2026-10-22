@@ -14,7 +14,14 @@ const lines = [
 function run(floors: Array<[string, number]>, prices: Array<[number, number]>) {
     const connection = {
         getRepository: () => ({
-            findByIds: vi.fn(async () => prices.map(([id, listPrice]) => ({ id, listPrice }))),
+            findByIds: vi.fn(async () =>
+                prices.map(([id, price]) => ({
+                    id,
+                    listPriceIncludesTax: false,
+                    proratedUnitPrice: price,
+                    proratedUnitPriceWithTax: price,
+                })),
+            ),
         }),
     };
     const check = new OrderFloorPriceCheck(

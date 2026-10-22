@@ -42,7 +42,13 @@ export class OrderFloorPriceCheck implements OnModuleInit {
         const rows = await this.connection
             .getRepository(ctx, OrderLine)
             .findByIds(subject.lines.map(l => l.lineId));
-        const priceByLine = new Map(rows.map(r => [String(r.id), r.listPrice]));
+        // Order-dependent discounts are promotion adjustments, so the price a customer pays is the prorated one.
+        const priceByLine = new Map(
+            rows.map(r => [
+                String(r.id),
+                r.listPriceIncludesTax ? r.proratedUnitPriceWithTax : r.proratedUnitPrice,
+            ]),
+        );
         const findings: Finding[] = [];
         for (const line of subject.lines) {
             const floor = floors.get(line.productVariantId);
