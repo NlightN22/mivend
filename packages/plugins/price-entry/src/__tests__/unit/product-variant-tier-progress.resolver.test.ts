@@ -8,15 +8,14 @@ const progress = { facetName: 'brand-a', metric: 'WEIGHT', current: 0 };
 function setup(order: { lines: unknown[] } | undefined) {
     const resolveTierProgress = vi.fn(async () => progress);
     const active = { getActiveOrder: vi.fn(async () => order && { id: 1 }) };
-    const connection = {
-        getRepository: () => ({ findOne: vi.fn(async () => order ?? null) }),
-    };
+    const findOne = vi.fn(async () => order ?? null);
+    const connection = { getRepository: () => ({ findOne }) };
     const resolver = new ProductVariantPriceResolver(
         { resolveTierProgress } as never,
         active as never,
         connection as never,
     );
-    return { resolver, resolveTierProgress };
+    return { resolver, resolveTierProgress, findOne, active };
 }
 
 describe('ProductVariant.tierProgress', () => {
@@ -55,5 +54,14 @@ describe('ProductVariant.tierProgress', () => {
             { order, quantity: 7 },
             expect.anything(),
         );
+    });
+
+    it('loads only the active order, once per request, for any number of variants', async () => {
+        const { resolver, findOne, active } = setup({ lines: [] });
+        const ctx = { activeUserId: 'u1' } as RequestContext;
+        await Promise.all(['1', '2', '3'].map(id => resolver.tierProgress(ctx, { id })));
+        expect(active.getActiveOrder).toHaveBeenCalledTimes(1);
+        expect(findOne).toHaveBeenCalledTimes(1);
+        expect(findOne).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 1 } }));
     });
 });

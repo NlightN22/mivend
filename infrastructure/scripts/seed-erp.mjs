@@ -2,6 +2,7 @@
 // Requires the server running on localhost:3000 and ERP_IMPORT_TOKEN env variable.
 
 import { execSync } from 'child_process';
+import { tierShowcaseRules } from './seed-tier-showcase.mjs';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -812,75 +813,7 @@ async function main() {
             validTo: discountValidTo,
             minWeightKg: null,
         },
-        // Dev showcase for the catalog tier ladder: no flat discount, flat below the ladder, flat above it.
-        {
-            erpId: 'discount-ladder-only-wholesale-volume-300',
-            priceTypeCode: 'WHOLESALE',
-            facetCode: 'brand',
-            facetValueCode: 'ladder-only',
-            percent: 10,
-            validFrom: discountValidFrom,
-            validTo: discountValidTo,
-            minWeightKg: 300,
-        },
-        {
-            erpId: 'discount-ladder-only-wholesale-volume-600',
-            priceTypeCode: 'WHOLESALE',
-            facetCode: 'brand',
-            facetValueCode: 'ladder-only',
-            percent: 15,
-            validFrom: discountValidFrom,
-            validTo: discountValidTo,
-            minWeightKg: 600,
-        },
-        {
-            erpId: 'discount-flat-plus-ladder-wholesale',
-            priceTypeCode: 'WHOLESALE',
-            facetCode: 'brand',
-            facetValueCode: 'flat-plus-ladder',
-            percent: 5,
-            validFrom: discountValidFrom,
-            validTo: discountValidTo,
-        },
-        {
-            erpId: 'discount-flat-plus-ladder-wholesale-volume-300',
-            priceTypeCode: 'WHOLESALE',
-            facetCode: 'brand',
-            facetValueCode: 'flat-plus-ladder',
-            percent: 12,
-            validFrom: discountValidFrom,
-            validTo: discountValidTo,
-            minWeightKg: 300,
-        },
-        {
-            erpId: 'discount-flat-beats-ladder-wholesale',
-            priceTypeCode: 'WHOLESALE',
-            facetCode: 'brand',
-            facetValueCode: 'flat-beats-ladder',
-            percent: 20,
-            validFrom: discountValidFrom,
-            validTo: discountValidTo,
-        },
-        {
-            erpId: 'discount-flat-beats-ladder-wholesale-volume-300',
-            priceTypeCode: 'WHOLESALE',
-            facetCode: 'brand',
-            facetValueCode: 'flat-beats-ladder',
-            percent: 10,
-            validFrom: discountValidFrom,
-            validTo: discountValidTo,
-            minWeightKg: 300,
-        },
-        {
-            erpId: 'discount-amount-ladder-wholesale-spend-30000',
-            priceTypeCode: 'WHOLESALE',
-            facetCode: 'brand',
-            facetValueCode: 'amount-ladder',
-            percent: 8,
-            validFrom: discountValidFrom,
-            validTo: discountValidTo,
-            minAmount: 30000,
-        },
+        ...tierShowcaseRules(discountValidFrom, discountValidTo),
     ];
     console.log(`Sending ${discountRules.length} discount rules...`);
     const discountResult = await postBatch(

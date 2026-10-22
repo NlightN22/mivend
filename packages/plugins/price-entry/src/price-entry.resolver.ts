@@ -23,6 +23,7 @@ import { PriceResolutionService, TierProgressVM } from './price-resolution.servi
 @Resolver('ProductVariant')
 export class ProductVariantPriceResolver {
     private memos = new WeakMap<RequestContext, LookupMemo>();
+    private activeOrders = new WeakMap<RequestContext, Promise<Order>>();
 
     constructor(
         private priceResolutionService: PriceResolutionService,
@@ -39,24 +40,40 @@ export class ProductVariantPriceResolver {
         return memo;
     }
 
-    // Catalog view of the active order's progress; an empty or missing cart yields 0 of N.
-    @ResolveField()
-    async tierProgress(
-        @Ctx() ctx: RequestContext,
-        @Parent() variant: { id: string },
-    ): Promise<TierProgressVM | null> {
-        if (!ctx.activeUserId) return null;
+    // One order load per request, shared by every variant resolved in a catalog list.
+    private activeOrderFor(ctx: RequestContext): Promise<Order> {
+        let order = this.activeOrders.get(ctx);
+        if (!order) {
+            order = this.loadActiveOrder(ctx);
+            this.activeOrders.set(ctx, order);
+        }
+        return order;
+    }
+
+    private async loadActiveOrder(ctx: RequestContext): Promise<Order> {
         const active = await this.activeOrderService.getActiveOrder(ctx, undefined);
         const order = active
             ? await this.connection
                   .getRepository(ctx, Order)
                   .findOne({ where: { id: active.id }, relations: ['lines'] })
             : null;
-        const line = order?.lines.find(l => String(l.productVariantId) === String(variant.id));
+        return order ?? new Order({ lines: [] });
+    }
+
+    // Catalog view of the active order's progress; an empty or missing cart yields 0 of N.
+    // Only the first unreached rung is considered, so a weaker next rung hides a stronger later one.
+    @ResolveField()
+    async tierProgress(
+        @Ctx() ctx: RequestContext,
+        @Parent() variant: { id: string },
+    ): Promise<TierProgressVM | null> {
+        if (!ctx.activeUserId) return null;
+        const order = await this.activeOrderFor(ctx);
+        const line = order.lines.find(l => String(l.productVariantId) === String(variant.id));
         return this.priceResolutionService.resolveTierProgress(
             ctx,
             String(variant.id),
-            { order: order ?? ({ lines: [] } as unknown as Order), quantity: line?.quantity ?? 0 },
+            { order, quantity: line?.quantity ?? 0 },
             this.memoFor(ctx),
         );
     }

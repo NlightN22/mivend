@@ -391,3 +391,4 @@ Vendure promotion, not part of the line's list price:
   ~2.5 s, adjust ~2.4 s, read ~1.9 s). Carts above roughly 100 lines are not measured; batch the rule queries
   per order before supporting them.
 - Progress (`tierProgress`) is derived from the order's quantities, independent of prices.
+- Catalog progress: `ProductVariant.tierProgress` reads the caller's own active order (null for a guest, 0 of N for an empty cart). It considers only the nearest unreached rung, so a rung weaker than the current discount hides a stronger later one; the storefront also hides the ladder in that case (`useTierProgressView`).
