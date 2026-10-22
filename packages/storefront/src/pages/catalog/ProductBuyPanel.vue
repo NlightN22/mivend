@@ -2,7 +2,7 @@
 import { formatMoney } from '../../i18n/format';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { stockVariantFromLevel } from '@mivend/ui-kit';
+import { MvProgressBar, stockVariantFromLevel } from '@mivend/ui-kit';
 import { useProductLabels } from '../../composables/useProductLabels';
 import { useDemoMode } from '../../composables/useDemoMode';
 import type { TierProgressView } from '../../composables/useTierProgressView';

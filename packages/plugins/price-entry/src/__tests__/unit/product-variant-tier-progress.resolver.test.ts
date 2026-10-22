@@ -5,12 +5,16 @@ import { ProductVariantPriceResolver } from '../../price-entry.resolver';
 
 const progress = { facetName: 'brand-a', metric: 'WEIGHT', current: 0 };
 
-function setup(order: unknown) {
+function setup(order: { lines: unknown[] } | undefined) {
     const resolveTierProgress = vi.fn(async () => progress);
-    const active = { getActiveOrder: vi.fn(async () => order) };
+    const active = { getActiveOrder: vi.fn(async () => order && { id: 1 }) };
+    const connection = {
+        getRepository: () => ({ findOne: vi.fn(async () => order ?? null) }),
+    };
     const resolver = new ProductVariantPriceResolver(
         { resolveTierProgress } as never,
         active as never,
+        connection as never,
     );
     return { resolver, resolveTierProgress };
 }

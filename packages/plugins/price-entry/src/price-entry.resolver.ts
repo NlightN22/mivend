@@ -27,6 +27,7 @@ export class ProductVariantPriceResolver {
     constructor(
         private priceResolutionService: PriceResolutionService,
         private activeOrderService: ActiveOrderService,
+        private connection: TransactionalConnection,
     ) {}
 
     private memoFor(ctx: RequestContext): LookupMemo {
@@ -45,7 +46,12 @@ export class ProductVariantPriceResolver {
         @Parent() variant: { id: string },
     ): Promise<TierProgressVM | null> {
         if (!ctx.activeUserId) return null;
-        const order = await this.activeOrderService.getActiveOrder(ctx, undefined);
+        const active = await this.activeOrderService.getActiveOrder(ctx, undefined);
+        const order = active
+            ? await this.connection
+                  .getRepository(ctx, Order)
+                  .findOne({ where: { id: active.id }, relations: ['lines'] })
+            : null;
         const line = order?.lines.find(l => String(l.productVariantId) === String(variant.id));
         return this.priceResolutionService.resolveTierProgress(
             ctx,
