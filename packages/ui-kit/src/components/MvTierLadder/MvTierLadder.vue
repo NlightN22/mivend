@@ -19,7 +19,7 @@ const fraction = computed(() =>
 
 <template>
     <div v-if="ladder.complete" class="mv-tier-ladder mv-tier-ladder--complete">
-        <IconCircleCheckFilled :size="22" />
+        <IconCircleCheckFilled :size="16" />
         <span class="mv-tier-ladder__achieved">{{ ladder.currentLabel }}</span>
     </div>
     <div v-else class="mv-tier-ladder" :style="{ '--tier-progress': fraction }">
@@ -106,7 +106,7 @@ const fraction = computed(() =>
 }
 
 .mv-tier-ladder__achieved {
-    font-size: 20px;
+    font-size: 14px;
     font-weight: 800;
     line-height: 1;
 }
