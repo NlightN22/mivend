@@ -1,6 +1,13 @@
 import { MANAGER_ACCOUNTS, SUPERADMIN } from './fixtures/accounts';
 import { E2E_CUSTOMER } from './fixtures/seed';
 import { CREDIT_BUYER, PASSWORD, PREPAY_BUYER } from './storefront/checkout-credit/helpers';
+import {
+    ACTORS,
+    CUSTOMERS,
+    VIS_PASSWORD,
+    actorEmail,
+    customerEmail,
+} from './fixtures/visibility/plan';
 import { endRunSessions, runStart, type TestAccount } from './helpers/session-cleanup';
 
 // Every account a spec logs in as belongs here, or its sessions outlive the run (issue #231).
@@ -12,6 +19,16 @@ const ACCOUNTS: TestAccount[] = [
     { api: 'shop-api', username: PREPAY_BUYER, password: PASSWORD },
     // The dev storefront logs this customer in on any unauthenticated page (App.vue).
     { api: 'shop-api', username: 'ivan@autoservice-nord.example', password: PASSWORD },
+    ...ACTORS.map(a => ({
+        api: 'admin-api' as const,
+        username: actorEmail(a.key),
+        password: VIS_PASSWORD,
+    })),
+    ...CUSTOMERS.map(c => ({
+        api: 'shop-api' as const,
+        username: customerEmail(c.key),
+        password: VIS_PASSWORD,
+    })),
 ];
 
 export default async function globalTeardown(): Promise<void> {

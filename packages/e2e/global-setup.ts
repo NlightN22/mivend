@@ -10,6 +10,7 @@ import { MANAGER_ACCOUNTS, SUPERADMIN } from './fixtures/accounts';
 import { markRunStart } from './helpers/session-cleanup';
 import { E2E_BROWSER_USER_AGENT } from './helpers/user-agent';
 import { seedRecords, E2E_CUSTOMER, E2E_OTHER_COUNTERPARTY_ID } from './fixtures/seed';
+import { seedVisibility } from './fixtures/visibility/seed-visibility';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 const STOREFRONT_URL = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
@@ -337,6 +338,8 @@ export default async function globalSetup(): Promise<void> {
             }
         }
     }
+
+    await seedVisibility(adminToken);
 
     const browser = await chromium.launch();
     const context = await browser.newContext({
