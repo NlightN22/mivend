@@ -1,3 +1,4 @@
+import { NUMBERING_SEQUENCE_NAMES } from '@mivend/plugin-numbering';
 import { Client } from 'pg';
 
 export interface TestDbConnection {
@@ -26,8 +27,17 @@ async function onMaintenanceDb<T>(run: (client: Client) => Promise<T>): Promise<
     }
 }
 
+// Synchronize makes the tables but not the numbering sequences, which only a migration creates.
 export async function createDatabase(name: string): Promise<void> {
     await onMaintenanceDb(client => client.query(`CREATE DATABASE "${name}"`));
+    const client = new Client({ ...testDbConnection(), database: name });
+    await client.connect();
+    try {
+        for (const sequence of Object.values(NUMBERING_SEQUENCE_NAMES))
+            await client.query(`CREATE SEQUENCE "${sequence}" START 1`);
+    } finally {
+        await client.end();
+    }
 }
 
 export async function dropDatabase(name: string): Promise<void> {
