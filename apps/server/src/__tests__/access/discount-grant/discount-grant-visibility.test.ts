@@ -41,6 +41,20 @@ beforeAll(async () => {
     }
 });
 
+it("the manager's own request for an allowed type is pending approval", async () => {
+    const result = await admin<{ approvalRequest: { status: string; requestType: string } | null }>(
+        manager,
+        `query($id: ID!) { approvalRequest(id: $id) { status requestType } }`,
+        { id: requestIds.allowed },
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.data!.approvalRequest).toEqual({
+        status: 'pending',
+        requestType: 'discountGrantApproval',
+    });
+    expect(GRANTS.allowed.by).toBe('manager-a');
+});
+
 it('the manager cannot request a grant for a hidden or confidential type, and nothing is created', async () => {
     const before = (await registry(superadmin)).totalItems;
     const day = 24 * 3600 * 1000;

@@ -233,6 +233,29 @@ describe.each(CUSTOMERS.map(c => c.key))('trading points of %s in the storefront
     const mine = CUSTOMERS.find(c => c.key === key)!.counterparty;
     const foreign = CUSTOMERS.find(c => c.key !== key)!.counterparty;
 
+    it('lists and reads by id only its own point; a foreign point is null, also to a guest', async () => {
+        const token = await customerToken(key);
+        const listed = await shop<{ myTradingPoints: { id: string }[] }>(
+            token,
+            `query { myTradingPoints { id } }`,
+        );
+        expect(listed.errors).toEqual([]);
+        expect(listed.data!.myTradingPoints.map(p => p.id)).toEqual([pointOf(mine)]);
+        const BY_ID = `query($id: ID!) { tradingPoint(id: $id) { id } }`;
+        const own = await shop<{ tradingPoint: { id: string } | null }>(token, BY_ID, {
+            id: pointOf(mine),
+        });
+        expect(own.errors).toEqual([]);
+        expect(own.data!.tradingPoint?.id).toBe(pointOf(mine));
+        const theirs = await shop<{ tradingPoint: unknown }>(token, BY_ID, {
+            id: pointOf(foreign),
+        });
+        expect(theirs.errors, 'no error that confirms the id exists').toEqual([]);
+        expect(theirs.data!.tradingPoint).toBeNull();
+        const guest = await shop<{ tradingPoint: unknown }>('', BY_ID, { id: pointOf(foreign) });
+        expect(guest.data?.tradingPoint ?? null).toBeNull();
+    });
+
     it('nested on its own counterparty and among hidden points, only its own points', async () => {
         const token = await customerToken(key);
         const nested = await shop<{
