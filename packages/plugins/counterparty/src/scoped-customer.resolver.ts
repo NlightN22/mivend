@@ -1,8 +1,5 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import type {
-    CustomerFilterParameter,
-    CustomerListOptions,
-} from '@vendure/common/lib/generated-types';
+import type { CustomerListOptions } from '@vendure/common/lib/generated-types';
 import { Permission } from '@vendure/common/lib/generated-types';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
@@ -10,40 +7,24 @@ import {
     Ctx,
     Customer,
     CustomerService,
+    ListQueryBuilder,
     PaginatedList,
     Relations,
     RelationPaths,
     RequestContext,
 } from '@vendure/core';
+import { IsNull } from 'typeorm';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 
 import { CounterpartyService } from './counterparty.service';
-
-type Filter = CustomerFilterParameter & { counterpartyId?: { in?: string[] } };
-
-// The caller's filter AND the visible counterparties; an OR filter is nested so it cannot widen the scope.
-export function scopedCustomerOptions(
-    options: CustomerListOptions | undefined,
-    visibleIds: string[],
-): CustomerListOptions {
-    const own = options?.filter;
-    const caller =
-        own && options?.filterOperator === 'OR'
-            ? { _or: Object.entries(own).map(([key, value]) => ({ [key]: value })) }
-            : own;
-    const scope: Filter = { counterpartyId: { in: visibleIds } };
-    return {
-        ...options,
-        filterOperator: undefined,
-        filter: (caller ? { _and: [caller, scope] } : scope) as CustomerFilterParameter,
-    };
-}
+import { applyCustomerScope } from './customer-scope';
 
 // Overrides core's Admin `customers`/`customer`: a portal customer inherits its counterparty's visibility (#263).
 @Resolver()
 export class ScopedCustomerResolver {
     constructor(
         private customerService: CustomerService,
+        private listQueryBuilder: ListQueryBuilder,
         private counterpartyService: CounterpartyService,
         private accessScopeService: AccessScopeService,
     ) {}
@@ -57,13 +38,22 @@ export class ScopedCustomerResolver {
     ): Promise<PaginatedList<Customer>> {
         if (await this.seesAll(ctx))
             return this.customerService.findAll(ctx, args.options, relations);
-        const visible = (await this.counterpartyService.findVisible(ctx)).map(c => String(c.id));
-        if (visible.length === 0) return { items: [], totalItems: 0 };
-        return this.customerService.findAll(
-            ctx,
-            scopedCustomerOptions(args.options, visible),
+        // Same build as core CustomerService.findAll; the filter stays in its own brackets, the scope is ANDed.
+        const customPropertyMap: Record<string, string> = {};
+        if (this.listQueryBuilder.filterObjectHasProperty(args.options?.filter, 'postalCode')) {
+            relations.push('addresses');
+            customPropertyMap.postalCode = 'addresses.postalCode';
+        }
+        const qb = this.listQueryBuilder.build(Customer, args.options, {
             relations,
-        );
+            channelId: ctx.channelId,
+            where: { deletedAt: IsNull() },
+            ctx,
+            customPropertyMap,
+        });
+        const visible = await this.counterpartyService.visibleFilteredQb(ctx, {});
+        const [items, totalItems] = await applyCustomerScope(qb, visible).getManyAndCount();
+        return { items, totalItems };
     }
 
     @Query()
@@ -73,13 +63,14 @@ export class ScopedCustomerResolver {
         @Args() args: { id: ID },
         @Relations(Customer) relations: RelationPaths<Customer>,
     ): Promise<Customer | undefined> {
-        const customer = await this.customerService.findOne(ctx, args.id, relations);
-        if (!customer || (await this.seesAll(ctx))) return customer;
-        const counterpartyId = (customer.customFields as { counterpartyId?: string | null })
-            .counterpartyId;
+        if (await this.seesAll(ctx)) return this.customerService.findOne(ctx, args.id, relations);
+        const bare = await this.customerService.findOne(ctx, args.id);
+        const counterpartyId = (
+            bare?.customFields as { counterpartyId?: string | null } | undefined
+        )?.counterpartyId;
         if (!counterpartyId) return undefined;
-        const visible = await this.counterpartyService.findOneVisible(ctx, counterpartyId);
-        return visible ? customer : undefined;
+        if (!(await this.counterpartyService.findOneVisible(ctx, counterpartyId))) return undefined;
+        return relations.length ? this.customerService.findOne(ctx, args.id, relations) : bare;
     }
 
     private async seesAll(ctx: RequestContext): Promise<boolean> {
