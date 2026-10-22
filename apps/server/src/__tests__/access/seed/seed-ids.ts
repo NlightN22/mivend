@@ -2,6 +2,7 @@ import { gqlOk } from '../harness/graphql';
 import {
     BRANCHES,
     DEFAULT_BRANCH_ERP_ID,
+    GAP_CLIENTS,
     COUNTERPARTIES,
     CUSTOMERS,
     STAFF,
@@ -20,6 +21,7 @@ export interface SeedIds {
     counterparties: Record<CounterpartyKey, string>;
     points: Record<CounterpartyKey, string>;
     customers: Record<CustomerKey, string>;
+    gapClients: Record<string, string>;
     ordering: OrderSeedIds;
 }
 
@@ -71,6 +73,10 @@ export async function readSeedIds(baseUrl: string, superadmin: string): Promise<
         ),
         counterparties: pick(cpKeys, key => cp(key)?.id),
         points: pick(cpKeys, key => cp(key)?.tradingPoints[0]?.id),
+        gapClients: pick(
+            GAP_CLIENTS.map(c => c.erpId),
+            erpId => lists.counterparties.items.find(c => c.erpId === erpId)?.id,
+        ),
         customers: pick(
             CUSTOMERS.map(c => c.key),
             key => lists.customers.items.find(c => c.emailAddress === customerEmail(key))?.id,

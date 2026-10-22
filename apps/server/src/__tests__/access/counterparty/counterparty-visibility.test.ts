@@ -7,7 +7,14 @@ import {
     counterpartyName,
     type ActorKey,
 } from '../seed/fixture-plan';
-import { ALL_KEYS, SUMMARY, idOf, listed, visibleById } from './counterparty-queries';
+import {
+    ALL_KEYS,
+    SUMMARY,
+    idOf,
+    listed,
+    visibleById,
+    visibleCounterpartyIds,
+} from './counterparty-queries';
 
 const ADMIN_STATE = `query($id: ID!) { administrator(id: $id) { customFields { branchId } user { roles { code } } } }`;
 
@@ -41,15 +48,16 @@ describe.each(STAFF.map(s => s.key))('counterparty visibility for %s', (key: Act
     });
 
     it('list total and summary count equal the rows the scope allows, nothing more', async () => {
+        const ids = visibleCounterpartyIds(key);
         const page = await listed(token);
-        expect(page.total).toBe(expected.size);
-        expect(new Set(page.ids)).toEqual(new Set([...expected].map(idOf)));
+        expect(page.total).toBe(ids.length);
+        expect(new Set(page.ids)).toEqual(new Set(ids));
         const summary = await admin<{ counterpartySummary: { totalCount: number } }>(
             token,
             SUMMARY,
         );
         expect(summary.errors).toEqual([]);
-        expect(summary.data!.counterpartySummary.totalCount).toBe(expected.size);
+        expect(summary.data!.counterpartySummary.totalCount).toBe(ids.length);
     });
 
     it('every counterparty is visible by id and by search exactly when the scope allows it', async () => {

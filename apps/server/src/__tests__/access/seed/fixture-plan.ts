@@ -212,3 +212,32 @@ export const SETTLEMENT_NUMBERS: Record<CustomerKey, Record<SettlementCategory, 
     'customer-a': { sale: '9511', payment: '9512' },
     'customer-b': { sale: '9521', payment: '9522' },
 };
+
+// Portal clients whose main contract does not resolve to an active price type (#263 group 19), one per reason.
+export type GapReason =
+    | 'no-main-contract'
+    | 'contract-not-found'
+    | 'contract-inactive'
+    | 'price-type-not-synced';
+export interface GapClientPlan {
+    erpId: string;
+    branch: 'a' | 'b';
+    reason: GapReason;
+}
+export const GAP_CLIENTS: GapClientPlan[] = [
+    { erpId: 'access-gap-no-main', branch: 'a', reason: 'no-main-contract' },
+    { erpId: 'access-gap-missing', branch: 'a', reason: 'contract-not-found' },
+    { erpId: 'access-gap-inactive', branch: 'b', reason: 'contract-inactive' },
+    { erpId: 'access-gap-unsynced', branch: 'b', reason: 'price-type-not-synced' },
+];
+export const gapClientName = (erpId: string): string => `Access gap ${erpId}`;
+// Unassigned clients: only their branch's branch scope and scope 'all' see them.
+export const VISIBLE_GAP_BRANCHES: Record<ActorKey, ('a' | 'b')[]> = {
+    'manager-a': [],
+    'manager-b': [],
+    'head-a': ['a'],
+    'operator-a': ['a'],
+    'head-b': ['b'],
+    'head-default': [],
+    director: ['a', 'b'],
+};

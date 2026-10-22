@@ -1,7 +1,14 @@
 import { expect } from 'vitest';
 
 import { admin, seed, staffToken } from '../harness/actors';
-import { COUNTERPARTIES, type CounterpartyKey } from '../seed/fixture-plan';
+import {
+    COUNTERPARTIES,
+    GAP_CLIENTS,
+    VISIBLE_COUNTERPARTIES,
+    VISIBLE_GAP_BRANCHES,
+    type ActorKey,
+    type CounterpartyKey,
+} from '../seed/fixture-plan';
 
 export const LIST = `query($s: String) { counterparties(options: { take: 100, search: $s }) { totalItems items { id } } }`;
 export const ONE = `query($id: ID!) { counterparty(id: $id) { id } }`;
@@ -41,4 +48,10 @@ export async function stateOf(
     }>(await staffToken('superadmin'), STATE, { id: idOf(key) });
     expect(result.errors).toEqual([]);
     return result.data!.counterparty;
+}
+
+// Every counterparty id the actor's scope allows, the gap clients included.
+export function visibleCounterpartyIds(key: ActorKey): string[] {
+    const gaps = GAP_CLIENTS.filter(c => VISIBLE_GAP_BRANCHES[key].includes(c.branch));
+    return [...VISIBLE_COUNTERPARTIES[key].map(idOf), ...gaps.map(c => seed().gapClients[c.erpId])];
 }

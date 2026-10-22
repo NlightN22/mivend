@@ -21,6 +21,7 @@ import {
     customerList,
     linkedCustomers,
 } from './portal-customer-queries';
+import { visibleCounterpartyIds } from '../counterparty/counterparty-queries';
 
 // The branch-a, branch-b and branch-less clients, each with a portal customer.
 const TARGETS: CounterpartyKey[] = ['a-own', 'b-own', 'none'];
@@ -82,9 +83,7 @@ describe.each(STAFF.map(s => s.key))('portal customers for %s', (key: ActorKey) 
             .filter(
                 i =>
                     key === 'director' ||
-                    VISIBLE_COUNTERPARTIES[key].some(
-                        cp => seed().counterparties[cp] === i.counterparty?.id,
-                    ),
+                    visibleCounterpartyIds(key).includes(i.counterparty?.id ?? ''),
             )
             .map(i => i.id);
         expect([...ids].sort(), 'the whole list').toEqual(expected.sort());

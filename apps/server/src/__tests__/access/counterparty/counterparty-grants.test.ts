@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { admin, seed, staffToken } from '../harness/actors';
-import { VISIBLE_COUNTERPARTIES, type CounterpartyKey } from '../seed/fixture-plan';
-import { listed, visibleById } from './counterparty-queries';
+import type { CounterpartyKey } from '../seed/fixture-plan';
+import { listed, visibleById, visibleCounterpartyIds } from './counterparty-queries';
 
 const GRANT = `mutation($g: ID!, $m: ID!, $t: DateTime, $r: String!) { grantManagerVisibility(granteeAdministratorId: $g, managerAdministratorId: $m, validTo: $t, reason: $r) { id } }`;
 const REVOKE = `mutation($i: ID!) { revokeVisibilityGrant(id: $i, reason: "access test restore") { id } }`;
@@ -24,7 +24,7 @@ describe('visibility grants', () => {
     it("a grant lets head-b see manager-a's clients of another branch, and revoking takes it away", async () => {
         const superadmin = await staffToken('superadmin');
         const [head, headA] = [await staffToken('head-b'), await staffToken('head-a')];
-        const before = VISIBLE_COUNTERPARTIES['head-b'];
+        const before = visibleCounterpartyIds('head-b');
         const hidden: CounterpartyKey[] = ['a-own', 'a-point'];
         for (const cp of hidden) expect(await visibleById(head, cp)).toBe(false);
         expect((await listed(head)).total).toBe(before.length);
@@ -43,7 +43,7 @@ describe('visibility grants', () => {
                 before.length + hidden.length,
             );
             expect((await listed(headA)).total, 'another head is not affected').toBe(
-                VISIBLE_COUNTERPARTIES['head-a'].length,
+                visibleCounterpartyIds('head-a').length,
             );
         } finally {
             await admin(superadmin, REVOKE, { i: granted.data!.grantManagerVisibility.id });
