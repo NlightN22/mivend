@@ -1,0 +1,17 @@
+query VariantTierProgress($ids: [String!]) {
+    products(options: { take: 100, filter: { id: { in: $ids } } }) {
+        items {
+            variants {
+                id
+                tierProgress {
+                    facetName
+                    metric
+                    current
+                    currentPercent
+                    nextThreshold
+                    nextPercent
+                }
+            }
+        }
+    }
+}

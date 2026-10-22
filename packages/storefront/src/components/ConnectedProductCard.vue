@@ -7,6 +7,7 @@ import { useFavoritesStore } from '../stores/favorites';
 import { useCartActions } from '../composables/useCartActions';
 import { useProductQuantity } from '../composables/useProductQuantity';
 import { useProductLabels } from '../composables/useProductLabels';
+import { useTierProgressView } from '../composables/useTierProgressView';
 import { brandOf } from '../utils/brand';
 import { formatMoney, formatNumber } from '../i18n/format';
 import type { ProductItem } from '../composables/useProductList';
@@ -29,6 +30,7 @@ const { cartLineFor, onAddToCart, onUpdateQty } = useCartActions();
 const { multiplicityEnforced, unitView, packQty, shownQty, toBaseQty } = useProductQuantity();
 
 const variant = computed(() => props.item.variants[0]);
+const tierProgress = useTierProgressView(computed(() => variant.value?.id));
 const prices = computed(() => {
     const factor = unitView(props.item).factor;
     const scale = (v: number | null | undefined): number | undefined =>
@@ -69,6 +71,7 @@ const common = computed(() => ({
         t('productCard.amountThreshold', {
             amount: formatMoney(minorUnits / 100, variant.value?.currencyCode ?? 'RUB'),
         }),
+    tierProgress: tierProgress.value,
     stepperLabels: labels.value.stepper,
     stockLabels: labels.value.stock,
     currency: variant.value?.currencyCode ?? 'RUB',

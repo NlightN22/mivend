@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { stockVariantFromLevel } from '@mivend/ui-kit';
 import { useProductLabels } from '../../composables/useProductLabels';
 import { useDemoMode } from '../../composables/useDemoMode';
+import type { TierProgressView } from '../../composables/useTierProgressView';
 import { noPriceAction } from './noPriceAction';
 import { baseToPacks, packsToBase, type SalesUnitView } from '../../composables/useSalesUnit';
 
@@ -19,6 +20,7 @@ interface Props {
     salesUnit?: SalesUnitView | null;
     requiredMultiple?: number;
     nearestPack?: { name: string; ratio: number; baseQty: number } | null;
+    tierProgress?: TierProgressView | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -30,6 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
     cartLineId: undefined,
     salesUnit: null,
     nearestPack: null,
+    tierProgress: null,
     requiredMultiple: 1,
 });
 
@@ -102,6 +105,13 @@ function onStepper(lineId: string | undefined, value: number): void {
             <div v-else class="buy-panel__price buy-panel__price--on-request">
                 {{ t('buyPanel.onRequest') }}
             </div>
+            <MvProgressBar
+                v-if="showPrices && tierProgress"
+                class="buy-panel__tier-progress"
+                :label="tierProgress.label"
+                :value="tierProgress.value"
+                :max="tierProgress.max"
+            />
             <div class="buy-panel__price-note">
                 <template v-if="showPrices && salesUnit && price !== undefined">
                     {{ t('buyPanel.pricePer', { unit: salesUnit.name }) }} &middot; {{ perPieceNote
@@ -197,6 +207,10 @@ function onStepper(lineId: string | undefined, value: number): void {
     color: #a8b8b2;
     margin-bottom: 6px;
 }
+.buy-panel__tier-progress {
+    margin-bottom: 12px;
+}
+
 .buy-panel__price-note {
     font-size: 12px;
     color: #a8b8b2;

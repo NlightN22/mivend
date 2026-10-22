@@ -66,6 +66,7 @@ const shopApiSchema = gql`
         customerPrice: Int
         compareAtPrice: Int
         discountTiers: [DiscountTier!]!
+        tierProgress: TierProgress
     }
 
     extend type OrderLine {

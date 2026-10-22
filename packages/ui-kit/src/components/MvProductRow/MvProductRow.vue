@@ -12,6 +12,7 @@ import MvQtyStepper, { type QtyStepperLabels } from '../MvQtyStepper/MvQtySteppe
 import MvTooltip from '../MvTooltip/MvTooltip.vue';
 import MvFavoriteButton from '../MvFavoriteButton/MvFavoriteButton.vue';
 import MvDiscountBadge, { type DiscountTier } from '../MvDiscountBadge/MvDiscountBadge.vue';
+import MvProgressBar from '../MvProgressBar/MvProgressBar.vue';
 
 export interface ProductRowLabels {
     sku: string;
@@ -57,6 +58,7 @@ interface Props {
     showFloorPrice?: boolean;
     floorPrice?: number;
     discountTiers?: DiscountTier[];
+    tierProgress?: { label: string; value: number; max: number } | null;
     discountTitle?: string;
     discountWeightLabel?: (kg: number) => string;
     discountAmountLabel?: (minorUnits: number) => string;
@@ -96,6 +98,7 @@ const props = withDefaults(defineProps<Props>(), {
     showFloorPrice: false,
     floorPrice: undefined,
     discountTiers: () => [],
+    tierProgress: null,
     currency: 'RUB',
     stock: undefined,
     stockVariant: undefined,
@@ -184,6 +187,13 @@ function onStepperChange(qty: number): void {
                     :amount-label="discountAmountLabel"
                 />
             </div>
+            <MvProgressBar
+                v-if="tierProgress"
+                class="mv-product-row__tier-progress"
+                :label="tierProgress.label"
+                :value="tierProgress.value"
+                :max="tierProgress.max"
+            />
         </div>
 
         <div class="mv-product-row__cell">
@@ -561,5 +571,8 @@ function onStepperChange(qty: number): void {
 .mv-product-row__analog-btn:hover {
     border-color: #00b894;
     color: #00b894;
+}
+.mv-product-row__tier-progress {
+    margin-top: 6px;
 }
 </style>

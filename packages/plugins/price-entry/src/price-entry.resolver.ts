@@ -1,9 +1,11 @@
 import { Args, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { Permission } from '@vendure/common/lib/generated-types';
 import {
+    ActiveOrderService,
     Allow,
     Ctx,
     ForbiddenError,
+    Order,
     OrderLine,
     RequestContext,
     Transaction,
@@ -20,7 +22,38 @@ import { PriceResolutionService, TierProgressVM } from './price-resolution.servi
 
 @Resolver('ProductVariant')
 export class ProductVariantPriceResolver {
-    constructor(private priceResolutionService: PriceResolutionService) {}
+    private memos = new WeakMap<RequestContext, LookupMemo>();
+
+    constructor(
+        private priceResolutionService: PriceResolutionService,
+        private activeOrderService: ActiveOrderService,
+    ) {}
+
+    private memoFor(ctx: RequestContext): LookupMemo {
+        let memo = this.memos.get(ctx);
+        if (!memo) {
+            memo = new LookupMemo();
+            this.memos.set(ctx, memo);
+        }
+        return memo;
+    }
+
+    // Catalog view of the active order's progress; an empty or missing cart yields 0 of N.
+    @ResolveField()
+    async tierProgress(
+        @Ctx() ctx: RequestContext,
+        @Parent() variant: { id: string },
+    ): Promise<TierProgressVM | null> {
+        if (!ctx.activeUserId) return null;
+        const order = await this.activeOrderService.getActiveOrder(ctx, undefined);
+        const line = order?.lines.find(l => String(l.productVariantId) === String(variant.id));
+        return this.priceResolutionService.resolveTierProgress(
+            ctx,
+            variant.id,
+            { order: order ?? ({ lines: [] } as unknown as Order), quantity: line?.quantity ?? 0 },
+            this.memoFor(ctx),
+        );
+    }
 
     @ResolveField()
     async customerPrice(

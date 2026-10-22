@@ -13,6 +13,7 @@ import {
 import { useAuthStore } from '../../stores/auth';
 import { assetUrl } from '../../composables/assetUrl';
 import { useCartActions } from '../../composables/useCartActions';
+import { useTierProgressView } from '../../composables/useTierProgressView';
 import { useCatalogStore } from '../../stores/catalog';
 import { filterVisibleCrumbs } from '../../../../shared/src/collectionTree';
 import { shopApi } from '../../api/client';
@@ -43,6 +44,7 @@ const galleryImages = computed(() =>
     })),
 );
 const variant = computed(() => product.value?.variants[0]);
+const tierProgress = useTierProgressView(computed(() => variant.value?.id));
 const packagesOnly = ref(false);
 const multiplicityEnforced = ref(false);
 const nearestPack = computed(() =>
@@ -202,6 +204,7 @@ onMounted(() => {
                     :cart-line-id="cartLineFor(variant?.id)?.id"
                     :sales-unit="salesUnit"
                     :nearest-pack="nearestPack"
+                    :tier-progress="tierProgress"
                     :required-multiple="
                         multiplicityEnforced ? (variant?.customFields?.multiplicity ?? 1) : 1
                     "

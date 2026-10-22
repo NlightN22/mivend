@@ -3327,6 +3327,7 @@ export type ProductVariant = Node & {
     stockLevel: Scalars['String']['output'];
     taxCategory: TaxCategory;
     taxRateApplied: TaxRate;
+    tierProgress?: Maybe<TierProgress>;
     translations: Array<ProductVariantTranslation>;
     updatedAt: Scalars['DateTime']['output'];
 };
@@ -4639,6 +4640,28 @@ export type SearchSuggestionsQuery = {
     };
 };
 
+export type VariantTierProgressQueryVariables = Exact<{
+    ids?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
+}>;
+
+export type VariantTierProgressQuery = {
+    products: {
+        items: Array<{
+            variants: Array<{
+                id: string;
+                tierProgress?: {
+                    facetName: string;
+                    metric: TierMetric;
+                    current: number;
+                    currentPercent?: number | null;
+                    nextThreshold?: number | null;
+                    nextPercent?: number | null;
+                } | null;
+            }>;
+        }>;
+    };
+};
+
 export type MultiplicityEnforcedQueryVariables = Exact<{ [key: string]: never }>;
 
 export type MultiplicityEnforcedQuery = { multiplicityEnforced: boolean };
@@ -5899,6 +5922,28 @@ export const SearchSuggestionsDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<SearchSuggestionsQuery, SearchSuggestionsQueryVariables>;
+export const VariantTierProgressDocument = new TypedDocumentString(`
+    query VariantTierProgress($ids: [String!]) {
+  products(options: {take: 100, filter: {id: {in: $ids}}}) {
+    items {
+      variants {
+        id
+        tierProgress {
+          facetName
+          metric
+          current
+          currentPercent
+          nextThreshold
+          nextPercent
+        }
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    VariantTierProgressQuery,
+    VariantTierProgressQueryVariables
+>;
 export const MultiplicityEnforcedDocument = new TypedDocumentString(`
     query MultiplicityEnforced {
   multiplicityEnforced
