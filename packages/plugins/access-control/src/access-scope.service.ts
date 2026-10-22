@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Administrator, AdministratorService, ForbiddenError, RequestContext } from '@vendure/core';
+import { SUPER_ADMIN_ROLE_CODE } from '@vendure/common/lib/shared-constants';
 import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
 import { RoleScopeConfigService } from './role-scope-config.service';
@@ -158,6 +159,7 @@ export class AccessScopeService {
             return { kind: 'own' };
         }
         const roles = admin.user.roles;
+        if (roles.some(r => r.code === SUPER_ADMIN_ROLE_CODE)) return { kind: 'all' };
         const maxScope = await this.roleScopeConfigService.maxScopeFor(ctx, roles, resource);
         const customFields = admin.customFields as
             | { departmentId?: string | null; branchId?: string | null }

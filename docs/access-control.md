@@ -157,6 +157,8 @@ Vendure has no built-in mechanism for row-level ownership beyond binary `Permiss
 this must be implemented at the service layer, mirroring the existing `myOrders`/`myDocuments`
 pattern (`ctx.activeUserId`-scoped), just generalized to the `Administrator` side.
 
+The Vendure superadmin role always resolves to `'all'`, with no `role_access_scope` row needed.
+
 ```typescript
 type AccessScopeKind = 'own' | 'department' | 'all';
 

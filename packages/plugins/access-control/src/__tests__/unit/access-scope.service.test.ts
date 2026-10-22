@@ -56,6 +56,14 @@ describe('AccessScopeService', () => {
         });
     });
 
+    it('gives the superadmin role "all" scope without a role scope row', async () => {
+        const admin = mockAdmin('admin-0');
+        admin.user.roles = [{ code: '__super_admin_role__' }];
+        administratorService.findOneByUserId.mockResolvedValue(admin);
+        expect(await service.resolveCounterpartyScope(ctx)).toEqual({ kind: 'all' });
+        expect(roleScopeConfigService.maxScopeFor).not.toHaveBeenCalled();
+    });
+
     it('resolves "all" scope with no ownership identifiers', async () => {
         administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-3'));
         roleScopeConfigService.maxScopeFor.mockResolvedValue('all');
