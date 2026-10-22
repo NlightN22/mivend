@@ -72,7 +72,7 @@ async function bootAndSeed(): Promise<void> {
         ERP_IMPORT_TOKEN: base.ERP_IMPORT_TOKEN,
         SEED_DB_NAME: name,
     });
-    if (seedCode !== 0 && !process.env.DBG) throw new Error(`seed-erp.mjs exited with ${seedCode}`);
+    if (seedCode !== 0) throw new Error(`seed-erp.mjs exited with ${seedCode}`);
     console.log(`e2e stack: seeded in ${elapsed(seeded)}`);
     await waitForPortal(portals[0], 'storefront', E2E_PORTS.storefront);
     await waitForPortal(portals[1], 'manager', E2E_PORTS.manager);
