@@ -164,6 +164,22 @@ export class VisibilityGrantQueryService {
         return [...team, ...grantedAdmins];
     }
 
+    // History reads use the list rule, so a grant hidden from the list has no visible audit trail either.
+    async visibleIds(ctx: RequestContext, ids: string[]): Promise<Set<string>> {
+        const numeric = ids.map(Number).filter(Number.isInteger);
+        if (numeric.length === 0) return new Set();
+        const qb = this.connection
+            .getRepository(ctx, VisibilityGrant)
+            .createQueryBuilder('g')
+            .select('g.id', 'id')
+            .where('g.id IN (:...ids)', { ids: numeric });
+        if (!ctx.userHasPermissions([CustomPermission.ManageAccessControl.Permission])) {
+            await this.restrictToCaller(ctx, qb);
+        }
+        const rows = await qb.getRawMany<{ id: number }>();
+        return new Set(rows.map(r => String(r.id)));
+    }
+
     // Read back after a write by the writer itself, so no caller restriction applies.
     async findOne(ctx: RequestContext, id: ID): Promise<VisibilityGrantRow> {
         const row = await this.connection

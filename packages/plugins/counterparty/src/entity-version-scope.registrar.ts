@@ -5,6 +5,7 @@ import { EntityVersionScopeRegistry } from '@mivend/plugin-versioning';
 
 import { CounterpartyService } from './counterparty.service';
 import { TradingPointService } from './trading-point.service';
+import { VisibilityGrantQueryService } from './visibility/visibility-grant-query.service';
 
 const GRANT_MANAGERS = [
     CustomPermission.ManageVisibilityGrants.Permission,
@@ -18,13 +19,14 @@ export class EntityVersionScopeRegistrar implements OnApplicationBootstrap {
         private readonly registry: EntityVersionScopeRegistry,
         private readonly counterparties: CounterpartyService,
         private readonly tradingPoints: TradingPointService,
+        private readonly grants: VisibilityGrantQueryService,
     ) {}
 
     onApplicationBootstrap(): void {
         this.registry.register('Counterparty', (ctx, ids) => this.visibleCounterparties(ctx, ids));
         this.registry.register('TradingPoint', (ctx, ids) => this.visiblePoints(ctx, ids));
         this.registry.register('VisibilityGrant', async (ctx, ids) =>
-            ctx.userHasPermissions(GRANT_MANAGERS) ? new Set(ids) : new Set(),
+            ctx.userHasPermissions(GRANT_MANAGERS) ? this.grants.visibleIds(ctx, ids) : new Set(),
         );
     }
 
