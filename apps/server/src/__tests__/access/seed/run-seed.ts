@@ -1,6 +1,7 @@
 import { login } from '../harness/graphql';
 import { seedDocuments } from './document-seed';
 import { seedGapClients } from './gap-seed';
+import { seedHistory } from './history-seed';
 import { seedMasterData } from './erp-import-seed';
 import { seedPortalCustomers } from './portal-customer-seed';
 import { seedPriceTypes } from './price-type-seed';
@@ -20,6 +21,7 @@ export async function runAccessSeed(baseUrl: string, importToken: string): Promi
     await seedStaff(target, superadmin);
     const ids = await readSeedIds(baseUrl, superadmin);
     await seedRelations(baseUrl, superadmin, ids);
+    await seedHistory(baseUrl, superadmin, ids);
     await seedPortalCustomers(target);
     const ordering = await seedOrders(target, superadmin, ids.points);
     await seedPriceTypes(target, superadmin);

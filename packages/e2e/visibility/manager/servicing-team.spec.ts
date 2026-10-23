@@ -86,3 +86,34 @@ test.describe('22: the counterparty Team tab', () => {
         }
     });
 });
+
+test.describe('263: the counterparty History tab', () => {
+    test('the owner head sees the history, the servicing head cannot open it', async ({
+        browser,
+    }) => {
+        const path = `/customers/${ids.clients['a-point']}?tab=history`;
+        const owner = await openManagerAs(browser, 'head-a');
+        try {
+            await owner.page.goto(path);
+            const panel = owner.page.locator('.entity-history');
+            await expect(panel.getByText('Trading point', { exact: true }).first()).toBeVisible({
+                timeout: 15000,
+            });
+            await expect(panel.getByText('Customer', { exact: true }).first()).toBeVisible();
+            await shot(owner.page, 'history-tab-head-a');
+        } finally {
+            await owner.context.close();
+        }
+        const servicing = await openManagerAs(browser, 'head-b');
+        try {
+            await servicing.page.goto(path);
+            await expect(servicing.page.getByText('Customer not found')).toBeVisible({
+                timeout: 15000,
+            });
+            await expect(servicing.page.locator('.entity-history')).toHaveCount(0);
+            await shot(servicing.page, 'history-tab-head-b');
+        } finally {
+            await servicing.context.close();
+        }
+    });
+});

@@ -246,3 +246,8 @@ export const VISIBLE_GAP_BRANCHES: Record<ActorKey, ('a' | 'b')[]> = {
     'head-default': [],
     director: ['a', 'b'],
 };
+
+// Entity history (#263): ReadEntityHistory holders see versions of the counterparties they see and of
+// those counterparties' points only; a servicing branch gets no history. Grant history follows the grant list.
+export const HISTORY_READERS: ActorKey[] = ['head-a', 'head-b', 'head-default', 'director'];
+export const GRANT_HISTORY_READERS: ActorKey[] = ['head-a', 'director'];
