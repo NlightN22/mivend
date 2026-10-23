@@ -34,6 +34,7 @@ class TestNotification {
     @Column({ type: 'varchar' }) kind!: string;
     @Column({ type: 'varchar' }) sourceType!: string;
     @Column({ type: 'varchar', nullable: true }) sourceId!: string | null;
+    @Column({ type: 'varchar', nullable: true }) orderId!: string | null;
     @Column({ type: 'varchar' }) title!: string;
     @Column({ type: 'text' }) message!: string;
     @Column({ type: 'varchar', default: 'unread' }) status!: string;
