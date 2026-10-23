@@ -3,6 +3,7 @@ import type { RequestContext } from '@vendure/core';
 
 import {
     NotificationAdminResolver,
+    type AdministratorSubscriptionIdentity,
     administratorNotificationSubscriptionFilter,
 } from '../../notification-admin.resolver';
 import type { NotificationReceivedEvent } from '../../types';
@@ -85,7 +86,7 @@ describe('administratorNotificationSubscriptionFilter', () => {
         const orderBroadcast = {
             notificationReceived: { ...broadcastPayload.notificationReceived, orderId: '42' },
         };
-        const identity = (visible: string[]) => ({
+        const identity = (visible: string[]): AdministratorSubscriptionIdentity => ({
             recipientType: 'administrator',
             recipientId: 'admin-1',
             deniedBroadcastSourceTypes: [],
