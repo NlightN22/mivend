@@ -8,6 +8,8 @@ containers).
 **Resources (provisional):** 4 vCPU, 8 GB RAM (12 GB if search runs on the same host), 100 GB SSD,
 1 Gbit network.
 
+**Host setting:** `vm.max_map_count=262144` (sysctl), needed by the search engine container.
+
 **Software:** a current LTS Linux, Docker Engine 25+ with the Compose plugin v2.
 
 **Network:**
@@ -19,7 +21,7 @@ containers).
   ports will be sent separately) and to the container registry;
 - SSH for the deployment engineers from a fixed address range.
 
-**Backups:** a target for nightly database dumps and a weekly copy of two data volumes (about the
+**Backups:** a target for nightly database dumps (produced by `make prod-backup` on the host) and a weekly copy of two data volumes (about the
 size of the data plus 20%), retention 14 days; a restore test once after setup.
 
 **Monitoring:** host CPU/RAM/disk alerts, disk above 80%, and a check of the portal URLs.

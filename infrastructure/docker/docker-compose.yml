@@ -51,10 +51,11 @@ x-server-env: &server-env
     ERP_IMPORT_ENABLED: 'false'
 
 x-server: &server
-    image: ghcr.io/nlightn22/mivend-server:${IMAGE_TAG:-latest}
+    image: ghcr.io/nlightn22/mivend-server:${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}
     environment: *server-env
     volumes:
         - document-pdfs:/data/document-pdfs
+        - ${KAFKA_TLS_DIR:-../kafka-tls}:/run/kafka-tls:ro
     depends_on:
         postgres:
             condition: service_healthy
@@ -66,7 +67,7 @@ x-server: &server
     logging: *logging
 
 services:
-    # Runs to completion before server/worker start — see docs/environments.md "Migrations".
+    # server and workers wait for it to finish (depends_on), see docs/environments.md "Migrations".
     migrate:
         <<: *server
         command: ['node', 'dist/migration.js', 'run']
@@ -74,6 +75,15 @@ services:
 
     server:
         <<: *server
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+            postgres:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+            garage:
+                condition: service_healthy
         environment:
             <<: *server-env
             PORT: 3000
@@ -98,6 +108,15 @@ services:
 
     worker:
         <<: *server
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+            postgres:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+            garage:
+                condition: service_healthy
         command: ['node', 'dist/worker.js']
         deploy:
             resources:
@@ -106,6 +125,15 @@ services:
 
     worker-email:
         <<: *server
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+            postgres:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+            garage:
+                condition: service_healthy
         command: ['node', 'dist/worker-email.js']
         deploy:
             resources:
@@ -187,35 +215,50 @@ services:
     # Production builds served via nginx (issue #115). Publishing these ports is decided by the
     # publish-service workflow, not here.
     storefront:
-        image: ghcr.io/nlightn22/mivend-storefront:${IMAGE_TAG:-latest}
+        image: ghcr.io/nlightn22/mivend-storefront:${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}
         environment:
             API_TARGET: http://server:3000
         ports:
             - '${STOREFRONT_BIND_ADDRESS:-127.0.0.1}:${STOREFRONT_PORT:-8004}:80'
         depends_on:
             - server
+        healthcheck:
+            test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+            interval: 30s
+            timeout: 5s
+            retries: 3
         restart: unless-stopped
         logging: *logging
 
     manager:
-        image: ghcr.io/nlightn22/mivend-manager:${IMAGE_TAG:-latest}
+        image: ghcr.io/nlightn22/mivend-manager:${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}
         environment:
             API_TARGET: http://server:3000
         ports:
             - '${MANAGER_BIND_ADDRESS:-127.0.0.1}:${MANAGER_PORT:-8005}:80'
         depends_on:
             - server
+        healthcheck:
+            test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+            interval: 30s
+            timeout: 5s
+            retries: 3
         restart: unless-stopped
         logging: *logging
 
     dashboard:
-        image: ghcr.io/nlightn22/mivend-dashboard:${IMAGE_TAG:-latest}
+        image: ghcr.io/nlightn22/mivend-dashboard:${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}
         environment:
             API_TARGET: http://server:3000
         ports:
             - '${DASHBOARD_BIND_ADDRESS:-127.0.0.1}:${DASHBOARD_PORT:-8006}:80'
         depends_on:
             - server
+        healthcheck:
+            test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+            interval: 30s
+            timeout: 5s
+            retries: 3
         restart: unless-stopped
         logging: *logging
 

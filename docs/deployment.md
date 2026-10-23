@@ -53,13 +53,18 @@ Nothing is configured inside a container by hand.
   `restart: unless-stopped`.
 - **Limits**: memory limits for server, workers and postgres are variables (`*_MEM_LIMIT`).
 - **Logs**: `json-file`, 10 MB x 5 files per service.
+- **Kafka TLS**: put the CA file in `KAFKA_TLS_DIR` (mounted at `/run/kafka-tls`) and set `INTEGRATION_KAFKA_CA_PATH=/run/kafka-tls/<file>`.
 - **First deploy**: `make prod-up` (starts postgres/rabbitmq/garage, runs migrations, starts the
   rest), then once `make prod-init-storage`.
 - **Upgrade**: set `IMAGE_TAG`, pull, `make prod-up`. It runs `migrate` (plain, forward-only) before
-  the new server starts; if it fails the command stops and the old containers keep running. Never
-  use a bare `up -d` for an upgrade: nothing in compose orders it after `migrate`.
+  the new server starts; if it fails the command stops and the old containers keep running. `server` and the workers also `depends_on` the completed `migrate`, so even a plain `up -d` or a host reboot never boots them against an unmigrated schema.
+- **Containers run as root** (server images ship Chromium for PDFs; nginx master processes are root as in the
+  official image). Accepted for the first deployment; hardening to a non-root user is a follow-up.
+- **Search**: `SEARCH_BACKEND` and `COMPOSE_PROFILES` must agree (`internal` needs the `internal-search`
+  profile; `external` must not have it). Elasticsearch needs `vm.max_map_count>=262144` on the host.
+- **Passwords** go into URLs: use hex or alphanumeric values only (`openssl rand -hex 16`).
 - **Backups** (volumes `postgres-data`, `garage-data`, `document-pdfs`, `rabbitmq-data`):
-    - postgres: `pg_dump -Fc` nightly via `docker compose exec -T postgres pg_dump -U $POSTGRES_USER -Fc $POSTGRES_DB`, copied off the host;
+    - postgres: `make prod-backup` nightly (dump into `./backups`, copy it off the host), `make prod-restore-check` loads the latest dump into a scratch database;
     - garage and `document-pdfs`: stop-free file copy of the volume (`docker run --rm -v <vol>:/v -v $PWD:/b alpine tar czf /b/<vol>.tgz -C /v .`);
     - rabbitmq holds only in-flight sync messages; back it up only if a branch is offline.
     - Restore is tested by loading the dump into a scratch postgres before it is trusted.

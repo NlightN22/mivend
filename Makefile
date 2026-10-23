@@ -15,7 +15,7 @@ export
         e2e-dev e2e-stack-build e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
         docker-build docker-push \
         preview-build preview-up preview-down \
-        prod-up prod-init-storage prod-down \
+        prod-up prod-init-storage prod-backup prod-restore-check prod-down \
         dev dev-fresh dev-reset dev-branch dev-staging-integration seed seed-approvals seed-payment-refunds \
         seed-customer-detail seed-order-edit-states seed-all \
         verify-branch-scope \
@@ -317,6 +317,20 @@ prod-init-storage:
 	set -a; . infrastructure/docker/.env.production; set +a; \
 	GARAGE_CONTAINER=$$($(COMPOSE_PROD) ps -q garage) \
 	infrastructure/scripts/garage-init.sh "$$S3_BUCKET" "$$S3_ACCESS_KEY_ID" "$$S3_SECRET_ACCESS_KEY"
+
+# Nightly dump to ./backups (copy it off the host); restore-check loads the latest dump into a scratch database.
+prod-backup:
+	mkdir -p backups
+	set -a; . infrastructure/docker/.env.production; set +a; \
+	$(COMPOSE_PROD) exec -T postgres pg_dump -U "$$POSTGRES_USER" -Fc "$$POSTGRES_DB" > backups/mivend-$$(date +%Y%m%d-%H%M%S).dump
+
+prod-restore-check:
+	set -a; . infrastructure/docker/.env.production; set +a; \
+	f=$$(ls -t backups/*.dump | head -1); echo "restoring $$f into scratch database"; \
+	$(COMPOSE_PROD) exec -T postgres sh -c "dropdb -U $$POSTGRES_USER --if-exists restore_check && createdb -U $$POSTGRES_USER restore_check" && \
+	$(COMPOSE_PROD) exec -T postgres pg_restore -U "$$POSTGRES_USER" -d restore_check < $$f && \
+	$(COMPOSE_PROD) exec -T postgres psql -U "$$POSTGRES_USER" -d restore_check -tAc "select count(*) || ' tables restored' from information_schema.tables where table_schema='public'"; \
+	$(COMPOSE_PROD) exec -T postgres dropdb -U "$$POSTGRES_USER" restore_check
 
 prod-down:
 	$(COMPOSE_PROD) down

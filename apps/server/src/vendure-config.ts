@@ -106,6 +106,12 @@ if (
 ) {
     throw new Error('COOKIE_SECRET must be a real secret in production (same for every process)');
 }
+if (
+    process.env.NODE_ENV === 'production' &&
+    process.env.SUPERADMIN_PASSWORD?.startsWith('change-me')
+) {
+    throw new Error('SUPERADMIN_PASSWORD is still the example placeholder');
+}
 
 // AcquiringPlugin already runs on every instance via DocumentsPlugin's module import.
 // Unconditional .init({}) keeps AcquiringPluginOptions defined even where the array omits it.
