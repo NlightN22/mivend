@@ -40,6 +40,25 @@ export interface VisibleOrdersSql {
     params: Record<string, unknown>;
 }
 
+// The order scope's parameters join this query's own; a shared name would silently rebind one.
+const OWN_LIST_PARAMS = [
+    'ownType',
+    'recipientId',
+    'broadcastType',
+    'gatedSourceTypes',
+    'allowedGatedSourceTypes',
+    'recipientType',
+    'status',
+    'search',
+];
+function assertNoParamClash(params: Record<string, unknown>): void {
+    const clash = Object.keys(params).filter(name => OWN_LIST_PARAMS.includes(name));
+    if (clash.length > 0)
+        throw new Error(
+            `Order scope parameter names clash with notifications: ${clash.join(', ')}`,
+        );
+}
+
 const DEFAULT_LIST_TAKE = 50;
 const MAX_LIST_TAKE = 100;
 
@@ -66,6 +85,8 @@ export class NotificationService {
                     sourceId: input.sourceId,
                     recipientType: input.recipientType,
                     recipientId: recipientId ?? IsNull(),
+                    // Part of the key: notices about two orders never merge into one row (#263).
+                    orderId: input.orderId ?? IsNull(),
                 },
                 order: { createdAt: 'DESC' },
             });
@@ -78,7 +99,6 @@ export class NotificationService {
             notification.kind = input.kind;
             notification.title = input.title;
             notification.message = input.message;
-            notification.orderId = input.orderId ?? notification.orderId;
             notification.status = 'unread';
         } else {
             notification = new Notification({
@@ -166,6 +186,7 @@ export class NotificationService {
                                     );
                                 }
                                 if (visibleOrders) {
+                                    assertNoParamClash(visibleOrders.params);
                                     broadcastQb.andWhere(
                                         `(notification.orderId IS NULL OR notification.orderId IN (${visibleOrders.sql}))`,
                                         visibleOrders.params,

@@ -45,6 +45,15 @@ const baseInput = {
 };
 
 describe('NotificationService.create (upsert-by-source)', () => {
+    it('keys the dedupe on the order, so two orders of one source type stay two rows (#263)', async () => {
+        const { service, findOne, save } = makeService(null);
+        await service.create({} as never, { ...baseInput, orderId: '1' });
+        await service.create({} as never, { ...baseInput, orderId: '2' });
+        expect(findOne.mock.calls.map(c => c[0].where.orderId)).toEqual(['1', '2']);
+        expect(save).toHaveBeenCalledTimes(2);
+        expect(save.mock.calls.map(c => c[0].orderId)).toEqual(['1', '2']);
+    });
+
     it('creates a new row when no notification exists for this source', async () => {
         const { service, save, publish } = makeService(null);
 

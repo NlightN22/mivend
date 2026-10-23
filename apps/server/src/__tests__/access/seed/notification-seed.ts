@@ -3,7 +3,7 @@ import { Client } from 'pg';
 import { testDbConnection } from '../harness/test-database';
 import { ORDERS, notificationTitle, type OrderKey } from './fixture-plan';
 
-// Broadcasts come only from timers and inbox handlers no API can drive, so the rows are inserted directly.
+// Only timers and inbound handlers create broadcasts, so they are inserted directly; throwaway access DB only.
 export async function seedNotifications(
     database: string,
     orders: Record<OrderKey, { id: string }>,
