@@ -387,8 +387,8 @@ Vendure promotion, not part of the line's list price:
   siblings' weight, amount and quantity (pinned by a unit test).
 - The bootstrap re-enables the promotion at every boot if staff disabled it (warn log): that is intended, a disabled
   promotion silently removes every order-dependent discount.
-- Size: the evaluation is linear, about 60 ms per line per mutation (measured on the local contour: 41 lines add
-  ~2.5 s, adjust ~2.4 s, read ~1.9 s). Carts above roughly 100 lines are not measured; batch the rule queries
-  per order before supporting them.
+- Size: before #271 the evaluation was linear, about 60 ms per line per mutation (41 lines: add ~2.5 s, adjust ~2.4 s,
+  read ~1.9 s). Now `preloadOrderLookups` seeds the memo with one query each for variants (facets, weight, erp id),
+  promo rules and base prices, so the per-line pass only reads memory. A 200-line cart is not yet measured on a contour.
 - Progress (`tierProgress`) is derived from the order's quantities, independent of prices.
 - Catalog progress: `ProductVariant.tierProgress` reads the caller's own active order (null for a guest, 0 of N for an empty cart). It considers only the nearest unreached rung, so a rung weaker than the current discount hides a stronger later one; the storefront also hides the ladder in that case (`useTierProgressView`).

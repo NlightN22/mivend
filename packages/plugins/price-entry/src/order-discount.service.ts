@@ -41,6 +41,7 @@ export class OrderDiscountService {
         // Before any promotion of this pass: the persisted total still carries the previous discounts.
         const documentAmount = order.lines.reduce((sum, l) => sum + l.linePriceWithTax, 0);
         const memo = new LookupMemo();
+        await this.priceResolution.preload(ctx, order, memo);
         for (const line of order.lines) {
             if (hasManualPrice(line)) continue;
             const { customerPrice } = await this.priceResolution.resolve(

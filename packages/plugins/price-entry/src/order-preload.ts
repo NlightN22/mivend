@@ -1,0 +1,105 @@
+import {
+    Order,
+    ProductVariant,
+    RequestContext,
+    TransactionalConnection,
+    translateEntity,
+} from '@vendure/core';
+import { In } from 'typeorm';
+
+import { DiscountRule } from './discount-rule.entity';
+import { VariantFacetValue } from './discount-rule.service';
+import { LookupMemo } from './lookup-memo';
+import { PriceEntryService } from './price-entry.service';
+
+interface VariantFacetValueWithName extends VariantFacetValue {
+    name: string;
+}
+
+export interface VariantFacetsAndWeight {
+    facetValues: VariantFacetValueWithName[];
+    weight: number;
+}
+
+// erp-import assigns facet values at the Product level, not the variant, so both levels are loaded.
+export const VARIANT_FACET_RELATIONS = [
+    'facetValues',
+    'facetValues.facet',
+    'facetValues.translations',
+    'product',
+    'product.facetValues',
+    'product.facetValues.facet',
+    'product.facetValues.translations',
+];
+
+export function toFacetsAndWeight(
+    ctx: RequestContext,
+    variant: ProductVariant,
+): VariantFacetsAndWeight {
+    const all = [...variant.facetValues, ...(variant.product?.facetValues ?? [])];
+    return {
+        facetValues: all.map(fv => ({
+            facetCode: fv.facet.code,
+            valueCode: fv.code,
+            name: translateEntity(fv, ctx.languageCode).name,
+        })),
+        weight: variant.customFields.weight ?? 0,
+    };
+}
+
+// Seeds the memo with one query per kind for the whole order, so the per-line pass finds every lookup cached.
+export async function preloadOrderLookups(
+    connection: TransactionalConnection,
+    priceEntryService: PriceEntryService,
+    ctx: RequestContext,
+    order: Order,
+    memo: LookupMemo,
+): Promise<void> {
+    const variantIds = [...new Set(order.lines.map(l => String(l.productVariantId)))];
+    if (variantIds.length === 0) return;
+
+    const variants = await connection.getRepository(ctx, ProductVariant).find({
+        where: { id: In(variantIds) },
+        relations: VARIANT_FACET_RELATIONS,
+    });
+    const erpIds = new Set<string>();
+    for (const variant of variants) {
+        const id = String(variant.id);
+        const erpId = variant.product?.customFields?.externalId ?? '';
+        memo.set(`fw:${id}`, toFacetsAndWeight(ctx, variant));
+        memo.set(`erp:${id}`, erpId);
+        if (erpId) erpIds.add(erpId);
+    }
+
+    if (erpIds.size > 0) {
+        const now = new Date();
+        const rules = await connection
+            .getRepository(ctx, DiscountRule)
+            .createQueryBuilder('dr')
+            .where(
+                '(dr.triggerProductErpId IN (:...erpIds) OR dr.giftProductErpId IN (:...erpIds))',
+                {
+                    erpIds: [...erpIds],
+                },
+            )
+            .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
+            .getMany();
+        for (const erpId of erpIds) {
+            memo.set(
+                `promo:${erpId}`,
+                rules.filter(r => r.triggerProductErpId === erpId || r.giftProductErpId === erpId),
+            );
+        }
+    }
+
+    if (order.customerId) {
+        const code = await priceEntryService.getPriceTypeCodeForCustomer(
+            ctx,
+            String(order.customerId),
+        );
+        if (code) {
+            const prices = await priceEntryService.getForVariants(ctx, variantIds, code);
+            for (const id of variantIds) memo.set(`price:${id}:${code}`, prices.get(id) ?? null);
+        }
+    }
+}

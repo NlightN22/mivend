@@ -5,7 +5,6 @@ import {
     ProductVariant,
     RequestContext,
     TransactionalConnection,
-    translateEntity,
 } from '@vendure/core';
 import { Counterparty, CounterpartyService } from '@mivend/plugin-counterparty';
 import { BranchSettingsService } from '@mivend/plugin-access-control';
@@ -16,6 +15,12 @@ import { PromoDiscountRuleService } from './promo-discount-rule.service';
 import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.service';
 import { getProductErpId, buildProductErpQuantities } from './promo-product-lookup';
 import { LookupMemo, memoized } from './lookup-memo';
+import {
+    VARIANT_FACET_RELATIONS,
+    VariantFacetsAndWeight,
+    preloadOrderLookups,
+    toFacetsAndWeight,
+} from './order-preload';
 import './types';
 
 export interface ResolvedPrice {
@@ -51,15 +56,6 @@ interface FacetAggregates {
     amountByFacet: Map<string, number>;
 }
 
-interface VariantFacetValueWithName extends VariantFacetValue {
-    name: string;
-}
-
-interface VariantFacetsAndWeight {
-    facetValues: VariantFacetValueWithName[];
-    weight: number;
-}
-
 function facetKey(facetCode: string, valueCode: string): string {
     return `${facetCode}:${valueCode}`;
 }
@@ -76,6 +72,10 @@ export class PriceResolutionService {
         private promoDiscountRuleService: PromoDiscountRuleService,
         private counterpartyDiscountRuleService: CounterpartyDiscountRuleService,
     ) {}
+
+    preload(ctx: RequestContext, order: Order, memo: LookupMemo): Promise<void> {
+        return preloadOrderLookups(this.connection, this.priceEntryService, ctx, order, memo);
+    }
 
     async resolve(
         ctx: RequestContext,
@@ -299,29 +299,11 @@ export class PriceResolutionService {
         ctx: RequestContext,
         variantId: string,
     ): Promise<VariantFacetsAndWeight> {
-        // erp-import assigns facet values at the Product level, not the variant, so merge both levels
-        // or a rule would miss facets assigned to either one.
         const variant = await this.connection.getRepository(ctx, ProductVariant).findOne({
             where: { id: variantId },
-            relations: [
-                'facetValues',
-                'facetValues.facet',
-                'facetValues.translations',
-                'product',
-                'product.facetValues',
-                'product.facetValues.facet',
-                'product.facetValues.translations',
-            ],
+            relations: VARIANT_FACET_RELATIONS,
         });
-        if (!variant) return { facetValues: [], weight: 0 };
-        const all = [...variant.facetValues, ...(variant.product?.facetValues ?? [])];
-        return {
-            facetValues: all.map(fv => {
-                const translated = translateEntity(fv, ctx.languageCode);
-                return { facetCode: fv.facet.code, valueCode: fv.code, name: translated.name };
-            }),
-            weight: variant.customFields.weight ?? 0,
-        };
+        return variant ? toFacetsAndWeight(ctx, variant) : { facetValues: [], weight: 0 };
     }
 
     // No order context here: rungs are informational and must not imply a price not yet earned.

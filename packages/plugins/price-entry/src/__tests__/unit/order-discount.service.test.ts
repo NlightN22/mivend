@@ -41,7 +41,11 @@ function setup(customerPriceByVariant: Record<string, number | null>) {
         customerPrice: customerPriceByVariant[variantId] ?? null,
         compareAtPrice: null,
     }));
-    const service = new OrderDiscountService({ resolve } as unknown as PriceResolutionService);
+    const preload = vi.fn(async () => undefined);
+    const service = new OrderDiscountService({
+        resolve,
+        preload,
+    } as unknown as PriceResolutionService);
     return { service, resolve };
 }
 

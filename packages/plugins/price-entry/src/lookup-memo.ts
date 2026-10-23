@@ -10,6 +10,10 @@ export class LookupMemo {
         }
         return hit;
     }
+
+    set<T>(key: string, value: T): void {
+        this.values.set(key, Promise.resolve(value));
+    }
 }
 
 export function memoized<T>(
