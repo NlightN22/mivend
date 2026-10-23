@@ -21,7 +21,7 @@ env file (`INSTANCE_TYPE`/`INSTANCE_ID`), never a different file.
 | `storefront`    | yes      | Customer portal (nginx, static bundle, proxies `/shop-api`).                    |
 | `manager`       | yes      | Manager portal (nginx).                                                         |
 | `dashboard`     | optional | Vendure Dashboard for staff; skip with `up -d <services>` if not needed.        |
-| `elasticsearch` | optional | Only for `SEARCH_BACKEND=internal` (`--profile internal-search`).               |
+| `elasticsearch` | optional | Only for `SEARCH_BACKEND=internal` (`COMPOSE_PROFILES=internal-search`).               |
 
 Central vs branch: same images and file. Central additionally sets the `INTEGRATION_*` variables
 (the ERP exchange runs only there, `INTEGRATION_KAFKA_ENABLED=true`); a branch leaves them unset
@@ -40,6 +40,7 @@ Nothing is configured inside a container by hand.
   pipeline's secret store); no image contains one. The app images are built with the registry
   token as a BuildKit secret (`--secret id=npmrc`), which never reaches a layer.
 - `INSTANCE_NUMBER_CODE` (exactly 3 digits, unique per instance) is required: the server refuses to boot without it.
+- `SEARCH_BACKEND` is required (no default): `internal` needs `COMPOSE_PROFILES=internal-search`, otherwise the workers log a failed Elasticsearch bootstrap; `external` needs `SEARCH_SERVICE_URL` and `SEARCH_SERVICE_API_KEY`.
 - **Optional** variables have the default shown in the example file.
 - Dead variables removed from the example: none were read by code; missing ones added
   (`INSTANCE_ID`, `RABBITMQ_URL`, `S3_*`, `GARAGE_RPC_SECRET`, search, `INTEGRATION_*`).

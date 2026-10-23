@@ -28,7 +28,7 @@ x-server-env: &server-env
     S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?S3_ACCESS_KEY_ID is required}
     S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?S3_SECRET_ACCESS_KEY is required}
     DOCUMENT_PDF_DIR: /data/document-pdfs
-    SEARCH_BACKEND: ${SEARCH_BACKEND:-internal}
+    SEARCH_BACKEND: ${SEARCH_BACKEND:?SEARCH_BACKEND must be internal or external}
     ELASTICSEARCH_HOST: http://elasticsearch:9200
     SEARCH_SERVICE_URL: ${SEARCH_SERVICE_URL:-}
     SEARCH_SERVICE_API_KEY: ${SEARCH_SERVICE_API_KEY:-}
@@ -166,7 +166,7 @@ services:
         restart: unless-stopped
         logging: *logging
 
-    # Only for SEARCH_BACKEND=internal: start with `--profile internal-search`.
+    # Only for SEARCH_BACKEND=internal: enabled by COMPOSE_PROFILES=internal-search in the env file.
     elasticsearch:
         image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
         profiles: ['internal-search']

@@ -35,6 +35,7 @@ nginx (4.4 s). The host was shared (load average 4-14), so CPU figures are indic
 | postgres     | 5%       | 54 MiB   | 24%             | 76 MiB   |
 | rabbitmq     | 1%       | 118 MiB  | 105% (brief)    | 169 MiB  |
 | garage       | 0%       | 7 MiB    | 6%              | 7 MiB    |
+| elasticsearch (optional) | - | 986 MiB (heap 512m) | - | - |
 | storefront / manager / dashboard (nginx) | 0% | 7 MiB each | 10% | 9 MiB |
 
 Disk after first start: postgres volume 75 MB, garage 1.3 MB, rabbitmq 0.2 MB.
@@ -49,7 +50,7 @@ Elasticsearch. Postgres and server memory will grow with the catalog; the limits
 
 server 2 GB + worker 2 GB + worker-email 1 GB + postgres 2 GB + rabbitmq ~0.5 GB + garage and
 three nginx ~0.4 GB (+ elasticsearch 1 GB if the internal search backend is used) + OS 1 GB:
-about 9-10 GB worst case. Observed idle total is under 1 GB. Provisional request: **4 vCPU,
+about 9-10 GB worst case. Observed idle total is under 1 GB (about 2 GB with Elasticsearch). Provisional request: **4 vCPU,
 8 GB RAM (12 GB with Elasticsearch), 100 GB SSD** (images about 4 GB, database and photos grow
 from there, plus room for dumps and log rotation).
 
