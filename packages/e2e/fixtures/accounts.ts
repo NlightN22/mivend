@@ -3,7 +3,7 @@ export const SUPERADMIN = {
     password: process.env.SUPERADMIN_PASSWORD ?? 'superadmin',
 };
 
-// Not re-seeded here: relies on `make seed` having run first (prerequisite for e2e).
+// Created by seed-erp.mjs in the e2e stack, not here.
 // Logs in only; accounts match .tests/accounts.md, one per manager-portal KPI variant.
 export const MANAGER_ACCOUNTS = {
     operator: { username: 'ivan.operator@mivend.dev', password: 'Password123!' },

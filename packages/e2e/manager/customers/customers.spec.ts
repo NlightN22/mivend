@@ -89,6 +89,8 @@ test('customer detail Orders tab shows the seeded e2e order', async ({ page }) =
     await openE2eCustomerDetail(page);
 
     await page.getByRole('button', { name: 'Orders' }).click();
+    // Orders other specs place and cancel push the seeded one off the first page.
+    await page.getByPlaceholder('Search orders…').fill(order.displayCode);
     await expect(page.getByText(order.displayCode)).toBeVisible({ timeout: 15000 });
 });
 
@@ -119,8 +121,8 @@ test('customer detail Documents tab shows the customer document list', async ({ 
     await openE2eCustomerDetail(page);
 
     await page.getByRole('button', { name: 'Documents' }).click();
-    // Document seeds live in other specs, so the row count here is not stable.
-    // Assert that real rows render instead of matching a specific count.
+    // Newer proforma invoices push the seeded contract off the first page, so search for it.
+    await page.getByPlaceholder('Search documents…').fill('E2E-CONTRACT-001');
     await expect(page.getByText('contract').first()).toBeVisible({ timeout: 15000 });
 });
 
@@ -153,6 +155,8 @@ test('reactivating the seeded inactive trading point flips its badge to Active (
 
     await expect(row.getByText('Active', { exact: true })).toBeVisible({ timeout: 15000 });
     await expect(row.getByRole('button', { name: 'Reactivate' })).toHaveCount(0);
+    // order-delivery.spec.ts relies on this point staying inactive.
+    await forceInactiveTradingPoint(page);
 });
 
 // ReadEntityHistory is leadership-only; see seed-access-roles.mjs for role grants.

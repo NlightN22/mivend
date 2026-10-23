@@ -827,6 +827,142 @@ async function main() {
         for (const e of discountResult.errors) console.warn(`    [${e.index}] ${e.message}`);
     }
 
+    // Org structure first: counterparties get their branch from the department mapping on import.
+    const departments = [
+        { erpId: 'dept-sales', name: 'Sales department' },
+        { erpId: 'dept-purchasing', name: 'Purchasing department' },
+    ];
+    console.log(`Sending ${departments.length} departments...`);
+    const departmentResult = await postBatch(
+        `seed-departments-${run}`,
+        departments.map(data => ({ type: 'department', data })),
+    );
+    console.log(
+        `  → status=${departmentResult.status} processed=${departmentResult.processed} failed=${departmentResult.failed}`,
+    );
+    if (departmentResult.errors?.length > 0) {
+        for (const e of departmentResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    const branches = [
+        { erpId: 'branch-central', name: 'Central branch' },
+        // Second branch (user request, 2026-09-05) so branch-scoped UI/flows (Settings >
+        // Branches select, warehouse curation, BranchSettings per branch) have more than one
+        // real row to exercise locally — see ensureBranchSettingsSeeded below for its own
+        // BranchSettings row. Warehouses come from the erp-import `warehouse` record type
+        // (see packages/e2e/fixtures/seed.ts for the binding the e2e order flow needs).
+        { erpId: 'branch-east', name: 'East branch' },
+    ];
+    console.log(`Sending ${branches.length} branches...`);
+    const branchResult = await postBatch(
+        `seed-branches-${run}`,
+        branches.map(data => ({ type: 'branch', data })),
+    );
+    console.log(
+        `  → status=${branchResult.status} processed=${branchResult.processed} failed=${branchResult.failed}`,
+    );
+    if (branchResult.errors?.length > 0) {
+        for (const e of branchResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    const warehouses = [
+        {
+            erpId: 'wh-central',
+            name: 'Central warehouse',
+            branchErpId: 'branch-central',
+            isActive: true,
+            stockLocationName: 'Default Stock Location',
+        },
+    ];
+    console.log(`Sending ${warehouses.length} warehouses...`);
+    const warehouseResult = await postBatch(
+        `seed-warehouses-${run}`,
+        warehouses.map(data => ({ type: 'warehouse', data })),
+    );
+    console.log(
+        `  → status=${warehouseResult.status} processed=${warehouseResult.processed} failed=${warehouseResult.failed}`,
+    );
+    if (warehouseResult.errors?.length > 0) {
+        for (const e of warehouseResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    const positions = [
+        { erpId: 'pos-operator', name: 'Sales operator', isActive: true },
+        { erpId: 'pos-manager', name: 'Sales manager', isActive: true },
+        { erpId: 'pos-head', name: 'Head of sales', isActive: true },
+        { erpId: 'pos-director', name: 'General director', isActive: true },
+    ];
+    console.log(`Sending ${positions.length} positions...`);
+    const positionResult = await postBatch(
+        `seed-positions-${run}`,
+        positions.map(data => ({ type: 'position', data })),
+    );
+    console.log(
+        `  → status=${positionResult.status} processed=${positionResult.processed} failed=${positionResult.failed}`,
+    );
+    if (positionResult.errors?.length > 0) {
+        for (const e of positionResult.errors) console.warn(`    [${e.index}] ${e.message}`);
+    }
+
+    // [code, rank, name, description, customerGroup, warehouseStarted, shipped, delivered, cancelled]
+    const orderStatuses = [
+        ['UNDER_APPROVAL', 3, 'Under approval', 'Waiting for approval', 'pending', 0, 0, 0, 0],
+        ['APPROVED', 4, 'Approved', 'Order approved by the manager', 'confirmed', 0, 0, 0, 0],
+        ['PICKING', 5, 'Picking', 'Order is being picked', 'confirmed', 1, 0, 0, 0],
+        ['SHIPPING', 6, 'Shipped', 'Order shipped from the warehouse', 'in_transit', 1, 1, 0, 0],
+        ['DELIVERING', 7, 'Delivering', 'Order is on its way', 'in_transit', 1, 1, 0, 0],
+        ['DELIVERED', 8, 'Delivered', 'Order delivered', 'delivered', 1, 1, 1, 0],
+        ['CANCELLED', 0, 'Cancelled', 'Order cancelled', 'cancelled', 0, 0, 0, 1],
+    ].map(
+        ([
+            code,
+            rank,
+            name,
+            description,
+            customerGroup,
+            started,
+            shipped,
+            delivered,
+            cancelled,
+        ]) => ({
+            code,
+            version: '1',
+            name,
+            rank,
+            terminal: delivered === 1 || cancelled === 1,
+            customerVisible: true,
+            description,
+            customerGroup,
+            warehouseStarted: started === 1,
+            shipped: shipped === 1,
+            delivered: delivered === 1,
+            cancelled: cancelled === 1,
+        }),
+    );
+    console.log(`Sending ${orderStatuses.length} order statuses...`);
+    const orderStatusResult = await postBatch(
+        `seed-order-statuses-${run}`,
+        orderStatuses.map(data => ({ type: 'orderStatus', data })),
+    );
+    console.log(
+        `  → status=${orderStatusResult.status} processed=${orderStatusResult.processed} failed=${orderStatusResult.failed}`,
+    );
+
+    // Synthetic department -> branch mapping (#65); employees and counterparties inherit the branch from it.
+    const departmentBranches = [{ departmentErpId: 'dept-sales', branchErpId: 'branch-central' }];
+    console.log(`Sending ${departmentBranches.length} department-branch mappings...`);
+    const departmentBranchResult = await postBatch(
+        `seed-department-branches-${run}`,
+        departmentBranches.map(data => ({ type: 'departmentBranch', data })),
+    );
+    console.log(
+        `  → status=${departmentBranchResult.status} processed=${departmentBranchResult.processed} failed=${departmentBranchResult.failed}`,
+    );
+    if (departmentBranchResult.errors?.length > 0) {
+        for (const e of departmentBranchResult.errors)
+            console.warn(`    [${e.index}] ${e.message}`);
+    }
+
     const customers = [
         {
             email: 'ivan@autoservice-nord.example',
@@ -1277,6 +1413,14 @@ async function main() {
             address: 'Warehouse Zone, 8',
             isActive: true,
         },
+        // The checkout buyers need a point of their own: an order takes its branch from it.
+        ...['cnt-credit-limited', 'cnt-prepay'].map(counterpartyErpId => ({
+            erpId: `tp-${counterpartyErpId}`,
+            counterpartyErpId,
+            name: 'Pickup point',
+            address: 'Depot Rd, 1',
+            isActive: true,
+        })),
     ];
     console.log(`Sending ${tradingPoints.length} trading points...`);
     const tpResult = await postBatch(
@@ -1336,141 +1480,6 @@ async function main() {
     // Administrators) — see docs/ai/manager-portal-concept.md §3.2.2. Employee records
     // match by email and never create the Administrator account itself (see
     // ensureOrgStructureAdmins() above and EmployeeService in plugin-access-control).
-    const departments = [
-        { erpId: 'dept-sales', name: 'Sales department' },
-        { erpId: 'dept-purchasing', name: 'Purchasing department' },
-    ];
-    console.log(`Sending ${departments.length} departments...`);
-    const departmentResult = await postBatch(
-        `seed-departments-${run}`,
-        departments.map(data => ({ type: 'department', data })),
-    );
-    console.log(
-        `  → status=${departmentResult.status} processed=${departmentResult.processed} failed=${departmentResult.failed}`,
-    );
-    if (departmentResult.errors?.length > 0) {
-        for (const e of departmentResult.errors) console.warn(`    [${e.index}] ${e.message}`);
-    }
-
-    const branches = [
-        { erpId: 'branch-central', name: 'Central branch' },
-        // Second branch (user request, 2026-09-05) so branch-scoped UI/flows (Settings >
-        // Branches select, warehouse curation, BranchSettings per branch) have more than one
-        // real row to exercise locally — see ensureBranchSettingsSeeded below for its own
-        // BranchSettings row. Warehouses come from the erp-import `warehouse` record type
-        // (see packages/e2e/fixtures/seed.ts for the binding the e2e order flow needs).
-        { erpId: 'branch-east', name: 'East branch' },
-    ];
-    console.log(`Sending ${branches.length} branches...`);
-    const branchResult = await postBatch(
-        `seed-branches-${run}`,
-        branches.map(data => ({ type: 'branch', data })),
-    );
-    console.log(
-        `  → status=${branchResult.status} processed=${branchResult.processed} failed=${branchResult.failed}`,
-    );
-    if (branchResult.errors?.length > 0) {
-        for (const e of branchResult.errors) console.warn(`    [${e.index}] ${e.message}`);
-    }
-
-    const warehouses = [
-        {
-            erpId: 'wh-central',
-            name: 'Central warehouse',
-            branchErpId: 'branch-central',
-            isActive: true,
-            stockLocationName: 'Default Stock Location',
-        },
-    ];
-    console.log(`Sending ${warehouses.length} warehouses...`);
-    const warehouseResult = await postBatch(
-        `seed-warehouses-${run}`,
-        warehouses.map(data => ({ type: 'warehouse', data })),
-    );
-    console.log(
-        `  → status=${warehouseResult.status} processed=${warehouseResult.processed} failed=${warehouseResult.failed}`,
-    );
-    if (warehouseResult.errors?.length > 0) {
-        for (const e of warehouseResult.errors) console.warn(`    [${e.index}] ${e.message}`);
-    }
-
-    const positions = [
-        { erpId: 'pos-operator', name: 'Sales operator', isActive: true },
-        { erpId: 'pos-manager', name: 'Sales manager', isActive: true },
-        { erpId: 'pos-head', name: 'Head of sales', isActive: true },
-        { erpId: 'pos-director', name: 'General director', isActive: true },
-    ];
-    console.log(`Sending ${positions.length} positions...`);
-    const positionResult = await postBatch(
-        `seed-positions-${run}`,
-        positions.map(data => ({ type: 'position', data })),
-    );
-    console.log(
-        `  → status=${positionResult.status} processed=${positionResult.processed} failed=${positionResult.failed}`,
-    );
-    if (positionResult.errors?.length > 0) {
-        for (const e of positionResult.errors) console.warn(`    [${e.index}] ${e.message}`);
-    }
-
-    // [code, rank, name, description, customerGroup, warehouseStarted, shipped, delivered, cancelled]
-    const orderStatuses = [
-        ['UNDER_APPROVAL', 3, 'Under approval', 'Waiting for approval', 'pending', 0, 0, 0, 0],
-        ['APPROVED', 4, 'Approved', 'Order approved by the manager', 'confirmed', 0, 0, 0, 0],
-        ['PICKING', 5, 'Picking', 'Order is being picked', 'confirmed', 1, 0, 0, 0],
-        ['SHIPPING', 6, 'Shipped', 'Order shipped from the warehouse', 'in_transit', 1, 1, 0, 0],
-        ['DELIVERING', 7, 'Delivering', 'Order is on its way', 'in_transit', 1, 1, 0, 0],
-        ['DELIVERED', 8, 'Delivered', 'Order delivered', 'delivered', 1, 1, 1, 0],
-        ['CANCELLED', 0, 'Cancelled', 'Order cancelled', 'cancelled', 0, 0, 0, 1],
-    ].map(
-        ([
-            code,
-            rank,
-            name,
-            description,
-            customerGroup,
-            started,
-            shipped,
-            delivered,
-            cancelled,
-        ]) => ({
-            code,
-            version: '1',
-            name,
-            rank,
-            terminal: delivered === 1 || cancelled === 1,
-            customerVisible: true,
-            description,
-            customerGroup,
-            warehouseStarted: started === 1,
-            shipped: shipped === 1,
-            delivered: delivered === 1,
-            cancelled: cancelled === 1,
-        }),
-    );
-    console.log(`Sending ${orderStatuses.length} order statuses...`);
-    const orderStatusResult = await postBatch(
-        `seed-order-statuses-${run}`,
-        orderStatuses.map(data => ({ type: 'orderStatus', data })),
-    );
-    console.log(
-        `  → status=${orderStatusResult.status} processed=${orderStatusResult.processed} failed=${orderStatusResult.failed}`,
-    );
-
-    // Synthetic department -> branch mapping (#65); employees and counterparties inherit the branch from it.
-    const departmentBranches = [{ departmentErpId: 'dept-sales', branchErpId: 'branch-central' }];
-    console.log(`Sending ${departmentBranches.length} department-branch mappings...`);
-    const departmentBranchResult = await postBatch(
-        `seed-department-branches-${run}`,
-        departmentBranches.map(data => ({ type: 'departmentBranch', data })),
-    );
-    console.log(
-        `  → status=${departmentBranchResult.status} processed=${departmentBranchResult.processed} failed=${departmentBranchResult.failed}`,
-    );
-    if (departmentBranchResult.errors?.length > 0) {
-        for (const e of departmentBranchResult.errors)
-            console.warn(`    [${e.index}] ${e.message}`);
-    }
-
     const employees = [
         {
             erpId: 'emp-001',

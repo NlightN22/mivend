@@ -41,13 +41,17 @@ test.describe('Cart recovers from an order stuck in ArrangingPayment', () => {
         await expect(page.locator('.mv-product-row').first()).toBeVisible({ timeout: 10000 });
         await page.getByRole('button', { name: '+ Add' }).first().click();
 
+        // The click only starts the add; poll until the recovery has moved the order back.
+        await expect
+            .poll(async () => {
+                const recovered = (await gql(
+                    page,
+                    `{ activeOrder { id state } }`,
+                )) as unknown as ActiveOrderState;
+                return recovered.activeOrder?.state;
+            })
+            .toBe('AddingItems');
         const errorToast = page.locator('.mv-toast', { hasText: 'Could not add item to cart' });
         await expect(errorToast).not.toBeVisible({ timeout: 5000 });
-
-        const recovered = (await gql(
-            page,
-            `{ activeOrder { id state } }`,
-        )) as unknown as ActiveOrderState;
-        expect(recovered.activeOrder?.state).toBe('AddingItems');
     });
 });

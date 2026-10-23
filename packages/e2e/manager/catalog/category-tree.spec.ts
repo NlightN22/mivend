@@ -66,7 +66,8 @@ test.describe('Manager category tree (#59)', () => {
         test('level-3 category lists only its own products', async ({ page }, testInfo) => {
             test.skip(testInfo.project.name !== 'manager-operator', 'Listing check runs once');
             await page.goto(url(SLUG.oils));
-            await expect(page.locator('.catalog-page__row')).toHaveCount(6);
+            // 6 oils plus the 4 tier-ladder showcase products seeded under semi-synthetic (#270).
+            await expect(page.locator('.catalog-page__row')).toHaveCount(10);
             await page.goto(url(SLUG.mineral));
             await expect(page.locator('.catalog-page__row')).toHaveCount(1);
         });

@@ -1,6 +1,16 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 
 const SEARCH_PLACEHOLDER = 'Article, VIN, brand, name or OEM';
+
+// Fuzzy search ranks other E2E SKUs too, so pick the result by its own SKU.
+const cardFor = (page: Page, sku: string): Locator =>
+    page.locator('.mv-product-card').filter({
+        has: page.locator('.mv-product-card__sku', { hasText: new RegExp(`^${sku}$`) }),
+    });
+const rowFor = (page: Page, sku: string): Locator =>
+    page.locator('.mv-product-row').filter({
+        has: page.locator('.mv-product-row__sku', { hasText: new RegExp(`^${sku}$`) }),
+    });
 
 async function esAvailable(): Promise<boolean> {
     try {
@@ -28,7 +38,7 @@ test.describe('Discount rules — compareAtPrice', () => {
         await searchInput.press('Enter');
         await page.waitForLoadState('networkidle');
 
-        const card = page.locator('.mv-product-card').first();
+        const card = cardFor(page, 'E2E-OIL-001');
         await expect(card).toBeVisible({ timeout: 10000 });
         await expect(card.locator('.mv-product-card__base-price--strike')).toBeVisible({
             timeout: 10000,
@@ -45,7 +55,7 @@ test.describe('Discount rules — compareAtPrice', () => {
         await searchInput.press('Enter');
         await page.waitForLoadState('networkidle');
 
-        const row = page.locator('.mv-product-row').first();
+        const row = rowFor(page, 'E2E-OIL-001');
         await expect(row).toBeVisible({ timeout: 10000 });
         await expect(row.locator('.mv-product-row__old-price')).toBeVisible({ timeout: 10000 });
     });
@@ -64,7 +74,7 @@ test.describe('Discount rules — compareAtPrice', () => {
         await searchInput.press('Enter');
         await page.waitForLoadState('networkidle');
 
-        const card = page.locator('.mv-product-card').first();
+        const card = cardFor(page, 'E2E-FLT-001');
         await expect(card).toBeVisible({ timeout: 10000 });
         await expect(card.locator('.mv-product-card__base-price--strike')).toContainText('290', {
             timeout: 10000,
@@ -90,7 +100,7 @@ test.describe('Discount tier badge (volume/amount ladder)', () => {
         await searchInput.press('Enter');
         await page.waitForLoadState('networkidle');
 
-        const card = page.locator('.mv-product-card').first();
+        const card = cardFor(page, 'E2E-OIL-001');
         const badge = card.locator('.mv-discount-badge');
         await expect(badge).toBeVisible({ timeout: 10000 });
         await badge.click();
@@ -106,7 +116,7 @@ test.describe('Discount tier badge (volume/amount ladder)', () => {
         await searchInput.press('Enter');
         await page.waitForLoadState('networkidle');
 
-        const row = page.locator('.mv-product-row').first();
+        const row = rowFor(page, 'E2E-OIL-001');
         await expect(row.locator('.mv-discount-badge')).toBeVisible({ timeout: 10000 });
     });
 
@@ -122,7 +132,7 @@ test.describe('Discount tier badge (volume/amount ladder)', () => {
         await searchInput.press('Enter');
         await page.waitForLoadState('networkidle');
 
-        const card = page.locator('.mv-product-card').first();
+        const card = cardFor(page, 'E2E-FLT-001');
         await expect(card).toBeVisible({ timeout: 10000 });
         await expect(card.locator('.mv-discount-badge')).not.toBeVisible();
     });

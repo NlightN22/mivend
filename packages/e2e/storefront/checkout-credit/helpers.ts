@@ -56,7 +56,7 @@ export async function loginBuyer(page: Page, email: string): Promise<void> {
 export async function addSku(page: Page, sku: string, quantity: number): Promise<void> {
     const found = (await gql(
         page,
-        `query($t: String) { search(input: { take: 1, term: $t, inStock: true, groupByProduct: false }) { items { productVariantId sku } } }`,
+        `query($t: String) { search(input: { take: 20, term: $t, inStock: true, groupByProduct: false }) { items { productVariantId sku } } }`,
         { t: sku },
     )) as { search: { items: { productVariantId: string; sku: string }[] } };
     const item = found.search.items.find(i => i.sku === sku);

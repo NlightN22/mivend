@@ -147,7 +147,11 @@ test('non-portal-admin roles cannot reach Settings (negative)', async ({ page },
     test.skip(testInfo.project.name === 'manager-portal-admin', 'Covered by the positive cases');
 
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Settings' })).toHaveCount(0);
+    const settingsLink = page.getByRole('link', { name: 'Settings' });
+    // A department head holds ManageVisibilityGrants (#123), so its Settings link opens that page only.
+    if (testInfo.project.name === 'manager-department-head')
+        await expect(settingsLink).toHaveAttribute('href', '/settings/visibility-grants');
+    else await expect(settingsLink).toHaveCount(0);
 
     await page.goto(`/settings/roles/${TARGET_ROLE}`);
     await expect(page.getByText('Not authorized')).toBeVisible({ timeout: 15000 });

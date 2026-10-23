@@ -39,7 +39,7 @@ async function resolveIds(token: string): Promise<Ids> {
     const own = counterparties.data.counterparties.items.find(c => c.erpId === 'e2e-cnt-001');
     const variantId = variants.data.productVariants.items[0]?.id;
     if (!customerId || !variantId || !own)
-        throw new Error('E2E seed data is missing; run make seed');
+        throw new Error('E2E seed data is missing; seed-erp.mjs or global-setup must provide it');
     return {
         customerId,
         variantId,

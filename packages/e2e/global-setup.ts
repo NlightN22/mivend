@@ -9,7 +9,10 @@ import { createConfirmedOrder } from './helpers/manager-order';
 import { MANAGER_ACCOUNTS, SUPERADMIN } from './fixtures/accounts';
 import { E2E_BROWSER_USER_AGENT } from './helpers/user-agent';
 import { seedRecords, E2E_CUSTOMER, E2E_OTHER_COUNTERPARTY_ID } from './fixtures/seed';
+import { reindexSearch } from './helpers/search-reindex';
 import { seedVisibility } from './fixtures/visibility/seed-visibility';
+import { seedPaidOrders, seedPendingGrantRequests } from './fixtures/list-pages';
+import { seedDiscountGrants } from './fixtures/discount-grants';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 const STOREFRONT_URL = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
@@ -192,6 +195,7 @@ export default async function globalSetup(): Promise<void> {
     );
     if (!preferred.setPreferredTradingPoint) throw new Error('setPreferredTradingPoint failed');
 
+    await seedPaidOrders({ operatorToken, customerId, customerCookie, productVariantId });
     const order = await createConfirmedOrder(operatorToken, customerId, productVariantId);
     fs.writeFileSync(path.join(AUTH_DIR, 'e2e-order.json'), JSON.stringify(order));
 
@@ -269,36 +273,15 @@ export default async function globalSetup(): Promise<void> {
     )?.id;
 
     if (!otherCounterpartyId) throw new Error(`${E2E_OTHER_COUNTERPARTY_ID} not found`);
-    // The 99% grant on the other counterparty must not leak onto the e2e customer's prices.
-    const validTo = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
-    for (const [counterpartyId, percent] of [
-        [e2eCounterpartyId, 8],
-        [otherCounterpartyId, 99],
-    ] as const) {
-        const requested = await adminGql<{ requestDiscountGrant: { id: string } }>(
-            `mutation($input: DiscountGrantInput!) { requestDiscountGrant(input: $input) { id } }`,
-            {
-                input: {
-                    priceTypeCode: 'WHOLESALE',
-                    percent,
-                    validFrom: new Date().toISOString(),
-                    validTo,
-                    justification: 'e2e seed grant',
-                    counterpartyIds: [counterpartyId],
-                },
-            },
-            managerToken,
-        );
-        await adminGql(
-            `mutation($requestId: ID!) {
-                decideDiscountGrantRequest(requestId: $requestId, decision: "approved") { id status }
-            }`,
-            { requestId: requested.data.requestDiscountGrant.id },
-            deptHeadToken,
-        );
-    }
-
+    await seedDiscountGrants({
+        managerToken,
+        deptHeadToken,
+        e2eCounterpartyId,
+        otherCounterpartyId,
+    });
+    await seedPendingGrantRequests(managerToken, otherCounterpartyId);
     await seedVisibility(adminToken);
+    await reindexSearch(adminToken);
 
     const browser = await chromium.launch();
     const context = await browser.newContext({

@@ -39,12 +39,14 @@ test('orders list pagination does not collapse the page to the top', async ({ pa
     const productVariantId = variantsResult.data.productVariants.items[0]?.id;
     if (!productVariantId) throw new Error('Could not find product variant E2E-OIL-001');
 
-    // Ensure at least PAGE_SIZE + 1 orders so a partial last page exists.
-    // Cancel created orders in finally so the shared customer's order count doesn't grow per run.
+    // Ensure at least PAGE_SIZE + 1 listed orders so a partial last page exists; the list hides
+    // cancelled orders. Created orders are cancelled in finally so the customer's count does not grow.
     const existingResult = await adminGql<{
         customer: { orders: { totalItems: number } } | null;
     }>(
-        `query($id: ID!) { customer(id: $id) { orders(options: { take: 0 }) { totalItems } } }`,
+        `query($id: ID!) { customer(id: $id) {
+            orders(options: { take: 0, filter: { state: { notEq: "Cancelled" } } }) { totalItems }
+        } }`,
         { id: customerId },
         token,
     );

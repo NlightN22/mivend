@@ -24,17 +24,16 @@ for (const path of PAGES) {
         await page.setViewportSize({ width: 1280, height: 500 });
         await page.goto(path);
 
+        // global-setup seeds a second page on every list; a disabled Next means that seed is missing.
         const nextButton = page.getByRole('button', { name: 'Next' }).last();
-        await expect(nextButton).toBeVisible({ timeout: 15000 });
-        if (await nextButton.isDisabled()) {
-            test.skip(true, 'not enough rows on this page to reach a second page');
-        }
+        await expect(page.getByText(/Page 1 of ([2-9]|\d{2,})/).first()).toBeVisible({
+            timeout: 15000,
+        });
+        await expect(nextButton).toBeEnabled();
 
         await nextButton.scrollIntoViewIfNeeded();
         const scrollBefore = await page.evaluate(() => window.scrollY);
-        if (scrollBefore === 0) {
-            test.skip(true, 'page content is shorter than the viewport, nothing to snap back from');
-        }
+        expect(scrollBefore, 'a 500px viewport must scroll to reach Next').toBeGreaterThan(0);
 
         await nextButton.click();
         await page.waitForTimeout(300);

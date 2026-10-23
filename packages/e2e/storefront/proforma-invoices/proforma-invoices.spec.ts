@@ -47,6 +47,7 @@ test.describe('Proforma invoices page', () => {
         await page.waitForLoadState('networkidle');
 
         const rows = page.locator('.proforma-invoice-row');
+        await expect(rows.first()).toContainText('Current', { timeout: 10000 });
         const count = await rows.count();
         expect(count).toBeGreaterThan(0);
         for (let i = 0; i < count; i++) {

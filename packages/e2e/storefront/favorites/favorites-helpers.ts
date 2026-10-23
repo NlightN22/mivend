@@ -71,7 +71,7 @@ export function setupPackSales(packagesOnly: boolean): PackSetup {
 export async function favoriteTarget(page: Page, sku: string): Promise<FavoriteTarget> {
     const d = (await gql(
         page,
-        `query($t: String) { search(input: { take: 1, term: $t, groupByProduct: false }) { items { productVariantId productId sku } } }`,
+        `query($t: String) { search(input: { take: 20, term: $t, groupByProduct: false }) { items { productVariantId productId sku } } }`,
         { t: sku },
     )) as { search: { items: { productVariantId: string; productId: string; sku: string }[] } };
     const hit = d.search.items.find(i => i.sku === sku);
