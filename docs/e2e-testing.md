@@ -9,9 +9,9 @@ Rules, checklist and the final checklist audit for every e2e change: the `e2e-ru
 ## Running
 
 ```bash
-make e2e-dev                                   # full suite
+make e2e-dev                                   # full suite, E2E_SHARDS (4) shards
 make e2e-dev E2E_ARGS="storefront/orders --project=storefront"
-make e2e-cart / make e2e-smoke / make e2e-ui
+make e2e-cart / make e2e-smoke / make e2e-ui / make e2e-resilience
 ```
 
 Each target boots its own throwaway stack (#274, `apps/server/src/__tests__/e2e-stack/`): a database
@@ -22,8 +22,21 @@ servers. It seeds the database with `infrastructure/scripts/seed-erp.mjs`, runs 
 database, vhost and indices. Boot and seed take about 75 s. `make dev` does not need to run, and its database
 (`mivend_central`) is never touched; `make seed` stays a dev-only command.
 
-Runs are serialised on `/tmp/mivend-e2e.lock`; a second run waits. A run killed hard leaves its processes, database,
-vhost and indices behind; the next run removes them first. Server, worker and portal logs are in
+No single run may take longer than 30 minutes. The full suite takes about an hour in one Playwright run, so
+`make e2e-dev` without `E2E_ARGS` runs it as `--shard=i/E2E_SHARDS`, each shard on its own fresh stack (15-20 min
+each); a run with `E2E_ARGS` is one stack. Specs therefore never depend on data another spec leaves behind: what a
+list or filter needs is seeded by `global-setup` (`fixtures/list-pages.ts` gives every manager list a second page).
+
+The runner enforces the cap: it stops the test run when it exceeds `E2E_RUN_TIMEOUT_MIN` (30) or when the server,
+a worker or a portal dies, and the run fails. The test command runs in its own process group, which teardown
+kills with the stack's groups, so Playwright and Chrome never outlive the stack. SIGINT, SIGTERM and SIGHUP all go
+through the same teardown.
+
+`make e2e-resilience` runs `manager/resilience` on its own stack and SIGSTOPs that stack's server, found by its
+`DB_NAME`; `make dev` is never frozen.
+
+Runs are serialised on `/tmp/mivend-e2e.lock`; a second run waits. A run killed with SIGKILL leaves its processes,
+database, vhost and indices behind; the next run removes them first. Server, worker and portal logs are in
 `apps/server/.e2e-stack/`. Auth state in `packages/e2e/.auth/` is rewritten by `global-setup` on every run.
 
 ## Staging-integration order exchange suite (`make e2e-integration`, #255)

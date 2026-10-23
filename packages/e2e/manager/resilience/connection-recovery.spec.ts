@@ -6,7 +6,7 @@ import { findServerPid, freezeServer, resumeServer } from '../../helpers/server-
 test.describe('Manager portal recovers from a backend outage', () => {
     test.skip(
         !process.env.E2E_RESILIENCE,
-        'Requires SIGSTOP/SIGCONT on the local dev server process — run via `make e2e-resilience`, not part of the default suite/CI.',
+        'SIGSTOPs the e2e stack server for minutes; run via `make e2e-resilience`, not part of the default suite/CI.',
     );
 
     // Real timers, not mocked — must exceed MvConnectionBar's 2-minute escalation threshold.
@@ -19,8 +19,7 @@ test.describe('Manager portal recovers from a backend outage', () => {
     });
 
     test.afterEach(() => {
-        // Always resume, even if an assertion above failed mid-test — a frozen dev server left
-        // behind would silently break every other test/manual session on this host afterward.
+        // Resume even after a failed assertion, or the remaining tests hit a frozen server.
         resumeServer(serverPid);
     });
 

@@ -345,9 +345,15 @@ E2E_STACK = flock /tmp/mivend-e2e.lock pnpm --filter server exec ts-node --trans
 e2e-stack-build: up
 	pnpm build:plugins
 
-# Subset: make e2e-dev E2E_ARGS="--project=storefront manager/catalog"
+# Subset: make e2e-dev E2E_ARGS="--project=storefront manager/catalog" (one stack).
+# The full suite runs as E2E_SHARDS shards, each on its own fresh stack, so no run hits the 30-min cap.
+E2E_SHARDS ?= 4
 e2e-dev test-e2e: e2e-stack-build
-	$(E2E_STACK) pnpm --filter @mivend/e2e test $(E2E_ARGS)
+	@if [ -n "$(E2E_ARGS)" ]; then $(E2E_STACK) pnpm --filter @mivend/e2e test $(E2E_ARGS); else \
+		failed=""; for i in $$(seq 1 $(E2E_SHARDS)); do \
+			$(E2E_STACK) pnpm --filter @mivend/e2e test --shard=$$i/$(E2E_SHARDS) || failed="$$failed $$i"; \
+		done; \
+		if [ -n "$$failed" ]; then echo "e2e shards failed:$$failed"; exit 1; fi; fi
 
 # Minimal critical-route subset (login, order creation) — see docs/testing-strategy.md's
 # "E2E strategy".
@@ -362,9 +368,9 @@ e2e-ui: e2e-stack-build
 	$(E2E_STACK) pnpm --filter @mivend/e2e test:ui
 
 # Recovery-after-transient-failure scenario — see manager/resilience/connection-recovery.spec.ts.
-# Not part of `make e2e-dev`/CI; SIGSTOPs the real local dev server, takes a few minutes.
-e2e-resilience:
-	E2E_RESILIENCE=1 pnpm --filter @mivend/e2e test:resilience
+# Not part of `make e2e-dev`/CI; SIGSTOPs the e2e stack's own server, takes a few minutes.
+e2e-resilience: e2e-stack-build
+	E2E_RESILIENCE=1 $(E2E_STACK) pnpm --filter @mivend/e2e test:resilience
 
 # Manual order exchange suite against a running `make dev-staging-integration` (#255); never in CI.
 # May restart that contour. Subset: make e2e-integration E2E_ARGS="01-placement".

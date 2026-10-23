@@ -1,13 +1,9 @@
 import { execSync } from 'node:child_process';
 
-// Local-dev-only process control for resilience E2E tests (see
-// manager/resilience/connection-recovery.spec.ts) — bare-metal `make dev` process only, never a container.
-
-const INSTANCE_ID = process.env.SERVER_INSTANCE_ID ?? 'central';
-
-// Finds the local Vendure server (apps/server's src/main.ts) by its own INSTANCE_ID env var —
-// never by port alone, since staging-integration's server also binds a port on this host.
+// Process control for manager/resilience: only the throwaway e2e stack's server, found by its database.
 export function findServerPid(): number {
+    const dbName = process.env.E2E_DB_NAME;
+    if (!dbName) throw new Error('E2E_DB_NAME is unset; run via make e2e-resilience');
     const pids = execSync(`pgrep -f "src/main.ts"`, { encoding: 'utf8' })
         .split('\n')
         .map(s => s.trim())
@@ -19,14 +15,11 @@ export function findServerPid(): number {
         } catch {
             continue; // process exited between pgrep and this read, or unreadable — skip it
         }
-        if (environ.split('\n').includes(`INSTANCE_ID=${INSTANCE_ID}`)) {
+        if (environ.split('\n').includes(`DB_NAME=${dbName}`)) {
             return Number(pid);
         }
     }
-    throw new Error(
-        `No running src/main.ts process found with INSTANCE_ID=${INSTANCE_ID}. ` +
-            `This test requires a bare-metal local dev server (\`make dev\`), not a container.`,
-    );
+    throw new Error(`No e2e stack server (src/main.ts) found with DB_NAME=${dbName}`);
 }
 
 export function freezeServer(pid: number): void {

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 import { deleteVhost, listVhosts } from '../access/harness/rabbit-vhost';
@@ -32,4 +32,6 @@ export async function sweepLeftovers(env: Record<string, string>): Promise<void>
     for (const name of (await listVhosts()).filter(n => n.startsWith(E2E_PREFIX)))
         await deleteVhost(name);
     await deleteIndices(env, E2E_PREFIX);
+    for (const dir of readdirSync(STACK_DIR).filter(d => d.startsWith(`pdfs-${E2E_PREFIX}`)))
+        rmSync(resolve(STACK_DIR, dir), { recursive: true, force: true });
 }
