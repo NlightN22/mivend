@@ -1,3 +1,4 @@
+import { ApprovalScopeRegistry } from '../../approval-scope.registry';
 import { describe, it, expect, vi } from 'vitest';
 import { ForbiddenError } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
@@ -6,6 +7,12 @@ import type { PriceTypeAccessService } from '@mivend/plugin-access-control';
 import { ApprovalReadAccessService } from '../../approval-read-access.service';
 import type { ApprovalStepService } from '../../approval-step.service';
 import type { ApprovalRequest } from '../../entities/approval-request.entity';
+
+const OPEN_SCOPE = {
+    clause: async () => null,
+    apply: async () => undefined,
+    isVisible: async () => true,
+} as unknown as ApprovalScopeRegistry;
 
 const ctx = {} as RequestContext;
 const grant = {
@@ -21,6 +28,7 @@ function build(
     return new ApprovalReadAccessService(
         { allowedCodes: vi.fn(async () => allowed) } as unknown as PriceTypeAccessService,
         { findRequest: vi.fn(async () => found) } as unknown as ApprovalStepService,
+        OPEN_SCOPE,
     );
 }
 

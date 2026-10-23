@@ -4,7 +4,6 @@ import { ID } from '@vendure/common/lib/shared-types';
 import { Permission } from '@vendure/common/lib/generated-types';
 import {
     AdministratorService,
-    Logger,
     PaginatedList,
     RequestContext,
     TransactionalConnection,
@@ -13,9 +12,10 @@ import { Brackets, SelectQueryBuilder } from 'typeorm';
 
 import { ApprovalRequest } from './entities/approval-request.entity';
 import { ApprovalStep } from './entities/approval-step.entity';
-import { ApprovalListOptions, loggerCtx } from './types';
+import { ApprovalListOptions } from './types';
 import { WorkflowDefinitionService } from './workflow-definition.service';
 import { applyPriceTypeGate } from './payload-price-type-gate';
+import { ApprovalScopeRegistry, payloadField } from './approval-scope.registry';
 
 @Injectable()
 export class ApprovalRequestQueryService {
@@ -23,6 +23,7 @@ export class ApprovalRequestQueryService {
         private connection: TransactionalConnection,
         private workflowDefinitionService: WorkflowDefinitionService,
         private administratorService: AdministratorService,
+        private scope: ApprovalScopeRegistry,
     ) {}
 
     // Aggregated for the manager portal dashboard (see docs/ai/manager-portal-pages/01-dashboard.md)
@@ -37,11 +38,13 @@ export class ApprovalRequestQueryService {
             return { pendingCount: 0, recent: [] };
         }
         const repo = this.connection.getRepository(ctx, ApprovalRequest);
+        const clause = await this.scope.clause(ctx);
         const own = (): SelectQueryBuilder<ApprovalRequest> => {
             const qb = repo
                 .createQueryBuilder('request')
                 .where('request.requestedByAdministratorId = :adminId', { adminId });
             if (allowedPriceTypeCodes) applyPriceTypeGate(qb, allowedPriceTypeCodes);
+            if (clause) qb.andWhere(clause.sql, clause.params);
             return qb;
         };
         const [pendingCount, recent] = await Promise.all([
@@ -54,42 +57,30 @@ export class ApprovalRequestQueryService {
     // Only priceAdjustmentApproval payloads reference a specific order;
     // discountGrantApproval and creditTermApproval are standing-policy requests, not per-order.
     async findPendingPriceAdjustmentOrderIds(ctx: RequestContext): Promise<string[]> {
-        const repo = this.connection.getRepository(ctx, ApprovalRequest);
-        const rows = await repo.find({
-            where: { requestType: 'priceAdjustmentApproval', status: 'pending' },
-        });
-        const orderIds = new Set<string>();
-        for (const row of rows) {
-            try {
-                const payload = JSON.parse(row.payload) as { orderId?: string };
-                if (payload.orderId) orderIds.add(payload.orderId);
-            } catch {
-                Logger.warn(`ApprovalRequest ${row.id} has invalid JSON payload`, loggerCtx);
-            }
-        }
-        return [...orderIds];
+        const qb = this.connection
+            .getRepository(ctx, ApprovalRequest)
+            .createQueryBuilder('request')
+            .select(`${payloadField('orderId')}`, 'orderId')
+            .where('request.requestType = :type', { type: 'priceAdjustmentApproval' })
+            .andWhere('request.status = :pending', { pending: 'pending' });
+        await this.scope.apply(ctx, qb);
+        const rows = await qb.getRawMany<{ orderId: string | null }>();
+        return [...new Set(rows.map(r => r.orderId).filter((id): id is string => !!id))];
     }
 
     // Returns all statuses, not just pending: the page shows history, not outstanding items.
-    // Not scoped by department/branch: callers only pass orders already loaded via visibleOrders.
     async findPriceAdjustmentRequestsForOrder(
         ctx: RequestContext,
         orderId: ID,
     ): Promise<ApprovalRequest[]> {
-        const repo = this.connection.getRepository(ctx, ApprovalRequest);
-        const rows = await repo.find({
-            where: { requestType: 'priceAdjustmentApproval' },
-            order: { createdAt: 'DESC' },
-        });
-        return rows.filter(row => {
-            try {
-                const payload = JSON.parse(row.payload) as { orderId?: string };
-                return payload.orderId === String(orderId);
-            } catch {
-                Logger.warn(`ApprovalRequest ${row.id} has invalid JSON payload`, loggerCtx);
-                return false;
-            }
-        });
+        const qb = this.connection
+            .getRepository(ctx, ApprovalRequest)
+            .createQueryBuilder('request')
+            .where('request.requestType = :type', { type: 'priceAdjustmentApproval' })
+            .andWhere(`${payloadField('orderId')} = :forOrderId`, { forOrderId: String(orderId) })
+            .orderBy('request.createdAt', 'DESC');
+        await this.scope.apply(ctx, qb);
+        return qb.getMany();
     }
 
     // DiscountRule rows exist only after approval, so pending/rejected entries must come from here.
@@ -104,6 +95,7 @@ export class ApprovalRequestQueryService {
             .createQueryBuilder('request')
             .where('request.requestType = :requestType', { requestType });
         this.applyListFilters(qb, options);
+        await this.scope.apply(ctx, qb);
         qb.orderBy('request.createdAt', 'DESC');
 
         const totalItems = await qb.getCount();
@@ -211,6 +203,7 @@ export class ApprovalRequestQueryService {
             .createQueryBuilder('request');
         qb.where(this.buildAwaitingDecisionBracket(ctx, pairs, adminId));
         this.applyListFilters(qb, options);
+        await this.scope.apply(ctx, qb);
         qb.orderBy('request.createdAt', 'DESC');
 
         const totalItems = await qb.getCount();
@@ -263,6 +256,7 @@ export class ApprovalRequestQueryService {
             }),
         );
         this.applyListFilters(qb, options);
+        await this.scope.apply(ctx, qb);
         qb.orderBy('request.createdAt', 'DESC');
 
         const totalItems = await qb.getCount();

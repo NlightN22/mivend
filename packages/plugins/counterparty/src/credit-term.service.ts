@@ -21,8 +21,8 @@ import { CreditTermApprovedEvent } from './credit-term.events';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyService } from './counterparty.service';
 
-const WITHIN_LIMIT_REQUEST_TYPE = 'creditTermApproval';
-const ESCALATED_REQUEST_TYPE = 'creditTermApprovalEscalated';
+export const WITHIN_LIMIT_REQUEST_TYPE = 'creditTermApproval';
+export const ESCALATED_REQUEST_TYPE = 'creditTermApprovalEscalated';
 
 export interface CreditTermRequestInput {
     counterpartyErpId: string;
@@ -66,10 +66,10 @@ export class CreditTermService {
             throw new UserInputError('requestedExtraDays must be positive');
         }
 
-        const counterparty = await this.counterpartyService.findByErpId(
-            ctx,
-            input.counterpartyErpId,
-        );
+        const found = await this.counterpartyService.findByErpId(ctx, input.counterpartyErpId);
+        // A counterparty outside the caller's scope answers like a missing one (#263).
+        const counterparty =
+            found && (await this.counterpartyService.findOneVisible(ctx, found.id));
         if (!counterparty) {
             throw new UserInputError(`Counterparty not found: erpId=${input.counterpartyErpId}`);
         }

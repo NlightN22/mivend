@@ -256,3 +256,19 @@ export const GRANT_HISTORY_READERS: ActorKey[] = ['head-a', 'director'];
 export const NOTIFICATION_MARKER = 'Access notice';
 export const notificationTitle = (key: OrderKey | 'general'): string =>
     `${NOTIFICATION_MARKER} ${key}`;
+
+// Price-adjustment and credit-term requests (#263): each branch client's manager asks on its order and on it;
+// a second a-own adjustment is the probe a deciding test may consume. Requests follow their order/counterparty.
+export type ApprovalKey = 'a-own' | 'b-own';
+export const APPROVAL_REQUESTERS: Record<ApprovalKey, ActorKey> = {
+    'a-own': 'manager-a',
+    'b-own': 'manager-b',
+};
+export const APPROVAL_READERS: ActorKey[] = [
+    'manager-a',
+    'manager-b',
+    'head-a',
+    'head-b',
+    'head-default',
+    'director',
+];

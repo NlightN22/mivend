@@ -9,6 +9,7 @@ import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 import { ChecksPlugin } from '@mivend/plugin-checks';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
+import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { NumberingPlugin } from '@mivend/plugin-numbering';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
@@ -37,6 +38,7 @@ import { orderDiscountAction, orderDiscountCondition } from './order-discount.pr
 import { OrderFloorPriceCheck } from './order-floor-price.check';
 import { PriceAdjustmentFloorCheck } from './price-adjustment-floor.check';
 import { PriceAdjustmentService } from './price-adjustment.service';
+import { PriceAdjustmentScopeRegistrar } from './price-adjustment-scope.registrar';
 import { DiscountGrantService } from './discount-grant.service';
 import { DiscountRegistryService } from './discount-registry.service';
 import { GrantedDiscountService } from './granted-discount.service';
@@ -290,6 +292,7 @@ const adminApiSchema = gql`
         ApprovalWorkflowPlugin,
         ChecksPlugin,
         CounterpartyPlugin,
+        ErpOrderPlugin,
         NumberingPlugin,
     ],
     entities: [
@@ -325,6 +328,7 @@ const adminApiSchema = gql`
         PriceAdjustmentFloorCheck,
         OrderFloorPriceCheck,
         PriceAdjustmentService,
+        PriceAdjustmentScopeRegistrar,
         DiscountGrantService,
         DiscountRegistryService,
         GrantedDiscountService,

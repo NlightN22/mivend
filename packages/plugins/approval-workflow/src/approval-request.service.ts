@@ -24,6 +24,7 @@ import {
     loggerCtx,
 } from './types';
 import { WorkflowDefinitionService } from './workflow-definition.service';
+import { ApprovalScopeRegistry } from './approval-scope.registry';
 
 @Injectable()
 export class ApprovalRequestService {
@@ -31,6 +32,7 @@ export class ApprovalRequestService {
         private connection: TransactionalConnection,
         private workflowDefinitionService: WorkflowDefinitionService,
         private administratorService: AdministratorService,
+        private scope: ApprovalScopeRegistry,
     ) {}
 
     async createRequest(
@@ -88,7 +90,10 @@ export class ApprovalRequestService {
         });
 
         const adminId = await activeAdministratorId(this.administratorService, ctx);
-        if (!this.canDecideStep(ctx, stepDef, stepRow, adminId)) {
+        if (
+            !this.canDecideStep(ctx, stepDef, stepRow, adminId) ||
+            !(await this.scope.isVisible(ctx, request.id))
+        ) {
             throw new ForbiddenError();
         }
 

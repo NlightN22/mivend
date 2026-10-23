@@ -12,6 +12,7 @@
         { "path": "../checks" },
         { "path": "../counterparty" },
         { "path": "../customer-pricing" },
+        { "path": "../erp-order" },
         { "path": "../../shared" }
     ]
 }

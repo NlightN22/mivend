@@ -1,3 +1,4 @@
+import { ApprovalScopeRegistry } from '../../approval-scope.registry';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn, VersionColumn } from 'typeorm';
 import type { AdministratorService, RequestContext, TransactionalConnection } from '@vendure/core';
@@ -146,6 +147,7 @@ beforeAll(async () => {
         connectionShim,
         workflowDefinitionService,
         administratorService,
+        new ApprovalScopeRegistry(connectionShim),
     );
 });
 

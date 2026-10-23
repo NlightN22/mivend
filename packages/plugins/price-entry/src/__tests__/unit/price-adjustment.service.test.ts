@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ForbiddenError } from '@vendure/core';
+import { EntityNotFoundError, ForbiddenError } from '@vendure/core';
 import type { OrderService, RequestContext, TransactionalConnection } from '@vendure/core';
 import type { ApprovalRequestService } from '@mivend/plugin-approval-workflow';
 
@@ -21,6 +21,7 @@ describe('PriceAdjustmentService', () => {
         decide: ReturnType<typeof vi.fn>;
     };
     let service: PriceAdjustmentService;
+    let visibleOrders: string[];
 
     beforeEach(() => {
         orderLineRepo = {
@@ -45,10 +46,45 @@ describe('PriceAdjustmentService', () => {
             } as unknown as AccessScopeService,
             checks as unknown as ChecksService,
             approvalRequestService as unknown as ApprovalRequestService,
+            {
+                visibleIds: vi.fn(
+                    async (_ctx: unknown, ids: string[]) =>
+                        new Set(ids.filter(id => visibleOrders.includes(id))),
+                ),
+            } as never,
         );
+        visibleOrders = ['order-1'];
     });
 
     describe('requestAdjustment', () => {
+        it('answers an order outside the scope like a missing one, applying and requesting nothing (#263)', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: 'require-approval' });
+            visibleOrders = [];
+            await expect(
+                service.requestAdjustment(
+                    mockCtx(['RequestPriceAdjustmentApproval']),
+                    'order-1',
+                    'line-1',
+                    1,
+                ),
+            ).rejects.toBeInstanceOf(EntityNotFoundError);
+            expect(orderLineRepo.findOneOrFail).not.toHaveBeenCalled();
+            expect(approvalRequestService.createRequest).not.toHaveBeenCalled();
+        });
+
+        it('reads the line only within the given order', async () => {
+            checks.evaluate.mockResolvedValue({ strongestConsequence: 'warn' });
+            await service.requestAdjustment(
+                mockCtx(['AdjustPriceWithinLimit']),
+                'order-1',
+                'line-1',
+                1,
+            );
+            expect(orderLineRepo.findOneOrFail).toHaveBeenCalledWith(
+                expect.objectContaining({ where: { id: 'line-1', order: { id: 'order-1' } } }),
+            );
+        });
+
         it('refuses, applying nothing and requesting nothing, when the policy blocks', async () => {
             checks.evaluate.mockResolvedValue({ strongestConsequence: 'block' });
             await expect(

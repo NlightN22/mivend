@@ -1,4 +1,5 @@
 import { login } from '../harness/graphql';
+import { seedApprovals } from './approval-seed';
 import { seedDocuments } from './document-seed';
 import { seedGapClients } from './gap-seed';
 import { seedHistory } from './history-seed';
@@ -33,5 +34,6 @@ export async function runAccessSeed(
     await seedSettlements(target);
     await seedDocuments(target, superadmin, ids.counterparties);
     await seedNotifications(database, ordering.orders);
-    return { ...ids, ordering };
+    const approvals = await seedApprovals(baseUrl, superadmin, ordering);
+    return { ...ids, ordering, approvals };
 }

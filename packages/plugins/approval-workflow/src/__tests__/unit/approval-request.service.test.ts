@@ -1,3 +1,4 @@
+import { ApprovalScopeRegistry } from '../../approval-scope.registry';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ForbiddenError, UserInputError } from '@vendure/core';
 import type { AdministratorService, RequestContext, TransactionalConnection } from '@vendure/core';
@@ -5,6 +6,12 @@ import type { AdministratorService, RequestContext, TransactionalConnection } fr
 import { ApprovalRequestQueryService } from '../../approval-request-query.service';
 import { ApprovalRequestService } from '../../approval-request.service';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
+
+const OPEN_SCOPE = {
+    clause: async () => null,
+    apply: async () => undefined,
+    isVisible: async () => true,
+} as unknown as ApprovalScopeRegistry;
 
 const steps = [
     {
@@ -93,11 +100,13 @@ describe('ApprovalRequestService', () => {
             connection as unknown as TransactionalConnection,
             workflowDefinitionService as unknown as WorkflowDefinitionService,
             administratorService as unknown as AdministratorService,
+            OPEN_SCOPE,
         );
         queryService = new ApprovalRequestQueryService(
             connection as unknown as TransactionalConnection,
             workflowDefinitionService as unknown as WorkflowDefinitionService,
             administratorService as unknown as AdministratorService,
+            OPEN_SCOPE,
         );
     });
 
@@ -270,54 +279,8 @@ describe('ApprovalRequestService', () => {
         expect(result).toEqual({ pendingCount: 0, recent: [] });
     });
 
-    it('findPendingPriceAdjustmentOrderIds extracts dedup orderIds from pending requests only', async () => {
-        requestRepo.find.mockResolvedValue([
-            { id: 'req-1', payload: JSON.stringify({ orderId: 'order-1' }) },
-            { id: 'req-2', payload: JSON.stringify({ orderId: 'order-2' }) },
-            { id: 'req-3', payload: JSON.stringify({ orderId: 'order-1' }) },
-        ]);
-
-        const result = await queryService.findPendingPriceAdjustmentOrderIds(mockCtx(true));
-
-        expect(requestRepo.find).toHaveBeenCalledWith({
-            where: { requestType: 'priceAdjustmentApproval', status: 'pending' },
-        });
-        expect(result.sort()).toEqual(['order-1', 'order-2']);
-    });
-
-    it('findPendingPriceAdjustmentOrderIds skips rows with invalid JSON payload', async () => {
-        requestRepo.find.mockResolvedValue([{ id: 'req-1', payload: 'not-json' }]);
-        const result = await queryService.findPendingPriceAdjustmentOrderIds(mockCtx(true));
-        expect(result).toEqual([]);
-    });
-
-    it('findPriceAdjustmentRequestsForOrder returns all statuses matching the given orderId', async () => {
-        requestRepo.find.mockResolvedValue([
-            { id: 'req-1', status: 'approved', payload: JSON.stringify({ orderId: 'order-1' }) },
-            { id: 'req-2', status: 'pending', payload: JSON.stringify({ orderId: 'order-2' }) },
-            { id: 'req-3', status: 'rejected', payload: JSON.stringify({ orderId: 'order-1' }) },
-        ]);
-
-        const result = await queryService.findPriceAdjustmentRequestsForOrder(
-            mockCtx(true),
-            'order-1',
-        );
-
-        expect(requestRepo.find).toHaveBeenCalledWith({
-            where: { requestType: 'priceAdjustmentApproval' },
-            order: { createdAt: 'DESC' },
-        });
-        expect(result.map(r => r.id)).toEqual(['req-1', 'req-3']);
-    });
-
-    it('findPriceAdjustmentRequestsForOrder skips rows with invalid JSON payload', async () => {
-        requestRepo.find.mockResolvedValue([{ id: 'req-1', payload: 'not-json' }]);
-        const result = await queryService.findPriceAdjustmentRequestsForOrder(
-            mockCtx(true),
-            'order-1',
-        );
-        expect(result).toEqual([]);
-    });
+    // findPendingPriceAdjustmentOrderIds/findPriceAdjustmentRequestsForOrder read the payload in SQL:
+    // real-Postgres coverage in __tests__/integration/approval-request.order-scope.test.ts.
 
     // Builds SQL via correlated subqueries; a mocked repository cannot exercise it meaningfully.
     // Real-Postgres coverage lives in __tests__/integration/approval-request.pagination.test.ts.

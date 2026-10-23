@@ -2,6 +2,8 @@ export { ApprovalWorkflowPlugin } from './src/approval-workflow.plugin';
 export { ApprovalRequestService } from './src/approval-request.service';
 export { ApprovalRequestQueryService } from './src/approval-request-query.service';
 export { ApprovalStepService } from './src/approval-step.service';
+export { ApprovalScopeRegistry, payloadField } from './src/approval-scope.registry';
+export type { ApprovalScopeRule, ApprovalScopeSql } from './src/approval-scope.registry';
 export { WorkflowDefinitionService } from './src/workflow-definition.service';
 export type { ParsedWorkflowDefinition } from './src/workflow-definition.service';
 export { ApprovalRequest } from './src/entities/approval-request.entity';

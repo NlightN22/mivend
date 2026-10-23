@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import {
+    EntityNotFoundError,
     ForbiddenError,
     InternalServerError,
     Logger,
@@ -17,11 +18,12 @@ import {
 } from '@mivend/plugin-approval-workflow';
 import { ChecksService, MANAGER_STAGES, MANAGER_SUBJECT_TYPE } from '@mivend/plugin-checks';
 import type { ManagerActionSubject } from '@mivend/plugin-checks';
+import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import type { PriceAdjustmentParams } from './price-adjustment-floor.check';
 import { PriceAdjustmentDecision, loggerCtx } from './types';
 
-const PRICE_ADJUSTMENT_REQUEST_TYPE = 'priceAdjustmentApproval';
+export const PRICE_ADJUSTMENT_REQUEST_TYPE = 'priceAdjustmentApproval';
 
 export interface PriceAdjustmentResult {
     decision: PriceAdjustmentDecision;
@@ -46,6 +48,7 @@ export class PriceAdjustmentService {
         private accessScope: AccessScopeService,
         private checks: ChecksService,
         private approvalRequestService: ApprovalRequestService,
+        private orderVisibility: OrderVisibilityService,
     ) {}
 
     async requestAdjustment(
@@ -55,9 +58,14 @@ export class PriceAdjustmentService {
         requestedPrice: number,
         justification?: string,
     ): Promise<PriceAdjustmentResult> {
-        const orderLine = await this.connection
-            .getRepository(ctx, OrderLine)
-            .findOneOrFail({ where: { id: orderLineId }, relations: ['productVariant'] });
+        // An order outside the caller's scope answers like a missing one (#263).
+        if (!(await this.orderVisibility.visibleIds(ctx, [orderId])).has(String(orderId))) {
+            throw new EntityNotFoundError('Order', orderId);
+        }
+        const orderLine = await this.connection.getRepository(ctx, OrderLine).findOneOrFail({
+            where: { id: orderLineId, order: { id: orderId } },
+            relations: ['productVariant'],
+        });
 
         const actor = await this.accessScope.getActorIdentity(ctx);
         const subject: ManagerActionSubject<PriceAdjustmentParams> = {

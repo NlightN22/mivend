@@ -9,6 +9,7 @@ import { ApprovalRequestService } from './approval-request.service';
 import { ApprovalRequestQueryService } from './approval-request-query.service';
 import { ApprovalReadAccessService } from './approval-read-access.service';
 import { ApprovalStepService } from './approval-step.service';
+import { ApprovalScopeRegistry } from './approval-scope.registry';
 import { WorkflowDefinitionService } from './workflow-definition.service';
 import { ApprovalRequestResolver, WorkflowDefinitionResolver } from './approval-workflow.resolver';
 
@@ -119,9 +120,15 @@ const adminApiSchema = gql`
         ApprovalRequestQueryService,
         ApprovalStepService,
         ApprovalReadAccessService,
+        ApprovalScopeRegistry,
         WorkflowDefinitionService,
     ],
-    exports: [ApprovalRequestService, ApprovalRequestQueryService, WorkflowDefinitionService],
+    exports: [
+        ApprovalRequestService,
+        ApprovalRequestQueryService,
+        ApprovalScopeRegistry,
+        WorkflowDefinitionService,
+    ],
     compatibility: '>0.0.0',
 })
 export class ApprovalWorkflowPlugin {}

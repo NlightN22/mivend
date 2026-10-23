@@ -25,7 +25,10 @@ describe('CreditTermService', () => {
         findOneOrFail: ReturnType<typeof vi.fn>;
         update: ReturnType<typeof vi.fn>;
     };
-    let counterpartyService: { findByErpId: ReturnType<typeof vi.fn> };
+    let counterpartyService: {
+        findByErpId: ReturnType<typeof vi.fn>;
+        findOneVisible: ReturnType<typeof vi.fn>;
+    };
     let checks: { evaluate: ReturnType<typeof vi.fn> };
     let approvalRequestService: {
         createRequest: ReturnType<typeof vi.fn>;
@@ -40,7 +43,10 @@ describe('CreditTermService', () => {
             update: vi.fn(async () => undefined),
         };
         const connection = { getRepository: () => counterpartyRepo };
-        counterpartyService = { findByErpId: vi.fn(async () => ({ id: '1', erpId: 'cnt-001' })) };
+        counterpartyService = {
+            findByErpId: vi.fn(async () => ({ id: '1', erpId: 'cnt-001' })),
+            findOneVisible: vi.fn(async () => ({ id: '1', erpId: 'cnt-001' })),
+        };
         checks = { evaluate: vi.fn() };
         approvalRequestService = {
             createRequest: vi.fn(async () => ({ id: 'req-1' })),
@@ -144,6 +150,15 @@ describe('CreditTermService', () => {
             counterpartyService.findByErpId.mockResolvedValue(null);
             const ctx = mockCtx(['RequestCreditTermApproval']);
             await expect(service.requestExtension(ctx, validInput)).rejects.toThrow(UserInputError);
+        });
+
+        it('answers a counterparty outside the scope like a missing one, requesting nothing (#263)', async () => {
+            counterpartyService.findOneVisible.mockResolvedValue(null);
+            const ctx = mockCtx(['RequestCreditTermApproval']);
+            await expect(service.requestExtension(ctx, validInput)).rejects.toThrow(
+                'Counterparty not found',
+            );
+            expect(approvalRequestService.createRequest).not.toHaveBeenCalled();
         });
     });
 

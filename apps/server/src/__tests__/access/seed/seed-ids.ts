@@ -13,6 +13,7 @@ import {
     type CounterpartyKey,
     type CustomerKey,
 } from './fixture-plan';
+import type { ApprovalSeedIds } from './approval-seed';
 import type { OrderSeedIds } from './orders-seed';
 
 export interface SeedIds {
@@ -23,9 +24,10 @@ export interface SeedIds {
     customers: Record<CustomerKey, string>;
     gapClients: Record<string, string>;
     ordering: OrderSeedIds;
+    approvals: ApprovalSeedIds;
 }
 
-export type BaseSeedIds = Omit<SeedIds, 'ordering'>;
+export type BaseSeedIds = Omit<SeedIds, 'ordering' | 'approvals'>;
 
 interface Lists {
     branches: { id: string; erpId: string }[];

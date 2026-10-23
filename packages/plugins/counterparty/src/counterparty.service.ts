@@ -200,6 +200,16 @@ export class CounterpartyService {
         return applyCounterpartyListFilter(qb, filter);
     }
 
+    // The caller's visible erpIds as SQL for another plugin's own filter; null for scope 'all'.
+    async visibleErpIdsSql(
+        ctx: RequestContext,
+    ): Promise<{ sql: string; params: Record<string, unknown> } | null> {
+        if ((await this.accessScopeService.resolveCounterpartyScope(ctx)).kind === 'all')
+            return null;
+        const qb = (await this.visibleFilteredQb(ctx, {})).select('c.erpId').orderBy();
+        return { sql: qb.getQuery(), params: qb.getParameters() };
+    }
+
     // Returns null, not ForbiddenError, for out-of-scope ids: don't leak that the id exists
     async findOneVisible(ctx: RequestContext, id: ID): Promise<Counterparty | null> {
         let qb = this.baseVisibleQb(ctx).andWhere('c.id = :id', { id: String(id) });
