@@ -131,8 +131,10 @@ export async function seedOrders(
             const second = await issued(shop, order.code);
             out.aOwnProformas = { cancelled: pick(first), issued: pick(second) };
         }
-        if (plan.proformas === 'paid')
+        if (plan.proformas === 'paid') {
             out.payments[plan.key as PaymentKey] = await pay(shop, admin, order.code, plan.key);
+            await settle(admin, order.id);
+        }
     }
     return out;
 }
@@ -161,4 +163,20 @@ async function pay(shop: Shop, admin: Shop, code: string, key: OrderKey): Promis
         { p: payment.id, r: refundMarker },
     );
     return { id: payment.id, proforma: pick(proforma), refundMarker };
+}
+
+// A paid order awaits shipment (the dashboard's PaymentSettled tile).
+async function settle(admin: Shop, orderId: string): Promise<void> {
+    const found = await admin<{ order: { payments: { id: string; state: string }[] } }>(
+        `query($id: ID!) { order(id: $id) { payments { id state } } }`,
+        { id: orderId },
+    );
+    const payment = found.order.payments.find(p => p.state === 'Authorized');
+    if (!payment) throw new Error(`Order ${orderId} has no authorized payment to settle`);
+    const settled = await admin<{ settlePayment: Result }>(
+        `mutation($id: ID!) { settlePayment(id: $id) { __typename ... on ErrorResult { message } } }`,
+        { id: payment.id },
+    );
+    if (settled.settlePayment.__typename !== 'Payment')
+        throw new Error(`settlePayment ${orderId}: ${settled.settlePayment.message ?? ''}`);
 }
