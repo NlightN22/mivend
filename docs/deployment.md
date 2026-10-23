@@ -54,8 +54,8 @@ Nothing is configured inside a container by hand.
 - **Limits**: memory limits for server, workers and postgres are variables (`*_MEM_LIMIT`).
 - **Logs**: `json-file`, 10 MB x 5 files per service.
 - **Kafka TLS**: put the CA file in `KAFKA_TLS_DIR` (mounted at `/run/kafka-tls`) and set `INTEGRATION_KAFKA_CA_PATH=/run/kafka-tls/<file>`.
-- **First deploy**: `make prod-up` (starts postgres/rabbitmq/garage, runs migrations, starts the
-  rest), then once `make prod-init-storage`.
+- **First deploy**: `make prod-up` (starts postgres/rabbitmq/garage, creates the photo bucket and key,
+  runs migrations, starts the rest).
 - **Upgrade**: set `IMAGE_TAG`, pull, `make prod-up`. It runs `migrate` (plain, forward-only) before
   the new server starts; if it fails the command stops and the old containers keep running. `server` and the workers also `depends_on` the completed `migrate`, so even a plain `up -d` or a host reboot never boots them against an unmigrated schema.
 - **Containers run as root** (server images ship Chromium for PDFs; nginx master processes are root as in the

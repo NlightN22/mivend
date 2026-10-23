@@ -63,6 +63,9 @@ x-server: &server
             condition: service_healthy
         garage:
             condition: service_healthy
+        elasticsearch:
+            condition: service_healthy
+            required: false
     restart: unless-stopped
     logging: *logging
 

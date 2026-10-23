@@ -308,11 +308,12 @@ docker-push:
 
 # Runs to completion before server/worker start — see docs/environments.md "Migrations".
 prod-up:
-	$(COMPOSE_PROD) up -d postgres rabbitmq
+	$(COMPOSE_PROD) up -d --wait postgres rabbitmq garage
+	$(MAKE) prod-init-storage
 	$(COMPOSE_PROD) run --rm migrate
 	$(COMPOSE_PROD) up -d
 
-# Once per new deployment: creates the photo bucket and key from .env.production (idempotent).
+# Creates the photo bucket and key from .env.production (idempotent); prod-up runs it before the app starts.
 prod-init-storage:
 	set -a; . infrastructure/docker/.env.production; set +a; \
 	GARAGE_CONTAINER=$$($(COMPOSE_PROD) ps -q garage) \
