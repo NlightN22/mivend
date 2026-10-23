@@ -37,7 +37,8 @@ through the same teardown.
 
 `skip-guard-reporter.ts` prints the skips by reason and fails the run when a skip's reason is not on its
 allow-list (a spec that runs under one role project, or needs a permission only some roles hold). Missing data is
-seeded, never skipped. `manager/resilience` is not part of the suite at all: `playwright.config.ts` ignores it unless
+seeded, never skipped. The guard checks only the reason text, so a skip with an allowed reason must have a condition
+on `testInfo.project.name` alone. `manager/resilience` is not part of the suite at all: `playwright.config.ts` ignores it unless
 `E2E_RESILIENCE` is set.
 
 Runs are serialised on `/tmp/mivend-e2e.lock`, held for the whole make target including every shard; `run.ts`
