@@ -2,6 +2,7 @@ import { Args, Context, Mutation, Query, Resolver, Subscription } from '@nestjs/
 import { Allow, Ctx, ForbiddenError, Permission, RequestContext } from '@vendure/core';
 import { Inject } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
+import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
 import { Notification } from './entities/notification.entity';
 import { NotificationService } from './notification.service';
@@ -21,6 +22,7 @@ export interface AdministratorSubscriptionIdentity {
     recipientType?: string;
     recipientId?: string;
     deniedBroadcastSourceTypes?: string[];
+    canSeeOrder?: (orderId: string) => Promise<boolean>;
 }
 
 // Mirrors NotificationService.findForRecipient's OR-condition: admins also get permitted broadcasts.
@@ -29,15 +31,17 @@ export function administratorNotificationSubscriptionFilter(
     payload: NotificationReceivedEvent,
     _variables: unknown,
     context: unknown,
-): boolean {
+): boolean | Promise<boolean> {
     const identity = context as AdministratorSubscriptionIdentity | undefined;
     if (identity?.recipientType !== 'administrator') return false;
-    const { recipientType, recipientId, sourceType } = payload.notificationReceived;
+    const { recipientType, recipientId, sourceType, orderId } = payload.notificationReceived;
     if (recipientType === 'administrator') {
         return recipientId === identity.recipientId;
     }
     if (recipientType === 'administrator-broadcast') {
-        return !(identity.deniedBroadcastSourceTypes ?? []).includes(sourceType);
+        if ((identity.deniedBroadcastSourceTypes ?? []).includes(sourceType)) return false;
+        if (!orderId) return true;
+        return identity.canSeeOrder ? identity.canSeeOrder(orderId) : false;
     }
     return false;
 }
@@ -49,6 +53,7 @@ export class NotificationAdminResolver {
     constructor(
         private notificationService: NotificationService,
         private recipientService: NotificationRecipientService,
+        private orderVisibility: OrderVisibilityService,
         @Inject(NOTIFICATION_PUB_SUB) private pubSub: PubSub,
     ) {}
 
@@ -65,6 +70,7 @@ export class NotificationAdminResolver {
             recipient.recipientType,
             recipient.recipientId,
             args.options ?? {},
+            await this.orderVisibility.visibleIdsSql(ctx),
         );
     }
 
@@ -114,7 +120,11 @@ export class NotificationAdminResolver {
             : undefined;
         const isPermittedBroadcast =
             notification?.recipientType === 'administrator-broadcast' &&
-            (!requiredPermission || ctx.userHasPermissions([requiredPermission]));
+            (!requiredPermission || ctx.userHasPermissions([requiredPermission])) &&
+            (!notification.orderId ||
+                (await this.orderVisibility.visibleIds(ctx, [notification.orderId])).has(
+                    notification.orderId,
+                ));
         if (!recipient || !notification || (!isOwn && !isPermittedBroadcast)) {
             throw new ForbiddenError();
         }

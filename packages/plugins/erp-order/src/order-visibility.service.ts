@@ -96,6 +96,16 @@ export class OrderVisibilityService {
         return qb;
     }
 
+    // The caller's visible order ids as SQL for another plugin's own filter; null for scope 'all'.
+    async visibleIdsSql(
+        ctx: RequestContext,
+    ): Promise<{ sql: string; params: Record<string, unknown> } | null> {
+        if ((await this.accessScopeService.resolveOrderScope(ctx)).kind === 'all') return null;
+        const qb = await this.buildVisibleOrdersQuery(ctx);
+        qb.select(`CAST("${qb.alias}"."id" AS TEXT)`).orderBy();
+        return { sql: qb.getQuery(), params: qb.getParameters() };
+    }
+
     async visibleIds(ctx: RequestContext, orderIds: ID[]): Promise<Set<string>> {
         if (orderIds.length === 0) return new Set();
         const qb = await this.buildVisibleOrdersQuery(ctx);

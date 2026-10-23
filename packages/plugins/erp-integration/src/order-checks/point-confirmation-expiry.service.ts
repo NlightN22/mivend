@@ -149,6 +149,7 @@ export class PointConfirmationExpiryService {
                 kind: 'warning',
                 sourceType: POINT_CONFIRMATION_EXPIRED_SOURCE,
                 sourceId: order.id,
+                orderId: String(order.id),
                 title: 'Order waiting for a delivery point confirmation has expired',
                 message: `Order ${order.code} passed its validity period while its delivery point is unconfirmed and cannot be cancelled automatically (${describeRefusal(outcome)}).`,
             });

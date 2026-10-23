@@ -21,6 +21,8 @@ export interface CreateNotificationInput {
     kind: NotificationKind;
     sourceType: string;
     sourceId?: string | null;
+    // The order the broadcast is about; it limits the broadcast to that order's viewers.
+    orderId?: string | null;
     title: string;
     message: string;
 }
@@ -31,6 +33,11 @@ export interface FindForRecipientOptions {
     search?: string;
     take?: number;
     skip?: number;
+}
+
+export interface VisibleOrdersSql {
+    sql: string;
+    params: Record<string, unknown>;
 }
 
 const DEFAULT_LIST_TAKE = 50;
@@ -71,6 +78,7 @@ export class NotificationService {
             notification.kind = input.kind;
             notification.title = input.title;
             notification.message = input.message;
+            notification.orderId = input.orderId ?? notification.orderId;
             notification.status = 'unread';
         } else {
             notification = new Notification({
@@ -79,6 +87,7 @@ export class NotificationService {
                 kind: input.kind,
                 sourceType: input.sourceType,
                 sourceId: input.sourceId ?? null,
+                orderId: input.orderId ?? null,
                 title: input.title,
                 message: input.message,
                 status: 'unread',
@@ -113,6 +122,8 @@ export class NotificationService {
         recipientType: NotificationRecipientType,
         recipientId: string,
         opts: FindForRecipientOptions = {},
+        // SQL of the order ids the caller sees; null means every order (scope 'all').
+        visibleOrders: VisibleOrdersSql | null = null,
     ): Promise<PaginatedList<Notification>> {
         // Clamp negative client input: a raw LIMIT -1 reaches Postgres and surfaces as a GraphQL 500.
         // Also cap at MAX_LIST_TAKE.
@@ -152,6 +163,12 @@ export class NotificationService {
                                                     { allowedGatedSourceTypes },
                                                 );
                                         }),
+                                    );
+                                }
+                                if (visibleOrders) {
+                                    broadcastQb.andWhere(
+                                        `(notification.orderId IS NULL OR notification.orderId IN (${visibleOrders.sql}))`,
+                                        visibleOrders.params,
                                     );
                                 }
                             }),

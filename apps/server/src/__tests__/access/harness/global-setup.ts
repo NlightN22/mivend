@@ -82,7 +82,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
         stop = server.stop;
         stopWorker = startPdfWorker(env, resolve(LOG_DIR, 'worker.log'));
         project.provide('accessBaseUrl', server.baseUrl);
-        project.provide('accessSeed', await runAccessSeed(server.baseUrl, importToken));
+        project.provide('accessSeed', await runAccessSeed(server.baseUrl, importToken, name));
     } catch (error) {
         await teardown();
         throw error;

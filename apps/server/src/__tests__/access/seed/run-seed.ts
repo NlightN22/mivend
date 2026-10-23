@@ -2,6 +2,7 @@ import { login } from '../harness/graphql';
 import { seedDocuments } from './document-seed';
 import { seedGapClients } from './gap-seed';
 import { seedHistory } from './history-seed';
+import { seedNotifications } from './notification-seed';
 import { seedMasterData } from './erp-import-seed';
 import { seedPortalCustomers } from './portal-customer-seed';
 import { seedPriceTypes } from './price-type-seed';
@@ -13,7 +14,11 @@ import { seedStaff } from './staff-seed';
 
 export const SUPERADMIN = { username: 'superadmin', password: 'access-superadmin' };
 
-export async function runAccessSeed(baseUrl: string, importToken: string): Promise<SeedIds> {
+export async function runAccessSeed(
+    baseUrl: string,
+    importToken: string,
+    database: string,
+): Promise<SeedIds> {
     const superadmin = await login(baseUrl, 'admin-api', SUPERADMIN.username, SUPERADMIN.password);
     const target = { baseUrl, token: importToken };
     await seedMasterData(target);
@@ -27,5 +32,6 @@ export async function runAccessSeed(baseUrl: string, importToken: string): Promi
     await seedPriceTypes(target, superadmin);
     await seedSettlements(target);
     await seedDocuments(target, superadmin, ids.counterparties);
+    await seedNotifications(database, ordering.orders);
     return { ...ids, ordering };
 }

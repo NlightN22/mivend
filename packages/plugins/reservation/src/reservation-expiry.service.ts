@@ -77,6 +77,7 @@ export class ReservationExpiryService {
                         kind: 'error',
                         sourceType: 'reservation-intervention',
                         sourceId: String(row.id),
+                        orderId: row.orderId,
                         title: 'Prepaid reservation needs manual intervention',
                         message: `Reservation ${String(row.id)} (order ${row.orderId}) expired at ${row.expiresAt.toISOString()} without release.`,
                     }),
@@ -192,6 +193,7 @@ export class ReservationExpiryService {
                     kind: 'warning',
                     sourceType: 'reservation-erp-owned',
                     sourceId: String(row.id),
+                    orderId: row.orderId,
                     title: 'Reservation past its deadline, order is in the ERP',
                     message: `Reservation ${String(row.id)} (order ${row.orderId}) is still active after its deadline; the order is registered or in progress in the ERP.`,
                 });

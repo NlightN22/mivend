@@ -70,10 +70,16 @@ export class PaymentReconciliationIssueService {
 
         // Called from webhook/inbox processing, so ctx has no signed-in administrator;
         // getCurrentAdministrator would return null, so notify every administrator instead.
+        const proforma = details.proformaInvoiceId
+            ? await this.connection
+                  .getRepository(ctx, ProformaInvoice)
+                  .findOne({ where: { id: details.proformaInvoiceId } })
+            : null;
         await this.notificationService.create(ctx, {
             recipientType: 'administrator-broadcast',
             kind: 'warning',
             sourceType: 'payment-reconciliation',
+            orderId: proforma?.orderId != null ? String(proforma.orderId) : null,
             sourceId: `${issueType}:${details.proformaInvoiceId ?? ''}:${details.organizationId ?? ''}:${details.providerPaymentId ?? ''}`,
             title: 'Payment/ERP drift detected',
             message: `${issueType} (proforma invoice ${details.proformaInvoiceId ?? 'n/a'})`,

@@ -139,6 +139,7 @@ export class RejectedOrderReleaseService {
                 kind: 'error',
                 sourceType: 'reservation-rejected-release',
                 sourceId: String(row.id),
+                orderId: row.orderId,
                 title: 'Reservation released after ERP rejection timeout',
                 message: `Reservation ${String(row.id)} (order ${row.orderId}) was released after its order stayed REJECTED by the ERP for over ${this.settings.rejectedOrderReleaseDays()} day(s).`,
             });

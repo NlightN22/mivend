@@ -1,4 +1,5 @@
 import { PluginCommonModule, VendurePlugin } from '@vendure/core';
+import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 
 import { Notification } from './entities/notification.entity';
 import { NotificationService } from './notification.service';
@@ -12,7 +13,7 @@ import { shopApiExtensions } from './api/shop.schema';
 // This plugin owns only storage, the upsert-by-source rule, and the Admin/Shop API surface.
 // Producers calling NotificationService.create come in follow-up work; none exist yet.
 @VendurePlugin({
-    imports: [PluginCommonModule],
+    imports: [PluginCommonModule, ErpOrderPlugin],
     entities: [Notification],
     providers: [
         NotificationService,

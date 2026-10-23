@@ -11,6 +11,7 @@ describe('PaymentReconciliationIssueService.report — Notification wiring', () 
         return {
             create: vi.fn((fields: unknown) => fields),
             save: vi.fn(async (row: unknown) => row),
+            findOne: vi.fn(async () => ({ id: 1, orderId: 7 })),
         };
     }
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -45,6 +46,7 @@ describe('PaymentReconciliationIssueService.report — Notification wiring', () 
                 recipientType: 'administrator-broadcast',
                 kind: 'warning',
                 sourceType: 'payment-reconciliation',
+                orderId: '7',
             }),
         );
     });

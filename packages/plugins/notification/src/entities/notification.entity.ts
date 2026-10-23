@@ -32,6 +32,10 @@ export class Notification extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     sourceId!: string | null;
 
+    // A broadcast with an order is shown only to administrators who see that order (#263).
+    @Column({ type: 'varchar', nullable: true })
+    orderId!: string | null;
+
     @Column({ type: 'varchar' })
     title!: string;
 

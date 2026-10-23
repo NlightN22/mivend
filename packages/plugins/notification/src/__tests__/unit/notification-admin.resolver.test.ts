@@ -81,6 +81,24 @@ describe('administratorNotificationSubscriptionFilter', () => {
         ).toBe(false);
     });
 
+    it('streams an order broadcast only to an administrator who sees that order (#263)', async () => {
+        const orderBroadcast = {
+            notificationReceived: { ...broadcastPayload.notificationReceived, orderId: '42' },
+        };
+        const identity = (visible: string[]) => ({
+            recipientType: 'administrator',
+            recipientId: 'admin-1',
+            deniedBroadcastSourceTypes: [],
+            canSeeOrder: async (id: string) => visible.includes(id),
+        });
+        expect(
+            await administratorNotificationSubscriptionFilter(orderBroadcast, {}, identity(['42'])),
+        ).toBe(true);
+        expect(
+            await administratorNotificationSubscriptionFilter(orderBroadcast, {}, identity([])),
+        ).toBe(false);
+    });
+
     it('still delivers an ungated-sourceType broadcast even when other sourceTypes are denied', () => {
         expect(
             administratorNotificationSubscriptionFilter(
@@ -142,6 +160,7 @@ describe('NotificationAdminResolver — assertOwnNotification with broadcast row
     function makeResolver(
         notification: Record<string, unknown> | null,
         callerRecipientId = 'admin-9',
+        visibleOrderIds: string[] = [],
     ): {
         resolver: NotificationAdminResolver;
         notificationService: {
@@ -162,9 +181,16 @@ describe('NotificationAdminResolver — assertOwnNotification with broadcast row
             })),
         };
         const pubSub = { asyncIterableIterator: vi.fn() };
+        const orderVisibility = {
+            visibleIds: vi.fn(
+                async (_ctx: unknown, ids: string[]) =>
+                    new Set(ids.filter(id => visibleOrderIds.includes(id))),
+            ),
+        };
         const resolver = new NotificationAdminResolver(
             notificationService as never,
             recipientService as never,
+            orderVisibility as never,
             pubSub as never,
         );
         return { resolver, notificationService };
@@ -195,6 +221,24 @@ describe('NotificationAdminResolver — assertOwnNotification with broadcast row
         await resolver.markNotificationRead({} as RequestContext, { id: 'n-3' });
 
         expect(notificationService.markRead).toHaveBeenCalledWith({}, 'n-3');
+    });
+
+    it('acts on an order broadcast only when the caller sees that order (#263)', async () => {
+        const row = {
+            id: 'n-7',
+            recipientType: 'administrator-broadcast',
+            recipientId: null,
+            orderId: '42',
+        };
+        const hidden = makeResolver(row);
+        await expect(
+            hidden.resolver.markNotificationRead({} as RequestContext, { id: 'n-7' }),
+        ).rejects.toThrow();
+        expect(hidden.notificationService.markRead).not.toHaveBeenCalled();
+
+        const shown = makeResolver(row, 'admin-9', ['42']);
+        await shown.resolver.markNotificationRead({} as RequestContext, { id: 'n-7' });
+        expect(shown.notificationService.markRead).toHaveBeenCalledWith({}, 'n-7');
     });
 
     it('rejects a non-owning, non-broadcast notification', async () => {

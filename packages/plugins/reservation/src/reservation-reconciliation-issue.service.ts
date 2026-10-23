@@ -163,6 +163,7 @@ export class ReservationReconciliationIssueService {
             // Dedupe on the same key as save()'s `existing` lookup, not saved.id: a repeat must update
             // the one open notification, not create another.
             sourceId: `${fields.issueType}:${fields.orderId}:${fields.productVariantId ?? ''}:${fields.externalProductId ?? ''}`,
+            orderId: fields.orderId,
             title: 'Reservation/ERP drift detected',
             message: `${fields.issueType} for order ${fields.orderId}`,
         });

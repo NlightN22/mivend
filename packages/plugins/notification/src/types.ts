@@ -10,6 +10,7 @@ export interface NotificationReceivedEvent {
         recipientType: 'administrator' | 'administrator-broadcast' | 'customer';
         recipientId: string | null;
         sourceType: string;
+        orderId?: string | null;
     };
 }
 

@@ -14,6 +14,7 @@ import {
     type AdministratorSubscriptionIdentity,
     type NotificationReceivedEvent,
 } from '@mivend/plugin-notification';
+import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 import { withFilter } from 'graphql-subscriptions';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/use/ws';
@@ -77,6 +78,7 @@ export function mountNotificationSubscriptions(app: INestApplication): void {
     const recipientService = app.get(NotificationRecipientService);
     const sessionService = app.get(SessionService);
     const channelService = app.get(ChannelService);
+    const orderVisibility = app.get(OrderVisibilityService);
 
     mountOne('/admin-api-subscriptions', 'admin');
     mountOne('/shop-api-subscriptions', 'shop');
@@ -121,7 +123,14 @@ export function mountNotificationSubscriptions(app: INestApplication): void {
                         );
                         if (!recipient) return {};
                         const { deniedSourceTypes } = resolveBroadcastVisibility(requestContext);
-                        return { ...recipient, deniedBroadcastSourceTypes: deniedSourceTypes };
+                        return {
+                            ...recipient,
+                            deniedBroadcastSourceTypes: deniedSourceTypes,
+                            canSeeOrder: async orderId =>
+                                (await orderVisibility.visibleIds(requestContext, [orderId])).has(
+                                    orderId,
+                                ),
+                        };
                     }
                     const recipient = await recipientService.getCurrentCustomerByUserId(
                         requestContext,

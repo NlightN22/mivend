@@ -6,6 +6,9 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 export const NOTIFICATION_SOURCE_PERMISSIONS: Record<string, Permission> = {
     'reservation-reconciliation': Permission.ReadOrder,
     'reservation-intervention': Permission.ReadOrder,
+    'reservation-erp-owned': Permission.ReadOrder,
+    'reservation-rejected-release': Permission.ReadOrder,
+    'point-confirmation-expired': Permission.ReadOrder,
     'payment-reconciliation': CustomPermission.ReadPayment.Permission,
 };
 
