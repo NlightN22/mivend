@@ -1,0 +1,54 @@
+# Backed up: the Postgres dump and the stack directory. Not backed up (rebuildable): RabbitMQ queues,
+# generated document PDFs, local search index. Live volumes of running stores are never copied;
+# Garage objects arrive again from the ERP photo events.
+source_directories:
+    - /mnt/source/stack
+
+exclude_patterns:
+    - /mnt/source/stack/backup/.env
+    - /mnt/source/stack/backup/ssh
+    - /mnt/source/stack/backup/data
+    - /mnt/source/stack/backups
+
+repositories:
+    - path: ${BORG_REPOSITORY}
+      label: primary
+
+archive_name_format: '${ARCHIVE_PREFIX}-{now:%Y-%m-%d-%H%M%S}'
+
+compression: zstd,6
+statistics: true
+exclude_caches: true
+
+postgresql_databases:
+    - name: ${DB_NAME}
+      hostname: ${DB_HOST}
+      port: 5432
+      username: ${DB_USER}
+      password: ${DB_PASSWORD}
+      format: custom
+
+keep_daily: 30
+keep_weekly: 12
+keep_monthly: 12
+keep_yearly: 2
+
+checks:
+    - name: repository
+      frequency: 1 month
+    - name: archives
+      frequency: 1 month
+
+apprise:
+    services:
+        - url: ${APPRISE_URL}
+          label: primary
+    states:
+        - finish
+        - fail
+    finish:
+        title: '${ARCHIVE_PREFIX} backup completed'
+        body: 'Backup of ${ARCHIVE_PREFIX} finished.'
+    fail:
+        title: '${ARCHIVE_PREFIX} backup failed'
+        body: 'Backup of ${ARCHIVE_PREFIX} failed. Borgmatic appends its log to this message.'

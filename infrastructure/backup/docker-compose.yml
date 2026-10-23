@@ -1,0 +1,42 @@
+# Encrypted Borg backups of the production host with borgmatic. Run through backup/backup.sh from
+# <stack dir>/backup on the host. The image is pinned by digest so a tested backup tool does not
+# change before the next scheduled run; bump the digest deliberately.
+services:
+    borgmatic:
+        image: ghcr.io/borgmatic-collective/borgmatic@sha256:d11d86d433d60a410ecbd54c186ca136d0400d20bab5c0defe941e87c7439b54
+        hostname: ${BACKUP_HOSTNAME:?set BACKUP_HOSTNAME in .env}
+        restart: unless-stopped
+        stop_grace_period: 10m
+        environment:
+            TZ: ${TZ:-UTC}
+            CRON: ${BACKUP_CRON:?set BACKUP_CRON in .env}
+            BORG_REPOSITORY: ${BORG_REPOSITORY:?set BORG_REPOSITORY in .env}
+            BORG_PASSPHRASE: ${BORG_PASSPHRASE:?set BORG_PASSPHRASE in .env}
+            BORG_RSH: ssh -i /root/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o UpdateHostKeys=no
+            ARCHIVE_PREFIX: ${ARCHIVE_PREFIX:?set ARCHIVE_PREFIX in .env}
+            APPRISE_URL: ${APPRISE_URL:?set APPRISE_URL in .env}
+            DB_NAME: ${DB_NAME:?set DB_NAME in .env}
+            DB_HOST: postgres
+            DB_USER: ${DB_USER:?set DB_USER in .env}
+            DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+        volumes:
+            # The stack directory (compose file, .env, Kafka CA) minus this backup project: its .env
+            # holds the repository passphrase, which must not be stored inside the repository it unlocks.
+            - ${STACK_DIRECTORY:-/opt/mv}:/mnt/source/stack:ro
+            - ./config/prod.yaml:/etc/borgmatic.d/config.yaml:ro
+            - ./data/borg-config:/root/.config/borg
+            - ./data/borg-cache:/root/.cache/borg
+            - ./data/borgmatic-state:/root/.local/state/borgmatic
+            - ./ssh:/root/.ssh:ro
+        networks:
+            - database
+        logging:
+            driver: local
+            options:
+                max-size: 10m
+                max-file: '3'
+
+networks:
+    database:
+        external: true
+        name: ${DB_DOCKER_NETWORK:-mv_default}

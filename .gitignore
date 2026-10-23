@@ -60,3 +60,6 @@ reports/mutation/
 apps/server/.access-test/
 apps/server/.e2e-stack/
 backups/
+infrastructure/backup/.env
+infrastructure/backup/ssh/
+infrastructure/backup/data/

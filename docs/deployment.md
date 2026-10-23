@@ -68,3 +68,12 @@ Nothing is configured inside a container by hand.
     - garage and `document-pdfs`: stop-free file copy of the volume (`docker run --rm -v <vol>:/v -v $PWD:/b alpine tar czf /b/<vol>.tgz -C /v .`);
     - rabbitmq holds only in-flight sync messages; back it up only if a branch is offline.
     - Restore is tested by loading the dump into a scratch postgres before it is trusted.
+- **Scheduled off-host backup** (`infrastructure/backup/`, copy it to `<stack dir>/backup`): borgmatic in Docker
+  dumps Postgres (read-only role `backup_ro`) and archives the stack directory (compose file, `.env`, Kafka CA)
+  into an encrypted Borg repository on a separate server. Setup once: put this host's `/root/.ssh/id_ed25519.pub`
+  into the borg account, then run `BORG_HOST=… BORG_ACCOUNT=… APPRISE_URL=… BACKUP_HOSTNAME=… backup/backup.sh`.
+  It generates the passphrase into `backup/.env` (copy it to a password manager; it is excluded from the archive),
+  creates the repository and runs the first backup. Prove a backup by extracting the dump from the archive and
+  running `pg_restore --list` with the image's `pg_restore`. `monitoring/install-host-check.sh` adds an hourly
+  disk (>80%) and memory (<500 MB) alert mailed through the same container. Garage objects and `document-pdfs`
+  are not in the archive: they are re-created from the ERP events.
