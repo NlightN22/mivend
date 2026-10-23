@@ -29,6 +29,7 @@
         { "path": "./versioning" },
         { "path": "./session-management" },
         { "path": "./saved-views" },
-        { "path": "./checks" }
+        { "path": "./checks" },
+        { "path": "./numbering" }
     ]
 }

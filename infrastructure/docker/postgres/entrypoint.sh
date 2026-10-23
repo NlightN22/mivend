@@ -32,16 +32,16 @@ retry() {
 
 # TCP, not the unix socket: only the real instance binds TCP, the temp init one never does —
 # avoids racing the init scripts' own ALTER USER ("tuple concurrently updated").
-retry pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1
+retry pg_isready -h 127.0.0.1 -U "${POSTGRES_USER:-postgres}" >/dev/null 2>&1
 
 # Idempotent; unix-socket peer auth avoids depending on pg_hba.conf host rules.
-retry su -s /bin/sh postgres -c "psql -d template1 -c 'ALTER USER postgres WITH LOGIN'" >/dev/null 2>&1
+retry su -s /bin/sh postgres -c "psql -U \"${POSTGRES_USER:-postgres}\" -d template1 -c 'ALTER USER \"${POSTGRES_USER:-postgres}\" WITH LOGIN'" >/dev/null 2>&1
 
 # Create application database if it does not exist
 if [ -n "$POSTGRES_APP_DB" ]; then
     retry su -s /bin/sh postgres -c \
-        "psql -tc \"SELECT 1 FROM pg_database WHERE datname='$POSTGRES_APP_DB'\" | grep -q 1 \
-         || psql -c 'CREATE DATABASE $POSTGRES_APP_DB'" >/dev/null 2>&1
+        "psql -U \"${POSTGRES_USER:-postgres}\" -d template1 -tc \"SELECT 1 FROM pg_database WHERE datname='$POSTGRES_APP_DB'\" | grep -q 1 \
+         || psql -U \"${POSTGRES_USER:-postgres}\" -d template1 -c 'CREATE DATABASE $POSTGRES_APP_DB'" >/dev/null 2>&1
 fi
 
 wait $PG_PID

@@ -1,6 +1,6 @@
 # Build with: docker build -f apps/server/Dockerfile --secret id=npmrc,src=$HOME/.npmrc .
-# Puppeteer's Chromium is skipped on Alpine; the runner stage uses apt-installed Chromium.
-FROM node:20-alpine AS deps
+# Same glibc base for build and run so native modules (sharp, bcrypt) match; Chromium is apt-installed in the runner.
+FROM node:20-slim AS deps
 RUN corepack enable && corepack prepare pnpm@10 --activate
 WORKDIR /app
 ENV PUPPETEER_SKIP_DOWNLOAD=1
@@ -17,7 +17,6 @@ RUN pnpm build:plugins && pnpm --filter "server" build
 # Debian-based (not Alpine) specifically so Puppeteer can drive a real,
 # apt-installed Chromium — musl/Alpine support for Chromium is unreliable.
 FROM node:20-slim AS runner
-WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium fonts-liberation libnss3 libatk-bridge2.0-0 libatk1.0-0 libgbm1 libasound2 \
@@ -26,11 +25,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PUPPETEER_SKIP_DOWNLOAD=1
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-COPY --from=builder /app/node_modules ./node_modules
+# Same layout as the workspace: pnpm symlinks in apps/server/node_modules resolve relative to it.
+WORKDIR /app/apps/server
+COPY --from=builder /app/node_modules /app/node_modules
+COPY --from=builder /app/packages /app/packages
+COPY --from=builder /app/infrastructure/fixtures /app/infrastructure/fixtures
+COPY --from=builder /app/apps/server/node_modules ./node_modules
 COPY --from=builder /app/apps/server/dist ./dist
 COPY --from=builder /app/apps/server/static ./static
 COPY --from=builder /app/apps/server/package.json ./
-COPY --from=builder /app/packages ./packages
 
 ENV NODE_ENV=production
 EXPOSE 3000

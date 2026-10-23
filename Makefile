@@ -1,5 +1,5 @@
 COMPOSE_DEV = docker compose -f infrastructure/docker/docker-compose.dev.yml
-COMPOSE_PROD = docker compose -f infrastructure/docker/docker-compose.yml
+COMPOSE_PROD = docker compose --env-file infrastructure/docker/.env.production -f infrastructure/docker/docker-compose.yml
 GITHUB_REPOSITORY_OWNER ?= nlightn22
 VERSION = $(shell node -p "require('./package.json').version")
 GIT_SHA = $(shell git rev-parse --short HEAD)
@@ -15,7 +15,7 @@ export
         e2e-dev e2e-stack-build e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
         docker-build docker-push \
         preview-build preview-up preview-down \
-        prod-up prod-down \
+        prod-up prod-init-storage prod-down \
         dev dev-fresh dev-reset dev-branch dev-staging-integration seed seed-approvals seed-payment-refunds \
         seed-customer-detail seed-order-edit-states seed-all \
         verify-branch-scope \
@@ -270,13 +270,16 @@ mutation-pilot:
 
 # ── Docker app images ──────────────────────────────────────────────────────────
 
+NPMRC_SECRET = --secret id=npmrc,src=$(HOME)/.npmrc
+
 docker-build:
-	docker build -f apps/server/Dockerfile -t mivend-server:local .
+	DOCKER_BUILDKIT=1 docker build -f apps/server/Dockerfile $(NPMRC_SECRET) -t mivend-server:local .
 	docker build -f packages/storefront/Dockerfile -t mivend-storefront:local .
 	docker build -f packages/manager/Dockerfile -t mivend-manager:local .
+	DOCKER_BUILDKIT=1 docker build -f packages/dashboard/Dockerfile $(NPMRC_SECRET) -t mivend-dashboard:local .
 
 docker-push:
-	docker build -f apps/server/Dockerfile \
+	DOCKER_BUILDKIT=1 docker build -f apps/server/Dockerfile $(NPMRC_SECRET) \
 		-t ghcr.io/nlightn22/mivend-server:v$(VERSION) \
 		-t ghcr.io/nlightn22/mivend-server:latest \
 		.
@@ -288,12 +291,18 @@ docker-push:
 		-t ghcr.io/nlightn22/mivend-manager:v$(VERSION) \
 		-t ghcr.io/nlightn22/mivend-manager:latest \
 		.
+	DOCKER_BUILDKIT=1 docker build -f packages/dashboard/Dockerfile $(NPMRC_SECRET) \
+		-t ghcr.io/nlightn22/mivend-dashboard:v$(VERSION) \
+		-t ghcr.io/nlightn22/mivend-dashboard:latest \
+		.
 	docker push ghcr.io/nlightn22/mivend-server:v$(VERSION)
 	docker push ghcr.io/nlightn22/mivend-server:latest
 	docker push ghcr.io/nlightn22/mivend-storefront:v$(VERSION)
 	docker push ghcr.io/nlightn22/mivend-storefront:latest
 	docker push ghcr.io/nlightn22/mivend-manager:v$(VERSION)
 	docker push ghcr.io/nlightn22/mivend-manager:latest
+	docker push ghcr.io/nlightn22/mivend-dashboard:v$(VERSION)
+	docker push ghcr.io/nlightn22/mivend-dashboard:latest
 
 # ── Production ─────────────────────────────────────────────────────────────────
 
@@ -302,6 +311,12 @@ prod-up:
 	$(COMPOSE_PROD) up -d postgres rabbitmq
 	$(COMPOSE_PROD) run --rm migrate
 	$(COMPOSE_PROD) up -d
+
+# Once per new deployment: creates the photo bucket and key from .env.production (idempotent).
+prod-init-storage:
+	set -a; . infrastructure/docker/.env.production; set +a; \
+	GARAGE_CONTAINER=$$($(COMPOSE_PROD) ps -q garage) \
+	infrastructure/scripts/garage-init.sh "$$S3_BUCKET" "$$S3_ACCESS_KEY_ID" "$$S3_SECRET_ACCESS_KEY"
 
 prod-down:
 	$(COMPOSE_PROD) down

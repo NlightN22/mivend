@@ -5,6 +5,8 @@ server {
     # port directly (see docs/environments.md's "prod-preview" contour).
     listen ${LISTEN_PORT};
     server_tokens off;
+    # Re-resolve the upstream so a recreated server container is picked up without restarting nginx.
+    resolver 127.0.0.11 valid=10s ipv6=off;
 
     root /usr/share/nginx/html;
     index index.html;
@@ -28,7 +30,8 @@ server {
     }
 
     location /shop-api {
-        proxy_pass ${API_TARGET};
+        set $api_upstream ${API_TARGET};
+        proxy_pass $api_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         # Without this, nginx proxies to the upstream over HTTP/1.0 (its own default for
@@ -42,7 +45,8 @@ server {
     # WS subscriptions transport — see apps/server/src/subscriptions.ts's
     # mountNotificationSubscriptions('/shop-api-subscriptions').
     location /shop-api-subscriptions {
-        proxy_pass ${API_TARGET};
+        set $api_upstream ${API_TARGET};
+        proxy_pass $api_upstream;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -53,14 +57,16 @@ server {
     # lives under /_app, see vite.config.ts's build.assetsDir, issue #115).
     # Authorized document PDFs (#263); the session cookie must reach the server.
     location /document-pdf/ {
-        proxy_pass ${API_TARGET};
+        set $api_upstream ${API_TARGET};
+        proxy_pass $api_upstream;
         proxy_set_header Host $host;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
     }
 
     location /assets {
-        proxy_pass ${API_TARGET};
+        set $api_upstream ${API_TARGET};
+        proxy_pass $api_upstream;
         proxy_set_header Host $host;
         proxy_http_version 1.1;
         proxy_set_header Connection "";

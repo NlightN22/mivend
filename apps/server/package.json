@@ -55,6 +55,7 @@
         "@vendure/asset-server-plugin": "^3.7.3",
         "@vendure/core": "^3.7.3",
         "@vendure/dashboard": "^3.7.3",
+        "@tanstack/react-router": "^1.170.32",
         "@vendure/email-plugin": "^3.7.3",
         "graphql": "^16.14.2",
         "graphql-subscriptions": "^3.0.0",

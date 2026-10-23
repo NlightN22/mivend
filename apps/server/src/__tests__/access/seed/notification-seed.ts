@@ -11,8 +11,8 @@ export async function seedNotifications(
     const client = new Client({ ...testDbConnection(), database });
     await client.connect();
     try {
-        const rows: [string, string | null][] = [
-            ...ORDERS.map(o => [o.key, orders[o.key].id] as [string, string]),
+        const rows: [OrderKey | 'general', string | null][] = [
+            ...ORDERS.map(o => [o.key, orders[o.key].id] as [OrderKey, string]),
             ['general', null],
         ];
         for (const [key, orderId] of rows)
