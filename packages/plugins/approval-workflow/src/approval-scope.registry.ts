@@ -10,7 +10,7 @@ export interface ApprovalScopeSql {
     params: Record<string, unknown>;
 }
 
-// SQL over `request` for the requests of one type the caller may see; null means all of them.
+// SQL over `request` for the requests of one type the caller may see; a null result means all of them.
 export type ApprovalScopeRule = (ctx: RequestContext) => Promise<ApprovalScopeSql | null>;
 
 // A payload field as text; an unparsable payload yields NULL, so it matches no scope.
@@ -29,41 +29,50 @@ function prefixed(rule: ApprovalScopeSql, prefix: string): ApprovalScopeSql {
     return { sql, params };
 }
 
-// Owning plugins register the row scope of their request types (#263); unregistered types stay unscoped.
+// Deny by default (#263): every request type is registered with a scope rule, or with null when company-wide.
 @Injectable()
 export class ApprovalScopeRegistry {
-    private readonly rules = new Map<string, ApprovalScopeRule>();
+    private readonly rules = new Map<string, ApprovalScopeRule | null>();
 
     constructor(private connection: TransactionalConnection) {}
 
-    register(requestType: string, rule: ApprovalScopeRule): void {
+    register(requestType: string, rule: ApprovalScopeRule | null): void {
         this.rules.set(requestType, rule);
     }
 
-    async clause(ctx: RequestContext): Promise<ApprovalScopeSql | null> {
-        const scoped: string[] = [];
+    assertDeclared(requestType: string): void {
+        if (!this.rules.has(requestType))
+            throw new Error(`Approval request type ${requestType} has no declared scope rule`);
+    }
+
+    // Unregistered types match neither list, so their rows stay hidden.
+    async clause(ctx: RequestContext): Promise<ApprovalScopeSql> {
+        const open: string[] = [];
         const branches: string[] = [];
         let params: Record<string, unknown> = {};
         let index = 0;
         for (const [requestType, rule] of this.rules) {
-            const found = await rule(ctx);
-            if (!found) continue;
+            const found = rule ? await rule(ctx) : null;
+            if (!found) {
+                open.push(requestType);
+                continue;
+            }
             const prefix = `approvalScope${index++}_`;
             const own = prefixed(found, prefix);
-            scoped.push(requestType);
             branches.push(`(request.requestType = :${prefix}type AND ${own.sql})`);
             params = { ...params, ...own.params, [`${prefix}type`]: requestType };
         }
-        if (scoped.length === 0) return null;
+        if (open.length > 0) branches.unshift('request.requestType IN (:...approvalOpenTypes)');
+        if (branches.length === 0) return { sql: '1 = 0', params: {} };
         return {
-            sql: `(request.requestType NOT IN (:...approvalScopedTypes) OR ${branches.join(' OR ')})`,
-            params: { ...params, approvalScopedTypes: scoped },
+            sql: `(${branches.join(' OR ')})`,
+            params: open.length > 0 ? { ...params, approvalOpenTypes: open } : params,
         };
     }
 
     async apply(ctx: RequestContext, qb: SelectQueryBuilder<ApprovalRequest>): Promise<void> {
         const clause = await this.clause(ctx);
-        if (clause) qb.andWhere(clause.sql, clause.params);
+        qb.andWhere(clause.sql, clause.params);
     }
 
     async isVisible(ctx: RequestContext, requestId: ID): Promise<boolean> {

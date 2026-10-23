@@ -8,7 +8,8 @@ import { ApprovalRequestService } from '../../approval-request.service';
 import { WorkflowDefinitionService } from '../../workflow-definition.service';
 
 const OPEN_SCOPE = {
-    clause: async () => null,
+    clause: async () => ({ sql: '1 = 1', params: {} }),
+    assertDeclared: () => undefined,
     apply: async () => undefined,
     isVisible: async () => true,
 } as unknown as ApprovalScopeRegistry;

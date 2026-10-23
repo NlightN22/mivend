@@ -9,7 +9,8 @@ import type { ApprovalStepService } from '../../approval-step.service';
 import type { ApprovalRequest } from '../../entities/approval-request.entity';
 
 const OPEN_SCOPE = {
-    clause: async () => null,
+    clause: async () => ({ sql: '1 = 1', params: {} }),
+    assertDeclared: () => undefined,
     apply: async () => undefined,
     isVisible: async () => true,
 } as unknown as ApprovalScopeRegistry;

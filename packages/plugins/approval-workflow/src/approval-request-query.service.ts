@@ -44,7 +44,7 @@ export class ApprovalRequestQueryService {
                 .createQueryBuilder('request')
                 .where('request.requestedByAdministratorId = :adminId', { adminId });
             if (allowedPriceTypeCodes) applyPriceTypeGate(qb, allowedPriceTypeCodes);
-            if (clause) qb.andWhere(clause.sql, clause.params);
+            qb.andWhere(clause.sql, clause.params);
             return qb;
         };
         const [pendingCount, recent] = await Promise.all([

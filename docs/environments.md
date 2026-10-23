@@ -37,6 +37,8 @@ provisions (`infrastructure/docker/docker-compose.yml`'s `postgres` service, bui
 `infrastructure/docker/postgres/` — the same image the local/staging-integration contours above
 use, see `.env.production.example` in that directory).
 
+**Minimum PostgreSQL: 16** (`infrastructure/docker/postgres/Dockerfile`, `postgres:16-alpine`): queries use `pg_input_is_valid` (approval payload gates). Every contour and the test database run this image.
+
 ### Migrations (issue #147)
 
 Local and staging-integration both run with `synchronize: true` (`dbConnectionOptions.synchronize`

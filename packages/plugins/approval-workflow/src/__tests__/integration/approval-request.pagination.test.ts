@@ -1,4 +1,4 @@
-import { ApprovalScopeRegistry } from '../../approval-scope.registry';
+import { companyWideRegistry } from './company-wide-registry';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn, VersionColumn } from 'typeorm';
 import type { AdministratorService, RequestContext, TransactionalConnection } from '@vendure/core';
@@ -123,7 +123,7 @@ beforeAll(async () => {
         connectionShim,
         workflowDefinitionService,
         administratorService,
-        new ApprovalScopeRegistry(connectionShim),
+        companyWideRegistry(connectionShim),
     );
 });
 
@@ -249,7 +249,7 @@ describe('ApprovalRequestQueryService pagination (integration, real Postgres)', 
                 connectionShim,
                 workflowDefinitionService,
                 noAdminService,
-                new ApprovalScopeRegistry(connectionShim),
+                companyWideRegistry(connectionShim),
             );
             const result = await noAdminQuerySvc.findAllInvolving(
                 ctxWithPermissions([], 'ghost-user'),

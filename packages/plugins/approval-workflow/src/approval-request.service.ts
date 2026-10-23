@@ -40,6 +40,7 @@ export class ApprovalRequestService {
         requestType: string,
         payload: Record<string, unknown>,
     ): Promise<ApprovalRequest> {
+        this.scope.assertDeclared(requestType);
         const definition = await this.workflowDefinitionService.getDefinition(ctx, requestType);
         const machine = buildApprovalMachine(definition.steps);
         const actor = createActor(machine);
