@@ -3,6 +3,16 @@ import { SLUG, adminToken, restoreCategoryTree, setOverride } from '../../helper
 import { readSidebar, OILS_EXPECTED, MINERAL_EXPECTED } from '../../helpers/category-sidebar';
 
 const url = (slug: string): string => `/catalog?collection=${slug}`;
+// The engine-oils subtree's own products in infrastructure/fixtures/products.json.
+const OIL_SKUS = [
+    'MOT-5W30-4L',
+    'MOT-10W40-4L',
+    'MOT-0W20-4L',
+    'MOT-5W40-1L',
+    'MOT-5W30-1L',
+    'MOT-15W40-5L',
+];
+const NON_OIL_SKU = 'FIL-OIL-C001';
 
 test.describe('Manager category tree (#59)', () => {
     test('catalog sidebar matches the storefront block for the same positions', async ({
@@ -65,11 +75,13 @@ test.describe('Manager category tree (#59)', () => {
 
         test('level-3 category lists only its own products', async ({ page }, testInfo) => {
             test.skip(testInfo.project.name !== 'manager-operator', 'Listing check runs once');
+            const rows = page.locator('.catalog-page__row');
             await page.goto(url(SLUG.oils));
-            // 6 oils plus the 4 tier-ladder showcase products seeded under semi-synthetic (#270).
-            await expect(page.locator('.catalog-page__row')).toHaveCount(10);
+            for (const sku of OIL_SKUS) await expect(rows.filter({ hasText: sku })).toHaveCount(1);
+            await expect(rows.filter({ hasText: NON_OIL_SKU })).toHaveCount(0);
             await page.goto(url(SLUG.mineral));
-            await expect(page.locator('.catalog-page__row')).toHaveCount(1);
+            await expect(rows).toHaveCount(1);
+            await expect(rows.filter({ hasText: 'MOT-15W40-5L' })).toHaveCount(1);
         });
     });
 

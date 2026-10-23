@@ -4,6 +4,9 @@ import { resolve } from 'path';
 export const REPO_ROOT = resolve(__dirname, '../../../../..');
 export const STACK_DIR = resolve(REPO_ROOT, 'apps/server/.e2e-stack');
 export const E2E_PREFIX = 'mivend_e2e_';
+export const E2E_LOCK_FILE = '/tmp/mivend-e2e.lock';
+// Playwright's storage states: tokens for this run's database, useless once it is dropped.
+export const E2E_AUTH_DIR = resolve(REPO_ROOT, 'packages/e2e/.auth');
 // Clear of make dev (3000, 5173/5174) and staging-integration (3010, 5183-5185).
 export const E2E_PORTS = { server: 3020, storefront: 5193, manager: 5194 };
 

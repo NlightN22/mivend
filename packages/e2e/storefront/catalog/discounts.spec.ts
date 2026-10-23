@@ -12,22 +12,7 @@ const rowFor = (page: Page, sku: string): Locator =>
         has: page.locator('.mv-product-row__sku', { hasText: new RegExp(`^${sku}$`) }),
     });
 
-async function esAvailable(): Promise<boolean> {
-    try {
-        const res = await fetch(
-            process.env.ELASTICSEARCH_URL ?? 'http://localhost:9200/_cluster/health',
-        );
-        return res.ok;
-    } catch {
-        return false;
-    }
-}
-
 test.describe('Discount rules — compareAtPrice', () => {
-    test.beforeEach(async () => {
-        if (!(await esAvailable())) test.skip();
-    });
-
     test('discounted product shows strikethrough compareAtPrice in grid view', async ({ page }) => {
         await page.goto('/catalog');
         await page.waitForLoadState('networkidle');
@@ -84,10 +69,6 @@ test.describe('Discount rules — compareAtPrice', () => {
 });
 
 test.describe('Discount tier badge (volume/amount ladder)', () => {
-    test.beforeEach(async () => {
-        if (!(await esAvailable())) test.skip();
-    });
-
     test('shows the tier badge with a tooltip listing the ladder in grid view', async ({
         page,
     }) => {

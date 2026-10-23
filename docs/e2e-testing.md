@@ -35,9 +35,15 @@ through the same teardown.
 `make e2e-resilience` runs `manager/resilience` on its own stack and SIGSTOPs that stack's server, found by its
 `DB_NAME`; `make dev` is never frozen.
 
-Runs are serialised on `/tmp/mivend-e2e.lock`; a second run waits. A run killed with SIGKILL leaves its processes,
+`skip-guard-reporter.ts` prints the skips by reason and fails the run when a skip's reason is not on its
+allow-list (a spec that runs under one role project, or needs a permission only some roles hold). Missing data is
+seeded, never skipped. `manager/resilience` is not part of the suite at all: `playwright.config.ts` ignores it unless
+`E2E_RESILIENCE` is set.
+
+Runs are serialised on `/tmp/mivend-e2e.lock`, held for the whole make target including every shard; `run.ts`
+refuses to start without it, because its leftover sweep drops every `mivend_e2e_*` database. A second run waits. A run killed with SIGKILL leaves its processes,
 database, vhost and indices behind; the next run removes them first. Server, worker and portal logs are in
-`apps/server/.e2e-stack/`. Auth state in `packages/e2e/.auth/` is rewritten by `global-setup` on every run.
+`apps/server/.e2e-stack/`. Auth state in `packages/e2e/.auth/` is written by `global-setup` and removed at teardown.
 
 ## Staging-integration order exchange suite (`make e2e-integration`, #255)
 

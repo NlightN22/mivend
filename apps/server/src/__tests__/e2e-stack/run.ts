@@ -1,4 +1,4 @@
-import type { ChildProcess } from 'child_process';
+import { spawnSync, type ChildProcess } from 'child_process';
 import { mkdirSync, rmSync } from 'fs';
 import { resolve } from 'path';
 
@@ -17,6 +17,8 @@ import {
 import { deleteIndices } from './search-indices';
 import { watchStack } from './watchdog';
 import {
+    E2E_AUTH_DIR,
+    E2E_LOCK_FILE,
     E2E_PORTS,
     E2E_PREFIX,
     STACK_DIR,
@@ -56,6 +58,7 @@ async function stopAndDrop(): Promise<void> {
         () => dropDatabase(name),
         () => deleteIndices(base, `${name}-`),
         async () => rmSync(resolve(STACK_DIR, `pdfs-${name}`), { recursive: true, force: true }),
+        async () => rmSync(E2E_AUTH_DIR, { recursive: true, force: true }),
     ];
     for (const step of steps) await step().catch(error => console.error('e2e teardown:', error));
     killRecordedGroups();
@@ -94,6 +97,9 @@ async function main(): Promise<number> {
     process.env.TEST_DB_USER = base.DB_USERNAME;
     process.env.TEST_DB_PASSWORD = base.DB_PASSWORD;
     process.env.RABBITMQ_URL = base.RABBITMQ_URL;
+    // The sweep drops every prefixed database, so it must never run beside another live run.
+    if (spawnSync('flock', ['-n', E2E_LOCK_FILE, 'true']).status === 0)
+        throw new Error(`run.ts must run under flock ${E2E_LOCK_FILE}; use the make e2e-* targets`);
     mkdirSync(STACK_DIR, { recursive: true });
     await sweepLeftovers(base);
     try {

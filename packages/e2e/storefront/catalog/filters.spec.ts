@@ -57,10 +57,8 @@ test.describe('Catalog filters', () => {
 
         const facetCheckboxes = page.locator('.mv-facet-group__row');
 
-        if ((await facetCheckboxes.count()) === 0) {
-            test.skip();
-            return;
-        }
+        // seed-erp imports brand and manufacturer facets, so the panel always has rows.
+        await expect(facetCheckboxes.first()).toBeVisible({ timeout: 10000 });
 
         await facetCheckboxes.first().check();
         await page.waitForLoadState('networkidle');

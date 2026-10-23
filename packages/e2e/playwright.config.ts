@@ -10,6 +10,11 @@ function markSessions(
     }));
 }
 
+// manager/resilience freezes the stack server for minutes; only make e2e-resilience runs it.
+const MANAGER_IGNORE = process.env.E2E_RESILIENCE
+    ? ['**/auth/**']
+    : ['**/auth/**', '**/resilience/**'];
+
 export default defineConfig({
     testDir: '.',
     globalSetup: './global-setup.ts',
@@ -17,7 +22,12 @@ export default defineConfig({
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 1 : 0,
     workers: 1,
-    reporter: [['html', { open: 'never' }], ['line']],
+    reporter: [
+        ['html', { open: 'never' }],
+        ['line'],
+        ['./skip-guard-reporter.ts'],
+        ...(process.env.PLAYWRIGHT_JSON_OUTPUT_NAME ? [['json'] as ['json']] : []),
+    ],
     use: {
         locale: 'en-GB',
         trace: 'on-first-retry',
@@ -80,7 +90,7 @@ export default defineConfig({
             name: 'manager-operator',
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
-            testIgnore: ['**/auth/**'],
+            testIgnore: MANAGER_IGNORE,
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
@@ -91,7 +101,7 @@ export default defineConfig({
             name: 'manager-manager',
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
-            testIgnore: ['**/auth/**'],
+            testIgnore: MANAGER_IGNORE,
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
@@ -102,7 +112,7 @@ export default defineConfig({
             name: 'manager-department-head',
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
-            testIgnore: ['**/auth/**'],
+            testIgnore: MANAGER_IGNORE,
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
@@ -113,7 +123,7 @@ export default defineConfig({
             name: 'manager-portal-admin',
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
-            testIgnore: ['**/auth/**'],
+            testIgnore: MANAGER_IGNORE,
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',

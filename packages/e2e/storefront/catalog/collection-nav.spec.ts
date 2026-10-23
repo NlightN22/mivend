@@ -72,10 +72,8 @@ test.describe('Catalog collection navigation', () => {
         await page.locator(CATALOG_BTN).click();
         await expect(page.locator(CAT_ITEM).first()).toBeVisible({ timeout: 5000 });
 
-        if ((await page.locator(CAT_ITEM).count()) < 2) {
-            test.skip();
-            return;
-        }
+        // seed-erp imports several top-level categories.
+        expect(await page.locator(CAT_ITEM).count()).toBeGreaterThanOrEqual(2);
 
         await page.locator(CAT_ITEM).first().click();
         const countA = await waitForCount(page);

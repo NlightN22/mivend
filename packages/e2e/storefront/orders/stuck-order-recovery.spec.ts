@@ -39,11 +39,14 @@ test.describe('Cart recovers from an order stuck in ArrangingPayment', () => {
         await page.goto('/catalog');
         await page.waitForLoadState('networkidle');
         await expect(page.locator('.mv-product-row').first()).toBeVisible({ timeout: 10000 });
+        const errorToast = page.locator('.mv-toast', { hasText: 'Could not add item to cart' });
         await page.getByRole('button', { name: '+ Add' }).first().click();
 
-        // The click only starts the add; poll until the recovery has moved the order back.
+        // The click only starts the add; poll until the recovery has moved the order back,
+        // failing at once if the error toast shows up meanwhile.
         await expect
             .poll(async () => {
+                if (await errorToast.isVisible()) return 'error toast shown';
                 const recovered = (await gql(
                     page,
                     `{ activeOrder { id state } }`,
@@ -51,7 +54,6 @@ test.describe('Cart recovers from an order stuck in ArrangingPayment', () => {
                 return recovered.activeOrder?.state;
             })
             .toBe('AddingItems');
-        const errorToast = page.locator('.mv-toast', { hasText: 'Could not add item to cart' });
         await expect(errorToast).not.toBeVisible({ timeout: 5000 });
     });
 });

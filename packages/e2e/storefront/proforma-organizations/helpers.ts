@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { gql } from '../orders/helpers';
 import { addSku, admin, placeViaApi } from '../checkout-credit/helpers';
 
@@ -101,13 +101,9 @@ export async function waitForReadyDocument(
     }
 }
 
-// CI must fail when the worker never produced the PDF; a local run without a worker skips visibly.
+// The e2e stack runs the worker, so a missing PDF is a failure.
 export function requirePdfWorker(rows: ProformaRow[] | null): asserts rows is ProformaRow[] {
-    if (rows !== null) return;
-    const reason =
-        'PDF generation job did not run: no worker process on this contour (make dev starts it)';
-    if (process.env.CI) throw new Error(reason);
-    test.skip(true, reason);
+    if (rows === null) throw new Error('PDF generation job did not finish: is the worker running?');
 }
 
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174';

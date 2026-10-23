@@ -13,56 +13,11 @@ import { reindexSearch } from './helpers/search-reindex';
 import { seedVisibility } from './fixtures/visibility/seed-visibility';
 import { seedPaidOrders, seedPendingGrantRequests } from './fixtures/list-pages';
 import { seedDiscountGrants } from './fixtures/discount-grants';
+import { ensureCountry, ensureShippingMethod } from './fixtures/shop-basics';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 const STOREFRONT_URL = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
 const MANAGER_URL = process.env.MANAGER_URL ?? 'http://localhost:5174';
-
-async function ensureShippingMethod(token: string): Promise<void> {
-    const { data } = await adminGql<{ shippingMethods: { items: { id: string }[] } }>(
-        `query { shippingMethods { items { id } } }`,
-        undefined,
-        token,
-    );
-    if (data.shippingMethods.items.length > 0) return;
-    await adminGql(
-        `mutation($input: CreateShippingMethodInput!) { createShippingMethod(input: $input) { id } }`,
-        {
-            input: {
-                code: 'free-shipping',
-                fulfillmentHandler: 'manual-fulfillment',
-                checker: {
-                    code: 'default-shipping-eligibility-checker',
-                    arguments: [{ name: 'orderMinimum', value: '0' }],
-                },
-                calculator: {
-                    code: 'default-shipping-calculator',
-                    arguments: [
-                        { name: 'rate', value: '0' },
-                        { name: 'includesTax', value: 'auto' },
-                        { name: 'taxRate', value: '0' },
-                    ],
-                },
-                translations: [{ languageCode: 'en', name: 'Free Shipping', description: '' }],
-            },
-        },
-        token,
-    );
-}
-
-async function ensureCountry(token: string, code: string, name: string): Promise<void> {
-    const { data } = await adminGql<{ countries: { items: { id: string }[] } }>(
-        `query($code: String!) { countries(options: { filter: { code: { eq: $code } } }) { items { id } } }`,
-        { code },
-        token,
-    );
-    if (data.countries.items.length > 0) return;
-    await adminGql(
-        `mutation($input: CreateCountryInput!) { createCountry(input: $input) { id } }`,
-        { input: { code, translations: [{ languageCode: 'en', name }], enabled: true } },
-        token,
-    );
-}
 
 export default async function globalSetup(): Promise<void> {
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });

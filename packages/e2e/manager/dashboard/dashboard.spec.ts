@@ -5,7 +5,7 @@ import { cancelTestOrder, createConfirmedOrder } from '../../helpers/manager-ord
 import { E2E_CUSTOMER } from '../../fixtures/seed';
 import { formatDocumentNumber } from '../../helpers/e2e-order';
 
-// One spec runs under three role projects, each pre-authenticated as a different seeded role.
+// One spec runs under four role projects, each pre-authenticated as a different seeded role.
 // Expected cards per role must match api/dashboard-config.ts, not be hardcoded here.
 const CARDS_BY_ROLE: Record<string, { visible: string[]; hidden: string[] }> = {
     'manager-operator': {
@@ -20,11 +20,16 @@ const CARDS_BY_ROLE: Record<string, { visible: string[]; hidden: string[] }> = {
         visible: ['Awaiting my decision', 'Department orders', 'Department clients'],
         hidden: ['My pending approval requests', 'My clients'],
     },
+    // portal-admin is an approver role in dashboard-config.ts, so it gets the approver cards.
+    'manager-portal-admin': {
+        visible: ['Awaiting my decision', 'Department orders', 'Department clients'],
+        hidden: ['My pending approval requests', 'My clients'],
+    },
 };
 
 test('dashboard shows the KPI cards for the current role', async ({ page }, testInfo) => {
     const expected = CARDS_BY_ROLE[testInfo.project.name];
-    test.skip(!expected, `No KPI expectations defined for project "${testInfo.project.name}"`);
+    if (!expected) throw new Error(`No KPI expectations for project "${testInfo.project.name}"`);
 
     await page.goto('/');
     await expect(page.getByText('Welcome back,')).toBeVisible();

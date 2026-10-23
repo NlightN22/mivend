@@ -340,7 +340,9 @@ preview-down:
 
 # Every run gets a throwaway stack on its own database (#274): server :3020, storefront :5193,
 # manager :5194, seeded from scratch, dropped afterwards. make dev's database is never touched.
-E2E_STACK = flock /tmp/mivend-e2e.lock pnpm --filter server exec ts-node --transpile-only src/__tests__/e2e-stack/run.ts
+# The lock is held for the whole target, shards included; run.ts refuses to start without it.
+E2E_LOCK = flock /tmp/mivend-e2e.lock
+E2E_STACK = $(E2E_LOCK) pnpm --filter server exec ts-node --transpile-only src/__tests__/e2e-stack/run.ts
 
 e2e-stack-build: up
 	pnpm build:plugins
@@ -349,11 +351,8 @@ e2e-stack-build: up
 # The full suite runs as E2E_SHARDS shards, each on its own fresh stack, so no run hits the 30-min cap.
 E2E_SHARDS ?= 4
 e2e-dev test-e2e: e2e-stack-build
-	@if [ -n "$(E2E_ARGS)" ]; then $(E2E_STACK) pnpm --filter @mivend/e2e test $(E2E_ARGS); else \
-		failed=""; for i in $$(seq 1 $(E2E_SHARDS)); do \
-			$(E2E_STACK) pnpm --filter @mivend/e2e test --shard=$$i/$(E2E_SHARDS) || failed="$$failed $$i"; \
-		done; \
-		if [ -n "$$failed" ]; then echo "e2e shards failed:$$failed"; exit 1; fi; fi
+	@if [ -n "$(E2E_ARGS)" ]; then $(E2E_STACK) pnpm --filter @mivend/e2e test $(E2E_ARGS); \
+	else $(E2E_LOCK) bash infrastructure/scripts/e2e-shards.sh $(E2E_SHARDS); fi
 
 # Minimal critical-route subset (login, order creation) — see docs/testing-strategy.md's
 # "E2E strategy".

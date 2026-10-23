@@ -1,24 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// Search tests require Elasticsearch. Skip if ES is unavailable in the current environment.
-const esAvailable = async (): Promise<boolean> => {
-    try {
-        const res = await fetch(
-            process.env.ELASTICSEARCH_URL ?? 'http://localhost:9200/_cluster/health',
-        );
-        return res.ok;
-    } catch {
-        return false;
-    }
-};
-
 const SEARCH_PLACEHOLDER = 'Article, VIN, brand, name or OEM';
 
 test.describe('Catalog search', () => {
     test.beforeEach(async ({ page }) => {
-        if (!(await esAvailable())) {
-            test.skip();
-        }
         await page.goto('/catalog');
         await page.waitForLoadState('networkidle');
     });

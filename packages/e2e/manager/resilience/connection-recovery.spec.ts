@@ -1,14 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { findServerPid, freezeServer, resumeServer } from '../../helpers/server-control';
 
-// Recovery-after-transient-failure scenario (docs/testing-strategy.md's "E2E strategy") for
-// stores/auth.ts's connection bar + relogin. Skipped by default — see the test.skip() below.
+// Connection bar + relogin after an outage. Only `make e2e-resilience` runs it: playwright.config
+// ignores manager/resilience unless E2E_RESILIENCE is set, since it freezes the stack server.
 test.describe('Manager portal recovers from a backend outage', () => {
-    test.skip(
-        !process.env.E2E_RESILIENCE,
-        'SIGSTOPs the e2e stack server for minutes; run via `make e2e-resilience`, not part of the default suite/CI.',
-    );
-
     // Real timers, not mocked — must exceed MvConnectionBar's 2-minute escalation threshold.
     test.setTimeout(3 * 60 * 1000);
 
