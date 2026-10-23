@@ -87,10 +87,12 @@ describe('ReservationExtensionService.extendReservation under concurrent writers
             );
         });
         await sleep(30);
-        const extension = service.extendReservation(mockCtx, order.id, 2);
+        const rejected = expect(
+            service.extendReservation(mockCtx, order.id, 2),
+        ).rejects.toBeInstanceOf(UserInputError);
 
         await sweep;
-        await expect(extension).rejects.toBeInstanceOf(UserInputError);
+        await rejected;
         const row = await load(order.id);
         expect(row.status).toBe('expired');
         expect(row.expiresAt.getTime()).toBe(before);
