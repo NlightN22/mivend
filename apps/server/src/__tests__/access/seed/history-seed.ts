@@ -13,7 +13,7 @@ export async function seedHistory(
     const call = (query: string, variables: Record<string, unknown>): Promise<unknown> =>
         gqlOk(baseUrl, 'admin-api', query, variables, superadmin);
     for (const c of COUNTERPARTIES) {
-        // No override exists in the seed, so clearing it re-runs the automatic rule and changes nothing.
+        // No override exists, so the branch stays as is; the call still records a Counterparty version.
         await call(
             `mutation($c: ID!) { setCounterpartyBranchOverride(counterpartyId: $c, branchId: null) }`,
             { c: ids.counterparties[c.key] },

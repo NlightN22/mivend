@@ -148,3 +148,21 @@ describe('servicing branch and history', () => {
         expect(got.keys.has(key(cp))).toBe(false);
     });
 });
+
+describe('grant history follows the grant list', () => {
+    it('head-b: the branch-A grant is hidden from its list and its history is empty', async () => {
+        const grant = { entityName: 'VisibilityGrant', entityId: grantId };
+        expect((await one(superadmin, grant)).count, 'superadmin sees the history').toBeGreaterThan(
+            0,
+        );
+        const token = await staffToken('head-b');
+        const list = await admin<{ visibilityGrants: { items: { id: string }[] } }>(token, GRANTS, {
+            g: seed().admins[STANDING_GRANT.grantee],
+        });
+        expect(list.errors).toEqual([]);
+        expect(list.data!.visibilityGrants.items.map(g => g.id)).not.toContain(grantId);
+        const got = await one(token, grant);
+        expect(got.errors).toEqual([]);
+        expect(got.count).toBe(0);
+    });
+});
