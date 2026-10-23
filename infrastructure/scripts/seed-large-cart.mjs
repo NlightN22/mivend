@@ -2,6 +2,13 @@
 // Requires the local contour (`make dev` + `make seed`).
 const BASE_URL = `http://localhost:${process.env.PORT ?? '3000'}`;
 const TOKEN = process.env.ERP_IMPORT_TOKEN ?? 'dev-import-token-change-me-0000';
+const ADMIN_USER = process.env.ADMIN_USER ?? 'superadmin';
+const ADMIN_PASS = process.env.ADMIN_PASS ?? 'superadmin';
+const CUSTOMER = process.env.CUSTOMER_EMAIL ?? 'ivan@autoservice-nord.example';
+const CUSTOMER_PASS = process.env.CUSTOMER_PASS ?? 'Password123!';
+if (!['3000', '3020'].includes(process.env.PORT ?? '3000')) {
+    throw new Error('Local contour only (:3000); never run this against staging-integration');
+}
 const LINES = Number(process.argv[2] ?? 200);
 const sku = i => `BULK-${String(i).padStart(3, '0')}`;
 const brands = ['ladder-only', 'flat-plus-ladder', 'flat-beats-ladder', 'amount-ladder'];
@@ -14,7 +21,8 @@ async function postBatch(exchangeId, records) {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     const result = await res.json();
-    if (result.failed > 0) throw new Error(`${exchangeId}: ${JSON.stringify(result.errors.slice(0, 3))}`);
+    if (result.failed > 0)
+        throw new Error(`${exchangeId}: ${JSON.stringify(result.errors.slice(0, 3))}`);
     return result;
 }
 
@@ -27,7 +35,11 @@ function client(path) {
             body: JSON.stringify({ query, variables }),
         });
         const set = res.headers.get('set-cookie');
-        if (set) cookie = set.split(',').map(c => c.split(';')[0].trim()).join('; ');
+        if (set)
+            cookie = set
+                .split(',')
+                .map(c => c.split(';')[0].trim())
+                .join('; ');
         const json = await res.json();
         if (json.errors) throw new Error(json.errors[0].message);
         return json.data;
@@ -51,10 +63,16 @@ async function seed() {
         organizationId: Number(process.env.ORGANIZATION_ID ?? 1),
     }));
     const run = `bulk-${LINES}-${Date.now()}`;
-    await postBatch(`seed-${run}-products`, products.map(data => ({ type: 'product', data })));
+    await postBatch(
+        `seed-${run}-products`,
+        products.map(data => ({ type: 'product', data })),
+    );
     await postBatch(
         `seed-${run}-prices`,
-        products.map(p => ({ type: 'price', data: { sku: p.sku, priceTypeCode: 'WHOLESALE', price: p.price } })),
+        products.map(p => ({
+            type: 'price',
+            data: { sku: p.sku, priceTypeCode: 'WHOLESALE', price: p.price },
+        })),
     );
     await postBatch(
         `seed-${run}-stock`,
@@ -64,7 +82,9 @@ async function seed() {
 
 async function variantIds() {
     const admin = client('/admin-api');
-    await admin(`mutation { login(username: "superadmin", password: "superadmin") { ... on CurrentUser { id } } }`);
+    await admin(
+        `mutation { login(username: "${ADMIN_USER}", password: "${ADMIN_PASS}") { ... on CurrentUser { id } } }`,
+    );
     const data = await admin(
         `query($t: Int!) { productVariants(options: { take: $t, filter: { sku: { contains: "BULK-" } } }) { items { id sku } } }`,
         { t: LINES },
@@ -82,9 +102,15 @@ await seed();
 const ids = await variantIds();
 console.log(`${ids.length} BULK variants`);
 const shop = client('/shop-api');
-await shop(`mutation { login(username: "ivan@autoservice-nord.example", password: "Password123!") { ... on CurrentUser { id } } }`);
+await shop(
+    `mutation { login(username: "${CUSTOMER}", password: "${CUSTOMER_PASS}") { ... on CurrentUser { id } } }`,
+);
 await shop(`mutation { removeAllOrderLines { __typename } }`).catch(() => undefined);
-const add = id => shop(`mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 2) { __typename ... on ErrorResult { message } } }`, { id });
+const add = id =>
+    shop(
+        `mutation($id: ID!) { addItemToOrder(productVariantId: $id, quantity: 2) { __typename ... on ErrorResult { message } } }`,
+        { id },
+    );
 const checkpoints = new Set([1, 41, 100, LINES]);
 for (let n = 1; n <= ids.length; n++) {
     if (checkpoints.has(n)) await time(`add line #${n}`, () => add(ids[n - 1]));
@@ -93,7 +119,9 @@ for (let n = 1; n <= ids.length; n++) {
 const order = await shop(`query { activeOrder { id lines { id } } }`);
 const lineId = order.activeOrder.lines[0].id;
 await time(`adjust (${order.activeOrder.lines.length} lines)`, () =>
-    shop(`mutation($l: ID!) { adjustOrderLine(orderLineId: $l, quantity: 3) { __typename } }`, { l: lineId }),
+    shop(`mutation($l: ID!) { adjustOrderLine(orderLineId: $l, quantity: 3) { __typename } }`, {
+        l: lineId,
+    }),
 );
 await time('read activeOrder', () =>
     shop(`query { activeOrder { totalWithTax lines { discountedLinePriceWithTax } } }`),

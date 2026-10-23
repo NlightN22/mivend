@@ -9,7 +9,7 @@ import { In } from 'typeorm';
 
 import { DiscountRule } from './discount-rule.entity';
 import { VariantFacetValue } from './discount-rule.service';
-import { LookupMemo } from './lookup-memo';
+import { LookupMemo, memoized } from './lookup-memo';
 import { PriceEntryService } from './price-entry.service';
 
 interface VariantFacetValueWithName extends VariantFacetValue {
@@ -93,9 +93,9 @@ export async function preloadOrderLookups(
     }
 
     if (order.customerId) {
-        const code = await priceEntryService.getPriceTypeCodeForCustomer(
-            ctx,
-            String(order.customerId),
+        const customerId = String(order.customerId);
+        const code = await memoized(memo, `ptc:${customerId}`, () =>
+            priceEntryService.getPriceTypeCodeForCustomer(ctx, customerId),
         );
         if (code) {
             const prices = await priceEntryService.getForVariants(ctx, variantIds, code);
