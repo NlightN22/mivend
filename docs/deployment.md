@@ -11,7 +11,7 @@ env file (`INSTANCE_TYPE`/`INSTANCE_ID`), never a different file.
 
 | Service         | Required | Notes                                                                           |
 | --------------- | -------- | ------------------------------------------------------------------------------- |
-| `postgres`      | yes      | Container, ICU locale fixed at first init (`DB_ICU_LOCALE`).                    |
+| `postgres`      | yes      | Stock `postgres:16-alpine`; ICU locale set at first init via `POSTGRES_INITDB_ARGS`. |
 | `rabbitmq`      | yes      | Stock image; hub/branch sync transport, the app declares its own queues.         |
 | `garage`        | yes      | S3 storage for product photos; bucket and key created by `make prod-init-storage`. |
 | `migrate`       | yes      | One-shot, runs before the rest; never at app boot.                              |

@@ -1,20 +1,26 @@
 name: Publish app images
 
 on:
-    push:
-        branches: [main]
-        paths:
-            - 'apps/server/**'
-            - 'packages/**'
-            - 'pnpm-lock.yaml'
     workflow_dispatch:
 
 jobs:
-    publish-server:
+    publish:
         runs-on: ubuntu-latest
         permissions:
             contents: read
             packages: write
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - { image: mivend-server, file: apps/server/Dockerfile, npmrc: true }
+                    - {
+                          image: mivend-storefront,
+                          file: packages/storefront/Dockerfile,
+                          npmrc: false,
+                      }
+                    - { image: mivend-manager, file: packages/manager/Dockerfile, npmrc: false }
+                    - { image: mivend-dashboard, file: packages/dashboard/Dockerfile, npmrc: true }
 
         steps:
             - uses: actions/checkout@v4
@@ -34,9 +40,9 @@ jobs:
               id: meta
               uses: docker/metadata-action@v5
               with:
-                  images: ghcr.io/${{ github.repository_owner }}/mivend-server
+                  images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
                   tags: |
-                      type=raw,value=latest,enable={{is_default_branch}}
+                      type=raw,value=latest
                       type=raw,value=v${{ steps.pkg.outputs.version }}
                       type=sha,prefix=sha-
 
@@ -46,11 +52,10 @@ jobs:
               uses: docker/build-push-action@v5
               with:
                   context: .
-                  file: apps/server/Dockerfile
+                  file: ${{ matrix.file }}
                   push: true
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
-                  secrets: |
-                      npmrc=//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGES_READ_TOKEN }}
+                  cache-from: type=gha,scope=${{ matrix.image }}
+                  cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+                  secrets: ${{ matrix.npmrc && format('npmrc=//npm.pkg.github.com/:_authToken={0}', secrets.PACKAGES_READ_TOKEN) || '' }}
