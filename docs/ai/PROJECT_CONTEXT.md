@@ -1,6 +1,11 @@
 # Project Context
 
-Updated: 2026-10-22 08:00
+Updated: 2026-10-23 05:00
+
+## #270 catalog tier-ladder progress (2026-10-23, DONE: audited, pushed `9c03af3a`, closed)
+- Shop `ProductVariant.tierProgress` is derived from the caller's OWN active order (null for guests, 0 of N for an empty cart); the order is loaded once per request. Storefront `stores/tierProgress.ts` batches by product id and refetches on `cart.serverVersion`; ui-kit `MvTierLadder` (pin, current best discount, target rung, orange to green, achieved state).
+- Limitation: only the nearest unreached rung is considered (a weaker next rung hides a stronger later one). Showcase data: `SHOW-*` products and `seed-tier-showcase.mjs` (seed-erp run `v16`); staging-integration has no rules and is never seeded.
+- Follow-up: #273 marketing-activities role and manager-portal section.
 
 ## #196 one-pass order-dependent discounts (2026-10-22, DONE: audited, pushed, closed)
 - Tier ladders, promo rules and counterparty rules are ONE automatic Vendure promotion (`order-discount.promotion.ts`, provisioned at boot by `OrderDiscountPromotionBootstrapService`, re-enabled if disabled); `OrderDiscountService.stateFor` evaluates the whole order once per snapshot with `PriceResolutionService.resolve`; the strategy keeps only the flat discount in `listPrice` (`{ orderRules: false }`). `TierRebalanceService`/`ActiveOrderSettleInterceptor` are gone. Never add a second promotion for these rules (Vendure would stack them). Details: `docs/pricing.md` "Order-dependent discounts".
