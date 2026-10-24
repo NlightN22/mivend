@@ -24,11 +24,12 @@ FROM deps AS builder
 # same as apps/server/Dockerfile's own `pnpm build:plugins` step. `shared` needs its own tsc
 # build too (its "main" points at ./dist, not ./src) — some plugins depend on it.
 # The config loader runs vendure-config.ts under NODE_ENV=production, which demands a cookie secret and an instance code.
-RUN pnpm --filter shared build && pnpm build:plugins && COOKIE_SECRET=build-time-only INSTANCE_NUMBER_CODE=000 pnpm --filter @mivend/dashboard build
+RUN pnpm --filter shared build && pnpm build:plugins && COOKIE_SECRET=build-time-only INSTANCE_NUMBER_CODE=000 EMAIL_TRANSPORT=file pnpm --filter @mivend/dashboard build
 
 FROM nginx:1.27-alpine AS runner
 COPY --from=builder /app/packages/dashboard/dist /usr/share/nginx/html
 COPY packages/dashboard/nginx.conf.template /etc/nginx/templates/default.conf.template
 ENV API_TARGET=http://server:3000
 ENV LISTEN_PORT=80
+ENV SITE_FAVICON_URL=/favicon.png
 EXPOSE 80
