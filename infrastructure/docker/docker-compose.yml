@@ -53,6 +53,8 @@ x-server-env: &server-env
     EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
     EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
     SITE_NAME: ${SITE_NAME:-}
+    SITE_DEFAULT_LANGUAGE: ${SITE_DEFAULT_LANGUAGE:-}
+    EMAIL_FOOTER_TEXT: ${EMAIL_FOOTER_TEXT:-}
     # REST surfaces are closed by default (docs/environments.md); keep these false in production.
     EMAIL_DEV_MAILBOX_ENABLED: 'false'
     API_DOCS_ENABLED: 'false'
