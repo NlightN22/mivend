@@ -57,6 +57,16 @@ describe.each(shopActors)('storefront categories for $name', ({ token: open }) =
         for (const slug of HIDDEN) expect(slugs, slug).not.toContain(slug);
     });
 
+    it('no hidden category appears in the breadcrumbs or parent of a visible one', async () => {
+        const result = await shop<{
+            collections: { items: { slug: string; breadcrumbs: { slug: string }[] }[] };
+        }>(token, SHOP_LIST);
+        expect(result.errors).toEqual([]);
+        for (const c of result.data!.collections.items)
+            for (const crumb of c.breadcrumbs)
+                expect(HIDDEN, `${c.slug} -> ${crumb.slug}`).not.toContain(crumb.slug);
+    });
+
     it('a visible override keeps its child reachable under a hidden parent', async () => {
         const slugs = await shopSlugs(token);
         expect(slugs).toContain(categorySlug('vis-b2'));

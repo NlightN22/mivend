@@ -7,6 +7,7 @@ import {
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { departmentBranchBundle } from './department-branch.bundle';
 import { visibilityGrantBundle } from './visibility-grant.bundle';
+import { ShopCollectionBreadcrumbsResolver } from './shop-collection-breadcrumbs.resolver';
 import { adminApiSchema } from './access-control.schema';
 
 import { AccessControlResolver, AdministratorStatusResolver } from './access-control.resolver';
@@ -109,6 +110,9 @@ import { WarehouseService } from './warehouse.service';
             ...departmentBranchBundle.resolvers,
             CustomerPriceTypeResolver,
         ],
+    },
+    shopApiExtensions: {
+        resolvers: [ShopCollectionBreadcrumbsResolver],
     },
     configuration: (config: RuntimeVendureConfig) => {
         config.schedulerOptions.tasks = [
