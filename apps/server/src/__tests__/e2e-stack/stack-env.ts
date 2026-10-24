@@ -33,6 +33,9 @@ export function serverEnv(
     return {
         ...base,
         PORT: String(E2E_PORTS.server),
+        MANAGER_PUBLIC_URL: `http://localhost:${E2E_PORTS.manager}`,
+        STOREFRONT_PUBLIC_URL: `http://localhost:${E2E_PORTS.storefront}`,
+        EMAIL_DEV_MAILBOX_ENABLED: 'true',
         DB_NAME: name,
         RABBITMQ_URL: rabbitUrl,
         ELASTICSEARCH_INDEX_PREFIX: `${name}-`,
