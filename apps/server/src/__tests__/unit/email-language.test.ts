@@ -3,10 +3,8 @@ import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { Injector, RequestContext } from '@vendure/core';
 import { HandlebarsMjmlGenerator, InitializedEmailPluginOptions } from '@vendure/email-plugin';
-import {
-    createEmailAddressChangeHandler,
-    createEmailVerificationHandler,
-} from '../../account-email-handlers';
+import {} from '../../account-email-handlers';
+import { EMAIL_SUBJECTS } from '../../account-email-handlers';
 import { createEmailHandlers } from '../../email-handlers';
 import { emailGlobalTemplateVars } from '../../email-config';
 import {
@@ -16,7 +14,6 @@ import {
     defaultEmailLanguage,
     resolveEmailLanguage,
 } from '../../email-language';
-import { createPasswordResetHandler } from '../../password-reset-handler';
 import { emailFooterText } from '../../site-config';
 
 const loader = new LanguageTemplateLoader(path.join(__dirname, '../../../static/email/templates'));
@@ -45,19 +42,13 @@ interface Mail {
     body: string;
 }
 
-const handlers = {
-    'password-reset': (fallback: EmailLanguage) =>
-        createPasswordResetHandler(
-            {
-                staff: 'https://m.example.org/set-password',
-                customer: 'https://shop.example.org/set-password',
-            },
-            fallback,
-        ),
-    'email-verification': createEmailVerificationHandler,
-    'email-address-change': createEmailAddressChangeHandler,
+const URLS = {
+    staff: 'https://m.example.org/set-password',
+    customer: 'https://shop.example.org/set-password',
 };
-type MailType = keyof typeof handlers;
+const REGISTERED = createEmailHandlers(URLS, 'en').map(h => h.type);
+type MailType = 'password-reset' | 'email-verification' | 'email-address-change';
+const MAIL_TYPES: MailType[] = ['password-reset', 'email-verification', 'email-address-change'];
 
 async function render(
     type: MailType,
@@ -71,7 +62,7 @@ async function render(
         authenticationMethods: [],
         getNativeAuthenticationMethod: () => method,
     };
-    const handler = handlers[type](fallback) as unknown as {
+    const handler = createEmailHandlers(URLS, fallback).find(h => h.type === type) as unknown as {
         handle: (
             e: unknown,
             g: unknown,
@@ -91,7 +82,6 @@ async function render(
             SITE_NAME: 'Site A',
             ...env,
         }),
-        changeEmailAddressUrl: 'https://shop.example.org/confirm-email',
     };
     const details = await handler.handle({ ctx, user }, globals, injector);
     if (!details) throw new Error('no mail');
@@ -114,7 +104,7 @@ async function render(
 const LINKS: Record<MailType, string> = {
     'password-reset': 'https://shop.example.org/set-password?token=tok1',
     'email-verification': 'https://shop.example.org/verify?token=tok1',
-    'email-address-change': 'https://shop.example.org/confirm-email?token=tok1',
+    'email-address-change': 'href="?token=tok1"',
 };
 const SUBJECTS: Record<MailType, Record<EmailLanguage, string>> = {
     'password-reset': { en: 'Forgotten password reset', ru: 'Восстановление пароля' },
@@ -132,7 +122,7 @@ const DEFAULT_FOOTER: Record<EmailLanguage, string> = {
     ru: 'Это автоматическое сообщение, отвечать на него не нужно.',
 };
 
-describe.each(Object.keys(handlers) as MailType[])('%s mail', type => {
+describe.each(MAIL_TYPES)('%s mail', type => {
     it.each(EMAIL_LANGUAGES)('renders subject, header, footer and link in %s', async language => {
         const mail = await render(type, ctxWith(language), 'en');
         expect(mail.subject).toBe(SUBJECTS[type][language]);
@@ -193,7 +183,13 @@ describe('boot-time validation', () => {
         );
     });
 
-    it.each(['a<b', 'a"b', 'a\nb', '{{x}}', 'a&b', "it's"])(
+    it('accepts an apostrophe and an ampersand', () => {
+        expect(emailFooterText({ EMAIL_FOOTER_TEXT: "Tom & Jerry's shop" })).toBe(
+            "Tom & Jerry's shop",
+        );
+    });
+
+    it.each(['a<b', 'a"b', 'a\nb', '{{x}}', 'a$b', 'a;b'])(
         'rejects EMAIL_FOOTER_TEXT %j',
         value => {
             expect(() => emailFooterText({ EMAIL_FOOTER_TEXT: value })).toThrow(
@@ -223,6 +219,31 @@ describe('background-raised mails', () => {
             expect(mail.subject).toBe(SUBJECTS[type].ru);
         },
     );
+});
+
+describe('mail tables', () => {
+    it('cover exactly the registered handlers', () => {
+        expect([...REGISTERED].sort()).toEqual([...MAIL_TYPES].sort());
+        for (const type of REGISTERED) {
+            expect(LINKS[type as MailType], type).toBeDefined();
+            expect(SUBJECTS[type as MailType], type).toBeDefined();
+        }
+    });
+
+    it('renders emailLanguage and an EMAIL_SUBJECTS subject for every handler', async () => {
+        const subjects = Object.values(EMAIL_SUBJECTS).flatMap(m => Object.values(m));
+        for (const type of REGISTERED) {
+            const mail = await render(type as MailType, ctxWith('ru'), 'en');
+            expect(subjects, type).toContain(mail.subject);
+            expect(mail.subject, type).not.toBe(SUBJECTS[type as MailType].en);
+        }
+    });
+
+    it('leaves the address-change link base undefined until a confirmation page exists', () => {
+        expect(
+            emailGlobalTemplateVars('a@example.org', 'https://shop.example.org', {}),
+        ).not.toHaveProperty('changeEmailAddressUrl');
+    });
 });
 
 describe('registered mail types', () => {

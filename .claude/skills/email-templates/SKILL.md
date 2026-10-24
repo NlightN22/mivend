@@ -22,7 +22,7 @@ Hard rule: every email template is created in at least two languages (`ru` and `
 
 ## Variables
 
-Global (`emailGlobalTemplateVars` in `email-config.ts`): `fromAddress`, `siteName`, `footerText`, `verifyEmailAddressUrl`. Per-mail variables come from the handler's `setTemplateVars`/`loadData`. Handlebars escapes `{{ }}` output.
+Global (`emailGlobalTemplateVars` in `email-config.ts`): `fromAddress`, `siteName`, `footerText`, `verifyEmailAddressUrl`. `changeEmailAddressUrl` (used by `email-address-change`) is not defined yet: no storefront page and no flow triggers that mail; do not invent a URL. Per-mail variables come from the handler's `setTemplateVars`/`loadData`. Handlebars escapes `{{ }}` output.
 
 ## Viewing a mail locally
 
@@ -31,3 +31,5 @@ Start the stack with `make dev` (never by hand) with `EMAIL_DEV_MAILBOX_ENABLED=
 ## Tests
 
 Follow `test-design`. Unit tests in `apps/server/src/__tests__/unit/email-language.test.ts` render each mail with the real Handlebars/MJML generator in every language (subject, site name, footer, link) and cover language fallbacks. Extend its tables for a new mail or language. Run `make test`; e2e specs find mails by the English subject.
+
+The e2e stack env must not set `SITE_DEFAULT_LANGUAGE=ru`: e2e specs find mails by the English subject.
