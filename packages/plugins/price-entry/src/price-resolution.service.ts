@@ -72,12 +72,19 @@ export class PriceResolutionService {
                     this.branchSettingsService.resolveEffective(ctx, branchId),
                 );
                 return branchSettings
-                    ? this.priceEntryService.getPriceTypeCodeById(
-                          ctx,
-                          branchSettings.defaultPriceTypeId,
-                      )
+                    ? this.defaultCodeOf(ctx, branchSettings.defaultPriceTypeId, memo)
                     : null;
             },
+        );
+    }
+
+    private defaultCodeOf(
+        ctx: RequestContext,
+        priceTypeId: string,
+        memo?: LookupMemo,
+    ): Promise<string | null> {
+        return memoized(memo, `ptid:${priceTypeId}`, () =>
+            this.priceEntryService.getPriceTypeCodeById(ctx, priceTypeId),
         );
     }
 
@@ -124,10 +131,7 @@ export class PriceResolutionService {
                 this.branchSettingsService.resolveEffective(ctx, branchId),
             );
             const defaultPriceTypeCode = branchSettings
-                ? await this.priceEntryService.getPriceTypeCodeById(
-                      ctx,
-                      branchSettings.defaultPriceTypeId,
-                  )
+                ? await this.defaultCodeOf(ctx, branchSettings.defaultPriceTypeId, memo)
                 : null;
             if (defaultPriceTypeCode) {
                 basePrice = await this.forVariant(ctx, variantId, defaultPriceTypeCode, memo);

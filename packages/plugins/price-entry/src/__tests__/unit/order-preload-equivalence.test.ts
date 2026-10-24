@@ -122,4 +122,26 @@ describe('order lookup preload (equivalence)', () => {
         expect(priceEntry.getForVariants).toHaveBeenCalledTimes(2);
         expect(priceEntry.getForVariants).toHaveBeenLastCalledWith(ctx, ['v3'], 'RETAIL');
     });
+
+    it('resolves the default price type id once for the whole order', async () => {
+        const twoFallbackLines = {
+            ...order,
+            lines: [
+                { productVariantId: 'v3', quantity: 1 },
+                { productVariantId: 'v3', quantity: 1 },
+            ],
+        } as unknown as Order;
+        priceEntry.getPriceTypeCodeById.mockClear();
+        const memo = new LookupMemo();
+        await service.preload(ctx, twoFallbackLines, memo);
+        for (const line of twoFallbackLines.lines) {
+            await service.resolve(
+                ctx,
+                String(line.productVariantId),
+                { order: twoFallbackLines, quantity: 1 },
+                { memo },
+            );
+        }
+        expect(priceEntry.getPriceTypeCodeById).toHaveBeenCalledTimes(1);
+    });
 });
