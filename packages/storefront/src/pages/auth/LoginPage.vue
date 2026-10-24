@@ -64,6 +64,8 @@ async function handleSubmit() {
                         <MvPasswordInput
                             v-model="form.password"
                             :placeholder="t('auth.passwordPlaceholder')"
+                            :show-label="t('auth.showPassword')"
+                            :hide-label="t('auth.hidePassword')"
                             :error="!!error"
                         />
                     </MvFormField>

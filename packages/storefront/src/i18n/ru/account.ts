@@ -12,6 +12,8 @@ const ru: typeof en = {
         emailOrPhone: 'Телефон или email',
         emailPlaceholder: '+7 900 000-00-00 или email',
         passwordPlaceholder: '••••••••',
+        showPassword: 'Показать',
+        hidePassword: 'Скрыть',
         rememberMe: 'Запомнить вход',
         forgotPassword: 'Забыли пароль?',
         publicCatalog: 'Публичный каталог',

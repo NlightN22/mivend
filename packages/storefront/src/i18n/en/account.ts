@@ -10,6 +10,8 @@ export default {
         emailOrPhone: 'Phone or email',
         emailPlaceholder: '+7 900 000-00-00 or email',
         passwordPlaceholder: '••••••••',
+        showPassword: 'Show',
+        hidePassword: 'Hide',
         rememberMe: 'Remember me',
         forgotPassword: 'Forgot password?',
         publicCatalog: 'Public catalogue',

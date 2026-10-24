@@ -2,12 +2,17 @@
 import { ref } from 'vue';
 import MvInput from '../MvInput/MvInput.vue';
 
-defineProps<{
-    modelValue: string;
-    placeholder?: string;
-    disabled?: boolean;
-    error?: boolean;
-}>();
+withDefaults(
+    defineProps<{
+        modelValue: string;
+        placeholder?: string;
+        disabled?: boolean;
+        error?: boolean;
+        showLabel?: string;
+        hideLabel?: string;
+    }>(),
+    { showLabel: 'Show', hideLabel: 'Hide' },
+);
 
 defineEmits<{
     'update:modelValue': [value: string];
@@ -31,10 +36,10 @@ const visible = ref(false);
         <button
             class="mv-pw__toggle"
             type="button"
-            :aria-label="visible ? 'Hide password' : 'Show password'"
+            :aria-label="visible ? hideLabel : showLabel"
             @click="visible = !visible"
         >
-            {{ visible ? 'Hide' : 'Show' }}
+            {{ visible ? hideLabel : showLabel }}
         </button>
     </div>
 </template>

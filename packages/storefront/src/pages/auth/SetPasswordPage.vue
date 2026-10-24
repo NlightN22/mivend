@@ -32,6 +32,8 @@ const copy = computed(() => (props.flow === 'verify' ? 'auth.verifyAccount' : 'a
                             <MvPasswordInput
                                 v-model="form.password"
                                 autocomplete="new-password"
+                                :show-label="t('auth.showPassword')"
+                                :hide-label="t('auth.hidePassword')"
                                 :error="tooShort"
                             />
                         </MvFormField>
@@ -43,6 +45,8 @@ const copy = computed(() => (props.flow === 'verify' ? 'auth.verifyAccount' : 'a
                             <MvPasswordInput
                                 v-model="form.confirm"
                                 autocomplete="new-password"
+                                :show-label="t('auth.showPassword')"
+                                :hide-label="t('auth.hidePassword')"
                                 :error="mismatch"
                             />
                         </MvFormField>
