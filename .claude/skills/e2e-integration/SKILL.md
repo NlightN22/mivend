@@ -41,7 +41,8 @@ unless the owner asks. Read `docs/e2e-testing.md` ("Staging-integration order ex
   Do not append unrelated scenarios to an existing file; shared steps go to a helper file (under ~200 lines).
 - Positive and negative cases of one rule live in the same group; check the API response, not only the UI
   (hidden in the UI is not the same as denied by the API).
-- Subset run: `make e2e-integration E2E_ARGS="01-placement"`.
+- Run by group: `make e2e-integration-group G=<name>` (registry and rules: `docs/testing-strategy.md` "E2E groups"); the full suite is for the audit session or an owner request. Contour restarts are still announced.
+- Checklist: the issue names its group; a new spec file adds or joins a registry group; only that group was run.
 
 ## Procedure
 

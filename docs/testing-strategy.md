@@ -262,6 +262,17 @@ manually via `gh workflow run integration.yml -f run_e2e_smoke=true` when touchi
 itself, or periodically as a health check — not as a per-PR gate. The full suite (`make e2e-dev`)
 stays local-only.
 
+## E2E groups
+
+A group is one theme (an entity type, a page set, or a backend/endpoint set) that maps to a folder or a common
+filename prefix of specs and runs in isolation. The registry (name, covers, args) is in `docs/e2e-testing.md`
+"E2E groups registry"; a new spec goes into an existing group's folder or adds a row there.
+
+- Every issue with e2e work names its group(s) for `make e2e-dev` and, where relevant, `make e2e-integration`.
+- Implementers run only their group(s): `make e2e-group G=<name>` / `make e2e-integration-group G=<name>`.
+- The full suite (`make e2e-dev`, `make e2e-integration`) runs only in the audit session or on explicit owner request.
+- `e2e-integration` runs still announce any contour restart first.
+
 ## CI
 
 Target pipeline: lint → format check → type check → unit → integration → component → contract →

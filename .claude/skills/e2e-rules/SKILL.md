@@ -60,6 +60,7 @@ A test must pass in any order and alone.
 
 - A full `make e2e-dev` takes over an hour. While fixing, run one spec file and one project:
   `make e2e-dev E2E_ARGS="<path/to/file.spec.ts> --project=<name>"`.
+- Run by group: `make e2e-group G=<name>` (registry and rules: `docs/testing-strategy.md` "E2E groups"); the full suite is for the audit session or an owner request.
 - Every e2e target takes `/tmp/mivend-e2e.lock` itself; a second run waits for the first.
 - Final verification of a change is scoped, not the full suite: run only the spec groups the
   change touches (a directory such as `storefront/orders` or `manager/customers`, with the affected
@@ -80,6 +81,7 @@ Copy into your report and tick every item, or write why it does not apply.
 - [ ] Carts, proforma invoices, payments, documents created by the test are cleaned up.
 - [ ] Logins use the e2e user agent and token helpers.
 - [ ] The spec passes alone and inside its whole group.
+- [ ] The issue names its e2e group(s) and only they were run via `make e2e-group` (`docs/testing-strategy.md` "E2E groups").
 - [ ] Only own specs were run, one at a time, with an explicit `--project`.
 - [ ] `make lint` passes; commits stage explicit paths, hooks on, no push.
 

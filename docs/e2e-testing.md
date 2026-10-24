@@ -80,6 +80,48 @@ a standing visibility grant, branch price type allow-lists, three pending discou
 placed, paid order per customer. Run:
 `make e2e-dev E2E_ARGS="visibility --project=visibility-manager --project=visibility-storefront"`.
 
+## E2E groups registry
+
+Canonical rules: `docs/testing-strategy.md` "E2E groups". Run one with `make e2e-group G=<name>` (suite `dev`) or
+`make e2e-integration-group G=<name>` (suite `integration`); the table below is the only name-to-args mapping and is
+read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or filename prefix.
+
+| Group | Suite | Covers | Args |
+| --- | --- | --- | --- |
+| `storefront-auth` | dev | storefront login, trading-point selection (no stored session) | `--project=storefront-noauth` |
+| `storefront-account` | dev | storefront account pages | `--project=storefront storefront/account` |
+| `storefront-api` | dev | storefront REST/Swagger docs surface | `--project=storefront storefront/api` |
+| `storefront-cart` | dev | cart behaviour | `--project=storefront storefront/cart` |
+| `cart-totals` | dev | cart totals and discount invariants | `--project=storefront-cart-totals` |
+| `storefront-catalog` | dev | catalog, search, filters, category tree, product card | `--project=storefront storefront/catalog` |
+| `storefront-checkout-credit` | dev | checkout, credit limits | `--project=storefront storefront/checkout-credit` |
+| `storefront-documents` | dev | customer documents | `--project=storefront storefront/documents` |
+| `storefront-favorites` | dev | favorites | `--project=storefront storefront/favorites` |
+| `storefront-home` | dev | home page | `--project=storefront storefront/home` |
+| `storefront-orders` | dev | customer orders (placement, list, detail, cancel) | `--project=storefront storefront/orders` |
+| `storefront-proforma` | dev | proforma invoices and per-organization proformas | `--project=storefront storefront/proforma-invoices storefront/proforma-organizations` |
+| `storefront-session` | dev | session-ended bar | `--project=storefront storefront/session` |
+| `manager-auth` | dev | manager login, password reset (no stored session) | `--project=manager-noauth` |
+| `manager-catalog` | dev | manager category tree | `--project=manager-operator manager/catalog` |
+| `manager-customers` | dev | customers, counterparties, history filters | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/customers` |
+| `manager-dashboard` | dev | dashboard KPIs per role | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/dashboard` |
+| `manager-discounts` | dev | discount grants | `--project=manager-operator manager/discounts` |
+| `manager-layout` | dev | mobile nav, pagination scroll | `--project=manager-operator manager/layout` |
+| `manager-orders` | dev | manager orders list, detail, delivery | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/orders` |
+| `manager-proforma-payments` | dev | proforma invoices and payments smoke | `--project=manager-operator manager/proforma-invoices-payments` |
+| `manager-settings` | dev | roles, users, security settings | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/settings` |
+| `manager-resilience` | dev | recovery after transient failure (use make e2e-resilience) | `manager/resilience` |
+| `visibility-storefront` | dev | own-data, price-type, category visibility (storefront) | `--project=visibility-storefront` |
+| `visibility-manager` | dev | entity lists, counterparties, price types, servicing team, categories (manager) | `--project=visibility-manager` |
+| `category-visibility` | dev | category visibility in both portals (#264) | `--project=visibility-storefront --project=visibility-manager categories` |
+| `smoke` | dev | critical-route subset tagged @smoke (use make e2e-smoke) | `--grep @smoke --project=storefront-noauth --project=storefront` |
+| `exchange-placement` | integration | order placement and ERP exchange | `01-placement` |
+| `exchange-cancel` | integration | order cancel after publish | `02-cancel` |
+| `exchange-cancel-before-publish` | integration | order cancel before publish | `03-cancel-before-publish` |
+| `exchange-cleanup` | integration | run cleanup | `04-cleanup` |
+
+`category-feed` (e2e-integration, #264) is added with that issue's spec.
+
 ## Manager portal role projects
 
 `playwright.config.ts` defines one project per manager-portal role under test —

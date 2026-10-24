@@ -9,7 +9,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
 -include .env.local
 export
 
-.PHONY: up up-rebuild down logs ps restart \
+.PHONY: e2e-group e2e-integration-group up up-rebuild down logs ps restart \
         build lint fmt ci \
         test test-int test-access test-e2e mutation-pilot \
         e2e-dev e2e-stack-build e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
@@ -384,6 +384,11 @@ e2e-dev test-e2e: e2e-stack-build
 	@if [ -n "$(E2E_ARGS)" ]; then $(E2E_STACK) pnpm --filter @mivend/e2e test $(E2E_ARGS); \
 	else $(E2E_LOCK) bash infrastructure/scripts/e2e-shards.sh $(E2E_SHARDS); fi
 
+# One registry group (docs/e2e-testing.md): make e2e-group G=cart-totals
+e2e-group:
+	@test -n "$(G)" || { echo "usage: make e2e-group G=<name>"; exit 1; }
+	$(MAKE) e2e-dev E2E_ARGS="$$(bash infrastructure/scripts/e2e-group.sh dev $(G))"
+
 # Minimal critical-route subset (login, order creation) — see docs/testing-strategy.md's
 # "E2E strategy".
 e2e-smoke: e2e-stack-build
@@ -405,6 +410,10 @@ e2e-resilience: e2e-stack-build
 # May restart that contour. Subset: make e2e-integration E2E_ARGS="01-placement".
 e2e-integration:
 	pnpm --filter @mivend/e2e test:erp-exchange $(E2E_ARGS)
+
+e2e-integration-group:
+	@test -n "$(G)" || { echo "usage: make e2e-integration-group G=<name>"; exit 1; }
+	$(MAKE) e2e-integration E2E_ARGS="$$(bash infrastructure/scripts/e2e-group.sh integration $(G))"
 
 e2e-report:
 	pnpm --filter @mivend/e2e report
