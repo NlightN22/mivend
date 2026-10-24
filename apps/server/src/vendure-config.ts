@@ -10,6 +10,7 @@ import {
 import { NumberingOrderCodeStrategy } from './order-code.strategy';
 import { sessionOptionsFromEnv } from './session-options';
 import { resolveEmailConfig } from './email-config';
+import { createPasswordResetHandler } from './password-reset-handler';
 import { OrderUuidSubscriber } from './order-uuid.subscriber';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { DeferredPaymentPlugin } from '@mivend/plugin-deferred-payment';
@@ -21,7 +22,6 @@ import {
     EmailPlugin,
     FileBasedTemplateLoader,
     emailVerificationHandler,
-    passwordResetHandler,
     emailAddressChangeHandler,
 } from '@vendure/email-plugin';
 import { DashboardPlugin } from '@vendure/dashboard/plugin';
@@ -132,10 +132,16 @@ const managerPublicUrl = process.env.MANAGER_PUBLIC_URL ?? '';
 
 const emailPlugin = EmailPlugin.init({
     templateLoader: new FileBasedTemplateLoader(path.join(__dirname, '../static/email/templates')),
-    handlers: [emailVerificationHandler, passwordResetHandler, emailAddressChangeHandler],
+    handlers: [
+        emailVerificationHandler,
+        createPasswordResetHandler({
+            staff: `${managerPublicUrl}/set-password`,
+            customer: `${process.env.STOREFRONT_PUBLIC_URL ?? ''}/set-password`,
+        }),
+        emailAddressChangeHandler,
+    ],
     globalTemplateVars: {
         fromAddress: emailFromAddress,
-        passwordResetUrl: `${managerPublicUrl}/set-password`,
     },
     ...emailTransportOptions,
 } as Parameters<typeof EmailPlugin.init>[0]);

@@ -81,3 +81,5 @@ Nothing is configured inside a container by hand.
 ## Email
 
 `EMAIL_TRANSPORT` is mandatory in production (`smtp`, or `file` for a contour that sends no mail); unset fails `server` and `worker-email` on boot. With `smtp`, set `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_SECURE` (`starttls` or `tls`), `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASSWORD`, `EMAIL_FROM_ADDRESS` (all required, no defaults) and optionally `EMAIL_FROM_NAME`. Copy the mailbox password between env files on the host, never through chat or the repo. Check: restart both services, trigger a password reset to a real mailbox, open its link on `/set-password`.
+
+Password-reset links go to `MANAGER_PUBLIC_URL/set-password` for staff and to `STOREFRONT_PUBLIC_URL/set-password` for customers; in production with `smtp` both URLs are required. The storefront has no set-password page yet, so customer links do not open anything until it is built.

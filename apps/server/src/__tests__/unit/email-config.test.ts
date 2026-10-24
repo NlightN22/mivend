@@ -76,7 +76,13 @@ describe('resolveEmailConfig', () => {
         );
         expect(() =>
             resolveEmailConfig(
-                { ...smtp, NODE_ENV: 'production', EMAIL_SMTP_PASSWORD: 'change-me' },
+                {
+                    ...smtp,
+                    NODE_ENV: 'production',
+                    EMAIL_SMTP_PASSWORD: 'change-me',
+                    MANAGER_PUBLIC_URL: 'https://m.example.org',
+                    STOREFRONT_PUBLIC_URL: 'https://s.example.org',
+                },
                 out,
             ),
         ).toThrow(/placeholder/);
@@ -91,6 +97,22 @@ describe('resolveEmailConfig', () => {
         );
         expect(() => resolveEmailConfig({ ...smtp, EMAIL_FROM_NAME: 'a\nb' }, out)).toThrow(
             /EMAIL_FROM_NAME/,
+        );
+    });
+
+    it('requires both public URLs in production with smtp', () => {
+        const prod = {
+            ...smtp,
+            NODE_ENV: 'production',
+            MANAGER_PUBLIC_URL: 'https://m.example.org',
+            STOREFRONT_PUBLIC_URL: 'https://s.example.org',
+        };
+        expect(resolveEmailConfig(prod, out).transport).toMatchObject({ type: 'smtp' });
+        expect(() =>
+            resolveEmailConfig({ ...prod, STOREFRONT_PUBLIC_URL: undefined }, out),
+        ).toThrow(/STOREFRONT_PUBLIC_URL/);
+        expect(() => resolveEmailConfig({ ...prod, MANAGER_PUBLIC_URL: undefined }, out)).toThrow(
+            /MANAGER_PUBLIC_URL/,
         );
     });
 });

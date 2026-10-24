@@ -22,6 +22,7 @@ x-server-env: &server-env
     SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:?SUPERADMIN_PASSWORD is required}
     COOKIE_SECRET: ${COOKIE_SECRET:?COOKIE_SECRET is required (same for every process)}
     MANAGER_PUBLIC_URL: ${MANAGER_PUBLIC_URL:-}
+    STOREFRONT_PUBLIC_URL: ${STOREFRONT_PUBLIC_URL:-}
     RABBITMQ_URL: amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASS:?RABBITMQ_PASS is required}@rabbitmq:5672
     S3_ENDPOINT: http://garage:3900
     S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}

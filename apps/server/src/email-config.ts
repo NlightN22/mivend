@@ -11,6 +11,8 @@ const SMTP_REQUIRED = [
     'EMAIL_FROM_ADDRESS',
 ] as const;
 
+const SMTP_PRODUCTION_REQUIRED = ['MANAGER_PUBLIC_URL', 'STOREFRONT_PUBLIC_URL'] as const;
+
 export interface EmailTransportConfig {
     transport?: EmailPluginOptions['transport'];
     devMode?: true;
@@ -56,6 +58,12 @@ export function resolveEmailConfig(env: Env, outputPath: string): EmailTransport
         throw new Error(`EMAIL_TRANSPORT must be file or smtp, got ${selected}`);
     }
     for (const name of SMTP_REQUIRED) required(env, name);
+    if (production) {
+        for (const name of SMTP_PRODUCTION_REQUIRED) {
+            if (!env[name])
+                throw new Error(`${name} is required in production when EMAIL_TRANSPORT=smtp`);
+        }
+    }
     const secure = env.EMAIL_SMTP_SECURE;
     if (secure !== 'starttls' && secure !== 'tls') {
         throw new Error('EMAIL_SMTP_SECURE must be starttls or tls');
