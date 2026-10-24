@@ -38,7 +38,9 @@ const priceDeltaPercent = computed<number | null>(() => {
     const line = orderLine.value;
     const requestedPrice = payload.value.requestedPrice as number | undefined;
     if (!line || requestedPrice == null || line.discountedUnitPriceWithTax === 0) return null;
-    return ((requestedPrice - line.discountedUnitPriceWithTax) / line.discountedUnitPriceWithTax) * 100;
+    return (
+        ((requestedPrice - line.discountedUnitPriceWithTax) / line.discountedUnitPriceWithTax) * 100
+    );
 });
 
 const rows = computed<DetailRow[]>(() => {

@@ -196,7 +196,9 @@ function toggleAdjust(lineId: string): void {
                                 Adjust price
                             </button>
                         </td>
-                        <td class="order-lines__num">{{ money(line.discountedLinePriceWithTax) }}</td>
+                        <td class="order-lines__num">
+                            {{ money(line.discountedLinePriceWithTax) }}
+                        </td>
                         <td v-if="canEditLines" class="order-lines__edit">
                             <OrderLineEditCell
                                 :quantity="line.quantity"

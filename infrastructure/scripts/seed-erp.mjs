@@ -646,7 +646,9 @@ async function main() {
             data: { code, name: code, visibility: 'customer' },
         })),
     );
-    console.log(`  → price types status=${priceTypeResult.status} failed=${priceTypeResult.failed}`);
+    console.log(
+        `  → price types status=${priceTypeResult.status} failed=${priceTypeResult.failed}`,
+    );
     const allPrices = [...prices, ...retailPrices, ...specialPrices];
     console.log(`Sending ${allPrices.length} prices...`);
     const priceResult = await postBatch(
