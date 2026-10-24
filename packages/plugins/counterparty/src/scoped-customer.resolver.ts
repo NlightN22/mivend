@@ -10,9 +10,9 @@ import {
     ListQueryBuilder,
     PaginatedList,
     Relations,
-    RelationPaths,
     RequestContext,
 } from '@vendure/core';
+import type { RelationPaths } from '@vendure/core';
 import { IsNull } from 'typeorm';
 import { AccessScopeService } from '@mivend/plugin-access-control';
 
