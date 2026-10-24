@@ -1,46 +1,23 @@
 import { test, expect } from '@playwright/test';
 import { shopGql } from '../../helpers/api';
+import { tokenFromNewMail } from '../../helpers/mailbox';
 import { E2E_CUSTOMER } from '../../fixtures/seed';
 
-const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:3000';
 const RESET_SUBJECT = 'Forgotten password reset';
 const NEW_PASSWORD = 'Reset-Pass-4567!';
 
-interface MailboxListItem {
-    fileName: string;
-    recipient: string;
-    subject: string;
-}
-
-async function resetMails(email: string): Promise<string[]> {
-    const list = (await (await fetch(`${SERVER_URL}/mailbox/list`)).json()) as MailboxListItem[];
-    return list
-        .filter(i => i.recipient === email && i.subject === RESET_SUBJECT)
-        .map(i => i.fileName)
-        .sort();
-}
-
-async function requestResetToken(email: string): Promise<string> {
-    const before = new Set(await resetMails(email));
-    await shopGql(
-        `mutation($e: String!) { requestPasswordReset(emailAddress: $e) { __typename } }`,
-        { e: email },
+function requestResetToken(email: string): Promise<string> {
+    return tokenFromNewMail(email, RESET_SUBJECT, 'set-password', () =>
+        shopGql(`mutation($e: String!) { requestPasswordReset(emailAddress: $e) { __typename } }`, {
+            e: email,
+        }),
     );
-    let fileName: string | undefined;
-    await expect(async () => {
-        fileName = (await resetMails(email)).filter(f => !before.has(f)).pop();
-        expect(fileName, `no new reset mail for ${email} in /mailbox`).toBeTruthy();
-    }).toPass({ timeout: 30_000 });
-    const item = (await (
-        await fetch(`${SERVER_URL}/mailbox/item/${encodeURIComponent(fileName!)}`)
-    ).json()) as { body: string };
-    const href = /href="([^"]*set-password\?token=[^"]*)"/.exec(item.body)?.[1];
-    expect(href, 'reset link in the mail').toBeTruthy();
-    return new URL(href!.replace(/&amp;/g, '&')).searchParams.get('token')!;
 }
 
 test.describe('Storefront set-password page (#137)', () => {
-    test('a mailed reset link sets a new password that logs in', async ({ page }) => {
+    test('a mailed reset link sets a new password, redirects on its own and the password logs in', async ({
+        page,
+    }) => {
         test.setTimeout(90_000);
         const token = await requestResetToken(E2E_CUSTOMER.email);
         try {
@@ -49,6 +26,8 @@ test.describe('Storefront set-password page (#137)', () => {
             await page.locator('input[type="password"]').last().fill(NEW_PASSWORD);
             await page.getByRole('button', { name: 'Save password' }).click();
             await expect(page.getByRole('heading', { name: 'Password saved' })).toBeVisible();
+            await expect(page.getByRole('status')).toContainText('Redirecting to the catalogue');
+            await expect(page).toHaveURL(/\/catalog$/);
 
             await page.context().clearCookies();
             await page.goto('/login');
