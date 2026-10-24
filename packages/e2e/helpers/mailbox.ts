@@ -17,12 +17,12 @@ async function mailsFor(email: string, subject: string): Promise<string[]> {
 }
 
 // The mailbox directory outlives runs: only a mail that appears after `trigger` counts.
-export async function tokenFromNewMail(
+export async function linkFromNewMail(
     email: string,
     subject: string,
     linkPath: string,
     trigger: () => Promise<unknown>,
-): Promise<string> {
+): Promise<URL> {
     const before = new Set(await mailsFor(email, subject));
     await trigger();
     let fileName: string | undefined;
@@ -36,5 +36,14 @@ export async function tokenFromNewMail(
     const pattern = new RegExp(`href="([^"]*${linkPath}\\?token=[^"]*)"`);
     const href = pattern.exec(item.body)?.[1];
     expect(href, `${linkPath} link in the mail`).toBeTruthy();
-    return new URL(href!.replace(/&amp;/g, '&')).searchParams.get('token')!;
+    return new URL(href!.replace(/&amp;/g, '&'));
+}
+
+export async function tokenFromNewMail(
+    email: string,
+    subject: string,
+    linkPath: string,
+    trigger: () => Promise<unknown>,
+): Promise<string> {
+    return (await linkFromNewMail(email, subject, linkPath, trigger)).searchParams.get('token')!;
 }

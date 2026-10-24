@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { randomUUID } from 'crypto';
-import { adminGql, shopGql } from '../../helpers/api';
+import { shopGql } from '../../helpers/api';
 import { adminTokenFor } from '../../helpers/api-tokens';
+import { deleteCustomerByEmail } from '../../helpers/customers';
 import { tokenFromNewMail } from '../../helpers/mailbox';
 import { SUPERADMIN } from '../../fixtures/accounts';
 
@@ -39,18 +40,7 @@ test.describe('Storefront account activation page (#137)', () => {
             await page.getByRole('button', { name: 'Sign in' }).click();
             await page.waitForURL(url => !url.pathname.includes('/login'));
         } finally {
-            const found = await adminGql<{ customers: { items: Array<{ id: string }> } }>(
-                `query($e: String!) { customers(options: { filter: { emailAddress: { eq: $e } } }) { items { id } } }`,
-                { e: email },
-                superadmin,
-            );
-            for (const { id } of found.data.customers.items) {
-                await adminGql(
-                    `mutation($id: ID!) { deleteCustomer(id: $id) { result } }`,
-                    { id },
-                    superadmin,
-                );
-            }
+            await deleteCustomerByEmail(email, superadmin);
         }
     });
 

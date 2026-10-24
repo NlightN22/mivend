@@ -1,4 +1,4 @@
-import { computed, reactive, ref, type ComputedRef, type Ref } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, type ComputedRef, type Ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
@@ -31,6 +31,13 @@ export function useSetPassword(flow: TokenFlow): {
 
     const token = typeof route.query.token === 'string' ? route.query.token : '';
     const state = ref<ViewState>(token ? 'form' : 'invalid');
+    // Keep the token in memory only: out of the address bar and history, and no Referer leak.
+    void router.replace({ query: {} });
+    const referrerMeta = document.createElement('meta');
+    referrerMeta.name = 'referrer';
+    referrerMeta.content = 'no-referrer';
+    document.head.appendChild(referrerMeta);
+    onBeforeUnmount(() => referrerMeta.remove());
     const form = reactive({ password: '', confirm: '' });
     const error = ref('');
     const loading = ref(false);
