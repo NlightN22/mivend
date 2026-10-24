@@ -9,6 +9,7 @@ import {
 } from '@vendure/core';
 import { NumberingOrderCodeStrategy } from './order-code.strategy';
 import { sessionOptionsFromEnv } from './session-options';
+import { resolveEmailConfig } from './email-config';
 import { OrderUuidSubscriber } from './order-uuid.subscriber';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { DeferredPaymentPlugin } from '@mivend/plugin-deferred-payment';
@@ -117,39 +118,27 @@ if (
 // Unconditional .init({}) keeps AcquiringPluginOptions defined even where the array omits it.
 const instancePlugins = [AcquiringPlugin.init({})];
 
-// Issue #121: until a real transport exists, emails (real token/link) are written to disk instead
-// of sent. The HTTP /mailbox route exposes those tokens, so it exists only with the explicit flag.
+// The HTTP /mailbox route exposes password-reset tokens, so it exists only with the explicit flag.
 const sessionOptions = sessionOptionsFromEnv(process.env);
-const emailDevMailboxEnabled = process.env.EMAIL_DEV_MAILBOX_ENABLED === 'true';
-const emailTransportConfigured = Boolean(process.env.EMAIL_TRANSPORT);
 const emailOutputPath = path.join(__dirname, '../static/email/test-mailbox');
+const { fromAddress: emailFromAddress, ...emailTransportOptions } = resolveEmailConfig(
+    process.env,
+    emailOutputPath,
+);
 
 // Vendure core cannot know the manager portal's public URL, so it comes from a per-contour env var.
 // Unset yields a host-less link, not a boot failure: a missing var must not take the server down.
 const managerPublicUrl = process.env.MANAGER_PUBLIC_URL ?? '';
 
-const emailCommonOptions = {
+const emailPlugin = EmailPlugin.init({
     templateLoader: new FileBasedTemplateLoader(path.join(__dirname, '../static/email/templates')),
     handlers: [emailVerificationHandler, passwordResetHandler, emailAddressChangeHandler],
     globalTemplateVars: {
-        fromAddress: '"mivend" <noreply@example.com>',
+        fromAddress: emailFromAddress,
         passwordResetUrl: `${managerPublicUrl}/set-password`,
     },
-};
-
-if (emailTransportConfigured) {
-    // Fails only on explicit opt-in, so an unrelated deploy never crashes over an email decision.
-    throw new Error(
-        `EMAIL_TRANSPORT=${process.env.EMAIL_TRANSPORT} was set, but no real EmailTransportOptions ` +
-            'is implemented yet — see issue #121. Unset EMAIL_TRANSPORT to keep the file transport.',
-    );
-}
-
-const emailPlugin = EmailPlugin.init(
-    emailDevMailboxEnabled
-        ? { ...emailCommonOptions, devMode: true, outputPath: emailOutputPath, route: 'mailbox' }
-        : { ...emailCommonOptions, transport: { type: 'file', outputPath: emailOutputPath } },
-);
+    ...emailTransportOptions,
+} as Parameters<typeof EmailPlugin.init>[0]);
 
 export const config: VendureConfig = {
     apiOptions: {

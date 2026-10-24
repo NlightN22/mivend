@@ -77,3 +77,7 @@ Nothing is configured inside a container by hand.
   running `pg_restore --list` with the image's `pg_restore`. `monitoring/install-host-check.sh` adds an hourly
   disk (>80%) and memory (<500 MB) alert mailed through the same container. Garage objects and `document-pdfs`
   are not in the archive: they are re-created from the ERP events.
+
+## Email
+
+`EMAIL_TRANSPORT` is mandatory in production (`smtp`, or `file` for a contour that sends no mail); unset fails `server` and `worker-email` on boot. With `smtp`, set `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_SECURE` (`starttls` or `tls`), `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASSWORD`, `EMAIL_FROM_ADDRESS` (all required, no defaults) and optionally `EMAIL_FROM_NAME`. Copy the mailbox password between env files on the host, never through chat or the repo. Check: restart both services, trigger a password reset to a real mailbox, open its link on `/set-password`.
