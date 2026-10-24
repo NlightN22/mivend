@@ -7,7 +7,7 @@ import {
 
 import { config } from '../../../vendure-config';
 
-// Renders document PDFs only: scheduled tasks would change seeded rows under the specs.
+// Renders document PDFs and applies collection filters only: scheduled tasks would change seeded rows under the specs.
 const idleScheduler: SchedulerStrategy = {
     executeTask: () => () => undefined,
     getTasks: async () => [],
@@ -22,7 +22,10 @@ bootstrapWorker({
     ...config,
     plugins: (config.plugins ?? []).filter(plugin => plugin !== DefaultSchedulerPlugin),
     schedulerOptions: { ...config.schedulerOptions, schedulerStrategy: idleScheduler },
-    jobQueueOptions: { ...config.jobQueueOptions, activeQueues: ['generate-document'] },
+    jobQueueOptions: {
+        ...config.jobQueueOptions,
+        activeQueues: ['generate-document', 'apply-collection-filters'],
+    },
 })
     .then(worker => worker.startJobQueue())
     .catch(err => {

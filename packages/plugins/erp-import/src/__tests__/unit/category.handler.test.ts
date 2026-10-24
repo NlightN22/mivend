@@ -95,3 +95,28 @@ describe('CategoryHandler (REST) hierarchy parity with the Kafka path', () => {
         );
     });
 });
+
+describe('CategoryHandler (REST) feed state', () => {
+    it('creates an inactive category hidden by the feed', async () => {
+        const { handler, collectionService } = build();
+        await handler.upsert(ctx, { erpId: 'c', name: 'C', parentErpId: null, isActive: false });
+        expect(collectionService.create).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ isPrivate: true, customFields: { feedHidden: true } }),
+        );
+    });
+
+    it('marks an existing category deleted without moving it', async () => {
+        const { handler, collectionService } = build({ 'cat-c': { id: 'col-1' } }, [
+            { id: 'root' },
+            { id: 'col-p' },
+            { id: 'col-1' },
+        ]);
+        await handler.upsert(ctx, { erpId: 'c', name: 'C', parentErpId: null, isDeleted: true });
+        expect(collectionService.update).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ customFields: { feedHidden: true } }),
+        );
+        expect(collectionService.move).not.toHaveBeenCalled();
+    });
+});

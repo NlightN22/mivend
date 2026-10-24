@@ -19,6 +19,7 @@ import {
     ensureParentCategoryCollection,
     moveCategoryIfParentChanged,
     recomputeCategoryTree,
+    resolveCategoryIsPrivate,
 } from 'shared';
 import path from 'path';
 import type { CategoryRecord } from '../types';
@@ -136,20 +137,32 @@ export class CategoryHandler {
         const translations = [
             { languageCode: LanguageCode.en, name: record.name, slug, description: '' },
         ];
+        const feedHidden = record.isActive === false || record.isDeleted === true;
 
         if (existing) {
-            await this.collectionService.update(ctx, { id: existing.id, translations, filters });
-            await moveCategoryIfParentChanged(ctx, this.collectionService, existing, parent?.id);
+            await this.collectionService.update(ctx, {
+                id: existing.id,
+                translations,
+                filters,
+                customFields: { feedHidden },
+            });
+            if (!record.isDeleted)
+                await moveCategoryIfParentChanged(
+                    ctx,
+                    this.collectionService,
+                    existing,
+                    parent?.id,
+                );
             Logger.verbose(`Updated collection erpId=${record.erpId}`, loggerCtx);
             return;
         }
 
         await this.collectionService.create(ctx, {
             parentId: parent?.id,
-            isPrivate: false,
+            isPrivate: resolveCategoryIsPrivate(feedHidden, undefined, parent?.isPrivate ?? false),
             translations,
             filters,
-            customFields: { feedHidden: false },
+            customFields: { feedHidden },
         });
         Logger.verbose(`Created collection erpId=${record.erpId}`, loggerCtx);
     }

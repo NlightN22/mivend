@@ -22,4 +22,10 @@ export class CategoryRecordDto {
             'File name of the category icon inside the configured import assets directory.',
     })
     iconFile?: string | null;
+
+    @ApiPropertyOptional({ description: 'False hides the category from the feed. Default true.' })
+    isActive?: boolean;
+
+    @ApiPropertyOptional({ description: 'True marks the category deleted. Default false.' })
+    isDeleted?: boolean;
 }

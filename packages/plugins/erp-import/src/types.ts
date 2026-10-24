@@ -166,6 +166,8 @@ export interface CategoryRecord {
     name: string;
     parentErpId: string | null;
     iconFile?: string | null;
+    isActive?: boolean;
+    isDeleted?: boolean;
 }
 
 export interface DiscountRuleRecord {
