@@ -65,7 +65,7 @@ test.describe('Manager category tree (#59)', () => {
             const menu = page.locator('.mv-catalog-dropdown');
             const hiddenItem = menu.getByRole('link', { name: /^Synthetic Oils\s*Hidden/ });
             await expect(hiddenItem).toBeVisible();
-            await expect(menu.locator(marker)).toHaveCount(1);
+            await expect(hiddenItem.locator(marker)).toHaveCount(1);
 
             await hiddenItem.click();
             await expect(page).toHaveURL(new RegExp(`collection=${SLUG.synthetic}`));

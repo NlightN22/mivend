@@ -34,6 +34,11 @@ export async function adminCollections(token: string): Promise<AdminCollection[]
     return data.collections.items.filter(c => c.slug.startsWith('cat-'));
 }
 
+// The seeded visibility subtree keeps its planned overrides; fixtures/visibility/categories.ts restores it.
+export async function adminFixtureCollections(token: string): Promise<AdminCollection[]> {
+    return (await adminCollections(token)).filter(c => !c.slug.startsWith('cat-vis-'));
+}
+
 // Same mutation shape as the manager visibility page (isPrivate omitted when clearing).
 export async function setOverride(
     token: string,
@@ -74,8 +79,11 @@ export async function waitForShopSlug(slug: string, present: boolean): Promise<v
 }
 
 export async function restoreCategoryTree(token: string): Promise<void> {
-    for (const c of await adminCollections(token)) {
+    for (const c of await adminFixtureCollections(token)) {
         if (c.customFields?.visibilityOverride) await setOverride(token, c.slug, null);
     }
-    await pollUntil(async () => (await adminCollections(token)).every(c => !c.isPrivate), 30_000);
+    await pollUntil(
+        async () => (await adminFixtureCollections(token)).every(c => !c.isPrivate),
+        30_000,
+    );
 }
