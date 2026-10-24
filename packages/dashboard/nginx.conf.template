@@ -22,7 +22,7 @@ server {
     location / {
         try_files $uri $uri/ /index.html;
         # Runtime site identity: one image, per-deployment SITE_NAME / SITE_FAVICON_URL (docs/deployment.md).
-        sub_filter 'href="/favicon.png"' 'href="${SITE_FAVICON_URL}"';
+        sub_filter '<link rel="icon" type="image/png" href="/favicon.png" />' '<link rel="icon" href="${SITE_FAVICON_URL}" />';
     }
 
     location /admin-api {

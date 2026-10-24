@@ -31,8 +31,10 @@ COPY packages/manager/nginx.conf.template /etc/nginx/templates/default.conf.temp
 # via IPv6 first inside a container and will hang if the target only listens on IPv4 —
 # use 127.0.0.1 (or --network host) instead of 'localhost' (found during issue #115's
 # own benchmark run, see docs/frontend-load-benchmarks.md).
+COPY infrastructure/docker/nginx/15-site-identity.envsh /docker-entrypoint.d/15-site-identity.envsh
 ENV API_TARGET=http://server:3000
 ENV LISTEN_PORT=80
 ENV SITE_NAME=Shop
 ENV SITE_FAVICON_URL=/favicon.svg
+ENV SITE_FAVICON_DEFAULT=/favicon.svg
 EXPOSE 80

@@ -132,7 +132,7 @@ describe('resolveEmailConfig', () => {
     });
 
     it('rejects characters that break the nginx substitution', () => {
-        for (const bad of ['a<b', 'a&b', 'a$b', 'a;b', 'a\\b']) {
+        for (const bad of ["a'b", 'a<b', 'a&b', 'a$b', 'a;b', 'a\\b']) {
             expect(() => resolveEmailConfig({ ...smtp, SITE_NAME: bad }, out)).toThrow(/SITE_NAME/);
         }
     });

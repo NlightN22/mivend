@@ -1,4 +1,5 @@
 import { EmailPluginOptions } from '@vendure/email-plugin';
+import { siteName } from './site-config';
 
 type Env = Record<string, string | undefined>;
 
@@ -31,16 +32,6 @@ function required(env: Env, name: string): string {
         throw new Error(`${name} is required when EMAIL_TRANSPORT=smtp`);
     }
     return value;
-}
-
-const DEFAULT_SITE_NAME = 'Shop';
-
-function siteName(env: Env): string {
-    const name = env.SITE_NAME || DEFAULT_SITE_NAME;
-    if (/["\r\n<>&$;\\]/.test(name)) {
-        throw new Error('SITE_NAME must not contain quotes, line breaks or any of < > & $ ; \\');
-    }
-    return name;
 }
 
 function formatFrom(env: Env): string {

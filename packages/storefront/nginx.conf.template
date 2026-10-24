@@ -24,7 +24,7 @@ server {
 
     # SPA fallback — every non-file route resolves client-side via vue-router. index.html itself
     # must never be cached (it's the one file whose content changes on every deploy without a
-    # new URL) — nginx's default (no cache headers here) already means "revalidate every time".
+    # new URL). sub_filter drops Content-Length/ETag/Last-Modified, so it is served whole every time.
     location / {
         try_files $uri $uri/ /index.html;
         # Runtime site identity: one image, per-deployment SITE_NAME / SITE_FAVICON_URL (docs/deployment.md).

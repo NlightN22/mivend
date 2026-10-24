@@ -29,7 +29,9 @@ RUN pnpm --filter shared build && pnpm build:plugins && COOKIE_SECRET=build-time
 FROM nginx:1.27-alpine AS runner
 COPY --from=builder /app/packages/dashboard/dist /usr/share/nginx/html
 COPY packages/dashboard/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY infrastructure/docker/nginx/15-site-identity.envsh /docker-entrypoint.d/15-site-identity.envsh
 ENV API_TARGET=http://server:3000
 ENV LISTEN_PORT=80
 ENV SITE_FAVICON_URL=/favicon.png
+ENV SITE_FAVICON_DEFAULT=/favicon.png
 EXPOSE 80

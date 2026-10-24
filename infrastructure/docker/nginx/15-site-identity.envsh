@@ -1,0 +1,24 @@
+# Sourced by the nginx image entrypoint before it renders the config templates.
+# Falls back to the defaults on a value that would break the generated nginx config or HTML.
+SITE_NAME=${SITE_NAME:-Shop}
+case $SITE_NAME in
+    *[\"\'\<\>\&\$\;\\]* | *[![:print:]]*)
+        echo "15-site-identity: invalid SITE_NAME, using Shop" >&2
+        SITE_NAME=Shop
+        ;;
+esac
+if [ -n "${SITE_FAVICON_URL-}" ]; then
+    case $SITE_FAVICON_URL in
+        http://* | https://* | /*)
+            case $SITE_FAVICON_URL in
+                *[[:space:]\"\'\$\;\{\}\\\<\>]* | *[![:print:]]*) SITE_FAVICON_URL= ;;
+            esac
+            ;;
+        *) SITE_FAVICON_URL= ;;
+    esac
+fi
+if [ -z "${SITE_FAVICON_URL-}" ]; then
+    SITE_FAVICON_URL=$SITE_FAVICON_DEFAULT
+    echo "15-site-identity: SITE_FAVICON_URL empty or invalid, using $SITE_FAVICON_DEFAULT" >&2
+fi
+export SITE_NAME SITE_FAVICON_URL

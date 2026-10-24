@@ -10,6 +10,7 @@ import {
 import { NumberingOrderCodeStrategy } from './order-code.strategy';
 import { sessionOptionsFromEnv } from './session-options';
 import { emailGlobalTemplateVars, resolveEmailConfig } from './email-config';
+import { siteFaviconUrl } from './site-config';
 import { createPasswordResetHandler } from './password-reset-handler';
 import { OrderUuidSubscriber } from './order-uuid.subscriber';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
@@ -121,6 +122,7 @@ const instancePlugins = [AcquiringPlugin.init({})];
 // The HTTP /mailbox route exposes password-reset tokens, so it exists only with the explicit flag.
 const sessionOptions = sessionOptionsFromEnv(process.env);
 const emailOutputPath = path.join(__dirname, '../static/email/test-mailbox');
+siteFaviconUrl(process.env);
 const { fromAddress: emailFromAddress, ...emailTransportOptions } = resolveEmailConfig(
     process.env,
     emailOutputPath,
