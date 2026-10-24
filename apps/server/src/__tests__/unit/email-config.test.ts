@@ -9,7 +9,7 @@ const smtp = {
     EMAIL_SMTP_USER: 'sender',
     EMAIL_SMTP_PASSWORD: 'abc123',
     EMAIL_FROM_ADDRESS: 'no-reply@example.org',
-    EMAIL_FROM_NAME: 'mivend',
+    SITE_NAME: 'Site A',
 };
 const out = '/tmp/mailbox';
 
@@ -63,7 +63,7 @@ describe('resolveEmailConfig', () => {
             requireTLS: true,
             auth: { user: 'sender', pass: 'abc123' },
         });
-        expect(starttls.fromAddress).toBe('"mivend" <no-reply@example.org>');
+        expect(starttls.fromAddress).toBe('"Site A" <no-reply@example.org>');
         expect(
             resolveEmailConfig({ ...smtp, EMAIL_SMTP_SECURE: 'tls', EMAIL_SMTP_PORT: '2465' }, out)
                 .transport,
@@ -92,12 +92,8 @@ describe('resolveEmailConfig', () => {
         expect(() => resolveEmailConfig({ ...smtp, EMAIL_SMTP_PORT: '70000' }, out)).toThrow(
             /1 to 65535/,
         );
-        expect(() => resolveEmailConfig({ ...smtp, EMAIL_FROM_NAME: 'a"b' }, out)).toThrow(
-            /EMAIL_FROM_NAME/,
-        );
-        expect(() => resolveEmailConfig({ ...smtp, EMAIL_FROM_NAME: 'a\nb' }, out)).toThrow(
-            /EMAIL_FROM_NAME/,
-        );
+        expect(() => resolveEmailConfig({ ...smtp, SITE_NAME: 'a"b' }, out)).toThrow(/SITE_NAME/);
+        expect(() => resolveEmailConfig({ ...smtp, SITE_NAME: 'a\nb' }, out)).toThrow(/SITE_NAME/);
     });
 
     it('requires both public URLs in production with smtp', () => {
@@ -114,5 +110,30 @@ describe('resolveEmailConfig', () => {
         expect(() => resolveEmailConfig({ ...prod, MANAGER_PUBLIC_URL: undefined }, out)).toThrow(
             /MANAGER_PUBLIC_URL/,
         );
+    });
+
+    it('requires SITE_NAME in production with smtp and defaults it elsewhere', () => {
+        const prod = {
+            ...smtp,
+            NODE_ENV: 'production',
+            MANAGER_PUBLIC_URL: 'https://m.example.org',
+            STOREFRONT_PUBLIC_URL: 'https://s.example.org',
+        };
+        expect(() => resolveEmailConfig({ ...prod, SITE_NAME: undefined }, out)).toThrow(
+            /SITE_NAME/,
+        );
+        expect(resolveEmailConfig({ ...smtp, SITE_NAME: undefined }, out).fromAddress).toBe(
+            '"Shop" <no-reply@example.org>',
+        );
+        expect(resolveEmailConfig({}, out).fromAddress).toBe('"Shop" <noreply@localhost>');
+        expect(resolveEmailConfig({ SITE_NAME: 'Site B' }, out).fromAddress).toBe(
+            '"Site B" <noreply@localhost>',
+        );
+    });
+
+    it('rejects characters that break the nginx substitution', () => {
+        for (const bad of ['a<b', 'a&b', 'a$b', 'a;b', 'a\\b']) {
+            expect(() => resolveEmailConfig({ ...smtp, SITE_NAME: bad }, out)).toThrow(/SITE_NAME/);
+        }
     });
 });

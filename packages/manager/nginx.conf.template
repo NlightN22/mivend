@@ -27,6 +27,9 @@ server {
     # new URL) — nginx's default (no cache headers here) already means "revalidate every time".
     location / {
         try_files $uri $uri/ /index.html;
+        # Runtime site identity: one image, per-deployment SITE_NAME / SITE_FAVICON_URL (docs/deployment.md).
+        sub_filter '<title>Shop manager portal</title>' '<title>${SITE_NAME} manager portal</title>';
+        sub_filter 'href="/favicon.svg"' 'href="${SITE_FAVICON_URL}"';
     }
 
     location /admin-api {

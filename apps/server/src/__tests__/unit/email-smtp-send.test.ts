@@ -25,7 +25,7 @@ const env = {
     EMAIL_SMTP_USER: 'sender',
     EMAIL_SMTP_PASSWORD: 'abc123',
     EMAIL_FROM_ADDRESS: 'no-reply@example.org',
-    EMAIL_FROM_NAME: 'mivend',
+    SITE_NAME: 'Site A',
 };
 
 describe('password-reset and account-activation mails through the smtp transport', () => {
@@ -81,7 +81,7 @@ describe('password-reset and account-activation mails through the smtp transport
                 }),
             );
             const sent = sendMail.mock.calls[0][0];
-            expect(sent.from).toBe('"mivend" <no-reply@example.org>');
+            expect(sent.from).toBe('"Site A" <no-reply@example.org>');
             expect(sent.to).toBe('user@example.org');
             expect(sent.html).toContain('tok1');
             if (type === 'password-reset')

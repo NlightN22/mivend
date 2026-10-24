@@ -21,6 +21,8 @@ server {
     # SPA fallback — every non-file route resolves client-side.
     location / {
         try_files $uri $uri/ /index.html;
+        # Runtime site identity: one image, per-deployment SITE_NAME / SITE_FAVICON_URL (docs/deployment.md).
+        sub_filter 'href="/favicon.png"' 'href="${SITE_FAVICON_URL}"';
     }
 
     location /admin-api {

@@ -39,4 +39,6 @@ COPY packages/storefront/nginx.conf.template /etc/nginx/templates/default.conf.t
 # own benchmark run, see docs/frontend-load-benchmarks.md).
 ENV API_TARGET=http://server:3000
 ENV LISTEN_PORT=80
+ENV SITE_NAME=Shop
+ENV SITE_FAVICON_URL=/favicon.svg
 EXPOSE 80

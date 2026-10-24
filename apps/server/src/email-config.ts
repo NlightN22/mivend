@@ -11,7 +11,11 @@ const SMTP_REQUIRED = [
     'EMAIL_FROM_ADDRESS',
 ] as const;
 
-const SMTP_PRODUCTION_REQUIRED = ['MANAGER_PUBLIC_URL', 'STOREFRONT_PUBLIC_URL'] as const;
+const SMTP_PRODUCTION_REQUIRED = [
+    'MANAGER_PUBLIC_URL',
+    'STOREFRONT_PUBLIC_URL',
+    'SITE_NAME',
+] as const;
 
 export interface EmailTransportConfig {
     transport?: EmailPluginOptions['transport'];
@@ -29,13 +33,18 @@ function required(env: Env, name: string): string {
     return value;
 }
 
-function formatFrom(env: Env): string {
-    const address = required(env, 'EMAIL_FROM_ADDRESS');
-    const name = env.EMAIL_FROM_NAME;
-    if (name && /["\r\n]/.test(name)) {
-        throw new Error('EMAIL_FROM_NAME must not contain quotes or line breaks');
+const DEFAULT_SITE_NAME = 'Shop';
+
+function siteName(env: Env): string {
+    const name = env.SITE_NAME || DEFAULT_SITE_NAME;
+    if (/["\r\n<>&$;\\]/.test(name)) {
+        throw new Error('SITE_NAME must not contain quotes, line breaks or any of < > & $ ; \\');
     }
-    return name ? `"${name}" <${address}>` : address;
+    return name;
+}
+
+function formatFrom(env: Env): string {
+    return `"${siteName(env)}" <${required(env, 'EMAIL_FROM_ADDRESS')}>`;
 }
 
 export function resolveEmailConfig(env: Env, outputPath: string): EmailTransportConfig {
@@ -49,7 +58,7 @@ export function resolveEmailConfig(env: Env, outputPath: string): EmailTransport
     if (selected === 'file') {
         const fromAddress = env.EMAIL_FROM_ADDRESS
             ? formatFrom(env)
-            : '"mivend" <noreply@localhost>';
+            : `"${siteName(env)}" <noreply@localhost>`;
         return env.EMAIL_DEV_MAILBOX_ENABLED === 'true'
             ? { devMode: true, outputPath, route: 'mailbox', fromAddress }
             : { transport: { type: 'file', outputPath }, fromAddress };

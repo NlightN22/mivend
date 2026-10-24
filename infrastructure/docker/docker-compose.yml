@@ -52,7 +52,7 @@ x-server-env: &server-env
     EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-}
     EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
     EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
-    EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-}
+    SITE_NAME: ${SITE_NAME:-}
     # REST surfaces are closed by default (docs/environments.md); keep these false in production.
     EMAIL_DEV_MAILBOX_ENABLED: 'false'
     API_DOCS_ENABLED: 'false'
@@ -230,6 +230,8 @@ services:
         image: ghcr.io/nlightn22/mivend-storefront:${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}
         environment:
             API_TARGET: http://server:3000
+            SITE_NAME: ${SITE_NAME:-Shop}
+            SITE_FAVICON_URL: ${SITE_FAVICON_URL:-/favicon.svg}
         ports:
             - '${STOREFRONT_BIND_ADDRESS:-127.0.0.1}:${STOREFRONT_PORT:-8004}:80'
         depends_on:
@@ -246,6 +248,8 @@ services:
         image: ghcr.io/nlightn22/mivend-manager:${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}
         environment:
             API_TARGET: http://server:3000
+            SITE_NAME: ${SITE_NAME:-Shop}
+            SITE_FAVICON_URL: ${SITE_FAVICON_URL:-/favicon.svg}
         ports:
             - '${MANAGER_BIND_ADDRESS:-127.0.0.1}:${MANAGER_PORT:-8005}:80'
         depends_on:
@@ -262,6 +266,7 @@ services:
         image: ghcr.io/nlightn22/mivend-dashboard:${IMAGE_TAG:?IMAGE_TAG is required (a published version, e.g. v0.0.1)}
         environment:
             API_TARGET: http://server:3000
+            SITE_FAVICON_URL: ${SITE_FAVICON_URL:-/favicon.png}
         ports:
             - '${DASHBOARD_BIND_ADDRESS:-127.0.0.1}:${DASHBOARD_PORT:-8006}:80'
         depends_on:
