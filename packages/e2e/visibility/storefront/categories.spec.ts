@@ -125,9 +125,7 @@ test.describe('14: category visibility, storefront as a customer', () => {
         }
     });
 
-    test.describe('known defect: category facet values still name hidden categories', () => {
-        test.fail();
-
+    test.describe('category names reach the customer only for visible categories', () => {
         test('search facet values omit hidden categories', async () => {
             const { page } = s;
             await page.goto('/catalog');

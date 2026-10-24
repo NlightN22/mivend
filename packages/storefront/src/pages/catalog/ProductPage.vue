@@ -112,12 +112,7 @@ const extraSpecs = computed(() => {
             : []),
     ];
 });
-const category = computed(
-    () =>
-        product.value?.facetValues.find(fv => fv.facet.code === 'category')?.name ??
-        deepestCollection.value?.name ??
-        '',
-);
+const category = computed(() => deepestCollection.value?.name ?? '');
 const stockVariantLabel = computed(() => stockVariantFromLevel(variant.value?.stockLevel));
 
 async function fetchData(slug: string) {

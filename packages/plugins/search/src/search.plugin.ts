@@ -7,6 +7,7 @@ import {
 } from '@vendure/core';
 import { ElasticsearchPlugin } from '@vendure/elasticsearch-plugin';
 import { CrossReferenceService } from '@mivend/plugin-cross-reference';
+import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
 import gql from 'graphql-tag';
@@ -20,6 +21,7 @@ import {
     hasOrganizationMapping,
     restrictToSellable,
 } from './sellable-filter';
+import { ShopSearchFacetValuesResolver } from './shop-search-facet-values.resolver';
 import { SearchService } from './search.service';
 import { getSearchBackend } from './types';
 
@@ -137,10 +139,14 @@ function buildElasticsearchPlugin(): Type<unknown> {
 }
 
 @VendurePlugin({
-    imports: [PluginCommonModule, PriceEntryPlugin, ReservationPlugin],
+    imports: [PluginCommonModule, PriceEntryPlugin, ReservationPlugin, AccessControlPlugin],
     shopApiExtensions: {
         schema: shopApiSchema,
-        resolvers: [SearchResultResolver, SearchCapabilitiesResolver],
+        resolvers: [
+            SearchResultResolver,
+            SearchCapabilitiesResolver,
+            ShopSearchFacetValuesResolver,
+        ],
     },
     adminApiExtensions: {
         schema: adminApiSchema,
@@ -178,7 +184,8 @@ function buildSearchPlugins(): Array<Type<unknown>> {
         }
         return [SearchPlugin, ExternalSearchPlugin];
     }
-    return [buildElasticsearchPlugin(), SearchPlugin];
+    // Before ElasticsearchPlugin: the first registered SearchResponse resolver wins, ours must override its own.
+    return [SearchPlugin, buildElasticsearchPlugin()];
 }
 
 export const searchPlugins = buildSearchPlugins();

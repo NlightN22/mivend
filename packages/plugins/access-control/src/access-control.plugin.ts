@@ -7,6 +7,11 @@ import {
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { departmentBranchBundle } from './department-branch.bundle';
 import { visibilityGrantBundle } from './visibility-grant.bundle';
+import { HiddenCategoryFacetValuesService } from './hidden-category-facet-values.service';
+import {
+    ShopProductFacetValuesResolver,
+    ShopVariantFacetValuesResolver,
+} from './shop-entity-facet-values.resolver';
 import { ShopCollectionBreadcrumbsResolver } from './shop-collection-breadcrumbs.resolver';
 import { adminApiSchema } from './access-control.schema';
 
@@ -59,6 +64,7 @@ import { WarehouseService } from './warehouse.service';
         ...departmentBranchBundle.providers,
         ...visibilityGrantBundle.providers,
         AccessScopeService,
+        HiddenCategoryFacetValuesService,
         TeamAdministratorService,
         RoleScopeConfigService,
         DepartmentService,
@@ -82,6 +88,7 @@ import { WarehouseService } from './warehouse.service';
         },
     ],
     exports: [
+        HiddenCategoryFacetValuesService,
         ...departmentBranchBundle.providers,
         ...visibilityGrantBundle.providers,
         AccessScopeService,
@@ -112,7 +119,11 @@ import { WarehouseService } from './warehouse.service';
         ],
     },
     shopApiExtensions: {
-        resolvers: [ShopCollectionBreadcrumbsResolver],
+        resolvers: [
+            ShopCollectionBreadcrumbsResolver,
+            ShopProductFacetValuesResolver,
+            ShopVariantFacetValuesResolver,
+        ],
     },
     configuration: (config: RuntimeVendureConfig) => {
         config.schedulerOptions.tasks = [

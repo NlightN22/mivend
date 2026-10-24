@@ -163,3 +163,27 @@ describe.each(STAFF.map(s => s.key))('manager portal categories for %s', key => 
         expect(row.customFields.visibilityOverride).toBeNull();
     });
 });
+
+const SHOP_FACETS = `{ product(slug: "%s") { facetValues { code name facet { code } } variants { facetValues { code name facet { code } } } } }`;
+
+describe.each(shopActors)('raw facet values for $name', ({ token: open }) => {
+    it.each(CATEGORY_PLAN.filter(c => !c.visible).map(c => c.erpId))(
+        'product of hidden category %s names no hidden category',
+        async erpId => {
+            const token = await open();
+            const result = await shop<{
+                product: {
+                    facetValues: { code: string; facet: { code: string } }[];
+                    variants: { facetValues: { code: string; facet: { code: string } }[] }[];
+                } | null;
+            }>(token, SHOP_FACETS.replace('%s', categoryProductSlug(erpId)));
+            expect(result.errors).toEqual([]);
+            const all = [
+                ...(result.data!.product?.facetValues ?? []),
+                ...(result.data!.product?.variants.flatMap(v => v.facetValues) ?? []),
+            ];
+            for (const fv of all.filter(f => f.facet.code === 'category'))
+                expect(HIDDEN, fv.code).not.toContain(categorySlug(fv.code));
+        },
+    );
+});
