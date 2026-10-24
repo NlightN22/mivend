@@ -1,6 +1,6 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { Injector, PasswordResetEvent, RequestContext } from '@vendure/core';
+import { Injector, RequestContext } from '@vendure/core';
 import {
     FileBasedTemplateLoader,
     HandlebarsMjmlGenerator,
@@ -28,7 +28,9 @@ async function renderedLink(isStaff: boolean): Promise<string> {
         identifier: 'user@example.org',
         getNativeAuthenticationMethod: () => ({ passwordResetToken: 'tok1' }),
     };
-    const event = { ctx, user } as unknown as PasswordResetEvent;
+    const event = { ctx, user } as unknown as Parameters<
+        ReturnType<typeof createPasswordResetHandler>['handle']
+    >[0];
     const details = await createPasswordResetHandler(urls).handle(
         event,
         { fromAddress: 'no-reply@example.org' },
@@ -36,7 +38,7 @@ async function renderedLink(isStaff: boolean): Promise<string> {
     );
     if (!details) throw new Error('handler produced no mail');
     const generator = new HandlebarsMjmlGenerator();
-    await generator.onInit({ templateLoader: loader } as InitializedEmailPluginOptions);
+    await generator.onInit({ templateLoader: loader } as unknown as InitializedEmailPluginOptions);
     const body = await loader.loadTemplate(injector, ctx, {
         type: details.type,
         templateName: details.templateFile,

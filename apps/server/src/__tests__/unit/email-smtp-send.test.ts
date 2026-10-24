@@ -42,7 +42,9 @@ describe('password-reset and account-activation mails through the smtp transport
         );
         sendMail.mockClear();
         createTransport.mockClear();
-        await generator.onInit({ templateLoader: loader } as InitializedEmailPluginOptions);
+        await generator.onInit({
+            templateLoader: loader,
+        } as unknown as InitializedEmailPluginOptions);
     });
 
     it.each([
@@ -65,7 +67,7 @@ describe('password-reset and account-activation mails through the smtp transport
                 ...extra,
             });
             await new NodemailerEmailSender().send(
-                { ...mail, recipient: 'user@example.org' },
+                { ...mail, recipient: 'user@example.org', attachments: [] },
                 transport as SMTPTransportOptions,
             );
 
