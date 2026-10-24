@@ -11,6 +11,7 @@ import {
 
 import { isStaffUser } from '../../password-reset-handler';
 
+// Checks the shape of the isStaffUser query only; a rename of Vendure's Administrator.user relation would not be caught here.
 // Mirror tables: Vendure's real Administrator needs bootstrap()'s EntityIdStrategy.
 @Entity('user')
 class TestUser {
