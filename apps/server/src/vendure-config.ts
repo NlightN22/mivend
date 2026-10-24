@@ -9,7 +9,7 @@ import {
 } from '@vendure/core';
 import { NumberingOrderCodeStrategy } from './order-code.strategy';
 import { sessionOptionsFromEnv } from './session-options';
-import { resolveEmailConfig } from './email-config';
+import { emailGlobalTemplateVars, resolveEmailConfig } from './email-config';
 import { createPasswordResetHandler } from './password-reset-handler';
 import { OrderUuidSubscriber } from './order-uuid.subscriber';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
@@ -140,9 +140,10 @@ const emailPlugin = EmailPlugin.init({
         }),
         emailAddressChangeHandler,
     ],
-    globalTemplateVars: {
-        fromAddress: emailFromAddress,
-    },
+    globalTemplateVars: emailGlobalTemplateVars(
+        emailFromAddress,
+        process.env.STOREFRONT_PUBLIC_URL ?? '',
+    ),
     ...emailTransportOptions,
 } as Parameters<typeof EmailPlugin.init>[0]);
 

@@ -12,6 +12,13 @@ export const router = createRouter({
         {
             path: '/set-password',
             component: () => import('../pages/auth/SetPasswordPage.vue'),
+            props: { flow: 'reset' },
+            meta: { layout: 'auth' },
+        },
+        {
+            path: '/verify',
+            component: () => import('../pages/auth/SetPasswordPage.vue'),
+            props: { flow: 'verify' },
             meta: { layout: 'auth' },
         },
         {

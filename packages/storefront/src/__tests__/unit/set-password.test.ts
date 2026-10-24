@@ -26,6 +26,10 @@ describe('password reset form rules', () => {
         ['PASSWORD_RESET_TOKEN_EXPIRED_ERROR', true],
         ['PASSWORD_VALIDATION_ERROR', false],
         ['NATIVE_AUTH_STRATEGY_ERROR', false],
+        ['VERIFICATION_TOKEN_INVALID_ERROR', true],
+        ['VERIFICATION_TOKEN_EXPIRED_ERROR', true],
+        ['PASSWORD_ALREADY_SET_ERROR', true],
+        ['MISSING_PASSWORD_ERROR', false],
         ['NOT_VERIFIED_ERROR', false],
     ])('%s dead link = %s', (code, dead) => expect(isDeadLinkCode(code)).toBe(dead));
 });
@@ -72,5 +76,26 @@ describe('useAuthStore.resetPassword', () => {
         );
         expect(store.isLoggedIn).toBe(false);
         expect(shopApiMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('verifyAccount signs in on success and returns the errorCode on a bad token', async () => {
+        const { useAuthStore } = await import('../../stores/auth');
+        shopApiMock
+            .mockResolvedValueOnce({
+                verifyCustomerAccount: { __typename: 'CurrentUser', id: '1' },
+            })
+            .mockResolvedValueOnce({ activeCustomer: { id: '1', emailAddress: 'a@b.example' } })
+            .mockResolvedValueOnce({
+                verifyCustomerAccount: {
+                    __typename: 'VerificationTokenInvalidError',
+                    errorCode: 'VERIFICATION_TOKEN_INVALID_ERROR',
+                },
+            });
+        const store = useAuthStore();
+        expect(await store.verifyAccount('tok', 'new-password')).toBeNull();
+        expect(store.authStatus).toBe('authenticated');
+        expect(await store.verifyAccount('bad', 'new-password')).toBe(
+            'VERIFICATION_TOKEN_INVALID_ERROR',
+        );
     });
 });

@@ -47,6 +47,13 @@ function formatFrom(env: Env): string {
     return `"${siteName(env)}" <${required(env, 'EMAIL_FROM_ADDRESS')}>`;
 }
 
+export function emailGlobalTemplateVars(
+    fromAddress: string,
+    storefrontPublicUrl: string,
+): Record<string, string> {
+    return { fromAddress, verifyEmailAddressUrl: `${storefrontPublicUrl}/verify` };
+}
+
 export function resolveEmailConfig(env: Env, outputPath: string): EmailTransportConfig {
     const production = env.NODE_ENV === 'production';
     const selected = env.EMAIL_TRANSPORT || (production ? undefined : 'file');

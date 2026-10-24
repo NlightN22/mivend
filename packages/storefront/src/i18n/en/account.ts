@@ -15,6 +15,13 @@ export default {
         publicCatalog: 'Public catalogue',
         help: 'Help',
         security: 'Security',
+        verifyAccount: {
+            title: 'Activate your account',
+            subtitle: 'Choose a password to finish activating your account.',
+            successText: 'Your account is active and you are signed in.',
+            invalidText:
+                'This activation link can no longer be used. If the account is already active, sign in; otherwise ask your manager to send a new invitation.',
+        },
         setPassword: {
             title: 'Set a new password',
             subtitle: 'Choose a password for your account.',
@@ -26,6 +33,7 @@ export default {
             submit: 'Save password',
             successTitle: 'Password saved',
             successText: 'You are signed in with your new password.',
+            redirecting: 'Redirecting to the catalogue in {n}…',
             toCatalog: 'Go to the catalogue',
             invalidTitle: 'Link is invalid or expired',
             invalidText:

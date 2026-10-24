@@ -5,6 +5,7 @@ import {
     ActiveCustomerForAuthDocument,
     LoginDocument,
     ResetPasswordFromAuthStoreDocument,
+    VerifyAccountFromAuthStoreDocument,
     LogoutFromAuthStoreDocument,
     type ActiveCustomerForAuthQuery,
 } from '../api/generated/graphql';
@@ -65,17 +66,29 @@ export const useAuthStore = defineStore('auth', () => {
         return false;
     }
 
-    // Vendure signs the customer in when a reset succeeds; returns the errorCode, or null on success.
+    // Vendure signs the customer in when a reset or activation succeeds; returns the errorCode, or null on success.
     async function resetPassword(token: string, password: string): Promise<string | null> {
         const { resetPassword: result } = await shopApi(ResetPasswordFromAuthStoreDocument, {
             token,
             password,
         });
-        if (result.__typename === 'CurrentUser') {
-            await startSession();
-            return null;
-        }
-        return 'errorCode' in result ? result.errorCode : 'UNKNOWN';
+        return finishTokenFlow(result);
+    }
+
+    async function verifyAccount(token: string, password: string): Promise<string | null> {
+        const { verifyCustomerAccount: result } = await shopApi(
+            VerifyAccountFromAuthStoreDocument,
+            { token, password },
+        );
+        return finishTokenFlow(result);
+    }
+
+    async function finishTokenFlow(
+        result: { __typename: string } | { errorCode: string },
+    ): Promise<string | null> {
+        if ('errorCode' in result) return result.errorCode;
+        await startSession();
+        return null;
     }
 
     async function startSession(): Promise<void> {
@@ -196,6 +209,7 @@ export const useAuthStore = defineStore('auth', () => {
         counterparty,
         login,
         resetPassword,
+        verifyAccount,
         logout,
         fetchCurrentCustomer,
     };

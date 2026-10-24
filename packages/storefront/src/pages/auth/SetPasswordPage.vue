@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { MIN_PASSWORD_LENGTH } from './passwordReset';
-import { useSetPassword } from './useSetPassword';
+import { useSetPassword, type TokenFlow } from './useSetPassword';
 
+const props = defineProps<{ flow: TokenFlow }>();
 const { t } = useI18n();
-const { form, state, error, loading, tooShort, mismatch, submittable, submit } = useSetPassword();
+const { form, state, error, loading, tooShort, mismatch, submittable, submit, remaining } =
+    useSetPassword(props.flow);
+const copy = computed(() => (props.flow === 'verify' ? 'auth.verifyAccount' : 'auth.setPassword'));
 </script>
 
 <template>
@@ -16,8 +20,8 @@ const { form, state, error, loading, tooShort, mismatch, submittable, submit } =
 
             <div class="login-card">
                 <template v-if="state === 'form'">
-                    <h1 class="login-card__title">{{ t('auth.setPassword.title') }}</h1>
-                    <p class="login-card__subtitle">{{ t('auth.setPassword.subtitle') }}</p>
+                    <h1 class="login-card__title">{{ t(`${copy}.title`) }}</h1>
+                    <p class="login-card__subtitle">{{ t(`${copy}.subtitle`) }}</p>
 
                     <MvNotice v-if="error" variant="error" class="login-card__error">
                         {{ error }}
@@ -65,7 +69,10 @@ const { form, state, error, loading, tooShort, mismatch, submittable, submit } =
 
                 <template v-else-if="state === 'success'">
                     <h1 class="login-card__title">{{ t('auth.setPassword.successTitle') }}</h1>
-                    <p class="login-card__subtitle">{{ t('auth.setPassword.successText') }}</p>
+                    <p class="login-card__subtitle">{{ t(`${copy}.successText`) }}</p>
+                    <p class="login-card__subtitle" role="status">
+                        {{ t('auth.setPassword.redirecting', { n: remaining }) }}
+                    </p>
                     <MvButton
                         variant="primary"
                         size="lg"
@@ -78,7 +85,7 @@ const { form, state, error, loading, tooShort, mismatch, submittable, submit } =
 
                 <template v-else>
                     <h1 class="login-card__title">{{ t('auth.setPassword.invalidTitle') }}</h1>
-                    <p class="login-card__subtitle">{{ t('auth.setPassword.invalidText') }}</p>
+                    <p class="login-card__subtitle">{{ t(`${copy}.invalidText`) }}</p>
                     <MvButton
                         variant="secondary"
                         size="lg"
