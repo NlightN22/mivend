@@ -11,7 +11,6 @@ import { NumberingOrderCodeStrategy } from './order-code.strategy';
 import { sessionOptionsFromEnv } from './session-options';
 import { emailGlobalTemplateVars, resolveEmailConfig } from './email-config';
 import { siteFaviconUrl } from './site-config';
-import { createPasswordResetHandler } from './password-reset-handler';
 import { OrderUuidSubscriber } from './order-uuid.subscriber';
 import { CustomerPriceCalculationStrategy } from './customer-price-calculation.strategy';
 import { DeferredPaymentPlugin } from '@mivend/plugin-deferred-payment';
@@ -19,12 +18,9 @@ import { FreightShippingPlugin } from '@mivend/plugin-freight-shipping';
 import { PickupShippingPlugin } from '@mivend/plugin-pickup-shipping';
 import { OnlinePaymentPlugin, onlineStubPaymentHandler } from '@mivend/plugin-online-payment';
 import { AssetServerPlugin, configureS3AssetStorage } from '@vendure/asset-server-plugin';
-import {
-    EmailPlugin,
-    FileBasedTemplateLoader,
-    emailVerificationHandler,
-    emailAddressChangeHandler,
-} from '@vendure/email-plugin';
+import { EmailPlugin } from '@vendure/email-plugin';
+import { createEmailHandlers } from './email-handlers';
+import { LanguageTemplateLoader, defaultEmailLanguage } from './email-language';
 import { DashboardPlugin } from '@vendure/dashboard/plugin';
 import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
@@ -132,19 +128,21 @@ const { fromAddress: emailFromAddress, ...emailTransportOptions } = resolveEmail
 // Unset yields a host-less link, not a boot failure: a missing var must not take the server down.
 const managerPublicUrl = process.env.MANAGER_PUBLIC_URL ?? '';
 
+const emailLanguage = defaultEmailLanguage(process.env);
+
 const emailPlugin = EmailPlugin.init({
-    templateLoader: new FileBasedTemplateLoader(path.join(__dirname, '../static/email/templates')),
-    handlers: [
-        emailVerificationHandler,
-        createPasswordResetHandler({
+    templateLoader: new LanguageTemplateLoader(path.join(__dirname, '../static/email/templates')),
+    handlers: createEmailHandlers(
+        {
             staff: `${managerPublicUrl}/set-password`,
             customer: `${process.env.STOREFRONT_PUBLIC_URL ?? ''}/set-password`,
-        }),
-        emailAddressChangeHandler,
-    ],
+        },
+        emailLanguage,
+    ),
     globalTemplateVars: emailGlobalTemplateVars(
         emailFromAddress,
         process.env.STOREFRONT_PUBLIC_URL ?? '',
+        process.env,
     ),
     ...emailTransportOptions,
 } as Parameters<typeof EmailPlugin.init>[0]);

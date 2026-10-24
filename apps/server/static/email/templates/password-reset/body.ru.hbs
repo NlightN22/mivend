@@ -1,0 +1,23 @@
+{{> header title="Восстановление пароля" }}
+
+<mj-section background-color="#fafafa">
+    <mj-column>
+        <mj-text color="#525252">
+            Для вашей учётной записи запрошен новый пароль.
+        </mj-text>
+
+        <mj-button font-family="Helvetica"
+                   background-color="#f45e43"
+                   color="white"
+                   href="{{ passwordResetUrl }}?token={{ passwordResetToken }}">
+            Сменить пароль
+        </mj-button>
+
+
+        <mj-text color="#525252">
+            Если вы не отправляли этот запрос, просто проигнорируйте письмо: в вашей учётной записи ничего не изменилось.
+        </mj-text>
+    </mj-column>
+</mj-section>
+
+{{> footer defaultFooter="Это автоматическое сообщение, отвечать на него не нужно." }}

@@ -4,6 +4,8 @@ import {
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
+import { EMAIL_SUBJECTS } from './account-email-handlers';
+import { EmailLanguage, resolveEmailLanguage } from './email-language';
 import { EmailEventHandler, EmailEventListener, EventWithAsyncData } from '@vendure/email-plugin';
 
 export interface PasswordResetUrls {
@@ -21,6 +23,7 @@ export function isStaffUser(
 
 export function createPasswordResetHandler(
     urls: PasswordResetUrls,
+    fallback: EmailLanguage,
 ): EmailEventHandler<
     'password-reset',
     EventWithAsyncData<PasswordResetEvent, { passwordResetUrl: string }>
@@ -37,8 +40,11 @@ export function createPasswordResetHandler(
         })
         .setRecipient(event => event.user.identifier)
         .setFrom('{{ fromAddress }}')
-        .setSubject('Forgotten password reset')
+        .setSubject(
+            event => EMAIL_SUBJECTS.passwordReset[resolveEmailLanguage(event.ctx, fallback)],
+        )
         .setTemplateVars(event => ({
+            emailLanguage: resolveEmailLanguage(event.ctx, fallback),
             passwordResetToken: event.user.getNativeAuthenticationMethod().passwordResetToken,
             passwordResetUrl: event.data.passwordResetUrl,
         }));

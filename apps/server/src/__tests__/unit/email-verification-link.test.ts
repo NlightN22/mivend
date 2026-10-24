@@ -1,15 +1,12 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { Injector, NativeAuthenticationMethod, RequestContext } from '@vendure/core';
-import {
-    FileBasedTemplateLoader,
-    HandlebarsMjmlGenerator,
-    InitializedEmailPluginOptions,
-    emailVerificationHandler,
-} from '@vendure/email-plugin';
+import { HandlebarsMjmlGenerator, InitializedEmailPluginOptions } from '@vendure/email-plugin';
+import { createEmailVerificationHandler } from '../../account-email-handlers';
 import { emailGlobalTemplateVars } from '../../email-config';
+import { LanguageTemplateLoader } from '../../email-language';
 
-const loader = new FileBasedTemplateLoader(path.join(__dirname, '../../../static/email/templates'));
+const loader = new LanguageTemplateLoader(path.join(__dirname, '../../../static/email/templates'));
 
 describe('email-verification link target', () => {
     it('points the activation link at the storefront /verify page', async () => {
@@ -29,10 +26,14 @@ describe('email-verification link target', () => {
             getNativeAuthenticationMethod: () => method,
         };
         const event = { ctx, user } as unknown as Parameters<
-            typeof emailVerificationHandler.handle
+            ReturnType<typeof createEmailVerificationHandler>['handle']
         >[0];
-        const vars = emailGlobalTemplateVars('no-reply@example.org', 'https://shop.example.org');
-        const details = await emailVerificationHandler.handle(event, vars, injector);
+        const vars = emailGlobalTemplateVars(
+            'no-reply@example.org',
+            'https://shop.example.org',
+            {},
+        );
+        const details = await createEmailVerificationHandler('en').handle(event, vars, injector);
         if (!details) throw new Error('handler produced no mail');
         const generator = new HandlebarsMjmlGenerator();
         await generator.onInit({

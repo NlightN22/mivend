@@ -1,18 +1,15 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { Injector, RequestContext } from '@vendure/core';
-import {
-    FileBasedTemplateLoader,
-    HandlebarsMjmlGenerator,
-    InitializedEmailPluginOptions,
-} from '@vendure/email-plugin';
+import { HandlebarsMjmlGenerator, InitializedEmailPluginOptions } from '@vendure/email-plugin';
+import { LanguageTemplateLoader } from '../../email-language';
 import { createPasswordResetHandler } from '../../password-reset-handler';
 
 const urls = {
     staff: 'https://manager.example.org/set-password',
     customer: 'https://shop.example.org/set-password',
 };
-const loader = new FileBasedTemplateLoader(path.join(__dirname, '../../../static/email/templates'));
+const loader = new LanguageTemplateLoader(path.join(__dirname, '../../../static/email/templates'));
 
 async function renderedLink(isStaff: boolean): Promise<string> {
     const injector = {
@@ -31,7 +28,7 @@ async function renderedLink(isStaff: boolean): Promise<string> {
     const event = { ctx, user } as unknown as Parameters<
         ReturnType<typeof createPasswordResetHandler>['handle']
     >[0];
-    const details = await createPasswordResetHandler(urls).handle(
+    const details = await createPasswordResetHandler(urls, 'en').handle(
         event,
         { fromAddress: 'no-reply@example.org' },
         injector,

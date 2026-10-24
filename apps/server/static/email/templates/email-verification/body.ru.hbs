@@ -1,0 +1,18 @@
+{{> header title="Подтвердите адрес электронной почты" }}
+
+<mj-section background-color="#fafafa">
+    <mj-column>
+        <mj-text color="#525252">
+            Спасибо за регистрацию. Нажмите кнопку ниже, чтобы подтвердить этот адрес электронной почты и завершить регистрацию:
+        </mj-text>
+
+        <mj-button font-family="Helvetica"
+                   background-color="#f45e43"
+                   color="white"
+                   href="{{ verifyEmailAddressUrl }}?token={{ verificationToken }}">
+            Подтвердить адрес
+        </mj-button>
+    </mj-column>
+</mj-section>
+
+{{> footer defaultFooter="Это автоматическое сообщение, отвечать на него не нужно." }}

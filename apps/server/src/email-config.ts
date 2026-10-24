@@ -1,5 +1,5 @@
 import { EmailPluginOptions } from '@vendure/email-plugin';
-import { siteName } from './site-config';
+import { emailFooterText, siteName } from './site-config';
 
 type Env = Record<string, string | undefined>;
 
@@ -41,8 +41,14 @@ function formatFrom(env: Env): string {
 export function emailGlobalTemplateVars(
     fromAddress: string,
     storefrontPublicUrl: string,
+    env: Env,
 ): Record<string, string> {
-    return { fromAddress, verifyEmailAddressUrl: `${storefrontPublicUrl}/verify` };
+    return {
+        fromAddress,
+        verifyEmailAddressUrl: `${storefrontPublicUrl}/verify`,
+        siteName: siteName(env),
+        footerText: emailFooterText(env),
+    };
 }
 
 export function resolveEmailConfig(env: Env, outputPath: string): EmailTransportConfig {

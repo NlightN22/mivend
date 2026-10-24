@@ -3,13 +3,13 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Injector, RequestContext } from '@vendure/core';
 import {
-    FileBasedTemplateLoader,
     HandlebarsMjmlGenerator,
     InitializedEmailPluginOptions,
     NodemailerEmailSender,
     SMTPTransportOptions,
 } from '@vendure/email-plugin';
 import { resolveEmailConfig } from '../../email-config';
+import { LanguageTemplateLoader } from '../../email-language';
 
 const sendMail = vi.fn().mockResolvedValue({});
 const createTransport = vi.fn((options: unknown) => ({ sendMail, options }));
@@ -29,7 +29,7 @@ const env = {
 };
 
 describe('password-reset and account-activation mails through the smtp transport', () => {
-    const loader = new FileBasedTemplateLoader(templates);
+    const loader = new LanguageTemplateLoader(templates);
     const generator = new HandlebarsMjmlGenerator();
     const { transport, fromAddress } = resolveEmailConfig(env, '/unused');
     const vars = { fromAddress, passwordResetUrl: 'https://manager.example.org/set-password' };
@@ -59,7 +59,7 @@ describe('password-reset and account-activation mails through the smtp transport
                 {
                     type,
                     templateName: 'body.hbs',
-                    templateVars: {},
+                    templateVars: { emailLanguage: 'en' },
                 },
             );
             const mail = await generator.generate('{{ fromAddress }}', subject, body, {

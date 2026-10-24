@@ -20,3 +20,13 @@ export function siteFaviconUrl(env: Env): string | undefined {
     }
     return url || undefined;
 }
+
+export function emailFooterText(env: Env): string {
+    const text = env.EMAIL_FOOTER_TEXT ?? '';
+    if (/["'\r\n<>&$;\\{}]/.test(text)) {
+        throw new Error(
+            'EMAIL_FOOTER_TEXT must not contain quotes, line breaks or any of < > & $ ; { } \\',
+        );
+    }
+    return text;
+}

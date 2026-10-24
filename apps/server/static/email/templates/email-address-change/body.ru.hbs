@@ -1,0 +1,18 @@
+{{> header title="Подтвердите новый адрес электронной почты" }}
+
+<mj-section background-color="#fafafa">
+    <mj-column>
+        <mj-text color="#525252">
+            Мы получили запрос на смену адреса электронной почты вашей учётной записи на этот. Нажмите кнопку ниже, чтобы подтвердить адрес и завершить смену:
+        </mj-text>
+
+        <mj-button font-family="Helvetica"
+                   background-color="#f45e43"
+                   color="white"
+                   href="{{ changeEmailAddressUrl }}?token={{ identifierChangeToken }}">
+            Подтвердить адрес
+        </mj-button>
+    </mj-column>
+</mj-section>
+
+{{> footer defaultFooter="Это автоматическое сообщение, отвечать на него не нужно." }}
