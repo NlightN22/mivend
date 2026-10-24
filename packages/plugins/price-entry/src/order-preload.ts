@@ -54,6 +54,7 @@ export async function preloadOrderLookups(
     ctx: RequestContext,
     order: Order,
     memo: LookupMemo,
+    resolveDefaultCode: (customerId: string) => Promise<string | null>,
 ): Promise<void> {
     const variantIds = [...new Set(order.lines.map(l => String(l.productVariantId)))];
     if (variantIds.length === 0) return;
@@ -97,9 +98,17 @@ export async function preloadOrderLookups(
         const code = await memoized(memo, `ptc:${customerId}`, () =>
             priceEntryService.getPriceTypeCodeForCustomer(ctx, customerId),
         );
+        let missing = variantIds;
         if (code) {
             const prices = await priceEntryService.getForVariants(ctx, variantIds, code);
             for (const id of variantIds) memo.set(`price:${id}:${code}`, prices.get(id) ?? null);
+            missing = variantIds.filter(id => prices.get(id) == null);
+        }
+        const defaultCode = missing.length > 0 ? await resolveDefaultCode(customerId) : null;
+        if (defaultCode && defaultCode !== code) {
+            const prices = await priceEntryService.getForVariants(ctx, missing, defaultCode);
+            for (const id of missing)
+                memo.set(`price:${id}:${defaultCode}`, prices.get(id) ?? null);
         }
     }
 }

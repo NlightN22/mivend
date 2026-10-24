@@ -5,6 +5,7 @@ import { LookupMemo } from '../../lookup-memo';
 import { preloadOrderLookups } from '../../order-preload';
 import { PriceEntryService } from '../../price-entry.service';
 
+const resolveDefault = vi.fn(async () => 'RETAIL');
 const ctx = { languageCode: 'en' } as unknown as RequestContext;
 
 function setup() {
@@ -55,11 +56,12 @@ describe('preloadOrderLookups', () => {
     it('runs one query per kind for the whole order and seeds the memo', async () => {
         const { connection, priceEntry, order, variantFind, qb } = setup();
         const memo = new LookupMemo();
-        await preloadOrderLookups(connection, priceEntry, ctx, order, memo);
+        await preloadOrderLookups(connection, priceEntry, ctx, order, memo, resolveDefault);
 
         expect(variantFind).toHaveBeenCalledTimes(1);
         expect(qb.getMany).toHaveBeenCalledTimes(1);
-        expect(priceEntry.getForVariants).toHaveBeenCalledTimes(1);
+        expect(priceEntry.getForVariants).toHaveBeenCalledTimes(2);
+        expect(priceEntry.getForVariants).toHaveBeenLastCalledWith(ctx, ['v-b'], 'RETAIL');
         const load = vi.fn();
         expect(await memo.get('erp:v-a', load)).toBe('erp-a');
         expect(await memo.get('erp:v-b', load)).toBe('');
@@ -67,7 +69,29 @@ describe('preloadOrderLookups', () => {
         expect(await memo.get('promo:erp-a', load)).toHaveLength(1);
         expect(await memo.get('price:v-a:WHOLESALE', load)).toBe(100);
         expect(await memo.get('price:v-b:WHOLESALE', load)).toBeNull();
+        expect(await memo.get('price:v-b:RETAIL', load)).toBeNull();
         expect(load).not.toHaveBeenCalled();
+    });
+
+    it('skips the default-type query when every variant has a customer price', async () => {
+        const { connection, priceEntry, order } = setup();
+        vi.mocked(priceEntry.getForVariants).mockResolvedValue(
+            new Map([
+                ['v-a', 100],
+                ['v-b', 50],
+            ]),
+        );
+        resolveDefault.mockClear();
+        await preloadOrderLookups(
+            connection,
+            priceEntry,
+            ctx,
+            order,
+            new LookupMemo(),
+            resolveDefault,
+        );
+        expect(priceEntry.getForVariants).toHaveBeenCalledTimes(1);
+        expect(resolveDefault).not.toHaveBeenCalled();
     });
 
     it('does nothing for an empty order', async () => {
@@ -78,6 +102,7 @@ describe('preloadOrderLookups', () => {
             ctx,
             { lines: [] } as unknown as Order,
             new LookupMemo(),
+            resolveDefault,
         );
         expect(variantFind).not.toHaveBeenCalled();
     });

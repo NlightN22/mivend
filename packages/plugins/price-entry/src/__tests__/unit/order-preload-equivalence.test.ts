@@ -61,10 +61,14 @@ const priceEntry = {
     getPriceTypeCodeForCustomer: vi.fn(async () => 'WHOLESALE'),
     getPriceTypeCodeById: vi.fn(async () => 'RETAIL'),
     getForVariant: async (_c: unknown, id: string, code: string) => prices[code]?.[id] ?? null,
-    getForVariants: async (_c: unknown, ids: string[], code: string) =>
-        new Map(
-            ids.filter(id => prices[code]?.[id] !== undefined).map(id => [id, prices[code][id]]),
-        ),
+    getForVariants: vi.fn(
+        async (_c: unknown, ids: string[], code: string) =>
+            new Map(
+                ids
+                    .filter(id => prices[code]?.[id] !== undefined)
+                    .map(id => [id, prices[code][id]]),
+            ),
+    ),
 };
 
 const service = new PriceResolutionService(
@@ -110,5 +114,12 @@ describe('order lookup preload (equivalence)', () => {
         const preloaded = await priceLines(true);
         expect(preloaded).toEqual(lazy);
         expect(preloaded).toEqual([900, 250, 700, 300, 900]);
+    });
+
+    it('loads the branch default type once for the variants without a customer price', async () => {
+        priceEntry.getForVariants.mockClear();
+        await service.preload(ctx, order, new LookupMemo());
+        expect(priceEntry.getForVariants).toHaveBeenCalledTimes(2);
+        expect(priceEntry.getForVariants).toHaveBeenLastCalledWith(ctx, ['v3'], 'RETAIL');
     });
 });

@@ -389,7 +389,7 @@ Vendure promotion, not part of the line's list price:
   promotion silently removes every order-dependent discount.
 - Size: before #271 the evaluation was linear, about 60 ms per line per mutation (41 lines: add ~2.5 s, adjust ~2.4 s,
   read ~1.9 s). Now `preloadOrderLookups` seeds the memo with one query each for variants (facets, weight, erp id),
-  promo rules and base prices, so the per-line pass only reads memory. Measured on the local
+  promo rules and base prices (plus one query for the branch default type, only for variants the customer type lacks), so the per-line pass only reads memory. Measured on the local
   contour with `infrastructure/scripts/seed-large-cart.mjs` (200 lines, one cart), before -> after: add of the 41st
   line 2.6 s -> 0.3 s, of the 100th 6.4 s -> 0.5 s, of the 200th 12.5 s -> 0.9 s; adjust at 200 lines 13.2 s -> 0.7 s.
   Supported: at least 200 lines.
