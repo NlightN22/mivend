@@ -32,6 +32,7 @@ import { DiscountRuleService } from './discount-rule.service';
 import { PromoDiscountRuleService } from './promo-discount-rule.service';
 import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.service';
 import { PriceResolutionService } from './price-resolution.service';
+import { TierProgressService } from './tier-progress.service';
 import { OrderDiscountService } from './order-discount.service';
 import { OrderDiscountPromotionBootstrapService } from './order-discount-promotion-bootstrap.service';
 import { orderDiscountAction, orderDiscountCondition } from './order-discount.promotion';
@@ -323,6 +324,7 @@ const adminApiSchema = gql`
         PromoDiscountRuleService,
         CounterpartyDiscountRuleService,
         PriceResolutionService,
+        TierProgressService,
         OrderDiscountService,
         OrderDiscountPromotionBootstrapService,
         PriceAdjustmentFloorCheck,

@@ -18,7 +18,8 @@ import { PriceEntryInput, PriceEntryService } from './price-entry.service';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountRuleInput, DiscountRuleService, DiscountTierVM } from './discount-rule.service';
 import { LookupMemo } from './lookup-memo';
-import { PriceResolutionService, TierProgressVM } from './price-resolution.service';
+import { PriceResolutionService } from './price-resolution.service';
+import { TierProgressService, TierProgressVM } from './tier-progress.service';
 
 @Resolver('ProductVariant')
 export class ProductVariantPriceResolver {
@@ -29,6 +30,7 @@ export class ProductVariantPriceResolver {
         private priceResolutionService: PriceResolutionService,
         private activeOrderService: ActiveOrderService,
         private connection: TransactionalConnection,
+        private tierProgressService: TierProgressService,
     ) {}
 
     private memoFor(ctx: RequestContext): LookupMemo {
@@ -70,7 +72,7 @@ export class ProductVariantPriceResolver {
         if (!ctx.activeUserId) return null;
         const order = await this.activeOrderFor(ctx);
         const line = order.lines.find(l => String(l.productVariantId) === String(variant.id));
-        return this.priceResolutionService.resolveTierProgress(
+        return this.tierProgressService.resolveTierProgress(
             ctx,
             String(variant.id),
             { order, quantity: line?.quantity ?? 0 },
@@ -111,6 +113,7 @@ export class OrderLineDiscountResolver {
     constructor(
         private priceResolutionService: PriceResolutionService,
         private connection: TransactionalConnection,
+        private tierProgressService: TierProgressService,
     ) {}
 
     private memoFor(ctx: RequestContext): LookupMemo {
@@ -154,7 +157,7 @@ export class OrderLineDiscountResolver {
             relations: ['order', 'order.lines'],
         });
         if (!line) return null;
-        return this.priceResolutionService.resolveTierProgress(
+        return this.tierProgressService.resolveTierProgress(
             ctx,
             String(line.productVariantId),
             { order: line.order, quantity: line.quantity },

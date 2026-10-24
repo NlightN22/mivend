@@ -11,9 +11,10 @@ function setup(order: { lines: unknown[] } | undefined) {
     const findOne = vi.fn(async () => order ?? null);
     const connection = { getRepository: () => ({ findOne }) };
     const resolver = new ProductVariantPriceResolver(
-        { resolveTierProgress } as never,
+        {} as never,
         active as never,
         connection as never,
+        { resolveTierProgress } as never,
     );
     return { resolver, resolveTierProgress, findOne, active };
 }

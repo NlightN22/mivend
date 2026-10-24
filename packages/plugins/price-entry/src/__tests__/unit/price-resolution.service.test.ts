@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
 import { PriceResolutionService } from '../../price-resolution.service';
+import { TierProgressService } from '../../tier-progress.service';
 import { LookupMemo } from '../../lookup-memo';
 import type { PriceEntryService } from '../../price-entry.service';
 import type { DiscountRuleService } from '../../discount-rule.service';
@@ -76,6 +77,7 @@ describe('PriceResolutionService', () => {
     let counterpartyService: { getForCustomer: ReturnType<typeof vi.fn> };
     let branchSettingsService: { resolveEffective: ReturnType<typeof vi.fn> };
     let service: PriceResolutionService;
+    let tierProgress: TierProgressService;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -110,6 +112,11 @@ describe('PriceResolutionService', () => {
             branchSettingsService as unknown as import('@mivend/plugin-access-control').BranchSettingsService,
             promoDiscountRuleService as unknown as import('../../promo-discount-rule.service').PromoDiscountRuleService,
             counterpartyDiscountRuleService as unknown as import('../../counterparty-discount-rule.service').CounterpartyDiscountRuleService,
+        );
+        tierProgress = new TierProgressService(
+            priceEntryService as unknown as PriceEntryService,
+            discountRuleService as unknown as DiscountRuleService,
+            service,
         );
     });
 
@@ -437,7 +444,10 @@ describe('PriceResolutionService', () => {
             discountRuleService.getTiers.mockResolvedValue([]);
 
             const order = { lines: [] } as unknown as Order;
-            const result = await service.resolveTierProgress(mockCtx, 'v1', { order, quantity: 1 });
+            const result = await tierProgress.resolveTierProgress(mockCtx, 'v1', {
+                order,
+                quantity: 1,
+            });
 
             expect(result).toBeNull();
         });
@@ -463,7 +473,10 @@ describe('PriceResolutionService', () => {
 
             const order = { lines: [] } as unknown as Order;
             // 6 * 100kg = 600kg — past the 500kg rung, short of the 1000kg rung
-            const result = await service.resolveTierProgress(mockCtx, 'v1', { order, quantity: 6 });
+            const result = await tierProgress.resolveTierProgress(mockCtx, 'v1', {
+                order,
+                quantity: 6,
+            });
 
             expect(result).toEqual({
                 facetName: 'Lukoil',
@@ -495,7 +508,7 @@ describe('PriceResolutionService', () => {
             ]);
 
             const order = { lines: [] } as unknown as Order;
-            const result = await service.resolveTierProgress(mockCtx, 'v1', {
+            const result = await tierProgress.resolveTierProgress(mockCtx, 'v1', {
                 order,
                 quantity: 12,
             });
@@ -514,7 +527,10 @@ describe('PriceResolutionService', () => {
             priceEntryService.getPriceTypeCodeForUser.mockResolvedValue(null);
 
             const order = { lines: [] } as unknown as Order;
-            const result = await service.resolveTierProgress(mockCtx, 'v1', { order, quantity: 1 });
+            const result = await tierProgress.resolveTierProgress(mockCtx, 'v1', {
+                order,
+                quantity: 1,
+            });
 
             expect(result).toBeNull();
         });
