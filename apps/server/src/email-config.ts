@@ -30,6 +30,9 @@ function required(env: Env, name: string): string {
 function formatFrom(env: Env): string {
     const address = required(env, 'EMAIL_FROM_ADDRESS');
     const name = env.EMAIL_FROM_NAME;
+    if (name && /["\r\n]/.test(name)) {
+        throw new Error('EMAIL_FROM_NAME must not contain quotes or line breaks');
+    }
     return name ? `"${name}" <${address}>` : address;
 }
 
@@ -58,8 +61,8 @@ export function resolveEmailConfig(env: Env, outputPath: string): EmailTransport
         throw new Error('EMAIL_SMTP_SECURE must be starttls or tls');
     }
     const port = Number(env.EMAIL_SMTP_PORT);
-    if (!Number.isInteger(port) || port <= 0) {
-        throw new Error('EMAIL_SMTP_PORT must be a positive integer');
+    if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+        throw new Error('EMAIL_SMTP_PORT must be an integer from 1 to 65535');
     }
     const password = required(env, 'EMAIL_SMTP_PASSWORD');
     if (production && password.startsWith('change-me')) {

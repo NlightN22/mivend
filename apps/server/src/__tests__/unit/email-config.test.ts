@@ -81,4 +81,16 @@ describe('resolveEmailConfig', () => {
             ),
         ).toThrow(/placeholder/);
     });
+
+    it('rejects an out-of-range port and a sender name that would break the header', () => {
+        expect(() => resolveEmailConfig({ ...smtp, EMAIL_SMTP_PORT: '70000' }, out)).toThrow(
+            /1 to 65535/,
+        );
+        expect(() => resolveEmailConfig({ ...smtp, EMAIL_FROM_NAME: 'a"b' }, out)).toThrow(
+            /EMAIL_FROM_NAME/,
+        );
+        expect(() => resolveEmailConfig({ ...smtp, EMAIL_FROM_NAME: 'a\nb' }, out)).toThrow(
+            /EMAIL_FROM_NAME/,
+        );
+    });
 });

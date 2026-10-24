@@ -13,6 +13,7 @@ import { resolveEmailConfig } from '../../email-config';
 
 const sendMail = vi.fn().mockResolvedValue({});
 const createTransport = vi.fn((options: unknown) => ({ sendMail, options }));
+// The plugin loads its own nodemailer copy; a plain import would mock a different instance.
 const pluginRequire = createRequire(require.resolve('@vendure/email-plugin'));
 
 const templates = path.join(__dirname, '../../../static/email/templates');
