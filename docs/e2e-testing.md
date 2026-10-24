@@ -88,7 +88,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 
 | Group | Suite | Covers | Args |
 | --- | --- | --- | --- |
-| `storefront-auth` | dev | storefront login, trading-point selection (no stored session) | `--project=storefront-noauth` |
+| `storefront-auth` | dev | storefront login, set-password page, trading-point selection (no stored session) | `--project=storefront-noauth` |
 | `storefront-account` | dev | storefront account pages | `--project=storefront storefront/account` |
 | `storefront-api` | dev | storefront REST/Swagger docs surface | `--project=storefront storefront/api` |
 | `storefront-cart` | dev | cart behaviour | `--project=storefront storefront/cart` |

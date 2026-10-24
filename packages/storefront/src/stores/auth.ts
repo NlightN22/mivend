@@ -4,6 +4,7 @@ import { shopApi } from '../api/client';
 import {
     ActiveCustomerForAuthDocument,
     LoginDocument,
+    ResetPasswordFromAuthStoreDocument,
     LogoutFromAuthStoreDocument,
     type ActiveCustomerForAuthQuery,
 } from '../api/generated/graphql';
@@ -58,14 +59,31 @@ export const useAuthStore = defineStore('auth', () => {
         const result = await shopApi(LoginDocument, { username, password, rememberMe });
 
         if (result.login.__typename === 'CurrentUser') {
-            sessionStorage.removeItem(LOGGED_OUT_KEY);
-            initPromise = null;
-            generation++;
-            stopBackgroundRetry();
-            await fetchCurrentCustomer();
+            await startSession();
             return true;
         }
         return false;
+    }
+
+    // Vendure signs the customer in when a reset succeeds; returns the errorCode, or null on success.
+    async function resetPassword(token: string, password: string): Promise<string | null> {
+        const { resetPassword: result } = await shopApi(ResetPasswordFromAuthStoreDocument, {
+            token,
+            password,
+        });
+        if (result.__typename === 'CurrentUser') {
+            await startSession();
+            return null;
+        }
+        return 'errorCode' in result ? result.errorCode : 'UNKNOWN';
+    }
+
+    async function startSession(): Promise<void> {
+        sessionStorage.removeItem(LOGGED_OUT_KEY);
+        initPromise = null;
+        generation++;
+        stopBackgroundRetry();
+        await fetchCurrentCustomer();
     }
 
     async function logout(): Promise<void> {
@@ -177,6 +195,7 @@ export const useAuthStore = defineStore('auth', () => {
         tradingPoint,
         counterparty,
         login,
+        resetPassword,
         logout,
         fetchCurrentCustomer,
     };

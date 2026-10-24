@@ -5366,6 +5366,21 @@ export type LoginMutation = {
         | { __typename: 'NotVerifiedError' };
 };
 
+export type ResetPasswordFromAuthStoreMutationVariables = Exact<{
+    token: Scalars['String']['input'];
+    password: Scalars['String']['input'];
+}>;
+
+export type ResetPasswordFromAuthStoreMutation = {
+    resetPassword:
+        | { __typename: 'CurrentUser'; id: string }
+        | { __typename: 'NativeAuthStrategyError'; errorCode: ErrorCode }
+        | { __typename: 'NotVerifiedError'; errorCode: ErrorCode }
+        | { __typename: 'PasswordResetTokenExpiredError'; errorCode: ErrorCode }
+        | { __typename: 'PasswordResetTokenInvalidError'; errorCode: ErrorCode }
+        | { __typename: 'PasswordValidationError'; errorCode: ErrorCode };
+};
+
 export type LogoutFromAuthStoreMutationVariables = Exact<{ [key: string]: never }>;
 
 export type LogoutFromAuthStoreMutation = { logout: { success: boolean } };
@@ -6743,6 +6758,22 @@ export const LoginDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<LoginMutation, LoginMutationVariables>;
+export const ResetPasswordFromAuthStoreDocument = new TypedDocumentString(`
+    mutation ResetPasswordFromAuthStore($token: String!, $password: String!) {
+  resetPassword(token: $token, password: $password) {
+    __typename
+    ... on CurrentUser {
+      id
+    }
+    ... on ErrorResult {
+      errorCode
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ResetPasswordFromAuthStoreMutation,
+    ResetPasswordFromAuthStoreMutationVariables
+>;
 export const LogoutFromAuthStoreDocument = new TypedDocumentString(`
     mutation LogoutFromAuthStore {
   logout {

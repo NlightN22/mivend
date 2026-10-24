@@ -15,6 +15,24 @@ export default {
         publicCatalog: 'Public catalogue',
         help: 'Help',
         security: 'Security',
+        setPassword: {
+            title: 'Set a new password',
+            subtitle: 'Choose a password for your account.',
+            newPassword: 'New password',
+            confirmPassword: 'Confirm new password',
+            rules: 'Use at least {min} characters.',
+            tooShort: 'The password is too short',
+            mismatch: 'The passwords do not match',
+            submit: 'Save password',
+            successTitle: 'Password saved',
+            successText: 'You are signed in with your new password.',
+            toCatalog: 'Go to the catalogue',
+            invalidTitle: 'Link is invalid or expired',
+            invalidText:
+                'This password link can no longer be used. Request a new one from the sign-in page.',
+            toLogin: 'Go to sign in',
+            failed: 'Could not save the password. Try again.',
+        },
     },
     account: {
         portalRole: {

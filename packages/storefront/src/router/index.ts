@@ -10,6 +10,11 @@ export const router = createRouter({
             meta: { layout: 'auth' },
         },
         {
+            path: '/set-password',
+            component: () => import('../pages/auth/SetPasswordPage.vue'),
+            meta: { layout: 'auth' },
+        },
+        {
             path: '/',
             component: () => import('../layouts/DefaultLayout.vue'),
             children: [

@@ -40,6 +40,18 @@ mutation Login($username: String!, $password: String!, $rememberMe: Boolean) {
     }
 }
 
+mutation ResetPasswordFromAuthStore($token: String!, $password: String!) {
+    resetPassword(token: $token, password: $password) {
+        __typename
+        ... on CurrentUser {
+            id
+        }
+        ... on ErrorResult {
+            errorCode
+        }
+    }
+}
+
 mutation LogoutFromAuthStore {
     logout {
         success
