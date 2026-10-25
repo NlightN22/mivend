@@ -9,7 +9,7 @@ export interface PromoDiscountRuleInput {
     erpId: string;
     percent: number;
     validFrom: Date;
-    validTo: Date;
+    validTo: Date | null;
     triggerProductErpId: string;
     triggerQuantity: number;
     giftProductErpId: string | null;
@@ -71,6 +71,7 @@ export class PromoDiscountRuleService {
                     '(dr.triggerProductErpId = :productErpId OR dr.giftProductErpId = :productErpId)',
                     { productErpId },
                 )
+                // NULL validTo (open-ended promo) never matches: such a rule is not applied
                 .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
                 .getMany(),
         );

@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { PromoDiscountRuleService, DiscountRuleOperationKind } from '@mivend/plugin-price-entry';
+import { NonRetryableInboundError } from '../non-retryable-inbound-error';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
+import { optionalString, parseTimestamp, zeroNumber } from './proto-json-fields';
 
 const loggerCtx = 'IntegrationPromoRuleHandler';
 
@@ -21,6 +23,7 @@ function isGiftKind(kind: DiscountRuleOperationKind): boolean {
 // Gift rules map to a near-100 int percent, never 100: the business wants a nominal non-zero charge
 const GIFT_TYPE_PERCENT = 99;
 
+// Absent effective_to is stored as NULL (open-ended) and is never applied: queries keep validTo >= now.
 // Reuses DiscountRule, not a new promo mechanism. warehouse_id, min_positions_count deferred
 // Absent is_active means inactive on purpose; event_id/version are guarded upstream by the inbox.
 @Injectable()
@@ -47,24 +50,28 @@ export class PromoRuleStreamHandler implements InboundStreamHandler {
         }
 
         const triggerProductErpId = String(payload.triggerProductId ?? '');
-        const triggerQuantity = Number(payload.triggerQuantity ?? 0);
+        const triggerQuantity = zeroNumber(payload.triggerQuantity);
         const effectiveFrom = parseTimestamp(payload.effectiveFrom);
-        const effectiveTo = parseTimestamp(payload.effectiveTo);
-        if (!triggerProductErpId || triggerQuantity <= 0 || !effectiveFrom || !effectiveTo) {
-            return inboundNoop(
-                `promo-rule ${entityId}: missing triggerProductId/triggerQuantity/effectiveFrom/effectiveTo, skipping`,
-            );
-        }
-
+        const hasEffectiveTo = optionalString(payload.effectiveTo) !== null;
+        const effectiveTo = hasEffectiveTo ? parseTimestamp(payload.effectiveTo) : null;
         const gift = isGiftKind(operationKind);
-        const giftProductErpId = gift ? String(payload.giftProductId ?? '') || null : null;
-        const giftQuantity = gift ? Number(payload.giftQuantity ?? 0) : null;
-        if (gift && (!giftProductErpId || !giftQuantity || giftQuantity <= 0)) {
-            return inboundNoop(
-                `promo-rule ${entityId}: gift-type rule missing giftProductId/giftQuantity, skipping`,
+        const giftProductErpId = gift ? optionalString(payload.giftProductId) : null;
+        const giftQuantity = gift ? zeroNumber(payload.giftQuantity) : null;
+        const payloadPercent = zeroNumber(payload.percent);
+        const invalid =
+            (!triggerProductErpId && 'triggerProductId') ||
+            (!(triggerQuantity > 0) && 'triggerQuantity') ||
+            (!Number.isFinite(payloadPercent) && 'percent') ||
+            (!effectiveFrom && 'effectiveFrom') ||
+            (hasEffectiveTo && !effectiveTo && 'effectiveTo') ||
+            (gift && !giftProductErpId && 'giftProductId') ||
+            (gift && !(giftQuantity !== null && giftQuantity > 0) && 'giftQuantity');
+        if (invalid || !effectiveFrom) {
+            throw new NonRetryableInboundError(
+                `promo-rule ${entityId}: invalid or missing ${String(invalid)}`,
             );
         }
-        const percent = gift ? GIFT_TYPE_PERCENT : Number(payload.percent ?? 0);
+        const percent = gift ? GIFT_TYPE_PERCENT : payloadPercent;
 
         await this.promoDiscountRuleService.upsertPromoRule(ctx, {
             erpId: entityId,
@@ -83,11 +90,4 @@ export class PromoRuleStreamHandler implements InboundStreamHandler {
         );
         return inboundApplied();
     }
-}
-
-// toJson encodes Timestamp as an RFC3339 string here, never a {seconds,nanos} object
-function parseTimestamp(value: unknown): Date | null {
-    if (typeof value !== 'string' || !value) return null;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
 }

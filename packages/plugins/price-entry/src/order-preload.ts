@@ -83,6 +83,7 @@ export async function preloadOrderLookups(
                     erpIds: [...erpIds],
                 },
             )
+            // NULL validTo (open-ended promo) never matches: such a rule is not applied
             .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
             .getMany();
         for (const erpId of erpIds) {
