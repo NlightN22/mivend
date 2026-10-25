@@ -252,7 +252,7 @@ export class ExternalOrderService {
             })),
         );
         if (currentSignature === externalLinesSignature(wanted)) return;
-        await repo.delete(current.map(l => String(l.id)));
+        if (current.length > 0) await repo.delete(current.map(l => String(l.id)));
         await this.insertLines(ctx, { id: orderId }, input, variants);
     }
 }

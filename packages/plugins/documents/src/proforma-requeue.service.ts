@@ -38,7 +38,7 @@ export class ProformaRequeueService {
 
     async requeueForUnconfirmedVat(ctx: RequestContext, categoryName: string): Promise<void> {
         const failed = await this.failedProformas(ctx)
-            .andWhere(`document.metadata ->> 'error' = :error`, {
+            .andWhere(`document.metadata::jsonb ->> 'error' = :error`, {
                 error: unconfirmedVatError(categoryName),
             })
             .getRawMany<{ id: string }>();
