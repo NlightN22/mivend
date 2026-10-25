@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, RequestContextService, TransactionalConnection } from '@vendure/core';
+import { lockAggregates } from 'shared';
 
 import { CategoryStreamHandler } from './handlers/category.handler';
 import { ContractStreamHandler } from './handlers/contract.handler';
@@ -10,7 +11,12 @@ import { DepartmentStreamHandler } from './handlers/department.handler';
 import { PositionStreamHandler } from './handlers/position.handler';
 import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
 import { GrantedDiscountStreamHandler } from './handlers/granted-discount.handler';
-import type { InboundAfterCommit, InboundStreamHandler } from './handlers/inbound-stream-handler';
+import { isBatchHandler } from './handlers/inbound-stream-handler';
+import type {
+    BatchInboundStreamHandler,
+    InboundAfterCommit,
+    InboundStreamHandler,
+} from './handlers/inbound-stream-handler';
 import { OrderCancelResultHandler } from './handlers/order-cancel-result.handler';
 import { OrderRegistrationResultHandler } from './handlers/order-registration-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
@@ -41,6 +47,7 @@ import { VatRateStreamHandler } from './handlers/vat-rate.handler';
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { UnknownOrderUuidError } from '@mivend/plugin-reservation';
 
+import { inboxEntityLockKey, processStreamBatch } from './integration-inbox-batch';
 import { IntegrationInboxService } from './integration-inbox.service';
 import type { ClaimedInboxEvent } from './integration-inbox.service';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
@@ -163,23 +170,55 @@ export class IntegrationInboxProcessorService {
             return 0;
         });
 
-        let stoppedAt = sorted.length;
-        for (let i = 0; i < sorted.length; i++) {
-            if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
-                stoppedAt = i;
+        const batchGroups = new Map<InboundStream, ClaimedInboxEvent[]>();
+        const singles: ClaimedInboxEvent[] = [];
+        for (const row of sorted) {
+            if (!isBatchHandler(this.handlers[row.stream])) {
+                singles.push(row);
+                continue;
+            }
+            const group = batchGroups.get(row.stream) ?? [];
+            group.push(row);
+            batchGroups.set(row.stream, group);
+        }
+
+        const unprocessed: ClaimedInboxEvent[] = [];
+        const pastDeadline = (): boolean => deadlineMs !== undefined && Date.now() >= deadlineMs;
+        for (const [stream, group] of batchGroups) {
+            if (pastDeadline()) {
+                unprocessed.push(...group);
+                continue;
+            }
+            const counts = await processStreamBatch(
+                { connection: this.connection, inbox: this.inbox },
+                ctx,
+                stream,
+                this.handlers[stream] as BatchInboundStreamHandler,
+                group,
+                row => this.processOne(ctx, row),
+            );
+            processed += counts.processed;
+            failed += counts.failed;
+        }
+        for (let i = 0; i < singles.length; i++) {
+            if (pastDeadline()) {
+                unprocessed.push(...singles.slice(i));
                 break;
             }
-            const ok = await this.processOne(ctx, sorted[i]);
+            const ok = await this.processOne(ctx, singles[i]);
             if (ok) processed += 1;
             else failed += 1;
         }
-        if (stoppedAt < sorted.length) {
-            const unprocessedIds = sorted.slice(stoppedAt).map(row => row.id);
+        if (unprocessed.length > 0) {
             Logger.warn(
-                `processPendingBatch: deadline reached mid-batch, releasing ${unprocessedIds.length} claimed row(s) back to pending`,
+                `processPendingBatch: deadline reached mid-batch, releasing ${unprocessed.length} claimed row(s) back to pending`,
                 loggerCtx,
             );
-            await this.inbox.releaseClaims(ctx, unprocessedIds, sorted[stoppedAt].claimToken);
+            await this.inbox.releaseClaims(
+                ctx,
+                unprocessed.map(row => row.id),
+                unprocessed[0].claimToken,
+            );
         }
         return { processed, failed, claimed: rows.length };
     }
@@ -238,6 +277,13 @@ export class IntegrationInboxProcessorService {
         ctx: RequestContext,
         row: ClaimedInboxEvent,
     ): Promise<InboundAfterCommit[]> {
+        const handler = this.handlers[row.stream];
+        // Batch-capable streams share the batch path's entity lock, so a row-by-row retry cannot race a batch.
+        if (isBatchHandler(handler)) {
+            await lockAggregates(this.connection, ctx, [
+                inboxEntityLockKey(row.stream, row.entityId),
+            ]);
+        }
         // A lower version arriving after a higher one must not regress state.
         // Such rows are still marked processed: stale replays are expected, not errors.
         if (await this.isSupersededByNewerVersion(ctx, row)) {
@@ -254,7 +300,7 @@ export class IntegrationInboxProcessorService {
             );
             return [];
         }
-        const result = await this.handlers[row.stream].apply(ctx, row.entityId, row.payload);
+        const result = await handler.apply(ctx, row.entityId, row.payload);
         if (result && result.kind === 'noop') {
             await this.inbox.markProcessed(ctx, row.id, 'noop', result.reason, row.claimToken);
         } else {

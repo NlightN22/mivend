@@ -49,6 +49,43 @@ export async function settleProcessed(
     );
 }
 
+export interface ProcessedMark {
+    id: number;
+    outcome: InboxOutcome;
+    reason: string | null;
+}
+
+// The batch twin of settleProcessed: one statement for the whole claimed batch. Returns how many
+// rows moved so the caller can tell a lost claim from success.
+export async function settleProcessedBatch(
+    connection: TransactionalConnection,
+    ctx: RequestContext,
+    marks: ProcessedMark[],
+    claimToken: string,
+): Promise<number> {
+    if (marks.length === 0) return 0;
+    const rows = await ctxQuery<Array<{ id: string }>>(
+        connection,
+        ctx,
+        `WITH done AS (
+            UPDATE integration_inbox_event e
+               SET status = 'processed', processed_at = now(), outcome = m.outcome,
+                   outcome_reason = m.reason, claim_token = NULL
+              FROM unnest($1::bigint[], $2::text[], $3::text[]) AS m(id, outcome, reason)
+             WHERE e.id = m.id AND e.status IN ('pending', 'processing') AND e.claim_token = $4::uuid
+         RETURNING e.id, e.stream, e.entity_id, e.created_at),
+         closed AS (
+            UPDATE integration_inbox_event r SET status = 'resolved'
+              FROM done
+             WHERE r.stream = done.stream AND r.entity_id = done.entity_id
+               AND r.status = 'replay_requested' AND r.replay_requested_at <= done.created_at
+         RETURNING r.id)
+         SELECT id FROM done`,
+        [marks.map(m => m.id), marks.map(m => m.outcome), marks.map(m => m.reason), claimToken],
+    );
+    return rows.length;
+}
+
 // Retries with backoff, dead-letters after 24h (NonRetryableInboundError at once; onBudgetExhausted may noop).
 // The row lock plus the claim guard make the attempt bump and the decision one atomic step.
 export async function settleFailed(

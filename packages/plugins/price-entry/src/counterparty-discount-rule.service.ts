@@ -8,7 +8,14 @@ import {
 } from './discount-rule.entity';
 import { Counterparty } from '@mivend/plugin-counterparty';
 import { LookupMemo, memoized } from './lookup-memo';
+import { applyCounterpartyRuleBatch } from './counterparty-discount-rule-batch';
+import type { CounterpartyRuleBatchOp } from './counterparty-discount-rule-batch';
 import { loggerCtx } from './types';
+import {
+    blockedByDeactivatedRow,
+    counterpartyRuleValues,
+    resolveConflicts,
+} from './counterparty-rule-policy';
 
 export interface CounterpartyDiscountRuleInput {
     erpId: string;
@@ -26,30 +33,6 @@ export interface CounterpartyDiscountRuleInput {
     sourceVersion: string;
 }
 
-// Same erpId-prefix convention DiscountRuleService.isPortalOrigin uses — kept as its own tiny
-// local copy rather than a shared export, same reasoning as this file's isVersionNewer below.
-function isPortalOrigin(erpId: string): boolean {
-    return erpId.startsWith('portal-');
-}
-
-// Mirrors plugin-erp-integration's version-compare.ts — not imported since domain plugins never
-// depend on erp-integration (layering runs the other way).
-function isVersionNewer(candidate: string, than: string): boolean {
-    const a = tryParseBigInt(candidate);
-    const b = tryParseBigInt(than);
-    if (a !== undefined && b !== undefined) return a > b;
-    return candidate > than;
-}
-
-function tryParseBigInt(value: string): bigint | undefined {
-    if (!/^\d+$/.test(value)) return undefined;
-    try {
-        return BigInt(value);
-    } catch {
-        return undefined;
-    }
-}
-
 // Separate from DiscountRuleService: different write/read shape; shares only the DiscountRule table.
 @Injectable()
 export class CounterpartyDiscountRuleService {
@@ -65,45 +48,13 @@ export class CounterpartyDiscountRuleService {
 
         // Decide everything first, mutate nothing until every decision is made — docs/ai/erp-streams-map.md.
         let record = await repo.findOne({ where: { erpId: input.erpId } });
-        if (
-            record &&
-            !record.active &&
-            !isVersionNewer(input.sourceVersion, record.sourceVersion ?? '')
-        ) {
-            Logger.warn(
-                `discount-rule ${input.erpId}: update at version=${input.sourceVersion} does not ` +
-                    `beat the deactivated row's own version=${record.sourceVersion} — not reactivating`,
-                loggerCtx,
-            );
-            return record;
-        }
+        if (blockedByDeactivatedRow(record, input)) return record!;
 
         const conflicts = await this.findActiveConflicts(ctx, input);
-        let active = true;
-        const toSupersede: DiscountRule[] = [];
-        for (const conflict of conflicts) {
-            if (isPortalOrigin(conflict.erpId)) {
-                Logger.warn(
-                    `discount-rule ${input.erpId}: conflicts with portal-sourced rule ${conflict.erpId} ` +
-                        `on recipient ${input.recipientType}/${input.recipientErpId} product=${input.productErpId ?? 'all'} ` +
-                        `— not auto-overwriting, writing inactive, needs manual resolution`,
-                    loggerCtx,
-                );
-                active = false;
-                continue;
-            }
-            if (!isVersionNewer(input.sourceVersion, conflict.sourceVersion ?? '')) {
-                Logger.warn(
-                    `discount-rule ${input.erpId}: stale event (version=${input.sourceVersion}) vs ` +
-                        `active conflicting rule ${conflict.erpId} (version=${conflict.sourceVersion}), skipping`,
-                    loggerCtx,
-                );
-                return conflict;
-            }
-            toSupersede.push(conflict);
-        }
+        const resolution = resolveConflicts(conflicts, input);
+        if (resolution.skip) return resolution.conflict;
 
-        for (const conflict of toSupersede) {
+        for (const conflict of resolution.toSupersede) {
             conflict.active = false;
             await repo.save(conflict);
             Logger.verbose(
@@ -112,35 +63,18 @@ export class CounterpartyDiscountRuleService {
             );
         }
 
-        const values: Partial<DiscountRule> = {
-            erpId: input.erpId,
-            priceTypeCode: null,
-            facetCode: null,
-            facetValueCode: null,
-            minWeightKg: null,
-            minAmount: null,
-            triggerProductErpId: null,
-            giftProductErpId: null,
-            giftQuantity: null,
-            operationKind: null,
-            recipientType: input.recipientType,
-            recipientErpId: input.recipientErpId,
-            productErpId: input.productErpId,
-            condition: input.condition,
-            conditionValue: input.conditionValue,
-            percent: input.percent,
-            limitAmount: input.limitAmount,
-            validFrom: input.validFrom,
-            validTo: input.validTo,
-            sourceVersion: input.sourceVersion,
-            active,
-        };
+        const values = counterpartyRuleValues(input, resolution.active);
         if (record) {
             Object.assign(record, values);
         } else {
             record = repo.create(values);
         }
         return repo.save(record);
+    }
+
+    // One transaction for a whole claimed batch; same decisions as the per-row methods, in op order.
+    applyBatch(ctx: RequestContext, ops: CounterpartyRuleBatchOp[]): Promise<boolean[]> {
+        return applyCounterpartyRuleBatch(this.connection, ctx, ops);
     }
 
     // Tombstone: deactivate by erpId only; cancellation wins regardless of version.

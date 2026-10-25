@@ -315,7 +315,7 @@ export const INBOX_RETENTION_INTERVAL_DEFAULT = 10 * 60_000;
 export const INBOX_RETENTION_WALL_CLOCK_BUDGET_MS = 60_000;
 // Larger than the critical lane's batch for throughput, but kept small so the SELECT ... FOR UPDATE
 // SKIP LOCKED transaction stays reasonably sized; tune by measurement if still insufficient.
-export const INBOX_BULK_BATCH_SIZE_DEFAULT = 100;
+export const INBOX_BULK_BATCH_SIZE_DEFAULT = 500;
 export const COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 180_000;
 export const CATEGORY_TREE_RECOMPUTE_INTERVAL_DEFAULT = 3_600_000;
 export const CREDIT_LIMIT_RECOMPUTE_INTERVAL_DEFAULT = 15 * 60_000;

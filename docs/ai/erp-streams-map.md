@@ -275,6 +275,10 @@ ERP-vs-portal conflict branch has no reachable trigger in production today (port
 `upsertDiscountRule` mutation has no `recipientType`/`recipientErpId` fields yet) — implemented
 and unit-tested against direct service calls only.
 
+### Batched apply for rule streams (#284)
+
+`discount-rule` and `retro-bonus-rule` implement the opt-in `applyBatch` handler capability (`BatchInboundStreamHandler`); other streams stay row by row. The processor groups a claimed bulk batch per stream and runs each group in ONE transaction (`integration-inbox-batch.ts`): advisory entity locks (sorted, `lockAggregates`), one query for processed history (superseded check, `isVersionNewer`), the handler batch, one multi-row `INSERT .. ON CONFLICT (erpId)`, one `UPDATE` marking outcomes. The discount conflict policy (portal rules, supersede, deactivated-row guard, tombstones) is the same pure code as the row path (`counterparty-rule-policy.ts`), replayed in memory in (entityId, version) order, with per-scope advisory locks. Invalid payloads are returned as `invalid` and become `failed` rows after the batch commits. Any batch error (including a lost claim) rolls back and the rows are retried through the row path. Bulk claim size is 500; the bulk task drains until empty or its wall-clock budget, with an in-process overlap guard. Retention (`purgeSupersededProcessedRows`) is set-based (3 statements per 200 groups), guarded by `pg_try_advisory_xact_lock`, and backed by a partial index; the retention window is unchanged (newest processed row per entity keeps its payload, every row stays as the dedup key). Migration `1791534000000` adds the two indexes. Benchmark: `rule-batch-inbox.int.test.ts` prints events/s for both paths (`RULE_BENCH_EVENTS` sets N).
+
 ### Order-time discount confirmation — two lifecycle stages, not one (issues #101/#110)
 
 `OrderChangedLine.appliedDiscountAmount` = live view from the **order document**, can change

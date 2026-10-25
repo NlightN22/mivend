@@ -9,6 +9,10 @@ Updated: 2026-10-25
 - Language rule: request `languageCode` query -> `SITE_DEFAULT_LANGUAGE` -> en. Skill `.claude/skills/email-templates`: every mail ships in at least ru and en (guard test). Docs: `docs/deployment.md`.
 - Gaps (no issue): frontends do not send `languageCode` (Russian only via `SITE_DEFAULT_LANGUAGE=ru`); storefront "forgot password" link is `#`; address-change mail has no confirmation page; `make lint` does not type-check tests; staff/customer `/set-password` link targets not eyeballed on production; no production-mode screenshots; no staff-notification mail duplication (owner: later).
 
+## #284 bulk inbox throughput (2026-10-25, implemented, awaiting `make test-int` and audit)
+
+Batched apply for `discount-rule`/`retro-bonus-rule`, bulk claim 500, set-based retention with overlap guard, two new indexes (migration `1791534000000`). Design and fallback: `docs/ai/erp-streams-map.md` "Batched apply for rule streams". Measured speedup comes from `make test-int` (benchmark test prints it). Release, redeploy and the ERP re-publish are still to do.
+
 ## Archived (full text: `.backup/PROJECT_CONTEXT-2026-10-25-271-270-196-192-263-full.md`)
 - #271 batched order-discount evaluation (preload memo, 200-line cart 13 s -> 0.7 s), #270 catalog tier progress, #196 one-pass order-dependent discounts, #192/#260/#259, #263 child-entity visibility + #274 e2e stack: all done, audited, pushed, closed.
 

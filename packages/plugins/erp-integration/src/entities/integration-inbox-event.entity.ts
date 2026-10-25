@@ -34,6 +34,10 @@ export type IntegrationInboxEventStatus =
 @Index('integration_inbox_event_entity', ['stream', 'entityId', 'status'])
 // Serves the per-stream no-op summary on the integration-health page (#200).
 @Index('integration_inbox_event_noop', ['stream', 'processedAt'], { where: `"outcome" = 'noop'` })
+// Serves the retention sweep's duplicate-group scan (ordered, so LIMIT stops early).
+@Index('integration_inbox_event_retention', ['stream', 'entityId'], {
+    where: `"status" = 'processed' AND "payload" <> '{}'::jsonb`,
+})
 export class IntegrationInboxEvent {
     @PrimaryGeneratedColumn('increment', { type: 'bigint' })
     id!: number;

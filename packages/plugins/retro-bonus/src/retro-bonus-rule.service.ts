@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { RetroBonusAccrualKind, RetroBonusRule } from './retro-bonus-rule.entity';
+import { upsertRetroBonusRuleBatch } from './retro-bonus-rule-batch';
 import { loggerCtx } from './types';
 import { isVersionNewer } from './version-compare';
 
@@ -72,6 +73,10 @@ export class RetroBonusRuleService {
             record = repo.create(values);
         }
         return repo.save(record);
+    }
+
+    upsertBatch(ctx: RequestContext, inputs: RetroBonusRuleUpsertInput[]): Promise<void> {
+        return upsertRetroBonusRuleBatch(this.connection, ctx, inputs);
     }
 
     async findForCounterparty(

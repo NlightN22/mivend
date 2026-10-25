@@ -16,6 +16,10 @@ export type DiscountRuleCondition = 'byQuantity' | 'byDocumentAmount';
 
 @Entity()
 @Index(['erpId'], { unique: true })
+// Serves the counterparty-rule conflict lookup (single and batch path).
+@Index('IDX_discount_rule_active_recipient', ['recipientType', 'recipientErpId'], {
+    where: '"active" = true',
+})
 export class DiscountRule extends VendureEntity {
     constructor(input?: DeepPartial<DiscountRule>) {
         super(input);

@@ -1,10 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { RetroBonusRuleService } from '@mivend/plugin-retro-bonus';
+import type { RetroBonusRuleUpsertInput } from '@mivend/plugin-retro-bonus';
 import { NonRetryableInboundError } from '../non-retryable-inbound-error';
 import { inboundApplied } from './inbound-stream-handler';
-import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
-import { optionalNumber, optionalString, parseTimestamp, zeroNumber } from './proto-json-fields';
+import type {
+    BatchInboundItem,
+    BatchInboundResult,
+    BatchInboundStreamHandler,
+    InboundOutcome,
+} from './inbound-stream-handler';
+import { parseRetroBonusRule } from './retro-bonus-rule-payload';
 
 const loggerCtx = 'IntegrationRetroBonusRuleHandler';
 
@@ -12,7 +18,7 @@ const loggerCtx = 'IntegrationRetroBonusRuleHandler';
 // Applies `retro-bonus-rule` into RetroBonusRule — pure upsert, no tombstone branch (unlike
 // every other handler in this plugin): this stream never sends one.
 @Injectable()
-export class RetroBonusRuleStreamHandler implements InboundStreamHandler {
+export class RetroBonusRuleStreamHandler implements BatchInboundStreamHandler {
     constructor(private readonly retroBonusRuleService: RetroBonusRuleService) {}
 
     async apply(
@@ -20,61 +26,32 @@ export class RetroBonusRuleStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
-        const accrualKind = String(payload.accrualKind ?? '');
-        const version = String(payload.version ?? '');
-        const productErpId = String(payload.productId ?? '');
-        const counterpartyErpId = String(payload.counterpartyId ?? '');
-        const percent = zeroNumber(payload.percent);
-        const accrualDayNumber = zeroNumber(payload.accrualDayNumber);
-        const effectiveFrom = parseTimestamp(payload.effectiveFrom);
-        const effectiveTo = optionalString(payload.effectiveTo)
-            ? parseTimestamp(payload.effectiveTo)
-            : null;
-        const invalid =
-            (!entityId && 'entityId') ||
-            (!version && 'version') ||
-            (!counterpartyErpId && 'counterpartyId') ||
-            (!Number.isFinite(percent) && 'percent') ||
-            (!Number.isFinite(accrualDayNumber) && 'accrualDayNumber') ||
-            (!effectiveFrom && 'effectiveFrom') ||
-            (optionalString(payload.effectiveTo) && !effectiveTo && 'effectiveTo');
-        if (invalid || !effectiveFrom) {
-            throw new NonRetryableInboundError(
-                `retro-bonus-rule ${entityId}: invalid or missing ${String(invalid)}`,
-            );
-        }
-
-        const recipientContractErpId = optionalString(payload.recipientContractId);
-        const priceTypeErpId = optionalString(payload.priceTypeId);
-        const isInstant = payload.isInstant === true;
-        const accrualPeriod = optionalString(payload.accrualPeriod);
-        const limitAmount = optionalNumber(payload.limitAmount);
-        const conditionAmount = optionalNumber(payload.conditionAmount);
-        const conditionQuantity = optionalNumber(payload.conditionQuantity);
-
-        await this.retroBonusRuleService.upsertRetroBonusRule(ctx, {
-            erpId: entityId,
-            productErpId,
-            counterpartyErpId,
-            recipientContractErpId,
-            priceTypeErpId,
-            isInstant,
-            accrualPeriod,
-            accrualDayNumber,
-            accrualKind,
-            percent,
-            limitAmount,
-            conditionAmount,
-            conditionQuantity,
-            validFrom: effectiveFrom,
-            validTo: effectiveTo,
-            sourceVersion: version,
-        });
+        const input = parseRetroBonusRule(entityId, payload);
+        await this.retroBonusRuleService.upsertRetroBonusRule(ctx, input);
         Logger.verbose(
-            `Upserted retro-bonus rule erpId=${entityId} counterparty=${counterpartyErpId} ` +
-                `product=${productErpId} accrualKind=${accrualKind}`,
+            `Upserted retro-bonus rule erpId=${entityId} counterparty=${input.counterpartyErpId} ` +
+                `product=${input.productErpId} accrualKind=${input.accrualKind}`,
             loggerCtx,
         );
         return inboundApplied();
+    }
+
+    async applyBatch(
+        ctx: RequestContext,
+        items: BatchInboundItem[],
+    ): Promise<BatchInboundResult[]> {
+        const results: BatchInboundResult[] = [];
+        const inputs: RetroBonusRuleUpsertInput[] = [];
+        for (const item of items) {
+            try {
+                inputs.push(parseRetroBonusRule(item.entityId, item.payload));
+                results.push(inboundApplied());
+            } catch (err) {
+                if (!(err instanceof NonRetryableInboundError)) throw err;
+                results.push({ kind: 'invalid', error: err });
+            }
+        }
+        await this.retroBonusRuleService.upsertBatch(ctx, inputs);
+        return results;
     }
 }

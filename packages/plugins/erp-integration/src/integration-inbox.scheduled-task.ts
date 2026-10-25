@@ -82,6 +82,7 @@ export function createIntegrationInboxUserTask(
 export function createIntegrationInboxBulkTask(
     options: ErpIntegrationPluginOptions,
 ): ScheduledTask {
+    let running = false;
     const everyMs = options.inboxPollIntervalMs ?? INBOX_POLL_INTERVAL_DEFAULT;
     return new ScheduledTask({
         id: 'erp-integration-inbox-bulk',
@@ -94,34 +95,45 @@ export function createIntegrationInboxBulkTask(
         execute: async ({ injector }) => {
             if (options.instanceType !== 'central') return { skipped: true };
 
-            const processor = injector.get(IntegrationInboxProcessorService);
-            let totalProcessed = 0;
-            let totalFailed = 0;
-            const startedAt = Date.now();
-            // Also passed into processPendingBatch to bound one slow batch's own loop (#149).
-            const deadlineMs = startedAt + INBOX_BULK_WALL_CLOCK_BUDGET_MS;
-            // Wall-clock bound, not just 'batch not full', keeps this run within its scheduler timeout
-            // Backlog size only adds ticks; the run never gets stuck or orphaned
-            for (;;) {
-                const { processed, failed, claimed } = await processor.processPendingBatch(
-                    [...INBOX_BULK_STREAMS],
-                    INBOX_BULK_BATCH_SIZE_DEFAULT,
-                    deadlineMs,
-                );
-                totalProcessed += processed;
-                totalFailed += failed;
-                if (claimed < INBOX_BULK_BATCH_SIZE_DEFAULT) break;
-                if (Date.now() >= deadlineMs) break;
+            if (running) return { skipped: true };
+            running = true;
+            try {
+                return await drainBulkLane(injector.get(IntegrationInboxProcessorService));
+            } finally {
+                running = false;
             }
-            if (totalProcessed > 0 || totalFailed > 0) {
-                Logger.verbose(
-                    `Integration inbox bulk-lane sweep: ${totalProcessed} processed, ${totalFailed} failed/retrying`,
-                    loggerCtx,
-                );
-            }
-            return { processed: totalProcessed, failed: totalFailed };
         },
     });
+}
+
+async function drainBulkLane(
+    processor: IntegrationInboxProcessorService,
+): Promise<{ processed: number; failed: number }> {
+    let totalProcessed = 0;
+    let totalFailed = 0;
+    const startedAt = Date.now();
+    // Also passed into processPendingBatch to bound one slow batch's own loop (#149).
+    const deadlineMs = startedAt + INBOX_BULK_WALL_CLOCK_BUDGET_MS;
+    // Wall-clock bound, not just 'batch not full', keeps this run within its scheduler timeout
+    // Backlog size only adds ticks; the run never gets stuck or orphaned
+    for (;;) {
+        const { processed, failed, claimed } = await processor.processPendingBatch(
+            [...INBOX_BULK_STREAMS],
+            INBOX_BULK_BATCH_SIZE_DEFAULT,
+            deadlineMs,
+        );
+        totalProcessed += processed;
+        totalFailed += failed;
+        if (claimed < INBOX_BULK_BATCH_SIZE_DEFAULT) break;
+        if (Date.now() >= deadlineMs) break;
+    }
+    if (totalProcessed > 0 || totalFailed > 0) {
+        Logger.verbose(
+            `Integration inbox bulk-lane sweep: ${totalProcessed} processed, ${totalFailed} failed/retrying`,
+            loggerCtx,
+        );
+    }
+    return { processed: totalProcessed, failed: totalFailed };
 }
 
 // Touches only 'processed' rows so it can never compete with a pending/processing claim
