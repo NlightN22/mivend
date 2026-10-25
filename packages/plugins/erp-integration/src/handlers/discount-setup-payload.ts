@@ -63,7 +63,8 @@ export function parseDiscountSetup(
     };
 }
 
-// Fail closed: anything mivend cannot evaluate faithfully is stored inactive with the reason, never applied.
+// Fail closed: any attribute mivend does not evaluate, set to a non-default value, stores the document inactive.
+// Values are opaque ERP ids and enums: only empty/absent versus set is compared, never a name.
 function notApplicableReason(
     payload: Record<string, unknown>,
     percent: number,
@@ -73,9 +74,44 @@ function notApplicableReason(
     if (!Number.isFinite(percent) || percent === 0) return 'no-header-percent';
     if (optionalNumber(payload.priceNumber) !== null) return 'fixed-price';
     if (optionalString(payload.conditionRefId) !== null) return 'reference-condition';
-    if (payload.byWeekdays === true) return 'weekday-windows';
+    if (payload.byWeekdays === true || nonEmpty(payload.weekdayWindows)) return 'weekday-windows';
     if (productMode === 'filter' && !allProducts) return 'product-filter';
+    const unevaluated = UNEVALUATED_ATTRIBUTES.find(([key]) => isSet(payload[key]));
+    if (unevaluated) return unevaluated[1];
+    if (payload.pseudo === true) return 'pseudo-document';
+    if (nonEmpty(payload.productLines) && hasLineAttributes(payload.productLines)) {
+        return 'product-line-attributes';
+    }
     return null;
+}
+
+const UNEVALUATED_ATTRIBUTES: ReadonlyArray<readonly [string, string]> = [
+    ['markupTypeId', 'markup-type'],
+    ['qualityId', 'quality'],
+    ['purposeId', 'purpose'],
+    ['currencyId', 'currency'],
+    ['commonTimeFrom', 'time-window'],
+    ['commonTimeTo', 'time-window'],
+    ['priceGroups', 'price-groups'],
+    ['bonusLines', 'bonus-lines'],
+    ['setComponents', 'set-components'],
+];
+
+const isSet = (value: unknown): boolean =>
+    Array.isArray(value) ? value.length > 0 : optionalString(value) !== null;
+
+function nonEmpty(value: unknown): boolean {
+    return Array.isArray(value) && value.length > 0;
+}
+
+function hasLineAttributes(lines: unknown): boolean {
+    return (lines as Array<Record<string, unknown>>).some(
+        line =>
+            ['characteristicId', 'qualityId', 'priceTypeId'].some(
+                key => optionalString(line?.[key]) !== null,
+            ) ||
+            ['percent', 'limitPercent', 'priceNumber'].some(key => !!optionalNumber(line?.[key])),
+    );
 }
 
 function parseRecipients(value: unknown): DiscountRecipientInput[] {
