@@ -75,6 +75,8 @@ what the runner image actually has (`apps/server/Dockerfile`'s runner stage copi
 generate/revert during development) is not what runs there. Local/staging-integration never need
 any of this — `synchronize: true`.
 
+**First boot / superadmin (#285).** Every process bootstraps Vendure's non-atomic superadmin check-then-create, so `main.ts`, `worker.ts` and `worker-email.ts` wrap bootstrap in `withSuperadminBootstrapLock` (advisory lock while no active superadmin exists). Production also has the `administrator."emailAddress"` partial unique index (migration `1791535000000`); synchronize contours drop it at boot, so only the lock protects them. Manual cleanup of an existing duplicate: `docs/deployment.md` "First boot and duplicate superadmin".
+
 Migration-seeded data is absent there too. The credit-term check policy recipient (`department-head`) comes from `make seed-all` (`seed-approvals`); until it runs, the recipient is empty and every credit-term request escalates (fail-closed).
 
 **One-time backfill done on 2026-09-28 (mivend.audit.common's #147 review, MEDIUM)**: `synchronize`

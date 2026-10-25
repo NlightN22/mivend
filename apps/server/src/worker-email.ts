@@ -2,16 +2,22 @@ import { bootstrapWorker } from '@vendure/core';
 import { config } from './vendure-config';
 import { assertDatabaseLocale } from './db-locale-check';
 import { carryOverOrderLineIdentity } from './order-line-identity-carryover';
+import { withSuperadminBootstrapLock } from './superadmin-bootstrap-lock';
 
 // Isolated so stuck jobs in other queues can't starve password-reset emails — see the
 // vendure-workers skill.
 assertDatabaseLocale()
     .then(carryOverOrderLineIdentity)
     .then(() =>
-        bootstrapWorker({
-            ...config,
-            jobQueueOptions: { ...(config.jobQueueOptions ?? {}), activeQueues: ['send-email'] },
-        }),
+        withSuperadminBootstrapLock(() =>
+            bootstrapWorker({
+                ...config,
+                jobQueueOptions: {
+                    ...(config.jobQueueOptions ?? {}),
+                    activeQueues: ['send-email'],
+                },
+            }),
+        ),
     )
     .then(worker => worker.startJobQueue())
     .catch(err => {

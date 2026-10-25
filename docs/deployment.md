@@ -95,3 +95,29 @@ Each mail type has one template per language: `apps/server/static/email/template
 Language rule: the explicit `languageCode` query parameter of the Shop/Admin API request that raised the mail (`ru-RU` counts as `ru`), otherwise `SITE_DEFAULT_LANGUAGE` (`en` when unset). Vendure fills `ctx.languageCode` with the channel default when a request names none, so the query is read instead. Limits: mails raised in the background (portal activation, administrator provisioning) have no request and always use `SITE_DEFAULT_LANGUAGE`; a client that does not send `languageCode` (the current storefront and manager portal) gets the default too; there is no per-customer language. Until clients send `languageCode`, Russian mails come only from `SITE_DEFAULT_LANGUAGE=ru`, so do not hunt for an error on the host when a `ru` request still yields the default. Global template variables (`emailGlobalTemplateVars`): `fromAddress`, `siteName`, `footerText`, `verifyEmailAddressUrl`. `changeEmailAddressUrl`, used by `email-address-change`, is deliberately not defined: the storefront has no confirmation page and nothing in the repo triggers `IdentifierChangeRequestEvent` (only Vendure's built-in Shop API mutation `requestUpdateCustomerEmailAddress` could, and no client calls it), so that mail would carry a base-less `?token=` link. Define the variable together with the page before enabling the flow. Developing mails: `.claude/skills/email-templates/SKILL.md`.
 
 Password-reset links depend on the recipient. Vendure's reset event carries only a `User`, which belongs either to an `Administrator` (staff) or to a `Customer`. `password-reset-handler.ts` looks up an `Administrator` for that user: found means staff, link `MANAGER_PUBLIC_URL/set-password`; not found means customer, link `STOREFRONT_PUBLIC_URL/set-password`. In production with `smtp` both URLs are required, otherwise boot fails. The URLs are set by hand on purpose: taking the domain from request headers would let anyone request a reset with a forged `Host` and make the victim's mail link to another site. The account-activation mail (`email-verification`) links to `STOREFRONT_PUBLIC_URL/verify` through the `verifyEmailAddressUrl` global template variable.
+
+## First boot and duplicate superadmin (#285)
+
+Vendure creates the superadmin in every process that bootstraps (`server`, `worker`, `worker-email`) with a
+non-atomic check-then-create, and `user.identifier` is deliberately not unique (a person can be both a customer and
+staff, and soft-deleted users keep their identifier). Three layers prevent two superadmins:
+
+- `worker` and `worker-email` start only after `server` is healthy, so on an empty database the server creates the account alone.
+- Each process wraps its bootstrap in `withSuperadminBootstrapLock` (`apps/server/src/superadmin-bootstrap-lock.ts`): while no active superadmin administrator exists it holds a Postgres advisory lock for the whole bootstrap; boots after the account exists skip it. This also covers dev/e2e stacks that start several processes at once.
+- Migration `1791535000000-administrator-email-unique` adds a partial unique index on `administrator."emailAddress"` (active rows only). It refuses to run and lists the ids if an active duplicate already exists.
+
+If the migration reports a duplicate (or two identical superadmins exist), keep the lowest ids and delete the extra
+account in this order, in one transaction (`:uid` and `:aid` are the extra user id and administrator id; find them with
+`SELECT a.id, a."userId", a."emailAddress" FROM administrator a WHERE a."deletedAt" IS NULL ORDER BY a."emailAddress", a.id`):
+
+```sql
+BEGIN;
+DELETE FROM session WHERE "userId" = :uid;
+DELETE FROM user_roles_role WHERE "userId" = :uid;
+DELETE FROM authentication_method WHERE "userId" = :uid;
+DELETE FROM administrator WHERE id = :aid;
+DELETE FROM "user" WHERE id = :uid;
+COMMIT;
+```
+
+Delete `history_entry` rows with `"administratorId" = :aid` first if the delete reports a foreign key violation.
