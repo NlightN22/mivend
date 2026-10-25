@@ -24,7 +24,9 @@ export function defaultEmailLanguage(env: Env): EmailLanguage {
 }
 
 // Vendure fills ctx.languageCode with the channel default when the request names none, so read the query.
+// The Dashboard always sends languageCode=en, so admin-api requests use the deployment default.
 export function resolveEmailLanguage(ctx: RequestContext, fallback: EmailLanguage): EmailLanguage {
+    if (ctx.apiType === 'admin') return fallback;
     const requested = ctx.req?.query?.languageCode;
     return supported(typeof requested === 'string' ? requested : undefined) ?? fallback;
 }

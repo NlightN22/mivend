@@ -156,6 +156,14 @@ describe('language selection', () => {
         expect(resolveEmailLanguage(ctxWith('RU-ru'), 'en')).toBe('ru');
     });
 
+    it('ignores the query language on admin-api requests', () => {
+        const ctx = {
+            apiType: 'admin',
+            req: { query: { languageCode: 'en' } },
+        } as unknown as RequestContext;
+        expect(resolveEmailLanguage(ctx, 'ru')).toBe('ru');
+    });
+
     it('ignores a non-string query value', () => {
         const ctx = { req: { query: { languageCode: ['ru'] } } } as unknown as RequestContext;
         expect(resolveEmailLanguage(ctx, 'en')).toBe('en');
