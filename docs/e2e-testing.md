@@ -123,7 +123,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `category-feed` | integration | category visibility on the real ERP feed: deleted parent, inactive, revive, late parent, move, tombstone (#264) | `05-category-feed 06-category-feed` |
 
 `category-feed` needs ERP-side fixture categories whose ids sit in the staging env file as `STAGING_FEED_CAT_<KEY>` (keys in
-`packages/e2e/integration/category-feed.ts`); `06` waits for the ERP owner's steps, so run it with the owner at hand.
+`packages/e2e/integration/category-feed.ts`); `06` waits for the ERP owner's steps, so run it with the owner at hand. Each scenario first waits (`[category-feed] WAITING FOR INITIAL STATE`, 15 min) for its ERP-sent state; for the late parent that is up to 70 min (Integration Service accepts an orphan child after 1 h) and the owner step plus child/parent visibility up to 40 min.
 The ERP feed sends `isActive = NOT(deletion mark)` and never `isDeleted=true`, so "deleted" and "inactive" fixtures
 look identical (`feedHidden`/`isPrivate`); specs must not assume `isDeleted` from the feed. Revive = the owner clears
 the deletion mark. `06` prints `[category-feed] WAITING FOR ERP OWNER: <step>` (15 min each, one step at a time):

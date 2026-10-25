@@ -115,6 +115,16 @@ export async function awaitOwner(
     console.log(`[category-feed] RECEIVED: ${transition}`);
 }
 
+// Waits for the ERP-sent initial state a scenario starts from; the exchange cycle takes minutes.
+export async function awaitInitialState(
+    what: string,
+    check: () => Promise<boolean>,
+    timeoutMs = OWNER_WAIT_TIMEOUT_MS,
+): Promise<void> {
+    console.log(`[category-feed] WAITING FOR INITIAL STATE: ${what}`);
+    await pollUntil(`initial state "${what}"`, check, timeoutMs);
+}
+
 const INGESTION_DELETE_PATH = '/api/ingestion/v1/entities/delete';
 const TOMBSTONE_ATTEMPTS = 5;
 
