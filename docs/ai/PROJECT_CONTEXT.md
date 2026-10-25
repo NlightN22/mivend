@@ -275,6 +275,11 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 
 - #252: ERP-provisioned Administrators now get firstName = name + patronymic, lastName = surname (`parseErpFullName`); ones created before #252 keep swapped names, and `UserChanged` never rewrites firstName/lastName.
 
+- **Fixed-price discount rules are not supported (known limitation, planned later)** — the ERP can
+  express "a price instead of a discount" as a zero-percent register row with a price or price type
+  set. mivend ignores such rules until a later mivend-side feature; the Integration Service
+  currently sends a tombstone for those keys, so they never arrive. A negative `percent` (markup)
+  raises the price but is never shown as a discount, markup or saving (no struck-through price).
 - **`limitAmount` on a counterparty/contract discount rule is not enforced** — rules that set it
   are excluded from applying at all (safe default), not capped. See #154.
 - **Upstream (search-platform) version-collision/dedup risk for `discount-rule`** — their

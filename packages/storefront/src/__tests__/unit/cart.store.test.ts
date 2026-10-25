@@ -67,6 +67,20 @@ describe('cart store totals', () => {
         expect(Number.isInteger(store.discountAmount)).toBe(true);
     });
 
+    it('shows no saving for a line priced above its list price (markup)', () => {
+        const store = useCartStore();
+        setLines(store, [
+            {
+                quantity: 1,
+                discountedUnitPriceWithTax: 10500,
+                compareAtPrice: 10000,
+                discountedLinePriceWithTax: 10500,
+            },
+        ]);
+
+        expect(store.discountAmount).toBe(0);
+    });
+
     it('ignores lines without a list price or with a zero unit price', () => {
         const store = useCartStore();
         setLines(store, [

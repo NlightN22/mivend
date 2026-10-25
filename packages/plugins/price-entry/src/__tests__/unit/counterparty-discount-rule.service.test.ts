@@ -472,6 +472,31 @@ describe('CounterpartyDiscountRuleService (issue #108)', () => {
             expect(result).toBeNull();
         });
 
+        it('selects a markup (negative percent) only when no better rule matches', async () => {
+            const rule = (percent: number): ReturnType<typeof activeRule> =>
+                activeRule({
+                    productErpId: null,
+                    condition: 'byQuantity',
+                    conditionValue: 1,
+                    percent,
+                });
+            const best = async (percents: number[]): Promise<number | null> => {
+                mockQb.getMany.mockResolvedValue(percents.map(rule));
+                return service.getBestPercent(
+                    mockCtx,
+                    fakeOrder(),
+                    { erpId: 'cp-erp-1' } as never,
+                    'prod-1',
+                    new Map([['prod-1', 5]]),
+                    0,
+                    now,
+                );
+            };
+            expect(await best([-5])).toBe(-5);
+            expect(await best([-5, -2])).toBe(-2);
+            expect(await best([-5, 4])).toBe(4);
+        });
+
         it('picks the highest percent when multiple recipient rules qualify (counterparty and contract combined)', async () => {
             mockQb.getMany.mockResolvedValue([
                 activeRule({

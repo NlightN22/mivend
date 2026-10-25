@@ -91,7 +91,8 @@ export const useCartStore = defineStore('cart', () => {
             if (
                 line.compareAtPrice == null ||
                 line.discountedUnitPriceWithTax == null ||
-                line.discountedUnitPriceWithTax === 0
+                line.discountedUnitPriceWithTax === 0 ||
+                line.compareAtPrice <= line.discountedUnitPriceWithTax
             )
                 return sum;
             const discountRatio =

@@ -538,6 +538,45 @@ describe('PriceResolutionService', () => {
 
     // Issue #107: per-product promo rules (PromoRuleChanged), applied alongside the existing
     // facet/priceType-threshold percent via DiscountRuleService.getBestPromoPercent.
+    describe('negative percent (markup, #281)', () => {
+        const order = { lines: [] } as unknown as Order;
+        beforeEach(() => {
+            variantsById.v1 = {
+                id: 'v1',
+                facetValues: [],
+                product: { facetValues: [], customFields: { externalId: 'prod-1' } },
+                customFields: { weight: 0 },
+            };
+            pricesByVariantId.v1 = 1000;
+        });
+
+        it('raises the price when a markup is the only matching rule', async () => {
+            counterpartyDiscountRuleService.getBestPercent.mockResolvedValue(-5);
+
+            const result = await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+            expect(result.customerPrice).toBe(1050);
+            expect(result.compareAtPrice).toBeNull();
+        });
+
+        it('applies a markup of zero-percent neighbours without clamping to the base price', async () => {
+            discountRuleService.getBestPercent.mockResolvedValue(-10);
+
+            const result = await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+            expect(result.customerPrice).toBe(1100);
+        });
+
+        it('lets any better discount win over a markup', async () => {
+            counterpartyDiscountRuleService.getBestPercent.mockResolvedValue(-5);
+            discountRuleService.getBestPercent.mockResolvedValue(3);
+
+            const result = await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+            expect(result.customerPrice).toBe(970);
+        });
+    });
+
     describe('promo rules (issue #107)', () => {
         it('never evaluates a promo rule for catalog display (no orderContext)', async () => {
             variantsById.v1 = {

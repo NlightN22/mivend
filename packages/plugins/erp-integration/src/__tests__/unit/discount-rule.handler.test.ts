@@ -283,4 +283,17 @@ describe('DiscountRuleStreamHandler', () => {
 
         expect(outcome.kind).toBe('applied');
     });
+
+    it('stores a negative percent (markup) as is', async () => {
+        const service = { upsertCounterpartyRule: vi.fn().mockResolvedValue({}) };
+        const handler = new DiscountRuleStreamHandler(service as never);
+
+        const outcome = await handler.apply(ctx, 'dr-1', basePayload({ percent: -5 }));
+
+        expect(outcome.kind).toBe('applied');
+        expect(service.upsertCounterpartyRule).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ percent: -5 }),
+        );
+    });
 });

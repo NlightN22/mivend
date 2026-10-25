@@ -214,9 +214,10 @@ export class PriceResolutionService {
             .reduce((max, p) => Math.max(max, p), -Infinity);
 
         if (bestPercent === -Infinity) return { customerPrice: basePrice, compareAtPrice: null };
+        // A markup raises the price but is never shown as a discount, so no struck-through price.
         return {
             customerPrice: Math.round(basePrice * (1 - bestPercent / 100)),
-            compareAtPrice: basePrice,
+            compareAtPrice: bestPercent < 0 ? null : basePrice,
         };
     }
 
