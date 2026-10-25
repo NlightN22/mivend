@@ -31,9 +31,10 @@ export function extractBarcodes(payload: Record<string, unknown>): string[] {
     if (!Array.isArray(payload.barcodes)) {
         return [];
     }
-    return payload.barcodes.filter(
+    const codes = payload.barcodes.filter(
         (code): code is string => typeof code === 'string' && code !== '',
     );
+    return [...new Set(codes)];
 }
 
 // `manufacturer_codes` (repeated ManufacturerCode) — same empty-repeated-field omission.

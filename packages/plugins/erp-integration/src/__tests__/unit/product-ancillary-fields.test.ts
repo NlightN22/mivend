@@ -32,6 +32,10 @@ describe('extractBarcodes', () => {
     it('filters out empty-string entries', () => {
         expect(extractBarcodes({ barcodes: ['111', ''] })).toEqual(['111']);
     });
+
+    it('drops repeated codes so the unique (variant, code) index is not hit', () => {
+        expect(extractBarcodes({ barcodes: ['111', '222', '111'] })).toEqual(['111', '222']);
+    });
 });
 
 describe('extractManufacturerCodes', () => {
