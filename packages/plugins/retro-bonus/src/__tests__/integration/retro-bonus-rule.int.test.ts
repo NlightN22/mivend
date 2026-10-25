@@ -181,14 +181,29 @@ describe('RetroBonusRuleService.apply (real Postgres)', () => {
     it('deactivates on a tombstone and is reactivated only by a strictly newer version', async () => {
         await service.apply(ctx, input('3', ['a']));
 
-        expect(await service.deactivate(ctx, 'doc-1', '5')).toBe(true);
+        expect(await service.deactivate(ctx, 'doc-1', '5')).toBe('deactivated');
         expect(await service.apply(ctx, input('5', ['a']))).toBe('stale');
         expect((await stored()).active).toBe(false);
 
         expect(await service.apply(ctx, input('6', ['a']))).toBe('applied');
         expect((await stored()).active).toBe(true);
         expect(await counterparties()).toEqual(['a']);
-        expect(await service.deactivate(ctx, 'ghost', '1')).toBe(false);
+        expect(await service.deactivate(ctx, 'ghost', '1')).toBe('unknown');
+    });
+
+    it('ignores a replayed older tombstone after a newer active version', async () => {
+        await service.apply(ctx, input('5', ['a']));
+
+        expect(await service.deactivate(ctx, 'doc-1', '3')).toBe('stale');
+        expect((await stored()).active).toBe(true);
+        expect(await counterparties()).toEqual(['a']);
+    });
+
+    it('applies an equal-version tombstone only while the rule is still active', async () => {
+        await service.apply(ctx, input('5', ['a']));
+
+        expect(await service.deactivate(ctx, 'doc-1', '5')).toBe('deactivated');
+        expect(await service.deactivate(ctx, 'doc-1', '5')).toBe('stale');
     });
 
     it('serializes concurrent replaces: the highest version wins with exactly its own lists', async () => {

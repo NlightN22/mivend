@@ -43,13 +43,17 @@ describe.each([
     [
         'discount-setup',
         (m: boolean) =>
-            new DiscountSetupStreamHandler({ deactivate: vi.fn().mockResolvedValue(m) } as never),
+            new DiscountSetupStreamHandler({
+                deactivate: vi.fn().mockResolvedValue(m ? 'deactivated' : 'unknown'),
+            } as never),
         { isDeleted: true, version: '5' },
     ],
     [
         'retro-bonus-setup',
         (m: boolean) =>
-            new RetroBonusSetupStreamHandler({ deactivate: vi.fn().mockResolvedValue(m) } as never),
+            new RetroBonusSetupStreamHandler({
+                deactivate: vi.fn().mockResolvedValue(m ? 'deactivated' : 'unknown'),
+            } as never),
         { isDeleted: true, version: '5' },
     ],
     [

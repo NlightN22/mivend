@@ -78,8 +78,17 @@ const products = async (): Promise<string[]> =>
             `SELECT "productErpId" FROM discount_setup_product ORDER BY "productErpId"`,
         )
     ).map((r: { productErpId: string }) => r.productErpId);
-const row = async (): Promise<{ active: boolean; sourceVersion: string; percent: number }> =>
-    (await dataSource.query(`SELECT active, "sourceVersion", percent FROM discount_setup`))[0];
+const row = async (): Promise<{
+    active: boolean;
+    sourceVersion: string;
+    percent: number;
+    inactiveReason: string | null;
+}> =>
+    (
+        await dataSource.query(
+            `SELECT active, "sourceVersion", percent, "inactiveReason" FROM discount_setup`,
+        )
+    )[0];
 
 describe('DiscountSetupService.apply (real Postgres)', () => {
     it('replaces the whole product set and the recipients with a newer version', async () => {
@@ -150,7 +159,7 @@ describe('DiscountSetupService.deactivate (real Postgres)', () => {
     it('deactivates, keeps the members, and is reactivated only by a strictly newer version', async () => {
         await service.apply(ctx, input('3', ['a']));
 
-        expect(await service.deactivate(ctx, 'doc-1', '5')).toBe(true);
+        expect(await service.deactivate(ctx, 'doc-1', '5')).toBe('deactivated');
         expect(await service.apply(ctx, input('4', ['a']))).toBe('stale');
         expect(await service.apply(ctx, input('5', ['a']))).toBe('stale');
         expect((await row()).active).toBe(false);
@@ -160,8 +169,42 @@ describe('DiscountSetupService.deactivate (real Postgres)', () => {
         expect(await products()).toEqual(['a']);
     });
 
+    it('ignores a replayed older tombstone after a newer active version', async () => {
+        await service.apply(ctx, input('5', ['a']));
+
+        expect(await service.deactivate(ctx, 'doc-1', '3')).toBe('stale');
+        const stored = await row();
+        expect(stored.active).toBe(true);
+        expect(stored.sourceVersion).toBe('5');
+        expect(await products()).toEqual(['a']);
+    });
+
+    it('applies an equal-version tombstone only while the row is still active', async () => {
+        await service.apply(ctx, input('5', ['a']));
+
+        expect(await service.deactivate(ctx, 'doc-1', '5')).toBe('deactivated');
+        expect(await service.deactivate(ctx, 'doc-1', '5')).toBe('stale');
+        expect((await row()).inactiveReason).toBe('cancelled');
+    });
+
+    it('stores a document with an unknown condition inactive and re-evaluates it on a newer version', async () => {
+        const unknown = { conditionName: 'Mystery', conditionNumber: 3 };
+        expect(await service.apply(ctx, input('1', ['a'], unknown))).toBe('unknown-condition');
+        const stored = await row();
+        expect(stored.active).toBe(false);
+        expect(stored.inactiveReason).toBe('unknown condition Mystery');
+        expect(await products()).toEqual([]);
+
+        await dataSource.query(
+            `INSERT INTO discount_condition_kind ("erpName", metric) VALUES ('Mystery', 'quantity')`,
+        );
+        expect(await service.apply(ctx, input('2', ['a'], unknown))).toBe('applied');
+        expect((await row()).active).toBe(true);
+        expect(await products()).toEqual(['a']);
+    });
+
     it('reports an unknown document without creating a row', async () => {
-        expect(await service.deactivate(ctx, 'ghost', '1')).toBe(false);
+        expect(await service.deactivate(ctx, 'ghost', '1')).toBe('unknown');
         expect(await dataSource.query(`SELECT 1 FROM discount_setup`)).toEqual([]);
     });
 });

@@ -43,13 +43,30 @@ describe('DiscountSetupStreamHandler', () => {
     });
 
     it('deactivates on an unposted document and noops when the rule is unknown', async () => {
-        const deactivate = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+        const deactivate = vi
+            .fn()
+            .mockResolvedValueOnce('deactivated')
+            .mockResolvedValueOnce('unknown');
         const handler = new DiscountSetupStreamHandler({ deactivate } as never);
         const payload = { ...discount, isActive: false };
 
         expect(await handler.apply(ctx, 'doc-1', payload)).toEqual({ kind: 'applied' });
         expect(await handler.apply(ctx, 'doc-1', payload)).toMatchObject({ kind: 'noop' });
         expect(deactivate).toHaveBeenCalledWith(ctx, 'doc-1', '2');
+    });
+
+    it('settles a tombstone older than the stored version as a noop', async () => {
+        const deactivate = vi.fn().mockResolvedValue('stale');
+        const handler = new DiscountSetupStreamHandler({ deactivate } as never);
+        const outcome = await handler.apply(ctx, 'doc-1', { ...discount, isDeleted: true });
+        expect(outcome).toMatchObject({ kind: 'noop' });
+        expect((outcome as { reason: string }).reason).toContain('does not beat');
+    });
+
+    it('settles a document with an unknown condition as a noop naming it', async () => {
+        const { outcome } = await run('unknown-condition', { ...discount, condition: 'Mystery' });
+        expect(outcome).toMatchObject({ kind: 'noop' });
+        expect((outcome as { reason: string }).reason).toContain('unknown condition Mystery');
     });
 });
 
@@ -68,5 +85,19 @@ describe('RetroBonusSetupStreamHandler', () => {
 
     it.each(['stale', 'unchanged'])('settles a %s redelivery as a noop', async result => {
         expect((await run(result)).outcome).toMatchObject({ kind: 'noop' });
+    });
+
+    it('returns a reason for a stored rule that a dynamic filter keeps from ever showing', async () => {
+        const apply = vi.fn().mockResolvedValue('applied');
+        const handler = new RetroBonusSetupStreamHandler({ apply } as never);
+        const outcome = await handler.apply(ctx, 'doc-2', { ...retro, productMode: 'filter' });
+        expect(outcome).toMatchObject({ kind: 'noop' });
+    });
+
+    it('settles a tombstone older than the stored version as a noop', async () => {
+        const deactivate = vi.fn().mockResolvedValue('stale');
+        const handler = new RetroBonusSetupStreamHandler({ deactivate } as never);
+        const outcome = await handler.apply(ctx, 'doc-2', { ...retro, isDeleted: true });
+        expect(outcome).toMatchObject({ kind: 'noop' });
     });
 });

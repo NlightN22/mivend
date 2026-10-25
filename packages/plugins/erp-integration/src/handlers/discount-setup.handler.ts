@@ -20,13 +20,18 @@ export class DiscountSetupStreamHandler implements InboundStreamHandler {
     ): Promise<InboundOutcome> {
         const parsed = parseDiscountSetup(entityId, payload);
         if (parsed.kind !== 'upsert') {
-            const matched = await this.discountSetupService.deactivate(
+            const result = await this.discountSetupService.deactivate(
                 ctx,
                 entityId,
                 parsed.version,
             );
-            Logger.verbose(`discount-setup ${entityId}: deactivated=${matched}`, loggerCtx);
-            return matched
+            Logger.verbose(`discount-setup ${entityId}: ${parsed.kind} -> ${result}`, loggerCtx);
+            if (result === 'stale') {
+                return inboundNoop(
+                    `discount-setup ${entityId}: ${parsed.kind} does not beat the stored version`,
+                );
+            }
+            return result === 'deactivated'
                 ? inboundApplied()
                 : inboundNoop(`discount-setup ${entityId}: ${parsed.kind} for an unknown rule`);
         }
@@ -38,6 +43,11 @@ export class DiscountSetupStreamHandler implements InboundStreamHandler {
             return inboundNoop(`discount-setup ${entityId}: content unchanged`);
         }
         const { setup } = parsed.input;
+        if (result === 'unknown-condition') {
+            return inboundNoop(
+                `discount-setup ${entityId}: not applied (unknown condition ${setup.conditionName})`,
+            );
+        }
         return setup.active
             ? inboundApplied()
             : inboundNoop(`discount-setup ${entityId}: not applied (${setup.inactiveReason})`);

@@ -35,7 +35,8 @@ export interface DiscountSetupInput {
     productErpIds: string[];
 }
 
-export type DiscountSetupApplyResult = 'applied' | 'unchanged' | 'stale';
+export type DiscountSetupApplyResult = 'applied' | 'unchanged' | 'stale' | 'unknown-condition';
+export type DiscountSetupDeactivateResult = 'deactivated' | 'unknown' | 'stale';
 
 const PRODUCT_LIST = {
     table: 'discount_setup_product',
@@ -49,20 +50,33 @@ export class DiscountSetupService {
     constructor(private connection: TransactionalConnection) {}
 
     apply(ctx: RequestContext, input: DiscountSetupInput): Promise<DiscountSetupApplyResult> {
-        const { setup } = input;
+        const { setup: incoming } = input;
         return withAggregateLock(
             this.connection,
             ctx,
-            `discount-setup:${setup.erpId}`,
+            `discount-setup:${incoming.erpId}`,
             async txCtx => {
                 const repo = this.connection.getRepository(txCtx, DiscountSetup);
-                const existing = await repo.findOne({ where: { erpId: setup.erpId } });
+                const existing = await repo.findOne({ where: { erpId: incoming.erpId } });
+                const setup = { ...incoming };
                 if (existing && !isVersionNewer(setup.sourceVersion, existing.sourceVersion)) {
                     Logger.warn(
                         `discount-setup ${setup.erpId}: version=${setup.sourceVersion} does not beat the stored version=${existing.sourceVersion}, skipping`,
                         loggerCtx,
                     );
                     return 'stale';
+                }
+                const unknownCondition =
+                    setup.active &&
+                    setup.conditionName !== '' &&
+                    !(await this.conditionKindExists(txCtx, setup.conditionName));
+                if (unknownCondition) {
+                    setup.active = false;
+                    setup.inactiveReason = `unknown condition ${setup.conditionName}`;
+                    Logger.warn(
+                        `discount-setup ${setup.erpId}: ${setup.inactiveReason}; add a discount_condition_kind row and resend a newer version`,
+                        loggerCtx,
+                    );
                 }
                 const recipients = setup.active ? input.recipients : [];
                 const products = setup.active && !setup.allProducts ? input.productErpIds : [];
@@ -80,25 +94,40 @@ export class DiscountSetupService {
                 const setupId = saved.id as number;
                 await this.replaceRecipients(txCtx, setupId, recipients);
                 await replaceMembership(this.connection, txCtx, PRODUCT_LIST, setupId, products);
-                return 'applied';
+                return unknownCondition ? 'unknown-condition' : 'applied';
             },
         );
     }
 
-    // Cancellation wins regardless of version; the newest version seen is kept so only a strictly newer upsert reactivates.
-    deactivate(ctx: RequestContext, erpId: string, version: string): Promise<boolean> {
+    // A tombstone older than the stored version is a replay and changes nothing; at an equal version it
+    // applies only while the row is still active. Only a strictly newer upsert reactivates.
+    deactivate(
+        ctx: RequestContext,
+        erpId: string,
+        version: string,
+    ): Promise<DiscountSetupDeactivateResult> {
         return withAggregateLock(this.connection, ctx, `discount-setup:${erpId}`, async txCtx => {
             const repo = this.connection.getRepository(txCtx, DiscountSetup);
             const existing = await repo.findOne({ where: { erpId } });
-            if (!existing) return false;
+            if (!existing) return 'unknown';
+            const newer = isVersionNewer(version, existing.sourceVersion);
+            if (!newer && !(version === existing.sourceVersion && existing.active)) return 'stale';
             existing.active = false;
             existing.inactiveReason = 'cancelled';
-            if (version && isVersionNewer(version, existing.sourceVersion)) {
-                existing.sourceVersion = version;
-            }
+            if (newer) existing.sourceVersion = version;
             await repo.save(existing);
-            return true;
+            return 'deactivated';
         });
+    }
+
+    private async conditionKindExists(txCtx: RequestContext, name: string): Promise<boolean> {
+        const rows = await ctxQuery<unknown[]>(
+            this.connection,
+            txCtx,
+            `SELECT 1 FROM discount_condition_kind WHERE "erpName" = $1`,
+            [name],
+        );
+        return rows.length > 0;
     }
 
     private async replaceRecipients(

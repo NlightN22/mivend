@@ -39,6 +39,7 @@ export interface RetroBonusSetupInput {
 }
 
 export type RetroBonusApplyResult = 'applied' | 'unchanged' | 'stale';
+export type RetroBonusDeactivateResult = 'deactivated' | 'unknown' | 'stale';
 
 const COUNTERPARTY_LIST = {
     table: 'retro_bonus_rule_counterparty',
@@ -99,18 +100,23 @@ export class RetroBonusRuleService {
         );
     }
 
-    // Cancellation wins regardless of version; the newest version seen is kept so only a strictly newer upsert reactivates.
-    deactivate(ctx: RequestContext, erpId: string, version: string): Promise<boolean> {
+    // A tombstone older than the stored version is a replay and changes nothing; at an equal version it
+    // applies only while the row is still active. Only a strictly newer upsert reactivates.
+    deactivate(
+        ctx: RequestContext,
+        erpId: string,
+        version: string,
+    ): Promise<RetroBonusDeactivateResult> {
         return withAggregateLock(this.connection, ctx, `retro-bonus-rule:${erpId}`, async txCtx => {
             const repo = this.connection.getRepository(txCtx, RetroBonusRule);
             const existing = await repo.findOne({ where: { erpId } });
-            if (!existing) return false;
+            if (!existing) return 'unknown';
+            const newer = isVersionNewer(version, existing.sourceVersion);
+            if (!newer && !(version === existing.sourceVersion && existing.active)) return 'stale';
             existing.active = false;
-            if (version && isVersionNewer(version, existing.sourceVersion)) {
-                existing.sourceVersion = version;
-            }
+            if (newer) existing.sourceVersion = version;
             await repo.save(existing);
-            return true;
+            return 'deactivated';
         });
     }
 

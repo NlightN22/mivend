@@ -20,13 +20,18 @@ export class RetroBonusSetupStreamHandler implements InboundStreamHandler {
     ): Promise<InboundOutcome> {
         const parsed = parseRetroBonusSetup(entityId, payload);
         if (parsed.kind !== 'upsert') {
-            const matched = await this.retroBonusRuleService.deactivate(
+            const result = await this.retroBonusRuleService.deactivate(
                 ctx,
                 entityId,
                 parsed.version,
             );
-            Logger.verbose(`retro-bonus-setup ${entityId}: deactivated=${matched}`, loggerCtx);
-            return matched
+            Logger.verbose(`retro-bonus-setup ${entityId}: ${parsed.kind} -> ${result}`, loggerCtx);
+            if (result === 'stale') {
+                return inboundNoop(
+                    `retro-bonus-setup ${entityId}: ${parsed.kind} does not beat the stored version`,
+                );
+            }
+            return result === 'deactivated'
                 ? inboundApplied()
                 : inboundNoop(`retro-bonus-setup ${entityId}: ${parsed.kind} for an unknown rule`);
         }
@@ -43,6 +48,12 @@ export class RetroBonusSetupStreamHandler implements InboundStreamHandler {
             `Applied retro-bonus setup ${entityId} counterparties=${parsed.input.counterpartyErpIds.length} products=${parsed.input.productErpIds.length}`,
             loggerCtx,
         );
-        return inboundApplied();
+        const { rule } = parsed.input;
+        const invisible =
+            (rule.productMode === 'filter' && !rule.allProducts) ||
+            (rule.counterpartyMode === 'filter' && !rule.allCounterparties);
+        return invisible
+            ? inboundNoop(`retro-bonus-setup ${entityId}: stored, never shown (dynamic filter)`)
+            : inboundApplied();
     }
 }
