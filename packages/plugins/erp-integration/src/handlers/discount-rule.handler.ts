@@ -12,8 +12,7 @@ import { optionalNumber, optionalString, parseTimestamp, zeroNumber } from './pr
 
 const loggerCtx = 'IntegrationDiscountRuleHandler';
 
-// Confirmed live against integration-service source (discount-rule.dto.ts) via search-platform —
-// see issue #108's own comment: closed TS union, exactly these 2 values, not a raw 1C passthrough.
+// Closed sets: any other value is a contract break, not reference data.
 const VALID_RECIPIENT_TYPES: readonly DiscountRuleRecipientType[] = ['counterparty', 'contract'];
 const VALID_CONDITIONS: readonly DiscountRuleCondition[] = ['byQuantity', 'byDocumentAmount'];
 
@@ -30,7 +29,7 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
-        // Tombstone (search-platform#145) — deactivate, never skip. version is stored too: see
+        // Tombstone — deactivate, never skip. version is stored too: see
         // docs/ai/erp-streams-map.md's "Discount rules" section for the reactivation-race reasoning.
         if (payload.isDeleted === true) {
             const matched = await this.counterpartyDiscountRuleService.deactivateTombstone(

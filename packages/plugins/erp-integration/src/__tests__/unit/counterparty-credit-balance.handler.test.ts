@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
+import { NonRetryableInboundError } from '../../non-retryable-inbound-error';
 import { CounterpartyCreditBalanceStreamHandler } from '../../handlers/counterparty-credit-balance.handler';
 
 describe('CounterpartyCreditBalanceStreamHandler', () => {
@@ -50,12 +51,23 @@ describe('CounterpartyCreditBalanceStreamHandler', () => {
         expect(counterpartyService.updateCreditBalance).not.toHaveBeenCalled();
     });
 
-    it('skips when balance is missing/invalid (malformed payload, not retryable)', async () => {
+    it('reads an absent balance as zero (proto3 omits zero scalars)', async () => {
         const counterpartyService = { updateCreditBalance: vi.fn().mockResolvedValue(undefined) };
         const handler = new CounterpartyCreditBalanceStreamHandler(counterpartyService as never);
 
-        await handler.apply(ctx, 'register-entry-1', { counterpartyId: 'cp-1' });
+        const outcome = await handler.apply(ctx, 'register-entry-1', { counterpartyId: 'cp-1' });
 
+        expect(outcome.kind).toBe('applied');
+        expect(counterpartyService.updateCreditBalance).toHaveBeenCalledWith(ctx, 'cp-1', 0);
+    });
+
+    it('fails visibly on a non-numeric balance', async () => {
+        const counterpartyService = { updateCreditBalance: vi.fn().mockResolvedValue(undefined) };
+        const handler = new CounterpartyCreditBalanceStreamHandler(counterpartyService as never);
+
+        await expect(
+            handler.apply(ctx, 'register-entry-1', { counterpartyId: 'cp-1', balance: 'abc' }),
+        ).rejects.toBeInstanceOf(NonRetryableInboundError);
         expect(counterpartyService.updateCreditBalance).not.toHaveBeenCalled();
     });
 

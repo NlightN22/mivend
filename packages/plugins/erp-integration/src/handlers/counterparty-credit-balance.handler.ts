@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { NonRetryableInboundError } from '../non-retryable-inbound-error';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
+import { zeroNumber } from './proto-json-fields';
 
 // Register-driven: creditBalance can change without Counterparty fields changing, and vice versa.
 // entityId is the register entry's key, not counterparty erpId; join via payload.counterpartyId.
@@ -28,11 +30,10 @@ export class CounterpartyCreditBalanceStreamHandler implements InboundStreamHand
                 `counterparty-credit-balance ${entityId}: deleted register entry, skipping`,
             );
         }
-        const rawBalance =
-            typeof payload.balance === 'number' ? payload.balance : Number(payload.balance);
+        const rawBalance = zeroNumber(payload.balance);
         if (!Number.isFinite(rawBalance)) {
-            return inboundNoop(
-                `counterparty-credit-balance ${entityId}: missing/invalid balance, skipping`,
+            throw new NonRetryableInboundError(
+                `counterparty-credit-balance ${entityId}: invalid balance`,
             );
         }
         // creditBalance/creditLimit are whole-ruble bigint columns; this stream alone sends fractional values.

@@ -567,6 +567,14 @@ describe('PriceResolutionService', () => {
             expect(result.customerPrice).toBe(1100);
         });
 
+        it('gives no struck-through price for a zero-percent rule', async () => {
+            counterpartyDiscountRuleService.getBestPercent.mockResolvedValue(0);
+
+            const result = await service.resolve(mockCtx, 'v1', { order, quantity: 1 });
+
+            expect(result).toEqual({ customerPrice: 1000, compareAtPrice: null });
+        });
+
         it('lets any better discount win over a markup', async () => {
             counterpartyDiscountRuleService.getBestPercent.mockResolvedValue(-5);
             discountRuleService.getBestPercent.mockResolvedValue(3);

@@ -10,7 +10,7 @@ const loggerCtx = 'IntegrationRetroBonusRuleHandler';
 
 // accrualKind is an open ERP string stored as reference data, never a closed enum.
 // Applies `retro-bonus-rule` into RetroBonusRule — pure upsert, no tombstone branch (unlike
-// every other handler in this plugin): this stream never sends one, see issue #102.
+// every other handler in this plugin): this stream never sends one.
 @Injectable()
 export class RetroBonusRuleStreamHandler implements InboundStreamHandler {
     constructor(private readonly retroBonusRuleService: RetroBonusRuleService) {}
