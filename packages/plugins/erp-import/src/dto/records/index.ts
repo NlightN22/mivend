@@ -9,6 +9,7 @@ export { CustomerCounterpartyRecordDto } from './customer-counterparty-record.dt
 export { TradingPointRecordDto } from './trading-point-record.dto';
 export { CategoryRecordDto } from './category-record.dto';
 export { DiscountRuleRecordDto } from './discount-rule-record.dto';
+export { CounterpartyDiscountRuleRecordDto } from './counterparty-discount-rule-record.dto';
 export { DocumentRecordDto } from './document-record.dto';
 export { OrganizationRequisitesRecordDto } from './organization-requisites-record.dto';
 export { DepartmentRecordDto } from './department-record.dto';

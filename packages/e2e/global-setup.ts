@@ -12,6 +12,7 @@ import { seedRecords, E2E_CUSTOMER, E2E_OTHER_COUNTERPARTY_ID } from './fixtures
 import { reindexSearch } from './helpers/search-reindex';
 import { seedVisibility } from './fixtures/visibility/seed-visibility';
 import { seedPaidOrders, seedPendingGrantRequests } from './fixtures/list-pages';
+import { prepareMarkupCustomer } from './fixtures/seed-markup';
 import { seedDiscountGrants } from './fixtures/discount-grants';
 import { ensureCountry, ensureShippingMethod } from './fixtures/shop-basics';
 
@@ -106,6 +107,7 @@ export default async function globalSetup(): Promise<void> {
             );
         }
     }
+    await prepareMarkupCustomer(adminToken, centralBranchId);
     const preferredTradingPointId = e2eCounterpartyForBranchFix?.tradingPoints.find(
         tp => tp.erpId === 'e2e-tp-001',
     )?.id;

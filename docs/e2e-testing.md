@@ -98,6 +98,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `storefront-documents` | dev | customer documents | `--project=storefront storefront/documents` |
 | `storefront-favorites` | dev | favorites | `--project=storefront storefront/favorites` |
 | `storefront-home` | dev | home page | `--project=storefront storefront/home` |
+| `storefront-markup` | dev | markup rule (negative discount percent) in catalog, cart and order (#283) | `--project=storefront storefront/markup` |
 | `storefront-orders` | dev | customer orders (placement, list, detail, cancel) | `--project=storefront storefront/orders` |
 | `storefront-proforma` | dev | proforma invoices and per-organization proformas | `--project=storefront storefront/proforma-invoices storefront/proforma-organizations` |
 | `storefront-session` | dev | session-ended bar | `--project=storefront storefront/session` |

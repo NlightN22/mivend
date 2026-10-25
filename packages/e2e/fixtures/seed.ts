@@ -1,4 +1,5 @@
 import { innSeedRecords } from './seed-inn';
+import { markupSeedRecords } from './seed-markup';
 
 export const E2E_CUSTOMER = {
     email: 'e2e@test.example',
@@ -367,4 +368,5 @@ export const seedRecords = [
         },
     },
     ...innSeedRecords,
+    ...markupSeedRecords,
 ];

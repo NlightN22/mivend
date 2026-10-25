@@ -141,6 +141,9 @@ export class ErpImportService {
             case 'discountRule':
                 await this.discountRuleHandler.upsert(ctx, record.data);
                 break;
+            case 'counterpartyDiscountRule':
+                await this.discountRuleHandler.upsertCounterparty(ctx, record.data);
+                break;
             case 'document':
                 await this.documentHandler.upsert(ctx, record.data);
                 break;

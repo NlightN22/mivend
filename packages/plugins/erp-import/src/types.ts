@@ -184,6 +184,18 @@ export interface DiscountRuleRecord {
     minAmount?: number | null;
 }
 
+export interface CounterpartyDiscountRuleRecord {
+    erpId: string;
+    counterpartyErpId: string;
+    productErpId?: string | null;
+    condition: 'byQuantity' | 'byDocumentAmount';
+    conditionValue: number;
+    // Negative percent is a markup.
+    percent: number;
+    validFrom: string;
+    validTo?: string | null;
+}
+
 export type ImportRecord =
     | { type: 'product'; data: ProductRecord }
     | { type: 'price'; data: PriceRecord }
@@ -196,6 +208,7 @@ export type ImportRecord =
     | { type: 'category'; data: CategoryRecord }
     | { type: 'crossReference'; data: CrossReferenceRecord }
     | { type: 'discountRule'; data: DiscountRuleRecord }
+    | { type: 'counterpartyDiscountRule'; data: CounterpartyDiscountRuleRecord }
     | { type: 'document'; data: DocumentRecord }
     | { type: 'organizationRequisites'; data: OrganizationRequisitesRecord }
     | { type: 'department'; data: DepartmentRecordInput }
