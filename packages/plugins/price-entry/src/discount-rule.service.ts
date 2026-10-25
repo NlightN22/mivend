@@ -91,12 +91,8 @@ export class DiscountRuleService {
         if (priceTypeCode) {
             return repo.find({ where: { priceTypeCode }, order: { validTo: 'DESC' } });
         }
-        // Counterparty/contract rules (recipientType set) are excluded like promo rules: this listing
-        // only shows facet/priceType-threshold rules.
-        const qb = repo
-            .createQueryBuilder('dr')
-            .where('dr.triggerProductErpId IS NULL')
-            .andWhere('dr.recipientType IS NULL');
+        // Promo rules are excluded: this listing only shows facet/priceType-threshold rules.
+        const qb = repo.createQueryBuilder('dr').where('dr.triggerProductErpId IS NULL');
         if (allowedCodes)
             qb.andWhere('dr.priceTypeCode IN (:...allowedCodes)', {
                 allowedCodes: allowedCodes.length ? allowedCodes : [''],
@@ -133,8 +129,7 @@ export class DiscountRuleService {
         if (nonPortalErpIds.length > 0) {
             const saved = await repo.find({ where: { erpId: In(nonPortalErpIds) } });
             for (const rule of saved) {
-                // bulkUpsert only writes facet/priceType-threshold rows (no recipientType field), so validTo
-                // is guaranteed non-null, as in upsert().
+                // bulkUpsert only writes facet/priceType-threshold rows, so validTo is non-null, as in upsert().
                 await this.discountRegistryService.upsertFromRule(ctx, {
                     ...rule,
                     validTo: rule.validTo as Date,

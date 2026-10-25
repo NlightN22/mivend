@@ -12,7 +12,7 @@ import { BranchSettingsService } from '@mivend/plugin-access-control';
 import { PriceEntryService } from './price-entry.service';
 import { DiscountRuleService, DiscountTierVM } from './discount-rule.service';
 import { PromoDiscountRuleService } from './promo-discount-rule.service';
-import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.service';
+import { DiscountSetupRulesService } from './discount-setup-rules.service';
 import { getProductErpId, buildProductErpQuantities } from './promo-product-lookup';
 import { LookupMemo, memoized } from './lookup-memo';
 import {
@@ -53,7 +53,7 @@ export class PriceResolutionService {
         private counterpartyService: CounterpartyService,
         private branchSettingsService: BranchSettingsService,
         private promoDiscountRuleService: PromoDiscountRuleService,
-        private counterpartyDiscountRuleService: CounterpartyDiscountRuleService,
+        private discountSetupRulesService: DiscountSetupRulesService,
     ) {}
 
     preload(ctx: RequestContext, order: Order, memo: LookupMemo): Promise<void> {
@@ -197,10 +197,11 @@ export class PriceResolutionService {
         // totalWithTax excludes this priced line's own contribution — accepted approximation, same as the tier ladder's aggregates.
         // Without order rules only threshold-0 rules match, so list, cart and order prices agree (docs/pricing.md).
         const productErpId = await getProductErpId(this.connection, ctx, variantId, memo);
-        const counterpartyRulePercent = await this.counterpartyDiscountRuleService.getBestPercent(
+        const counterpartyRulePercent = await this.discountSetupRulesService.getBestPercent(
             ctx,
             orderContext?.order,
             counterparty,
+            priceTypeCodeForDiscount,
             productErpId,
             productErpQuantities ?? new Map<string, number>(),
             ruleContext ? (ruleContext.documentAmount ?? ruleContext.order.totalWithTax) : 0,

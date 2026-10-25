@@ -188,7 +188,8 @@ export interface CounterpartyDiscountRuleRecord {
     erpId: string;
     counterpartyErpId: string;
     productErpId?: string | null;
-    condition: 'byQuantity' | 'byDocumentAmount';
+    // The ERP condition enum value name (DiscountConditionKind.erpName); empty = unconditional.
+    condition: string;
     conditionValue: number;
     // Negative percent is a markup.
     percent: number;

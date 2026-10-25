@@ -14,10 +14,14 @@ export { PromoDiscountRuleService } from './src/promo-discount-rule.service';
 export type { PromoDiscountRuleInput } from './src/promo-discount-rule.service';
 export { GrantedDiscountService } from './src/granted-discount.service';
 export type { GrantedDiscountInput } from './src/granted-discount.service';
-export { CounterpartyDiscountRuleService } from './src/counterparty-discount-rule.service';
-export type { CounterpartyDiscountRuleInput } from './src/counterparty-discount-rule.service';
-export type { CounterpartyRuleBatchOp } from './src/counterparty-discount-rule-batch';
-export type { DiscountRuleRecipientType, DiscountRuleCondition } from './src/discount-rule.entity';
+export { DiscountSetupService } from './src/discount-setup.service';
+export type {
+    DiscountRecipientInput,
+    DiscountSetupApplyResult,
+    DiscountSetupInput,
+    DiscountSetupValues,
+} from './src/discount-setup.service';
+export { DiscountSetup } from './src/discount-setup.entity';
 export { PriceResolutionService } from './src/price-resolution.service';
 export type { ResolvedPrice } from './src/price-resolution.service';
 export type { TierProgressVM } from './src/tier-progress.service';

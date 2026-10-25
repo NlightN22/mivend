@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Order, ProductVariant, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { LookupMemo } from '../../lookup-memo';
-import { CounterpartyDiscountRuleService } from '../../counterparty-discount-rule.service';
+import { DiscountSetupRulesService } from '../../discount-setup-rules.service';
 import { PromoDiscountRuleService } from '../../promo-discount-rule.service';
 import { PriceResolutionService } from '../../price-resolution.service';
 
@@ -79,7 +79,7 @@ const service = new PriceResolutionService(
     { getForCustomer: async () => null } as never,
     { resolveEffective: async () => ({ defaultPriceTypeId: 1 }) } as never,
     new PromoDiscountRuleService(connection),
-    new CounterpartyDiscountRuleService(connection),
+    new DiscountSetupRulesService(connection),
 );
 
 // two lines of v1, a variant without a price for the customer's type, a product without externalId

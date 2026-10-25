@@ -58,11 +58,7 @@ export class DiscountRegistryResolver {
     @Mutation()
     @Allow(CustomPermission.ManageApprovalWorkflows.Permission)
     async backfillDiscountRegistry(@Ctx() ctx: RequestContext): Promise<number> {
-        // Excluded: rules with no priceTypeCode (counterparty/contract-scoped) or a nullable validTo.
-        // This registry is priceType-scoped only, matching findByPriceType.
-        const rules = (await this.connection.getRepository(ctx, DiscountRule).find()).filter(
-            rule => rule.recipientType === null,
-        );
+        const rules = await this.connection.getRepository(ctx, DiscountRule).find();
 
         // DiscountRule does not store justification or counterpartyIds; only the originating request payload does.
         // Fetch once and reuse it for the pending/rejected entries below.
@@ -98,7 +94,7 @@ export class DiscountRegistryResolver {
                     facetValueCode: rule.facetValueCode,
                     percent: rule.percent,
                     validFrom: rule.validFrom,
-                    validTo: rule.validTo as Date, // recipientType rows already filtered above
+                    validTo: rule.validTo as Date,
                     justification: payload?.justification ?? null,
                     counterpartyIds: payload?.counterpartyIds ?? null,
                 },

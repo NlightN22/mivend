@@ -14,6 +14,12 @@ import { NumberingPlugin } from '@mivend/plugin-numbering';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { DiscountRule } from './discount-rule.entity';
+import {
+    DiscountConditionKind,
+    DiscountSetup,
+    DiscountSetupProduct,
+    DiscountSetupRecipient,
+} from './discount-setup.entity';
 import { DiscountGrant } from './discount-grant.entity';
 import { DiscountRegistryEntry } from './discount-registry-entry.entity';
 import { GrantedDiscount } from './granted-discount.entity';
@@ -30,7 +36,9 @@ import { PriceEntryService } from './price-entry.service';
 import { FloorPriceService } from './floor-price.service';
 import { DiscountRuleService } from './discount-rule.service';
 import { PromoDiscountRuleService } from './promo-discount-rule.service';
-import { CounterpartyDiscountRuleService } from './counterparty-discount-rule.service';
+import { DiscountConditionKindBootstrapService } from './discount-condition-kind-bootstrap.service';
+import { DiscountSetupRulesService } from './discount-setup-rules.service';
+import { DiscountSetupService } from './discount-setup.service';
 import { PriceResolutionService } from './price-resolution.service';
 import { TierProgressService } from './tier-progress.service';
 import { OrderDiscountService } from './order-discount.service';
@@ -299,6 +307,10 @@ const adminApiSchema = gql`
     entities: [
         ProductVariantPriceEntry,
         DiscountRule,
+        DiscountSetup,
+        DiscountSetupRecipient,
+        DiscountSetupProduct,
+        DiscountConditionKind,
         DiscountGrant,
         DiscountRegistryEntry,
         GrantedDiscount,
@@ -322,7 +334,9 @@ const adminApiSchema = gql`
         FloorPriceService,
         DiscountRuleService,
         PromoDiscountRuleService,
-        CounterpartyDiscountRuleService,
+        DiscountSetupService,
+        DiscountSetupRulesService,
+        DiscountConditionKindBootstrapService,
         PriceResolutionService,
         TierProgressService,
         OrderDiscountService,
@@ -339,7 +353,7 @@ const adminApiSchema = gql`
         PriceEntryService,
         DiscountRuleService,
         PromoDiscountRuleService,
-        CounterpartyDiscountRuleService,
+        DiscountSetupService,
         GrantedDiscountService,
         PriceResolutionService,
     ],

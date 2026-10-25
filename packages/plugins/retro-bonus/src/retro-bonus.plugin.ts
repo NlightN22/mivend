@@ -11,6 +11,10 @@ import {
 import { GrantedRetroBonusService } from './granted-retro-bonus.service';
 import { RetroBonusRule } from './retro-bonus-rule.entity';
 import {
+    RetroBonusRuleCounterparty,
+    RetroBonusRuleProduct,
+} from './retro-bonus-rule-membership.entity';
+import {
     RetroBonusRuleAccrualKindResolver,
     RetroBonusRulePriceTypeResolver,
     RetroBonusRuleResolver,
@@ -20,11 +24,15 @@ import { RetroBonusRuleService } from './retro-bonus-rule.service';
 const adminApiSchema = gql`
     type RetroBonusRule {
         id: ID!
+        "The ERP setup document uuid."
         erpId: String!
-        productErpId: String!
-        counterpartyErpId: String!
+        documentNumber: String!
+        recipientCounterpartyErpId: String
         recipientContractErpId: String
         priceTypeErpId: String
+        organizationErpId: String
+        allCounterparties: Boolean!
+        allProducts: Boolean!
         isInstant: Boolean!
         accrualPeriod: String
         accrualDayNumber: Int!
@@ -32,7 +40,6 @@ const adminApiSchema = gql`
         "Translated display label for accrualKind's closed 4-value set — never the raw value."
         accrualKindLabel: String!
         percent: Float!
-        limitAmount: Float
         conditionAmount: Float
         conditionQuantity: Float
         validFrom: DateTime!
@@ -78,11 +85,16 @@ const adminApiSchema = gql`
     }
 `;
 
-// Issue #102: read-only retro-bonus terms log (ERP's RetroBonusRuleChanged) — manager-portal
+// Issue #102/#290: read-only retro-bonus terms (ERP's RetroBonusSetupChanged) — manager-portal
 // display only, never applied to order pricing. See RetroBonusRule's own doc comment.
 @VendurePlugin({
     imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
-    entities: [RetroBonusRule, GrantedRetroBonus],
+    entities: [
+        RetroBonusRule,
+        RetroBonusRuleCounterparty,
+        RetroBonusRuleProduct,
+        GrantedRetroBonus,
+    ],
     adminApiExtensions: {
         schema: adminApiSchema,
         resolvers: [

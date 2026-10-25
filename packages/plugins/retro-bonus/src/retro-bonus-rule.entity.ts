@@ -5,69 +5,94 @@ import { Column, Entity, Index } from 'typeorm';
 // Open ERP string (display text), stored raw and translated only at the GraphQL layer.
 export type RetroBonusAccrualKind = string;
 
-// Read-only, upsert-only feed: deactivation and conflict handling live in RetroBonusRuleService.
-// Known gap: unused 1C rules marked for deletion never rewrite the register; validTo may go stale.
+// How a dimension is given: an explicit id list, or a filter the ERP evaluates (list stays empty).
+export type RetroBonusSelectionMode = string;
+
+// One ERP setup document. Read-only: applied by RetroBonusRuleService, never to order pricing.
+// Member lists live in RetroBonusRuleCounterparty/RetroBonusRuleProduct, replaced as a unit.
 @Entity()
 @Index(['erpId'], { unique: true })
-@Index(['counterpartyErpId', 'recipientContractErpId'])
+@Index(['recipientCounterpartyErpId'])
 export class RetroBonusRule extends VendureEntity {
     constructor(input?: DeepPartial<RetroBonusRule>) {
         super(input);
     }
 
+    // The setup document uuid.
     @Column({ type: 'varchar' })
     erpId!: string;
 
-    @Column({ type: 'varchar' })
-    productErpId!: string;
+    @Column({ type: 'varchar', default: '' })
+    documentNumber!: string;
 
-    @Column({ type: 'varchar' })
-    counterpartyErpId!: string;
-
-    @Column({ type: 'varchar', nullable: true })
-    recipientContractErpId!: string | null;
-
-    @Column({ type: 'varchar', nullable: true })
-    priceTypeErpId!: string | null;
-
-    // Zero-coercion field (proto3 `optional bool` silently zero-valued) — absence read as false,
-    // never treated as "field not sent" — see RetroBonusRuleStreamHandler.
     @Column({ type: 'boolean', default: false })
     isInstant!: boolean;
 
-    // Raw passthrough — no fixed enum confirmed for this field (unlike accrualKind).
     @Column({ type: 'varchar', nullable: true })
     accrualPeriod!: string | null;
 
-    // Zero-coercion field, same reasoning as isInstant.
     @Column({ type: 'int', default: 0 })
     accrualDayNumber!: number;
 
-    @Column({ type: 'varchar' })
+    @Column({ type: 'varchar', default: '' })
     accrualKind!: RetroBonusAccrualKind;
 
     @Column({ type: 'double precision' })
     percent!: number;
 
-    // Pure display fields — never matched/applied to anything (issue #102).
-    @Column({ type: 'double precision', nullable: true })
-    limitAmount!: number | null;
-
+    // Display only, never matched against an order.
     @Column({ type: 'double precision', nullable: true })
     conditionAmount!: number | null;
 
     @Column({ type: 'double precision', nullable: true })
     conditionQuantity!: number | null;
 
+    @Column({ type: 'varchar', nullable: true })
+    priceTypeErpId!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    organizationErpId!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    recipientCounterpartyErpId!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    recipientContractErpId!: string | null;
+
     @Column({ type: 'timestamp' })
     validFrom!: Date;
 
-    // Real optional presence — null means no expiry.
     @Column({ type: 'timestamp', nullable: true })
     validTo!: Date | null;
 
-    // The ERP event's own `version` — used by RetroBonusRuleService's version guard against
-    // out-of-order Kafka redelivery.
+    // False after a tombstone or an unposted document; reactivated only by a strictly newer version.
+    @Column({ type: 'boolean', default: true })
+    active!: boolean;
+
+    // The flags win over the lists: a true flag means the list is ignored, never "empty list = all".
+    @Column({ type: 'boolean', default: false })
+    allCounterparties!: boolean;
+
+    @Column({ type: 'boolean', default: false })
+    allProducts!: boolean;
+
+    @Column({ type: 'varchar', default: 'list' })
+    counterpartyMode!: RetroBonusSelectionMode;
+
+    @Column({ type: 'varchar', default: 'list' })
+    productMode!: RetroBonusSelectionMode;
+
+    // The ERP's dynamic selection as sent; mivend does not evaluate it, so a filter-mode rule has no members here.
+    @Column({ type: 'jsonb', nullable: true })
+    counterpartyFilter!: unknown[] | null;
+
+    @Column({ type: 'jsonb', nullable: true })
+    productFilter!: unknown[] | null;
+
     @Column({ type: 'varchar' })
     sourceVersion!: string;
+
+    // Equal content under a newer version is not a change: lists are not rewritten.
+    @Column({ type: 'varchar', length: 64 })
+    contentHash!: string;
 }

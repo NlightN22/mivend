@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
-import { CounterpartyDiscountRuleService } from '../../counterparty-discount-rule.service';
+import { DiscountSetupRulesService } from '../../discount-setup-rules.service';
 import { ProductVariantPriceResolver } from '../../price-entry.resolver';
 import { PriceResolutionService } from '../../price-resolution.service';
 
@@ -13,13 +13,11 @@ describe('ProductVariant catalog price fields', () => {
             product: { facetValues: [], customFields: { externalId: 'p' } },
             customFields: { weight: 0 },
         }));
-        const qb: Record<string, unknown> = { getMany: ruleQueries };
-        qb.where = qb.andWhere = () => qb;
         const connection = {
             getRepository: (_ctx: unknown, entity: { name?: string }) =>
                 entity.name === 'ProductVariant'
                     ? { findOne: variantReads }
-                    : { createQueryBuilder: () => qb },
+                    : { query: ruleQueries },
         };
         const resolution = new PriceResolutionService(
             {
@@ -33,7 +31,7 @@ describe('ProductVariant catalog price fields', () => {
             { getForCustomer: async () => ({ id: 1, erpId: 'cnt-1', branchId: null }) } as never,
             { resolveEffective: async () => null } as never,
             { getBestPromoPercent: async () => null } as never,
-            new CounterpartyDiscountRuleService(connection as never),
+            new DiscountSetupRulesService(connection as never),
         );
         const resolver = new ProductVariantPriceResolver(
             resolution,

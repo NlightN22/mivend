@@ -8391,17 +8391,20 @@ export type RetroBonusRule = {
     /** Translated display label for accrualKind's closed 4-value set — never the raw value. */
     accrualKindLabel: Scalars['String']['output'];
     accrualPeriod: Maybe<Scalars['String']['output']>;
+    allCounterparties: Scalars['Boolean']['output'];
+    allProducts: Scalars['Boolean']['output'];
     conditionAmount: Maybe<Scalars['Float']['output']>;
     conditionQuantity: Maybe<Scalars['Float']['output']>;
-    counterpartyErpId: Scalars['String']['output'];
+    documentNumber: Scalars['String']['output'];
+    /** The ERP setup document uuid. */
     erpId: Scalars['String']['output'];
     id: Scalars['ID']['output'];
     isInstant: Scalars['Boolean']['output'];
-    limitAmount: Maybe<Scalars['Float']['output']>;
+    organizationErpId: Maybe<Scalars['String']['output']>;
     percent: Scalars['Float']['output'];
     priceTypeErpId: Maybe<Scalars['String']['output']>;
-    productErpId: Scalars['String']['output'];
     recipientContractErpId: Maybe<Scalars['String']['output']>;
+    recipientCounterpartyErpId: Maybe<Scalars['String']['output']>;
     validFrom: Scalars['DateTime']['output'];
     validTo: Maybe<Scalars['DateTime']['output']>;
 };

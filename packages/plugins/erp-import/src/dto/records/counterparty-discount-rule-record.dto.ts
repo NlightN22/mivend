@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Mirrors CounterpartyDiscountRuleRecord in ../../types.ts; keep the fields in sync with it.
-// Dev/test seeding of the rules production receives from the discount-rule stream.
+// Dev/test seeding of the discount setup documents production receives from the discount-setup stream.
 export class CounterpartyDiscountRuleRecordDto {
     @ApiProperty({ description: 'ERP identifier, used as the idempotency key.' })
     erpId!: string;
@@ -16,8 +16,11 @@ export class CounterpartyDiscountRuleRecordDto {
     })
     productErpId?: string | null;
 
-    @ApiProperty({ enum: ['byQuantity', 'byDocumentAmount'] })
-    condition!: 'byQuantity' | 'byDocumentAmount';
+    @ApiProperty({
+        description:
+            'ERP condition enum value name, e.g. a quantity or document-amount kind; empty = unconditional.',
+    })
+    condition!: string;
 
     @ApiProperty({ description: 'Threshold; 0 means applicable from the first unit.' })
     conditionValue!: number;

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { Injector, Order, OrderLine, ProductVariant, TransactionalConnection } from '@vendure/core';
 import {
     createTestConnection,
@@ -10,7 +10,8 @@ import {
     testSchemaOptions,
 } from 'shared';
 
-import { CounterpartyDiscountRuleService } from '../../counterparty-discount-rule.service';
+import { DiscountSetupRulesService } from '../../discount-setup-rules.service';
+import { DiscountSetupService } from '../../discount-setup.service';
 import {
     ORDER_DISCOUNT_CONDITION_CODE,
     orderDiscountAction,
@@ -18,21 +19,12 @@ import {
 } from '../../order-discount.promotion';
 import { OrderDiscountService } from '../../order-discount.service';
 import { PriceResolutionService } from '../../price-resolution.service';
-
-@Entity('discount_rule')
-class TestRule {
-    @PrimaryGeneratedColumn() id!: number;
-    @Column({ type: 'boolean', default: true }) active!: boolean;
-    @Column({ type: 'timestamp' }) validFrom!: Date;
-    @Column({ type: 'timestamp', nullable: true }) validTo!: Date | null;
-    @Column({ type: 'varchar', nullable: true }) recipientType!: string | null;
-    @Column({ type: 'varchar', nullable: true }) recipientErpId!: string | null;
-    @Column({ type: 'varchar', nullable: true }) productErpId!: string | null;
-    @Column({ type: 'varchar', nullable: true }) condition!: string | null;
-    @Column({ type: 'int', nullable: true }) conditionValue!: number | null;
-    @Column({ type: 'int' }) percent!: number;
-    @Column({ type: 'int', nullable: true }) limitAmount!: number | null;
-}
+import {
+    QUANTITY_KIND,
+    SETUP_ENTITIES,
+    mapSetupEntities,
+    resetSetupTables,
+} from './discount-setup-harness';
 
 const variant = {
     id: 1,
@@ -42,12 +34,13 @@ const variant = {
 };
 
 function mapEntity(base: TransactionalConnection): TransactionalConnection {
+    const mapped = mapSetupEntities(base);
     return {
-        getRepository: (ctx: never, entity: unknown) => {
-            if (entity === ProductVariant) return { findOne: async () => variant };
-            const isRule = (entity as { name?: string }).name === 'DiscountRule';
-            return base.getRepository(ctx, (isRule ? TestRule : entity) as never);
-        },
+        withTransaction: mapped.withTransaction.bind(mapped),
+        getRepository: (ctx: never, entity: unknown) =>
+            entity === ProductVariant
+                ? { findOne: async () => variant }
+                : mapped.getRepository(ctx, entity as never),
     } as unknown as TransactionalConnection;
 }
 
@@ -57,6 +50,8 @@ const day = 24 * 60 * 60 * 1000;
 const LIST = 1000;
 let dataSource: DataSource;
 let resolution: PriceResolutionService;
+let setups: DiscountSetupService;
+let seeded = 0;
 
 beforeAll(async () => {
     await createTestSchema(schema);
@@ -65,7 +60,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestRule],
+        entities: SETUP_ENTITIES,
         synchronize: true,
     });
     await dataSource.initialize();
@@ -83,8 +78,9 @@ beforeAll(async () => {
         { getForCustomer: async () => ({ id: 1, erpId: 'cnt-1', branchId: null }) } as never,
         { resolveEffective: async () => null } as never,
         { getBestPromoPercent: async () => null } as never,
-        new CounterpartyDiscountRuleService(connection),
+        new DiscountSetupRulesService(connection),
     );
+    setups = new DiscountSetupService(connection);
     vi.spyOn(resolution, 'preload').mockResolvedValue(undefined);
     await orderDiscountCondition.init({
         get: () => new OrderDiscountService(resolution),
@@ -97,18 +93,31 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    await dataSource.getRepository(TestRule).clear();
+    await resetSetupTables(dataSource);
 });
 
 async function seed(percent: number, conditionValue: number): Promise<void> {
-    await dataSource.getRepository(TestRule).save({
-        validFrom: new Date(Date.now() - day),
-        validTo: new Date(Date.now() + day),
-        recipientType: 'counterparty',
-        recipientErpId: 'cnt-1',
-        condition: 'byQuantity',
-        conditionValue,
-        percent,
+    seeded += 1;
+    await setups.apply(ctx, {
+        setup: {
+            erpId: `setup-${seeded}`,
+            documentNumber: '',
+            percent,
+            conditionName: QUANTITY_KIND,
+            conditionNumber: conditionValue,
+            priceTypeErpId: null,
+            limitPercent: null,
+            validFrom: new Date(Date.now() - day),
+            validTo: new Date(Date.now() + day),
+            active: true,
+            inactiveReason: null,
+            allProducts: true,
+            productMode: 'list',
+            productFilter: null,
+            sourceVersion: '1',
+        },
+        recipients: [{ counterpartyErpId: 'cnt-1', contractErpId: '' }],
+        productErpIds: [],
     });
 }
 

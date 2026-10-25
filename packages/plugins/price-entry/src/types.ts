@@ -14,7 +14,7 @@ declare module '@vendure/core' {
         manualPriceReason?: string | null;
     }
     interface CustomOrderFields {
-        // Declaration-merged: CounterpartyDiscountRuleService matches "contract" rules through it,
+        // Declaration-merged: DiscountSetupRulesService matches contract-scoped setups through it,
         // so there is no package dependency on @mivend/plugin-erp-order.
         erpContractId?: string | null;
     }
