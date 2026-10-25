@@ -70,7 +70,7 @@ test('parent change moves the category under the new parent', async () => {
     expect(await client.shopVisible('MOVE_CHILD')).toBe(await client.shopVisible('MOVE_TO'));
 });
 
-// The ERP never sends category tombstones yet (1C issue #22, ut103-torg): the spec sends one via Integration Service ingestion.
+// The ERP never sends category tombstones yet (ERP-side issue for category deletion tombstones): the spec sends one via Integration Service ingestion.
 test('tombstone hides the category and its children', async () => {
     await awaitInitialState(
         'TOMBSTONE and TOMBSTONE_CHILD visible, child under TOMBSTONE',

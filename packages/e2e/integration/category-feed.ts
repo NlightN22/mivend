@@ -128,14 +128,20 @@ export async function awaitInitialState(
 const INGESTION_DELETE_PATH = '/api/ingestion/v1/entities/delete';
 const TOMBSTONE_ATTEMPTS = 5;
 
-// Same base URL and source id the server's replay client uses; 1C sends categories under that source.
+function requiredEnv(key: string): string {
+    const value = envValue(key);
+    if (!value) throw new Error(`${key} is missing in the staging env file`);
+    return value;
+}
+
+// Base URL and source id come only from the staging env file; the ERP sends categories under that source.
 export async function sendCategoryTombstone(key: FeedKey): Promise<void> {
-    const baseUrl = envValue('INTEGRATION_SERVICE_BASE_URL') ?? 'https://is.komponent-m.ru';
-    const apiKey = envValue('INTEGRATION_SERVICE_API_KEY');
-    if (!apiKey) throw new Error('INTEGRATION_SERVICE_API_KEY is missing in the staging env file');
+    const baseUrl = requiredEnv('INTEGRATION_SERVICE_BASE_URL');
+    const apiKey = requiredEnv('INTEGRATION_SERVICE_API_KEY');
+    const sourceSystem = requiredEnv('INTEGRATION_RESYNC_SOURCE_SYSTEM');
     const now = new Date().toISOString();
     const body = JSON.stringify({
-        sourceSystem: envValue('INTEGRATION_RESYNC_SOURCE_SYSTEM') ?? 'onec-main',
+        sourceSystem,
         entityType: 'category',
         entityId: feedId(key),
         version: now,
