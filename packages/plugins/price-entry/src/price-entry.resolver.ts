@@ -85,7 +85,11 @@ export class ProductVariantPriceResolver {
         @Ctx() ctx: RequestContext,
         @Parent() variant: { id: string },
     ): Promise<number | null> {
-        return (await this.priceResolutionService.resolve(ctx, variant.id)).customerPrice;
+        return (
+            await this.priceResolutionService.resolve(ctx, variant.id, undefined, {
+                memo: this.memoFor(ctx),
+            })
+        ).customerPrice;
     }
 
     @ResolveField()
@@ -93,7 +97,11 @@ export class ProductVariantPriceResolver {
         @Ctx() ctx: RequestContext,
         @Parent() variant: { id: string },
     ): Promise<number | null> {
-        return (await this.priceResolutionService.resolve(ctx, variant.id)).compareAtPrice;
+        return (
+            await this.priceResolutionService.resolve(ctx, variant.id, undefined, {
+                memo: this.memoFor(ctx),
+            })
+        ).compareAtPrice;
     }
 
     @ResolveField()

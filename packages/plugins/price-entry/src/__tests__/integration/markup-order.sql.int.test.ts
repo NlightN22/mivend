@@ -194,3 +194,50 @@ describe('markup discount rule through an order (real Postgres)', () => {
         expect((await resolution.resolve(ctx, '1')).customerPrice).toBe(1050);
     });
 });
+
+describe('markup over several lines (real Postgres)', () => {
+    async function priceLines(quantities: number[]): Promise<number[]> {
+        const lines = quantities.map(
+            (quantity, i) =>
+                new OrderLine({
+                    id: 20 + i,
+                    productVariantId: 1 + i,
+                    quantity,
+                    listPrice: LIST,
+                    listPriceIncludesTax: true,
+                    orderPlacedQuantity: 0,
+                    adjustments: [],
+                    taxLines: [{ taxRate: 20, description: 'VAT' }],
+                }),
+        );
+        const order = { id: 1, customerId: 1, customFields: {}, lines } as unknown as Order;
+        const state = await orderDiscountCondition.check(ctx, order, [], {} as never);
+        for (const line of lines) {
+            const perUnit = state
+                ? (orderDiscountAction.execute(
+                      ctx,
+                      line,
+                      [],
+                      { [ORDER_DISCOUNT_CONDITION_CODE]: state } as never,
+                      {} as never,
+                  ) as number)
+                : 0;
+            line.addAdjustment({
+                amount: Math.round(perUnit * line.quantity),
+                type: 'PROMOTION' as never,
+                adjustmentSource: 'p',
+                description: 'd',
+                data: {},
+            });
+        }
+        return lines.map(l => l.proratedLinePriceWithTax);
+    }
+
+    it('marks up every line once the order quantity threshold is reached, and the lines sum to the total', async () => {
+        await seed(-5, 5);
+        const totals = await priceLines([2, 3]);
+        expect(totals).toEqual([2100, 3150]);
+        expect(totals.reduce((a, b) => a + b, 0)).toBe(5250);
+        expect(await priceLines([2, 2])).toEqual([2000, 2000]);
+    });
+});
