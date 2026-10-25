@@ -1,20 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
-import { RetroBonusAccrualKind, RetroBonusRuleService } from '@mivend/plugin-retro-bonus';
-import { inboundApplied, inboundNoop } from './inbound-stream-handler';
+import { RetroBonusRuleService } from '@mivend/plugin-retro-bonus';
+import { NonRetryableInboundError } from '../non-retryable-inbound-error';
+import { inboundApplied } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
+import { optionalNumber, optionalString, parseTimestamp, zeroNumber } from './proto-json-fields';
 
 const loggerCtx = 'IntegrationRetroBonusRuleHandler';
 
-// Confirmed live by search-platform#126: closed TS union, exactly these 4 raw Cyrillic values —
-// see RetroBonusRule.accrualKind's own doc comment for why they're stored raw, not translated.
-const VALID_ACCRUAL_KINDS: readonly RetroBonusAccrualKind[] = [
-    'ПоЗакупкам',
-    'ПоПоступлениюДС',
-    'ПоПоступлениюДССБК',
-    'ПоПродажам',
-];
-
+// accrualKind is an open ERP string stored as reference data, never a closed enum.
 // Applies `retro-bonus-rule` into RetroBonusRule — pure upsert, no tombstone branch (unlike
 // every other handler in this plugin): this stream never sends one, see issue #102.
 @Injectable()
@@ -26,48 +20,37 @@ export class RetroBonusRuleStreamHandler implements InboundStreamHandler {
         entityId: string,
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
-        const accrualKind = String(payload.accrualKind ?? '') as RetroBonusAccrualKind;
-        if (!VALID_ACCRUAL_KINDS.includes(accrualKind)) {
-            return inboundNoop(
-                `retro-bonus-rule ${entityId}: unrecognized accrualKind "${String(payload.accrualKind)}", skipping`,
-            );
-        }
-
+        const accrualKind = String(payload.accrualKind ?? '');
         const version = String(payload.version ?? '');
         const productErpId = String(payload.productId ?? '');
         const counterpartyErpId = String(payload.counterpartyId ?? '');
-        const percent = Number(payload.percent ?? NaN);
+        const percent = zeroNumber(payload.percent);
+        const accrualDayNumber = zeroNumber(payload.accrualDayNumber);
         const effectiveFrom = parseTimestamp(payload.effectiveFrom);
-        // Real optional presence — absence means no expiry; present-but-unparseable is malformed.
-        const effectiveToPresent = payload.effectiveTo != null;
-        const effectiveTo = effectiveToPresent ? parseTimestamp(payload.effectiveTo) : null;
-        if (
-            !entityId ||
-            !version ||
-            !productErpId ||
-            !counterpartyErpId ||
-            !Number.isFinite(percent) ||
-            !effectiveFrom ||
-            (effectiveToPresent && !effectiveTo)
-        ) {
-            return inboundNoop(
-                `retro-bonus-rule ${entityId}: missing/invalid entityId/version/productId/` +
-                    `counterpartyId/percent/effectiveFrom/effectiveTo, skipping`,
+        const effectiveTo = optionalString(payload.effectiveTo)
+            ? parseTimestamp(payload.effectiveTo)
+            : null;
+        const invalid =
+            (!entityId && 'entityId') ||
+            (!version && 'version') ||
+            (!counterpartyErpId && 'counterpartyId') ||
+            (!Number.isFinite(percent) && 'percent') ||
+            (!Number.isFinite(accrualDayNumber) && 'accrualDayNumber') ||
+            (!effectiveFrom && 'effectiveFrom') ||
+            (optionalString(payload.effectiveTo) && !effectiveTo && 'effectiveTo');
+        if (invalid || !effectiveFrom) {
+            throw new NonRetryableInboundError(
+                `retro-bonus-rule ${entityId}: invalid or missing ${String(invalid)}`,
             );
         }
 
-        const recipientContractErpId =
-            payload.recipientContractId != null ? String(payload.recipientContractId) : null;
-        const priceTypeErpId = payload.priceTypeId != null ? String(payload.priceTypeId) : null;
-        // Zero-coercion fields — absence reads as false/0, never "was this field actually sent".
+        const recipientContractErpId = optionalString(payload.recipientContractId);
+        const priceTypeErpId = optionalString(payload.priceTypeId);
         const isInstant = payload.isInstant === true;
-        const accrualDayNumber = Number(payload.accrualDayNumber ?? 0);
-        const accrualPeriod = payload.accrualPeriod != null ? String(payload.accrualPeriod) : null;
-        const limitAmount = payload.limitAmount != null ? Number(payload.limitAmount) : null;
-        const conditionAmount =
-            payload.conditionAmount != null ? Number(payload.conditionAmount) : null;
-        const conditionQuantity =
-            payload.conditionQuantity != null ? Number(payload.conditionQuantity) : null;
+        const accrualPeriod = optionalString(payload.accrualPeriod);
+        const limitAmount = optionalNumber(payload.limitAmount);
+        const conditionAmount = optionalNumber(payload.conditionAmount);
+        const conditionQuantity = optionalNumber(payload.conditionQuantity);
 
         await this.retroBonusRuleService.upsertRetroBonusRule(ctx, {
             erpId: entityId,
@@ -94,12 +77,4 @@ export class RetroBonusRuleStreamHandler implements InboundStreamHandler {
         );
         return inboundApplied();
     }
-}
-
-// google.protobuf.Timestamp fields are encoded by @bufbuild/protobuf's toJson as an RFC3339
-// string — see discount-rule.handler.ts's own identical helper/comment.
-function parseTimestamp(value: unknown): Date | null {
-    if (typeof value !== 'string' || !value) return null;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
 }

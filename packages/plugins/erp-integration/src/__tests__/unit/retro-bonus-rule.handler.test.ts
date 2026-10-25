@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
+import { NonRetryableInboundError } from '../../non-retryable-inbound-error';
 import { RetroBonusRuleStreamHandler } from '../../handlers/retro-bonus-rule.handler';
 
 const ctx = {} as RequestContext;
@@ -59,21 +60,14 @@ describe('RetroBonusRuleStreamHandler', () => {
         });
     });
 
-    it('skips an unrecognized accrualKind rather than storing a raw/opaque value', async () => {
-        const { handler, retroBonusRuleService } = createHandler();
-
-        await handler.apply(ctx, 'rbr-1', basePayload({ accrualKind: 'ПоВозврату' }));
-
-        expect(retroBonusRuleService.upsertRetroBonusRule).not.toHaveBeenCalled();
-    });
-
-    it.each(['ПоЗакупкам', 'ПоПоступлениюДС', 'ПоПоступлениюДССБК', 'ПоПродажам'])(
-        'accepts the closed accrualKind value %s',
+    it.each(['ПоПродажам', 'По продажам', 'SomethingNew'])(
+        'accepts any accrualKind string as reference data: %s',
         async accrualKind => {
             const { handler, retroBonusRuleService } = createHandler();
 
-            await handler.apply(ctx, 'rbr-1', basePayload({ accrualKind }));
+            const outcome = await handler.apply(ctx, 'rbr-1', basePayload({ accrualKind }));
 
+            expect(outcome.kind).toBe('applied');
             expect(retroBonusRuleService.upsertRetroBonusRule).toHaveBeenCalledWith(
                 ctx,
                 expect.objectContaining({ accrualKind }),
@@ -81,23 +75,42 @@ describe('RetroBonusRuleStreamHandler', () => {
         },
     );
 
-    it.each(['version', 'productId', 'counterpartyId', 'percent', 'effectiveFrom'])(
-        'skips when required field %s is missing',
+    it.each(['version', 'counterpartyId', 'effectiveFrom'])(
+        'fails visibly when required field %s is missing',
         async field => {
             const { handler, retroBonusRuleService } = createHandler();
             const payload = basePayload();
             delete payload[field];
 
-            await handler.apply(ctx, 'rbr-1', payload);
-
+            await expect(handler.apply(ctx, 'rbr-1', payload)).rejects.toBeInstanceOf(
+                NonRetryableInboundError,
+            );
             expect(retroBonusRuleService.upsertRetroBonusRule).not.toHaveBeenCalled();
         },
     );
 
+    it('treats absent percent, accrualKind and productId as zero/empty', async () => {
+        const { handler, retroBonusRuleService } = createHandler();
+        const payload = basePayload();
+        delete payload.percent;
+        delete payload.accrualKind;
+        delete payload.productId;
+
+        const outcome = await handler.apply(ctx, 'rbr-1', payload);
+
+        expect(outcome.kind).toBe('applied');
+        expect(retroBonusRuleService.upsertRetroBonusRule).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ percent: 0, accrualKind: '', productErpId: '' }),
+        );
+    });
+
     it('skips when entityId is empty', async () => {
         const { handler, retroBonusRuleService } = createHandler();
 
-        await handler.apply(ctx, '', basePayload());
+        await expect(handler.apply(ctx, '', basePayload())).rejects.toBeInstanceOf(
+            NonRetryableInboundError,
+        );
 
         expect(retroBonusRuleService.upsertRetroBonusRule).not.toHaveBeenCalled();
     });
@@ -105,7 +118,9 @@ describe('RetroBonusRuleStreamHandler', () => {
     it('skips when percent is not a finite number', async () => {
         const { handler, retroBonusRuleService } = createHandler();
 
-        await handler.apply(ctx, 'rbr-1', basePayload({ percent: 'not-a-number' }));
+        await expect(
+            handler.apply(ctx, 'rbr-1', basePayload({ percent: 'not-a-number' })),
+        ).rejects.toBeInstanceOf(NonRetryableInboundError);
 
         expect(retroBonusRuleService.upsertRetroBonusRule).not.toHaveBeenCalled();
     });
@@ -152,7 +167,9 @@ describe('RetroBonusRuleStreamHandler', () => {
     it('skips when effectiveTo is present but unparseable (malformed, not "no expiry")', async () => {
         const { handler, retroBonusRuleService } = createHandler();
 
-        await handler.apply(ctx, 'rbr-1', basePayload({ effectiveTo: 'not-a-date' }));
+        await expect(
+            handler.apply(ctx, 'rbr-1', basePayload({ effectiveTo: 'not-a-date' })),
+        ).rejects.toBeInstanceOf(NonRetryableInboundError);
 
         expect(retroBonusRuleService.upsertRetroBonusRule).not.toHaveBeenCalled();
     });

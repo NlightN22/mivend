@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RequestContext } from '@vendure/core';
 
+import { NonRetryableInboundError } from '../../non-retryable-inbound-error';
 import { DiscountRuleStreamHandler } from '../../handlers/discount-rule.handler';
 
 const ctx = {} as RequestContext;
@@ -90,7 +91,9 @@ describe('DiscountRuleStreamHandler', () => {
         const counterpartyDiscountRuleService = { upsertCounterpartyRule: vi.fn() };
         const handler = new DiscountRuleStreamHandler(counterpartyDiscountRuleService as never);
 
-        await handler.apply(ctx, 'dr-1', basePayload({ recipientType: 'branch' }));
+        await expect(
+            handler.apply(ctx, 'dr-1', basePayload({ recipientType: 'branch' })),
+        ).rejects.toBeInstanceOf(NonRetryableInboundError);
 
         expect(counterpartyDiscountRuleService.upsertCounterpartyRule).not.toHaveBeenCalled();
     });
@@ -99,16 +102,20 @@ describe('DiscountRuleStreamHandler', () => {
         const counterpartyDiscountRuleService = { upsertCounterpartyRule: vi.fn() };
         const handler = new DiscountRuleStreamHandler(counterpartyDiscountRuleService as never);
 
-        await handler.apply(ctx, 'dr-1', basePayload({ condition: 'byWeight' }));
+        await expect(
+            handler.apply(ctx, 'dr-1', basePayload({ condition: 'byWeight' })),
+        ).rejects.toBeInstanceOf(NonRetryableInboundError);
 
         expect(counterpartyDiscountRuleService.upsertCounterpartyRule).not.toHaveBeenCalled();
     });
 
-    it('skips when recipientId/version/conditionValue/percent/effectiveFrom is missing', async () => {
+    it('fails visibly when recipientId is missing', async () => {
         const counterpartyDiscountRuleService = { upsertCounterpartyRule: vi.fn() };
         const handler = new DiscountRuleStreamHandler(counterpartyDiscountRuleService as never);
 
-        await handler.apply(ctx, 'dr-1', basePayload({ recipientId: '' }));
+        await expect(
+            handler.apply(ctx, 'dr-1', basePayload({ recipientId: '' })),
+        ).rejects.toBeInstanceOf(NonRetryableInboundError);
 
         expect(counterpartyDiscountRuleService.upsertCounterpartyRule).not.toHaveBeenCalled();
     });
@@ -135,7 +142,9 @@ describe('DiscountRuleStreamHandler', () => {
         const counterpartyDiscountRuleService = { upsertCounterpartyRule: vi.fn() };
         const handler = new DiscountRuleStreamHandler(counterpartyDiscountRuleService as never);
 
-        await handler.apply(ctx, 'dr-1', basePayload({ effectiveTo: 'not-a-date' }));
+        await expect(
+            handler.apply(ctx, 'dr-1', basePayload({ effectiveTo: 'not-a-date' })),
+        ).rejects.toBeInstanceOf(NonRetryableInboundError);
 
         expect(counterpartyDiscountRuleService.upsertCounterpartyRule).not.toHaveBeenCalled();
     });
@@ -228,5 +237,50 @@ describe('DiscountRuleStreamHandler', () => {
             ctx,
             expect.objectContaining({ condition: 'byDocumentAmount' }),
         );
+    });
+
+    it('treats an absent conditionValue as zero (proto3 zero scalar omitted)', async () => {
+        const service = { upsertCounterpartyRule: vi.fn().mockResolvedValue({}) };
+        const handler = new DiscountRuleStreamHandler(service as never);
+        const { conditionValue, ...payload } = basePayload();
+        void conditionValue;
+
+        const outcome = await handler.apply(ctx, 'dr-1', payload);
+
+        expect(outcome.kind).toBe('applied');
+        expect(service.upsertCounterpartyRule).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ conditionValue: 0 }),
+        );
+    });
+
+    it('treats an empty productId and empty effectiveTo as whole assortment and open-ended', async () => {
+        const service = { upsertCounterpartyRule: vi.fn().mockResolvedValue({}) };
+        const handler = new DiscountRuleStreamHandler(service as never);
+
+        await handler.apply(ctx, 'dr-1', basePayload({ productId: '', effectiveTo: '' }));
+
+        expect(service.upsertCounterpartyRule).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ productErpId: null, validTo: null }),
+        );
+    });
+
+    it('accepts a real production-shaped payload without conditionValue and limitAmount', async () => {
+        const service = { upsertCounterpartyRule: vi.fn().mockResolvedValue({}) };
+        const handler = new DiscountRuleStreamHandler(service as never);
+
+        const outcome = await handler.apply(ctx, 'p|r|byQuantity|0', {
+            percent: 5,
+            version: '7',
+            isActive: true,
+            condition: 'byQuantity',
+            productId: 'p',
+            recipientId: 'r',
+            recipientType: 'counterparty',
+            effectiveFrom: '2026-01-01T00:00:00Z',
+        });
+
+        expect(outcome.kind).toBe('applied');
     });
 });

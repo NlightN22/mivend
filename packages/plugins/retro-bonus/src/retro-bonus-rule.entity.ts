@@ -2,13 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Issue #102: closed 4-value 1C enum (ВидыНачисленийРетроБонусов, search-platform#126) — stored
-// raw, translated only at the GraphQL layer (accrualKindLabel in retro-bonus-rule.resolver.ts).
-export type RetroBonusAccrualKind =
-    | 'ПоЗакупкам'
-    | 'ПоПоступлениюДС'
-    | 'ПоПоступлениюДССБК'
-    | 'ПоПродажам';
+// Open ERP string (display text), stored raw and translated only at the GraphQL layer.
+export type RetroBonusAccrualKind = string;
 
 // Read-only, upsert-only feed: deactivation and conflict handling live in RetroBonusRuleService.
 // Known gap: unused 1C rules marked for deletion never rewrite the register; validTo may go stale.

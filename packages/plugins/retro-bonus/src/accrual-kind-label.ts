@@ -1,4 +1,4 @@
-// Closed 4-value set (search-platform#126) — display-only, never stored.
+// Display-only hints for known values; any other ERP string is shown as is.
 const ACCRUAL_KIND_LABEL: Record<string, string> = {
     ПоЗакупкам: 'By purchases',
     ПоПоступлениюДС: 'By cash receipt',

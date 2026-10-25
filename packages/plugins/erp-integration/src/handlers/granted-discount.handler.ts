@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { GrantedDiscountService } from '@mivend/plugin-price-entry';
+import { NonRetryableInboundError } from '../non-retryable-inbound-error';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
@@ -49,9 +50,8 @@ export class GrantedDiscountStreamHandler implements InboundStreamHandler {
             !version ||
             !Number.isFinite(discountAmount)
         ) {
-            return inboundNoop(
-                `granted-discount ${entityId}: missing/invalid sourceDocumentId/` +
-                    `sourceCounterpartyId/productId/version/discountAmount, skipping`,
+            throw new NonRetryableInboundError(
+                `granted-discount ${entityId}: missing/invalid sourceDocumentId/sourceCounterpartyId/productId/version/discountAmount`,
             );
         }
 

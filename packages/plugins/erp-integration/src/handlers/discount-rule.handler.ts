@@ -5,8 +5,10 @@ import {
     DiscountRuleCondition,
     DiscountRuleRecipientType,
 } from '@mivend/plugin-price-entry';
+import { NonRetryableInboundError } from '../non-retryable-inbound-error';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
+import { optionalNumber, optionalString, parseTimestamp, zeroNumber } from './proto-json-fields';
 
 const loggerCtx = 'IntegrationDiscountRuleHandler';
 
@@ -49,44 +51,32 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
         }
 
         const recipientType = String(payload.recipientType ?? '') as DiscountRuleRecipientType;
-        if (!VALID_RECIPIENT_TYPES.includes(recipientType)) {
-            return inboundNoop(
-                `discount-rule ${entityId}: unrecognized recipientType "${String(payload.recipientType)}", skipping`,
-            );
-        }
-
         const condition = String(payload.condition ?? '') as DiscountRuleCondition;
-        if (!VALID_CONDITIONS.includes(condition)) {
-            return inboundNoop(
-                `discount-rule ${entityId}: unrecognized condition "${String(payload.condition)}", skipping`,
-            );
-        }
-
         const recipientErpId = String(payload.recipientId ?? '');
-        const conditionValue = Number(payload.conditionValue ?? NaN);
-        const percent = Number(payload.percent ?? NaN);
+        const conditionValue = zeroNumber(payload.conditionValue);
+        const percent = zeroNumber(payload.percent);
         const version = String(payload.version ?? '');
         const effectiveFrom = parseTimestamp(payload.effectiveFrom);
-        // Real optional presence — absence means no expiry (docs/ai/erp-streams-map.md), a
-        // present-but-unparseable value is still malformed and skipped below.
-        const effectiveToPresent = payload.effectiveTo != null;
-        const effectiveTo = effectiveToPresent ? parseTimestamp(payload.effectiveTo) : null;
-        if (
-            !recipientErpId ||
-            !version ||
-            !Number.isFinite(conditionValue) ||
-            !Number.isFinite(percent) ||
-            !effectiveFrom ||
-            (effectiveToPresent && !effectiveTo)
-        ) {
-            return inboundNoop(
-                `discount-rule ${entityId}: missing/invalid recipientId/version/conditionValue/` +
-                    `percent/effectiveFrom/effectiveTo, skipping`,
+        const effectiveTo = optionalString(payload.effectiveTo)
+            ? parseTimestamp(payload.effectiveTo)
+            : null;
+        const invalid =
+            (!VALID_RECIPIENT_TYPES.includes(recipientType) && 'recipientType') ||
+            (!VALID_CONDITIONS.includes(condition) && 'condition') ||
+            (!recipientErpId && 'recipientId') ||
+            (!version && 'version') ||
+            (!Number.isFinite(conditionValue) && 'conditionValue') ||
+            (!Number.isFinite(percent) && 'percent') ||
+            (!effectiveFrom && 'effectiveFrom') ||
+            (optionalString(payload.effectiveTo) && !effectiveTo && 'effectiveTo');
+        if (invalid || !effectiveFrom) {
+            throw new NonRetryableInboundError(
+                `discount-rule ${entityId}: invalid or missing ${String(invalid)}`,
             );
         }
 
-        const productErpId = payload.productId != null ? String(payload.productId) : null;
-        const limitAmount = payload.limitAmount != null ? Number(payload.limitAmount) : null;
+        const productErpId = optionalString(payload.productId);
+        const limitAmount = optionalNumber(payload.limitAmount);
 
         await this.counterpartyDiscountRuleService.upsertCounterpartyRule(ctx, {
             erpId: entityId,
@@ -108,12 +98,4 @@ export class DiscountRuleStreamHandler implements InboundStreamHandler {
         );
         return inboundApplied();
     }
-}
-
-// google.protobuf.Timestamp fields are encoded by @bufbuild/protobuf's toJson as an RFC3339
-// string — see promo-rule.handler.ts's own identical helper/comment.
-function parseTimestamp(value: unknown): Date | null {
-    if (typeof value !== 'string' || !value) return null;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
 }

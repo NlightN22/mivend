@@ -77,9 +77,9 @@ describe('GrantedRetroBonusStreamHandler', () => {
         ['recipientCounterpartyId', { recipientCounterpartyId: '' }],
         ['productId', { productId: undefined }],
         ['amount', { amount: 'abc' }],
-    ])('skips when %s is missing/invalid', async (_n, overrides) => {
+    ])('fails visibly when %s is missing/invalid', async (_n, overrides) => {
         const { handler, service } = createHandler();
-        await handler.apply(ctx, 'grb-1', basePayload(overrides));
+        await expect(handler.apply(ctx, 'grb-1', basePayload(overrides))).rejects.toThrow();
         expect(service.upsert).not.toHaveBeenCalled();
     });
 

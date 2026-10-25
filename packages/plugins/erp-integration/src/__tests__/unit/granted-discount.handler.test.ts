@@ -63,14 +63,16 @@ describe('GrantedDiscountStreamHandler', () => {
     });
 
     it.each(['sourceDocumentId', 'sourceCounterpartyId', 'productId', 'version'])(
-        'skips a malformed payload missing %s',
+        'fails visibly on a malformed payload missing %s',
         async field => {
             const service = { upsert: vi.fn() };
-            await new GrantedDiscountStreamHandler(service as never).apply(
-                ctx,
-                'gd-1',
-                basePayload({ [field]: undefined }),
-            );
+            await expect(
+                new GrantedDiscountStreamHandler(service as never).apply(
+                    ctx,
+                    'gd-1',
+                    basePayload({ [field]: undefined }),
+                ),
+            ).rejects.toThrow();
             expect(service.upsert).not.toHaveBeenCalled();
         },
     );

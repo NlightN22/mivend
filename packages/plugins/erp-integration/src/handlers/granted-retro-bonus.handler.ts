@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { GrantedRetroBonusService } from '@mivend/plugin-retro-bonus';
+import { NonRetryableInboundError } from '../non-retryable-inbound-error';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
@@ -55,8 +56,8 @@ export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
             !Number.isFinite(quantity) ||
             !Number.isFinite(amount)
         ) {
-            return inboundNoop(
-                `granted-retro-bonus ${entityId}: missing/invalid required field, skipping`,
+            throw new NonRetryableInboundError(
+                `granted-retro-bonus ${entityId}: missing/invalid required field`,
             );
         }
 
