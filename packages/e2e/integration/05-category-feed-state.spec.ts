@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { feedClient, pollUntil, type FeedClient } from './category-feed';
 
-test.describe.configure({ mode: 'serial', timeout: 15 * 60_000 });
+test.describe.configure({ timeout: 15 * 60_000 });
 
 let client: FeedClient;
 test.beforeAll(async () => {
@@ -12,14 +12,15 @@ test.beforeAll(async () => {
 test.describe('ERP deletion-marked parent', () => {
     test('children are hidden together with the deleted parent in admin and shop API', async () => {
         const parent = await client.admin('DELETED_PARENT');
-        expect(parent?.customFields?.feedHidden).toBe(true);
+        expect(await client.ownFeedHidden('DELETED_PARENT')).toBe(true);
         expect(parent?.isPrivate).toBe(true);
         await pollUntil(
             'child hidden',
             async () => (await client.admin('DELETED_PARENT_CHILD'))?.isPrivate === true,
         );
         const child = await client.admin('DELETED_PARENT_CHILD');
-        expect(child?.customFields?.feedHidden).toBe(false);
+        expect(child?.parent?.isPrivate).toBe(true);
+        expect(await client.ownFeedHidden('DELETED_PARENT_CHILD')).toBe(false);
         expect(await client.shopVisible('DELETED_PARENT')).toBe(false);
         expect(await client.shopVisible('DELETED_PARENT_CHILD')).toBe(false);
     });
@@ -47,7 +48,7 @@ test.describe('ERP deletion-marked parent', () => {
 test.describe('inactive flag (deletion mark on the feed)', () => {
     test('an inactive category is feed-hidden and its live child follows it', async () => {
         const row = await client.admin('INACTIVE');
-        expect(row?.customFields?.feedHidden).toBe(true);
+        expect(await client.ownFeedHidden('INACTIVE')).toBe(true);
         expect(row?.isPrivate).toBe(true);
         await pollUntil(
             'inactive child hidden',

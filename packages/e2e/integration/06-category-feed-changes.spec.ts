@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { awaitOwner, feedClient, feedId, pollUntil, type FeedClient } from './category-feed';
+import {
+    awaitOwner,
+    feedClient,
+    feedId,
+    pollUntil,
+    sendCategoryTombstone,
+    type FeedClient,
+} from './category-feed';
 
 // Each test asserts the precondition, then waits (bounded, printed) for one owner transition; the owner acts one step at a time on request.
 test.describe.configure({ mode: 'serial', timeout: 15 * 60_000 });
@@ -17,18 +24,14 @@ test('revived parent unhides its children except the feed-hidden one', async () 
     );
     await pollUntil('child unhidden', () => client.shopVisible('REVIVE_CHILD'));
     expect(await client.shopVisible('REVIVE_FEED_HIDDEN_CHILD')).toBe(false);
-    expect((await client.admin('REVIVE_FEED_HIDDEN_CHILD'))?.customFields?.feedHidden).toBe(true);
+    expect(await client.ownFeedHidden('REVIVE_FEED_HIDDEN_CHILD')).toBe(true);
 });
 
 test('parent arriving after its child: placeholder first, then filled in', async () => {
-    const placeholder = await client.admin('LATE_PARENT');
-    expect(placeholder?.customFields?.feedHidden).toBe(true);
+    expect(await client.ownFeedHidden('LATE_PARENT')).toBe(true);
     expect((await client.admin('LATE_CHILD'))?.parent?.slug).toContain('cat-');
     expect(await client.shopVisible('LATE_CHILD')).toBe(false);
-    await awaitOwner(
-        'register LATE_PARENT for sending',
-        async () => (await client.admin('LATE_PARENT'))?.customFields?.feedHidden === false,
-    );
+    await awaitOwner('register LATE_PARENT for sending', () => client.shopVisible('LATE_PARENT'));
     await pollUntil('child visible', () => client.shopVisible('LATE_CHILD'));
     expect(await client.shopVisible('LATE_PARENT')).toBe(true);
 });
@@ -44,12 +47,17 @@ test('parent change moves the category under the new parent', async () => {
     expect(await client.shopVisible('MOVE_CHILD')).toBe(await client.shopVisible('MOVE_TO'));
 });
 
-// Blocked: the ERP never sends category tombstones; only a direct Integration Service entities/delete call can,
-// and its request body and key scope are undocumented (see docs/e2e-testing.md).
-test.fixme('tombstone hides the category and its children', async () => {
+// The ERP never sends category tombstones yet (1C issue #22, ut103-torg): the spec sends one via Integration Service ingestion.
+test('tombstone hides the category and its children', async () => {
     expect(await client.shopVisible('TOMBSTONE')).toBe(true);
     expect(await client.shopVisible('TOMBSTONE_CHILD')).toBe(true);
+    const before = await client.admin('TOMBSTONE');
+    const childParent = (await client.admin('TOMBSTONE_CHILD'))?.parent?.slug;
+    expect(childParent).toBe(`cat-${feedId('TOMBSTONE')}`);
+    await sendCategoryTombstone('TOMBSTONE');
     await pollUntil('tombstone hidden', async () => !(await client.shopVisible('TOMBSTONE')));
     await pollUntil('child hidden', async () => !(await client.shopVisible('TOMBSTONE_CHILD')));
-    expect((await client.admin('TOMBSTONE'))?.customFields?.feedHidden).toBe(true);
+    const after = await client.admin('TOMBSTONE');
+    expect(await client.ownFeedHidden('TOMBSTONE')).toBe(true);
+    expect(after?.parent?.slug).toBe(before?.parent?.slug);
 });

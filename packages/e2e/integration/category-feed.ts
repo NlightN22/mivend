@@ -33,16 +33,17 @@ export function feedId(key: FeedKey): string {
 export interface AdminCategory {
     id: string;
     isPrivate: boolean;
-    parent: { slug: string } | null;
-    customFields: { visibilityOverride: string | null; feedHidden: boolean } | null;
+    parent: { slug: string; isPrivate: boolean } | null;
+    customFields: { visibilityOverride: string | null } | null;
 }
 
 const slugOf = (erpId: string): string => `cat-${erpId}`;
-const ADMIN_Q = `query($s: String) { collection(slug: $s) { id isPrivate parent { slug } customFields { visibilityOverride feedHidden } } }`;
+const ADMIN_Q = `query($s: String) { collection(slug: $s) { id isPrivate parent { slug isPrivate } customFields { visibilityOverride } } }`;
 
 export interface FeedClient {
     admin(key: FeedKey): Promise<AdminCategory | null>;
     shopVisible(key: FeedKey): Promise<boolean>;
+    ownFeedHidden(key: FeedKey): Promise<boolean>;
     setOverride(key: FeedKey, value: 'visible' | 'hidden' | null): Promise<void>;
 }
 
@@ -60,6 +61,10 @@ export async function feedClient(): Promise<FeedClient> {
         ).data.collection;
     return {
         admin,
+        async ownFeedHidden(key) {
+            const row = await admin(key);
+            return row?.isPrivate === true && row.parent?.isPrivate !== true;
+        },
         async shopVisible(key) {
             const data = await shopGql<{ collection: { id: string } | null }>(
                 `query($s: String) { collection(slug: $s) { id } }`,
@@ -108,4 +113,35 @@ export async function awaitOwner(
     );
     await pollUntil(`ERP owner step "${transition}"`, check, timeoutMs);
     console.log(`[category-feed] RECEIVED: ${transition}`);
+}
+
+const INGESTION_DELETE_PATH = '/api/ingestion/v1/entities/delete';
+const TOMBSTONE_ATTEMPTS = 5;
+
+// Same base URL and source id the server's replay client uses; 1C sends categories under that source.
+export async function sendCategoryTombstone(key: FeedKey): Promise<void> {
+    const baseUrl = envValue('INTEGRATION_SERVICE_BASE_URL') ?? 'https://is.komponent-m.ru';
+    const apiKey = envValue('INTEGRATION_SERVICE_API_KEY');
+    if (!apiKey) throw new Error('INTEGRATION_SERVICE_API_KEY is missing in the staging env file');
+    const now = new Date().toISOString();
+    const body = JSON.stringify({
+        sourceSystem: envValue('INTEGRATION_RESYNC_SOURCE_SYSTEM') ?? 'onec-main',
+        entityType: 'category',
+        entityId: feedId(key),
+        version: now,
+        isDeleted: true,
+        updatedAt: now,
+    });
+    for (let attempt = 1; ; attempt++) {
+        const response = await fetch(new URL(INGESTION_DELETE_PATH, baseUrl), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Api-Key': apiKey },
+            body,
+            signal: AbortSignal.timeout(15_000),
+        });
+        if (response.status === 202) return;
+        if (response.status !== 429 || attempt >= TOMBSTONE_ATTEMPTS)
+            throw new Error(`tombstone request answered ${response.status}`);
+        await new Promise(r => setTimeout(r, attempt * 2000));
+    }
 }

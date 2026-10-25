@@ -128,8 +128,8 @@ The ERP feed sends `isActive = NOT(deletion mark)` and never `isDeleted=true`, s
 look identical (`feedHidden`/`isPrivate`); specs must not assume `isDeleted` from the feed. Revive = the owner clears
 the deletion mark. `06` prints `[category-feed] WAITING FOR ERP OWNER: <step>` (15 min each, one step at a time):
 clear the deletion mark on REVIVE_PARENT; register LATE_PARENT for sending; change the parent of MOVE_CHILD from
-MOVE_FROM to MOVE_TO. The tombstone scenario is `test.fixme` (blocked): the ERP never sends category tombstones and the
-Integration Service `POST /api/ingestion/v1/entities/delete` request body and key scope are not documented here.
+MOVE_FROM to MOVE_TO. The tombstone scenario sends the tombstone itself (Integration Service `POST /api/ingestion/v1/entities/delete`,
+source id `INTEGRATION_RESYNC_SOURCE_SYSTEM` or `onec-main`) until the 1C side sends one (1C issue #22, ut103-torg).
 
 ## Manager portal role projects
 
