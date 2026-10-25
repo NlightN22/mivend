@@ -19,7 +19,7 @@ const enqueue = vi.fn();
 beforeAll(async () => {
     await createTestSchema(schema);
     dataSource = new DataSource({
-        ...testDataSourceConnectionOptions(schema),
+        ...testDataSourceConnectionOptions(),
         entities: [Document],
         synchronize: true,
         ...extra,
