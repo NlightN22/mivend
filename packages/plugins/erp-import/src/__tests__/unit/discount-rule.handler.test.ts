@@ -25,6 +25,7 @@ describe('DiscountRuleHandler.upsertCounterparty', () => {
             }),
             recipients: [{ counterpartyErpId: 'cnt-1', contractErpId: '' }],
             productErpIds: [],
+            operationKind: '',
         });
     });
 
