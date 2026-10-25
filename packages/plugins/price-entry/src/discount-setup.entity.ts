@@ -99,7 +99,7 @@ export class DiscountConditionKind {
     @PrimaryColumn({ type: 'varchar' })
     erpName!: string;
 
-    // 'quantity' or 'amount': the two metrics getBestPercent knows how to evaluate.
+    // 'quantity', 'amount' or 'unconditional': the metrics getBestPercent knows how to evaluate.
     @Column({ type: 'varchar' })
     metric!: string;
 }

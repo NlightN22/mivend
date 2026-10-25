@@ -63,6 +63,7 @@ export const SETUP_ENTITIES = [
 
 export const QUANTITY_KIND = 'quantity-kind';
 export const AMOUNT_KIND = 'amount-kind';
+export const UNCONDITIONAL_KIND = 'unconditional-kind';
 
 export function mapSetupEntities(base: TransactionalConnection): TransactionalConnection {
     return {
@@ -84,5 +85,6 @@ export async function resetSetupTables(dataSource: DataSource): Promise<void> {
     await dataSource.getRepository(TestConditionKind).save([
         { erpName: QUANTITY_KIND, metric: 'quantity' },
         { erpName: AMOUNT_KIND, metric: 'amount' },
+        { erpName: UNCONDITIONAL_KIND, metric: 'unconditional' },
     ]);
 }

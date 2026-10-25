@@ -199,7 +199,7 @@ counterparty (a `recipients` row, empty = any), the contract (order only) and th
 (`price_type_id`, when set the customer's effective price type must match; a markup is relative to a price type) are
 mandatory matches. Overlapping setups never stack: the highest percent wins, a negative percent (markup) competes by
 max. `condition` is the ERP enum value name; what it measures comes from the `discount_condition_kind` table
-(`erpName` -> `quantity` | `amount`, seeded at boot with the two names seen on real documents, an unknown name never
+(`erpName` -> `quantity` | `amount` | `unconditional`, seeded at boot with the three names that carry a threshold or no condition, an unknown name never
 matches, an empty one is unconditional). A quantity threshold sums the order quantity over the products of the setup's
 list (all lines for an "all products" setup); an amount threshold is the whole document amount (kopecks vs currency units).
 Catalog prices (no order) include only unconditional or threshold-0 setups of the counterparty itself.

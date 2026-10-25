@@ -418,7 +418,7 @@ Counterparty- and contract-scoped discounts and markups come from the ERP as one
 - **price type**: a document naming a price type applies only to a customer whose effective price type is that one
   (a markup is relative to a price type); a document without one applies to any;
 - **products**: an "all products" flag, or the document's product list (one indexed probe per priced product);
-- **condition**: `DiscountConditionKind` maps the ERP condition name to `quantity` (summed over the document's product
+- **condition**: `DiscountConditionKind` maps the ERP condition name to `unconditional` (applies always), `quantity` (summed over the document's product
   list, or all lines for an "all products" document) or `amount` (the whole document amount); an empty condition is
   unconditional and an unknown name never matches;
 - the validity window and the active flag.
@@ -432,6 +432,8 @@ Details and field accounting: `docs/ai/erp-streams-map.md`.
 
 - **Catalog vs cart**: the catalog has no order, so it sees only recipients with an empty contract; a document naming a
   contract shows only in the cart and the order. This is a deliberate catalog/cart difference.
+- **No-condition kind**: the ERP name for "no condition" is a `discount_condition_kind` row with metric `unconditional`
+  (bootstrap row); it applies at any quantity and amount, catalog included, exactly like an empty condition.
 - **Unknown condition**: a condition name missing from `discount_condition_kind` stores the document inactive with the
   reason `unknown condition <name>` and a warning log; the inbox row settles as a noop. To enable it, insert the kind row
   (`erpName`, `metric` of `quantity` or `amount`); the document is re-evaluated when the ERP sends a newer version.

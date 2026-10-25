@@ -203,6 +203,21 @@ describe('DiscountSetupService.deactivate (real Postgres)', () => {
         expect(await products()).toEqual(['a']);
     });
 
+    it.each([
+        'ПоВидуОплаты',
+        'ПоДисконтнойКарте',
+        'РучнаяСкидка',
+        'СпецПредложение',
+        'ПоВидуДисконтныхКарт',
+    ])('stores the unmapped ERP condition %s inactive', async name => {
+        expect(await service.apply(ctx, input('1', ['a'], { conditionName: name }))).toBe(
+            'unknown-condition',
+        );
+        const stored = await row();
+        expect(stored.active).toBe(false);
+        expect(stored.inactiveReason).toBe(`unknown condition ${name}`);
+    });
+
     it('reports an unknown document without creating a row', async () => {
         expect(await service.deactivate(ctx, 'ghost', '1')).toBe('unknown');
         expect(await dataSource.query(`SELECT 1 FROM discount_setup`)).toEqual([]);

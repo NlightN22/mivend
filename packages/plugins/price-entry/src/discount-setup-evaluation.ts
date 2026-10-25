@@ -1,10 +1,10 @@
-export type DiscountConditionMetric = 'quantity' | 'amount';
+export type DiscountConditionMetric = 'quantity' | 'amount' | 'unconditional';
 
 export interface LoadedDiscountSetup {
     id: number;
     percent: number;
     allProducts: boolean;
-    // Null = unconditional (empty ERP condition).
+    // Null or 'unconditional' (a named no-condition kind) = applies at any quantity and amount.
     metric: DiscountConditionMetric | null;
     conditionNumber: number | null;
 }
@@ -42,6 +42,7 @@ function meetsCondition(
     members: Set<string> | undefined,
     input: SetupEvaluation,
 ): boolean {
+    if (rule.metric === null || rule.metric === 'unconditional') return true;
     const threshold = rule.conditionNumber ?? 0;
     if (rule.metric === 'amount') return input.documentAmount >= Math.round(threshold * 100);
     if (rule.metric === 'quantity') {

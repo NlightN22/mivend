@@ -91,4 +91,50 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
     it('keeps plain product lines (ids only) active', () => {
         expect(reasonOf({ productLines: [{ productId: 'p1' }] })).toBeNull();
     });
+
+    it('applies a by-product document with the no-condition kind', () => {
+        const parsed = parseDiscountSetup(
+            'doc-1',
+            payload({ operationKind: 'ПоНоменклатуре', condition: 'БезУсловий' }),
+        );
+        expect(parsed).toMatchObject({
+            kind: 'upsert',
+            input: { setup: { active: true, conditionName: 'БезУсловий' } },
+        });
+    });
+
+    it('ends a price-groups document inactive by its form', () => {
+        expect(
+            reasonOf({
+                operationKind: 'ПоЦеновымГруппам',
+                percent: 0,
+                priceGroups: [{ priceGroupId: 'g1', percent: 4 }],
+            }),
+        ).toBe('no-header-percent');
+        expect(
+            reasonOf({
+                operationKind: 'ПоЦеновымГруппам',
+                priceGroups: [{ priceGroupId: 'g1', percent: 4 }],
+            }),
+        ).toBe('price-groups');
+    });
+
+    it('ends a natural-discounts document inactive by its bonus lines or set components', () => {
+        const bonus = { operationKind: 'НатуральныеСкидки', percent: 0 };
+        expect(reasonOf({ ...bonus, bonusLines: [{ productId: 'b1', quantity: 1 }] })).toBe(
+            'no-header-percent',
+        );
+        expect(
+            reasonOf({
+                operationKind: 'НатуральныеСкидки',
+                bonusLines: [{ productId: 'b1', quantity: 1 }],
+            }),
+        ).toBe('bonus-lines');
+        expect(
+            reasonOf({
+                operationKind: 'НатуральныеСкидки',
+                setComponents: [{ productId: 's1', quantity: 1 }],
+            }),
+        ).toBe('set-components');
+    });
 });

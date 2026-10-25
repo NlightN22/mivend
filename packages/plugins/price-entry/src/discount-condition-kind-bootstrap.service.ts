@@ -4,10 +4,11 @@ import { ctxQuery } from 'shared';
 
 import type { DiscountConditionMetric } from './discount-setup-evaluation';
 
-// The two ERP condition enum values seen on real documents; any other name stays unmatched until a row is added.
+// The ERP condition enum values that carry a threshold or no condition; any other name stays unmatched until a row is added.
 const KNOWN_CONDITION_KINDS: ReadonlyArray<readonly [string, DiscountConditionMetric]> = [
     ['ПоКоличествуТовара', 'quantity'],
     ['ПоСуммеДокумента', 'amount'],
+    ['БезУсловий', 'unconditional'],
 ];
 
 // Insert-if-missing only, so an operator's edit of a metric survives restarts.

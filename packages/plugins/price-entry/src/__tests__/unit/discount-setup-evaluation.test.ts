@@ -29,6 +29,11 @@ describe('bestSetupPercent', () => {
         expect(evaluate({ rules: [rule({ allProducts: true })], productErpId: null })).toBe(5);
     });
 
+    it('treats the unconditional metric like an empty condition, whatever the threshold', () => {
+        const rules = [rule({ allProducts: true, metric: 'unconditional', conditionNumber: 50 })];
+        expect(evaluate({ rules })).toBe(5);
+    });
+
     it('matches a list setup only for a member product', () => {
         const rules = [rule()];
         expect(evaluate({ rules, membersBySetup: new Map([[1, new Set(['p1'])]]) })).toBe(5);

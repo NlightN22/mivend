@@ -18,6 +18,7 @@ import { LookupMemo } from '../../lookup-memo';
 import {
     AMOUNT_KIND,
     QUANTITY_KIND,
+    UNCONDITIONAL_KIND,
     SETUP_ENTITIES,
     TestPriceType,
     mapSetupEntities,
@@ -210,6 +211,18 @@ describe('DiscountSetupRulesService matching (real Postgres)', () => {
 
         expect(await best({ amount: 9999 })).toBeNull();
         expect(await best({ amount: 10000 })).toBe(9);
+    });
+
+    it('applies a named no-condition kind at any quantity and amount, catalog included', async () => {
+        await seed({
+            percent: 6,
+            allProducts: true,
+            conditionName: UNCONDITIONAL_KIND,
+            conditionNumber: 100,
+        });
+
+        expect(await best()).toBe(6);
+        expect(await best({ amount: 0, quantities: {} })).toBe(6);
     });
 
     it('never matches a condition the kind table does not know', async () => {
