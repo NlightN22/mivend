@@ -27,10 +27,22 @@ function schemaClient(): Client {
     });
 }
 
-// Same shape as Vendure's ensureSuperAdminExists: read, yield, then insert without a transaction.
-async function checkThenCreate(): Promise<void> {
+// Same shape as Vendure's ensureSuperAdminExists: read, then insert without a transaction.
+function latch(parties: number): () => Promise<void> {
+    let arrived = 0;
+    let release!: () => void;
+    const opened = new Promise<void>(resolve => (release = resolve));
+    return async () => {
+        if (++arrived === parties) release();
+        await opened;
+    };
+}
+
+async function checkThenCreate(
+    afterRead: () => Promise<void> = async () => undefined,
+): Promise<void> {
     const rows = await dataSource.query(`SELECT 1 FROM "user" WHERE identifier = $1`, [IDENTIFIER]);
-    await new Promise(r => setTimeout(r, 50));
+    await afterRead();
     if (rows.length === 0) {
         const [u] = await dataSource.query(
             `INSERT INTO "user" (identifier) VALUES ($1) RETURNING id`,
@@ -77,14 +89,15 @@ afterAll(async () => {
 
 describe('superadmin first boot (integration, real Postgres)', () => {
     it('without the lock parallel check-then-create duplicates the account (the #285 race)', async () => {
-        await Promise.all([1, 2, 3].map(() => checkThenCreate()));
+        const barrier = latch(3);
+        await Promise.all([1, 2, 3].map(() => checkThenCreate(barrier)));
         expect((await counts()).admins).toBeGreaterThan(1);
     });
 
     it('with the lock N parallel bootstraps end with one user and one administrator', async () => {
         await Promise.all(
             Array.from({ length: 5 }, () =>
-                withSuperadminBootstrapLock(checkThenCreate, IDENTIFIER, schemaClient),
+                withSuperadminBootstrapLock(() => checkThenCreate(), IDENTIFIER, schemaClient),
             ),
         );
         expect(await counts()).toEqual({ users: 1, admins: 1 });
