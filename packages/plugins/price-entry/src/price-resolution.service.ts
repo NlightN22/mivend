@@ -195,18 +195,18 @@ export class PriceResolutionService {
               )
             : null;
         // totalWithTax excludes this priced line's own contribution — accepted approximation, same as the tier ladder's aggregates.
-        const counterpartyRulePercent = ruleContext
-            ? await this.counterpartyDiscountRuleService.getBestPercent(
-                  ctx,
-                  ruleContext.order,
-                  counterparty,
-                  await getProductErpId(this.connection, ctx, variantId, memo),
-                  productErpQuantities!,
-                  ruleContext.documentAmount ?? ruleContext.order.totalWithTax,
-                  new Date(),
-                  memo,
-              )
-            : null;
+        // Without order rules only threshold-0 rules match, so list, cart and order prices agree (docs/pricing.md).
+        const productErpId = await getProductErpId(this.connection, ctx, variantId, memo);
+        const counterpartyRulePercent = await this.counterpartyDiscountRuleService.getBestPercent(
+            ctx,
+            orderContext?.order,
+            counterparty,
+            productErpId,
+            productErpQuantities ?? new Map<string, number>(),
+            ruleContext ? (ruleContext.documentAmount ?? ruleContext.order.totalWithTax) : 0,
+            new Date(),
+            memo,
+        );
 
         // Sources combine by max, never additively: discounts from different rules must not stack.
         const bestPercent = [percent, promoPercent, counterpartyRulePercent]
@@ -214,7 +214,7 @@ export class PriceResolutionService {
             .reduce((max, p) => Math.max(max, p), -Infinity);
 
         if (bestPercent === -Infinity) return { customerPrice: basePrice, compareAtPrice: null };
-        // Only a real discount gets a struck-through price; a markup or 0% must not.
+        // A negative best percent is a markup: it raises the price and is never shown as a discount or markup.
         return {
             customerPrice: Math.round(basePrice * (1 - bestPercent / 100)),
             compareAtPrice: bestPercent <= 0 ? null : basePrice,

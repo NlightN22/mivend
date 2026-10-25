@@ -337,6 +337,31 @@ describe('renderProformaInvoiceHtml', () => {
     it('renders discount columns only when a discount exists', () => {
         const source = makeSource();
         source.lines[0].discounts = [{ amount: -100 }];
-        expect(render(source)).toContain('Скидка (наценка)');
+        expect(render(source)).toContain('Сумма без скидки');
+    });
+
+    it('prints a markup as the final price only, with no discount or markup column', () => {
+        const source = makeSource({ totalAmount: 21000 });
+        source.lines[0].discounts = [{ amount: 1000 }];
+        const data = buildProformaInvoiceTemplateData(source, makeRequisites(), buyer);
+        expect(data.showDiscount).toBe(false);
+        expect(data.rows[0]).toMatchObject({
+            price: '105,00',
+            gross: '210,00',
+            discount: '0,00',
+            total: '210,00',
+        });
+        expect(renderProformaInvoiceHtml(data)).not.toMatch(/наценк|Сумма без скидки/i);
+    });
+
+    it('keeps a discounted line and a marked-up line consistent in the totals', () => {
+        const source = makeSource({ totalAmount: 40000 });
+        source.lines[0].discounts = [{ amount: -1000 }];
+        source.lines.push({ ...source.lines[0], discounts: [{ amount: 1000 }] });
+        const data = buildProformaInvoiceTemplateData(source, makeRequisites(), buyer);
+        expect(data.showDiscount).toBe(true);
+        expect(data.rows[1].discount).toBe('0,00');
+        expect(data.totals.subtotal).toBe('410,00');
+        expect(data.totals.discount).toBe('10,00');
     });
 });

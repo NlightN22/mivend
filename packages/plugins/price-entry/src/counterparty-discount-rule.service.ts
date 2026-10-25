@@ -180,7 +180,8 @@ export class CounterpartyDiscountRuleService {
         return qb.getMany();
     }
 
-    // Returns null without order context (same invariant as promo rules).
+    // Without an order (catalog) only the counterparty's own rules are read and the empty quantity map and
+    // zero amount let just threshold-0 rules match, like the price-type ladder. A negative percent is a markup.
     // byQuantity sums quantityByProductErpId across all products when productErpId is unset.
     async getBestPercent(
         ctx: RequestContext,
@@ -192,10 +193,9 @@ export class CounterpartyDiscountRuleService {
         now: Date,
         memo?: LookupMemo,
     ): Promise<number | null> {
-        if (!order) return null;
         const recipients: Array<{ type: DiscountRuleRecipientType; erpId: string }> = [];
         if (counterparty) recipients.push({ type: 'counterparty', erpId: counterparty.erpId });
-        if (order.customFields.erpContractId) {
+        if (order?.customFields.erpContractId) {
             recipients.push({ type: 'contract', erpId: order.customFields.erpContractId });
         }
         if (recipients.length === 0) return null;

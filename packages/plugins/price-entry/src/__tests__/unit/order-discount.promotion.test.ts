@@ -52,4 +52,18 @@ describe('order discount promotion', () => {
         expect(run('1')).toBe(-150);
         expect(run('2')).toBe(0);
     });
+
+    it('turns a negative per-unit state into a positive adjustment (markup)', () => {
+        const state = {
+            [ORDER_DISCOUNT_CONDITION_CODE]: { discounts: new Map([['1', -50]]) },
+        };
+        const run = orderDiscountAction.execute(
+            ctx,
+            { id: '1' } as unknown as OrderLine,
+            [],
+            state as never,
+            {} as never,
+        );
+        expect(run).toBe(50);
+    });
 });

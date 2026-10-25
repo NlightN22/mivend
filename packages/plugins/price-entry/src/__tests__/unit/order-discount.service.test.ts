@@ -56,10 +56,13 @@ describe('OrderDiscountService', () => {
         expect(state).toEqual(new Map([['a', 200]]));
     });
 
-    it('gives no discount when the best price is not below the list price or unknown', async () => {
-        const { service } = setup({ 'v-a': 1200, 'v-b': null });
-        const state = await service.stateFor(ctx, orderOf(line('a', 1000), line('b', 1000)));
-        expect(state.size).toBe(0);
+    it('adjusts a marked-up line by a negative per-unit amount, no clamping', async () => {
+        const { service } = setup({ 'v-a': 1050, 'v-b': null, 'v-c': 1000 });
+        const state = await service.stateFor(
+            ctx,
+            orderOf(line('a', 1000, 2), line('b', 1000), line('c', 1000)),
+        );
+        expect(state).toEqual(new Map([['a', -50]]));
     });
 
     it('skips lines with a manual unit price', async () => {

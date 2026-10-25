@@ -99,7 +99,7 @@ function renderItems(rows: ProformaInvoiceRow[], showDiscount: boolean): string 
         'Кол-во',
         'Ед.',
         'Цена',
-        ...(showDiscount ? ['Сумма без скидки', 'Скидка (наценка)'] : []),
+        ...(showDiscount ? ['Сумма без скидки', 'Скидка'] : []),
         'Сумма',
     ];
     const head = heads.map(h => `<th>${h}</th>`).join('');

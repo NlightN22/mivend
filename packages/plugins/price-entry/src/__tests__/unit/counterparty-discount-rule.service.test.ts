@@ -497,6 +497,50 @@ describe('CounterpartyDiscountRuleService (issue #108)', () => {
             expect(await best([-5, 4])).toBe(4);
         });
 
+        it('applies a markup with a threshold only once the threshold is reached', async () => {
+            mockQb.getMany.mockResolvedValue([
+                activeRule({
+                    productErpId: null,
+                    condition: 'byQuantity',
+                    conditionValue: 5,
+                    percent: -5,
+                }),
+            ]);
+            const at = (qty: number): Promise<number | null> =>
+                service.getBestPercent(
+                    mockCtx,
+                    fakeOrder(),
+                    { erpId: 'cp-erp-1' } as never,
+                    'prod-1',
+                    new Map([['prod-1', qty]]),
+                    0,
+                    now,
+                );
+            expect(await at(4)).toBeNull();
+            expect(await at(5)).toBe(-5);
+        });
+
+        it('without an order matches only threshold-0 counterparty rules (catalog price)', async () => {
+            const rule = (conditionValue: number, percent: number): ReturnType<typeof activeRule> =>
+                activeRule({
+                    productErpId: null,
+                    condition: 'byQuantity',
+                    conditionValue,
+                    percent,
+                });
+            mockQb.getMany.mockResolvedValue([rule(0, -5), rule(10, 20)]);
+            const result = await service.getBestPercent(
+                mockCtx,
+                undefined,
+                { erpId: 'cp-erp-1' } as never,
+                'prod-1',
+                new Map(),
+                0,
+                now,
+            );
+            expect(result).toBe(-5);
+        });
+
         it('picks the highest percent when multiple recipient rules qualify (counterparty and contract combined)', async () => {
             mockQb.getMany.mockResolvedValue([
                 activeRule({

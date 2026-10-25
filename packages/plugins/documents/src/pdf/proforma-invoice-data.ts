@@ -156,9 +156,13 @@ export function buildProformaInvoiceTemplateData(
     buyer: PartyInput,
 ): ProformaInvoiceTemplateData {
     const supplier = sellerParty(requisites);
-    const discounts = source.lines.map(line => lineDiscountTotal(line.discounts));
+    // A markup (negative discount) is printed as the final price only: no discount or markup column value.
+    const discounts = source.lines.map(line => Math.max(0, lineDiscountTotal(line.discounts)));
+    const grosses = source.lines.map((line, i) =>
+        discounts[i] === 0 ? lineNetAmount(line) : line.linePriceWithTax,
+    );
     const totalDiscount = discounts.reduce((sum, d) => sum + d, 0);
-    const subtotal = source.lines.reduce((sum, line) => sum + line.linePriceWithTax, 0);
+    const subtotal = grosses.reduce((sum, g) => sum + g, 0);
     const currency = source.currencyCode ?? '';
     const vat = summarizeVat(source.lines);
 
@@ -186,8 +190,12 @@ export function buildProformaInvoiceTemplateData(
             name: line.productVariant.name,
             quantity: formatQuantity(line.quantity),
             unit: line.unitName ?? '',
-            price: formatMoneyRu(line.unitPriceWithTax),
-            gross: formatMoneyRu(line.linePriceWithTax),
+            price: formatMoneyRu(
+                discounts[i] === 0
+                    ? Math.round(lineNetAmount(line) / line.quantity)
+                    : line.unitPriceWithTax,
+            ),
+            gross: formatMoneyRu(grosses[i]),
             discount: formatMoneyRu(discounts[i]),
             total: formatMoneyRu(lineNetAmount(line)),
         })),

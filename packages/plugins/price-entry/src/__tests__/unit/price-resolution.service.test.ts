@@ -180,7 +180,16 @@ describe('PriceResolutionService', () => {
             undefined,
         );
         expect(promoDiscountRuleService.getBestPromoPercent).not.toHaveBeenCalled();
-        expect(counterpartyDiscountRuleService.getBestPercent).not.toHaveBeenCalled();
+        expect(counterpartyDiscountRuleService.getBestPercent).toHaveBeenCalledWith(
+            mockCtx,
+            order,
+            expect.anything(),
+            expect.anything(),
+            new Map(),
+            0,
+            expect.any(Date),
+            undefined,
+        );
     });
 
     it('uses documentAmount instead of the persisted order total for counterparty amount rules (#196)', async () => {
@@ -567,6 +576,24 @@ describe('PriceResolutionService', () => {
             expect(result.customerPrice).toBe(1100);
         });
 
+        it('includes a threshold-0 markup in the catalog price, without an order and without a saving', async () => {
+            counterpartyDiscountRuleService.getBestPercent.mockResolvedValue(-5);
+
+            const result = await service.resolve(mockCtx, 'v1');
+
+            expect(counterpartyDiscountRuleService.getBestPercent).toHaveBeenCalledWith(
+                mockCtx,
+                undefined,
+                null,
+                expect.anything(),
+                new Map(),
+                0,
+                expect.any(Date),
+                undefined,
+            );
+            expect(result).toEqual({ customerPrice: 1050, compareAtPrice: null });
+        });
+
         it('gives no struck-through price for a zero-percent rule', async () => {
             counterpartyDiscountRuleService.getBestPercent.mockResolvedValue(0);
 
@@ -682,7 +709,7 @@ describe('PriceResolutionService', () => {
     });
 
     describe('counterparty/contract-scoped ERP discount rules (issue #108)', () => {
-        it('never evaluates a counterparty rule for catalog display (no orderContext)', async () => {
+        it('evaluates only threshold-0 counterparty rules for catalog display (no orderContext)', async () => {
             variantsById.v1 = {
                 id: 'v1',
                 facetValues: [],
@@ -692,7 +719,16 @@ describe('PriceResolutionService', () => {
 
             await service.resolve(mockCtx, 'v1');
 
-            expect(counterpartyDiscountRuleService.getBestPercent).not.toHaveBeenCalled();
+            expect(counterpartyDiscountRuleService.getBestPercent).toHaveBeenCalledWith(
+                mockCtx,
+                undefined,
+                null,
+                expect.anything(),
+                new Map(),
+                0,
+                expect.any(Date),
+                undefined,
+            );
         });
 
         it('max-wins: a counterparty-rule percent higher than the facet/promo percents wins', async () => {

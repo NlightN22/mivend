@@ -395,3 +395,10 @@ Vendure promotion, not part of the line's list price:
   Supported: at least 200 lines.
 - Progress (`tierProgress`) is derived from the order's quantities, independent of prices.
 - Catalog progress: `ProductVariant.tierProgress` reads the caller's own active order (null for a guest, 0 of N for an empty cart). It considers only the nearest unreached rung, so a rung weaker than the current discount hides a stronger later one; the storefront also hides the ladder in that case (`useTierProgressView`).
+
+## Markup rules (negative percent, #283)
+
+- A discount rule with a negative percent raises the price (`price * (1 - percent/100)`) and competes by max with every other rule, so it applies only when nothing better matches. No clamping to the list price.
+- Orders: `OrderDiscountService` keeps a signed per-unit state and the item action returns a positive adjustment, which Vendure accepts (only negative adjustments are clamped to the line price). Prorated prices, totals, taxes, proforma invoice amounts and the ERP order `totalWithTax` include it.
+- Catalog and list price: counterparty/contract rules with `conditionValue` 0 apply without an order (like price-type rules without a threshold), including markups. A rule with a threshold above 0 depends on the order, so it stays out of the catalog (the same treatment as positive percents) and enters the price through the order adjustment once reached. A contract rule reaches the catalog price only through an order that names the contract.
+- A markup is never shown as a discount, markup or saving: no `compareAtPrice`, and the proforma invoice prints the final price with no discount value.

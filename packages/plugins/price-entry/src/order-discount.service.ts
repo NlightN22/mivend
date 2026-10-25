@@ -4,7 +4,7 @@ import { Order, OrderLine, RequestContext } from '@vendure/core';
 import { LookupMemo } from './lookup-memo';
 import { PriceResolutionService } from './price-resolution.service';
 
-// Per unit, in the same tax terms as OrderLine.listPrice; absent lines get no discount.
+// Signed per unit, in the same tax terms as OrderLine.listPrice: negative is a markup; absent lines get no adjustment.
 export type OrderDiscountState = Map<string, number>;
 
 interface CacheEntry {
@@ -50,7 +50,7 @@ export class OrderDiscountService {
                 { order, quantity: line.quantity, documentAmount },
                 { memo },
             );
-            if (customerPrice !== null && customerPrice < line.listPrice) {
+            if (customerPrice !== null && customerPrice !== line.listPrice) {
                 state.set(String(line.id), line.listPrice - customerPrice);
             }
         }
