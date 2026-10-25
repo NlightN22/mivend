@@ -94,3 +94,18 @@ export async function pollUntil(
         await new Promise(r => setTimeout(r, FEED_POLL_INTERVAL_MS));
     }
 }
+
+export const OWNER_WAIT_TIMEOUT_MS = 15 * 60_000;
+
+// Prints the awaited ERP owner transition so the lead sees what to request; bounded like any poll.
+export async function awaitOwner(
+    transition: string,
+    check: () => Promise<boolean>,
+    timeoutMs = OWNER_WAIT_TIMEOUT_MS,
+): Promise<void> {
+    console.log(
+        `[category-feed] WAITING FOR ERP OWNER: ${transition} (up to ${timeoutMs / 60_000} min)`,
+    );
+    await pollUntil(`ERP owner step "${transition}"`, check, timeoutMs);
+    console.log(`[category-feed] RECEIVED: ${transition}`);
+}

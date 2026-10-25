@@ -8,7 +8,8 @@ test.beforeAll(async () => {
     client = await feedClient();
 });
 
-test.describe('ERP-deleted parent', () => {
+// The ERP feed sends isActive = NOT(deletion mark) and never isDeleted, so a deletion mark reads as feed-inactive.
+test.describe('ERP deletion-marked parent', () => {
     test('children are hidden together with the deleted parent in admin and shop API', async () => {
         const parent = await client.admin('DELETED_PARENT');
         expect(parent?.customFields?.feedHidden).toBe(true);
@@ -43,7 +44,7 @@ test.describe('ERP-deleted parent', () => {
     });
 });
 
-test.describe('inactive flag', () => {
+test.describe('inactive flag (deletion mark on the feed)', () => {
     test('an inactive category is feed-hidden and its live child follows it', async () => {
         const row = await client.admin('INACTIVE');
         expect(row?.customFields?.feedHidden).toBe(true);

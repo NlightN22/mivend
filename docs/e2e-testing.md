@@ -124,6 +124,12 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 
 `category-feed` needs ERP-side fixture categories whose ids sit in the staging env file as `STAGING_FEED_CAT_<KEY>` (keys in
 `packages/e2e/integration/category-feed.ts`); `06` waits for the ERP owner's steps, so run it with the owner at hand.
+The ERP feed sends `isActive = NOT(deletion mark)` and never `isDeleted=true`, so "deleted" and "inactive" fixtures
+look identical (`feedHidden`/`isPrivate`); specs must not assume `isDeleted` from the feed. Revive = the owner clears
+the deletion mark. `06` prints `[category-feed] WAITING FOR ERP OWNER: <step>` (15 min each, one step at a time):
+clear the deletion mark on REVIVE_PARENT; register LATE_PARENT for sending; change the parent of MOVE_CHILD from
+MOVE_FROM to MOVE_TO. The tombstone scenario is `test.fixme` (blocked): the ERP never sends category tombstones and the
+Integration Service `POST /api/ingestion/v1/entities/delete` request body and key scope are not documented here.
 
 ## Manager portal role projects
 
