@@ -52,7 +52,7 @@ function mapEntity(base: TransactionalConnection): TransactionalConnection {
 }
 
 const { schema, extra } = testSchemaOptions('markup_order_sql');
-const ctx = testRequestContext;
+const ctx = { ...testRequestContext, activeUserId: 7 } as typeof testRequestContext;
 const day = 24 * 60 * 60 * 1000;
 const LIST = 1000;
 let dataSource: DataSource;
@@ -79,7 +79,7 @@ beforeAll(async () => {
         } as never,
         { getBestPercent: async () => null } as never,
         connection,
-        { findOneByUserId: async () => null } as never,
+        { findOneByUserId: async () => ({ id: 1 }) } as never,
         { getForCustomer: async () => ({ id: 1, erpId: 'cnt-1', branchId: null }) } as never,
         { resolveEffective: async () => null } as never,
         { getBestPromoPercent: async () => null } as never,

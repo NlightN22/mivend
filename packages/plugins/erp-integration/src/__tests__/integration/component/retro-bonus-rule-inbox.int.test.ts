@@ -113,7 +113,7 @@ describe('retro-bonus-rule through the inbox (real Postgres)', () => {
     });
 
     it('surfaces an invalid payload as a failed inbox row, not a processed noop', async () => {
-        await deliver('1', { ...productionShaped, counterpartyId: '' });
+        await deliver('1', { ...productionShaped, counterpartyId: '', version: '1' });
 
         const [event] = await dataSource.getRepository(IntegrationInboxEvent).find();
         expect(event.status).toBe('failed');
