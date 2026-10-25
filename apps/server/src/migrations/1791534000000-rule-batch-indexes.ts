@@ -5,6 +5,7 @@ export class RuleBatchIndexes1791534000000 implements MigrationInterface {
     name = 'RuleBatchIndexes1791534000000';
     // CONCURRENTLY cannot run in a transaction; Vendure runs migrations with transaction 'each'.
     transaction = false;
+    // Must run with no statement_timeout (a timeout aborts the build); run with workers stopped.
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(

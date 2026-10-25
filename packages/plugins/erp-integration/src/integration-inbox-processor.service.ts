@@ -47,7 +47,11 @@ import { VatRateStreamHandler } from './handlers/vat-rate.handler';
 import { WarehouseStreamHandler } from './handlers/warehouse.handler';
 import { UnknownOrderUuidError } from '@mivend/plugin-reservation';
 
-import { inboxEntityLockKey, processStreamBatch } from './integration-inbox-batch';
+import {
+    BATCH_TX_MAX_ROWS,
+    inboxEntityLockKey,
+    processStreamBatch,
+} from './integration-inbox-batch';
 import { IntegrationInboxService } from './integration-inbox.service';
 import type { ClaimedInboxEvent } from './integration-inbox.service';
 import { IntegrationInboxEvent } from './entities/integration-inbox-event.entity';
@@ -185,20 +189,25 @@ export class IntegrationInboxProcessorService {
         const unprocessed: ClaimedInboxEvent[] = [];
         const pastDeadline = (): boolean => deadlineMs !== undefined && Date.now() >= deadlineMs;
         for (const [stream, group] of batchGroups) {
-            if (pastDeadline()) {
-                unprocessed.push(...group);
-                continue;
+            for (let start = 0; start < group.length; start += BATCH_TX_MAX_ROWS) {
+                const chunk = group.slice(start, start + BATCH_TX_MAX_ROWS);
+                if (pastDeadline()) {
+                    unprocessed.push(...chunk);
+                    continue;
+                }
+                const counts = await processStreamBatch(
+                    { connection: this.connection, inbox: this.inbox },
+                    ctx,
+                    stream,
+                    this.handlers[stream] as BatchInboundStreamHandler,
+                    chunk,
+                    row => this.processOne(ctx, row),
+                    pastDeadline,
+                );
+                processed += counts.processed;
+                failed += counts.failed;
+                unprocessed.push(...counts.unprocessed);
             }
-            const counts = await processStreamBatch(
-                { connection: this.connection, inbox: this.inbox },
-                ctx,
-                stream,
-                this.handlers[stream] as BatchInboundStreamHandler,
-                group,
-                row => this.processOne(ctx, row),
-            );
-            processed += counts.processed;
-            failed += counts.failed;
         }
         for (let i = 0; i < singles.length; i++) {
             if (pastDeadline()) {

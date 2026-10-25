@@ -16,6 +16,9 @@ export interface InboxBatchResult {
     invalid: Array<{ row: ClaimedInboxEvent; error: NonRetryableInboundError }>;
 }
 
+// Each row takes advisory locks from the shared lock table; a full 500-row claim in one transaction could exhaust it.
+export const BATCH_TX_MAX_ROWS = 200;
+
 export const inboxEntityLockKey = (stream: string, entityId: string): string =>
     `inbox-entity:${stream}:${entityId}`;
 
@@ -42,9 +45,8 @@ async function newestProcessedVersions(
     return newest;
 }
 
-// One transaction for one stream's claimed rows (already sorted by entityId, version): entity
-// locks, superseded check against processed history, handler batch, one UPDATE marking outcomes.
-// Throws on any failure so the caller can roll back and retry the rows one by one.
+// One transaction per chunk of sorted rows: locks, superseded check, handler batch, one outcome UPDATE.
+// Throws on any failure so the caller can roll back and retry row by row.
 async function applyInboxBatch(
     connection: TransactionalConnection,
     ctx: RequestContext,
@@ -110,7 +112,8 @@ export async function processStreamBatch(
     handler: BatchInboundStreamHandler,
     rows: ClaimedInboxEvent[],
     processOne: (row: ClaimedInboxEvent) => Promise<boolean>,
-): Promise<{ processed: number; failed: number }> {
+    pastDeadline: () => boolean = () => false,
+): Promise<{ processed: number; failed: number; unprocessed: ClaimedInboxEvent[] }> {
     try {
         const { settled, invalid } = await applyInboxBatch(
             deps.connection,
@@ -126,16 +129,24 @@ export async function processStreamBatch(
             );
             await deps.inbox.markFailed(ctx, row.id, error, Math.random, null, row.claimToken);
         }
-        return { processed: settled, failed: invalid.length };
+        return { processed: settled, failed: invalid.length, unprocessed: [] };
     } catch (err) {
         Logger.warn(
             `Batch of ${rows.length} ${stream} row(s) rolled back, retrying one by one: ${err instanceof Error ? err.message : String(err)}`,
             loggerCtx,
         );
         let processed = 0;
+        let failed = 0;
+        const unprocessed: ClaimedInboxEvent[] = [];
         for (const row of rows) {
-            if (await processOne(row)) processed += 1;
+            if (pastDeadline()) {
+                unprocessed.push(row);
+            } else if (await processOne(row)) {
+                processed += 1;
+            } else {
+                failed += 1;
+            }
         }
-        return { processed, failed: rows.length - processed };
+        return { processed, failed, unprocessed };
     }
 }
