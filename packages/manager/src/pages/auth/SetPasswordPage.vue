@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useRedirectCountdown } from '../../composables/useRedirectCountdown';
 import { MvLogo, MvAvatar, MvFormField, MvPasswordInput, MvButton, MvNotice } from '@mivend/ui-kit';
 import {
     resetAdministratorPassword,
@@ -60,6 +61,7 @@ async function handleSubmit(): Promise<void> {
         const result = await resetAdministratorPassword(token.value, form.password);
         if (result.success) {
             state.value = 'success';
+            start();
         } else {
             state.value = result.reason ? REASON_TO_STATE[result.reason] : 'invalid';
             if (result.reason === 'validation')
@@ -75,6 +77,8 @@ async function handleSubmit(): Promise<void> {
 function goToSignIn(): void {
     void router.push('/login');
 }
+
+const { remaining, start } = useRedirectCountdown(goToSignIn);
 </script>
 
 <template>
@@ -172,6 +176,8 @@ function goToSignIn(): void {
                             </div>
                         </div>
                     </div>
+
+                    <p role="status">Redirecting to sign in in {{ remaining }}s...</p>
 
                     <MvButton variant="primary" size="lg" @click="goToSignIn"
                         >Go to sign in</MvButton
