@@ -272,6 +272,7 @@ filename prefix of specs and runs in isolation. The registry (name, covers, args
 - Implementers run only their group(s): `make e2e-group G=<name>` / `make e2e-integration-group G=<name>`.
 - The full suite (`make e2e-dev`, `make e2e-integration`) runs only in the audit session or on explicit owner request.
 - `e2e-integration` runs still announce any contour restart first.
+- Exception to the 30-minute run limit: the `category-feed` group waits for manual ERP-owner steps (per-step bounds 15/40 min, test timeout up to 125 min); run it with the owner at hand.
 
 ## CI
 

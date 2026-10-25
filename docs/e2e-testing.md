@@ -114,13 +114,13 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `manager-resilience` | dev | recovery after transient failure (use make e2e-resilience) | `manager/resilience` |
 | `visibility-storefront` | dev | own-data, price-type, category visibility (storefront) | `--project=visibility-storefront` |
 | `visibility-manager` | dev | entity lists, counterparties, price types, servicing team, categories (manager) | `--project=visibility-manager` |
-| `category-visibility` | dev | category visibility in both portals (#264) | `--project=visibility-storefront --project=visibility-manager categories` |
+| `category-visibility` | dev | category visibility in both portals (#264); alias that overlaps `visibility-storefront` and `visibility-manager` (their category specs) | `--project=visibility-storefront --project=visibility-manager categories` |
 | `smoke` | dev | critical-route subset tagged @smoke (use make e2e-smoke) | `--grep @smoke --project=storefront-noauth --project=storefront` |
 | `exchange-placement` | integration | order placement and ERP exchange | `01-placement` |
 | `exchange-cancel` | integration | order cancel after publish | `02-cancel` |
 | `exchange-cancel-before-publish` | integration | order cancel before publish | `03-cancel-before-publish` |
 | `exchange-cleanup` | integration | run cleanup | `04-cleanup` |
-| `category-feed` | integration | category visibility on the real ERP feed: deleted parent, inactive, revive, late parent, move, tombstone (#264) | `05-category-feed 06-category-feed` |
+| `category-feed` | integration | category visibility on the real ERP feed: deleted parent, inactive, revive, late parent, move, tombstone (#264); "move" and "parent arriving after child" are written, awaiting first run (need the ERP owner) | `05-category-feed 06-category-feed` |
 
 `category-feed` needs ERP-side fixture categories whose ids sit in the staging env file as `STAGING_FEED_CAT_<KEY>` (keys in
 `packages/e2e/integration/category-feed.ts`); `06` waits for the ERP owner's steps, so run it with the owner at hand. Each scenario first waits (`[category-feed] WAITING FOR INITIAL STATE`, 15 min) for its ERP-sent state; for the late parent that is up to 70 min (Integration Service accepts an orphan child after 1 h) and the owner step plus child/parent visibility up to 40 min.
@@ -129,7 +129,11 @@ look identical (`feedHidden`/`isPrivate`); specs must not assume `isDeleted` fro
 the deletion mark. `06` prints `[category-feed] WAITING FOR ERP OWNER: <step>` (15 min each, one step at a time):
 clear the deletion mark on REVIVE_PARENT; register LATE_PARENT for sending; change the parent of MOVE_CHILD from
 MOVE_FROM to MOVE_TO. The tombstone scenario sends the tombstone itself (Integration Service `POST /api/ingestion/v1/entities/delete`,
-source id `INTEGRATION_RESYNC_SOURCE_SYSTEM` or `onec-main`) until the 1C side sends one (1C issue #22, ut103-torg).
+source id `INTEGRATION_RESYNC_SOURCE_SYSTEM`; both it and `INTEGRATION_SERVICE_BASE_URL` come only from the staging env file and the helper fails naming the missing key) until the ERP sends one (ERP-side issue for category deletion tombstones).
+
+`category-feed` is the explicit exception to the 30-minute run limit: it waits for manual ERP-owner steps (per-step bounds 15/40 min, test timeout up to 125 min).
+
+Deliberate omissions of #264 (see #291): authorized-staff checks run as superadmin because no seeded role other than superadmin holds `UpdateCatalog`; search and suggestions are not covered on the access stand (the external search backend is dead there); `/catalog?collection=<hidden slug>` still listing the hidden category's products awaits an owner decision (#291).
 
 ## Manager portal role projects
 
