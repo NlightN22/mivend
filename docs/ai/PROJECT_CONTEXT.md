@@ -9,9 +9,9 @@ Updated: 2026-10-25
 - Language rule: request `languageCode` query -> `SITE_DEFAULT_LANGUAGE` -> en. Skill `.claude/skills/email-templates`: every mail ships in at least ru and en (guard test). Docs: `docs/deployment.md`.
 - Gaps (no issue): frontends do not send `languageCode` (Russian only via `SITE_DEFAULT_LANGUAGE=ru`); storefront "forgot password" link is `#`; address-change mail has no confirmation page; `make lint` does not type-check tests; staff/customer `/set-password` link targets not eyeballed on production; no production-mode screenshots; no staff-notification mail duplication (owner: later).
 
-## #284 bulk inbox throughput (2026-10-25, implemented, awaiting `make test-int` and audit)
+## #290 / #289 setup documents (2026-10-25, implemented, awaiting `make test-int` and audit)
 
-Batched apply for `discount-rule`/`retro-bonus-rule`, bulk claim 500, set-based retention with overlap guard, two new indexes (migration `1791534000000`). Design and fallback: `docs/ai/erp-streams-map.md` "Batched apply for rule streams". Measured speedup comes from `make test-int` (benchmark test prints it). Release, redeploy and the ERP re-publish are still to do.
+event-contracts 0.82.0. `discount-rule`/`retro-bonus-rule` streams and topics are gone; `discount-setup` and `retro-bonus-setup` carry one event per ERP setup document (header row + member tables replaced under an advisory lock, equal content = no change). Discount read path `DiscountSetupRulesService` (counterparty, contract, price type, product list, `discount_condition_kind` for the condition metric); unevaluable documents (fixed price, price groups, bonuses, weekday windows, reference condition, dynamic filter) are stored inactive with a reason. Migrations `1791536000000` (drop old rows, create tables) and `1791537000000` (batched purge of old-stream inbox rows). Design, semantics, open questions and field accounting: `docs/ai/erp-streams-map.md` "Discount and retro-bonus setup documents", `docs/pricing.md`. Left: the #284 batched-apply inbox capability has no consumer (remove later); filter-mode products/counterparties are not evaluated; contact_infos (`counterparty`, `point-of-sale`) are not consumed (old phone/email fields stay derived).
 
 ## Archived (full text: `.backup/PROJECT_CONTEXT-2026-10-25-271-270-196-192-263-full.md`)
 - #271 batched order-discount evaluation (preload memo, 200-line cart 13 s -> 0.7 s), #270 catalog tier progress, #196 one-pass order-dependent discounts, #192/#260/#259, #263 child-entity visibility + #274 e2e stack: all done, audited, pushed, closed.
@@ -50,7 +50,7 @@ Batched apply for `discount-rule`/`retro-bonus-rule`, bulk claim 500, set-based 
 
 ## #242-#244 / #239-#240 / #230 / #233 / #237 / 2026-10-18 session (closed; full text: `.backup/PROJECT_CONTEXT-2026-10-19-242-239-230-1018-full.md`)
 - Manager actions go through the checks framework (`packages/plugins/checks`, `docs/checks-and-policies.md`); a check never refuses checkout; findings hold the automatic reserve/send. Z-index only via `--mv-z-*` tokens. Manager line edits before confirmation: `docs/order-contracts.md`.
-- Storefront has ONE add-to-cart path (`useCartActions.addToCart`, `productQuantity.ts`) and one product card (`ConnectedProductCard.vue`). Point-confirmation expiry cancels on the reservation deadline. event-contracts 0.77.1; new streams are ignored pending #254. `pnpm-lock.yaml` is in `.prettierignore`.
+- Storefront has ONE add-to-cart path (`useCartActions.addToCart`, `productQuantity.ts`) and one product card (`ConnectedProductCard.vue`). Point-confirmation expiry cancels on the reservation deadline. event-contracts 0.82.0; other new streams are ignored pending #254. `pnpm-lock.yaml` is in `.prettierignore`.
 - Open: #27 partial allocation over-allocates a proforma; overpayment after a line edit is not credited; owner confirmations pending (credit.limit default `hold`, `ManageCheckPolicies` global); AccountFrequentProducts is a mock.
 
 ## #236 / #197 / #175 / #232 / #112 / #238 (2026-10-14..15, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-17-236-197-175-full.md`)

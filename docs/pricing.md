@@ -13,6 +13,7 @@ charged on an order.
 | `CustomerPriceType`        | `plugin-customer-pricing` | Customer → `PriceType` assignment (one active row per customer)  |
 | `ProductVariantPriceEntry` | `plugin-price-entry`      | `variantId × priceTypeCode → price` — the base price             |
 | `DiscountRule`             | `plugin-price-entry`      | Facet + time-window percentage discount on top of the base price |
+| `DiscountSetup`            | `plugin-price-entry`      | One ERP discount/markup setup document: recipients, product list |
 | `Counterparty`             | `plugin-counterparty`     | Legal entity; carries the `priceType` string from the ERP        |
 
 **Fallback price (issue #70):** a guest, or a customer whose own price can't be resolved, gets the
@@ -361,7 +362,7 @@ price" action instead of a dash; guests see "Log in to see prices".
 
 ## Order-dependent discounts (one pass, #196)
 
-Tier ladders (weight/amount), promo rules and counterparty rules depend on the whole order, so they are a
+Tier ladders (weight/amount), promo rules and discount setup documents depend on the whole order, so they are a
 Vendure promotion, not part of the line's list price:
 
 - `CustomerPriceCalculationStrategy` prices a line with the flat facet+period discount only
@@ -375,14 +376,14 @@ Vendure promotion, not part of the line's list price:
   ONE action means the highest percent among all sources wins (never stacked, as before); never add a second
   promotion for these rules, Vendure would stack it.
 - Skipped: lines with a manual unit price (`manualUnitPrice`) and read-only ERP orders (`isExternal`).
-- The counterparty amount rule compares the pre-promotion line total (`documentAmount`), not the persisted
+- A discount setup amount condition compares the pre-promotion line total (`documentAmount`), not the persisted
   order total, which still carries the previous pass's discounts.
 - Consumers read the price a customer pays from `discounted*`/`prorated*` fields (`discountedLinePriceWithTax`,
   `proratedUnitPriceWithTax`); `unitPrice`/`linePrice` are before the promotion. `OrderLine.compareAtPrice`
   is the price before every discount. The floor-price check compares the prorated price.
 - Any OTHER enabled Vendure promotion (a coupon, one an admin creates) stacks additively on top of this one,
   which could not happen while the price was baked into `listPrice`; create no such promotion without a decision.
-- Amount thresholds (`minAmount`, counterparty amount rules) are measured BEFORE discounts (list-price line
+- Amount thresholds (`minAmount`, setup amount conditions) are measured BEFORE discounts (list-price line
   totals, shipping and surcharges excluded). A manual-price line gets no discount but still counts toward its
   siblings' weight, amount and quantity (pinned by a unit test).
 - The bootstrap re-enables the promotion at every boot if staff disabled it (warn log): that is intended, a disabled
@@ -398,10 +399,30 @@ Vendure promotion, not part of the line's list price:
 
 ## Markup rules (negative percent, #283)
 
-- A discount rule with a negative percent raises the price (`price * (1 - percent/100)`) and competes by max with every other rule, so it applies only when nothing better matches. No clamping to the list price.
+- A discount setup with a negative percent raises the price (`price * (1 - percent/100)`) and competes by max with every other rule, so it applies only when nothing better matches. No clamping to the list price.
 - Orders: `OrderDiscountService` keeps a signed per-unit state and the item action returns a positive adjustment, which Vendure accepts (only negative adjustments are clamped to the line price). Prorated prices, totals, taxes, proforma invoice amounts and the ERP order `totalWithTax` include it.
-- Catalog and list price: counterparty/contract rules with `conditionValue` 0 apply without an order (like price-type rules without a threshold), including markups. A rule with a threshold above 0 depends on the order, so it stays out of the catalog (the same treatment as positive percents) and enters the price through the order adjustment once reached. A contract rule reaches the catalog price only through an order that names the contract.
+- Catalog and list price: setups with no condition or a threshold of 0 apply without an order (like price-type rules without a threshold), including markups. A setup with a threshold above 0 depends on the order, so it stays out of the catalog (the same treatment as positive percents) and enters the price through the order adjustment once reached. A contract rule reaches the catalog price only through an order that names the contract.
 - A markup is never shown as a discount, markup or saving: no `compareAtPrice`, and the proforma invoice prints the final price with no discount value.
-- Known limitation: rules with `recipientType` `contract` are not in the catalog price, because the contract is known only in an order. For a threshold-0 contract rule the catalog price and the cart price differ.
-- Tier badges (`discountTiers`, `tierProgress`) come from the price-type ladder only. A counterparty rule already in the price can match or beat a rung, so a badge may offer a rung that is not better than the current price; this is unchanged by markups and not corrected here.
-- `DiscountRule.validTo` is nullable only for promo and counterparty rows; the registry resolver filters those out, so the GraphQL `validTo` stays non-null.
+- Known limitation: a setup whose recipient row names a contract is not in the catalog price, because the contract is known only in an order. For such an unconditional setup the catalog price and the cart price differ.
+- Tier badges (`discountTiers`, `tierProgress`) come from the price-type ladder only. A discount setup already in the price can match or beat a rung, so a badge may offer a rung that is not better than the current price; this is unchanged by markups and not corrected here.
+- `DiscountRule.validTo` is nullable only for promo rows; the registry resolver filters those out, so the GraphQL `validTo` stays non-null.
+
+## Discount setup documents (#290, #289)
+
+Counterparty- and contract-scoped discounts and markups come from the ERP as one **setup document** each
+(`DiscountSetup`, table `discount_setup`), not as expanded register rows. `DiscountSetupRulesService.getBestPercent`
+(called from `PriceResolutionService.resolve`) matches by:
+
+- **counterparty and contract** through the document's recipient rows (an empty counterparty or contract means any; a
+  contract row matches only an order on that contract);
+- **price type**: a document naming a price type applies only to a customer whose effective price type is that one
+  (a markup is relative to a price type); a document without one applies to any;
+- **products**: an "all products" flag, or the document's product list (one indexed probe per priced product);
+- **condition**: `DiscountConditionKind` maps the ERP condition name to `quantity` (summed over the document's product
+  list, or all lines for an "all products" document) or `amount` (the whole document amount); an empty condition is
+  unconditional and an unknown name never matches;
+- the validity window and the active flag.
+
+Several matching documents never stack: the highest percent wins and a negative percent competes by max. Documents
+mivend cannot evaluate (fixed prices, price groups, bonuses, weekday windows, reference conditions, dynamic product
+filters) are stored inactive with a reason and ignored. Details and field accounting: `docs/ai/erp-streams-map.md`.

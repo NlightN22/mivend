@@ -26,7 +26,7 @@ within the local contour").
 stream, check `docs/ai/erp-streams-map.md` first** — a living status table (consumed / blocked /
 design-in-progress / needed-later / not-needed) for every stream, with the mivend + search-platform
 issue numbers already tracking it and non-trivial design decisions already made (e.g. the
-per-contract credit-limit model, the discount-rule one-entity-two-channels model). Update that
+per-contract credit-limit model, the discount and retro-bonus setup document model). Update that
 table whenever a stream's status changes — don't let it go stale, and don't re-derive a decision
 already recorded there from scratch.
 

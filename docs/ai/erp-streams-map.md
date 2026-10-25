@@ -80,15 +80,15 @@ before implementing or before trusting this table's status column.
 | `user` | ✅ (partial) | `Administrator` enrichment — email/departmentId/fullName/isActive/isDeleted (#109, #119); `positionId` → `erp_user.positionErpId`, linked or not (#251) | #109, #119, #251 | role still not consumed |
 | `position` | ✅ | `ErpPosition` (`erp_position`, @mivend/plugin-access-control); referenced softly by `erp_user.positionErpId` | #117, #120, #251 | — |
 | `point-of-sale`               | ✅ (partial)                                        | `TradingPoint` (@mivend/plugin-counterparty)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | #100                                                                    | #121 — shipped/live, verified against `@nlightn22/event-contracts@0.42.0`                                                                                                                             |
-| `discount-rule`               | ✅ (partial — `limitAmount` not enforced, see #154) | existing `DiscountRule` (plugin-price-entry) — **one entity, two write channels (ERP + portal), not a new table**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | #108                                                                    | none open (field value sets closed via #126)                                                                                                                                                          |
+| `discount-setup` | consumed (#290) | `DiscountSetup` + recipient/product member tables (plugin-price-entry); one row per ERP setup document, see "Discount and retro-bonus setup documents" | #290, #289 | filter-mode products, price groups, bonuses, fixed prices and weekday windows are stored inactive |
 | `granted-discount`            | ✅ consumed (#101)                                  | `GrantedDiscount` (plugin-price-entry), read-only shipment-time fact, never feeds price resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | #101                                                                    | #127/#128 resolved — `orderEntityId` shipped in contracts 0.38.0                                                                                                                                      |
-| `retro-bonus-rule`            | ✅ consumed (#102)                                  | new `RetroBonusRule` (manager-portal-only, read-only)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | #102                                                                    | none open (`accrual_kind` is an open ERP string, see the proto3 rule below)                                                                                                                                                            |
-| `granted-retro-bonus`         | ✅ consumed (#106)                                  | new `GrantedRetroBonus` (manager-portal-only, pairs with `retro-bonus-rule`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | #106                                                                    | none open (`operation_kind` kept opaque display text, by design)                                                                                                                                      |
+| `retro-bonus-setup` | consumed (#290) | `RetroBonusRule` + counterparty/product member tables (plugin-retro-bonus, manager-portal-only, read-only) | #290, #289 | filter-mode lists are not evaluated |
+| `granted-retro-bonus`         | ✅ consumed (#106)                                  | new `GrantedRetroBonus` (manager-portal-only, pairs with `retro-bonus-setup`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | #106                                                                    | none open (`operation_kind` kept opaque display text, by design)                                                                                                                                      |
 | `settlement-document` | consumed (#224) | `plugin-settlement`: `SettlementDocument` -> `SettlementDocumentEntry` -> `SettlementOrderLink` (ERP-owned, minor units) | #224 | storefront section and acts (#226) pending |
 | `settlement-balance` | consumed (#224) | `plugin-settlement`: `SettlementBalance` per (organization, counterparty, contract); `closing_balance` authoritative | #224 | storefront section pending |
 | `settlement-document-type` | consumed (#227) | `plugin-settlement`: `SettlementDocumentType` reference (category, `customer_visible`); drives the customer visibility of settlement documents | #227 | none |
 | `order-status` | consumed (sp#200) | `plugin-erp-order`: `OrderStatusReference` (code, name, rank, terminal, customer_visible, description, warehouse_started, shipped, delivered, cancelled, customer_group, is_deleted) = the order status dictionary (event-contracts 0.70.0); every status decision reads these attributes, no status name in code. All 17 fields consumed (event_id/occurred_at/entity_id are transport keys; version guards ordering; updated_at redundant with version) | sp#200 | topic `erp.order-status.events.v1`; mivend-pipeline statuses stay local |
-| `promo-rule`                  | ✅                                                  | existing `DiscountRule` (plugin-price-entry) — same entity as `discount-rule` above, extended with `triggerProductErpId`/`triggerQuantity`/`giftProductErpId`/`giftQuantity`/`operationKind` (product decision: not a separate table). Consumed: `entity_id`, `trigger_product_id`, `trigger_quantity`, `gift_product_id`, `gift_quantity`, `percent`, `operation_kind` (mapped to a closed 4-value union), `effective_from`/`effective_to`, `is_active`, `is_deleted`. `effective_to` is an optional timestamp (#282): absent is stored as `validTo = NULL` (open-ended) but never applied, since the promo and order-preload queries keep `validTo >= now`; invalid payloads (missing/bad `effective_from`, bad timestamps, non-finite numbers, missing trigger/gift fields) fail visibly as `NonRetryableInboundError`. Deliberately deferred: `event_id`/`occurred_at`/`updated_at` (envelope-only, no current consumer), `source_document_id` (no current need to trace back to the source 1C document), `warehouse_id` (promo rules applied warehouse-agnostically — no per-warehouse promo concept yet), `min_positions_count` (no current basket-composition rule beyond trigger_quantity). Storefront `CartPromoBanner.vue` UI deliberately not built yet (own confirmation needed — cart banner vs. product page vs. both) | #107                                                                    | none open (`operation_kind` closed via #126)                                                                                                                                                          |
+| `promo-rule`                  | ✅                                                  | existing `DiscountRule` (plugin-price-entry) — same table as the facet/price-type threshold rules, extended with `triggerProductErpId`/`triggerQuantity`/`giftProductErpId`/`giftQuantity`/`operationKind` (product decision: not a separate table). Consumed: `entity_id`, `trigger_product_id`, `trigger_quantity`, `gift_product_id`, `gift_quantity`, `percent`, `operation_kind` (mapped to a closed 4-value union), `effective_from`/`effective_to`, `is_active`, `is_deleted`. `effective_to` is an optional timestamp (#282): absent is stored as `validTo = NULL` (open-ended) but never applied, since the promo and order-preload queries keep `validTo >= now`; invalid payloads (missing/bad `effective_from`, bad timestamps, non-finite numbers, missing trigger/gift fields) fail visibly as `NonRetryableInboundError`. Deliberately deferred: `event_id`/`occurred_at`/`updated_at` (envelope-only, no current consumer), `source_document_id` (no current need to trace back to the source 1C document), `warehouse_id` (promo rules applied warehouse-agnostically — no per-warehouse promo concept yet), `min_positions_count` (no current basket-composition rule beyond trigger_quantity). Storefront `CartPromoBanner.vue` UI deliberately not built yet (own confirmation needed — cart banner vs. product page vs. both) | #107                                                                    | none open (`operation_kind` closed via #126)                                                                                                                                                          |
 
 ## Orders domain (one topic `erp.order.events.v1`, proto package `company.orders.events.v1`)
 
@@ -177,107 +177,72 @@ regardless of these fields — see #150/#151), but **whoever wires #150's gate m
 resolve the real presence-vs-zero distinction for these fields as part of that work, not assume
 the current storage shape is enforcement-ready as-is.
 
-### Discount rules — one entity, two write channels (issue #108)
+### Discount and retro-bonus setup documents (#290, #289)
 
-**`DiscountRule` (plugin-price-entry) is not being duplicated or paralleled.** Two write paths
-into the same table:
+The per-register-row streams `discount-rule` and `retro-bonus-rule` are gone (event-contracts 0.78.0 / 0.82.0, topics
+deleted by the Integration Service). The ERP now sends **one event per setup document**: `discount-setup`
+(`DiscountSetupChanged`, topic `erp.discount-setup.events.v1`) and `retro-bonus-setup` (`RetroBonusSetupChanged`,
+topic `erp.retro-bonus-setup.events.v1`). Key = document uuid, `version` strictly grows, a newer version is a full
+replace, a tombstone (`is_deleted`) comes from deletion mark, unposting, or posting of a "cancel discounts" document.
+The old rows cannot convert into documents: the migration drops them and the ERP re-delivers the documents.
 
-1. ERP channel (new): `discount-rule` Kafka stream, bootstrap/ongoing.
-2. Portal channel (existing): manager-portal Admin API (`upsertDiscountRule`), already built.
+**Storage** (plugin-price-entry / plugin-retro-bonus): one header row per document (`discount_setup`, `retro_bonus_rule`,
+`erpId` = document uuid) plus member tables replaced as a unit under the document's advisory lock
+(`discount_setup_recipient`, `discount_setup_product`, `retro_bonus_rule_counterparty`, `retro_bonus_rule_product`).
+No arrays, no foreign keys, arrival order does not matter. A newer version with **equal content** (sha-256 over the
+header and the sorted lists) only bumps the stored version; lists are not rewritten. An older or equal version is a
+noop; a tombstone or `is_active=false` deactivates and keeps the newest version seen, so only a strictly newer version
+reactivates. The "all" flags win over the lists and no list rows are kept behind them.
 
-Planned two-phase lifecycle: load from 1C first, then increasingly author rules directly in
-mivend — **not pushed back to 1C**, at least not for now.
+**Discount semantics** (read path `DiscountSetupRulesService`, called from `PriceResolutionService.resolve`): the
+counterparty (a `recipients` row, empty = any), the contract (order only) and the price type
+(`price_type_id`, when set the customer's effective price type must match; a markup is relative to a price type) are
+mandatory matches. Overlapping setups never stack: the highest percent wins, a negative percent (markup) competes by
+max. `condition` is the ERP enum value name; what it measures comes from the `discount_condition_kind` table
+(`erpName` -> `quantity` | `amount`, seeded at boot with the two names seen on real documents, an unknown name never
+matches, an empty one is unconditional). A quantity threshold sums the order quantity over the products of the setup's
+list (all lines for an "all products" setup); an amount threshold is the whole document amount (kopecks vs currency units).
+Catalog prices (no order) include only unconditional or threshold-0 setups of the counterparty itself.
 
-**Implemented** (see `CounterpartyDiscountRuleService`/`DiscountRuleStreamHandler`): schema extended
-with `recipientType`/`recipientErpId`/`productErpId`/`condition`/`conditionValue`/`limitAmount`/
-`sourceVersion`/`active` as a third, mutually-exclusive trigger shape alongside the existing
-facet/priceType-tier and #107 promo shapes. Write-time conflict-prevention on
-(`recipientType`,`recipientErpId`,`productErpId`): ERP-vs-ERP resolved by the event's own
-`version` (never delivery order), older row deactivated; ERP-vs-portal never auto-resolved (new
-row written inactive, warning logged). `PriceResolutionService` folds this in as a third max-wins
-source alongside facet/tier and promo — no additive stacking.
+**Not applied, stored inactive with a reason** (`inactiveReason`; the inbox row settles as a noop naming it):
+no header percent (price groups, bonus lines, fixed-price rules: the ERP's zero-percent plus price shape), a numeric
+`price_number`, a reference condition (`condition_ref_id`: payment kind, discount card), weekday windows
+(`by_weekdays`), and a dynamic product filter without the all flag (mivend does not evaluate the ERP's selection;
+a filter-mode retro-bonus rule likewise has no members, only the stored filter). `limit_percent` is stored, not enforced.
 
-Field accounting (`@nlightn22/event-contracts@0.43.0`, `DiscountRuleChanged`): `entity_id` ->
-`erpId`; `version` -> `sourceVersion` (read twice — once by `IntegrationInboxProcessorService`'s
-own per-erpId ordering guard, once here for this stream's own cross-erpId conflict comparison);
-`product_id` -> `productErpId` (null = all nomenclature for this recipient); `recipient_type`/
-`recipient_id` -> `recipientType`/`recipientErpId`, validated against a closed 2-value set,
-rejected if unrecognized rather than stored raw; `condition` -> `condition`, same closed-set
-validation (confirmed live against integration-service's own `discount-rule.dto.ts` source, not
-just examples — a real TS union, not a raw 1C passthrough); `condition_value` -> `conditionValue`
-(rubles, as with every other ERP money field — converted to kopecks only at the
-`byDocumentAmount` comparison site, see `getBestPercent`); `percent` -> `percent`; `limit_amount`
--> `limitAmount` (captured, **not yet enforced** — see the caveat below); `effective_from` ->
-`validFrom` (always present); `effective_to` -> `validTo`, a **real optional Timestamp** — absence
-means no expiry (`validTo: null`), also optional on `promo-rule`, but there a NULL end date is stored and never applied — `getBestPercent`'s validity check is `validFrom <= now AND (validTo IS NULL OR validTo >=
-now)`. `is_active`/`is_deleted`: consumed the same zero-value-omission-safe way as every other
-stream (`payload.isActive === true` only). `event_id`/`occurred_at`/`updated_at`/
-`source_document_id`: not consumed, same reasoning as every other stream (envelope-only / no
-current consumer).
+**Field accounting, `DiscountSetupChanged` (0.82.0).** Consumed: `entity_id`, `version`, `document_number`,
+`effective_from`/`effective_to`, `is_active`, `is_deleted`, `condition`, `condition_number`, `percent`, `limit_percent`
+(stored), `price_type_id`, `all_products`, `product_mode`, `product_filter` (stored), `product_ids` and `product_lines`
+(their product ids), `recipients` (counterparty and contract; warehouse rows skipped). Read only to reject the document
+(stored inactive): `price_number`, `condition_ref_id`, `by_weekdays`, a missing `percent`. Deferred, no mivend feature
+reads them yet: `document_date`, `operation_kind` (applicability is decided by the fields, not the kind name),
+`currency_id`, `discount_kind`, `quality_id`, `markup_type_id`, `purpose_id`, `allow_exceeding_limit_price`, `pseudo`,
+`responsible_id`, `comment`, `common_time_from`/`common_time_to`/`weekday_windows` (a weekday setup is not applied),
+`price_groups`/`bonus_lines`/`set_components` (no header percent), `source_fields` (a copy of the header). Envelope only:
+`event_id`, `occurred_at`, `updated_at`.
 
-**proto3 zero-value rule (#281)**: the wire is proto3 JSON, so zero/empty scalars are omitted. In `discount-rule` and `retro-bonus-rule`, an absent `conditionValue`, `percent`, `accrualDayNumber` is `0`; an empty/absent `productId` is the whole assortment (`discount-rule`) or `''` (`retro-bonus-rule`); an empty/absent `effectiveTo` is open-ended; `retro-bonus-rule.accrualKind` is an open display string stored as is (absent = `''`). Truly invalid data (unknown `recipientType`/`condition`, missing `recipientId`/`counterpartyId`/`version`/`effectiveFrom`, unparseable timestamp) throws `NonRetryableInboundError`, so the inbox row ends `failed` with `last_error` and shows on the integration-health page instead of a healthy-looking noop; inactive rules and tombstones for unknown rules stay legitimate noops. `granted-discount`/`granted-retro-bonus` follow the same invalid-data rule. Sign of `percent` is confirmed: positive is a discount, negative is a markup (`lineTotal = amountWithoutDiscount * (1 - percent/100)`).
+**Field accounting, `RetroBonusSetupChanged` (0.82.0).** Consumed: `entity_id`, `version`, `document_number`, `percent`,
+`condition_amount`, `condition_quantity`, `is_instant`, `accrual_period`, `accrual_day_number`, `accrual_kind` (empty for
+legacy documents), `price_type_id`, `organization_id`, `recipient_counterparty_id`, `recipient_contract_id`,
+`effective_from`/`effective_to`, `is_active`, `is_deleted`, `all_counterparties`, `all_products`, `counterparty_mode`,
+`product_mode`, `counterparty_filter` and `product_filter` (stored, not evaluated), `counterparty_ids`, `product_ids`.
+Deferred, no mivend feature reads them: `document_date`, `department_id`, `purpose`, `responsible_id`, `comment`,
+`source_fields`. Envelope only: `event_id`, `occurred_at`, `updated_at`.
 
-**Fixed-price rules (known limitation, future work)**: the ERP can hold a "price instead of a discount" rule as a zero-percent register row with a price or price type set. These are not supported and stay ignored; the Integration Service currently sends a tombstone for such keys, so mivend never sees them. Support is planned as a later mivend-side feature. **Markup (#283)**: a negative `percent` is applied for real, `price * (1 - percent/100)`, and competes by max with the other rules, so it applies only when nothing better matches. Orders: `OrderDiscountService` keeps a signed per-unit state and `orderDiscountAction` returns a positive item adjustment (Vendure accepts it; only negative adjustments are clamped), so line price, order total, taxes, proforma invoice amounts and `totalWithTax` in the ERP order payload (which carries no line prices) include it. Catalog and list price: counterparty/contract rules with `conditionValue` 0 are included (also without an order, like price-type rules without a threshold); rules with a threshold above 0 are order-dependent and stay out of the catalog, as for positive percents. Nothing shows it as a discount, markup or saving: no `compareAtPrice`, and the proforma invoice prints the final price with no discount value.
+Retro bonus is display only (manager portal, query
+`retroBonusRules`): shown for a counterparty by list membership, recipient or the all flag, narrowed by contract.
 
-**Cancellation (resolved, search-platform#145 + mivend 0b92748)**: cancelling a rule in 1C
-(`ОтменаСкидокНоменклатуры`) writes a new register row with the same natural key and `percent=0` —
-originally `СформироватьDTOСкидки` filtered that 0%-percent row out entirely and sent nothing, a
-completely silent no-op on the wire (no `effective_to` update, no `is_active=false`, no
-`is_deleted=true`). search-platform fixed this (search-platform#145): a percent=0 row now
-triggers a genuine tombstone call (`POST /api/ingestion/v1/entities/delete`) that arrives as a
-normal `DiscountRuleChanged` with `is_deleted=true` for the same `entityId` as the original active
-rule, same topic as ordinary upserts. mivend's `DiscountRuleStreamHandler` checks `is_deleted` fully
-before any other field parsing (a tombstone payload carries none of the other required fields,
-same shape as `contract.handler.ts`'s own tombstone-first check) and calls
-`CounterpartyDiscountRuleService.deactivateTombstone` (erpId-only, no other field touched,
-idempotent on redelivery). `is_deleted` really is otherwise hardcoded `false` for every non-tombstone
-event on this stream — that part of the original contract comment was accurate.
+**Fixed-price rules (known limitation, future work)**: a "price instead of a discount" document is stored inactive and
+ignored. **Markup (#283)**: a negative `percent` is applied for real, `price * (1 - percent/100)`, competes by max, and
+is never shown as a discount or markup. Orders: `OrderDiscountService` keeps a signed per-unit state and
+`orderDiscountAction` returns a positive item adjustment. Sign of `percent` follows the old register semantics
+(positive discount, negative markup); `markup_type_id` is deferred (see below).
 
-**Confirmed NOT monotonic (sp.issue.145, checked `register-streams.bsl` directly) — mitigated in
-mivend's own code, not just on the wire**: `ПодготовитьКонтекст` calls `ТекущаяДата()` once per
-sync pass and reuses that single timestamp-string as `version` for every DTO/tombstone generated
-in that pass — if an update and its cancellation for the same `entityId` land in one sync pass
-(e.g. after a backlog catch-up), both get an **identical** `version`. Worse, search-platform's own
-Ingestion API dedupes inbound requests on `(sourceSystem, entityType, entityId, version)` with
-`onConflictDoNothing`, so at equal versions one of the two can be silently dropped before ever
-reaching Kafka — not fixable from mivend's side at all. **mivend's own mitigation** (not relying on
-version strictly increasing): `CounterpartyDiscountRuleService.upsertCounterpartyRule` refuses to
-reactivate a deactivated row (tombstone or conflict-superseded) unless the incoming event's
-`version` is _strictly_ newer than the row's own stored `sourceVersion`; `deactivateTombstone`
-stores the tombstone's own version (not just `active=false`) so this guard has something real to
-compare against. A genuinely older/equal-version update is logged and otherwise ignored, never
-silently reactivates. This is specific to the discount-rule table's own write path — it does not
-fix the underlying version scheme (shared across every register-based stream: discount-rules,
-retro-bonus, stock, price, …) or the Ingestion API's own dedup-drop risk: if the _cancellation
-itself_ loses the dedup race, mivend never receives it at all, and no mivend-side guard can fix
-that. Tracked as mivend#154 (own-side residual risk) — upstream fix (version scheme/dedup policy)
-is search-platform's own follow-up to search-platform#145, not yet confirmed back with an issue
-number.
-
-**Fixed ordering bug in the mitigation itself (mivend.audit.common, review of 9549a8d)**:
-`upsertCounterpartyRule` originally ran the reactivation guard _after_ the cross-erpId
-conflict-supersede loop, and that loop mutated/saved conflicting rows as it went — a stale
-reactivation attempt (or a stale comparison against a _second_ conflict) could abort the write via
-an early `return` after an _earlier_ conflict had already been deactivated and saved, silently
-losing an unrelated active rule. Fixed by deciding every outcome first (fetch the record, check
-the reactivation guard, evaluate every conflict into a to-supersede list) and only mutating/saving
-after no decision aborts the write.
-
-**Deferred, low-priority (re-filed as mivend#154, not tracked inside a closed issue anymore)**:
-`limitAmount` is captured but currently makes a rule excluded from matching entirely (safe
-default — never applies an uncapped percent for a rule the ERP declared a limit for) rather than
-having its cap actually enforced — a real, visible gap for any ERP rule that sets this field, not
-just unfinished polish. The write-time conflict scope simplification (a null `productErpId`
-"applies to all products" row is not detected as overlapping a product-specific row for the same
-recipient — they are treated as distinct scope values) is a deliberate narrowing of #108's literal
-"never two rules cover the same product" requirement, not the fully general overlap check. The
-ERP-vs-portal conflict branch has no reachable trigger in production today (portal's
-`upsertDiscountRule` mutation has no `recipientType`/`recipientErpId` fields yet) — implemented
-and unit-tested against direct service calls only.
-
-### Batched apply for rule streams (#284)
-
-`discount-rule` and `retro-bonus-rule` implement the opt-in `applyBatch` handler capability (`BatchInboundStreamHandler`); other streams stay row by row. The processor groups a claimed bulk batch per stream and runs each group in ONE transaction (`integration-inbox-batch.ts`): advisory entity locks (sorted, `lockAggregates`), one query for processed history (superseded check, `isVersionNewer`), the handler batch, one multi-row `INSERT .. ON CONFLICT (erpId)`, one `UPDATE` marking outcomes. The discount conflict policy (portal rules, supersede, deactivated-row guard, tombstones) is the same pure code as the row path (`counterparty-rule-policy.ts`), replayed in memory in (entityId, version) order, with per-scope advisory locks. Invalid payloads are returned as `invalid` and become `failed` rows after the batch commits. Any batch error (including a lost claim) rolls back and the rows are retried through the row path. Bulk claim size is 500; the bulk task drains until empty or its wall-clock budget, with an in-process overlap guard. Retention (`purgeSupersededProcessedRows`) is set-based (3 statements per 200 groups), guarded by `pg_try_advisory_xact_lock`, and backed by a partial index; the retention window is unchanged (newest processed row per entity keeps its payload, every row stays as the dedup key). Migration `1791534000000` adds the two indexes. Benchmark: `rule-batch-inbox.int.test.ts` prints events/s for both paths (`RULE_BENCH_EVENTS` sets N).
+**Open questions for the Integration Service / owner**: whether `markup_type_id` (1C discount-or-markup type) can flip the
+sign of a positive percent; the real enum value names of `condition` (assumed the 1C programmatic names); how many
+documents use a dynamic filter in production. **Dead code left in place**: the batched-apply capability
+(`BatchInboundStreamHandler`, `integration-inbox-batch.ts`, #284) has no consumer now that the two rule streams are
+per-document; remove it with the next inbox refactor.
 
 ### Order-time discount confirmation — two lifecycle stages, not one (issues #101/#110)
 
@@ -302,6 +267,14 @@ stale. A repost re-upserts lines with the same `LineNumber`, but lines whose num
 tombstoned. Upstream also leaks the exchange-plan registration for the unposted recorder (possibly the
 same root cause as search-platform#136). Fix and semantics are up to search-platform; do not show these
 facts in the UI (#155/#156) until a tombstone arrives, then add an `is_deleted` branch here.
+
+### Contact information list `contact_infos` (#290, event-contracts 0.82.0)
+
+Added on `counterparty`, `counterparty-contact` (stream ignored) and `point-of-sale`: `ContactInfo {type, kind_name,
+is_primary, presentation, comment}`, all contact information as a list, data not cleaned (a phone field may hold an
+e-mail). **Deferred** on every stream: the old `phone` / `official_email` / `contact_phone` fields stay and are derived
+from the list by the Integration Service, and no mivend feature reads the full list yet. Consume it when a feature needs
+more than the first phone and e-mail (for example several recipients for notifications).
 
 ### `point-of-sale` field accounting (issue #100)
 
@@ -339,7 +312,7 @@ same-version upsert arriving later still creates the row. Future read queries ov
 
 ### Retro bonuses — manager-portal only, decision deferred for storefront
 
-Explicit project-owner decision: retro bonus terms/facts (`retro-bonus-rule`/
+Explicit project-owner decision: retro bonus terms/facts (`retro-bonus-setup`/
 `granted-retro-bonus`) show on the manager portal for a specific client (read-only) — **not on
 the storefront**, "not all retro bonuses should be customer-visible," that call is for later, do
 not build a storefront surface for this without a fresh explicit decision.
