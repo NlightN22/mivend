@@ -16,9 +16,9 @@ import { OrderRegistrationResultHandler } from './handlers/order-registration-re
 import { OrderCancelResultHandler } from './handlers/order-cancel-result.handler';
 import { OrderChangedStreamHandler } from './handlers/order-changed.handler';
 import { PromoRuleStreamHandler } from './handlers/promo-rule.handler';
-import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
+import { DiscountSetupStreamHandler } from './handlers/discount-setup.handler';
 import { GrantedDiscountStreamHandler } from './handlers/granted-discount.handler';
-import { RetroBonusRuleStreamHandler } from './handlers/retro-bonus-rule.handler';
+import { RetroBonusSetupStreamHandler } from './handlers/retro-bonus-setup.handler';
 import { GrantedRetroBonusStreamHandler } from './handlers/granted-retro-bonus.handler';
 import { VatRateStreamHandler } from './handlers/vat-rate.handler';
 import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
@@ -55,9 +55,9 @@ export const STREAM_HANDLERS = [
     OrderChangedStreamHandler,
     OrderCancelResultHandler,
     PromoRuleStreamHandler,
-    DiscountRuleStreamHandler,
+    DiscountSetupStreamHandler,
     GrantedDiscountStreamHandler,
-    RetroBonusRuleStreamHandler,
+    RetroBonusSetupStreamHandler,
     GrantedRetroBonusStreamHandler,
     VatRateStreamHandler,
     PointOfSaleStreamHandler,

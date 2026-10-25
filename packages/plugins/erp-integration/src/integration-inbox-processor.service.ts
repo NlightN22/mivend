@@ -9,7 +9,7 @@ import { CounterpartyCreditBalanceStreamHandler } from './handlers/counterparty-
 import { DeferredStreamHandler } from './handlers/deferred-stream-handler';
 import { DepartmentStreamHandler } from './handlers/department.handler';
 import { PositionStreamHandler } from './handlers/position.handler';
-import { DiscountRuleStreamHandler } from './handlers/discount-rule.handler';
+import { DiscountSetupStreamHandler } from './handlers/discount-setup.handler';
 import { GrantedDiscountStreamHandler } from './handlers/granted-discount.handler';
 import { isBatchHandler } from './handlers/inbound-stream-handler';
 import type {
@@ -26,7 +26,7 @@ import { SettlementBalanceStreamHandler } from './handlers/settlement-balance.ha
 import { SettlementDocumentStreamHandler } from './handlers/settlement-document.handler';
 import { OrderStatusStreamHandler } from './handlers/order-status.handler';
 import { SettlementDocumentTypeStreamHandler } from './handlers/settlement-document-type.handler';
-import { RetroBonusRuleStreamHandler } from './handlers/retro-bonus-rule.handler';
+import { RetroBonusSetupStreamHandler } from './handlers/retro-bonus-setup.handler';
 import { PointOfSaleStreamHandler } from './handlers/point-of-sale.handler';
 import { OrganizationStreamHandler } from './handlers/organization.handler';
 import { PriceStreamHandler } from './handlers/price.handler';
@@ -96,9 +96,9 @@ export class IntegrationInboxProcessorService {
         bankHandler: BankStreamHandler,
         bankAccountHandler: BankAccountStreamHandler,
         productPhotoHandler: ProductPhotoStreamHandler,
-        discountRuleHandler: DiscountRuleStreamHandler,
+        discountSetupHandler: DiscountSetupStreamHandler,
         grantedDiscountHandler: GrantedDiscountStreamHandler,
-        retroBonusRuleHandler: RetroBonusRuleStreamHandler,
+        retroBonusSetupHandler: RetroBonusSetupStreamHandler,
         grantedRetroBonusHandler: GrantedRetroBonusStreamHandler,
         settlementDocumentHandler: SettlementDocumentStreamHandler,
         settlementBalanceHandler: SettlementBalanceStreamHandler,
@@ -135,9 +135,9 @@ export class IntegrationInboxProcessorService {
             bank: bankHandler,
             'bank-account': bankAccountHandler,
             'product-photo': productPhotoHandler,
-            'discount-rule': discountRuleHandler,
+            'discount-setup': discountSetupHandler,
             'granted-discount': grantedDiscountHandler,
-            'retro-bonus-rule': retroBonusRuleHandler,
+            'retro-bonus-setup': retroBonusSetupHandler,
             'granted-retro-bonus': grantedRetroBonusHandler,
             'settlement-document': settlementDocumentHandler,
             'settlement-balance': settlementBalanceHandler,

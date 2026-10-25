@@ -753,19 +753,18 @@ export const config: VendureConfig = {
                     'product-photo':
                         process.env.INTEGRATION_KAFKA_TOPIC_PRODUCT_PHOTO ??
                         'erp.product-photo.events.v1',
-                    // Issue #108: the ERP's own per-counterparty/contract automatic discount
-                    // engine. See DiscountRuleStreamHandler.
-                    'discount-rule':
-                        process.env.INTEGRATION_KAFKA_TOPIC_DISCOUNT_RULE ??
-                        'erp.discount-rule.events.v1',
+                    // Issue #290: one event per ERP discount setup document. See DiscountSetupStreamHandler.
+                    'discount-setup':
+                        process.env.INTEGRATION_KAFKA_TOPIC_DISCOUNT_SETUP ??
+                        'erp.discount-setup.events.v1',
                     // Issue #101: shipment-time confirmed discount facts. See GrantedDiscountStreamHandler.
                     'granted-discount':
                         process.env.INTEGRATION_KAFKA_TOPIC_GRANTED_DISCOUNT ??
                         'erp.granted-discount.events.v1',
-                    // Issue #102: the ERP's retro-bonus terms log. See RetroBonusRuleStreamHandler.
-                    'retro-bonus-rule':
-                        process.env.INTEGRATION_KAFKA_TOPIC_RETRO_BONUS_RULE ??
-                        'erp.retro-bonus-rule.events.v1',
+                    // Issue #290: one event per ERP retro-bonus setup document. See RetroBonusSetupStreamHandler.
+                    'retro-bonus-setup':
+                        process.env.INTEGRATION_KAFKA_TOPIC_RETRO_BONUS_SETUP ??
+                        'erp.retro-bonus-setup.events.v1',
                     position:
                         process.env.INTEGRATION_KAFKA_TOPIC_POSITION ?? 'erp.position.events.v1',
                     'granted-retro-bonus':

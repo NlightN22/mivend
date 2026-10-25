@@ -134,14 +134,13 @@ export type InboundStream =
     | 'bank-account'
     // Issue #181: normalized product photos (ProductPhotoChanged); metadata + pre-signed download URL.
     | 'product-photo'
-    // Feeds the same DiscountRule entity as the facet/priceType-threshold and promo rules.
-    // Its three-shape invariant is documented on DiscountRule's own doc comment.
-    | 'discount-rule'
+    // Issue #290: one event per ERP discount setup document (DiscountSetupChanged), see DiscountSetupStreamHandler.
+    | 'discount-setup'
     // Issue #101: shipment-time confirmed discount fact (GrantedDiscountChanged),
     // company.customers.events.v1. See GrantedDiscountStreamHandler.
     | 'granted-discount'
-    // Read-only; surfaced only in the manager portal, see @mivend/plugin-retro-bonus.
-    | 'retro-bonus-rule'
+    // Read-only; one event per ERP retro-bonus setup document, surfaced only in the manager portal.
+    | 'retro-bonus-setup'
     // Issue #106: credited-bonus facts (GrantedRetroBonusChanged), see
     // GrantedRetroBonusStreamHandler.
     | 'granted-retro-bonus'
@@ -229,9 +228,9 @@ const ALL_INBOUND_STREAMS_MAP = {
     bank: true,
     'bank-account': true,
     'product-photo': true,
-    'discount-rule': true,
+    'discount-setup': true,
     'granted-discount': true,
-    'retro-bonus-rule': true,
+    'retro-bonus-setup': true,
     'granted-retro-bonus': true,
     'settlement-document': true,
     'settlement-balance': true,

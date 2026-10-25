@@ -8,7 +8,7 @@ import {
     CounterpartyChangedSchema,
     CounterpartyCreditBalanceChangedSchema,
     DepartmentChangedSchema,
-    DiscountRuleChangedSchema,
+    DiscountSetupChangedSchema,
     GrantedDiscountChangedSchema,
     OfferChangedSchema,
     OrderStatusChangedSchema,
@@ -20,7 +20,7 @@ import {
     ProductChangedSchema,
     PromoRuleChangedSchema,
     GrantedRetroBonusChangedSchema,
-    RetroBonusRuleChangedSchema,
+    RetroBonusSetupChangedSchema,
     SettlementBalanceChangedSchema,
     SettlementDocumentChangedSchema,
     SettlementDocumentTypeChangedSchema,
@@ -58,6 +58,8 @@ const STATUS_KEY = 'default';
 
 // Plain protobuf toBinary() payloads, no Confluent header: decode statically, not via Registry.
 // Offset is committed only after the inbox write resolves, so ack never precedes the durable write.
+// Setup documents carry lists of up to 100k ids; the broker's message limit is 8 MiB.
+const FETCH_MAX_BYTES = 16 * 1024 * 1024;
 const CONNECT_MAX_ATTEMPTS = 8;
 const CONNECT_BASE_DELAY_MS = 1000;
 const CONNECT_MAX_DELAY_MS = 60_000;
@@ -88,9 +90,9 @@ const SCHEMA_BY_STREAM: Record<
     'counterparty-credit-balance': CounterpartyCreditBalanceChangedSchema,
     user: UserChangedSchema,
     'promo-rule': PromoRuleChangedSchema,
-    'discount-rule': DiscountRuleChangedSchema,
+    'discount-setup': DiscountSetupChangedSchema,
     'granted-discount': GrantedDiscountChangedSchema,
-    'retro-bonus-rule': RetroBonusRuleChangedSchema,
+    'retro-bonus-setup': RetroBonusSetupChangedSchema,
     'granted-retro-bonus': GrantedRetroBonusChangedSchema,
     'settlement-document': SettlementDocumentChangedSchema,
     'settlement-balance': SettlementBalanceChangedSchema,
@@ -168,7 +170,11 @@ export class KafkaConsumerService implements OnModuleDestroy {
             ssl: this.options.kafkaConsumer.ssl,
             sasl: this.options.kafkaConsumer.sasl as SASLOptions | undefined,
         });
-        this.consumer = kafka.consumer({ groupId: this.options.kafkaConsumer.groupId });
+        this.consumer = kafka.consumer({
+            groupId: this.options.kafkaConsumer.groupId,
+            maxBytesPerPartition: FETCH_MAX_BYTES,
+            maxBytes: FETCH_MAX_BYTES,
+        });
 
         this.consumer.on(this.consumer.events.CONNECT, () => {
             this.connected = true;

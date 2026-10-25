@@ -3,13 +3,14 @@ import type { RequestContext } from '@vendure/core';
 
 import { ContractStreamHandler } from '../../handlers/contract.handler';
 import { CounterpartyStreamHandler } from '../../handlers/counterparty.handler';
-import { DiscountRuleStreamHandler } from '../../handlers/discount-rule.handler';
+import { DiscountSetupStreamHandler } from '../../handlers/discount-setup.handler';
 import { GrantedDiscountStreamHandler } from '../../handlers/granted-discount.handler';
 import { GrantedRetroBonusStreamHandler } from '../../handlers/granted-retro-bonus.handler';
 import { OrderChangedStreamHandler } from '../../handlers/order-changed.handler';
 import { OrderRegistrationResultHandler } from '../../handlers/order-registration-result.handler';
 import { OrganizationStreamHandler } from '../../handlers/organization.handler';
 import { PointOfSaleStreamHandler } from '../../handlers/point-of-sale.handler';
+import { RetroBonusSetupStreamHandler } from '../../handlers/retro-bonus-setup.handler';
 
 // Issue #200: a tombstone matching no row, or a skipped part of a message, is a noop with a
 // reason, never a bare return recorded as applied; the "row existed" case stays `applied`.
@@ -40,12 +41,16 @@ describe.each([
         { isDeleted: true },
     ],
     [
-        'discount-rule',
+        'discount-setup',
         (m: boolean) =>
-            new DiscountRuleStreamHandler({
-                deactivateTombstone: vi.fn().mockResolvedValue(m),
-            } as never),
-        { isDeleted: true },
+            new DiscountSetupStreamHandler({ deactivate: vi.fn().mockResolvedValue(m) } as never),
+        { isDeleted: true, version: '5' },
+    ],
+    [
+        'retro-bonus-setup',
+        (m: boolean) =>
+            new RetroBonusSetupStreamHandler({ deactivate: vi.fn().mockResolvedValue(m) } as never),
+        { isDeleted: true, version: '5' },
     ],
     [
         'granted-discount',

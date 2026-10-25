@@ -9,7 +9,7 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 const loggerCtx = 'IntegrationPointOfSaleHandler';
 
 // Applies the `point-of-sale` stream (issue #100) — TradingPoint's live counterpart. Field
-// accounting: docs/ai/erp-streams-map.md's `point-of-sale` row.
+// accounting: docs/ai/erp-streams-map.md's `point-of-sale` row (contactInfos is deferred there).
 @Injectable()
 export class PointOfSaleStreamHandler implements InboundStreamHandler {
     constructor(private readonly tradingPointService: TradingPointService) {}

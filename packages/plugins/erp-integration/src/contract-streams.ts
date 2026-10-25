@@ -24,6 +24,14 @@ const NOT_EVENT_SCHEMAS = new Set([
     'TypedDocumentRefSchema',
     'SettlementEntrySchema',
     'SettlementOrderLinkSchema',
+    'ContactInfoSchema',
+    'SelectionConditionSchema',
+    'DiscountBonusLineSchema',
+    'DiscountPriceGroupSchema',
+    'DiscountProductLineSchema',
+    'DiscountRecipientSchema',
+    'DiscountSetComponentSchema',
+    'DiscountWeekdayWindowSchema',
 ]);
 
 export function streamNameFromSchemaExport(exportName: string): string | null {

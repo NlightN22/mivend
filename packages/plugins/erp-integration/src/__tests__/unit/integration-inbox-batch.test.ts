@@ -17,7 +17,7 @@ describe('processStreamBatch fallback', () => {
         const result = await processStreamBatch(
             { connection: failingTx as never, inbox: {} as never },
             {} as never,
-            'retro-bonus-rule',
+            'retro-bonus-setup',
             {} as never,
             [row(1), row(2), row(3)],
             processOne,

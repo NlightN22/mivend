@@ -67,7 +67,7 @@ export class CounterpartyStreamHandler implements InboundStreamHandler {
 
                     ...optionalErpDetails(payload),
                     // notificationPhone: deliberately unread — see this file's own top-of-file field
-                    // accounting comment.
+                    // accounting comment. contactInfos: deferred, see docs/ai/erp-streams-map.md.
                 }),
         );
         if (!name) {
