@@ -64,6 +64,15 @@ export class SetupDocuments1791536000000 implements MigrationInterface {
         await queryRunner.query(
             `CREATE TABLE "discount_condition_kind" ("erpName" character varying NOT NULL, "metric" character varying NOT NULL, CONSTRAINT "PK_d759a73d03f3f3aa2d4d99cfa8d" PRIMARY KEY ("erpName"))`,
         );
+        await queryRunner.query(
+            `CREATE TABLE "discount_operation_kind" ("erpName" character varying NOT NULL, CONSTRAINT "PK_69f93252c50cf99c794475ae22e" PRIMARY KEY ("erpName"))`,
+        );
+        await queryRunner.query(
+            `INSERT INTO "discount_condition_kind" ("erpName", "metric") VALUES ('ПоКоличествуТовара', 'quantity'), ('ПоСуммеДокумента', 'amount'), ('БезУсловий', 'unconditional') ON CONFLICT DO NOTHING`,
+        );
+        await queryRunner.query(
+            `INSERT INTO "discount_operation_kind" ("erpName") VALUES ('ПоНоменклатуре') ON CONFLICT DO NOTHING`,
+        );
     }
 
     public async down(): Promise<void> {

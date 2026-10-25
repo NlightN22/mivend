@@ -137,4 +137,16 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
             }),
         ).toBe('set-components');
     });
+
+    it('stores a document with no recipients inactive instead of silently never matching', () => {
+        expect(reasonOf({ recipients: [] })).toBe('no-recipients');
+    });
+
+    it('hands the operation kind to the service for the allow-list check', () => {
+        const parsed = parseDiscountSetup('doc-1', payload({ operationKind: 'ПоНоменклатуре' }));
+        expect(parsed).toMatchObject({
+            kind: 'upsert',
+            input: { operationKind: 'ПоНоменклатуре' },
+        });
+    });
 });

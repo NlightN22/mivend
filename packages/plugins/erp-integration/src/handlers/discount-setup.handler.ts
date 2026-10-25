@@ -27,8 +27,15 @@ export class DiscountSetupStreamHandler implements InboundStreamHandler {
             );
             Logger.verbose(`discount-setup ${entityId}: ${parsed.kind} -> ${result}`, loggerCtx);
             if (result === 'stale') {
+                const note = parsed.version === '' ? ' (empty version)' : '';
+                if (note) {
+                    Logger.warn(
+                        `discount-setup ${entityId}: ${parsed.kind} has no version`,
+                        loggerCtx,
+                    );
+                }
                 return inboundNoop(
-                    `discount-setup ${entityId}: ${parsed.kind} does not beat the stored version`,
+                    `discount-setup ${entityId}: ${parsed.kind} does not beat the stored version${note}`,
                 );
             }
             return result === 'deactivated'
@@ -43,6 +50,11 @@ export class DiscountSetupStreamHandler implements InboundStreamHandler {
             return inboundNoop(`discount-setup ${entityId}: content unchanged`);
         }
         const { setup } = parsed.input;
+        if (result === 'unsupported-operation') {
+            return inboundNoop(
+                `discount-setup ${entityId}: not applied (unsupported operation ${parsed.input.operationKind})`,
+            );
+        }
         if (result === 'unknown-condition') {
             return inboundNoop(
                 `discount-setup ${entityId}: not applied (unknown condition ${setup.conditionName})`,

@@ -46,6 +46,11 @@ export class TestConditionKind {
     @Column({ type: 'varchar' }) metric!: string;
 }
 
+@Entity('discount_operation_kind')
+export class TestOperationKind {
+    @PrimaryColumn({ type: 'varchar' }) erpName!: string;
+}
+
 @Entity('price_type')
 export class TestPriceType {
     @PrimaryGeneratedColumn() id!: number;
@@ -58,11 +63,13 @@ export const SETUP_ENTITIES = [
     TestRecipient,
     TestProduct,
     TestConditionKind,
+    TestOperationKind,
     TestPriceType,
 ];
 
 export const QUANTITY_KIND = 'quantity-kind';
 export const AMOUNT_KIND = 'amount-kind';
+export const OPERATION_KIND = 'operation-kind';
 export const UNCONDITIONAL_KIND = 'unconditional-kind';
 
 export function mapSetupEntities(base: TransactionalConnection): TransactionalConnection {
@@ -80,11 +87,12 @@ export function mapSetupEntities(base: TransactionalConnection): TransactionalCo
 
 export async function resetSetupTables(dataSource: DataSource): Promise<void> {
     await dataSource.query(
-        'TRUNCATE discount_setup, discount_setup_recipient, discount_setup_product, discount_condition_kind, price_type RESTART IDENTITY',
+        'TRUNCATE discount_setup, discount_setup_recipient, discount_setup_product, discount_condition_kind, discount_operation_kind, price_type RESTART IDENTITY',
     );
     await dataSource.getRepository(TestConditionKind).save([
         { erpName: QUANTITY_KIND, metric: 'quantity' },
         { erpName: AMOUNT_KIND, metric: 'amount' },
         { erpName: UNCONDITIONAL_KIND, metric: 'unconditional' },
     ]);
+    await dataSource.getRepository(TestOperationKind).save({ erpName: OPERATION_KIND });
 }

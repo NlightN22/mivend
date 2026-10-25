@@ -36,7 +36,10 @@ export function parseDiscountSetup(
     }
     const allProducts = payload.allProducts === true;
     const percent = optionalNumber(payload.percent) ?? 0;
-    const inactiveReason = notApplicableReason(payload, percent, allProducts, productMode);
+    const recipients = parseRecipients(payload.recipients);
+    const inactiveReason =
+        notApplicableReason(payload, percent, allProducts, productMode) ??
+        (recipients.length === 0 ? 'no-recipients' : null);
     return {
         kind: 'upsert',
         input: {
@@ -57,7 +60,8 @@ export function parseDiscountSetup(
                 productFilter: parseSelectionFilter(payload.productFilter),
                 sourceVersion: version,
             },
-            recipients: parseRecipients(payload.recipients),
+            recipients,
+            operationKind: String(payload.operationKind ?? ''),
             productErpIds: productIds(payload),
         },
     };

@@ -118,6 +118,7 @@ async function seed(percent: number, conditionValue: number): Promise<void> {
         },
         recipients: [{ counterpartyErpId: 'cnt-1', contractErpId: '' }],
         productErpIds: [],
+        operationKind: '',
     });
 }
 

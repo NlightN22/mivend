@@ -209,7 +209,7 @@ no header percent (price groups, bonus lines, fixed-price rules: the ERP's zero-
 `price_number`, a reference condition (`condition_ref_id`: payment kind, discount card), weekday windows
 (`by_weekdays`/`weekday_windows`), any non-default `markup_type_id`, `quality_id`, `purpose_id`, `currency_id`, `common_time_*`,
 `pseudo`, price groups, bonus lines, set components or product-line attributes, an unknown `condition` name (reason
-`unknown condition <name>`), and a dynamic product filter without the all flag (mivend does not evaluate the ERP's selection;
+`unknown condition <name>`), an `operation_kind` missing from `discount_operation_kind` (`unsupported operation <name>`), no recipients (`no-recipients`), and a dynamic product filter without the all flag (mivend does not evaluate the ERP's selection;
 a filter-mode retro-bonus rule likewise has no members, only the stored filter). `limit_percent` is stored, not enforced.
 
 **Field accounting, `DiscountSetupChanged` (0.82.0).** Consumed: `entity_id`, `version`, `document_number`,
@@ -218,8 +218,8 @@ a filter-mode retro-bonus rule likewise has no members, only the stored filter).
 (their product ids), `recipients` (counterparty and contract; warehouse rows skipped). Read only to reject the document
 (stored inactive): `price_number`, `condition_ref_id`, `by_weekdays`, a missing `percent`, and the non-default attributes
 listed above. Deferred, no mivend feature
-reads them yet: `document_date`, `operation_kind` (applicability is decided by the fields, not the kind name),
-`discount_kind`, `allow_exceeding_limit_price` (the rejected attributes above are read only to reject),
+reads them yet: `document_date`, 
+`discount_kind` (not checked: the contract gives no meaning for it and no fixture sets it; open question for the Integration Service, together with whether an empty `recipients` list means everyone, stored inactive as `no-recipients` until then), `allow_exceeding_limit_price` (the rejected attributes above are read only to reject),
 `responsible_id`, `comment`, `common_time_from`/`common_time_to`/`weekday_windows` (a weekday setup is not applied),
 `price_groups`/`bonus_lines`/`set_components` (no header percent), `source_fields` (a copy of the header). Envelope only:
 `event_id`, `occurred_at`, `updated_at`.

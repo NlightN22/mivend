@@ -11,7 +11,9 @@ import {
 
 import { DiscountSetupService } from '../../discount-setup.service';
 import type { DiscountSetupInput } from '../../discount-setup.service';
+import { KNOWN_CONDITION_KINDS } from '../../discount-known-kinds';
 import {
+    OPERATION_KIND,
     SETUP_ENTITIES,
     TestPriceType,
     mapSetupEntities,
@@ -69,6 +71,7 @@ function input(version: string, productErpIds: string[], overrides = {}): Discou
         },
         recipients: [{ counterpartyErpId: 'cp-1', contractErpId: '' }],
         productErpIds,
+        operationKind: '',
     };
 }
 
@@ -216,6 +219,31 @@ describe('DiscountSetupService.deactivate (real Postgres)', () => {
         const stored = await row();
         expect(stored.active).toBe(false);
         expect(stored.inactiveReason).toBe(`unknown condition ${name}`);
+    });
+
+    it('stores a document with an unsupported operation inactive, and allows a listed or empty one', async () => {
+        const unsupported = { ...input('1', ['a']), operationKind: 'НатуральныеСкидки' };
+        expect(await service.apply(ctx, unsupported)).toBe('unsupported-operation');
+        const stored = await row();
+        expect(stored.active).toBe(false);
+        expect(stored.inactiveReason).toBe('unsupported operation НатуральныеСкидки');
+
+        const listed = { ...input('2', ['a']), operationKind: OPERATION_KIND };
+        expect(await service.apply(ctx, listed)).toBe('applied');
+        expect((await row()).active).toBe(true);
+    });
+
+    it('applies the no-condition kind with only the migration-seeded rows (no server bootstrap)', async () => {
+        await dataSource.query(`TRUNCATE discount_condition_kind`);
+        for (const [name, metric] of KNOWN_CONDITION_KINDS) {
+            await dataSource.query(
+                `INSERT INTO discount_condition_kind ("erpName", metric) VALUES ($1, $2)`,
+                [name, metric],
+            );
+        }
+        const doc = input('1', ['a'], { conditionName: 'БезУсловий' });
+        expect(await service.apply(ctx, doc)).toBe('applied');
+        expect((await row()).active).toBe(true);
     });
 
     it('reports an unknown document without creating a row', async () => {

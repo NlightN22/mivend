@@ -103,3 +103,10 @@ export class DiscountConditionKind {
     @Column({ type: 'varchar' })
     metric!: string;
 }
+
+// ERP operation kinds evaluable as a percent on the document's product list; any other non-empty kind is not applied.
+@Entity()
+export class DiscountOperationKind {
+    @PrimaryColumn({ type: 'varchar' })
+    erpName!: string;
+}

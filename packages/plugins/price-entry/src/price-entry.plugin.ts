@@ -16,6 +16,7 @@ import { ProductVariantPriceEntry } from './price-entry.entity';
 import { DiscountRule } from './discount-rule.entity';
 import {
     DiscountConditionKind,
+    DiscountOperationKind,
     DiscountSetup,
     DiscountSetupProduct,
     DiscountSetupRecipient,
@@ -311,6 +312,7 @@ const adminApiSchema = gql`
         DiscountSetupRecipient,
         DiscountSetupProduct,
         DiscountConditionKind,
+        DiscountOperationKind,
         DiscountGrant,
         DiscountRegistryEntry,
         GrantedDiscount,

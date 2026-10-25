@@ -63,6 +63,26 @@ describe('DiscountSetupStreamHandler', () => {
         expect((outcome as { reason: string }).reason).toContain('does not beat');
     });
 
+    it('settles an unsupported operation as a noop naming it', async () => {
+        const { outcome } = await run('unsupported-operation', {
+            ...discount,
+            operationKind: 'НатуральныеСкидки',
+        });
+        expect((outcome as { reason: string }).reason).toContain(
+            'unsupported operation НатуральныеСкидки',
+        );
+    });
+
+    it('notes an empty version on a stale tombstone', async () => {
+        const deactivate = vi.fn().mockResolvedValue('stale');
+        const handler = new DiscountSetupStreamHandler({ deactivate } as never);
+        const outcome = await handler.apply(ctx, 'doc-1', {
+            isDeleted: true,
+            effectiveFrom: base.effectiveFrom,
+        });
+        expect((outcome as { reason: string }).reason).toContain('empty version');
+    });
+
     it('settles a document with an unknown condition as a noop naming it', async () => {
         const { outcome } = await run('unknown-condition', { ...discount, condition: 'Mystery' });
         expect(outcome).toMatchObject({ kind: 'noop' });

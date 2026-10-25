@@ -112,6 +112,7 @@ async function seed(s: Seed): Promise<void> {
         },
         recipients: s.recipients ?? [{ counterpartyErpId: 'cp-1', contractErpId: '' }],
         productErpIds: s.products ?? [],
+        operationKind: '',
     });
 }
 

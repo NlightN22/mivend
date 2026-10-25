@@ -49,6 +49,7 @@ export class DiscountRuleHandler {
             },
             recipients: [{ counterpartyErpId: record.counterpartyErpId, contractErpId: '' }],
             productErpIds: record.productErpId ? [record.productErpId] : [],
+            operationKind: '',
         });
     }
 }

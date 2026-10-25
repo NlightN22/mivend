@@ -437,7 +437,11 @@ Details and field accounting: `docs/ai/erp-streams-map.md`.
 - **Unknown condition**: a condition name missing from `discount_condition_kind` stores the document inactive with the
   reason `unknown condition <name>` and a warning log; the inbox row settles as a noop. To enable it, insert the kind row
   (`erpName`, `metric` of `quantity` or `amount`); the document is re-evaluated when the ERP sends a newer version.
+- **Operation kind**: only kinds listed in `discount_operation_kind` (seeded: by-product-list percent documents) are
+  evaluated; any other non-empty `operation_kind` is stored inactive with `unsupported operation <name>`. Add a row to enable one.
+- **No recipients**: a document with an empty recipient list is stored inactive (`no-recipients`) until the ERP confirms
+  that an empty list means everyone.
 - **Version order**: a tombstone or unposted document older than the stored version is a noop (a replay); at an equal
   version it applies only while the row is still active; only a strictly newer upsert reactivates.
-- `limit_percent` is stored but not enforced yet. A filter-mode retro-bonus rule is stored but never shown (no members);
+- `limit_percent` is stored but not enforced yet, so the real discount can be lower than the ERP's (issue #292). A filter-mode retro-bonus rule is stored but never shown (no members);
   its inbox row settles as a noop naming that.

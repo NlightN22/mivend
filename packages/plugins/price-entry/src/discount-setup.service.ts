@@ -33,9 +33,16 @@ export interface DiscountSetupInput {
     setup: DiscountSetupValues;
     recipients: DiscountRecipientInput[];
     productErpIds: string[];
+    // The ERP operation kind name; not stored, checked against discount_operation_kind. Empty = allowed.
+    operationKind: string;
 }
 
-export type DiscountSetupApplyResult = 'applied' | 'unchanged' | 'stale' | 'unknown-condition';
+export type DiscountSetupApplyResult =
+    | 'applied'
+    | 'unchanged'
+    | 'stale'
+    | 'unknown-condition'
+    | 'unsupported-operation';
 export type DiscountSetupDeactivateResult = 'deactivated' | 'unknown' | 'stale';
 
 const PRODUCT_LIST = {
@@ -66,10 +73,22 @@ export class DiscountSetupService {
                     );
                     return 'stale';
                 }
+                const unsupportedOperation =
+                    setup.active &&
+                    input.operationKind !== '' &&
+                    !(await this.kindExists(txCtx, 'discount_operation_kind', input.operationKind));
+                if (unsupportedOperation) {
+                    setup.active = false;
+                    setup.inactiveReason = `unsupported operation ${input.operationKind}`;
+                    Logger.warn(
+                        `discount-setup ${setup.erpId}: ${setup.inactiveReason}`,
+                        loggerCtx,
+                    );
+                }
                 const unknownCondition =
                     setup.active &&
                     setup.conditionName !== '' &&
-                    !(await this.conditionKindExists(txCtx, setup.conditionName));
+                    !(await this.kindExists(txCtx, 'discount_condition_kind', setup.conditionName));
                 if (unknownCondition) {
                     setup.active = false;
                     setup.inactiveReason = `unknown condition ${setup.conditionName}`;
@@ -94,6 +113,7 @@ export class DiscountSetupService {
                 const setupId = saved.id as number;
                 await this.replaceRecipients(txCtx, setupId, recipients);
                 await replaceMembership(this.connection, txCtx, PRODUCT_LIST, setupId, products);
+                if (unsupportedOperation) return 'unsupported-operation';
                 return unknownCondition ? 'unknown-condition' : 'applied';
             },
         );
@@ -120,11 +140,15 @@ export class DiscountSetupService {
         });
     }
 
-    private async conditionKindExists(txCtx: RequestContext, name: string): Promise<boolean> {
+    private async kindExists(
+        txCtx: RequestContext,
+        table: 'discount_condition_kind' | 'discount_operation_kind',
+        name: string,
+    ): Promise<boolean> {
         const rows = await ctxQuery<unknown[]>(
             this.connection,
             txCtx,
-            `SELECT 1 FROM discount_condition_kind WHERE "erpName" = $1`,
+            `SELECT 1 FROM ${table} WHERE "erpName" = $1`,
             [name],
         );
         return rows.length > 0;
