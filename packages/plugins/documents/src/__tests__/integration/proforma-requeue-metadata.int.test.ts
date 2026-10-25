@@ -19,11 +19,13 @@ const enqueue = vi.fn();
 beforeAll(async () => {
     await createTestSchema(schema);
     dataSource = new DataSource({
+        type: 'postgres',
         ...testDataSourceConnectionOptions(),
+        schema,
         entities: [Document],
         synchronize: true,
-        ...extra,
-    } as never);
+        extra,
+    });
     await dataSource.initialize();
 });
 
