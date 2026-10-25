@@ -424,5 +424,18 @@ Counterparty- and contract-scoped discounts and markups come from the ERP as one
 - the validity window and the active flag.
 
 Several matching documents never stack: the highest percent wins and a negative percent competes by max. Documents
-mivend cannot evaluate (fixed prices, price groups, bonuses, weekday windows, reference conditions, dynamic product
-filters) are stored inactive with a reason and ignored. Details and field accounting: `docs/ai/erp-streams-map.md`.
+mivend cannot evaluate are stored inactive with a reason and ignored: fixed prices, price groups, bonus lines, set
+components, weekday or time windows, reference conditions, dynamic product filters, and any non-default value of an
+attribute mivend does not read (markup type, quality, purpose, currency, pseudo documents, product-line attributes).
+A positive percent with a markup type is therefore never a discount. Opaque ids are compared only to empty, never by name.
+Details and field accounting: `docs/ai/erp-streams-map.md`.
+
+- **Catalog vs cart**: the catalog has no order, so it sees only recipients with an empty contract; a document naming a
+  contract shows only in the cart and the order. This is a deliberate catalog/cart difference.
+- **Unknown condition**: a condition name missing from `discount_condition_kind` stores the document inactive with the
+  reason `unknown condition <name>` and a warning log; the inbox row settles as a noop. To enable it, insert the kind row
+  (`erpName`, `metric` of `quantity` or `amount`); the document is re-evaluated when the ERP sends a newer version.
+- **Version order**: a tombstone or unposted document older than the stored version is a noop (a replay); at an equal
+  version it applies only while the row is still active; only a strictly newer upsert reactivates.
+- `limit_percent` is stored but not enforced yet. A filter-mode retro-bonus rule is stored but never shown (no members);
+  its inbox row settles as a noop naming that.

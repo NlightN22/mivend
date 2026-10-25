@@ -195,7 +195,7 @@ export class PriceResolutionService {
               )
             : null;
         // totalWithTax excludes this priced line's own contribution — accepted approximation, same as the tier ladder's aggregates.
-        // Without order rules only threshold-0 rules match, so list, cart and order prices agree (docs/pricing.md).
+        // Without an order only threshold-0 rules of recipients with an empty contract match, so the catalog can differ from cart and order (docs/pricing.md).
         const productErpId = await getProductErpId(this.connection, ctx, variantId, memo);
         const counterpartyRulePercent = await this.discountSetupRulesService.getBestPercent(
             ctx,

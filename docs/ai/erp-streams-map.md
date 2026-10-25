@@ -207,16 +207,19 @@ Catalog prices (no order) include only unconditional or threshold-0 setups of th
 **Not applied, stored inactive with a reason** (`inactiveReason`; the inbox row settles as a noop naming it):
 no header percent (price groups, bonus lines, fixed-price rules: the ERP's zero-percent plus price shape), a numeric
 `price_number`, a reference condition (`condition_ref_id`: payment kind, discount card), weekday windows
-(`by_weekdays`), and a dynamic product filter without the all flag (mivend does not evaluate the ERP's selection;
+(`by_weekdays`/`weekday_windows`), any non-default `markup_type_id`, `quality_id`, `purpose_id`, `currency_id`, `common_time_*`,
+`pseudo`, price groups, bonus lines, set components or product-line attributes, an unknown `condition` name (reason
+`unknown condition <name>`), and a dynamic product filter without the all flag (mivend does not evaluate the ERP's selection;
 a filter-mode retro-bonus rule likewise has no members, only the stored filter). `limit_percent` is stored, not enforced.
 
 **Field accounting, `DiscountSetupChanged` (0.82.0).** Consumed: `entity_id`, `version`, `document_number`,
 `effective_from`/`effective_to`, `is_active`, `is_deleted`, `condition`, `condition_number`, `percent`, `limit_percent`
 (stored), `price_type_id`, `all_products`, `product_mode`, `product_filter` (stored), `product_ids` and `product_lines`
 (their product ids), `recipients` (counterparty and contract; warehouse rows skipped). Read only to reject the document
-(stored inactive): `price_number`, `condition_ref_id`, `by_weekdays`, a missing `percent`. Deferred, no mivend feature
+(stored inactive): `price_number`, `condition_ref_id`, `by_weekdays`, a missing `percent`, and the non-default attributes
+listed above. Deferred, no mivend feature
 reads them yet: `document_date`, `operation_kind` (applicability is decided by the fields, not the kind name),
-`currency_id`, `discount_kind`, `quality_id`, `markup_type_id`, `purpose_id`, `allow_exceeding_limit_price`, `pseudo`,
+`discount_kind`, `allow_exceeding_limit_price` (the rejected attributes above are read only to reject),
 `responsible_id`, `comment`, `common_time_from`/`common_time_to`/`weekday_windows` (a weekday setup is not applied),
 `price_groups`/`bonus_lines`/`set_components` (no header percent), `source_fields` (a copy of the header). Envelope only:
 `event_id`, `occurred_at`, `updated_at`.
@@ -236,7 +239,7 @@ Retro bonus is display only (manager portal, query
 ignored. **Markup (#283)**: a negative `percent` is applied for real, `price * (1 - percent/100)`, competes by max, and
 is never shown as a discount or markup. Orders: `OrderDiscountService` keeps a signed per-unit state and
 `orderDiscountAction` returns a positive item adjustment. Sign of `percent` follows the old register semantics
-(positive discount, negative markup); `markup_type_id` is deferred (see below).
+(positive discount, negative markup); a non-default `markup_type_id` stores the document inactive.
 
 **Open questions for the Integration Service / owner**: whether `markup_type_id` (1C discount-or-markup type) can flip the
 sign of a positive percent; the real enum value names of `condition` (assumed the 1C programmatic names); how many
