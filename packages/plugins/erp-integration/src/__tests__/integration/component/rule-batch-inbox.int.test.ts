@@ -1,3 +1,4 @@
+import { appendFileSync } from 'fs';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     Column,
@@ -338,13 +339,13 @@ describe('batched discount-rule / retro-bonus-rule apply (real Postgres)', () =>
     });
 
     it('keeps the conflict policy: a newer rule of the same scope supersedes the older one', async () => {
-        await enqueue('discount-rule', 'old', '1', discountPayload('1'));
-        await enqueue('discount-rule', 'new', '2', discountPayload('2', { percent: 7 }));
+        await enqueue('discount-rule', 'a-old', '1', discountPayload('1'));
+        await enqueue('discount-rule', 'b-new', '2', discountPayload('2', { percent: 7 }));
         await processor(true).processPendingBatch();
 
         expect(await rules()).toEqual([
-            { erpId: 'new', percent: 7, active: true, sourceVersion: '2' },
-            { erpId: 'old', percent: 5, active: false, sourceVersion: '1' },
+            { erpId: 'a-old', percent: 5, active: false, sourceVersion: '1' },
+            { erpId: 'b-new', percent: 7, active: true, sourceVersion: '2' },
         ]);
     });
 });
@@ -395,9 +396,9 @@ describe('benchmark: row-by-row vs batch (prints events/s)', () => {
     it('batch path is much faster than the row path', async () => {
         const rowPath = await run(false);
         const batchPath = await run(true);
-        console.info(
-            `[rule-batch-bench] N=${N} row-by-row=${rowPath.toFixed(0)}/s batch=${batchPath.toFixed(0)}/s speedup=${(batchPath / rowPath).toFixed(1)}x`,
-        );
+        const line = `[rule-batch-bench] N=${N} row-by-row=${rowPath.toFixed(0)}/s batch=${batchPath.toFixed(0)}/s speedup=${(batchPath / rowPath).toFixed(1)}x\n`;
+        appendFileSync('/tmp/rule-batch-bench.txt', line);
+        process.stderr.write(line);
         expect(batchPath).toBeGreaterThan(rowPath * 3);
     }, 300_000);
 });
