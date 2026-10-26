@@ -38,6 +38,8 @@ export interface AdminCategory {
 }
 
 const slugOf = (erpId: string): string => `cat-${erpId}`;
+// Owner waits run for an hour; sessions are renewed so a long wait never ends in an auth error.
+const SESSION_REFRESH_MS = 20 * 60_000;
 const ADMIN_Q = `query($s: String) { collection(slug: $s) { id isPrivate parent { slug isPrivate } customFields { visibilityOverride } } }`;
 
 export interface FeedClient {
@@ -49,14 +51,23 @@ export interface FeedClient {
 
 export async function feedClient(): Promise<FeedClient> {
     const env = loadContourEnv();
-    const token = await adminTokenFor(env.superadmin.username, env.superadmin.password);
-    const cookie = await shopLoginCookie(env.customer.email, env.customer.password);
+    const token = (): Promise<string> =>
+        adminTokenFor(env.superadmin.username, env.superadmin.password);
+    let cookie = await shopLoginCookie(env.customer.email, env.customer.password);
+    let cookieAt = Date.now();
+    const freshCookie = async (): Promise<string> => {
+        if (Date.now() - cookieAt > SESSION_REFRESH_MS) {
+            cookie = await shopLoginCookie(env.customer.email, env.customer.password);
+            cookieAt = Date.now();
+        }
+        return cookie;
+    };
     const admin = async (key: FeedKey): Promise<AdminCategory | null> =>
         (
             await adminGql<{ collection: AdminCategory | null }>(
                 ADMIN_Q,
                 { s: slugOf(feedId(key)) },
-                token,
+                await token(),
             )
         ).data.collection;
     return {
@@ -69,7 +80,7 @@ export async function feedClient(): Promise<FeedClient> {
             const data = await shopGql<{ collection: { id: string } | null }>(
                 `query($s: String) { collection(slug: $s) { id } }`,
                 { s: slugOf(feedId(key)) },
-                cookie,
+                await freshCookie(),
             );
             return data.collection !== null;
         },
@@ -79,7 +90,7 @@ export async function feedClient(): Promise<FeedClient> {
             await adminGql(
                 `mutation($id: ID!, $o: String, $p: Boolean) { updateCollection(input: { id: $id, isPrivate: $p, customFields: { visibilityOverride: $o } }) { id } }`,
                 { id: row.id, o: value, ...(value === null ? {} : { p: value === 'hidden' }) },
-                token,
+                await token(),
             );
         },
     };
