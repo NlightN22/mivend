@@ -270,7 +270,6 @@ onMounted(loadAll);
     display: flex;
     flex-direction: column;
     gap: 18px;
-    max-width: 1000px;
 }
 
 .branch-settings-page__description {
