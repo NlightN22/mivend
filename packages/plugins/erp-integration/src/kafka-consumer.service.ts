@@ -15,20 +15,17 @@ import type { ErpIntegrationPluginOptions, InboundStream } from './types';
 
 const ORDER_EVENT_STREAM_SET: ReadonlySet<InboundStream> = new Set(ORDER_EVENT_STREAMS);
 
-// Plain protobuf toBinary() payloads, no Confluent header: decode statically, not via Registry.
-// Offset is committed only after the inbox write resolves, so ack never precedes the durable write.
+// Plain protobuf payloads (no Confluent header) decode statically; offsets commit only after the inbox write.
 // Setup documents carry lists of up to 100k ids; the broker's message limit is 8 MiB.
 const FETCH_MAX_BYTES = 16 * 1024 * 1024;
 const CONNECT_MAX_ATTEMPTS = 8;
 const CONNECT_BASE_DELAY_MS = 1000;
 const CONNECT_MAX_DELAY_MS = 60_000;
 
-// kafkajs auto-restarts only retriable crashes; a non-retriable one (e.g. ACL denial) stays dead.
-// Supervisor retries with capped backoff so recovery needs no process restart.
+// kafkajs restarts only retriable crashes; a non-retriable one (ACL denial) is retried here with capped backoff.
 const CRASH_RETRY_BASE_DELAY_MS = 1000;
 const CRASH_RETRY_MAX_DELAY_MS = 60_000;
-// A runner can stop without a non-retriable CRASH event ("consumer not running, exiting");
-// if not connected again within this window, rebuild the consumer.
+// A runner can stop without a CRASH event; if not reconnected within this window, rebuild the consumer.
 const STALL_WATCHDOG_MS = 120_000;
 
 @Injectable()
@@ -124,8 +121,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
 
         await this.connectWithBackoff();
 
-        // A failed subscribe for one topic is logged and skipped so the others still consume.
-        // Throwing here would stop consumption of every healthy topic, since run() is never reached.
+        // A failed subscribe is logged and skipped: throwing would stop every healthy topic, run() never being reached.
         const streamByTopic = new Map<string, InboundStream>();
         const orderEventTopics = new Set<string>();
         for (const [stream, topic] of Object.entries(this.options.kafkaConsumer.topics)) {
@@ -218,8 +214,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
         this.consumer?.disconnect().catch(() => undefined);
     }
 
-    // Unprocessable messages are dead-lettered into the inbox, then committed; if recording or
-    // enqueueing fails this rethrows, so the offset is not committed (docs/integration-health.md).
+    // Unprocessable messages are dead-lettered then committed; a failed recording rethrows (docs/integration-health.md).
     private async handleMessage(
         stream: InboundStream,
         { message, partition }: EachMessagePayload,
