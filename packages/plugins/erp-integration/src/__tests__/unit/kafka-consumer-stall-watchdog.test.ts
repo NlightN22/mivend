@@ -15,11 +15,12 @@ class FakeConsumer extends EventEmitter {
     events = EVENTS;
     connect = vi.fn().mockResolvedValue(undefined);
     subscribe = vi.fn().mockResolvedValue(undefined);
-    run = vi.fn().mockResolvedValue(undefined);
+    run = vi.fn(() => (runError ? Promise.reject(runError) : Promise.resolve()));
     disconnect = vi.fn().mockResolvedValue(undefined);
 }
 
 const created: FakeConsumer[] = [];
+let runError: Error | undefined;
 
 vi.mock('kafkajs', () => ({
     Kafka: class {
@@ -65,6 +66,7 @@ describe('KafkaConsumerService stall watchdog and status persistence', () => {
     beforeEach(() => {
         vi.useFakeTimers();
         created.length = 0;
+        runError = undefined;
     });
     afterEach(() => {
         vi.useRealTimers();
@@ -127,5 +129,30 @@ describe('KafkaConsumerService stall watchdog and status persistence', () => {
             { key: 'default', connected: true },
             { conflictPaths: ['key'] },
         );
+    });
+
+    it('does not arm the watchdog while kafkajs restarts itself after a crash, however long it takes', async () => {
+        const service = makeService(vi.fn().mockResolvedValue(undefined));
+        await service.start();
+        created[0].emit(EVENTS.CONNECT);
+
+        created[0].emit(EVENTS.CRASH, { payload: { restart: true } });
+        created[0].emit(EVENTS.DISCONNECT);
+        await vi.advanceTimersByTimeAsync(600_000);
+
+        expect(created).toHaveLength(1);
+    });
+
+    it('disconnects a half-started consumer before the crash retry builds a new one', async () => {
+        const service = makeService(vi.fn().mockResolvedValue(undefined));
+        runError = new Error('boom');
+        await expect(service.start()).rejects.toThrow('boom');
+        runError = undefined;
+
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        expect(created).toHaveLength(2);
+        expect(created[0].disconnect).toHaveBeenCalled();
+        expect(created[1].run).toHaveBeenCalledTimes(1);
     });
 });

@@ -138,7 +138,7 @@ services:
             test:
                 [
                     'CMD-SHELL',
-                    '[ "$$INTEGRATION_KAFKA_ENABLED" != "true" ] || test -f /tmp/kafka-consumer-connected',
+                    '[ ! -f /tmp/kafka-consumer-expected ] || test -f /tmp/kafka-consumer-connected',
                 ]
             interval: 30s
             timeout: 10s

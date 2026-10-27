@@ -177,8 +177,9 @@ actually encodes this axis in code. It gates, in addition to the existing `insta
 
 The consumer recovers on its own (#295): a non-retriable crash retries with capped backoff, and a runner that
 stops silently (no reconnect within 2 minutes of a disconnect/stop) is rebuilt. Status persistence failures are logged
-and retried, never fatal. The prod `worker` healthcheck (when `INTEGRATION_KAFKA_ENABLED=true`) is unhealthy while
-`/tmp/kafka-consumer-connected` is absent, which the consumer removes on disconnect, so `up -d --wait` surfaces it.
+and retried, never fatal. The prod `worker` healthcheck is active only in a process that started the consumer (it creates
+`/tmp/kafka-consumer-expected` at start and clears stale marker files) and is unhealthy while
+`/tmp/kafka-consumer-connected` is absent. The state is visible in `docker compose ps` / `docker ps`; nothing restarts the container.
 
 A config site that forgets to set `kafkaEnabled` fails safe (no Kafka connection) rather than
 silently defaulting to on.

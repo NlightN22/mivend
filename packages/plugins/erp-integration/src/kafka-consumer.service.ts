@@ -38,6 +38,8 @@ export class KafkaConsumerService implements OnModuleDestroy {
     private destroyed = false;
     private crashRetryTimeout: NodeJS.Timeout | undefined;
     private crashRetryAttempt = 0;
+    private rebuilding = false;
+    private kafkajsRestarting = false;
     private stallWatchdog: NodeJS.Timeout | undefined;
     private readonly statusMirror: KafkaConsumerStatusMirror;
 
@@ -61,6 +63,8 @@ export class KafkaConsumerService implements OnModuleDestroy {
 
     // A failed start() must still schedule crash-retry before rethrowing, or the consumer stays dead.
     async start(): Promise<void> {
+        this.statusMirror.resetFiles();
+        this.statusMirror.markExpected();
         try {
             await this.runOnce();
         } catch (err) {
@@ -71,6 +75,15 @@ export class KafkaConsumerService implements OnModuleDestroy {
 
     // Crashed Consumer instances are never reused; each retry builds a fresh Kafka and Consumer.
     private async runOnce(): Promise<void> {
+        this.rebuilding = true;
+        try {
+            await this.buildAndRun();
+        } finally {
+            this.rebuilding = false;
+        }
+    }
+
+    private async buildAndRun(): Promise<void> {
         const kafka = new Kafka({
             clientId: this.options.kafkaConsumer.clientId,
             brokers: this.options.kafkaConsumer.brokers,
@@ -86,6 +99,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
         const consumer = this.consumer;
         consumer.on(consumer.events.CONNECT, () => {
             this.connected = true;
+            this.kafkajsRestarting = false;
             this.crashRetryAttempt = 0;
             this.clearStallWatchdog();
             this.statusMirror.set(true);
@@ -93,12 +107,16 @@ export class KafkaConsumerService implements OnModuleDestroy {
         const onStopped = (): void => {
             this.connected = false;
             this.statusMirror.set(false);
-            if (this.consumer === consumer) this.armStallWatchdog();
+            if (this.consumer === consumer && !this.kafkajsRestarting) this.armStallWatchdog();
         };
         consumer.on(consumer.events.DISCONNECT, onStopped);
         consumer.on(consumer.events.STOP, onStopped);
         // Only step in when restart is false: kafkajs already restarts; a second reconnect double-joins.
         consumer.on(consumer.events.CRASH, ({ payload }) => {
+            if (payload.restart && this.consumer === consumer) {
+                this.kafkajsRestarting = true;
+                this.clearStallWatchdog();
+            }
             onStopped();
             if (payload.restart || this.consumer !== consumer) return;
             this.scheduleCrashRetry();
@@ -154,13 +172,12 @@ export class KafkaConsumerService implements OnModuleDestroy {
     }
 
     private armStallWatchdog(): void {
-        if (this.destroyed || this.stallWatchdog || this.crashRetryTimeout) return;
+        if (this.destroyed || this.stallWatchdog || this.crashRetryTimeout || this.rebuilding)
+            return;
         this.stallWatchdog = setTimeout(() => {
             this.stallWatchdog = undefined;
-            if (this.destroyed || this.connected) return;
+            if (this.destroyed || this.connected || this.rebuilding) return;
             Logger.warn('Kafka consumer stalled without reconnecting, rebuilding it', loggerCtx);
-            const stale = this.consumer;
-            stale?.disconnect().catch(() => undefined);
             this.scheduleCrashRetry();
         }, STALL_WATCHDOG_MS);
     }
@@ -197,6 +214,8 @@ export class KafkaConsumerService implements OnModuleDestroy {
                 this.scheduleCrashRetry();
             });
         }, delay);
+        // best-effort: a half-started consumer may be live and would join the group next to its replacement.
+        this.consumer?.disconnect().catch(() => undefined);
     }
 
     // Unprocessable messages are dead-lettered into the inbox, then committed; if recording or

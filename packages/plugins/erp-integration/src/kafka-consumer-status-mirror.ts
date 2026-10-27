@@ -13,6 +13,8 @@ const PERSIST_RETRY_DELAY_MS = 5000;
 
 // The worker container healthcheck tests this file; it exists only while the consumer is connected.
 export const CONSUMER_HEALTH_FILE = '/tmp/kafka-consumer-connected';
+// Present only in a process that starts the consumer; the healthcheck is inactive without it.
+export const CONSUMER_EXPECTED_FILE = '/tmp/kafka-consumer-expected';
 
 const errMessage = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
@@ -21,6 +23,7 @@ const errMessage = (err: unknown): string => (err instanceof Error ? err.message
 export class KafkaConsumerStatusMirror {
     private latest = false;
     private retryTimer: NodeJS.Timeout | undefined;
+    private fileOps: Promise<void> = Promise.resolve();
 
     constructor(
         private readonly connection: TransactionalConnection,
@@ -30,20 +33,55 @@ export class KafkaConsumerStatusMirror {
     set(connected: boolean): void {
         this.latest = connected;
         if (this.retryTimer) clearTimeout(this.retryTimer);
-        void this.writeHealthFile(connected);
+        this.queueFile(() => this.writeHealthFile(connected));
         void this.persist(connected, 1);
     }
 
     async setFinal(connected: boolean): Promise<void> {
         this.latest = connected;
         if (this.retryTimer) clearTimeout(this.retryTimer);
-        await this.writeHealthFile(connected);
+        this.queueFile(() => this.writeHealthFile(connected));
+        await this.fileOps;
         await this.upsert(connected).catch(err =>
             Logger.error(
                 `Failed to persist final Kafka consumer status: ${errMessage(err)}`,
                 loggerCtx,
             ),
         );
+    }
+
+    resetFiles(): void {
+        this.queueFile(async () => {
+            await this.remove(CONSUMER_HEALTH_FILE);
+            await this.remove(CONSUMER_EXPECTED_FILE);
+        });
+    }
+
+    markExpected(): void {
+        this.queueFile(async () => {
+            try {
+                await writeFile(CONSUMER_EXPECTED_FILE, new Date().toISOString());
+            } catch (err) {
+                Logger.error(
+                    `Failed to mark Kafka consumer expected: ${errMessage(err)}`,
+                    loggerCtx,
+                );
+            }
+        });
+    }
+
+    private queueFile(op: () => Promise<void>): void {
+        this.fileOps = this.fileOps.then(op, op);
+    }
+
+    private async remove(path: string): Promise<void> {
+        try {
+            await unlink(path);
+        } catch (err) {
+            if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+                Logger.error(`Failed to remove ${path}: ${errMessage(err)}`, loggerCtx);
+            }
+        }
     }
 
     private upsert(connected: boolean): Promise<unknown> {
