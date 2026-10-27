@@ -134,6 +134,16 @@ services:
             garage:
                 condition: service_healthy
         command: ['node', 'dist/worker.js']
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    '[ "$$INTEGRATION_KAFKA_ENABLED" != "true" ] || test -f /tmp/kafka-consumer-connected',
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 180s
         deploy:
             resources:
                 limits:

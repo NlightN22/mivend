@@ -7,6 +7,7 @@ const CONSUMER_EVENTS = {
     CONNECT: 'consumer.connect',
     DISCONNECT: 'consumer.disconnect',
     CRASH: 'consumer.crash',
+    STOP: 'consumer.stop',
 };
 
 // connectImpl is overridable per instance (via nextConnectImpl) so a test can simulate
@@ -23,6 +24,10 @@ class FakeConsumer extends EventEmitter {
         this.emit(CONSUMER_EVENTS.CRASH, {
             payload: { restart, error: new Error('x'), groupId: 'g' },
         });
+    }
+
+    emitStop(): void {
+        this.emit(CONSUMER_EVENTS.STOP);
     }
 
     emitConnect(): void {

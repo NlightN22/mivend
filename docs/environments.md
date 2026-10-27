@@ -175,6 +175,11 @@ actually encodes this axis in code. It gates, in addition to the existing `insta
 - `KafkaConsumerBootstrapService` (inbound consumer — also worker-process-only, see issue #67)
 - `IntegrationOutboxWorker` (outbound producer path)
 
+The consumer recovers on its own (#295): a non-retriable crash retries with capped backoff, and a runner that
+stops silently (no reconnect within 2 minutes of a disconnect/stop) is rebuilt. Status persistence failures are logged
+and retried, never fatal. The prod `worker` healthcheck (when `INTEGRATION_KAFKA_ENABLED=true`) is unhealthy while
+`/tmp/kafka-consumer-connected` is absent, which the consumer removes on disconnect, so `up -d --wait` surfaces it.
+
 A config site that forgets to set `kafkaEnabled` fails safe (no Kafka connection) rather than
 silently defaulting to on.
 

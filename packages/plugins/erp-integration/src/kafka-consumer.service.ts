@@ -1,60 +1,19 @@
-import type { fromBinary } from '@bufbuild/protobuf';
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Logger, RequestContextService, TransactionalConnection } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
-import {
-    CategoryChangedSchema,
-    ContractChangedSchema,
-    CounterpartyChangedSchema,
-    CounterpartyCreditBalanceChangedSchema,
-    DepartmentChangedSchema,
-    DiscountSetupChangedSchema,
-    GrantedDiscountChangedSchema,
-    OfferChangedSchema,
-    OrderStatusChangedSchema,
-    OrganizationChangedSchema,
-    PointOfSaleChangedSchema,
-    PositionChangedSchema,
-    PriceChangedSchema,
-    PriceTypeChangedSchema,
-    ProductChangedSchema,
-    PromoRuleChangedSchema,
-    GrantedRetroBonusChangedSchema,
-    RetroBonusSetupChangedSchema,
-    SettlementBalanceChangedSchema,
-    SettlementDocumentChangedSchema,
-    SettlementDocumentTypeChangedSchema,
-    StockChangedSchema,
-    StockOrganizationChangedSchema,
-    StorageLocationChangedSchema,
-    ManufacturerChangedSchema,
-    RegionChangedSchema,
-    LegalFormChangedSchema,
-    BankChangedSchema,
-    BankAccountChangedSchema,
-    ProductPhotoChangedSchema,
-    UnitChangedSchema,
-    UserChangedSchema,
-    VatRateChangedSchema,
-    WarehouseChangedSchema,
-} from '@nlightn22/event-contracts';
 import { Consumer, Kafka } from 'kafkajs';
 import type { EachMessagePayload, SASLOptions } from 'kafkajs';
 
-import { KafkaConsumerStatus } from './entities/kafka-consumer-status.entity';
+import { KafkaConsumerStatusMirror } from './kafka-consumer-status-mirror';
 import { IntegrationInboxService } from './integration-inbox.service';
+import { SCHEMA_BY_STREAM } from './kafka-consumer-schemas';
 import type { ClassifiedKafkaMessage } from './kafka-inbound-message';
 import { classifyInboundMessage } from './kafka-inbound-message';
 import { classifyOrderEventMessage, ORDER_EVENT_STREAMS } from './order-events-message';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ErpIntegrationPluginOptions, InboundStream } from './types';
 
-type OrderEventStream = 'order-registration-result' | 'order-changed' | 'order-cancel-result';
 const ORDER_EVENT_STREAM_SET: ReadonlySet<InboundStream> = new Set(ORDER_EVENT_STREAMS);
-
-// Worker and HTTP controller run in separate Node processes; this row is the only shared state.
-// isConnected() is in-memory, so the status controller reads it through this row.
-const STATUS_KEY = 'default';
 
 // Plain protobuf toBinary() payloads, no Confluent header: decode statically, not via Registry.
 // Offset is committed only after the inbox write resolves, so ack never precedes the durable write.
@@ -68,46 +27,9 @@ const CONNECT_MAX_DELAY_MS = 60_000;
 // Supervisor retries with capped backoff so recovery needs no process restart.
 const CRASH_RETRY_BASE_DELAY_MS = 1000;
 const CRASH_RETRY_MAX_DELAY_MS = 60_000;
-
-const SCHEMA_BY_STREAM: Record<
-    Exclude<InboundStream, OrderEventStream>,
-    Parameters<typeof fromBinary>[0]
-> = {
-    category: CategoryChangedSchema,
-    organization: OrganizationChangedSchema,
-    warehouse: WarehouseChangedSchema,
-    'price-type': PriceTypeChangedSchema,
-    product: ProductChangedSchema,
-    offer: OfferChangedSchema,
-    price: PriceChangedSchema,
-    stock: StockChangedSchema,
-    'storage-location': StorageLocationChangedSchema,
-    'stock-organization': StockOrganizationChangedSchema,
-    'order-status': OrderStatusChangedSchema,
-    department: DepartmentChangedSchema,
-    position: PositionChangedSchema,
-    counterparty: CounterpartyChangedSchema,
-    'counterparty-credit-balance': CounterpartyCreditBalanceChangedSchema,
-    user: UserChangedSchema,
-    'promo-rule': PromoRuleChangedSchema,
-    'discount-setup': DiscountSetupChangedSchema,
-    'granted-discount': GrantedDiscountChangedSchema,
-    'retro-bonus-setup': RetroBonusSetupChangedSchema,
-    'granted-retro-bonus': GrantedRetroBonusChangedSchema,
-    'settlement-document': SettlementDocumentChangedSchema,
-    'settlement-balance': SettlementBalanceChangedSchema,
-    'settlement-document-type': SettlementDocumentTypeChangedSchema,
-    'vat-rate': VatRateChangedSchema,
-    'point-of-sale': PointOfSaleChangedSchema,
-    contract: ContractChangedSchema,
-    unit: UnitChangedSchema,
-    manufacturer: ManufacturerChangedSchema,
-    region: RegionChangedSchema,
-    'legal-form': LegalFormChangedSchema,
-    bank: BankChangedSchema,
-    'bank-account': BankAccountChangedSchema,
-    'product-photo': ProductPhotoChangedSchema,
-};
+// A runner can stop without a non-retriable CRASH event ("consumer not running, exiting");
+// if not connected again within this window, rebuild the consumer.
+const STALL_WATCHDOG_MS = 120_000;
 
 @Injectable()
 export class KafkaConsumerService implements OnModuleDestroy {
@@ -116,6 +38,8 @@ export class KafkaConsumerService implements OnModuleDestroy {
     private destroyed = false;
     private crashRetryTimeout: NodeJS.Timeout | undefined;
     private crashRetryAttempt = 0;
+    private stallWatchdog: NodeJS.Timeout | undefined;
+    private readonly statusMirror: KafkaConsumerStatusMirror;
 
     constructor(
         @Inject(ERP_INTEGRATION_PLUGIN_OPTIONS)
@@ -123,7 +47,9 @@ export class KafkaConsumerService implements OnModuleDestroy {
         private readonly inbox: IntegrationInboxService,
         private readonly connection: TransactionalConnection,
         private readonly requestContextService: RequestContextService,
-    ) {}
+    ) {
+        this.statusMirror = new KafkaConsumerStatusMirror(connection, () => this.adminCtx());
+    }
 
     private adminCtx(): Promise<RequestContext> {
         return this.requestContextService.create({ apiType: 'admin' });
@@ -131,25 +57,6 @@ export class KafkaConsumerService implements OnModuleDestroy {
 
     isConnected(): boolean {
         return this.connected;
-    }
-
-    // Fire-and-forget: a DB hiccup here must never crash Kafka message handling — this is a
-    // best-effort status mirror, not a business-critical write.
-    private persistStatus(connected: boolean): void {
-        this.adminCtx()
-            .then(ctx =>
-                this.connection
-                    .getRepository(ctx, KafkaConsumerStatus)
-                    .upsert({ key: STATUS_KEY, connected }, { conflictPaths: ['key'] }),
-            )
-            .catch(err => {
-                Logger.error(
-                    `Failed to persist Kafka consumer status: ${
-                        err instanceof Error ? err.message : String(err)
-                    }`,
-                    loggerCtx,
-                );
-            });
     }
 
     // A failed start() must still schedule crash-retry before rethrowing, or the consumer stays dead.
@@ -176,20 +83,24 @@ export class KafkaConsumerService implements OnModuleDestroy {
             maxBytes: FETCH_MAX_BYTES,
         });
 
-        this.consumer.on(this.consumer.events.CONNECT, () => {
+        const consumer = this.consumer;
+        consumer.on(consumer.events.CONNECT, () => {
             this.connected = true;
             this.crashRetryAttempt = 0;
-            this.persistStatus(true);
+            this.clearStallWatchdog();
+            this.statusMirror.set(true);
         });
-        this.consumer.on(this.consumer.events.DISCONNECT, () => {
+        const onStopped = (): void => {
             this.connected = false;
-            this.persistStatus(false);
-        });
+            this.statusMirror.set(false);
+            if (this.consumer === consumer) this.armStallWatchdog();
+        };
+        consumer.on(consumer.events.DISCONNECT, onStopped);
+        consumer.on(consumer.events.STOP, onStopped);
         // Only step in when restart is false: kafkajs already restarts; a second reconnect double-joins.
-        this.consumer.on(this.consumer.events.CRASH, ({ payload }) => {
-            this.connected = false;
-            this.persistStatus(false);
-            if (payload.restart) return;
+        consumer.on(consumer.events.CRASH, ({ payload }) => {
+            onStopped();
+            if (payload.restart || this.consumer !== consumer) return;
             this.scheduleCrashRetry();
         });
 
@@ -242,8 +153,27 @@ export class KafkaConsumerService implements OnModuleDestroy {
         });
     }
 
+    private armStallWatchdog(): void {
+        if (this.destroyed || this.stallWatchdog || this.crashRetryTimeout) return;
+        this.stallWatchdog = setTimeout(() => {
+            this.stallWatchdog = undefined;
+            if (this.destroyed || this.connected) return;
+            Logger.warn('Kafka consumer stalled without reconnecting, rebuilding it', loggerCtx);
+            const stale = this.consumer;
+            stale?.disconnect().catch(() => undefined);
+            this.scheduleCrashRetry();
+        }, STALL_WATCHDOG_MS);
+    }
+
+    private clearStallWatchdog(): void {
+        if (this.stallWatchdog) clearTimeout(this.stallWatchdog);
+        this.stallWatchdog = undefined;
+    }
+
     private scheduleCrashRetry(): void {
         if (this.destroyed) return;
+        this.clearStallWatchdog();
+        if (this.crashRetryTimeout) clearTimeout(this.crashRetryTimeout);
         this.crashRetryAttempt += 1;
         const delay = Math.min(
             CRASH_RETRY_BASE_DELAY_MS * 2 ** (this.crashRetryAttempt - 1),
@@ -254,6 +184,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
             loggerCtx,
         );
         this.crashRetryTimeout = setTimeout(() => {
+            this.crashRetryTimeout = undefined;
             if (this.destroyed) return;
             this.runOnce().catch(err => {
                 Logger.error(
@@ -338,6 +269,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
     async onModuleDestroy(): Promise<void> {
         this.destroyed = true;
         if (this.crashRetryTimeout) clearTimeout(this.crashRetryTimeout);
+        this.clearStallWatchdog();
         this.connected = false;
         try {
             await this.consumer?.disconnect();
@@ -349,13 +281,6 @@ export class KafkaConsumerService implements OnModuleDestroy {
                 loggerCtx,
             );
         }
-        await this.adminCtx()
-            .then(ctx =>
-                this.connection
-                    .getRepository(ctx, KafkaConsumerStatus)
-                    .upsert({ key: STATUS_KEY, connected: false }, { conflictPaths: ['key'] }),
-            )
-            // best-effort: status row is advisory and shutdown must not fail on it.
-            .catch(() => undefined);
+        await this.statusMirror.setFinal(false);
     }
 }
