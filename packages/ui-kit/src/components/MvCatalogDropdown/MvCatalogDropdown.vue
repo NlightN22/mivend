@@ -272,12 +272,6 @@ function categoryLink(slug: string): { path: string; query: { collection: string
     transform: translateY(-8px);
 }
 
-@media (max-width: 1180px) {
-    .mv-catalog-dropdown {
-        display: none;
-    }
-}
-
 @media (max-width: 960px) {
     .mv-catalog-dropdown__inner {
         grid-template-columns: 1fr;
