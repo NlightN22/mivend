@@ -235,7 +235,7 @@ lint:
 	pnpm lint
 
 # Guards against packages/plugins/erp-integration silently drifting from Integration Service's
-# real @nlightn22/event-contracts schema (docs/ai/1c-integration-service-decision.md's "Audit
+# real @nlightn22/event-contracts schema (docs/ai/erp-integration-service-decision.md's "Audit
 # 2026-09-04" — a real incident, not hypothetical: pinned 0.5.0 vs upstream 0.13.0, 8 minor
 # versions of undetected drift). Network-dependent — warns and exits 0 if GitHub Packages is
 # unreachable, never blocks lint on a missing/expired token or offline dev machine.
@@ -343,7 +343,7 @@ prod-down:
 # directly on this host (--network host, not the compose network) against the staging-integration
 # backend's real data (:3010) — for "we made a pile of changes, let's see how this actually
 # behaves in a production build" checks, not a permanent dev workflow. Reachable externally at
-# https://devof.komponent-m.ru:8024 (storefront) / :8025 (manager) / :8026 (dashboard) — see
+# https://devhost.example.com:8024 (storefront) / :8025 (manager) / :8026 (dashboard) — see
 # docs/environments.md's "Production preview" section. `preview-build` requires a GitHub Packages
 # read token in ~/.npmrc for the dashboard image (see packages/dashboard/Dockerfile's own comment).
 
@@ -362,7 +362,7 @@ preview-up:
 		-e API_TARGET=$(PREVIEW_API_TARGET) -e LISTEN_PORT=18025 mivend-manager:preview
 	docker run -d --name mivend-dashboard-preview --network host \
 		-e API_TARGET=$(PREVIEW_API_TARGET) -e LISTEN_PORT=18026 mivend-dashboard:preview
-	@echo "Preview containers up: https://devof.komponent-m.ru:8024 (storefront) / :8025 (manager) / :8026 (dashboard)"
+	@echo "Preview containers up: https://devhost.example.com:8024 (storefront) / :8025 (manager) / :8026 (dashboard)"
 
 preview-down:
 	-docker rm -f mivend-storefront-preview mivend-manager-preview mivend-dashboard-preview
