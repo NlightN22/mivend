@@ -21,7 +21,6 @@ const FETCH_MAX_BYTES = 16 * 1024 * 1024;
 const CONNECT_MAX_ATTEMPTS = 8;
 const CONNECT_BASE_DELAY_MS = 1000;
 const CONNECT_MAX_DELAY_MS = 60_000;
-
 // kafkajs restarts only retriable crashes; a non-retriable one (ACL denial) is retried here with capped backoff.
 const CRASH_RETRY_BASE_DELAY_MS = 1000;
 const CRASH_RETRY_MAX_DELAY_MS = 60_000;
