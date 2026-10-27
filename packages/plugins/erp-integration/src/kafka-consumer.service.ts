@@ -6,8 +6,8 @@ import type { EachMessagePayload, SASLOptions } from 'kafkajs';
 
 import { KafkaConsumerStatusMirror } from './kafka-consumer-status-mirror';
 import { IntegrationInboxService } from './integration-inbox.service';
+import { storeClassified } from './kafka-consumer-store';
 import { SCHEMA_BY_STREAM } from './kafka-consumer-schemas';
-import type { ClassifiedKafkaMessage } from './kafka-inbound-message';
 import { classifyInboundMessage } from './kafka-inbound-message';
 import { classifyOrderEventMessage, ORDER_EVENT_STREAMS } from './order-events-message';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS, loggerCtx } from './types';
@@ -27,6 +27,8 @@ const CRASH_RETRY_BASE_DELAY_MS = 1000;
 const CRASH_RETRY_MAX_DELAY_MS = 60_000;
 // A runner can stop without a CRASH event; if not reconnected within this window, rebuild the consumer.
 const STALL_WATCHDOG_MS = 120_000;
+// Backstop when kafkajs owns the restart: it can back off for minutes, but must not stall forever.
+const KAFKAJS_RESTART_BACKSTOP_MS = 600_000;
 
 @Injectable()
 export class KafkaConsumerService implements OnModuleDestroy {
@@ -115,6 +117,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
                 this.clearStallWatchdog();
             }
             onStopped();
+            if (payload.restart && this.consumer === consumer) this.armStallWatchdog();
             if (payload.restart || this.consumer !== consumer) return;
             this.scheduleCrashRetry();
         });
@@ -168,6 +171,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
     }
 
     private armStallWatchdog(): void {
+        const window = this.kafkajsRestarting ? KAFKAJS_RESTART_BACKSTOP_MS : STALL_WATCHDOG_MS;
         if (this.destroyed || this.stallWatchdog || this.crashRetryTimeout || this.rebuilding)
             return;
         this.stallWatchdog = setTimeout(() => {
@@ -175,7 +179,7 @@ export class KafkaConsumerService implements OnModuleDestroy {
             if (this.destroyed || this.connected || this.rebuilding) return;
             Logger.warn('Kafka consumer stalled without reconnecting, rebuilding it', loggerCtx);
             this.scheduleCrashRetry();
-        }, STALL_WATCHDOG_MS);
+        }, window);
     }
 
     private clearStallWatchdog(): void {
@@ -196,9 +200,13 @@ export class KafkaConsumerService implements OnModuleDestroy {
             `Kafka consumer crashed without kafkajs auto-restart (non-retriable), reconnecting in ${delay}ms (attempt ${this.crashRetryAttempt})`,
             loggerCtx,
         );
-        this.crashRetryTimeout = setTimeout(() => {
+        const fire = (): void => {
             this.crashRetryTimeout = undefined;
             if (this.destroyed) return;
+            if (this.rebuilding) {
+                this.crashRetryTimeout = setTimeout(fire, CRASH_RETRY_BASE_DELAY_MS);
+                return;
+            }
             this.runOnce().catch(err => {
                 Logger.error(
                     `Kafka consumer crash-retry failed to reconnect: ${
@@ -209,7 +217,8 @@ export class KafkaConsumerService implements OnModuleDestroy {
                 // A failing retry must schedule the next attempt; a one-shot retry would leave the consumer dead.
                 this.scheduleCrashRetry();
             });
-        }, delay);
+        };
+        this.crashRetryTimeout = setTimeout(fire, delay);
         // best-effort: a half-started consumer may be live and would join the group next to its replacement.
         this.consumer?.disconnect().catch(() => undefined);
     }
@@ -221,7 +230,9 @@ export class KafkaConsumerService implements OnModuleDestroy {
     ): Promise<void> {
         const schema = SCHEMA_BY_STREAM[stream as keyof typeof SCHEMA_BY_STREAM];
         if (!schema) throw new Error(`No schema registered for stream ${stream}`);
-        await this.store(
+        await storeClassified(
+            this.inbox,
+            await this.adminCtx(),
             classifyInboundMessage(stream, schema, message, partition ?? 0),
             stream,
             message.offset,
@@ -239,23 +250,13 @@ export class KafkaConsumerService implements OnModuleDestroy {
         }
         const stream =
             classified.kind === 'enqueue' ? classified.input.stream : classified.rejected.stream;
-        await this.store(classified, stream, message.offset);
-    }
-
-    private async store(
-        classified: ClassifiedKafkaMessage,
-        stream: InboundStream,
-        offset: string,
-    ): Promise<void> {
-        if (classified.kind === 'rejected') {
-            Logger.error(
-                `Rejected ${stream} message (offset=${offset}): ${classified.rejected.reason}`,
-                loggerCtx,
-            );
-            await this.inbox.enqueueRejected(await this.adminCtx(), classified.rejected);
-            return;
-        }
-        await this.inbox.enqueue(await this.adminCtx(), classified.input);
+        await storeClassified(
+            this.inbox,
+            await this.adminCtx(),
+            classified,
+            stream,
+            message.offset,
+        );
     }
 
     private async connectWithBackoff(): Promise<void> {

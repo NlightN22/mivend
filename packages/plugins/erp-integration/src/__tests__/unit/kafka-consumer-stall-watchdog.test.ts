@@ -13,7 +13,7 @@ const EVENTS = {
 
 class FakeConsumer extends EventEmitter {
     events = EVENTS;
-    connect = vi.fn().mockResolvedValue(undefined);
+    connect = vi.fn(() => (nextConnect ? nextConnect() : Promise.resolve()));
     subscribe = vi.fn().mockResolvedValue(undefined);
     run = vi.fn(() => (runError ? Promise.reject(runError) : Promise.resolve()));
     disconnect = vi.fn().mockResolvedValue(undefined);
@@ -21,6 +21,7 @@ class FakeConsumer extends EventEmitter {
 
 const created: FakeConsumer[] = [];
 let runError: Error | undefined;
+let nextConnect: (() => Promise<void>) | undefined;
 
 vi.mock('kafkajs', () => ({
     Kafka: class {
@@ -67,6 +68,7 @@ describe('KafkaConsumerService stall watchdog and status persistence', () => {
         vi.useFakeTimers();
         created.length = 0;
         runError = undefined;
+        nextConnect = undefined;
     });
     afterEach(() => {
         vi.useRealTimers();
@@ -138,7 +140,7 @@ describe('KafkaConsumerService stall watchdog and status persistence', () => {
 
         created[0].emit(EVENTS.CRASH, { payload: { restart: true } });
         created[0].emit(EVENTS.DISCONNECT);
-        await vi.advanceTimersByTimeAsync(600_000);
+        await vi.advanceTimersByTimeAsync(599_000);
 
         expect(created).toHaveLength(1);
     });
@@ -154,5 +156,46 @@ describe('KafkaConsumerService stall watchdog and status persistence', () => {
         expect(created).toHaveLength(2);
         expect(created[0].disconnect).toHaveBeenCalled();
         expect(created[1].run).toHaveBeenCalledTimes(1);
+    });
+
+    it('rebuilds after the long backstop when a kafkajs-owned restart never reconnects', async () => {
+        const service = makeService(vi.fn().mockResolvedValue(undefined));
+        await service.start();
+        created[0].emit(EVENTS.CONNECT);
+
+        created[0].emit(EVENTS.CRASH, { payload: { restart: true } });
+        await vi.advanceTimersByTimeAsync(601_000);
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        expect(created).toHaveLength(2);
+    });
+
+    it('does not rebuild after a kafkajs-owned restart when it reconnects before the backstop', async () => {
+        const service = makeService(vi.fn().mockResolvedValue(undefined));
+        await service.start();
+        created[0].emit(EVENTS.CRASH, { payload: { restart: true } });
+        await vi.advanceTimersByTimeAsync(300_000);
+        created[0].emit(EVENTS.CONNECT);
+        await vi.advanceTimersByTimeAsync(900_000);
+
+        expect(created).toHaveLength(1);
+    });
+
+    it('does not start a second build while a rebuild is in flight', async () => {
+        const service = makeService(vi.fn().mockResolvedValue(undefined));
+        await service.start();
+        let release: () => void = () => undefined;
+        nextConnect = () => new Promise<void>(r => (release = r));
+        created[0].emit(EVENTS.CRASH, { payload: { restart: false } });
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(created).toHaveLength(2);
+
+        created[1].emit(EVENTS.CRASH, { payload: { restart: false } });
+        await vi.advanceTimersByTimeAsync(10_000);
+        expect(created).toHaveLength(2);
+
+        release();
+        await vi.advanceTimersByTimeAsync(10_000);
+        expect(created).toHaveLength(3);
     });
 });
