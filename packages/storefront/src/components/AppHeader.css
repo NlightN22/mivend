@@ -295,7 +295,15 @@
     background: rgba(20, 35, 31, 0.28);
 }
 
+.app-header__nav-btn--catalog {
+    display: none;
+}
+
 @media (max-width: 1180px) {
+    .app-header__nav-btn--catalog {
+        display: flex;
+    }
+
     .app-header__strip {
         display: none;
     }

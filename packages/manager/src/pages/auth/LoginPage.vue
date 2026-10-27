@@ -1,8 +1,18 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { MvLogo, MvFormField, MvInput, MvPasswordInput, MvButton, MvNotice } from '@mivend/ui-kit';
+import {
+    readSiteName,
+    MvLogo,
+    MvFormField,
+    MvInput,
+    MvPasswordInput,
+    MvButton,
+    MvNotice,
+} from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
+
+const siteName = readSiteName();
 
 const router = useRouter();
 const route = useRoute();
@@ -33,7 +43,7 @@ async function handleSubmit(): Promise<void> {
 <template>
     <main class="login-page">
         <div class="login-wrap">
-            <MvLogo size="md" />
+            <MvLogo :name="siteName" size="md" />
 
             <div class="login-card">
                 <h1 class="login-card__title">Manager portal sign in</h1>

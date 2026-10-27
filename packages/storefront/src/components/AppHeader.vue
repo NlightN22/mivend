@@ -3,8 +3,13 @@ import { formatMoney } from '../i18n/format';
 import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { IconClipboardList, IconHeart, IconUser } from '@tabler/icons-vue';
-import { MvLanguageSwitcher, MvNotificationBell, MvNotificationPanel } from '@mivend/ui-kit';
+import { IconCategory, IconClipboardList, IconHeart, IconUser } from '@tabler/icons-vue';
+import {
+    MvLanguageSwitcher,
+    MvNotificationBell,
+    MvNotificationPanel,
+    readSiteName,
+} from '@mivend/ui-kit';
 import { useLanguageSwitcher } from '../composables/useLanguageSwitcher';
 import { useHeaderSearch } from '../composables/useHeaderSearch';
 import { useNotificationPanelLabels } from '../composables/useNotificationPanelLabels';
@@ -18,6 +23,7 @@ const router = useRouter();
 const route = useRoute();
 const { t } = useI18n();
 const language = useLanguageSwitcher();
+const siteName = readSiteName();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
@@ -86,6 +92,11 @@ function closeCatalog(): void {
     catalogOpen.value = false;
 }
 
+function openCatalogFromNav(): void {
+    mobileNavOpen.value = false;
+    toggleCatalog();
+}
+
 function toggleMobileNav(): void {
     mobileNavOpen.value = !mobileNavOpen.value;
 }
@@ -127,7 +138,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         <header class="app-header">
             <div class="app-header__inner">
                 <RouterLink to="/" class="app-header__logo-link" :aria-label="t('nav.home')">
-                    <MvLogo name="mivend" size="md" />
+                    <MvLogo :name="siteName" size="md" />
                 </RouterLink>
 
                 <button
@@ -165,6 +176,15 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                         'app-header__nav--in-zone': inAccountZone,
                     }"
                 >
+                    <button
+                        type="button"
+                        class="app-header__nav-btn app-header__nav-btn--catalog"
+                        @click="openCatalogFromNav"
+                    >
+                        <IconCategory :size="20" aria-hidden="true" />
+                        <span>{{ t('nav.catalog') }}</span>
+                    </button>
+
                     <template v-if="authStore.isLoggedIn">
                         <RouterLink
                             to="/account"

@@ -10,12 +10,20 @@ const ANCHORS = [
     {
         pkg: 'storefront',
         html: 'packages/storefront/index.html',
-        anchors: ['<title>Shop</title>', 'href="/favicon.svg"'],
+        anchors: [
+            '<title>Shop</title>',
+            'href="/favicon.svg"',
+            '<meta name="site-name" content="Shop" />',
+        ],
     },
     {
         pkg: 'manager',
         html: 'packages/manager/index.html',
-        anchors: ['<title>Shop manager portal</title>', 'href="/favicon.svg"'],
+        anchors: [
+            '<title>Shop manager portal</title>',
+            'href="/favicon.svg"',
+            '<meta name="site-name" content="Shop" />',
+        ],
     },
     {
         pkg: 'dashboard',

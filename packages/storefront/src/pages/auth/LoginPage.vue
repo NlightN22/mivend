@@ -2,8 +2,11 @@
 import { reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { readSiteName } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useCartStore } from '../../stores/cart';
+
+const siteName = readSiteName();
 
 const router = useRouter();
 const route = useRoute();
@@ -38,7 +41,7 @@ async function handleSubmit() {
     <main class="login-page">
         <div class="login-wrap">
             <a class="login-logo" href="/" :aria-label="t('nav.home')">
-                <MvLogo name="mivend" size="md" />
+                <MvLogo :name="siteName" size="md" />
             </a>
 
             <div class="login-card">
