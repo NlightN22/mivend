@@ -120,7 +120,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `exchange-cancel` | integration | order cancel after publish | `02-cancel` |
 | `exchange-cancel-before-publish` | integration | order cancel before publish | `03-cancel-before-publish` |
 | `exchange-cleanup` | integration | run cleanup | `04-cleanup` |
-| `category-feed` | integration | category visibility on the real ERP feed: deleted parent, inactive, revive, late parent, move, tombstone (#264); "move" and "parent arriving after child" are written, awaiting first run (need the ERP owner) | `05-category-feed 06-category-feed` |
+| `category-feed` | integration | category visibility on the real ERP feed: deleted parent, inactive, revive, late parent, move, tombstone (#264); all scenarios passed on the real feed with the ERP owner on 2026-10-27 | `05-category-feed 06-category-feed` |
 
 `category-feed` needs ERP-side fixture categories whose ids sit in the staging env file as `STAGING_FEED_CAT_<KEY>` (keys in
 `packages/e2e/integration/category-feed.ts`); `06` waits for the ERP owner's steps, so run it with the owner at hand. Each scenario first waits (`[category-feed] WAITING FOR INITIAL STATE`, 15 min) for its ERP-sent state; for the late parent that is up to 70 min (Integration Service accepts an orphan child after 1 h) and the owner step plus child/parent visibility up to 40 min.

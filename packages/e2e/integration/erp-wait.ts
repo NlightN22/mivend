@@ -2,7 +2,7 @@ import { waitFor } from './contour-db';
 import { inboxRows, orderByCode, outboxRows, type InboxRow, type OrderRow } from './order-rows';
 import { rememberOrder, updateRun } from './run-state';
 
-// 1C picks commands up once per exchange cycle (6-10 min).
+// The ERP picks commands up once per exchange cycle (6-10 min).
 export const ERP_ANSWER_TIMEOUT_MS = 20 * 60_000;
 const LOCAL_TIMEOUT_MS = 90_000;
 

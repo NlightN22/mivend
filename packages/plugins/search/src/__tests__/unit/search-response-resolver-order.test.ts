@@ -28,7 +28,7 @@ describe('SearchResponse resolver precedence (internal backend)', () => {
         expect(ElasticsearchService.prototype.collections).toBeTypeOf('function');
     });
 
-    it('resolves the real ElasticsearchService class through ModuleRef with strict:false', async () => {
+    it('asks ModuleRef for the ElasticsearchService class with strict:false', async () => {
         const { ShopSearchFacetValuesResolver } =
             await import('../../shop-search-facet-values.resolver');
         const facetValues = vi.fn().mockResolvedValue([]);
