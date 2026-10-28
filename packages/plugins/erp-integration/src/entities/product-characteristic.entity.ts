@@ -32,7 +32,7 @@ export class ProductCharacteristic extends VendureEntity {
     @Column({ type: 'text', nullable: true })
     normalizedValue!: string | null;
 
-    // CharacteristicValue.structured_json — confirmed always null today (Search Platform's
+    // CharacteristicValue.structured_json — confirmed always null today (the upstream service's
     // attribute-mapping.ts hardcodes it), but a real contract field kept for when it isn't.
     @Column({ type: 'text', nullable: true })
     structuredJson!: string | null;

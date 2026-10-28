@@ -458,7 +458,7 @@ describe('OrderRegistrationResultHandler', () => {
         });
     });
 
-    // mivend#207/search-platform#180: order_uuid is now live on OrderRegistrationResult.
+    // mivend#207/upstream#180: order_uuid is now live on OrderRegistrationResult.
     it('extracts orderUuid and passes it through alongside the fallback keys', async () => {
         const syncService = { handleOrderRegistrationResult: vi.fn() };
         const handler = new OrderRegistrationResultHandler(

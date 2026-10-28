@@ -1,7 +1,7 @@
-# ERP integration: decided direction (search-platform / Integration Service)
+# ERP integration: decided direction (upstream / Integration Service)
 
-**Status (updated 2026-08-12): decision recorded 2026-07-24, discussed in `search-platform`
-repo. The `search-platform` side is now real, not hypothetical — `apps/integration-service`
+**Status (updated 2026-08-12): decision recorded 2026-07-24, discussed in the upstream
+repo. The upstream side is now real, not hypothetical — `apps/integration-service`
 exists, and the Kafka transport between `integration-service` and `search-service` is deployed
 and verified (SASL_SSL, cross-host, real produce→broker→consume round trip). The MiVend side is
 still **not started**: `erp-import`/`sync` are unchanged, still assume a direct ERP REST push,
@@ -11,7 +11,7 @@ current MiVend code.**
 
 ## Context
 
-`search-platform` (separate repo, catalog/CMS/ERP-agnostic search service for auto parts/fluids)
+The upstream repo (separate repo, catalog/CMS/ERP-agnostic search service for auto parts/fluids)
 is independently building an ERP ingestion contract (issue #5 there,
 `docs/design/ingestion-api-dto.md`). During that work it became clear MiVend is a real,
 concurrent consumer of the same ERP data — not a hypothetical future integration — so the two
@@ -27,10 +27,10 @@ change shape once this decision is implemented.
 
 ```
 ERP
-  → Integration Service (new app, lives in the search-platform monorepo)
+  → Integration Service (new app, lives in the upstream monorepo)
       → Kafka (entity-level events: Category / Organization / Warehouse / PriceType /
                 Product / Offer / Price / Stock)
-          ├→ search-service (search-platform's own consumer)
+          ├→ search-service (the search service's own consumer)
           └→ MiVend / Vendure (this repo — new consumer plugin, replacing erp-import's
                                 direct-from-ERP REST batch model)
 ```
@@ -65,7 +65,7 @@ ERP
   default: one transport, Kafka, both directions. RabbitMQ stays scoped to MiVend's own hub↔branch
   topology (`docs/sync.md`) and is not reused for the ERP/Integration-Service boundary.
 - **Outbound direction (Vendure → the ERP: orders, reservations, payments)** is also decided on the
-  search-platform side: Vendure publishes a business event (e.g. `OrderSubmitted`) to Kafka, which
+  upstream side: Vendure publishes a business event (e.g. `OrderSubmitted`) to Kafka, which
   Integration Service's own consumer turns into a row in its own durable `outbound_commands`
   table (`pending` → `delivered` → `acknowledged`/`rejected`), handed to the ERP via the same
   regulated-job PUSH/PULL/ACK cycle the ERP already uses for catalog export, on a separate, more
@@ -84,15 +84,15 @@ ERP
 ## MiVend-side schema strategy: Schema Registry, not a shared npm package
 
 **Correction (checked against actual code, not just their design doc):** Integration Service's
-production publishing mechanism for `@search-platform/event-contracts` is not actually an open
+production publishing mechanism for the event-contracts package is not actually an open
 question — `docs/monorepo-split-decision.md` §6 still says "решается на этапе реализации"
 ("decided at implementation time"), but that's a stale line nobody went back to close out after
 the real implementation landed. What's actually running: a **self-hosted Verdaccio container per
 production host** (`infrastructure/compose/verdaccio.yml`, wired into both
 `search-service.yml` and `integration-service.yml`), resolved at **Docker build time** over host
-networking — both `search-platform/apps/search-service` and
+networking — both `the search service app` and
 `integration-service/apps/integration-service` depend on
-`"@search-platform/event-contracts": "^0.3.0"` exactly this way. So the mechanism is real, working
+a `"^0.3.0"` dependency on the event-contracts package exactly this way. So the mechanism is real, working
 production infrastructure, just undocumented as a closed decision in their own design doc.
 
 This changes _why_ Option A is rejected for MiVend, not _whether_: it's not "an unresolved
@@ -131,7 +131,7 @@ direction is producer-authoritative and MiVend's own choice) — it just isn't h
 inbound streams are actually encoded, so it cannot be the decode mechanism MiVend's consumer relies
 on for them.
 
-**Corrected direction: depend on `@search-platform/event-contracts`' generated protobuf types
+**Corrected direction: depend on the event-contracts package' generated protobuf types
 directly**, the same way `search-service`'s own consumer does. The earlier rejection of this
 package wasn't wrong about the package/contract itself — a producer-owned, versioned, generated
 contract is the normal and correct pattern here, not something to avoid. It was specifically about
@@ -141,7 +141,7 @@ host-scoped Docker networking at build time — real coupling to another team's 
 infrastructure and IP-scoping model (the same kind already applied to Kafka access), not just to
 their release cadence. That specific objection still stands and doesn't need relitigating. The
 fix isn't to avoid the contract — it's to ask Integration Service to publish
-`@search-platform/event-contracts` somewhere a third-party consumer can actually reach without
+the event-contracts package somewhere a third-party consumer can actually reach without
 VPN/firewall provisioning per consumer (e.g. GitHub Packages under their own org, token-auth,
 no network/IP allowlisting needed) — tracked as a real ask to Integration Service, not yet
 answered (see issue #63 there). Until that lands, MiVend's inbound consumer is blocked on either
@@ -164,7 +164,7 @@ returned a schema id. Broker CA cert lives at
 
 ## Audit 2026-09-04: current MiVend inbound/outbound code checked against real proto + real
 
-Integration Service code (`NlightN22/search-platform`, `master`, docs updated same day)
+Integration Service code (the integration-service repo, `master`, docs updated same day)
 
 Checked out `contracts/event-contracts/proto/company/catalog/events/v1/*.proto` and
 `integration-service/apps/integration-service/src/ingestion/outbound/*` directly on GitHub (not
@@ -226,7 +226,7 @@ owner before treating the outbound slice as "done".
 - No decision yet on this repo's own `plugin-sync`/`erp-import` restructuring (rename, merge, or
   replace) to reflect the new boundary — tracked as follow-up work, not started.
 
-See `search-platform`'s `docs/design/ingestion-api-dto.md` and
+See the upstream repo's `docs/design/ingestion-api-dto.md` and
 `docs/design/erp-integration-architecture.md` for the full DTO shapes and reasoning. (Those paths
-are internal to the `search-platform` repo, not published here — this document restates only
+are internal to the upstream repo, not published here — this document restates only
 what MiVend needs to know, generically, per this repo's confidentiality rules.)

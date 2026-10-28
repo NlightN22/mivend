@@ -17,14 +17,14 @@ business data, never send directly); every consumer must be idempotent (unique i
 commits, never before; no silent drops (log, retry with backoff, dead-letter after bounded
 attempts — a `try/catch` that swallows a sync/integration error is forbidden).
 
-Full design: `docs/sync.md`, `docs/payments.md`, `docs/ai/1c-integration-service-decision.md`,
+Full design: `docs/sync.md`, `docs/payments.md`, `docs/ai/erp-integration-service-decision.md`,
 `docs/environments.md` (local/staging-integration/production contour separation — **never let
 `make dev`/automated tests reach a real external broker**, see that doc's "Testing must stay
 within the local contour").
 
 **Before researching or implementing consumption of any specific Integration Service Kafka
 stream, check `docs/ai/erp-streams-map.md` first** — a living status table (consumed / blocked /
-design-in-progress / needed-later / not-needed) for every stream, with the mivend + search-platform
+design-in-progress / needed-later / not-needed) for every stream, with the mivend + upstream
 issue numbers already tracking it and non-trivial design decisions already made (e.g. the
 per-contract credit-limit model, the discount and retro-bonus setup document model). Update that
 table whenever a stream's status changes — don't let it go stale, and don't re-derive a decision
@@ -38,7 +38,7 @@ Service or to the ERP from this repo, in either direction.** No RPC channel of a
 `docs/sync.md`'s "Why Kafka both ways, not Kafka + RPC"). Inbound catalog/price/stock streams are
 consumed from Kafka topics (`erp.<entity>.events.v1`) into `IntegrationInboxEvent`; outbound
 business events (e.g. `OrderSubmitted`) are published via `IntegrationOutboxEntry`, both
-schema-decoded/encoded per `docs/ai/1c-integration-service-decision.md`. No other plugin imports
+schema-decoded/encoded per `docs/ai/erp-integration-service-decision.md`. No other plugin imports
 from `plugin-erp-integration` or references Kafka/the Schema Registry directly.
 
 **Branches never call the ERP or Integration Service.** Only the central hub does —
@@ -70,7 +70,7 @@ ready to consume, full stop, regardless of how complete or stable its field set 
 
 **When a stream mivend needs is still JSON-bridge**: file it upstream against Integration
 Service, asking them to run their own contract-formalization process for that stream (as of this
-writing, their `1c-exchange-plan-workflow` skill's stage 6.5 — "Event-contracts protobuf schema
+writing, their exchange-plan workflow's stage 6.5 — "Event-contracts protobuf schema
 audit" — already exists for exactly this; check whether an equivalent skill/process still exists
 on their side before assuming the same reference applies verbatim, their tooling can change).
 Don't design or implement a mivend-side handler against the JSON shape as an interim measure —
@@ -505,10 +505,10 @@ this same `organization`/`isDeleted` fix, immediately after it shipped: "у на
    both already local.
 2. **Known entity-id list, but the payload needs to come from the source again** (not fully
    reconstructable from what's stored) → a **targeted replay** via Integration Service's
-   `POST /api/resync/v1/replay` (issue #108 on the `search-platform` side; max 200 entityIds per
+   `POST /api/resync/v1/replay` (issue #108 on the upstream side; max 200 entityIds per
    request) — ask by explicit ID list, never guess/enumerate on mivend's side.
 3. **Unknown or large-scale gap** (you can't enumerate which specific rows are wrong, or the
-   count is large enough that enumeration itself is the risk) → ask Search Platform for a full
+   count is large enough that enumeration itself is the risk) → ask the upstream service for a full
    `aggregateType` resync through the same endpoint, rather than trying to figure out the
    affected set yourself.
 

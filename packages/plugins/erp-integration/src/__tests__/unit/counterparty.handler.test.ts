@@ -304,7 +304,7 @@ describe('CounterpartyStreamHandler', () => {
             );
         });
 
-        // search-platform#92's own established fallback: primary manager_id wins; else the
+        // upstream#92's own established fallback: primary manager_id wins; else the
         // first entry of manager_ids.
         it('falls back to the first of managerIds when managerId is absent', async () => {
             const findManagerLink = vi

@@ -85,7 +85,7 @@ describe('ReconciliationSummaryClient.fetchSummaries', () => {
         );
     });
 
-    // Issue #90's follow-up (search-platform#111): "stock"'s activeCount otherwise counts stock
+    // Issue #90's follow-up (upstream#111): "stock"'s activeCount otherwise counts stock
     // tied to a since-deleted warehouse, which mivend structurally can't track locally.
     it('adds excludeDeletedWarehouse=true only for aggregateType=stock', async () => {
         const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });

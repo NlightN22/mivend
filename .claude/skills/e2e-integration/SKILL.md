@@ -1,6 +1,6 @@
 ---
 name: e2e-integration
-description: Use when asked to write, extend or fix end-to-end tests for the staging-integration contour (make e2e-integration, packages/e2e/integration/). Rules for what such tests may create, how groups are split into numbered spec files, which data to ask sp.auditor for, and the plan, run, screenshot and audit order.
+description: Use when asked to write, extend or fix end-to-end tests for the staging-integration contour (make e2e-integration, packages/e2e/integration/). Rules for what such tests may create, how groups are split into numbered spec files, which data to ask the ERP-side team for, and the plan, run, screenshot and audit order.
 ---
 
 # e2e-integration: Playwright suite for the staging-integration contour
@@ -24,7 +24,7 @@ unless the owner asks. Read `docs/e2e-testing.md` ("Staging-integration order ex
   An exception that cannot be released needs the owner's explicit agreement first.
 - Every entity a spec creates gets a per-run suffix, is recorded in the run state and removed or closed in
   `afterAll`/teardown even when the spec fails; a cleanup failure fails the run.
-- Missing ERP-owned data (counterparties, prices, products) is requested from the `sp.auditor` session
+- Missing ERP-owned data (counterparties, prices, products) is requested from the ERP-side team
   (SendMessage), not invented and not inserted.
 - ERP waits use `erp-wait.ts` helpers with the shared timeouts (`timeouts.ts`), never fixed sleeps.
 - Logins come from `contour-env.ts` (`STAGING_TEST_*` in the staging env file); never print or commit secrets.
@@ -47,7 +47,7 @@ unless the owner asks. Read `docs/e2e-testing.md` ("Staging-integration order ex
 ## Procedure
 
 1. `test-design` plan (invariants, scope, positive/negative, data needed, what stays uncovered).
-2. List data gaps, ask `sp.auditor` for what the ERP must provide.
+2. List data gaps, ask the ERP-side team for what the ERP must provide.
 3. Implement the group; keep files small.
 4. Run only the new group; take screenshots yourself (`check-page`/Playwright), send them to the user.
 5. Update `docs/e2e-testing.md` for the new group, commit, push, send to the `mivend.audit` session.

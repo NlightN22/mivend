@@ -30,7 +30,7 @@ cd packages/e2e
 node check-page.mjs <url> [--wait-for=<css-selector>] [--out=<path>]
 ```
 
-- `<url>` — full URL, e.g. `https://devof.komponent-m.ru:8004` (local storefront, external) or
+- `<url>` — full URL, e.g. `https://devhost.example.com:8004` (local storefront, external) or
   `http://localhost:5173` (local storefront, internal) — see `docs/environments.md`'s port table
   for every contour's addresses.
 - `--wait-for` — optional CSS/text selector to wait for beyond plain network-idle (Playwright

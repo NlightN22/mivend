@@ -676,7 +676,7 @@ export const config: VendureConfig = {
                               password: process.env.INTEGRATION_KAFKA_SASL_PASSWORD,
                           }
                         : undefined,
-                // Topic names follow <writer>.<entity>.events.v1 (search-platform#201).
+                // Topic names follow <writer>.<entity>.events.v1 (upstream#201).
                 topics: {
                     category:
                         process.env.INTEGRATION_KAFKA_TOPIC_CATEGORY ?? 'erp.category.events.v1',
@@ -713,7 +713,7 @@ export const config: VendureConfig = {
                     counterparty:
                         process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY ??
                         'erp.counterparty.events.v1',
-                    // search-platform#129: register-driven creditBalance, independent of
+                    // upstream#129: register-driven creditBalance, independent of
                     // counterparty above — see CounterpartyCreditBalanceStreamHandler.
                     'counterparty-credit-balance':
                         process.env.INTEGRATION_KAFKA_TOPIC_COUNTERPARTY_CREDIT_BALANCE ??

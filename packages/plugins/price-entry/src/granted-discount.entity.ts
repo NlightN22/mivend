@@ -36,7 +36,7 @@ export class GrantedDiscount extends VendureEntity {
     @Column({ type: 'varchar' })
     discountRuleRecipientId!: string;
 
-    // Opaque ERP classifier text (closed ERP enum, see search-platform#126) — display only.
+    // Opaque ERP classifier text (closed ERP enum, see upstream#126) — display only.
     @Column({ type: 'varchar', nullable: true })
     condition!: string | null;
 

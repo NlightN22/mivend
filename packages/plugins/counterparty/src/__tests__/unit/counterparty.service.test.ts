@@ -436,7 +436,7 @@ describe('CounterpartyService', () => {
     });
 
     describe('updateCreditBalance', () => {
-        // search-platform#129: a separate, register-driven stream from upsertActiveState above.
+        // upstream#129: a separate, register-driven stream from upsertActiveState above.
         it('updates creditBalance on an existing row', async () => {
             mockRepo.update.mockResolvedValue({ affected: 1 });
             await service.updateCreditBalance(mockCtx, 'cp-1', 500);

@@ -132,7 +132,7 @@ and is never an idempotency key for a business entity.
   affected by this change); `orderUuid` comes from `Order.customFields.uuid`, `lineUuid` from `order_line_identity` (#221).
   All three required, matching `contractId`'s own precedent. **Follow-up, not done here:** the canonical
   `@nlightn22/event-contracts` npm package has the same three fields prepared but unpublished, on a
-  `/opt/search-platform-wt-order-uuid` worktree, branch `feat/order-submitted-uuid` — the npm bump into mivend's
+  an upstream worktree — the npm bump into mivend's
   dependency and the ERP/Integration-Service side's own consumption are separate, tracked follow-ups once that
   branch is reviewed and released.
 - Done: `DateStampedOrderCodeStrategy` replaced by `NumberingOrderCodeStrategy`
@@ -184,12 +184,12 @@ and is never an idempotency key for a business entity.
   Dashboard couldn't load vendure-config.ts" commit. Verified running on both local (`:5175`) and
   staging-integration (`:5185`), alongside a healthy Kafka consumer group join on staging-integration.
 - Done: `@nlightn22/event-contracts` bumped to `0.56.0` (the real published package now carries
-  `orderUuid`/`orderNumber`/`lineUuid` — `sp.issue.180`'s branch was merged and released as `0.55.0`,
+  `orderUuid`/`orderNumber`/`lineUuid` — upstream issue 180's branch was merged and released as `0.55.0`,
   `0.56.0` adds `OrderRegistrationResult.order_uuid`/optional `OrderChanged.order_uuid` on top).
   `contract-schema.ts`'s `resolveOutboundSchema` now picks up the real package schema (its documented
   #203 behavior: the package wins once it carries the fields), which surfaced a stale test fixture
   (`outbound-contract.test.ts`'s `BUILDER_PAYLOAD`) — fixed.
 - Still open, separate from this slice: the Reservation uuid/`erpOperationId` unification
   described above; Swagger/API example updates; consuming the new `order_uuid` field on
-  `OrderRegistrationResult`/`OrderChanged` (real ERP-side dedup is not live yet per `sp.issue.180` — ERP's
+  `OrderRegistrationResult`/`OrderChanged` (real ERP-side dedup is not live yet per upstream issue 180 — ERP's
   own field-length fix is still pending, so this has no urgency yet but is tracked).

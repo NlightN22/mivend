@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// search-platform#147: soft-delete flag for ERP unposting tombstones on granted_discount.
+// upstream#147: soft-delete flag for ERP unposting tombstones on granted_discount.
 export class AddGrantedDiscountIsDeleted1791000000001 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(

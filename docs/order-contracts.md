@@ -296,7 +296,7 @@ shipment) in a later task; #223 only frees the name.
 
 Implemented as `OrderCancellationService` (plugin-reservation), `order.cancel-requested` (outbound) and
 the `order-cancel-result` stream (inbound); the decisions are recorded here and in #194. The ERP-side facts come from
-search-platform#178 (read from the ERP configuration and checked with live tests on a test order).
+upstream#178 (read from the ERP configuration and checked with live tests on a test order).
 
 ### Two operations
 
@@ -363,7 +363,7 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   delivered, marked for deletion -> cancelled); a non-priority task.
 - The customer sees a simplified status, staff a detailed one; the ERP only supplies facts.
 
-### Kafka topic names (search-platform#201, mivend#234)
+### Kafka topic names (upstream#201, mivend#234)
 
 - Names are `<writer>.<entity>.<kind>.<version>`. The ERP writes `erp.<entity>.events.v1` (one per stream, e.g.
   `erp.product.events.v1`, `erp.order-status.events.v1`); mivend writes `mivend.order.commands.v1`.
@@ -392,12 +392,12 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
   preferred warehouse and the source of the shipping scheme. The ERP distributes each line over warehouses by free
   stock (preferred first, then the user's warehouse group, splitting a line when one is short). We send any
   warehouse from the order's reservations. Until the ERP switches to this standard autoreserve (tracked in
-  search-platform#179) the whole order is reserved at the warehouse we send.
+  upstream#179) the whole order is reserved at the warehouse we send.
 - Products without a stock-keeping unit in the ERP are skipped from the reserve (the order still registers):
   their `reservedQuantity` is 0 and indistinguishable from "no stock" (accepted contract gap).
 - `reserveUntil` is our deadline and the source of truth (ISO-8601 UTC); the ERP stores it as the order's
   "reserve until" and closes the reserve only after it, so it never releases earlier than mivend. Times coming from
-  the ERP are treated as UTC only after search-platform#187 (local time labelled as UTC) is fixed.
+  the ERP are treated as UTC only after upstream#187 (local time labelled as UTC) is fixed.
 - Which organization/storage place the ERP reserves a line at is its own distribution; mivend's per-line warehouse
   choice (most available stock) and per-product organization winner are not coordinated with it (known gap).
 
@@ -607,7 +607,7 @@ Today the consumer drops them as a `noop`. Decision: import them as real `Order`
 
 Documents that form a customer's receivables (sales, payments, returns, corrections) arrive on two streams
 (event-contracts 0.65.0): `erp.settlement-document.events.v1` and
-`erp.settlement-balance.events.v1`. Contract source: search-platform#195.
+`erp.settlement-balance.events.v1`. Contract source: upstream#195.
 
 - **Entities (ERP-owned).** `SettlementDocument` (key: the document uuid, never the number) -> `SettlementEntry`
   (one per organization/counterparty/contract triple, signed amount) -> `SettlementOrderLink` (order uuid, amount).

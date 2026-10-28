@@ -295,7 +295,7 @@ Every contour's server/worker/storefront/manager bind to `0.0.0.0` (or `localhos
 Postgres/RabbitMQ it shares — see "Database isolation" above), but the only thing actually
 reachable from outside this box is **nginx** (`/etc/nginx/sites-enabled/mivend.conf`, TLS on
 `devhost.example.com`) plus `ufw` allowing exactly the ports nginx listens on — see this box's
-`publish-service` skill (`/opt/search-platform/.claude/skills/publish-service/SKILL.md`) for the
+`publish-service` skill (the shared box-level one) for the
 port-per-service-behind-nginx convention this follows. Internal ports are never reachable
 directly from outside (no `ufw allow` for them).
 

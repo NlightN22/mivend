@@ -252,7 +252,7 @@ interchangeable id spaces:
   `branchId` as mivend understands it below is **entirely mivend's own invention**, never sourced
   from the ERP directly except as an optional convenience match against that same reused GUID (see
   `Branch` below) — flagged to the Integration Service team to reconsider that field's naming,
-  search-platform#140.
+  upstream#140.
 - **`Branch`** (`.../entities/branch.entity.ts`) is mivend's own entity for warehouse/ATP
   consolidation and branch-scoped access control — it is **not** a 1:1 mirror of anything in the ERP.
   A `Branch` row can be created two ways: resolved from an ERP-side branch/point code

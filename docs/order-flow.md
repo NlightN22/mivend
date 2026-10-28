@@ -370,13 +370,13 @@ unit; the variant, stock, reservations and the order line are all in that unit.
 ### Order weight/volume and branch-conditional packaging (mivend#103)
 
 Decided architecture, not yet implemented. Two ERP-sourced facts drive this, both confirmed live
-against ERP (a test database) by search-platform, not theoretical:
+against ERP (a test database) by upstream, not theoretical:
 
-- `ProductChanged.defaultSalesUnitId` (search-platform#143, contract `@nlightn22/event-contracts`
+- `ProductChanged.defaultSalesUnitId` (upstream#143, contract `@nlightn22/event-contracts`
   0.43.0+) — resolved server-side by ERP, always present, never a raw "unset" marker. Equal to the
   product's base unit → no constraint. Different from the base unit → **ERP's own semantics for
   this field is "sellable only in this packaging, not by piece"** — confirmed with the ERP
-  developer directly (search-platform#144, closed as resolved-by-#143: there is no separate
+  developer directly (upstream#144, closed as resolved-by-#143: there is no separate
   "mandatory packaging" flag, it's the same field).
 - `UnitChanged` (still not consumed by mivend as of this writing) carries, per unit
   (`owner_id=null` = shared classifier, `owner_id=<productId>` = product-owned packaging unit):

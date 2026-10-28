@@ -319,7 +319,7 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   `reconciliation-local-counts.service.ts`'s own comments for why each is excluded).
 - **Two discrepancy classes only** (the summary endpoint has no per-entity diff, only aggregate
   counts): `upstream-higher` (Integration Service has more active entities than mivend — flag for
-  a human to request a replay via Search Platform's own operator-only tooling) and `local-higher`
+  a human to request a replay via the upstream service's own operator-only tooling) and `local-higher`
   (mivend has more than Integration Service — flag for review, never auto-deleted).
 - **Where to see it**: the manager portal's Dashboard shows an "ERP reconciliation" panel listing
   open discrepancies (`ErpReconciliationPanel.vue`), gated by the `ManageErpIntegration`

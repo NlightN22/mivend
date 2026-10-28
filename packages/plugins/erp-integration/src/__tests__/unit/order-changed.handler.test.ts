@@ -469,7 +469,7 @@ describe('OrderChangedStreamHandler', () => {
         );
     });
 
-    // mivend#207/search-platform#180: order_uuid is a real `optional string` on OrderChanged —
+    // mivend#207/upstream#180: order_uuid is a real `optional string` on OrderChanged —
     // present only for orders registered through our integration.
     it('passes orderUuid through when present', async () => {
         const syncService = {

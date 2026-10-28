@@ -68,4 +68,4 @@ Stream status lives in `ai/erp-streams-map.md`; this file is the design record.
 ## Backfill
 
 Existing Kafka contours need the `category` aggregate re-delivered once after deploy (bulk resync via
-search-platform); the already-processed inbox rows carry the old flat result.
+upstream); the already-processed inbox rows carry the old flat result.

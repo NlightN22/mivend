@@ -14,12 +14,12 @@ everything about limits/receivables in one place before a dedicated implementati
 | Credit-term approval | `credit-term-*.ts` in `plugin-counterparty` (#142 `creditTermApproval`) | Workflow not wired into checkout |
 | Deferred checkout | `plugin-deferred-payment` (eligibility needs `creditLimit > 0`, open-order exposure, warning flag) | Built (#180), docs/payments.md |
 | Contract data | `contract` stream -> `Contract` entity (limit, `controlledIndividually`, `debtDaysLimit`, `paymentDelayDays`) | Stored |
-| Counterparty balance | `CounterpartyCreditBalanceChanged` (search-platform#129) | Consumed, almost empty on staging |
+| Counterparty balance | `CounterpartyCreditBalanceChanged` (upstream#129) | Consumed, almost empty on staging |
 | Settlement ledger / receivables | #45, docs/payments.md | Not built |
 
 Related issues: #50 (per-org/contract limits), #151 (per-contract balance), #45 (settlement ledger),
 #48 (aggregate vs per-organization UI), #31 (manager finance/AR view), #133 (dashboard counterparty
-pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (main contract reference).
+pages), #142/#143/#150 (closed: deferred checkout), #172 in upstream (main contract reference).
 
 ## Data on staging (2026-10-06)
 
@@ -47,7 +47,7 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
 ## Working model (owner's decisions 2026-10-06)
 
 - **Contracts**: every order is attributed to the counterparty's **main contract** automatically
-  (search-platform#172 gives the main-contract reference). Customers do not choose a contract (not
+  (upstream#172 gives the main-contract reference). Customers do not choose a contract (not
   planned); a manager can re-attribute an order to another contract. A re-attributed order starts
   counting against that contract's limit only after the manager changes it.
 - **Limit calculation (scheduled job, not during import)**: all contracts **without** the per-contract
@@ -69,7 +69,7 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
   `granted-discount` stream is sourced from it. `@nlightn22/event-contracts@0.47.0` has no proforma invoice,
   shipment, payment or settlement-register stream: only `counterparty-credit-balance-changed`,
   `contract-changed`, `order-changed`, `order-registration-result`, `granted-discount-changed`.
-- Asked search-platform (sp.auditor.common) to confirm and to say which receivables source is feasible.
+- Asked the upstream team to confirm and to say which receivables source is feasible.
 
 ## Open questions
 
