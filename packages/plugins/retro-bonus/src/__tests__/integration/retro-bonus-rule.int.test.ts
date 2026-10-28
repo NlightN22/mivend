@@ -245,6 +245,23 @@ describe('RetroBonusRuleService.findForCounterparty (real Postgres)', () => {
         expect((await stored()).inactiveReason).toBe('counterparty-unsupported-comparison');
     });
 
+    it('returns an all-counterparties rule with an unevaluable product side flagged, never as evaluated', async () => {
+        await service.apply(
+            ctx,
+            input('1', [], [], {
+                allCounterparties: true,
+                productMode: 'filter',
+                productFilter: [{ field: 'Поставщик', comparison: 'Равно', values: [ref('s1')] }],
+            }),
+        );
+
+        const found = await service.findForCounterparty(ctx, 'anyone');
+
+        expect(found).toHaveLength(1);
+        expect(found[0].inactiveReason).toBe('product-unknown-filter-field');
+        expect(await termCount()).toBe(0);
+    });
+
     it('reclassifies legacy rows once from the stored filter and is idempotent', async () => {
         await service.apply(
             ctx,

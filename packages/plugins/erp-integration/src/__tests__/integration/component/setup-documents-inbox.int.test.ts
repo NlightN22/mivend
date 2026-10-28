@@ -3,9 +3,11 @@ import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import {
     DiscountSetupChangedSchema,
     RetroBonusSetupChangedSchema,
+    SelectionConditionSchema,
+    SourceFieldValueSchema,
 } from '@nlightn22/event-contracts';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, Entity, Index, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
+import { DataSource } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { DiscountSetupService } from '@mivend/plugin-price-entry';
 import { RetroBonusRuleService } from '@mivend/plugin-retro-bonus';
@@ -24,90 +26,16 @@ import { RetroBonusSetupStreamHandler } from '../../../handlers/retro-bonus-setu
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import type { InboundStream } from '../../../types';
 import { makeInboxProcessor } from './inbox-processor-helpers';
-import { TestRetroFilterTerm, TestSetupFilterTerm } from './setup-documents-term-entities';
-
-// Plain mirrors of the rule tables (VendureEntity needs a bootstrapped id strategy); members are real columns.
-@Entity('discount_setup')
-@Index(['erpId'], { unique: true })
-class TestDiscountSetup {
-    @PrimaryGeneratedColumn() id!: number;
-    @Column({ type: 'timestamp', default: () => 'now()' }) createdAt!: Date;
-    @Column({ type: 'timestamp', default: () => 'now()' }) updatedAt!: Date;
-    @Column({ type: 'varchar' }) erpId!: string;
-    @Column({ type: 'varchar', default: '' }) documentNumber!: string;
-    @Column({ type: 'double precision' }) percent!: number;
-    @Column({ type: 'varchar', default: '' }) conditionName!: string;
-    @Column({ type: 'double precision', nullable: true }) conditionNumber!: number | null;
-    @Column({ type: 'varchar', nullable: true }) priceTypeErpId!: string | null;
-    @Column({ type: 'double precision', nullable: true }) limitPercent!: number | null;
-    @Column({ type: 'timestamp' }) validFrom!: Date;
-    @Column({ type: 'timestamp', nullable: true }) validTo!: Date | null;
-    @Column({ type: 'boolean', default: true }) active!: boolean;
-    @Column({ type: 'varchar', nullable: true }) inactiveReason!: string | null;
-    @Column({ type: 'boolean', default: false }) allProducts!: boolean;
-    @Column({ type: 'varchar', default: 'list' }) productMode!: string;
-    @Column({ type: 'jsonb', nullable: true }) productFilter!: unknown[] | null;
-    @Column({ type: 'varchar' }) sourceVersion!: string;
-    @Column({ type: 'varchar', length: 64 }) contentHash!: string;
-}
-
-@Entity('discount_setup_recipient')
-class TestRecipient {
-    @PrimaryColumn({ type: 'int' }) setupId!: number;
-    @PrimaryColumn({ type: 'varchar', default: '' }) counterpartyErpId!: string;
-    @PrimaryColumn({ type: 'varchar', default: '' }) contractErpId!: string;
-}
-
-@Entity('discount_setup_product')
-class TestSetupProduct {
-    @PrimaryColumn({ type: 'int' }) setupId!: number;
-    @PrimaryColumn({ type: 'varchar' }) productErpId!: string;
-}
-
-@Entity('retro_bonus_rule')
-@Index(['erpId'], { unique: true })
-class TestRetroRule {
-    @PrimaryGeneratedColumn() id!: number;
-    @Column({ type: 'timestamp', default: () => 'now()' }) createdAt!: Date;
-    @Column({ type: 'timestamp', default: () => 'now()' }) updatedAt!: Date;
-    @Column({ type: 'varchar' }) erpId!: string;
-    @Column({ type: 'varchar', default: '' }) documentNumber!: string;
-    @Column({ type: 'boolean', default: false }) isInstant!: boolean;
-    @Column({ type: 'varchar', nullable: true }) accrualPeriod!: string | null;
-    @Column({ type: 'int', default: 0 }) accrualDayNumber!: number;
-    @Column({ type: 'varchar', default: '' }) accrualKind!: string;
-    @Column({ type: 'double precision' }) percent!: number;
-    @Column({ type: 'double precision', nullable: true }) conditionAmount!: number | null;
-    @Column({ type: 'double precision', nullable: true }) conditionQuantity!: number | null;
-    @Column({ type: 'varchar', nullable: true }) priceTypeErpId!: string | null;
-    @Column({ type: 'varchar', nullable: true }) organizationErpId!: string | null;
-    @Column({ type: 'varchar', nullable: true }) recipientCounterpartyErpId!: string | null;
-    @Column({ type: 'varchar', nullable: true }) recipientContractErpId!: string | null;
-    @Column({ type: 'timestamp' }) validFrom!: Date;
-    @Column({ type: 'timestamp', nullable: true }) validTo!: Date | null;
-    @Column({ type: 'boolean', default: true }) active!: boolean;
-    @Column({ type: 'varchar', nullable: true }) inactiveReason!: string | null;
-    @Column({ type: 'boolean', default: false }) allCounterparties!: boolean;
-    @Column({ type: 'boolean', default: false }) allProducts!: boolean;
-    @Column({ type: 'varchar', default: 'list' }) counterpartyMode!: string;
-    @Column({ type: 'varchar', default: 'list' }) productMode!: string;
-    @Column({ type: 'jsonb', nullable: true }) counterpartyFilter!: unknown[] | null;
-    @Column({ type: 'jsonb', nullable: true }) productFilter!: unknown[] | null;
-    @Column({ type: 'varchar' }) sourceVersion!: string;
-    @Column({ type: 'varchar', length: 64 }) contentHash!: string;
-}
-
-@Entity('retro_bonus_rule_counterparty')
-class TestRetroCounterparty {
-    @PrimaryColumn({ type: 'int' }) ruleId!: number;
-    @PrimaryColumn({ type: 'varchar' }) counterpartyErpId!: string;
-}
-
-@Entity('retro_bonus_rule_product')
-class TestRetroProduct {
-    @PrimaryColumn({ type: 'int' }) ruleId!: number;
-    @PrimaryColumn({ type: 'varchar' }) productErpId!: string;
-}
+import {
+    TestDiscountSetup,
+    TestRecipient,
+    TestRetroCounterparty,
+    TestRetroFilterTerm,
+    TestRetroProduct,
+    TestRetroRule,
+    TestSetupFilterTerm,
+    TestSetupProduct,
+} from './setup-documents-entities';
 
 const { schema, extra } = testSchemaOptions('erp_setup_documents');
 let dataSource: DataSource;
@@ -281,6 +209,53 @@ describe('discount-setup through the inbox (real Postgres)', () => {
             .findOneByOrFail({ entityId: 'doc-bad' });
         expect(bad.status).toBe('failed');
         expect(bad.lastError).toContain('productMode');
+    });
+});
+
+describe('replaying a filter-mode discount document (real Postgres)', () => {
+    const filterMessage = (): Record<string, unknown> =>
+        toJson(
+            DiscountSetupChangedSchema,
+            create(DiscountSetupChangedSchema, {
+                entityId: 'doc-f',
+                version: '7',
+                effectiveFrom: from,
+                isActive: true,
+                percent: 5,
+                productMode: 'filter',
+                productFilter: [
+                    create(SelectionConditionSchema, {
+                        field: 'Номенклатура',
+                        comparison: 'ВИерархии',
+                        values: [
+                            create(SourceFieldValueSchema, {
+                                value: { case: 'refId', value: 'g-1' },
+                            }),
+                        ],
+                    }),
+                ],
+                recipients: [{ counterpartyId: 'cp-1' }],
+            }),
+        ) as Record<string, unknown>;
+
+    it('re-runs the handler for the same version under a new event id and activates an awaiting-redelivery row', async () => {
+        await deliver('discount-setup', 'doc-f', '7', filterMessage());
+        await dataSource.query(
+            `UPDATE discount_setup SET active = false, "inactiveReason" = 'awaiting-redelivery',
+                    "sourceVersion" = '0', "contentHash" = ''; DELETE FROM discount_setup_recipient`,
+        );
+
+        await deliver('discount-setup', 'doc-f', '7', filterMessage());
+
+        expect(
+            await dataSource.query(
+                `SELECT active, "inactiveReason", "sourceVersion" FROM discount_setup`,
+            ),
+        ).toEqual([{ active: true, inactiveReason: null, sourceVersion: '7' }]);
+        expect(
+            await dataSource.query(`SELECT count(*)::int AS n FROM discount_setup_recipient`),
+        ).toEqual([{ n: 1 }]);
+        expect((await outcomes()).map(o => o.outcome)).toEqual(['applied', 'applied']);
     });
 });
 
