@@ -135,8 +135,16 @@ const counterparties = async (): Promise<string[]> =>
             `SELECT "counterpartyErpId" FROM retro_bonus_rule_counterparty ORDER BY 1`,
         )
     ).map((r: { counterpartyErpId: string }) => r.counterpartyErpId);
-const stored = async (): Promise<{ active: boolean; sourceVersion: string }> =>
-    (await dataSource.query(`SELECT active, "sourceVersion" FROM retro_bonus_rule`))[0];
+const stored = async (): Promise<{
+    active: boolean;
+    sourceVersion: string;
+    inactiveReason: string | null;
+}> =>
+    (
+        await dataSource.query(
+            `SELECT active, "sourceVersion", "inactiveReason" FROM retro_bonus_rule`,
+        )
+    )[0];
 
 describe('RetroBonusRuleService.apply (real Postgres)', () => {
     it('replaces both lists as a unit with a newer version', async () => {
