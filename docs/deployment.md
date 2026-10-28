@@ -127,3 +127,33 @@ COMMIT;
 ```
 
 Delete `history_entry` rows with `"administratorId" = :aid` first if the delete reports a foreign key violation.
+
+## Release step: filter-mode discount documents (#296)
+
+Before the release, count what is off. These discount documents are stored inactive and never applied until the step below:
+
+```sql
+SELECT count(*) FROM discount_setup WHERE "inactiveReason" = 'product-filter';
+SELECT count(*) FROM retro_bonus_rule WHERE "inactiveReason" IN ('product-filter', 'counterparty-filter');
+```
+
+On first start after the release the server reclassifies these rows once (migration `1791539000000` creates the term
+tables). Retro-bonus rules are fixed in place. A discount document cannot be rebuilt (its recipients were never stored while
+it was inactive), so an evaluable one becomes `awaiting-redelivery` and **stays off until the ERP resends it**. Resend them
+through Integration Service replay, 200 ids per call (`REPLAY_MAX_IDS`):
+
+```sql
+SELECT "erpId" FROM discount_setup WHERE "inactiveReason" = 'awaiting-redelivery';
+```
+
+```bash
+curl -X POST "$INTEGRATION_SERVICE_BASE_URL/api/resync/v1/replay" \
+  -H "X-Api-Key: $INTEGRATION_SERVICE_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"aggregateType":"discountSetup","sourceSystem":"'"$INTEGRATION_RESYNC_SOURCE_SYSTEM"'","entityIds":["<erpId>", "..."]}'
+```
+
+A replayed event gets a new event id, so the inbox stores it as a new row (the inbox dedupes on stream plus event id only) and
+the handler runs again. The stored version is reset to `0`, so any delivered version applies and the row turns active.
+This path is covered by `setup-documents-inbox.int.test.ts`; that Integration Service issues a new event id for a replay is
+documented behaviour, not asserted by mivend tests. Verify afterwards that the first query returns 0 and that no row is left
+in `awaiting-redelivery`; rows that stay there were not resent or were rejected for another reason (`inactiveReason`).

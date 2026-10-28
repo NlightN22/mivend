@@ -469,7 +469,11 @@ needs no recompute.
   max-percent logic are untouched.
 - _Fail closed_: an unresolved ref (category, product or manufacturer not synced) makes a negated term false; a
   hierarchy comparison on a manufacturer needs every ref to be a stored manufacturer; an unknown comparison never
-  applies; a product without a resolved category matches no category term.
+  applies; a product without a resolved category matches no category term. **A negated term also needs a known
+  attribute**: НеРавно/НеВСписке on the manufacturer is false for a product with no manufacturer, and
+  НеВИерархии/НеВСпискеПоИерархии is false for a product with no category facet value, because the ERP may hold that
+  product under the excluded manufacturer or group. Negation on product identity (НеРавно, НеВСписке on an item) needs no
+  attribute.
 - _Limits_: no manufacturer tree is stored (hierarchy on manufacturers behaves as in-list); counterparty hierarchy is
   not evaluated (no `counterparty-groups` stream); other fields (supplier, parent, nomenclature group) and comparisons
   (greater/less, contains, interval) stay inactive. Retro-bonus stays display only: the counterparty side narrows
@@ -482,8 +486,13 @@ needs no recompute.
   rules keep their members and are fixed in place, no resend needed.
 - _Wire shape_: a condition value is a `SourceFieldValue`; in proto JSON a reference is `{"refId": "<uuid>"}`. Any other
   value kind (string, number, enum) stores the document inactive as `unknown-value-type`.
-- _Query cost_: with only filter documents a 100-line cart costs 4 queries in total (rules, terms, ref resolution,
-  product attributes) through the per-request `LookupMemo`; a catalog page of N products costs 3 + N (the three shared
-  lookups, then one attribute query per product, like the list-mode member probe). Both are asserted in
-  `discount-setup-filter.int.test.ts` (written, run by the lead). Wall-clock timing is left to the first run on a
-  populated database.
+- _Query cost_: with only filter documents a 100-line cart costs 4 queries in total (rules, terms, ref resolution, product
+  attributes) through the per-request `LookupMemo`. A catalog page costs the same 4 however many products it has: the
+  variants of a page are resolved concurrently and `BatchLoader` collects their product ids within a 5 ms window into one
+  attribute query. Products that reach the loader in separate windows (a slow variant) add one query per extra window;
+  results stay correct. Asserted in `discount-setup-filter.int.test.ts`. Every lookup is indexed
+  (`collection_translation.slug`, `manufacturer.externalId`, `product.customFieldsExternalid`, `collection_closure`
+  both columns, facet-value joins), so no index was added. Wall-clock timing is left to the first run on a populated database.
+- _Retro-bonus display_: `retroBonusRules` returns a rule whose product or counterparty side is not evaluable with
+  `inactiveReason` set (visible to the manager); nothing else reads retro-bonus rules (no accrual or grant logic
+  depends on them), and the portal does not use `allProducts`, so such a rule is never presented as covering all products.
