@@ -70,7 +70,7 @@ event-contracts 0.82.0. `discount-rule`/`retro-bonus-rule` streams and topics ar
 - **Snapshots**: lines (with `taxRate`/`taxAmount`), content hash decides reuse/new version under `proformaInvoices-for-order:<id>` lock; paid snapshots never rewritten (difference settled via the ERP). Print form follows the ERP payment-request layout on one A4 page, VAT as one total line, payment QR GOST R 56042-2014 ST00012 (own module, `qrcode` for drawing; required: name, account, bank, BIC, corr. account, sum, purpose, payee INN). Required requisites: legal name + INN + bank; address/KPP/phone/signatories optional (organization stream, contract 0.66).
 - **Form of payment vs terms (#222)**: forms `cash` / `offline-terms` (bank transfer) / `online-stub` (card); limit control is a policy for every form (`CreditPlacementService`, lock `credit-exposure:<counterparty>`), route in `Payment.metadata.placement`; over limit waits for a manager unless the branch allows exceeding and the customer acknowledged; card amount = excess + total and cures the order; prepayment orders reserve with `prepaymentReserveDays` (default 3); manager action `confirmPaymentReceived` (`ConfirmPaymentReceived`). `deferred-payment` method removed.
 - **Payments**: FIFO allocation module (`SettlementEntry`) is FROZEN, not extended, not used for display; owner idea for later: the customer allocates a payment across orders in our system (needs an ERP contract). The ERP REST callbacks are a TEST tool (docs/environments.md), off by default, key-protected; the payment fact carries amount + currency + required `proformaInvoiceUuid`.
-- **Open**: realization ingestion and "by shipment" version (#224 stream), customer-driven allocation, e2e sets `storefront/checkout-credit` and `proforma-organizations` written but not confirmed green on a stable contour (PDF specs need a worker; they fail on CI without one), dashboard GraphQL types regeneration, withdraw vs concurrent payment lock, integration-side proforma contract (search-platform#198), shop API 500 on proforma/order lists for a session without customer.
+- **Open**: realization ingestion and "by shipment" version (#224 stream), customer-driven allocation, e2e sets `storefront/checkout-credit` and `proforma-organizations` written but not confirmed green on a stable contour (PDF specs need a worker; they fail on CI without one), dashboard GraphQL types regeneration, withdraw vs concurrent payment lock, integration-side proforma contract (the integration service), shop API 500 on proforma/order lists for a session without customer.
 - **Owner preferences**: no production, destructive/no-compat changes are fine (staging-integration DB holds real integration data: plain UPDATE/RENAME only, never reseed); the owner's ERP sample PDF/xlsx are private, never copy real data into the repo.
 
 ## #223 legacy-name rename + #218 event-contracts 0.57-0.61 (2026-10-11..12, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-16-223-218-full.md`)
@@ -126,7 +126,7 @@ Over-limit deferred order is NOT rejected (flag `creditLimitExceeded`, manager c
 
 ## Product photos (issue #181, shipped/audited/closed; pushed to d845536; earlier design text: `.backup/PROJECT_CONTEXT.20261006-181-photos-design.md`)
 
-- **Flow**: Integration Service stream `product-photo` (`ProductPhotoChanged`, event-contracts 0.46.0+, search-platform#170) -> `ProductPhotoStreamHandler` stores metadata in `ProductPhoto` (+ `syncQueuedAt`, `replayAttempts`) -> `ProductPhotoSyncService` (Vendure job queue `product-photo-sync`, must be in `worker.ts` activeQueues) downloads the pre-signed URL, checks MD5, `AssetService.createFromFileStream`, sets product assets by `position` (0 = featured). Same hash stored once; tombstone detaches. Serialized per product by `pg_advisory_xact_lock`; queue concurrency 1 (long transaction by design). ERP owns product photos: sync REPLACES the product's whole asset list.
+- **Flow**: Integration Service stream `product-photo` (`ProductPhotoChanged`, event-contracts 0.46.0+, upstream issue 170) -> `ProductPhotoStreamHandler` stores metadata in `ProductPhoto` (+ `syncQueuedAt`, `replayAttempts`) -> `ProductPhotoSyncService` (Vendure job queue `product-photo-sync`, must be in `worker.ts` activeQueues) downloads the pre-signed URL, checks MD5, `AssetService.createFromFileStream`, sets product assets by `position` (0 = featured). Same hash stored once; tombstone detaches. Serialized per product by `pg_advisory_xact_lock`; queue concurrency 1 (long transaction by design). ERP owns product photos: sync REPLACES the product's whole asset list.
 
 ## #166/#168/#164/#170 + 2026-10-05 storefront UX (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT.20261007-166-168-164-170-storefront-ux.md`)
 
@@ -253,7 +253,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 - #228 follow-ups of the settlement section (i18n, organization names from `organization_requisites`, e2e with data via the real ingestion path); #229 role gating of receivables (low); #226 reconciliation acts.
 - #181 follow-ups (#187 asset GC, card chips, `garage-init` into `make up`); #154 discount-rule follow-ups; #44 shipping selector and freight pricing; #143 deferred routing UX.
 - `access-control-review` of `AcquiringPlugin` on a branch; #138 sort/filter audit of ~17 `MvAdvancedDataTable` consumers (`manager-table-standard`); #130 Administrator-lifecycle E2E.
-- #150 checkout integration point for `CreditLimitCheckService` (owner UX decision), #151 per-contract balance register question to search-platform; `UserChanged.role` (#109) deferred; `branchId`/`departmentId` cleanup (#123-#125) design-only.
+- #150 checkout integration point for `CreditLimitCheckService` (owner UX decision), #151 per-contract balance register question to the integration service team; `UserChanged.role` (#109) deferred; `branchId`/`departmentId` cleanup (#123-#125) design-only.
 
 ## Known problems and limitations
 
@@ -265,7 +265,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
   currently sends a tombstone for those keys, so they never arrive.
 - **`limitAmount` on a counterparty/contract discount rule is not enforced** — rules that set it
   are excluded from applying at all (safe default), not capped. See #154.
-- **Upstream (search-platform) version-collision/dedup risk for `discount-rule`** — their
+- **Upstream (integration service) version-collision/dedup risk for `discount-rule`** — their
   Ingestion API can silently drop a cancellation event before it reaches Kafka if it shares a
   version with the update in the same sync pass. No mivend-side fix possible. See #154.
 - **This box hosts multiple parallel Claude sessions/contours sharing one Postgres/Kafka/RAM** —

@@ -25,7 +25,7 @@ This is a public open-source repository. Keep all content generic.
 - No client names, employee names, or internal system names.
 - No internal pricing details, financial figures, or contract terms.
 - Architectural decisions may reference general technical constraints (e.g. "unreliable network between locations") but must not describe specific infrastructure or vendors.
-- Accepted exception: the npm scope and container registry owner handle in package and image names are unavoidable and allowed.
+- Accepted exception: the npm scope and container registry owner handle in package and image names are unavoidable and allowed; so is the public CA certificate file in infrastructure/kafka-tls, whose issuer name cannot be edited.
 - Use generic placeholders in examples: `branch-a`, `branch-b`, `customer-123`, `price-type-wholesale`.
 
 ---
