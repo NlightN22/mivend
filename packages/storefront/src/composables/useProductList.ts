@@ -193,8 +193,7 @@ export function useProductList(options: UseProductListOptions = {}): {
     }
 
     function clearResults(failed: boolean): void {
-        loadError.value = failed;
-        loading.value = false;
+        [loadError.value, loading.value] = [failed, false];
         [items.value, facetGroups.value, categoryCounts.value] = [[], [], new Map()];
         [totalItems.value, hasMore.value, categoryCountsLoading.value] = [0, false, false];
     }

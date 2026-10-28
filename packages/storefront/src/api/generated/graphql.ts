@@ -4623,6 +4623,12 @@ export type SearchCapabilitiesQuery = {
     searchCapabilities: { sortKeys: Array<string>; priceRange: boolean };
 };
 
+export type CatalogCollectionBySlugQueryVariables = Exact<{
+    slug: Scalars['String']['input'];
+}>;
+
+export type CatalogCollectionBySlugQuery = { collection?: { id: string } | null };
+
 export type SearchSuggestionsQueryVariables = Exact<{
     term: Scalars['String']['input'];
     collectionSlug?: InputMaybe<Scalars['String']['input']>;
@@ -5622,12 +5628,6 @@ export type RemoveCartLineInBatchMutation = {
         | { __typename: 'OrderModificationError'; errorCode: ErrorCode; message: string };
 };
 
-export type CatalogCollectionBySlugQueryVariables = Exact<{
-    slug: Scalars['String']['input'];
-}>;
-
-export type CatalogCollectionBySlugQuery = { collection?: { id: string } | null };
-
 export type CatalogCollectionsQueryVariables = Exact<{
     skip: Scalars['Int']['input'];
     take: Scalars['Int']['input'];
@@ -5942,6 +5942,16 @@ export const SearchCapabilitiesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<SearchCapabilitiesQuery, SearchCapabilitiesQueryVariables>;
+export const CatalogCollectionBySlugDocument = new TypedDocumentString(`
+    query CatalogCollectionBySlug($slug: String!) {
+  collection(slug: $slug) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CatalogCollectionBySlugQuery,
+    CatalogCollectionBySlugQueryVariables
+>;
 export const SearchSuggestionsDocument = new TypedDocumentString(`
     query SearchSuggestions($term: String!, $collectionSlug: String) {
   search(
@@ -7072,16 +7082,6 @@ export const RemoveCartLineInBatchDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     RemoveCartLineInBatchMutation,
     RemoveCartLineInBatchMutationVariables
->;
-export const CatalogCollectionBySlugDocument = new TypedDocumentString(`
-    query CatalogCollectionBySlug($slug: String!) {
-  collection(slug: $slug) {
-    id
-  }
-}
-    `) as unknown as TypedDocumentString<
-    CatalogCollectionBySlugQuery,
-    CatalogCollectionBySlugQueryVariables
 >;
 export const CatalogCollectionsDocument = new TypedDocumentString(`
     query CatalogCollections($skip: Int!, $take: Int!) {
