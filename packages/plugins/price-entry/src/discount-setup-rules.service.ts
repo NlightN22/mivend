@@ -5,12 +5,19 @@ import { ctxQuery } from 'shared';
 
 import { bestSetupPercent } from './discount-setup-evaluation';
 import type { DiscountConditionMetric, LoadedDiscountSetup } from './discount-setup-evaluation';
+import {
+    filterMembers,
+    loadProductAttributes,
+    loadSetupTerms,
+    resolveRefs,
+} from './discount-setup-filter-lookup';
 import { LookupMemo, memoized } from './lookup-memo';
 
 interface SetupRow {
     id: number;
     percent: number;
     allProducts: boolean;
+    productMode: string;
     conditionNumber: number | null;
     metric: DiscountConditionMetric | null;
 }
@@ -49,7 +56,11 @@ export class DiscountSetupRulesService {
         const membersBySetup = await memoized(
             memo,
             `dsm:${rules.map(r => r.id).join(',')}|${ids.join(',')}`,
-            () => this.loadMembers(ctx, rules, ids),
+            async () => {
+                const list = await this.loadMembers(ctx, rules, ids);
+                const filter = await this.loadFilterMembers(ctx, rules, ids, memo);
+                return new Map([...list, ...filter]);
+            },
         );
         return bestSetupPercent({
             rules,
@@ -70,7 +81,7 @@ export class DiscountSetupRulesService {
         const rows = await ctxQuery<SetupRow[]>(
             this.connection,
             ctx,
-            `SELECT s.id, s.percent, s."allProducts", s."conditionNumber", k.metric
+            `SELECT s.id, s.percent, s."allProducts", s."productMode", s."conditionNumber", k.metric
              FROM discount_setup s
              LEFT JOIN discount_condition_kind k ON k."erpName" = s."conditionName"
              WHERE s.active = true
@@ -91,7 +102,7 @@ export class DiscountSetupRulesService {
         rules: LoadedDiscountSetup[],
         productErpIds: string[],
     ): Promise<Map<number, Set<string>>> {
-        const listRules = rules.filter(rule => !rule.allProducts).map(rule => rule.id);
+        const listRules = rules.filter(isListRule).map(rule => rule.id);
         const members = new Map<number, Set<string>>();
         if (listRules.length === 0 || productErpIds.length === 0) return members;
         const rows = await ctxQuery<Array<{ setupId: number; productErpId: string }>>(
@@ -108,4 +119,29 @@ export class DiscountSetupRulesService {
         }
         return members;
     }
+
+    // Filter-mode setups are evaluated lazily over the products in play, the same way for catalog, cart and order.
+    private async loadFilterMembers(
+        ctx: RequestContext,
+        rules: LoadedDiscountSetup[],
+        productErpIds: string[],
+        memo?: LookupMemo,
+    ): Promise<Map<number, Set<string>>> {
+        const filterIds = rules.filter(isFilterRule).map(rule => rule.id);
+        if (filterIds.length === 0 || productErpIds.length === 0) return new Map();
+        const { terms, known } = await memoized(memo, `dst:${filterIds.join(',')}`, async () => {
+            const loaded = await loadSetupTerms(this.connection, ctx, filterIds);
+            const refs = [...new Set([...loaded.values()].flat().flatMap(t => t.refs))];
+            return { terms: loaded, known: await resolveRefs(this.connection, ctx, refs) };
+        });
+        const attributes = await memoized(memo, `dsa:${productErpIds.join(',')}`, () =>
+            loadProductAttributes(this.connection, ctx, productErpIds),
+        );
+        return filterMembers(terms, attributes, known, productErpIds);
+    }
 }
+
+const isFilterRule = (rule: LoadedDiscountSetup): boolean =>
+    !rule.allProducts && rule.productMode === 'filter';
+const isListRule = (rule: LoadedDiscountSetup): boolean =>
+    !rule.allProducts && rule.productMode !== 'filter';

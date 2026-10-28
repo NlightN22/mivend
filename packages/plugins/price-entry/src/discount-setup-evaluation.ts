@@ -4,6 +4,8 @@ export interface LoadedDiscountSetup {
     id: number;
     percent: number;
     allProducts: boolean;
+    // 'filter' = members come from the evaluated filter terms, otherwise from the stored list.
+    productMode: string;
     // Null or 'unconditional' (a named no-condition kind) = applies at any quantity and amount.
     metric: DiscountConditionMetric | null;
     conditionNumber: number | null;

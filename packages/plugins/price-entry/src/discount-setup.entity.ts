@@ -54,7 +54,7 @@ export class DiscountSetup extends VendureEntity {
     @Column({ type: 'boolean', default: false })
     allProducts!: boolean;
 
-    // 'filter': the ERP's dynamic selection, which mivend does not evaluate; such a rule has no product members.
+    // 'filter': the ERP's dynamic selection, evaluated at read time from DiscountSetupFilterTerm rows.
     @Column({ type: 'varchar', default: 'list' })
     productMode!: string;
 
@@ -109,4 +109,29 @@ export class DiscountConditionKind {
 export class DiscountOperationKind {
     @PrimaryColumn({ type: 'varchar' })
     erpName!: string;
+}
+
+// One ANDed condition of a filter-mode setup, normalised at write time (see classifySelectionFilter).
+@Entity()
+export class DiscountSetupFilterTerm {
+    @PrimaryColumn({ type: 'int' })
+    setupId!: number;
+
+    @PrimaryColumn({ type: 'varchar' })
+    side!: string;
+
+    @PrimaryColumn({ type: 'int' })
+    position!: number;
+
+    @Column({ type: 'varchar' })
+    field!: string;
+
+    @Column({ type: 'boolean' })
+    hierarchical!: boolean;
+
+    @Column({ type: 'boolean' })
+    negated!: boolean;
+
+    @Column({ type: 'jsonb' })
+    refs!: string[];
 }

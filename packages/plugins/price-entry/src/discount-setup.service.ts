@@ -1,6 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { contentHash, ctxQuery, replaceMembership, withAggregateLock } from 'shared';
+import {
+    classifySelectionFilter,
+    contentHash,
+    ctxQuery,
+    replaceFilterTerms,
+    replaceMembership,
+    withAggregateLock,
+} from 'shared';
+import type { FilterTerm } from 'shared';
 
 import { DiscountSetup } from './discount-setup.entity';
 import { loggerCtx } from './types';
@@ -45,6 +53,7 @@ export type DiscountSetupApplyResult =
     | 'unsupported-operation';
 export type DiscountSetupDeactivateResult = 'deactivated' | 'unknown' | 'stale';
 
+const FILTER_TERMS = { table: 'discount_setup_filter_term', ownerColumn: 'setupId' };
 const PRODUCT_LIST = {
     table: 'discount_setup_product',
     ownerColumn: 'setupId',
@@ -97,6 +106,15 @@ export class DiscountSetupService {
                         loggerCtx,
                     );
                 }
+                let terms: FilterTerm[] = [];
+                if (setup.active && setup.productMode === 'filter' && !setup.allProducts) {
+                    const classified = classifySelectionFilter(setup.productFilter, 'product');
+                    terms = classified.terms;
+                    if (classified.reason) {
+                        setup.active = false;
+                        setup.inactiveReason = classified.reason;
+                    }
+                }
                 const recipients = setup.active ? input.recipients : [];
                 const products = setup.active && !setup.allProducts ? input.productErpIds : [];
                 const hash = contentHash({ ...setup, sourceVersion: undefined }, [
@@ -113,6 +131,13 @@ export class DiscountSetupService {
                 const setupId = saved.id as number;
                 await this.replaceRecipients(txCtx, setupId, recipients);
                 await replaceMembership(this.connection, txCtx, PRODUCT_LIST, setupId, products);
+                await replaceFilterTerms(
+                    this.connection,
+                    txCtx,
+                    FILTER_TERMS,
+                    setupId,
+                    setup.active ? terms : [],
+                );
                 if (unsupportedOperation) return 'unsupported-operation';
                 return unknownCondition ? 'unknown-condition' : 'applied';
             },

@@ -38,8 +38,7 @@ export function parseDiscountSetup(
     const percent = optionalNumber(payload.percent) ?? 0;
     const recipients = parseRecipients(payload.recipients);
     const inactiveReason =
-        notApplicableReason(payload, percent, allProducts, productMode) ??
-        (recipients.length === 0 ? 'no-recipients' : null);
+        notApplicableReason(payload, percent) ?? (recipients.length === 0 ? 'no-recipients' : null);
     return {
         kind: 'upsert',
         input: {
@@ -69,17 +68,11 @@ export function parseDiscountSetup(
 
 // Fail closed: any attribute mivend does not evaluate, set to a non-default value, stores the document inactive.
 // Values are opaque ERP ids and enums: only empty/absent versus set is compared, never a name.
-function notApplicableReason(
-    payload: Record<string, unknown>,
-    percent: number,
-    allProducts: boolean,
-    productMode: 'list' | 'filter',
-): string | null {
+function notApplicableReason(payload: Record<string, unknown>, percent: number): string | null {
     if (!Number.isFinite(percent) || percent === 0) return 'no-header-percent';
     if (optionalNumber(payload.priceNumber) !== null) return 'fixed-price';
     if (optionalString(payload.conditionRefId) !== null) return 'reference-condition';
     if (payload.byWeekdays === true || nonEmpty(payload.weekdayWindows)) return 'weekday-windows';
-    if (productMode === 'filter' && !allProducts) return 'product-filter';
     const unevaluated = UNEVALUATED_ATTRIBUTES.find(([key]) => isSet(payload[key]));
     if (unevaluated) return unevaluated[1];
     if (payload.pseudo === true) return 'pseudo-document';

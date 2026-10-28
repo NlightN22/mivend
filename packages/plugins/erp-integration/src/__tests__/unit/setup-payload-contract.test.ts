@@ -2,6 +2,8 @@ import { create, toJson } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import {
     DiscountSetupChangedSchema,
+    SelectionConditionSchema,
+    SourceFieldValueSchema,
     RetroBonusSetupChangedSchema,
 } from '@nlightn22/event-contracts';
 import { describe, expect, it } from 'vitest';
@@ -114,13 +116,43 @@ describe('parseDiscountSetup against the real contract', () => {
         ['a fixed price', { priceNumber: 99 }, 'fixed-price'],
         ['a reference condition', { conditionRefId: 'card-1' }, 'reference-condition'],
         ['weekday windows', { byWeekdays: true }, 'weekday-windows'],
-        ['a dynamic product filter', { productMode: 'filter', productIds: [] }, 'product-filter'],
     ])('stores %s inactive, never applied', (_name, overrides, reason) => {
         const parsed = parseDiscountSetup('doc-1', discountPayload(overrides));
 
         expect(parsed).toMatchObject({
             kind: 'upsert',
             input: { setup: { active: false, inactiveReason: reason } },
+        });
+    });
+
+    it('keeps a dynamic product filter active, each reference value as {refId}', () => {
+        const parsed = parseDiscountSetup(
+            'doc-1',
+            discountPayload({
+                productMode: 'filter',
+                productFilter: [
+                    create(SelectionConditionSchema, {
+                        field: 'Номенклатура',
+                        comparison: 'Равно',
+                        values: [
+                            create(SourceFieldValueSchema, {
+                                value: { case: 'refId', value: 'p-1' },
+                            }),
+                        ],
+                    }),
+                ],
+            }),
+        );
+
+        expect(parsed).toMatchObject({
+            kind: 'upsert',
+            input: {
+                setup: {
+                    active: true,
+                    inactiveReason: null,
+                    productFilter: [{ values: [{ refId: 'p-1' }] }],
+                },
+            },
         });
     });
 

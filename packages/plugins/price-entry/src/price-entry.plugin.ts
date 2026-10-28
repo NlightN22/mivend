@@ -19,6 +19,7 @@ import {
     DiscountOperationKind,
     DiscountSetup,
     DiscountSetupProduct,
+    DiscountSetupFilterTerm,
     DiscountSetupRecipient,
 } from './discount-setup.entity';
 import { DiscountGrant } from './discount-grant.entity';
@@ -39,6 +40,7 @@ import { DiscountRuleService } from './discount-rule.service';
 import { PromoDiscountRuleService } from './promo-discount-rule.service';
 import { DiscountConditionKindBootstrapService } from './discount-condition-kind-bootstrap.service';
 import { DiscountSetupRulesService } from './discount-setup-rules.service';
+import { DiscountSetupReclassifyService } from './discount-setup-reclassify.service';
 import { DiscountSetupService } from './discount-setup.service';
 import { PriceResolutionService } from './price-resolution.service';
 import { TierProgressService } from './tier-progress.service';
@@ -311,6 +313,7 @@ const adminApiSchema = gql`
         DiscountSetup,
         DiscountSetupRecipient,
         DiscountSetupProduct,
+        DiscountSetupFilterTerm,
         DiscountConditionKind,
         DiscountOperationKind,
         DiscountGrant,
@@ -339,6 +342,7 @@ const adminApiSchema = gql`
         DiscountSetupService,
         DiscountSetupRulesService,
         DiscountConditionKindBootstrapService,
+        DiscountSetupReclassifyService,
         PriceResolutionService,
         TierProgressService,
         OrderDiscountService,

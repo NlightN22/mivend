@@ -7,6 +7,7 @@ const rule = (overrides: Partial<LoadedDiscountSetup> = {}): LoadedDiscountSetup
     id: 1,
     percent: 5,
     allProducts: false,
+    productMode: 'list',
     metric: null,
     conditionNumber: null,
     ...overrides,
