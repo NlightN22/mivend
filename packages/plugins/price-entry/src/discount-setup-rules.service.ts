@@ -11,6 +11,7 @@ import {
     loadSetupTerms,
     resolveRefs,
 } from './discount-setup-filter-lookup';
+import { BatchLoader } from './batch-loader';
 import { LookupMemo, memoized } from './lookup-memo';
 
 interface SetupRow {
@@ -134,9 +135,16 @@ export class DiscountSetupRulesService {
             const refs = [...new Set([...loaded.values()].flat().flatMap(t => t.refs))];
             return { terms: loaded, known: await resolveRefs(this.connection, ctx, refs) };
         });
-        const attributes = await memoized(memo, `dsa:${productErpIds.join(',')}`, () =>
-            loadProductAttributes(this.connection, ctx, productErpIds),
-        );
+        const attributes = memo
+            ? await (
+                  await memoized(
+                      memo,
+                      'dsa-loader',
+                      async () =>
+                          new BatchLoader(ids => loadProductAttributes(this.connection, ctx, ids)),
+                  )
+              ).loadAll(productErpIds)
+            : await loadProductAttributes(this.connection, ctx, productErpIds);
         return filterMembers(terms, attributes, known, productErpIds);
     }
 }

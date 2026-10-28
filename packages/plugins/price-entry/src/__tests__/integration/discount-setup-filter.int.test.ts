@@ -191,8 +191,18 @@ describe('filter setups in catalog, cart and order (real Postgres)', () => {
         await seedFilter(4, [cond(MAKER, 'ВСписке', 'm-1', 'm-ghost')]);
 
         expect(await best('p-leaf')).toBe(4);
-        expect(await best('p-other-maker')).toBe(3);
+        expect(await best('p-other-maker')).toBeNull();
         expect(await best('p-nomaker')).toBeNull();
+    });
+
+    it('never applies a negated term to a product with an unknown category or manufacturer', async () => {
+        await seedFilter(6, [cond(ITEM, 'НеВИерархии', 'c-other')]);
+        await seedFilter(5, [cond(MAKER, 'НеРавно', 'm-1')]);
+
+        expect(await best('p-orphan')).toBeNull();
+        expect(await best('p-nomaker')).toBeNull();
+        expect(await best('p-leaf')).toBe(6);
+        expect(await best('p-other-maker')).toBe(5);
     });
 
     it('stores an unsupported shape inactive with its reason and terms for an evaluable one', async () => {
@@ -230,16 +240,30 @@ describe('query counts (no per-product storm)', () => {
         expect(queries).toBe(4);
     });
 
-    it('a catalog page costs one attribute query per product on top of the shared lookups', async () => {
+    it('a catalog page resolved concurrently costs a constant number of queries', async () => {
         await seedFilter(7, [cond(MAKER, 'Равно', 'm-1')]);
         const memo = new LookupMemo();
-        const products = Array.from({ length: 24 }, (_, i) => `ghost-${i}`);
+        const products = [
+            'p-leaf',
+            'p-other-maker',
+            ...Array.from({ length: 22 }, (_, i) => `ghost-${i}`),
+        ];
         queries = 0;
 
-        for (const product of products) await best(product, { memo });
+        const percents = await Promise.all(products.map(product => best(product, { memo })));
 
-        // rules + terms + refs, then one attribute query per product
-        expect(queries).toBe(3 + products.length);
+        // rules + terms + ref resolution + one batched attribute query, however many products
+        expect(queries).toBe(4);
+        expect(percents.slice(0, 2)).toEqual([7, null]);
+    });
+
+    it('still prices correctly when products are resolved one after another', async () => {
+        await seedFilter(7, [cond(MAKER, 'Равно', 'm-1')]);
+        const memo = new LookupMemo();
+
+        expect(await best('p-leaf', { memo })).toBe(7);
+        expect(await best('p-other-maker', { memo })).toBeNull();
+        expect(await best('p-leaf', { memo })).toBe(7);
     });
 });
 
