@@ -62,4 +62,22 @@ describe('ProformaRequeueService.requeueForUnconfirmedVat', () => {
         const row = await repo.findOneByOrFail({ type: 'proforma-invoice' });
         expect(row.status).toBe('pending');
     });
+
+    it('skips a failed proforma whose metadata text is not valid JSON', async () => {
+        enqueue.mockClear();
+        const repo = dataSource.getRepository(TestDocument);
+        await repo.query(
+            `INSERT INTO "document" ("type", "status", "metadata") VALUES ('proforma-invoice', 'failed', 'not json {')`,
+        );
+        const connection = { getRepository: () => dataSource.getRepository(TestDocument) };
+        const service = new ProformaRequeueService(
+            connection as unknown as TransactionalConnection,
+            { enqueue } as never,
+        );
+
+        await expect(service.requeueForUnconfirmedVat(ctx, 'VAT-20')).resolves.toBeUndefined();
+
+        expect(enqueue).not.toHaveBeenCalled();
+        expect(await repo.countBy({ status: 'failed' })).toBe(1);
+    });
 });

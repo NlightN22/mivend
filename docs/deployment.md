@@ -58,6 +58,12 @@ Nothing is configured inside a container by hand.
   runs migrations, starts the rest).
 - **Upgrade**: set `IMAGE_TAG`, pull, `make prod-up`. It runs `migrate` (plain, forward-only) before
   the new server starts; if it fails the command stops and the old containers keep running. `server` and the workers also `depends_on` the completed `migrate`, so even a plain `up -d` or a host reboot never boots them against an unmigrated schema.
+- **Heavy migrations**: stop the workers, run the `migrate` service alone (`docker compose run --rm migrate`)
+  before `up -d`. The purge migration `1791537000000` deletes retired-stream inbox rows in batches of 50k and can take
+  long on a large inbox. The 16 MiB consumer fetch needs the 2 GB worker limit (about 165 MB idle observed).
+  Consumer-group offsets of retired topics are not cleaned automatically: list the groups with
+  `kafka-consumer-groups.sh --list` and delete the stale ones with `--delete --group <group>` (or delete the
+  retired topics' offsets) on the broker side.
 - **Containers run as root** (server images ship Chromium for PDFs; nginx master processes are root as in the
   official image). Accepted for the first deployment; hardening to a non-root user is a follow-up.
 - **Search**: `SEARCH_BACKEND` and `COMPOSE_PROFILES` must agree (`internal` needs the `internal-search`

@@ -69,6 +69,10 @@ export class RetroBonusRule extends VendureEntity {
     @Column({ type: 'boolean', default: true })
     active!: boolean;
 
+    // Why an active rule never applies (a dynamic filter mivend does not evaluate); null when it can.
+    @Column({ type: 'varchar', nullable: true })
+    inactiveReason!: string | null;
+
     // The flags win over the lists: a true flag means the list is ignored, never "empty list = all".
     @Column({ type: 'boolean', default: false })
     allCounterparties!: boolean;

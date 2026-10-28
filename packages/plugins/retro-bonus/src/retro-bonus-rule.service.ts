@@ -52,6 +52,12 @@ const PRODUCT_LIST = {
     valueColumn: 'productErpId',
 };
 
+export function unevaluatedReason(rule: RetroBonusRuleValues): string | null {
+    if (rule.counterpartyMode === 'filter' && !rule.allCounterparties) return 'counterparty-filter';
+    if (rule.productMode === 'filter' && !rule.allProducts) return 'product-filter';
+    return null;
+}
+
 // Issue #102/#289: one row per ERP setup document; a newer version replaces the whole rule and both lists.
 @Injectable()
 export class RetroBonusRuleService {
@@ -81,7 +87,12 @@ export class RetroBonusRuleService {
                 ]);
                 const unchanged = existing !== null && existing.contentHash === hash;
                 const wasActive = existing?.active === true;
-                const values = { ...rule, active: true, contentHash: hash };
+                const values = {
+                    ...rule,
+                    active: true,
+                    inactiveReason: unevaluatedReason(rule),
+                    contentHash: hash,
+                };
                 const saved = await repo.save(
                     existing ? Object.assign(existing, values) : repo.create(values),
                 );

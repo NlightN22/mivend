@@ -176,6 +176,10 @@ describe('RetroBonusRuleService.apply (real Postgres)', () => {
             }),
         );
         expect(await counterparties()).toEqual([]);
+        expect((await stored()).inactiveReason).toBe('counterparty-filter');
+
+        await service.apply(ctx, input('3', ['a']));
+        expect((await stored()).inactiveReason).toBeNull();
     });
 
     it('deactivates on a tombstone and is reactivated only by a strictly newer version', async () => {

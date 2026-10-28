@@ -44,6 +44,8 @@ const adminApiSchema = gql`
         conditionQuantity: Float
         validFrom: DateTime!
         validTo: DateTime
+        "Why an active rule never applies (dynamic filter not evaluated); null when it can."
+        inactiveReason: String
     }
 
     type GrantedRetroBonus implements Node {

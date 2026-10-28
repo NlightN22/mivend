@@ -7,6 +7,16 @@ import { Document } from './entities/document.entity';
 import { PdfGeneratorService } from './pdf/pdf-generator.service';
 import { unconfirmedVatError } from './pdf/proforma-invoice-vat';
 
+// Metadata is a text column that may hold non-JSON; parse in code, never cast in SQL.
+function metadataError(metadata: string | null): unknown {
+    if (!metadata) return undefined;
+    try {
+        return (JSON.parse(metadata) as { error?: unknown } | null)?.error;
+    } catch {
+        return undefined;
+    }
+}
+
 // Requeues failed proforma documents once what made them fail is fixed. The conditional
 // failed->pending update keeps two concurrent requeues from enqueuing the same document twice.
 @Injectable()
@@ -37,11 +47,11 @@ export class ProformaRequeueService {
     }
 
     async requeueForUnconfirmedVat(ctx: RequestContext, categoryName: string): Promise<void> {
-        const failed = await this.failedProformas(ctx)
-            .andWhere(`document.metadata::jsonb ->> 'error' = :error`, {
-                error: unconfirmedVatError(categoryName),
-            })
-            .getRawMany<{ id: string }>();
+        const expected = unconfirmedVatError(categoryName);
+        const rows = await this.failedProformas(ctx)
+            .addSelect('document.metadata', 'metadata')
+            .getRawMany<{ id: string; metadata: string | null }>();
+        const failed = rows.filter(row => metadataError(row.metadata) === expected);
         await this.requeue(ctx, failed, `VAT category ${categoryName}`);
     }
 
