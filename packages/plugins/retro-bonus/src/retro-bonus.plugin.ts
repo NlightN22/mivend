@@ -13,12 +13,14 @@ import { RetroBonusRule } from './retro-bonus-rule.entity';
 import {
     RetroBonusRuleCounterparty,
     RetroBonusRuleProduct,
+    RetroBonusRuleFilterTerm,
 } from './retro-bonus-rule-membership.entity';
 import {
     RetroBonusRuleAccrualKindResolver,
     RetroBonusRulePriceTypeResolver,
     RetroBonusRuleResolver,
 } from './retro-bonus-rule.resolver';
+import { RetroBonusRuleReclassifyService } from './retro-bonus-rule-reclassify.service';
 import { RetroBonusRuleService } from './retro-bonus-rule.service';
 
 const adminApiSchema = gql`
@@ -95,6 +97,7 @@ const adminApiSchema = gql`
         RetroBonusRule,
         RetroBonusRuleCounterparty,
         RetroBonusRuleProduct,
+        RetroBonusRuleFilterTerm,
         GrantedRetroBonus,
     ],
     adminApiExtensions: {
@@ -107,7 +110,7 @@ const adminApiSchema = gql`
             GrantedRetroBonusFieldResolver,
         ],
     },
-    providers: [RetroBonusRuleService, GrantedRetroBonusService],
+    providers: [RetroBonusRuleService, RetroBonusRuleReclassifyService, GrantedRetroBonusService],
     exports: [RetroBonusRuleService, GrantedRetroBonusService],
     compatibility: '>0.0.0',
 })

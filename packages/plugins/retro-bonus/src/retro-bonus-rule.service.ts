@@ -1,9 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
-import { contentHash, replaceMembership, withAggregateLock } from 'shared';
+import {
+    contentHash,
+    evaluateCounterpartyTerms,
+    loadFilterTerms,
+    replaceFilterTerms,
+    replaceMembership,
+    withAggregateLock,
+} from 'shared';
 
 import { RetroBonusRule } from './retro-bonus-rule.entity';
 import type { RetroBonusAccrualKind, RetroBonusSelectionMode } from './retro-bonus-rule.entity';
+import { classifyRule } from './retro-bonus-rule-classify';
 import { loggerCtx } from './types';
 import { isVersionNewer } from './version-compare';
 
@@ -52,11 +60,7 @@ const PRODUCT_LIST = {
     valueColumn: 'productErpId',
 };
 
-export function unevaluatedReason(rule: RetroBonusRuleValues): string | null {
-    if (rule.counterpartyMode === 'filter' && !rule.allCounterparties) return 'counterparty-filter';
-    if (rule.productMode === 'filter' && !rule.allProducts) return 'product-filter';
-    return null;
-}
+const FILTER_TERMS = { table: 'retro_bonus_rule_filter_term', ownerColumn: 'ruleId' };
 
 // Issue #102/#289: one row per ERP setup document; a newer version replaces the whole rule and both lists.
 @Injectable()
@@ -87,10 +91,11 @@ export class RetroBonusRuleService {
                 ]);
                 const unchanged = existing !== null && existing.contentHash === hash;
                 const wasActive = existing?.active === true;
+                const { terms, inactiveReason } = classifyRule(rule);
                 const values = {
                     ...rule,
                     active: true,
-                    inactiveReason: unevaluatedReason(rule),
+                    inactiveReason,
                     contentHash: hash,
                 };
                 const saved = await repo.save(
@@ -106,6 +111,7 @@ export class RetroBonusRuleService {
                     counterparties,
                 );
                 await replaceMembership(this.connection, txCtx, PRODUCT_LIST, ruleId, products);
+                await replaceFilterTerms(this.connection, txCtx, FILTER_TERMS, ruleId, terms);
                 return 'applied';
             },
         );
@@ -131,7 +137,7 @@ export class RetroBonusRuleService {
         });
     }
 
-    findForCounterparty(
+    async findForCounterparty(
         ctx: RequestContext,
         counterpartyErpId: string,
         contractErpId?: string,
@@ -143,7 +149,9 @@ export class RetroBonusRuleService {
             .andWhere(
                 `(r.allCounterparties = true OR r.recipientCounterpartyErpId = :counterpartyErpId
                   OR EXISTS (SELECT 1 FROM retro_bonus_rule_counterparty m
-                             WHERE m."ruleId" = r.id AND m."counterpartyErpId" = :counterpartyErpId))`,
+                             WHERE m."ruleId" = r.id AND m."counterpartyErpId" = :counterpartyErpId)
+                  OR EXISTS (SELECT 1 FROM retro_bonus_rule_filter_term t
+                             WHERE t."ruleId" = r.id AND t.side = 'counterparty'))`,
                 { counterpartyErpId },
             );
         if (contractErpId) {
@@ -154,6 +162,16 @@ export class RetroBonusRuleService {
                 },
             );
         }
-        return qb.orderBy('r.validFrom', 'DESC').getMany();
+        const candidates = await qb.orderBy('r.validFrom', 'DESC').getMany();
+        const terms = await loadFilterTerms(
+            this.connection,
+            ctx,
+            FILTER_TERMS,
+            candidates.map(rule => rule.id as number),
+        );
+        return candidates.filter(rule => {
+            const own = (terms.get(rule.id as number) ?? []).filter(t => t.side === 'counterparty');
+            return own.length === 0 || evaluateCounterpartyTerms(own, counterpartyErpId);
+        });
     }
 }
