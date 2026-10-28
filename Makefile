@@ -254,6 +254,7 @@ ci:
 test:
 	pnpm test
 	bash infrastructure/scripts/tests/dev-kill-lib.test.sh
+	bash infrastructure/scripts/tests/site-identity-envsh.test.sh
 
 test-int: up
 	pnpm --filter "{packages/**}" --filter server --no-bail test:integration
