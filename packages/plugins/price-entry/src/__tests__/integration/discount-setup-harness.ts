@@ -40,6 +40,17 @@ export class TestProduct {
     @PrimaryColumn({ type: 'varchar' }) productErpId!: string;
 }
 
+@Entity('discount_setup_filter_term')
+export class TestFilterTerm {
+    @PrimaryColumn({ type: 'int' }) setupId!: number;
+    @PrimaryColumn({ type: 'varchar' }) side!: string;
+    @PrimaryColumn({ type: 'int' }) position!: number;
+    @Column({ type: 'varchar' }) field!: string;
+    @Column({ type: 'boolean' }) hierarchical!: boolean;
+    @Column({ type: 'boolean' }) negated!: boolean;
+    @Column({ type: 'jsonb' }) refs!: string[];
+}
+
 @Entity('discount_condition_kind')
 export class TestConditionKind {
     @PrimaryColumn({ type: 'varchar' }) erpName!: string;
@@ -62,6 +73,7 @@ export const SETUP_ENTITIES = [
     TestSetup,
     TestRecipient,
     TestProduct,
+    TestFilterTerm,
     TestConditionKind,
     TestOperationKind,
     TestPriceType,
@@ -87,7 +99,7 @@ export function mapSetupEntities(base: TransactionalConnection): TransactionalCo
 
 export async function resetSetupTables(dataSource: DataSource): Promise<void> {
     await dataSource.query(
-        'TRUNCATE discount_setup, discount_setup_recipient, discount_setup_product, discount_condition_kind, discount_operation_kind, price_type RESTART IDENTITY',
+        'TRUNCATE discount_setup, discount_setup_recipient, discount_setup_product, discount_setup_filter_term, discount_condition_kind, discount_operation_kind, price_type RESTART IDENTITY',
     );
     await dataSource.getRepository(TestConditionKind).save([
         { erpName: QUANTITY_KIND, metric: 'quantity' },
