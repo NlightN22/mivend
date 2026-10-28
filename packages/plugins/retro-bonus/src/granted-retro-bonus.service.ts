@@ -52,7 +52,7 @@ export class GrantedRetroBonusService {
         );
     }
 
-    // A tombstone wins a version tie (update + cancel can share one 1C timestamp); upsert's
+    // A tombstone wins a version tie (update + cancel can share one ERP timestamp); upsert's
     // strictly-newer guard then keeps the row removed against a same-version delayed upsert.
     async remove(ctx: RequestContext, erpId: string, version: string): Promise<boolean> {
         const repo = this.connection.getRepository(ctx, GrantedRetroBonus);

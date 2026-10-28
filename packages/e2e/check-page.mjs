@@ -28,7 +28,7 @@ async function main() {
     const networkErrors = [];
 
     const browser = await chromium.launch({
-        // devof.komponent-m.ru has a real Let's Encrypt cert per docs/environments.md, but this
+        // devhost.example.com has a real Let's Encrypt cert per docs/environments.md, but this
         // stays permissive so the same script also works against a bare localhost:port target.
         args: ['--ignore-certificate-errors'],
     });

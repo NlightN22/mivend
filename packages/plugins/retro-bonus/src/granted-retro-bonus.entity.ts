@@ -2,8 +2,8 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { VendureEntity } from '@vendure/core';
 import { Column, Entity, Index } from 'typeorm';
 
-// Issue #106: feed (rows soft-deleted on a 1C unposting tombstone) of retro bonuses the ERP actually credited. operationKind is
-// opaque display text — a polymorphic 1C classifier with no fixed value set, never mapped.
+// Issue #106: feed (rows soft-deleted on an ERP unposting tombstone) of retro bonuses the ERP actually credited. operationKind is
+// opaque display text — a polymorphic ERP classifier with no fixed value set, never mapped.
 @Entity()
 @Index(['erpId'], { unique: true })
 @Index(['recipientCounterpartyErpId'])
@@ -34,7 +34,7 @@ export class GrantedRetroBonus extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     operationKind!: string | null;
 
-    // Raw closed 1C enum, same set as RetroBonusRule.accrualKind; null when the ERP omits it.
+    // Raw closed ERP enum, same set as RetroBonusRule.accrualKind; null when the ERP omits it.
     @Column({ type: 'varchar', nullable: true })
     accrualKind!: string | null;
 
@@ -53,7 +53,7 @@ export class GrantedRetroBonus extends VendureEntity {
     @Column({ type: 'varchar' })
     sourceVersion!: string;
 
-    // Set by a 1C unposting tombstone; the row keeps the tombstone's version so a same-version
+    // Set by an ERP unposting tombstone; the row keeps the tombstone's version so a same-version
     // delayed upsert cannot resurrect it.
     @Column({ type: 'boolean', default: false })
     isDeleted!: boolean;

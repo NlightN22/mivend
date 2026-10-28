@@ -36,13 +36,13 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
 
 1. The counterparty-level limit is **our own calculation** from contracts; ERP is a data source,
    not a mechanism to copy.
-2. Receivables should come from a **1C export**: every counterparty that has receivables plus the
+2. Receivables should come from a **ERP export**: every counterparty that has receivables plus the
    documents that make them up (orders, sales, ...), so we get the amount and the breakdown and
    can show the customer "these documents, this debt, please pay".
 3. The **order should not carry a contract**: it adds complexity for the customer; managers can
    distribute it later. Ideally a counterparty has one contract, reality has many.
 4. Limits should be computed by a **worker/scheduled job**, not during import (import would slow down).
-5. Changing a contract or limit in the manager portal must reach 1C, so write-back streams are needed.
+5. Changing a contract or limit in the manager portal must reach ERP, so write-back streams are needed.
 
 ## Working model (owner's decisions 2026-10-06)
 
@@ -51,13 +51,13 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
   planned); a manager can re-attribute an order to another contract. A re-attributed order starts
   counting against that contract's limit only after the manager changes it.
 - **Limit calculation (scheduled job, not during import)**: all contracts **without** the per-contract
-  control flag are pooled into one **general limit** (sum of their limits, this is how 1C pools them).
+  control flag are pooled into one **general limit** (sum of their limits, this is how ERP pools them).
   Contracts **with** the flag (`controlledIndividually`) are **sublimits** inside it and must not exceed
   the general total; if they do, our calculation **clamps them down** to fit (our own control wins over
-  1C's numbers). Later we may drop 1C's limits entirely and keep only our own.
+  ERP's numbers). Later we may drop ERP's limits entirely and keep only our own.
 - **Provisional order amount**: an order takes limit immediately and keeps it until it is released by
   either the arrival of its shipment document (receivables are formed by the shipment, not the order)
-  or its cancellation (by a 1C timeout or by a manager). Cancelled orders must never keep blocking the
+  or its cancellation (by an ERP timeout or by a manager). Cancelled orders must never keep blocking the
   counterparty.
 
 ## Documents: what we have and what we do not
@@ -78,7 +78,7 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
 2. **Order->contract attribution**: default main contract, manager can re-attribute (see working model);
    `contractId` already travels on `order-changed` (#123). Confirm how the checkout-time check treats
    a flagged non-main contract.
-3. **Receivables source**: new 1C export of debtors + documents (owner's plan) versus the existing
+3. **Receivables source**: new ERP export of debtors + documents (owner's plan) versus the existing
    settlement-register idea (#45) and balance stream (#129). Who builds it, what shape, what is the
    contract of the event, and does it replace `CounterpartyCreditBalanceChanged`?
 4. **Per-contract balance (#151)**: if the export carries documents per contract, do we compute the
@@ -86,7 +86,7 @@ pages), #142/#143/#150 (closed: deferred checkout), #172 in search-platform (mai
 5. ~~Where it is computed~~ **Decided 2026-10-07**: scheduled task every 15 min, central worker, set-based
    SQL. **Original:** **Where it is computed**: a scheduled worker task (owner's leaning) — which trigger (on receivable
    change, periodic), and how it avoids the importer's load problems.
-6. **Write-back to 1C**: which entities flow back (contract, limit, payment terms), master of data
+6. **Write-back to ERP**: which entities flow back (contract, limit, payment terms), master of data
    (docs/sync.md currently says ERP is master for credit limit), conflict handling, and the outbound
    contract in `event-contracts`.
 7. **Frontend**: customer view (limit, debts, documents to pay) and manager view (#48 aggregate vs

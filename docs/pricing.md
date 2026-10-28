@@ -72,8 +72,8 @@ guess which one is main: one counterparty can have several contracts named "main
 organization.
 
 ```
-counterparty.mainContractId (1C: counterparty's main-contract reference)
-    → contract (by erpId) → contract.priceTypeId (1C price type GUID)
+counterparty.mainContractId (ERP: counterparty's main-contract reference)
+    → contract (by erpId) → contract.priceTypeId (ERP price type GUID)
         → PriceType (by externalId) → CustomerPriceType(customerId → priceType)
 no mainContractId / contract or price type not found  → no CustomerPriceType row
                                                         → branch-default fallback
@@ -430,8 +430,11 @@ attribute mivend does not read (markup type, quality, purpose, currency, pseudo 
 A positive percent with a markup type is therefore never a discount. Opaque ids are compared only to empty, never by name.
 Details and field accounting: `docs/ai/erp-streams-map.md`.
 
-- **Catalog vs cart**: the catalog has no order, so it sees only recipients with an empty contract; a document naming a
-  contract shows only in the cart and the order. This is a deliberate catalog/cart difference.
+- **Catalog vs cart**: the catalog has no order, so `loadRules` runs with an empty contract and matches only recipient
+  rows whose contract is empty (any counterparty or the customer's own, any contract). The catalog price therefore
+  includes documents addressed to the customer or to everyone without a contract. A document whose recipient names a
+  contract is applied only by the cart and the order (contract known), so the cart or order price can be lower than
+  the catalog price. This is deliberate, not a bug.
 - **No-condition kind**: the ERP name for "no condition" is a `discount_condition_kind` row with metric `unconditional`
   (bootstrap row); it applies at any quantity and amount, catalog included, exactly like an empty condition.
 - **Unknown condition**: a condition name missing from `discount_condition_kind` stores the document inactive with the
@@ -443,5 +446,6 @@ Details and field accounting: `docs/ai/erp-streams-map.md`.
   that an empty list means everyone.
 - **Version order**: a tombstone or unposted document older than the stored version is a noop (a replay); at an equal
   version it applies only while the row is still active; only a strictly newer upsert reactivates.
-- `limit_percent` is stored but not enforced yet, so the real discount can be lower than the ERP's (issue #292). A filter-mode retro-bonus rule is stored but never shown (no members);
-  its inbox row settles as a noop naming that.
+- `limit_percent` is stored but not enforced yet, so the real discount can be lower than the ERP's (issue #292). A filter-mode retro-bonus rule stays active but has
+  no members, so it never applies; it carries `inactiveReason` (`counterparty-filter` or `product-filter`, exposed on
+  `RetroBonusRule`), and its inbox row settles as a noop naming that.

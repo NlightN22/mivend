@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Guards against silently drifting from Integration Service's real @nlightn22/event-contracts
-// contract (packages/plugins/erp-integration consumes it) — see docs/ai/1c-integration-service-
+// contract (packages/plugins/erp-integration consumes it) — see docs/ai/erp-integration-service-
 // decision.md's "Audit 2026-09-04" section for the real incident this exists to prevent: our
 // pinned 0.5.0 was 8 versions behind upstream's 0.13.0, missing whole streams and carrying fields
 // upstream had already removed, and nothing caught it until a manual audit.
@@ -71,7 +71,7 @@ if (minorDrift > MAX_MINOR_DRIFT) {
         `FAIL: ${PACKAGE_NAME} is pinned at ${pinned} but GitHub Packages has ${latest} — ` +
             `${minorDrift === Infinity ? 'a major-version' : `a ${minorDrift}-minor-version`} gap, ` +
             `over the ${MAX_MINOR_DRIFT}-minor threshold. Field shapes and streams likely changed ` +
-            `(see docs/ai/1c-integration-service-decision.md's "Audit 2026-09-04"). Bump the ` +
+            `(see docs/ai/erp-integration-service-decision.md's "Audit 2026-09-04"). Bump the ` +
             `dependency in packages/plugins/erp-integration/package.json, re-check every inbound/` +
             `outbound handler's field names against the new .proto, and re-run test-design before ` +
             `merging.`,

@@ -2,7 +2,7 @@
 
 There are **two independent axes** here — this document exists because conflating them is exactly
 what caused the incident in issue #68 (a plain `make dev` connected `KafkaConsumerService` to
-Integration Service's real staging Kafka broker, `is.komponent-m.ru`, and wrote real inbound
+Integration Service's real staging Kafka broker, `integration.example.com`, and wrote real inbound
 events into the same Postgres that `make seed-all`'s synthetic `erp-import` data lives in).
 
 ## Axis 1: `INSTANCE_TYPE` — identity (central hub vs. branch)
@@ -294,12 +294,12 @@ already watching plugins.
 Every contour's server/worker/storefront/manager bind to `0.0.0.0` (or `localhost`, for the
 Postgres/RabbitMQ it shares — see "Database isolation" above), but the only thing actually
 reachable from outside this box is **nginx** (`/etc/nginx/sites-enabled/mivend.conf`, TLS on
-`devof.komponent-m.ru`) plus `ufw` allowing exactly the ports nginx listens on — see this box's
+`devhost.example.com`) plus `ufw` allowing exactly the ports nginx listens on — see this box's
 `publish-service` skill (`/opt/search-platform/.claude/skills/publish-service/SKILL.md`) for the
 port-per-service-behind-nginx convention this follows. Internal ports are never reachable
 directly from outside (no `ufw allow` for them).
 
-| Service          | Contour             | Internal (`localhost`) | External (`https://devof.komponent-m.ru:<port>`) |
+| Service          | Contour             | Internal (`localhost`) | External (`https://devhost.example.com:<port>`) |
 | ---------------- | ------------------- | ---------------------- | ------------------------------------------------ |
 | API (Admin+Shop) | local               | `3000`                 | `8003`                                           |
 | Storefront       | local               | `5173`                 | `8004`                                           |
@@ -404,7 +404,7 @@ loops back via `lo` and proves nothing).
 
 ## Open follow-up
 
-`make check-event-contracts` (see `docs/ai/1c-integration-service-decision.md`'s "Audit
+`make check-event-contracts` (see `docs/ai/erp-integration-service-decision.md`'s "Audit
 2026-09-04" contract-drift finding) should ideally run against whatever
 `@nlightn22/event-contracts` version staging/prod actually use, not just whatever happens to be
 locally pinned — not yet implemented, tracked under issue #68's checklist.

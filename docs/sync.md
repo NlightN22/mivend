@@ -3,14 +3,14 @@
 Data exchange between hub, branches, and the legacy ERP.
 
 **Target direction (decided, not yet implemented — see
-`docs/ai/1c-integration-service-decision.md`):** the central hub no longer talks to the legacy
+`docs/ai/erp-integration-service-decision.md`):** the central hub no longer talks to the legacy
 ERP directly. A separate Integration Service (its own project, not part of this monorepo) owns
 the ERP-facing side of the exchange and exchanges data with this repo over Kafka **in both
 directions** — inbound entity events (catalog/prices/stock) and outbound business events
 (order-registration, reservations, payment confirmations) alike. There is no synchronous RPC
 channel in the target design — see "Why Kafka both ways, not Kafka + RPC" below. The sections
 below describe both the current, still-live direct-ERP-adapter shape and the target shape — read
-`1c-integration-service-decision.md` before changing anything in `plugin-sync`/`erp-import`.
+`erp-integration-service-decision.md` before changing anything in `plugin-sync`/`erp-import`.
 
 ---
 
@@ -242,7 +242,7 @@ The concrete implementation (HTTP, file exchange, direct DB — whatever the ERP
 injected via plugin options and never referenced directly in domain code.
 
 **This interface is superseded end-to-end by the Integration Service direction** (see
-`docs/ai/1c-integration-service-decision.md`), inbound and outbound alike — not implemented yet,
+`docs/ai/erp-integration-service-decision.md`), inbound and outbound alike — not implemented yet,
 kept here only as the current, still-running shape:
 
 - `fetchChanges` (catalog/price/stock polling) is replaced by a Kafka consumer subscribed to
@@ -255,7 +255,7 @@ kept here only as the current, still-running shape:
   both ways (see "Why Kafka both ways" above).
 
 Do not extend or "fix" `ErpAdapter` for new functionality — new work in this area should target
-the Integration Service shape instead. See `1c-integration-service-decision.md`'s "Not yet done"
+the Integration Service shape instead. See `erp-integration-service-decision.md`'s "Not yet done"
 section for what's actually unblocked to start.
 
 ---
@@ -310,7 +310,7 @@ but they don't detect a gap that never arrived as a message in the first place (
 upstream publish, or a very large backlog that takes hours to drain — see #82/#84's own incident
 write-up). `plugin-erp-integration` runs a periodic reconciliation check against Integration
 Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
-(`is.komponent-m.ru`, `X-Api-Key` auth via `INTEGRATION_SERVICE_API_KEY`), comparing its
+(`integration.example.com`, `X-Api-Key` auth via `INTEGRATION_SERVICE_API_KEY`), comparing its
 `activeCount` per entity type against mivend's own local count for the same type.
 
 - **Scope**: only `category`, `organization`, `warehouse`, `priceType`, `product` are compared —

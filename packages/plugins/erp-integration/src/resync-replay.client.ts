@@ -1,10 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import {
-    ERP_INTEGRATION_PLUGIN_OPTIONS,
-    RECONCILIATION_API_URL_DEFAULT,
-    RESYNC_SOURCE_SYSTEM_DEFAULT,
-} from './types';
+import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
 export interface ReplayResult {
@@ -25,10 +21,13 @@ export class ResyncReplayClient {
     ) {}
 
     async replay(aggregateType: string, entityIds: string[]): Promise<ReplayResult[]> {
-        const url = new URL(
-            '/api/resync/v1/replay',
-            this.options.reconciliationApiUrl ?? RECONCILIATION_API_URL_DEFAULT,
-        );
+        const { reconciliationApiUrl, resyncSourceSystem } = this.options;
+        if (!reconciliationApiUrl)
+            throw new Error('INTEGRATION_SERVICE_BASE_URL is not configured');
+        if (!resyncSourceSystem) {
+            throw new Error('INTEGRATION_RESYNC_SOURCE_SYSTEM is not configured');
+        }
+        const url = new URL('/api/resync/v1/replay', reconciliationApiUrl);
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -37,7 +36,7 @@ export class ResyncReplayClient {
             },
             body: JSON.stringify({
                 aggregateType,
-                sourceSystem: this.options.resyncSourceSystem ?? RESYNC_SOURCE_SYSTEM_DEFAULT,
+                sourceSystem: resyncSourceSystem,
                 entityIds,
             }),
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),

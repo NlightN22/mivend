@@ -129,6 +129,19 @@ describe('ReconciliationSummaryClient.fetchSummaries', () => {
         await expect(client.fetchSummaries('product')).rejects.toThrow('still down');
     });
 
+    it('throws naming the missing key when the base URL is not configured', async () => {
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+        const client = new ReconciliationSummaryClient({
+            ...OPTIONS,
+            reconciliationApiUrl: undefined,
+        });
+        await expect(client.fetchSummaries('product')).rejects.toThrow(
+            'INTEGRATION_SERVICE_BASE_URL',
+        );
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it('throws on a non-2xx response instead of returning an empty array', async () => {
         const fetchMock = vi.fn().mockResolvedValue({
             ok: false,

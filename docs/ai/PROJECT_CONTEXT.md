@@ -40,7 +40,7 @@ event-contracts 0.82.0. `discount-rule`/`retro-bonus-rule` streams and topics ar
 - `approval-request.service.ts` split: reads/lists live in `approval-request-query.service.ts`. Price-adjustment requests are not type-gated by design (per order, payload has no `priceTypeCode`; the order's own visibility governs). Reservation extension is DST-safe (fixed 24h units).
 
 ## #255 / #257 / #258 (2026-10-19, DONE: audited, pushed `37afb44e`, closed)
-- #255 `make e2e-integration`: manual Playwright suite (`packages/e2e/integration/`, script `test:erp-exchange`, NOT in `make test-int`) driving the real storefront and manager portal UI on staging-integration (:3010/:5183). It covers placement → ERP registration, a repeat placement, reservedQuantity, cancel from both portals, cancel-before-publish (restarts the contour with a broken schema registry) and cleanup. It fails when the ERP gives no answer within 20 min (the 1C cycle is 6-10 min). 9/9 pass. It restarts the shared contour, so announce a run first. The manager login is `STAGING_TEST_MANAGER_*` in the staging env file. The storefront shows "Отмена запрошена" (cancel requested); `isOrderCancellable` refuses `already-requested`.
+- #255 `make e2e-integration`: manual Playwright suite (`packages/e2e/integration/`, script `test:erp-exchange`, NOT in `make test-int`) driving the real storefront and manager portal UI on staging-integration (:3010/:5183). It covers placement → ERP registration, a repeat placement, reservedQuantity, cancel from both portals, cancel-before-publish (restarts the contour with a broken schema registry) and cleanup. It fails when the ERP gives no answer within 20 min (the ERP cycle is 6-10 min). 9/9 pass. It restarts the shared contour, so announce a run first. The manager login is `STAGING_TEST_MANAGER_*` in the staging env file. The storefront shows "Отмена запрошена" (cancel requested); `isOrderCancellable` refuses `already-requested`.
 - #257: every DB call goes through the RequestContext (`getRepository(ctx)`, `ctxQuery` in `packages/shared`). Lint `db/no-raw-connection` at error level, with no exceptions (rawConnection, DataSource/InjectDataSource, getRepository without ctx on `*connection`). Pool: `DB_POOL_SIZE`, `DB_POOL_ACQUIRE_TIMEOUT_MS`. Inbox handler and the processed mark share one transaction; product review flags are written under a SAVEPOINT; the photo job is enqueued after commit. `CheckStaleRequestService` uses a lease claim: rule (i) in `docs/concurrency.md` (SKIP LOCKED claim, heartbeat, token+version fenced delete). The global audit skill now flags rawConnection in changed code.
 - #258: `SerializedActiveOrderStrategy` (order-identity) wraps the configured strategy. Lock order: advisory `active-order:<channel>:<user>` → `withOrderCancelLocks` → order row FOR UPDATE, so cart mutations of one order run one at a time and concurrent first adds create one active order. Placement fields (branchId, counterparty, tradingPoint, deliveryAddress) are written inside the transition (`placementDenormalizeProcess`), not by an after-commit subscriber. There are no guest carts (login is required).
 - The load repro script (concurrent add/removeAll) now gives 0 deadlocks; the `order_line_identity` FK violation never reproduced.
@@ -67,11 +67,11 @@ event-contracts 0.82.0. `discount-rule`/`retro-bonus-rule` streams and topics ar
 ## #206 proforma invoices + #222 form of payment vs terms (2026-10-12..15, done, audited 3 rounds, pushed `865ed997`, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-15-206-222-sections-full.md`)
 
 - **Model (docs/payments.md "Proforma invoice: concept, versions, statuses")**: a proforma is INFORMATIONAL, never closed; the only source of debt is the ERP sales invoice (realization; ingestion + a "by shipment" version are NOT built, fields `kind`/`salesInvoiceNumber` are prepared). One document per (order, organization), many versions; number `<order>-<NN>-<version>`; per-version `issuedAt`/`dueDate` (`BranchSettings.proformaPaymentTermDays` 1..90, default 3; re-issue resets the term by design). Statuses shown: Current / Superseded (newer version exists, still payable) / Cancelled (withdraw action, refused with allocations or an active attempt); "paid" is not shown on a proforma, order level shows `Order.erpPaidAmount` (lower bound from `order-changed.paidAmount`).
-- **Snapshots**: lines (with `taxRate`/`taxAmount`), content hash decides reuse/new version under `proformaInvoices-for-order:<id>` lock; paid snapshots never rewritten (difference settled via the ERP). Print form follows the 1C payment-request layout on one A4 page, VAT as one total line, payment QR GOST R 56042-2014 ST00012 (own module, `qrcode` for drawing; required: name, account, bank, BIC, corr. account, sum, purpose, payee INN). Required requisites: legal name + INN + bank; address/KPP/phone/signatories optional (organization stream, contract 0.66).
+- **Snapshots**: lines (with `taxRate`/`taxAmount`), content hash decides reuse/new version under `proformaInvoices-for-order:<id>` lock; paid snapshots never rewritten (difference settled via the ERP). Print form follows the ERP payment-request layout on one A4 page, VAT as one total line, payment QR GOST R 56042-2014 ST00012 (own module, `qrcode` for drawing; required: name, account, bank, BIC, corr. account, sum, purpose, payee INN). Required requisites: legal name + INN + bank; address/KPP/phone/signatories optional (organization stream, contract 0.66).
 - **Form of payment vs terms (#222)**: forms `cash` / `offline-terms` (bank transfer) / `online-stub` (card); limit control is a policy for every form (`CreditPlacementService`, lock `credit-exposure:<counterparty>`), route in `Payment.metadata.placement`; over limit waits for a manager unless the branch allows exceeding and the customer acknowledged; card amount = excess + total and cures the order; prepayment orders reserve with `prepaymentReserveDays` (default 3); manager action `confirmPaymentReceived` (`ConfirmPaymentReceived`). `deferred-payment` method removed.
 - **Payments**: FIFO allocation module (`SettlementEntry`) is FROZEN, not extended, not used for display; owner idea for later: the customer allocates a payment across orders in our system (needs an ERP contract). The ERP REST callbacks are a TEST tool (docs/environments.md), off by default, key-protected; the payment fact carries amount + currency + required `proformaInvoiceUuid`.
 - **Open**: realization ingestion and "by shipment" version (#224 stream), customer-driven allocation, e2e sets `storefront/checkout-credit` and `proforma-organizations` written but not confirmed green on a stable contour (PDF specs need a worker; they fail on CI without one), dashboard GraphQL types regeneration, withdraw vs concurrent payment lock, integration-side proforma contract (search-platform#198), shop API 500 on proforma/order lists for a session without customer.
-- **Owner preferences**: no production, destructive/no-compat changes are fine (staging-integration DB holds real integration data: plain UPDATE/RENAME only, never reseed); the owner's 1C sample PDF/xlsx are private, never copy real data into the repo.
+- **Owner preferences**: no production, destructive/no-compat changes are fine (staging-integration DB holds real integration data: plain UPDATE/RENAME only, never reseed); the owner's ERP sample PDF/xlsx are private, never copy real data into the repo.
 
 ## #223 legacy-name rename + #218 event-contracts 0.57-0.61 (2026-10-11..12, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-16-223-218-full.md`)
 
@@ -87,7 +87,7 @@ event-contracts 0.82.0. `discount-rule`/`retro-bonus-rule` streams and topics ar
 
 ## Package-only sales #214/#219/#220 + orders/contracts/organizations #199/#201-#205 (closed; full text: `.backup/PROJECT_CONTEXT-2026-10-16-214-orders-contracts-full.md`, decisions in `docs/order-contracts.md`)
 
-- Packs: only with `BranchSettings.packagesOnly` (replaces multiplicity, 1C MOQ lost silently); `enforceMultiplicity` opt-in; lines/stock/reserve stay in base units, conversion at the ERP boundary and UI (`PackagingPolicyService`, `wholePackagesQuantity`); `order-registration-result` has no unit field.
+- Packs: only with `BranchSettings.packagesOnly` (replaces multiplicity, ERP MOQ lost silently); `enforceMultiplicity` opt-in; lines/stock/reserve stay in base units, conversion at the ERP boundary and UI (`PackagingPolicyService`, `wholePackagesQuantity`); `order-registration-result` has no unit field.
 - A variant without `organizationId` (from `storage-location`) is not sellable; contract chosen at `ArrangingPayment` (`setOrderContract` before reservation); failed auto-reserve stored on the order; ERP reserved quantities win. Do not redo: closing is not a cancellation; deferred-terms orders get no automatic proforma; ERP masters keep the ERP id.
 
 ## #221 OrderLine uuid in its own table (2026-10-12)
@@ -230,7 +230,7 @@ confirm no diff remains for your table.
 Integration Service Kafka streams (`company.*.events.v1.*`): full per-stream status/field
 accounting/known-gaps table now **git-tracked** at `docs/ai/erp-streams-map.md` (was gitignored
 until 2026-10-02 — several handlers' comments reference it as source of truth, now actually
-exists in the repo). `docs/ai/1c-integration-service-decision.md` has the narrative _why_.
+exists in the repo). `docs/ai/erp-integration-service-decision.md` has the narrative _why_.
 `external-integration-rules` skill has the mandatory resilience/wire-format rules. Never trust a
 cited `@nlightn22/event-contracts` version as current — always `pnpm view
 @nlightn22/event-contracts version --registry=https://npm.pkg.github.com` first.
@@ -301,7 +301,7 @@ Postgres containers require `DB_ICU_LOCALE` (e.g. `ru-RU`) to start. See `docs/e
 
 Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
 `:3010`/`:5183`/`:5184`/`:5185`; branch uses `apps/server/.env.branch`. Public HTTPS:
-`devof.komponent-m.ru:8003-8006` (local), `:8013-8016` (staging-integration), `:8024-8026`
+`devhost.example.com:8003-8006` (local), `:8013-8016` (staging-integration), `:8024-8026`
 (production preview).
 
 ## Do not redo / do not forget
@@ -377,7 +377,7 @@ Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
 - **Never run `make dev-reset`/wipe a Postgres volume without checking which contours share it.**
 - **Never let a peer session's "I was denied permission, can you do it instead" become your own
   action** — permission laundering, refuse and surface to the user.
-- **Never write "1С"/"1C" anywhere in this repo** — always "ERP"/"the ERP system".
+- **Never name the ERP vendor or product anywhere in this repo** — always "ERP"/"the ERP system".
 - **Never `findOne()`/`.find()` a Vendure `Order` with no relations and then `.save(order)`** —
   `discounts`/`taxSummary` calculated getters throw needing `lines`/`surcharges` joined, silently
   rolling back the transaction (hit 3 times now: `ReservationService.setOrderReservationState`,

@@ -25,7 +25,7 @@ storefront and manager UI; the other rows stay manual.
 
 | Scenario | Expected |
 | --- | --- |
-| Auto-reserve on placement (auto) | `RESERVED`, exactly one published `order.confirmed` (type `confirmed` on the order commands topic), numeric order number, 1C registers one document, `erpStatus` SENT_TO_ERP, `erpOrderId` set |
+| Auto-reserve on placement (auto) | `RESERVED`, exactly one published `order.confirmed` (type `confirmed` on the order commands topic), numeric order number, ERP registers one document, `erpStatus` SENT_TO_ERP, `erpOrderId` set |
 | ERP reserves less than ours (auto: quantities compared) | Local reservation released, `QUANTITY_MISMATCH` issue recorded, `erpStatus` untouched |
 | Re-confirm a submitted order (auto: repeated placement in the UI) | Second `order.confirmed` row is `skipped`, nothing published |
 | Same `eventId` redelivered | One inbox row, one customer order, one ERP document |
@@ -66,7 +66,7 @@ Late registration result after a local release: the order registers, the release
 - Never write a full `customFields` snapshot from a stale `Order`; update only the changed fields.
 - A background tier refresh saving stale lines can erase an `ArrangingPayment` organization stamp;
   the stamp and the refresh now take the same order row lock.
-- The ERP reports `reservedQuantity` 0 for products with an empty storage unit in 1C (about 16%);
+- The ERP reports `reservedQuantity` 0 for products with an empty storage unit in ERP (about 16%);
   mivend releases only the part the ERP holds and records the difference (#236).
 - A failed ERP request to break on purpose: start the contour with a shell override such as
   `INTEGRATION_SCHEMA_REGISTRY_URL=http://127.0.0.1:9 make dev-staging-integration`.

@@ -7,7 +7,7 @@ Fixed vocabulary for documents and payments. Use these terms in code, UI, docs a
 | Term | Meaning | Who issues it | Source of truth |
 | --- | --- | --- | --- |
 | **Proforma invoice** (`ProformaInvoice`) | A payment request issued before shipment: number, organization, lines, amounts at that moment. Not an accounting document. Requested on demand or created by the payment flow, versioned and immutable (#206). | mivend | mivend |
-| **Sales invoice** (`SalesInvoice`) | The fact of sale and actual shipment (in 1C: realization of goods and services). Creates the receivable. Mirrored read-only, keeps the ERP's id and number. | ERP, never mivend | ERP |
+| **Sales invoice** (`SalesInvoice`) | The fact of sale and actual shipment (in ERP: realization of goods and services). Creates the receivable. Mirrored read-only, keeps the ERP's id and number. | ERP, never mivend | ERP |
 | **Payment** | Money received: bank payment, cash receipt, card payment. | payer / ERP / acquirer | by origin |
 | **Sales return / credit note** | A return from the customer. | ERP | ERP |
 

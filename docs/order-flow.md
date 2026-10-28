@@ -336,7 +336,7 @@ auto-round silently.
 overrides the global one; default off, edited in "Controls and policies"). The old
 `BranchSettings.enforceMultiplicity` flag is gone: migration `1791519000000` moved it into policy rows.
 When off, the interceptor and reservation skip it and the storefront hides the Multiplicity cell/block.
-The pack rule below is unaffected. A 1C multiplicity > 1 therefore applies only where the policy is on.
+The pack rule below is unaffected. A ERP multiplicity > 1 therefore applies only where the policy is on.
 ERP import keeps writing the field. Both enforcement points call
 `PackagingPolicyService.requiredMultiple`, so they always agree. The same rule is reported as a
 finding (`order.multiplicity`, stages `cart`, `pre-reserve`, `on-edit`; default consequence `hold` at
@@ -370,12 +370,12 @@ unit; the variant, stock, reservations and the order line are all in that unit.
 ### Order weight/volume and branch-conditional packaging (mivend#103)
 
 Decided architecture, not yet implemented. Two ERP-sourced facts drive this, both confirmed live
-against 1C (`torg_develop4`) by search-platform, not theoretical:
+against ERP (a test database) by search-platform, not theoretical:
 
 - `ProductChanged.defaultSalesUnitId` (search-platform#143, contract `@nlightn22/event-contracts`
-  0.43.0+) — resolved server-side by 1C, always present, never a raw "unset" marker. Equal to the
-  product's base unit → no constraint. Different from the base unit → **1C's own semantics for
-  this field is "sellable only in this packaging, not by piece"** — confirmed with the 1C
+  0.43.0+) — resolved server-side by ERP, always present, never a raw "unset" marker. Equal to the
+  product's base unit → no constraint. Different from the base unit → **ERP's own semantics for
+  this field is "sellable only in this packaging, not by piece"** — confirmed with the ERP
   developer directly (search-platform#144, closed as resolved-by-#143: there is no separate
   "mandatory packaging" flag, it's the same field).
 - `UnitChanged` (still not consumed by mivend as of this writing) carries, per unit
@@ -481,7 +481,7 @@ base units and treating packaging as an order-time constraint, not a catalog-tim
   `order-changed` and the registration result both run under `reserve-order:<id>`. The local
   reserve keeps its own expiry, so `reservationState` is `RELEASED` only when nothing remains active.
 - **Expiry and cancel** (#194, `docs/order-contracts.md`): cancelling the reserve (A) and cancelling the
-  order (B, which includes A) are different operations; at the shared deadline 1C does A and mivend does
+  order (B, which includes A) are different operations; at the shared deadline ERP does A and mivend does
   A and, for pending/unregistered orders, B. One `OrderCancellationService.cancel` serves every cancel
   path under the `reserve-order:<id>` lock; the registration result is applied under the same lock.
 

@@ -29,7 +29,7 @@ The central hub is the only node that communicates with the legacy ERP side of t
                   [Branch Instance ...]
 ```
 
-**Decided, not yet implemented** (see `docs/ai/1c-integration-service-decision.md`): the direct
+**Decided, not yet implemented** (see `docs/ai/erp-integration-service-decision.md`): the direct
 `[Legacy ERP] ←→ [Central Hub]` edge above is being replaced. A separate Integration Service (its
 own project) becomes the only thing that talks to the ERP; the central hub exchanges data with it
 over Kafka **in both directions** — entity events (catalog/price/stock) inbound, business events

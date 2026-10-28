@@ -271,7 +271,7 @@ The paid snapshot is never rewritten. Rules: `docs/payments.md`, "Payment alloca
 ## Proforma invoices
 
 Terminology (owner decision, #223): our payment request is a **proforma invoice** (the entity was named `ProformaInvoice` before
-#223); "sales invoice" is reserved for the ERP's fact of sale (1C realization), which mivend never issues. It will be mirrored as a read-only, ERP-owned `SalesInvoice` (fact of
+#223); "sales invoice" is reserved for the ERP's fact of sale (ERP realization), which mivend never issues. It will be mirrored as a read-only, ERP-owned `SalesInvoice` (fact of
 shipment) in a later task; #223 only frees the name.
 
 - Proforma invoices (`ProformaInvoice`, one per distinct line organization) are created for the payment methods that
@@ -296,19 +296,19 @@ shipment) in a later task; #223 only frees the name.
 
 Implemented as `OrderCancellationService` (plugin-reservation), `order.cancel-requested` (outbound) and
 the `order-cancel-result` stream (inbound); the decisions are recorded here and in #194. The ERP-side facts come from
-search-platform#178 (read from the 1C configuration and checked with live tests on a test order).
+search-platform#178 (read from the ERP configuration and checked with live tests on a test order).
 
 ### Two operations
 
-| | What it does | Who and when | In 1C |
+| | What it does | Who and when | In ERP |
 | --- | --- | --- | --- |
-| **A. Cancel the reserve** | Zeroes the reserves of an order; the order stays alive | 1C by its scheduled job at the order's "reserve until" date (`РезервДо`); mivend at its own expiry (releases its reservations) | Posting a "closing of customer orders" document |
+| **A. Cancel the reserve** | Zeroes the reserves of an order; the order stays alive | ERP by its scheduled job at the order's "reserve until" date (`РезервДо`); mivend at its own expiry (releases its reservations) | Posting a "closing of customer orders" document |
 | **B. Cancel the order** | Cancels the order and, with it, its reserves (B includes A) | The customer on request; mivend at the reserve deadline, for orders that can still be cancelled | "Mark for deletion" on the order |
 
-Closing (A) is not a cancellation of the order. It is the routine write-off 1C runs for every order in the
+Closing (A) is not a cancellation of the order. It is the routine write-off ERP runs for every order in the
 end, cancelled or shipped; posting it never refuses and silently does nothing for an order with a sale.
 
-### Cancellability (technical condition for B, from what 1C already checks)
+### Cancellability (technical condition for B, from what ERP already checks)
 
 - **Pending** (no warehouse order, no sale; `erpStatus` UNDER_APPROVAL/APPROVED or not registered yet):
   cancellable, automatically.
@@ -334,8 +334,8 @@ end, cancelled or shipped; posting it never refuses and silently does nothing fo
 ### The reserve deadline
 
 - The deadline is one shared date. mivend sends it as `reserveUntil` in `order.confirmed` (mandatory: with an
-  empty `РезервДо` the 1C job only picks an order after about four months) and the ERP writes it to `РезервДо`.
-- At the deadline 1C does A and mivend does A and, for a pending or unregistered order, B. Both are idempotent
+  empty `РезервДо` the ERP job only picks an order after about four months) and the ERP writes it to `РезервДо`.
+- At the deadline ERP does A and mivend does A and, for a pending or unregistered order, B. Both are idempotent
   and the order of execution does not matter. An order that is in progress or shipped is left alone: its
   reserve is already used up, and mivend follows what the ERP reports.
 - Not confirmed/unregistered order: mivend cancels it locally and, if `order.confirmed` was already sent, tells
@@ -449,7 +449,7 @@ string validated against the dictionary; `erpOrderStatus` stays the ERP's raw `s
 - **Attributes decisions read:** `rank` (forward-only progression), `terminal`, `customerVisible`, `customerGroup`
   (storefront filter bucket), `warehouseStarted` (cancel refused), `shipped` (cancel refused, debt is in the ERP
   balance, an external order becomes `Shipped`), `delivered`, `cancelled` (terminal on our side whatever the ERP later
-  reports, even if 1C unmarks the deletion), plus the pipeline roles above.
+  reports, even if ERP unmarks the deletion), plus the pipeline roles above.
 - **Forward-only:** `OrderStatusDictionary.canAdvance` moves an order only to a higher rank; a `cancelled` status never
   moves; an unknown current status never blocks, an unknown next one does. The guard is mandatory: unposting a sales
   document drops the ERP facts back.
@@ -640,7 +640,7 @@ Documents that form a customer's receivables (sales, payments, returns, correcti
   is owned by the ERP side; mivend never hard-codes type names or contract kinds and has no admin whitelist.
 - **Categories.** The chip and the row category come from the reference `category` (free string owned by the ERP:
   sale, payment, return, correction, bonus, other); an unknown value is shown under `other`. The label comes from
-  the reference, not from the document (a retro-bonus accrual document carries a wrong 1C synonym). A retro-bonus
+  the reference, not from the document (a retro-bonus accrual document carries a wrong ERP synonym). A retro-bonus
   accrual arrives as a settlement document (category `bonus`); `GrantedRetroBonusChanged` is informational only and
   must not be added to the balance.
 - **Reference lifecycle.** Upsert by `documentType`, version guarded, idempotent; a type missing from the

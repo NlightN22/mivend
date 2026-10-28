@@ -61,8 +61,8 @@ describe('managerRejectedOrdersLink', () => {
         expect(managerRejectedOrdersLink('http://localhost:5175')).toBe(
             'http://localhost:5174/orders?erpStatus=REJECTED',
         );
-        expect(managerRejectedOrdersLink('https://devof.komponent-m.ru:8016')).toBe(
-            'https://devof.komponent-m.ru:8015/orders?erpStatus=REJECTED',
+        expect(managerRejectedOrdersLink('https://devhost.example.com:8016')).toBe(
+            'https://devhost.example.com:8015/orders?erpStatus=REJECTED',
         );
     });
 });

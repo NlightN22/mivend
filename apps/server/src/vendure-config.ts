@@ -792,8 +792,7 @@ export const config: VendureConfig = {
             },
             // Issue #84: reconciliation summary API — separate REST boundary from the Kafka
             // streams above, same host/API key family as Integration Service's Ingestion API.
-            reconciliationApiUrl:
-                process.env.INTEGRATION_SERVICE_BASE_URL ?? 'https://is.komponent-m.ru',
+            reconciliationApiUrl: process.env.INTEGRATION_SERVICE_BASE_URL,
             reconciliationApiKey: process.env.INTEGRATION_SERVICE_API_KEY ?? '',
             resyncSourceSystem: process.env.INTEGRATION_RESYNC_SOURCE_SYSTEM,
             eventContractsRegistryToken: process.env.EVENT_CONTRACTS_REGISTRY_TOKEN,

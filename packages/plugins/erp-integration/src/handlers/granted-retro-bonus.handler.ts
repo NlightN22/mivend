@@ -8,7 +8,7 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 const optionalString = (value: unknown): string | null => (value != null ? String(value) : null);
 
 // Applies `granted-retro-bonus` (issue #106) into an append-only GrantedRetroBonus feed — the
-// is_deleted=true is a 1C unposting tombstone (all other fields empty), soft-deleting the row.
+// is_deleted=true is an ERP unposting tombstone (all other fields empty), soft-deleting the row.
 @Injectable()
 export class GrantedRetroBonusStreamHandler implements InboundStreamHandler {
     constructor(private readonly grantedRetroBonusService: GrantedRetroBonusService) {}

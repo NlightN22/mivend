@@ -191,5 +191,5 @@ and is never an idempotency key for a business entity.
   (`outbound-contract.test.ts`'s `BUILDER_PAYLOAD`) — fixed.
 - Still open, separate from this slice: the Reservation uuid/`erpOperationId` unification
   described above; Swagger/API example updates; consuming the new `order_uuid` field on
-  `OrderRegistrationResult`/`OrderChanged` (real ERP-side dedup is not live yet per `sp.issue.180` — 1C's
+  `OrderRegistrationResult`/`OrderChanged` (real ERP-side dedup is not live yet per `sp.issue.180` — ERP's
   own field-length fix is still pending, so this has no urgency yet but is tracked).

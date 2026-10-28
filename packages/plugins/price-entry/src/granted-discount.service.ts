@@ -23,7 +23,7 @@ export interface GrantedDiscountInput {
 export class GrantedDiscountService {
     constructor(private connection: TransactionalConnection) {}
 
-    // A tombstone wins a version tie (update + cancel can share one 1C timestamp).
+    // A tombstone wins a version tie (update + cancel can share one ERP timestamp).
     async remove(ctx: RequestContext, erpId: string, version: string): Promise<boolean> {
         return withAggregateLock(this.connection, ctx, `granted-discount:${erpId}`, async txCtx => {
             const repo = this.connection.getRepository(txCtx, GrantedDiscount);

@@ -8,7 +8,7 @@ import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-hand
 const loggerCtx = 'IntegrationGrantedDiscountHandler';
 
 // Applies the `granted-discount` stream (issue #101) into plugin-price-entry's GrantedDiscount —
-// full field accounting: docs/ai/erp-streams-map.md. is_deleted=true is a 1C unposting tombstone.
+// full field accounting: docs/ai/erp-streams-map.md. is_deleted=true is an ERP unposting tombstone.
 @Injectable()
 export class GrantedDiscountStreamHandler implements InboundStreamHandler {
     constructor(private readonly grantedDiscountService: GrantedDiscountService) {}

@@ -1022,7 +1022,7 @@ passes (contracts, counterparty limit, payment delay days) run without a shared 
 arriving between them can leave the three values briefly inconsistent; the next run (15 min) corrects it:
 
 - pool = sum of `limit` of the counterparty's active contracts without `controlledIndividually`;
-  stored in `Counterparty.creditLimit` (our calculation wins over any 1C number).
+  stored in `Counterparty.creditLimit` (our calculation wins over any ERP number).
 - Flagged active contracts are sublimits inside the pool; if their sum exceeds it, each is clamped to
   `limit * pool / sumOfFlagged`. The effective value is `Contract.effectiveCreditLimit`.
 - No pool contracts or no limits gives 0: "deferred payment unavailable", never "unlimited".
@@ -1041,7 +1041,7 @@ Two different things, do not mix them up:
 - **Amount limit**: a general pool on the counterparty plus sublimits of individually controlled contracts (above).
 - **Payment term (days)**: general for the counterparty, `Counterparty.paymentDelayDays` (taken from the main contract's
   `debtDaysLimit`, 0 = unknown). A contract with `controlledIndividually` has its own, more precise term in its own
-  `debtDaysLimit`. `Contract.paymentDelayDays` (1C "КоличествоДнейОтсрочки") is empty in 1C on every contract: never
+  `debtDaysLimit`. `Contract.paymentDelayDays` (ERP "КоличествоДнейОтсрочки") is empty in ERP on every contract: never
   read it.
 - **Due date of a settlement document**: the document's own `due_date` if the ERP sent one (rare), otherwise document
   date + the term above (own term for an individually controlled contract, else the counterparty's). No term means

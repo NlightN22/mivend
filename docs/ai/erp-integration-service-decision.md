@@ -149,17 +149,17 @@ that publishing change or a manual, hand-synced local copy of the relevant `.pro
 "keep the DTO in sync by hand" pattern the backend-plugin-rules skill already uses for REST DTOs) as a fallback.
 
 **Update 2026-08-13: access granted, provisioned, and verified live** — this was tracked as a
-blocking prerequisite below; it no longer blocks. On `is.komponent-m.ru`: a dedicated Kafka SCRAM
+blocking prerequisite below; it no longer blocks. On `integration.example.com`: a dedicated Kafka SCRAM
 principal (`mivend-hub`, Write+Describe-scoped to `mivend.orders.events.v1.order-submitted` only,
 same least-privilege ACL model as `integration-service`/`search-service`'s own principals),
 `ufw` + `DOCKER-USER` iptables rules scoping the SASL_SSL listener (9094) to MiVend central hub's
 IP alongside `search-service`'s existing rule (persisted via `kafka-sasl-firewall.service`,
 survives reboot), and an nginx-proxied, source-IP-restricted path
-(`https://is.komponent-m.ru/schema-registry/`) for Schema Registry, which stays loopback-only on
+(`https://integration.example.com/schema-registry/`) for Schema Registry, which stays loopback-only on
 the host itself otherwise. Verified live: a real producer connected over SASL_SSL and published a
 message to the topic; a real schema was registered against the proxied Registry endpoint and
 returned a schema id. Broker CA cert lives at
-`infrastructure/kafka-tls/is-komponent-m-ca.crt` in this repo; real credentials are in
+`infrastructure/kafka-tls/integration-ca.crt` in this repo; real credentials are in
 `apps/server/.env.central` (gitignored, not committed).
 
 ## Audit 2026-09-04: current MiVend inbound/outbound code checked against real proto + real
@@ -227,6 +227,6 @@ owner before treating the outbound slice as "done".
   replace) to reflect the new boundary — tracked as follow-up work, not started.
 
 See `search-platform`'s `docs/design/ingestion-api-dto.md` and
-`docs/design/1c-integration-architecture.md` for the full DTO shapes and reasoning. (Those paths
+`docs/design/erp-integration-architecture.md` for the full DTO shapes and reasoning. (Those paths
 are internal to the `search-platform` repo, not published here — this document restates only
 what MiVend needs to know, generically, per this repo's confidentiality rules.)

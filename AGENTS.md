@@ -116,7 +116,7 @@ against `make dev-staging-integration`'s real Integration Service Kafka connecti
   to point a test at the staging-integration contour to borrow real data from there.
 - `erp-integration`'s Kafka consumer/producer tests mock the broker/Schema Registry client (see
   `docs/testing-strategy.md`'s mocking strategy — external transport boundaries are exactly what's
-  allowed to be mocked); they never require a live connection to `is.komponent-m.ru`, in any test
+  allowed to be mocked); they never require a live connection to `integration.example.com`, in any test
   level, including integration/component tests.
 - The staging-integration contour's own database is deliberately **never seeded** (see
   "Environments / contours" in `docs/environments.md`) — it exists solely to validate the real

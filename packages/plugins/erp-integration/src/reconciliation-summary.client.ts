@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
-import { ERP_INTEGRATION_PLUGIN_OPTIONS, RECONCILIATION_API_URL_DEFAULT, loggerCtx } from './types';
+import { ERP_INTEGRATION_PLUGIN_OPTIONS, loggerCtx } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
 export interface ReconciliationSummary {
@@ -26,10 +26,9 @@ export class ReconciliationSummaryClient {
     ) {}
 
     async fetchSummaries(aggregateType?: string): Promise<ReconciliationSummary[]> {
-        const url = new URL(
-            '/api/reconciliation/v1/summary',
-            this.options.reconciliationApiUrl ?? RECONCILIATION_API_URL_DEFAULT,
-        );
+        const baseUrl = this.options.reconciliationApiUrl;
+        if (!baseUrl) throw new Error('INTEGRATION_SERVICE_BASE_URL is not configured');
+        const url = new URL('/api/reconciliation/v1/summary', baseUrl);
         if (aggregateType) url.searchParams.set('aggregateType', aggregateType);
         // Upstream activeCount includes stock tied to deleted warehouses, which mivend cannot track locally.
         // Filter aligns both sides on one definition of active stock to avoid an unresolvable mismatch.

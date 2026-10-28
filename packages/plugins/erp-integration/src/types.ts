@@ -180,13 +180,12 @@ export interface ErpIntegrationPluginOptions {
     categoryTreeRecomputeIntervalMs?: number;
     // Defaults to CREDIT_LIMIT_RECOMPUTE_INTERVAL_DEFAULT.
     creditLimitRecomputeIntervalMs?: number;
-    // Never hardcoded or logged. Optional so existing plugin config fixtures need no update; the client
-    // falls back to defaults, which only matter on a kafkaEnabled+central contour.
+    // Never hardcoded or logged. Required by the REST clients (they throw naming the missing key).
     reconciliationApiUrl?: string;
     reconciliationApiKey?: string;
     // Read-only GitHub Packages token used only to look up the latest published event-contracts version.
     eventContractsRegistryToken?: string;
-    // sourceSystem sent to the resync replay API; defaults to RESYNC_SOURCE_SYSTEM_DEFAULT.
+    // sourceSystem sent to the resync replay API; required by the replay client.
     resyncSourceSystem?: string;
     reconciliationIntervalMs?: number;
     // Issue #91: how often KafkaLagPollerService recomputes per-partition consumer lag for every
@@ -320,10 +319,8 @@ export const CATEGORY_TREE_RECOMPUTE_INTERVAL_DEFAULT = 3_600_000;
 export const CREDIT_LIMIT_RECOMPUTE_INTERVAL_DEFAULT = 15 * 60_000;
 // Once daily — no sub-day freshness requirement raised for this (issue #84).
 export const RECONCILIATION_INTERVAL_DEFAULT = 24 * 60 * 60 * 1000;
-export const RESYNC_SOURCE_SYSTEM_DEFAULT = 'onec-main';
 export const EVENT_CONTRACTS_REGISTRY_URL =
     'https://npm.pkg.github.com/@nlightn22%2fevent-contracts';
-export const RECONCILIATION_API_URL_DEFAULT = 'https://is.komponent-m.ru';
 // Frequent enough to catch a stalled consumer well before it becomes a support ticket, without
 // hammering the broker's admin API — no sub-minute freshness requirement raised for issue #91.
 export const KAFKA_LAG_POLL_INTERVAL_DEFAULT = 60_000;
