@@ -95,3 +95,10 @@ export {
     type ApiKeyOptions,
 } from './api-key';
 export { isNewerVersion, shouldApplyDocument } from './ordering-version';
+
+export { classifySelectionFilter } from './selection-filter';
+export type { FilterClassification, FilterField, FilterSide, FilterTerm } from './selection-filter';
+export { evaluateCounterpartyTerms, evaluateProductTerms } from './selection-filter-eval';
+export type { ProductAttributes, RefResolution } from './selection-filter-eval';
+export { loadFilterTerms, replaceFilterTerms } from './filter-terms';
+export type { FilterTermTable } from './filter-terms';
