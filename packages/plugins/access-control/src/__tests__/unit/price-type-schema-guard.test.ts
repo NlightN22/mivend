@@ -29,23 +29,23 @@ const INVENTORY: Record<string, string> = {
         'lists counterparties without a resolved type; exposes no price type',
     'counterparty/src/trading-point.schema.ts::priceType':
         'storefront: the customer own counterparty type',
-    'price-entry/src/price-entry.plugin.ts::bulkUpsertPriceEntries':
+    'price-entry/src/price-entry.schema.ts::bulkUpsertPriceEntries':
         'PriceEntryAdminResolver: every code asserted',
-    'price-entry/src/price-entry.plugin.ts::compareAtPrice': 'storefront: own price type',
-    'price-entry/src/price-entry.plugin.ts::customerPrice': 'storefront: own price type',
-    'price-entry/src/price-entry.plugin.ts::decidePriceAdjustmentRequest':
+    'price-entry/src/price-entry.schema.ts::compareAtPrice': 'storefront: own price type',
+    'price-entry/src/price-entry.schema.ts::customerPrice': 'storefront: own price type',
+    'price-entry/src/price-entry.schema.ts::decidePriceAdjustmentRequest':
         'mutation, no price type output',
-    'price-entry/src/price-entry.plugin.ts::floorPrice': 'ReadConfidentialPriceTypes',
-    'price-entry/src/price-entry.plugin.ts::floorPricesForVariants': 'ReadConfidentialPriceTypes',
-    'price-entry/src/price-entry.plugin.ts::price':
+    'price-entry/src/price-entry.schema.ts::floorPrice': 'ReadConfidentialPriceTypes',
+    'price-entry/src/price-entry.schema.ts::floorPricesForVariants': 'ReadConfidentialPriceTypes',
+    'price-entry/src/price-entry.schema.ts::price':
         'value of an entry the caller was allowed to request',
-    'price-entry/src/price-entry.plugin.ts::priceEntriesForVariants': 'assertCodeAllowed',
-    'price-entry/src/price-entry.plugin.ts::priceTypeCode':
+    'price-entry/src/price-entry.schema.ts::priceEntriesForVariants': 'assertCodeAllowed',
+    'price-entry/src/price-entry.schema.ts::priceTypeCode':
         'discount rule/registry/entry types, filtered by allowed codes',
-    'price-entry/src/price-entry.plugin.ts::priceTypeCodes': 'PriceTypeAccessService.allowedCodes',
-    'price-entry/src/price-entry.plugin.ts::requestPriceAdjustment':
+    'price-entry/src/price-entry.schema.ts::priceTypeCodes': 'PriceTypeAccessService.allowedCodes',
+    'price-entry/src/price-entry.schema.ts::requestPriceAdjustment':
         'mutation, decision only, floor never returned',
-    'price-entry/src/price-entry.plugin.ts::upsertPriceEntry': 'assertCodeAllowed',
+    'price-entry/src/price-entry.schema.ts::upsertPriceEntry': 'assertCodeAllowed',
     'retro-bonus/src/retro-bonus.plugin.ts::priceTypeErpId':
         'RetroBonusRulePriceTypeResolver (null without access)',
     'search/src/external-search.schema.ts::priceRangeWithTax':
