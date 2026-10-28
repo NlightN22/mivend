@@ -20,10 +20,12 @@ function productMatches(term: FilterTerm, attrs: ProductAttributes): boolean {
     );
 }
 
+// A negated term needs a known attribute: a product with no manufacturer or category may still sit in the ERP group.
 function termHolds(term: FilterTerm, attrs: ProductAttributes, known: RefResolution): boolean {
     if (term.field === 'manufacturer') {
         const unresolved = term.refs.some(ref => !known.manufacturers.has(ref));
         if (unresolved && (term.negated || term.hierarchical)) return false;
+        if (term.negated && attrs.manufacturerRef === null) return false;
         const matched = attrs.manufacturerRef !== null && term.refs.includes(attrs.manufacturerRef);
         return term.negated ? !matched : matched;
     }
@@ -31,6 +33,7 @@ function termHolds(term: FilterTerm, attrs: ProductAttributes, known: RefResolut
         ref => !known.products.has(ref) && !known.categories.has(ref),
     );
     if (unresolved && term.negated) return false;
+    if (term.negated && term.hierarchical && attrs.categoryRefs.size === 0) return false;
     const matched = productMatches(term, attrs);
     return term.negated ? !matched : matched;
 }

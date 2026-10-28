@@ -86,10 +86,11 @@ describe('evaluateProductTerms', () => {
         expect(holds(cond(MAKER, 'НеВСписке', 'm1', 'm2'))).toBe(false);
     });
 
-    it('treats a product without a manufacturer as not equal', () => {
+    it('never satisfies a negated manufacturer term for a product without a manufacturer', () => {
         const none = attrs({ manufacturerRef: null });
         expect(holds(cond(MAKER, 'Равно', 'm1'), none)).toBe(false);
-        expect(holds(cond(MAKER, 'НеРавно', 'm1'), none)).toBe(true);
+        expect(holds(cond(MAKER, 'НеРавно', 'm1'), none)).toBe(false);
+        expect(holds(cond(MAKER, 'НеВСписке', 'm2'), none)).toBe(false);
     });
 
     it('fails closed on an unsynced manufacturer, also negated and hierarchical', () => {
@@ -131,10 +132,12 @@ describe('evaluateProductTerms', () => {
         expect(holds(cond(ITEM, 'ВСпискеПоИерархии', 'ghost', 'root'))).toBe(true);
     });
 
-    it('matches no category term for a product without a resolved category', () => {
+    it('matches no category term, and no negated one, for a product without a resolved category', () => {
         const orphan = attrs({ categoryRefs: new Set() });
         expect(holds(cond(ITEM, 'ВИерархии', 'root'), orphan)).toBe(false);
-        expect(holds(cond(ITEM, 'НеВИерархии', 'root'), orphan)).toBe(true);
+        expect(holds(cond(ITEM, 'НеВИерархии', 'root'), orphan)).toBe(false);
+        expect(holds(cond(ITEM, 'НеВСпискеПоИерархии', 'p2', 'root'), orphan)).toBe(false);
+        expect(holds(cond(ITEM, 'НеРавно', 'p2'), orphan)).toBe(true);
     });
 
     it('ANDs the terms and never matches an empty list', () => {
