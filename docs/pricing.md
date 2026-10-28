@@ -417,7 +417,8 @@ Counterparty- and contract-scoped discounts and markups come from the ERP as one
   contract row matches only an order on that contract);
 - **price type**: a document naming a price type applies only to a customer whose effective price type is that one
   (a markup is relative to a price type); a document without one applies to any;
-- **products**: an "all products" flag, or the document's product list (one indexed probe per priced product);
+- **products**: an "all products" flag, the document's product list (one indexed probe per priced product), or a
+  dynamic filter evaluated lazily (see "Filter-mode documents" below);
 - **condition**: `DiscountConditionKind` maps the ERP condition name to `unconditional` (applies always), `quantity` (summed over the document's product
   list, or all lines for an "all products" document) or `amount` (the whole document amount); an empty condition is
   unconditional and an unknown name never matches;
@@ -425,7 +426,7 @@ Counterparty- and contract-scoped discounts and markups come from the ERP as one
 
 Several matching documents never stack: the highest percent wins and a negative percent competes by max. Documents
 mivend cannot evaluate are stored inactive with a reason and ignored: fixed prices, price groups, bonus lines, set
-components, weekday or time windows, reference conditions, dynamic product filters, and any non-default value of an
+components, weekday or time windows, reference conditions, dynamic product filters with a field or comparison mivend does not evaluate, and any non-default value of an
 attribute mivend does not read (markup type, quality, purpose, currency, pseudo documents, product-line attributes).
 A positive percent with a markup type is therefore never a discount. Opaque ids are compared only to empty, never by name.
 Details and field accounting: `docs/ai/erp-streams-map.md`.
@@ -446,6 +447,43 @@ Details and field accounting: `docs/ai/erp-streams-map.md`.
   that an empty list means everyone.
 - **Version order**: a tombstone or unposted document older than the stored version is a noop (a replay); at an equal
   version it applies only while the row is still active; only a strictly newer upsert reactivates.
-- `limit_percent` is stored but not enforced yet, so the real discount can be lower than the ERP's (issue #292). A filter-mode retro-bonus rule stays active but has
-  no members, so it never applies; it carries `inactiveReason` (`counterparty-filter` or `product-filter`, exposed on
-  `RetroBonusRule`), and its inbox row settles as a noop naming that.
+- `limit_percent` is stored but not enforced yet, so the real discount can be lower than the ERP's (issue #292).
+
+**Filter-mode documents (#296).** The ERP sends a dynamic selection as a flat list of ANDed conditions; mivend
+evaluates it lazily over the products in play and never materialises members, so a manufacturer or category change
+needs no recompute.
+
+- _Write time_: `classifySelectionFilter` (`packages/shared`) normalises the filter into term rows
+  (`discount_setup_filter_term`, `retro_bonus_rule_filter_term`: field, hierarchical, negated, refs) and decides
+  evaluability once. Supported: fields `Номенклатура.Производитель` and `Номенклатура` with the comparisons Равно,
+  НеРавно, ВСписке, НеВСписке, ВИерархии, НеВИерархии, ВСпискеПоИерархии, НеВСпискеПоИерархии; on the counterparty side
+  (retro-bonus) `Контрагент` with the non-hierarchy comparisons. Anything else stores the document inactive with
+  `unknown-filter-field`, `unknown-comparison`, `unsupported-comparison` (hierarchy on a counterparty),
+  `unknown-value-type`, `invalid-values` or `empty-filter` (a filter-mode document with no conditions and no all flag
+  never applies). Retro-bonus reasons are prefixed with the side (`product-`/`counterparty-`).
+- _Read time_: `DiscountSetupRulesService` loads the terms of the matching filter setups and resolves their refs
+  (manufacturer by `manufacturer.externalId`, category by slug `cat-<ref>`, product by `product.customFieldsExternalid`),
+  reads one attribute row per product in play (manufacturer, own category and all ancestors through
+  `collection_closure`, from the product's `category` facet value) and evaluates in memory. The result is the member
+  set a list document would produce, so catalog, cart and order share one evaluator and the thresholds and
+  max-percent logic are untouched.
+- _Fail closed_: an unresolved ref (category, product or manufacturer not synced) makes a negated term false; a
+  hierarchy comparison on a manufacturer needs every ref to be a stored manufacturer; an unknown comparison never
+  applies; a product without a resolved category matches no category term.
+- _Limits_: no manufacturer tree is stored (hierarchy on manufacturers behaves as in-list); counterparty hierarchy is
+  not evaluated (no `counterparty-groups` stream); other fields (supplier, parent, nomenclature group) and comparisons
+  (greater/less, contains, interval) stay inactive. Retro-bonus stays display only: the counterparty side narrows
+  `retroBonusRules`, the product side is only validated and stored.
+- _Existing rows_: discount documents stored before this change as `product-filter` are reclassified once at server
+  start from the stored filter. Their recipients were not stored while the document was inactive, so an evaluable one
+  gets `awaiting-redelivery` (its stored version is reset). **What the owner must do after the deploy: have the ERP
+  resend the filter-mode discount documents (a replay of the `discount-setup` stream), nothing else.** Any redelivery
+  of such a document, at any version, activates it. Documents that stay `awaiting-redelivery` were not resent. Retro-bonus
+  rules keep their members and are fixed in place, no resend needed.
+- _Wire shape_: a condition value is a `SourceFieldValue`; in proto JSON a reference is `{"refId": "<uuid>"}`. Any other
+  value kind (string, number, enum) stores the document inactive as `unknown-value-type`.
+- _Query cost_: with only filter documents a 100-line cart costs 4 queries in total (rules, terms, ref resolution,
+  product attributes) through the per-request `LookupMemo`; a catalog page of N products costs 3 + N (the three shared
+  lookups, then one attribute query per product, like the list-mode member probe). Both are asserted in
+  `discount-setup-filter.int.test.ts` (written, run by the lead). Wall-clock timing is left to the first run on a
+  populated database.
