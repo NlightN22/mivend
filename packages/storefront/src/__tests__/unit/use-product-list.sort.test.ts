@@ -16,6 +16,9 @@ function mockBackend(capabilities: { sortKeys: string[]; priceRange: boolean }):
         if (query.includes('SearchCapabilities')) {
             return Promise.resolve({ searchCapabilities: capabilities });
         }
+        if (query.includes('CatalogCollectionBySlug')) {
+            return Promise.resolve({ collection: { id: '1' } });
+        }
         return Promise.resolve({ search: { totalItems: 0, items: [], facetValues: [] } });
     });
 }

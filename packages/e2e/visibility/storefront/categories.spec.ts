@@ -125,6 +125,21 @@ test.describe('14: category visibility, storefront as a customer', () => {
         }
     });
 
+    test('direct URL of a hidden category shows an empty catalog, a visible one lists products', async () => {
+        const { page } = s;
+        await page.goto(catalogUrl('vis-a2'));
+        await settleCatalog(page);
+        await expect(page.getByText('No products found')).toBeVisible();
+        expect(await pageText(page)).not.toContain('Product of vis-a2');
+        await shot(page, 'category-direct-hidden-empty');
+        expectNoHiddenCategory(s, await pageText(page));
+
+        await page.goto(catalogUrl('vis-b2x'));
+        await settleCatalog(page);
+        await expect(page.getByText('Product of vis-b2x')).toBeVisible();
+        await expect(page.getByText('No products found')).toHaveCount(0);
+    });
+
     test.describe('category names reach the customer only for visible categories', () => {
         test('search facet values omit hidden categories', async () => {
             const { page } = s;

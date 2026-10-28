@@ -5622,6 +5622,12 @@ export type RemoveCartLineInBatchMutation = {
         | { __typename: 'OrderModificationError'; errorCode: ErrorCode; message: string };
 };
 
+export type CatalogCollectionBySlugQueryVariables = Exact<{
+    slug: Scalars['String']['input'];
+}>;
+
+export type CatalogCollectionBySlugQuery = { collection?: { id: string } | null };
+
 export type CatalogCollectionsQueryVariables = Exact<{
     skip: Scalars['Int']['input'];
     take: Scalars['Int']['input'];
@@ -7066,6 +7072,16 @@ export const RemoveCartLineInBatchDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     RemoveCartLineInBatchMutation,
     RemoveCartLineInBatchMutationVariables
+>;
+export const CatalogCollectionBySlugDocument = new TypedDocumentString(`
+    query CatalogCollectionBySlug($slug: String!) {
+  collection(slug: $slug) {
+    id
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CatalogCollectionBySlugQuery,
+    CatalogCollectionBySlugQueryVariables
 >;
 export const CatalogCollectionsDocument = new TypedDocumentString(`
     query CatalogCollections($skip: Int!, $take: Int!) {

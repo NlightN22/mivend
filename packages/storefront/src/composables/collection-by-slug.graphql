@@ -1,0 +1,5 @@
+query CatalogCollectionBySlug($slug: String!) {
+    collection(slug: $slug) {
+        id
+    }
+}

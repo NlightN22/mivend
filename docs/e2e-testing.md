@@ -112,7 +112,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `manager-proforma-payments` | dev | proforma invoices and payments smoke | `--project=manager-operator manager/proforma-invoices-payments` |
 | `manager-settings` | dev | roles, users, security settings | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/settings` |
 | `manager-resilience` | dev | recovery after transient failure (use make e2e-resilience) | `manager/resilience` |
-| `visibility-storefront` | dev | own-data, price-type, category visibility (storefront) | `--project=visibility-storefront` |
+| `visibility-storefront` | dev | own-data, price-type, category visibility incl. hidden-category URL empty catalog (storefront) | `--project=visibility-storefront` |
 | `visibility-manager` | dev | entity lists, counterparties, price types, servicing team, categories (manager) | `--project=visibility-manager` |
 | `category-visibility` | dev | category visibility in both portals (#264); alias that overlaps `visibility-storefront` and `visibility-manager` (their category specs) | `--project=visibility-storefront --project=visibility-manager categories` |
 | `smoke` | dev | critical-route subset tagged @smoke (use make e2e-smoke) | `--grep @smoke --project=storefront-noauth --project=storefront` |

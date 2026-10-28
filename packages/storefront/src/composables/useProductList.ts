@@ -11,6 +11,7 @@ import {
     type CatalogFacetsQuery,
     type CatalogProductsQuery,
 } from '../api/generated/graphql';
+import { isCollectionVisible } from './collectionVisible';
 import { useViewMode } from './useViewMode';
 // Imports TS source, not compiled 'shared' CJS: Vite/Rollup can't interop its __exportStar
 // aggregator, so it stays plain ESM in the same module graph with no CJS boundary.
@@ -191,6 +192,13 @@ export function useProductList(options: UseProductListOptions = {}): {
         });
     }
 
+    function clearResults(failed: boolean): void {
+        loadError.value = failed;
+        loading.value = false;
+        [items.value, facetGroups.value, categoryCounts.value] = [[], [], new Map()];
+        [totalItems.value, hasMore.value, categoryCountsLoading.value] = [0, false, false];
+    }
+
     let loadSeq = 0;
     let countsTerm: string | undefined;
 
@@ -203,6 +211,10 @@ export function useProductList(options: UseProductListOptions = {}): {
         let productsResult: CatalogProductsQuery;
         let facetsResult: CatalogFacetsQuery | null;
         try {
+            if (collectionSlug?.value && !(await isCollectionVisible(collectionSlug.value))) {
+                if (seq === loadSeq) clearResults(false);
+                return;
+            }
             [productsResult, facetsResult] = await Promise.all([
                 fetchProducts(0),
                 fetchFacets().catch(() => null),
@@ -211,14 +223,7 @@ export function useProductList(options: UseProductListOptions = {}): {
             if (seq === loadSeq) {
                 console.error('Catalog load failed', e);
                 loadErrorInfo.value = describeLoadError(e);
-                items.value = [];
-                facetGroups.value = [];
-                categoryCounts.value = new Map();
-                totalItems.value = 0;
-                hasMore.value = false;
-                loadError.value = true;
-                loading.value = false;
-                categoryCountsLoading.value = false;
+                clearResults(true);
             }
             throw e;
         }

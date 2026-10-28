@@ -22,7 +22,9 @@ describe('useProductList coalesces triggers from the same tick', () => {
             Promise.resolve(
                 String(document).includes('SearchCapabilities')
                     ? { searchCapabilities: { sortKeys: ['relevance'], priceRange: false } }
-                    : { search: { totalItems: 0, items: [], facetValues: [] } },
+                    : String(document).includes('CatalogCollectionBySlug')
+                      ? { collection: { id: '1' } }
+                      : { search: { totalItems: 0, items: [], facetValues: [] } },
             ),
         );
     });
