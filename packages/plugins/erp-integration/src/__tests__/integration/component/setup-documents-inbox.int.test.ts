@@ -24,6 +24,7 @@ import { RetroBonusSetupStreamHandler } from '../../../handlers/retro-bonus-setu
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import type { InboundStream } from '../../../types';
 import { makeInboxProcessor } from './inbox-processor-helpers';
+import { TestRetroFilterTerm, TestSetupFilterTerm } from './setup-documents-term-entities';
 
 // Plain mirrors of the rule tables (VendureEntity needs a bootstrapped id strategy); members are real columns.
 @Entity('discount_setup')
@@ -85,6 +86,7 @@ class TestRetroRule {
     @Column({ type: 'timestamp' }) validFrom!: Date;
     @Column({ type: 'timestamp', nullable: true }) validTo!: Date | null;
     @Column({ type: 'boolean', default: true }) active!: boolean;
+    @Column({ type: 'varchar', nullable: true }) inactiveReason!: string | null;
     @Column({ type: 'boolean', default: false }) allCounterparties!: boolean;
     @Column({ type: 'boolean', default: false }) allProducts!: boolean;
     @Column({ type: 'varchar', default: 'list' }) counterpartyMode!: string;
@@ -129,6 +131,8 @@ beforeAll(async () => {
             TestRetroRule,
             TestRetroCounterparty,
             TestRetroProduct,
+            TestSetupFilterTerm,
+            TestRetroFilterTerm,
         ],
         synchronize: true,
     });
@@ -156,7 +160,8 @@ beforeAll(async () => {
 beforeEach(async () => {
     await dataSource.query(
         `TRUNCATE integration_inbox_event, discount_setup, discount_setup_recipient, discount_setup_product,
-                  retro_bonus_rule, retro_bonus_rule_counterparty, retro_bonus_rule_product RESTART IDENTITY`,
+                  retro_bonus_rule, retro_bonus_rule_counterparty, retro_bonus_rule_product,
+                  discount_setup_filter_term, retro_bonus_rule_filter_term RESTART IDENTITY`,
     );
 });
 
