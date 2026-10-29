@@ -11,7 +11,7 @@ charged on an order.
 | -------------------------- | ------------------------- | ---------------------------------------------------------------- |
 | `PriceType`                | `plugin-customer-pricing` | Named price tier (e.g. `WHOLESALE`, `RETAIL`)                    |
 | `CustomerPriceType`        | `plugin-customer-pricing` | Customer → `PriceType` assignment (one active row per customer)  |
-| `ProductVariantPriceEntry` | `plugin-price-entry`      | `variantId × priceTypeCode → price` — the base price             |
+| `ProductVariantPriceEntry` | `plugin-price-entry`      | `productExternalId × priceTypeCode → price` — the base price     |
 | `DiscountRule`             | `plugin-price-entry`      | Facet + time-window percentage discount on top of the base price |
 | `DiscountSetup`            | `plugin-price-entry`      | One ERP discount/markup setup document: recipients, product list |
 | `Counterparty`             | `plugin-counterparty`     | Legal entity; carries the `priceType` string from the ERP        |
@@ -144,8 +144,8 @@ PriceResolutionService.resolve(ctx, variantId)
       does resolve() return { customerPrice: null, compareAtPrice: null }
 
 2. basePrice = PriceEntryService.getForVariant(ctx, variantId, priceTypeCode)
-   — reads ProductVariantPriceEntry
-   → if no PriceEntry row exists for this variant+priceType: fall through to 1b
+   — reads ProductVariantPriceEntry, joining variant -> product -> `customFieldsExternalid`
+   → if no PriceEntry row exists for this product+priceType: fall through to 1b
 
 3. facetValues = merge(ProductVariant.facetValues, Product.facetValues)
    — facets such as category are assigned to the PRODUCT, not the variant (brand is
@@ -216,11 +216,10 @@ was replaced).
 Discount rules are pushed the same way as everything else — via the `erp-import`
 REST batch endpoint (`POST /erp/import/batch`), record `type: "discountRule"`
 (`packages/plugins/erp-import/src/handlers/discount-rule.handler.ts`). Unlike
-`price.handler.ts` (which uses raw SQL against `product_variant_price_entry` because
-that table belongs to another plugin it doesn't want a hard TS dependency on),
-`discount-rule.handler.ts` imports `DiscountRuleService` from `@mivend/plugin-price-entry`
-directly — `erp-import` already depends on `plugin-price-entry` for other reasons, so
-there's no reason not to use the real service.
+`price.handler.ts`, `discount-rule.handler.ts` imports `DiscountRuleService` from
+`@mivend/plugin-price-entry` directly; `price.handler.ts` likewise calls
+`PriceEntryService.upsertByProduct`. A `price` record carries `productExternalId` (the product's
+ERP id), not a SKU, and does not need the product to exist yet.
 
 `DiscountRule.erpId` is the natural upsert key (not the facet/period combination) —
 rules can be edited or reissued from the ERP with the same identity.

@@ -366,8 +366,19 @@ A change is not done until:
 - `make test` — unit tests, offline.
 - `make test-int` — integration/component/contract tests (starts infra via `make up`).
 - `make test-access` — access integration matrix on a throwaway server and database (about 4 min).
+- `make bench-pricing` — pricing benchmark (see "Pricing benchmark"); manual, never in CI.
 - `make ci` — the push CI pipeline (lint, format, type check, unit, contract) on a clean HEAD checkout with an empty pnpm store; run before pushing.
 - `make e2e-dev` — Playwright E2E on its own throwaway stack and database (needs no `make dev`).
+
+## Pricing benchmark
+
+`make bench-pricing` (`packages/plugins/erp-integration/src/__tests__/bench/`) builds a synthetic catalog
+(20,000 products, two price types) in a throwaway schema of the test database and times: a catalog page of
+100 variants (per-variant and batch lookups), the cart/order price preload for 60 lines, a 5,000-variant bulk
+price read, and `PriceStreamHandler` ingest of 2,000 events (half inserts, half updates). Set `BENCH_OUT=<file>`
+to append the results. Use it before and after any change to how price entries are stored or read; a read path
+may not be slower than the baseline beyond noise (compare medians and minimums of back-to-back runs, the host
+is shared), and ingest may not be slower. It never touches a contour database and is not part of CI.
 
 ## Diagnosing failing tests
 

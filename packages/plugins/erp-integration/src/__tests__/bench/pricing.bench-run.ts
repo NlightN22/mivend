@@ -13,10 +13,10 @@ import {
 
 import { Logger } from '@nestjs/common';
 import { PriceStreamHandler } from '../../handlers/price.handler';
-import { BenchPriceEntry, PRODUCT_COUNT, createBenchTables } from './price-bench-schema';
+import { PRODUCT_COUNT, createBenchTables } from './price-bench-schema';
 
 const { schema, extra } = testSchemaOptions('price_bench');
-const REPEATS = 15;
+const REPEATS = 30;
 const INGEST_EVENTS = 2000;
 let ds: DataSource;
 let service: PriceEntryService;
@@ -40,7 +40,7 @@ async function time(label: string, fn: () => Promise<unknown>, repeats = REPEATS
         await fn();
         runs.push(performance.now() - t);
     }
-    report(label, `${median(runs).toFixed(2)} ms`);
+    report(label, `${median(runs).toFixed(2)} ms median, ${Math.min(...runs).toFixed(2)} ms min`);
 }
 
 function priceEvent(n: number, type: string, value: number): Record<string, unknown> {
@@ -55,21 +55,12 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [BenchPriceEntry],
     });
     await ds.initialize();
     await createBenchTables(ds);
-    const base = createTestConnection(ds);
-    const connection = {
-        ...base,
-        getRepository: (c: never, entity: unknown) =>
-            typeof entity === 'function' && entity.name === 'ProductVariantPriceEntry'
-                ? ds.getRepository(BenchPriceEntry)
-                : base.getRepository(c, entity as never),
-    } as unknown as typeof base;
+    const connection = createTestConnection(ds);
     service = new PriceEntryService(connection);
     handler = new PriceStreamHandler(
-        connection,
         {
             findPriceTypeByExternalId: async (_c: unknown, guid: string) => ({ code: guid }),
         } as never,
@@ -97,7 +88,7 @@ describe('pricing benchmark (synthetic data, throwaway schema)', () => {
         await time(
             'bulk price build, 5000 variants',
             () => service.getForVariants(ctx, ids(1, 5000), 'RETAIL'),
-            7,
+            15,
         );
 
         const rates: number[] = [];
