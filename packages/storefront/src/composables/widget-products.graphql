@@ -34,29 +34,19 @@ fragment ProductWidgetFields on Product {
     }
 }
 
-query NewArrivals($since: DateTime!) {
-    products(
-        options: { take: 12, sort: { createdAt: DESC }, filter: { createdAt: { after: $since } } }
-    ) {
-        items {
-            ...ProductWidgetFields
-        }
-    }
+query NewArrivalProductIds {
+    newArrivalProductIds(take: 12, sinceDays: 7)
 }
 
-query SaleProducts {
-    products(options: { take: 40, filter: { onSale: { eq: true } } }) {
-        items {
-            ...ProductWidgetFields
-        }
-    }
+query SaleProductIds {
+    saleProductIds(take: 40)
 }
 
 query PopularProductIds {
     popularProductIds(take: 12)
 }
 
-query PopularProducts($ids: [String!]!, $take: Int!) {
+query WidgetProducts($ids: [String!]!, $take: Int!) {
     products(options: { take: $take, filter: { id: { in: $ids } } }) {
         items {
             ...ProductWidgetFields

@@ -435,7 +435,8 @@
         "price": 10490,
         "stockOnHand": 9,
         "categoryCode": "cat-electrical-batteries",
-        "brandCode": "bosch"
+        "brandCode": "bosch",
+        "onSale": true
     },
     {
         "externalId": "ext-show-1",

@@ -308,7 +308,11 @@ describe('ProductStreamHandler', () => {
             expect(deps.productService.update).toHaveBeenCalledWith(
                 ctx,
                 expect.objectContaining({
-                    customFields: { manufacturerPartNumber: 'KT 100511', fullName: null },
+                    customFields: {
+                        manufacturerPartNumber: 'KT 100511',
+                        fullName: null,
+                        erpCreatedAt: null,
+                    },
                 }),
             );
         });
@@ -325,8 +329,46 @@ describe('ProductStreamHandler', () => {
                 expect(call[1].customFields).toEqual({
                     manufacturerPartNumber: null,
                     fullName: null,
+                    erpCreatedAt: null,
                 });
             }
+        });
+    });
+
+    describe('erpCreatedAt (#298)', () => {
+        const payload = {
+            sku: 'SKU-1',
+            name: 'Widget',
+            sourceFields: { ДатаСоздания: { dateValue: '2013-09-12T02:25:10Z' } },
+        };
+        const created = new Date('2013-09-12T02:25:10Z');
+
+        it('stores the ERP creation date on create', async () => {
+            const { handler, productService } = makeHandler();
+
+            await handler.apply(ctx, 'p-1', payload);
+
+            expect(productService.create.mock.calls[0][1].customFields.erpCreatedAt).toEqual(
+                created,
+            );
+        });
+
+        it('on update, overwrites with the date, and clears it when the ERP sends none', async () => {
+            const connection = makeConnection('existing-product-id');
+            const productVariantService = {
+                getVariantsByProductId: vi.fn().mockResolvedValue({ items: [{ id: 'variant-1' }] }),
+                create: vi.fn(),
+                update: vi.fn().mockResolvedValue([{}]),
+                findOne: vi.fn().mockResolvedValue({ id: 'variant-1', facetValues: [] }),
+            };
+            const productService = { create: vi.fn(), update: vi.fn().mockResolvedValue({}) };
+            const { handler } = makeHandler({ connection, productVariantService, productService });
+
+            await handler.apply(ctx, 'p-1', payload);
+            await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget' });
+
+            const dates = productService.update.mock.calls.map(c => c[1].customFields.erpCreatedAt);
+            expect(dates).toEqual([created, null]);
         });
     });
 

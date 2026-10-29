@@ -3630,7 +3630,9 @@ export type Query = {
     orderStatuses: Array<OrderStatusInfo>;
     packagesOnlySales: Scalars['Boolean']['output'];
     payment?: Maybe<PaymentAttempt>;
+    newArrivalProductIds: Array<Scalars['ID']['output']>;
     popularProductIds: Array<Scalars['ID']['output']>;
+    saleProductIds: Array<Scalars['ID']['output']>;
     /** Get a Product either by id or slug. If neither 'id' nor 'slug' is specified, an error will result. */
     product?: Maybe<Product>;
     /** Get a list of Products */
@@ -3694,7 +3696,16 @@ export type QueryPaymentArgs = {
     id: Scalars['ID']['input'];
 };
 
+export type QueryNewArrivalProductIdsArgs = {
+    sinceDays?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type QueryPopularProductIdsArgs = {
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QuerySaleProductIdsArgs = {
     take?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -4703,84 +4714,24 @@ export type ProductWidgetFieldsFragment = {
     facetValues: Array<{ id: string; name: string; facet: { code: string; name: string } }>;
 };
 
-export type NewArrivalsQueryVariables = Exact<{
-    since: Scalars['DateTime']['input'];
-}>;
+export type NewArrivalProductIdsQueryVariables = Exact<{ [key: string]: never }>;
 
-export type NewArrivalsQuery = {
-    products: {
-        items: Array<{
-            id: string;
-            name: string;
-            slug: string;
-            manufacturer?: { name?: string | null } | null;
-            variants: Array<{
-                id: string;
-                sku: string;
-                price: any;
-                customerPrice?: number | null;
-                compareAtPrice?: number | null;
-                currencyCode: CurrencyCode;
-                stockLevel: string;
-                discountTiers: Array<{
-                    percent: number;
-                    minWeightKg?: number | null;
-                    minAmount?: number | null;
-                }>;
-                customFields?: {
-                    unitName?: string | null;
-                    unitRatioToBase?: number | null;
-                    multiplicity?: number | null;
-                } | null;
-            }>;
-            facetValues: Array<{ id: string; name: string; facet: { code: string; name: string } }>;
-        }>;
-    };
-};
+export type NewArrivalProductIdsQuery = { newArrivalProductIds: Array<string> };
 
-export type SaleProductsQueryVariables = Exact<{ [key: string]: never }>;
+export type SaleProductIdsQueryVariables = Exact<{ [key: string]: never }>;
 
-export type SaleProductsQuery = {
-    products: {
-        items: Array<{
-            id: string;
-            name: string;
-            slug: string;
-            manufacturer?: { name?: string | null } | null;
-            variants: Array<{
-                id: string;
-                sku: string;
-                price: any;
-                customerPrice?: number | null;
-                compareAtPrice?: number | null;
-                currencyCode: CurrencyCode;
-                stockLevel: string;
-                discountTiers: Array<{
-                    percent: number;
-                    minWeightKg?: number | null;
-                    minAmount?: number | null;
-                }>;
-                customFields?: {
-                    unitName?: string | null;
-                    unitRatioToBase?: number | null;
-                    multiplicity?: number | null;
-                } | null;
-            }>;
-            facetValues: Array<{ id: string; name: string; facet: { code: string; name: string } }>;
-        }>;
-    };
-};
+export type SaleProductIdsQuery = { saleProductIds: Array<string> };
 
 export type PopularProductIdsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type PopularProductIdsQuery = { popularProductIds: Array<string> };
 
-export type PopularProductsQueryVariables = Exact<{
+export type WidgetProductsQueryVariables = Exact<{
     ids: Array<Scalars['String']['input']> | Scalars['String']['input'];
     take: Scalars['Int']['input'];
 }>;
 
-export type PopularProductsQuery = {
+export type WidgetProductsQuery = {
     products: {
         items: Array<{
             id: string;
@@ -6004,101 +5955,26 @@ export const PackagesOnlySalesDocument = new TypedDocumentString(`
   packagesOnlySales
 }
     `) as unknown as TypedDocumentString<PackagesOnlySalesQuery, PackagesOnlySalesQueryVariables>;
-export const NewArrivalsDocument = new TypedDocumentString(`
-    query NewArrivals($since: DateTime!) {
-  products(
-    options: {take: 12, sort: {createdAt: DESC}, filter: {createdAt: {after: $since}}}
-  ) {
-    items {
-      ...ProductWidgetFields
-    }
-  }
+export const NewArrivalProductIdsDocument = new TypedDocumentString(`
+    query NewArrivalProductIds {
+  newArrivalProductIds(take: 12, sinceDays: 7)
 }
-    fragment ProductWidgetFields on Product {
-  id
-  name
-  slug
-  manufacturer {
-    name
-  }
-  variants {
-    id
-    sku
-    price
-    customerPrice
-    compareAtPrice
-    discountTiers {
-      percent
-      minWeightKg
-      minAmount
-    }
-    currencyCode
-    stockLevel
-    customFields {
-      unitName
-      unitRatioToBase
-      multiplicity
-    }
-  }
-  facetValues {
-    id
-    name
-    facet {
-      code
-      name
-    }
-  }
-}`) as unknown as TypedDocumentString<NewArrivalsQuery, NewArrivalsQueryVariables>;
-export const SaleProductsDocument = new TypedDocumentString(`
-    query SaleProducts {
-  products(options: {take: 40, filter: {onSale: {eq: true}}}) {
-    items {
-      ...ProductWidgetFields
-    }
-  }
+    `) as unknown as TypedDocumentString<
+    NewArrivalProductIdsQuery,
+    NewArrivalProductIdsQueryVariables
+>;
+export const SaleProductIdsDocument = new TypedDocumentString(`
+    query SaleProductIds {
+  saleProductIds(take: 40)
 }
-    fragment ProductWidgetFields on Product {
-  id
-  name
-  slug
-  manufacturer {
-    name
-  }
-  variants {
-    id
-    sku
-    price
-    customerPrice
-    compareAtPrice
-    discountTiers {
-      percent
-      minWeightKg
-      minAmount
-    }
-    currencyCode
-    stockLevel
-    customFields {
-      unitName
-      unitRatioToBase
-      multiplicity
-    }
-  }
-  facetValues {
-    id
-    name
-    facet {
-      code
-      name
-    }
-  }
-}`) as unknown as TypedDocumentString<SaleProductsQuery, SaleProductsQueryVariables>;
+    `) as unknown as TypedDocumentString<SaleProductIdsQuery, SaleProductIdsQueryVariables>;
 export const PopularProductIdsDocument = new TypedDocumentString(`
     query PopularProductIds {
   popularProductIds(take: 12)
 }
     `) as unknown as TypedDocumentString<PopularProductIdsQuery, PopularProductIdsQueryVariables>;
-export const PopularProductsDocument = new TypedDocumentString(`
-    query PopularProducts($ids: [String!]!, $take: Int!) {
+export const WidgetProductsDocument = new TypedDocumentString(`
+    query WidgetProducts($ids: [String!]!, $take: Int!) {
   products(options: {take: $take, filter: {id: {in: $ids}}}) {
     items {
       ...ProductWidgetFields
@@ -6139,7 +6015,7 @@ export const PopularProductsDocument = new TypedDocumentString(`
       name
     }
   }
-}`) as unknown as TypedDocumentString<PopularProductsQuery, PopularProductsQueryVariables>;
+}`) as unknown as TypedDocumentString<WidgetProductsQuery, WidgetProductsQueryVariables>;
 export const MyContractsDocument = new TypedDocumentString(`
     query MyContracts {
   myContracts {

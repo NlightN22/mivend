@@ -22,6 +22,7 @@ import { resolveVatCode } from '../vat-code-resolver';
 import { resolveCategoryFacetValueId } from '../category-resolver';
 import {
     extractBarcodes,
+    extractErpCreatedAt,
     extractManufacturerCodes,
     extractOptionalString,
     extractManufacturerId,
@@ -141,8 +142,10 @@ export class ProductStreamHandler implements InboundStreamHandler {
         const manufacturerCodeRows = extractManufacturerCodes(payload);
         const manufacturerPartNumber = extractOptionalString(payload, 'manufacturerPartNumber');
         const fullName = extractOptionalString(payload, 'fullName');
+        const erpCreatedAt = extractErpCreatedAt(payload);
         const optionalCustomFields = {
             ...(manufacturerId ? { manufacturerId } : {}),
+            ...(erpCreatedAt ? { erpCreatedAt } : {}),
             ...(manufacturerPartNumber ? { manufacturerPartNumber } : {}),
             ...(fullName ? { fullName } : {}),
         };
@@ -170,6 +173,7 @@ export class ProductStreamHandler implements InboundStreamHandler {
                     ...optionalCustomFields,
                     manufacturerPartNumber: manufacturerPartNumber ?? null,
                     fullName: fullName ?? null,
+                    erpCreatedAt: erpCreatedAt ?? null,
                 },
             });
             const variants = await this.productVariantService.getVariantsByProductId(

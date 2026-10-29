@@ -1,3 +1,5 @@
+import { parseTimestamp } from './handlers/proto-json-fields';
+
 // Pure extraction of ProductChanged's remaining Tier 2 fields (issue #116) that don't need the
 // characteristic-map treatment: the manufacturer GUID, barcodes, and manufacturer_codes.
 
@@ -53,4 +55,14 @@ export function extractManufacturerCodes(payload: Record<string, unknown>): Manu
             manufacturer: typeof entry.manufacturer === 'string' ? entry.manufacturer : '',
         }))
         .filter(row => row.code !== '');
+}
+
+// Catalog attribute `ДатаСоздания` from ProductChanged.source_fields: only a date value counts,
+// any other kind or an absent key means "no ERP creation date".
+export function extractErpCreatedAt(payload: Record<string, unknown>): Date | null {
+    const fields = payload.sourceFields;
+    if (typeof fields !== 'object' || fields === null) return null;
+    const field = (fields as Record<string, unknown>)['ДатаСоздания'];
+    if (typeof field !== 'object' || field === null) return null;
+    return parseTimestamp((field as Record<string, unknown>).dateValue);
 }

@@ -351,6 +351,13 @@ export const config: VendureConfig = {
                 label: [{ languageCode: LanguageCode.en, value: 'On Sale' }],
             },
             {
+                name: 'erpCreatedAt',
+                type: 'datetime',
+                nullable: true,
+                public: false,
+                label: [{ languageCode: LanguageCode.en, value: 'ERP creation date' }],
+            },
+            {
                 name: 'manufacturerPartNumber',
                 type: 'string',
                 nullable: true,

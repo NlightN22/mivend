@@ -8,15 +8,18 @@
     "scripts": {
         "build": "tsc",
         "dev": "tsc --watch",
-        "test": "vitest run"
+        "test": "vitest run",
+        "test:integration": "vitest run --config vitest.integration.config.ts"
     },
     "dependencies": {
+        "@mivend/plugin-reservation": "workspace:*",
         "@nestjs/common": "^11.0.0",
         "@nestjs/core": "^11.0.0",
         "@nestjs/graphql": "^13.0.0",
         "@vendure/core": "^3.7.3",
         "graphql": "^16.0.0",
         "graphql-tag": "^2.12.6",
+        "shared": "workspace:*",
         "typeorm": "^0.3.20"
     },
     "devDependencies": {

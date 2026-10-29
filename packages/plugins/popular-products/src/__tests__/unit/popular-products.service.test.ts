@@ -1,10 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { PopularProductsService } from '../../popular-products.service';
+import { StockScopedIdsService } from '../../stock-scoped-ids.service';
+
+vi.mock('@mivend/plugin-reservation', () => ({
+    StockLevelService: class {},
+    andProductInStock: (query: { andWhere: (sql: string, p: unknown) => unknown }, ids: string[]) =>
+        query.andWhere('IN_STOCK', { warehouseErpIds: ids }),
+}));
 
 const mockQb = {
     innerJoin: vi.fn(),
     where: vi.fn(),
+    andWhere: vi.fn(),
     select: vi.fn(),
     addSelect: vi.fn(),
     groupBy: vi.fn(),
@@ -14,6 +22,7 @@ const mockQb = {
 };
 mockQb.innerJoin.mockReturnValue(mockQb);
 mockQb.where.mockReturnValue(mockQb);
+mockQb.andWhere.mockReturnValue(mockQb);
 mockQb.select.mockReturnValue(mockQb);
 mockQb.addSelect.mockReturnValue(mockQb);
 mockQb.groupBy.mockReturnValue(mockQb);
@@ -24,6 +33,8 @@ const mockRepo = { createQueryBuilder: vi.fn(() => mockQb) };
 const mockConnection = { getRepository: vi.fn(() => mockRepo) };
 const mockCtx = {} as unknown as RequestContext;
 
+const viewerWarehouses = vi.fn();
+
 describe('PopularProductsService', () => {
     let service: PopularProductsService;
 
@@ -31,13 +42,20 @@ describe('PopularProductsService', () => {
         vi.clearAllMocks();
         mockQb.innerJoin.mockReturnValue(mockQb);
         mockQb.where.mockReturnValue(mockQb);
+        mockQb.andWhere.mockReturnValue(mockQb);
         mockQb.select.mockReturnValue(mockQb);
         mockQb.addSelect.mockReturnValue(mockQb);
         mockQb.groupBy.mockReturnValue(mockQb);
         mockQb.orderBy.mockReturnValue(mockQb);
         mockQb.limit.mockReturnValue(mockQb);
         mockRepo.createQueryBuilder.mockReturnValue(mockQb);
-        service = new PopularProductsService(mockConnection as unknown as TransactionalConnection);
+        viewerWarehouses.mockResolvedValue(['wh-1']);
+        service = new PopularProductsService(
+            mockConnection as unknown as TransactionalConnection,
+            new StockScopedIdsService({
+                getViewerWarehouseErpIds: viewerWarehouses,
+            } as never),
+        );
     });
 
     it('excludes AddingItems and Cancelled orders from the ranking', async () => {
@@ -60,18 +78,30 @@ describe('PopularProductsService', () => {
     it('defaults to 12 when no take is given', async () => {
         mockQb.getRawMany.mockResolvedValue([]);
         await service.getPopularProductIds(mockCtx);
-        expect(mockQb.limit).toHaveBeenCalledWith(12);
+        expect(mockQb.limit).toHaveBeenCalledWith(36);
     });
 
     it('caps take at 50 even if a larger value is requested', async () => {
         mockQb.getRawMany.mockResolvedValue([]);
         await service.getPopularProductIds(mockCtx, 500);
-        expect(mockQb.limit).toHaveBeenCalledWith(50);
+        expect(mockQb.limit).toHaveBeenCalledWith(150);
     });
 
     it('passes through a valid take within bounds', async () => {
         mockQb.getRawMany.mockResolvedValue([]);
         await service.getPopularProductIds(mockCtx, 5);
-        expect(mockQb.limit).toHaveBeenCalledWith(5);
+        expect(mockQb.limit).toHaveBeenCalledWith(15);
+    });
+
+    it('restricts the ranking to the viewer warehouses before the limit', async () => {
+        mockQb.getRawMany.mockResolvedValue([]);
+        await service.getPopularProductIds(mockCtx);
+        expect(mockQb.andWhere).toHaveBeenCalledWith('IN_STOCK', { warehouseErpIds: ['wh-1'] });
+    });
+
+    it('returns nothing without querying when the viewer has no warehouses', async () => {
+        viewerWarehouses.mockResolvedValue([]);
+        expect(await service.getPopularProductIds(mockCtx)).toEqual([]);
+        expect(mockQb.getRawMany).not.toHaveBeenCalled();
     });
 });

@@ -116,7 +116,7 @@ envelope `entity_id` = Kafka key (`productId:priceTypeId`, `productId:warehouseI
 | `counterparty` | legalAddress, factualAddress, phone, officialEmail | inn, group, department, manager, ERP reference ids |
 | `point-of-sale` | address, latitude, longitude, contactPhone (the existing primary contact's phone) | name, counterparty, active flag |
 | `organization` | phone | legal requisites (inn, kpp, ogrn, address, bank): proforma invoices need them, an empty one never wipes; signatory list (an empty list keeps it) |
-| `product` | manufacturerPartNumber, fullName; barcodes, characteristics, manufacturer codes were already full-replace | manufacturer reference |
+| `product` | manufacturerPartNumber, fullName, `erpCreatedAt` (`source_fields["ДатаСоздания"]` date value only, other kinds ignored; absent clears it; defines "new" as `COALESCE(erpCreatedAt, createdAt)` for the New arrivals widget, #298); barcodes, characteristics, manufacturer codes were already full-replace | manufacturer reference |
 | contact person | no consumer (`counterparty-contact` is ignored) | n/a |
 
 ## Non-trivial design decisions (so they don't need re-explaining next session)

@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { create, toJson } from '@bufbuild/protobuf';
+import { timestampFromDate } from '@bufbuild/protobuf/wkt';
+import { ProductChangedSchema, SourceFieldValueSchema } from '@nlightn22/event-contracts';
 
 import {
     extractBarcodes,
+    extractErpCreatedAt,
     extractManufacturerCodes,
     extractManufacturerId,
 } from '../../product-ancillary-fields';
@@ -57,5 +61,36 @@ describe('extractManufacturerCodes', () => {
         });
 
         expect(rows).toEqual([]);
+    });
+});
+
+describe('extractErpCreatedAt', () => {
+    const field = (value: unknown) => ({ sourceFields: { ДатаСоздания: value } });
+
+    it('reads the date value from the wire JSON of a real ProductChanged', () => {
+        const message = create(ProductChangedSchema, {
+            sourceFields: {
+                ДатаСоздания: create(SourceFieldValueSchema, {
+                    value: {
+                        case: 'dateValue',
+                        value: timestampFromDate(new Date('2013-09-12T02:25:10Z')),
+                    },
+                }),
+            },
+        });
+        const payload = toJson(ProductChangedSchema, message) as Record<string, unknown>;
+
+        expect(extractErpCreatedAt(payload)?.toISOString()).toBe('2013-09-12T02:25:10.000Z');
+    });
+
+    it('ignores any other value kind', () => {
+        expect(extractErpCreatedAt(field({ stringValue: '2013-09-12T02:25:10Z' }))).toBeNull();
+        expect(extractErpCreatedAt(field({ numberValue: 5 }))).toBeNull();
+    });
+
+    it('is null when the key, the map or a parseable date is missing', () => {
+        expect(extractErpCreatedAt({})).toBeNull();
+        expect(extractErpCreatedAt({ sourceFields: {} })).toBeNull();
+        expect(extractErpCreatedAt(field({ dateValue: 'not a date' }))).toBeNull();
     });
 });

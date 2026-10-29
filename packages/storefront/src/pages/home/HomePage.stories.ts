@@ -28,10 +28,13 @@ export const Default: Story = {
             registerMock('CatalogFacets', () => ({
                 search: { facetValues: [] },
             }));
-            registerMock('NewArrivals', () => ({ products: { items: [buildWidgetProduct()] } }));
-            registerMock('SaleProducts', () => ({
+            registerMock('NewArrivalProductIds', () => ({ newArrivalProductIds: ['prod-1'] }));
+            registerMock('SaleProductIds', () => ({ saleProductIds: ['prod-2'] }));
+            registerMock('PopularProductIds', () => ({ popularProductIds: ['prod-1'] }));
+            registerMock('WidgetProducts', () => ({
                 products: {
                     items: [
+                        buildWidgetProduct(),
                         buildWidgetProduct({
                             id: 'prod-2',
                             name: 'Oil filter',
@@ -39,10 +42,6 @@ export const Default: Story = {
                         }),
                     ],
                 },
-            }));
-            registerMock('PopularProductIds', () => ({ popularProductIds: ['prod-1'] }));
-            registerMock('PopularProducts', () => ({
-                products: { items: [buildWidgetProduct()] },
             }));
             await router.push('/');
         },
