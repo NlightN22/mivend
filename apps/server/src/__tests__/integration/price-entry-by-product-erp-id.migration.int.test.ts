@@ -35,12 +35,16 @@ beforeAll(async () => {
         `CREATE UNIQUE INDEX "IDX_94d191d8ddc46b70764a3ab283" ON "product_variant_price_entry" ("variantId", "priceTypeCode")`,
     );
     await dataSource.query(
-        `INSERT INTO product ("customFieldsExternalid") VALUES ('erp-1'), (NULL), ('erp-3')`,
+        `INSERT INTO product ("customFieldsExternalid") VALUES ('erp-1'), (NULL), ('erp-3'), ('erp-5')`,
     );
-    await dataSource.query(`INSERT INTO product_variant ("productId") VALUES (1), (2), (3), (3)`);
-    await dataSource.query(`INSERT INTO product_variant_price_entry ("variantId", "priceTypeCode", price) VALUES
-        ('1', 'RETAIL', 100), ('1', 'WHOLESALE', 90), ('2', 'RETAIL', 50),
-        ('3', 'RETAIL', 70), ('4', 'RETAIL', 75), ('99', 'RETAIL', 1)`);
+    await dataSource.query(
+        `INSERT INTO product_variant ("productId") VALUES (1), (2), (3), (3), (4), (4)`,
+    );
+    // erp-3: the lower id carries the newer updatedAt and must win; erp-5: equal updatedAt, higher id wins.
+    await dataSource.query(`INSERT INTO product_variant_price_entry ("variantId", "priceTypeCode", price, "updatedAt") VALUES
+        ('1', 'RETAIL', 100, now()), ('1', 'WHOLESALE', 90, now()), ('2', 'RETAIL', 50, now()),
+        ('3', 'RETAIL', 70, '2026-10-02'), ('4', 'RETAIL', 75, '2026-10-01'), ('99', 'RETAIL', 1, now()),
+        ('5', 'RETAIL', 60, '2026-10-03'), ('6', 'RETAIL', 65, '2026-10-03')`);
 });
 
 afterAll(async () => {
@@ -80,7 +84,8 @@ describe('price entry by product ERP id migration (integration, real Postgres)',
         expect(rows).toEqual([
             { productExternalId: 'erp-1', priceTypeCode: 'RETAIL', price: '100' },
             { productExternalId: 'erp-1', priceTypeCode: 'WHOLESALE', price: '90' },
-            { productExternalId: 'erp-3', priceTypeCode: 'RETAIL', price: '75' },
+            { productExternalId: 'erp-3', priceTypeCode: 'RETAIL', price: '70' },
+            { productExternalId: 'erp-5', priceTypeCode: 'RETAIL', price: '65' },
         ]);
         expect(await columns()).not.toContain('variantId');
         expect(await indexes()).toContain('IDX_ddee21f1a63880aa171f305bc5');
@@ -106,7 +111,8 @@ describe('price entry by product ERP id migration (integration, real Postgres)',
         expect(rows).toEqual([
             { variantId: '1', priceTypeCode: 'RETAIL', price: '100' },
             { variantId: '1', priceTypeCode: 'WHOLESALE', price: '90' },
-            { variantId: '3', priceTypeCode: 'RETAIL', price: '75' },
+            { variantId: '3', priceTypeCode: 'RETAIL', price: '70' },
+            { variantId: '5', priceTypeCode: 'RETAIL', price: '65' },
         ]);
         expect(await columns()).not.toContain('productExternalId');
         expect(await indexes()).toContain('IDX_94d191d8ddc46b70764a3ab283');

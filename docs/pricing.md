@@ -211,6 +211,22 @@ was replaced).
 
 ---
 
+## Price entries are keyed by the product ERP id (#297)
+
+An entry is stored per product ERP id (`product.customFieldsExternalid`) and price type code, never per variant. A
+price event is stored the moment it arrives, even before its product; the variant resolves it at read time through
+variant -> product -> ERP id. Consequences:
+
+- All variants of one product share one price. The admin mutation `upsertPriceEntry(variantId, ...)` and
+  `bulkUpsertPriceEntries` therefore price the whole product; a variant whose product has no ERP id is rejected
+  (`upsertPriceEntry`) or skipped (`bulk`). No UI writes entries; the manager catalog only reads them
+  (`priceEntriesForVariants`), and the ERP models one variant per product, so no screen expects per-variant prices.
+- A price stored for a product that never arrives stays as an orphan row. This is intended (it costs nothing and
+  resolves if the product shows up later); `reconciliation-local-counts` counts the table as a whole, so orphans
+  are included in the local count.
+- `getForVariants` pins per-variant index lookups for up to 500 ids (`LATERAL ... OFFSET 0`) and uses a plain join
+  above that; see "Pricing benchmark" in `testing-strategy.md` for the plans and numbers.
+
 ## ERP import
 
 Discount rules are pushed the same way as everything else — via the `erp-import`

@@ -212,6 +212,9 @@ export const adminApiSchema: DocumentNode = gql`
     }
 
     extend type Mutation {
+        """
+        Prices the variant's whole product: the entry is keyed by the product ERP id, so every variant of that product gets the price.
+        """
         upsertPriceEntry(variantId: ID!, priceTypeCode: String!, price: Int!): PriceEntry!
         bulkUpsertPriceEntries(entries: [PriceEntryInput!]!): Int!
         upsertDiscountRule(input: DiscountRuleInput!): DiscountRule!

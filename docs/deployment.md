@@ -157,3 +157,36 @@ the handler runs again. The stored version is reset to `0`, so any delivered ver
 This path is covered by `setup-documents-inbox.int.test.ts`; that Integration Service issues a new event id for a replay is
 documented behaviour, not asserted by mivend tests. Verify afterwards that the first query returns 0 and that no row is left
 in `awaiting-redelivery`; rows that stay there were not resent or were rejected for another reason (`inactiveReason`).
+
+## Release step: price entries keyed by product ERP id (#297)
+
+Migration `1791540000000` re-keys `product_variant_price_entry` from the variant id to the product ERP id. Before the
+release, record the counts:
+
+```sql
+SELECT count(*) FROM product_variant_price_entry;
+-- rows the migration will delete: variant gone, or its product has no ERP id
+SELECT count(*) FROM product_variant_price_entry e
+  LEFT JOIN product_variant pv ON pv.id::varchar = e."variantId"
+  LEFT JOIN product p ON p.id = pv."productId"
+ WHERE p."customFieldsExternalid" IS NULL;
+-- failed price events waiting for replay
+SELECT count(*) FROM integration_inbox_event WHERE stream = 'price' AND status = 'failed';
+```
+
+Order: **migrate first, then replay the failed price events** in batches (the new code stores a price without its
+product, so the replay no longer fails on a missing product):
+
+1. Deploy and let the migration run. Where two variants of one product both had an entry for a price type, the migration
+   keeps the row with the newest `updatedAt` (higher id on a tie). Check that the new entry count equals the old count
+   minus the deleted rows minus the duplicates.
+2. Re-queue the failed `price` inbox rows from their stored payloads through the existing replay path, in batches (a few
+   thousand rows at a time), waiting for the inbox to drain between batches. Price-type events must already be processed;
+   a row whose price type has not arrived retries on its own.
+3. A remainder that stays `failed` after a full pass is not a missing product any more: read its `last_error`; usually the
+   price type is unknown (resend the price-type stream) or the payload is malformed. Do not re-queue it in a loop.
+4. Verify: failed price rows are 0 (or explained), and the entry count is about products-with-prices x price types.
+   Orphan entries (a price for a product the ERP never sends) stay and are counted; that is intended.
+
+`down` is lossy: it restores `variantId` from the lowest variant id of each product, so all but the lowest variant of a
+multi-variant product lose their entry. The ERP models one variant per product, so this is normally a no-op.

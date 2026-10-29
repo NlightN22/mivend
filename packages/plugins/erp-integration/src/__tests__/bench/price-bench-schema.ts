@@ -1,8 +1,8 @@
 import type { DataSource } from 'typeorm';
 
-export const PRODUCT_COUNT = 20_000;
+export const PRODUCT_COUNT = 100_000;
 
-// Synthetic catalog: one variant per product, two price types priced for every product.
+// Synthetic catalog: one variant per product, two price types priced for every product. Price-type lookup is stubbed (not part of ingest cost).
 export async function createBenchTables(ds: DataSource): Promise<void> {
     await ds.query(
         `CREATE TABLE product (id serial PRIMARY KEY, "customFieldsExternalid" varchar)`,

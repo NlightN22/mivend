@@ -373,12 +373,40 @@ A change is not done until:
 ## Pricing benchmark
 
 `make bench-pricing` (`packages/plugins/erp-integration/src/__tests__/bench/`) builds a synthetic catalog
-(20,000 products, two price types) in a throwaway schema of the test database and times: a catalog page of
+(100,000 products, two price types) in a throwaway schema of the test database and times: a catalog page of
 100 variants (per-variant and batch lookups), the cart/order price preload for 60 lines, a 5,000-variant bulk
-price read, and `PriceStreamHandler` ingest of 2,000 events (half inserts, half updates). Set `BENCH_OUT=<file>`
+price read, and `PriceStreamHandler` ingest of 2,000 events (half inserts, half updates). The price-type lookup
+(`findPriceTypeByExternalId`) is stubbed, so ingest numbers exclude the real price-type query. Set `BENCH_OUT=<file>`
 to append the results. Use it before and after any change to how price entries are stored or read; a read path
 may not be slower than the baseline beyond noise (compare medians and minimums of back-to-back runs, the host
 is shared), and ingest may not be slower. It never touches a contour database and is not part of CI.
+
+Result for #297 (keyed by product ERP id), 100,000 products, back-to-back runs, median / min ms (events/s for ingest):
+
+| Path | Before (variant key) | After (product ERP id key) |
+| --- | --- | --- |
+| Catalog page, 100 variants, per-variant lookups | 59-60 / 38-40 | 48-60 / 36 |
+| Catalog page, 100 variants, batch | 4.6-4.7 / 2.3-3.0 | 4.6-5.7 / 2.9 |
+| Cart/order preload, 60 lines | 6.6-8.5 / 2.6-4.8 | 5.1-7.2 / 3.3-4.9 |
+| Bulk read, 5,000 variants | 73-77 / 58-68 | 78-83 / 67-70 |
+| Ingest, 2,000 events | 67-73 events/s | 222-281 events/s |
+
+`getForVariants` has two shapes (`PER_VARIANT_LOOKUP_MAX` = 500). At 100,000 products both plan as nested loops for
+100 ids (`EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF)`, execution 1.3 ms with `LATERAL ... OFFSET 0`, 0.9 ms plain):
+
+```text
+=== LATERAL OFFSET 0, 100 ids          === plain join, 100 ids
+Nested Loop                            Nested Loop
+  -> Nested Loop                         -> Nested Loop
+       -> Index Scan product_variant_pkey     -> Index Scan product_variant_pkey
+       -> Index Scan product_pkey (x100)      -> Index Scan product_pkey (x100)
+  -> Memoize                             -> Index Scan price_entry (productExternalId, priceTypeCode) (x100)
+       -> Index Scan price_entry (x100)
+```
+
+For 5,000 ids the `LATERAL` shape stays a nested loop (77 ms: 5,000 `product_pkey` probes), the plain join becomes a hash
+join with a sequential scan of `product` (58 ms). On a 20,000-product table the planner chose the hash join even for
+100 ids (6 ms against 1.4 ms), which is why the small-list shape pins the lookups; at 100,000 the pin is neutral.
 
 ## Diagnosing failing tests
 

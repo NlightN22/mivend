@@ -18,7 +18,7 @@ export class PriceEntryByProductErpId1791540000000 implements MigrationInterface
         );
         await queryRunner.query(
             `DELETE FROM "product_variant_price_entry" a USING "product_variant_price_entry" b
-              WHERE a."productExternalId" = b."productExternalId" AND a."priceTypeCode" = b."priceTypeCode" AND a."id" < b."id"`,
+              WHERE a."productExternalId" = b."productExternalId" AND a."priceTypeCode" = b."priceTypeCode" AND (a."updatedAt" < b."updatedAt" OR (a."updatedAt" = b."updatedAt" AND a."id" < b."id"))`,
         );
         await queryRunner.query(
             `ALTER TABLE "product_variant_price_entry" ALTER COLUMN "productExternalId" SET NOT NULL`,
