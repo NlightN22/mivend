@@ -11,7 +11,7 @@ export
 
 .PHONY: e2e-group e2e-integration-group up up-rebuild down logs ps restart \
         build lint fmt ci \
-        test test-int test-access test-e2e mutation-pilot \
+        test test-int test-access test-e2e bench-pricing mutation-pilot \
         e2e-dev e2e-stack-build e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
         docker-build docker-push \
         preview-build preview-up preview-down \
@@ -258,6 +258,12 @@ test:
 
 test-int: up
 	pnpm --filter "{packages/**}" --filter server --no-bail test:integration
+
+# Price read paths and price-event ingest on synthetic data in a throwaway schema; manual, not in CI.
+# Results are also appended to BENCH_OUT when set (docs/testing-strategy.md "Pricing benchmark").
+bench-pricing: up
+	pnpm build:plugins
+	pnpm --filter @mivend/plugin-erp-integration bench:pricing
 
 # Role x entity API matrix against a throwaway server, database and RabbitMQ vhost, about 4 min (docs/testing-strategy.md).
 test-access: up

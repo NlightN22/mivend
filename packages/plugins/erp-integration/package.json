@@ -8,7 +8,8 @@
     "scripts": {
         "build": "tsc",
         "dev": "tsc --watch",
-        "test:integration": "vitest run --config vitest.integration.config.ts"
+        "test:integration": "vitest run --config vitest.integration.config.ts",
+        "bench:pricing": "vitest run --config vitest.bench.config.ts"
     },
     "peerDependencies": {
         "@vendure/core": "^3.7.3"
