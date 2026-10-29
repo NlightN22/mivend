@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { RequestContext } from '@vendure/core';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { PriceEntryService } from '@mivend/plugin-price-entry';
-import { ctxQuery } from 'shared';
 
 import { MissingDependencyError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
@@ -15,7 +14,6 @@ const loggerCtx = 'IntegrationPriceHandler';
 @Injectable()
 export class PriceStreamHandler implements InboundStreamHandler {
     constructor(
-        private readonly connection: TransactionalConnection,
         private readonly customerPricingService: CustomerPricingService,
         private readonly priceEntryService: PriceEntryService,
     ) {}
@@ -52,31 +50,19 @@ export class PriceStreamHandler implements InboundStreamHandler {
             );
         }
 
-        const [variant] = await ctxQuery<Array<{ id: string }>>(
-            this.connection,
-            ctx,
-            `SELECT pv.id FROM product_variant pv
-               INNER JOIN product p ON p.id = pv."productId"
-              WHERE p."customFieldsExternalid" = $1`,
-            [productId],
-        );
-
-        if (!variant) {
-            if (removal) return inboundNoop(`price ${entityId}: tombstone for unknown product`);
-            throw new MissingDependencyError(
-                `price ${entityId}: variant not found for productId=${productId}`,
-            );
-        }
-
         if (removal) {
-            const removed = await this.priceEntryService.remove(ctx, variant.id, priceType.code);
+            const removed = await this.priceEntryService.removeByProduct(
+                ctx,
+                productId,
+                priceType.code,
+            );
             return removed
                 ? inboundApplied()
                 : inboundNoop(`price ${entityId}: tombstone, no stored price`);
         }
 
         const priceInCents = Math.round(value * 100);
-        await this.priceEntryService.upsert(ctx, variant.id, priceType.code, priceInCents);
+        await this.priceEntryService.upsertByProduct(ctx, productId, priceType.code, priceInCents);
         Logger.verbose(
             `Upserted price productId=${productId} priceType=${priceType.code} value=${value}`,
             loggerCtx,

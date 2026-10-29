@@ -2,37 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RequestContext, TransactionalConnection } from '@vendure/core';
 import { PriceEntryService } from '../../price-entry.service';
 
-const mockRepo = {
-    findOne: vi.fn(),
-    create: vi.fn(),
-    save: vi.fn(),
-    createQueryBuilder: vi.fn(),
-};
-
-const mockQb = {
-    insert: vi.fn(),
-    into: vi.fn(),
-    values: vi.fn(),
-    orUpdate: vi.fn(),
-    execute: vi.fn(),
-    where: vi.fn(),
-    andWhere: vi.fn(),
-    getMany: vi.fn(),
-};
-// chain returns this except execute/getMany
-mockQb.insert.mockReturnValue(mockQb);
-mockQb.into.mockReturnValue(mockQb);
-mockQb.values.mockReturnValue(mockQb);
-mockQb.orUpdate.mockReturnValue(mockQb);
-mockQb.where.mockReturnValue(mockQb);
-mockQb.andWhere.mockReturnValue(mockQb);
-
 const mockRawQuery = vi.fn();
 
 const mockConnection = {
-    getRepository: vi.fn((_ctx: unknown, entity: unknown) =>
-        entity === 'Channel' ? { query: mockRawQuery } : mockRepo,
-    ),
+    getRepository: vi.fn(() => ({ query: mockRawQuery })),
 };
 
 const mockCtx = {} as unknown as RequestContext;
@@ -42,85 +15,87 @@ describe('PriceEntryService', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockRepo.createQueryBuilder.mockReturnValue(mockQb);
         service = new PriceEntryService(mockConnection as unknown as TransactionalConnection);
     });
 
-    describe('upsert', () => {
-        it('creates new record when none exists', async () => {
-            mockRepo.findOne.mockResolvedValue(null);
-            const created = { variantId: 'v1', priceTypeCode: 'RETAIL', price: 1000 };
-            mockRepo.create.mockReturnValue(created);
-            mockRepo.save.mockResolvedValue(created);
+    describe('upsert (variant API)', () => {
+        it('writes one atomic upsert keyed by the variant product ERP id and returns the entry', async () => {
+            mockRawQuery.mockResolvedValue([{ id: 7 }]);
 
-            const result = await service.upsert(mockCtx, 'v1', 'RETAIL', 1000);
+            const result = await service.upsert(mockCtx, '12', 'RETAIL', 1000);
 
-            expect(mockRepo.create).toHaveBeenCalledWith({
-                variantId: 'v1',
+            const [sql, params] = mockRawQuery.mock.calls[0];
+            expect(sql).toContain('ON CONFLICT ("productExternalId", "priceTypeCode")');
+            expect(params).toEqual(['12', 'RETAIL', 1000]);
+            expect(result).toEqual({
+                id: '7',
+                variantId: '12',
                 priceTypeCode: 'RETAIL',
                 price: 1000,
             });
-            expect(mockRepo.save).toHaveBeenCalledWith(created);
-            expect(result).toEqual(created);
         });
 
-        it('updates price when record already exists', async () => {
-            const existing = { variantId: 'v1', priceTypeCode: 'RETAIL', price: 500 };
-            mockRepo.findOne.mockResolvedValue(existing);
-            mockRepo.save.mockResolvedValue({ ...existing, price: 1500 });
+        it('rejects a variant whose product has no ERP id', async () => {
+            mockRawQuery.mockResolvedValue([]);
 
-            await service.upsert(mockCtx, 'v1', 'RETAIL', 1500);
+            await expect(service.upsert(mockCtx, '12', 'RETAIL', 1)).rejects.toThrow(
+                'has no product ERP id',
+            );
+        });
+    });
 
-            expect(existing.price).toBe(1500);
-            expect(mockRepo.create).not.toHaveBeenCalled();
-            expect(mockRepo.save).toHaveBeenCalledWith(existing);
+    describe('upsertByProduct / removeByProduct', () => {
+        it('upserts by product ERP id without touching product tables', async () => {
+            mockRawQuery.mockResolvedValue([]);
+
+            await service.upsertByProduct(mockCtx, 'erp-1', 'RETAIL', 500);
+
+            const [sql, params] = mockRawQuery.mock.calls[0];
+            expect(sql).not.toContain('product_variant ');
+            expect(params).toEqual(['erp-1', 'RETAIL', 500]);
+        });
+
+        it('reports whether a stored price was removed', async () => {
+            mockRawQuery.mockResolvedValueOnce([{ n: 1 }]).mockResolvedValueOnce([{ n: 0 }]);
+
+            expect(await service.removeByProduct(mockCtx, 'erp-1', 'RETAIL')).toBe(true);
+            expect(await service.removeByProduct(mockCtx, 'erp-1', 'RETAIL')).toBe(false);
         });
     });
 
     describe('bulkUpsert', () => {
         it('returns 0 and skips DB for empty array', async () => {
-            const result = await service.bulkUpsert(mockCtx, []);
-
-            expect(result).toBe(0);
-            expect(mockRepo.createQueryBuilder).not.toHaveBeenCalled();
+            expect(await service.bulkUpsert(mockCtx, [])).toBe(0);
+            expect(mockRawQuery).not.toHaveBeenCalled();
         });
 
-        it('executes insert+orUpdate and returns entries count', async () => {
-            mockQb.execute.mockResolvedValue({});
+        it('returns the number of stored entries', async () => {
+            mockRawQuery.mockResolvedValue([{ id: 1 }, { id: 2 }]);
             const entries = [
-                { variantId: 'v1', priceTypeCode: 'RETAIL', price: 100 },
-                { variantId: 'v2', priceTypeCode: 'RETAIL', price: 200 },
+                { variantId: '1', priceTypeCode: 'RETAIL', price: 100 },
+                { variantId: '2', priceTypeCode: 'RETAIL', price: 200 },
             ];
 
-            const result = await service.bulkUpsert(mockCtx, entries);
-
-            expect(mockRepo.createQueryBuilder).toHaveBeenCalled();
-            expect(mockQb.insert).toHaveBeenCalled();
-            expect(mockQb.orUpdate).toHaveBeenCalledWith(['price'], ['variantId', 'priceTypeCode']);
-            expect(mockQb.execute).toHaveBeenCalled();
-            expect(result).toBe(2);
+            expect(await service.bulkUpsert(mockCtx, entries)).toBe(2);
+            expect(mockRawQuery.mock.calls[0][1]).toEqual([
+                ['1', '2'],
+                ['RETAIL', 'RETAIL'],
+                [100, 200],
+            ]);
         });
     });
 
     describe('getForVariant', () => {
-        it('returns numeric price when record found', async () => {
-            mockRepo.findOne.mockResolvedValue({
-                variantId: 'v1',
-                priceTypeCode: 'RETAIL',
-                price: '2500',
-            });
+        it('returns numeric price when found', async () => {
+            mockRawQuery.mockResolvedValue([{ price: '2500' }]);
 
-            const result = await service.getForVariant(mockCtx, 'v1', 'RETAIL');
-
-            expect(result).toBe(2500);
+            expect(await service.getForVariant(mockCtx, '1', 'RETAIL')).toBe(2500);
         });
 
-        it('returns null when record not found', async () => {
-            mockRepo.findOne.mockResolvedValue(null);
+        it('returns null when not found', async () => {
+            mockRawQuery.mockResolvedValue([]);
 
-            const result = await service.getForVariant(mockCtx, 'v1', 'RETAIL');
-
-            expect(result).toBeNull();
+            expect(await service.getForVariant(mockCtx, '1', 'RETAIL')).toBeNull();
         });
     });
 
@@ -129,19 +104,19 @@ describe('PriceEntryService', () => {
             const result = await service.getForVariants(mockCtx, [], 'RETAIL');
 
             expect(result.size).toBe(0);
-            expect(mockRepo.createQueryBuilder).not.toHaveBeenCalled();
+            expect(mockRawQuery).not.toHaveBeenCalled();
         });
 
         it('returns Map of variantId to price', async () => {
-            mockQb.getMany.mockResolvedValue([
-                { variantId: 'v1', price: '100' },
-                { variantId: 'v2', price: '200' },
+            mockRawQuery.mockResolvedValue([
+                { variantId: 1, price: '100' },
+                { variantId: 2, price: '200' },
             ]);
 
-            const result = await service.getForVariants(mockCtx, ['v1', 'v2'], 'RETAIL');
+            const result = await service.getForVariants(mockCtx, ['1', '2'], 'RETAIL');
 
-            expect(result.get('v1')).toBe(100);
-            expect(result.get('v2')).toBe(200);
+            expect(result.get('1')).toBe(100);
+            expect(result.get('2')).toBe(200);
             expect(result.size).toBe(2);
         });
     });

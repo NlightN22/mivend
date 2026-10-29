@@ -2,8 +2,11 @@ import { ApiProperty } from '@nestjs/swagger';
 
 // Mirrors PriceRecord in ../../types.ts.
 export class PriceRecordDto {
-    @ApiProperty({ description: 'Must match an already-imported Product/ProductVariant SKU.' })
-    sku!: string;
+    @ApiProperty({
+        description:
+            'ERP id of the product (Product externalId); the product need not be imported yet.',
+    })
+    productExternalId!: string;
 
     @ApiProperty({
         description:

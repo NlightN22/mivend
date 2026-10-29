@@ -195,7 +195,10 @@ describe('ErpImportService', () => {
         const body: BatchImportBody = {
             exchangeId: 'ex-3',
             records: [
-                { type: 'price', data: { sku: 'SKU1', priceTypeCode: 'RETAIL', price: 99.9 } },
+                {
+                    type: 'price',
+                    data: { productExternalId: 'erp-1', priceTypeCode: 'RETAIL', price: 99.9 },
+                },
             ],
         };
         importRunService.findByExchangeId

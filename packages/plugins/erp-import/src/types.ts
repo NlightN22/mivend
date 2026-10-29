@@ -65,7 +65,7 @@ export interface CrossReferenceRecord {
 }
 
 export interface PriceRecord {
-    sku: string;
+    productExternalId: string;
     priceTypeCode: string;
     price: number;
 }

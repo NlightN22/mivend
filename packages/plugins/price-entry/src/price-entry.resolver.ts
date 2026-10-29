@@ -13,8 +13,7 @@ import {
 } from '@vendure/core';
 import { PriceTypeAccessService } from '@mivend/plugin-access-control';
 
-import { ProductVariantPriceEntry } from './price-entry.entity';
-import { PriceEntryInput, PriceEntryService } from './price-entry.service';
+import { PriceEntryInput, PriceEntryService, PriceEntryView } from './price-entry.service';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountRuleInput, DiscountRuleService, DiscountTierVM } from './discount-rule.service';
 import { LookupMemo } from './lookup-memo';
@@ -208,7 +207,7 @@ export class PriceEntryAdminResolver {
     async upsertPriceEntry(
         @Ctx() ctx: RequestContext,
         @Args() args: { variantId: string; priceTypeCode: string; price: number },
-    ): Promise<ProductVariantPriceEntry> {
+    ): Promise<PriceEntryView> {
         await this.priceTypeAccess.assertCodeAllowed(ctx, args.priceTypeCode);
         return this.priceEntryService.upsert(ctx, args.variantId, args.priceTypeCode, args.price);
     }

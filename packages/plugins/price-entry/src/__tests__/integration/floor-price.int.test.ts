@@ -42,9 +42,10 @@ class TestPriceType {
 @Entity('product_variant_price_entry')
 class TestPriceEntry {
     @PrimaryGeneratedColumn() id!: number;
-    @Column({ type: 'varchar' }) variantId!: string;
+    @Column({ type: 'varchar' }) productExternalId!: string;
     @Column({ type: 'varchar' }) priceTypeCode!: string;
     @Column({ type: 'bigint' }) price!: number;
+    @Column({ type: 'timestamp', default: () => 'now()' }) updatedAt!: Date;
 }
 
 function mapEntity(base: TransactionalConnection): TransactionalConnection {
@@ -79,6 +80,14 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
+    await dataSource.query(
+        `CREATE TABLE product (id serial PRIMARY KEY, "customFieldsExternalid" varchar)`,
+    );
+    await dataSource.query(`CREATE TABLE product_variant (id serial PRIMARY KEY, "productId" int)`);
+    await dataSource.query(
+        `INSERT INTO product ("customFieldsExternalid") VALUES ('erp-1'), ('erp-2')`,
+    );
+    await dataSource.query(`INSERT INTO product_variant ("productId") VALUES (1), (2)`);
     const connection = mapEntity(createTestConnection(dataSource));
     floor = new FloorPriceService(connection, new PriceEntryService(connection));
     access = new PriceTypeAccessService(connection, {} as never, {} as never);
@@ -100,14 +109,14 @@ describe('derived floor price (integration, real Postgres)', () => {
             { code: 'retail', name: 'R', visibility: 'customer' },
         ]);
         await dataSource.getRepository(TestPriceEntry).save([
-            { variantId: 'v1', priceTypeCode: 'purchase', price: 100 },
-            { variantId: 'v1', priceTypeCode: 'retail', price: 999 },
+            { productExternalId: 'erp-1', priceTypeCode: 'purchase', price: 100 },
+            { productExternalId: 'erp-1', priceTypeCode: 'retail', price: 999 },
         ]);
 
-        const map = await floor.forVariants(ctx, ['v1', 'v2']);
+        const map = await floor.forVariants(ctx, ['1', '2']);
 
-        expect(map.get('v1')).toBe(125);
-        expect(map.has('v2')).toBe(false);
+        expect(map.get('1')).toBe(125);
+        expect(map.has('2')).toBe(false);
     });
 
     it('is unknown when the purchase type has no multiplier', async () => {
@@ -116,9 +125,9 @@ describe('derived floor price (integration, real Postgres)', () => {
             .save({ code: 'purchase', name: 'P', isPurchase: true });
         await dataSource
             .getRepository(TestPriceEntry)
-            .save({ variantId: 'v1', priceTypeCode: 'purchase', price: 100 });
+            .save({ productExternalId: 'erp-1', priceTypeCode: 'purchase', price: 100 });
 
-        expect((await floor.forVariants(ctx, ['v1'])).size).toBe(0);
+        expect((await floor.forVariants(ctx, ['1'])).size).toBe(0);
     });
 });
 

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Column, DataSource, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 import { PriceEntryService } from '@mivend/plugin-price-entry';
 import {
@@ -17,12 +17,14 @@ import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { makeInboxProcessor } from './inbox-processor-helpers';
 
 // Plain mirror of the price entry table (VendureEntity needs a bootstrapped id strategy).
+@Index(['productExternalId', 'priceTypeCode'], { unique: true })
 @Entity('product_variant_price_entry')
 class TestPriceEntry {
     @PrimaryGeneratedColumn() id!: number;
-    @Column({ type: 'varchar' }) variantId!: string;
+    @Column({ type: 'varchar' }) productExternalId!: string;
     @Column({ type: 'varchar' }) priceTypeCode!: string;
     @Column({ type: 'bigint' }) price!: number;
+    @Column({ type: 'timestamp', default: () => 'now()' }) updatedAt!: Date;
 }
 
 const { schema, extra } = testSchemaOptions('erp_price_tombstone');
@@ -65,15 +67,15 @@ afterAll(async () => {
     await dropTestSchema(schema);
 });
 
+const connection = {
+    getRepository: (_c: RequestContext, entity: unknown) =>
+        typeof entity === 'string'
+            ? { query: (sql: string, params?: unknown[]) => dataSource.query(sql, params) }
+            : dataSource.getRepository(TestPriceEntry),
+} as unknown as TransactionalConnection;
+
 function makeProcessor(): ReturnType<typeof makeInboxProcessor> {
-    const connection = {
-        getRepository: (_c: RequestContext, entity: unknown) =>
-            typeof entity === 'string'
-                ? { query: (sql: string, params?: unknown[]) => dataSource.query(sql, params) }
-                : dataSource.getRepository(TestPriceEntry),
-    } as unknown as TransactionalConnection;
     const handler = new PriceStreamHandler(
-        connection,
         { findPriceTypeByExternalId: async () => ({ code: 'WHOLESALE' }) } as never,
         new PriceEntryService(connection),
     );
@@ -122,6 +124,21 @@ describe('price tombstone through the inbox (real Postgres)', () => {
 
         await deliver('4', { ...live, value: '300' });
         expect(await stored()).toEqual([{ price: '30000' }]);
+    });
+
+    it('stores a price whose product has not arrived and resolves it once the product does (#297)', async () => {
+        await dataSource.query(`TRUNCATE product, product_variant RESTART IDENTITY`);
+        await deliver('1', live);
+
+        const [row] = await dataSource.getRepository(IntegrationInboxEvent).find();
+        expect(row.status).toBe('processed');
+        expect(await stored()).toEqual([{ price: '19990' }]);
+        const service = new PriceEntryService(connection);
+        expect(await service.getForVariant(testRequestContext, '1', 'WHOLESALE')).toBeNull();
+
+        await dataSource.query(`INSERT INTO product ("customFieldsExternalid") VALUES ('prod-1')`);
+        await dataSource.query(`INSERT INTO product_variant ("productId") VALUES (1)`);
+        expect(await service.getForVariant(testRequestContext, '1', 'WHOLESALE')).toBe(19990);
     });
 
     it('settles a tombstone for an unknown product without retrying', async () => {
