@@ -71,7 +71,7 @@ async function seed() {
         `seed-${run}-prices`,
         products.map(p => ({
             type: 'price',
-            data: { sku: p.sku, priceTypeCode: 'WHOLESALE', price: p.price },
+            data: { productExternalId: p.externalId, priceTypeCode: 'WHOLESALE', price: p.price },
         })),
     );
     await postBatch(

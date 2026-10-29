@@ -192,35 +192,35 @@ export const seedRecords = [
     },
     {
         type: 'price' as const,
-        data: { sku: 'E2E-OIL-001', priceTypeCode: 'WHOLESALE', price: 765 },
+        data: { productExternalId: 'e2e-prod-001', priceTypeCode: 'WHOLESALE', price: 765 },
     },
     {
         type: 'price' as const,
-        data: { sku: 'E2E-FLT-001', priceTypeCode: 'WHOLESALE', price: 290 },
+        data: { productExternalId: 'e2e-prod-002', priceTypeCode: 'WHOLESALE', price: 290 },
     },
     {
         type: 'price' as const,
-        data: { sku: 'E2E-BRK-001', priceTypeCode: 'WHOLESALE', price: 1080 },
+        data: { productExternalId: 'e2e-prod-003', priceTypeCode: 'WHOLESALE', price: 1080 },
     },
     {
         type: 'price' as const,
-        data: { sku: 'E2E-SPK-001', priceTypeCode: 'WHOLESALE', price: 405 },
+        data: { productExternalId: 'e2e-prod-004', priceTypeCode: 'WHOLESALE', price: 405 },
     },
     {
         type: 'price' as const,
-        data: { sku: 'E2E-OIL-003', priceTypeCode: 'WHOLESALE', price: 630 },
+        data: { productExternalId: 'e2e-prod-008', priceTypeCode: 'WHOLESALE', price: 630 },
     },
     {
         type: 'price' as const,
-        data: { sku: 'E2E-OIL-002', priceTypeCode: 'WHOLESALE', price: 495 },
+        data: { productExternalId: 'e2e-prod-006', priceTypeCode: 'WHOLESALE', price: 495 },
     },
     {
         type: 'price' as const,
-        data: { sku: 'E2E-BRK-002', priceTypeCode: 'WHOLESALE', price: 720 },
+        data: { productExternalId: 'e2e-prod-007', priceTypeCode: 'WHOLESALE', price: 720 },
     },
     {
         type: 'price' as const,
-        data: { sku: 'E2E-AIR-001', priceTypeCode: 'WHOLESALE', price: 252 },
+        data: { productExternalId: 'e2e-prod-005', priceTypeCode: 'WHOLESALE', price: 252 },
     },
     // product.stockOnHand is set only on create, never on update, so repeated e2e runs drain it;
     // stock records update by SKU on every run, keeping global-setup idempotent.

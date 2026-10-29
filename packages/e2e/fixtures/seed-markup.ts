@@ -51,7 +51,7 @@ export const markupSeedRecords = [
     ...[MARKUP_PRODUCT_A, MARKUP_PRODUCT_B].flatMap(p => [
         {
             type: 'price' as const,
-            data: { sku: p.sku, priceTypeCode: 'WHOLESALE', price: p.price },
+            data: { productExternalId: p.externalId, priceTypeCode: 'WHOLESALE', price: p.price },
         },
         { type: 'stock' as const, data: { sku: p.sku, stockOnHand: 100 } },
     ]),

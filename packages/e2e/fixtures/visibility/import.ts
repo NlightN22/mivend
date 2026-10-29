@@ -184,10 +184,18 @@ export async function importClients(organizationId: number): Promise<void> {
             })),
         ),
         ...many('price', [
-            { sku: PRODUCT.sku, priceTypeCode: VIS_PRICE_TYPES.a, price: PRODUCT.prices.a },
-            { sku: PRODUCT.sku, priceTypeCode: VIS_PRICE_TYPES.b, price: PRODUCT.prices.b },
             {
-                sku: PRODUCT.sku,
+                productExternalId: `ext-${PRODUCT.sku}`,
+                priceTypeCode: VIS_PRICE_TYPES.a,
+                price: PRODUCT.prices.a,
+            },
+            {
+                productExternalId: `ext-${PRODUCT.sku}`,
+                priceTypeCode: VIS_PRICE_TYPES.b,
+                price: PRODUCT.prices.b,
+            },
+            {
+                productExternalId: `ext-${PRODUCT.sku}`,
                 priceTypeCode: VIS_PRICE_TYPES.confidential,
                 price: PRODUCT.prices.confidential,
             },

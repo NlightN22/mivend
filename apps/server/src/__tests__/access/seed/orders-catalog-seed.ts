@@ -90,7 +90,13 @@ export async function seedCatalog(target: ImportTarget, superadmin: string): Pro
     await postBatch(
         target,
         'price',
-        [{ sku: PRODUCT.sku, priceTypeCode: 'RETAIL', price: PRODUCT.price }],
+        [
+            {
+                productExternalId: `ext-${PRODUCT.sku}`,
+                priceTypeCode: 'RETAIL',
+                price: PRODUCT.price,
+            },
+        ],
         'order-price',
     );
     await postBatch(

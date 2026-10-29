@@ -875,7 +875,7 @@ async function topUpReservationVariety(directorToken, customerId, organizationId
                     {
                         type: 'price',
                         data: {
-                            sku: FAILED_SKU,
+                            productExternalId: `seed-${FAILED_SKU}`,
                             priceTypeCode: 'price-type-wholesale',
                             price: 100,
                         },

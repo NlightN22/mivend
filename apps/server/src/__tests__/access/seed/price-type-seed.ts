@@ -96,7 +96,7 @@ async function seedPrices(target: ImportTarget, superadmin: string): Promise<voi
         target,
         'price',
         (Object.keys(PRICE_TYPES) as (keyof typeof PRICE_TYPES)[]).map(key => ({
-            sku: PRICED_PRODUCT.sku,
+            productExternalId: `ext-${PRICED_PRODUCT.sku}`,
             priceTypeCode: PRICE_TYPES[key],
             price: PRICED_PRODUCT.prices[key],
         })),

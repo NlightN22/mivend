@@ -99,7 +99,7 @@ export async function seedCategoryTree(superadmin: string, organizationId: numbe
         'price',
         CATEGORY_PLAN.flatMap(c =>
             [VIS_PRICE_TYPES.a, VIS_PRICE_TYPES.b].map(priceTypeCode => ({
-                sku: categorySku(c.erpId),
+                productExternalId: `ext-${categorySku(c.erpId)}`,
                 priceTypeCode,
                 price: 100,
             })),

@@ -463,7 +463,11 @@ async function main() {
     const categories = loadFixture('categories');
     const products = loadFixture('products');
     const crossReferences = loadFixture('cross-references');
-    const prices = loadFixture('prices');
+    const externalIdBySku = new Map(products.map(p => [p.sku, p.externalId]));
+    const prices = loadFixture('prices').map(({ sku, ...rest }) => ({
+        productExternalId: externalIdBySku.get(sku),
+        ...rest,
+    }));
     const stock = loadFixture('stock');
     // Fixed, not Date.now(): exchangeId must stay stable across reruns so erp-import's
     // dedup-by-exchangeId (ImportRunService.findByExchangeId) makes reseeding a no-op
@@ -629,12 +633,12 @@ async function main() {
     // "named price tier" model — both are business-plausible, not load-bearing beyond that.
     const wholesalePrices = prices.filter(p => p.priceTypeCode === 'WHOLESALE');
     const retailPrices = wholesalePrices.map(p => ({
-        sku: p.sku,
+        productExternalId: p.productExternalId,
         priceTypeCode: 'RETAIL',
         price: Math.round(p.price * 1.2 * 100) / 100,
     }));
     const specialPrices = wholesalePrices.map(p => ({
-        sku: p.sku,
+        productExternalId: p.productExternalId,
         priceTypeCode: 'SPECIAL',
         price: Math.round(p.price * 0.9 * 100) / 100,
     }));
