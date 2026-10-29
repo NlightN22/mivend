@@ -3611,6 +3611,7 @@ export type Query = {
     myProformaInvoices: ProformaInvoiceList;
     mySessions: Array<SessionSummary>;
     myTradingPoints: Array<TradingPoint>;
+    newArrivalProductIds: Array<Scalars['ID']['output']>;
     /** Returns the possible next states that the activeOrder can transition to */
     nextOrderStates: Array<Scalars['String']['output']>;
     /** The calling customer's own notifications, newest first, server-paginated (issue #87). */
@@ -3630,14 +3631,13 @@ export type Query = {
     orderStatuses: Array<OrderStatusInfo>;
     packagesOnlySales: Scalars['Boolean']['output'];
     payment?: Maybe<PaymentAttempt>;
-    newArrivalProductIds: Array<Scalars['ID']['output']>;
     popularProductIds: Array<Scalars['ID']['output']>;
-    saleProductIds: Array<Scalars['ID']['output']>;
     /** Get a Product either by id or slug. If neither 'id' nor 'slug' is specified, an error will result. */
     product?: Maybe<Product>;
     /** Get a list of Products */
     products: ProductList;
     proformaInvoice?: Maybe<ProformaInvoice>;
+    saleProductIds: Array<Scalars['ID']['output']>;
     /** Search Products based on the criteria set by the `SearchInput` */
     search: SearchResponse;
     searchCapabilities: SearchCapabilities;
@@ -3680,6 +3680,11 @@ export type QueryMyProformaInvoicesArgs = {
     options?: InputMaybe<ProformaInvoiceListOptions>;
 };
 
+export type QueryNewArrivalProductIdsArgs = {
+    sinceDays?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type QueryNotificationsArgs = {
     options?: InputMaybe<NotificationListOptions>;
 };
@@ -3696,16 +3701,7 @@ export type QueryPaymentArgs = {
     id: Scalars['ID']['input'];
 };
 
-export type QueryNewArrivalProductIdsArgs = {
-    sinceDays?: InputMaybe<Scalars['Int']['input']>;
-    take?: InputMaybe<Scalars['Int']['input']>;
-};
-
 export type QueryPopularProductIdsArgs = {
-    take?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type QuerySaleProductIdsArgs = {
     take?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -3720,6 +3716,10 @@ export type QueryProductsArgs = {
 
 export type QueryProformaInvoiceArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type QuerySaleProductIdsArgs = {
+    take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QuerySearchArgs = {
