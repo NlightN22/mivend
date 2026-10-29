@@ -17,7 +17,7 @@ export type {
     DataTableFilterKind,
 } from './components/MvTable/dataTableTypes';
 export { toColumnVisibilityDefs } from './components/MvTable/dataTableTypes';
-export { readSiteName, DEFAULT_SITE_NAME } from './utils/siteName';
+export { readSiteName, readSiteIconUrl, DEFAULT_SITE_NAME } from './utils/siteName';
 export { useUrlSyncedState } from './composables/useUrlSyncedState';
 export type { UrlSyncMode, UrlSyncedState } from './composables/useUrlSyncedState';
 export { useUrlState } from './composables/useUrlState';

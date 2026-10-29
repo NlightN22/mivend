@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
+    readSiteIconUrl,
     readSiteName,
     MvLogo,
     MvFormField,
@@ -13,6 +14,7 @@ import {
 import { useAuthStore } from '../../stores/auth';
 
 const siteName = readSiteName();
+const siteIconUrl = readSiteIconUrl();
 
 const router = useRouter();
 const route = useRoute();
@@ -43,7 +45,7 @@ async function handleSubmit(): Promise<void> {
 <template>
     <main class="login-page">
         <div class="login-wrap">
-            <MvLogo :name="siteName" size="md" />
+            <MvLogo :name="siteName" :icon-url="siteIconUrl" size="md" />
 
             <div class="login-card">
                 <h1 class="login-card__title">Manager portal sign in</h1>

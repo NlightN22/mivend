@@ -38,7 +38,7 @@
     margin: 0 auto;
     padding: 12px 28px 8px;
     display: grid;
-    grid-template-columns: 160px 144px minmax(360px, 1fr) auto auto auto auto;
+    grid-template-columns: minmax(160px, max-content) 144px minmax(360px, 1fr) auto auto auto auto;
     gap: 12px;
     align-items: center;
 }
@@ -46,6 +46,8 @@
 .app-header__logo-link {
     text-decoration: none;
     color: inherit;
+    min-width: 0;
+    max-width: 300px;
 }
 
 .app-header__catalog-btn {
@@ -311,6 +313,10 @@
     .app-header__inner {
         grid-template-columns: auto 1fr auto auto auto;
         padding: 10px 16px 8px;
+    }
+
+    .app-header__logo-link {
+        max-width: 200px;
     }
 
     .app-header__catalog-btn {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { resolveLogoMark } from './logoMark';
 
 export type LogoSize = 'sm' | 'md' | 'lg';
 
@@ -8,17 +9,27 @@ const props = withDefaults(
         name?: string;
         size?: LogoSize;
         ariaLabel?: string;
+        iconUrl?: string | null;
     }>(),
     { name: 'mivend', size: 'md', ariaLabel: 'Home' },
 );
 
-const letter = computed(() => props.name.charAt(0).toUpperCase());
+const iconFailed = ref(false);
+const mark = computed(() => resolveLogoMark(props.name, props.iconUrl, iconFailed.value));
 </script>
 
 <template>
     <div :class="['mv-logo', `mv-logo--${size}`]" :aria-label="ariaLabel">
-        <span class="mv-logo__mark" aria-hidden="true">{{ letter }}</span>
-        <span class="mv-logo__name">{{ name }}</span>
+        <img
+            v-if="mark.kind === 'image'"
+            class="mv-logo__mark mv-logo__mark--image"
+            :src="mark.src"
+            alt=""
+            aria-hidden="true"
+            @error="iconFailed = true"
+        />
+        <span v-else class="mv-logo__mark" aria-hidden="true">{{ mark.letter }}</span>
+        <span class="mv-logo__name" :title="name">{{ name }}</span>
     </div>
 </template>
 
@@ -27,6 +38,7 @@ const letter = computed(() => props.name.charAt(0).toUpperCase());
     display: inline-flex;
     align-items: center;
     gap: 10px;
+    max-width: 100%;
     font-weight: 900;
     letter-spacing: -0.04em;
     text-decoration: none;
@@ -42,6 +54,24 @@ const letter = computed(() => props.name.charAt(0).toUpperCase());
     border-radius: 14px;
     font-weight: 900;
     flex-shrink: 0;
+}
+
+.mv-logo__mark--image {
+    display: block;
+    object-fit: contain;
+    background: #fff;
+    box-shadow: none;
+}
+
+.mv-logo__name {
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    line-height: 1.1;
 }
 
 .mv-logo--sm .mv-logo__mark {

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { readSiteName } from '@mivend/ui-kit';
+import { readSiteIconUrl, readSiteName } from '@mivend/ui-kit';
 import { MIN_PASSWORD_LENGTH } from './passwordReset';
 import { useSetPassword, type TokenFlow } from './useSetPassword';
 
 const siteName = readSiteName();
+const siteIconUrl = readSiteIconUrl();
 
 const props = defineProps<{ flow: TokenFlow }>();
 const { t } = useI18n();
@@ -18,7 +19,7 @@ const copy = computed(() => (props.flow === 'verify' ? 'auth.verifyAccount' : 'a
     <main class="login-page">
         <div class="login-wrap">
             <a class="login-logo" href="/" :aria-label="t('nav.home')">
-                <MvLogo :name="siteName" size="md" />
+                <MvLogo :name="siteName" :icon-url="siteIconUrl" size="md" />
             </a>
 
             <div class="login-card">

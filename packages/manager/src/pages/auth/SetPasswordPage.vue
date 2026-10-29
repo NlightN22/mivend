@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useRedirectCountdown } from '../../composables/useRedirectCountdown';
 import {
+    readSiteIconUrl,
     readSiteName,
     MvLogo,
     MvAvatar,
@@ -19,6 +20,7 @@ import {
 } from '../../api/users';
 
 const siteName = readSiteName();
+const siteIconUrl = readSiteIconUrl();
 
 // Issue #119 Phase 2 — reached from the emailed password-reset link
 // (AdministratorProvisioningService.createFromPending), no session yet. Same shell/layout as
@@ -94,7 +96,7 @@ const { remaining, start } = useRedirectCountdown(goToSignIn);
 <template>
     <main class="set-password-page">
         <div class="set-password-wrap">
-            <MvLogo :name="siteName" size="md" />
+            <MvLogo :name="siteName" :icon-url="siteIconUrl" size="md" />
 
             <div class="set-password-card">
                 <template v-if="state === 'form' || state === 'validation'">

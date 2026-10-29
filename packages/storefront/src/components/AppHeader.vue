@@ -8,6 +8,7 @@ import {
     MvLanguageSwitcher,
     MvNotificationBell,
     MvNotificationPanel,
+    readSiteIconUrl,
     readSiteName,
 } from '@mivend/ui-kit';
 import { useLanguageSwitcher } from '../composables/useLanguageSwitcher';
@@ -24,6 +25,7 @@ const route = useRoute();
 const { t } = useI18n();
 const language = useLanguageSwitcher();
 const siteName = readSiteName();
+const siteIconUrl = readSiteIconUrl();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
@@ -138,7 +140,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         <header class="app-header">
             <div class="app-header__inner">
                 <RouterLink to="/" class="app-header__logo-link" :aria-label="t('nav.home')">
-                    <MvLogo :name="siteName" size="md" />
+                    <MvLogo :name="siteName" :icon-url="siteIconUrl" size="md" />
                 </RouterLink>
 
                 <button
