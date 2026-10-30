@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
 
 // Replicas of the Vendure tables: real entities need a bootstrapped EntityIdStrategy to load.
 class TProductCustomFields {
@@ -14,6 +14,12 @@ export class TProduct {
     @Column({ type: 'timestamp', nullable: true }) deletedAt!: Date | null;
     @Column({ type: 'timestamp', default: () => 'now()' }) createdAt!: Date;
     @Column(() => TProductCustomFields, { prefix: false }) customFields!: TProductCustomFields;
+}
+
+@Entity('product_channels_channel')
+export class TProductChannel {
+    @PrimaryColumn({ type: 'int' }) productId!: number;
+    @PrimaryColumn({ type: 'int' }) channelId!: number;
 }
 
 @Entity('product_variant')

@@ -173,7 +173,6 @@ export class ProductStreamHandler implements InboundStreamHandler {
                     ...optionalCustomFields,
                     manufacturerPartNumber: manufacturerPartNumber ?? null,
                     fullName: fullName ?? null,
-                    erpCreatedAt: erpCreatedAt ?? null,
                 },
             });
             const variants = await this.productVariantService.getVariantsByProductId(

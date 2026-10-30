@@ -21,6 +21,7 @@ import {
     TOrder,
     TOrderLine,
     TProduct,
+    TProductChannel,
     TReservation,
     TVariant,
 } from './home-widgets.entities';
@@ -30,6 +31,7 @@ import { StockScopedIdsService } from '../../stock-scoped-ids.service';
 
 const { schema, extra } = testSchemaOptions('home_widgets');
 const DAY = 24 * 3600 * 1000;
+const CHANNEL = 1;
 const ago = (days: number): Date => new Date(Date.now() - days * DAY);
 let dataSource: DataSource;
 let widgets: HomeWidgetIdsService;
@@ -48,6 +50,7 @@ interface Seed {
     stock?: 'branch-a' | 'branch-b' | 'none';
     onHand?: number;
     reserved?: number;
+    channel?: number;
     sold?: Array<[number, string]>;
 }
 
@@ -58,6 +61,9 @@ async function seed(s: Seed): Promise<void> {
         deletedAt: s.deleted ? new Date() : null,
         customFields: { onSale: s.onSale ?? false, erpCreatedAt: s.erpCreatedAt ?? null },
     });
+    await dataSource
+        .getRepository(TProductChannel)
+        .save({ productId: product.id, channelId: s.channel ?? CHANNEL });
     const variant = await dataSource.getRepository(TVariant).save({
         productId: product.id,
         deletedAt: null,
@@ -90,7 +96,7 @@ async function seed(s: Seed): Promise<void> {
 }
 
 const viewer = (...warehouses: string[]): RequestContext =>
-    ({ warehouses }) as unknown as RequestContext;
+    ({ warehouses, channelId: CHANNEL }) as unknown as RequestContext;
 const named = (list: string[]): string[] =>
     list.map(id => [...ids].find(([, value]) => value === id)![0]);
 
@@ -101,7 +107,16 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TProduct, TVariant, TOrder, TOrderLine, TLocation, TLevel, TReservation],
+        entities: [
+            TProduct,
+            TProductChannel,
+            TVariant,
+            TOrder,
+            TOrderLine,
+            TLocation,
+            TLevel,
+            TReservation,
+        ],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -121,7 +136,9 @@ beforeAll(async () => {
     await seed({ name: 'disabled', createdAt: ago(1), enabled: false });
     await seed({ name: 'deleted', createdAt: ago(1), deleted: true });
 
+    await seed({ name: 'otherChannelNew', createdAt: ago(1), channel: 2 });
     await seed({ name: 'saleA', onSale: true, createdAt: ago(100) });
+    await seed({ name: 'otherChannelSale', onSale: true, createdAt: ago(100), channel: 2 });
     await seed({ name: 'saleOut', onSale: true, createdAt: ago(100), stock: 'none' });
     await seed({ name: 'saleOtherBranch', onSale: true, createdAt: ago(100), stock: 'branch-b' });
 
@@ -146,6 +163,24 @@ beforeAll(async () => {
         ],
     });
     await seed({ name: 'lesserInStock', createdAt: ago(100), sold: [[4, 'Delivered']] });
+    await seed({
+        name: 'otherChannelTop',
+        createdAt: ago(100),
+        channel: 2,
+        sold: [[500, 'Delivered']],
+    });
+    await seed({
+        name: 'disabledTop',
+        createdAt: ago(100),
+        enabled: false,
+        sold: [[600, 'Delivered']],
+    });
+    await seed({
+        name: 'deletedTop',
+        createdAt: ago(100),
+        deleted: true,
+        sold: [[700, 'Delivered']],
+    });
     await seed({
         name: 'onlyCancelled',
         createdAt: ago(100),
@@ -194,6 +229,7 @@ describe('new arrivals (real Postgres)', () => {
             'fullyReserved',
             'disabled',
             'deleted',
+            'otherChannelNew',
         ]) {
             expect(result, name).not.toContain(name);
         }
@@ -214,6 +250,13 @@ describe('new arrivals (real Postgres)', () => {
         expect(await widgets.newArrivalProductIds(viewer('wh-unknown'), 12, 7)).toEqual([]);
     });
 
+    it('other-channel products do not eat overfetch slots', async () => {
+        const result = await widgets.newArrivalProductIds(viewer('wh-a'), 1, 7);
+
+        expect(result.length).toBe(3);
+        expect(named(result)).not.toContain('otherChannelNew');
+    });
+
     it('widens the window with sinceDays', async () => {
         const result = named(await widgets.newArrivalProductIds(viewer('wh-a'), 12, 10));
 
@@ -224,6 +267,9 @@ describe('new arrivals (real Postgres)', () => {
 describe('sale (real Postgres)', () => {
     it('lists only on-sale products in stock at the viewer branch', async () => {
         expect(named(await widgets.saleProductIds(viewer('wh-a'), 40))).toEqual(['saleA']);
+        expect(named(await widgets.saleProductIds(viewer('wh-a'), 40))).not.toContain(
+            'otherChannelSale',
+        );
         expect(named(await widgets.saleProductIds(viewer('wh-b'), 40))).toEqual([
             'saleOtherBranch',
         ]);
@@ -236,6 +282,14 @@ describe('popular (real Postgres)', () => {
         const result = named(await popular.getPopularProductIds(viewer('wh-a'), 1));
 
         expect(result).toEqual(['bestInStock', 'lesserInStock']);
+    });
+
+    it('skips other-channel, disabled and deleted products even when they sell most', async () => {
+        const result = named(await popular.getPopularProductIds(viewer('wh-a'), 1));
+
+        for (const name of ['otherChannelTop', 'disabledTop', 'deletedTop']) {
+            expect(result, name).not.toContain(name);
+        }
     });
 
     it('other branch gets its own ranking', async () => {

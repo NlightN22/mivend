@@ -33,7 +33,7 @@ mockQb.limit.mockReturnValue(mockQb);
 
 const mockRepo = { createQueryBuilder: vi.fn(() => mockQb) };
 const mockConnection = { getRepository: vi.fn(() => mockRepo) };
-const mockCtx = {} as unknown as RequestContext;
+const mockCtx = { channelId: 4 } as unknown as RequestContext;
 
 const viewerWarehouses = vi.fn();
 
@@ -61,52 +61,80 @@ describe('PopularProductsService', () => {
         );
     });
 
-    it('excludes AddingItems and Cancelled orders from the ranking', async () => {
-        mockQb.getRawMany.mockResolvedValue([]);
+    const rank = (...ids: number[]): void => {
+        mockQb.getRawMany.mockResolvedValueOnce(ids.map(productId => ({ productId })));
+    };
+
+    it('ranking excludes AddingItems and Cancelled orders, disabled and deleted products, other channels', async () => {
+        rank();
         await service.getPopularProductIds(mockCtx);
         expect(mockQb.where).toHaveBeenCalledWith('order.state NOT IN (:...excluded)', {
             excluded: ['AddingItems', 'Cancelled'],
         });
         expect(mockQb.andWhere).toHaveBeenCalledWith('product.deletedAt IS NULL');
         expect(mockQb.andWhere).toHaveBeenCalledWith('product.enabled = true');
+        expect(mockQb.andWhere).toHaveBeenCalledWith(
+            expect.stringContaining('product_channels_channel'),
+            { channelId: 4 },
+        );
+        expect(mockQb.limit).toHaveBeenCalledWith(500);
     });
 
-    it('returns product ids ranked by total quantity, as strings', async () => {
-        mockQb.getRawMany.mockResolvedValue([
-            { productId: 5, totalQty: '42' },
-            { productId: 2, totalQty: '10' },
-        ]);
-        const result = await service.getPopularProductIds(mockCtx);
-        expect(result).toEqual(['5', '2']);
+    it('returns ranked ids that are in stock, as strings', async () => {
+        rank(5, 2);
+        mockQb.getRawMany.mockResolvedValueOnce([{ productId: 5 }, { productId: 2 }]);
+        expect(await service.getPopularProductIds(mockCtx)).toEqual(['5', '2']);
+        expect(mockQb.where).toHaveBeenCalledWith('product.id IN (:...ranked)', { ranked: [5, 2] });
     });
 
-    it('defaults to 12 when no take is given', async () => {
+    it('defaults to 12 and caps take at 50', async () => {
+        rank(1);
         mockQb.getRawMany.mockResolvedValue([]);
         await service.getPopularProductIds(mockCtx);
-        expect(mockQb.limit).toHaveBeenCalledWith(36);
-    });
-
-    it('caps take at 50 even if a larger value is requested', async () => {
-        mockQb.getRawMany.mockResolvedValue([]);
         await service.getPopularProductIds(mockCtx, 500);
-        expect(mockQb.limit).toHaveBeenCalledWith(150);
-    });
-
-    it('passes through a valid take within bounds', async () => {
-        mockQb.getRawMany.mockResolvedValue([]);
         await service.getPopularProductIds(mockCtx, 5);
-        expect(mockQb.limit).toHaveBeenCalledWith(15);
+        expect(mockQb.limit.mock.calls.map(call => call[0])).toEqual([500, 36, 150, 15]);
     });
 
-    it('restricts the ranking to the viewer warehouses before the limit', async () => {
+    it('restricts the final list to the request channel and viewer warehouses', async () => {
+        rank(1);
         mockQb.getRawMany.mockResolvedValue([]);
         await service.getPopularProductIds(mockCtx);
         expect(mockQb.andWhere).toHaveBeenCalledWith('IN_STOCK', { warehouseErpIds: ['wh-1'] });
+        expect(mockQb.andWhere).toHaveBeenCalledWith(
+            expect.stringContaining('product_channels_channel'),
+            { channelId: 4 },
+        );
     });
 
-    it('returns nothing without querying when the viewer has no warehouses', async () => {
-        viewerWarehouses.mockResolvedValue([]);
+    it('shares the ranking per channel within the TTL and reloads for another channel', async () => {
+        rank(1);
+        mockQb.getRawMany.mockResolvedValue([]);
+        await service.getPopularProductIds(mockCtx);
+        await service.getPopularProductIds(mockCtx);
+        expect(mockRepo.createQueryBuilder).toHaveBeenCalledTimes(3);
+        rank(1);
+        await service.getPopularProductIds({ channelId: 9 } as unknown as RequestContext);
+        expect(mockRepo.createQueryBuilder).toHaveBeenCalledTimes(5);
+    });
+
+    it('does not keep a failed ranking in the cache', async () => {
+        mockQb.getRawMany.mockRejectedValueOnce(new Error('db down'));
+        await expect(service.getPopularProductIds(mockCtx)).rejects.toThrow('db down');
+        rank();
         expect(await service.getPopularProductIds(mockCtx)).toEqual([]);
-        expect(mockQb.getRawMany).not.toHaveBeenCalled();
+    });
+
+    it('returns nothing without a final query when nothing is ranked', async () => {
+        rank();
+        expect(await service.getPopularProductIds(mockCtx)).toEqual([]);
+        expect(mockRepo.createQueryBuilder).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns nothing without a final query when the viewer has no warehouses', async () => {
+        viewerWarehouses.mockResolvedValue([]);
+        rank(1);
+        expect(await service.getPopularProductIds(mockCtx)).toEqual([]);
+        expect(mockQb.getRawMany).toHaveBeenCalledTimes(1);
     });
 });

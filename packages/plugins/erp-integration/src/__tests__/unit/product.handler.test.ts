@@ -311,7 +311,6 @@ describe('ProductStreamHandler', () => {
                     customFields: {
                         manufacturerPartNumber: 'KT 100511',
                         fullName: null,
-                        erpCreatedAt: null,
                     },
                 }),
             );
@@ -329,7 +328,6 @@ describe('ProductStreamHandler', () => {
                 expect(call[1].customFields).toEqual({
                     manufacturerPartNumber: null,
                     fullName: null,
-                    erpCreatedAt: null,
                 });
             }
         });
@@ -353,7 +351,7 @@ describe('ProductStreamHandler', () => {
             );
         });
 
-        it('on update, overwrites with the date, and clears it when the ERP sends none', async () => {
+        it('on update, overwrites with the date and keeps the stored one when the event has none', async () => {
             const connection = makeConnection('existing-product-id');
             const productVariantService = {
                 getVariantsByProductId: vi.fn().mockResolvedValue({ items: [{ id: 'variant-1' }] }),
@@ -367,8 +365,9 @@ describe('ProductStreamHandler', () => {
             await handler.apply(ctx, 'p-1', payload);
             await handler.apply(ctx, 'p-1', { sku: 'SKU-1', name: 'Widget' });
 
-            const dates = productService.update.mock.calls.map(c => c[1].customFields.erpCreatedAt);
-            expect(dates).toEqual([created, null]);
+            const fields = productService.update.mock.calls.map(c => c[1].customFields);
+            expect(fields[0].erpCreatedAt).toEqual(created);
+            expect(fields[1]).not.toHaveProperty('erpCreatedAt');
         });
     });
 

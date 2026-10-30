@@ -20,7 +20,7 @@ const qb = {
     getRawMany: vi.fn(),
 };
 const viewerWarehouses = vi.fn();
-const ctx = {} as RequestContext;
+const ctx = { channelId: 4 } as RequestContext;
 let service: HomeWidgetIdsService;
 
 beforeEach(() => {
@@ -68,6 +68,16 @@ describe('HomeWidgetIdsService', () => {
         expect(qb.andWhere).toHaveBeenCalledWith('product."customFieldsOnsale" = true');
         expect(qb.andWhere).toHaveBeenCalledWith('IN_STOCK', { warehouseErpIds: ['wh-1'] });
         expect(qb.limit).toHaveBeenCalledWith(120);
+    });
+
+    it('both widgets are restricted to the request channel', async () => {
+        await service.newArrivalProductIds(ctx);
+        await service.saleProductIds(ctx);
+
+        const channelCalls = qb.andWhere.mock.calls.filter(call =>
+            String(call[0]).includes('product_channels_channel'),
+        );
+        expect(channelCalls.map(call => call[1])).toEqual([{ channelId: 4 }, { channelId: 4 }]);
     });
 
     it('both return nothing for a viewer without branch warehouses', async () => {
