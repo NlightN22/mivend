@@ -394,3 +394,9 @@
         padding: 0 16px 8px;
     }
 }
+
+@media (max-width: 640px) {
+    .app-header__logo-link :deep(.mv-logo__name) {
+        display: none;
+    }
+}

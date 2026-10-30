@@ -70,7 +70,7 @@ const mark = computed(() => resolveLogoMark(props.name, props.iconUrl, iconFaile
     -webkit-line-clamp: 2;
     line-clamp: 2;
     overflow: hidden;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     line-height: 1.1;
 }
 
