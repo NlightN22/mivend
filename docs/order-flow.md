@@ -174,7 +174,7 @@ refusal message converts `quantityAvailable` to whole packs and names the pack u
 A ratio with no whole multiple within 1000 packs (or at most 1) stays in base units; a ratio such as 1.5 counts
 sellable packs in whole steps of 3 base units. Query cost: one extra `product_variant` SELECT per `getTiers` batch (the
 ratio cannot ride on the ATP query, which reads `stock_level` and `reservation` only), plus one or two branch-settings
-reads when the batch has a pack variant; never per variant. The `inStock` filter still counts base units, see #301.
+reads when the batch has a pack variant; never per variant. The `inStock` filter deliberately counts base units: items with less than one pack stay listed (and visible to customers), so stock-accounting gaps surface and get fixed at the source (#301, not planned).
 
 **Inbound stock for deleted warehouses:** a `stock` event whose warehouse is unknown is retried (the warehouse event may not be
 consumed yet), unless the latest inbox event for that warehouse is a processed deletion tombstone — then the fact is ignored,
