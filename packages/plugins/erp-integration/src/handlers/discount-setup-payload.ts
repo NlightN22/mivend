@@ -67,6 +67,7 @@ export function parseDiscountSetup(
 }
 
 // Fail closed: any attribute mivend does not evaluate, set to a non-default value, stores the document inactive.
+// Quality is deliberately ignored: it never restricts a discount here.
 // Values are opaque ERP ids and enums: only empty/absent versus set is compared, never a name.
 function notApplicableReason(payload: Record<string, unknown>, percent: number): string | null {
     if (!Number.isFinite(percent) || percent === 0) return 'no-header-percent';
@@ -84,7 +85,6 @@ function notApplicableReason(payload: Record<string, unknown>, percent: number):
 
 const UNEVALUATED_ATTRIBUTES: ReadonlyArray<readonly [string, string]> = [
     ['markupTypeId', 'markup-type'],
-    ['qualityId', 'quality'],
     ['purposeId', 'purpose'],
     ['currencyId', 'currency'],
     ['commonTimeFrom', 'time-window'],
@@ -104,9 +104,7 @@ function nonEmpty(value: unknown): boolean {
 function hasLineAttributes(lines: unknown): boolean {
     return (lines as Array<Record<string, unknown>>).some(
         line =>
-            ['characteristicId', 'qualityId', 'priceTypeId'].some(
-                key => optionalString(line?.[key]) !== null,
-            ) ||
+            ['characteristicId', 'priceTypeId'].some(key => optionalString(line?.[key]) !== null) ||
             ['percent', 'limitPercent', 'priceNumber'].some(key => !!optionalNumber(line?.[key])),
     );
 }

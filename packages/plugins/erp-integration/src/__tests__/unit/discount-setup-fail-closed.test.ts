@@ -38,7 +38,6 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
 
     it.each([
         ['markupTypeId', { markupTypeId: 'mt-1' }, 'markup-type'],
-        ['qualityId', { qualityId: 'q-1' }, 'quality'],
         ['purposeId', { purposeId: 'pu-1' }, 'purpose'],
         ['currencyId', { currencyId: 'cur-1' }, 'currency'],
         ['commonTimeFrom', { commonTimeFrom: time }, 'time-window'],
@@ -54,11 +53,6 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
             'product-line-attributes',
         ],
         [
-            'line quality',
-            { productLines: [{ productId: 'p1', qualityId: 'q' }] },
-            'product-line-attributes',
-        ],
-        [
             'line percent',
             { productLines: [{ productId: 'p1', percent: 9 }] },
             'product-line-attributes',
@@ -70,6 +64,11 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
         ],
     ])('stores a document with %s inactive', (_name, overrides, reason) => {
         expect(reasonOf(overrides)).toBe(reason);
+    });
+
+    it('ignores quality on the header and on lines', () => {
+        expect(reasonOf({ qualityId: 'q-1' })).toBeNull();
+        expect(reasonOf({ productLines: [{ productId: 'p1', qualityId: 'q-1' }] })).toBeNull();
     });
 
     it('never turns a positive percent with a markup type into a discount', () => {
