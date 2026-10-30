@@ -8,6 +8,8 @@ import { IN_CHANNEL_SQL, StockScopedIdsService } from './stock-scoped-ids.servic
 const EXCLUDED_STATES = ['AddingItems', 'Cancelled'];
 
 const DEFAULT_TAKE = 12;
+// Popular is ranked among the top 500 sellers of the channel before the stock filter: a branch with
+// few of them in stock sees a shorter list.
 const CANDIDATES = 500;
 const RANKING_TTL_MS = 60_000;
 
@@ -29,8 +31,8 @@ export class PopularProductsService {
             .getRepository(ctx, Product)
             .createQueryBuilder('product')
             .select('product.id', 'productId')
-            .where('product.id IN (:...ranked)', { ranked })
-            .orderBy('array_position(ARRAY[:...ranked]::int[], product.id)');
+            .where('product.id = ANY(:ranked)', { ranked })
+            .orderBy('array_position(:ranked::int[], product.id)');
         return this.scopedIds.run(ctx, this.scopedIds.clampTake(take, DEFAULT_TAKE), query);
     }
 
@@ -41,7 +43,9 @@ export class PopularProductsService {
         if (hit && Date.now() - hit.at < RANKING_TTL_MS) return hit.ids;
         const ids = this.loadRanking(ctx);
         this.cache.set(key, { at: Date.now(), ids });
-        ids.catch(() => this.cache.delete(key));
+        ids.catch(() => {
+            if (this.cache.get(key)?.ids === ids) this.cache.delete(key);
+        });
         return ids;
     }
 

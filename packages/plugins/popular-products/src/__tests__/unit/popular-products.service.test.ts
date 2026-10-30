@@ -84,7 +84,7 @@ describe('PopularProductsService', () => {
         rank(5, 2);
         mockQb.getRawMany.mockResolvedValueOnce([{ productId: 5 }, { productId: 2 }]);
         expect(await service.getPopularProductIds(mockCtx)).toEqual(['5', '2']);
-        expect(mockQb.where).toHaveBeenCalledWith('product.id IN (:...ranked)', { ranked: [5, 2] });
+        expect(mockQb.where).toHaveBeenCalledWith('product.id = ANY(:ranked)', { ranked: [5, 2] });
     });
 
     it('defaults to 12 and caps take at 50', async () => {
