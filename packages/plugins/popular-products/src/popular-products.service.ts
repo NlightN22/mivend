@@ -26,10 +26,13 @@ export class PopularProductsService {
             .innerJoin('line.productVariant', 'variant')
             .innerJoin('variant.product', 'product')
             .where('order.state NOT IN (:...excluded)', { excluded: EXCLUDED_STATES })
+            .andWhere('product.deletedAt IS NULL')
+            .andWhere('product.enabled = true')
             .select('variant.productId', 'productId')
             .addSelect('SUM(line.quantity)', 'totalQty')
             .groupBy('variant.productId')
-            .orderBy('"totalQty"', 'DESC');
+            .orderBy('"totalQty"', 'DESC')
+            .addOrderBy('variant.productId', 'ASC');
         return this.scopedIds.run(ctx, this.scopedIds.clampTake(take, DEFAULT_TAKE), query);
     }
 }

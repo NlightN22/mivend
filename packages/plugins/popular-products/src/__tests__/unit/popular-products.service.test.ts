@@ -17,6 +17,7 @@ const mockQb = {
     addSelect: vi.fn(),
     groupBy: vi.fn(),
     orderBy: vi.fn(),
+    addOrderBy: vi.fn(),
     limit: vi.fn(),
     getRawMany: vi.fn(),
 };
@@ -27,6 +28,7 @@ mockQb.select.mockReturnValue(mockQb);
 mockQb.addSelect.mockReturnValue(mockQb);
 mockQb.groupBy.mockReturnValue(mockQb);
 mockQb.orderBy.mockReturnValue(mockQb);
+mockQb.addOrderBy.mockReturnValue(mockQb);
 mockQb.limit.mockReturnValue(mockQb);
 
 const mockRepo = { createQueryBuilder: vi.fn(() => mockQb) };
@@ -47,6 +49,7 @@ describe('PopularProductsService', () => {
         mockQb.addSelect.mockReturnValue(mockQb);
         mockQb.groupBy.mockReturnValue(mockQb);
         mockQb.orderBy.mockReturnValue(mockQb);
+        mockQb.addOrderBy.mockReturnValue(mockQb);
         mockQb.limit.mockReturnValue(mockQb);
         mockRepo.createQueryBuilder.mockReturnValue(mockQb);
         viewerWarehouses.mockResolvedValue(['wh-1']);
@@ -64,6 +67,8 @@ describe('PopularProductsService', () => {
         expect(mockQb.where).toHaveBeenCalledWith('order.state NOT IN (:...excluded)', {
             excluded: ['AddingItems', 'Cancelled'],
         });
+        expect(mockQb.andWhere).toHaveBeenCalledWith('product.deletedAt IS NULL');
+        expect(mockQb.andWhere).toHaveBeenCalledWith('product.enabled = true');
     });
 
     it('returns product ids ranked by total quantity, as strings', async () => {
