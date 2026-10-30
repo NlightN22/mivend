@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { CustomerService, GlobalSettingsService, RequestContext } from '@vendure/core';
+import type {
+    CustomerService,
+    GlobalSettingsService,
+    RequestContext,
+    TransactionalConnection,
+} from '@vendure/core';
 import type { BranchSettingsService, WarehouseService } from '@mivend/plugin-access-control';
 import type { CounterpartyService } from '@mivend/plugin-counterparty';
 
@@ -12,15 +17,22 @@ function build(options: {
     defaultBranchId?: string | null;
     atp?: Record<string, number>;
     customFields?: Record<string, number | null>;
+    ratios?: Record<string, number>;
+    packagesOnly?: boolean;
     warehouses?: Array<{ branchId: string | null; erpId: string; includedInBranchAtp: boolean }>;
 }) {
     const batch = vi.fn(
         async () => new Map(Object.entries(options.atp ?? {})) as Map<string, number>,
     );
+    const resolveEffective = vi.fn(async () => ({ packagesOnly: options.packagesOnly ?? false }));
+    const query = vi.fn(async () =>
+        Object.entries(options.ratios ?? {}).map(([id, ratio]) => ({ id, ratio })),
+    );
     const service = new StockLevelService(
         { getAvailableToPromiseBatch: batch } as unknown as ReservationAvailabilityService,
         {
             getGlobalDefaultBranchId: async () => options.defaultBranchId ?? null,
+            resolveEffective,
         } as unknown as BranchSettingsService,
         { findAll: async () => options.warehouses ?? [] } as unknown as WarehouseService,
         {
@@ -33,9 +45,10 @@ function build(options: {
                     ? null
                     : { branchId: options.counterpartyBranchId },
         } as unknown as CounterpartyService,
+        { getRepository: () => ({ query }) } as unknown as TransactionalConnection,
     );
     const ctx = { activeUserId: options.activeUserId } as unknown as RequestContext;
-    return { service, batch, ctx };
+    return { service, batch, ctx, query, resolveEffective };
 }
 
 describe('StockLevelService', () => {
@@ -120,5 +133,36 @@ describe('StockLevelService', () => {
         expect(tiers).toEqual(['OUT_OF_STOCK', 'MEDIUM_STOCK', 'OUT_OF_STOCK']);
         expect(batch).toHaveBeenCalledTimes(1);
         expect(batch).toHaveBeenCalledWith(ctx, ['v1', 'v2'], 'branch-a');
+    });
+
+    it('counts whole packs for a packs-only branch and leaves base-unit variants alone', async () => {
+        const { service, ctx, query } = build({
+            defaultBranchId: 'branch-a',
+            atp: { '1': 20, '2': 100, '3': 20 },
+            ratios: { '1': 50, '2': 50 },
+            packagesOnly: true,
+        });
+        const tiers = await service.getTiers(ctx, ['1', '2', '3']);
+        expect([...tiers.values()]).toEqual(['OUT_OF_STOCK', 'LOW_STOCK', 'HIGH_STOCK']);
+        expect(query).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps base units when the branch sells by the piece', async () => {
+        const { service, ctx } = build({
+            defaultBranchId: 'branch-a',
+            atp: { '1': 20 },
+            ratios: { '1': 50 },
+            packagesOnly: false,
+        });
+        expect((await service.getTiers(ctx, ['1'])).get('1')).toBe('HIGH_STOCK');
+    });
+
+    it('does not read branch settings when no variant has a pack ratio', async () => {
+        const { service, ctx, resolveEffective } = build({
+            defaultBranchId: 'branch-a',
+            atp: { '1': 20 },
+        });
+        await service.getTiers(ctx, ['1']);
+        expect(resolveEffective).not.toHaveBeenCalled();
     });
 });

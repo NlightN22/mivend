@@ -1,9 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ID } from '@vendure/common/lib/shared-types';
 import DataLoader from 'dataloader';
-import { CustomerService, GlobalSettingsService, RequestContext } from '@vendure/core';
+import {
+    CustomerService,
+    GlobalSettingsService,
+    RequestContext,
+    TransactionalConnection,
+} from '@vendure/core';
 import { BranchSettingsService, WarehouseService } from '@mivend/plugin-access-control';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { wholePackQuantity } from '@mivend/plugin-moq';
+import { ctxQuery } from 'shared';
 
 import { ReservationAvailabilityService } from './reservation-availability.service';
 import {
@@ -26,6 +33,7 @@ export class StockLevelService {
         private globalSettingsService: GlobalSettingsService,
         private customerService: CustomerService,
         private counterpartyService: CounterpartyService,
+        private connection: TransactionalConnection,
     ) {}
 
     // Batches the per-item field resolvers of one request into a single ATP query.
@@ -51,7 +59,39 @@ export class StockLevelService {
             lowMax: settings.customFields?.stockTierLowMax ?? DEFAULT_STOCK_TIER_LOW_MAX,
             mediumMax: settings.customFields?.stockTierMediumMax ?? DEFAULT_STOCK_TIER_MEDIUM_MAX,
         };
-        return new Map([...atp].map(([id, qty]) => [id, stockTierFor(qty, thresholds)]));
+        const packRatios = await this.getPackRatios(ctx, [...atp.keys()], branchId);
+        return new Map(
+            [...atp].map(([id, qty]) => [
+                id,
+                stockTierFor(qty, thresholds, packRatios.get(id) ?? null),
+            ]),
+        );
+    }
+
+    // Ratios of the variants the viewer's branch sells by whole packs only; one query for the batch,
+    // and the branch settings are read only when some variant has a pack ratio.
+    private async getPackRatios(
+        ctx: RequestContext,
+        variantIds: string[],
+        branchId: string | null,
+    ): Promise<Map<string, number>> {
+        const numericIds = variantIds.filter(id => /^\d+$/.test(id));
+        if (numericIds.length === 0) return new Map();
+        const rows = await ctxQuery<Array<{ id: number; ratio: number | string }>>(
+            this.connection,
+            ctx,
+            `SELECT id, "customFieldsUnitratiotobase" AS ratio FROM product_variant
+             WHERE id = ANY($1) AND "customFieldsUnitratiotobase" > 1`,
+            [numericIds.map(Number)],
+        );
+        if (rows.length === 0) return new Map();
+        const settings = await this.branchSettingsService.resolveEffective(ctx, branchId);
+        if (settings?.packagesOnly !== true) return new Map();
+        return new Map(
+            rows
+                .map(r => [String(r.id), Number(r.ratio)] as const)
+                .filter(([, ratio]) => wholePackQuantity(ratio) !== null),
+        );
     }
 
     async getViewerWarehouseErpIds(ctx: RequestContext): Promise<string[]> {

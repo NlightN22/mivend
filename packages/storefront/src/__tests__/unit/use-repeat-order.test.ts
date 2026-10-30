@@ -37,14 +37,18 @@ describe('useRepeatOrder pack rounding', () => {
             { quantity: 7, productVariant: packVariant },
             { quantity: 5, productVariant: pieceVariant },
         ]);
-        expect(addItem).toHaveBeenCalledWith('v-pack', 12);
-        expect(addItem).toHaveBeenCalledWith('v-piece', 5);
+        expect(addItem).toHaveBeenCalledWith(
+            'v-pack',
+            12,
+            expect.objectContaining({ name: 'pack', ratio: 6 }),
+        );
+        expect(addItem).toHaveBeenCalledWith('v-piece', 5, null);
     });
 
     it('keeps the quantity untouched when the branch does not sell by packages only', async () => {
         packagesOnly.value = false;
         await useRepeatOrder().repeat([{ quantity: 7, productVariant: packVariant }]);
-        expect(addItem).toHaveBeenCalledWith('v-pack', 7);
+        expect(addItem).toHaveBeenCalledWith('v-pack', 7, null);
     });
 
     it('sums the duplicate lines of a variant first and rounds the total once', async () => {
@@ -53,7 +57,11 @@ describe('useRepeatOrder pack rounding', () => {
             { quantity: 1, productVariant: packVariant },
         ]);
         expect(addItem).toHaveBeenCalledTimes(1);
-        expect(addItem).toHaveBeenCalledWith('v-pack', 6);
+        expect(addItem).toHaveBeenCalledWith(
+            'v-pack',
+            6,
+            expect.objectContaining({ name: 'pack', ratio: 6 }),
+        );
     });
 
     it('counts the variants whose quantity was raised to whole packs', async () => {

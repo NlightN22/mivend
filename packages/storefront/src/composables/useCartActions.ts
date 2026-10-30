@@ -4,6 +4,7 @@ import { discountAddToCartHint } from '../utils/discountMessages';
 import { resolveAddQty, type QuantityVariant } from './productQuantity';
 import { useMultiplicityEnforced } from './useMultiplicityEnforced';
 import { usePackagesOnly } from './usePackagesOnly';
+import { salesUnitOf } from './useSalesUnit';
 
 export function useCartActions(): {
     cartLineFor: (variantId: string | undefined) => CartLine | null;
@@ -39,7 +40,7 @@ export function useCartActions(): {
     ): Promise<{ brand: string; percent: number } | null> {
         await Promise.all([loadPackagesOnly(), loadMultiplicityEnforced()]);
         const qty = resolveAddQty(variant, packagesOnly.value, multiplicityEnforced.value, baseQty);
-        return cartStore.addItem(variantId, qty);
+        return cartStore.addItem(variantId, qty, salesUnitOf(variant, packagesOnly.value));
     }
 
     async function onAddToCart(

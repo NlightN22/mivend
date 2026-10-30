@@ -51,8 +51,8 @@ describe('useRepeatOrder', () => {
             roundedUp: 0,
             failedVariantIds: [],
         });
-        expect(add).toHaveBeenCalledWith('v1', 2);
-        expect(add).toHaveBeenCalledWith('v2', 1);
+        expect(add).toHaveBeenCalledWith('v1', 2, null);
+        expect(add).toHaveBeenCalledWith('v2', 1, null);
     });
 
     it('counts a line the cart refused as skipped', async () => {

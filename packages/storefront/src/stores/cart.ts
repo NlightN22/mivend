@@ -24,6 +24,8 @@ import {
 } from '../api/generated/graphql';
 import { stockInsufficient } from '../utils/discountMessages';
 import { i18n } from '../i18n';
+import { salesUnitOf, type SalesUnitView } from '../composables/useSalesUnit';
+import { usePackagesOnly } from '../composables/usePackagesOnly';
 import { shopErrorMessage } from '../utils/shopErrorMessage';
 
 const ADJUST_DEBOUNCE_MS = 350;
@@ -45,10 +47,14 @@ interface MutationResult {
 
 // Vendure's InsufficientStockError.message is a long server-composed sentence;
 // replace it with a short one, using quantityAvailable when it is known.
-function mutationErrorMessage(result: MutationResult, fallback: string): string {
+function mutationErrorMessage(
+    result: MutationResult,
+    fallback: string,
+    unit: SalesUnitView | null = null,
+): string {
     if (result.errorCode === 'INSUFFICIENT_STOCK_ERROR') {
         return result.quantityAvailable != null
-            ? stockInsufficient(result.quantityAvailable)
+            ? stockInsufficient(result.quantityAvailable, unit)
             : i18n.global.t('cartErrors.stockGeneric');
     }
     return fallback;
@@ -123,6 +129,7 @@ export const useCartStore = defineStore('cart', () => {
     async function addItem(
         variantId: string,
         qty: number,
+        unit: SalesUnitView | null = null,
     ): Promise<{ brand: string; percent: number } | null> {
         // Optimistic: insert a temp line so badge + stepper appear instantly
         const tempId = `optimistic-${variantId}`;
@@ -175,6 +182,7 @@ export const useCartStore = defineStore('cart', () => {
                         mutationErrorMessage(
                             result.addItemToOrder,
                             i18n.global.t('cartErrors.addFailed'),
+                            unit,
                         ),
                         'error',
                     );
@@ -269,6 +277,11 @@ export const useCartStore = defineStore('cart', () => {
         }
     }
 
+    function lineSalesUnit(lineId: string): SalesUnitView | null {
+        const line = order.value?.lines.find(l => l.id === lineId);
+        return salesUnitOf(line?.productVariant.customFields, usePackagesOnly().packagesOnly.value);
+    }
+
     async function sendAdjust(lineId: string): Promise<void> {
         try {
             await resumeIfArrangingPayment();
@@ -283,6 +296,7 @@ export const useCartStore = defineStore('cart', () => {
                     mutationErrorMessage(
                         result.adjustOrderLine,
                         i18n.global.t('cartErrors.updateFailed'),
+                        lineSalesUnit(lineId),
                     ),
                     'error',
                 );

@@ -60,6 +60,8 @@ const ru: typeof en = {
     },
     cartErrors: {
         stockInsufficient: 'Доступно только {n} шт.',
+        stockInsufficientPacks: 'Доступно только {n} {unit}',
+        stockNoWholePacks: 'Нет в наличии в {unit}: на складе меньше одной целой упаковки ({unit})',
         stockGeneric: 'Недостаточно товара',
         addFailed: 'Не удалось добавить товар в корзину',
         updateFailed: 'Не удалось изменить количество',

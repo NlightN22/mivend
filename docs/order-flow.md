@@ -165,6 +165,13 @@ branch, else `GlobalSettings.defaultBranchId`; the API resolves guests against t
 `docs/pricing.md`, "Guest display"). Tiers: none = ATP ≤ 0, low = 1–4, medium = 5–19, high = 20+. Thresholds are
 computed on mivend's side (not in search-service) and stored in the database, not in code.
 
+**Packs (#300):** an order line's `quantity` and Vendure's `quantityAvailable` are in base units (the variant stays in
+base units, see "Branch-conditional packaging"). For a variant with `unitRatioToBase` > 1 on a branch that sells by
+packages only (`BranchSettings.packagesOnly`), the tier counts whole packs: `floor(ATP / ratio)`, so fewer than one pack
+is `OUT_OF_STOCK` and the thresholds above apply to packs. Every `stockLevel` goes through `StockLevelService`, which
+reads the ratios of a batch in one extra query (branch settings only when some variant has a ratio). The storefront
+refusal message converts `quantityAvailable` to whole packs and names the pack unit for such lines.
+
 **Inbound stock for deleted warehouses:** a `stock` event whose warehouse is unknown is retried (the warehouse event may not be
 consumed yet), unless the latest inbox event for that warehouse is a processed deletion tombstone — then the fact is ignored,
 because the warehouse never existed here (`warehouse-tombstone.query.ts`, #167).

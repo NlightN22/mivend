@@ -58,6 +58,8 @@ export default {
     },
     cartErrors: {
         stockInsufficient: 'Only {n} pcs. available',
+        stockInsufficientPacks: 'Only {n} {unit} available',
+        stockNoWholePacks: 'Not available in {unit}: less than one whole {unit} in stock',
         stockGeneric: 'Not enough stock',
         addFailed: 'Could not add item to cart',
         updateFailed: 'Could not update quantity',

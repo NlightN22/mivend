@@ -1,4 +1,5 @@
 import { i18n } from '../i18n';
+import { baseToPacks, type SalesUnitView } from '../composables/useSalesUnit';
 
 const { t } = i18n.global;
 
@@ -26,6 +27,11 @@ export function discountTierCurrentSuffix(percent: number): string {
     return t('discount.tierCurrent', { percent });
 }
 
-export function stockInsufficient(qty: number): string {
-    return t('cartErrors.stockInsufficient', { n: qty });
+// quantityAvailable is in base units; a line sold in packs reports whole packs in the pack unit.
+export function stockInsufficient(qty: number, unit: SalesUnitView | null = null): string {
+    if (!unit) return t('cartErrors.stockInsufficient', { n: qty });
+    const packs = Math.floor(baseToPacks(qty, unit) + 1e-9);
+    return packs > 0
+        ? t('cartErrors.stockInsufficientPacks', { n: packs, unit: unit.name })
+        : t('cartErrors.stockNoWholePacks', { unit: unit.name });
 }
