@@ -49,5 +49,12 @@ describe('ProductVariant catalog price fields', () => {
 
         expect(ruleQueries).toHaveBeenCalledTimes(1);
         expect(variantReads).toHaveBeenCalledTimes(ids.length * 2);
+        // The manufacturer rides on the facet read as a join, not as an extra query per variant.
+        const calls = variantReads.mock.calls as unknown as Array<[{ relations: string[] }]>;
+        const facetReads = calls.filter(([arg]) => arg.relations.includes('facetValues'));
+        expect(facetReads).toHaveLength(ids.length);
+        for (const [arg] of facetReads) {
+            expect(arg.relations).toContain('product.customFields.manufacturer');
+        }
     });
 });

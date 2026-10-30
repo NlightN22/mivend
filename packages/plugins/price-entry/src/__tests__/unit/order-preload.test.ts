@@ -59,6 +59,11 @@ describe('preloadOrderLookups', () => {
         await preloadOrderLookups(connection, priceEntry, ctx, order, memo, resolveDefault);
 
         expect(variantFind).toHaveBeenCalledTimes(1);
+        expect(variantFind).toHaveBeenCalledWith(
+            expect.objectContaining({
+                relations: expect.arrayContaining(['product.customFields.manufacturer']),
+            }),
+        );
         expect(qb.getMany).toHaveBeenCalledTimes(1);
         expect(priceEntry.getForVariants).toHaveBeenCalledTimes(2);
         expect(priceEntry.getForVariants).toHaveBeenLastCalledWith(ctx, ['v-b'], 'RETAIL');

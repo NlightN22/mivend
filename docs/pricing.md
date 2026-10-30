@@ -149,7 +149,8 @@ PriceResolutionService.resolve(ctx, variantId)
 
 3. facetValues = merge(ProductVariant.facetValues, Product.facetValues)
    — facets such as category are assigned to the PRODUCT, not the variant (brand is
-     not a facet at all, see "Brand / manufacturer" below), so both levels must be checked or matching silently misses
+     not a facet, but matches as a synthetic `manufacturer` entry, see "Brand / manufacturer"
+     below), so both levels must be checked or matching silently misses
      everything (this was a real bug during development — verify with both
      relations loaded if debugging "discount doesn't apply")
 
@@ -365,6 +366,15 @@ product's `manufacturer` relation (`Product.customFields.manufacturer`), never a
 API exposes it as `Product.manufacturer { id name }` and `SearchResult.manufacturer`
 (erp-integration, batched per request); the storefront reads it only through `brandOf`
 (`packages/storefront/src/utils/brand.ts`). There is no `brand` facet — nothing assigns one.
+
+A `DiscountRule` with `facetCode = manufacturer` and `facetValueCode = <manufacturer ERP id>`
+matches by that relation: `toFacetsAndWeight` (`order-preload.ts`) adds one synthetic entry
+`{ facetCode: 'manufacturer', valueCode: <Manufacturer.externalId>, name }` to the product's facet
+values when it has a manufacturer. Everything that matches rules reads that one list — tier display
+(`resolveTiers`), price resolution, tier progress and the per-facet order aggregates — so a brand
+ladder (percent by amount or weight) counts every cart line of that brand and never mixes brands.
+The relation loads with the same single variant query as the facets (a join; no extra query per
+variant on a catalog page or in a cart preload). No facet value, column or brand list is involved.
 
 ---
 

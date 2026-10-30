@@ -30,19 +30,39 @@ export const VARIANT_FACET_RELATIONS = [
     'product.facetValues',
     'product.facetValues.facet',
     'product.facetValues.translations',
+    'product.customFields.manufacturer',
 ];
+
+export const MANUFACTURER_FACET_CODE = 'manufacturer';
+
+interface ProductManufacturerRef {
+    externalId: string;
+    name: string | null;
+}
 
 export function toFacetsAndWeight(
     ctx: RequestContext,
     variant: ProductVariant,
 ): VariantFacetsAndWeight {
     const all = [...variant.facetValues, ...(variant.product?.facetValues ?? [])];
+    const facetValues: VariantFacetValueWithName[] = all.map(fv => ({
+        facetCode: fv.facet.code,
+        valueCode: fv.code,
+        name: translateEntity(fv, ctx.languageCode).name,
+    }));
+    // The brand is a product relation, not a facet; a synthetic entry lets "manufacturer" rules match by ERP id.
+    const manufacturer = (
+        variant.product?.customFields as unknown as { manufacturer?: ProductManufacturerRef | null }
+    )?.manufacturer;
+    if (manufacturer?.externalId) {
+        facetValues.push({
+            facetCode: MANUFACTURER_FACET_CODE,
+            valueCode: manufacturer.externalId,
+            name: manufacturer.name ?? manufacturer.externalId,
+        });
+    }
     return {
-        facetValues: all.map(fv => ({
-            facetCode: fv.facet.code,
-            valueCode: fv.code,
-            name: translateEntity(fv, ctx.languageCode).name,
-        })),
+        facetValues,
         weight: variant.customFields.weight ?? 0,
     };
 }
