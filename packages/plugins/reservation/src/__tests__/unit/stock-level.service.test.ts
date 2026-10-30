@@ -165,4 +165,18 @@ describe('StockLevelService', () => {
         await service.getTiers(ctx, ['1']);
         expect(resolveEffective).not.toHaveBeenCalled();
     });
+
+    it.each([
+        [0.5, 20, 'HIGH_STOCK'],
+        [1.5, 2, 'OUT_OF_STOCK'],
+        [Math.PI, 20, 'HIGH_STOCK'],
+    ])('ratio %s with %i base units on a packs-only branch is %s', async (ratio, qty, tier) => {
+        const { service, ctx } = build({
+            defaultBranchId: 'branch-a',
+            atp: { '1': qty },
+            ratios: { '1': ratio },
+            packagesOnly: true,
+        });
+        expect((await service.getTiers(ctx, ['1'])).get('1')).toBe(tier);
+    });
 });

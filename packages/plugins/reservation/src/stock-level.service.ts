@@ -9,7 +9,6 @@ import {
 } from '@vendure/core';
 import { BranchSettingsService, WarehouseService } from '@mivend/plugin-access-control';
 import { CounterpartyService } from '@mivend/plugin-counterparty';
-import { wholePackQuantity } from '@mivend/plugin-moq';
 import { ctxQuery } from 'shared';
 
 import { ReservationAvailabilityService } from './reservation-availability.service';
@@ -87,11 +86,7 @@ export class StockLevelService {
         if (rows.length === 0) return new Map();
         const settings = await this.branchSettingsService.resolveEffective(ctx, branchId);
         if (settings?.packagesOnly !== true) return new Map();
-        return new Map(
-            rows
-                .map(r => [String(r.id), Number(r.ratio)] as const)
-                .filter(([, ratio]) => wholePackQuantity(ratio) !== null),
-        );
+        return new Map(rows.map(r => [String(r.id), Number(r.ratio)]));
     }
 
     async getViewerWarehouseErpIds(ctx: RequestContext): Promise<string[]> {

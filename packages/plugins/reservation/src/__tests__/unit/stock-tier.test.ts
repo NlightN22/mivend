@@ -44,4 +44,20 @@ describe('stockTierFor', () => {
     it.each([null, 1, 0.5])('keeps base units for pack ratio %s', ratio => {
         expect(stockTierFor(3, thresholds, ratio)).toBe('LOW_STOCK');
     });
+
+    describe('odd ratios', () => {
+        it('ratio 1.5 sells in steps of 3 base units (2 packs)', () => {
+            expect(stockTierFor(2, thresholds, 1.5)).toBe('OUT_OF_STOCK');
+            expect(stockTierFor(4, thresholds, 1.5)).toBe('LOW_STOCK');
+            expect(stockTierFor(30, thresholds, 1.5)).toBe('HIGH_STOCK');
+        });
+
+        it('ratio 0.5 stays in base units', () => {
+            expect(stockTierFor(2, thresholds, 0.5)).toBe('LOW_STOCK');
+        });
+
+        it('a ratio with no whole multiple within 1000 packs stays in base units', () => {
+            expect(stockTierFor(20, thresholds, Math.PI)).toBe('HIGH_STOCK');
+        });
+    });
 });

@@ -156,6 +156,7 @@ export const useCartStore = defineStore('cart', () => {
                 };
             }
         }
+        if (unit) unitByVariant.set(variantId, unit);
         pendingMutations++;
         let discountResult: { brand: string; percent: number } | null = null;
         await enqueue(async () => {
@@ -277,14 +278,20 @@ export const useCartStore = defineStore('cart', () => {
         }
     }
 
+    // An optimistic line has no customFields yet, so the unit given at add time is the fallback.
+    const unitByVariant = new Map<string, SalesUnitView>();
+
     function lineSalesUnit(lineId: string): SalesUnitView | null {
-        const line = order.value?.lines.find(l => l.id === lineId);
-        return salesUnitOf(line?.productVariant.customFields, usePackagesOnly().packagesOnly.value);
+        const variant = order.value?.lines.find(l => l.id === lineId)?.productVariant;
+        return (
+            salesUnitOf(variant?.customFields, usePackagesOnly().packagesOnly.value) ??
+            (variant ? (unitByVariant.get(variant.id) ?? null) : null)
+        );
     }
 
     async function sendAdjust(lineId: string): Promise<void> {
         try {
-            await resumeIfArrangingPayment();
+            await Promise.all([resumeIfArrangingPayment(), usePackagesOnly().load()]);
             const qty = pendingAdjusts.get(lineId);
             if (qty === undefined) return;
             pendingAdjusts.delete(lineId);
