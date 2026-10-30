@@ -32,7 +32,7 @@ describe('toFacetsAndWeight manufacturer entry', () => {
         ]);
     });
 
-    it('falls back to the ERP id as name when the manufacturer name is not known yet', () => {
+    it('uses an empty name, never the ERP id, when the manufacturer name is not known yet', () => {
         const { facetValues } = toFacetsAndWeight(
             ctx,
             variant({ externalId: 'maker-1', name: null }),
@@ -40,7 +40,7 @@ describe('toFacetsAndWeight manufacturer entry', () => {
         expect(facetValues.at(-1)).toEqual({
             facetCode: 'manufacturer',
             valueCode: 'maker-1',
-            name: 'maker-1',
+            name: '',
         });
     });
 

@@ -35,11 +35,6 @@ export const VARIANT_FACET_RELATIONS = [
 
 export const MANUFACTURER_FACET_CODE = 'manufacturer';
 
-interface ProductManufacturerRef {
-    externalId: string;
-    name: string | null;
-}
-
 export function toFacetsAndWeight(
     ctx: RequestContext,
     variant: ProductVariant,
@@ -51,14 +46,17 @@ export function toFacetsAndWeight(
         name: translateEntity(fv, ctx.languageCode).name,
     }));
     // The brand is a product relation, not a facet; a synthetic entry lets "manufacturer" rules match by ERP id.
+    // Typed locally: the field's declaration lives in erp-integration and a second one would conflict.
     const manufacturer = (
-        variant.product?.customFields as unknown as { manufacturer?: ProductManufacturerRef | null }
+        variant.product?.customFields as {
+            manufacturer?: { externalId: string; name: string | null } | null;
+        }
     )?.manufacturer;
     if (manufacturer?.externalId) {
         facetValues.push({
             facetCode: MANUFACTURER_FACET_CODE,
             valueCode: manufacturer.externalId,
-            name: manufacturer.name ?? manufacturer.externalId,
+            name: manufacturer.name ?? '',
         });
     }
     return {
