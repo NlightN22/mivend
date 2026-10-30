@@ -236,6 +236,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
                 <MvNotificationBell
                     v-if="notificationsStore"
+                    class="app-header__bell"
                     :unread-count="notificationsStore.unreadCount"
                     :aria-label="t('notifications.title')"
                     @click="notificationPanelOpen = !notificationPanelOpen"

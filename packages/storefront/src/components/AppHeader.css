@@ -311,7 +311,7 @@
     }
 
     .app-header__inner {
-        grid-template-columns: auto 1fr auto auto auto;
+        grid-template-columns: auto 1fr auto auto auto auto;
         padding: 10px 16px 8px;
     }
 
@@ -332,8 +332,12 @@
         grid-column: 3;
     }
 
-    .app-header__cart {
+    .app-header__bell {
         grid-column: 4;
+    }
+
+    .app-header__cart {
+        grid-column: 5;
         min-width: 0;
         min-height: 44px;
         padding: 0 10px;
@@ -345,7 +349,7 @@
 
     .app-header__hamburger {
         display: flex;
-        grid-column: 5;
+        grid-column: 6;
     }
 
     .app-header__nav {
