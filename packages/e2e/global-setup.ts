@@ -1,4 +1,4 @@
-import { chromium } from '@playwright/test';
+import { chromium, type Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 import { adminGql, postBatch, shopGql, shopLoginCookie, waitForRun } from './helpers/api';
@@ -19,6 +19,18 @@ import { ensureCountry, ensureShippingMethod } from './fixtures/shop-basics';
 const AUTH_DIR = path.join(__dirname, '.auth');
 const STOREFRONT_URL = process.env.STOREFRONT_URL ?? 'http://localhost:5173';
 const MANAGER_URL = process.env.MANAGER_URL ?? 'http://localhost:5174';
+
+// Cold Vite transforms and first widget queries otherwise leave the home widgets on "Loading" past a spec's timeout.
+async function warmStorefront(page: Page): Promise<void> {
+    for (const route of ['/', '/catalog']) {
+        await page.goto(route);
+        await page.waitForLoadState('networkidle');
+        await page
+            .locator('.mv-product-card, .mv-product-row')
+            .first()
+            .waitFor({ timeout: 60_000 });
+    }
+}
 
 export default async function globalSetup(): Promise<void> {
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
@@ -249,6 +261,7 @@ export default async function globalSetup(): Promise<void> {
 
     await loginAs(page, E2E_CUSTOMER.email, E2E_CUSTOMER.password);
     await context.storageState({ path: path.join(AUTH_DIR, 'storefront-user.json') });
+    await warmStorefront(page);
     await context.close();
 
     for (const [key, account] of Object.entries(MANAGER_ACCOUNTS)) {
