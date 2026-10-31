@@ -449,10 +449,14 @@ default, no Redis): another server process may accept an ended token until its c
 expires (`sessionCacheTTL`, 300 s). The cap applies to every account; raise it on a contour where
 many tools share one login.
 
-## Migration name drift
+## Migration and entity schema drift (#302)
 
-The plain rename migrations (#223) do not rename FK/PK/index hash names, so `migration:run` on a
-non-synchronize database drifts those names from entity-derived ones. Accepted: there is no production database yet.
+A database built only by migrations must equal the entity-derived schema. `migrations-match-entities.int.test.ts`
+(`make test-int`) builds a throwaway database by migrations alone and fails when TypeORM would still generate changes.
+Migration `1791544000000` realigned index and FK names (the plain rename migrations of #223 kept hash names of the old
+tables), the four string custom-field columns of `order` (`varchar(255)`) and the two `order` unique custom fields (constraints).
+Indexes only a migration can express (partial, expression, custom-field indexes) are listed in the test's
+`MIGRATION_ONLY_INDEXES`. A new entity index or column needs its migration in the same change, or the test fails.
 
 ## ERP REST callbacks are a test tool, not an integration channel
 

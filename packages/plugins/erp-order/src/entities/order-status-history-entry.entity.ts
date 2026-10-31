@@ -3,6 +3,7 @@ import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
 @Entity()
+@Index(['orderId', 'id'])
 @Index(['orderId', 'occurredAt', 'id'])
 export class OrderStatusHistoryEntry extends UuidEntity {
     constructor(input?: DeepPartial<OrderStatusHistoryEntry>) {

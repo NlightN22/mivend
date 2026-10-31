@@ -194,3 +194,13 @@ product, so the replay no longer fails on a missing product):
 
 `down` is lossy: it restores `variantId` from the lowest variant id of each product, so all but the lowest variant of a
 multi-variant product lose their entry. The ERP models one variant per product, so this is normally a no-op.
+
+## Release step: schema drift realignment (#302)
+
+Migration `1791544000000` is mostly metadata-only (index and FK renames, a redundant index drop). Two statements are heavy
+on the `order` table and take an exclusive lock for their duration; run the release outside peak hours:
+
+- four string custom-field columns narrowed from `varchar` to `varchar(255)` (a table rewrite; fails loudly if a value is longer);
+- the partial unique index on `customFieldsErporderid` replaced by a full unique constraint (one index build; NULLs stay unlimited).
+
+Both are reversible by `down`. Check the time on a copy of the production data first when `order` has more than a few hundred thousand rows.
