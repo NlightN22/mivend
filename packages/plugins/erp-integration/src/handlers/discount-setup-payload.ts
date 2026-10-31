@@ -62,6 +62,7 @@ export function parseDiscountSetup(
             recipients,
             operationKind: String(payload.operationKind ?? ''),
             productErpIds: productIds(payload),
+            productPercents: linePercents(payload),
         },
     };
 }
@@ -103,7 +104,7 @@ function hasLineAttributes(lines: unknown): boolean {
     return (lines as Array<Record<string, unknown>>).some(
         line =>
             ['characteristicId', 'priceTypeId'].some(key => optionalString(line?.[key]) !== null) ||
-            ['percent', 'limitPercent', 'priceNumber'].some(key => !!optionalNumber(line?.[key])),
+            !!optionalNumber(line?.priceNumber),
     );
 }
 
@@ -124,6 +125,21 @@ function parseRecipients(value: unknown): DiscountRecipientInput[] {
         rows.push(recipient);
     }
     return rows;
+}
+
+// A line percent differing from the header replaces it for that product; zero means "use the header".
+function linePercents(
+    payload: Record<string, unknown>,
+): Array<{ productErpId: string; percent: number }> {
+    const lines = Array.isArray(payload.productLines) ? payload.productLines : [];
+    const byProduct = new Map<string, number>();
+    for (const raw of lines) {
+        const line = raw as Record<string, unknown>;
+        const percent = optionalNumber(line.percent);
+        if (percent) byProduct.set(String(line.productId ?? ''), percent);
+    }
+    byProduct.delete('');
+    return [...byProduct].map(([productErpId, percent]) => ({ productErpId, percent }));
 }
 
 function productIds(payload: Record<string, unknown>): string[] {

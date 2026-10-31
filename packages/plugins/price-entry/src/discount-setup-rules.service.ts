@@ -54,18 +54,22 @@ export class DiscountSetupRulesService {
         const productsInPlay = new Set(quantityByProductErpId.keys());
         if (productErpId !== null) productsInPlay.add(productErpId);
         const ids = [...productsInPlay].sort();
-        const membersBySetup = await memoized(
+        const { membersBySetup, percentBySetup } = await memoized(
             memo,
             `dsm:${rules.map(r => r.id).join(',')}|${ids.join(',')}`,
             async () => {
                 const list = await this.loadMembers(ctx, rules, ids);
                 const filter = await this.loadFilterMembers(ctx, rules, ids, memo);
-                return new Map([...list, ...filter]);
+                return {
+                    membersBySetup: new Map([...list.members, ...filter]),
+                    percentBySetup: list.percents,
+                };
             },
         );
         return bestSetupPercent({
             rules,
             membersBySetup,
+            percentBySetup,
             productErpId,
             quantityByProductErpId,
             documentAmount,
@@ -102,14 +106,20 @@ export class DiscountSetupRulesService {
         ctx: RequestContext,
         rules: LoadedDiscountSetup[],
         productErpIds: string[],
-    ): Promise<Map<number, Set<string>>> {
+    ): Promise<{
+        members: Map<number, Set<string>>;
+        percents: Map<number, Map<string, number>>;
+    }> {
         const listRules = rules.filter(isListRule).map(rule => rule.id);
         const members = new Map<number, Set<string>>();
-        if (listRules.length === 0 || productErpIds.length === 0) return members;
-        const rows = await ctxQuery<Array<{ setupId: number; productErpId: string }>>(
+        const percents = new Map<number, Map<string, number>>();
+        if (listRules.length === 0 || productErpIds.length === 0) return { members, percents };
+        const rows = await ctxQuery<
+            Array<{ setupId: number; productErpId: string; percent: number | null }>
+        >(
             this.connection,
             ctx,
-            `SELECT "setupId", "productErpId" FROM discount_setup_product
+            `SELECT "setupId", "productErpId", percent FROM discount_setup_product
              WHERE "setupId" = ANY($1::int[]) AND "productErpId" = ANY($2::text[])`,
             [listRules, productErpIds],
         );
@@ -117,8 +127,13 @@ export class DiscountSetupRulesService {
             const set = members.get(row.setupId) ?? new Set<string>();
             set.add(row.productErpId);
             members.set(row.setupId, set);
+            if (row.percent !== null) {
+                const byProduct = percents.get(row.setupId) ?? new Map<string, number>();
+                byProduct.set(row.productErpId, Number(row.percent));
+                percents.set(row.setupId, byProduct);
+            }
         }
-        return members;
+        return { members, percents };
     }
 
     // Filter-mode setups are evaluated lazily over the products in play, the same way for catalog, cart and order.

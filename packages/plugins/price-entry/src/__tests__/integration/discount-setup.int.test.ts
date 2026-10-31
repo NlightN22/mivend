@@ -94,6 +94,33 @@ const row = async (): Promise<{
     )[0];
 
 describe('DiscountSetupService.apply (real Postgres)', () => {
+    it('stores a line percent per product, replaces it with a newer version and clears it', async () => {
+        const percents = () =>
+            dataSource.query(
+                `SELECT "productErpId", percent FROM discount_setup_product ORDER BY "productErpId"`,
+            );
+        await service.apply(ctx, {
+            ...input('1', ['a', 'b']),
+            productPercents: [{ productErpId: 'a', percent: 9 }],
+        });
+        expect(await percents()).toEqual([
+            { productErpId: 'a', percent: 9 },
+            { productErpId: 'b', percent: null },
+        ]);
+        await service.apply(ctx, {
+            ...input('2', ['a', 'b']),
+            productPercents: [{ productErpId: 'b', percent: 4 }],
+        });
+        expect(await percents()).toEqual([
+            { productErpId: 'a', percent: null },
+            { productErpId: 'b', percent: 4 },
+        ]);
+        await service.apply(ctx, input('3', ['a', 'b']));
+        expect(
+            (await percents()).every((r: { percent: number | null }) => r.percent === null),
+        ).toBe(true);
+    });
+
     it('replaces the whole product set and the recipients with a newer version', async () => {
         await service.apply(ctx, input('1', ['a', 'b', 'c']));
         const replaced = input('2', ['b', 'd']);

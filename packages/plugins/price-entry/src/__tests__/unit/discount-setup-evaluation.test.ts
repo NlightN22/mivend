@@ -84,4 +84,12 @@ describe('bestSetupPercent', () => {
         expect(evaluate({ rules })).toBe(3);
         expect(evaluate({ rules: [rules[0]] })).toBe(-5);
     });
+
+    it('uses the line percent for its product and the header percent for the others', () => {
+        const rules = [rule()];
+        const membersBySetup = new Map([[1, new Set(['p1', 'p2'])]]);
+        const percentBySetup = new Map([[1, new Map([['p1', 20]])]]);
+        expect(evaluate({ rules, membersBySetup, percentBySetup })).toBe(20);
+        expect(evaluate({ rules, membersBySetup, percentBySetup, productErpId: 'p2' })).toBe(5);
+    });
 });

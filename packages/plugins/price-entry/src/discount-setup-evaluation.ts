@@ -15,6 +15,8 @@ export interface SetupEvaluation {
     rules: LoadedDiscountSetup[];
     // Per setup: which of the products in play (order lines + the priced one) are members.
     membersBySetup: Map<number, Set<string>>;
+    // Per setup: members whose document line carries its own percent instead of the header one.
+    percentBySetup?: Map<number, Map<string, number>>;
     productErpId: string | null;
     quantityByProductErpId: Map<string, number>;
     // Kopecks; the ERP threshold is in currency units.
@@ -34,7 +36,11 @@ export function bestSetupPercent(input: SetupEvaluation): number | null {
             continue;
         }
         if (!meetsCondition(rule, members, input)) continue;
-        if (best === null || rule.percent > best) best = rule.percent;
+        const percent =
+            (input.productErpId !== null &&
+                input.percentBySetup?.get(rule.id)?.get(input.productErpId)) ||
+            rule.percent;
+        if (best === null || percent > best) best = percent;
     }
     return best;
 }

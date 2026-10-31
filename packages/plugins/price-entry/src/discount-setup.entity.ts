@@ -91,6 +91,10 @@ export class DiscountSetupProduct {
 
     @PrimaryColumn({ type: 'varchar' })
     productErpId!: string;
+
+    // The document line's own percent; null = the header percent applies.
+    @Column({ type: 'double precision', nullable: true })
+    percent!: number | null;
 }
 
 // What an ERP condition name measures, so no business enum lives in code. Unknown names never match.

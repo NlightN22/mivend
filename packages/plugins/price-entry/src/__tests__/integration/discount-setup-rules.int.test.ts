@@ -80,6 +80,7 @@ beforeEach(async () => {
 interface Seed {
     percent: number;
     products?: string[];
+    productPercents?: Array<{ productErpId: string; percent: number }>;
     allProducts?: boolean;
     recipients?: DiscountRecipientInput[];
     conditionName?: string;
@@ -112,6 +113,7 @@ async function seed(s: Seed): Promise<void> {
         },
         recipients: s.recipients ?? [{ counterpartyErpId: 'cp-1', contractErpId: '' }],
         productErpIds: s.products ?? [],
+        productPercents: s.productPercents,
         operationKind: '',
     });
 }
@@ -181,6 +183,17 @@ describe('DiscountSetupRulesService matching (real Postgres)', () => {
         expect(await best({ priceType: 'RETAIL' })).toBe(-3);
         expect(await best({ priceType: 'WHOLESALE' })).toBeNull();
         expect(await best({ priceType: null })).toBeNull();
+    });
+
+    it('prices a product with its own line percent and the others with the header percent', async () => {
+        await seed({
+            percent: 7,
+            products: ['p1', 'p2'],
+            productPercents: [{ productErpId: 'p1', percent: 20 }],
+        });
+        expect(await best({ product: 'p1' })).toBe(20);
+        expect(await best({ product: 'p2' })).toBe(7);
+        expect(await best({ product: 'p9' })).toBeNull();
     });
 
     it('matches a list setup only for a member product', async () => {

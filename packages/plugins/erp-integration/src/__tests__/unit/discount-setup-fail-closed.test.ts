@@ -51,17 +51,28 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
             'product-line-attributes',
         ],
         [
-            'line percent',
-            { productLines: [{ productId: 'p1', percent: 9 }] },
-            'product-line-attributes',
-        ],
-        [
             'line price number',
             { productLines: [{ productId: 'p1', priceNumber: 2 }] },
             'product-line-attributes',
         ],
     ])('stores a document with %s inactive', (_name, overrides, reason) => {
         expect(reasonOf(overrides)).toBe(reason);
+    });
+
+    it('carries a line percent to the product instead of storing the document inactive', () => {
+        const parsed = parseDiscountSetup(
+            'doc-1',
+            payload({
+                productLines: [
+                    { productId: 'p1', percent: 9 },
+                    { productId: 'p2', percent: 0 },
+                ],
+            }),
+        );
+        if (parsed.kind !== 'upsert') throw new Error('expected an upsert');
+        expect(parsed.input.setup.inactiveReason).toBeNull();
+        expect(parsed.input.productPercents).toEqual([{ productErpId: 'p1', percent: 9 }]);
+        expect(parsed.input.productErpIds).toEqual(['p1', 'p2']);
     });
 
     it('ignores purpose and currency on the header', () => {

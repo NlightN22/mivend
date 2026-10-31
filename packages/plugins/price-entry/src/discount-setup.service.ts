@@ -41,6 +41,8 @@ export interface DiscountSetupInput {
     setup: DiscountSetupValues;
     recipients: DiscountRecipientInput[];
     productErpIds: string[];
+    // Lines carrying their own percent; every other member uses the header percent.
+    productPercents?: Array<{ productErpId: string; percent: number }>;
     // The ERP operation kind name; not stored, checked against discount_operation_kind. Empty = allowed.
     operationKind: string;
 }
@@ -117,9 +119,11 @@ export class DiscountSetupService {
                 }
                 const recipients = setup.active ? input.recipients : [];
                 const products = setup.active && !setup.allProducts ? input.productErpIds : [];
+                const productPercents = products.length > 0 ? (input.productPercents ?? []) : [];
                 const hash = contentHash({ ...setup, sourceVersion: undefined }, [
                     recipients.map(r => `${r.counterpartyErpId}\u0002${r.contractErpId}`),
                     products,
+                    productPercents.map(l => `${l.productErpId}\u0002${l.percent}`),
                 ]);
                 const unchanged = existing !== null && existing.contentHash === hash;
                 const wasActive = existing?.active === true;
@@ -131,6 +135,7 @@ export class DiscountSetupService {
                 const setupId = saved.id as number;
                 await this.replaceRecipients(txCtx, setupId, recipients);
                 await replaceMembership(this.connection, txCtx, PRODUCT_LIST, setupId, products);
+                await this.replaceProductPercents(txCtx, setupId, productPercents);
                 await replaceFilterTerms(
                     this.connection,
                     txCtx,
@@ -201,6 +206,28 @@ export class DiscountSetupService {
                 recipients.map(r => r.counterpartyErpId),
                 recipients.map(r => r.contractErpId),
             ],
+        );
+    }
+
+    private async replaceProductPercents(
+        txCtx: RequestContext,
+        setupId: number,
+        lines: NonNullable<DiscountSetupInput['productPercents']>,
+    ): Promise<void> {
+        await ctxQuery(
+            this.connection,
+            txCtx,
+            `UPDATE discount_setup_product SET percent = NULL WHERE "setupId" = $1 AND percent IS NOT NULL`,
+            [setupId],
+        );
+        if (lines.length === 0) return;
+        await ctxQuery(
+            this.connection,
+            txCtx,
+            `UPDATE discount_setup_product p SET percent = t.pct
+             FROM unnest($2::text[], $3::float8[]) AS t(id, pct)
+             WHERE p."setupId" = $1 AND p."productErpId" = t.id`,
+            [setupId, lines.map(l => l.productErpId), lines.map(l => l.percent)],
         );
     }
 }

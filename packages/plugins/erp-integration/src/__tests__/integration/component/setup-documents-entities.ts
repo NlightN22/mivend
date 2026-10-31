@@ -36,6 +36,7 @@ export class TestRecipient {
 export class TestSetupProduct {
     @PrimaryColumn({ type: 'int' }) setupId!: number;
     @PrimaryColumn({ type: 'varchar' }) productErpId!: string;
+    @Column({ type: 'double precision', nullable: true }) percent!: number | null;
 }
 
 @Entity('retro_bonus_rule')

@@ -38,6 +38,7 @@ export class TestRecipient {
 export class TestProduct {
     @PrimaryColumn({ type: 'int' }) setupId!: number;
     @PrimaryColumn({ type: 'varchar' }) productErpId!: string;
+    @Column({ type: 'double precision', nullable: true }) percent!: number | null;
 }
 
 @Entity('discount_setup_filter_term')
