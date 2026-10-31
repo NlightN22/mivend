@@ -32,6 +32,15 @@ describe('consistencySourcesFromEnv', () => {
         });
     });
 
+    it('treats an empty URL (compose default) as unset', () => {
+        const [source] = consistencySourcesFromEnv({
+            ...on,
+            CONSISTENCY_SEARCH_SERVICE_URL: '',
+            SEARCH_SERVICE_URL: 'https://fallback.example.test',
+        });
+        expect(source.baseUrl).toBe('https://fallback.example.test');
+    });
+
     it('takes an explicit interval', () => {
         const [source] = consistencySourcesFromEnv({
             ...on,
