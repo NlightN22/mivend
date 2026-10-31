@@ -6,6 +6,7 @@ import {
     countEntries,
     formatLag,
     healthVariant,
+    livenessOnlyTypes,
     streamLags,
     totalOpen,
 } from './consistency-display.js';
@@ -20,6 +21,27 @@ function Counts({ label, value }: Readonly<{ label: string; value: unknown }>) {
         <div className="text-xs">
             <span className="text-muted-foreground">{label}: </span>
             {entries.length === 0 ? 'none' : entries.map(([k, n]) => `${k} ${n}`).join(', ')}
+        </div>
+    );
+}
+
+function NotChecked({ source }: Readonly<{ source: Source }>) {
+    const liveness = livenessOnlyTypes(source.coveredEntityTypes);
+    if (source.ignoredEntityTypes.length === 0 && liveness.length === 0) return null;
+    return (
+        <div className="text-xs border-t pt-2 space-y-1">
+            <div className="font-medium">Not checked</div>
+            {source.ignoredEntityTypes.map(i => (
+                <div key={i.entityType}>
+                    <code>{i.entityType}</code>
+                    <span className="text-muted-foreground">: {i.reason}</span>
+                </div>
+            ))}
+            {liveness.length > 0 && (
+                <div className="text-muted-foreground">
+                    {liveness.join(', ')}: stream liveness only (no content check).
+                </div>
+            )}
         </div>
     );
 }
@@ -50,20 +72,28 @@ function SourceCard({ source }: Readonly<{ source: Source }>) {
             )}
             <Counts label="By type" value={source.localOpenByType} />
             <Counts label="By severity" value={source.localOpenBySeverity} />
+            <NotChecked source={source} />
         </div>
     );
 }
 
 export function SourcesPanel() {
     const [sources, setSources] = useState<Source[] | null>(null);
+    const [failed, setFailed] = useState(false);
 
     // Must stay in useEffect: a bare render-body load causes a request storm (see dashboard-extension-rules).
     useEffect(() => {
+        let active = true;
         api.query(consistencySourcesDocument)
-            .then(d => setSources(d.consistencySources))
-            .catch(() => setSources([]));
+            .then(d => active && setSources(d.consistencySources))
+            .catch(() => active && setFailed(true));
+        return () => {
+            active = false;
+        };
     }, []);
 
+    if (failed)
+        return <div className="text-destructive text-sm">Could not load report sources.</div>;
     if (sources === null)
         return <div className="text-muted-foreground text-sm">Loading sources…</div>;
     if (sources.length === 0) {

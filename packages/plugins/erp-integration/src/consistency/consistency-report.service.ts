@@ -4,6 +4,7 @@ import { ctxQuery } from 'shared';
 
 import { ConsistencyReport } from './consistency-report.entity';
 import { ConsistencySourceState } from './consistency-source-state.entity';
+import type { ConsistencyIgnoredEntityType, ConsistencySummary } from './consistency-types';
 
 export interface ConsistencyReportListOptions {
     take?: number;
@@ -18,6 +19,8 @@ export interface ConsistencyReportListOptions {
 export interface ConsistencySourceView extends ConsistencySourceState {
     localOpenByType: Record<string, number>;
     localOpenBySeverity: Record<string, number>;
+    coveredEntityTypes: string[];
+    ignoredEntityTypes: ConsistencyIgnoredEntityType[];
 }
 
 const MAX_TAKE = 100;
@@ -60,6 +63,9 @@ export class ConsistencyReportService {
         );
         return states.map(state => {
             const view = state as ConsistencySourceView;
+            const summary = state.summary as Partial<ConsistencySummary> | null;
+            view.coveredEntityTypes = summary?.coveredEntityTypes ?? [];
+            view.ignoredEntityTypes = summary?.ignoredEntityTypes ?? [];
             view.localOpenByType = {};
             view.localOpenBySeverity = {};
             for (const row of counts.filter(c => c.source === state.source)) {

@@ -56,8 +56,16 @@ to every holder of it). No mutations: nothing here writes to another system or t
 
 - `consistencyReports(options)`: paginated, filters `source`, `status`, `type`, `severity`,
   `entityType`, newest detection first, `take` capped at 100.
-- `consistencySources`: per source health, last provider summary (check state, stream lag, provider
+- `consistencySources`: per source health, `coveredEntityTypes` and `ignoredEntityTypes` ("Not checked"), last provider summary (check state, stream lag, provider
   counts) and local open counts by type and severity. Empty when no source is configured.
+
+## Coverage ("Not checked")
+
+The provider summary carries `coveredEntityTypes` (stream names, not issue `entityType`s) and
+`ignoredEntityTypes` (`{entityType, reason}`). They are kept inside the stored summary (no extra
+column) and shown on the sources panel. `price`, `warehouse` and `category` are covered only by the
+stream-stalled liveness check, not by content checks, so the panel says that instead of implying
+they are verified. An older provider that omits both fields yields empty lists; the poll does not fail.
 
 ## Configuration
 

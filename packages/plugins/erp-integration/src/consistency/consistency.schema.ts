@@ -36,6 +36,11 @@ export const consistencyTypes = `
         entityType: String
     }
 
+    type ConsistencyIgnoredEntityType {
+        entityType: String!
+        reason: String!
+    }
+
     type ConsistencySource {
         source: String!
         health: String!
@@ -46,6 +51,8 @@ export const consistencyTypes = `
         lastSuccessAt: DateTime
         localOpenByType: JSON!
         localOpenBySeverity: JSON!
+        coveredEntityTypes: [String!]!
+        ignoredEntityTypes: [ConsistencyIgnoredEntityType!]!
     }
 
     extend type Query {

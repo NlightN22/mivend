@@ -86,3 +86,10 @@ export function toReportFilter(filter: ListPageFilter | undefined): ReportFilter
         entityType: unwrap(filter, 'entityType'),
     };
 }
+
+// Covered only by the stream-stalled liveness check, never by content checks (provider API text).
+export const LIVENESS_ONLY_TYPES = ['price', 'warehouse', 'category'];
+
+export function livenessOnlyTypes(covered: readonly string[]): string[] {
+    return LIVENESS_ONLY_TYPES.filter(t => covered.includes(t));
+}

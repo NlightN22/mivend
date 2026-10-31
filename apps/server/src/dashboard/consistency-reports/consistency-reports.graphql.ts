@@ -38,6 +38,11 @@ export const consistencySourcesDocument = graphql(`
             lastSuccessAt
             localOpenByType
             localOpenBySeverity
+            coveredEntityTypes
+            ignoredEntityTypes {
+                entityType
+                reason
+            }
         }
     }
 `);

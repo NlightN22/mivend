@@ -23,12 +23,20 @@ export interface ConsistencyStream {
     lagSeconds: number;
 }
 
+export interface ConsistencyIgnoredEntityType {
+    entityType: string;
+    reason: string;
+}
+
 export interface ConsistencySummary {
     generatedAt: string;
     lastCheck: ConsistencyLastCheck;
     streams: ConsistencyStream[];
     openByType: Record<string, number>;
     openBySeverity: Record<string, number>;
+    // Stream names, not issue entityTypes; empty when an older provider omits them.
+    coveredEntityTypes: string[];
+    ignoredEntityTypes: ConsistencyIgnoredEntityType[];
 }
 
 export interface ConsistencyIssue {

@@ -1,5 +1,6 @@
 import { ConsistencyClientError } from './consistency-client-error';
 import type {
+    ConsistencyIgnoredEntityType,
     ConsistencyIssue,
     ConsistencyIssuePage,
     ConsistencyStream,
@@ -53,6 +54,24 @@ function parseStream(value: unknown): ConsistencyStream {
     };
 }
 
+function parseCovered(value: unknown): string[] {
+    if (value === undefined) return [];
+    if (!Array.isArray(value)) malformed('coveredEntityTypes');
+    return value.map(v => str(v, 'coveredEntityTypes[]'));
+}
+
+function parseIgnored(value: unknown): ConsistencyIgnoredEntityType[] {
+    if (value === undefined) return [];
+    if (!Array.isArray(value)) malformed('ignoredEntityTypes');
+    return value.map(v => {
+        const i = obj(v, 'ignoredEntityTypes[]');
+        return {
+            entityType: str(i.entityType, 'ignoredEntityTypes.entityType'),
+            reason: str(i.reason, 'ignoredEntityTypes.reason'),
+        };
+    });
+}
+
 export function parseSummary(body: unknown): ConsistencySummary {
     const b = obj(body, 'summary');
     const check = obj(b.lastCheck, 'lastCheck');
@@ -75,6 +94,8 @@ export function parseSummary(body: unknown): ConsistencySummary {
         streams: b.streams.map(parseStream),
         openByType: counts(b.openByType, 'openByType'),
         openBySeverity: counts(b.openBySeverity, 'openBySeverity'),
+        coveredEntityTypes: parseCovered(b.coveredEntityTypes),
+        ignoredEntityTypes: parseIgnored(b.ignoredEntityTypes),
     };
 }
 

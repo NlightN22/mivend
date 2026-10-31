@@ -140,6 +140,34 @@ describe('ConsistencySourceClient response mapping', () => {
         });
     });
 
+    it('maps coveredEntityTypes and ignoredEntityTypes', async () => {
+        const body = wireSummary({
+            coveredEntityTypes: ['stock', 'price'],
+            ignoredEntityTypes: [{ entityType: 'category', reason: 'no content check' }],
+        });
+        const summary = await new ConsistencySourceClient(CONFIG, respond(200, body)).getSummary();
+        expect(summary.coveredEntityTypes).toEqual(['stock', 'price']);
+        expect(summary.ignoredEntityTypes).toEqual([
+            { entityType: 'category', reason: 'no content check' },
+        ]);
+    });
+
+    it('stores empty lists when an older provider omits them', async () => {
+        const summary = await new ConsistencySourceClient(
+            CONFIG,
+            respond(200, wireSummary()),
+        ).getSummary();
+        expect(summary.coveredEntityTypes).toEqual([]);
+        expect(summary.ignoredEntityTypes).toEqual([]);
+    });
+
+    it('rejects malformed ignoredEntityTypes', async () => {
+        const body = wireSummary({ ignoredEntityTypes: [{ entityType: 'x' }] });
+        await expect(
+            new ConsistencySourceClient(CONFIG, respond(200, body)).getSummary(),
+        ).rejects.toMatchObject({ kind: 'malformed' });
+    });
+
     it('accepts a running check with null finishedAt and durationMs', async () => {
         const body = wireSummary({
             lastCheck: {

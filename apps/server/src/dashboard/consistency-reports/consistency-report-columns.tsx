@@ -3,7 +3,9 @@ import { Badge } from '@vendure/dashboard';
 import { formatJson } from './consistency-display.js';
 
 function Json({ value }: Readonly<{ value: unknown }>) {
-    return <pre className="text-xs whitespace-pre-wrap break-all max-w-56">{formatJson(value)}</pre>;
+    return (
+        <pre className="text-xs whitespace-pre-wrap break-all max-w-56">{formatJson(value)}</pre>
+    );
 }
 
 interface Row {
