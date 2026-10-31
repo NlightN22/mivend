@@ -1,6 +1,6 @@
 import type { ConsistencySourceConfig } from '@mivend/plugin-erp-integration';
 
-const CHECK_INTERVAL_DEFAULT_MS = 15 * 60_000;
+const CHECK_INTERVAL_DEFAULT_MS = 6 * 60 * 60_000;
 
 // Disabled unless explicitly enabled; a missing URL or key disables it as well, never a half-configured poll.
 export function consistencySourcesFromEnv(env: NodeJS.ProcessEnv): ConsistencySourceConfig[] {

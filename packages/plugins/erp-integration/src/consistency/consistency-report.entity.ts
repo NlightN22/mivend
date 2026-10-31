@@ -37,7 +37,7 @@ export class ConsistencyReport extends UuidEntity {
     @Column({ type: 'varchar', name: 'entity_id' })
     entityId!: string;
 
-    @Column({ type: 'jsonb', default: () => `'{}'::jsonb` })
+    @Column({ type: 'jsonb', default: () => "'{}'" })
     scope!: Record<string, string>;
 
     @Column({ type: 'jsonb', nullable: true })

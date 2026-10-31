@@ -166,7 +166,7 @@ are never registered together.
 | `CONSISTENCY_SEARCH_SERVICE_ENABLED` | unset (off) | `true` turns the search-service source on |
 | `CONSISTENCY_SEARCH_SERVICE_URL` | `SEARCH_SERVICE_URL` | base URL of the provider |
 | `CONSISTENCY_SEARCH_SERVICE_API_KEY` | none, required | separate read-only key with scope `consistency:read`; never committed |
-| `CONSISTENCY_SEARCH_SERVICE_CHECK_INTERVAL_MS` | `900000` | the provider's own check schedule; a check older than 3x is reported stale |
+| `CONSISTENCY_SEARCH_SERVICE_CHECK_INTERVAL_MS` | `21600000` | the provider's own check schedule; a check older than 3x is reported stale |
 | `CONSISTENCY_RETENTION_DAYS` | `90` | resolved reports older than this are deleted daily |
 
 **`packages/plugins/search/package.json` pins `@vendure/elasticsearch-plugin` to `^3.5.7`**, not

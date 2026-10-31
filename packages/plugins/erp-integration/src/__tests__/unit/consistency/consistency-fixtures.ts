@@ -11,7 +11,7 @@ export const CONFIG: ConsistencySourceConfig = {
     source: 'search-service',
     baseUrl: 'https://provider.example.invalid/',
     apiKey: 'synthetic-key',
-    checkIntervalMs: 15 * 60_000,
+    checkIntervalMs: 6 * 60 * 60_000,
 };
 
 // Synthetic provider payloads (wire shape of the provider OpenAPI file), never captured from a real provider.

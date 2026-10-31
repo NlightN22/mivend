@@ -67,5 +67,5 @@ export const REPORT_UNAVAILABLE_TYPE = 'report-unavailable';
 export const REPORT_UNAVAILABLE_ISSUE_ID = 'report-unavailable';
 export const STALE_CHECK_FACTOR = 3;
 export const CONSISTENCY_POLL_INTERVAL_DEFAULT = 5 * 60_000;
-export const CONSISTENCY_CHECK_INTERVAL_DEFAULT = 15 * 60_000;
+export const CONSISTENCY_CHECK_INTERVAL_DEFAULT = 6 * 60 * 60_000;
 export const CONSISTENCY_RETENTION_DAYS_DEFAULT = 90;
