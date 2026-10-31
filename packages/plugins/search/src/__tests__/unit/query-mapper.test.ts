@@ -17,6 +17,7 @@ describe('mapSearchInputToResolveQueryRequest', () => {
             query: 'pad',
             sort: 'relevance',
             availableOnly: false,
+            availabilityMode: 'onHandAndErp',
             limit: 10,
             offset: 20,
         });
@@ -60,6 +61,16 @@ describe('mapSearchInputToResolveQueryRequest', () => {
             { manufacturer: [], characteristics: [], warehouseIds: [], unsatisfiable: false },
         );
         expect(request.filters).toEqual({ warehouseIds: [] });
+    });
+
+    it('always sends the onHandAndErp availability mode, with or without inStock', () => {
+        expect(
+            mapSearchInputToResolveQueryRequest({ term: 'a', inStock: true }, none)
+                .availabilityMode,
+        ).toBe('onHandAndErp');
+        expect(mapSearchInputToResolveQueryRequest({ term: 'a' }, none).availabilityMode).toBe(
+            'onHandAndErp',
+        );
     });
 
     it('without inStock availableOnly is explicitly false (search-service defaults to true) and no warehouseIds are sent', () => {

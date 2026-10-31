@@ -3,6 +3,9 @@ import type { ShopSearchInput } from './types';
 
 export type SearchServiceSort = 'relevance' | 'name' | 'nameDesc' | 'priceAsc' | 'priceDesc';
 
+// Mirrors mivend's availability formula minus allocations, which search cannot know (docs/order-flow.md).
+export const AVAILABILITY_MODE = 'onHandAndErp';
+
 export interface ResolveQueryRequest {
     query: string;
     priceTypeId?: string;
@@ -17,6 +20,7 @@ export interface ResolveQueryRequest {
     limit?: number;
     offset?: number;
     availableOnly?: boolean;
+    availabilityMode?: typeof AVAILABILITY_MODE;
     requireOrganization?: boolean;
 }
 
@@ -69,6 +73,7 @@ export function mapSearchInputToResolveQueryRequest(
         ...(resolved.categoryId ? { categoryId: resolved.categoryId } : {}),
         ...(Object.keys(filters).length > 0 ? { filters } : {}),
         availableOnly: Boolean(input.inStock),
+        availabilityMode: AVAILABILITY_MODE,
         sort: mapSort(input),
         // search-service rejects limit 0; a facets-only request (take 0) still needs one hit.
         limit:
