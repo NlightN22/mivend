@@ -38,7 +38,6 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
 
     it.each([
         ['markupTypeId', { markupTypeId: 'mt-1' }, 'markup-type'],
-        ['currencyId', { currencyId: 'cur-1' }, 'currency'],
         ['commonTimeFrom', { commonTimeFrom: time }, 'time-window'],
         ['commonTimeTo', { commonTimeTo: time }, 'time-window'],
         ['pseudo', { pseudo: true }, 'pseudo-document'],
@@ -65,8 +64,9 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
         expect(reasonOf(overrides)).toBe(reason);
     });
 
-    it('ignores purpose on the header', () => {
+    it('ignores purpose and currency on the header', () => {
         expect(reasonOf({ purposeId: 'pu-1' })).toBeNull();
+        expect(reasonOf({ currencyId: 'cur-1' })).toBeNull();
     });
 
     it('ignores quality on the header and on lines', () => {
