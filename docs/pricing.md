@@ -453,7 +453,7 @@ Several matching documents never stack: the highest percent wins and a negative 
 mivend cannot evaluate are stored inactive with a reason and ignored: fixed prices, price groups, bonus lines, set
 components, weekday or time windows, reference conditions, dynamic product filters with a field or comparison mivend does not evaluate, and any non-default value of an
 attribute mivend does not read (markup type, purpose, currency, pseudo documents, product-line attributes).
-A positive percent with a markup type is therefore never a discount. Opaque ids are compared only to empty, never by name.
+Quality is ignored by design: it never restricts a discount. A positive percent with a markup type is therefore never a discount. Opaque ids are compared only to empty, never by name.
 Details and field accounting: `docs/ai/erp-streams-map.md`.
 
 - **Catalog vs cart**: the catalog has no order, so `loadRules` runs with an empty contract and matches only recipient

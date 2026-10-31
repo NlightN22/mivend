@@ -158,6 +158,10 @@ This path is covered by `setup-documents-inbox.int.test.ts`; that Integration Se
 documented behaviour, not asserted by mivend tests. Verify afterwards that the first query returns 0 and that no row is left
 in `awaiting-redelivery`; rows that stay there were not resent or were rejected for another reason (`inactiveReason`).
 
+Rows stored inactive for a reason mivend later stopped enforcing (e.g. `quality`) need the same resend: first reset them with
+`UPDATE discount_setup SET "sourceVersion" = '0', "contentHash" = '' WHERE "inactiveReason" = '<reason>'`, then replay their ids.
+Afterwards `count(*)` for that reason must be 0.
+
 ## Release step: price entries keyed by product ERP id (#297)
 
 Migration `1791540000000` re-keys `product_variant_price_entry` from the variant id to the product ERP id. Before the
