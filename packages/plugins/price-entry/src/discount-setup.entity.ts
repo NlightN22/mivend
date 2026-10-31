@@ -33,7 +33,7 @@ export class DiscountSetup extends VendureEntity {
     @Column({ type: 'varchar', nullable: true })
     priceTypeErpId!: string | null;
 
-    // Captured, not enforced: it caps manual adjustments in the ERP, not the automatic percent.
+    // Captured, deliberately not applied: the ERP's per-unit cap on the discount amount, 0 = unlimited.
     @Column({ type: 'double precision', nullable: true })
     limitPercent!: number | null;
 
