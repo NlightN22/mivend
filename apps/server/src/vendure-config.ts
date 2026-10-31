@@ -65,6 +65,7 @@ import { ErpUsersDashboardPlugin } from './erp-users-dashboard.plugin';
 import { ProductPhotosDashboardPlugin } from './product-photos-dashboard.plugin';
 import { CounterpartyDashboardPlugin } from './counterparty-dashboard.plugin';
 import { RoleProvisioningDashboardPlugin } from './role-provisioning-dashboard.plugin';
+import { consistencySourcesFromEnv } from './consistency-sources';
 import { CustomFieldWritePolicyPlugin } from './custom-field-write-policy.plugin';
 
 const instanceType = (process.env.INSTANCE_TYPE ?? 'branch') as 'central' | 'branch';
@@ -801,6 +802,8 @@ export const config: VendureConfig = {
             // streams above, same host/API key family as Integration Service's Ingestion API.
             reconciliationApiUrl: process.env.INTEGRATION_SERVICE_BASE_URL,
             reconciliationApiKey: process.env.INTEGRATION_SERVICE_API_KEY ?? '',
+            consistencySources: consistencySourcesFromEnv(process.env),
+            consistencyRetentionDays: Number(process.env.CONSISTENCY_RETENTION_DAYS) || undefined,
             resyncSourceSystem: process.env.INTEGRATION_RESYNC_SOURCE_SYSTEM,
             eventContractsRegistryToken: process.env.EVENT_CONTRACTS_REGISTRY_TOKEN,
         }),

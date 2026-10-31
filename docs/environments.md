@@ -159,6 +159,16 @@ required `SEARCH_SERVICE_URL` and `SEARCH_SERVICE_API_KEY`, sent as `X-Api-Key`)
 per-contour deployment choice, never an admin-configurable runtime toggle, and the two backends
 are never registered together.
 
+**Data-drift report sources (issue #303)**: disabled by default; polled only on the central hub. See `docs/consistency-reports.md`.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `CONSISTENCY_SEARCH_SERVICE_ENABLED` | unset (off) | `true` turns the search-service source on |
+| `CONSISTENCY_SEARCH_SERVICE_URL` | `SEARCH_SERVICE_URL` | base URL of the provider |
+| `CONSISTENCY_SEARCH_SERVICE_API_KEY` | none, required | separate read-only key with scope `consistency:read`; never committed |
+| `CONSISTENCY_SEARCH_SERVICE_CHECK_INTERVAL_MS` | `900000` | the provider's own check schedule; a check older than 3x is reported stale |
+| `CONSISTENCY_RETENTION_DAYS` | `90` | resolved reports older than this are deleted daily |
+
 **`packages/plugins/search/package.json` pins `@vendure/elasticsearch-plugin` to `^3.5.7`**, not
 `^3.7.3` like every other `@vendure/*` dependency after #77's core upgrade — confirmed via `pnpm
 view @vendure/elasticsearch-plugin versions` that `3.5.7` is the newest stable release this package

@@ -7,6 +7,7 @@ import { problemTypes } from './schema-types-problems';
 import { reportTypes } from './schema-types-reports';
 import { photoTypes } from './schema-types-photos';
 import { operations } from './schema-operations';
+import { consistencyTypes } from '../consistency/consistency.schema';
 
 export const adminApiExtensions: DocumentNode = gql`
     ${coreTypes}
@@ -15,4 +16,5 @@ export const adminApiExtensions: DocumentNode = gql`
     ${reportTypes}
     ${photoTypes}
     ${operations}
+    ${consistencyTypes}
 `;

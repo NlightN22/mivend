@@ -83,6 +83,14 @@ import {
 import { ProductGalleryService } from './product-gallery.service';
 import { ReconciliationSummaryClient } from './reconciliation-summary.client';
 import { ReconciliationLocalCountsService } from './reconciliation-local-counts.service';
+import { ConsistencyPollerService } from './consistency/consistency-poller.service';
+import { ConsistencyReportStore } from './consistency/consistency-report.store';
+import { ConsistencyReportService } from './consistency/consistency-report.service';
+import { ConsistencyReportResolver } from './consistency/consistency-report.resolver';
+import {
+    createConsistencyPollTask,
+    createConsistencyRetentionTask,
+} from './consistency/consistency-tasks';
 import { ReconciliationService } from './reconciliation.service';
 import { ReconciliationResolver } from './reconciliation.resolver';
 import { createReconciliationTask } from './reconciliation.scheduled-task';
@@ -196,6 +204,9 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
         OrderSubmittedBuilder,
         ReconciliationLocalCountsService,
         ReconciliationService,
+        ConsistencyReportStore,
+        ConsistencyReportService,
+        ConsistencyPollerService,
         KafkaLagPollerService,
         {
             provide: ERP_INTEGRATION_PLUGIN_OPTIONS,
@@ -208,6 +219,7 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
             IntegrationInboxEventResolver,
             ProductTaxCodeFlagResolver,
             ReconciliationResolver,
+            ConsistencyReportResolver,
             KafkaLagResolver,
             IntegrationStreamHealthResolver,
             IntegrationEventListResolver,
@@ -244,6 +256,8 @@ import { OrderSubmittedBuilder } from './order-submitted.builder';
                 createCategoryTreeRecomputeTask(ErpIntegrationPlugin.options),
                 createCreditLimitRecomputeTask(ErpIntegrationPlugin.options),
                 createReconciliationTask(ErpIntegrationPlugin.options),
+                createConsistencyPollTask(ErpIntegrationPlugin.options),
+                createConsistencyRetentionTask(ErpIntegrationPlugin.options),
                 createKafkaLagPollTask(ErpIntegrationPlugin.options),
                 createProductPhotoRecoveryTask(ErpIntegrationPlugin.options),
             ];

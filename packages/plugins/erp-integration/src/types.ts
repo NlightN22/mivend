@@ -1,3 +1,4 @@
+import type { ConsistencySourceConfig } from './consistency/consistency-types';
 declare module '@vendure/core' {
     interface CustomProductFields {
         // Owned by apps/server/src/vendure-config.ts customFields config. ProductChanged.manufacturer is an ERP directory GUID,
@@ -188,6 +189,10 @@ export interface ErpIntegrationPluginOptions {
     // sourceSystem sent to the resync replay API; required by the replay client.
     resyncSourceSystem?: string;
     reconciliationIntervalMs?: number;
+    // Issue #303: drift-report sources; empty or unset means no polling. Keys come from env only.
+    consistencySources?: ConsistencySourceConfig[];
+    consistencyPollIntervalMs?: number;
+    consistencyRetentionDays?: number;
     // Issue #91: how often KafkaLagPollerService recomputes per-partition consumer lag for every
     // inbound topic. Defaults to KAFKA_LAG_POLL_INTERVAL_DEFAULT.
     kafkaLagPollIntervalMs?: number;

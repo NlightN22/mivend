@@ -19,3 +19,7 @@ export type {
     InboundStream,
 } from './src/types';
 export type { OrderSubmittedPayload } from './src/schemas/order-submitted.schema';
+export type {
+    ConsistencySourceConfig,
+    ConsistencySourceId,
+} from './src/consistency/consistency-types';
