@@ -1,4 +1,4 @@
-import { ConsistencyClientError } from './consistency-client-error';
+import { ConsistencyClientError, truncateText } from './consistency-client-error';
 import type {
     ConsistencyIgnoredEntityType,
     ConsistencyIssue,
@@ -6,6 +6,15 @@ import type {
     ConsistencyStream,
     ConsistencySummary,
 } from './consistency-types';
+
+export const MAX_DETAILS = 4096;
+export const MAX_JSON_FIELD = 16384;
+
+// Provider text is untrusted and stored as-is; an oversized field is replaced by a marked preview.
+export function capJson(value: unknown): unknown {
+    const text = JSON.stringify(value) ?? 'null';
+    return text.length > MAX_JSON_FIELD ? { truncated: truncateText(text, MAX_JSON_FIELD) } : value;
+}
 
 type Json = Record<string, unknown>;
 
@@ -103,7 +112,7 @@ function parseScope(value: unknown): Record<string, string> {
     const scope = obj(value, 'scope');
     const out: Record<string, string> = {};
     for (const [key, v] of Object.entries(scope)) out[key] = str(v, `scope.${key}`);
-    return out;
+    return capJson(out) as Record<string, string>;
 }
 
 function parseIssue(value: unknown): ConsistencyIssue {
@@ -118,9 +127,12 @@ function parseIssue(value: unknown): ConsistencyIssue {
         entityType: str(i.entityType, 'issue.entityType'),
         entityId: str(i.entityId, 'issue.entityId'),
         scope: parseScope(i.scope),
-        expected: i.expected ?? null,
-        actual: i.actual ?? null,
-        details: typeof i.details === 'string' ? i.details : malformed('issue.details'),
+        expected: capJson(i.expected ?? null),
+        actual: capJson(i.actual ?? null),
+        details: truncateText(
+            typeof i.details === 'string' ? i.details : malformed('issue.details'),
+            MAX_DETAILS,
+        ),
         replayable: i.replayable,
         occurrences: int(i.occurrences, 'issue.occurrences'),
         firstDetectedAt: isoDate(i.firstDetectedAt, 'issue.firstDetectedAt'),

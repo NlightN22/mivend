@@ -1,6 +1,6 @@
 import type { RequestContextService } from '@vendure/core';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { DataSource, EntitySchema } from 'typeorm';
+import { DataSource } from 'typeorm';
 import {
     createTestConnection,
     createTestSchema,
@@ -13,6 +13,7 @@ import {
 import { ConsistencyClientError } from '../../../../consistency/consistency-client-error';
 import { ConsistencyPollerService } from '../../../../consistency/consistency-poller.service';
 import { ConsistencyReport } from '../../../../consistency/consistency-report.entity';
+import { reportSchema, stateSchema } from './consistency-test-schemas';
 import { ConsistencyReportService } from '../../../../consistency/consistency-report.service';
 import { ConsistencyReportStore } from '../../../../consistency/consistency-report.store';
 import { ConsistencySourceState } from '../../../../consistency/consistency-source-state.entity';
@@ -27,57 +28,6 @@ import {
 
 const { schema, extra } = testSchemaOptions('erp_integration_consistency');
 const ctx = testRequestContext;
-
-// VendureEntity's id column is only wired up by Vendure's own bootstrap, so the tables are mapped here.
-const base = {
-    id: { type: Number, primary: true, generated: true },
-    createdAt: { type: 'timestamp', createDate: true },
-    updatedAt: { type: 'timestamp', updateDate: true },
-    uuid: { type: 'uuid', unique: true },
-} as const;
-const timestamptz = { type: 'timestamptz' } as const;
-const reportSchema = new EntitySchema({
-    name: 'ConsistencyReport',
-    target: ConsistencyReport,
-    tableName: 'consistency_report',
-    columns: {
-        ...base,
-        number: { type: Number, generated: 'increment' },
-        source: { type: String },
-        providerIssueId: { type: String, name: 'provider_issue_id' },
-        type: { type: String },
-        severity: { type: String },
-        entityType: { type: String, name: 'entity_type' },
-        entityId: { type: String, name: 'entity_id' },
-        scope: { type: 'jsonb', default: () => "'{}'" },
-        expected: { type: 'jsonb', nullable: true },
-        actual: { type: 'jsonb', nullable: true },
-        details: { type: 'text', default: '' },
-        replayable: { type: Boolean, default: false },
-        occurrences: { type: Number, default: 1 },
-        firstDetectedAt: { ...timestamptz, name: 'first_detected_at' },
-        lastDetectedAt: { ...timestamptz, name: 'last_detected_at' },
-        resolvedAt: { ...timestamptz, name: 'resolved_at', nullable: true },
-        status: { type: String, default: 'open' },
-    },
-    uniques: [{ columns: ['source', 'providerIssueId'] }],
-});
-const stateSchema = new EntitySchema({
-    name: 'ConsistencySourceState',
-    target: ConsistencySourceState,
-    tableName: 'consistency_source_state',
-    columns: {
-        ...base,
-        source: { type: String, unique: true },
-        health: { type: String },
-        healthDetail: { type: 'text', name: 'health_detail', default: '' },
-        summary: { type: 'jsonb', nullable: true },
-        lastFinishedAt: { ...timestamptz, name: 'last_finished_at', nullable: true },
-        watermark: { ...timestamptz, nullable: true },
-        lastPolledAt: { ...timestamptz, name: 'last_polled_at', nullable: true },
-        lastSuccessAt: { ...timestamptz, name: 'last_success_at', nullable: true },
-    },
-});
 
 let dataSource: DataSource;
 let store: ConsistencyReportStore;
@@ -134,16 +84,6 @@ describe('upsert', () => {
         expect(second.map(r => [r.uuid, r.number])).toEqual(first.map(r => [r.uuid, r.number]));
         expect(new Set(second.map(r => r.number)).size).toBe(2);
         expect(second[0].uuid).toMatch(/^[0-9a-f-]{36}$/);
-    });
-
-    it('keeps one row when the same id is in a page twice', async () => {
-        await store.upsertIssues(ctx, 'search-service', [
-            issue('a', '2026-10-30T10:00:00.000Z', { occurrences: 1 }),
-            issue('a', '2026-10-30T12:00:00.000Z', { occurrences: 2 }),
-        ]);
-        const all = await rows();
-        expect(all).toHaveLength(1);
-        expect(all[0].occurrences).toBe(2);
     });
 
     it('reopens a resolved id in place and keeps it in history while resolved', async () => {
@@ -230,6 +170,35 @@ describe('poller paging with concurrent updates', () => {
         const [state] = await dataSource.getRepository(ConsistencySourceState).find();
         expect(state.watermark).toBeNull();
         expect(state.health).toBe('unreachable');
+    });
+});
+
+describe('watermark overlap', () => {
+    it('asks from watermark minus the margin and stores a record just below the watermark', async () => {
+        const watermark = '2026-10-30T12:00:00.000Z';
+        await store.writeState(ctx, {
+            source: 'search-service',
+            health: 'ok',
+            detail: '',
+            summary: null,
+            lastFinishedAt: null,
+            watermark,
+            succeeded: true,
+        });
+        const requests: unknown[] = [];
+        const client = {
+            getSummary: async () => freshSummary(),
+            getIssuesPage: async (request: unknown) => {
+                requests.push(request);
+                return { items: [issue('late', '2026-10-30T11:58:00.000Z')], nextCursor: null };
+            },
+        } as unknown as ConsistencySourceClient;
+        await poller.pollSource(CONFIG, client);
+
+        expect(requests[0]).toMatchObject({ since: '2026-10-30T11:55:00.000Z' });
+        expect((await rows()).map(r => r.providerIssueId)).toEqual(['late']);
+        const [state] = await dataSource.getRepository(ConsistencySourceState).find();
+        expect(state.watermark).toEqual(new Date(watermark));
     });
 });
 

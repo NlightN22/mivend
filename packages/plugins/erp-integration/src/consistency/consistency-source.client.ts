@@ -38,19 +38,19 @@ export class ConsistencySourceClient {
         const url = `${this.config.baseUrl.replace(/\/+$/, '')}${path}${query ? `?${query}` : ''}`;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-        let response: Response;
         try {
-            response = await this.fetchImpl(url, {
+            const response = await this.fetchImpl(url, {
                 headers: { 'X-Api-Key': this.config.apiKey },
                 signal: controller.signal,
             });
+            if (response.ok) return await this.readJson(response);
+            throw await this.toError(response);
         } catch (err) {
+            if (err instanceof ConsistencyClientError) throw err;
             throw new ConsistencyClientError('unreachable', errorMessage(err));
         } finally {
             clearTimeout(timeout);
         }
-        if (response.ok) return this.readJson(response);
-        throw await this.toError(response);
     }
 
     private async readJson(response: Response): Promise<unknown> {

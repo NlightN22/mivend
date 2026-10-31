@@ -99,7 +99,7 @@ describe('ConsistencyPollerService', () => {
         });
         await poller.pollSource(CONFIG, client);
         expect(rawClient.getIssuesPage.mock.calls[0][0]).toEqual({
-            since: watermark.toISOString(),
+            since: new Date(watermark.getTime() - 5 * 60_000).toISOString(),
             cursor: null,
         });
     });
@@ -171,6 +171,18 @@ describe('ConsistencyPollerService', () => {
         const result = await poller.pollSource(CONFIG, client);
         expect(result).toMatchObject({ health: 'stale', stored: 1 });
         expect(store.markUnavailable).toHaveBeenCalledOnce();
+    });
+
+    it('one source crashing does not stop the others', async () => {
+        const { poller } = setup({
+            sources: [CONFIG, { ...CONFIG, baseUrl: 'https://b.invalid' }],
+        });
+        const spy = vi
+            .spyOn(poller, 'pollSource')
+            .mockRejectedValueOnce(new TypeError('boom'))
+            .mockResolvedValueOnce({ source: 'search-service', health: 'ok', stored: 0 });
+        expect(await poller.pollAll()).toHaveLength(1);
+        expect(spy).toHaveBeenCalledTimes(2);
     });
 
     it('does not swallow a non-provider error', async () => {

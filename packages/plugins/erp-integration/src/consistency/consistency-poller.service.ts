@@ -12,6 +12,8 @@ import type { ConsistencySourceConfig, ConsistencySummary } from './consistency-
 
 // 500 per page: a runaway or looping cursor must end the run, not the process.
 const MAX_PAGES = 400;
+// since is inclusive but a record can land just below the watermark; upsert idempotency makes the overlap free.
+const WATERMARK_MARGIN_MS = 5 * 60_000;
 
 export interface PollResult {
     source: string;
@@ -31,7 +33,16 @@ export class ConsistencyPollerService {
     async pollAll(): Promise<PollResult[]> {
         const results: PollResult[] = [];
         for (const config of this.options.consistencySources ?? []) {
-            results.push(await this.pollSource(config, new ConsistencySourceClient(config)));
+            try {
+                results.push(await this.pollSource(config, new ConsistencySourceClient(config)));
+            } catch (err) {
+                const error = err instanceof Error ? err : new Error(String(err));
+                Logger.error(
+                    `Consistency poll of ${config.source} crashed: ${error.message}`,
+                    error.stack,
+                    loggerCtx,
+                );
+            }
         }
         return results;
     }
@@ -58,7 +69,7 @@ export class ConsistencyPollerService {
                 ctx,
                 config,
                 client,
-                state?.watermark ?? null,
+                state?.watermark ? new Date(state.watermark.getTime() - WATERMARK_MARGIN_MS) : null,
             );
             watermark = collected.watermark;
             stored = collected.stored;

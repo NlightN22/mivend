@@ -215,3 +215,42 @@ describe('ConsistencySourceClient response mapping', () => {
         expect(err.kind).toBe('malformed');
     });
 });
+
+describe('ConsistencySourceClient bounds', () => {
+    it('caps details, jsonb fields and error messages', async () => {
+        const big = 'x'.repeat(20_000);
+        const page = {
+            items: [wireIssue({ details: big, expected: { v: big }, actual: big })],
+            nextCursor: null,
+        };
+        const { items } = await new ConsistencySourceClient(
+            CONFIG,
+            respond(200, page),
+        ).getIssuesPage({
+            since: null,
+            cursor: null,
+        });
+        expect(items[0].details.length).toBeLessThan(4200);
+        expect(items[0].details.endsWith('[truncated]')).toBe(true);
+        expect(JSON.stringify(items[0].expected).length).toBeLessThan(16500);
+        expect(items[0].expected).toHaveProperty('truncated');
+        expect(items[0].actual).toHaveProperty('truncated');
+        expect(new ConsistencyClientError('unreachable', big).message.length).toBeLessThan(4200);
+    });
+
+    it('a body that never arrives is aborted by the timeout', async () => {
+        vi.useFakeTimers();
+        const fetchImpl = vi.fn(async (_url: unknown, init?: RequestInit) => ({
+            ok: true,
+            status: 200,
+            json: () =>
+                new Promise((_resolve, reject) =>
+                    init?.signal?.addEventListener('abort', () => reject(new Error('aborted'))),
+                ),
+        })) as unknown as typeof fetch;
+        const pending = failureOf(new ConsistencySourceClient(CONFIG, fetchImpl).getSummary());
+        await vi.advanceTimersByTimeAsync(10_001);
+        vi.useRealTimers();
+        expect((await pending).kind).toBe('malformed');
+    });
+});
