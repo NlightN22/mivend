@@ -180,9 +180,10 @@ reads when the batch has a pack variant; never per variant. The `inStock` filter
 consumed yet), unless the latest inbox event for that warehouse is a processed deletion tombstone — then the fact is ignored,
 because the warehouse never existed here (`warehouse-tombstone.query.ts`, #167).
 
-**Known limits of the tiers:** the `inStock` filter uses search-service's availability (ERP stock for
-the viewer's branch warehouses) while `stockLevel` uses mivend's ATP (minus our own unconfirmed
-reservations), so right after a reservation an item can pass the filter and show "out". Admin-API
+**Known limits of the tiers:** the external `inStock` filter uses search-service's `onHandAndErp` availability (on hand and ERP
+available, for the viewer's branch warehouses) while `stockLevel` uses mivend's ATP; the only remaining
+divergence is allocations and active reservations, which search cannot know, so right after a
+reservation an item can pass the filter and show "out". Admin-API
 contexts (manager portal) have no Customer, so they see default-branch tiers and filter, not their
 own branch scope (see #123 for manager-portal branch scope).
 
