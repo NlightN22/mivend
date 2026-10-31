@@ -472,7 +472,7 @@ Details and field accounting: `docs/ai/erp-streams-map.md`.
   that an empty list means everyone.
 - **Version order**: a tombstone or unposted document older than the stored version is a noop (a replay); at an equal
   version it applies only while the row is still active; only a strictly newer upsert reactivates.
-- `limit_percent` is stored but not enforced yet, so the real discount can be lower than the ERP's (issue #292).
+- `limit_percent` is deliberately not applied (#292). Despite the name it is not a percent: the ERP treats it as a cap on the discount (markup) amount per unit, 0 meaning unlimited; every prod document has 0 or null. Apply it only if documents with a non-zero cap appear and the owner asks.
 
 **Filter-mode documents (#296).** The ERP sends a dynamic selection as a flat list of ANDed conditions; mivend
 evaluates it lazily over the products in play and never materialises members, so a manufacturer or category change

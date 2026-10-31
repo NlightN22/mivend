@@ -209,7 +209,7 @@ no header percent (price groups, bonus lines, fixed-price rules: the ERP's zero-
 `price_number`, a reference condition (`condition_ref_id`: payment kind, discount card), weekday windows
 (`by_weekdays`/`weekday_windows`), any non-default `markup_type_id`, `common_time_*`,
 `pseudo`, price groups, bonus lines, set components or product-line attributes, an unknown `condition` name (reason
-`unknown condition <name>`), an `operation_kind` missing from `discount_operation_kind` (`unsupported operation <name>`), no recipients (`no-recipients`), and a dynamic product filter mivend cannot evaluate (`unknown-filter-field`, `unknown-comparison`, `unknown-value-type`, `invalid-values`, `empty-filter`; the evaluable set is in `docs/pricing.md` "Filter-mode documents"). `limit_percent` is stored, not enforced.
+`unknown condition <name>`), an `operation_kind` missing from `discount_operation_kind` (`unsupported operation <name>`), no recipients (`no-recipients`), and a dynamic product filter mivend cannot evaluate (`unknown-filter-field`, `unknown-comparison`, `unknown-value-type`, `invalid-values`, `empty-filter`; the evaluable set is in `docs/pricing.md` "Filter-mode documents"). `limit_percent` is stored, deliberately not applied (a per-unit amount cap, 0 = unlimited; see `docs/pricing.md`).
 
 **Field accounting, `DiscountSetupChanged` (0.82.0).** Consumed: `entity_id`, `version`, `document_number`,
 `effective_from`/`effective_to`, `is_active`, `is_deleted`, `condition`, `condition_number`, `percent`, `limit_percent`
