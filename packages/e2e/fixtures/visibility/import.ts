@@ -1,4 +1,5 @@
 import { postBatch, waitForRun } from '../../helpers/api';
+import { widgetProductRecords, widgetPriceAndStockRecords } from './widget-products';
 import {
     ACTORS,
     CLIENTS,
@@ -8,6 +9,7 @@ import {
     VIS_DEPARTMENTS,
     VIS_PASSWORD,
     VIS_PRICE_TYPES,
+    VIS_WAREHOUSES,
     actorEmail,
     clientErpId,
     clientName,
@@ -60,13 +62,13 @@ export async function importStructure(): Promise<void> {
         ]),
         ...many('warehouse', [
             {
-                erpId: 'e2e-vis-wh-a',
+                erpId: VIS_WAREHOUSES.a,
                 name: 'E2E Vis warehouse A',
                 branchErpId: VIS_BRANCHES.a,
                 isActive: true,
             },
             {
-                erpId: 'e2e-vis-wh-b',
+                erpId: VIS_WAREHOUSES.b,
                 name: 'E2E Vis warehouse B',
                 branchErpId: VIS_BRANCHES.b,
                 isActive: true,
@@ -202,4 +204,10 @@ export async function importClients(organizationId: number): Promise<void> {
         ]),
         ...many('stock', [{ sku: PRODUCT.sku, stockOnHand: PRODUCT.stock }]),
     ]);
+}
+
+// Imported last so these are the newest products: the New Arrivals carousel shows the newest first.
+export async function importWidgetProducts(organizationId: number): Promise<void> {
+    await apply('widget-products', widgetProductRecords(organizationId));
+    await apply('widget-stock', widgetPriceAndStockRecords());
 }

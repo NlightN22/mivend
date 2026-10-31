@@ -11,6 +11,8 @@ export const VIS_DEPARTMENTS = {
     b: 'e2e-vis-dept-b',
 } as const;
 
+export const VIS_WAREHOUSES = { a: 'e2e-vis-wh-a', b: 'e2e-vis-wh-b' } as const;
+
 export interface ActorPlan {
     key: ActorKey;
     role: string;

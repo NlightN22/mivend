@@ -7,4 +7,12 @@ export class StockRecordDto {
 
     @ApiProperty()
     stockOnHand!: number;
+
+    @ApiProperty({
+        required: false,
+        description:
+            'ERP identifier of the warehouse holding this quantity. Absent: the quantity is written ' +
+            'to every existing stock level of the variant.',
+    })
+    warehouseErpId?: string;
 }

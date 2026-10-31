@@ -97,6 +97,7 @@ export interface StorageLocationRecord {
 export interface StockRecord {
     sku: string;
     stockOnHand: number;
+    warehouseErpId?: string;
 }
 
 export interface CustomerRecord {

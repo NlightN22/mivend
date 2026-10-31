@@ -2,7 +2,7 @@ import { adminGql } from '../../helpers/api';
 import { seedCategoryTree } from './categories';
 import { seedGrants } from './grants';
 import { readVisIds, type VisIds } from './ids';
-import { importClients, importEmployees, importStructure } from './import';
+import { importClients, importEmployees, importStructure, importWidgetProducts } from './import';
 import { seedOrders } from './orders';
 import { seedRelations } from './relations';
 import { seedStaff } from './staff';
@@ -24,6 +24,7 @@ export async function seedVisibility(superadmin: string): Promise<VisIds> {
     await importEmployees();
     await importClients(Number(org.id));
     await seedCategoryTree(superadmin, Number(org.id));
+    await importWidgetProducts(Number(org.id));
     const ids = await readVisIds(superadmin);
     await seedRelations(superadmin, ids);
     await seedOrders(superadmin, ids);

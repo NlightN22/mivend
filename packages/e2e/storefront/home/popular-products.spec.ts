@@ -76,6 +76,7 @@ test.describe('Popular products ranking reflects real orders', () => {
     test('completing a real order for a product can only improve its ranking position', async ({
         page,
     }) => {
+        test.setTimeout(120_000);
         const { variantId, productId } = await searchInStockWithProductId(page);
 
         const before = await popularProductIds(page);
@@ -86,6 +87,10 @@ test.describe('Popular products ranking reflects real orders', () => {
         // excluded, same as myOrders), so payment does not need to be completed.
         await placeOrderForVariant(page, variantId, 5);
 
+        // The server caches the ranking per channel for up to a minute.
+        await expect
+            .poll(() => popularProductIds(page), { timeout: 90_000, intervals: [2000] })
+            .toContain(productId);
         const after = await popularProductIds(page);
         const rankAfter = after.indexOf(productId);
         const positionAfter = rankAfter === -1 ? Infinity : rankAfter;
