@@ -101,4 +101,10 @@ describe('reconciliation local counts against real Postgres', () => {
         await warehouseEvent('real', 'v1', { isFolder: false, isActive: true });
         expect(await service.getLocalActiveCount(ctx, 'warehouse')).toBe(2);
     });
+
+    it('keeps counting a folder after retention emptied its older versions', async () => {
+        await warehouseEvent('f-1', '2026-10-25T06:00:00.000Z', {});
+        await warehouseEvent('f-1', '2026-10-25T07:00:00.000Z', { isFolder: true, isActive: true });
+        expect(await service.getLocalActiveCount(ctx, 'warehouse')).toBe(2);
+    });
 });
