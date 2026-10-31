@@ -64,6 +64,7 @@ import { OrganizationsDashboardPlugin } from './organizations-dashboard.plugin';
 import { ErpUsersDashboardPlugin } from './erp-users-dashboard.plugin';
 import { ProductPhotosDashboardPlugin } from './product-photos-dashboard.plugin';
 import { CounterpartyDashboardPlugin } from './counterparty-dashboard.plugin';
+import { ConsistencyReportsDashboardPlugin } from './consistency-reports-dashboard.plugin';
 import { RoleProvisioningDashboardPlugin } from './role-provisioning-dashboard.plugin';
 import { consistencySourcesFromEnv } from './consistency-sources';
 import { CustomFieldWritePolicyPlugin } from './custom-field-write-policy.plugin';
@@ -590,6 +591,8 @@ export const config: VendureConfig = {
         CounterpartyDashboardPlugin,
         // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
         // Defense in depth: backstops AccessControlPlugin's bootstrap-time self-provisioning.
+        // Not in packages/plugins: pnpm-symlinked packages' dashboard extensions aren't discovered.
+        ConsistencyReportsDashboardPlugin,
         RoleProvisioningDashboardPlugin,
         CustomerPricingPlugin.init({ defaultPriceTypeCode }),
         AccessControlPlugin.init({

@@ -1,5 +1,5 @@
 export const consistencyTypes = `
-    type ConsistencyReport {
+    type ConsistencyReport implements Node {
         id: ID!
         uuid: String!
         number: Int!
@@ -21,7 +21,7 @@ export const consistencyTypes = `
         status: String!
     }
 
-    type ConsistencyReportList {
+    type ConsistencyReportList implements PaginatedList {
         items: [ConsistencyReport!]!
         totalItems: Int!
     }
