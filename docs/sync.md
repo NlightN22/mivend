@@ -313,10 +313,16 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
 (`integration.example.com`, `X-Api-Key` auth via `INTEGRATION_SERVICE_API_KEY`), comparing its
 `activeCount` per entity type against mivend's own local count for the same type.
 
-- **Scope**: only `category`, `organization`, `warehouse`, `priceType`, `product` are compared —
-  the other supported types (`offer`, `stockOrganization`, `unit`, `storageLocation`, `price`,
-  `stock`) don't currently have a meaningful local equivalent to compare against (see
-  `reconciliation-local-counts.service.ts`'s own comments for why each is excluded).
+- **Scope**: `category`, `organization`, `warehouse`, `priceType`, `product`, `price`, `stock` are
+  compared; `offer`, `unit`, `storageLocation`, `stockOrganization` have no 1:1 local count.
+- **Local count rules (#304)**: each local count mirrors what upstream `activeCount` includes.
+  - `category`: non-root, `feedHidden = false`; a manager `isPrivate` override does not hide one.
+  - `warehouse`: active warehouses plus active folder nodes (upstream counts folders, mivend skips them).
+  - `price`: only entries whose product exists and is not deleted (a price may arrive before its product;
+    upstream counts prices of products it holds). A residual under ~0.5% is expected.
+  - `stock`: `StockLevel` rows with a received `erpAvailableQuantity`; upstream called with `excludeDeletedWarehouse`.
+  - `product`: enabled products. A gap here is real: failed inbox rows (e.g. missing `defaultVatCode`).
+  Covered by `reconciliation-local-counts.int.test.ts` (real Postgres, rows in every filtered state).
 - **Two discrepancy classes only** (the summary endpoint has no per-entity diff, only aggregate
   counts): `upstream-higher` (Integration Service has more active entities than mivend — flag for
   a human to request a replay via the upstream service's own operator-only tooling) and `local-higher`

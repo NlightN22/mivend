@@ -4,19 +4,13 @@ import { ReconciliationLocalCountsService } from '../../reconciliation-local-cou
 
 describe('ReconciliationLocalCountsService', () => {
     function makeService(overrides: {
-        collectionTotalItems?: number;
         productTotalItems?: number;
         organizations?: Array<{ isActive: boolean }>;
         warehouses?: Array<{ isActive: boolean }>;
         priceTypes?: Array<{ isActive: boolean }>;
-        priceEntryCount?: number;
+        sqlCount?: number;
         stockLevelCount?: number;
     }) {
-        const collectionService = {
-            findAll: vi
-                .fn()
-                .mockResolvedValue({ items: [], totalItems: overrides.collectionTotalItems ?? 0 }),
-        };
         const productService = {
             findAll: async () => ({ items: [], totalItems: overrides.productTotalItems ?? 0 }),
         };
@@ -33,39 +27,27 @@ describe('ReconciliationLocalCountsService', () => {
             where: vi.fn().mockReturnThis(),
             getCount: vi.fn().mockResolvedValue(overrides.stockLevelCount ?? 0),
         };
+        const querySpy = vi.fn().mockResolvedValue([{ n: overrides.sqlCount ?? 0 }]);
         const connection = {
             getRepository: (_ctx: unknown, _entity: { name: string }) => ({
-                count: async () => overrides.priceEntryCount ?? 0,
+                query: querySpy,
                 createQueryBuilder: () => stockQueryBuilder,
             }),
         };
         const service = new ReconciliationLocalCountsService(
-            collectionService as never,
             productService as never,
             customerPricingService as never,
             warehouseService as never,
             documentsService as never,
             connection as never,
         );
-        return { service, collectionService, stockQueryBuilder };
+        return { service, querySpy, stockQueryBuilder };
     }
 
-    // root's isPrivate defaults to true, so the isPrivate:false filter already excludes it.
-    // Do not subtract 1 for root here; that would undercount every real category.
-    it('uses the isPrivate:false totalItems directly, with no root adjustment', async () => {
-        const { service } = makeService({ collectionTotalItems: 6 });
+    it('reads the category count from SQL excluding root and feed-hidden', async () => {
+        const { service, querySpy } = makeService({ sqlCount: 6 });
         expect(await service.getLocalActiveCount({} as never, 'category')).toBe(6);
-    });
-
-    // Deactivated categories are hidden via isPrivate:true, so exclude them from this count too.
-    // Otherwise a deactivated category still counts as present and the gap never closes.
-    it('only counts public (non-hidden) categories', async () => {
-        const { service, collectionService } = makeService({ collectionTotalItems: 6 });
-        await service.getLocalActiveCount({} as never, 'category');
-        expect(collectionService.findAll).toHaveBeenCalledWith(
-            {},
-            expect.objectContaining({ filter: { isPrivate: { eq: false } } }),
-        );
+        expect(querySpy.mock.calls[0][0]).toContain('"customFieldsFeedhidden" = false');
     });
 
     it('counts only active organizations', async () => {
@@ -75,11 +57,12 @@ describe('ReconciliationLocalCountsService', () => {
         expect(await service.getLocalActiveCount({} as never, 'organization')).toBe(2);
     });
 
-    it('counts only active warehouses', async () => {
+    it('adds skipped active folder warehouses to the active warehouses', async () => {
         const { service } = makeService({
             warehouses: [{ isActive: true }, { isActive: true }, { isActive: false }],
+            sqlCount: 3,
         });
-        expect(await service.getLocalActiveCount({} as never, 'warehouse')).toBe(2);
+        expect(await service.getLocalActiveCount({} as never, 'warehouse')).toBe(5);
     });
 
     it('counts only active price types', async () => {
@@ -94,9 +77,10 @@ describe('ReconciliationLocalCountsService', () => {
         expect(await service.getLocalActiveCount({} as never, 'product')).toBe(123);
     });
 
-    it('counts price rows as a plain row count (simplified, not per-fact matched)', async () => {
-        const { service } = makeService({ priceEntryCount: 456 });
+    it('reads the price count from SQL restricted to existing products', async () => {
+        const { service, querySpy } = makeService({ sqlCount: 456 });
         expect(await service.getLocalActiveCount({} as never, 'price')).toBe(456);
+        expect(querySpy.mock.calls[0][0]).toContain('EXISTS (SELECT 1 FROM product p');
     });
 
     // Vendure auto-creates a zero-quantity StockLevel row per variant, so a plain row count is wrong.

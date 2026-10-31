@@ -1,18 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import {
-    CollectionService,
-    ProductService,
-    RequestContext,
-    StockLevel,
-    TransactionalConnection,
-} from '@vendure/core';
+import { ProductService, RequestContext, StockLevel, TransactionalConnection } from '@vendure/core';
+import { ctxQuery } from 'shared';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { WarehouseService } from '@mivend/plugin-access-control';
 import { DocumentsService } from '@mivend/plugin-documents';
-import { ProductVariantPriceEntry } from '@mivend/plugin-price-entry';
 
 // offer, unit, storageLocation, stockOrganization are not compared (no 1:1 local count); excluded.
-// price/stock are plain row counts; StockLevel exists for every variant, not per received fact.
+// StockLevel exists for every variant, so stock counts rows carrying a received-event marker.
 export const COMPARED_AGGREGATE_TYPES = [
     'category',
     'organization',
@@ -27,7 +21,6 @@ export type ComparedAggregateType = (typeof COMPARED_AGGREGATE_TYPES)[number];
 @Injectable()
 export class ReconciliationLocalCountsService {
     constructor(
-        private readonly collectionService: CollectionService,
         private readonly productService: ProductService,
         private readonly customerPricingService: CustomerPricingService,
         private readonly warehouseService: WarehouseService,
@@ -51,7 +44,7 @@ export class ReconciliationLocalCountsService {
             case 'product':
                 return this.countActiveProducts(ctx);
             case 'price':
-                return this.connection.getRepository(ctx, ProductVariantPriceEntry).count();
+                return this.countPricesOfKnownProducts(ctx);
             case 'stock':
                 return this.countReceivedStockLevels(ctx);
         }
@@ -67,24 +60,49 @@ export class ReconciliationLocalCountsService {
             .getCount();
     }
 
+    // Upstream counts every non-deleted category; a manager-made private override must not hide one.
     private async countCategories(ctx: RequestContext): Promise<number> {
-        // isPrivate:false drops deactivated categories and the root; do not subtract 1 for root.
-        // The root's isPrivate defaults to true here, so the filter alone excludes it.
-        const { totalItems } = await this.collectionService.findAll(ctx, {
-            take: 1,
-            filter: { isPrivate: { eq: false } },
-        });
-        return totalItems;
+        const [row] = await ctxQuery<Array<{ n: number }>>(
+            this.connection,
+            ctx,
+            `SELECT count(*)::int AS n FROM collection
+             WHERE "isRoot" = false AND "customFieldsFeedhidden" = false`,
+        );
+        return row.n;
+    }
+
+    // Prices may arrive before their product; upstream counts only prices of products it holds.
+    private async countPricesOfKnownProducts(ctx: RequestContext): Promise<number> {
+        const [row] = await ctxQuery<Array<{ n: number }>>(
+            this.connection,
+            ctx,
+            `SELECT count(*)::int AS n FROM product_variant_price_entry e
+             WHERE EXISTS (SELECT 1 FROM product p
+                           WHERE p."customFieldsExternalid" = e."productExternalId" AND p."deletedAt" IS NULL)`,
+        );
+        return row.n;
+    }
+
+    // Upstream counts folder nodes as warehouses; mivend skips them, so add the skipped active ones.
+    private async countActiveWarehouses(ctx: RequestContext): Promise<number> {
+        const all = await this.warehouseService.findAll(ctx);
+        const [row] = await ctxQuery<Array<{ n: number }>>(
+            this.connection,
+            ctx,
+            `SELECT count(*)::int AS n FROM (
+                 SELECT DISTINCT ON (entity_id) payload FROM integration_inbox_event
+                 WHERE stream = 'warehouse' AND status = 'processed'
+                 ORDER BY entity_id, version DESC, id DESC
+             ) latest
+             WHERE latest.payload->>'isFolder' = 'true' AND latest.payload->>'isActive' = 'true'
+               AND coalesce(latest.payload->>'isDeleted', 'false') <> 'true'`,
+        );
+        return all.filter(w => w.isActive).length + row.n;
     }
 
     private async countActiveOrganizations(ctx: RequestContext): Promise<number> {
         const all = await this.documentsService.findAllRequisites(ctx);
         return all.filter(o => o.isActive).length;
-    }
-
-    private async countActiveWarehouses(ctx: RequestContext): Promise<number> {
-        const all = await this.warehouseService.findAll(ctx);
-        return all.filter(w => w.isActive).length;
     }
 
     private async countActivePriceTypes(ctx: RequestContext): Promise<number> {
