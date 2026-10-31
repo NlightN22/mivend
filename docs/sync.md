@@ -322,6 +322,10 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     upstream counts prices of products it holds). A residual under ~0.5% is expected.
   - `stock`: `StockLevel` rows with a received `erpAvailableQuantity`; upstream called with `excludeDeletedWarehouse`.
   - `product`: enabled products. A gap here is real: failed inbox rows (e.g. missing `defaultVatCode`).
+  - `priceType`, `organization`: no rule needed; the 2026-10-31 prod gaps (8 vs 9, 20 vs 24) closed on their own once
+    upstream's own count settled (8 = 8, 20 = 20 on re-check).
+  - Prod measurement 2026-10-31: price count 127 ms over 317k rows, warehouse folder count 2 ms. The category count
+    relies on the category handler setting `feedHidden` for a deactivated or deleted category.
   Covered by `reconciliation-local-counts.int.test.ts` (real Postgres, rows in every filtered state).
 - **Two discrepancy classes only** (the summary endpoint has no per-entity diff, only aggregate
   counts): `upstream-higher` (Integration Service has more active entities than mivend — flag for
