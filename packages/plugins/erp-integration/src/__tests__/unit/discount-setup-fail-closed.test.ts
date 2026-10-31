@@ -51,6 +51,11 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
             'product-line-attributes',
         ],
         [
+            'negative line percent',
+            { productLines: [{ productId: 'p1', percent: -3 }] },
+            'product-line-attributes',
+        ],
+        [
             'line price number',
             { productLines: [{ productId: 'p1', priceNumber: 2 }] },
             'product-line-attributes',

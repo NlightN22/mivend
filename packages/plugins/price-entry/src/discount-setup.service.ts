@@ -123,7 +123,10 @@ export class DiscountSetupService {
                 const hash = contentHash({ ...setup, sourceVersion: undefined }, [
                     recipients.map(r => `${r.counterpartyErpId}\u0002${r.contractErpId}`),
                     products,
-                    productPercents.map(l => `${l.productErpId}\u0002${l.percent}`),
+                    // Added only when present so the hash of every existing document stays the same.
+                    ...(productPercents.length > 0
+                        ? [productPercents.map(l => `${l.productErpId}\u0002${l.percent}`)]
+                        : []),
                 ]);
                 const unchanged = existing !== null && existing.contentHash === hash;
                 const wasActive = existing?.active === true;

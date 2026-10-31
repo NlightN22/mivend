@@ -104,7 +104,8 @@ function hasLineAttributes(lines: unknown): boolean {
     return (lines as Array<Record<string, unknown>>).some(
         line =>
             ['characteristicId', 'priceTypeId'].some(key => optionalString(line?.[key]) !== null) ||
-            !!optionalNumber(line?.priceNumber),
+            !!optionalNumber(line?.priceNumber) ||
+            (optionalNumber(line?.percent) ?? 0) < 0,
     );
 }
 
