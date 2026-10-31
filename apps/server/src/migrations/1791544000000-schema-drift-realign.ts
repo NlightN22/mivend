@@ -57,6 +57,13 @@ const ORDER_STRING_COLUMNS = [
     'customFieldsReservationfailurereason',
 ];
 
+// Rename only when the source exists and the target does not, in the current schema (to_regclass uses the search path).
+const renameIndex = (from: string, to: string): string =>
+    `DO $$ BEGIN
+       IF to_regclass('"${from}"') IS NOT NULL AND to_regclass('"${to}"') IS NULL
+       THEN ALTER INDEX "${from}" RENAME TO "${to}"; END IF;
+     END $$`;
+
 const renameConstraint = (table: string, from: string, to: string): string =>
     `DO $$ BEGIN
        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = '${from}' AND conrelid = '"${table}"'::regclass)
@@ -66,7 +73,7 @@ const renameConstraint = (table: string, from: string, to: string): string =>
 export class SchemaDriftRealign1791544000000 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         for (const [from, to] of INDEX_RENAMES) {
-            await queryRunner.query(`ALTER INDEX IF EXISTS "${from}" RENAME TO "${to}"`);
+            await queryRunner.query(renameIndex(from, to));
         }
         for (const [table, from, to] of FK_RENAMES) {
             await queryRunner.query(renameConstraint(table, from, to));
@@ -79,7 +86,7 @@ export class SchemaDriftRealign1791544000000 implements MigrationInterface {
         );
         await queryRunner.query(
             `DO $$ BEGIN
-               IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'IDX_order_custom_fields_uuid') THEN
+               IF to_regclass('"IDX_order_custom_fields_uuid"') IS NOT NULL THEN
                  ALTER TABLE "order" ADD CONSTRAINT "UQ_83d503c1a18723712fd501c0bcf"
                    UNIQUE USING INDEX "IDX_order_custom_fields_uuid";
                END IF;
@@ -87,7 +94,7 @@ export class SchemaDriftRealign1791544000000 implements MigrationInterface {
         );
         await queryRunner.query(
             `DO $$ BEGIN
-               IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'IDX_order_custom_fields_erporderid') THEN
+               IF to_regclass('"IDX_order_custom_fields_erporderid"') IS NOT NULL THEN
                  ALTER TABLE "order" ADD CONSTRAINT "UQ_05055a4988508bc8302aa785b0d"
                    UNIQUE ("customFieldsErporderid");
                  DROP INDEX "IDX_order_custom_fields_erporderid";
@@ -121,7 +128,7 @@ export class SchemaDriftRealign1791544000000 implements MigrationInterface {
             await queryRunner.query(renameConstraint(table, to, from));
         }
         for (const [from, to] of INDEX_RENAMES) {
-            await queryRunner.query(`ALTER INDEX IF EXISTS "${to}" RENAME TO "${from}"`);
+            await queryRunner.query(renameIndex(to, from));
         }
     }
 }

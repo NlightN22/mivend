@@ -161,6 +161,8 @@ component test verified as the reference. Confirmed by running all of `documents
 prevent (cross-plugin, not just cross-file, DDL races against one shared `mivend_test` database)
 is what this run exercises, not just each plugin in isolation.
 
+**Migration-drift guard** (`migrations-match-entities.int.test.ts`, about 1-2 minutes, part of `make test-int`): builds a throwaway database by migrations only and fails when TypeORM would still generate a change. A new partial, expression or custom-field index that an entity cannot declare goes into `MIGRATION_ONLY_INDEXES` in that test, with a reason.
+
 **Hand-mirrored Vendure columns.** Harnesses that mirror Vendure tables by hand must not drift from production:
 `apps/server/src/__tests__/unit/harness-custom-field-columns.test.ts` fails when a `customFields*` column used in
 any test no longer matches a custom field defined in production code. Columns of Vendure's own tables (for example

@@ -203,4 +203,4 @@ on the `order` table and take an exclusive lock for their duration; run the rele
 - four string custom-field columns narrowed from `varchar` to `varchar(255)` (a table rewrite; fails loudly if a value is longer);
 - the partial unique index on `customFieldsErporderid` replaced by a full unique constraint (one index build; NULLs stay unlimited).
 
-Both are reversible by `down`. Check the time on a copy of the production data first when `order` has more than a few hundred thousand rows.
+Both are reversible by `down`. Stop the workers before the migration (the usual heavy-migration step). Before the release run `SELECT max(length(col))` over the four columns of `"order"` and check that `customFieldsErporderid` has no duplicate non-NULL values; the migration fails loudly otherwise. Check the time on a copy of the production data first when `order` has more than a few hundred thousand rows.
