@@ -56,13 +56,8 @@ export class StockHandler {
             .from('stock_location', 'sl')
             .where('sl."customFieldsWarehouseerpid" = :erpId', { erpId: warehouseErpId })
             .getRawOne<{ id: string }>();
-        if (!location) {
-            Logger.warn(
-                `Stock update: warehouse ${warehouseErpId} has no stock location`,
-                loggerCtx,
-            );
-            return;
-        }
+        if (!location)
+            throw new Error(`Stock update: warehouse ${warehouseErpId} has no stock location`);
         const levels = this.connection.getRepository(ctx, StockLevel);
         const existing = await levels.findOne({
             where: { productVariantId, stockLocationId: location.id },
