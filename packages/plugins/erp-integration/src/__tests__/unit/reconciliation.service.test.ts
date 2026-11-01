@@ -217,12 +217,14 @@ describe('ReconciliationService.runComparison', () => {
             fetchSummaries: async (aggregateType?: string) => [
                 { ...makeSummary(aggregateType ?? '', 3), unresolvedActiveCount: 9 },
             ],
-            getLocalActiveCount: async () => 0,
+            getLocalActiveCount: async () => 3,
         });
 
         const result = await service.runComparison({ triggeredBy: 'scheduled' });
 
-        expect(result.skipped).toEqual([...COMPARED_AGGREGATE_TYPES]);
+        expect(result.skipped).toEqual(
+            COMPARED_AGGREGATE_TYPES.filter(type => type !== 'stockOrganization'),
+        );
         expect(save).not.toHaveBeenCalled();
     });
 

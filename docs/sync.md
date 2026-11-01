@@ -357,8 +357,8 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   - `unit`: `unit_record` rows with `isDeleted = false` (prod 2026-11-01: 66448 = 66448).
   - `department`: rows with `isActive = true` (prod 2026-11-01: 123 = 123).
   - `stockOrganization`: rows with `isActive = true`. Prod 2026-11-01: 15365 local vs 15099 upstream (+266, local-higher),
-    upstream-side: Integration Service relays rows with an unresolved product or organization reference to Kafka
-    without storing them (269 such rows), the same mechanism as the `price` residual below. Closes when upstream stores them.
+    rows keep raw product and organization ids without checking them, so no unresolved upstream row is subtracted
+    (prod 2026-11-01 after upstream stored them: 138184 = 138184).
   - `user`: `erp_user` rows with `active = true`, linked to an Administrator or not (prod 2026-11-01: 263 = 263).
   - `priceType`, `organization`: no rule needed; the 2026-10-31 prod gaps (8 vs 9, 20 vs 24) closed on their own once
     upstream's own count settled (8 = 8, 20 = 20 on re-check).

@@ -120,6 +120,21 @@ describe('resolveTheirCount with unresolved products', () => {
     });
 });
 
+describe('resolveTheirCount for types that store unresolved rows', () => {
+    it('subtracts nothing for stockOrganization', () => {
+        expect(
+            resolveTheirCount(
+                summary({
+                    aggregateType: 'stockOrganization',
+                    activeCount: 138184,
+                    unresolvedActiveCount: 265,
+                    unresolvedProductActiveCount: 195,
+                }),
+            ),
+        ).toBe(138184);
+    });
+});
+
 describe('resolveTheirCount edge cases', () => {
     it('ignores unresolvedLinkCount when activeCount is set', () => {
         expect(

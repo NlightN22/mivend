@@ -11,10 +11,14 @@ const NO_ACTIVE_CONCEPT_TYPES: readonly string[] = ['storageLocation'];
 // Only price keeps a row locally when its unit is unresolved; other types drop a row on any missing link.
 const PRODUCT_ONLY_UNRESOLVED_TYPES: readonly string[] = ['price'];
 
+// The local row stores the raw ids without checking them, so unresolved upstream rows are all present here.
+const STORES_UNRESOLVED_TYPES: readonly string[] = ['stockOrganization'];
+
 export function resolveTheirCount(summary: ReconciliationSummary): number {
     const useActive =
         summary.activeCount != null && !NO_ACTIVE_CONCEPT_TYPES.includes(summary.aggregateType);
     const total = useActive ? (summary.activeCount as number) : summary.count;
+    if (STORES_UNRESOLVED_TYPES.includes(summary.aggregateType)) return total;
     const anyLink =
         (useActive ? summary.unresolvedActiveCount : summary.unresolvedLinkCount) ?? null;
     const byProduct = PRODUCT_ONLY_UNRESOLVED_TYPES.includes(summary.aggregateType)
