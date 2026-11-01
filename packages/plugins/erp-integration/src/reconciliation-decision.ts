@@ -8,11 +8,17 @@ const NO_ACTIVE_CONCEPT_TYPES: readonly string[] = ['storageLocation'];
 // Pure decisions extracted from ReconciliationService so they're unit-testable without a DB or a
 // mocked HTTP client, mirroring retry-policy.ts's own split in this same plugin.
 export function resolveTheirCount(summary: ReconciliationSummary): number {
-    if (NO_ACTIVE_CONCEPT_TYPES.includes(summary.aggregateType)) {
-        return summary.count - (summary.unresolvedLinkCount ?? 0);
+    const useActive =
+        summary.activeCount != null && !NO_ACTIVE_CONCEPT_TYPES.includes(summary.aggregateType);
+    const total = useActive ? (summary.activeCount as number) : summary.count;
+    const unresolved =
+        (useActive ? summary.unresolvedActiveCount : summary.unresolvedLinkCount) ?? 0;
+    if (unresolved > total) {
+        throw new Error(
+            `Summary for ${summary.aggregateType} reports ${unresolved} unresolved rows above its total ${total}`,
+        );
     }
-    if (summary.activeCount == null) return summary.count - (summary.unresolvedLinkCount ?? 0);
-    return summary.activeCount - (summary.unresolvedActiveCount ?? 0);
+    return total - unresolved;
 }
 
 export function classifyDiscrepancy(

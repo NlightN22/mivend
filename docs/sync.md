@@ -322,7 +322,8 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     `vat-rate` (generated upstream).
   - Upstream rows stored with an unresolved relation are already inside `activeCount`; the compared figure is
     `activeCount - unresolvedActiveCount` (or `count - unresolvedLinkCount` when there is no active concept);
-    null counts as 0.
+    null counts as 0. The figure stored in an issue is this net value; look at the unresolved rows in Integration
+    Service. A summary with more unresolved rows than total is rejected and the type is skipped.
   - `AWAITING_UPSTREAM_ENDPOINT` (a finding): the endpoint answers 400 for these aggregateTypes. Needed from
     Integration Service: `GET /api/reconciliation/v1/summary?aggregateType=<type>` returning `count` and
     `activeCount` (active and not deleted), like the supported types. Streams: `position`, `counterparty`,

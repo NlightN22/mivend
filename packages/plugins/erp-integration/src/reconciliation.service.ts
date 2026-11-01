@@ -85,7 +85,15 @@ export class ReconciliationService {
                 continue;
             }
 
-            const theirCount = resolveTheirCount(summary);
+            let theirCount: number;
+            try {
+                theirCount = resolveTheirCount(summary);
+            } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                Logger.error(`Reconciliation skipped for ${aggregateType}: ${message}`, loggerCtx);
+                skipped.push(aggregateType);
+                continue;
+            }
             const ourCount = await this.localCounts.getLocalActiveCount(ctx, aggregateType);
             checked += 1;
 

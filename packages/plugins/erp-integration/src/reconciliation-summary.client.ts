@@ -7,7 +7,7 @@ export interface ReconciliationSummary {
     aggregateType: string;
     count: number;
     // null (not 0) means this type has no active/inactive concept upstream (only storageLocation).
-    // Reconcile against activeCount when non-null; against count when null.
+    // Compared figure: activeCount - unresolvedActiveCount, or count - unresolvedLinkCount when null.
     activeCount: number | null;
     lastModifiedMax: string | null;
     // Rows with an unresolved relation; already included in count/activeCount. Absent or null means none.

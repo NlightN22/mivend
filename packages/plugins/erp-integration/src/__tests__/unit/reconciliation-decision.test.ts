@@ -66,6 +66,26 @@ describe('resolveTheirCount with unresolved relations', () => {
     });
 });
 
+describe('resolveTheirCount edge cases', () => {
+    it('ignores unresolvedLinkCount when activeCount is set', () => {
+        expect(
+            resolveTheirCount(summary({ activeCount: 8, count: 10, unresolvedLinkCount: 5 })),
+        ).toBe(8);
+    });
+
+    it('uses count minus unresolved links when activeCount is null on a regular type', () => {
+        expect(
+            resolveTheirCount(summary({ activeCount: null, count: 42, unresolvedLinkCount: 2 })),
+        ).toBe(40);
+    });
+
+    it('throws when unresolved rows exceed the total, so the type is skipped', () => {
+        expect(() =>
+            resolveTheirCount(summary({ activeCount: 3, unresolvedActiveCount: 5 })),
+        ).toThrow(/unresolved/);
+    });
+});
+
 describe('classifyDiscrepancy', () => {
     it('classifies as upstream-higher when Integration Service has more', () => {
         expect(classifyDiscrepancy(4, 10)).toBe('upstream-higher');

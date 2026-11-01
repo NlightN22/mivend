@@ -212,6 +212,20 @@ describe('ReconciliationService.runComparison', () => {
         expect(save).not.toHaveBeenCalled();
     });
 
+    it('skips a type whose summary reports more unresolved rows than its total', async () => {
+        const { service, save } = makeService({
+            fetchSummaries: async (aggregateType?: string) => [
+                { ...makeSummary(aggregateType ?? '', 3), unresolvedActiveCount: 9 },
+            ],
+            getLocalActiveCount: async () => 0,
+        });
+
+        const result = await service.runComparison({ triggeredBy: 'scheduled' });
+
+        expect(result.skipped).toEqual([...COMPARED_AGGREGATE_TYPES]);
+        expect(save).not.toHaveBeenCalled();
+    });
+
     it('skips a type missing from the response entirely, rather than throwing or silently succeeding', async () => {
         const { service } = makeService({
             fetchSummaries: async () => [],
