@@ -66,6 +66,33 @@ describe('resolveTheirCount with unresolved relations', () => {
     });
 });
 
+describe('resolveTheirCount with unresolved products', () => {
+    it('subtracts only rows with an unresolved product when the field is present', () => {
+        expect(
+            resolveTheirCount(
+                summary({
+                    aggregateType: 'price',
+                    activeCount: 649244,
+                    unresolvedActiveCount: 280322,
+                    unresolvedProductActiveCount: 278504,
+                }),
+            ),
+        ).toBe(370740);
+    });
+
+    it('falls back to the any-link count when the product field is null', () => {
+        expect(
+            resolveTheirCount(
+                summary({
+                    activeCount: 10,
+                    unresolvedActiveCount: 4,
+                    unresolvedProductActiveCount: null,
+                }),
+            ),
+        ).toBe(6);
+    });
+});
+
 describe('resolveTheirCount edge cases', () => {
     it('ignores unresolvedLinkCount when activeCount is set', () => {
         expect(

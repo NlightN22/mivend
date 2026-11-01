@@ -13,6 +13,9 @@ export interface ReconciliationSummary {
     // Rows with an unresolved relation; already included in count/activeCount. Absent or null means none.
     unresolvedLinkCount?: number | null;
     unresolvedActiveCount?: number | null;
+    // Subset whose product is unresolved; preferred over unresolved* when present.
+    unresolvedProductCount?: number | null;
+    unresolvedProductActiveCount?: number | null;
 }
 
 const FETCH_TIMEOUT_MS = 10_000;

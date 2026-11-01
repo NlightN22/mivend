@@ -324,7 +324,7 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     rows without an organization and tombstones, mivend stores neither), the order result streams (events),
     `vat-rate` (generated upstream).
   - Upstream rows stored with an unresolved relation are already inside `activeCount`; the compared figure is
-    `activeCount - unresolvedActiveCount` (or `count - unresolvedLinkCount` when there is no active concept);
+    `activeCount - unresolvedActiveCount` (or `count - unresolvedLinkCount` when there is no active concept); when the summary carries `unresolvedProductActiveCount` / `unresolvedProductCount` those are subtracted instead, because rows with only a unit unresolved are stored locally;
     null counts as 0. The figure stored in an issue is this net value; look at the unresolved rows in Integration
     Service. A summary with more unresolved rows than total is rejected and the type is skipped.
   - `AWAITING_UPSTREAM_ENDPOINT` (a finding): the endpoint answers 400 for these aggregateTypes. Needed from
