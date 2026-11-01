@@ -85,7 +85,7 @@ export class ReconciliationLocalCountsService {
                        AND btrim(coalesce(latest.payload->>'address', '')) = ''
                        AND NOT EXISTS (SELECT 1 FROM trading_point t WHERE t."erpId" = latest.entity_id)
                        AND EXISTS (SELECT 1 FROM counterparty c WHERE c."erpId" = latest.payload->>'counterpartyId')
-                    ))::int AS n`,
+                    )::int AS n`,
         );
         return row.n;
     }
