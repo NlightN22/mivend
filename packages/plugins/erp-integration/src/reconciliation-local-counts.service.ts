@@ -73,7 +73,7 @@ export class ReconciliationLocalCountsService {
         const [row] = await ctxQuery<Array<{ n: number }>>(
             this.connection,
             ctx,
-            `SELECT (SELECT count(*) FROM trading_point WHERE "isActive" = true)
+            `SELECT ((SELECT count(*) FROM trading_point WHERE "isActive" = true)
                   + (SELECT count(*) FROM (
                        SELECT DISTINCT ON (entity_id) entity_id, payload
                        FROM integration_inbox_event
@@ -86,7 +86,7 @@ export class ReconciliationLocalCountsService {
                        AND btrim(coalesce(latest.payload->>'address', '')) = ''
                        AND NOT EXISTS (SELECT 1 FROM trading_point t WHERE t."erpId" = latest.entity_id)
                        AND EXISTS (SELECT 1 FROM counterparty c WHERE c."erpId" = latest.payload->>'counterpartyId')
-                    )::int AS n`,
+                    ))::int AS n`,
         );
         return row.n;
     }
