@@ -64,8 +64,30 @@ export class ReconciliationLocalCountsService {
             case 'contract':
                 return this.countRows(ctx, 'contract', '"isActive" = true');
             case 'pointOfSale':
-                return this.countRows(ctx, 'trading_point', '"isActive" = true');
+                return this.countActiveTradingPoints(ctx);
         }
+    }
+
+    // A named point without an address is never stored, yet upstream counts it; add those by latest event.
+    private async countActiveTradingPoints(ctx: RequestContext): Promise<number> {
+        const [row] = await ctxQuery<Array<{ n: number }>>(
+            this.connection,
+            ctx,
+            `SELECT (SELECT count(*) FROM trading_point WHERE "isActive" = true)
+                  + (SELECT count(*) FROM (
+                       SELECT DISTINCT ON (entity_id) entity_id, payload
+                       FROM integration_inbox_event
+                       WHERE stream = 'point-of-sale' AND status = 'processed' AND payload <> '{}'::jsonb
+                       ORDER BY entity_id, id DESC) latest
+                     WHERE latest.payload->>'isActive' = 'true'
+                       AND coalesce(latest.payload->>'isDeleted', 'false') <> 'true'
+                       AND btrim(coalesce(latest.payload->>'name', '')) <> ''
+                       AND btrim(coalesce(latest.payload->>'address', '')) = ''
+                       AND NOT EXISTS (SELECT 1 FROM trading_point t WHERE t."erpId" = latest.entity_id)
+                       AND EXISTS (SELECT 1 FROM counterparty c WHERE c."erpId" = latest.payload->>'counterpartyId')
+                    ))::int AS n`,
+        );
+        return row.n;
     }
 
     // Table and condition are constants from the switch above, never user input.

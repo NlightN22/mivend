@@ -56,6 +56,7 @@ beforeAll(async () => {
     await dataSource.query(
         `CREATE TABLE trading_point (id serial PRIMARY KEY, "erpId" varchar, "isActive" boolean)`,
     );
+    await dataSource.query(`CREATE TABLE counterparty (id serial PRIMARY KEY, "erpId" varchar)`);
     const warehouseService = { findAll: async () => [{ isActive: true }, { isActive: false }] };
     service = new ReconciliationLocalCountsService(
         {} as never,
@@ -68,7 +69,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query(
-        `TRUNCATE integration_inbox_event, product, product_variant_price_entry, collection, unit_record, department, stock_organization, erp_user, contract, trading_point RESTART IDENTITY`,
+        `TRUNCATE integration_inbox_event, product, product_variant_price_entry, collection, unit_record, department, stock_organization, erp_user, contract, trading_point, counterparty RESTART IDENTITY`,
     );
 });
 
@@ -163,5 +164,29 @@ describe('reconciliation local counts against real Postgres', () => {
         );
         expect(await service.getLocalActiveCount(ctx, 'contract')).toBe(2);
         expect(await service.getLocalActiveCount(ctx, 'pointOfSale')).toBe(1);
+    });
+
+    it('adds active named points without an address that were applied but never stored', async () => {
+        await dataSource.query(`INSERT INTO counterparty ("erpId") VALUES ('cp1')`);
+        const point = (id: string, evt: string, p: Record<string, unknown>) =>
+            dataSource.query(
+                `INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status)
+                 VALUES ('point-of-sale', $1, '1', $2, $3, 'processed')`,
+                [
+                    id,
+                    evt,
+                    JSON.stringify({ name: 'P', counterpartyId: 'cp1', isActive: true, ...p }),
+                ],
+            );
+        await point('a', 'e1', {});
+        await point('b', 'e2', { address: '  ' });
+        await point('c', 'e3', { address: 'Main st' });
+        await point('d', 'e4', { isActive: false });
+        await point('e', 'e5', { counterpartyId: 'unknown' });
+        await point('f', 'e6', {});
+        await dataSource.query(
+            `INSERT INTO trading_point ("erpId", "isActive") VALUES ('f', true)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, 'pointOfSale')).toBe(3);
     });
 });

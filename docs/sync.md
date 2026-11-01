@@ -317,7 +317,9 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   `category`, `organization`, `warehouse`, `priceType`, `product`, `price`, `stock`, `unit`, `department`,
   `stockOrganization`, `user`, `contract`, `pointOfSale` (local count: active rows of `contract` and
   `trading_point`; rows whose counterparty is missing are never stored, so they are not in the local count and are
-  subtracted from the upstream figure). Prod upstream figures at the time of writing: contract 17677 (count 18599,
+  subtracted from the upstream figure). A named active point with no address is applied but never stored (no row is
+  created until an address arrives); the local `pointOfSale` count adds those, taken from the latest processed event
+  per point whose counterparty is known. Prod upstream figures at the time of writing: contract 17677 (count 18599,
   active 18360, minus 683 unresolved) and pointOfSale 5085 (7261 minus 2176); local count not yet compared on prod. Every other consumed stream is in one of two lists in `reconciled-streams.ts`,
   and a unit test fails when a stream in `ALL_INBOUND_STREAMS` is in none or in more than one:
   - `NOT_COMPARABLE_STREAMS` (with a reason): `offer` (deliberate no-op), `storage-location` (upstream counts
