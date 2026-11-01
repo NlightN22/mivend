@@ -5,7 +5,7 @@ import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { WarehouseService } from '@mivend/plugin-access-control';
 import { DocumentsService } from '@mivend/plugin-documents';
 
-// offer, unit, storageLocation, stockOrganization are not compared (no 1:1 local count); excluded.
+// Streams without a type here are listed with a reason in reconciled-streams.ts.
 // StockLevel exists for every variant, so stock counts rows carrying a received-event marker.
 export const COMPARED_AGGREGATE_TYPES = [
     'category',
@@ -15,6 +15,10 @@ export const COMPARED_AGGREGATE_TYPES = [
     'product',
     'price',
     'stock',
+    'unit',
+    'department',
+    'stockOrganization',
+    'user',
 ] as const;
 export type ComparedAggregateType = (typeof COMPARED_AGGREGATE_TYPES)[number];
 
@@ -47,7 +51,29 @@ export class ReconciliationLocalCountsService {
                 return this.countPricesOfKnownProducts(ctx);
             case 'stock':
                 return this.countReceivedStockLevels(ctx);
+            case 'unit':
+                return this.countRows(ctx, 'unit_record', '"isDeleted" = false');
+            case 'department':
+                return this.countRows(ctx, 'department', '"isActive" = true');
+            case 'stockOrganization':
+                return this.countRows(ctx, 'stock_organization', '"isActive" = true');
+            case 'user':
+                return this.countRows(ctx, 'erp_user', 'active = true');
         }
+    }
+
+    // Table and condition are constants from the switch above, never user input.
+    private async countRows(
+        ctx: RequestContext,
+        table: string,
+        condition: string,
+    ): Promise<number> {
+        const [row] = await ctxQuery<Array<{ n: number }>>(
+            this.connection,
+            ctx,
+            `SELECT count(*)::int AS n FROM ${table} WHERE ${condition}`,
+        );
+        return row.n;
     }
 
     // Plain StockLevel count is wrong: Vendure auto-creates zero-quantity rows per variant/location.

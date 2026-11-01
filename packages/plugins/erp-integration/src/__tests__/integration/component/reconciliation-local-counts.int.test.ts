@@ -38,6 +38,18 @@ beforeAll(async () => {
     await dataSource.query(
         `CREATE TABLE collection (id serial PRIMARY KEY, "isRoot" boolean, "isPrivate" boolean, "customFieldsFeedhidden" boolean)`,
     );
+    await dataSource.query(
+        `CREATE TABLE unit_record (id serial PRIMARY KEY, "entityId" varchar, "isDeleted" boolean)`,
+    );
+    await dataSource.query(
+        `CREATE TABLE department (id serial PRIMARY KEY, "erpId" varchar, "isActive" boolean)`,
+    );
+    await dataSource.query(
+        `CREATE TABLE stock_organization (id serial PRIMARY KEY, "entityId" varchar, "isActive" boolean)`,
+    );
+    await dataSource.query(
+        `CREATE TABLE erp_user (id serial PRIMARY KEY, "erpId" varchar, active boolean)`,
+    );
     const warehouseService = { findAll: async () => [{ isActive: true }, { isActive: false }] };
     service = new ReconciliationLocalCountsService(
         {} as never,
@@ -50,7 +62,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query(
-        `TRUNCATE integration_inbox_event, product, product_variant_price_entry, collection RESTART IDENTITY`,
+        `TRUNCATE integration_inbox_event, product, product_variant_price_entry, collection, unit_record, department, stock_organization, erp_user RESTART IDENTITY`,
     );
 });
 
@@ -106,5 +118,33 @@ describe('reconciliation local counts against real Postgres', () => {
         await warehouseEvent('f-1', '2026-10-25T06:00:00.000Z', {});
         await warehouseEvent('f-1', '2026-10-25T07:00:00.000Z', { isFolder: true, isActive: true });
         expect(await service.getLocalActiveCount(ctx, 'warehouse')).toBe(2);
+    });
+
+    it('counts only units that are not deleted', async () => {
+        await dataSource.query(
+            `INSERT INTO unit_record ("entityId", "isDeleted") VALUES ('u1', false), ('u2', true), ('u3', false)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, 'unit')).toBe(2);
+    });
+
+    it('counts only active departments', async () => {
+        await dataSource.query(
+            `INSERT INTO department ("erpId", "isActive") VALUES ('d1', true), ('d2', false)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, 'department')).toBe(1);
+    });
+
+    it('counts only active stock-organization rows', async () => {
+        await dataSource.query(
+            `INSERT INTO stock_organization ("entityId", "isActive") VALUES ('s1', true), ('s2', false), ('s3', true)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, 'stockOrganization')).toBe(2);
+    });
+
+    it('counts only active ERP users, linked or not, never null or inactive ones', async () => {
+        await dataSource.query(
+            `INSERT INTO erp_user ("erpId", active) VALUES ('e1', true), ('e2', false), ('e3', NULL), ('e4', true)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, 'user')).toBe(2);
     });
 });
