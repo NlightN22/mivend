@@ -326,7 +326,10 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     `counterpartyCreditBalance`, `promoRule`, `pointOfSale`, `contract`, `manufacturer`, `region`, `legalForm`,
     `bank`, `bankAccount`, `productPhoto`, `discountSetup`, `grantedDiscount`, `retroBonusSetup`,
     `grantedRetroBonus`, `settlementDocument`, `settlementBalance`, `settlementDocumentType`, `orderStatus`.
+    Tracked upstream in search-platform #220 (endpoints), #219 (store entities with an unresolved reference),
+    #221 (reprocess failed rows), #222 (units dictionary), #223 (counterparties missing from the topic).
     Remove a stream from the list and add a local count once its endpoint exists.
+- **Notifications**: a manual run notifies the requesting administrator only when an issue is first opened; an already open drift is updated silently and shown in the panel.
 - **Failed inbox rows**: because uncompared streams cannot show count drift, each run also opens one
   `failed-inbox-rows` issue per stream (`aggregateType` `inbox-failed:<stream>`, `ourCount` = failed rows)
   while any `failed` inbox row exists, and auto-resolves it when none remain. The integration-health page
