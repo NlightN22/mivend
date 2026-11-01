@@ -35,6 +35,7 @@ describe('ReconciliationService.runComparison', () => {
             summaryClient as never,
             localCounts as never,
             notificationService as never,
+            { getBacklogByStream: async () => [] } as never,
         );
         return { service, save, notificationService };
     }
@@ -132,7 +133,11 @@ describe('ReconciliationService.runComparison', () => {
     it('auto-resolves a previously open issue once counts agree again (no stale drift left showing)', async () => {
         const existing = { id: '9', status: 'open', aggregateType: COMPARED_AGGREGATE_TYPES[0] };
         const save = vi.fn().mockResolvedValue(undefined);
-        const findOne = vi.fn().mockResolvedValue(existing);
+        const findOne = vi
+            .fn()
+            .mockImplementation(async ({ where }: { where: { aggregateType: string } }) =>
+                where.aggregateType === existing.aggregateType ? existing : undefined,
+            );
         const connection = {
             getRepository: () => ({ save, findOne, createQueryBuilder: vi.fn() }),
         };
@@ -151,11 +156,12 @@ describe('ReconciliationService.runComparison', () => {
             summaryClient as never,
             localCounts as never,
             notificationService as never,
+            { getBacklogByStream: async () => [] } as never,
         );
 
         await service.runComparison({ triggeredBy: 'scheduled' });
 
-        expect(save).toHaveBeenCalledTimes(COMPARED_AGGREGATE_TYPES.length);
+        expect(save).toHaveBeenCalledTimes(1);
         expect(notificationService.resolveBySource).toHaveBeenCalledWith(
             expect.anything(),
             { sourceType: 'erp-reconciliation', sourceId: COMPARED_AGGREGATE_TYPES[0] },
@@ -203,7 +209,11 @@ describe('ReconciliationService.runComparison', () => {
     it('updates the existing open issue for the same aggregateType instead of inserting a duplicate (mivend.audit.85 HIGH)', async () => {
         const existing = { id: '7', status: 'open', aggregateType: COMPARED_AGGREGATE_TYPES[0] };
         const save = vi.fn().mockResolvedValue(undefined);
-        const findOne = vi.fn().mockResolvedValue(existing);
+        const findOne = vi
+            .fn()
+            .mockImplementation(async ({ where }: { where: { aggregateType: string } }) =>
+                where.aggregateType === existing.aggregateType ? existing : undefined,
+            );
         const connection = {
             getRepository: () => ({ save, findOne, createQueryBuilder: vi.fn() }),
         };
@@ -221,6 +231,7 @@ describe('ReconciliationService.runComparison', () => {
             summaryClient as never,
             localCounts as never,
             notificationService as never,
+            { getBacklogByStream: async () => [] } as never,
         );
 
         await service.runComparison({ triggeredBy: 'scheduled' });
@@ -258,6 +269,7 @@ describe('ReconciliationService.resolve', () => {
             {} as never,
             {} as never,
             notificationService as never,
+            { getBacklogByStream: async () => [] } as never,
         );
 
         const result = await service.resolve({} as never, {
@@ -292,6 +304,7 @@ describe('ReconciliationService.resolve', () => {
             {} as never,
             {} as never,
             notificationService as never,
+            { getBacklogByStream: async () => [] } as never,
         );
 
         await service.resolve({} as never, { id: '3', resolution: 'stale seed row' });

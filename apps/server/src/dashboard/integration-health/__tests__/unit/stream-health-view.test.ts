@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    streamsWithFailedRows,
     formatAge,
     schemaSourceBadge,
     formatVariantOrganizationLine,
@@ -96,5 +97,16 @@ describe('schemaSourceBadge', () => {
     it('shows nothing when the source is unknown', () => {
         expect(schemaSourceBadge(null)).toBeNull();
         expect(schemaSourceBadge(undefined)).toBeNull();
+    });
+});
+
+describe('streamsWithFailedRows', () => {
+    it('keeps only streams with failed rows', () => {
+        expect(
+            streamsWithFailedRows([
+                { stream: 'contract', failed: 3 },
+                { stream: 'stock', failed: 0 },
+            ]),
+        ).toEqual([{ stream: 'contract', failed: 3 }]);
     });
 });

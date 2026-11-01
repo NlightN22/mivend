@@ -104,3 +104,9 @@ export function schemaSourceBadge(source: string | null | undefined): SchemaSour
     }
     return null;
 }
+
+export function streamsWithFailedRows(
+    streams: ReadonlyArray<{ stream: string; failed: number }>,
+): Array<{ stream: string; failed: number }> {
+    return streams.filter(s => s.failed > 0).map(({ stream, failed }) => ({ stream, failed }));
+}

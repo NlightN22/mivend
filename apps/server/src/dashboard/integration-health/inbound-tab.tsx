@@ -14,7 +14,12 @@ import {
 } from '@vendure/dashboard';
 
 import { CountLink } from './count-link.js';
-import { VariantOrganizationAlert, VariantUnitAlert, VersionDriftAlert } from './health-alerts.js';
+import {
+    FailedInboxAlert,
+    VariantOrganizationAlert,
+    VariantUnitAlert,
+    VersionDriftAlert,
+} from './health-alerts.js';
 import { inboxIssuesLink } from './issue-links.js';
 import { RefreshIconButton } from './refresh-button.js';
 import type { VariantOrganizationHealth, VariantUnitHealth } from './stream-health-view.js';
@@ -125,6 +130,7 @@ export function InboundTab() {
                 {variantHealth && <VariantOrganizationAlert health={variantHealth} />}
                 {unitHealth && <VariantUnitAlert health={unitHealth} />}
                 {report && <VersionDriftAlert drift={report.versionDrift} />}
+                <FailedInboxAlert streams={streams} />
                 <div className="flex justify-end mb-2">
                     <RefreshIconButton loading={loading} onRefresh={() => void load()} />
                 </div>
@@ -151,7 +157,7 @@ export function InboundTab() {
                             {streams.flatMap(s => [
                                 <TableRow
                                     key={s.stream}
-                                    className={s.drift ? 'bg-destructive/5' : ''}
+                                    className={s.drift || s.failed > 0 ? 'bg-destructive/5' : ''}
                                 >
                                     <TableCell className="max-w-60 whitespace-normal break-all">
                                         <div className="font-medium">{s.stream}</div>

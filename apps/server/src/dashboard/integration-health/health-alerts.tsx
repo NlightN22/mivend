@@ -4,6 +4,7 @@ import {
     VERSION_DRIFT_MESSAGES,
     formatVariantOrganizationLine,
     formatVariantUnitLine,
+    streamsWithFailedRows,
 } from './stream-health-view.js';
 import type { VariantOrganizationHealth, VariantUnitHealth } from './stream-health-view.js';
 
@@ -40,6 +41,21 @@ export function VersionDriftAlert({ drift }: Readonly<{ drift: VersionDrift }>) 
         <Alert variant={drift.status === 'BEHIND' ? 'destructive' : 'default'} className="mb-3">
             <AlertTitle>Event contract {message.title}</AlertTitle>
             <AlertDescription>{message.text(drift.installed, drift.latest)}</AlertDescription>
+        </Alert>
+    );
+}
+
+export function FailedInboxAlert({
+    streams,
+}: Readonly<{ streams: ReadonlyArray<{ stream: string; failed: number }> }>) {
+    const failing = streamsWithFailedRows(streams);
+    if (failing.length === 0) return null;
+    return (
+        <Alert variant="destructive" className="mb-3">
+            <AlertTitle>Failed inbox rows</AlertTitle>
+            <AlertDescription>
+                {failing.map(s => `${s.stream}: ${s.failed}`).join(', ')}
+            </AlertDescription>
         </Alert>
     );
 }

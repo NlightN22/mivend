@@ -313,8 +313,24 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
 (`integration.example.com`, `X-Api-Key` auth via `INTEGRATION_SERVICE_API_KEY`), comparing its
 `activeCount` per entity type against mivend's own local count for the same type.
 
-- **Scope**: `category`, `organization`, `warehouse`, `priceType`, `product`, `price`, `stock` are
-  compared; `offer`, `unit`, `storageLocation`, `stockOrganization` have no 1:1 local count.
+- **Scope (#305)**: the summary endpoint supports only 13 aggregate types. Eleven are compared:
+  `category`, `organization`, `warehouse`, `priceType`, `product`, `price`, `stock`, `unit`, `department`,
+  `stockOrganization`, `user`. Every other consumed stream is in one of two lists in `reconciled-streams.ts`,
+  and a unit test fails when a stream in `ALL_INBOUND_STREAMS` is in none or in more than one:
+  - `NOT_COMPARABLE_STREAMS` (with a reason): `offer` (deliberate no-op), `storage-location` (upstream counts
+    rows without an organization and tombstones, mivend stores neither), the order result streams (events),
+    `vat-rate` (generated upstream).
+  - `AWAITING_UPSTREAM_ENDPOINT` (a finding): the endpoint answers 400 for these aggregateTypes. Needed from
+    Integration Service: `GET /api/reconciliation/v1/summary?aggregateType=<type>` returning `count` and
+    `activeCount` (active and not deleted), like the supported types. Streams: `position`, `counterparty`,
+    `counterpartyCreditBalance`, `promoRule`, `pointOfSale`, `contract`, `manufacturer`, `region`, `legalForm`,
+    `bank`, `bankAccount`, `productPhoto`, `discountSetup`, `grantedDiscount`, `retroBonusSetup`,
+    `grantedRetroBonus`, `settlementDocument`, `settlementBalance`, `settlementDocumentType`, `orderStatus`.
+    Remove a stream from the list and add a local count once its endpoint exists.
+- **Failed inbox rows**: because uncompared streams cannot show count drift, each run also opens one
+  `failed-inbox-rows` issue per stream (`aggregateType` `inbox-failed:<stream>`, `ourCount` = failed rows)
+  while any `failed` inbox row exists, and auto-resolves it when none remain. The integration-health page
+  shows a red alert and highlights the stream row.
 - **Local count rules (#304)**: each local count mirrors what upstream `activeCount` includes.
   - `category`: non-root, `feedHidden = false`; a manager `isPrivate` override does not hide one.
   - `warehouse`: active warehouses plus active folder nodes (upstream counts folders, mivend skips them).
@@ -322,6 +338,10 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     upstream counts prices of products it holds). A residual under ~0.5% is expected.
   - `stock`: `StockLevel` rows with a received `erpAvailableQuantity`; upstream called with `excludeDeletedWarehouse`.
   - `product`: enabled products. A gap here is real: failed inbox rows (e.g. missing `defaultVatCode`).
+  - `unit`: `unit_record` rows with `isDeleted = false`.
+  - `department`: rows with `isActive = true`.
+  - `stockOrganization`: rows with `isActive = true`.
+  - `user`: `erp_user` rows with `active = true`, linked to an Administrator or not.
   - `priceType`, `organization`: no rule needed; the 2026-10-31 prod gaps (8 vs 9, 20 vs 24) closed on their own once
     upstream's own count settled (8 = 8, 20 = 20 on re-check).
   - `price` residual (+1818 on 2026-11-01, local-higher) is upstream-side: for 229 products the base unit is missing in

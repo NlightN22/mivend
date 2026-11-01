@@ -96,6 +96,8 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
   A row is dead-lettered (`failed`) only when 24 h have passed since its first failure.
 - A `failed` row is never retried automatically and is never purged: it stays until someone acts.
   Only superseded `processed` rows are tombstoned by retention.
+- Any stream with a `failed` row raises a red alert on the Inbound tab, highlights the stream row, and opens a
+  `failed-inbox-rows` issue in the reconciliation list (nightly run, #305); it clears when no failed row remains.
 - Look at them on the page **System -> Inbox issues** (also reached by clicking the Failed or No-op
   number in the Inbound table, which opens the list pre-filtered by stream): stream, entity id with
   a copy button, attempts, first failure, last error, plus search and sorting. Payloads are never

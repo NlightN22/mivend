@@ -7,6 +7,8 @@ export function formatIssueTypeLabel(issueType: string): string {
             return 'Integration Service has more than mivend';
         case 'local-higher':
             return 'mivend has more than Integration Service';
+        case 'failed-inbox-rows':
+            return 'Inbox rows failed processing and need attention';
         default:
             return issueType;
     }

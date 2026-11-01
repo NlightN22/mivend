@@ -17,6 +17,12 @@ describe('formatIssueTypeLabel', () => {
         );
     });
 
+    it('labels failed-inbox-rows', () => {
+        expect(formatIssueTypeLabel('failed-inbox-rows')).toBe(
+            'Inbox rows failed processing and need attention',
+        );
+    });
+
     it('passes an unrecognized issue type through unchanged instead of throwing', () => {
         expect(formatIssueTypeLabel('some-future-type')).toBe('some-future-type');
     });

@@ -8,15 +8,21 @@ import {
 import { NotificationService } from '@mivend/plugin-notification';
 
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
-import type { ErpReconciliationTrigger } from './entities/erp-reconciliation-issue.entity';
+import type {
+    ErpReconciliationIssueType,
+    ErpReconciliationTrigger,
+} from './entities/erp-reconciliation-issue.entity';
 import {
     COMPARED_AGGREGATE_TYPES,
     ReconciliationLocalCountsService,
 } from './reconciliation-local-counts.service';
 import { ReconciliationSummaryClient } from './reconciliation-summary.client';
 import type { ReconciliationSummary } from './reconciliation-summary.client';
+import { IntegrationInboxHealthService } from './integration-inbox-health.service';
 import { classifyDiscrepancy, resolveTheirCount } from './reconciliation-decision';
-import { loggerCtx } from './types';
+import { ALL_INBOUND_STREAMS, loggerCtx } from './types';
+
+export const FAILED_INBOX_ISSUE_PREFIX = 'inbox-failed:';
 
 export interface RunComparisonInput {
     triggeredBy: ErpReconciliationTrigger;
@@ -46,6 +52,7 @@ export class ReconciliationService {
         private readonly summaryClient: ReconciliationSummaryClient,
         private readonly localCounts: ReconciliationLocalCountsService,
         private readonly notificationService: NotificationService,
+        private readonly inboxHealth: IntegrationInboxHealthService,
     ) {}
 
     async runComparison(input: RunComparisonInput): Promise<RunComparisonResult> {
@@ -96,7 +103,37 @@ export class ReconciliationService {
             }
         }
 
+        issuesFound += await this.reconcileFailedInboxRows(ctx, input);
         return { checked, issuesFound, skipped };
+    }
+
+    // Failed rows never leave the inbox on their own; one open issue per stream until none remain.
+    private async reconcileFailedInboxRows(
+        ctx: RequestContext,
+        input: RunComparisonInput,
+    ): Promise<number> {
+        const backlog = await this.inboxHealth.getBacklogByStream(ctx);
+        const failedByStream = new Map(backlog.map(b => [b.stream as string, b.failed]));
+        const streams = new Set<string>([...ALL_INBOUND_STREAMS, ...failedByStream.keys()]);
+        let found = 0;
+        for (const stream of streams) {
+            const aggregateType = `${FAILED_INBOX_ISSUE_PREFIX}${stream}`;
+            const failed = failedByStream.get(stream) ?? 0;
+            if (failed > 0) {
+                await this.recordIssue(ctx, {
+                    aggregateType,
+                    issueType: 'failed-inbox-rows',
+                    ourCount: failed,
+                    theirActiveCount: 0,
+                    triggeredBy: input.triggeredBy,
+                    triggeredByAdministratorId: input.triggeredByAdministratorId ?? null,
+                });
+                found += 1;
+            } else {
+                await this.autoResolveIfOpen(ctx, aggregateType);
+            }
+        }
+        return found;
     }
 
     async findOpen(
@@ -159,6 +196,7 @@ export class ReconciliationService {
         ctx: RequestContext,
         params: {
             aggregateType: string;
+            issueType?: ErpReconciliationIssueType;
             ourCount: number;
             theirActiveCount: number;
             triggeredBy: ErpReconciliationTrigger;
@@ -171,7 +209,8 @@ export class ReconciliationService {
         });
 
         const fields = {
-            issueType: classifyDiscrepancy(params.ourCount, params.theirActiveCount),
+            issueType:
+                params.issueType ?? classifyDiscrepancy(params.ourCount, params.theirActiveCount),
             aggregateType: params.aggregateType,
             ourCount: params.ourCount,
             theirActiveCount: params.theirActiveCount,
