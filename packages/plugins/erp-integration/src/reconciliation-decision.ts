@@ -7,15 +7,25 @@ const NO_ACTIVE_CONCEPT_TYPES: readonly string[] = ['storageLocation'];
 
 // Pure decisions extracted from ReconciliationService so they're unit-testable without a DB or a
 // mocked HTTP client, mirroring retry-policy.ts's own split in this same plugin.
-// Only a missing product has no local counterpart; rows lacking another link (e.g. a unit) are still stored here.
+
+// Only price keeps a row locally when its unit is unresolved; other types drop a row on any missing link.
+const PRODUCT_ONLY_UNRESOLVED_TYPES: readonly string[] = ['price'];
+
 export function resolveTheirCount(summary: ReconciliationSummary): number {
     const useActive =
         summary.activeCount != null && !NO_ACTIVE_CONCEPT_TYPES.includes(summary.aggregateType);
     const total = useActive ? (summary.activeCount as number) : summary.count;
-    const byProduct = useActive
-        ? summary.unresolvedProductActiveCount
-        : summary.unresolvedProductCount;
-    const anyLink = useActive ? summary.unresolvedActiveCount : summary.unresolvedLinkCount;
+    const anyLink =
+        (useActive ? summary.unresolvedActiveCount : summary.unresolvedLinkCount) ?? null;
+    const byProduct = PRODUCT_ONLY_UNRESOLVED_TYPES.includes(summary.aggregateType)
+        ? ((useActive ? summary.unresolvedProductActiveCount : summary.unresolvedProductCount) ??
+          null)
+        : null;
+    if (byProduct != null && anyLink != null && byProduct > anyLink) {
+        throw new Error(
+            `Summary for ${summary.aggregateType} reports ${byProduct} unresolved-product rows above ${anyLink} unresolved rows`,
+        );
+    }
     const unresolved = byProduct ?? anyLink ?? 0;
     if (unresolved > total) {
         throw new Error(

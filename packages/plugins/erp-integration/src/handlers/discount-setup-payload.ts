@@ -94,7 +94,12 @@ const UNEVALUATED_ATTRIBUTES: ReadonlyArray<readonly [string, string]> = [
 
 // A window covering the whole day (from 00:00:00, to 23:59:59) is no restriction.
 function restrictsTimeOfDay(payload: Record<string, unknown>): boolean {
-    const timeOf = (value: unknown): string | null => optionalString(value)?.slice(11, 19) ?? null;
+    // Only UTC ('Z') times are read as time of day; any other form stays a restriction.
+    const timeOf = (value: unknown): string | null => {
+        const text = optionalString(value);
+        if (text === null) return null;
+        return text.endsWith('Z') ? text.slice(11, 19) : text;
+    };
     const from = timeOf(payload.commonTimeFrom);
     const to = timeOf(payload.commonTimeTo);
     return (from !== null && from !== '00:00:00') || (to !== null && to !== '23:59:59');

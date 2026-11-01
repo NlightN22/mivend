@@ -80,10 +80,37 @@ describe('resolveTheirCount with unresolved products', () => {
         ).toBe(370740);
     });
 
+    it('keeps the any-link count for types that drop a row on any missing link', () => {
+        expect(
+            resolveTheirCount(
+                summary({
+                    aggregateType: 'stock',
+                    activeCount: 100,
+                    unresolvedActiveCount: 9,
+                    unresolvedProductActiveCount: 2,
+                }),
+            ),
+        ).toBe(91);
+    });
+
+    it('throws when unresolved-product rows exceed unresolved rows', () => {
+        expect(() =>
+            resolveTheirCount(
+                summary({
+                    aggregateType: 'price',
+                    activeCount: 100,
+                    unresolvedActiveCount: 3,
+                    unresolvedProductActiveCount: 5,
+                }),
+            ),
+        ).toThrow(/unresolved-product/);
+    });
+
     it('falls back to the any-link count when the product field is null', () => {
         expect(
             resolveTheirCount(
                 summary({
+                    aggregateType: 'price',
                     activeCount: 10,
                     unresolvedActiveCount: 4,
                     unresolvedProductActiveCount: null,

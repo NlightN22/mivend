@@ -47,6 +47,15 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
         ).toBeNull();
     });
 
+    it('treats a lone midnight start as no restriction but a non-UTC form as one', () => {
+        expect(reasonOf({ commonTimeFrom: at('0001-01-01T00:00:00Z') })).toBeNull();
+        const parsed = parseDiscountSetup('doc-1', {
+            ...payload({}),
+            commonTimeTo: '0001-01-01T23:59:59+03:00',
+        });
+        expect(parsed.kind === 'upsert' && parsed.input.setup.inactiveReason).toBe('time-window');
+    });
+
     it.each([
         ['markupTypeId', { markupTypeId: 'mt-1' }, 'markup-type'],
         ['commonTimeFrom', { commonTimeFrom: at('0001-01-01T09:00:00Z') }, 'time-window'],

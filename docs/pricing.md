@@ -451,7 +451,7 @@ Counterparty- and contract-scoped discounts and markups come from the ERP as one
 
 Several matching documents never stack: the highest percent wins and a negative percent competes by max. Documents
 mivend cannot evaluate are stored inactive with a reason and ignored: fixed prices, price groups, bonus lines, set
-components, weekday or time windows, reference conditions, dynamic product filters with a field or comparison mivend does not evaluate, and any non-default value of an
+components, weekday windows, a time window that is not the whole day (00:00:00 to 23:59:59 UTC, either bound may be absent), reference conditions, dynamic product filters with a field or comparison mivend does not evaluate, and any non-default value of an
 attribute mivend does not read (markup type, pseudo documents, product-line attributes).
 Quality, purpose and currency are ignored by design: they never restrict a discount. A document line with its own percent (`discount_setup_product.percent`) overrides the header percent for that product; other members use the header percent. A negative line percent (markup) stores the document inactive; a line `limitPercent` is not applied, like the header one; line percents of an all-products document are not stored (none exist). A positive percent with a markup type is therefore never a discount. Opaque ids are compared only to empty, never by name.
 Details and field accounting: `docs/ai/erp-streams-map.md`.
