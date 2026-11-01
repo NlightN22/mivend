@@ -227,9 +227,8 @@ export class ReconciliationService {
             await repo.save(new ErpReconciliationIssue(fields));
         }
 
-        // A manual run always has the requesting administrator to notify; scheduled runs have none.
-        // So scheduled issues stay detected-but-unnotified, as in the other reconciliation plugins.
-        if (params.triggeredByAdministratorId) {
+        // Scheduled runs have no administrator to notify; a re-detected open issue is not re-announced.
+        if (!existing && params.triggeredByAdministratorId) {
             await this.notificationService.create(ctx, {
                 recipientType: 'administrator',
                 recipientId: params.triggeredByAdministratorId,

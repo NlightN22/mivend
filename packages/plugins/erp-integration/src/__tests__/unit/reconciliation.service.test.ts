@@ -28,7 +28,10 @@ describe('ReconciliationService.runComparison', () => {
         const localCounts = {
             getLocalActiveCount: overrides?.getLocalActiveCount ?? (async () => 1),
         };
-        const notificationService = { create: vi.fn().mockResolvedValue({}) };
+        const notificationService = {
+            create: vi.fn().mockResolvedValue({}),
+            resolveBySource: vi.fn().mockResolvedValue([]),
+        };
         const service = new ReconciliationService(
             connection as never,
             requestContextService as never,
@@ -37,7 +40,7 @@ describe('ReconciliationService.runComparison', () => {
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
         );
-        return { service, save, notificationService };
+        return { service, save, findOne, notificationService };
     }
 
     it('records an upstream-higher issue when Integration Service has more active entities', async () => {
@@ -94,6 +97,20 @@ describe('ReconciliationService.runComparison', () => {
                 sourceType: 'erp-reconciliation',
             }),
         );
+    });
+
+    it('does not notify again for a drift that already has an open issue', async () => {
+        const { service, notificationService, findOne } = makeService({
+            fetchSummaries: async (aggregateType?: string) => [
+                makeSummary(aggregateType ?? '', 10),
+            ],
+            getLocalActiveCount: async () => 4,
+        });
+        findOne.mockResolvedValue({ id: '1', status: 'open' });
+
+        await service.runComparison({ triggeredBy: 'manual', triggeredByAdministratorId: '42' });
+
+        expect(notificationService.create).not.toHaveBeenCalled();
     });
 
     it('records a local-higher issue when mivend has more active entities than Integration Service', async () => {
