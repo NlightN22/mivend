@@ -318,7 +318,7 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   `stockOrganization`, `user`, `contract`, `pointOfSale` (local count: active rows of `contract` and
   `trading_point`; rows whose counterparty is missing are never stored, so they are not in the local count and are
   subtracted from the upstream figure). A named active point with no address is applied but never stored (no row is
-  created until an address arrives); the local `pointOfSale` count adds those, taken from the latest processed event
+  created until an address arrives); the local `pointOfSale` count adds those as a bridge (owner has not decided to create them), taken from the latest applied event
   per point whose counterparty is known. Prod upstream figures at the time of writing: contract 17677 (count 18599,
   active 18360, minus 683 unresolved) and pointOfSale 5085 (7261 minus 2176); local count not yet compared on prod. Every other consumed stream is in one of two lists in `reconciled-streams.ts`,
   and a unit test fails when a stream in `ALL_INBOUND_STREAMS` is in none or in more than one:
@@ -358,9 +358,8 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   - `product`: enabled products. A gap here is real: failed inbox rows (e.g. missing `defaultVatCode`).
   - `unit`: `unit_record` rows with `isDeleted = false` (prod 2026-11-01: 66448 = 66448).
   - `department`: rows with `isActive = true` (prod 2026-11-01: 123 = 123).
-  - `stockOrganization`: rows with `isActive = true`. Prod 2026-11-01: 15365 local vs 15099 upstream (+266, local-higher),
-    rows keep raw product and organization ids without checking them, so no unresolved upstream row is subtracted
-    (prod 2026-11-01 after upstream stored them: 138184 = 138184).
+  - `stockOrganization`: rows with `isActive = true`. Rows keep raw product and organization ids without checking them, so no unresolved upstream row is subtracted
+    (earlier +266 local-higher; closed once upstream stored them, prod 2026-11-01: 138184 = 138184).
   - `user`: `erp_user` rows with `active = true`, linked to an Administrator or not (prod 2026-11-01: 263 = 263).
   - `priceType`, `organization`: no rule needed; the 2026-10-31 prod gaps (8 vs 9, 20 vs 24) closed on their own once
     upstream's own count settled (8 = 8, 20 = 20 on re-check).

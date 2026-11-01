@@ -184,9 +184,21 @@ describe('reconciliation local counts against real Postgres', () => {
         await point('d', 'e4', { isActive: false });
         await point('e', 'e5', { counterpartyId: 'unknown' });
         await point('f', 'e6', {});
+        await point('g', 'e7', {});
+        await dataSource.query(`UPDATE integration_inbox_event SET outcome = 'applied'`);
+        await point('g', 'e8', { address: 'Old st' });
+        await point('h', 'e9', {});
+        await dataSource.query(
+            `UPDATE integration_inbox_event SET outcome = 'applied' WHERE entity_id = 'h'`,
+        );
+        await dataSource.query(`INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status, outcome)
+             VALUES ('point-of-sale', 'h', '2', 'e10', '{"isDeleted":true}', 'processed', 'applied')`);
+        await dataSource.query(
+            `UPDATE integration_inbox_event SET outcome = 'superseded' WHERE source_event_id = 'e8'`,
+        );
         await dataSource.query(
             `INSERT INTO trading_point ("erpId", "isActive") VALUES ('f', true)`,
         );
-        expect(await service.getLocalActiveCount(ctx, 'pointOfSale')).toBe(3);
+        expect(await service.getLocalActiveCount(ctx, 'pointOfSale')).toBe(4);
     });
 });

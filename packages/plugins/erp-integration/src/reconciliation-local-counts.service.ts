@@ -68,7 +68,7 @@ export class ReconciliationLocalCountsService {
         }
     }
 
-    // A named point without an address is never stored, yet upstream counts it; add those by latest event.
+    // A named point without an address is never stored, yet upstream counts it; add those by the latest applied event.
     private async countActiveTradingPoints(ctx: RequestContext): Promise<number> {
         const [row] = await ctxQuery<Array<{ n: number }>>(
             this.connection,
@@ -78,6 +78,7 @@ export class ReconciliationLocalCountsService {
                        SELECT DISTINCT ON (entity_id) entity_id, payload
                        FROM integration_inbox_event
                        WHERE stream = 'point-of-sale' AND status = 'processed' AND payload <> '{}'::jsonb
+                         AND (outcome = 'applied' OR outcome IS NULL)
                        ORDER BY entity_id, id DESC) latest
                      WHERE latest.payload->>'isActive' = 'true'
                        AND coalesce(latest.payload->>'isDeleted', 'false') <> 'true'
