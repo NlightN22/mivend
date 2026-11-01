@@ -15,6 +15,7 @@ import { IntegrationInboxHealthService } from '../../../integration-inbox-health
 import { IntegrationInboxRetentionService } from '../../../integration-inbox-retention.service';
 import { IntegrationInboxService } from '../../../integration-inbox.service';
 import { NonRetryableInboundError } from '../../../non-retryable-inbound-error';
+import { MissingDependencyError, MissingReferenceError } from '../../../types';
 
 // Real Postgres, not mocked: SELECT ... FOR UPDATE SKIP LOCKED semantics exist only at the DB level.
 // Concurrent sweeps can claim the same row before either commits 'processing'.
@@ -641,6 +642,73 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         });
     });
 
+    describe('dependency-missing rows', () => {
+        async function parkedRow(): Promise<number> {
+            const row = await inboxService.enqueue(testRequestContext, {
+                stream: 'contract',
+                entityId: 'c-dep',
+                version: '1',
+                sourceEventId: 'evt-dep',
+                payload: {},
+            });
+            await dataSource.query(
+                "UPDATE integration_inbox_event SET first_failed_at = now() - interval '25 hours' WHERE id = $1",
+                [row.id],
+            );
+            await inboxService.markFailedUnclaimed(
+                testRequestContext,
+                row.id,
+                new MissingReferenceError('contract c-dep: counterparty erpId=x not synced yet'),
+            );
+            return row.id;
+        }
+
+        it('parks a missing-dependency row after the budget instead of failing it, counted apart from failed', async () => {
+            const id = await parkedRow();
+            const row = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .findOneOrFail({ where: { id } });
+            expect(row.status).toBe('dependency_missing');
+            expect(row.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
+            const [entry] = await inboxHealth.getBacklogByStream(testRequestContext);
+            expect(entry).toMatchObject({ stream: 'contract', failed: 0, dependencyMissing: 1 });
+        });
+
+        it('dead-letters a config-type MissingDependencyError as failed so it keeps alerting', async () => {
+            const row = await inboxService.enqueue(testRequestContext, {
+                stream: 'product',
+                entityId: 'p-vat',
+                version: '1',
+                sourceEventId: 'evt-vat',
+                payload: {},
+            });
+            await dataSource.query(
+                "UPDATE integration_inbox_event SET first_failed_at = now() - interval '25 hours' WHERE id = $1",
+                [row.id],
+            );
+            await inboxService.markFailedUnclaimed(
+                testRequestContext,
+                row.id,
+                new MissingDependencyError('product p-vat: VAT code needs a default TaxCategory'),
+            );
+            const saved = await dataSource
+                .getRepository(IntegrationInboxEvent)
+                .findOneOrFail({ where: { id: row.id } });
+            expect(saved.status).toBe('failed');
+        });
+
+        it('claimBatch retries a parked row only once its backoff elapsed', async () => {
+            const id = await parkedRow();
+            expect(await inboxService.claimBatch(testRequestContext, 10)).toHaveLength(0);
+            await dataSource.query(
+                "UPDATE integration_inbox_event SET eligible_at = now() - interval '1 minute' WHERE id = $1",
+                [id],
+            );
+            const claimed = await inboxService.claimBatch(testRequestContext, 10);
+            expect(claimed.map(r => r.id)).toEqual([id]);
+        });
+    });
+
     // Counts consumed rows awaiting the processor, not broker-side Kafka lag.
     // Real Postgres: a mocked query builder would not exercise the GROUP BY/aggregate shape.
     describe('getBacklogByStream', () => {
@@ -695,6 +763,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 pending: 2,
                 processing: 0,
                 failed: 0,
+                dependencyMissing: 0,
                 replayPending: 0,
                 oldestPendingAt: expect.any(Date),
             });
@@ -703,6 +772,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 pending: 1,
                 processing: 0,
                 failed: 1,
+                dependencyMissing: 0,
                 replayPending: 0,
                 oldestPendingAt: expect.any(Date),
             });

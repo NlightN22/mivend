@@ -10,12 +10,14 @@ import {
 import type { InboundStream } from '../types';
 
 // replay_requested: a failed row whose entity was replayed, waiting for the new event to be
-// processed; resolved: that event was processed (docs/integration-health.md).
+// processed; resolved: that event was processed; dependency_missing: parked until the
+// referenced entity arrives, retried on the longest backoff (docs/integration-health.md).
 export type IntegrationInboxEventStatus =
     | 'pending'
     | 'processing'
     | 'processed'
     | 'failed'
+    | 'dependency_missing'
     | 'replay_requested'
     | 'resolved';
 

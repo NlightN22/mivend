@@ -111,6 +111,7 @@ export function InboxIssuesPage({ route }: Readonly<{ route: AnyRoute }>) {
                     options: [
                         { label: 'failed', value: 'failed' },
                         { label: 'replay requested', value: 'replay_requested' },
+                        { label: 'dependency missing', value: 'dependency_missing' },
                     ],
                 },
             }}

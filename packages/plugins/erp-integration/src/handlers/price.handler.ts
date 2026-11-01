@@ -3,7 +3,7 @@ import { RequestContext } from '@vendure/core';
 import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { PriceEntryService } from '@mivend/plugin-price-entry';
 
-import { MissingDependencyError } from '../types';
+import { MissingReferenceError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
@@ -44,8 +44,8 @@ export class PriceStreamHandler implements InboundStreamHandler {
         if (!priceType) {
             if (removal) return inboundNoop(`price ${entityId}: tombstone for unknown price type`);
             // Issue #96: ordinary eventual-consistency race (price-type stream not consumed yet),
-            // not a malformed payload — retry via MissingDependencyError instead of dropping.
-            throw new MissingDependencyError(
+            // not a malformed payload — retry via MissingReferenceError instead of dropping.
+            throw new MissingReferenceError(
                 `price ${entityId}: no PriceType found for priceTypeId=${priceTypeId}`,
             );
         }

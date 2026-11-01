@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { RequestContext } from '@vendure/core';
 import { TradingPointService } from '@mivend/plugin-counterparty';
 
-import { MissingDependencyError } from '../types';
+import { MissingReferenceError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
@@ -42,7 +42,7 @@ export class PointOfSaleStreamHandler implements InboundStreamHandler {
             counterpartyErpId,
         );
         if (!counterparty) {
-            throw new MissingDependencyError(
+            throw new MissingReferenceError(
                 `point-of-sale ${entityId}: counterparty erpId=${counterpartyErpId} not synced yet`,
             );
         }

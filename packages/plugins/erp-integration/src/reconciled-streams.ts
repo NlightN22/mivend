@@ -13,6 +13,8 @@ export const RECONCILED_STREAMS: Readonly<Partial<Record<InboundStream, Compared
     department: 'department',
     'stock-organization': 'stockOrganization',
     user: 'user',
+    contract: 'contract',
+    'point-of-sale': 'pointOfSale',
 };
 
 const EVENT_STREAM = 'Event or command result, not an entity with a standing count';
@@ -36,8 +38,6 @@ export const AWAITING_UPSTREAM_ENDPOINT: Readonly<Partial<Record<InboundStream, 
     counterparty: 'counterparty',
     'counterparty-credit-balance': 'counterpartyCreditBalance',
     'promo-rule': 'promoRule',
-    'point-of-sale': 'pointOfSale',
-    contract: 'contract',
     manufacturer: 'manufacturer',
     region: 'region',
     'legal-form': 'legalForm',

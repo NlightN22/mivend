@@ -7,7 +7,7 @@ import { ctxQuery, withAggregateLock } from 'shared';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 import { StorageLocationAssignment } from '../entities/storage-location-assignment.entity';
-import { MissingDependencyError } from '../types';
+import { MissingReferenceError } from '../types';
 
 const loggerCtx = 'IntegrationStorageLocationHandler';
 
@@ -97,7 +97,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
         if (!variant) {
             if (!winner) return;
             // Ordinary eventual-consistency race (product stream not consumed yet): retry.
-            throw new MissingDependencyError(
+            throw new MissingReferenceError(
                 `storage-location ${winner.entityId}: variant not found for productId=${productId}`,
             );
         }
@@ -109,7 +109,7 @@ export class StorageLocationStreamHandler implements InboundStreamHandler {
                 winner.organizationErpId,
             );
             if (organizationId == null) {
-                throw new MissingDependencyError(
+                throw new MissingReferenceError(
                     `storage-location ${winner.entityId}: no OrganizationRequisites found for ` +
                         `organizationId=${winner.organizationErpId}`,
                 );

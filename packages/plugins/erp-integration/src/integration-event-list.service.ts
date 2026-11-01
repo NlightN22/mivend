@@ -146,7 +146,7 @@ export class IntegrationEventListService {
             .where(
                 new Brackets(b =>
                     b
-                        .where(`e.status IN ('failed', 'replay_requested')`)
+                        .where(`e.status IN ('failed', 'dependency_missing', 'replay_requested')`)
                         .orWhere(`e.outcome = 'noop'`),
                 ),
             );

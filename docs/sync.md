@@ -313,9 +313,11 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
 (`integration.example.com`, `X-Api-Key` auth via `INTEGRATION_SERVICE_API_KEY`), comparing its
 `activeCount` per entity type against mivend's own local count for the same type.
 
-- **Scope (#305)**: the summary endpoint supports only 13 aggregate types. Eleven are compared:
+- **Scope (#305)**: the summary endpoint supports only 13 aggregate types. Thirteen are compared:
   `category`, `organization`, `warehouse`, `priceType`, `product`, `price`, `stock`, `unit`, `department`,
-  `stockOrganization`, `user`. Every other consumed stream is in one of two lists in `reconciled-streams.ts`,
+  `stockOrganization`, `user`, `contract`, `pointOfSale` (local count: active rows of `contract` and
+  `trading_point`; rows whose counterparty is missing are never stored, so they are not in the local count and are
+  subtracted from the upstream figure). Every other consumed stream is in one of two lists in `reconciled-streams.ts`,
   and a unit test fails when a stream in `ALL_INBOUND_STREAMS` is in none or in more than one:
   - `NOT_COMPARABLE_STREAMS` (with a reason): `offer` (deliberate no-op), `storage-location` (upstream counts
     rows without an organization and tombstones, mivend stores neither), the order result streams (events),
@@ -327,12 +329,16 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   - `AWAITING_UPSTREAM_ENDPOINT` (a finding): the endpoint answers 400 for these aggregateTypes. Needed from
     Integration Service: `GET /api/reconciliation/v1/summary?aggregateType=<type>` returning `count` and
     `activeCount` (active and not deleted), like the supported types. Streams: `position`, `counterparty`,
-    `counterpartyCreditBalance`, `promoRule`, `pointOfSale`, `contract`, `manufacturer`, `region`, `legalForm`,
+    `counterpartyCreditBalance`, `promoRule`, `manufacturer`, `region`, `legalForm`,
     `bank`, `bankAccount`, `productPhoto`, `discountSetup`, `grantedDiscount`, `retroBonusSetup`,
     `grantedRetroBonus`, `settlementDocument`, `settlementBalance`, `settlementDocumentType`, `orderStatus`.
     Tracked upstream in search-platform #220 (endpoints), #219 (store entities with an unresolved reference),
     #221 (reprocess failed rows), #222 (units dictionary), #223 (counterparties missing from the topic).
     Remove a stream from the list and add a local count once its endpoint exists.
+  - A missing referenced entity (a `MissingReferenceError`, e.g. a contract whose counterparty is not synced) is
+    classified once, generically: after the 24 h retry budget the inbox row is parked as `dependency_missing`
+    instead of `failed`, is retried every 30 min, and never raises the failed-inbox-rows issue. A unit test fails
+    when a stream handler throws a plain `Error`, which would bypass this. Config or order-stream errors (plain `MissingDependencyError`, e.g. a product VAT default not configured) stay `failed` and keep alerting.
 - **Notifications**: a manual run notifies the requesting administrator only when an issue is first opened; an already open drift is updated silently and shown in the panel.
 - **Failed inbox rows**: because uncompared streams cannot show count drift, each run also opens one
   `failed-inbox-rows` issue per stream (`aggregateType` `inbox-failed:<stream>`, `ourCount` = failed rows)

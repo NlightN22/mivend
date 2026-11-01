@@ -21,7 +21,7 @@ import {
     photoFileName,
 } from './product-photo-download';
 import { ctxQuery, withAggregateLock } from 'shared';
-import { loggerCtx, MissingDependencyError } from './types';
+import { loggerCtx, MissingReferenceError } from './types';
 
 export const PRODUCT_PHOTO_SYNC_QUEUE = 'product-photo-sync';
 
@@ -77,7 +77,7 @@ export class ProductPhotoSyncService implements OnModuleInit {
         const repo = this.connection.getRepository(ctx, ProductPhoto);
         const productId = await this.findProductId(ctx, productExternalId);
         if (!productId) {
-            throw new MissingDependencyError(`product ${productExternalId} not imported yet`);
+            throw new MissingReferenceError(`product ${productExternalId} not imported yet`);
         }
         const rows = await repo.find({ where: { productExternalId } });
         let transientError: Error | undefined;

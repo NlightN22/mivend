@@ -12,6 +12,7 @@ export const healthTypes = `
         pending: Int!
         processing: Int!
         failed: Int!
+        dependencyMissing: Int!
     }
 
     type IntegrationStreamHealth {
@@ -26,6 +27,8 @@ export const healthTypes = `
         pending: Int!
         processing: Int!
         failed: Int!
+        "Rows parked because a referenced entity has not arrived yet; retried automatically, not an alert."
+        dependencyMissing: Int!
         "Failed rows whose replay was requested and that wait for the replayed event to be processed."
         replayPending: Int!
         oldestPendingAt: DateTime

@@ -30,6 +30,7 @@ describe('buildStreamHealthRows', () => {
                 topic: 't',
                 pending: 0,
                 failed: 0,
+                dependencyMissing: 0,
                 drift: null,
             }),
         ]);
@@ -60,6 +61,7 @@ describe('buildStreamHealthRows', () => {
                     pending: 2,
                     processing: 0,
                     failed: 1,
+                    dependencyMissing: 2,
                     replayPending: 0,
                     oldestPendingAt: new Date(0),
                 },
@@ -70,6 +72,7 @@ describe('buildStreamHealthRows', () => {
             drift: 'UNKNOWN_STREAM',
             pending: 2,
             failed: 1,
+            dependencyMissing: 2,
         });
     });
 

@@ -44,6 +44,7 @@ const streamHealthDocument = graphql(`
                 pending
                 processing
                 failed
+                dependencyMissing
                 replayPending
                 oldestPendingAt
                 noop24h
@@ -223,6 +224,16 @@ export function InboundTab() {
                                             hideZero
                                             icon={<RefreshCw className="size-3" />}
                                             title="replay requested, waiting for the entity to be processed"
+                                        />
+                                        <CountLink
+                                            count={s.dependencyMissing}
+                                            href={inboxIssuesLink({
+                                                stream: s.stream,
+                                                status: 'dependency_missing',
+                                            })}
+                                            muted
+                                            hideZero
+                                            title="waiting for a referenced entity to arrive, retried automatically"
                                         />
                                     </TableCell>
                                     <TableCell title={s.lastNoopReason ?? undefined}>

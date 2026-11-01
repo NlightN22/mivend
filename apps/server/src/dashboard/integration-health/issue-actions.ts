@@ -53,6 +53,8 @@ export function statusBadge(row: InboxIssueStatusInput): {
     variant: 'destructive' | 'outline' | 'secondary';
 } {
     if (row.status === 'failed') return { label: 'failed', variant: 'destructive' };
+    if (row.status === 'dependency_missing')
+        return { label: 'dependency missing', variant: 'outline' };
     if (row.status === 'replay_requested') return { label: 'replay requested', variant: 'outline' };
     return { label: row.outcome ?? row.status, variant: 'secondary' };
 }

@@ -287,6 +287,15 @@ export class MissingDependencyError extends Error {
     }
 }
 
+// A reference to another synced entity that has not arrived: parked, not failed, once the retry budget is spent.
+// Config or data problems an operator must fix stay a plain MissingDependencyError and keep failing.
+export class MissingReferenceError extends MissingDependencyError {
+    constructor(message: string) {
+        super(message);
+        this.name = 'MissingReferenceError';
+    }
+}
+
 export const ERP_INTEGRATION_PLUGIN_OPTIONS = Symbol('ERP_INTEGRATION_PLUGIN_OPTIONS');
 export const KAFKA_ENABLED_DEFAULT = false;
 export const PRICES_INCLUDE_TAX_DEFAULT = true;

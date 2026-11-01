@@ -4,7 +4,7 @@ import { ContractService, CounterpartyService } from '@mivend/plugin-counterpart
 import { OrderCheckStaleService } from '@mivend/plugin-reservation';
 import { SettlementPendingService } from '@mivend/plugin-settlement';
 
-import { MissingDependencyError } from '../types';
+import { MissingReferenceError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
 
@@ -58,7 +58,7 @@ export class ContractStreamHandler implements InboundStreamHandler {
         if (!counterparty) {
             // Ordinary eventual-consistency race (Kafka gives no cross-topic ordering guarantee)
             // — retryable, same as every other sibling handler's cross-entity dependency.
-            throw new MissingDependencyError(
+            throw new MissingReferenceError(
                 `contract ${entityId}: counterparty erpId=${counterpartyErpId} not synced yet`,
             );
         }

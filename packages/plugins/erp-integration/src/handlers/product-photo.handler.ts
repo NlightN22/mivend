@@ -4,7 +4,7 @@ import { ctxQuery } from 'shared';
 
 import { ProductPhoto } from '../entities/product-photo.entity';
 import { ProductPhotoSyncService } from '../product-photo-sync.service';
-import { MissingDependencyError } from '../types';
+import { MissingReferenceError } from '../types';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type {
     InboundAfterCommit,
@@ -45,7 +45,7 @@ export class ProductPhotoStreamHandler implements InboundStreamHandler {
             return inboundNoop(`product-photo ${entityId}: incomplete payload, skipping`);
         }
         if (!(await this.productExists(ctx, productExternalId))) {
-            throw new MissingDependencyError(`product ${productExternalId} not imported yet`);
+            throw new MissingReferenceError(`product ${productExternalId} not imported yet`);
         }
 
         const expires = payload.downloadUrlExpiresAt

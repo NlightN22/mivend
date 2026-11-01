@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -33,5 +35,14 @@ describe('reconciliation coverage', () => {
         expect(Object.values(RECONCILED_STREAMS).sort()).toEqual(
             [...COMPARED_AGGREGATE_TYPES].sort(),
         );
+    });
+
+    // A missing referenced entity must be a MissingDependencyError (parked as dependency_missing,
+    // not a failed row); a plain Error from a handler would raise the failed-rows alert forever.
+    it('no stream handler throws a plain Error for a missing reference', () => {
+        const dir = join(__dirname, '../../handlers');
+        for (const file of readdirSync(dir).filter(f => f.endsWith('.handler.ts'))) {
+            expect(readFileSync(join(dir, file), 'utf8'), file).not.toMatch(/throw new Error\(/);
+        }
     });
 });

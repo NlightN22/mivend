@@ -8,7 +8,7 @@ import {
 import { WarehouseService } from '@mivend/plugin-access-control';
 import { ctxQuery } from 'shared';
 
-import { MissingDependencyError } from '../types';
+import { MissingReferenceError } from '../types';
 import { isWarehouseTombstoned } from './warehouse-tombstone.query';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
@@ -50,21 +50,21 @@ export class StockStreamHandler implements InboundStreamHandler {
                 );
             }
             // Ordering race: the warehouse event is not consumed yet (#96), so retry.
-            throw new MissingDependencyError(
+            throw new MissingReferenceError(
                 `stock ${entityId}: no Warehouse found for warehouseId=${warehouseId}`,
             );
         }
 
         const stockLocationId = await this.findStockLocationId(ctx, warehouseId);
         if (!stockLocationId) {
-            throw new MissingDependencyError(
+            throw new MissingReferenceError(
                 `stock ${entityId}: no StockLocation found for warehouseId=${warehouseId}`,
             );
         }
 
         const variantId = await this.findVariantId(ctx, productId);
         if (!variantId) {
-            throw new MissingDependencyError(
+            throw new MissingReferenceError(
                 `stock ${entityId}: variant not found for productId=${productId}`,
             );
         }

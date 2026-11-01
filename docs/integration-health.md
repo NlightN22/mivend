@@ -94,6 +94,11 @@ over non-cancelled orders with a stored failing finding, `{ checkCode, reason, o
 
 - Every handler error retries with exponential backoff (30 s base, capped at 30 min, +-20% jitter).
   A row is dead-lettered (`failed`) only when 24 h have passed since its first failure.
+- A row that fails because a referenced entity has not arrived (`MissingReferenceError`, e.g. a contract whose
+  counterparty is unknown) is not dead-lettered: after 24 h it is parked as `dependency_missing`, claimed again every
+  30 min and processed once the entity exists. It is not an alert and opens no `failed-inbox-rows` issue; the
+  Inbound tab shows its count per stream as a muted badge under Failed, and **Inbox issues** lists it with the
+  status filter `dependency missing`. Only references to other synced entities are parked; config problems and the order streams (plain `MissingDependencyError`) still fail and alert. Upstream counts these as unresolved rows, which reconciliation subtracts.
 - A `failed` row is never retried automatically and is never purged: it stays until someone acts.
   Only superseded `processed` rows are tombstoned by retention.
 - Any stream with a `failed` row raises a red alert on the Inbound tab, highlights the stream row, and opens a

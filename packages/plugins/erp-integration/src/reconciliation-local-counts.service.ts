@@ -19,6 +19,8 @@ export const COMPARED_AGGREGATE_TYPES = [
     'department',
     'stockOrganization',
     'user',
+    'contract',
+    'pointOfSale',
 ] as const;
 export type ComparedAggregateType = (typeof COMPARED_AGGREGATE_TYPES)[number];
 
@@ -59,6 +61,10 @@ export class ReconciliationLocalCountsService {
                 return this.countRows(ctx, 'stock_organization', '"isActive" = true');
             case 'user':
                 return this.countRows(ctx, 'erp_user', 'active = true');
+            case 'contract':
+                return this.countRows(ctx, 'contract', '"isActive" = true');
+            case 'pointOfSale':
+                return this.countRows(ctx, 'trading_point', '"isActive" = true');
         }
     }
 

@@ -16,6 +16,7 @@ export interface StreamHealthBacklog {
     pending: number;
     processing: number;
     failed: number;
+    dependencyMissing: number;
     replayPending: number;
     oldestPendingAt: Date | null;
 }
@@ -46,6 +47,7 @@ export interface StreamHealthRow {
     pending: number;
     processing: number;
     failed: number;
+    dependencyMissing: number;
     replayPending: number;
     oldestPendingAt: Date | null;
     noop24h: number;
@@ -108,6 +110,7 @@ export function buildStreamHealthRows(input: StreamHealthInput): StreamHealthRow
             pending: backlog?.pending ?? 0,
             processing: backlog?.processing ?? 0,
             failed: backlog?.failed ?? 0,
+            dependencyMissing: backlog?.dependencyMissing ?? 0,
             replayPending: backlog?.replayPending ?? 0,
             oldestPendingAt: backlog?.oldestPendingAt ?? null,
             noop24h: input.noopByStream.get(stream)?.count ?? 0,

@@ -123,7 +123,7 @@ export class IntegrationInboxService {
                 .createQueryBuilder('event')
                 .where('event.id IN (:...ids)', { ids })
                 .andWhere(
-                    `(event.status = 'pending' OR (event.status = 'processing' AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval))`,
+                    `(event.status IN ('pending', 'dependency_missing') OR (event.status = 'processing' AND event.updatedAt < now() - (:staleMs || ' milliseconds')::interval))`,
                     { staleMs: STUCK_PROCESSING_THRESHOLD_MS },
                 )
                 .andWhere('event.eligibleAt <= now()')
@@ -177,12 +177,16 @@ export class IntegrationInboxService {
               ${streamFilter}
             ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
 
+        const parkedBranch = `(SELECT id, eligible_at FROM integration_inbox_event
+            WHERE status = 'dependency_missing' AND eligible_at <= now() ${streamFilter}
+            ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
+
         // FIFO by the time a row became eligible, not by enqueue time — a backed-off retry queues
         // behind rows that arrived before it came due, so retries can't starve them (#146).
         const rows = await ctxQuery<Array<{ id: string }>>(
             this.connection,
             ctx,
-            `SELECT id FROM (${[...pendingBranches, staleProcessingBranch].join(' UNION ALL ')}) combined
+            `SELECT id FROM (${[...pendingBranches, staleProcessingBranch, parkedBranch].join(' UNION ALL ')}) combined
              ORDER BY eligible_at ASC, id ASC LIMIT $1`,
             params,
         );

@@ -50,6 +50,12 @@ beforeAll(async () => {
     await dataSource.query(
         `CREATE TABLE erp_user (id serial PRIMARY KEY, "erpId" varchar, active boolean)`,
     );
+    await dataSource.query(
+        `CREATE TABLE contract (id serial PRIMARY KEY, "erpId" varchar, "isActive" boolean)`,
+    );
+    await dataSource.query(
+        `CREATE TABLE trading_point (id serial PRIMARY KEY, "erpId" varchar, "isActive" boolean)`,
+    );
     const warehouseService = { findAll: async () => [{ isActive: true }, { isActive: false }] };
     service = new ReconciliationLocalCountsService(
         {} as never,
@@ -62,7 +68,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query(
-        `TRUNCATE integration_inbox_event, product, product_variant_price_entry, collection, unit_record, department, stock_organization, erp_user RESTART IDENTITY`,
+        `TRUNCATE integration_inbox_event, product, product_variant_price_entry, collection, unit_record, department, stock_organization, erp_user, contract, trading_point RESTART IDENTITY`,
     );
 });
 
@@ -146,5 +152,16 @@ describe('reconciliation local counts against real Postgres', () => {
             `INSERT INTO erp_user ("erpId", active) VALUES ('e1', true), ('e2', false), ('e3', NULL), ('e4', true)`,
         );
         expect(await service.getLocalActiveCount(ctx, 'user')).toBe(2);
+    });
+
+    it('counts only active contracts and active points of sale', async () => {
+        await dataSource.query(
+            `INSERT INTO contract ("erpId", "isActive") VALUES ('c1', true), ('c2', false), ('c3', true)`,
+        );
+        await dataSource.query(
+            `INSERT INTO trading_point ("erpId", "isActive") VALUES ('t1', true), ('t2', false)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, 'contract')).toBe(2);
+        expect(await service.getLocalActiveCount(ctx, 'pointOfSale')).toBe(1);
     });
 });

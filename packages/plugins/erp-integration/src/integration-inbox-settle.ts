@@ -5,7 +5,11 @@ import { ctxQuery } from 'shared';
 import { replayDidNotResolve } from './inbox-replay-lifecycle';
 import { NonRetryableInboundError } from './non-retryable-inbound-error';
 import { computeRetryBackoffMs } from './retry-policy';
-import { INBOX_RETRY_WALL_CLOCK_BUDGET_MS } from './types';
+import {
+    INBOX_RETRY_WALL_CLOCK_BUDGET_MS,
+    MissingReferenceError,
+    RETRY_BACKOFF_MAX_MS,
+} from './types';
 
 const loggerCtx = 'IntegrationInboxService';
 
@@ -144,6 +148,21 @@ export async function settleFailed(
                 id,
                 onBudgetExhausted.outcome,
                 onBudgetExhausted.reason,
+            );
+            return true;
+        }
+        if (retriable && error instanceof MissingReferenceError) {
+            // Parked, not failed: claimBatch retries it at the maximum backoff until the dependency arrives.
+            const retryAt = new Date(Date.now() + RETRY_BACKOFF_MAX_MS);
+            await ctxQuery<unknown>(
+                connection,
+                txCtx,
+                `UPDATE integration_inbox_event
+                    SET attempts = $2, first_failed_at = $3, last_error = $4,
+                        status = 'dependency_missing', next_retry_at = $5, eligible_at = $5,
+                        claim_token = NULL
+                  WHERE id = $1`,
+                [id, attempts, firstFailedAt, error.message, retryAt],
             );
             return true;
         }
