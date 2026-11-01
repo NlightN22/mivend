@@ -10,6 +10,9 @@ export interface ReconciliationSummary {
     // Reconcile against activeCount when non-null; against count when null.
     activeCount: number | null;
     lastModifiedMax: string | null;
+    // Rows with an unresolved relation; already included in count/activeCount. Absent or null means none.
+    unresolvedLinkCount?: number | null;
+    unresolvedActiveCount?: number | null;
 }
 
 const FETCH_TIMEOUT_MS = 10_000;

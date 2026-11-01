@@ -35,6 +35,37 @@ describe('resolveTheirCount', () => {
     });
 });
 
+describe('resolveTheirCount with unresolved relations', () => {
+    it('excludes unresolved active rows from activeCount', () => {
+        expect(
+            resolveTheirCount(
+                summary({
+                    aggregateType: 'price',
+                    activeCount: 644800,
+                    unresolvedActiveCount: 275900,
+                }),
+            ),
+        ).toBe(368900);
+    });
+
+    it('treats null unresolved counts as zero', () => {
+        expect(resolveTheirCount(summary({ activeCount: 8, unresolvedActiveCount: null }))).toBe(8);
+    });
+
+    it('excludes unresolved links from count when there is no active concept', () => {
+        expect(
+            resolveTheirCount(
+                summary({
+                    aggregateType: 'storageLocation',
+                    activeCount: null,
+                    count: 100,
+                    unresolvedLinkCount: 4,
+                }),
+            ),
+        ).toBe(96);
+    });
+});
+
 describe('classifyDiscrepancy', () => {
     it('classifies as upstream-higher when Integration Service has more', () => {
         expect(classifyDiscrepancy(4, 10)).toBe('upstream-higher');

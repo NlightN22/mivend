@@ -320,6 +320,9 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   - `NOT_COMPARABLE_STREAMS` (with a reason): `offer` (deliberate no-op), `storage-location` (upstream counts
     rows without an organization and tombstones, mivend stores neither), the order result streams (events),
     `vat-rate` (generated upstream).
+  - Upstream rows stored with an unresolved relation are already inside `activeCount`; the compared figure is
+    `activeCount - unresolvedActiveCount` (or `count - unresolvedLinkCount` when there is no active concept);
+    null counts as 0.
   - `AWAITING_UPSTREAM_ENDPOINT` (a finding): the endpoint answers 400 for these aggregateTypes. Needed from
     Integration Service: `GET /api/reconciliation/v1/summary?aggregateType=<type>` returning `count` and
     `activeCount` (active and not deleted), like the supported types. Streams: `position`, `counterparty`,
