@@ -341,7 +341,7 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     instead of `failed`, is retried last in every claim (never ahead of fresh pending rows), after a delay that starts at 30 min and doubles with
     the time parked up to 24 h, and never raises the failed-inbox-rows issue. A unit test fails
     when a stream handler throws a plain `Error`, which would bypass this. Load: about 275k parked price rows
-    retry at most once per 24 h at the cap (about 3 rows/s on average), and always behind fresh pending rows. Config or order-stream errors (plain `MissingDependencyError`, e.g. a product VAT default not configured) stay `failed` and keep alerting.
+    retry at most once per 24 h at the cap (about 3 rows/s on average), and always behind fresh pending rows. While the queue stays full of fresh pending rows, parked rows are not retried at all (accepted). Config or order-stream errors (plain `MissingDependencyError`, e.g. a product VAT default not configured) stay `failed` and keep alerting.
 - **Notifications**: a manual run notifies the requesting administrator only when an issue is first opened; an already open drift is updated silently and shown in the panel.
 - **Failed inbox rows**: because uncompared streams cannot show count drift, each run also opens one
   `failed-inbox-rows` issue per stream (`aggregateType` `inbox-failed:<stream>`, `ourCount` = failed rows)
