@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeRetryBackoffMs, decideOutboxFailure } from '../../retry-policy';
+import {
+    computeParkedRetryDelayMs,
+    computeRetryBackoffMs,
+    decideOutboxFailure,
+} from '../../retry-policy';
 
 describe('decideOutboxFailure', () => {
     const now = new Date('2026-01-02T00:00:00Z');
@@ -55,5 +59,16 @@ describe('computeRetryBackoffMs', () => {
         // The cap itself is applied before jitter (per the "capped at 30 minutes per individual
         // retry gap" spec) — jitter can still push the final delay slightly past the raw cap.
         expect(computeRetryBackoffMs(20, () => 1)).toBe(30 * 60_000 * 1.2);
+    });
+});
+
+describe('computeParkedRetryDelayMs', () => {
+    it('starts at 30 min, doubles with the parked time and caps at 24 h', () => {
+        const min = 60_000;
+        expect(computeParkedRetryDelayMs(0)).toBe(30 * min);
+        expect(computeParkedRetryDelayMs(30 * min)).toBe(30 * min);
+        expect(computeParkedRetryDelayMs(60 * min)).toBe(60 * min);
+        expect(computeParkedRetryDelayMs(240 * min)).toBe(240 * min);
+        expect(computeParkedRetryDelayMs(10 * 24 * 60 * min)).toBe(24 * 60 * min);
     });
 });

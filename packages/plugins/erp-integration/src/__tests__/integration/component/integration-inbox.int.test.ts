@@ -643,12 +643,12 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
     });
 
     describe('dependency-missing rows', () => {
-        async function parkedRow(): Promise<number> {
+        async function parkedRow(entityId = 'c-dep'): Promise<number> {
             const row = await inboxService.enqueue(testRequestContext, {
                 stream: 'contract',
-                entityId: 'c-dep',
+                entityId,
                 version: '1',
-                sourceEventId: 'evt-dep',
+                sourceEventId: `evt-${entityId}`,
                 payload: {},
             });
             await dataSource.query(
@@ -695,6 +695,50 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 .getRepository(IntegrationInboxEvent)
                 .findOneOrFail({ where: { id: row.id } });
             expect(saved.status).toBe('failed');
+        });
+
+        it('claims fresh pending before any number of due parked rows', async () => {
+            for (let i = 0; i < 5; i++) {
+                const id = await parkedRow(`dep-${i}`);
+                await dataSource.query(
+                    "UPDATE integration_inbox_event SET eligible_at = now() - interval '2 days' WHERE id = $1",
+                    [id],
+                );
+            }
+            const fresh = await inboxService.enqueue(testRequestContext, {
+                stream: 'contract',
+                entityId: 'c-fresh',
+                version: '1',
+                sourceEventId: 'evt-fresh',
+                payload: {},
+            });
+            const claimed = await inboxService.claimBatch(testRequestContext, 1);
+            expect(claimed.map(r => r.id)).toEqual([fresh.id]);
+        });
+
+        it('doubles the retry delay the longer a row stays parked, capped at 24 h', async () => {
+            const id = await parkedRow();
+            const delayOf = async (parkedHours: number): Promise<number> => {
+                await dataSource.query(
+                    `UPDATE integration_inbox_event SET status = 'processing',
+                        first_failed_at = now() - ($2 || ' hours')::interval WHERE id = $1`,
+                    [id, String(24 + parkedHours)],
+                );
+                await inboxService.markFailedUnclaimed(
+                    testRequestContext,
+                    id,
+                    new MissingReferenceError(
+                        'contract c-dep: counterparty erpId=x not synced yet',
+                    ),
+                );
+                const row = await dataSource
+                    .getRepository(IntegrationInboxEvent)
+                    .findOneOrFail({ where: { id } });
+                return (row.nextRetryAt!.getTime() - Date.now()) / 3_600_000;
+            };
+            expect(await delayOf(2)).toBeCloseTo(2, 1);
+            expect(await delayOf(8)).toBeCloseTo(8, 1);
+            expect(await delayOf(100)).toBeCloseTo(24, 1);
         });
 
         it('claimBatch retries a parked row only once its backoff elapsed', async () => {

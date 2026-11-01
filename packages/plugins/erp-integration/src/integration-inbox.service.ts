@@ -155,12 +155,12 @@ export class IntegrationInboxService {
             streams && streams.length > 0
                 ? streams.map(stream => {
                       params.push(stream);
-                      return `(SELECT id, eligible_at FROM integration_inbox_event
+                      return `(SELECT id, eligible_at, 0 AS prio FROM integration_inbox_event
                           WHERE status = 'pending' AND stream = $${params.length} AND eligible_at <= now()
                           ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
                   })
                 : [
-                      `(SELECT id, eligible_at FROM integration_inbox_event
+                      `(SELECT id, eligible_at, 0 AS prio FROM integration_inbox_event
                           WHERE status = 'pending' AND eligible_at <= now()
                           ORDER BY eligible_at ASC, id ASC LIMIT $1)`,
                   ];
@@ -171,23 +171,24 @@ export class IntegrationInboxService {
             params.push(streams);
             streamFilter = `AND stream = ANY($${params.length})`;
         }
-        const staleProcessingBranch = `(SELECT id, eligible_at FROM integration_inbox_event
+        const staleProcessingBranch = `(SELECT id, eligible_at, 0 AS prio FROM integration_inbox_event
             WHERE status = 'processing' AND eligible_at <= now()
               AND updated_at < now() - ($2 || ' milliseconds')::interval
               ${streamFilter}
             ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
 
-        const parkedBranch = `(SELECT id, eligible_at FROM integration_inbox_event
+        const parkedBranch = `(SELECT id, eligible_at, 1 AS prio FROM integration_inbox_event
             WHERE status = 'dependency_missing' AND eligible_at <= now() ${streamFilter}
             ORDER BY eligible_at ASC, id ASC LIMIT $1)`;
 
+        // Parked rows (prio 1) only fill what fresh pending and stale rows leave of the batch.
         // FIFO by the time a row became eligible, not by enqueue time — a backed-off retry queues
         // behind rows that arrived before it came due, so retries can't starve them (#146).
         const rows = await ctxQuery<Array<{ id: string }>>(
             this.connection,
             ctx,
             `SELECT id FROM (${[...pendingBranches, staleProcessingBranch, parkedBranch].join(' UNION ALL ')}) combined
-             ORDER BY eligible_at ASC, id ASC LIMIT $1`,
+             ORDER BY prio ASC, eligible_at ASC, id ASC LIMIT $1`,
             params,
         );
         return rows.map(row => row.id);

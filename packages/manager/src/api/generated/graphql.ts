@@ -849,6 +849,107 @@ export type ConfigurableOperationInput = {
     code: Scalars['String']['input'];
 };
 
+export type ConsistencyIgnoredEntityType = {
+    entityType: Scalars['String']['output'];
+    reason: Scalars['String']['output'];
+};
+
+export type ConsistencyReport = Node & {
+    actual: Maybe<Scalars['JSON']['output']>;
+    details: Scalars['String']['output'];
+    entityId: Scalars['String']['output'];
+    entityType: Scalars['String']['output'];
+    expected: Maybe<Scalars['JSON']['output']>;
+    firstDetectedAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    lastDetectedAt: Scalars['DateTime']['output'];
+    number: Scalars['Int']['output'];
+    occurrences: Scalars['Int']['output'];
+    providerIssueId: Scalars['String']['output'];
+    replayable: Scalars['Boolean']['output'];
+    resolvedAt: Maybe<Scalars['DateTime']['output']>;
+    scope: Scalars['JSON']['output'];
+    severity: Scalars['String']['output'];
+    source: Scalars['String']['output'];
+    status: Scalars['String']['output'];
+    type: Scalars['String']['output'];
+    uuid: Scalars['String']['output'];
+};
+
+export type ConsistencyReportFilterParameter = {
+    _and?: InputMaybe<Array<ConsistencyReportFilterParameter>>;
+    _or?: InputMaybe<Array<ConsistencyReportFilterParameter>>;
+    details?: InputMaybe<StringOperators>;
+    entityId?: InputMaybe<StringOperators>;
+    entityType?: InputMaybe<StringOperators>;
+    firstDetectedAt?: InputMaybe<DateOperators>;
+    id?: InputMaybe<IdOperators>;
+    lastDetectedAt?: InputMaybe<DateOperators>;
+    number?: InputMaybe<NumberOperators>;
+    occurrences?: InputMaybe<NumberOperators>;
+    providerIssueId?: InputMaybe<StringOperators>;
+    replayable?: InputMaybe<BooleanOperators>;
+    resolvedAt?: InputMaybe<DateOperators>;
+    severity?: InputMaybe<StringOperators>;
+    source?: InputMaybe<StringOperators>;
+    status?: InputMaybe<StringOperators>;
+    type?: InputMaybe<StringOperators>;
+    uuid?: InputMaybe<StringOperators>;
+};
+
+export type ConsistencyReportList = PaginatedList & {
+    items: Array<ConsistencyReport>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type ConsistencyReportListOptions = {
+    entityType?: InputMaybe<Scalars['String']['input']>;
+    /** Allows the results to be filtered */
+    filter?: InputMaybe<ConsistencyReportFilterParameter>;
+    /** Specifies whether multiple top-level "filter" fields should be combined with a logical AND or OR operation. Defaults to AND. */
+    filterOperator?: InputMaybe<LogicalOperator>;
+    severity?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    /** Specifies which properties to sort the results by */
+    sort?: InputMaybe<ConsistencyReportSortParameter>;
+    source?: InputMaybe<Scalars['String']['input']>;
+    status?: InputMaybe<Scalars['String']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+    type?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ConsistencyReportSortParameter = {
+    details?: InputMaybe<SortOrder>;
+    entityId?: InputMaybe<SortOrder>;
+    entityType?: InputMaybe<SortOrder>;
+    firstDetectedAt?: InputMaybe<SortOrder>;
+    id?: InputMaybe<SortOrder>;
+    lastDetectedAt?: InputMaybe<SortOrder>;
+    number?: InputMaybe<SortOrder>;
+    occurrences?: InputMaybe<SortOrder>;
+    providerIssueId?: InputMaybe<SortOrder>;
+    resolvedAt?: InputMaybe<SortOrder>;
+    severity?: InputMaybe<SortOrder>;
+    source?: InputMaybe<SortOrder>;
+    status?: InputMaybe<SortOrder>;
+    type?: InputMaybe<SortOrder>;
+    uuid?: InputMaybe<SortOrder>;
+};
+
+export type ConsistencySource = {
+    coveredEntityTypes: Array<Scalars['String']['output']>;
+    health: Scalars['String']['output'];
+    healthDetail: Scalars['String']['output'];
+    ignoredEntityTypes: Array<ConsistencyIgnoredEntityType>;
+    lastFinishedAt: Maybe<Scalars['DateTime']['output']>;
+    lastPolledAt: Maybe<Scalars['DateTime']['output']>;
+    lastSuccessAt: Maybe<Scalars['DateTime']['output']>;
+    localOpenBySeverity: Scalars['JSON']['output'];
+    localOpenByType: Scalars['JSON']['output'];
+    source: Scalars['String']['output'];
+    summary: Maybe<Scalars['JSON']['output']>;
+};
+
 export type ContactPerson = {
     email: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
@@ -1878,11 +1979,6 @@ export type CustomFields = {
     TaxRate: Array<CustomFieldConfig>;
     User: Array<CustomFieldConfig>;
     Zone: Array<CustomFieldConfig>;
-};
-
-export type CustomProductMappings = {
-    fullName: Maybe<Scalars['String']['output']>;
-    oemCodes: Maybe<Array<Scalars['String']['output']>>;
 };
 
 export type Customer = Node & {
@@ -3044,6 +3140,7 @@ export type IntStructFieldConfig = StructField & {
 };
 
 export type IntegrationInboxBacklogByStream = {
+    dependencyMissing: Scalars['Int']['output'];
     failed: Scalars['Int']['output'];
     pending: Scalars['Int']['output'];
     processing: Scalars['Int']['output'];
@@ -3201,6 +3298,8 @@ export type IntegrationOutboxProblemSortParameter = {
 
 export type IntegrationStreamHealth = {
     consumed: Scalars['Boolean']['output'];
+    /** Rows parked because a referenced entity has not arrived yet; retried automatically, not an alert. */
+    dependencyMissing: Scalars['Int']['output'];
     /** NOT_CONSUMED | NOT_IN_CONTRACT | UNKNOWN_STREAM, null when the stream is consistent. */
     drift: Maybe<Scalars['String']['output']>;
     failed: Scalars['Int']['output'];
@@ -4256,6 +4355,7 @@ export type Mutation = {
     updateZone: Zone;
     upsertCounterparty: Counterparty;
     upsertDiscountRule: DiscountRule;
+    /** Prices the variant's whole product: the entry is keyed by the product ERP id, so every variant of that product gets the price. */
     upsertPriceEntry: PriceEntry;
     upsertPriceType: PriceType;
     upsertTradingPoint: TradingPoint;
@@ -6606,16 +6706,6 @@ export type PriceRange = {
     min: Scalars['Money']['output'];
 };
 
-export type PriceRangeBucket = {
-    count: Scalars['Int']['output'];
-    to: Scalars['Int']['output'];
-};
-
-export type PriceRangeInput = {
-    max: Scalars['Int']['input'];
-    min: Scalars['Int']['input'];
-};
-
 export type PriceType = {
     code: Scalars['String']['output'];
     id: Scalars['ID']['output'];
@@ -6674,6 +6764,7 @@ export type ProductCrossReference = {
 };
 
 export type ProductCustomFields = {
+    erpCreatedAt: Maybe<Scalars['DateTime']['output']>;
     externalId: Maybe<Scalars['String']['output']>;
     fullName: Maybe<Scalars['String']['output']>;
     manufacturer: Maybe<Manufacturer>;
@@ -6687,6 +6778,7 @@ export type ProductFilterParameter = {
     createdAt?: InputMaybe<DateOperators>;
     description?: InputMaybe<StringOperators>;
     enabled?: InputMaybe<BooleanOperators>;
+    erpCreatedAt?: InputMaybe<DateOperators>;
     externalId?: InputMaybe<StringOperators>;
     facetValueId?: InputMaybe<IdOperators>;
     fullName?: InputMaybe<StringOperators>;
@@ -6927,6 +7019,7 @@ export type ProductPhotoSortParameter = {
 export type ProductSortParameter = {
     createdAt?: InputMaybe<SortOrder>;
     description?: InputMaybe<SortOrder>;
+    erpCreatedAt?: InputMaybe<SortOrder>;
     externalId?: InputMaybe<SortOrder>;
     fullName?: InputMaybe<SortOrder>;
     id?: InputMaybe<SortOrder>;
@@ -7396,6 +7489,10 @@ export type Query = {
     collection: Maybe<Collection>;
     collectionFilters: Array<ConfigurableOperationDefinition>;
     collections: CollectionList;
+    /** Collected data-drift reports from external systems, newest detection first (issue #303). */
+    consistencyReports: ConsistencyReportList;
+    /** Per-source health, last provider summary and local open counts (issue #303); empty when no source is configured. */
+    consistencySources: Array<ConsistencySource>;
     counterparties: CounterpartyList;
     counterparty: Maybe<Counterparty>;
     counterpartySummary: CounterpartySummary;
@@ -7669,6 +7766,10 @@ export type QueryCollectionArgs = {
 
 export type QueryCollectionsArgs = {
     options?: InputMaybe<CollectionListOptions>;
+};
+
+export type QueryConsistencyReportsArgs = {
+    options?: InputMaybe<ConsistencyReportListOptions>;
 };
 
 export type QueryCounterpartiesArgs = {
@@ -8399,6 +8500,8 @@ export type RetroBonusRule = {
     /** The ERP setup document uuid. */
     erpId: Scalars['String']['output'];
     id: Scalars['ID']['output'];
+    /** Why an active rule never applies (dynamic filter not evaluated); null when it can. */
+    inactiveReason: Maybe<Scalars['String']['output']>;
     isInstant: Scalars['Boolean']['output'];
     organizationErpId: Maybe<Scalars['String']['output']>;
     percent: Scalars['Float']['output'];
@@ -8515,10 +8618,6 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
-    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
-    inStock?: InputMaybe<Scalars['Boolean']['input']>;
-    priceRange?: InputMaybe<PriceRangeInput>;
-    priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
     take?: InputMaybe<Scalars['Int']['input']>;
@@ -8533,15 +8632,7 @@ export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
-    prices: SearchResponsePriceData;
     totalItems: Scalars['Int']['output'];
-};
-
-export type SearchResponsePriceData = {
-    buckets: Array<PriceRangeBucket>;
-    bucketsWithTax: Array<PriceRangeBucket>;
-    range: PriceRange;
-    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -8552,14 +8643,10 @@ export type SearchResult = {
     /** An array of ids of the Collections in which this result appears */
     collectionIds: Array<Scalars['ID']['output']>;
     currencyCode: CurrencyCode;
-    /** @deprecated Use customProductMappings or customProductVariantMappings */
-    customMappings: CustomProductMappings;
-    customProductMappings: CustomProductMappings;
     description: Scalars['String']['output'];
     enabled: Scalars['Boolean']['output'];
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
-    inStock: Maybe<Scalars['Boolean']['output']>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset: Maybe<SearchResultAsset>;

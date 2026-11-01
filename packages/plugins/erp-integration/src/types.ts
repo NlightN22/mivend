@@ -288,7 +288,7 @@ export class MissingDependencyError extends Error {
 }
 
 // A reference to another synced entity that has not arrived: parked, not failed, once the retry budget is spent.
-// Config or data problems an operator must fix stay a plain MissingDependencyError and keep failing.
+// A plain MissingDependencyError (product VAT default, the order streams) stays failed and keeps alerting.
 export class MissingReferenceError extends MissingDependencyError {
     constructor(message: string) {
         super(message);
@@ -315,6 +315,7 @@ export const INBOX_USER_BATCH_SIZE_DEFAULT = 20;
 // cap, ±20% jitter, dead-lettered only after 24h wall-clock since the first failure.
 export const RETRY_BACKOFF_BASE_MS = 30_000;
 export const RETRY_BACKOFF_MAX_MS = 30 * 60_000;
+export const PARKED_RETRY_MAX_MS = 24 * 60 * 60_000;
 export const RETRY_BACKOFF_JITTER_RATIO = 0.2;
 export const INBOX_RETRY_WALL_CLOCK_BUDGET_MS = 24 * 60 * 60 * 1000;
 // Outbox publishing uses the same backoff and budget as the inbox (#200).

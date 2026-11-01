@@ -3,6 +3,7 @@ import {
     RETRY_BACKOFF_JITTER_RATIO,
     RETRY_BACKOFF_MAX_MS,
     OUTBOX_RETRY_WALL_CLOCK_BUDGET_MS,
+    PARKED_RETRY_MAX_MS,
 } from './types';
 
 // `attemptsAfterThisFailure` is 1 on the first failure; `random` is injectable for tests.
@@ -33,4 +34,9 @@ export function decideOutboxFailure(
     }
     const backoffMs = computeRetryBackoffMs(attemptsAfterThisFailure, random);
     return { status: 'pending', nextRetryAt: new Date(now.getTime() + backoffMs) };
+}
+
+// A parked row retries after as long as it has been parked (30 min, then doubling), capped at 24 h.
+export function computeParkedRetryDelayMs(parkedForMs: number): number {
+    return Math.min(Math.max(parkedForMs, RETRY_BACKOFF_MAX_MS), PARKED_RETRY_MAX_MS);
 }

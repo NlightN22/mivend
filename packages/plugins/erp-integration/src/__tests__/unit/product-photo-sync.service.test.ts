@@ -9,7 +9,7 @@ vi.mock('../../product-photo-download', async importOriginal => ({
 import type { ProductPhoto } from '../../entities/product-photo.entity';
 import { downloadVerifiedPhoto, PermanentPhotoError } from '../../product-photo-download';
 import { ProductPhotoSyncService } from '../../product-photo-sync.service';
-import { MissingDependencyError } from '../../types';
+import { MissingDependencyError, MissingReferenceError } from '../../types';
 
 const ctx = {} as RequestContext;
 const future = new Date(Date.now() + 3600_000);
@@ -164,10 +164,11 @@ describe('ProductPhotoSyncService.syncProduct', () => {
         expect(repo.remove).toHaveBeenCalledWith([expect.objectContaining({ id: 'b' })]);
     });
 
+    // Runs from the job queue, outside the inbox: the error just fails the job for the queue's retry.
     it('throws a retryable error when the product is not imported yet', async () => {
         const { service } = setup([photo({})], false);
-        await expect(service.syncProduct(ctx, 'p-1')).rejects.toBeInstanceOf(
-            MissingDependencyError,
-        );
+        const error = await service.syncProduct(ctx, 'p-1').catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(MissingReferenceError);
+        expect(error).toBeInstanceOf(MissingDependencyError);
     });
 });
