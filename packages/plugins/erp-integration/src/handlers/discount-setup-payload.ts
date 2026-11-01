@@ -77,6 +77,7 @@ function notApplicableReason(payload: Record<string, unknown>, percent: number):
     if (payload.byWeekdays === true || nonEmpty(payload.weekdayWindows)) return 'weekday-windows';
     const unevaluated = UNEVALUATED_ATTRIBUTES.find(([key]) => isSet(payload[key]));
     if (unevaluated) return unevaluated[1];
+    if (restrictsTimeOfDay(payload)) return 'time-window';
     if (payload.pseudo === true) return 'pseudo-document';
     if (nonEmpty(payload.productLines) && hasLineAttributes(payload.productLines)) {
         return 'product-line-attributes';
@@ -86,12 +87,18 @@ function notApplicableReason(payload: Record<string, unknown>, percent: number):
 
 const UNEVALUATED_ATTRIBUTES: ReadonlyArray<readonly [string, string]> = [
     ['markupTypeId', 'markup-type'],
-    ['commonTimeFrom', 'time-window'],
-    ['commonTimeTo', 'time-window'],
     ['priceGroups', 'price-groups'],
     ['bonusLines', 'bonus-lines'],
     ['setComponents', 'set-components'],
 ];
+
+// A window covering the whole day (from 00:00:00, to 23:59:59) is no restriction.
+function restrictsTimeOfDay(payload: Record<string, unknown>): boolean {
+    const timeOf = (value: unknown): string | null => optionalString(value)?.slice(11, 19) ?? null;
+    const from = timeOf(payload.commonTimeFrom);
+    const to = timeOf(payload.commonTimeTo);
+    return (from !== null && from !== '00:00:00') || (to !== null && to !== '23:59:59');
+}
 
 const isSet = (value: unknown): boolean =>
     Array.isArray(value) ? value.length > 0 : optionalString(value) !== null;

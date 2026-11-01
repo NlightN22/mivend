@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { parseDiscountSetup } from '../../handlers/discount-setup-payload';
 
 const time = timestampFromDate(new Date('2026-01-01T00:00:00Z'));
+const at = (iso: string): ReturnType<typeof timestampFromDate> => timestampFromDate(new Date(iso));
 
 function payload(
     overrides: Parameters<typeof create<typeof DiscountSetupChangedSchema>>[1] = {},
@@ -36,10 +37,20 @@ describe('parseDiscountSetup fails closed on attributes it does not evaluate', (
         expect(reasonOf({})).toBeNull();
     });
 
+    it('treats a whole-day time window as no restriction', () => {
+        expect(reasonOf({ commonTimeTo: at('0001-01-01T23:59:59Z') })).toBeNull();
+        expect(
+            reasonOf({
+                commonTimeFrom: at('0001-01-01T00:00:00Z'),
+                commonTimeTo: at('0001-01-01T23:59:59.000Z'),
+            }),
+        ).toBeNull();
+    });
+
     it.each([
         ['markupTypeId', { markupTypeId: 'mt-1' }, 'markup-type'],
-        ['commonTimeFrom', { commonTimeFrom: time }, 'time-window'],
-        ['commonTimeTo', { commonTimeTo: time }, 'time-window'],
+        ['commonTimeFrom', { commonTimeFrom: at('0001-01-01T09:00:00Z') }, 'time-window'],
+        ['commonTimeTo', { commonTimeTo: at('0001-01-01T18:00:00Z') }, 'time-window'],
         ['pseudo', { pseudo: true }, 'pseudo-document'],
         ['priceGroups', { priceGroups: [{ priceGroupId: 'g1', percent: 3 }] }, 'price-groups'],
         ['bonusLines', { bonusLines: [{ productId: 'b1', quantity: 1 }] }, 'bonus-lines'],
