@@ -18,4 +18,8 @@ export class Manufacturer extends VendureEntity {
 
     @Column({ type: 'varchar', nullable: true })
     name!: string | null;
+
+    // Cleared by an ERP deletion/deactivation; the row and name stay so products remain labelled.
+    @Column({ type: 'boolean', default: true })
+    isActive!: boolean;
 }

@@ -13,21 +13,44 @@ function setup() {
 }
 
 describe('ManufacturerStreamHandler', () => {
-    it('upserts the trimmed name keyed by entity id', async () => {
+    it('upserts the trimmed name as active, keyed by entity id', async () => {
         const { upsert, handler } = setup();
-        await handler.apply(ctx, 'm-1', { name: '  Acme ' });
-        expect(upsert).toHaveBeenCalledWith(ctx, 'm-1', 'Acme');
+        upsert.mockResolvedValue({});
+        expect(await handler.apply(ctx, 'm-1', { name: '  Acme ' })).toEqual({ kind: 'applied' });
+        expect(upsert).toHaveBeenCalledWith(ctx, 'm-1', 'Acme', true);
     });
 
-    it('keeps the name of a deleted manufacturer', async () => {
+    it('deactivates on isDeleted, keeping the name', async () => {
         const { upsert, handler } = setup();
         await handler.apply(ctx, 'm-1', { name: 'Acme', isDeleted: true });
-        expect(upsert).toHaveBeenCalledWith(ctx, 'm-1', 'Acme');
+        expect(upsert).toHaveBeenCalledWith(ctx, 'm-1', 'Acme', false);
     });
 
-    it('skips an event without a name', async () => {
+    it('deactivates on isActive=false and reactivates on a later active event', async () => {
         const { upsert, handler } = setup();
-        await handler.apply(ctx, 'm-1', { name: ' ' });
-        expect(upsert).not.toHaveBeenCalled();
+        await handler.apply(ctx, 'm-1', { name: 'Acme', isActive: false });
+        await handler.apply(ctx, 'm-1', { name: 'Acme', isActive: true });
+        expect(upsert).toHaveBeenNthCalledWith(1, ctx, 'm-1', 'Acme', false);
+        expect(upsert).toHaveBeenNthCalledWith(2, ctx, 'm-1', 'Acme', true);
+    });
+
+    it('applies a nameless tombstone as deactivation', async () => {
+        const { upsert, handler } = setup();
+        upsert.mockResolvedValue({});
+        const out = await handler.apply(ctx, 'm-1', { name: '', isDeleted: true });
+        expect(upsert).toHaveBeenCalledWith(ctx, 'm-1', undefined, false);
+        expect(out.kind).toBe('applied');
+    });
+
+    it('is a noop for a nameless event of an unknown manufacturer', async () => {
+        const { upsert, handler } = setup();
+        upsert.mockResolvedValue(null);
+        expect((await handler.apply(ctx, 'm-1', { name: ' ' })).kind).toBe('noop');
+    });
+
+    it('propagates storage errors', async () => {
+        const { upsert, handler } = setup();
+        upsert.mockRejectedValue(new Error('db down'));
+        await expect(handler.apply(ctx, 'm-1', { name: 'A' })).rejects.toThrow('db down');
     });
 });

@@ -5,7 +5,7 @@ import { ManufacturerService } from '../../manufacturer.service';
 
 const ctx = {} as RequestContext;
 
-function setup(existing: { externalId: string; name: string | null } | null) {
+function setup(existing: { externalId: string; name: string | null; isActive?: boolean } | null) {
     const repo = {
         findOne: vi.fn().mockResolvedValue(existing),
         create: vi.fn((v: object) => v),
@@ -20,21 +20,48 @@ function setup(existing: { externalId: string; name: string | null } | null) {
 describe('ManufacturerService.upsert facet mirroring', () => {
     it('creates the manufacturer and its facet value', async () => {
         const { service, facet } = setup(null);
-        await service.upsert(ctx, 'mfr-1', 'Brand A');
+        await service.upsert(ctx, 'mfr-1', 'Brand A', true);
         expect(facet.ensureValue).toHaveBeenCalledWith(ctx, 'mfr-1', 'Brand A');
     });
 
     it('heals a missing facet value for an existing manufacturer without a new name', async () => {
-        const { service, facet, repo } = setup({ externalId: 'mfr-1', name: 'Brand A' });
-        await service.upsert(ctx, 'mfr-1', undefined);
+        const { service, facet, repo } = setup({
+            externalId: 'mfr-1',
+            name: 'Brand A',
+            isActive: true,
+        });
+        await service.upsert(ctx, 'mfr-1', undefined, true);
         expect(repo.save).not.toHaveBeenCalled();
         expect(facet.ensureValue).toHaveBeenCalledWith(ctx, 'mfr-1', 'Brand A');
     });
 
     it('passes the backfilled name through', async () => {
         const { service, facet } = setup({ externalId: 'mfr-1', name: null });
-        await service.upsert(ctx, 'mfr-1', 'Brand A');
+        await service.upsert(ctx, 'mfr-1', 'Brand A', true);
         expect(facet.ensureValue).toHaveBeenCalledWith(ctx, 'mfr-1', 'Brand A');
+    });
+});
+
+describe('ManufacturerService.upsert activity', () => {
+    it('deactivates a stored manufacturer on a nameless tombstone and keeps its name', async () => {
+        const { service, repo } = setup({ externalId: 'mfr-1', name: 'Brand A', isActive: true });
+        await service.upsert(ctx, 'mfr-1', undefined, false);
+        expect(repo.save).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'Brand A', isActive: false }),
+        );
+    });
+
+    it('reactivates an inactive manufacturer', async () => {
+        const { service, repo } = setup({ externalId: 'mfr-1', name: 'Brand A', isActive: false });
+        await service.upsert(ctx, 'mfr-1', 'Brand A', true);
+        expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ isActive: true }));
+    });
+
+    it('does not create a row for a nameless tombstone of an unknown manufacturer', async () => {
+        const { service, repo, facet } = setup(null);
+        expect(await service.upsert(ctx, 'mfr-1', undefined, false)).toBeNull();
+        expect(repo.save).not.toHaveBeenCalled();
+        expect(facet.ensureValue).not.toHaveBeenCalled();
     });
 });
 

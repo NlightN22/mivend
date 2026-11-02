@@ -23,17 +23,22 @@ export class ManufacturerService {
         ctx: RequestContext,
         externalId: string,
         name: string | undefined,
-    ): Promise<Manufacturer> {
+        isActive: boolean,
+    ): Promise<Manufacturer | null> {
         const repo = this.connection.getRepository(ctx, Manufacturer);
         const existing = await repo.findOne({ where: { externalId } });
-        let manufacturer = existing;
-        if (!manufacturer) {
-            manufacturer = await repo.save(repo.create({ externalId, name: name ?? null }));
-        } else if (name && manufacturer.name !== name) {
-            manufacturer.name = name;
-            manufacturer = await repo.save(manufacturer);
+        if (!existing && !name) return null;
+        let saved: Manufacturer;
+        if (!existing) {
+            saved = await repo.save(repo.create({ externalId, name: name ?? null, isActive }));
+        } else if (existing.isActive !== isActive || (name && existing.name !== name)) {
+            saved = await repo.save(
+                Object.assign(existing, { isActive, ...(name ? { name } : {}) }),
+            );
+        } else {
+            saved = existing;
         }
-        await this.facetService.ensureValue(ctx, externalId, manufacturer.name);
-        return manufacturer;
+        await this.facetService.ensureValue(ctx, externalId, saved.name);
+        return saved;
     }
 }
