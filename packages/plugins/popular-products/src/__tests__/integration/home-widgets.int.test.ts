@@ -59,6 +59,7 @@ interface Seed {
     reserved?: number;
     channel?: number;
     sold?: Array<[number, string]>;
+    noOrganization?: boolean;
     collection?: 'private' | 'public' | 'both';
 }
 
@@ -75,6 +76,7 @@ async function seed(s: Seed): Promise<void> {
     const variant = await dataSource.getRepository(TVariant).save({
         productId: product.id,
         deletedAt: null,
+        organizationId: s.noOrganization ? null : 1,
     });
     const values = {
         private: [privateValue],
@@ -164,6 +166,19 @@ beforeAll(async () => {
     await seed({ name: 'newest', createdAt: ago(1) });
     await seed({ name: 'newInPublic', createdAt: ago(5), collection: 'public' });
     await seed({ name: 'newInBoth', createdAt: ago(1), collection: 'both' });
+    await seed({ name: 'newNoOrganization', createdAt: ago(1), noOrganization: true });
+    await seed({
+        name: 'saleNoOrganization',
+        onSale: true,
+        createdAt: ago(100),
+        noOrganization: true,
+    });
+    await seed({
+        name: 'topSellerNoOrganization',
+        createdAt: ago(100),
+        noOrganization: true,
+        sold: [[800, 'Delivered']],
+    });
     await seed({ name: 'newInPrivate', createdAt: ago(1), collection: 'private' });
     await seed({ name: 'saleInPrivate', onSale: true, createdAt: ago(100), collection: 'private' });
     await seed({
@@ -314,6 +329,22 @@ describe('new arrivals (real Postgres)', () => {
         const result = named(await widgets.newArrivalProductIds(viewer('wh-a'), 12, 10));
 
         expect(result).toContain('outsideWindow');
+    });
+});
+
+describe('products without an organization (real Postgres)', () => {
+    it('no widget offers a product whose variants have no organization', async () => {
+        const lists = [
+            named(await widgets.newArrivalProductIds(viewer('wh-a'), 50, 7)),
+            named(await widgets.saleProductIds(viewer('wh-a'), 50)),
+            named(await popular.getPopularProductIds(viewer('wh-a'), 50)),
+        ];
+
+        for (const list of lists) {
+            expect(list).not.toContain('newNoOrganization');
+            expect(list).not.toContain('saleNoOrganization');
+            expect(list).not.toContain('topSellerNoOrganization');
+        }
     });
 });
 

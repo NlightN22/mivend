@@ -65,6 +65,7 @@ export { isUnconfirmedTaxRateName, unconfirmedTaxRateName } from './vatRate';
 export { cronEveryMs } from './scheduled-task-cron';
 export {
     CATEGORY_FACET_CODE,
+    CATEGORY_SLUG_PREFIX,
     buildCategoryFacetFilter,
     categorySlug,
     categoryErpIdFromSlug,

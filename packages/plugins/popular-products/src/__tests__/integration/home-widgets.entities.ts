@@ -29,6 +29,8 @@ export class TVariant {
     @ManyToOne(() => TProduct) product!: TProduct;
     @Column({ type: 'boolean', default: true }) enabled!: boolean;
     @Column({ type: 'timestamp', nullable: true }) deletedAt!: Date | null;
+    @Column({ name: 'customFieldsOrganizationid', type: 'int', nullable: true })
+    organizationId!: number | null;
 }
 
 @Entity('order')

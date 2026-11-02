@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
 import { StockLevelService, andProductInStock } from '@mivend/plugin-reservation';
+import { CATEGORY_FACET_CODE, CATEGORY_SLUG_PREFIX } from 'shared';
 import { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
 const OVERFETCH = 3;
@@ -13,16 +14,24 @@ export const IN_CHANNEL_SQL = `EXISTS (
     WHERE pc."productId" = product.id AND pc."channelId" = :channelId
 )`;
 
-// Same rule as the catalog: a variant whose category collection is private is hidden. Membership
-// rows can lag, so the category facet value is matched to the collection by slug instead.
-export const NOT_IN_PRIVATE_CATEGORY_SQL = `NOT EXISTS (
-    SELECT 1 FROM product_variant pv
+// Same rule as the catalog: a variant whose category collection is private is hidden. Membership rows
+// can lag, so match by slug; isPrivate already includes inheritance and the visibility override.
+export const NOT_IN_PRIVATE_CATEGORY_SQL = `product.id NOT IN (
+    SELECT pv."productId" FROM product_variant pv
     JOIN product_variant_facet_values_facet_value pvf ON pvf."productVariantId" = pv.id
-    JOIN facet_value fv ON fv.id = pvf."facetValueId"
-    JOIN facet f ON f.id = fv."facetId" AND f.code = 'category'
-    JOIN collection_translation ct ON ct.slug = 'cat-' || fv.code
-    JOIN collection col ON col.id = ct."baseId" AND col."isPrivate" = true
-    WHERE pv."productId" = product.id
+    WHERE pvf."facetValueId" IN (
+        SELECT fv.id FROM facet_value fv
+        JOIN facet f ON f.id = fv."facetId" AND f.code = '${CATEGORY_FACET_CODE}'
+        JOIN collection_translation ct ON ct.slug = '${CATEGORY_SLUG_PREFIX}' || fv.code
+        JOIN collection col ON col.id = ct."baseId" AND col."isPrivate" = true
+    )
+)`;
+
+// A variant without an organization (seller of record) cannot be ordered; the catalog hides it too.
+export const HAS_ORGANIZATION_SQL = `EXISTS (
+    SELECT 1 FROM product_variant ov
+    WHERE ov."productId" = product.id AND ov."deletedAt" IS NULL
+    AND ov."customFieldsOrganizationid" IS NOT NULL
 )`;
 
 @Injectable()
@@ -43,7 +52,8 @@ export class StockScopedIdsService {
         const rows = await andProductInStock(
             query
                 .andWhere(IN_CHANNEL_SQL, { channelId: ctx.channelId })
-                .andWhere(NOT_IN_PRIVATE_CATEGORY_SQL),
+                .andWhere(NOT_IN_PRIVATE_CATEGORY_SQL)
+                .andWhere(HAS_ORGANIZATION_SQL),
             warehouseErpIds,
         )
             .limit(take * OVERFETCH)
