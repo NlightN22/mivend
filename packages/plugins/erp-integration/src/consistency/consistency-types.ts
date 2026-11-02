@@ -28,6 +28,24 @@ export interface ConsistencyIgnoredEntityType {
     reason: string;
 }
 
+export const STOCK_DEFECT_KINDS = [
+    'negativeReserved',
+    'availableExceedsQuantity',
+    'negativeAvailable',
+    'negativeQuantity',
+] as const;
+
+export type StockDefectCounts = Record<(typeof STOCK_DEFECT_KINDS)[number], number>;
+
+export interface ConsistencyStockDefects {
+    mirror: StockDefectCounts;
+    integrationService: {
+        counts: StockDefectCounts | null;
+        fetchedAt: string | null;
+        status: string;
+    };
+}
+
 export interface ConsistencySummary {
     generatedAt: string;
     lastCheck: ConsistencyLastCheck;
@@ -37,6 +55,8 @@ export interface ConsistencySummary {
     // Stream names, not issue entityTypes; empty when an older provider omits them.
     coveredEntityTypes: string[];
     ignoredEntityTypes: ConsistencyIgnoredEntityType[];
+    // Absent when an older provider omits it or sends it malformed; never fails the poll.
+    stockDefects?: ConsistencyStockDefects;
 }
 
 export interface ConsistencyIssue {

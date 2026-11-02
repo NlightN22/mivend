@@ -51,13 +51,23 @@ when the source is healthy again and reopened (occurrences + 1) if it fails agai
 ## Reading
 
 Admin GraphQL, permission `ManageErpIntegration` (the existing read-only integration health
-permission; no new permission and no per-type restriction, so `input-anomaly` reports are visible
-to every holder of it). No mutations: nothing here writes to another system or triggers a replay.
+permission; no new permission and no per-type restriction). No mutations: nothing here writes to another system or triggers a replay.
 
 - `consistencyReports(options)`: paginated, filters `source`, `status`, `type`, `severity`,
   `entityType`, newest detection first, `take` capped at 100.
 - `consistencySources`: per source health, `coveredEntityTypes` and `ignoredEntityTypes` ("Not checked"), last provider summary (check state, stream lag, provider
   counts) and local open counts by type and severity. Empty when no source is configured.
+
+## Stock source-data defects
+
+The provider summary carries `stockDefects`: four counts of defects in the ERP stock data itself
+(`negativeReserved`, `availableExceedsQuantity`, `negativeAvailable`, `negativeQuantity`; kinds overlap)
+from the search mirror, and the same counts from Integration Service with `status`
+(`ok`/`not-configured`/`error`/`skipped`) and `fetchedAt` (saved by the provider's last full pass, not
+live). They are kept inside the stored summary and shown on the sources panel as two columns; a
+difference between them is drift (the provider raises `defect-count-mismatch` after two consecutive
+full passes). The defects themselves are no longer reported as issues (`input-anomaly` is not created
+any more). Missing or malformed `stockDefects` is skipped without failing the poll.
 
 ## Coverage ("Not checked")
 

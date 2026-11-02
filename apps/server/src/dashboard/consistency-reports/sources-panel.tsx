@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, Badge } from '@vendure/dashboard';
 
 import { consistencySourcesDocument } from './consistency-reports.graphql.js';
+import { StockDefectsPanel } from './stock-defects-panel.js';
 import {
     countEntries,
     formatLag,
@@ -72,6 +73,7 @@ function SourceCard({ source }: Readonly<{ source: Source }>) {
             )}
             <Counts label="By type" value={source.localOpenByType} />
             <Counts label="By severity" value={source.localOpenBySeverity} />
+            <StockDefectsPanel summary={source.summary} />
             <NotChecked source={source} />
         </div>
     );

@@ -6,6 +6,7 @@ import {
     healthVariant,
     livenessOnlyTypes,
     streamLags,
+    stockDefectsView,
     toReportFilter,
     totalOpen,
 } from '../../consistency-display';
@@ -63,5 +64,49 @@ describe('consistency display helpers', () => {
     it('picks the liveness-only types that the provider covers', () => {
         expect(livenessOnlyTypes(['stock', 'price', 'category'])).toEqual(['price', 'category']);
         expect(livenessOnlyTypes([])).toEqual([]);
+    });
+});
+
+describe('stockDefectsView', () => {
+    const mirror = {
+        negativeReserved: 152,
+        availableExceedsQuantity: 152,
+        negativeAvailable: 321,
+        negativeQuantity: 16,
+    };
+
+    it('lines up the mirror and Integration Service counts and flags a difference', () => {
+        const view = stockDefectsView({
+            stockDefects: {
+                mirror,
+                integrationService: {
+                    counts: { ...mirror, negativeAvailable: 320 },
+                    fetchedAt: '2026-11-02T06:00:00.000Z',
+                    status: 'ok',
+                },
+            },
+        });
+        expect(view?.status).toBe('ok');
+        expect(view?.rows.map(r => [r.kind, r.mirror, r.integrationService, r.differs])).toEqual([
+            ['negativeReserved', 152, 152, false],
+            ['availableExceedsQuantity', 152, 152, false],
+            ['negativeAvailable', 321, 320, true],
+            ['negativeQuantity', 16, 16, false],
+        ]);
+    });
+
+    it('shows no difference when the Integration Service figures are unavailable', () => {
+        const view = stockDefectsView({
+            stockDefects: {
+                mirror,
+                integrationService: { counts: null, fetchedAt: null, status: 'not-configured' },
+            },
+        });
+        expect(view?.rows.every(r => r.integrationService === null && !r.differs)).toBe(true);
+    });
+
+    it('returns null for an older summary without stockDefects', () => {
+        expect(stockDefectsView({ streams: [] })).toBeNull();
+        expect(stockDefectsView(null)).toBeNull();
     });
 });

@@ -1,10 +1,13 @@
 import { ConsistencyClientError, truncateText } from './consistency-client-error';
+import { STOCK_DEFECT_KINDS } from './consistency-types';
 import type {
     ConsistencyIgnoredEntityType,
     ConsistencyIssue,
     ConsistencyIssuePage,
+    ConsistencyStockDefects,
     ConsistencyStream,
     ConsistencySummary,
+    StockDefectCounts,
 } from './consistency-types';
 
 export const MAX_DETAILS = 4096;
@@ -81,6 +84,35 @@ function parseIgnored(value: unknown): ConsistencyIgnoredEntityType[] {
     });
 }
 
+function parseDefectCounts(value: unknown): StockDefectCounts | null {
+    if (!value || typeof value !== 'object') return null;
+    const source = value as Record<string, unknown>;
+    const out = {} as StockDefectCounts;
+    for (const kind of STOCK_DEFECT_KINDS) {
+        const n = source[kind];
+        if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) return null;
+        out[kind] = n;
+    }
+    return out;
+}
+
+function parseStockDefects(value: unknown): ConsistencyStockDefects | undefined {
+    if (!value || typeof value !== 'object') return undefined;
+    const v = value as Record<string, unknown>;
+    const mirror = parseDefectCounts(v.mirror);
+    const is = v.integrationService;
+    if (!mirror || !is || typeof is !== 'object') return undefined;
+    const i = is as Record<string, unknown>;
+    return {
+        mirror,
+        integrationService: {
+            counts: parseDefectCounts(i.counts),
+            fetchedAt: typeof i.fetchedAt === 'string' ? i.fetchedAt : null,
+            status: typeof i.status === 'string' ? i.status : 'error',
+        },
+    };
+}
+
 export function parseSummary(body: unknown): ConsistencySummary {
     const b = obj(body, 'summary');
     const check = obj(b.lastCheck, 'lastCheck');
@@ -105,6 +137,7 @@ export function parseSummary(body: unknown): ConsistencySummary {
         openBySeverity: counts(b.openBySeverity, 'openBySeverity'),
         coveredEntityTypes: parseCovered(b.coveredEntityTypes),
         ignoredEntityTypes: parseIgnored(b.ignoredEntityTypes),
+        stockDefects: parseStockDefects(b.stockDefects),
     };
 }
 

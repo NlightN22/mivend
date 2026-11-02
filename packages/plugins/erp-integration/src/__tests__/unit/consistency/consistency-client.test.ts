@@ -161,6 +161,53 @@ describe('ConsistencySourceClient response mapping', () => {
         expect(summary.ignoredEntityTypes).toEqual([]);
     });
 
+    it('maps stockDefects of the mirror and the integration service', async () => {
+        const counts = {
+            negativeReserved: 152,
+            availableExceedsQuantity: 152,
+            negativeAvailable: 321,
+            negativeQuantity: 16,
+        };
+        const body = wireSummary({
+            stockDefects: {
+                mirror: counts,
+                integrationService: { counts, fetchedAt: '2026-11-02T06:00:00.000Z', status: 'ok' },
+            },
+        });
+        const summary = await new ConsistencySourceClient(CONFIG, respond(200, body)).getSummary();
+        expect(summary.stockDefects).toEqual({
+            mirror: counts,
+            integrationService: { counts, fetchedAt: '2026-11-02T06:00:00.000Z', status: 'ok' },
+        });
+    });
+
+    it('keeps a null integration service figure and skips malformed stockDefects without failing', async () => {
+        const mirror = {
+            negativeReserved: 1,
+            availableExceedsQuantity: 0,
+            negativeAvailable: 2,
+            negativeQuantity: 0,
+        };
+        const notConfigured = wireSummary({
+            stockDefects: {
+                mirror,
+                integrationService: { counts: null, fetchedAt: null, status: 'not-configured' },
+            },
+        });
+        const a = await new ConsistencySourceClient(
+            CONFIG,
+            respond(200, notConfigured),
+        ).getSummary();
+        expect(a.stockDefects?.integrationService).toEqual({
+            counts: null,
+            fetchedAt: null,
+            status: 'not-configured',
+        });
+        const broken = wireSummary({ stockDefects: { mirror: { negativeReserved: -1 } } });
+        const b = await new ConsistencySourceClient(CONFIG, respond(200, broken)).getSummary();
+        expect(b.stockDefects).toBeUndefined();
+    });
+
     it('rejects malformed ignoredEntityTypes', async () => {
         const body = wireSummary({ ignoredEntityTypes: [{ entityType: 'x' }] });
         await expect(

@@ -93,3 +93,50 @@ export const LIVENESS_ONLY_TYPES = ['price', 'warehouse', 'category'];
 export function livenessOnlyTypes(covered: readonly string[]): string[] {
     return LIVENESS_ONLY_TYPES.filter(t => covered.includes(t));
 }
+
+const DEFECT_LABELS: Array<[string, string]> = [
+    ['negativeReserved', 'Reserved < 0'],
+    ['availableExceedsQuantity', 'Available > quantity'],
+    ['negativeAvailable', 'Available < 0'],
+    ['negativeQuantity', 'Quantity < 0'],
+];
+
+export interface StockDefectRow {
+    kind: string;
+    label: string;
+    mirror: number;
+    integrationService: number | null;
+    differs: boolean;
+}
+
+export interface StockDefectsView {
+    rows: StockDefectRow[];
+    status: string;
+    fetchedAt: string | null;
+}
+
+function counted(value: unknown, kind: string): number | null {
+    const n = (value as Record<string, unknown> | null | undefined)?.[kind];
+    return typeof n === 'number' ? n : null;
+}
+
+export function stockDefectsView(summary: unknown): StockDefectsView | null {
+    const defects = (summary as { stockDefects?: Record<string, unknown> } | null)?.stockDefects;
+    if (!defects?.mirror) return null;
+    const is = (defects.integrationService ?? {}) as Record<string, unknown>;
+    return {
+        rows: DEFECT_LABELS.map(([kind, label]) => {
+            const mirror = counted(defects.mirror, kind) ?? 0;
+            const integrationService = counted(is.counts, kind);
+            return {
+                kind,
+                label,
+                mirror,
+                integrationService,
+                differs: integrationService !== null && integrationService !== mirror,
+            };
+        }),
+        status: typeof is.status === 'string' ? is.status : 'error',
+        fetchedAt: typeof is.fetchedAt === 'string' ? is.fetchedAt : null,
+    };
+}
