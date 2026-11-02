@@ -8,6 +8,6 @@ export class ManufacturerHandler {
     constructor(private readonly manufacturerService: ManufacturerService) {}
 
     async upsert(ctx: RequestContext, record: ManufacturerRecord): Promise<void> {
-        await this.manufacturerService.upsert(ctx, record.code, record.name);
+        await this.manufacturerService.upsert(ctx, record.code, record.name, true);
     }
 }

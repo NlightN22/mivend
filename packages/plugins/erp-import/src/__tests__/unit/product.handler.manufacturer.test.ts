@@ -79,6 +79,7 @@ describe('ManufacturerHandler', () => {
             ctx,
             'manufacturer-a',
             'Manufacturer A',
+            true,
         );
     });
 });

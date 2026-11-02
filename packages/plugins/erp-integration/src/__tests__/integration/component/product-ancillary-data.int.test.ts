@@ -28,6 +28,7 @@ class TestManufacturer {
 
     @Column({ type: 'varchar' }) externalId!: string;
     @Column({ type: 'varchar', nullable: true }) name!: string | null;
+    @Column({ type: 'boolean', default: true }) isActive!: boolean;
 }
 
 @Entity('anc_test_barcode')
@@ -106,23 +107,27 @@ afterAll(async () => {
 
 describe('ManufacturerService (integration, real Postgres)', () => {
     it('creates a new Manufacturer with the given name', async () => {
-        const result = await manufacturerService.upsert(ctx, 'guid-1', 'Yokohama');
+        const result = await manufacturerService.upsert(ctx, 'guid-1', 'Yokohama', true);
 
         expect(result).toMatchObject({ externalId: 'guid-1', name: 'Yokohama' });
     });
 
-    it('creates with a null name when none is given yet', async () => {
-        const result = await manufacturerService.upsert(ctx, 'guid-1', undefined);
+    it('creates nothing for a nameless event on an unknown manufacturer', async () => {
+        expect(await manufacturerService.upsert(ctx, 'guid-1', undefined, true)).toBeNull();
+    });
 
-        expect(result).toMatchObject({ externalId: 'guid-1', name: null });
+    it('ensureReference creates a placeholder with a null name', async () => {
+        const result = await manufacturerService.ensureReference(ctx, 'guid-1');
+
+        expect(result).toMatchObject({ externalId: 'guid-1', name: null, isActive: true });
     });
 
     it('backfills the name on a later event that finally carries one', async () => {
-        await manufacturerService.upsert(ctx, 'guid-1', undefined);
+        await manufacturerService.ensureReference(ctx, 'guid-1');
 
-        const result = await manufacturerService.upsert(ctx, 'guid-1', 'Yokohama');
+        const result = await manufacturerService.upsert(ctx, 'guid-1', 'Yokohama', true);
 
-        expect(result.name).toBe('Yokohama');
+        expect(result?.name).toBe('Yokohama');
         const rows = await dataSource.getRepository(TestManufacturer).find();
         expect(rows).toHaveLength(1);
     });
@@ -130,11 +135,11 @@ describe('ManufacturerService (integration, real Postgres)', () => {
     // issue #116: name is never cleared back to null just because a later event happens not to
     // carry one — absence doesn't mean "no longer has a name."
     it('never clears an already-known name when a later event carries none', async () => {
-        await manufacturerService.upsert(ctx, 'guid-1', 'Yokohama');
+        await manufacturerService.upsert(ctx, 'guid-1', 'Yokohama', true);
 
-        const result = await manufacturerService.upsert(ctx, 'guid-1', undefined);
+        const result = await manufacturerService.upsert(ctx, 'guid-1', undefined, true);
 
-        expect(result.name).toBe('Yokohama');
+        expect(result?.name).toBe('Yokohama');
     });
 });
 
