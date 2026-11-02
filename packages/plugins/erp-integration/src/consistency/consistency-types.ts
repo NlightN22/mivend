@@ -53,7 +53,6 @@ export interface ConsistencyCountComparison {
     mirrorCount: number | null;
     expectedCount: number | null;
     differing: boolean;
-    fetchedAt: string | null;
 }
 
 export interface ConsistencySummary {

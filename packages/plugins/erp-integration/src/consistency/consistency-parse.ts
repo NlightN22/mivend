@@ -132,7 +132,6 @@ function parseCountComparison(value: unknown): ConsistencyCountComparison[] | un
             mirrorCount: nullableCount(c.mirrorCount),
             expectedCount: nullableCount(c.expectedCount),
             differing: c.differing === true,
-            fetchedAt: typeof c.fetchedAt === 'string' ? c.fetchedAt : null,
         });
     }
     return out;

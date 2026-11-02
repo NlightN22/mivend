@@ -183,7 +183,6 @@ describe('ConsistencySourceClient response mapping', () => {
                 mirrorCount: 10,
                 expectedCount: 12,
                 differing: true,
-                fetchedAt: '2026-11-02T18:49:43.278Z',
             },
         ]);
         const older = await new ConsistencySourceClient(
