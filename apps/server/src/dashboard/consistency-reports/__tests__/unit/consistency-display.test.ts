@@ -105,6 +105,32 @@ describe('stockDefectsView', () => {
         expect(view?.rows.every(r => r.integrationService === null && !r.differs)).toBe(true);
     });
 
+    it('does not flag stale Integration Service figures when its status is not ok', () => {
+        const view = stockDefectsView({
+            stockDefects: {
+                mirror,
+                integrationService: {
+                    counts: { ...mirror, negativeReserved: 1 },
+                    fetchedAt: '2026-11-01T06:00:00.000Z',
+                    status: 'error',
+                },
+            },
+        });
+        expect(view?.rows.every(r => !r.differs)).toBe(true);
+        expect(view?.rows[0].integrationService).toBe(1);
+    });
+
+    it('returns null when the stored mirror counts are not valid', () => {
+        expect(
+            stockDefectsView({
+                stockDefects: {
+                    mirror: { negativeReserved: 'x' },
+                    integrationService: { counts: null, fetchedAt: null, status: 'ok' },
+                },
+            }),
+        ).toBeNull();
+    });
+
     it('returns null for an older summary without stockDefects', () => {
         expect(stockDefectsView({ streams: [] })).toBeNull();
         expect(stockDefectsView(null)).toBeNull();

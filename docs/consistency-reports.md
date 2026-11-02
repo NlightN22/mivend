@@ -65,9 +65,9 @@ The provider summary carries `stockDefects`: four counts of defects in the ERP s
 from the search mirror, and the same counts from Integration Service with `status`
 (`ok`/`not-configured`/`error`/`skipped`) and `fetchedAt` (saved by the provider's last full pass, not
 live). They are kept inside the stored summary and shown on the sources panel as two columns; a
-difference between them is drift (the provider raises `defect-count-mismatch` after two consecutive
-full passes). The defects themselves are no longer reported as issues (`input-anomaly` is not created
-any more). Missing or malformed `stockDefects` is skipped without failing the poll.
+difference between them is drift, flagged only while the Integration Service status is `ok` (per the
+provider contract it raises `defect-count-mismatch` after two consecutive full passes). The defects themselves are no longer reported as issues (`input-anomaly` is not created
+any more); `input-anomaly` rows stored earlier stay in the table until the provider resolves them on its first full pass. Missing or malformed `stockDefects` is skipped without failing the poll.
 
 ## Coverage ("Not checked")
 

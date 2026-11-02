@@ -31,14 +31,18 @@ export function StockDefectsPanel({ summary }: Readonly<{ summary: unknown }>) {
                         <tr key={r.kind} className={r.differs ? 'text-destructive' : undefined}>
                             <td>{r.label}</td>
                             <td className="text-right">{r.mirror}</td>
-                            <td className="text-right">{r.integrationService ?? '—'}</td>
+                            <td
+                                className={`text-right ${view.status === 'ok' ? '' : 'text-muted-foreground'}`}
+                            >
+                                {r.integrationService ?? '—'}
+                            </td>
                         </tr>
                     ))}
                 </tbody>
             </table>
             <div className="text-muted-foreground">
-                Defects of the ERP data itself (kinds overlap); a mismatch between the two columns is
-                drift.
+                Defects of the ERP data itself (kinds overlap); a mismatch between the two columns
+                is drift.
             </div>
         </div>
     );
