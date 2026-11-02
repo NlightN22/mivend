@@ -32,6 +32,7 @@ export function ConsistencyReportsPage({ route }: Readonly<{ route: AnyRoute }>)
                     ],
                 },
             }}
+            defaultVisibility={{ id: false }}
             defaultColumnOrder={reportColumnOrder}
         />
     );
