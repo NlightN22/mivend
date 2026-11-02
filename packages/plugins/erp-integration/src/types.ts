@@ -330,6 +330,8 @@ export const INBOX_RETENTION_WALL_CLOCK_BUDGET_MS = 60_000;
 // SKIP LOCKED transaction stays reasonably sized; tune by measurement if still insufficient.
 export const INBOX_BULK_BATCH_SIZE_DEFAULT = 500;
 export const COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT = 180_000;
+// A sweep unsettled for longer is a job lost to a worker restart, not a running one (sweeps take ~44 min).
+export const COLLECTION_FILTERS_SWEEP_STALE_MS = 6 * 3_600_000;
 export const CATEGORY_TREE_RECOMPUTE_INTERVAL_DEFAULT = 3_600_000;
 export const CREDIT_LIMIT_RECOMPUTE_INTERVAL_DEFAULT = 15 * 60_000;
 // Once daily — no sub-day freshness requirement raised for this (issue #84).

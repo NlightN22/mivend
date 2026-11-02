@@ -9,13 +9,14 @@ import { cronEveryMs } from 'shared';
 
 import {
     COLLECTION_FILTERS_RECOMPUTE_INTERVAL_DEFAULT,
+    COLLECTION_FILTERS_SWEEP_STALE_MS,
     KAFKA_ENABLED_DEFAULT,
     loggerCtx,
 } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
 // Replaces per-product recompute disabled in KafkaConsumerBootstrapService; remove both together.
-// Skip enqueue while a prior sweep is unsettled (isSettled: false); sweeps take ~44min.
+// Skip enqueue while a recent sweep is unsettled; an older one is a job lost on restart and is ignored.
 export function createCollectionFiltersRecomputeTask(
     options: ErpIntegrationPluginOptions,
 ): ScheduledTask {
@@ -37,6 +38,9 @@ export function createCollectionFiltersRecomputeTask(
                     filter: {
                         queueName: { eq: 'apply-collection-filters' },
                         isSettled: { eq: false },
+                        createdAt: {
+                            after: new Date(Date.now() - COLLECTION_FILTERS_SWEEP_STALE_MS),
+                        },
                     },
                     take: 1,
                 });

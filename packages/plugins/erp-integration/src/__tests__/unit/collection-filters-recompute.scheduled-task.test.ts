@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ConfigService, CollectionService } from '@vendure/core';
 
 import { createCollectionFiltersRecomputeTask } from '../../collection-filters-recompute.scheduled-task';
+import { COLLECTION_FILTERS_SWEEP_STALE_MS } from '../../types';
 import type { ErpIntegrationPluginOptions } from '../../types';
 
 // A strategy shaped enough to satisfy isInspectableJobQueueStrategy's own duck-typing check
@@ -148,6 +149,21 @@ describe('createCollectionFiltersRecomputeTask', () => {
         });
         expect(triggerApplyFiltersJob).not.toHaveBeenCalled();
         expect(result).toEqual({ skipped: true, reason: 'previous sweep still running' });
+    });
+
+    // Prod incident: a job lost to a worker restart stayed RUNNING for days and blocked every sweep.
+    it('only counts unsettled sweeps created within the stale window', async () => {
+        const findMany = vi.fn().mockResolvedValue({ items: [], totalItems: 0 });
+        const task = createCollectionFiltersRecomputeTask(makeOptions('central', true));
+        const before = Date.now();
+        await task.options.execute({
+            injector: makeInjector(vi.fn(), findMany) as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+        const { after } = findMany.mock.calls[0][0].filter.createdAt as { after: Date };
+        expect(before - after.getTime()).toBeGreaterThanOrEqual(COLLECTION_FILTERS_SWEEP_STALE_MS);
+        expect(before - after.getTime()).toBeLessThan(COLLECTION_FILTERS_SWEEP_STALE_MS + 60_000);
     });
 
     it('triggers anyway if the job queue strategy is not inspectable (no findMany etc.)', async () => {
