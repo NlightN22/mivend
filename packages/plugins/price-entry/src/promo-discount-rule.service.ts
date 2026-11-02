@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { RequestContext, TransactionalConnection } from '@vendure/core';
+import { Logger, RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { DiscountRule, DiscountRuleOperationKind } from './discount-rule.entity';
+import { DiscountGrant } from './discount-grant.entity';
+import { DiscountRegistryEntry } from './discount-registry-entry.entity';
 import { LookupMemo, memoized } from './lookup-memo';
+
+const loggerCtx = 'PromoDiscountRuleService';
 
 // Issue #107 — see DiscountRuleService.upsertPromoRule.
 export interface PromoDiscountRuleInput {
@@ -55,13 +59,27 @@ export class PromoDiscountRuleService {
 
     // Withdrawn in the ERP: remove so it stops applying. Only promo rows (operationKind set) are touched.
     async removePromoRule(ctx: RequestContext, erpId: string): Promise<boolean> {
-        const result = await this.connection
-            .getRepository(ctx, DiscountRule)
-            .createQueryBuilder()
-            .delete()
-            .where('"erpId" = :erpId AND "operationKind" IS NOT NULL', { erpId })
-            .execute();
-        return (result.affected ?? 0) > 0;
+        const repo = this.connection.getRepository(ctx, DiscountRule);
+        const rule = await repo
+            .createQueryBuilder('dr')
+            .where('dr."erpId" = :erpId AND dr."operationKind" IS NOT NULL', { erpId })
+            .getOne();
+        if (!rule) return false;
+        const id = String(rule.id);
+        const grants = await this.connection
+            .getRepository(ctx, DiscountGrant)
+            .countBy({ discountRuleId: id });
+        const entries = await this.connection
+            .getRepository(ctx, DiscountRegistryEntry)
+            .countBy({ discountRuleId: id });
+        if (grants + entries > 0) {
+            throw new Error(
+                `Promo rule ${erpId} (id ${id}) is referenced by ${grants} grant(s) and ${entries} registry entr(ies); refusing to delete`,
+            );
+        }
+        await repo.delete({ id: rule.id });
+        Logger.verbose(`Deleted withdrawn promo rule erpId=${erpId} id=${id}`, loggerCtx);
+        return true;
     }
 
     // Returns null without order context: promo rules can't be evaluated without the order's lines.

@@ -31,14 +31,30 @@ class TestRule {
     @Column({ type: 'bigint', nullable: true }) minAmount!: number | null;
 }
 
+@Entity('discount_grant')
+class TestGrant {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar' }) discountRuleId!: string;
+}
+
+@Entity('discount_registry_entry')
+class TestEntry {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar', nullable: true }) discountRuleId!: string | null;
+}
+
+const TEST_ENTITIES: Record<string, unknown> = {
+    DiscountRule: TestRule,
+    DiscountGrant: TestGrant,
+    DiscountRegistryEntry: TestEntry,
+};
+
 function mapEntity(base: TransactionalConnection): TransactionalConnection {
     return {
         getRepository: (ctx: never, entity: unknown) =>
             base.getRepository(
                 ctx,
-                ((entity as { name?: string }).name === 'DiscountRule'
-                    ? TestRule
-                    : entity) as never,
+                (TEST_ENTITIES[(entity as { name: string }).name] ?? entity) as never,
             ),
     } as unknown as TransactionalConnection;
 }
@@ -56,7 +72,7 @@ beforeAll(async () => {
         ...testDataSourceConnectionOptions(),
         schema,
         extra,
-        entities: [TestRule],
+        entities: [TestRule, TestGrant, TestEntry],
         synchronize: true,
     });
     await dataSource.initialize();
@@ -69,7 +85,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    await dataSource.getRepository(TestRule).clear();
+    await dataSource.query('TRUNCATE discount_rule, discount_grant, discount_registry_entry');
 });
 
 const promo = (erpId: string) => ({
@@ -118,4 +134,25 @@ describe('withdrawn promo rule (real Postgres)', () => {
         expect(await service.removePromoRule(ctx, 'tier-1')).toBe(false);
         expect(await dataSource.getRepository(TestRule).countBy({ erpId: 'tier-1' })).toBe(1);
     });
+
+    it.each([
+        ['grant', TestGrant],
+        ['registry entry', TestEntry],
+    ])(
+        'refuses to delete a rule referenced by a %s and keeps it applying',
+        async (_name, Referrer) => {
+            await service.upsertPromoRule(ctx, promo('promo-1'));
+            const rule = await dataSource
+                .getRepository(TestRule)
+                .findOneByOrFail({ erpId: 'promo-1' });
+            await dataSource
+                .getRepository(Referrer as never)
+                .save({ discountRuleId: String(rule.id) } as never);
+
+            await expect(service.removePromoRule(ctx, 'promo-1')).rejects.toThrow(
+                /refusing to delete/,
+            );
+            expect(await best()).toBe(15);
+        },
+    );
 });
