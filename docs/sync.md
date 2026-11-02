@@ -336,14 +336,14 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     row but those cancelled, since unevaluated setups are stored inactive yet counted upstream); `retroBonusSetup`
     (`active`, unevaluable filters stay active); `orderStatus` (`source = 'erp'`, not deleted). A photo whose product
     has not arrived is parked, so it is missing locally until then.
-  - Upstream activeRule per type (`search-platform/integration-service/apps/integration-service/src/reconciliation/registry/`):
+  - Upstream activeRule per type (per the Integration Service reconciliation registry):
     `position`, `counterparty`, `region`, `legalForm`, `bank`, `bankAccount`, `discountSetup`, `retroBonusSetup`:
-    "isActive = true and not deleted" (`relay-sources.ts`); `grantedDiscount`, `grantedRetroBonus`,
-    `settlementBalance`: "not deleted" (`relay-sources.ts`); `manufacturer`: `is_active = true`, count includes
-    tombstones (`own-table-sources.ts`); `productPhoto`: activeCount is `status = 'ready'` (IS-side download), count
-    excludes deleted (`own-table-sources.ts`), so mivend compares the count (`NO_ACTIVE_CONCEPT_TYPES` in
+    "isActive = true and not deleted"; `grantedDiscount`, `grantedRetroBonus`,
+    `settlementBalance`: "not deleted"; `manufacturer`: `is_active = true`, count includes
+    tombstones; `productPhoto`: activeCount is `status = 'ready'` (IS-side download), count
+    excludes deleted, so mivend compares the count (`NO_ACTIVE_CONCEPT_TYPES` in
     `reconciliation-decision.ts`); `settlementDocumentType`, `orderStatus`: activeCount = count, no deletion concept
-    (`own-table-sources.ts`; our local figure still excludes deleted and non-ERP rows, to be confirmed with prod numbers).
+    (our local figure still excludes deleted and non-ERP rows, to be confirmed with prod numbers).
   - `manufacturer`: prod upstream has count = activeCount (2543 = 2543), so a higher local figure means stale deleted
     rows kept by our own handler (a nameless tombstone is a no-op) and is a mivend bug to fix, not a false alarm.
   - `productPhoto`: rows parked on a missing product (inbox `dependency_missing`, the muted per-stream badge) leave the
