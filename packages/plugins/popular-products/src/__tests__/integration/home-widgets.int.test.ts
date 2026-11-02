@@ -59,7 +59,7 @@ interface Seed {
     reserved?: number;
     channel?: number;
     sold?: Array<[number, string]>;
-    collection?: 'private' | 'public';
+    collection?: 'private' | 'public' | 'both';
 }
 
 async function seed(s: Seed): Promise<void> {
@@ -76,11 +76,15 @@ async function seed(s: Seed): Promise<void> {
         productId: product.id,
         deletedAt: null,
     });
-    if (s.collection) {
-        await dataSource.getRepository(TVariantFacetValue).save({
-            productVariantId: variant.id,
-            facetValueId: s.collection === 'private' ? privateValue : publicValue,
-        });
+    const values = {
+        private: [privateValue],
+        public: [publicValue],
+        both: [privateValue, publicValue],
+    };
+    for (const facetValueId of s.collection ? values[s.collection] : []) {
+        await dataSource
+            .getRepository(TVariantFacetValue)
+            .save({ productVariantId: variant.id, facetValueId });
     }
     const where = s.stock ?? 'branch-a';
     if (where !== 'none') {
@@ -159,6 +163,7 @@ beforeAll(async () => {
 
     await seed({ name: 'newest', createdAt: ago(1) });
     await seed({ name: 'newInPublic', createdAt: ago(5), collection: 'public' });
+    await seed({ name: 'newInBoth', createdAt: ago(1), collection: 'both' });
     await seed({ name: 'newInPrivate', createdAt: ago(1), collection: 'private' });
     await seed({ name: 'saleInPrivate', onSale: true, createdAt: ago(100), collection: 'private' });
     await seed({
@@ -321,6 +326,7 @@ describe('hidden categories (real Postgres)', () => {
         expect(arrivals).toContain('newInPublic');
         for (const list of [arrivals, sale, top]) {
             expect(list).not.toContain('newInPrivate');
+            expect(list).not.toContain('newInBoth');
             expect(list).not.toContain('saleInPrivate');
             expect(list).not.toContain('topSellerInPrivate');
         }
