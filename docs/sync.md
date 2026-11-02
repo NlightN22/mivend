@@ -467,3 +467,10 @@ public `index.ts`; `plugin-acquiring`'s `PaymentEventListener` is the only subsc
 only job is to durably enqueue the event (never to process it inline) — see the
 external-integration-rules skill and `docs/payments.md`'s "Idempotency: three independent levels" section for the full
 inbox/worker design this event stream feeds into.
+
+## Stuck collection sweep
+
+The scheduled recompute (`erp-integration-collection-filters-recompute`) enqueues one `apply-collection-filters` job per
+tick and skips while a recent one is unsettled. A job left `RUNNING` by a worker restart is ignored after 6 hours and logged
+as "Ignoring stale unsettled apply-collection-filters job"; the row itself stays in `job_record`. An operator removes or
+marks it failed only when that log line repeats for a job that is certainly not running (no worker holds it).

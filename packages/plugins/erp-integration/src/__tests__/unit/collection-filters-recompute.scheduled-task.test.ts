@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ConfigService, CollectionService } from '@vendure/core';
+import { ConfigService, CollectionService, Logger } from '@vendure/core';
 
 import { createCollectionFiltersRecomputeTask } from '../../collection-filters-recompute.scheduled-task';
 import { COLLECTION_FILTERS_SWEEP_STALE_MS } from '../../types';
@@ -164,6 +164,28 @@ describe('createCollectionFiltersRecomputeTask', () => {
         const { after } = findMany.mock.calls[0][0].filter.createdAt as { after: Date };
         expect(before - after.getTime()).toBeGreaterThanOrEqual(COLLECTION_FILTERS_SWEEP_STALE_MS);
         expect(before - after.getTime()).toBeLessThan(COLLECTION_FILTERS_SWEEP_STALE_MS + 60_000);
+    });
+
+    it('logs a stale unsettled job and still triggers the sweep', async () => {
+        const warn = vi.spyOn(Logger, 'warn').mockImplementation(() => undefined);
+        const triggerApplyFiltersJob = vi.fn().mockResolvedValue(undefined);
+        const findMany = vi
+            .fn()
+            .mockResolvedValueOnce({ items: [], totalItems: 0 })
+            .mockResolvedValueOnce({
+                items: [{ id: 'job-old', createdAt: new Date('2026-10-29T07:06:00Z') }],
+                totalItems: 1,
+            });
+        const task = createCollectionFiltersRecomputeTask(makeOptions('central', true));
+        const result = await task.options.execute({
+            injector: makeInjector(triggerApplyFiltersJob, findMany) as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('job-old'), expect.anything());
+        expect(triggerApplyFiltersJob).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ triggered: true });
+        warn.mockRestore();
     });
 
     it('triggers anyway if the job queue strategy is not inspectable (no findMany etc.)', async () => {

@@ -32,6 +32,7 @@ export function createCollectionFiltersRecomputeTask(
             if (options.instanceType !== 'central') return { skipped: true };
             if (!(options.kafkaEnabled ?? KAFKA_ENABLED_DEFAULT)) return { skipped: true };
 
+            const staleBefore = new Date(Date.now() - COLLECTION_FILTERS_SWEEP_STALE_MS);
             const strategy = injector.get(ConfigService).jobQueueOptions.jobQueueStrategy;
             if (isInspectableJobQueueStrategy(strategy)) {
                 const { totalItems } = await strategy.findMany({
@@ -50,6 +51,23 @@ export function createCollectionFiltersRecomputeTask(
                         loggerCtx,
                     );
                     return { skipped: true, reason: 'previous sweep still running' };
+                }
+            }
+
+            if (isInspectableJobQueueStrategy(strategy)) {
+                const stale = await strategy.findMany({
+                    filter: {
+                        queueName: { eq: 'apply-collection-filters' },
+                        isSettled: { eq: false },
+                        createdAt: { before: staleBefore },
+                    },
+                    take: 1,
+                });
+                for (const job of stale.items) {
+                    Logger.warn(
+                        `Ignoring stale unsettled apply-collection-filters job ${job.id}, created ${job.createdAt?.toISOString()}`,
+                        loggerCtx,
+                    );
                 }
             }
 
