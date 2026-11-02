@@ -16,8 +16,23 @@ describe('ManufacturerStreamHandler', () => {
     it('upserts the trimmed name as active, keyed by entity id', async () => {
         const { upsert, handler } = setup();
         upsert.mockResolvedValue({});
-        expect(await handler.apply(ctx, 'm-1', { name: '  Acme ' })).toEqual({ kind: 'applied' });
+        expect(await handler.apply(ctx, 'm-1', { name: '  Acme ', isActive: true })).toEqual({
+            kind: 'applied',
+        });
         expect(upsert).toHaveBeenCalledWith(ctx, 'm-1', 'Acme', true);
+    });
+
+    it('treats an absent isActive as inactive', async () => {
+        const { upsert, handler } = setup();
+        await handler.apply(ctx, 'm-1', { name: 'Acme' });
+        expect(upsert).toHaveBeenCalledWith(ctx, 'm-1', 'Acme', false);
+    });
+
+    it('deactivates an existing row on a nameless event without isActive, name untouched', async () => {
+        const { upsert, handler } = setup();
+        upsert.mockResolvedValue({});
+        await handler.apply(ctx, 'm-1', { name: '' });
+        expect(upsert).toHaveBeenCalledWith(ctx, 'm-1', undefined, false);
     });
 
     it('deactivates on isDeleted, keeping the name', async () => {
@@ -45,7 +60,7 @@ describe('ManufacturerStreamHandler', () => {
     it('is a noop for a nameless event of an unknown manufacturer', async () => {
         const { upsert, handler } = setup();
         upsert.mockResolvedValue(null);
-        expect((await handler.apply(ctx, 'm-1', { name: ' ' })).kind).toBe('noop');
+        expect((await handler.apply(ctx, 'm-1', { name: ' ', isActive: false })).kind).toBe('noop');
     });
 
     it('propagates storage errors', async () => {

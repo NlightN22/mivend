@@ -17,7 +17,7 @@ export class ManufacturerStreamHandler implements InboundStreamHandler {
         payload: Record<string, unknown>,
     ): Promise<InboundOutcome> {
         const name = typeof payload.name === 'string' ? payload.name.trim() : '';
-        const isActive = payload.isActive !== false && payload.isDeleted !== true;
+        const isActive = payload.isActive === true && payload.isDeleted !== true;
         const saved = await this.manufacturerService.upsert(
             ctx,
             entityId,

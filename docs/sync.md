@@ -344,8 +344,10 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     excludes deleted, so mivend compares the count (`NO_ACTIVE_CONCEPT_TYPES` in
     `reconciliation-decision.ts`); `settlementDocumentType`, `orderStatus`: activeCount = count, no deletion concept
     (our local figure still excludes deleted and non-ERP rows, to be confirmed with prod numbers).
-  - `manufacturer`: a deletion/deactivation event (`isDeleted` or `isActive = false`, name may be empty) sets the local
-    `isActive = false`; the row and its name stay so products remain labelled, and a later active event reactivates it.
+  - `manufacturer`: a deletion/deactivation event (`isDeleted`, or `isActive` not true since an absent flag means inactive, name may be empty) sets the local
+    `isActive = false`; the row and its name stay so products remain labelled, and a later active event reactivates it. Rows deleted upstream before this fix stay active locally until
+    the manufacturer stream is replayed for them (`POST /api/resync/v1/replay` by entityId); afterwards the local
+    count should equal upstream `activeCount` (2543 on prod).
   - `productPhoto`: rows parked on a missing product (inbox `dependency_missing`, the muted per-stream badge) leave the
     local count below upstream until the product arrives; upstream gives no unresolved counter for this type. Check
     against prod after release.
