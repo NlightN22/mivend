@@ -79,3 +79,35 @@ export class TReservation {
     @Column({ type: 'int' }) quantity!: number;
     @Column({ type: 'varchar' }) status!: string;
 }
+
+@Entity('collection')
+export class TCollection {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'boolean', default: false }) isPrivate!: boolean;
+}
+
+@Entity('collection_translation')
+export class TCollectionTranslation {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'int' }) baseId!: number;
+    @Column({ type: 'varchar' }) slug!: string;
+}
+
+@Entity('facet')
+export class TFacet {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'varchar' }) code!: string;
+}
+
+@Entity('facet_value')
+export class TFacetValue {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'int' }) facetId!: number;
+    @Column({ type: 'varchar' }) code!: string;
+}
+
+@Entity('product_variant_facet_values_facet_value')
+export class TVariantFacetValue {
+    @PrimaryColumn({ type: 'int' }) productVariantId!: number;
+    @PrimaryColumn({ type: 'int' }) facetValueId!: number;
+}

@@ -16,6 +16,10 @@ import {
 } from 'shared';
 
 import {
+    TCollection,
+    TCollectionTranslation,
+    TFacet,
+    TFacetValue,
     TLevel,
     TLocation,
     TOrder,
@@ -24,6 +28,7 @@ import {
     TProductChannel,
     TReservation,
     TVariant,
+    TVariantFacetValue,
 } from './home-widgets.entities';
 import { HomeWidgetIdsService } from '../../home-widget-ids.service';
 import { PopularProductsService } from '../../popular-products.service';
@@ -38,6 +43,8 @@ let widgets: HomeWidgetIdsService;
 let popular: PopularProductsService;
 let branchA: number;
 let branchB: number;
+let privateValue: number;
+let publicValue: number;
 const ids = new Map<string, string>();
 
 interface Seed {
@@ -52,6 +59,7 @@ interface Seed {
     reserved?: number;
     channel?: number;
     sold?: Array<[number, string]>;
+    collection?: 'private' | 'public';
 }
 
 async function seed(s: Seed): Promise<void> {
@@ -68,6 +76,12 @@ async function seed(s: Seed): Promise<void> {
         productId: product.id,
         deletedAt: null,
     });
+    if (s.collection) {
+        await dataSource.getRepository(TVariantFacetValue).save({
+            productVariantId: variant.id,
+            facetValueId: s.collection === 'private' ? privateValue : publicValue,
+        });
+    }
     const where = s.stock ?? 'branch-a';
     if (where !== 'none') {
         const locationId = where === 'branch-a' ? branchA : branchB;
@@ -116,6 +130,11 @@ beforeAll(async () => {
             TLocation,
             TLevel,
             TReservation,
+            TCollection,
+            TCollectionTranslation,
+            TFacet,
+            TFacetValue,
+            TVariantFacetValue,
         ],
         synchronize: true,
     });
@@ -124,7 +143,30 @@ beforeAll(async () => {
     branchA = (await locations.save({ customFields: { warehouseErpId: 'wh-a' } })).id;
     branchB = (await locations.save({ customFields: { warehouseErpId: 'wh-b' } })).id;
 
+    const facet = await dataSource.getRepository(TFacet).save({ code: 'category' });
+    for (const [code, isPrivate] of [
+        ['hidden-cat', true],
+        ['shown-cat', false],
+    ] as const) {
+        const collection = await dataSource.getRepository(TCollection).save({ isPrivate });
+        await dataSource
+            .getRepository(TCollectionTranslation)
+            .save({ baseId: collection.id, slug: `cat-${code}` });
+        const value = await dataSource.getRepository(TFacetValue).save({ facetId: facet.id, code });
+        if (isPrivate) privateValue = value.id;
+        else publicValue = value.id;
+    }
+
     await seed({ name: 'newest', createdAt: ago(1) });
+    await seed({ name: 'newInPublic', createdAt: ago(5), collection: 'public' });
+    await seed({ name: 'newInPrivate', createdAt: ago(1), collection: 'private' });
+    await seed({ name: 'saleInPrivate', onSale: true, createdAt: ago(100), collection: 'private' });
+    await seed({
+        name: 'topSellerInPrivate',
+        createdAt: ago(100),
+        collection: 'private',
+        sold: [[900, 'Delivered']],
+    });
     await seed({ name: 'insideWindow', createdAt: ago(6) });
     await seed({ name: 'outsideWindow', createdAt: ago(8) });
     await seed({ name: 'erpOldRecentRow', createdAt: ago(1), erpCreatedAt: ago(400) });
@@ -215,7 +257,13 @@ describe('new arrivals (real Postgres)', () => {
     it('lists in-stock products in the window, newest first, using the ERP date when present', async () => {
         const result = named(await widgets.newArrivalProductIds(viewer('wh-a'), 12, 7));
 
-        expect(result).toEqual(['newest', 'erpRecentOldRow', 'partlyReserved', 'insideWindow']);
+        expect(result).toEqual([
+            'newest',
+            'erpRecentOldRow',
+            'partlyReserved',
+            'newInPublic',
+            'insideWindow',
+        ]);
     });
 
     it('excludes the window boundary, other-branch stock, no stock, full reservations, disabled and deleted', async () => {
@@ -261,6 +309,21 @@ describe('new arrivals (real Postgres)', () => {
         const result = named(await widgets.newArrivalProductIds(viewer('wh-a'), 12, 10));
 
         expect(result).toContain('outsideWindow');
+    });
+});
+
+describe('hidden categories (real Postgres)', () => {
+    it('no widget offers a product that sits in a private collection', async () => {
+        const arrivals = named(await widgets.newArrivalProductIds(viewer('wh-a'), 50, 7));
+        const sale = named(await widgets.saleProductIds(viewer('wh-a'), 50));
+        const top = named(await popular.getPopularProductIds(viewer('wh-a'), 50));
+
+        expect(arrivals).toContain('newInPublic');
+        for (const list of [arrivals, sale, top]) {
+            expect(list).not.toContain('newInPrivate');
+            expect(list).not.toContain('saleInPrivate');
+            expect(list).not.toContain('topSellerInPrivate');
+        }
     });
 });
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import ConnectedProductCard from './ConnectedProductCard.vue';
+import { scrollRowItems } from './scroll-row-items';
 import type { ProductItem } from '../composables/useProductList';
 
 const props = defineProps<{
@@ -17,8 +18,7 @@ const VISIBLE = 5;
 const offset = ref(0);
 
 const displayItems = computed(() => {
-    if (props.items.length === 0) return [];
-    return [...props.items, ...props.items];
+    return scrollRowItems(props.items, VISIBLE);
 });
 
 const maxOffset = computed(() => Math.max(0, props.items.length * STEP));
