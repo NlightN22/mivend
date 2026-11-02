@@ -94,6 +94,14 @@ src/pages/orders/orders.operations.graphql
 
 Codegen picks them up via glob and generates typed composables into `src/api/generated/`.
 
+## Home widgets
+
+"New arrivals", "On sale" and "Popular" take ids from `newArrivalProductIds`, `saleProductIds` and `popularProductIds`
+(`popular-products` plugin). A product is offered only when it is enabled, in the channel, in stock at the viewer's
+branch warehouses, has a variant with an organization (as in the catalog) and has no variant in a private category
+(matched by category slug, as the catalog hides it). The scroll row repeats its list for the endless wrap only when
+there are more cards than fit, so short rows show each product once.
+
 ## Catalog filters
 
 - One filter sidebar for both portals: `MvCatalogFacets` in ui-kit, with one `MvFacetGroup` per facet
