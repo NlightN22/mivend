@@ -30,6 +30,14 @@ describe('resolveTheirCount', () => {
         ).toBe(30142);
     });
 
+    it('compares productPhoto by count, ignoring its download-status activeCount', () => {
+        expect(
+            resolveTheirCount(
+                summary({ aggregateType: 'productPhoto', activeCount: 15595, count: 19111 }),
+            ),
+        ).toBe(19111);
+    });
+
     it('falls back to count for any other type only if activeCount itself is null', () => {
         expect(resolveTheirCount(summary({ activeCount: null, count: 42 }))).toBe(42);
     });

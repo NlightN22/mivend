@@ -223,7 +223,9 @@ describe('ReconciliationService.runComparison', () => {
         const result = await service.runComparison({ triggeredBy: 'scheduled' });
 
         expect(result.skipped).toEqual(
-            COMPARED_AGGREGATE_TYPES.filter(type => type !== 'stockOrganization'),
+            COMPARED_AGGREGATE_TYPES.filter(
+                type => type !== 'stockOrganization' && type !== 'productPhoto',
+            ),
         );
         expect(save).not.toHaveBeenCalled();
     });

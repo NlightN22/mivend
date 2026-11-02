@@ -336,6 +336,22 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     row but those cancelled, since unevaluated setups are stored inactive yet counted upstream); `retroBonusSetup`
     (`active`, unevaluable filters stay active); `orderStatus` (`source = 'erp'`, not deleted). A photo whose product
     has not arrived is parked, so it is missing locally until then.
+  - Upstream activeRule per type (`search-platform/integration-service/apps/integration-service/src/reconciliation/registry/`):
+    `position`, `counterparty`, `region`, `legalForm`, `bank`, `bankAccount`, `discountSetup`, `retroBonusSetup`:
+    "isActive = true and not deleted" (`relay-sources.ts`); `grantedDiscount`, `grantedRetroBonus`,
+    `settlementBalance`: "not deleted" (`relay-sources.ts`); `manufacturer`: `is_active = true`, count includes
+    tombstones (`own-table-sources.ts`); `productPhoto`: activeCount is `status = 'ready'` (IS-side download), count
+    excludes deleted (`own-table-sources.ts`), so mivend compares the count (`NO_ACTIVE_CONCEPT_TYPES` in
+    `reconciliation-decision.ts`); `settlementDocumentType`, `orderStatus`: activeCount = count, no deletion concept
+    (`own-table-sources.ts`; our local figure still excludes deleted and non-ERP rows, to be confirmed with prod numbers).
+  - `manufacturer`: prod upstream has count = activeCount (2543 = 2543), so a higher local figure means stale deleted
+    rows kept by our own handler (a nameless tombstone is a no-op) and is a mivend bug to fix, not a false alarm.
+  - `productPhoto`: rows parked on a missing product (inbox `dependency_missing`, the muted per-stream badge) leave the
+    local count below upstream until the product arrives; upstream gives no unresolved counter for this type. Check
+    against prod after release.
+  - `discountSetup`: the upstream activeCount (isActive and not deleted) versus our "all but cancelled" rule must be
+    confirmed with the prod number after release.
+  - `counterparty`: rows cannot be split by origin (erpId is mandatory on the admin mutation too), so no origin filter exists.
   - Activity keys were checked in the handlers, not samples: every `isActive` row is stored as `isActive && !isDeleted`;
     tombstones keep the row flagged. Events a handler skips (missing name/code/bik, a nameless tombstone for an
     unknown row, a deletion of an unknown row) store nothing, so they are absent from the local count exactly as

@@ -1,9 +1,10 @@
 import type { ErpReconciliationIssueType } from './entities/erp-reconciliation-issue.entity';
 import type { ReconciliationSummary } from './reconciliation-summary.client';
 
-// storageLocation has no active/inactive split upstream (activeCount is always null).
+// storageLocation has no active split upstream. productPhoto's upstream activeCount is its own download
+// status, which mivend cannot reproduce, so its count (not deleted) is compared.
 // Selection rule stays general, so it remains correct if the type joins COMPARED_AGGREGATE_TYPES.
-const NO_ACTIVE_CONCEPT_TYPES: readonly string[] = ['storageLocation'];
+const NO_ACTIVE_CONCEPT_TYPES: readonly string[] = ['storageLocation', 'productPhoto'];
 
 // Pure decisions extracted from ReconciliationService so they're unit-testable without a DB or a
 // mocked HTTP client, mirroring retry-policy.ts's own split in this same plugin.
