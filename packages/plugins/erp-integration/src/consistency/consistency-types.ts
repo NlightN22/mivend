@@ -46,6 +46,16 @@ export interface ConsistencyStockDefects {
     };
 }
 
+export interface ConsistencyCountComparison {
+    stream: string;
+    basis: string;
+    status: string;
+    mirrorCount: number | null;
+    expectedCount: number | null;
+    differing: boolean;
+    fetchedAt: string | null;
+}
+
 export interface ConsistencySummary {
     generatedAt: string;
     lastCheck: ConsistencyLastCheck;
@@ -57,6 +67,8 @@ export interface ConsistencySummary {
     ignoredEntityTypes: ConsistencyIgnoredEntityType[];
     // Absent when an older provider omits it or sends it malformed; never fails the poll.
     stockDefects?: ConsistencyStockDefects;
+    // Absent when an older provider omits it; malformed entries are skipped, never fail the poll.
+    countComparison?: ConsistencyCountComparison[];
 }
 
 export interface ConsistencyIssue {

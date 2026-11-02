@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { api, Badge } from '@vendure/dashboard';
 
 import { consistencySourcesDocument } from './consistency-reports.graphql.js';
+import { CountComparisonPanel } from './count-comparison-panel.js';
 import { StockDefectsPanel } from './stock-defects-panel.js';
 import {
     countEntries,
     formatLag,
     healthVariant,
-    livenessOnlyTypes,
     streamLags,
     totalOpen,
 } from './consistency-display.js';
@@ -27,8 +27,7 @@ function Counts({ label, value }: Readonly<{ label: string; value: unknown }>) {
 }
 
 function NotChecked({ source }: Readonly<{ source: Source }>) {
-    const liveness = livenessOnlyTypes(source.coveredEntityTypes);
-    if (source.ignoredEntityTypes.length === 0 && liveness.length === 0) return null;
+    if (source.ignoredEntityTypes.length === 0) return null;
     return (
         <div className="text-xs border-t pt-2 space-y-1">
             <div className="font-medium">Not checked</div>
@@ -38,11 +37,6 @@ function NotChecked({ source }: Readonly<{ source: Source }>) {
                     <span className="text-muted-foreground">: {i.reason}</span>
                 </div>
             ))}
-            {liveness.length > 0 && (
-                <div className="text-muted-foreground">
-                    {liveness.join(', ')}: stream liveness only (no content check).
-                </div>
-            )}
         </div>
     );
 }
@@ -73,6 +67,7 @@ function SourceCard({ source }: Readonly<{ source: Source }>) {
             )}
             <Counts label="By type" value={source.localOpenByType} />
             <Counts label="By severity" value={source.localOpenBySeverity} />
+            <CountComparisonPanel summary={source.summary} />
             <StockDefectsPanel summary={source.summary} />
             <NotChecked source={source} />
         </div>

@@ -87,13 +87,6 @@ export function toReportFilter(filter: ListPageFilter | undefined): ReportFilter
     };
 }
 
-// Covered only by the stream-stalled liveness check, never by content checks (provider API text).
-export const LIVENESS_ONLY_TYPES = ['price', 'warehouse', 'category'];
-
-export function livenessOnlyTypes(covered: readonly string[]): string[] {
-    return LIVENESS_ONLY_TYPES.filter(t => covered.includes(t));
-}
-
 const DEFECT_LABELS: Array<[string, string]> = [
     ['negativeReserved', 'Reserved < 0'],
     ['availableExceedsQuantity', 'Available > quantity'],

@@ -69,13 +69,18 @@ difference between them is drift, flagged only while the Integration Service sta
 provider contract it raises `defect-count-mismatch` after two consecutive full passes). The defects themselves are no longer reported as issues (`input-anomaly` is not created
 any more); `input-anomaly` rows stored earlier stay in the table until the provider resolves them on its first full pass. Missing or malformed `stockDefects` is skipped without failing the poll.
 
-## Coverage ("Not checked")
+## Entity counts and coverage
 
-The provider summary carries `coveredEntityTypes` (stream names, not issue `entityType`s) and
-`ignoredEntityTypes` (`{entityType, reason}`). They are kept inside the stored summary (no extra
-column) and shown on the sources panel. `price`, `warehouse` and `category` are covered only by the
-stream-stalled liveness check, not by content checks, so the panel says that instead of implying
-they are verified. An older provider that omits both fields yields empty lists; the poll does not fail.
+The provider summary carries `countComparison[]`: per stream the search-mirror count against the
+Integration Service count (`basis`, `status`, `mirrorCount`, `expectedCount`, `differing`). It is kept
+inside the stored summary and shown on the sources panel as a table; a difference is flagged only while
+the row `status` is `ok`. The provider raises a `count-mismatch` issue (entityType is the stream) after
+two consecutive full passes; it is stored and listed like any other report. Malformed rows are skipped
+without failing the poll, and an older provider that omits the field shows no table.
+
+`coveredEntityTypes` (stream names, not issue `entityType`s) and `ignoredEntityTypes`
+(`{entityType, reason}`) are kept in the stored summary too. The "Not checked" block appears only
+when the provider sends a non-empty `ignoredEntityTypes`.
 
 ## Configuration
 

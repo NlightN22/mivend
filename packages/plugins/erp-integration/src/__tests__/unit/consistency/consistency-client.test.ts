@@ -161,6 +161,38 @@ describe('ConsistencySourceClient response mapping', () => {
         expect(summary.ignoredEntityTypes).toEqual([]);
     });
 
+    it('maps countComparison and skips malformed entries without failing', async () => {
+        const good = {
+            stream: 'price',
+            basis: 'activeCount',
+            status: 'ok',
+            mirrorCount: 10,
+            expectedCount: 12,
+            differing: true,
+            fetchedAt: '2026-11-02T18:49:43.278Z',
+            isFigures: { count: 12 },
+            sampleIds: null,
+        };
+        const body = wireSummary({ countComparison: [good, null, { stream: 5 }] });
+        const summary = await new ConsistencySourceClient(CONFIG, respond(200, body)).getSummary();
+        expect(summary.countComparison).toEqual([
+            {
+                stream: 'price',
+                basis: 'activeCount',
+                status: 'ok',
+                mirrorCount: 10,
+                expectedCount: 12,
+                differing: true,
+                fetchedAt: '2026-11-02T18:49:43.278Z',
+            },
+        ]);
+        const older = await new ConsistencySourceClient(
+            CONFIG,
+            respond(200, wireSummary({})),
+        ).getSummary();
+        expect(older.countComparison).toBeUndefined();
+    });
+
     it('maps stockDefects of the mirror and the integration service', async () => {
         const counts = {
             negativeReserved: 152,

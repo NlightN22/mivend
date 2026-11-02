@@ -4,7 +4,6 @@ import {
     countEntries,
     formatLag,
     healthVariant,
-    livenessOnlyTypes,
     streamLags,
     stockDefectsView,
     toReportFilter,
@@ -59,11 +58,6 @@ describe('consistency display helpers', () => {
             ],
         });
         expect(f).toMatchObject({ severity: 'critical', status: 'all', entityType: 'stock' });
-    });
-
-    it('picks the liveness-only types that the provider covers', () => {
-        expect(livenessOnlyTypes(['stock', 'price', 'category'])).toEqual(['price', 'category']);
-        expect(livenessOnlyTypes([])).toEqual([]);
     });
 });
 

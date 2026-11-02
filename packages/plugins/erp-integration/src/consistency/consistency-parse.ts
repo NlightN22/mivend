@@ -4,6 +4,7 @@ import type {
     ConsistencyIgnoredEntityType,
     ConsistencyIssue,
     ConsistencyIssuePage,
+    ConsistencyCountComparison,
     ConsistencyStockDefects,
     ConsistencyStream,
     ConsistencySummary,
@@ -113,6 +114,30 @@ function parseStockDefects(value: unknown): ConsistencyStockDefects | undefined 
     };
 }
 
+function nullableCount(value: unknown): number | null {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function parseCountComparison(value: unknown): ConsistencyCountComparison[] | undefined {
+    if (!Array.isArray(value)) return undefined;
+    const out: ConsistencyCountComparison[] = [];
+    for (const raw of value) {
+        if (!raw || typeof raw !== 'object') continue;
+        const c = raw as Record<string, unknown>;
+        if (typeof c.stream !== 'string' || typeof c.status !== 'string') continue;
+        out.push({
+            stream: c.stream,
+            basis: typeof c.basis === 'string' ? c.basis : '',
+            status: c.status,
+            mirrorCount: nullableCount(c.mirrorCount),
+            expectedCount: nullableCount(c.expectedCount),
+            differing: c.differing === true,
+            fetchedAt: typeof c.fetchedAt === 'string' ? c.fetchedAt : null,
+        });
+    }
+    return out;
+}
+
 export function parseSummary(body: unknown): ConsistencySummary {
     const b = obj(body, 'summary');
     const check = obj(b.lastCheck, 'lastCheck');
@@ -138,6 +163,7 @@ export function parseSummary(body: unknown): ConsistencySummary {
         coveredEntityTypes: parseCovered(b.coveredEntityTypes),
         ignoredEntityTypes: parseIgnored(b.ignoredEntityTypes),
         stockDefects: parseStockDefects(b.stockDefects),
+        countComparison: parseCountComparison(b.countComparison),
     };
 }
 
