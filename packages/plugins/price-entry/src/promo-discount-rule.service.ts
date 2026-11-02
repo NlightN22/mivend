@@ -53,6 +53,17 @@ export class PromoDiscountRuleService {
         return repo.save(record);
     }
 
+    // Withdrawn in the ERP: remove so it stops applying. Only promo rows (operationKind set) are touched.
+    async removePromoRule(ctx: RequestContext, erpId: string): Promise<boolean> {
+        const result = await this.connection
+            .getRepository(ctx, DiscountRule)
+            .createQueryBuilder()
+            .delete()
+            .where('"erpId" = :erpId AND "operationKind" IS NOT NULL', { erpId })
+            .execute();
+        return (result.affected ?? 0) > 0;
+    }
+
     // Returns null without order context: promo rules can't be evaluated without the order's lines.
     // No priceTypeCode filter: promo rules apply regardless of the customer's price type.
     async getBestPromoPercent(

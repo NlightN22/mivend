@@ -3,8 +3,8 @@
 export const ROW_COUNT_RULES = {
     position: { table: 'erp_position', condition: '"isActive" = true' },
     counterparty: { table: 'counterparty', condition: '"isActive" = true' },
-    // Product-referenced placeholders carry no name; upstream has no inactive notion for it.
-    manufacturer: { table: 'manufacturer', condition: 'name IS NOT NULL' },
+    // Product-referenced placeholders carry no name and are not counted upstream.
+    manufacturer: { table: 'manufacturer', condition: '"isActive" = true AND name IS NOT NULL' },
     region: { table: 'region_record', condition: '"isActive" = true' },
     legalForm: { table: 'legal_form_record', condition: '"isActive" = true' },
     bank: { table: 'bank_record', condition: '"isActive" = true' },
@@ -22,6 +22,8 @@ export const ROW_COUNT_RULES = {
     grantedRetroBonus: { table: 'granted_retro_bonus', condition: '"isDeleted" = false' },
     settlementBalance: { table: 'settlement_balance', condition: '"isDeleted" = false' },
     settlementDocumentType: { table: 'settlement_document_type', condition: '"isDeleted" = false' },
+    // Promo rows carry operationKind; a withdrawn rule is deleted, so every stored one is active upstream.
+    promoRule: { table: 'discount_rule', condition: '"operationKind" IS NOT NULL' },
     // Statuses owned by mivend itself are never sent upstream.
     orderStatus: {
         table: 'order_status_reference',

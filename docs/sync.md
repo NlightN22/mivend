@@ -331,7 +331,7 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     Service. A summary with more unresolved rows than total is rejected and the type is skipped.
   - Compared since the endpoint covers them (rules in `reconciliation-row-counts.ts`, count = rows upstream counts as
     active): `position`, `counterparty`, `region`, `legalForm`, `bank`, `bankAccount` (`isActive`);
-    `manufacturer` (rows with a name; products create nameless placeholders); `productPhoto`, `grantedDiscount`,
+    `manufacturer` (`isActive` rows with a name; products create nameless placeholders); `productPhoto`, `grantedDiscount`,
     `grantedRetroBonus`, `settlementBalance`, `settlementDocumentType` (not `isDeleted`); `discountSetup` (every
     row but those cancelled, since unevaluated setups are stored inactive yet counted upstream); `retroBonusSetup`
     (`active`, unevaluable filters stay active); `orderStatus` (`source = 'erp'`, not deleted). A photo whose product
@@ -344,8 +344,8 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     excludes deleted, so mivend compares the count (`NO_ACTIVE_CONCEPT_TYPES` in
     `reconciliation-decision.ts`); `settlementDocumentType`, `orderStatus`: activeCount = count, no deletion concept
     (our local figure still excludes deleted and non-ERP rows, to be confirmed with prod numbers).
-  - `manufacturer`: prod upstream has count = activeCount (2543 = 2543), so a higher local figure means stale deleted
-    rows kept by our own handler (a nameless tombstone is a no-op) and is a mivend bug to fix, not a false alarm.
+  - `manufacturer`: a deletion/deactivation event (`isDeleted` or `isActive = false`, name may be empty) sets the local
+    `isActive = false`; the row and its name stay so products remain labelled, and a later active event reactivates it.
   - `productPhoto`: rows parked on a missing product (inbox `dependency_missing`, the muted per-stream badge) leave the
     local count below upstream until the product arrives; upstream gives no unresolved counter for this type. Check
     against prod after release.
@@ -357,8 +357,9 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     unknown row, a deletion of an unknown row) store nothing, so they are absent from the local count exactly as
     upstream counts them only once a full event arrives; parked events (`product-photo` before its product) count
     once applied.
-  - Also in `NOT_COMPARABLE_STREAMS`: `counterparty-credit-balance` (folded into a counterparty column), `promo-rule`
-    (inactive or deleted events are no-ops, so withdrawn rules stay stored), `settlement-document` (the retention
+  - `promoRule`: counts `discount_rule` rows with an operation kind; an inactive or deleted event deletes the stored rule, so
+    every stored one is active upstream.
+  - Also in `NOT_COMPARABLE_STREAMS`: `counterparty-credit-balance` (folded into a counterparty column), `settlement-document` (the retention
     cleaner removes old documents, so the local count is lower by design).
   - A missing referenced entity (a `MissingReferenceError`, e.g. a contract whose counterparty is not synced) is
     classified once, generically: after the 24 h retry budget the inbox row is parked as `dependency_missing`

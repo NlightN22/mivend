@@ -39,19 +39,75 @@ function baseGiftPayload(overrides: Record<string, unknown> = {}): Record<string
 }
 
 describe('PromoRuleStreamHandler', () => {
-    it('skips an inactive/deleted rule without writing', async () => {
-        const promoDiscountRuleService = { upsertPromoRule: vi.fn() };
-        const handler = new PromoRuleStreamHandler(promoDiscountRuleService as never);
+    it('removes a stored rule on an inactive event and reports applied', async () => {
+        const svc = { upsertPromoRule: vi.fn(), removePromoRule: vi.fn().mockResolvedValue(true) };
+        const handler = new PromoRuleStreamHandler(svc as never);
 
+        const outcome = await handler.apply(
+            ctx,
+            'promo-1',
+            basePercentPayload({ isActive: false }),
+        );
+
+        expect(svc.removePromoRule).toHaveBeenCalledWith(ctx, 'promo-1');
+        expect(svc.upsertPromoRule).not.toHaveBeenCalled();
+        expect(outcome.kind).toBe('applied');
+    });
+
+    it('removes a stored rule on a deleted event', async () => {
+        const svc = { upsertPromoRule: vi.fn(), removePromoRule: vi.fn().mockResolvedValue(true) };
+        const handler = new PromoRuleStreamHandler(svc as never);
+
+        await handler.apply(ctx, 'promo-1', basePercentPayload({ isDeleted: true }));
+
+        expect(svc.removePromoRule).toHaveBeenCalledWith(ctx, 'promo-1');
+    });
+
+    it('is a no-op for an unknown rule on an inactive event', async () => {
+        const svc = { upsertPromoRule: vi.fn(), removePromoRule: vi.fn().mockResolvedValue(false) };
+        const handler = new PromoRuleStreamHandler(svc as never);
+
+        const outcome = await handler.apply(
+            ctx,
+            'promo-9',
+            basePercentPayload({ isActive: false }),
+        );
+
+        expect(outcome.kind).toBe('noop');
+        expect(svc.upsertPromoRule).not.toHaveBeenCalled();
+    });
+
+    it('apply, withdraw, reapply: the rule is upserted again after removal', async () => {
+        const svc = {
+            upsertPromoRule: vi.fn().mockResolvedValue({}),
+            removePromoRule: vi.fn().mockResolvedValue(true),
+        };
+        const handler = new PromoRuleStreamHandler(svc as never);
+
+        await handler.apply(ctx, 'promo-1', basePercentPayload());
         await handler.apply(ctx, 'promo-1', basePercentPayload({ isActive: false }));
+        await handler.apply(ctx, 'promo-1', basePercentPayload());
 
-        expect(promoDiscountRuleService.upsertPromoRule).not.toHaveBeenCalled();
+        expect(svc.upsertPromoRule).toHaveBeenCalledTimes(2);
+        expect(svc.removePromoRule).toHaveBeenCalledTimes(1);
+    });
+
+    it('propagates a removal failure instead of swallowing it', async () => {
+        const svc = { removePromoRule: vi.fn().mockRejectedValue(new Error('db down')) };
+        const handler = new PromoRuleStreamHandler(svc as never);
+
+        await expect(
+            handler.apply(ctx, 'promo-1', basePercentPayload({ isActive: false })),
+        ).rejects.toThrow('db down');
     });
 
     // Integration Service encodes isActive as a plain (non-optional) proto3 bool — absent means
     // false, never true (see types.ts's InboundStream comment, mivend#89).
     it('skips when isActive is absent from the payload', async () => {
-        const promoDiscountRuleService = { upsertPromoRule: vi.fn() };
+        const promoDiscountRuleService = {
+            upsertPromoRule: vi.fn(),
+            removePromoRule: vi.fn().mockResolvedValue(false),
+        };
         const handler = new PromoRuleStreamHandler(promoDiscountRuleService as never);
         const { isActive, ...payload } = basePercentPayload();
         void isActive;

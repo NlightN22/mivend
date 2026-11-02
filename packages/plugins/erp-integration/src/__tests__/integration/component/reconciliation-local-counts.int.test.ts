@@ -68,7 +68,9 @@ beforeAll(async () => {
     ]) {
         await dataSource.query(`CREATE TABLE ${t} (id serial PRIMARY KEY, "isActive" boolean)`);
     }
-    await dataSource.query(`CREATE TABLE manufacturer (id serial PRIMARY KEY, name varchar)`);
+    await dataSource.query(
+        `CREATE TABLE manufacturer (id serial PRIMARY KEY, name varchar, "isActive" boolean NOT NULL DEFAULT true)`,
+    );
     for (const t of [
         'product_photo',
         'granted_discount',
@@ -80,6 +82,9 @@ beforeAll(async () => {
     }
     await dataSource.query(
         `CREATE TABLE discount_setup (id serial PRIMARY KEY, "inactiveReason" varchar)`,
+    );
+    await dataSource.query(
+        `CREATE TABLE discount_rule (id serial PRIMARY KEY, "erpId" varchar, "operationKind" varchar)`,
     );
     await dataSource.query(`CREATE TABLE retro_bonus_rule (id serial PRIMARY KEY, active boolean)`);
     await dataSource.query(
@@ -246,8 +251,10 @@ describe('reconciliation local counts against real Postgres', () => {
         expect(await service.getLocalActiveCount(ctx, type)).toBe(2);
     });
 
-    it('counts only named manufacturers, not product-created placeholders', async () => {
-        await dataSource.query(`INSERT INTO manufacturer (name) VALUES ('m1'), (NULL), ('m2')`);
+    it('counts only active named manufacturers, not placeholders or deactivated ones', async () => {
+        await dataSource.query(
+            `INSERT INTO manufacturer (name, "isActive") VALUES ('m1', true), (NULL, true), ('m2', true), ('m3', false)`,
+        );
         expect(await service.getLocalActiveCount(ctx, 'manufacturer')).toBe(2);
     });
 
@@ -274,6 +281,14 @@ describe('reconciliation local counts against real Postgres', () => {
     it('counts active retro-bonus rules only', async () => {
         await dataSource.query(`INSERT INTO retro_bonus_rule (active) VALUES (true), (false)`);
         expect(await service.getLocalActiveCount(ctx, 'retroBonusSetup')).toBe(1);
+    });
+
+    it('counts promo rows only, not tier rules without an operation kind', async () => {
+        await dataSource.query(
+            `INSERT INTO discount_rule ("erpId", "operationKind") VALUES
+             ('p1', 'percent-discount'), ('p2', 'gift-one-from-list'), ('t1', NULL)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, 'promoRule')).toBe(2);
     });
 
     it('counts only ERP-owned, non-deleted order statuses', async () => {

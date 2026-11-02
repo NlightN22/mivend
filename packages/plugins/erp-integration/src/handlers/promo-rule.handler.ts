@@ -25,7 +25,7 @@ const GIFT_TYPE_PERCENT = 99;
 
 // Absent effective_to is stored as NULL (open-ended) and is never applied: queries keep validTo >= now.
 // Reuses DiscountRule, not a new promo mechanism. warehouse_id, min_positions_count deferred
-// Absent is_active means inactive on purpose; event_id/version are guarded upstream by the inbox.
+// Absent is_active means inactive on purpose; an inactive/deleted event removes a stored rule; event_id/version are guarded upstream by the inbox.
 @Injectable()
 export class PromoRuleStreamHandler implements InboundStreamHandler {
     constructor(private readonly promoDiscountRuleService: PromoDiscountRuleService) {}
@@ -38,7 +38,10 @@ export class PromoRuleStreamHandler implements InboundStreamHandler {
         const isActive = payload.isActive === true;
         const isDeleted = payload.isDeleted === true;
         if (!isActive || isDeleted) {
-            return inboundNoop(`promo-rule ${entityId}: inactive/deleted, skipping`);
+            const removed = await this.promoDiscountRuleService.removePromoRule(ctx, entityId);
+            return removed
+                ? inboundApplied()
+                : inboundNoop(`promo-rule ${entityId}: inactive/deleted and not stored, skipping`);
         }
 
         const rawOperationKind = String(payload.operationKind ?? '');
