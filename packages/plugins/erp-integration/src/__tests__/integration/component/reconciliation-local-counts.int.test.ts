@@ -56,7 +56,35 @@ beforeAll(async () => {
     await dataSource.query(
         `CREATE TABLE trading_point (id serial PRIMARY KEY, "erpId" varchar, "isActive" boolean)`,
     );
-    await dataSource.query(`CREATE TABLE counterparty (id serial PRIMARY KEY, "erpId" varchar)`);
+    await dataSource.query(
+        `CREATE TABLE counterparty (id serial PRIMARY KEY, "erpId" varchar, "isActive" boolean)`,
+    );
+    for (const t of [
+        'erp_position',
+        'region_record',
+        'legal_form_record',
+        'bank_record',
+        'bank_account_record',
+    ]) {
+        await dataSource.query(`CREATE TABLE ${t} (id serial PRIMARY KEY, "isActive" boolean)`);
+    }
+    await dataSource.query(`CREATE TABLE manufacturer (id serial PRIMARY KEY, name varchar)`);
+    for (const t of [
+        'product_photo',
+        'granted_discount',
+        'granted_retro_bonus',
+        'settlement_balance',
+        'settlement_document_type',
+    ]) {
+        await dataSource.query(`CREATE TABLE ${t} (id serial PRIMARY KEY, "isDeleted" boolean)`);
+    }
+    await dataSource.query(
+        `CREATE TABLE discount_setup (id serial PRIMARY KEY, "inactiveReason" varchar)`,
+    );
+    await dataSource.query(`CREATE TABLE retro_bonus_rule (id serial PRIMARY KEY, active boolean)`);
+    await dataSource.query(
+        `CREATE TABLE order_status_reference (id serial PRIMARY KEY, source varchar, "isDeleted" boolean)`,
+    );
     const warehouseService = { findAll: async () => [{ isActive: true }, { isActive: false }] };
     service = new ReconciliationLocalCountsService(
         {} as never,
@@ -69,7 +97,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query(
-        `TRUNCATE integration_inbox_event, product, product_variant_price_entry, collection, unit_record, department, stock_organization, erp_user, contract, trading_point, counterparty RESTART IDENTITY`,
+        `TRUNCATE integration_inbox_event, product, product_variant_price_entry, collection, unit_record, department, stock_organization, erp_user, contract, trading_point, counterparty, erp_position, region_record, legal_form_record, bank_record, bank_account_record, manufacturer, product_photo, granted_discount, granted_retro_bonus, settlement_balance, settlement_document_type, discount_setup, retro_bonus_rule, order_status_reference RESTART IDENTITY`,
     );
 });
 
@@ -167,7 +195,9 @@ describe('reconciliation local counts against real Postgres', () => {
     });
 
     it('adds active named points without an address that were applied but never stored', async () => {
-        await dataSource.query(`INSERT INTO counterparty ("erpId") VALUES ('cp1')`);
+        await dataSource.query(
+            `INSERT INTO counterparty ("erpId", "isActive") VALUES ('cp1', true)`,
+        );
         const point = (id: string, evt: string, p: Record<string, unknown>) =>
             dataSource.query(
                 `INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status)
@@ -200,5 +230,57 @@ describe('reconciliation local counts against real Postgres', () => {
             `INSERT INTO trading_point ("erpId", "isActive") VALUES ('f', true)`,
         );
         expect(await service.getLocalActiveCount(ctx, 'pointOfSale')).toBe(4);
+    });
+
+    it.each([
+        ['position', 'erp_position'],
+        ['counterparty', 'counterparty'],
+        ['region', 'region_record'],
+        ['legalForm', 'legal_form_record'],
+        ['bank', 'bank_record'],
+        ['bankAccount', 'bank_account_record'],
+    ] as const)('counts only active rows for %s', async (type, table) => {
+        await dataSource.query(
+            `INSERT INTO ${table} ("isActive") VALUES (true), (false), (true), (NULL)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, type)).toBe(2);
+    });
+
+    it('counts only named manufacturers, not product-created placeholders', async () => {
+        await dataSource.query(`INSERT INTO manufacturer (name) VALUES ('m1'), (NULL), ('m2')`);
+        expect(await service.getLocalActiveCount(ctx, 'manufacturer')).toBe(2);
+    });
+
+    it.each([
+        ['productPhoto', 'product_photo'],
+        ['grantedDiscount', 'granted_discount'],
+        ['grantedRetroBonus', 'granted_retro_bonus'],
+        ['settlementBalance', 'settlement_balance'],
+        ['settlementDocumentType', 'settlement_document_type'],
+    ] as const)('counts only non-deleted rows for %s', async (type, table) => {
+        await dataSource.query(
+            `INSERT INTO ${table} ("isDeleted") VALUES (false), (true), (false)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, type)).toBe(2);
+    });
+
+    it('counts unevaluated discount setups but not cancelled ones', async () => {
+        await dataSource.query(
+            `INSERT INTO discount_setup ("inactiveReason") VALUES (NULL), ('fixed-price'), ('cancelled')`,
+        );
+        expect(await service.getLocalActiveCount(ctx, 'discountSetup')).toBe(2);
+    });
+
+    it('counts active retro-bonus rules only', async () => {
+        await dataSource.query(`INSERT INTO retro_bonus_rule (active) VALUES (true), (false)`);
+        expect(await service.getLocalActiveCount(ctx, 'retroBonusSetup')).toBe(1);
+    });
+
+    it('counts only ERP-owned, non-deleted order statuses', async () => {
+        await dataSource.query(
+            `INSERT INTO order_status_reference (source, "isDeleted") VALUES
+             ('erp', false), ('erp', true), ('mivend', false)`,
+        );
+        expect(await service.getLocalActiveCount(ctx, 'orderStatus')).toBe(1);
     });
 });

@@ -313,14 +313,14 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
 (`integration.example.com`, `X-Api-Key` auth via `INTEGRATION_SERVICE_API_KEY`), comparing its
 `activeCount` per entity type against mivend's own local count for the same type.
 
-- **Scope (#305)**: the summary endpoint supports only 13 aggregate types. Thirteen are compared:
+- **Scope (#305)**: the summary endpoint now supports 31 aggregate types. The first thirteen are compared:
   `category`, `organization`, `warehouse`, `priceType`, `product`, `price`, `stock`, `unit`, `department`,
   `stockOrganization`, `user`, `contract`, `pointOfSale` (local count: active rows of `contract` and
   `trading_point`; rows whose counterparty is missing are never stored, so they are not in the local count and are
   subtracted from the upstream figure). A named active point with no address is applied but never stored (no row is
   created until an address arrives); the local `pointOfSale` count adds those as a bridge (owner has not decided to create them), taken from the latest applied event
   per point whose counterparty is known. Prod upstream figures at the time of writing: contract 17677 (count 18599,
-  active 18360, minus 683 unresolved) and pointOfSale 5085 (7261 minus 2176); local count not yet compared on prod. Every other consumed stream is in one of two lists in `reconciled-streams.ts`,
+  active 18360, minus 683 unresolved) and pointOfSale 5085 (7261 minus 2176); local count not yet compared on prod. Every other consumed stream is in one of two lists (`RECONCILED_STREAMS`, `NOT_COMPARABLE_STREAMS`) in `reconciled-streams.ts`,
   and a unit test fails when a stream in `ALL_INBOUND_STREAMS` is in none or in more than one:
   - `NOT_COMPARABLE_STREAMS` (with a reason): `offer` (deliberate no-op), `storage-location` (upstream counts
     rows without an organization and tombstones, mivend stores neither), the order result streams (events),
@@ -329,15 +329,21 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     `activeCount - unresolvedActiveCount` (or `count - unresolvedLinkCount` when there is no active concept); when the summary carries `unresolvedProductActiveCount` / `unresolvedProductCount` those are subtracted instead, because rows with only a unit unresolved are stored locally;
     null counts as 0. The figure stored in an issue is this net value; look at the unresolved rows in Integration
     Service. A summary with more unresolved rows than total is rejected and the type is skipped.
-  - `AWAITING_UPSTREAM_ENDPOINT` (a finding): the endpoint answers 400 for these aggregateTypes. Needed from
-    Integration Service: `GET /api/reconciliation/v1/summary?aggregateType=<type>` returning `count` and
-    `activeCount` (active and not deleted), like the supported types. Streams: `position`, `counterparty`,
-    `counterpartyCreditBalance`, `promoRule`, `manufacturer`, `region`, `legalForm`,
-    `bank`, `bankAccount`, `productPhoto`, `discountSetup`, `grantedDiscount`, `retroBonusSetup`,
-    `grantedRetroBonus`, `settlementDocument`, `settlementBalance`, `settlementDocumentType`, `orderStatus`.
-    Tracked upstream in search-platform #220 (endpoints), #219 (store entities with an unresolved reference),
-    #221 (reprocess failed rows), #222 (units dictionary), #223 (counterparties missing from the topic).
-    Remove a stream from the list and add a local count once its endpoint exists.
+  - Compared since the endpoint covers them (rules in `reconciliation-row-counts.ts`, count = rows upstream counts as
+    active): `position`, `counterparty`, `region`, `legalForm`, `bank`, `bankAccount` (`isActive`);
+    `manufacturer` (rows with a name; products create nameless placeholders); `productPhoto`, `grantedDiscount`,
+    `grantedRetroBonus`, `settlementBalance`, `settlementDocumentType` (not `isDeleted`); `discountSetup` (every
+    row but those cancelled, since unevaluated setups are stored inactive yet counted upstream); `retroBonusSetup`
+    (`active`, unevaluable filters stay active); `orderStatus` (`source = 'erp'`, not deleted). A photo whose product
+    has not arrived is parked, so it is missing locally until then.
+  - Activity keys were checked in the handlers, not samples: every `isActive` row is stored as `isActive && !isDeleted`;
+    tombstones keep the row flagged. Events a handler skips (missing name/code/bik, a nameless tombstone for an
+    unknown row, a deletion of an unknown row) store nothing, so they are absent from the local count exactly as
+    upstream counts them only once a full event arrives; parked events (`product-photo` before its product) count
+    once applied.
+  - Also in `NOT_COMPARABLE_STREAMS`: `counterparty-credit-balance` (folded into a counterparty column), `promo-rule`
+    (inactive or deleted events are no-ops, so withdrawn rules stay stored), `settlement-document` (the retention
+    cleaner removes old documents, so the local count is lower by design).
   - A missing referenced entity (a `MissingReferenceError`, e.g. a contract whose counterparty is not synced) is
     classified once, generically: after the 24 h retry budget the inbox row is parked as `dependency_missing`
     instead of `failed`, is retried last in every claim (never ahead of fresh pending rows), after a delay that starts at 30 min and doubles with

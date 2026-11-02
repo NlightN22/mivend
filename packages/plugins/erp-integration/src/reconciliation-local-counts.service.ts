@@ -5,6 +5,8 @@ import { CustomerPricingService } from '@mivend/plugin-customer-pricing';
 import { WarehouseService } from '@mivend/plugin-access-control';
 import { DocumentsService } from '@mivend/plugin-documents';
 
+import { ROW_COUNT_RULES } from './reconciliation-row-counts';
+
 // Streams without a type here are listed with a reason in reconciled-streams.ts.
 // StockLevel exists for every variant, so stock counts rows carrying a received-event marker.
 export const COMPARED_AGGREGATE_TYPES = [
@@ -21,6 +23,7 @@ export const COMPARED_AGGREGATE_TYPES = [
     'user',
     'contract',
     'pointOfSale',
+    ...(Object.keys(ROW_COUNT_RULES) as Array<keyof typeof ROW_COUNT_RULES>),
 ] as const;
 export type ComparedAggregateType = (typeof COMPARED_AGGREGATE_TYPES)[number];
 
@@ -65,6 +68,10 @@ export class ReconciliationLocalCountsService {
                 return this.countRows(ctx, 'contract', '"isActive" = true');
             case 'pointOfSale':
                 return this.countActiveTradingPoints(ctx);
+            default: {
+                const rule = ROW_COUNT_RULES[aggregateType];
+                return this.countRows(ctx, rule.table, rule.condition);
+            }
         }
     }
 

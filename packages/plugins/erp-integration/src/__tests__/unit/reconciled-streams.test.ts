@@ -2,15 +2,11 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import {
-    AWAITING_UPSTREAM_ENDPOINT,
-    NOT_COMPARABLE_STREAMS,
-    RECONCILED_STREAMS,
-} from '../../reconciled-streams';
+import { NOT_COMPARABLE_STREAMS, RECONCILED_STREAMS } from '../../reconciled-streams';
 import { COMPARED_AGGREGATE_TYPES } from '../../reconciliation-local-counts.service';
 import { ALL_INBOUND_STREAMS } from '../../types';
 
-const lists = [RECONCILED_STREAMS, NOT_COMPARABLE_STREAMS, AWAITING_UPSTREAM_ENDPOINT];
+const lists = [RECONCILED_STREAMS, NOT_COMPARABLE_STREAMS];
 
 describe('reconciliation coverage', () => {
     it('every consumed stream has exactly one reconciliation decision', () => {
