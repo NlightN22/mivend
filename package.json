@@ -1,6 +1,6 @@
 {
     "name": "mivend",
-    "version": "0.0.25",
+    "version": "0.0.26",
     "private": true,
     "license": "GPL-3.0-or-later",
     "scripts": {
