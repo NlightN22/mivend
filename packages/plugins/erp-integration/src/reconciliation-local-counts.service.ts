@@ -68,6 +68,10 @@ export class ReconciliationLocalCountsService {
                 return this.countRows(ctx, 'contract', '"isActive" = true');
             case 'pointOfSale':
                 return this.countActiveTradingPoints(ctx);
+            case 'bank':
+                return this.countRowsAndSkipped(ctx, 'bank', 'bank_record');
+            case 'bankAccount':
+                return this.countRowsAndSkipped(ctx, 'bank-account', 'bank_account_record');
             default: {
                 const rule = ROW_COUNT_RULES[aggregateType];
                 return this.countRows(ctx, rule.table, rule.condition);
@@ -94,6 +98,32 @@ export class ReconciliationLocalCountsService {
                        AND NOT EXISTS (SELECT 1 FROM trading_point t WHERE t."erpId" = latest.entity_id)
                        AND EXISTS (SELECT 1 FROM counterparty c WHERE c."erpId" = latest.payload->>'counterpartyId')
                     ))::int AS n`,
+        );
+        return row.n;
+    }
+
+    // Active rows plus active records skipped for a missing required field: upstream counts them too.
+    private async countRowsAndSkipped(
+        ctx: RequestContext,
+        stream: string,
+        table: string,
+    ): Promise<number> {
+        const [row] = await ctxQuery<Array<{ n: number }>>(
+            this.connection,
+            ctx,
+            `SELECT ((SELECT count(*) FROM ${table} WHERE "isActive" = true)
+                  + (SELECT count(*) FROM (
+                       SELECT DISTINCT ON (entity_id) entity_id, payload, outcome
+                       FROM integration_inbox_event
+                       WHERE stream = $1 AND status = 'processed' AND payload <> '{}'::jsonb
+                         AND outcome IS DISTINCT FROM 'superseded'
+                       ORDER BY entity_id, id DESC) latest
+                     WHERE latest.outcome = 'noop'
+                       AND latest.payload->>'isActive' = 'true'
+                       AND coalesce(latest.payload->>'isDeleted', 'false') <> 'true'
+                       AND NOT EXISTS (SELECT 1 FROM ${table} t WHERE t."entityId" = latest.entity_id)
+                    ))::int AS n`,
+            [stream],
         );
         return row.n;
     }

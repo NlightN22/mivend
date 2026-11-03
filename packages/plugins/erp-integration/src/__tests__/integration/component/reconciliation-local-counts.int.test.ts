@@ -66,7 +66,9 @@ beforeAll(async () => {
         'bank_record',
         'bank_account_record',
     ]) {
-        await dataSource.query(`CREATE TABLE ${t} (id serial PRIMARY KEY, "isActive" boolean)`);
+        await dataSource.query(
+            `CREATE TABLE ${t} (id serial PRIMARY KEY, "entityId" varchar, "isActive" boolean)`,
+        );
     }
     await dataSource.query(
         `CREATE TABLE manufacturer (id serial PRIMARY KEY, name varchar, "isActive" boolean NOT NULL DEFAULT true)`,
@@ -250,6 +252,35 @@ describe('reconciliation local counts against real Postgres', () => {
         );
         expect(await service.getLocalActiveCount(ctx, type)).toBe(2);
     });
+
+    it.each([
+        ['bank', 'bank', 'bank_record'],
+        ['bankAccount', 'bank-account', 'bank_account_record'],
+    ] as const)(
+        'adds active %s records skipped for a missing required field and not stored later',
+        async (type, stream, table) => {
+            const event = (id: string, evt: string, outcome: string, p: Record<string, unknown>) =>
+                dataSource.query(
+                    `INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status, outcome)
+                     VALUES ($1, $2, '1', $3, $4, 'processed', $5)`,
+                    [stream, id, evt, JSON.stringify({ isActive: true, ...p }), outcome],
+                );
+            await dataSource.query(
+                `INSERT INTO ${table} ("entityId", "isActive") VALUES ('stored', true)`,
+            );
+            await event('a', 'e1', 'noop', {});
+            await event('b', 'e2', 'noop', { isActive: false });
+            await event('c', 'e3', 'noop', { isDeleted: true });
+            await event('d', 'e4', 'noop', {});
+            await event('d', 'e5', 'applied', {});
+            await dataSource.query(
+                `INSERT INTO ${table} ("entityId", "isActive") VALUES ('d', true)`,
+            );
+            await event('f', 'e8', 'applied', {});
+
+            expect(await service.getLocalActiveCount(ctx, type)).toBe(3);
+        },
+    );
 
     it('counts only active named manufacturers, not placeholders or deactivated ones', async () => {
         await dataSource.query(
