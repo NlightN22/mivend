@@ -474,3 +474,12 @@ The scheduled recompute (`erp-integration-collection-filters-recompute`) enqueue
 tick and skips while a recent one is unsettled. A job left `RUNNING` by a worker restart is ignored after 6 hours and logged
 as "Ignoring stale unsettled apply-collection-filters job"; the row itself stays in `job_record`. An operator removes or
 marks it failed only when that log line repeats for a job that is certainly not running (no worker holds it).
+
+### Skipped records counted by reconciliation
+
+For `pointOfSale` (no address), `bank` (no name or BIK) and `bankAccount` (an empty required field) the local count is
+the stored active rows plus the active, non-deleted records whose latest non-superseded event was skipped as a `noop`
+and that have no stored row, because Integration Service counts them. The records stay visible as source-data defects:
+list the inbox rows with `outcome = 'noop'` for stream `point-of-sale`, `bank` or `bank-account` (the reason names the
+missing field). A stored inactive row whose latest event is an active `noop` is not added; the bridge covers only
+records that were never stored.
