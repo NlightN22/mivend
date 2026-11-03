@@ -375,6 +375,17 @@ describe('settlement shop queries (real Postgres)', () => {
         expect((await shop.documents(ctx, '1', {}, 0, 20)).totalItems).toBe(0);
     });
 
+    it('hides supplier and payroll categories even when the reference marks them visible', async () => {
+        await typeRef('Purchase', 'supplier', true);
+        await typeRef('Salary', 'payroll', true);
+        await typeRef('Pay', 'payment', true);
+        await doc('d-p', { number: '1', documentType: 'Purchase', entries: [entry()] });
+        await doc('d-s', { number: '2', documentType: 'Salary', entries: [entry()] });
+        await doc('d-y', { number: '3', documentType: 'Pay', entries: [entry()] });
+        const page = await shop.documents(ctx, '1', {}, 0, 20);
+        expect(page.items.map(i => i.number)).toEqual(['3']);
+    });
+
     it('shows a customer-contract balance only and hides a non-customer one', async () => {
         await balance('cp-1', 'ct-1', 0, 100);
         await balance('cp-1', 'ct-2', 0, 500);

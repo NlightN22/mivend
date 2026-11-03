@@ -11,7 +11,7 @@ import type {
     SettlementDocumentRow,
     SettlementOrderRef,
 } from './settlement-shop.types';
-import { CATEGORY_SQL, normalizeCategory } from './settlement-visibility';
+import { CATEGORY_SQL, INTERNAL_CATEGORIES, normalizeCategory } from './settlement-visibility';
 import { toAlphaCurrency } from './currency-code';
 
 const MAX_PAGE = 100;
@@ -82,6 +82,7 @@ export class SettlementShopService {
             'e."contractId" IS NOT NULL',
             'c."isCustomerContract" IS TRUE',
             't."customerVisible"',
+            `t.category NOT IN (${INTERNAL_CATEGORIES.map(c => `'${c}'`).join(', ')})`,
         ];
         if (filter.contractId) where.push(`e."contractId" = ${bind(filter.contractId)}`);
         if (filter.organizationId) {

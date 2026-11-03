@@ -18,3 +18,6 @@ export function normalizeCategory(raw: string | null | undefined): SettlementCat
 
 export const CATEGORY_SQL = `(CASE WHEN t.category IN (${KNOWN_CATEGORIES.map(c => `'${c}'`).join(', ')})
     THEN t.category ELSE 'other' END)`;
+
+// Purchases and payroll are not customer-facing whatever the reference's visibility flag says.
+export const INTERNAL_CATEGORIES = ['supplier', 'payroll'] as const;
