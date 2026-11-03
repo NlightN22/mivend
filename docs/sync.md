@@ -340,9 +340,8 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
     `position`, `counterparty`, `region`, `legalForm`, `bank`, `bankAccount`, `discountSetup`, `retroBonusSetup`:
     "isActive = true and not deleted"; `grantedDiscount`, `grantedRetroBonus`,
     `settlementBalance`: "not deleted"; `manufacturer`: `is_active = true`, count includes
-    tombstones; `productPhoto`: activeCount is `status = 'ready'` (IS-side download), count
-    excludes deleted, so mivend compares the count (`NO_ACTIVE_CONCEPT_TYPES` in
-    `reconciliation-decision.ts`); `settlementDocumentType`, `orderStatus`: activeCount = count, no deletion concept
+    tombstones; `productPhoto`: activeCount is `status = 'ready' AND position IS NOT NULL`
+    (published photos; count also holds rejected ones), compared by activeCount; `settlementDocumentType`, `orderStatus`: activeCount = count, no deletion concept
     (our local figure still excludes deleted and non-ERP rows, to be confirmed with prod numbers).
   - `manufacturer`: a deletion/deactivation event (`isDeleted`, or `isActive` not true since an absent flag means inactive, name may be empty) sets the local
     `isActive = false`; the row and its name stay so products remain labelled, and a later active event reactivates it. Rows deleted upstream before this fix stay active locally until
