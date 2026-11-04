@@ -111,6 +111,7 @@ there are more cards than fit, so short rows show each product once.
   (`ManufacturerFacetService`). With `SEARCH_BACKEND=external` its counts come from search-service and
   clicks are mapped back to ERP ids in the search plugin. The icon is optional (`iconUrl`); without one a
   letter avatar is shown.
+- Code matches (#307): with `SEARCH_BACKEND=external`, a query containing an article, part number or manufacturer code returns `SearchResponse.skuMatches / partNumberMatches / manufacturerCodeMatches` (`{ items, total }`, disjoint, priority sku > part number > manufacturer code, full-text `items` exclude them). The first page asks each group for up to 100 hits, later pages and facets-only requests ask for 0; the storefront lists the groups first with a badge, suggestions and the manager portal put them ahead of full-text hits. `searchCapabilities.codeGroups` says which backend serves them. The internal Elasticsearch backend never fills them (a pinned no-op, test in `search-response-resolver-order.test.ts`; its index lacks the part-number field), so local contours cannot show them; real implementation is a follow-up.
 - Category navigation is `MvCategoryNav` + `collectionSlug`, not a facet (the `category` facet is hidden).
 - Sort and price filter use Vendure's `SearchInput.sort {name, price}` and `priceRangeWithTax` (minor
   units) on both backends. The shop query `searchCapabilities { sortKeys priceRange }` says what the

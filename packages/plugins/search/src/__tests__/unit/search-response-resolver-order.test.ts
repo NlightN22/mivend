@@ -23,6 +23,21 @@ describe('SearchResponse resolver precedence (internal backend)', () => {
         expect(forSearchResponse[0]).toBe(ShopSearchFacetValuesResolver);
     }, 20000);
 
+    it('pins the code groups as a no-op: no internal resolver fills them (#307)', async () => {
+        vi.resetModules();
+        process.env.SEARCH_BACKEND = 'internal';
+        const { searchPlugins } = await import('../../search.plugin');
+        const resolvers = getPluginAPIExtensions(searchPlugins, 'shop').flatMap(
+            e => (typeof e.resolvers === 'function' ? e.resolvers() : (e.resolvers ?? [])) as Cls[],
+        );
+        const methods = resolvers
+            .filter(r => reflect.getMetadata('graphql:resolver_type', r) === 'SearchResponse')
+            .flatMap(r => Object.getOwnPropertyNames(r.prototype));
+        for (const field of ['skuMatches', 'partNumberMatches', 'manufacturerCodeMatches']) {
+            expect(methods).not.toContain(field);
+        }
+    }, 20000);
+
     it('keeps the deep-imported ElasticsearchService with the methods our resolver calls', () => {
         expect(ElasticsearchService.prototype.facetValues).toBeTypeOf('function');
         expect(ElasticsearchService.prototype.collections).toBeTypeOf('function');
