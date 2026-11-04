@@ -11,34 +11,34 @@ query SearchSuggestions($term: String!, $collectionSlug: String) {
         skuMatches {
             items {
                 productId
-            productName
-            manufacturer {
-                name
-            }
-            slug
-            sku
+                productName
+                manufacturer {
+                    name
+                }
+                slug
+                sku
             }
         }
         partNumberMatches {
             items {
                 productId
-            productName
-            manufacturer {
-                name
-            }
-            slug
-            sku
+                productName
+                manufacturer {
+                    name
+                }
+                slug
+                sku
             }
         }
         manufacturerCodeMatches {
             items {
                 productId
-            productName
-            manufacturer {
-                name
-            }
-            slug
-            sku
+                productName
+                manufacturer {
+                    name
+                }
+                slug
+                sku
             }
         }
         items {
