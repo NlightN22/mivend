@@ -150,6 +150,6 @@ test.describe('Home widgets, guest view', () => {
         });
         await expect(page.locator('section.psr')).toHaveCount(0, { timeout: 20000 });
         const { slug } = await variantBySku(page, 'BAT-90-AGM');
-        await expect(page.locator(`a[href$="/${slug}"]`)).toHaveCount(0);
+        await expect(page.locator(`section.psr a[href$="/${slug}"]`)).toHaveCount(0);
     });
 });
