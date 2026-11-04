@@ -69,6 +69,13 @@ difference between them is drift, flagged only while the Integration Service sta
 provider contract it raises `defect-count-mismatch` after two consecutive full passes). The defects themselves are no longer reported as issues (`input-anomaly` is not created
 any more); `input-anomaly` rows stored earlier stay in the table until the provider resolves them on its first full pass. Missing or malformed `stockDefects` is skipped without failing the poll.
 
+## Reports list
+
+One row per report with: status, severity, problem (type, number, provider text), entity (type and id),
+expected → actual (a provider count object shows its count) and last detection with the occurrence
+count. ID, number, type, entity type, actual, replayable and the other generated columns are hidden by
+default; the page id carries a version suffix so older saved column settings do not apply.
+
 ## Entity counts and coverage
 
 The provider summary carries `countComparison[]`: per stream the search-mirror count against the

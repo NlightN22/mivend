@@ -2,13 +2,13 @@ import { ListPage } from '@vendure/dashboard';
 import { AnyRoute } from '@tanstack/react-router';
 
 import { consistencyReportListDocument } from './consistency-reports.graphql.js';
-import { reportColumnOrder, reportColumns } from './consistency-report-columns.js';
+import { defaultHidden, reportColumnOrder, reportColumns } from './consistency-report-columns.js';
 import { STATUS_OPTIONS, toReportFilter } from './consistency-display.js';
 
 export function ConsistencyReportsPage({ route }: Readonly<{ route: AnyRoute }>) {
     return (
         <ListPage
-            pageId="consistency-report-list"
+            pageId="consistency-report-list-v2"
             title="Data drift reports"
             listQuery={consistencyReportListDocument}
             route={route}
@@ -32,7 +32,7 @@ export function ConsistencyReportsPage({ route }: Readonly<{ route: AnyRoute }>)
                     ],
                 },
             }}
-            defaultVisibility={{ id: false }}
+            defaultVisibility={defaultHidden}
             defaultColumnOrder={reportColumnOrder}
         />
     );

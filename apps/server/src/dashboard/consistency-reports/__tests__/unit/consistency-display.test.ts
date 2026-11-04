@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     countEntries,
+    figureText,
     formatLag,
     healthVariant,
     streamLags,
@@ -128,5 +129,14 @@ describe('stockDefectsView', () => {
     it('returns null for an older summary without stockDefects', () => {
         expect(stockDefectsView({ streams: [] })).toBeNull();
         expect(stockDefectsView(null)).toBeNull();
+    });
+});
+
+describe('figureText', () => {
+    it('shows the count of a provider figure, a short JSON otherwise, and truncates', () => {
+        expect(figureText({ count: 7, source: 'x' })).toBe('7');
+        expect(figureText({ a: 1 })).toBe('{"a":1}');
+        expect(figureText(null)).toBe('—');
+        expect(figureText('x'.repeat(100), 10)).toBe(`${'x'.repeat(9)}…`);
     });
 });

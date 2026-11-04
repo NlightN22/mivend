@@ -23,7 +23,7 @@ defineDashboardExtension({
         {
             id: 'consistency-sources',
             location: {
-                pageId: 'consistency-report-list',
+                pageId: 'consistency-report-list-v2',
                 position: { blockId: 'list-table', order: 'before' },
                 column: 'full',
             },

@@ -137,3 +137,10 @@ export function stockDefectsView(summary: unknown): StockDefectsView | null {
         fetchedAt: typeof is.fetchedAt === 'string' ? is.fetchedAt : null,
     };
 }
+
+// Compact one-line figure for the list: a provider count object shows its count, anything else its JSON.
+export function figureText(value: unknown, max = 60): string {
+    const count = (value as { count?: unknown } | null)?.count;
+    const text = typeof count === 'number' ? String(count) : formatJson(value);
+    return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
