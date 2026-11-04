@@ -42,6 +42,7 @@ import { DiscountConditionKindBootstrapService } from './discount-condition-kind
 import { DiscountSetupRulesService } from './discount-setup-rules.service';
 import { DiscountSetupReclassifyService } from './discount-setup-reclassify.service';
 import { DiscountSetupService } from './discount-setup.service';
+import { CatalogPricingService } from './catalog-pricing.service';
 import { PriceResolutionService } from './price-resolution.service';
 import { TierProgressService } from './tier-progress.service';
 import { OrderDiscountService } from './order-discount.service';
@@ -102,6 +103,7 @@ import { GrantedDiscountService } from './granted-discount.service';
         DiscountConditionKindBootstrapService,
         DiscountSetupReclassifyService,
         PriceResolutionService,
+        CatalogPricingService,
         TierProgressService,
         OrderDiscountService,
         OrderDiscountPromotionBootstrapService,
@@ -120,6 +122,7 @@ import { GrantedDiscountService } from './granted-discount.service';
         DiscountSetupService,
         GrantedDiscountService,
         PriceResolutionService,
+        CatalogPricingService,
     ],
     configuration: (config: RuntimeVendureConfig) => {
         config.promotionOptions.promotionConditions = [

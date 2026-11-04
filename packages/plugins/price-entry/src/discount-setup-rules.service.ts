@@ -44,27 +44,21 @@ export class DiscountSetupRulesService {
     ): Promise<number | null> {
         if (!counterparty) return null;
         const contractErpId = order?.customFields.erpContractId ?? '';
-        const rules = await memoized(
+        const rules = await this.rulesFor(
+            ctx,
+            counterparty,
+            contractErpId,
+            priceTypeCode,
+            now,
             memo,
-            `dsr:${counterparty.erpId}|${contractErpId}|${priceTypeCode ?? ''}`,
-            () => this.loadRules(ctx, counterparty.erpId, contractErpId, priceTypeCode, now),
         );
         if (rules.length === 0) return null;
 
         const productsInPlay = new Set(quantityByProductErpId.keys());
         if (productErpId !== null) productsInPlay.add(productErpId);
         const ids = [...productsInPlay].sort();
-        const { membersBySetup, percentBySetup } = await memoized(
-            memo,
-            `dsm:${rules.map(r => r.id).join(',')}|${ids.join(',')}`,
-            async () => {
-                const list = await this.loadMembers(ctx, rules, ids);
-                const filter = await this.loadFilterMembers(ctx, rules, ids, memo);
-                return {
-                    membersBySetup: new Map([...list.members, ...filter]),
-                    percentBySetup: list.percents,
-                };
-            },
+        const { membersBySetup, percentBySetup } = await memoized(memo, memberKey(rules, ids), () =>
+            this.membersOf(ctx, rules, ids, memo),
         );
         return bestSetupPercent({
             rules,
@@ -74,6 +68,52 @@ export class DiscountSetupRulesService {
             quantityByProductErpId,
             documentAmount,
         });
+    }
+
+    private rulesFor(
+        ctx: RequestContext,
+        counterparty: Counterparty,
+        contractErpId: string,
+        priceTypeCode: string | null,
+        now: Date,
+        memo?: LookupMemo,
+    ): Promise<LoadedDiscountSetup[]> {
+        return memoized(
+            memo,
+            `dsr:${counterparty.erpId}|${contractErpId}|${priceTypeCode ?? ''}`,
+            () => this.loadRules(ctx, counterparty.erpId, contractErpId, priceTypeCode, now),
+        );
+    }
+
+    private async membersOf(
+        ctx: RequestContext,
+        rules: LoadedDiscountSetup[],
+        ids: string[],
+        memo?: LookupMemo,
+    ): Promise<SetupMembers> {
+        const list = await this.loadMembers(ctx, rules, ids);
+        const filter = await this.loadFilterMembers(ctx, rules, ids, memo);
+        return {
+            membersBySetup: new Map([...list.members, ...filter]),
+            percentBySetup: list.percents,
+        };
+    }
+
+    // Catalog pages price many products at once: seeds the per-product lookups getBestPercent
+    // will ask for (no order) from one query per kind.
+    async preloadCatalog(
+        ctx: RequestContext,
+        counterparty: Counterparty | null,
+        priceTypeCode: string | null,
+        productErpIds: string[],
+        memo: LookupMemo,
+    ): Promise<void> {
+        if (!counterparty) return;
+        const rules = await this.rulesFor(ctx, counterparty, '', priceTypeCode, new Date(), memo);
+        if (rules.length === 0) return;
+        const ids = [...new Set(productErpIds)];
+        const all = await this.membersOf(ctx, rules, ids, memo);
+        for (const id of ids) memo.set(memberKey(rules, [id]), sliceMembers(all, id));
     }
 
     private async loadRules(
@@ -162,6 +202,27 @@ export class DiscountSetupRulesService {
             : await loadProductAttributes(this.connection, ctx, productErpIds);
         return filterMembers(terms, attributes, known, productErpIds);
     }
+}
+
+const memberKey = (rules: LoadedDiscountSetup[], ids: string[]): string =>
+    `dsm:${rules.map(r => r.id).join(',')}|${ids.join(',')}`;
+
+interface SetupMembers {
+    membersBySetup: Map<number, Set<string>>;
+    percentBySetup: Map<number, Map<string, number>>;
+}
+
+function sliceMembers(all: SetupMembers, id: string): SetupMembers {
+    const membersBySetup = new Map<number, Set<string>>();
+    for (const [setupId, members] of all.membersBySetup) {
+        if (members.has(id)) membersBySetup.set(setupId, new Set([id]));
+    }
+    const percentBySetup = new Map<number, Map<string, number>>();
+    for (const [setupId, byProduct] of all.percentBySetup) {
+        const percent = byProduct.get(id);
+        if (percent !== undefined) percentBySetup.set(setupId, new Map([[id, percent]]));
+    }
+    return { membersBySetup, percentBySetup };
 }
 
 const isFilterRule = (rule: LoadedDiscountSetup): boolean =>

@@ -141,6 +141,22 @@ export class DiscountRuleService {
         return entries.length;
     }
 
+    private activeRules(
+        ctx: RequestContext,
+        priceTypeCode: string,
+        now: Date,
+        memo?: LookupMemo,
+    ): Promise<DiscountRule[]> {
+        return memoized(memo, `dr:${priceTypeCode}`, () =>
+            this.connection
+                .getRepository(ctx, DiscountRule)
+                .createQueryBuilder('dr')
+                .where('dr.priceTypeCode = :priceTypeCode', { priceTypeCode })
+                .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
+                .getMany(),
+        );
+    }
+
     // Threshold rules qualify only once the order's aggregate reaches minWeightKg/minAmount;
     // catalog display passes empty maps (quantity unknown), and a rule never sets both metrics.
     async getBestPercent(
@@ -153,14 +169,7 @@ export class DiscountRuleService {
         counterpartyId: string | null = null,
         memo?: LookupMemo,
     ): Promise<number | null> {
-        const rules = await memoized(memo, `dr:${priceTypeCode}`, () =>
-            this.connection
-                .getRepository(ctx, DiscountRule)
-                .createQueryBuilder('dr')
-                .where('dr.priceTypeCode = :priceTypeCode', { priceTypeCode })
-                .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
-                .getMany(),
-        );
+        const rules = await this.activeRules(ctx, priceTypeCode, now, memo);
 
         const matching = rules.filter(rule => {
             const facetMatches =
@@ -218,13 +227,9 @@ export class DiscountRuleService {
         priceTypeCode: string,
         variantFacetValues: VariantFacetValue[],
         now: Date,
+        memo?: LookupMemo,
     ): Promise<DiscountTierVM[]> {
-        const rules = await this.connection
-            .getRepository(ctx, DiscountRule)
-            .createQueryBuilder('dr')
-            .where('dr.priceTypeCode = :priceTypeCode', { priceTypeCode })
-            .andWhere('dr.validFrom <= :now AND dr.validTo >= :now', { now })
-            .getMany();
+        const rules = await this.activeRules(ctx, priceTypeCode, now, memo);
 
         const matching = rules.filter(rule => {
             if (rule.minWeightKg === null && rule.minAmount === null) return false;

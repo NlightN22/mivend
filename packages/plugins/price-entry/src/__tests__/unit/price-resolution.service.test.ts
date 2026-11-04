@@ -434,6 +434,7 @@ describe('PriceResolutionService', () => {
                 'WHOLESALE',
                 [{ facetCode: 'brand', valueCode: 'lukoil', name: 'lukoil' }],
                 expect.any(Date),
+                undefined,
             );
             expect(result).toBe(tiers);
         });

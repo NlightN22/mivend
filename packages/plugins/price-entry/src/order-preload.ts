@@ -65,6 +65,28 @@ export function toFacetsAndWeight(
     };
 }
 
+// One query seeds the facet/weight and ERP id lookups of every variant in the list; returns the ERP id per found variant.
+export async function preloadVariantFacets(
+    connection: TransactionalConnection,
+    ctx: RequestContext,
+    variantIds: string[],
+    memo: LookupMemo,
+): Promise<Map<string, string>> {
+    const variants = await connection.getRepository(ctx, ProductVariant).find({
+        where: { id: In(variantIds) },
+        relations: VARIANT_FACET_RELATIONS,
+    });
+    const erpIdByVariant = new Map<string, string>();
+    for (const variant of variants) {
+        const id = String(variant.id);
+        const erpId = variant.product?.customFields?.externalId ?? '';
+        memo.set(`fw:${id}`, toFacetsAndWeight(ctx, variant));
+        memo.set(`erp:${id}`, erpId);
+        erpIdByVariant.set(id, erpId);
+    }
+    return erpIdByVariant;
+}
+
 // Seeds the memo with one query per kind for the whole order, so the per-line pass finds every lookup cached.
 export async function preloadOrderLookups(
     connection: TransactionalConnection,
@@ -77,18 +99,8 @@ export async function preloadOrderLookups(
     const variantIds = [...new Set(order.lines.map(l => String(l.productVariantId)))];
     if (variantIds.length === 0) return;
 
-    const variants = await connection.getRepository(ctx, ProductVariant).find({
-        where: { id: In(variantIds) },
-        relations: VARIANT_FACET_RELATIONS,
-    });
-    const erpIds = new Set<string>();
-    for (const variant of variants) {
-        const id = String(variant.id);
-        const erpId = variant.product?.customFields?.externalId ?? '';
-        memo.set(`fw:${id}`, toFacetsAndWeight(ctx, variant));
-        memo.set(`erp:${id}`, erpId);
-        if (erpId) erpIds.add(erpId);
-    }
+    const erpIdByVariant = await preloadVariantFacets(connection, ctx, variantIds, memo);
+    const erpIds = new Set([...erpIdByVariant.values()].filter(Boolean));
 
     if (erpIds.size > 0) {
         const now = new Date();

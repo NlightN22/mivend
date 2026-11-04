@@ -22,11 +22,18 @@ import {
     toFacetsAndWeight,
 } from './order-preload';
 import { buildAggregates } from './order-aggregates';
+import { priceAfterBestPercent } from './price-after-percent';
 import './types';
 
 export interface ResolvedPrice {
     customerPrice: number | null;
     compareAtPrice: number | null;
+}
+
+export interface CatalogPricingScope {
+    userCode: string | null;
+    defaultCode: string | null;
+    counterparty: Counterparty | null;
 }
 
 export interface OrderPricingContext {
@@ -67,24 +74,8 @@ export class PriceResolutionService {
                 const counterparty = await memoized(memo, `cp:${customerId}`, () =>
                     this.counterpartyService.getForCustomer(ctx, customerId),
                 );
-                const branchId = counterparty?.branchId ?? undefined;
-                const branchSettings = await memoized(memo, `bs:${String(branchId)}`, () =>
-                    this.branchSettingsService.resolveEffective(ctx, branchId),
-                );
-                return branchSettings
-                    ? this.defaultCodeOf(ctx, branchSettings.defaultPriceTypeId, memo)
-                    : null;
+                return this.branchDefaultCode(ctx, counterparty, memo);
             },
-        );
-    }
-
-    private defaultCodeOf(
-        ctx: RequestContext,
-        priceTypeId: string,
-        memo?: LookupMemo,
-    ): Promise<string | null> {
-        return memoized(memo, `ptid:${priceTypeId}`, () =>
-            this.priceEntryService.getPriceTypeCodeById(ctx, priceTypeId),
         );
     }
 
@@ -105,7 +96,7 @@ export class PriceResolutionService {
                       String(orderContext.order.customerId),
                   ),
               )
-            : await this.priceEntryService.getPriceTypeCodeForUser(ctx);
+            : await this.userPriceTypeCode(ctx, memo);
 
         // Customer-scoped grants must only discount their granted counterparties. order.customerId is
         // authoritative on real order lines, as for priceTypeCode.
@@ -126,13 +117,7 @@ export class PriceResolutionService {
         // Fallback must be the branch default price type, never a raw search-index price or zero.
         // Only general discounts apply here, so effectiveCounterpartyId stays null.
         if (effectivePriceTypeCode === null) {
-            const branchId = counterparty?.branchId ?? undefined;
-            const branchSettings = await memoized(memo, `bs:${String(branchId)}`, () =>
-                this.branchSettingsService.resolveEffective(ctx, branchId),
-            );
-            const defaultPriceTypeCode = branchSettings
-                ? await this.defaultCodeOf(ctx, branchSettings.defaultPriceTypeId, memo)
-                : null;
+            const defaultPriceTypeCode = await this.branchDefaultCode(ctx, counterparty, memo);
             if (defaultPriceTypeCode) {
                 basePrice = await this.forVariant(ctx, variantId, defaultPriceTypeCode, memo);
                 effectivePriceTypeCode = basePrice !== null ? defaultPriceTypeCode : null;
@@ -185,10 +170,11 @@ export class PriceResolutionService {
                   memo,
               )
             : null;
+        const productErpId = await getProductErpId(this.connection, ctx, variantId, memo);
         const promoPercent = ruleContext
             ? await this.promoDiscountRuleService.getBestPromoPercent(
                   ctx,
-                  await getProductErpId(this.connection, ctx, variantId, memo),
+                  productErpId,
                   new Date(),
                   productErpQuantities!,
                   memo,
@@ -196,7 +182,6 @@ export class PriceResolutionService {
             : null;
         // totalWithTax excludes this priced line's own contribution — accepted approximation, same as the tier ladder's aggregates.
         // Without an order only threshold-0 rules of recipients with an empty contract match, so the catalog can differ from cart and order (docs/pricing.md).
-        const productErpId = await getProductErpId(this.connection, ctx, variantId, memo);
         const counterpartyRulePercent = await this.discountSetupRulesService.getBestPercent(
             ctx,
             orderContext?.order,
@@ -209,17 +194,7 @@ export class PriceResolutionService {
             memo,
         );
 
-        // Sources combine by max, never additively: discounts from different rules must not stack.
-        const bestPercent = [percent, promoPercent, counterpartyRulePercent]
-            .filter((p): p is number => p !== null)
-            .reduce((max, p) => Math.max(max, p), -Infinity);
-
-        if (bestPercent === -Infinity) return { customerPrice: basePrice, compareAtPrice: null };
-        // A negative best percent is a markup: it raises the price and is never shown as a discount or markup.
-        return {
-            customerPrice: Math.round(basePrice * (1 - bestPercent / 100)),
-            compareAtPrice: bestPercent <= 0 ? null : basePrice,
-        };
+        return priceAfterBestPercent(basePrice, [percent, promoPercent, counterpartyRulePercent]);
     }
 
     // order.customerId wins on real order lines; activeUserId is used for catalog display.
@@ -233,8 +208,11 @@ export class PriceResolutionService {
         if (orderContext?.order.customerId) {
             customerId = String(orderContext.order.customerId);
         } else if (ctx.activeUserId) {
-            const customer = await this.customerService.findOneByUserId(ctx, ctx.activeUserId);
-            customerId = customer ? String(customer.id) : undefined;
+            const userId = ctx.activeUserId;
+            customerId = await memoized(memo, `custu:${String(userId)}`, async () => {
+                const customer = await this.customerService.findOneByUserId(ctx, userId);
+                return customer ? String(customer.id) : undefined;
+            });
         }
         if (!customerId) return null;
         const id = customerId;
@@ -272,14 +250,48 @@ export class PriceResolutionService {
     }
 
     // No order context here: rungs are informational and must not imply a price not yet earned.
-    async resolveTiers(ctx: RequestContext, variantId: string): Promise<DiscountTierVM[]> {
-        const priceTypeCode = await this.priceEntryService.getPriceTypeCodeForUser(ctx);
+    async resolveTiers(
+        ctx: RequestContext,
+        variantId: string,
+        memo?: LookupMemo,
+    ): Promise<DiscountTierVM[]> {
+        const priceTypeCode = await this.userPriceTypeCode(ctx, memo);
         if (!priceTypeCode) return [];
         // No PriceEntry for this variant+priceType means there is no base price to ever
         // discount from — showing a tier ladder badge would be pure noise/misleading.
-        const basePrice = await this.priceEntryService.getForVariant(ctx, variantId, priceTypeCode);
+        const basePrice = await this.forVariant(ctx, variantId, priceTypeCode, memo);
         if (basePrice === null) return [];
-        const { facetValues } = await this.getVariantFacetsAndWeight(ctx, variantId);
-        return this.discountRuleService.getTiers(ctx, priceTypeCode, facetValues, new Date());
+        const { facetValues } = await this.getVariantFacetsAndWeight(ctx, variantId, memo);
+        return this.discountRuleService.getTiers(ctx, priceTypeCode, facetValues, new Date(), memo);
+    }
+
+    // The viewer's price type, branch-default fallback and counterparty: what a catalog preload needs to know up front.
+    async catalogPricingScope(ctx: RequestContext, memo: LookupMemo): Promise<CatalogPricingScope> {
+        const counterparty = await this.resolveCounterparty(ctx, undefined, memo);
+        return {
+            userCode: await this.userPriceTypeCode(ctx, memo),
+            defaultCode: await this.branchDefaultCode(ctx, counterparty, memo),
+            counterparty,
+        };
+    }
+
+    private userPriceTypeCode(ctx: RequestContext, memo?: LookupMemo): Promise<string | null> {
+        return memoized(memo, 'ptu', () => this.priceEntryService.getPriceTypeCodeForUser(ctx));
+    }
+
+    private async branchDefaultCode(
+        ctx: RequestContext,
+        counterparty: Counterparty | null,
+        memo?: LookupMemo,
+    ): Promise<string | null> {
+        const branchId = counterparty?.branchId ?? undefined;
+        const branchSettings = await memoized(memo, `bs:${String(branchId)}`, () =>
+            this.branchSettingsService.resolveEffective(ctx, branchId),
+        );
+        if (!branchSettings) return null;
+        const priceTypeId = branchSettings.defaultPriceTypeId;
+        return memoized(memo, `ptid:${priceTypeId}`, () =>
+            this.priceEntryService.getPriceTypeCodeById(ctx, priceTypeId),
+        );
     }
 }

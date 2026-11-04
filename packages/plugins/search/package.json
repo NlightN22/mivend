@@ -11,6 +11,7 @@
         "test:integration": "vitest run --config vitest.integration.config.ts"
     },
     "dependencies": {
+        "dataloader": "2.2.3",
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-cross-reference": "workspace:*",

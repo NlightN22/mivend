@@ -183,6 +183,13 @@ storefront must never show a strikethrough price otherwise (see ui-kit rule belo
 needs a price, call `PriceResolutionService.resolve()`. This is what keeps catalog
 display, product page, and the real order total from diverging.
 
+`SearchResult` price fields go through `CatalogPricingService` (`catalog-pricing.service.ts`): one
+request-scoped batch per `RequestContext` (a DataLoader plus a `LookupMemo`) preloads facets, prices
+and counterparty setup members for all cards of the response, then runs the same `resolve()` and
+`resolveTiers()` per variant against the memo. `customerPrice`, `compareAtPrice` and `discountTiers`
+share one resolution per variant, and nothing is cached across requests. The query count is constant
+in the number of cards (24 or 100 cards: 7 queries for a customer on a setup, was about 20 per card).
+
 ---
 
 ## Real order pricing

@@ -1,21 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
 import { StockLevelService, StockTier } from '@mivend/plugin-reservation';
-import { DiscountTierVM, PriceResolutionService, ResolvedPrice } from '@mivend/plugin-price-entry';
+import { CatalogPricingService, DiscountTierVM, ResolvedPrice } from '@mivend/plugin-price-entry';
 
 @Injectable()
 export class SearchService {
     constructor(
-        private priceResolutionService: PriceResolutionService,
+        private catalogPricingService: CatalogPricingService,
         private stockLevelService: StockLevelService,
     ) {}
 
     async getResolvedPrice(ctx: RequestContext, variantId: string): Promise<ResolvedPrice> {
-        return this.priceResolutionService.resolve(ctx, variantId);
+        return (await this.catalogPricingService.get(ctx, variantId)).price;
     }
 
     async getTiers(ctx: RequestContext, variantId: string): Promise<DiscountTierVM[]> {
-        return this.priceResolutionService.resolveTiers(ctx, variantId);
+        return (await this.catalogPricingService.get(ctx, variantId)).tiers;
     }
 
     async getStockLevel(ctx: RequestContext, variantId: string): Promise<StockTier> {

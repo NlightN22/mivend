@@ -22,6 +22,8 @@ export type {
     DiscountSetupValues,
 } from './src/discount-setup.service';
 export { DiscountSetup } from './src/discount-setup.entity';
+export { CatalogPricingService } from './src/catalog-pricing.service';
+export type { CatalogPricing } from './src/catalog-pricing.service';
 export { PriceResolutionService } from './src/price-resolution.service';
 export type { ResolvedPrice } from './src/price-resolution.service';
 export type { TierProgressVM } from './src/tier-progress.service';

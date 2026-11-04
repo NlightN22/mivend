@@ -23,6 +23,7 @@
         "typescript": "^5.4.0"
     },
     "dependencies": {
+        "dataloader": "2.2.3",
         "graphql-tag": "^2.12.6",
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-approval-workflow": "workspace:*",
