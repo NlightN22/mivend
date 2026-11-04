@@ -73,11 +73,12 @@ beforeAll(async () => {
             contractsByErpId.set(id, { id: 77 });
         },
     };
-    const resolver = new SettlementReferenceResolver(
-        connection,
-        counterpartyService as never,
-        contractService as never,
-    );
+    const resolver = new SettlementReferenceResolver(connection, {
+        counterpartyIds: async (_c: unknown, ids: Iterable<string>) =>
+            new Map([...ids].map(id => [id, '5'])),
+        contractIds: async (_c: unknown, ids: Iterable<string>) =>
+            new Map([...ids].filter(id => contractsByErpId.has(id)).map(id => [id, '77'])),
+    } as never);
     const pending = new SettlementPendingService(connection);
     documentHandler = new SettlementDocumentStreamHandler(
         new SettlementDocumentService(connection, resolver),

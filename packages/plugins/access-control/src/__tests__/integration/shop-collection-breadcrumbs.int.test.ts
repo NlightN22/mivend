@@ -56,7 +56,7 @@ const tree: Record<number, [number | null, boolean, boolean]> = {
 
 async function referenceBreadcrumbs(id: number): Promise<Array<{ id: number; slug: string }>> {
     const chain: number[] = [];
-    let current: number | null = id;
+    let current: number | null = id as number | null;
     while (current != null) {
         chain.unshift(current);
         const [{ parentId }] = await dataSource.query(

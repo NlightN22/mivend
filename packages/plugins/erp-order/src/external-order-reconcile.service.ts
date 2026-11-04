@@ -7,7 +7,7 @@ import {
     RequestContextService,
     TransactionalConnection,
 } from '@vendure/core';
-import { CounterpartyService } from '@mivend/plugin-counterparty';
+import { ErpIdLookupService } from '@mivend/plugin-counterparty';
 
 import { ExternalOrderService } from './external-order.service';
 
@@ -21,7 +21,7 @@ const MAX_PAGES = 50;
 export class ExternalOrderReconcileService implements OnApplicationBootstrap {
     constructor(
         private readonly connection: TransactionalConnection,
-        private readonly counterpartyService: CounterpartyService,
+        private readonly erpIds: ErpIdLookupService,
         private readonly externalOrders: ExternalOrderService,
         private readonly processContext: ProcessContext,
         private readonly requestContextService: RequestContextService,
@@ -51,15 +51,15 @@ export class ExternalOrderReconcileService implements OnApplicationBootstrap {
                      ORDER BY 1 LIMIT ${PAGE_SIZE}`,
                     [after],
                 );
+            const found = await this.erpIds.counterpartyIds(
+                ctx,
+                rows.map(row => row.erpId),
+            );
             for (const { erpId } of rows) {
-                const counterparty = await this.counterpartyService.findByErpId(ctx, erpId);
-                if (!counterparty) continue;
+                const counterpartyId = found.get(erpId);
+                if (!counterpartyId) continue;
                 counterparties += 1;
-                orders += await this.externalOrders.attachCounterparty(
-                    ctx,
-                    erpId,
-                    String(counterparty.id),
-                );
+                orders += await this.externalOrders.attachCounterparty(ctx, erpId, counterpartyId);
             }
             if (rows.length < PAGE_SIZE) break;
             after = rows[rows.length - 1].erpId;

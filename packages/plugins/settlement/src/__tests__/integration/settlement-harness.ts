@@ -68,21 +68,24 @@ export async function createHarness(tag: string): Promise<Harness> {
     const contracts = new Map<string, number>();
     const connection = createTestConnection(dataSource);
     const lookupDelayMs = { value: 0 };
-    const slowLookup = async (
+    const slowIds = async (
         map: Map<string, number>,
-        id: string,
-    ): Promise<{ id: number } | null> => {
-        const found = lookup(map, id);
+        erpIds: Iterable<string>,
+    ): Promise<Map<string, string>> => {
         if (lookupDelayMs.value > 0) {
             await new Promise(resolve => setTimeout(resolve, lookupDelayMs.value));
         }
+        const found = new Map<string, string>();
+        for (const erpId of erpIds) {
+            const id = map.get(erpId);
+            if (id !== undefined) found.set(erpId, String(id));
+        }
         return found;
     };
-    const resolver = new SettlementReferenceResolver(
-        connection,
-        { findByErpId: (_c: unknown, id: string) => slowLookup(counterparties, id) } as never,
-        { findByErpId: (_c: unknown, id: string) => slowLookup(contracts, id) } as never,
-    );
+    const resolver = new SettlementReferenceResolver(connection, {
+        counterpartyIds: (_c: unknown, ids: Iterable<string>) => slowIds(counterparties, ids),
+        contractIds: (_c: unknown, ids: Iterable<string>) => slowIds(contracts, ids),
+    } as never);
     const pending = new SettlementPendingService(connection);
     return {
         dataSource,
@@ -107,9 +110,6 @@ export async function createHarness(tag: string): Promise<Harness> {
         } as never),
     };
 }
-
-const lookup = (map: Map<string, number>, id: string): { id: number } | null =>
-    map.has(id) ? { id: map.get(id) as number } : null;
 
 export function documentInput(
     erpId: string,

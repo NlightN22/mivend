@@ -4,6 +4,7 @@ import {
     CreateDateColumn,
     DataSource,
     Entity,
+    In,
     JoinColumn,
     ManyToOne,
     PrimaryGeneratedColumn,
@@ -461,8 +462,12 @@ describe('order-changed without orderUuid (component, real Postgres)', () => {
                     }),
                 } as never,
                 {
-                    findByErpId: (_c: RequestContext, erpId: string) =>
-                        dataSource.getRepository(TestCounterparty).findOne({ where: { erpId } }),
+                    counterpartyIds: async (_c: RequestContext, erpIds: string[]) => {
+                        const found = await dataSource
+                            .getRepository(TestCounterparty)
+                            .find({ where: { erpId: In(erpIds) } });
+                        return new Map(found.map(row => [row.erpId, String(row.id)]));
+                    },
                 } as never,
                 externalOrders,
                 { isWorker: false } as never,

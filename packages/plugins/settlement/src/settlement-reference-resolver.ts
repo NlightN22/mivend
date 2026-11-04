@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
-import { ContractService, CounterpartyService } from '@mivend/plugin-counterparty';
+import { ErpIdLookupService } from '@mivend/plugin-counterparty';
 
 export interface ResolvedReferences {
     counterparties: Map<string, string>;
@@ -19,21 +19,14 @@ export interface ReferenceKeys {
 export class SettlementReferenceResolver {
     constructor(
         private readonly connection: TransactionalConnection,
-        private readonly counterpartyService: CounterpartyService,
-        private readonly contractService: ContractService,
+        private readonly erpIds: ErpIdLookupService,
     ) {}
 
     async resolve(ctx: RequestContext, keys: ReferenceKeys): Promise<ResolvedReferences> {
-        const counterparties = new Map<string, string>();
-        for (const erpId of new Set(keys.counterpartyErpIds)) {
-            const found = await this.counterpartyService.findByErpId(ctx, erpId);
-            if (found) counterparties.set(erpId, String(found.id));
-        }
-        const contracts = new Map<string, string>();
-        for (const erpId of new Set(keys.contractErpIds)) {
-            const found = await this.contractService.findByErpId(ctx, erpId);
-            if (found) contracts.set(erpId, String(found.id));
-        }
+        const [counterparties, contracts] = await Promise.all([
+            this.erpIds.counterpartyIds(ctx, keys.counterpartyErpIds),
+            this.erpIds.contractIds(ctx, keys.contractErpIds),
+        ]);
         return { counterparties, contracts, orders: await this.resolveOrders(ctx, keys.orders) };
     }
 

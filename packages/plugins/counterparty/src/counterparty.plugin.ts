@@ -1,3 +1,4 @@
+import { ErpIdLookupService } from './erp-id-lookup.service';
 import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import {
     LanguageCode,
@@ -124,6 +125,7 @@ const adminResolvers = [
         ...visibilityBundle.providers,
         CounterpartyService,
         CounterpartyBatchLoaders,
+        ErpIdLookupService,
         CounterpartyConsumer,
         TradingPointService,
         TradingPointConsumer,
@@ -142,6 +144,7 @@ const adminResolvers = [
     ],
     exports: [
         CounterpartyService,
+        ErpIdLookupService,
         TradingPointService,
         ContractService,
         CreditLimitCheckService,

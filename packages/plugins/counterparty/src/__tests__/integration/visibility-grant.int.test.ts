@@ -85,10 +85,12 @@ let maxScope: 'own' | 'department' = 'department';
 let adminIds: Record<'viewer' | 'head' | 'm7' | 'm8', number>;
 const recordChange = vi.fn();
 
-const ctx = {
-    activeUserId: 'user-1',
-    userHasPermissions: () => true,
-} as unknown as RequestContext;
+// A scope is memoized per request, so every read below is its own request.
+const freshCtx = (): RequestContext =>
+    ({
+        activeUserId: 'user-1',
+        userHasPermissions: () => true,
+    }) as unknown as RequestContext;
 
 function mirrored(): TransactionalConnection {
     const base = createTestConnection(dataSource);
@@ -187,7 +189,7 @@ async function insertGrant(over: Partial<TestGrant> = {}): Promise<TestGrant> {
 }
 
 const erpIds = async (): Promise<string[]> =>
-    (await counterparties.findVisible(ctx)).map(c => c.erpId).sort();
+    (await counterparties.findVisible(freshCtx())).map(c => c.erpId).sort();
 
 describe('VisibilityGrantReader validity window (real Postgres)', () => {
     const now = new Date('2030-06-15T12:00:00Z');
@@ -206,7 +208,7 @@ describe('VisibilityGrantReader validity window (real Postgres)', () => {
         await manager('ends-now', { validTo: now });
         await manager('revoked', { revokedAt: new Date(now.getTime() - DAY) });
         await manager('other-grantee', { granteeAdministratorId: '999' });
-        const ids = await reader.activeManagerIds(ctx, String(adminIds.viewer), now);
+        const ids = await reader.activeManagerIds(freshCtx(), String(adminIds.viewer), now);
         expect(ids.sort()).toEqual(['permanent', 'running', 'started']);
     });
 });
@@ -225,18 +227,18 @@ describe('visible counterparties are the union of the layers (real Postgres)', (
 
     it('pagination totals, KPIs and single reads do not leak hidden rows', async () => {
         await insertGrant();
-        const page = await counterparties.findVisiblePage(ctx, { take: 1, skip: 0 });
+        const page = await counterparties.findVisiblePage(freshCtx(), { take: 1, skip: 0 });
         expect(page.totalItems).toBe(4);
         expect(page.items).toHaveLength(1);
-        expect((await counterparties.getSummary(ctx)).totalCount).toBe(4);
+        expect((await counterparties.getSummary(freshCtx())).totalCount).toBe(4);
         const hidden = await dataSource
             .getRepository(TestCounterparty)
             .findOneByOrFail({ erpId: 'cp-m8-b' });
         const shown = await dataSource
             .getRepository(TestCounterparty)
             .findOneByOrFail({ erpId: 'cp-m7-b' });
-        expect(await counterparties.findOneVisible(ctx, hidden.id)).toBeNull();
-        expect((await counterparties.findOneVisible(ctx, shown.id))?.erpId).toBe('cp-m7-b');
+        expect(await counterparties.findOneVisible(freshCtx(), hidden.id)).toBeNull();
+        expect((await counterparties.findOneVisible(freshCtx(), shown.id))?.erpId).toBe('cp-m7-b');
     });
 
     it('expired and revoked grants stop applying, nothing is deleted', async () => {
@@ -262,24 +264,24 @@ describe('grant and revoke against concurrent writers and readers (real Postgres
 
     it('re-grants the same manager after an expiry and after a revoke', async () => {
         await insertGrant({ validTo: new Date(Date.now() - DAY) });
-        await expect(grants.grant(ctx, input())).resolves.toBeDefined();
+        await expect(grants.grant(freshCtx(), input())).resolves.toBeDefined();
         const [open] = await dataSource
             .getRepository(TestGrant)
             .find({ where: { validTo: IsNull(), revokedAt: IsNull() } });
-        await grants.revoke(ctx, open.id);
-        await expect(grants.grant(ctx, input())).resolves.toBeDefined();
+        await grants.revoke(freshCtx(), open.id);
+        await expect(grants.grant(freshCtx(), input())).resolves.toBeDefined();
     });
 
     it('still rejects a genuinely overlapping grant', async () => {
         await insertGrant({ validTo: new Date(Date.now() + DAY) });
-        await expect(grants.grant(ctx, input())).rejects.toThrow(/overlapping/);
+        await expect(grants.grant(freshCtx(), input())).rejects.toThrow(/overlapping/);
     });
 
     it('two concurrent re-grants after an expiry leave exactly one new row', async () => {
         await insertGrant({ validTo: new Date(Date.now() - DAY) });
         const results = await Promise.allSettled([
-            grants.grant(ctx, input()),
-            grants.grant(ctx, input()),
+            grants.grant(freshCtx(), input()),
+            grants.grant(freshCtx(), input()),
         ]);
         expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1);
         expect(await dataSource.getRepository(TestGrant).count()).toBe(2);
@@ -287,8 +289,8 @@ describe('grant and revoke against concurrent writers and readers (real Postgres
 
     it('two identical grants at once leave exactly one row and one audit entry', async () => {
         const results = await Promise.allSettled([
-            grants.grant(ctx, input()),
-            grants.grant(ctx, input()),
+            grants.grant(freshCtx(), input()),
+            grants.grant(freshCtx(), input()),
         ]);
         expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1);
         expect(results.filter(r => r.status === 'rejected')).toHaveLength(1);
@@ -298,7 +300,10 @@ describe('grant and revoke against concurrent writers and readers (real Postgres
 
     it('two revokes at once record exactly one audit entry', async () => {
         const grant = await insertGrant();
-        await Promise.all([grants.revoke(ctx, grant.id, 'a'), grants.revoke(ctx, grant.id, 'b')]);
+        await Promise.all([
+            grants.revoke(freshCtx(), grant.id, 'a'),
+            grants.revoke(freshCtx(), grant.id, 'b'),
+        ]);
         expect(recordChange).toHaveBeenCalledTimes(1);
         expect(
             (await dataSource.getRepository(TestGrant).findOneByOrFail({ id: grant.id })).revokedAt,
@@ -310,8 +315,8 @@ describe('grant and revoke against concurrent writers and readers (real Postgres
         const readers = Array.from({ length: 10 }, async () => {
             seen.push(await erpIds());
         });
-        const created = await grants.grant(ctx, input());
-        await Promise.all([...readers, grants.revoke(ctx, created.id)]);
+        const created = await grants.grant(freshCtx(), input());
+        await Promise.all([...readers, grants.revoke(freshCtx(), created.id)]);
         const withManager = ['cp-branch-a', 'cp-m7-b', 'cp-m7-unsorted', 'cp-own'];
         for (const ids of seen) {
             expect([withManager, ['cp-branch-a', 'cp-own']]).toContainEqual(ids);

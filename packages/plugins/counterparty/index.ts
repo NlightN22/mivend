@@ -2,6 +2,7 @@ export { CounterpartyPlugin } from './src/counterparty.plugin';
 export { CounterpartyService } from './src/counterparty.service';
 export { TradingPointService } from './src/trading-point.service';
 export type { TradingPointUpsertPayload } from './src/trading-point.service';
+export { ErpIdLookupService } from './src/erp-id-lookup.service';
 export { ContractService } from './src/contract.service';
 export type { ContractStreamFields } from './src/contract.service';
 export { chooseOrderContract, isSelectableContract } from './src/order-contract-rule';
