@@ -63,11 +63,19 @@ export class OrderLineEditService {
             'lines',
             'lines.productVariant',
         ]);
-        const steps = new Map<string, number>();
-        for (const line of order?.lines ?? []) {
-            steps.set(String(line.id), await this.requiredMultiple(ctx, order as Order, line));
-        }
-        return rows.map(row => ({ ...row, step: steps.get(row.lineId) ?? 1 }));
+        const lines = order?.lines ?? [];
+        const steps = order
+            ? await this.packaging.requiredMultiples(
+                  ctx,
+                  lines.map(l => l.productVariant),
+                  order.customerId,
+                  order.customFields?.branchId ?? null,
+              )
+            : new Map<string, number>();
+        const stepOfLine = new Map(
+            lines.map(l => [String(l.id), steps.get(String(l.productVariant.id)) ?? 1]),
+        );
+        return rows.map(row => ({ ...row, step: stepOfLine.get(row.lineId) ?? 1 }));
     }
 
     async setQuantity(

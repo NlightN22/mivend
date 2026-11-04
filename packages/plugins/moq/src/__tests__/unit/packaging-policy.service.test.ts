@@ -98,3 +98,90 @@ describe('PackagingPolicyService', () => {
         ).toBe(false);
     });
 });
+
+describe('PackagingPolicyService.requiredMultiples', () => {
+    const variant = (
+        id: string,
+        multiplicity: number | null,
+        unitRatioToBase: number | null = null,
+    ) => ({ id, customFields: { multiplicity, unitRatioToBase } }) as never;
+
+    function build(packagesOnly: boolean, enforced: boolean) {
+        const resolveEffective = vi.fn(async () => ({ packagesOnly }));
+        const getPreferredForCustomer = vi.fn(async () => ({ servicingBranchId: 'branch-a' }));
+        const resolve = vi.fn(async () => ({ enabled: enforced, consequence: 'block' }));
+        const service = new PackagingPolicyService(
+            { resolveEffective } as never,
+            {
+                getPreferredForCustomer,
+                resolveServicingBranchId: async (_c: unknown, tp: { servicingBranchId: string }) =>
+                    tp.servicingBranchId,
+            } as never,
+            { resolve } as never,
+        );
+        return { service, resolveEffective, getPreferredForCustomer, resolve };
+    }
+
+    const mixed = [
+        variant('1', null),
+        variant('2', 6),
+        variant('3', 1, 12),
+        variant('4', 6, 12),
+        variant('5', 4),
+    ];
+
+    it('equals the per-variant answer for every settings combination', async () => {
+        for (const packagesOnly of [true, false]) {
+            for (const enforced of [true, false]) {
+                for (const assumeEnforced of [true, false]) {
+                    const { service } = build(packagesOnly, enforced);
+                    const batch = await service.requiredMultiples(
+                        ctx,
+                        mixed,
+                        'customer-1',
+                        null,
+                        assumeEnforced,
+                    );
+                    for (const v of mixed) {
+                        const single = await build(packagesOnly, enforced).service.requiredMultiple(
+                            ctx,
+                            v,
+                            'customer-1',
+                            null,
+                            assumeEnforced,
+                        );
+                        expect(batch.get(String((v as { id: string }).id))).toBe(single);
+                    }
+                }
+            }
+        }
+    });
+
+    it('resolves branch, settings and policy once for the whole order', async () => {
+        const { service, resolveEffective, getPreferredForCustomer, resolve } = build(false, true);
+        await service.requiredMultiples(ctx, mixed, 'customer-1');
+        expect(getPreferredForCustomer).toHaveBeenCalledTimes(1);
+        expect(resolveEffective).toHaveBeenCalledTimes(1);
+        expect(resolve).toHaveBeenCalledTimes(1);
+    });
+
+    it('looks nothing up when no variant has a rule', async () => {
+        const { service, resolveEffective, resolve } = build(false, true);
+        const steps = await service.requiredMultiples(
+            ctx,
+            [variant('1', null), variant('2', 1)],
+            'c',
+        );
+        expect([...steps.values()]).toEqual([1, 1]);
+        expect(resolveEffective).not.toHaveBeenCalled();
+        expect(resolve).not.toHaveBeenCalled();
+    });
+
+    it('does not swallow a failing settings lookup', async () => {
+        const { service, resolveEffective } = build(false, true);
+        resolveEffective.mockRejectedValueOnce(new Error('settings down'));
+        await expect(service.requiredMultiples(ctx, mixed, 'customer-1')).rejects.toThrow(
+            'settings down',
+        );
+    });
+});

@@ -7,6 +7,11 @@ import { TradingPointService } from '@mivend/plugin-counterparty';
 import { MULTIPLICITY_CHECK_CODE } from './multiplicity.check';
 import { wholePackQuantity } from './whole-pack';
 
+interface OrderScope {
+    branchId: string | null;
+    settings: BranchSettings | null;
+}
+
 // Whether the branch serving a customer sells variants with a package default unit only in packages (#214).
 @Injectable()
 export class PackagingPolicyService {
@@ -75,19 +80,60 @@ export class PackagingPolicyService {
         // The multiplicity check passes `true`: it reports the declared rule whatever the cart policy is.
         assumeEnforced = false,
     ): Promise<number> {
-        const multiplicity = variant.customFields?.multiplicity ?? 1;
-        const ratio = variant.customFields?.unitRatioToBase ?? null;
-        const hasRatio = !!ratio && ratio > 0 && ratio !== 1;
-        if (!(multiplicity > 1) && !hasRatio) return 1;
+        const steps = await this.requiredMultiples(
+            ctx,
+            [variant],
+            customerId,
+            orderBranchId,
+            assumeEnforced,
+        );
+        return steps.get(String(variant.id)) ?? 1;
+    }
 
-        const branchId = await this.resolveBranchId(ctx, customerId, orderBranchId);
-        const settings = await this.branchSettingsService.resolveEffective(ctx, branchId);
-        if (hasRatio && settings?.packagesOnly === true) {
-            const packQuantity = wholePackQuantity(ratio);
-            if (packQuantity !== null) return packQuantity;
+    // Branch, settings and policy are the same for every line of one order: resolved once, lazily.
+    async requiredMultiples(
+        ctx: RequestContext,
+        variants: ProductVariant[],
+        customerId: ID | null | undefined,
+        orderBranchId: string | null = null,
+        assumeEnforced = false,
+    ): Promise<Map<string, number>> {
+        const steps = new Map<string, number>();
+        let scope: Promise<OrderScope> | null = null;
+        let enforcedPolicy: Promise<boolean> | null = null;
+        for (const variant of variants) {
+            const multiplicity = variant.customFields?.multiplicity ?? 1;
+            const ratio = variant.customFields?.unitRatioToBase ?? null;
+            const hasRatio = !!ratio && ratio > 0 && ratio !== 1;
+            if (!(multiplicity > 1) && !hasRatio) {
+                steps.set(String(variant.id), 1);
+                continue;
+            }
+            scope ??= this.loadScope(ctx, customerId, orderBranchId);
+            const { settings, branchId } = await scope;
+            const packQuantity =
+                hasRatio && settings?.packagesOnly === true ? wholePackQuantity(ratio) : null;
+            if (packQuantity !== null) steps.set(String(variant.id), packQuantity);
+            else if (!(multiplicity > 1)) steps.set(String(variant.id), 1);
+            else {
+                enforcedPolicy ??= this.isEnforcedFor(ctx, branchId);
+                const enforced = assumeEnforced || (await enforcedPolicy);
+                steps.set(String(variant.id), enforced ? multiplicity : 1);
+            }
         }
-        if (!(multiplicity > 1)) return 1;
-        return assumeEnforced || (await this.isEnforcedFor(ctx, branchId)) ? multiplicity : 1;
+        return steps;
+    }
+
+    private async loadScope(
+        ctx: RequestContext,
+        customerId: ID | null | undefined,
+        orderBranchId: string | null,
+    ): Promise<OrderScope> {
+        const branchId = await this.resolveBranchId(ctx, customerId, orderBranchId);
+        return {
+            branchId,
+            settings: await this.branchSettingsService.resolveEffective(ctx, branchId),
+        };
     }
 
     private async resolveSettings(

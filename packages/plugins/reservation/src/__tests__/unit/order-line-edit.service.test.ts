@@ -120,7 +120,11 @@ function build(setup: Setup = {}) {
         orderService as never,
         history as never,
         eventBus as never,
-        { requiredMultiple: async () => setup.multiple ?? 1 } as never,
+        {
+            requiredMultiple: async () => setup.multiple ?? 1,
+            requiredMultiples: async (_c: unknown, variants: Array<{ id: unknown }>) =>
+                new Map(variants.map(v => [String(v.id), setup.multiple ?? 1])),
+        } as never,
         {
             get: () => ({
                 forOrder: async () =>

@@ -35,23 +35,17 @@ export class MultiplicityCheckRegistrar implements OnModuleInit {
                           .getRepository(ctx, ProductVariant)
                           .findByIds(subject.lines.map(l => l.productVariantId))
                     : [];
-                const byId = new Map(variants.map(v => [String(v.id), v]));
-                const lines = [];
-                for (const line of subject.lines) {
-                    const variant = byId.get(line.productVariantId);
-                    lines.push({
-                        ...line,
-                        requiredMultiple: variant
-                            ? await this.packaging.requiredMultiple(
-                                  ctx,
-                                  variant,
-                                  subject.customerId,
-                                  subject.branchId,
-                                  true,
-                              )
-                            : 1,
-                    });
-                }
+                const steps = await this.packaging.requiredMultiples(
+                    ctx,
+                    variants,
+                    subject.customerId,
+                    subject.branchId,
+                    true,
+                );
+                const lines = subject.lines.map(line => ({
+                    ...line,
+                    requiredMultiple: steps.get(line.productVariantId) ?? 1,
+                }));
                 return evaluateMultiplicity(lines);
             },
         });
