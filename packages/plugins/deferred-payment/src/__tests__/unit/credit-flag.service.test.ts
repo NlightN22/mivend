@@ -39,20 +39,24 @@ describe('CreditFlagService.flaggedCounterpartyIds', () => {
 });
 
 describe('CreditFlagService.isOrderFlagged', () => {
-    it.each([
-        [1, true],
-        [0, false],
-    ])('is %s matching flagged payments -> %s', async (count, expected) => {
+    it('answers every order of one request with a single query', async () => {
         const qb = {
+            select: vi.fn().mockReturnThis(),
+            distinct: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
             andWhere: vi.fn().mockReturnThis(),
-            getCount: vi.fn().mockResolvedValue(count),
+            getRawMany: vi.fn().mockResolvedValue([{ orderId: 9 }]),
         };
         const service = new CreditFlagService(
             { getRepository: () => ({ createQueryBuilder: () => qb }) } as never,
             {} as never,
         );
-        expect(await service.isOrderFlagged(ctx, 9)).toBe(expected);
-        expect(qb.where).toHaveBeenCalledWith('p."orderId" = :orderId', { orderId: 9 });
+        const request = {} as RequestContext;
+        const flags = await Promise.all([9, 10, 11].map(id => service.isOrderFlagged(request, id)));
+        expect(flags).toEqual([true, false, false]);
+        expect(qb.getRawMany).toHaveBeenCalledTimes(1);
+        expect(qb.where).toHaveBeenCalledWith('p."orderId" IN (:...orderIds)', {
+            orderIds: [9, 10, 11],
+        });
     });
 });
