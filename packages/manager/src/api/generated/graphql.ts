@@ -8611,6 +8611,12 @@ export type ScheduledTask = {
     scheduleDescription: Scalars['String']['output'];
 };
 
+/** Products matched by an article, part number or manufacturer code; the internal backend never fills them. */
+export type SearchCodeMatches = {
+    items: Array<SearchResult>;
+    total: Scalars['Int']['output'];
+};
+
 export type SearchInput = {
     collectionId?: InputMaybe<Scalars['ID']['input']>;
     collectionIds?: InputMaybe<Array<Scalars['ID']['input']>>;
@@ -8628,18 +8634,13 @@ export type SearchReindexResponse = {
     success: Scalars['Boolean']['output'];
 };
 
-export type SearchCodeMatches = {
-    items: Array<SearchResult>;
-    total: Scalars['Int']['output'];
-};
-
 export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
-    manufacturerCodeMatches: SearchCodeMatches | null;
-    partNumberMatches: SearchCodeMatches | null;
-    skuMatches: SearchCodeMatches | null;
+    manufacturerCodeMatches: Maybe<SearchCodeMatches>;
+    partNumberMatches: Maybe<SearchCodeMatches>;
+    skuMatches: Maybe<SearchCodeMatches>;
     totalItems: Scalars['Int']['output'];
 };
 
@@ -10366,24 +10367,55 @@ export type CatalogPageQueryVariables = Exact<{
     take?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-type CatalogPageHit = {
-    productId: string;
-    productVariantId: string;
-    productName: string;
-    sku: string;
-    slug: string;
-    facetValueIds: Array<string>;
-    availableForOrder: boolean;
-    productAsset: { preview: string } | null;
-};
-
 export type CatalogPageQuery = {
     search: {
         totalItems: number;
-        skuMatches: { items: Array<CatalogPageHit> } | null;
-        partNumberMatches: { items: Array<CatalogPageHit> } | null;
-        manufacturerCodeMatches: { items: Array<CatalogPageHit> } | null;
-        items: Array<CatalogPageHit>;
+        skuMatches: {
+            items: Array<{
+                productId: string;
+                productVariantId: string;
+                productName: string;
+                sku: string;
+                slug: string;
+                facetValueIds: Array<string>;
+                availableForOrder: boolean;
+                productAsset: { preview: string } | null;
+            }>;
+        } | null;
+        partNumberMatches: {
+            items: Array<{
+                productId: string;
+                productVariantId: string;
+                productName: string;
+                sku: string;
+                slug: string;
+                facetValueIds: Array<string>;
+                availableForOrder: boolean;
+                productAsset: { preview: string } | null;
+            }>;
+        } | null;
+        manufacturerCodeMatches: {
+            items: Array<{
+                productId: string;
+                productVariantId: string;
+                productName: string;
+                sku: string;
+                slug: string;
+                facetValueIds: Array<string>;
+                availableForOrder: boolean;
+                productAsset: { preview: string } | null;
+            }>;
+        } | null;
+        items: Array<{
+            productId: string;
+            productVariantId: string;
+            productName: string;
+            sku: string;
+            slug: string;
+            facetValueIds: Array<string>;
+            availableForOrder: boolean;
+            productAsset: { preview: string } | null;
+        }>;
     };
 };
 
@@ -11366,14 +11398,18 @@ export type OrderCreateProductSearchQueryVariables = Exact<{
     term: Scalars['String']['input'];
 }>;
 
-type OrderCreateSearchHit = { productVariantId: string; productName: string; sku: string };
-
 export type OrderCreateProductSearchQuery = {
     search: {
-        skuMatches: { items: Array<OrderCreateSearchHit> } | null;
-        partNumberMatches: { items: Array<OrderCreateSearchHit> } | null;
-        manufacturerCodeMatches: { items: Array<OrderCreateSearchHit> } | null;
-        items: Array<OrderCreateSearchHit>;
+        skuMatches: {
+            items: Array<{ productVariantId: string; productName: string; sku: string }>;
+        } | null;
+        partNumberMatches: {
+            items: Array<{ productVariantId: string; productName: string; sku: string }>;
+        } | null;
+        manufacturerCodeMatches: {
+            items: Array<{ productVariantId: string; productName: string; sku: string }>;
+        } | null;
+        items: Array<{ productVariantId: string; productName: string; sku: string }>;
     };
 };
 
