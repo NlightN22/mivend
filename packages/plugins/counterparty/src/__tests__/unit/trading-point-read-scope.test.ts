@@ -1,3 +1,4 @@
+import { CounterpartyBatchLoaders } from '../../counterparty-batch-loaders.service';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { CustomerService, RequestContext, TransactionalConnection } from '@vendure/core';
 import { TradingPointService } from '../../trading-point.service';
@@ -168,31 +169,29 @@ describe('nested fields of a hidden counterparty (Admin API, #263)', () => {
     const getTeamMembers = vi.fn().mockResolvedValue([{ id: 't' }]);
     const findPortalUsers = vi.fn().mockResolvedValue([{ id: 'u' }]);
     const getLinkedCustomerId = vi.fn().mockResolvedValue('7');
-    const findOneVisible = vi.fn();
-    const counterparties = {
-        findOneVisible,
-        getLinkedCustomerId,
-    } as unknown as CounterpartyService;
-    const points = new CounterpartyTradingPointResolver(
-        { findByCounterparty } as unknown as TradingPointService,
-        counterparties,
-    );
+    const isHidden = vi.fn();
+    const loaders = {
+        isHidden,
+        tradingPoints: findByCounterparty,
+    } as unknown as CounterpartyBatchLoaders;
+    const counterparties = { getLinkedCustomerId } as unknown as CounterpartyService;
+    const points = new CounterpartyTradingPointResolver(loaders);
     const team = new CounterpartyTeamFieldResolver(
         { getTeamMembers } as unknown as CounterpartyTeamService,
-        counterparties,
+        loaders,
     );
     const portal = new CounterpartyPortalAccessFieldResolver(
         { findPortalUsers } as unknown as CounterpartyPortalAccessService,
-        counterparties,
+        loaders,
     );
-    const link = new CounterpartyCustomerLinkResolver(counterparties);
+    const link = new CounterpartyCustomerLinkResolver(counterparties, loaders);
     const admin = (): RequestContext => ({ apiType: 'admin' }) as unknown as RequestContext;
     const cp = { id: 'cp-2' } as never;
 
     beforeEach(() => vi.clearAllMocks());
 
     it('returns no points, team, portal users or link to a staff member who cannot see it', async () => {
-        findOneVisible.mockResolvedValue(null);
+        isHidden.mockResolvedValue(true);
         const ctx = admin();
         expect(await points.tradingPoints(ctx, cp)).toEqual([]);
         expect(await team.teamMembers(ctx, cp)).toEqual([]);
@@ -202,11 +201,11 @@ describe('nested fields of a hidden counterparty (Admin API, #263)', () => {
         expect(getTeamMembers).not.toHaveBeenCalled();
         expect(findPortalUsers).not.toHaveBeenCalled();
         expect(getLinkedCustomerId).not.toHaveBeenCalled();
-        expect(findOneVisible).toHaveBeenCalledTimes(1);
+        expect(isHidden).toHaveBeenCalledTimes(4);
     });
 
     it('returns them when the counterparty is visible', async () => {
-        findOneVisible.mockResolvedValue({ id: 'cp-2' });
+        isHidden.mockResolvedValue(false);
         const ctx = admin();
         expect(await points.tradingPoints(ctx, cp)).toEqual([{ id: '1' }]);
         expect(await team.teamMembers(ctx, cp)).toEqual([{ id: 't' }]);
@@ -217,6 +216,6 @@ describe('nested fields of a hidden counterparty (Admin API, #263)', () => {
     it('never gates the Shop API', async () => {
         const shop = { apiType: 'shop' } as unknown as RequestContext;
         expect(await points.tradingPoints(shop, cp)).toEqual([{ id: '1' }]);
-        expect(findOneVisible).not.toHaveBeenCalled();
+        expect(isHidden).not.toHaveBeenCalled();
     });
 });

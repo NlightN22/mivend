@@ -11,6 +11,7 @@ import {
     TradingPointDetailsPatch,
 } from './trading-point.service';
 import { CounterpartyService } from './counterparty.service';
+import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
 import { ctxQuery } from 'shared';
 
@@ -29,18 +30,15 @@ export class CustomerTradingPointResolver {
 
 @Resolver('Counterparty')
 export class CounterpartyTradingPointResolver {
-    constructor(
-        private tradingPointService: TradingPointService,
-        private counterpartyService: CounterpartyService,
-    ) {}
+    constructor(private loaders: CounterpartyBatchLoaders) {}
 
     @ResolveField()
     async tradingPoints(
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: { id: string },
     ): Promise<TradingPoint[]> {
-        if (await hiddenOnAdmin(this.counterpartyService, ctx, counterparty.id)) return [];
-        return this.tradingPointService.findByCounterparty(ctx, counterparty.id);
+        if (await hiddenOnAdmin(this.loaders, ctx, counterparty.id)) return [];
+        return this.loaders.tradingPoints(ctx, counterparty.id);
     }
 }
 

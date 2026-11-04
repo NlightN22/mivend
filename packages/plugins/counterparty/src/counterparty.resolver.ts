@@ -15,19 +15,20 @@ import type { CounterpartyListFilter } from './counterparty-list-filter';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyManagerAssignmentService } from './counterparty-manager-assignment.service';
 import { CounterpartyService } from './counterparty.service';
+import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
 import { CounterpartySortParameter } from './types';
 
 @Resolver('Customer')
 export class CustomerCounterpartyResolver {
-    constructor(private counterpartyService: CounterpartyService) {}
+    constructor(private loaders: CounterpartyBatchLoaders) {}
 
     @ResolveField()
     async counterparty(
         @Ctx() ctx: RequestContext,
         @Parent() customer: { id: string },
     ): Promise<Counterparty | null> {
-        return this.counterpartyService.getForCustomer(ctx, customer.id);
+        return this.loaders.forCustomer(ctx, customer.id);
     }
 }
 
@@ -78,14 +79,17 @@ export class CounterpartyPriceTypeResolver {
 // otherwise returns null.
 @Resolver('Counterparty')
 export class CounterpartyCustomerLinkResolver {
-    constructor(private counterpartyService: CounterpartyService) {}
+    constructor(
+        private counterpartyService: CounterpartyService,
+        private loaders: CounterpartyBatchLoaders,
+    ) {}
 
     @ResolveField()
     async linkedCustomerId(
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: Counterparty,
     ): Promise<ID | null> {
-        if (await hiddenOnAdmin(this.counterpartyService, ctx, counterparty.id)) return null;
+        if (await hiddenOnAdmin(this.loaders, ctx, counterparty.id)) return null;
         return this.counterpartyService.getLinkedCustomerId(ctx, counterparty.id);
     }
 

@@ -16,9 +16,11 @@ describe('AccessScopeService per-request memo', () => {
     let service: AccessScopeService;
 
     beforeEach(() => {
-        findOneByUserId = vi.fn(async (_ctx: unknown, userId: string) =>
-            adminOf(`admin-of-${userId}`),
-        );
+        findOneByUserId = vi
+            .fn()
+            .mockImplementation(async (_ctx: unknown, userId: string) =>
+                adminOf(`admin-of-${userId}`),
+            );
         maxScopeFor = vi.fn().mockResolvedValue('own');
         activeManagerIds = vi.fn().mockResolvedValue([]);
         service = new AccessScopeService(

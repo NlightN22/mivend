@@ -1,3 +1,4 @@
+import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import {
     LanguageCode,
     PluginCommonModule,
@@ -122,6 +123,7 @@ const adminResolvers = [
     providers: [
         ...visibilityBundle.providers,
         CounterpartyService,
+        CounterpartyBatchLoaders,
         CounterpartyConsumer,
         TradingPointService,
         TradingPointConsumer,

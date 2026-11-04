@@ -5,7 +5,7 @@ import { CustomPermission } from '@mivend/plugin-access-control';
 import { Counterparty } from './entities/counterparty.entity';
 import { CounterpartyTeamMember } from './entities/counterparty-team-member.entity';
 import { CounterpartyTeamService } from './counterparty-team.service';
-import { CounterpartyService } from './counterparty.service';
+import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
 
 // A counterparty's team is structurally bounded (Owner + a few backup/observer members),
@@ -14,7 +14,7 @@ import { hiddenOnAdmin } from './hidden-on-admin';
 export class CounterpartyTeamFieldResolver {
     constructor(
         private counterpartyTeamService: CounterpartyTeamService,
-        private counterpartyService: CounterpartyService,
+        private loaders: CounterpartyBatchLoaders,
     ) {}
 
     @ResolveField()
@@ -22,7 +22,7 @@ export class CounterpartyTeamFieldResolver {
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: Counterparty,
     ): Promise<CounterpartyTeamMember[]> {
-        if (await hiddenOnAdmin(this.counterpartyService, ctx, counterparty.id)) return [];
+        if (await hiddenOnAdmin(this.loaders, ctx, counterparty.id)) return [];
         return this.counterpartyTeamService.getTeamMembers(ctx, counterparty.id);
     }
 }

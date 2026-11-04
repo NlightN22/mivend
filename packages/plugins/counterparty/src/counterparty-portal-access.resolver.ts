@@ -3,8 +3,8 @@ import { ID } from '@vendure/common/lib/shared-types';
 import { Allow, Ctx, Customer, RequestContext, Transaction, UserInputError } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
 
-import { CounterpartyService } from './counterparty.service';
 import { Counterparty } from './entities/counterparty.entity';
+import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
 import {
     CounterpartyPortalAccessService,
@@ -29,7 +29,7 @@ function toPortalAccessChanges(
 export class CounterpartyPortalAccessFieldResolver {
     constructor(
         private portalAccessService: CounterpartyPortalAccessService,
-        private counterpartyService: CounterpartyService,
+        private loaders: CounterpartyBatchLoaders,
     ) {}
 
     @ResolveField()
@@ -38,7 +38,7 @@ export class CounterpartyPortalAccessFieldResolver {
         @Ctx() ctx: RequestContext,
         @Parent() counterparty: Counterparty,
     ): Promise<Customer[]> {
-        if (await hiddenOnAdmin(this.counterpartyService, ctx, counterparty.id)) return [];
+        if (await hiddenOnAdmin(this.loaders, ctx, counterparty.id)) return [];
         return this.portalAccessService.findPortalUsers(ctx, counterparty.id);
     }
 }
