@@ -189,6 +189,7 @@ and counterparty setup members for all cards of the response, then runs the same
 `resolveTiers()` per variant against the memo. `customerPrice`, `compareAtPrice` and `discountTiers`
 share one resolution per variant, and nothing is cached across requests. The query count is constant
 in the number of cards (24 or 100 cards: 7 queries for a customer on a setup, was about 20 per card).
+A transient failure of a shared lookup inside one request (the memo keeps the rejected promise) fails every card of that request, where the per-card path failed only its own card.
 
 ---
 
