@@ -64,7 +64,7 @@ The provider summary carries `stockDefects`: four counts of defects in the ERP s
 (`negativeReserved`, `availableExceedsQuantity`, `negativeAvailable`, `negativeQuantity`; kinds overlap)
 from the search mirror, and the same counts from Integration Service with `status`
 (`ok`/`not-configured`/`error`/`skipped`) and `fetchedAt` (saved by the provider's last full pass, not
-live). They are kept inside the stored summary and shown on the sources panel as two columns; a
+live). They are kept inside the stored summary and shown on the sources panel as a table (search mirror, Integration Service, difference; the Integration Service status and `fetchedAt` sit in the section header); a
 difference between them is drift, flagged only while the Integration Service status is `ok` (per the
 provider contract it raises `defect-count-mismatch` after two consecutive full passes). The defects themselves are no longer reported as issues (`input-anomaly` is not created
 any more); `input-anomaly` rows stored earlier stay in the table until the provider resolves them on its first full pass. Missing or malformed `stockDefects` is skipped without failing the poll.
@@ -80,7 +80,7 @@ default; the page id carries a version suffix so older saved column settings do 
 
 The provider summary carries `countComparison[]`: per stream the search-mirror count against the
 Integration Service count (`basis`, `status`, `mirrorCount`, `expectedCount`, `differing`). It is kept
-inside the stored summary and shown on the sources panel as a table; a difference is flagged only while
+inside the stored summary and shown on the sources panel as a table with the stream lag next to each row; a difference is flagged only while
 the row `status` is `ok`. The provider raises a `count-mismatch` issue (entityType is the stream) after
 two consecutive full passes; it is stored and listed like any other report. Malformed rows are skipped
 without failing the poll, and an older provider that omits the field shows no table.
