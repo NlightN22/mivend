@@ -53,16 +53,16 @@ export interface PriceRow {
 // Floor price row is added only if the caller has ReadConfidentialPriceTypes (confidential).
 export async function fetchPricesForVariant(variantId: string): Promise<PriceRow[]> {
     const codes = await fetchPriceTypeCodes();
-    const rows: PriceRow[] = [];
-    for (const code of codes) {
-        const map = await fetchPriceEntriesForVariants([variantId], code);
-        rows.push({
-            priceTypeCode: code,
-            label: `${code[0]}${code.slice(1).toLowerCase()}`,
-            price: map?.get(variantId) ?? null,
-        });
-    }
-    const floorMap = await fetchFloorPricesForVariants([variantId]);
+    // The query takes one price type per request; per-code failures already resolve to null, so run them together.
+    const [maps, floorMap] = await Promise.all([
+        Promise.all(codes.map(code => fetchPriceEntriesForVariants([variantId], code))),
+        fetchFloorPricesForVariants([variantId]),
+    ]);
+    const rows: PriceRow[] = codes.map((code, i) => ({
+        priceTypeCode: code,
+        label: `${code[0]}${code.slice(1).toLowerCase()}`,
+        price: maps[i]?.get(variantId) ?? null,
+    }));
     if (floorMap) {
         rows.push({
             priceTypeCode: 'floor',
