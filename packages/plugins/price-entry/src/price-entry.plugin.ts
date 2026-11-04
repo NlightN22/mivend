@@ -42,6 +42,7 @@ import { DiscountConditionKindBootstrapService } from './discount-condition-kind
 import { DiscountSetupRulesService } from './discount-setup-rules.service';
 import { DiscountSetupReclassifyService } from './discount-setup-reclassify.service';
 import { DiscountSetupService } from './discount-setup.service';
+import { OrderLineContextService } from './order-line-context.service';
 import { CatalogPricingService } from './catalog-pricing.service';
 import { PriceResolutionService } from './price-resolution.service';
 import { TierProgressService } from './tier-progress.service';
@@ -104,6 +105,7 @@ import { GrantedDiscountService } from './granted-discount.service';
         DiscountSetupReclassifyService,
         PriceResolutionService,
         CatalogPricingService,
+        OrderLineContextService,
         TierProgressService,
         OrderDiscountService,
         OrderDiscountPromotionBootstrapService,

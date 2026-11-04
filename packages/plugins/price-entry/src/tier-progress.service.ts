@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RequestContext } from '@vendure/core';
 
 import { DiscountRuleService } from './discount-rule.service';
-import { LookupMemo } from './lookup-memo';
+import { LookupMemo, memoized } from './lookup-memo';
 import { buildAggregates, facetKey } from './order-aggregates';
 import { PriceEntryService } from './price-entry.service';
 import { OrderPricingContext, PriceResolutionService } from './price-resolution.service';
@@ -31,7 +31,9 @@ export class TierProgressService {
         orderContext: OrderPricingContext,
         memo?: LookupMemo,
     ): Promise<TierProgressVM | null> {
-        const priceTypeCode = await this.priceEntryService.getPriceTypeCodeForUser(ctx);
+        const priceTypeCode = await memoized(memo, 'ptu', () =>
+            this.priceEntryService.getPriceTypeCodeForUser(ctx),
+        );
         if (!priceTypeCode) return null;
 
         const basePrice = await this.priceResolutionService.forVariant(
@@ -52,6 +54,7 @@ export class TierProgressService {
             priceTypeCode,
             facetValues,
             new Date(),
+            memo,
         );
         if (tiers.length === 0) return null;
 

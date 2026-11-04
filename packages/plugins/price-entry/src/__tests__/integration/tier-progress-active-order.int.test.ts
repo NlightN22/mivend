@@ -98,10 +98,10 @@ function setup() {
         },
     };
     const resolver = new ProductVariantPriceResolver(
-        {} as never,
         activeOrderService as never,
         mapEntity(createTestConnection(dataSource)),
         { resolveTierProgress } as never,
+        {} as never,
     );
     return { resolver, resolveTierProgress };
 }

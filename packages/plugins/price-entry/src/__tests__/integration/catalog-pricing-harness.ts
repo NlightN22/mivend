@@ -12,6 +12,13 @@ import { DiscountGrant } from '../../discount-grant.entity';
 import { ProductVariant, type RequestContext, type TransactionalConnection } from '@vendure/core';
 import { createTestConnection } from 'shared';
 
+import { CatalogPricingService } from '../../catalog-pricing.service';
+import { DiscountRuleService } from '../../discount-rule.service';
+import { DiscountSetupRulesService } from '../../discount-setup-rules.service';
+import { PromoDiscountRuleService } from '../../promo-discount-rule.service';
+import { PriceEntryService } from '../../price-entry.service';
+import { PriceResolutionService } from '../../price-resolution.service';
+
 import {
     TestFacet,
     TestFacetValue,
@@ -68,6 +75,12 @@ export class CatalogRule {
     @Column({ type: 'timestamp', nullable: true }) validTo!: Date | null;
     @Column({ type: 'float', nullable: true }) minWeightKg!: number | null;
     @Column({ type: 'bigint', nullable: true }) minAmount!: number | null;
+    @Column({ type: 'varchar', nullable: true }) erpId!: string | null;
+    @Column({ type: 'varchar', nullable: true }) triggerProductErpId!: string | null;
+    @Column({ type: 'float', nullable: true }) triggerQuantity!: number | null;
+    @Column({ type: 'varchar', nullable: true }) giftProductErpId!: string | null;
+    @Column({ type: 'float', nullable: true }) giftQuantity!: number | null;
+    @Column({ type: 'varchar', nullable: true }) operationKind!: string | null;
 }
 
 export const CATALOG_ENTITIES = [
@@ -235,4 +248,47 @@ export async function seedCatalog(ds: DataSource, count: number): Promise<string
             .save({ setupId: setup.id, productErpId: `erp-${i}`, percent: null });
     }
     return ids;
+}
+
+export interface CatalogServices {
+    connection: TransactionalConnection;
+    priceEntry: PriceEntryService;
+    resolution: PriceResolutionService;
+    catalog: CatalogPricingService;
+}
+
+// Customer lookups are stubbed (and counted in stubCalls): user N is customer N, branch default price type 2.
+export function buildCatalogServices(
+    ds: DataSource,
+    connection: TransactionalConnection = catalogConnection(ds),
+): CatalogServices {
+    const priceEntry = new PriceEntryService(connection);
+    const setupRules = new DiscountSetupRulesService(connection);
+    const resolution = new PriceResolutionService(
+        priceEntry,
+        new DiscountRuleService(connection, {} as never),
+        connection,
+        {
+            findOneByUserId: async (_c: unknown, userId: number) => {
+                stubCalls.count++;
+                return { id: userId };
+            },
+        } as never,
+        {
+            getForCustomer: async (_c: unknown, id: string) => {
+                stubCalls.count++;
+                return { id, erpId: `cp-${id}`, branchId: null };
+            },
+        } as never,
+        {
+            resolveEffective: async () => {
+                stubCalls.count++;
+                return { defaultPriceTypeId: '2' };
+            },
+        } as never,
+        new PromoDiscountRuleService(connection),
+        setupRules,
+    );
+    const catalog = new CatalogPricingService(resolution, priceEntry, setupRules, connection);
+    return { connection, priceEntry, resolution, catalog };
 }

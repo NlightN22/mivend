@@ -6,7 +6,6 @@ import {
     Ctx,
     ForbiddenError,
     Order,
-    OrderLine,
     RequestContext,
     Transaction,
     TransactionalConnection,
@@ -16,7 +15,9 @@ import { PriceTypeAccessService } from '@mivend/plugin-access-control';
 import { PriceEntryInput, PriceEntryService, PriceEntryView } from './price-entry.service';
 import { DiscountRule } from './discount-rule.entity';
 import { DiscountRuleInput, DiscountRuleService, DiscountTierVM } from './discount-rule.service';
+import { OrderLineContextService } from './order-line-context.service';
 import { LookupMemo } from './lookup-memo';
+import { CatalogPricingService } from './catalog-pricing.service';
 import { PriceResolutionService } from './price-resolution.service';
 import { TierProgressService, TierProgressVM } from './tier-progress.service';
 
@@ -26,10 +27,10 @@ export class ProductVariantPriceResolver {
     private activeOrders = new WeakMap<RequestContext, Promise<Order>>();
 
     constructor(
-        private priceResolutionService: PriceResolutionService,
         private activeOrderService: ActiveOrderService,
         private connection: TransactionalConnection,
         private tierProgressService: TierProgressService,
+        private catalogPricing: CatalogPricingService,
     ) {}
 
     private memoFor(ctx: RequestContext): LookupMemo {
@@ -84,11 +85,7 @@ export class ProductVariantPriceResolver {
         @Ctx() ctx: RequestContext,
         @Parent() variant: { id: string },
     ): Promise<number | null> {
-        return (
-            await this.priceResolutionService.resolve(ctx, variant.id, undefined, {
-                memo: this.memoFor(ctx),
-            })
-        ).customerPrice;
+        return (await this.catalogPricing.get(ctx, variant.id)).price.customerPrice;
     }
 
     @ResolveField()
@@ -96,11 +93,7 @@ export class ProductVariantPriceResolver {
         @Ctx() ctx: RequestContext,
         @Parent() variant: { id: string },
     ): Promise<number | null> {
-        return (
-            await this.priceResolutionService.resolve(ctx, variant.id, undefined, {
-                memo: this.memoFor(ctx),
-            })
-        ).compareAtPrice;
+        return (await this.catalogPricing.get(ctx, variant.id)).price.compareAtPrice;
     }
 
     @ResolveField()
@@ -108,29 +101,17 @@ export class ProductVariantPriceResolver {
         @Ctx() ctx: RequestContext,
         @Parent() variant: { id: string },
     ): Promise<DiscountTierVM[]> {
-        return this.priceResolutionService.resolveTiers(ctx, variant.id);
+        return (await this.catalogPricing.get(ctx, variant.id)).tiers;
     }
 }
 
 @Resolver('OrderLine')
 export class OrderLineDiscountResolver {
-    // Catalog data only (facets, weights, prices, identity): safe to share by every line of one request.
-    private memos = new WeakMap<RequestContext, LookupMemo>();
-
     constructor(
         private priceResolutionService: PriceResolutionService,
-        private connection: TransactionalConnection,
+        private lineContext: OrderLineContextService,
         private tierProgressService: TierProgressService,
     ) {}
-
-    private memoFor(ctx: RequestContext): LookupMemo {
-        let memo = this.memos.get(ctx);
-        if (!memo) {
-            memo = new LookupMemo();
-            this.memos.set(ctx, memo);
-        }
-        return memo;
-    }
 
     // Display only: unitPrice already has the discount applied; do not re-derive it here.
     @ResolveField()
@@ -138,16 +119,13 @@ export class OrderLineDiscountResolver {
         @Ctx() ctx: RequestContext,
         @Parent() orderLine: { id: string },
     ): Promise<number | null> {
-        const line = await this.connection.getRepository(ctx, OrderLine).findOne({
-            where: { id: orderLine.id },
-            relations: ['order', 'order.lines'],
-        });
+        const line = await this.lineContext.get(ctx, orderLine.id);
         if (!line) return null;
         const { compareAtPrice } = await this.priceResolutionService.resolve(
             ctx,
-            String(line.productVariantId),
+            line.productVariantId,
             { order: line.order, quantity: line.quantity },
-            { memo: this.memoFor(ctx) },
+            { memo: this.lineContext.memoFor(ctx) },
         );
         return compareAtPrice;
     }
@@ -159,16 +137,13 @@ export class OrderLineDiscountResolver {
         @Ctx() ctx: RequestContext,
         @Parent() orderLine: { id: string },
     ): Promise<TierProgressVM | null> {
-        const line = await this.connection.getRepository(ctx, OrderLine).findOne({
-            where: { id: orderLine.id },
-            relations: ['order', 'order.lines'],
-        });
+        const line = await this.lineContext.get(ctx, orderLine.id);
         if (!line) return null;
         return this.tierProgressService.resolveTierProgress(
             ctx,
-            String(line.productVariantId),
+            line.productVariantId,
             { order: line.order, quantity: line.quantity },
-            this.memoFor(ctx),
+            this.lineContext.memoFor(ctx),
         );
     }
 }

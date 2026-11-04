@@ -9,14 +9,11 @@ import {
 } from 'shared';
 
 import { CatalogPricing, CatalogPricingService } from '../../catalog-pricing.service';
-import { DiscountRuleService } from '../../discount-rule.service';
-import { DiscountSetupRulesService } from '../../discount-setup-rules.service';
-import { PriceEntryService } from '../../price-entry.service';
 import { PriceResolutionService } from '../../price-resolution.service';
 import {
     CATALOG_ENTITIES,
     PLAIN_CTX,
-    catalogConnection,
+    buildCatalogServices,
     createCatalogTables,
     seedCatalog,
     stubCalls,
@@ -30,35 +27,7 @@ let resolution: PriceResolutionService;
 let catalog: CatalogPricingService;
 
 function build(): void {
-    const connection = catalogConnection(ds);
-    const priceEntry = new PriceEntryService(connection);
-    const setupRules = new DiscountSetupRulesService(connection);
-    resolution = new PriceResolutionService(
-        priceEntry,
-        new DiscountRuleService(connection, {} as never),
-        connection,
-        {
-            findOneByUserId: async (_c: unknown, userId: number) => {
-                stubCalls.count++;
-                return { id: userId };
-            },
-        } as never,
-        {
-            getForCustomer: async (_c: unknown, id: string) => {
-                stubCalls.count++;
-                return { id, erpId: `cp-${id}`, branchId: null };
-            },
-        } as never,
-        {
-            resolveEffective: async () => {
-                stubCalls.count++;
-                return { defaultPriceTypeId: '2' };
-            },
-        } as never,
-        {} as never,
-        setupRules,
-    );
-    catalog = new CatalogPricingService(resolution, priceEntry, setupRules, connection);
+    ({ resolution, catalog } = buildCatalogServices(ds));
 }
 
 beforeAll(async () => {
@@ -132,6 +101,14 @@ describe('catalog pricing batch (real Postgres)', () => {
         stubCalls.count = 0;
         const queriesSmall = await measure(PLAIN_CTX(2), small);
         expect(stubCalls.count).toBeLessThanOrEqual(4);
+        stubCalls.count = 0;
+        const twelve = small.slice(0, 12);
+        counter.count = 0;
+        await Promise.all(twelve.map(id => perCard(PLAIN_CTX(2), id)));
+        const perCardQueries = counter.count;
+        console.log(
+            `home 12 variants: per-card ${perCardQueries} queries, batched ${await measure(PLAIN_CTX(2), twelve)}`,
+        );
         stubCalls.count = 0;
         const large = await seedCatalog(ds, 100);
         const queriesLarge = await measure(PLAIN_CTX(2), large);
