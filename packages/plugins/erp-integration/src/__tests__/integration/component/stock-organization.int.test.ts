@@ -143,7 +143,7 @@ describe('StockOrganization (real Postgres)', () => {
         expect([1, 2, 3, 4, 5, 6]).toContain(result[0].quantity);
     });
 
-    it('read service sums per organization, keeps negatives, skips inactive and other products', async () => {
+    it('read service sums per product and organization, keeps negatives, skips inactive and other products', async () => {
         await apply('e-1', { productId: 'p-1', organizationId: 'o-1', quantity: 10 });
         await apply('e-2', { productId: 'p-2', organizationId: 'o-1', quantity: -4 });
         await apply('e-3', {
@@ -154,9 +154,11 @@ describe('StockOrganization (real Postgres)', () => {
         });
         await apply('e-4', { productId: 'p-3', organizationId: 'o-1', quantity: 99 });
 
-        const stock = await reader.getOrganizationStock(ctx, ['p-1', 'p-2']);
+        const stock = await reader.getOrganizationStockByProduct(ctx, ['p-1', 'p-2']);
 
-        expect([...stock.entries()]).toEqual([['o-1', 6]]);
-        expect((await reader.getOrganizationStock(ctx, [])).size).toBe(0);
+        expect([...stock.get('p-1')!.entries()]).toEqual([['o-1', 10]]);
+        expect([...stock.get('p-2')!.entries()]).toEqual([['o-1', -4]]);
+        expect(stock.has('p-3')).toBe(false);
+        expect((await reader.getOrganizationStockByProduct(ctx, [])).size).toBe(0);
     });
 });

@@ -29,12 +29,12 @@ export class OrderCheckDataService {
             ctx,
             subject.buyerCounterpartyId,
         );
+        const stockAll = await this.stockRead.getOrganizationStockByProduct(ctx, [
+            ...storageOrganizations.keys(),
+        ]);
         const stockByProduct = new Map<string, Map<string, number>>();
         for (const productErpId of storageOrganizations.keys()) {
-            stockByProduct.set(
-                productErpId,
-                await this.stockRead.getOrganizationStock(ctx, [productErpId]),
-            );
+            stockByProduct.set(productErpId, stockAll.get(productErpId) ?? new Map());
         }
         const organizationIds = new Set<string>(contractOrganizations);
         for (const line of subject.lines) {
