@@ -14,6 +14,7 @@ import { Document } from './entities/document.entity';
 import { OrganizationRequisites } from './entities/organization-requisites.entity';
 import { hasRequiredRequisites } from './requisites-completeness';
 import { DocumentsService, DocumentListOptions } from './documents.service';
+import { ProformaDocumentLoaders } from './proforma-document-loaders.service';
 import { PdfGeneratorService } from './pdf/pdf-generator.service';
 
 @Resolver()
@@ -130,14 +131,14 @@ export class OrganizationFieldResolver {
 
 @Resolver('ProformaInvoice')
 export class ProformaInvoiceDocumentFieldResolver {
-    constructor(private documentsService: DocumentsService) {}
+    constructor(private loaders: ProformaDocumentLoaders) {}
 
     @ResolveField()
     seller(
         @Ctx() ctx: RequestContext,
         @Parent() proformaInvoice: { organizationId: number },
     ): Promise<OrganizationRequisites> {
-        return this.documentsService.getRequisitesById(ctx, proformaInvoice.organizationId);
+        return this.loaders.seller(ctx, proformaInvoice.organizationId);
     }
 
     @ResolveField()
@@ -145,6 +146,6 @@ export class ProformaInvoiceDocumentFieldResolver {
         @Ctx() ctx: RequestContext,
         @Parent() proformaInvoice: { id: number | string },
     ): Promise<Document | null> {
-        return this.documentsService.findForProformaInvoice(ctx, proformaInvoice.id);
+        return this.loaders.document(ctx, proformaInvoice.id);
     }
 }

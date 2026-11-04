@@ -1,4 +1,5 @@
 import path from 'path';
+import { ProformaDocumentLoaders } from './proforma-document-loaders.service';
 import { ID } from '@vendure/common/lib/shared-types';
 import { OnApplicationBootstrap } from '@nestjs/common';
 import {
@@ -85,6 +86,7 @@ const PROFORMA_INVOICE_TRIGGER_STATE = 'PaymentAuthorized';
             }),
         },
         ContractProformaCleanupService,
+        ProformaDocumentLoaders,
         DocumentPdfAccessService,
         DocumentPdfStorageService,
         DocumentsService,
