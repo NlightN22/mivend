@@ -1023,6 +1023,11 @@ export type Counterparty = Node & {
     tradingPoints: Array<TradingPoint>;
 };
 
+export type CounterpartyDiscountCount = {
+    count: Scalars['Int']['output'];
+    counterpartyId: Scalars['ID']['output'];
+};
+
 export type CounterpartyFilterParameter = {
     _and?: InputMaybe<Array<CounterpartyFilterParameter>>;
     _or?: InputMaybe<Array<CounterpartyFilterParameter>>;
@@ -1113,11 +1118,6 @@ export type CounterpartyPortalAccessChangeResult = {
     customerId: Maybe<Scalars['ID']['output']>;
     error: Maybe<Scalars['String']['output']>;
     success: Scalars['Boolean']['output'];
-};
-
-export type CounterpartyDiscountCount = {
-    count: Scalars['Int']['output'];
-    counterpartyId: Scalars['ID']['output'];
 };
 
 export type CounterpartySortParameter = {
@@ -7694,6 +7694,10 @@ export type Query = {
     zones: ZoneList;
 };
 
+export type QueryActiveDiscountCountsArgs = {
+    counterpartyIds: Array<Scalars['ID']['input']>;
+};
+
 export type QueryAdministratorArgs = {
     id: Scalars['ID']['input'];
 };
@@ -7826,10 +7830,6 @@ export type QueryDashboardMetricSummaryArgs = {
 
 export type QueryDeactivatedAdministratorsArgs = {
     options?: InputMaybe<AdministratorListOptions>;
-};
-
-export type QueryActiveDiscountCountsArgs = {
-    counterpartyIds: Array<Scalars['ID']['input']>;
 };
 
 export type QueryDiscountGrantsForCounterpartyArgs = {
@@ -8621,7 +8621,7 @@ export type ScheduledTask = {
     scheduleDescription: Scalars['String']['output'];
 };
 
-/** Products matched by an article, part number or manufacturer code; the internal backend never fills them. */
+/** Products matched by an article, part number or manufacturer code, disjoint and excluded from the full-text items. */
 export type SearchCodeMatches = {
     items: Array<SearchResult>;
     total: Scalars['Int']['output'];
