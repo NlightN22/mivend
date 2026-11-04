@@ -3847,7 +3847,6 @@ export type RoleList = PaginatedList & {
 };
 
 export type SearchCapabilities = {
-    codeGroups: Scalars['Boolean']['output'];
     priceRange: Scalars['Boolean']['output'];
     sortKeys: Array<Scalars['String']['output']>;
 };

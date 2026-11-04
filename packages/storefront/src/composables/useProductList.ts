@@ -2,7 +2,6 @@ import { orderFacetGroups } from './facetOrder';
 import { describeLoadError, type LoadErrorText } from '../api/describeLoadError';
 import { ref, watch, type Ref } from 'vue';
 import { shopApi } from '../api/client';
-import { assetUrl } from './assetUrl';
 import { buildSort, type SortOption } from './search-sort';
 import { useSearchCapabilities } from './useSearchCapabilities';
 import {
@@ -19,50 +18,12 @@ import {
     buildFacetValueFilters,
     buildFacetGroups,
     type FacetGroup,
-    type FacetValue,
-    type EsFacetValueResult,
 } from '../../../shared/src/catalogFacets';
-
-export interface DiscountTierVM {
-    percent: number;
-    minWeightKg: number | null;
-    minAmount: number | null;
-}
-
-interface ProductVariant {
-    id: string;
-    sku: string;
-    // Undefined, not 0: a 0 would make an unresolved price look like a genuinely free product.
-    // A real 'no price' state only occurs before bootstrap or on misconfiguration.
-    price: number | undefined;
-    customerPrice: number | null;
-    compareAtPrice: number | null;
-    discountTiers: DiscountTierVM[];
-    currencyCode: string;
-    stockLevel: string;
-    unitName: string | null;
-    unitRatioToBase: number | null;
-    multiplicity?: number | null;
-    packagingLevels?: { name: string; ratioToBase: number }[];
-}
 
 export type { FacetGroup, FacetValue } from 'shared';
 
-export interface ProductItem {
-    id: string;
-    name: string;
-    slug: string;
-    variants: ProductVariant[];
-    facetValues: FacetValue[];
-    manufacturer?: { name?: string | null } | null;
-    images: string[];
-    codeMatch?: CodeMatchKind;
-}
-
-// search-service never returns more than this many hits per code group.
-const CODE_GROUP_LIMIT = 100;
-
-export type CodeMatchKind = 'sku' | 'partNumber' | 'manufacturerCode';
+export type { DiscountTierVM, ProductItem, CodeMatchKind } from './catalogProductMapper';
+import { mapCodeGroups, mapItems, type ProductItem } from './catalogProductMapper';
 
 export type ViewMode = 'list' | 'grid';
 
@@ -79,75 +40,6 @@ interface UseProductListOptions {
     initialSort?: string;
     filters?: Ref<FilterState>;
     collectionSlug?: Ref<string | undefined>;
-}
-
-type EsSearchItem = CatalogProductsQuery['search']['items'][number];
-
-interface CodeGroup {
-    total: number;
-    items: EsSearchItem[];
-}
-
-// Code groups come first in priority order, then full-text; the server keeps them disjoint.
-function mapCodeGroups(
-    search: CatalogProductsQuery['search'],
-    facetValues: EsFacetValueResult[],
-): { items: ProductItem[]; total: number; truncated: boolean } {
-    const groups: Array<[CodeMatchKind, CodeGroup | null | undefined]> = [
-        ['sku', search.skuMatches],
-        ['partNumber', search.partNumberMatches],
-        ['manufacturerCode', search.manufacturerCodeMatches],
-    ];
-    const items: ProductItem[] = [];
-    let total = 0;
-    let truncated = false;
-    for (const [codeMatch, group] of groups) {
-        if (!group) continue;
-        total += group.total;
-        truncated ||= group.total > CODE_GROUP_LIMIT;
-        items.push(...mapItems(group.items, facetValues).map(item => ({ ...item, codeMatch })));
-    }
-    return { items, total, truncated };
-}
-
-function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): ProductItem[] {
-    const facetMap = new Map<string, FacetValue>();
-    for (const { facetValue } of facetValues) {
-        facetMap.set(facetValue.id, facetValue);
-    }
-    return items.map(item => ({
-        id: item.productId,
-        name: item.productName,
-        slug: item.slug,
-        manufacturer: item.manufacturer,
-        images: item.galleryPreviews.map(preview => assetUrl(preview, 'small')),
-        variants: [
-            {
-                id: item.productVariantId,
-                sku: item.sku,
-                // Never use priceWithTax: a placeholder under SEARCH_BACKEND=external, and customer-agnostic.
-                // Only customerPrice is valid: the resolver always supplies it, with the branch fallback.
-                price: item.customerPrice ?? undefined,
-                customerPrice: item.customerPrice ?? null,
-                compareAtPrice: item.compareAtPrice ?? null,
-                discountTiers: item.discountTiers.map(tier => ({
-                    percent: tier.percent,
-                    minWeightKg: tier.minWeightKg ?? null,
-                    minAmount: tier.minAmount ?? null,
-                })),
-                currencyCode: item.currencyCode,
-                stockLevel: item.stockLevel,
-                unitName: item.unitName ?? null,
-                unitRatioToBase: item.unitRatioToBase ?? null,
-                multiplicity: item.multiplicity ?? null,
-                packagingLevels: item.packagingLevels,
-            },
-        ],
-        facetValues: item.facetValueIds.flatMap(id => {
-            const fv = facetMap.get(id);
-            return fv ? [fv] : [];
-        }),
-    }));
 }
 
 export function useProductList(options: UseProductListOptions = {}): {
