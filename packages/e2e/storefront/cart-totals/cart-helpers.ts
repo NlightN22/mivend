@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { clearCart, gql } from '../orders/helpers';
+import { hitsOf } from '../../fixtures/search-hits';
 
 export { clearCart };
 
@@ -43,10 +44,15 @@ export async function variantIdBySku(page: Page, sku: string): Promise<string> {
     if (cached) return cached;
     const data = await gql(
         page,
-        `query($term: String!) { search(input: { term: $term, take: 5 }) { items { sku productVariantId } } }`,
+        `query($term: String!) { search(input: { term: $term, take: 5 }) { skuMatches { items { sku productVariantId } } items { sku productVariantId } } }`,
         { term: sku },
     );
-    const items = (data.search as { items: { sku: string; productVariantId: string }[] }).items;
+    const items = hitsOf(
+        data.search as {
+            items: { sku: string; productVariantId: string }[];
+            skuMatches?: { items: { sku: string; productVariantId: string }[] } | null;
+        },
+    );
     const item = items.find(i => i.sku === sku);
     if (!item) throw new Error(`Variant not found for sku=${sku}`);
     variantIds.set(sku, item.productVariantId);

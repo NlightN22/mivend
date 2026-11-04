@@ -4,6 +4,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 import { gql, clearCart, addItem, orderStep } from '../orders/helpers';
 import { placeViaApi } from '../checkout-credit/helpers';
 import { finishOrdersPlacedInEachTest } from '../order-cleanup';
+import { hitsOf } from '../../fixtures/search-hits';
 
 finishOrdersPlacedInEachTest();
 
@@ -31,12 +32,11 @@ async function openHome(page: Page, names: string[]): Promise<void> {
 async function variantBySku(page: Page, sku: string): Promise<{ variantId: string; slug: string }> {
     const result = await gql(
         page,
-        `query($t: String!) { search(input: { term: $t, take: 5 }) { items { sku productVariantId slug } } }`,
+        `query($t: String!) { search(input: { term: $t, take: 5 }) { skuMatches { items { sku productVariantId slug } } items { sku productVariantId slug } } }`,
         { t: sku },
     );
-    const items = (
-        result.search as { items: { sku: string; productVariantId: string; slug: string }[] }
-    ).items;
+    type Hit = { sku: string; productVariantId: string; slug: string };
+    const items = hitsOf(result.search as { items: Hit[]; skuMatches?: { items: Hit[] } | null });
     const hit = items.find(item => item.sku === sku);
     if (!hit) throw new Error(`${sku} not found in search`);
     return { variantId: hit.productVariantId, slug: hit.slug };

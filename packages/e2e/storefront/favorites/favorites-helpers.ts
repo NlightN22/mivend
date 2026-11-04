@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { type Page } from '@playwright/test';
 import { gql } from '../orders/helpers';
+import { hitsOf } from '../../fixtures/search-hits';
 
 export const PACK_SKU = 'E2E-FLT-001';
 export const PIECE_SKU = 'E2E-OIL-001';
@@ -71,10 +72,17 @@ export function setupPackSales(packagesOnly: boolean): PackSetup {
 export async function favoriteTarget(page: Page, sku: string): Promise<FavoriteTarget> {
     const d = (await gql(
         page,
-        `query($t: String) { search(input: { take: 20, term: $t, groupByProduct: false }) { items { productVariantId productId sku } } }`,
+        `query($t: String) { search(input: { take: 20, term: $t, groupByProduct: false }) { skuMatches { items { productVariantId productId sku } } items { productVariantId productId sku } } }`,
         { t: sku },
-    )) as { search: { items: { productVariantId: string; productId: string; sku: string }[] } };
-    const hit = d.search.items.find(i => i.sku === sku);
+    )) as {
+        search: {
+            items: { productVariantId: string; productId: string; sku: string }[];
+            skuMatches?: {
+                items: { productVariantId: string; productId: string; sku: string }[];
+            } | null;
+        };
+    };
+    const hit = hitsOf(d.search).find(i => i.sku === sku);
     if (!hit) throw new Error(`Variant ${sku} not found in search`);
     return { variantId: hit.productVariantId, productId: hit.productId };
 }

@@ -2,6 +2,7 @@ import { adminTokenFor } from '../../helpers/api-tokens';
 import { expect, type Page } from '@playwright/test';
 import { adminGql, postBatch, waitForRun } from '../../helpers/api';
 import { gql, clearCart } from '../orders/helpers';
+import { hitsOf } from '../../fixtures/search-hits';
 
 export const PASSWORD = 'Password123!';
 export const CREDIT_BUYER = 'credit-limited@buyer.example';
@@ -56,10 +57,15 @@ export async function loginBuyer(page: Page, email: string): Promise<void> {
 export async function addSku(page: Page, sku: string, quantity: number): Promise<void> {
     const found = (await gql(
         page,
-        `query($t: String) { search(input: { take: 20, term: $t, inStock: true, groupByProduct: false }) { items { productVariantId sku } } }`,
+        `query($t: String) { search(input: { take: 20, term: $t, inStock: true, groupByProduct: false }) { skuMatches { items { productVariantId sku } } items { productVariantId sku } } }`,
         { t: sku },
-    )) as { search: { items: { productVariantId: string; sku: string }[] } };
-    const item = found.search.items.find(i => i.sku === sku);
+    )) as {
+        search: {
+            items: { productVariantId: string; sku: string }[];
+            skuMatches?: { items: { productVariantId: string; sku: string }[] } | null;
+        };
+    };
+    const item = hitsOf(found.search).find(i => i.sku === sku);
     if (!item) throw new Error(`No in-stock variant ${sku}`);
     // An InsufficientStockError still adds what is available, which is all the tests need.
     await page.request.post(`${process.env.STOREFRONT_URL ?? 'http://localhost:5173'}/shop-api`, {

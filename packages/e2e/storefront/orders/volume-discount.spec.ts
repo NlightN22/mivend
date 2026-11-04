@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { clearCart, gql } from './helpers';
+import { hitsOf } from '../../fixtures/search-hits';
 
 interface OrderLine {
     quantity: number;
@@ -12,10 +13,15 @@ async function findVariantId(page: import('@playwright/test').Page, sku: string)
     // Search by exact SKU instead; it is bounded by search capability, not by catalog size.
     const result = await gql(
         page,
-        `query($term: String!) { search(input: { term: $term, take: 5 }) { items { sku productVariantId } } }`,
+        `query($term: String!) { search(input: { term: $term, take: 5 }) { skuMatches { items { sku productVariantId } } items { sku productVariantId } } }`,
         { term: sku },
     );
-    const items = (result.search as { items: { sku: string; productVariantId: string }[] }).items;
+    const items = hitsOf(
+        result.search as {
+            items: { sku: string; productVariantId: string }[];
+            skuMatches?: { items: { sku: string; productVariantId: string }[] } | null;
+        },
+    );
     const item = items.find(i => i.sku === sku);
     if (!item) throw new Error(`Variant not found for sku=${sku}`);
     return item.productVariantId;
