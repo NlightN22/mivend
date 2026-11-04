@@ -76,3 +76,32 @@ describe('InternalCodeMatchesService', () => {
         expect(get).toHaveBeenCalledWith(ElasticsearchService, { strict: false });
     });
 });
+
+describe('InternalCodeMatchesService facets (#307)', () => {
+    function facetSetup() {
+        const facetValues = vi.fn().mockResolvedValue([
+            { facetValue: { facet: { isPrivate: false } }, count: 2 },
+            { facetValue: { facet: { isPrivate: true } }, count: 1 },
+        ]);
+        const collections = vi.fn().mockResolvedValue([
+            { collection: { isPrivate: false }, count: 2 },
+            { collection: { isPrivate: true }, count: 1 },
+        ]);
+        const get = vi.fn().mockReturnValue({ facetValues, collections });
+        return {
+            service: new InternalCodeMatchesService({ get } as never),
+            facetValues,
+            collections,
+        };
+    }
+
+    it('runs facets and collections with the union flag and drops private ones', async () => {
+        const { service, facetValues, collections } = facetSetup();
+        const input = { term: '483855', inStock: true };
+        expect(await service.facetValues(ctx, input)).toHaveLength(1);
+        expect(await service.collections(ctx, input)).toHaveLength(1);
+        expect(facetValues.mock.calls[0][1]).toMatchObject({ ...input, facetUnion: true });
+        expect(collections.mock.calls[0][1]).toMatchObject({ ...input, facetUnion: true });
+        expect(facetValues.mock.calls[0][2]).toBe(true);
+    });
+});

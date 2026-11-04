@@ -1,5 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Ctx, RequestContext } from '@vendure/core';
+import { Collection, Ctx, FacetValue, RequestContext } from '@vendure/core';
 import type { SearchInput } from '@vendure/common/lib/generated-types';
 
 import { CodeMatches, InternalCodeMatchesService } from './internal-code-matches.service';
@@ -37,6 +37,22 @@ export class ShopCodeMatchesResolver {
 @Resolver('SearchResponse')
 export class AdminCodeMatchesResolver {
     constructor(private matches: InternalCodeMatchesService) {}
+
+    @ResolveField()
+    facetValues(
+        @Ctx() ctx: RequestContext,
+        @Parent() p: SearchParent,
+    ): Promise<Array<{ facetValue: FacetValue; count: number }>> {
+        return this.matches.facetValues(ctx, p.input);
+    }
+
+    @ResolveField()
+    collections(
+        @Ctx() ctx: RequestContext,
+        @Parent() p: SearchParent,
+    ): Promise<Array<{ collection: Collection; count: number }>> {
+        return this.matches.collections(ctx, p.input);
+    }
 
     @ResolveField()
     skuMatches(@Ctx() ctx: RequestContext, @Parent() p: SearchParent): Promise<CodeMatches | null> {

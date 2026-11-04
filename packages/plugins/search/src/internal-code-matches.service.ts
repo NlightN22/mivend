@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { RequestContext } from '@vendure/core';
+import { Collection, FacetValue, RequestContext } from '@vendure/core';
 import type { SearchInput } from '@vendure/common/lib/generated-types';
 import { ElasticsearchService } from '@vendure/elasticsearch-plugin/lib/src/elasticsearch.service';
 
 import { CODE_GROUP_LIMIT } from './query-mapper';
 import { CodeKind, extractCodes, skuMatchReasons } from './code-query';
-import type { CodeScope } from './code-match-query';
+import { withFacetUnion, type CodeScope } from './code-match-query';
 
 export interface CodeMatches {
     items: Array<Record<string, unknown>>;
@@ -16,6 +16,27 @@ export interface CodeMatches {
 @Injectable()
 export class InternalCodeMatchesService {
     constructor(private moduleRef: ModuleRef) {}
+
+    // Vendure's own admin field filters with enabledOnly=true; keep that, only widen the term.
+    async facetValues(
+        ctx: RequestContext,
+        input: SearchInput,
+    ): Promise<Array<{ facetValue: FacetValue; count: number }>> {
+        const values = await this.es().facetValues(ctx, withFacetUnion(input), true);
+        return values.filter(r => !r.facetValue.facet.isPrivate);
+    }
+
+    async collections(
+        ctx: RequestContext,
+        input: SearchInput,
+    ): Promise<Array<{ collection: Collection; count: number }>> {
+        const results = await this.es().collections(ctx, withFacetUnion(input), true);
+        return results.filter(r => !r.collection.isPrivate);
+    }
+
+    private es(): ElasticsearchService {
+        return this.moduleRef.get(ElasticsearchService, { strict: false });
+    }
 
     async find(
         ctx: RequestContext,

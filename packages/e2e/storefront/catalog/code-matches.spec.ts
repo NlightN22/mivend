@@ -16,6 +16,13 @@ test.describe('Catalog code matches (#307)', () => {
         await expect(page.getByText('Engine Oil 5W-30').first()).toBeVisible();
     });
 
+    test('the facet panel stays populated while only code matches exist', async ({ page }) => {
+        await search(page, 'E2E-OIL-001');
+        await expect(page.locator(BADGE).first()).toHaveText('Article', { timeout: 10000 });
+        await expect(page.locator('.catalog-facets__block').first()).toBeVisible();
+        await expect(page.locator('.mv-facet-group__row').first()).toBeVisible();
+    });
+
     test('a separator-insensitive article query still matches', async ({ page }) => {
         await search(page, 'e2e oil 001');
         await expect(page.locator(BADGE).first()).toHaveText('Article', { timeout: 10000 });

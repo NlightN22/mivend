@@ -12,6 +12,12 @@ export interface CodeScope {
 export interface CodeQueryInput {
     term?: string | null;
     codeScope?: CodeScope;
+    facetUnion?: boolean;
+}
+
+// Facets and collections span code groups plus full-text hits, like the external backend.
+export function withFacetUnion<T extends object>(input: T): T & { facetUnion: true } {
+    return { ...input, facetUnion: true };
 }
 
 interface EsBoolQuery {
@@ -59,19 +65,29 @@ export function mapSearchQuery(
     if (input.codeScope) return mapGroupQuery(query, input.codeScope);
     if (!input.term) return query;
     const codes = extractCodes(input.term);
+    const fullText = {
+        multi_match: {
+            query: input.term,
+            type: 'most_fields',
+            fuzziness: 'AUTO',
+            fields: FULL_TEXT_FIELDS,
+        },
+    };
+    if (codes.length > 0 && input.facetUnion) {
+        query.bool.must = [
+            {
+                bool: {
+                    minimum_should_match: 1,
+                    should: [fullText, ...CODE_KINDS.map(kind => codePredicate(kind, codes))],
+                },
+            },
+        ];
+        return query;
+    }
     if (codes.length > 0) {
         query.bool.must_not = CODE_KINDS.map(kind => codePredicate(kind, codes));
     }
-    query.bool.must = [
-        {
-            multi_match: {
-                query: input.term,
-                type: 'most_fields',
-                fuzziness: 'AUTO',
-                fields: FULL_TEXT_FIELDS,
-            },
-        },
-    ];
+    query.bool.must = [fullText];
     return query;
 }
 

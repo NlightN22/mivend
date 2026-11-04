@@ -67,6 +67,43 @@ describe('mapSearchQuery', () => {
     });
 });
 
+describe('mapSearchQuery facet union (#307)', () => {
+    const term = '48.3855 filter';
+
+    it('widens a code term to full-text OR every code group, with no exclusion', () => {
+        const q = mapSearchQuery(base(), { term, facetUnion: true }, true);
+        expect(q.bool.must_not).toBeUndefined();
+        expect(q.bool.must).toHaveLength(1);
+        const should = (q.bool.must?.[0] as { bool: { should: unknown[] } }).bool.should;
+        expect(should).toHaveLength(4);
+        expect(JSON.stringify(should[0])).toContain('multi_match');
+        expect(new Set(fieldsIn(should))).toEqual(new Set(Object.values(CODE_FIELDS)));
+    });
+
+    it('keeps the base filters and the sellable restriction', () => {
+        const q = mapSearchQuery(base(), { term, facetUnion: true }, true);
+        expect(q.bool.filter).toEqual([
+            { term: { channelId: 1 } },
+            { term: { [HAS_ORGANIZATION_FIELD]: true } },
+        ]);
+        expect(mapSearchQuery(base(), { term, facetUnion: true }, false).bool.filter).toHaveLength(
+            1,
+        );
+    });
+
+    it('leaves text-only queries identical with or without the flag', () => {
+        const plain = mapSearchQuery(base(), { term: 'oil filter' }, true);
+        expect(mapSearchQuery(base(), { term: 'oil filter', facetUnion: true }, true)).toEqual(
+            plain,
+        );
+    });
+
+    it('does not change the items query without the flag', () => {
+        const q = mapSearchQuery(base(), { term }, false);
+        expect(q.bool.must_not).toHaveLength(3);
+    });
+});
+
 describe('mapSearchSort', () => {
     it('orders groups by relevance then id and leaves other sorts alone', () => {
         expect(mapSearchSort([], { codeScope: { kind: 'sku', codes: ['1'] } })).toEqual([

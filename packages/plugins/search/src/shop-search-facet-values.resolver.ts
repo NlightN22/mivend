@@ -3,6 +3,7 @@ import { ResolveField, Parent, Resolver } from '@nestjs/graphql';
 import { Collection, Ctx, FacetValue, RequestContext } from '@vendure/core';
 import type { SearchInput } from '@vendure/common/lib/generated-types';
 import { HiddenCategoryFacetValuesService } from '@mivend/plugin-access-control';
+import { withFacetUnion } from './code-match-query';
 import { ElasticsearchService } from '@vendure/elasticsearch-plugin/lib/src/elasticsearch.service';
 
 interface FacetValueResult {
@@ -37,9 +38,9 @@ export class ShopSearchFacetValuesResolver {
     ): Promise<FacetValueResult[]> {
         const results =
             parent.facetValues ??
-            (await this.elasticsearch().facetValues(ctx, parent.input, true)).filter(
-                r => !r.facetValue.facet.isPrivate,
-            );
+            (
+                await this.elasticsearch().facetValues(ctx, withFacetUnion(parent.input), true)
+            ).filter(r => !r.facetValue.facet.isPrivate);
         const hiddenIds = await this.hidden.findHiddenIds(
             ctx,
             results.map(r => r.facetValue.id),
@@ -53,7 +54,8 @@ export class ShopSearchFacetValuesResolver {
         @Parent() parent: SearchParent,
     ): Promise<CollectionResult[]> {
         const results =
-            parent.collections ?? (await this.elasticsearch().collections(ctx, parent.input, true));
+            parent.collections ??
+            (await this.elasticsearch().collections(ctx, withFacetUnion(parent.input), true));
         const privateIds = await this.hidden.findPrivateCollectionIds(
             ctx,
             results.map(r => r.collection.id),
