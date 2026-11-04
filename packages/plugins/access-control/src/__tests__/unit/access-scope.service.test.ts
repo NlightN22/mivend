@@ -71,7 +71,8 @@ describe('AccessScopeService', () => {
         expect(await service.resolveOrderScope(ctx)).toEqual({ kind: 'all' });
         administratorService.findOneByUserId.mockResolvedValue(mockAdmin('admin-o'));
         roleScopeConfigService.maxScopeFor.mockResolvedValue('own');
-        expect((await service.resolveOrderScope(ctx)).kind).toBe('own');
+        const otherRequest = { activeUserId: 'user-1' } as unknown as RequestContext;
+        expect((await service.resolveOrderScope(otherRequest)).kind).toBe('own');
     });
 
     it('resolves "all" scope with no ownership identifiers', async () => {

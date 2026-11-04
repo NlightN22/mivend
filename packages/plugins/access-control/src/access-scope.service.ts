@@ -17,6 +17,8 @@ interface CounterpartyScopeFields {
 
 @Injectable()
 export class AccessScopeService {
+    private scopeCache = new WeakMap<RequestContext, Map<string, Promise<AccessScope>>>();
+
     constructor(
         private administratorService: AdministratorService,
         private roleScopeConfigService: RoleScopeConfigService,
@@ -153,7 +155,24 @@ export class AccessScopeService {
         return managerId != null && (scope.grantedManagerIds ?? []).includes(managerId);
     }
 
-    private async resolveScope(ctx: RequestContext, resource: string): Promise<AccessScope> {
+    // Per-request memo: list resolvers call this per row. A rejected lookup is dropped so a retry re-reads.
+    private resolveScope(ctx: RequestContext, resource: string): Promise<AccessScope> {
+        let byKey = this.scopeCache.get(ctx);
+        if (!byKey) {
+            byKey = new Map();
+            this.scopeCache.set(ctx, byKey);
+        }
+        const key = `${String(ctx.activeUserId)}:${resource}`;
+        let scope = byKey.get(key);
+        if (!scope) {
+            scope = this.loadScope(ctx, resource);
+            byKey.set(key, scope);
+            scope.catch(() => byKey.delete(key));
+        }
+        return scope;
+    }
+
+    private async loadScope(ctx: RequestContext, resource: string): Promise<AccessScope> {
         const admin = await this.getAdministrator(ctx);
         if (!admin) {
             return { kind: 'own' };
