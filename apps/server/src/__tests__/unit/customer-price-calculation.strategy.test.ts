@@ -28,11 +28,11 @@ describe('CustomerPriceCalculationStrategy repricing', () => {
             await strategy.calculateUnitPrice(ctx, variant(i), {}, order, 1);
 
         expect(preload).toHaveBeenCalledTimes(1);
-        const memos = (
-            resolve.mock.calls as unknown as Array<[unknown, unknown, unknown, { memo: unknown }]>
-        ).map(c => c[3].memo);
-        expect(new Set(memos).size).toBe(1);
-        expect(resolve.mock.calls[0][3]).toMatchObject({ orderRules: false });
+        const calls = resolve.mock.calls as unknown as Array<
+            [unknown, unknown, unknown, { memo: unknown }]
+        >;
+        expect(new Set(calls.map(c => c[3].memo)).size).toBe(1);
+        expect(calls[0][3]).toMatchObject({ orderRules: false });
     });
 
     it('never shares a memo between two requests', async () => {
