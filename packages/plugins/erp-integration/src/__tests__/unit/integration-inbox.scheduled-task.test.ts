@@ -12,6 +12,7 @@ import {
     INBOX_BULK_WALL_CLOCK_BUDGET_MS,
     INBOX_CRITICAL_BATCH_SIZE_DEFAULT,
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
+    INBOX_RETENTION_STATEMENT_TIMEOUT_MS,
     INBOX_RETENTION_WALL_CLOCK_BUDGET_MS,
     INBOX_USER_BATCH_SIZE_DEFAULT,
     INBOX_USER_STREAMS,
@@ -268,7 +269,7 @@ describe('createIntegrationInboxRetentionTask', () => {
             params: {},
         });
         expect(purgeSupersededProcessedRows).toHaveBeenCalledTimes(2);
-        expect(result).toEqual({ tombstoned: 3 });
+        expect(result).toEqual({ tombstoned: 3, slices: 2, outcome: 'swept' });
     });
 
     // mirrors createIntegrationInboxBulkTask's own wall-clock-budget test — a resync-sized
@@ -289,6 +290,38 @@ describe('createIntegrationInboxRetentionTask', () => {
         });
 
         expect(purgeSupersededProcessedRows).toHaveBeenCalledTimes(1);
-        expect(result).toEqual({ tombstoned: 5 });
+        expect(result).toEqual({ tombstoned: 5, slices: 1, outcome: 'swept' });
+    });
+
+    it('caps each slice statement timeout to the remaining budget and reports a timeout outcome', async () => {
+        let now = 0;
+        vi.spyOn(Date, 'now').mockImplementation(() => now);
+        const purgeSupersededProcessedRows = vi.fn().mockImplementation(async () => {
+            now += INBOX_RETENTION_WALL_CLOCK_BUDGET_MS - 5_000;
+            return { tombstoned: 0, finished: false, outcome: 'swept' };
+        });
+        const task = createIntegrationInboxRetentionTask(makeOptions('central'));
+
+        await task.options.execute({
+            injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+
+        expect(purgeSupersededProcessedRows).toHaveBeenNthCalledWith(
+            1,
+            INBOX_RETENTION_STATEMENT_TIMEOUT_MS,
+        );
+        expect(purgeSupersededProcessedRows).toHaveBeenNthCalledWith(2, 5_000);
+
+        purgeSupersededProcessedRows
+            .mockReset()
+            .mockResolvedValue({ tombstoned: 0, finished: true, outcome: 'timeout' });
+        const result = await task.options.execute({
+            injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
+            scheduledContext: {} as never,
+            params: {},
+        });
+        expect(result).toEqual({ tombstoned: 0, slices: 1, outcome: 'timeout' });
     });
 });

@@ -3,6 +3,7 @@ import { Logger, RequestContextService, TransactionalConnection } from '@vendure
 import { ctxQuery } from 'shared';
 
 import {
+    RETENTION_MIN_SLICE_SIZE,
     RETENTION_SLICE_SIZE,
     RETENTION_SLICE_SQL,
     planRetentionSlice,
@@ -31,6 +32,8 @@ function isStatementTimeout(error: unknown): boolean {
 export class IntegrationInboxRetentionService {
     // Per-process resume point; losing it on restart only restarts the pass (the work is idempotent).
     private cursor: RetentionCursor | null = null;
+    // Halved on a statement timeout so a slow slice shrinks until it fits, doubled back after a success.
+    private sliceSize = RETENTION_SLICE_SIZE;
 
     constructor(
         private readonly connection: TransactionalConnection,
@@ -47,8 +50,9 @@ export class IntegrationInboxRetentionService {
             return await this.sweepSlice(statementTimeoutMs);
         } catch (error) {
             if (!isStatementTimeout(error)) throw error;
+            this.sliceSize = Math.max(RETENTION_MIN_SLICE_SIZE, Math.floor(this.sliceSize / 2));
             Logger.warn(
-                `Integration inbox retention slice hit the ${statementTimeoutMs} ms statement timeout; retrying next tick`,
+                `Integration inbox retention slice hit the ${statementTimeoutMs} ms statement timeout; retrying with ${this.sliceSize} rows`,
                 loggerCtx,
             );
             return { tombstoned: 0, finished: true, outcome: 'timeout' };
@@ -77,9 +81,9 @@ export class IntegrationInboxRetentionService {
                 this.connection,
                 txCtx,
                 RETENTION_SLICE_SQL,
-                [this.cursor?.stream ?? null, this.cursor?.entityId ?? null, RETENTION_SLICE_SIZE],
+                [this.cursor?.stream ?? null, this.cursor?.entityId ?? null, this.sliceSize],
             );
-            const plan = planRetentionSlice(rows);
+            const plan = planRetentionSlice(rows, this.sliceSize);
             if (plan.tombstoneIds.length > 0) {
                 await ctxQuery<unknown>(
                     this.connection,
@@ -89,6 +93,7 @@ export class IntegrationInboxRetentionService {
                 );
             }
             this.cursor = plan.nextCursor;
+            this.sliceSize = Math.min(RETENTION_SLICE_SIZE, this.sliceSize * 2);
             return {
                 tombstoned: plan.tombstoneIds.length,
                 finished: plan.finished,

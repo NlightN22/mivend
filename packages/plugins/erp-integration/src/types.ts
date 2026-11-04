@@ -325,9 +325,11 @@ export const OUTBOX_RETRY_WALL_CLOCK_BUDGET_MS = INBOX_RETRY_WALL_CLOCK_BUDGET_M
 export const INBOX_RETENTION_INTERVAL_DEFAULT = 10 * 60_000;
 // Bounds the retention task's own reclaim loop, same shape as INBOX_BULK_WALL_CLOCK_BUDGET_MS —
 // a resync-sized backlog just means more ticks, never a run that risks the scheduler's timeout.
-export const INBOX_RETENTION_WALL_CLOCK_BUDGET_MS = 60_000;
+export const INBOX_RETENTION_WALL_CLOCK_BUDGET_MS = 50_000;
 // The DB cancels a retention slice itself; the Node task timeout cannot cancel a running query.
-export const INBOX_RETENTION_STATEMENT_TIMEOUT_MS = 50_000;
+export const INBOX_RETENTION_STATEMENT_TIMEOUT_MS = 30_000;
+// A slice is not started with less budget left than this: it would only be cancelled mid-way.
+export const RETENTION_MIN_SLICE_BUDGET_MS = 2_000;
 // Larger than the critical lane's batch for throughput, but kept small so the SELECT ... FOR UPDATE
 // SKIP LOCKED transaction stays reasonably sized; tune by measurement if still insufficient.
 export const INBOX_BULK_BATCH_SIZE_DEFAULT = 500;

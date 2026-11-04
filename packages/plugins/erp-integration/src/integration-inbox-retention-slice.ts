@@ -1,6 +1,7 @@
 import { isVersionNewer } from './version-compare';
 
 export const RETENTION_SLICE_SIZE = 2000;
+export const RETENTION_MIN_SLICE_SIZE = 100;
 
 export interface RetentionCursor {
     stream: string;

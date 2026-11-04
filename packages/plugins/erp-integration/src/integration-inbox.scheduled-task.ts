@@ -3,7 +3,10 @@ import { cronEveryMs } from 'shared';
 
 import { IntegrationInboxProcessorService } from './integration-inbox-processor.service';
 import { IntegrationInboxReplayStateService } from './integration-inbox-replay-state.service';
-import { IntegrationInboxRetentionService } from './integration-inbox-retention.service';
+import {
+    IntegrationInboxRetentionService,
+    type RetentionSliceResult,
+} from './integration-inbox-retention.service';
 import {
     INBOX_BULK_BATCH_SIZE_DEFAULT,
     INBOX_BULK_STREAMS,
@@ -13,7 +16,9 @@ import {
     INBOX_ORDER_REGISTRATION_RESULT_STREAMS,
     INBOX_POLL_INTERVAL_DEFAULT,
     INBOX_RETENTION_INTERVAL_DEFAULT,
+    INBOX_RETENTION_STATEMENT_TIMEOUT_MS,
     INBOX_RETENTION_WALL_CLOCK_BUDGET_MS,
+    RETENTION_MIN_SLICE_BUDGET_MS,
     INBOX_USER_BATCH_SIZE_DEFAULT,
     INBOX_USER_STREAMS,
     loggerCtx,
@@ -152,12 +157,20 @@ export function createIntegrationInboxRetentionTask(
 
             const inbox = injector.get(IntegrationInboxRetentionService);
             let totalTombstoned = 0;
+            let slices = 0;
+            let outcome: RetentionSliceResult['outcome'] = 'swept';
             const startedAt = Date.now();
             for (;;) {
-                const slice = await inbox.purgeSupersededProcessedRows();
+                // The slice's own timeout is capped to the remaining budget so the run ends inside the task timeout.
+                const remainingMs = INBOX_RETENTION_WALL_CLOCK_BUDGET_MS - (Date.now() - startedAt);
+                if (remainingMs < RETENTION_MIN_SLICE_BUDGET_MS) break;
+                const slice = await inbox.purgeSupersededProcessedRows(
+                    Math.min(INBOX_RETENTION_STATEMENT_TIMEOUT_MS, remainingMs),
+                );
+                slices += 1;
                 totalTombstoned += slice.tombstoned;
+                outcome = slice.outcome;
                 if (slice.finished) break;
-                if (Date.now() - startedAt >= INBOX_RETENTION_WALL_CLOCK_BUDGET_MS) break;
             }
             if (totalTombstoned > 0) {
                 Logger.verbose(
@@ -165,7 +178,7 @@ export function createIntegrationInboxRetentionTask(
                     loggerCtx,
                 );
             }
-            return { tombstoned: totalTombstoned };
+            return { tombstoned: totalTombstoned, slices, outcome };
         },
     });
 }
