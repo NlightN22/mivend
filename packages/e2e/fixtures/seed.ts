@@ -86,6 +86,7 @@ export const seedRecords = [
             name: 'Oil Filter',
             slug: 'oil-filter-e2e',
             fullName: 'Oil Filter Standard Type',
+            manufacturerPartNumber: 'MPN-48.3855',
             price: 320,
             stockOnHand: 50,
         },

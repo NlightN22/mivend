@@ -21,6 +21,9 @@ export class ProductRecordDto {
     @ApiPropertyOptional()
     fullName?: string;
 
+    @ApiPropertyOptional()
+    manufacturerPartNumber?: string;
+
     @ApiProperty({
         description:
             'Decimal amount (e.g. rubles) — converted to the smallest currency unit internally.',

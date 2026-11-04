@@ -45,6 +45,7 @@ export interface ProductRecord {
     slug: string;
     description?: string;
     fullName?: string;
+    manufacturerPartNumber?: string;
     price: number;
     stockOnHand: number;
     categoryCode?: string;

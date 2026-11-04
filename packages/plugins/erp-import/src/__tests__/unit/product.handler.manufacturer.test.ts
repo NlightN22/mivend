@@ -70,6 +70,29 @@ describe('ProductHandler manufacturer link', () => {
     });
 });
 
+describe('ProductHandler manufacturer part number', () => {
+    it('stores it on create and on update, and leaves it alone when absent', async () => {
+        const created = build(undefined);
+        await created.handler.upsert(ctx, { ...record, manufacturerPartNumber: 'MPN-1' });
+        expect(created.productService.create).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                customFields: expect.objectContaining({ manufacturerPartNumber: 'MPN-1' }),
+            }),
+        );
+        const updated = build({ id: '1' });
+        await updated.handler.upsert(ctx, { ...record, manufacturerPartNumber: 'MPN-2' });
+        await updated.handler.upsert(ctx, record);
+        const fields = (
+            updated.productService.update.mock.calls as unknown as Array<
+                [unknown, { customFields: Record<string, unknown> }]
+            >
+        ).map(call => call[1].customFields);
+        expect(fields[0].manufacturerPartNumber).toBe('MPN-2');
+        expect(fields[1]).not.toHaveProperty('manufacturerPartNumber');
+    });
+});
+
 describe('ManufacturerHandler', () => {
     it('delegates to the shared manufacturer upsert keyed by code', async () => {
         const manufacturerService = { upsert: vi.fn(async () => ({})) };

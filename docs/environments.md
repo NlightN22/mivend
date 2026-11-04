@@ -157,7 +157,8 @@ against local Elasticsearch, `SEARCH_BACKEND=internal` or unset); `staging-integ
 required `SEARCH_SERVICE_URL` and `SEARCH_SERVICE_API_KEY`, sent as `X-Api-Key`). `SearchBackend` (`SEARCH_BACKEND_DEFAULT` in
 `packages/plugins/search/src/types.ts`) is decided once at bootstrap in `search.plugin.ts` — a
 per-contour deployment choice, never an admin-configurable runtime toggle, and the two backends
-are never registered together.
+are never registered together. The internal index gained code-match fields (#307/#308, `docs/frontend.md` "Code matches"):
+run the admin `reindex` once on every existing `internal` contour (`make dev-reset` does it implicitly), otherwise code groups stay empty.
 
 **Data-drift report sources (issue #303)**: disabled by default; polled only on the central hub. See `docs/consistency-reports.md`.
 

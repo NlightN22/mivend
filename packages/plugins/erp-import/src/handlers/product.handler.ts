@@ -73,6 +73,9 @@ export class ProductHandler {
                     onSale,
                     ...manufacturerFields,
                     ...(record.fullName !== undefined && { fullName: record.fullName }),
+                    ...(record.manufacturerPartNumber !== undefined && {
+                        manufacturerPartNumber: record.manufacturerPartNumber,
+                    }),
                 },
                 translations: [
                     {
@@ -118,6 +121,7 @@ export class ProductHandler {
                     externalId: record.externalId,
                     onSale,
                     fullName: record.fullName ?? '',
+                    manufacturerPartNumber: record.manufacturerPartNumber ?? null,
                     ...manufacturerFields,
                 },
             });

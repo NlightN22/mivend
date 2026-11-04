@@ -14,7 +14,7 @@ export function capabilitiesFor(backend: SearchBackend): SearchCapabilities {
     const base = ['relevance', 'name_asc', 'name_desc'];
     return backend === 'external'
         ? { sortKeys: [...base, 'price_asc', 'price_desc'], priceRange: true, codeGroups: true }
-        : { sortKeys: base, priceRange: false, codeGroups: false };
+        : { sortKeys: base, priceRange: false, codeGroups: true };
 }
 
 @Resolver()

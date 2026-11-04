@@ -11,11 +11,11 @@ describe('capabilitiesFor', () => {
         });
     });
 
-    it('internal backend has no price sort and no price range', () => {
+    it('internal backend has no price sort and no price range but serves code groups', () => {
         expect(capabilitiesFor('internal')).toEqual({
             sortKeys: ['relevance', 'name_asc', 'name_desc'],
             priceRange: false,
-            codeGroups: false,
+            codeGroups: true,
         });
     });
 });

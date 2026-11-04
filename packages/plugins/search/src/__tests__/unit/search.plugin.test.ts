@@ -23,7 +23,7 @@ describe('search.plugin searchPlugins backend switch', () => {
         const { searchPlugins } = await import('../../search.plugin');
         const { ExternalSearchPlugin } = await import('../../external-search.plugin');
 
-        expect(searchPlugins).toHaveLength(2);
+        expect(searchPlugins).toHaveLength(3);
         expect(searchPlugins).not.toContain(ExternalSearchPlugin);
         // The internal branch's first element is ElasticsearchPlugin.init(...)'s return
         // value — a plugin config object, not the ExternalSearchPlugin class.
@@ -35,7 +35,7 @@ describe('search.plugin searchPlugins backend switch', () => {
         const { searchPlugins } = await import('../../search.plugin');
         const { ExternalSearchPlugin } = await import('../../external-search.plugin');
 
-        expect(searchPlugins).toHaveLength(2);
+        expect(searchPlugins).toHaveLength(3);
         expect(searchPlugins).not.toContain(ExternalSearchPlugin);
     }, 20000);
 

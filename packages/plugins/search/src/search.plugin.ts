@@ -12,21 +12,20 @@ import { PriceEntryPlugin } from '@mivend/plugin-price-entry';
 import { ReservationPlugin } from '@mivend/plugin-reservation';
 import gql from 'graphql-tag';
 
+import { codeIndexMappingProperties, codeProductMappings } from './code-index-fields';
+import { mapSearchQuery, mapSearchSort } from './code-match-query';
+import { InternalCodeMatchesPlugin } from './internal-code-matches.plugin';
 import { ExternalSearchPlugin } from './external-search.plugin';
 import { SearchCapabilitiesResolver } from './search-capabilities';
 import { SearchResultAvailabilityResolver } from './search-result-availability.resolver';
 import { SearchResultResolver } from './search.resolver';
-import {
-    HAS_ORGANIZATION_FIELD,
-    hasOrganizationMapping,
-    restrictToSellable,
-} from './sellable-filter';
+import { HAS_ORGANIZATION_FIELD, hasOrganizationMapping } from './sellable-filter';
 import { ShopSearchFacetValuesResolver } from './shop-search-facet-values.resolver';
 import { SearchService } from './search.service';
 import { getSearchBackend } from './types';
 
 const codeMatchesSchema = gql`
-    "Products matched by an article, part number or manufacturer code; the internal backend never fills them."
+    "Products matched by an article, part number or manufacturer code, disjoint and excluded from the full-text items."
     type SearchCodeMatches {
         items: [SearchResult!]!
         total: Int!
@@ -62,7 +61,7 @@ const shopApiSchema = gql`
     ${codeMatchesSchema}
 
     extend type SearchResult {
-        "Why the hit matched, from the external search backend; null on the internal one."
+        "Why the hit matched; the internal backend fills it for article matches only."
         matchReasons: [String!]
         customerPrice: Int
         compareAtPrice: Int
@@ -110,6 +109,7 @@ function buildElasticsearchPlugin(): Type<unknown> {
             'product-oemCodes': {
                 type: 'keyword',
             },
+            ...codeIndexMappingProperties,
             [HAS_ORGANIZATION_FIELD]: {
                 type: 'boolean',
             },
@@ -118,6 +118,7 @@ function buildElasticsearchPlugin(): Type<unknown> {
             hasOrganization: hasOrganizationMapping,
         },
         customProductMappings: {
+            ...codeProductMappings,
             fullName: {
                 graphQlType: 'String',
                 valueFn: product =>
@@ -133,28 +134,9 @@ function buildElasticsearchPlugin(): Type<unknown> {
             },
         },
         searchConfig: {
-            mapQuery: (query, input, _searchConfig, _channelId, enabledOnly) => {
-                restrictToSellable(query, enabledOnly);
-                if (!input.term) return query;
-                query.bool.must = [
-                    {
-                        multi_match: {
-                            query: input.term,
-                            type: 'most_fields',
-                            fuzziness: 'AUTO',
-                            fields: [
-                                'sku^5',
-                                'product-oemCodes^4',
-                                'productName^3',
-                                'product-fullName^2',
-                                'productVariantName^2',
-                                'description^1',
-                            ],
-                        },
-                    },
-                ];
-                return query;
-            },
+            mapQuery: (query, input, _searchConfig, _channelId, enabledOnly) =>
+                mapSearchQuery(query, input, enabledOnly),
+            mapSort: (sort, input) => mapSearchSort(sort, input),
         },
     });
 }
@@ -206,7 +188,7 @@ function buildSearchPlugins(): Array<Type<unknown>> {
         return [SearchPlugin, ExternalSearchPlugin];
     }
     // Before ElasticsearchPlugin: the first registered SearchResponse resolver wins, ours must override its own.
-    return [SearchPlugin, buildElasticsearchPlugin()];
+    return [SearchPlugin, InternalCodeMatchesPlugin, buildElasticsearchPlugin()];
 }
 
 export const searchPlugins = buildSearchPlugins();
