@@ -1,6 +1,6 @@
 # Project Context
 
-Updated: 2026-10-31
+Updated: 2026-11-04
 
 ## #297 prices keyed by product ERP id (DONE, prod 0.0.12; full text: `.backup/PROJECT_CONTEXT-2026-10-31-297-298-full.md`)
 - `product_variant_price_entry` is keyed by `productExternalId` + `priceTypeCode` (a price may arrive before its product); `PriceEntryService` keeps the variant-based API. Docs: `docs/pricing.md`, `make bench-pricing`.
@@ -11,7 +11,13 @@ Updated: 2026-10-31
 - `EMAIL_TRANSPORT=file|smtp`; with smtp in production `MANAGER_PUBLIC_URL`, `STOREFRONT_PUBLIC_URL`, `SITE_NAME` are mandatory (never taken from Host/Origin). Every mail ships in ru and en (guard test, skill `email-templates`); language: request `languageCode` -> `SITE_DEFAULT_LANGUAGE` -> en. Site identity env `SITE_NAME`, `SITE_FAVICON_URL`, `EMAIL_FOOTER_TEXT`. Docs: `docs/deployment.md`.
 - Gaps (no issue): frontends do not send `languageCode`; storefront "forgot password" link is `#`; address-change mail has no confirmation page.
 
-## Production state (2026-10-31): v0.0.16, release recipe in `docs/deployment.md`
+## Reconciliation, widgets, settlement statement (2026-11-02..03, DONE, prod v0.0.26)
+- Prod is on v0.0.26 (main `149259b4`). Manual `runErpReconciliation` on 2026-11-03: 29 types checked, 0 issues; #304/#305/#306 closed. bank/bankAccount use the skipped-record bridge (`countRowsAndSkipped`), productPhoto is compared by IS `activeCount` (ready AND position, 15566; IS publishes no rejected photos). Only `storageLocation` stays in `NO_ACTIVE_CONCEPT_TYPES`. Docs: `docs/sync.md`.
+- Home widgets hide private-category and organization-less products (`StockScopedIdsService`); stuck collection sweep fixed (`COLLECTION_FILTERS_SWEEP_STALE_MS`); prod favicon replaced from `infrastructure/brand/`.
+- Settlement statement: shows documents whose type has `customerVisible` AND category not in `INTERNAL_CATEGORIES` (supplier, payroll; `settlement-visibility.ts`); balances/aging deliberately unfiltered (match ERP closingBalance). IS owns the type reference (flags reclassified 2026-11-03: 15 visible, supplier/payroll hidden). Known gap owned by sp/1c.audit: balance 971.45 vs one document -8000 for one counterparty (documents not exported from 1C); IS is adding a window fingerprint (event-contracts 0.84.0, 1C not sending yet), nothing required from mivend until then.
+- Prod checks I run myself read-only (SELECT via ssh, SQL through stdin files); releases need the owner's phrase in `mivend.issue.303`. Contacts (`contacts[]`) have no consumer by design.
+
+## Production state (as of 2026-10-31, v0.0.16; now v0.0.26), release recipe in `docs/deployment.md`
 - Releases this week: 0.0.11 #296 filters, 0.0.12 #297 prices by product ERP id, 0.0.13 #298/#299/#300 + quality ignored, 0.0.14 purpose ignored, 0.0.15 currency ignored + per-line percent, 0.0.16 #302 schema drift realign. Prod `.env` carries the Integration Service URL/key and `INTEGRATION_RESYNC_SOURCE_SYSTEM=onec-main` (needed for replay); local copies live in gitignored `apps/server/.env.production-integration-service` and `.env.production-customer` (real prod customer for price checks).
 - Setup documents: all 587 prod discount documents are active (replayed through the IS replay API in batches of 200). Only the fields mivend evaluates matter: recipients, price type, validity, header percent, product list/filter, condition (unconditional/quantity/amount) and a per-line percent (`discount_setup_product.percent`). Quality, purpose and currency are ignored by design; fixed price, price groups, bonus lines, set components, weekday/time windows, reference condition, markup type, pseudo documents, line characteristic/price type/negative line percent store the document inactive. A row stored under a reason that was later dropped needs `sourceVersion='0', contentHash=''` plus a replay (`docs/deployment.md`).
 - Verified on prod under a real customer: catalog and cart show the 10% (group filter) and 5% (manufacturer filter) discounts exactly. Cart of that customer must be restored after a check.
@@ -35,35 +41,9 @@ Updated: 2026-10-31
 - #266 and #269 done (custom-field write policy, `make verify-branch-scope`); rules in `docs/access-control.md`. Remaining: #264/#265, #267, #261, #268.
 - Dev gotcha: `ts-node-dev` children can spin at 95% CPU and never bind :3000; use `infrastructure/scripts/dev-kill.sh`, rerun `make dev`. `make e2e-*` uses its own throwaway stack (#274), never `make dev`'s.
 
-## #65 / #123 / #262 branch scope + visibility grants (2026-10-20, DONE: audited, pushed `e531f973`, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-20-65-123-262-216-full.md`)
-- #65: staff-edited `department_branch_mapping` (subtree inheritance, unmapped = deny) + `Counterparty.branchOverrideId`; `BranchAssignmentService` is the only writer of `Administrator.customFields.branchId` (readonly in GraphQL) and `Counterparty.branchId`: advisory lock `branch-assignment`, rows `SKIP LOCKED` + retry event for skipped rows, 15-min backstop, central only. Counterparty rule: override > manager's department > own `departmentId` > null. `createAdministratorFromErpUser` refuses an unmapped department. Manager Settings "Departments to branch"; staging mapping set through the product API (two branch roots).
-- #123: `VisibilityGrant` (administrator -> manager, optional period, reason, audited, never deleted) widens scope additively (own + granted managers + primary branch; `all` unchanged); permission `ManageVisibilityGrants` (no escalation beyond the granter's team; `ManageAccessControl` unrestricted); unsorted list (only all-scope administrators sort). Manager Settings "Visibility grants", "Unsorted". Grants are central-only: #267.
-- Security found by #262 and fixed in the backend: shop/admin `tradingPoint(id)` (a guest could read any point), staff comment edit, `orderReservations`/`availableStock`, `entityVersions*` (`EntityVersionScopeRegistry`), `reservationExtensionLimit`; see `docs/access-control.md` "Scope guards". `trading-point.service.ts` is 607 lines: split it after #260.
-- #262 suite: `make e2e-integration` groups 08-12 (API, portal pages, write denials + branch move, storefront, grants), role-keyed actors. Fixture ERP ids and logins live ONLY in the staging env file (`STAGING_FIXTURE_*_ERPIDS`, `STAGING_TEST_{HEAD_A,OPERATOR_A,HEAD_B,MANAGER_B,DIRECTOR}_*`, `STAGING_TEST_CUSTOMER_B_*`): never commit names, cities or ERP ids (privacy rule, issues too). Permanent fixtures; temporary changes are restored in `finally`.
-- Nuances: portal activation uses the counterparty's own ERP email+phone (contact-person events are not consumed); only `ReassignCounterpartyManager` roles test scope refusals; administrator `branchId` only via the mapping (never SQL); parallel agents editing plugins restart the staging contour (`fetch failed`), run contour e2e when quiet; shared git index: stage and commit in ONE command with explicit paths; leaked Puppeteer chrome fills RAM (record the parent before killing).
+## Closed 2026-10-12..20 (full text: `.backup/PROJECT_CONTEXT-2026-11-04-1020-sections-full.md`)
+- #65/#123/#262 branch scope + visibility grants, #216 storefront i18n, #235/#256/#255/#257/#258, #247/#248/#231, #242-#244/#239/#240/#230/#233/#237, #234 Kafka topic rename: done, audited, pushed, closed. Follow-ups: #260/#261/#266/#268 (see Next).
 
-## #216 storefront i18n (2026-10-19..20, DONE, closed; follow-ups #260, #261; full text in the archive above)
-- en default / ru lazy catalogues `packages/storefront/src/i18n/`, one formatter `i18n/format.ts`, ui-kit takes texts via props (never imports vue-i18n), no-raw-text lint, shop errors shown by `errorCode`.
-
-## #235 / #256 / #255 / #257 / #258 (2026-10-19, DONE, audited, pushed, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-29-235-256-255-257-258-full.md`)
-- #235 `PriceType.visibility` (customer/confidential) gated by `PriceTypeAccessService` (deny by default); #256 below-floor check (warn only); #255 manual `make e2e-integration` suite on staging (restarts the shared contour: announce a run); #257 every DB call through the RequestContext (lint `db/no-raw-connection`, `ctxQuery`); #258 `SerializedActiveOrderStrategy` (no guest carts).
-
-
-## #247 / #248 / #231 (2026-10-17..18, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-21-247-248-231-full.md`)
-- #247: repeat payment delivery resolves a `pending` attempt with the same (channel, externalReference) by status transition; late capture after failed/canceled -> reconciliation issue. #248: core Admin API order operations go through one central order-scope guard (+ #251/#252, dev kill scripts). #231: session leak fix and order cancel/e2e cleanup.
-
-## #242-#244 / #239-#240 / #230 / #233 / #237 / 2026-10-18 session (closed; full text: `.backup/PROJECT_CONTEXT-2026-10-19-242-239-230-1018-full.md`)
-- Manager actions go through the checks framework (`packages/plugins/checks`, `docs/checks-and-policies.md`); a check never refuses checkout; findings hold the automatic reserve/send. Z-index only via `--mv-z-*` tokens. Manager line edits before confirmation: `docs/order-contracts.md`.
-- Storefront has ONE add-to-cart path (`useCartActions.addToCart`, `productQuantity.ts`) and one product card (`ConnectedProductCard.vue`). Point-confirmation expiry cancels on the reservation deadline. event-contracts 0.82.0; other new streams are ignored pending #254. `pnpm-lock.yaml` is in `.prettierignore`.
-- Open: #27 partial allocation over-allocates a proforma; overpayment after a line edit is not credited; owner confirmations pending (credit.limit default `hold`, `ManageCheckPolicies` global); AccountFrequentProducts is a mock.
-
-## #236 / #197 / #175 / #232 / #112 / #238 (2026-10-14..15, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-17-236-197-175-full.md`)
-- #236: local reserve released only for what the ERP holds (per-variant split, `erpHandedOverAt` of current generation; rules in `docs/order-flow.md`). #197: capture must not take an early proforma row lock (`allocate()` locks FIFO; deadlock otherwise); remaining findings in #240.
-- #175/#232/#112/#238: order page/list by dictionary `customerGroup`, status history table, atomic `erp_order_reserve`, delivery vs pickup by `pointOfSaleId` (`docs/order-contracts.md`). Nested `withTransaction` in test harnesses must join the open transaction or lock tests hang.
-
-## #234 Kafka topic rename (closed; full text: `.backup/PROJECT_CONTEXT-2026-10-31-234-full.md`)
-## #215 / #224 / #227 ERP orders + settlement documents (closed; full text: `.backup/PROJECT_CONTEXT-2026-10-18-215-224-227-full.md`)
-- External ERP orders are read-only `isExternal` orders seen by `counterpartyId`; settlement plugin keeps ERP documents/balances per organization/counterparty/contract (`closing_balance` authoritative); customer visibility fails closed (`customerVisible` type AND `isCustomerContract`). Payment term = counterparty `paymentDelayDays` (docs/payments.md). Measured goods sell in a small base unit (integer quantity).
 
 ## #206 proforma invoices + #222 form of payment vs terms (2026-10-12..15, done, audited 3 rounds, pushed `865ed997`, closed; full text: `.backup/PROJECT_CONTEXT-2026-10-15-206-222-sections-full.md`)
 
