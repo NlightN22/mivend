@@ -154,9 +154,9 @@ export function createIntegrationInboxRetentionTask(
             let totalTombstoned = 0;
             const startedAt = Date.now();
             for (;;) {
-                const tombstoned = await inbox.purgeSupersededProcessedRows();
-                totalTombstoned += tombstoned;
-                if (tombstoned === 0) break;
+                const slice = await inbox.purgeSupersededProcessedRows();
+                totalTombstoned += slice.tombstoned;
+                if (slice.finished) break;
                 if (Date.now() - startedAt >= INBOX_RETENTION_WALL_CLOCK_BUDGET_MS) break;
             }
             if (totalTombstoned > 0) {

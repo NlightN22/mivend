@@ -852,7 +852,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             const older2 = await enqueueProcessed('pr-1', '2');
             const newest = await enqueueProcessed('pr-1', '3');
 
-            const tombstoned = await retention.purgeSupersededProcessedRows();
+            const tombstoned = (await retention.purgeSupersededProcessedRows()).tombstoned;
 
             expect(tombstoned).toBe(2);
             const rows = await dataSource
@@ -913,7 +913,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
                 payload: { real: 'data' },
             });
 
-            const tombstoned = await retention.purgeSupersededProcessedRows();
+            const tombstoned = (await retention.purgeSupersededProcessedRows()).tombstoned;
 
             expect(tombstoned).toBe(0);
             const rows = await dataSource
@@ -927,7 +927,7 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         it('leaves a single processed row alone (no duplicate to tombstone)', async () => {
             const only = await enqueueProcessed('pr-single', '1');
 
-            const tombstoned = await retention.purgeSupersededProcessedRows();
+            const tombstoned = (await retention.purgeSupersededProcessedRows()).tombstoned;
 
             expect(tombstoned).toBe(0);
             const row = await dataSource
@@ -940,8 +940,8 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
             await enqueueProcessed('pr-converged', '1');
             const newest = await enqueueProcessed('pr-converged', '2');
 
-            const first = await retention.purgeSupersededProcessedRows();
-            const second = await retention.purgeSupersededProcessedRows();
+            const first = (await retention.purgeSupersededProcessedRows()).tombstoned;
+            const second = (await retention.purgeSupersededProcessedRows()).tombstoned;
 
             expect(first).toBe(1);
             expect(second).toBe(0);

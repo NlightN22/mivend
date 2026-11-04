@@ -256,11 +256,11 @@ describe('createIntegrationInboxRetentionTask', () => {
         expect(purgeSupersededProcessedRows).not.toHaveBeenCalled();
     });
 
-    it('tombstones superseded processed rows on a central instance, stopping once a call tombstones nothing', async () => {
+    it('tombstones superseded processed rows on a central instance, stopping once the pass over the index is finished', async () => {
         const purgeSupersededProcessedRows = vi
             .fn()
-            .mockResolvedValueOnce(3)
-            .mockResolvedValueOnce(0);
+            .mockResolvedValueOnce({ tombstoned: 3, finished: false, outcome: 'swept' })
+            .mockResolvedValueOnce({ tombstoned: 0, finished: true, outcome: 'swept' });
         const task = createIntegrationInboxRetentionTask(makeOptions('central'));
         const result = await task.options.execute({
             injector: { get: () => ({ purgeSupersededProcessedRows }) } as never,
@@ -278,7 +278,7 @@ describe('createIntegrationInboxRetentionTask', () => {
         vi.spyOn(Date, 'now').mockImplementation(() => now);
         const purgeSupersededProcessedRows = vi.fn().mockImplementation(async () => {
             now += INBOX_RETENTION_WALL_CLOCK_BUDGET_MS;
-            return 5;
+            return { tombstoned: 5, finished: false, outcome: 'swept' };
         });
         const task = createIntegrationInboxRetentionTask(makeOptions('central'));
 
