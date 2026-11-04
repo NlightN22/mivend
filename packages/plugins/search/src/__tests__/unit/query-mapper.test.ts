@@ -29,7 +29,7 @@ describe('mapSearchInputToResolveQueryRequest', () => {
     it('asks the three code groups for their whole content on the first page only', () => {
         const first = mapSearchInputToResolveQueryRequest({ term: '48.3855', take: 24 }, none);
         expect([first.skuLimit, first.partNumberLimit, first.manufacturerCodeLimit]).toEqual([
-            100, 100, 100,
+            24, 24, 24,
         ]);
         const facetsOnly = mapSearchInputToResolveQueryRequest({ term: 'x1', take: 0 }, none);
         expect(facetsOnly.skuLimit).toBe(0);

@@ -27,9 +27,9 @@ export interface ResolveQueryRequest {
     requireOrganization?: boolean;
 }
 
-// Code groups are small and load once: the first page asks for their whole content, later pages and
-// facets-only requests ask for none so a product never repeats (#307).
-export const CODE_GROUP_LIMIT = 100;
+// Code groups load once on the first page; later pages and facets-only requests ask for none so a
+// product never repeats. Larger groups mean a too-broad query: the UI asks to refine it (#307).
+export const CODE_GROUP_LIMIT = 24;
 
 export function hasPriceCriteria(input: ShopSearchInput): boolean {
     return Boolean(input.priceRangeWithTax || input.sort?.price);

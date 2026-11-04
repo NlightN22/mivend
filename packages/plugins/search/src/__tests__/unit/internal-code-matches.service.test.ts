@@ -26,7 +26,7 @@ describe('InternalCodeMatchesService', () => {
         expect(get).not.toHaveBeenCalled();
     });
 
-    it('first page: up to 100 hits, same filters, term replaced by the code scope', async () => {
+    it('first page: up to the group cap, same filters, term replaced by the code scope', async () => {
         const { service, search } = setup();
         const input = { term: '483855', take: 24, inStock: true, collectionSlug: 'oils' };
         const result = await service.find(ctx, input, 'sku', true);
@@ -37,7 +37,7 @@ describe('InternalCodeMatchesService', () => {
             collectionSlug: 'oils',
             groupByProduct: true,
             skip: 0,
-            take: 100,
+            take: 24,
             codeScope: { kind: 'sku', codes: ['483855'] },
         });
         expect(enabledOnly).toBe(true);

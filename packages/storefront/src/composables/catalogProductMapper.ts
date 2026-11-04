@@ -36,8 +36,8 @@ export interface ProductItem {
     codeMatch?: CodeMatchKind;
 }
 
-// search-service never returns more than this many hits per code group.
-const CODE_GROUP_LIMIT = 100;
+// Mirrors CODE_GROUP_LIMIT of the search plugin: hits asked per code group on the first page.
+const CODE_GROUP_LIMIT = 24;
 
 export type CodeMatchKind = 'sku' | 'partNumber' | 'manufacturerCode';
 

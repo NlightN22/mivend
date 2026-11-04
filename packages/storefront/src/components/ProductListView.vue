@@ -101,7 +101,7 @@ onBeforeUnmount(() => observer?.disconnect());
             </div>
         </div>
 
-        <div v-if="codeMatchesTruncated && !loading" class="plv-state" role="status">
+        <div v-if="codeMatchesTruncated && !loading" class="plv-note" role="status">
             {{ t('productList.codeMatchesTruncated') }}
         </div>
         <div v-if="loading" class="plv-state">{{ t('productList.loading') }}</div>
@@ -263,6 +263,16 @@ onBeforeUnmount(() => observer?.disconnect());
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
+}
+
+.plv-note {
+    margin-bottom: 10px;
+    padding: 10px 16px;
+    color: #66736e;
+    font-size: 13px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #edf3f0;
 }
 
 .plv-state {
