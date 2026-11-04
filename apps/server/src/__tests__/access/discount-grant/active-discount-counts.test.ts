@@ -35,3 +35,10 @@ for (const actor of ['manager-a', 'superadmin'] as const) {
         }
     });
 }
+
+it('refuses a list longer than the cap instead of building an oversized IN clause', async () => {
+    const token = await staffToken('superadmin');
+    const tooMany = Array.from({ length: 201 }, (_, i) => String(i + 1));
+    const res = await admin<Batch>(token, BATCH, { ids: tooMany });
+    expect(res.errors?.length).toBeGreaterThan(0);
+});

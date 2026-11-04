@@ -2,7 +2,7 @@ import type { RequestContext } from '@vendure/core';
 import DataLoader from 'dataloader';
 
 // One DataLoader per RequestContext: sibling ResolveField calls of a request share a single batch query.
-// Never shared across requests. The batch returns one value (or Error) per key, in key order.
+// Never shared across requests; do not keep one ctx across logical operations, the cache is never refreshed. The batch returns one value (or Error) per key, in key order.
 export class CtxLoader<V> {
     private loaders = new WeakMap<RequestContext, DataLoader<string, V>>();
 

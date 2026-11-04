@@ -51,7 +51,7 @@ export class OrderLineContextService {
         ctx: RequestContext,
         memo: LookupMemo,
         ids: readonly string[],
-    ): Promise<Array<OrderLineContext | null>> {
+    ): Promise<Array<OrderLineContext | Error | null>> {
         const lines = await this.connection
             .getRepository(ctx, OrderLine)
             .find({ where: { id: In([...ids]) }, relations: ['order'] });
@@ -74,11 +74,19 @@ export class OrderLineContextService {
                 orders.set(key, Object.assign(line.order, { lines: byOrder.get(key) ?? [] }));
             }
         }
-        for (const order of orders.values())
-            await this.priceResolutionService.preload(ctx, order, memo);
+        const failed = new Map<string, Error>();
+        for (const [key, order] of orders) {
+            try {
+                await this.priceResolutionService.preload(ctx, order, memo);
+            } catch (e) {
+                failed.set(key, e instanceof Error ? e : new Error(String(e)));
+            }
+        }
         const byId = new Map(lines.map(l => [String(l.id), l]));
         return ids.map(id => {
             const line = byId.get(id);
+            const error = line && failed.get(String(line.order.id));
+            if (error) return error;
             return line
                 ? {
                       productVariantId: String(line.productVariantId),

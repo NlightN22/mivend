@@ -60,7 +60,7 @@ export class CustomerPriceCalculationStrategy implements OrderItemPriceCalculati
             state = { memo: new LookupMemo(), preloaded: new Set() };
             this.states.set(ctx, state);
         }
-        const key = `${String(order.id)}:${order.lines?.length ?? 0}`;
+        const key = `${String(order.id)}:${(order.lines ?? []).map(l => l.productVariantId).join(',')}`;
         if (order.id != null && order.lines?.length && !state.preloaded.has(key)) {
             state.preloaded.add(key);
             await this.priceResolutionService.preload(ctx, order, state.memo);

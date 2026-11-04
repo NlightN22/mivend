@@ -139,7 +139,7 @@ portal-admin is unchanged: the Dashboard shows them only their scope.
 
 ## Layer 3: `AccessScopeService` — one service, reused everywhere
 
-**Per-request memo.** `resolveScope` is memoized per `RequestContext`, user and resource, because list resolvers ask for it per row. A grant or role change made earlier in the same request is not seen by later reads of that request; a failed lookup is not kept, so a retry re-reads it. Batch loaders for nested fields (`CounterpartyBatchLoaders`, `ShopCollectionBreadcrumbsLoader`) use the same memoized scope and apply the same SQL filters as the per-row path.
+**Per-request memo.** `resolveScope` is memoized per `RequestContext`, user and resource, because list resolvers ask for it per row. A grant or role change made earlier in the same request is not seen by later reads of that request; a failed lookup is not kept, so a retry re-reads it. Never hold one `RequestContext` across logical operations (a loop or background task): its memo and the per-request loaders are never refreshed. Batch loaders for nested fields (`CounterpartyBatchLoaders`, `ShopCollectionBreadcrumbsLoader`) use the same memoized scope and apply the same SQL filters as the per-row path.
 
 **Team pickers and manager reassignment (#231).** Since Vendure 3.7.3, `AdministratorService.findAll`/`findOne`
 hide every administrator holding a role the caller could not grant. `teamMembers` therefore lists

@@ -18,6 +18,7 @@ export interface BreadcrumbItem {
 }
 
 const MAX_DEPTH = 64;
+const asError = (e: unknown): Error => (e instanceof Error ? e : new Error(String(e)));
 
 // Resolves the breadcrumbs of every collection of a request with one ancestry query and one entity load.
 @Injectable()
@@ -44,28 +45,33 @@ export class ShopCollectionBreadcrumbsLoader {
             .getRepository(ctx, Collection)
             .find({ where: { id: In(ids) } });
         const byId = new Map(entities.map(entity => [String(entity.id), entity]));
-        return Promise.all(
-            keys.map(async key => {
-                const chain = (chains.get(key) ?? []).map(id => byId.get(id));
-                if (chain.length === 0 || chain.some(entity => !entity)) {
-                    return this.coreBreadcrumbs(ctx, key);
-                }
-                const nodes = chain as Collection[];
-                if (!nodes[0].isRoot) return this.coreBreadcrumbs(ctx, key);
-                const crumbs = nodes.map(node => {
-                    const { id, name, slug } = this.translator.translate(node, ctx);
-                    return { id, name, slug };
-                });
-                if (crumbs.length < 3) return crumbs;
-                const hidden = new Set(
-                    nodes
-                        .slice(1, -1)
-                        .filter(n => n.isPrivate)
-                        .map(n => String(n.id)),
-                );
-                return dropPrivateAncestors(crumbs, hidden);
-            }),
+        return Promise.all(keys.map(key => this.crumbsFor(ctx, key, chains, byId).catch(asError)));
+    }
+
+    private async crumbsFor(
+        ctx: RequestContext,
+        key: string,
+        chains: Map<string, string[]>,
+        byId: Map<string, Collection>,
+    ): Promise<BreadcrumbItem[]> {
+        const chain = (chains.get(key) ?? []).map(id => byId.get(id));
+        if (chain.length === 0 || chain.some(entity => !entity)) {
+            return this.coreBreadcrumbs(ctx, key);
+        }
+        const nodes = chain as Collection[];
+        if (!nodes[0].isRoot) return this.coreBreadcrumbs(ctx, key);
+        const crumbs = nodes.map(node => {
+            const { id, name, slug } = this.translator.translate(node, ctx);
+            return { id, name, slug };
+        });
+        if (crumbs.length < 3) return crumbs;
+        const hidden = new Set(
+            nodes
+                .slice(1, -1)
+                .filter(n => n.isPrivate)
+                .map(n => String(n.id)),
         );
+        return dropPrivateAncestors(crumbs, hidden);
     }
 
     // Ids from the root down to the collection; empty when the chain cannot be followed.

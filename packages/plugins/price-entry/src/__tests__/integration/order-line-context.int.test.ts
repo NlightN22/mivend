@@ -250,6 +250,27 @@ describe('cart line fields (real Postgres)', () => {
         }
     });
 
+    it('fails only the lines of the order whose preload throws', async () => {
+        const variants = await seedCatalog(ds, 4);
+        const ctx = PLAIN_CTX(1);
+        const first = await placeOrder(1, variants.slice(0, 2), () => 1);
+        const second = await placeOrder(1, variants.slice(2), () => 1);
+        const { resolver } = newResolver();
+        const spy = vi
+            .spyOn(services.resolution, 'preload')
+            .mockRejectedValueOnce(new Error('preload boom'));
+        try {
+            const [a, b] = await Promise.allSettled([
+                resolver.compareAtPrice(ctx, { id: first[0] }),
+                resolver.compareAtPrice(ctx, { id: second[0] }),
+            ]);
+            expect(a).toMatchObject({ status: 'rejected' });
+            expect(b.status).toBe('fulfilled');
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
     it('answers null for a line that no longer exists', async () => {
         const { resolver } = newResolver();
         expect(await resolver.compareAtPrice(PLAIN_CTX(1), { id: '999999' })).toBeNull();

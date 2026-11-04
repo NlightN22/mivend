@@ -8,6 +8,7 @@ import {
     RequestContext,
     Transaction,
     TransactionalConnection,
+    UserInputError,
 } from '@vendure/core';
 import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 import { ApprovalRequest, ApprovalStepDecision } from '@mivend/plugin-approval-workflow';
@@ -20,6 +21,8 @@ import {
     DiscountGrantsForCounterpartyOptions,
 } from './discount-grant.types';
 import { DiscountGrant } from './discount-grant.entity';
+
+const MAX_COUNT_IDS = 200;
 
 @Resolver()
 export class DiscountGrantResolver {
@@ -60,6 +63,9 @@ export class DiscountGrantResolver {
         @Ctx() ctx: RequestContext,
         @Args() args: { counterpartyIds: ID[] },
     ): Promise<Array<{ counterpartyId: string; count: number }>> {
+        if (args.counterpartyIds.length > MAX_COUNT_IDS) {
+            throw new UserInputError(`At most ${MAX_COUNT_IDS} counterparties per request`);
+        }
         const counts = await activeGrantCounts(
             this.connection,
             ctx,

@@ -172,4 +172,15 @@ describe('ShopCollectionBreadcrumbsLoader (integration, real Postgres)', () => {
         expect(slugs(await loader.load(ctx(), parent(7)))).toEqual([[7, 'slug-7']]);
         expect(coreBreadcrumbs).toHaveBeenCalledTimes(1);
     });
+
+    it('fails only the collection whose core fallback throws, not the rest of the request', async () => {
+        coreBreadcrumbs.mockRejectedValue(new Error('boom'));
+        const shared = ctx();
+        const [bad, good] = await Promise.allSettled([
+            loader.load(shared, parent(7)),
+            loader.load(shared, parent(2)),
+        ]);
+        expect(bad).toMatchObject({ status: 'rejected' });
+        expect(good.status).toBe('fulfilled');
+    });
 });
