@@ -12,6 +12,7 @@ import {
     ShopProductFacetValuesResolver,
     ShopVariantFacetValuesResolver,
 } from './shop-entity-facet-values.resolver';
+import { ShopCollectionBreadcrumbsLoader } from './shop-collection-breadcrumbs.loader';
 import { ShopCollectionBreadcrumbsResolver } from './shop-collection-breadcrumbs.resolver';
 import { adminApiSchema } from './access-control.schema';
 
@@ -61,6 +62,7 @@ import { WarehouseService } from './warehouse.service';
         ...visibilityGrantBundle.entities,
     ],
     providers: [
+        ShopCollectionBreadcrumbsLoader,
         ...departmentBranchBundle.providers,
         ...visibilityGrantBundle.providers,
         AccessScopeService,
