@@ -51,7 +51,6 @@ const shopApiSchema = gql`
     type SearchCapabilities {
         sortKeys: [String!]!
         priceRange: Boolean!
-        codeGroups: Boolean!
     }
 
     extend type Query {
