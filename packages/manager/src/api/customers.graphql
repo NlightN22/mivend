@@ -226,12 +226,10 @@ query CreditForCounterparty($id: ID!) {
     }
 }
 
-query ActiveDiscountCountForCounterparty(
-    $counterpartyId: ID!
-    $options: DiscountGrantForCustomerListOptions
-) {
-    discountGrantsForCounterparty(counterpartyId: $counterpartyId, options: $options) {
-        totalItems
+query ActiveDiscountCounts($counterpartyIds: [ID!]!) {
+    activeDiscountCounts(counterpartyIds: $counterpartyIds) {
+        counterpartyId
+        count
     }
 }
 

@@ -141,6 +141,11 @@ export const adminApiSchema: DocumentNode = gql`
         status: String!
     }
 
+    type CounterpartyDiscountCount {
+        counterpartyId: ID!
+        count: Int!
+    }
+
     type DiscountGrantForCustomerList {
         items: [DiscountGrantForCustomer!]!
         totalItems: Int!
@@ -202,6 +207,8 @@ export const adminApiSchema: DocumentNode = gql`
             counterpartyId: ID!
             options: DiscountGrantForCustomerListOptions
         ): DiscountGrantForCustomerList!
+        # Active grant count per counterparty in one request; same filters as discountGrantsForCounterparty(status: active).
+        activeDiscountCounts(counterpartyIds: [ID!]!): [CounterpartyDiscountCount!]!
         priceTypeCodes: [String!]!
         # Batch lookup for the catalog list/detail pages; see PriceEntryAdminResolver.priceEntriesForVariants.
         priceEntriesForVariants(variantIds: [ID!]!, priceTypeCode: String!): [VariantPriceEntry!]!

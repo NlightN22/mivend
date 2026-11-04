@@ -1115,6 +1115,11 @@ export type CounterpartyPortalAccessChangeResult = {
     success: Scalars['Boolean']['output'];
 };
 
+export type CounterpartyDiscountCount = {
+    count: Scalars['Int']['output'];
+    counterpartyId: Scalars['ID']['output'];
+};
+
 export type CounterpartySortParameter = {
     assignedManagerId?: InputMaybe<SortOrder>;
     branchId?: InputMaybe<SortOrder>;
@@ -7464,6 +7469,7 @@ export type QuantityTooGreatError = ErrorResult & {
 export type Query = {
     activeAdministrator: Maybe<Administrator>;
     activeChannel: Channel;
+    activeDiscountCounts: Array<CounterpartyDiscountCount>;
     administrator: Maybe<Administrator>;
     administratorForPasswordResetToken: Maybe<PasswordResetIdentity>;
     administrators: AdministratorList;
@@ -7820,6 +7826,10 @@ export type QueryDashboardMetricSummaryArgs = {
 
 export type QueryDeactivatedAdministratorsArgs = {
     options?: InputMaybe<AdministratorListOptions>;
+};
+
+export type QueryActiveDiscountCountsArgs = {
+    counterpartyIds: Array<Scalars['ID']['input']>;
 };
 
 export type QueryDiscountGrantsForCounterpartyArgs = {
@@ -10942,13 +10952,12 @@ export type CreditForCounterpartyQuery = {
     } | null;
 };
 
-export type ActiveDiscountCountForCounterpartyQueryVariables = Exact<{
-    counterpartyId: Scalars['ID']['input'];
-    options?: InputMaybe<DiscountGrantForCustomerListOptions>;
+export type ActiveDiscountCountsQueryVariables = Exact<{
+    counterpartyIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
 }>;
 
-export type ActiveDiscountCountForCounterpartyQuery = {
-    discountGrantsForCounterparty: { totalItems: number };
+export type ActiveDiscountCountsQuery = {
+    activeDiscountCounts: Array<{ counterpartyId: string; count: number }>;
 };
 
 export type DiscountGrantViewCountsQueryVariables = Exact<{
@@ -14284,18 +14293,16 @@ export const CreditForCounterpartyDocument = new TypedDocumentString(`
     CreditForCounterpartyQuery,
     CreditForCounterpartyQueryVariables
 >;
-export const ActiveDiscountCountForCounterpartyDocument = new TypedDocumentString(`
-    query ActiveDiscountCountForCounterparty($counterpartyId: ID!, $options: DiscountGrantForCustomerListOptions) {
-  discountGrantsForCounterparty(
-    counterpartyId: $counterpartyId
-    options: $options
-  ) {
-    totalItems
+export const ActiveDiscountCountsDocument = new TypedDocumentString(`
+    query ActiveDiscountCounts($counterpartyIds: [ID!]!) {
+  activeDiscountCounts(counterpartyIds: $counterpartyIds) {
+    counterpartyId
+    count
   }
 }
     `) as unknown as TypedDocumentString<
-    ActiveDiscountCountForCounterpartyQuery,
-    ActiveDiscountCountForCounterpartyQueryVariables
+    ActiveDiscountCountsQuery,
+    ActiveDiscountCountsQueryVariables
 >;
 export const DiscountGrantViewCountsDocument = new TypedDocumentString(`
     query DiscountGrantViewCounts($counterpartyId: ID!) {

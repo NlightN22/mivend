@@ -1,9 +1,18 @@
 import { Args, Query, Mutation, Resolver } from '@nestjs/graphql';
 import { ID } from '@vendure/common/lib/shared-types';
-import { Allow, Ctx, PaginatedList, Permission, RequestContext, Transaction } from '@vendure/core';
+import {
+    Allow,
+    Ctx,
+    PaginatedList,
+    Permission,
+    RequestContext,
+    Transaction,
+    TransactionalConnection,
+} from '@vendure/core';
 import { CustomPermission, PriceTypeAccessService } from '@mivend/plugin-access-control';
 import { ApprovalRequest, ApprovalStepDecision } from '@mivend/plugin-approval-workflow';
 
+import { activeGrantCounts } from './discount-grant-counts';
 import { DiscountGrantService } from './discount-grant.service';
 import {
     DiscountGrantInput,
@@ -17,6 +26,7 @@ export class DiscountGrantResolver {
     constructor(
         private discountGrantService: DiscountGrantService,
         private priceTypeAccess: PriceTypeAccessService,
+        private connection: TransactionalConnection,
     ) {}
 
     @Query()
@@ -42,6 +52,21 @@ export class DiscountGrantResolver {
             ...args.options,
             allowedPriceTypeCodes: await this.priceTypeAccess.allowedCodes(ctx),
         });
+    }
+
+    @Query()
+    @Allow(Permission.ReadCatalog)
+    async activeDiscountCounts(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { counterpartyIds: ID[] },
+    ): Promise<Array<{ counterpartyId: string; count: number }>> {
+        const counts = await activeGrantCounts(
+            this.connection,
+            ctx,
+            args.counterpartyIds.map(String),
+            await this.priceTypeAccess.allowedCodes(ctx),
+        );
+        return [...counts].map(([counterpartyId, count]) => ({ counterpartyId, count }));
     }
 
     @Transaction()

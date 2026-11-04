@@ -1,7 +1,7 @@
 import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
 import {
-    ActiveDiscountCountForCounterpartyDocument,
+    ActiveDiscountCountsDocument,
     CounterpartyShortNameDocument,
     CreditByCounterpartyIdDocument,
     CreditForCounterpartyDocument,
@@ -483,23 +483,15 @@ export async function fetchCreditForCounterparty(
     }
 }
 
-// Counts grants for this counterparty only; discountRules(priceTypeCode) is shared by price type
-// so customers sharing a price type would show identical counts
+// One request for the whole page; counts only grants applying to each counterparty, not the shared
+// price type rules. 'active' is computed server-side, never from validTo here.
 export async function fetchActiveDiscountCountsByCustomer(
     counterpartyIds: string[],
 ): Promise<Map<string, number>> {
-    const entries = await Promise.all(
-        [...new Set(counterpartyIds)].map(async counterpartyId => {
-            // take: 0 fetches only totalItems; status is computed server-side
-            // Don't recompute 'active' from validTo client-side; computeGrantStatus is the source of truth
-            const result = await adminApi(ActiveDiscountCountForCounterpartyDocument, {
-                counterpartyId,
-                options: { take: 0, status: 'active' },
-            });
-            return [counterpartyId, result.discountGrantsForCounterparty.totalItems] as const;
-        }),
-    );
-    return new Map(entries);
+    const ids = [...new Set(counterpartyIds)];
+    if (ids.length === 0) return new Map();
+    const result = await adminApi(ActiveDiscountCountsDocument, { counterpartyIds: ids });
+    return new Map(result.activeDiscountCounts.map(row => [row.counterpartyId, row.count]));
 }
 
 export type DiscountGrantStatus = 'active' | 'expiring-soon' | 'expired';
