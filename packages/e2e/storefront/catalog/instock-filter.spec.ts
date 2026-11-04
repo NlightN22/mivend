@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const CATALOG = 'http://localhost:5173/catalog';
+const CATALOG = '/catalog';
 const COUNT = '.plv-toolbar__count';
 const IN_STOCK_CHECK = 'input[type="checkbox"]';
 
