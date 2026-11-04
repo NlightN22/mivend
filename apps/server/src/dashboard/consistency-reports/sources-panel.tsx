@@ -1,11 +1,23 @@
 import { useEffect, useState } from 'react';
-import { api, Badge, Table, TableBody, TableCell, TableRow } from '@vendure/dashboard';
+import {
+    api,
+    Badge,
+    Table,
+    TableBody,
+    TableCell,
+    TableRow,
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from '@vendure/dashboard';
 
 import { consistencySourcesDocument } from './consistency-reports.graphql.js';
 import { CountComparisonPanel } from './count-comparison-panel.js';
 import { DataSection } from './data-section.js';
 import { StockDefectsPanel } from './stock-defects-panel.js';
-import { countEntries, healthVariant, totalOpen } from './consistency-display.js';
+import { countComparisonView } from './count-comparison-view.js';
+import { countEntries, healthVariant, stockDefectsView, totalOpen } from './consistency-display.js';
 
 type Source = Awaited<
     ReturnType<typeof api.query<typeof consistencySourcesDocument>>
@@ -42,6 +54,44 @@ function NotChecked({ source }: Readonly<{ source: Source }>) {
     );
 }
 
+function differing(n: number): string {
+    return n > 0 ? ` (${n} differ)` : '';
+}
+
+function SourceTabs({ source }: Readonly<{ source: Source }>) {
+    const counts = countComparisonView(source.summary);
+    const defects = stockDefectsView(source.summary);
+    const notChecked = source.ignoredEntityTypes.length;
+    if (counts.length === 0 && !defects && notChecked === 0) return null;
+    const first = counts.length > 0 ? 'counts' : defects ? 'defects' : 'unchecked';
+    return (
+        <Tabs defaultValue={first} orientation="horizontal" className="flex-col gap-3">
+            <TabsList className="w-fit">
+                {counts.length > 0 && (
+                    <TabsTrigger value="counts">
+                        Entity counts{differing(counts.filter(r => r.differs).length)}
+                    </TabsTrigger>
+                )}
+                {defects && (
+                    <TabsTrigger value="defects">
+                        Stock defects{differing(defects.rows.filter(r => r.differs).length)}
+                    </TabsTrigger>
+                )}
+                {notChecked > 0 && <TabsTrigger value="unchecked">Not checked</TabsTrigger>}
+            </TabsList>
+            <TabsContent value="counts">
+                <CountComparisonPanel summary={source.summary} />
+            </TabsContent>
+            <TabsContent value="defects">
+                <StockDefectsPanel summary={source.summary} />
+            </TabsContent>
+            <TabsContent value="unchecked">
+                <NotChecked source={source} />
+            </TabsContent>
+        </Tabs>
+    );
+}
+
 function SourceCard({ source }: Readonly<{ source: Source }>) {
     const open = totalOpen(source);
     return (
@@ -66,9 +116,7 @@ function SourceCard({ source }: Readonly<{ source: Source }>) {
             )}
             <Counts label="By type" value={source.localOpenByType} />
             <Counts label="By severity" value={source.localOpenBySeverity} />
-            <CountComparisonPanel summary={source.summary} />
-            <StockDefectsPanel summary={source.summary} />
-            <NotChecked source={source} />
+            <SourceTabs source={source} />
             <div className="pt-2">
                 <div className="font-medium">Reports</div>
                 <div className="text-xs text-muted-foreground">
