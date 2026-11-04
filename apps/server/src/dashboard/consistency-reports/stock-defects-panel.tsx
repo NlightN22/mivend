@@ -1,49 +1,65 @@
-import { Badge } from '@vendure/dashboard';
+import {
+    Badge,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@vendure/dashboard';
 
 import { stockDefectsView } from './consistency-display.js';
+import { DataSection } from './data-section.js';
 
 export function StockDefectsPanel({ summary }: Readonly<{ summary: unknown }>) {
     const view = stockDefectsView(summary);
     if (!view) return null;
+    const muted = view.status === 'ok' ? '' : 'text-muted-foreground';
     return (
-        <div className="text-xs space-y-1">
-            <div className="flex items-center gap-2">
-                <span className="font-medium">Stock source-data defects</span>
-                <Badge variant={view.status === 'ok' ? 'secondary' : 'outline'}>
-                    Integration Service: {view.status}
-                </Badge>
-                {view.fetchedAt && (
-                    <span className="text-muted-foreground">
-                        as of {new Date(view.fetchedAt).toLocaleString()}
-                    </span>
-                )}
-            </div>
-            <table className="w-full">
-                <thead className="text-muted-foreground">
-                    <tr>
-                        <th className="text-left font-normal">Defect</th>
-                        <th className="text-right font-normal">Search mirror</th>
-                        <th className="text-right font-normal">Integration Service</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <DataSection
+            title="Stock source-data defects"
+            hint="Defects of the ERP data itself (kinds overlap); a difference is drift"
+            aside={
+                <>
+                    <Badge variant={view.status === 'ok' ? 'secondary' : 'outline'}>
+                        Integration Service: {view.status}
+                    </Badge>
+                    {view.fetchedAt && (
+                        <span className="text-xs text-muted-foreground">
+                            as of {new Date(view.fetchedAt).toLocaleString()}
+                        </span>
+                    )}
+                </>
+            }
+        >
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Defect</TableHead>
+                        <TableHead className="text-right">Search mirror</TableHead>
+                        <TableHead className="text-right">Integration Service</TableHead>
+                        <TableHead className="text-right">Difference</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
                     {view.rows.map(r => (
-                        <tr key={r.kind} className={r.differs ? 'text-destructive' : undefined}>
-                            <td>{r.label}</td>
-                            <td className="text-right">{r.mirror}</td>
-                            <td
-                                className={`text-right ${view.status === 'ok' ? '' : 'text-muted-foreground'}`}
-                            >
+                        <TableRow key={r.kind} className={r.differs ? 'bg-destructive/5' : ''}>
+                            <TableCell className="font-medium">{r.label}</TableCell>
+                            <TableCell className="text-right">{r.mirror}</TableCell>
+                            <TableCell className={`text-right ${muted}`}>
                                 {r.integrationService ?? '—'}
-                            </td>
-                        </tr>
+                            </TableCell>
+                            <TableCell
+                                className={`text-right ${r.differs ? 'text-destructive' : 'text-muted-foreground'}`}
+                            >
+                                {r.differs && r.integrationService !== null
+                                    ? r.mirror - r.integrationService
+                                    : '—'}
+                            </TableCell>
+                        </TableRow>
                     ))}
-                </tbody>
-            </table>
-            <div className="text-muted-foreground">
-                Defects of the ERP data itself (kinds overlap); a mismatch between the two columns
-                is drift.
-            </div>
-        </div>
+                </TableBody>
+            </Table>
+        </DataSection>
     );
 }

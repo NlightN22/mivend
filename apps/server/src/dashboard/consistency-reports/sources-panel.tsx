@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react';
-import { api, Badge } from '@vendure/dashboard';
+import { api, Badge, Table, TableBody, TableCell, TableRow } from '@vendure/dashboard';
 
 import { consistencySourcesDocument } from './consistency-reports.graphql.js';
 import { CountComparisonPanel } from './count-comparison-panel.js';
+import { DataSection } from './data-section.js';
 import { StockDefectsPanel } from './stock-defects-panel.js';
-import {
-    countEntries,
-    formatLag,
-    healthVariant,
-    streamLags,
-    totalOpen,
-} from './consistency-display.js';
+import { countEntries, healthVariant, totalOpen } from './consistency-display.js';
 
 type Source = Awaited<
     ReturnType<typeof api.query<typeof consistencySourcesDocument>>
@@ -18,10 +13,11 @@ type Source = Awaited<
 
 function Counts({ label, value }: Readonly<{ label: string; value: unknown }>) {
     const entries = countEntries(value);
+    if (entries.length === 0) return null;
     return (
         <div className="text-xs">
             <span className="text-muted-foreground">{label}: </span>
-            {entries.length === 0 ? 'none' : entries.map(([k, n]) => `${k} ${n}`).join(', ')}
+            {entries.map(([k, n]) => `${k} ${n}`).join(', ')}
         </div>
     );
 }
@@ -29,47 +25,57 @@ function Counts({ label, value }: Readonly<{ label: string; value: unknown }>) {
 function NotChecked({ source }: Readonly<{ source: Source }>) {
     if (source.ignoredEntityTypes.length === 0) return null;
     return (
-        <div className="text-xs border-t pt-2 space-y-1">
-            <div className="font-medium">Not checked</div>
-            {source.ignoredEntityTypes.map(i => (
-                <div key={i.entityType}>
-                    <code>{i.entityType}</code>
-                    <span className="text-muted-foreground">: {i.reason}</span>
-                </div>
-            ))}
-        </div>
+        <DataSection title="Not checked">
+            <Table>
+                <TableBody>
+                    {source.ignoredEntityTypes.map(i => (
+                        <TableRow key={i.entityType}>
+                            <TableCell className="font-medium">{i.entityType}</TableCell>
+                            <TableCell className="text-muted-foreground whitespace-normal">
+                                {i.reason}
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </DataSection>
     );
 }
 
 function SourceCard({ source }: Readonly<{ source: Source }>) {
-    const lags = streamLags(source.summary);
+    const open = totalOpen(source);
     return (
-        <div className="rounded-md border p-4 space-y-2">
-            <div className="flex items-center gap-2">
-                <span className="font-medium">{source.source}</span>
+        <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="text-lg font-medium">{source.source}</span>
                 <Badge variant={healthVariant(source.health)}>{source.health}</Badge>
-                <span className="text-muted-foreground text-xs">{totalOpen(source)} open</span>
+                <span className="text-sm text-muted-foreground">{open} open</span>
+                <span className="text-xs text-muted-foreground sm:ml-auto">
+                    Last check finished:{' '}
+                    {source.lastFinishedAt
+                        ? new Date(source.lastFinishedAt).toLocaleString()
+                        : 'never'}
+                    {' · '}Last successful poll:{' '}
+                    {source.lastSuccessAt
+                        ? new Date(source.lastSuccessAt).toLocaleString()
+                        : 'never'}
+                </span>
             </div>
             {source.health !== 'ok' && (
-                <div className="text-xs text-muted-foreground">{source.healthDetail}</div>
-            )}
-            <div className="text-xs text-muted-foreground">
-                Last check finished:{' '}
-                {source.lastFinishedAt ? new Date(source.lastFinishedAt).toLocaleString() : 'never'}
-                {' · '}Last successful poll:{' '}
-                {source.lastSuccessAt ? new Date(source.lastSuccessAt).toLocaleString() : 'never'}
-            </div>
-            {lags.length > 0 && (
-                <div className="text-xs">
-                    <span className="text-muted-foreground">Stream lag: </span>
-                    {lags.map(s => `${s.stream} ${formatLag(s.lagSeconds)}`).join(', ')}
-                </div>
+                <div className="text-sm text-destructive">{source.healthDetail}</div>
             )}
             <Counts label="By type" value={source.localOpenByType} />
             <Counts label="By severity" value={source.localOpenBySeverity} />
             <CountComparisonPanel summary={source.summary} />
             <StockDefectsPanel summary={source.summary} />
             <NotChecked source={source} />
+            <div className="pt-2">
+                <div className="font-medium">Reports</div>
+                <div className="text-xs text-muted-foreground">
+                    {open === 0 ? 'No open reports. ' : ''}Use the Status filter to see resolved
+                    ones.
+                </div>
+            </div>
         </div>
     );
 }
@@ -102,7 +108,7 @@ export function SourcesPanel() {
         );
     }
     return (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-6">
             {sources.map(s => (
                 <SourceCard key={s.source} source={s} />
             ))}
