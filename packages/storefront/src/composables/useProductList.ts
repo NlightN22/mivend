@@ -59,6 +59,9 @@ export interface ProductItem {
     codeMatch?: CodeMatchKind;
 }
 
+// search-service never returns more than this many hits per code group.
+const CODE_GROUP_LIMIT = 100;
+
 export type CodeMatchKind = 'sku' | 'partNumber' | 'manufacturerCode';
 
 export type ViewMode = 'list' | 'grid';
@@ -101,7 +104,7 @@ function mapCodeGroups(
     for (const [codeMatch, group] of groups) {
         if (!group) continue;
         total += group.total;
-        truncated ||= group.total > group.items.length;
+        truncated ||= group.total > CODE_GROUP_LIMIT;
         items.push(...mapItems(group.items, facetValues).map(item => ({ ...item, codeMatch })));
     }
     return { items, total, truncated };
