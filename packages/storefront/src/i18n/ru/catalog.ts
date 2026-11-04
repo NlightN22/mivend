@@ -60,6 +60,13 @@ const ru: typeof en = {
         price: 'Цена',
         order: 'Заказ',
         packOf: 'упаковка {n} шт.',
+        sortTextOnly: 'Сортировка действует только на результаты по тексту',
+        codeMatchesTruncated: 'Совпадений по коду слишком много, уточните запрос',
+        match: {
+            sku: 'Артикул',
+            partNumber: 'Номер детали',
+            manufacturerCode: 'Код производителя',
+        },
     },
     productCard: {
         previousPhoto: 'Предыдущее фото',

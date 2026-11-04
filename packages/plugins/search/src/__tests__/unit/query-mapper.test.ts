@@ -20,7 +20,24 @@ describe('mapSearchInputToResolveQueryRequest', () => {
             availabilityMode: 'onHandAndErp',
             limit: 10,
             offset: 20,
+            skuLimit: 0,
+            partNumberLimit: 0,
+            manufacturerCodeLimit: 0,
         });
+    });
+
+    it('asks the three code groups for their whole content on the first page only', () => {
+        const first = mapSearchInputToResolveQueryRequest({ term: '48.3855', take: 24 }, none);
+        expect([first.skuLimit, first.partNumberLimit, first.manufacturerCodeLimit]).toEqual([
+            100, 100, 100,
+        ]);
+        const facetsOnly = mapSearchInputToResolveQueryRequest({ term: 'x1', take: 0 }, none);
+        expect(facetsOnly.skuLimit).toBe(0);
+    });
+
+    it('sends no group limits without a term', () => {
+        const request = mapSearchInputToResolveQueryRequest({ take: 24 }, none);
+        expect(request).not.toHaveProperty('skuLimit');
     });
 
     it('sends limit 1 for a facets-only request (take 0), which search-service would reject', () => {

@@ -25,7 +25,23 @@ import { ShopSearchFacetValuesResolver } from './shop-search-facet-values.resolv
 import { SearchService } from './search.service';
 import { getSearchBackend } from './types';
 
+const codeMatchesSchema = gql`
+    "Products matched by an article, part number or manufacturer code; the internal backend never fills them."
+    type SearchCodeMatches {
+        items: [SearchResult!]!
+        total: Int!
+    }
+
+    extend type SearchResponse {
+        skuMatches: SearchCodeMatches
+        partNumberMatches: SearchCodeMatches
+        manufacturerCodeMatches: SearchCodeMatches
+    }
+`;
+
 const adminApiSchema = gql`
+    ${codeMatchesSchema}
+
     extend type SearchResult {
         "False when the variant has no organization (seller of record) and cannot be ordered."
         availableForOrder: Boolean!
@@ -36,13 +52,18 @@ const shopApiSchema = gql`
     type SearchCapabilities {
         sortKeys: [String!]!
         priceRange: Boolean!
+        codeGroups: Boolean!
     }
 
     extend type Query {
         searchCapabilities: SearchCapabilities!
     }
 
+    ${codeMatchesSchema}
+
     extend type SearchResult {
+        "Why the hit matched, from the external search backend; null on the internal one."
+        matchReasons: [String!]
         customerPrice: Int
         compareAtPrice: Int
         discountTiers: [DiscountTier!]!

@@ -13,7 +13,8 @@ export interface ResolveQueryResponseItem {
     manufacturerCodes: Array<{ lineNumber: number; code: string; manufacturer: string }>;
     hasAvailableOffer: boolean;
     hasPrice: boolean;
-    matchReasons: string[];
+    // Open set: search-service may add reasons, consumers must ignore unknown ones.
+    matchReasons?: string[];
     score: number;
 }
 
@@ -23,9 +24,17 @@ export interface ResolveQueryFacets {
     characteristics?: Array<{ key: string; normalized: string; count: number }>;
 }
 
+export interface ResolveQueryCodeGroup {
+    items: ResolveQueryResponseItem[];
+    total: number;
+}
+
 export interface ResolveQueryResponse {
     items: ResolveQueryResponseItem[];
     total: number;
+    skuMatches?: ResolveQueryCodeGroup;
+    partNumberMatches?: ResolveQueryCodeGroup;
+    manufacturerCodeMatches?: ResolveQueryCodeGroup;
     facets?: ResolveQueryFacets;
 }
 

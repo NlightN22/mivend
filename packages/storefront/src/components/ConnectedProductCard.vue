@@ -59,8 +59,13 @@ const packLabelCard = computed(() => {
     return q ? t('productList.packOf', { n: q }) : '';
 });
 
+const matchBadge = computed(() =>
+    props.item.codeMatch ? t(`productList.match.${props.item.codeMatch}`) : undefined,
+);
+
 const common = computed(() => ({
     name: props.item.name,
+    matchBadge: matchBadge.value,
     sku: variant.value?.sku ?? '',
     brand: brandOf(props.item.manufacturer),
     price: prices.value.price,

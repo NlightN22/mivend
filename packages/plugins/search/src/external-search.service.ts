@@ -8,6 +8,7 @@ import {
 } from '@vendure/core';
 import type { SearchInput } from '@vendure/common/lib/generated-types';
 
+import type { ResolveQueryCodeGroup, ResolveQueryResponseItem } from './search-service.client';
 import { ExternalCollectionResult, mapFacetsToCollections } from './category-facet-mapper';
 import { mapFacetsToFacetValues, ExternalFacetValueResult } from './facet-mapper';
 import {
@@ -43,11 +44,20 @@ export interface ExternalSearchResult {
     facetValueIds: string[];
     collectionIds: string[];
     score: number;
+    matchReasons: string[];
+}
+
+export interface ExternalCodeMatches {
+    items: ExternalSearchResult[];
+    total: number;
 }
 
 export interface ExternalSearchResponse {
     items: ExternalSearchResult[];
     totalItems: number;
+    skuMatches?: ExternalCodeMatches;
+    partNumberMatches?: ExternalCodeMatches;
+    manufacturerCodeMatches?: ExternalCodeMatches;
     facetValues: ExternalFacetValueResult[];
     collections: ExternalCollectionResult[];
 }
@@ -85,24 +95,50 @@ export class ExternalSearchService {
 
         const response = await this.client.resolveQuery(request);
 
+        const groups = {
+            skuMatches: response.skuMatches,
+            partNumberMatches: response.partNumberMatches,
+            manufacturerCodeMatches: response.manufacturerCodeMatches,
+        };
+        const hits = [
+            ...Object.values(groups).flatMap(group => group?.items ?? []),
+            ...response.items,
+        ];
         const products = await this.productLookup.findByExternalIds(
             ctx,
-            response.items.map(item => item.partOrProductId),
+            hits.map(item => item.partOrProductId),
             includeDisabled,
         );
-        const items: ExternalSearchResult[] = [];
-        for (const item of input.take === 0 ? [] : response.items) {
-            const result = this.toSearchResult(
-                ctx,
-                item.canonicalName,
-                item.score,
-                products.get(item.partOrProductId),
-            );
-            if (result) items.push(result);
+        // search-service keeps the parts disjoint; the guard keeps a card from ever showing twice.
+        const seen = new Set<string>();
+        const toResults = (source: ResolveQueryResponseItem[]): ExternalSearchResult[] => {
+            const results: ExternalSearchResult[] = [];
+            for (const item of source) {
+                if (seen.has(item.partOrProductId)) continue;
+                const result = this.toSearchResult(
+                    ctx,
+                    item.canonicalName,
+                    item.score,
+                    products.get(item.partOrProductId),
+                    item.matchReasons,
+                );
+                if (!result) continue;
+                seen.add(item.partOrProductId);
+                results.push(result);
+            }
+            return results;
+        };
+        const codeMatches: Partial<Record<keyof typeof groups, ExternalCodeMatches>> = {};
+        for (const [key, group] of Object.entries(groups) as Array<
+            [keyof typeof groups, ResolveQueryCodeGroup | undefined]
+        >) {
+            if (group) codeMatches[key] = { items: toResults(group.items), total: group.total };
         }
+        const items = input.take === 0 ? [] : toResults(response.items);
 
         return {
             items,
+            ...codeMatches,
             // search-service's total, so pagination works; hits not synced into this instance
             // are skipped from `items`, which can leave a page shorter than `take`.
             totalItems: response.total,
@@ -142,6 +178,7 @@ export class ExternalSearchService {
         canonicalName: string,
         score: number,
         product: Product | undefined,
+        matchReasons: string[] = [],
     ): ExternalSearchResult | null {
         if (!product) return null;
 
@@ -165,6 +202,7 @@ export class ExternalSearchService {
             facetValueIds: [],
             collectionIds: [],
             score,
+            matchReasons,
         };
     }
 }

@@ -128,4 +128,30 @@ describe('useSearchSuggestions', () => {
 
         expect(groups.value?.[0]?.items[0]?.label).toBe('second');
     });
+
+    it('puts code matches first in priority order, deduplicated, capped at five', async () => {
+        const hit = (id: string): Record<string, unknown> => ({
+            productId: id,
+            productName: `P${id}`,
+            manufacturer: null,
+            slug: `s${id}`,
+            sku: `K${id}`,
+        });
+        shopApiMock.mockResolvedValue({
+            search: {
+                items: [hit('1'), hit('4'), hit('5'), hit('6')],
+                skuMatches: { items: [hit('1')] },
+                partNumberMatches: { items: [hit('2')] },
+                manufacturerCodeMatches: { items: [hit('3')] },
+            },
+        });
+        const query = ref('');
+        const groups = useSearchSuggestions(query, ref(undefined));
+
+        await type(query, '48.3855');
+
+        const items = groups.value?.[0].items ?? [];
+        expect(items.map(item => item.id)).toEqual(['1', '2', '3', '4', '5']);
+        expect(items[0].to).toBe('/product/s1');
+    });
 });

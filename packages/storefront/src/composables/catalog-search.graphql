@@ -1,3 +1,41 @@
+fragment CatalogSearchItem on SearchResult {
+    productId
+    productVariantId
+    productName
+    manufacturer {
+        name
+    }
+    galleryPreviews
+    slug
+    sku
+    priceWithTax {
+        ... on SinglePrice {
+            value
+        }
+        ... on PriceRange {
+            min
+        }
+    }
+    currencyCode
+    stockLevel
+    unitName
+    unitRatioToBase
+    multiplicity
+    packagingLevels {
+        name
+        ratioToBase
+    }
+    facetValueIds
+    customerPrice
+    compareAtPrice
+    discountTiers {
+        percent
+        minWeightKg
+        minAmount
+    }
+    matchReasons
+}
+
 query CatalogProducts(
     $term: String
     $take: Int!
@@ -22,41 +60,26 @@ query CatalogProducts(
         }
     ) {
         totalItems
+        skuMatches {
+            total
+            items {
+                ...CatalogSearchItem
+            }
+        }
+        partNumberMatches {
+            total
+            items {
+                ...CatalogSearchItem
+            }
+        }
+        manufacturerCodeMatches {
+            total
+            items {
+                ...CatalogSearchItem
+            }
+        }
         items {
-            productId
-            productVariantId
-            productName
-            manufacturer {
-                name
-            }
-            galleryPreviews
-            slug
-            sku
-            priceWithTax {
-                ... on SinglePrice {
-                    value
-                }
-                ... on PriceRange {
-                    min
-                }
-            }
-            currencyCode
-            stockLevel
-            unitName
-            unitRatioToBase
-            multiplicity
-            packagingLevels {
-                name
-                ratioToBase
-            }
-            facetValueIds
-            customerPrice
-            compareAtPrice
-            discountTiers {
-                percent
-                minWeightKg
-                minAmount
-            }
+            ...CatalogSearchItem
         }
         facetValues {
             facetValue {

@@ -81,6 +81,68 @@ describe('ExternalSearchService.search', () => {
         expect(result.totalItems).toBe(7);
     });
 
+    it('maps the code groups with their totals, keeps matchReasons, and never repeats a product', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({
+                items: [makeItem({ matchReasons: ['fullText', 'someFutureReason'] })],
+                total: 1,
+                skuMatches: {
+                    items: [makeItem({ matchReasons: ['exactSku'] })],
+                    total: 3,
+                },
+                partNumberMatches: { items: [], total: 0 },
+            }),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(makeProduct()) as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+            noPriceType as never,
+        );
+        const result = await service.search(ctx, { term: '48.3855', take: 24 } as SearchInput);
+        expect(result.skuMatches?.total).toBe(3);
+        expect(result.skuMatches?.items.map(i => i.matchReasons)).toEqual([['exactSku']]);
+        expect(result.partNumberMatches).toEqual({ items: [], total: 0 });
+        expect(result.manufacturerCodeMatches).toBeUndefined();
+        expect(result.items).toEqual([]);
+    });
+
+    it('omits the groups when search-service returns none (text-only query)', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(makeProduct()) as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+            noPriceType as never,
+        );
+        const result = await service.search(ctx, { term: 'oil', take: 24 } as SearchInput);
+        expect(result).not.toHaveProperty('skuMatches');
+        expect(result.items).toHaveLength(1);
+    });
+
+    it('skips an unsynced code hit without failing the group', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({
+                items: [],
+                total: 0,
+                skuMatches: { items: [makeItem({ partOrProductId: 'ext-unknown' })], total: 1 },
+            }),
+        };
+        const service = new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(makeProduct()) as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+            noPriceType as never,
+        );
+        const result = await service.search(ctx, { term: 'A1', take: 24 } as SearchInput);
+        expect(result.skuMatches).toEqual({ items: [], total: 1 });
+    });
+
     it('skips a search-service item with no matching Product.customFields.externalId, without erroring', async () => {
         const client = {
             resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),

@@ -3857,6 +3857,7 @@ export type RoleList = PaginatedList & {
 };
 
 export type SearchCapabilities = {
+    codeGroups: Scalars['Boolean']['output'];
     priceRange: Scalars['Boolean']['output'];
     sortKeys: Array<Scalars['String']['output']>;
 };
@@ -3882,11 +3883,19 @@ export type SearchReindexResponse = {
     success: Scalars['Boolean']['output'];
 };
 
+export type SearchCodeMatches = {
+    items: Array<SearchResult>;
+    total: Scalars['Int']['output'];
+};
+
 export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
+    manufacturerCodeMatches?: Maybe<SearchCodeMatches>;
+    partNumberMatches?: Maybe<SearchCodeMatches>;
     prices: SearchResponsePriceData;
+    skuMatches?: Maybe<SearchCodeMatches>;
     totalItems: Scalars['Int']['output'];
 };
 
@@ -3914,6 +3923,8 @@ export type SearchResult = {
     galleryPreviews: Array<Scalars['String']['output']>;
     inStock?: Maybe<Scalars['Boolean']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
+    /** Why the hit matched, from the external search backend; null on the internal one. */
+    matchReasons?: Maybe<Array<Scalars['String']['output']>>;
     /** Order quantity step of the variant, in base units. */
     multiplicity?: Maybe<Scalars['Int']['output']>;
     /** Product-owned packaging units (pack, pallet), smallest first. */
@@ -4556,6 +4567,32 @@ export type EndAllSessionsMutationVariables = Exact<{ [key: string]: never }>;
 
 export type EndAllSessionsMutation = { endAllSessions: boolean };
 
+export type CatalogSearchItemFragment = {
+    productId: string;
+    productVariantId: string;
+    productName: string;
+    galleryPreviews: Array<string>;
+    slug: string;
+    sku: string;
+    currencyCode: CurrencyCode;
+    stockLevel: string;
+    unitName?: string | null;
+    unitRatioToBase?: number | null;
+    multiplicity?: number | null;
+    facetValueIds: Array<string>;
+    customerPrice?: number | null;
+    compareAtPrice?: number | null;
+    manufacturer?: { name?: string | null } | null;
+    priceWithTax: { min: any } | { value: any };
+    packagingLevels: Array<{ name: string; ratioToBase: number }>;
+    discountTiers: Array<{
+        percent: number;
+        minWeightKg?: number | null;
+        minAmount?: number | null;
+    }>;
+    matchReasons?: Array<string> | null;
+};
+
 export type CatalogProductsQueryVariables = Exact<{
     term?: InputMaybe<Scalars['String']['input']>;
     take: Scalars['Int']['input'];
@@ -4570,30 +4607,10 @@ export type CatalogProductsQueryVariables = Exact<{
 export type CatalogProductsQuery = {
     search: {
         totalItems: number;
-        items: Array<{
-            productId: string;
-            productVariantId: string;
-            productName: string;
-            galleryPreviews: Array<string>;
-            slug: string;
-            sku: string;
-            currencyCode: CurrencyCode;
-            stockLevel: string;
-            unitName?: string | null;
-            unitRatioToBase?: number | null;
-            multiplicity?: number | null;
-            facetValueIds: Array<string>;
-            customerPrice?: number | null;
-            compareAtPrice?: number | null;
-            manufacturer?: { name?: string | null } | null;
-            priceWithTax: { min: any } | { value: any };
-            packagingLevels: Array<{ name: string; ratioToBase: number }>;
-            discountTiers: Array<{
-                percent: number;
-                minWeightKg?: number | null;
-                minAmount?: number | null;
-            }>;
-        }>;
+        skuMatches?: { total: number; items: Array<CatalogSearchItemFragment> } | null;
+        partNumberMatches?: { total: number; items: Array<CatalogSearchItemFragment> } | null;
+        manufacturerCodeMatches?: { total: number; items: Array<CatalogSearchItemFragment> } | null;
+        items: Array<CatalogSearchItemFragment>;
         facetValues: Array<{
             count: number;
             facetValue: {
@@ -4645,15 +4662,20 @@ export type SearchSuggestionsQueryVariables = Exact<{
     collectionSlug?: InputMaybe<Scalars['String']['input']>;
 }>;
 
+type SuggestionHit = {
+    productId: string;
+    productName: string;
+    slug: string;
+    sku: string;
+    manufacturer?: { name?: string | null } | null;
+};
+
 export type SearchSuggestionsQuery = {
     search: {
-        items: Array<{
-            productId: string;
-            productName: string;
-            slug: string;
-            sku: string;
-            manufacturer?: { name?: string | null } | null;
-        }>;
+        skuMatches?: { items: Array<SuggestionHit> } | null;
+        partNumberMatches?: { items: Array<SuggestionHit> } | null;
+        manufacturerCodeMatches?: { items: Array<SuggestionHit> } | null;
+        items: Array<SuggestionHit>;
     };
 };
 
@@ -5808,41 +5830,26 @@ export const CatalogProductsDocument = new TypedDocumentString(`
     input: {term: $term, take: $take, skip: $skip, groupByProduct: true, collectionSlug: $collectionSlug, facetValueFilters: $facetValueFilters, inStock: $inStock, priceRangeWithTax: $priceRangeWithTax, sort: $sort}
   ) {
     totalItems
+    skuMatches {
+      total
+      items {
+        ...CatalogSearchItem
+      }
+    }
+    partNumberMatches {
+      total
+      items {
+        ...CatalogSearchItem
+      }
+    }
+    manufacturerCodeMatches {
+      total
+      items {
+        ...CatalogSearchItem
+      }
+    }
     items {
-      productId
-      productVariantId
-      productName
-      manufacturer {
-        name
-      }
-      galleryPreviews
-      slug
-      sku
-      priceWithTax {
-        ... on SinglePrice {
-          value
-        }
-        ... on PriceRange {
-          min
-        }
-      }
-      currencyCode
-      stockLevel
-      unitName
-      unitRatioToBase
-      multiplicity
-      packagingLevels {
-        name
-        ratioToBase
-      }
-      facetValueIds
-      customerPrice
-      compareAtPrice
-      discountTiers {
-        percent
-        minWeightKg
-        minAmount
-      }
+      ...CatalogSearchItem
     }
     facetValues {
       facetValue {
@@ -5857,6 +5864,44 @@ export const CatalogProductsDocument = new TypedDocumentString(`
       count
     }
   }
+}
+
+    fragment CatalogSearchItem on SearchResult {
+  productId
+  productVariantId
+  productName
+  manufacturer {
+    name
+  }
+  galleryPreviews
+  slug
+  sku
+  priceWithTax {
+    ... on SinglePrice {
+      value
+    }
+    ... on PriceRange {
+      min
+    }
+  }
+  currencyCode
+  stockLevel
+  unitName
+  unitRatioToBase
+  multiplicity
+  packagingLevels {
+    name
+    ratioToBase
+  }
+  facetValueIds
+  customerPrice
+  compareAtPrice
+  discountTiers {
+    percent
+    minWeightKg
+    minAmount
+  }
+  matchReasons
 }
     `) as unknown as TypedDocumentString<CatalogProductsQuery, CatalogProductsQueryVariables>;
 export const CatalogFacetsDocument = new TypedDocumentString(`
@@ -5908,6 +5953,39 @@ export const SearchSuggestionsDocument = new TypedDocumentString(`
   search(
     input: {term: $term, take: 5, skip: 0, groupByProduct: true, collectionSlug: $collectionSlug}
   ) {
+    skuMatches {
+      items {
+        productId
+        productName
+        manufacturer {
+          name
+        }
+        slug
+        sku
+      }
+    }
+    partNumberMatches {
+      items {
+        productId
+        productName
+        manufacturer {
+          name
+        }
+        slug
+        sku
+      }
+    }
+    manufacturerCodeMatches {
+      items {
+        productId
+        productName
+        manufacturer {
+          name
+        }
+        slug
+        sku
+      }
+    }
     items {
       productId
       productName

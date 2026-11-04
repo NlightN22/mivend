@@ -58,6 +58,9 @@ export default {
         price: 'Price',
         order: 'Order',
         packOf: 'pack of {n}',
+        sortTextOnly: 'Sorting applies to the text results only',
+        codeMatchesTruncated: 'Too many code matches; refine the query to see them all',
+        match: { sku: 'Article', partNumber: 'Part number', manufacturerCode: 'Manufacturer code' },
     },
     productCard: {
         previousPhoto: 'Previous photo',

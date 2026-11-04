@@ -82,7 +82,15 @@ export interface ProductSearchResult {
 export async function searchProducts(term: string): Promise<ProductSearchResult[]> {
     if (!term.trim()) return [];
     const result = await adminApi(OrderCreateProductSearchDocument, { term });
-    return result.search.items;
+    const { search } = result;
+    const seen = new Set<string>();
+    // Code matches (article, part number, manufacturer code) go before the full-text hits.
+    return [
+        ...(search.skuMatches?.items ?? []),
+        ...(search.partNumberMatches?.items ?? []),
+        ...(search.manufacturerCodeMatches?.items ?? []),
+        ...search.items,
+    ].filter(item => !seen.has(item.productVariantId) && seen.add(item.productVariantId));
 }
 
 export type DraftOrderState = DraftOrderFieldsFragment;

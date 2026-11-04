@@ -32,6 +32,8 @@ const {
     categoryCounts,
     categoryCountsLoading,
     totalItems,
+    hasCodeMatches,
+    codeMatchesTruncated,
     loading,
     loadError,
     loadErrorInfo,
@@ -159,6 +161,8 @@ onMounted(() => {
                 <ProductListView
                     :items="items"
                     :total-items="totalItems"
+                    :has-code-matches="hasCodeMatches"
+                    :code-matches-truncated="codeMatchesTruncated"
                     :loading="loading"
                     :load-error="loadError"
                     :error-title="loadErrorInfo.title"

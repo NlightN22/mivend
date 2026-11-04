@@ -6,6 +6,7 @@ import { SearchSuggestionsDocument } from '../api/generated/graphql';
 
 const MIN_TERM_LENGTH = 2;
 const DEBOUNCE_MS = 250;
+const SUGGESTION_LIMIT = 5;
 
 // `undefined` hides the dropdown (too short, in flight, failed); `[]` means a finished search found nothing.
 export function useSearchSuggestions(
@@ -18,12 +19,35 @@ export function useSearchSuggestions(
         (term: string, slug: string | undefined) =>
             shopApi(SearchSuggestionsDocument, { term, collectionSlug: slug }),
         result => {
-            const items = result.search.items.map(item => ({
-                id: item.productId,
-                label: item.productName,
-                subtitle: [item.manufacturer?.name, item.sku].filter(Boolean).join(' · '),
-                to: `/product/${item.slug}`,
-            }));
+            const { search } = result;
+            const ranked = [
+                ...(search.skuMatches?.items ?? []).map(item => ({ item, kind: 'sku' })),
+                ...(search.partNumberMatches?.items ?? []).map(item => ({
+                    item,
+                    kind: 'partNumber',
+                })),
+                ...(search.manufacturerCodeMatches?.items ?? []).map(item => ({
+                    item,
+                    kind: 'manufacturerCode',
+                })),
+                ...search.items.map(item => ({ item, kind: undefined })),
+            ];
+            const seen = new Set<string>();
+            const items = ranked
+                .filter(({ item }) => !seen.has(item.productId) && seen.add(item.productId))
+                .slice(0, SUGGESTION_LIMIT)
+                .map(({ item, kind }) => ({
+                    id: item.productId,
+                    label: item.productName,
+                    subtitle: [
+                        kind ? i18n.global.t(`productList.match.${kind}`) : undefined,
+                        item.manufacturer?.name,
+                        item.sku,
+                    ]
+                        .filter(Boolean)
+                        .join(' · '),
+                    to: `/product/${item.slug}`,
+                }));
             groups.value =
                 items.length > 0
                     ? [{ type: 'products', label: i18n.global.t('search.products'), items }]

@@ -7,6 +7,7 @@ describe('capabilitiesFor', () => {
         expect(capabilitiesFor('external')).toEqual({
             sortKeys: ['relevance', 'name_asc', 'name_desc', 'price_asc', 'price_desc'],
             priceRange: true,
+            codeGroups: true,
         });
     });
 
@@ -14,6 +15,7 @@ describe('capabilitiesFor', () => {
         expect(capabilitiesFor('internal')).toEqual({
             sortKeys: ['relevance', 'name_asc', 'name_desc'],
             priceRange: false,
+            codeGroups: false,
         });
     });
 });

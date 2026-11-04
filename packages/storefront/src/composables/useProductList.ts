@@ -56,7 +56,10 @@ export interface ProductItem {
     facetValues: FacetValue[];
     manufacturer?: { name?: string | null } | null;
     images: string[];
+    codeMatch?: CodeMatchKind;
 }
+
+export type CodeMatchKind = 'sku' | 'partNumber' | 'manufacturerCode';
 
 export type ViewMode = 'list' | 'grid';
 
@@ -76,6 +79,33 @@ interface UseProductListOptions {
 }
 
 type EsSearchItem = CatalogProductsQuery['search']['items'][number];
+
+interface CodeGroup {
+    total: number;
+    items: EsSearchItem[];
+}
+
+// Code groups come first in priority order, then full-text; the server keeps them disjoint.
+function mapCodeGroups(
+    search: CatalogProductsQuery['search'],
+    facetValues: EsFacetValueResult[],
+): { items: ProductItem[]; total: number; truncated: boolean } {
+    const groups: Array<[CodeMatchKind, CodeGroup | null | undefined]> = [
+        ['sku', search.skuMatches],
+        ['partNumber', search.partNumberMatches],
+        ['manufacturerCode', search.manufacturerCodeMatches],
+    ];
+    const items: ProductItem[] = [];
+    let total = 0;
+    let truncated = false;
+    for (const [codeMatch, group] of groups) {
+        if (!group) continue;
+        total += group.total;
+        truncated ||= group.total > group.items.length;
+        items.push(...mapItems(group.items, facetValues).map(item => ({ ...item, codeMatch })));
+    }
+    return { items, total, truncated };
+}
 
 function mapItems(items: EsSearchItem[], facetValues: EsFacetValueResult[]): ProductItem[] {
     const facetMap = new Map<string, FacetValue>();
@@ -123,6 +153,8 @@ export function useProductList(options: UseProductListOptions = {}): {
     categoryCounts: Ref<Map<string, number>>;
     categoryCountsLoading: Ref<boolean>;
     totalItems: Ref<number>;
+    hasCodeMatches: Ref<boolean>;
+    codeMatchesTruncated: Ref<boolean>;
     loading: Ref<boolean>;
     loadError: Ref<boolean>;
     loadErrorInfo: Ref<LoadErrorText>;
@@ -143,6 +175,8 @@ export function useProductList(options: UseProductListOptions = {}): {
     const categoryCounts = ref(new Map<string, number>());
     const categoryCountsLoading = ref(false);
     const totalItems = ref(0);
+    const hasCodeMatches = ref(false);
+    const codeMatchesTruncated = ref(false);
     const loading = ref(false);
     const loadError = ref(false);
     const loadErrorInfo = ref<LoadErrorText>(describeLoadError(null));
@@ -156,6 +190,7 @@ export function useProductList(options: UseProductListOptions = {}): {
         ready: capabilitiesReady,
     } = useSearchCapabilities();
     let currentSkip = 0;
+    let textTotal = 0;
 
     function buildPriceRange(): { min: number; max: number } | undefined {
         const priceMin = filters?.value.priceMin;
@@ -196,6 +231,7 @@ export function useProductList(options: UseProductListOptions = {}): {
         [loadError.value, loading.value] = [failed, false];
         [items.value, facetGroups.value, categoryCounts.value] = [[], [], new Map()];
         [totalItems.value, hasMore.value, categoryCountsLoading.value] = [0, false, false];
+        [hasCodeMatches.value, codeMatchesTruncated.value, textTotal] = [false, false, 0];
     }
 
     let loadSeq = 0;
@@ -234,12 +270,15 @@ export function useProductList(options: UseProductListOptions = {}): {
         categoryCounts.value = new Map(
             (facetsResult?.search.collections ?? []).map(c => [c.collection.slug, c.count]),
         );
-        items.value = mapItems(productsResult.search.items, facetValues);
-        totalItems.value = productsResult.search.totalItems;
+        const codes = mapCodeGroups(productsResult.search, facetValues);
+        items.value = [...codes.items, ...mapItems(productsResult.search.items, facetValues)];
+        textTotal = productsResult.search.totalItems;
+        hasCodeMatches.value = codes.items.length > 0;
+        codeMatchesTruncated.value = codes.truncated;
+        totalItems.value = codes.total + textTotal;
+        // Paging continues over the full-text part only: code groups load once with the first page.
         currentSkip = productsResult.search.items.length;
-        hasMore.value =
-            productsResult.search.items.length === pageSize &&
-            currentSkip < productsResult.search.totalItems;
+        hasMore.value = productsResult.search.items.length === pageSize && currentSkip < textTotal;
         countsTerm = term;
         categoryCountsLoading.value = false;
         loading.value = false;
@@ -256,7 +295,7 @@ export function useProductList(options: UseProductListOptions = {}): {
             if (seq !== loadSeq) return; // a load() started/finished while this was in flight
             items.value = [...items.value, ...mapItems(result.search.items, [])];
             currentSkip += result.search.items.length;
-            hasMore.value = currentSkip < result.search.totalItems;
+            hasMore.value = currentSkip < textTotal;
         } finally {
             loadingMore.value = false;
         }
@@ -284,6 +323,8 @@ export function useProductList(options: UseProductListOptions = {}): {
         categoryCounts,
         categoryCountsLoading,
         totalItems,
+        hasCodeMatches,
+        codeMatchesTruncated,
         loading,
         loadError,
         loadErrorInfo,

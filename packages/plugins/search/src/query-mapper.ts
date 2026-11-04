@@ -19,10 +19,17 @@ export interface ResolveQueryRequest {
     sort?: SearchServiceSort;
     limit?: number;
     offset?: number;
+    skuLimit?: number;
+    partNumberLimit?: number;
+    manufacturerCodeLimit?: number;
     availableOnly?: boolean;
     availabilityMode?: typeof AVAILABILITY_MODE;
     requireOrganization?: boolean;
 }
+
+// Code groups are small and load once: the first page asks for their whole content, later pages and
+// facets-only requests ask for none so a product never repeats (#307).
+export const CODE_GROUP_LIMIT = 100;
 
 export function hasPriceCriteria(input: ShopSearchInput): boolean {
     return Boolean(input.priceRangeWithTax || input.sort?.price);
@@ -67,8 +74,16 @@ export function mapSearchInputToResolveQueryRequest(
             : {}),
         ...(resolved.warehouseIds ? { warehouseIds: resolved.warehouseIds } : {}),
     };
+    const groupLimit = input.take === 0 || (input.skip ?? 0) > 0 ? 0 : CODE_GROUP_LIMIT;
     return {
         query: input.term ?? '',
+        ...(input.term
+            ? {
+                  skuLimit: groupLimit,
+                  partNumberLimit: groupLimit,
+                  manufacturerCodeLimit: groupLimit,
+              }
+            : {}),
         ...(priceTypeId ? { priceTypeId } : {}),
         ...(resolved.categoryId ? { categoryId: resolved.categoryId } : {}),
         ...(Object.keys(filters).length > 0 ? { filters } : {}),

@@ -85,8 +85,17 @@ export async function fetchCatalogPage(
         skip: (page - 1) * pageSize,
         take: pageSize,
     });
+    const { search } = result;
+    // Code groups arrive on the first page only; the pager keeps counting full-text hits.
+    const seen = new Set<string>();
+    const merged = [
+        ...(search.skuMatches?.items ?? []),
+        ...(search.partNumberMatches?.items ?? []),
+        ...(search.manufacturerCodeMatches?.items ?? []),
+        ...search.items,
+    ].filter(item => !seen.has(item.productId) && seen.add(item.productId));
     return {
-        items: result.search.items.map(item => ({
+        items: merged.map(item => ({
             ...item,
             imagePreview: item.productAsset?.preview ?? null,
         })),

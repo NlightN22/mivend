@@ -8628,10 +8628,18 @@ export type SearchReindexResponse = {
     success: Scalars['Boolean']['output'];
 };
 
+export type SearchCodeMatches = {
+    items: Array<SearchResult>;
+    total: Scalars['Int']['output'];
+};
+
 export type SearchResponse = {
     collections: Array<CollectionResult>;
     facetValues: Array<FacetValueResult>;
     items: Array<SearchResult>;
+    manufacturerCodeMatches: SearchCodeMatches | null;
+    partNumberMatches: SearchCodeMatches | null;
+    skuMatches: SearchCodeMatches | null;
     totalItems: Scalars['Int']['output'];
 };
 
@@ -10358,19 +10366,24 @@ export type CatalogPageQueryVariables = Exact<{
     take?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
+type CatalogPageHit = {
+    productId: string;
+    productVariantId: string;
+    productName: string;
+    sku: string;
+    slug: string;
+    facetValueIds: Array<string>;
+    availableForOrder: boolean;
+    productAsset: { preview: string } | null;
+};
+
 export type CatalogPageQuery = {
     search: {
         totalItems: number;
-        items: Array<{
-            productId: string;
-            productVariantId: string;
-            productName: string;
-            sku: string;
-            slug: string;
-            facetValueIds: Array<string>;
-            availableForOrder: boolean;
-            productAsset: { preview: string } | null;
-        }>;
+        skuMatches: { items: Array<CatalogPageHit> } | null;
+        partNumberMatches: { items: Array<CatalogPageHit> } | null;
+        manufacturerCodeMatches: { items: Array<CatalogPageHit> } | null;
+        items: Array<CatalogPageHit>;
     };
 };
 
@@ -11353,8 +11366,15 @@ export type OrderCreateProductSearchQueryVariables = Exact<{
     term: Scalars['String']['input'];
 }>;
 
+type OrderCreateSearchHit = { productVariantId: string; productName: string; sku: string };
+
 export type OrderCreateProductSearchQuery = {
-    search: { items: Array<{ productVariantId: string; productName: string; sku: string }> };
+    search: {
+        skuMatches: { items: Array<OrderCreateSearchHit> } | null;
+        partNumberMatches: { items: Array<OrderCreateSearchHit> } | null;
+        manufacturerCodeMatches: { items: Array<OrderCreateSearchHit> } | null;
+        items: Array<OrderCreateSearchHit>;
+    };
 };
 
 export type DraftOrderFieldsFragment = {
@@ -13605,6 +13625,48 @@ export const CatalogPageDocument = new TypedDocumentString(`
     input: {term: $term, collectionSlug: $collectionSlug, facetValueFilters: $facetValueFilters, groupByProduct: true, skip: $skip, take: $take}
   ) {
     totalItems
+    skuMatches {
+      items {
+        productId
+        productVariantId
+        productName
+        sku
+        slug
+        facetValueIds
+        availableForOrder
+        productAsset {
+          preview
+        }
+      }
+    }
+    partNumberMatches {
+      items {
+        productId
+        productVariantId
+        productName
+        sku
+        slug
+        facetValueIds
+        availableForOrder
+        productAsset {
+          preview
+        }
+      }
+    }
+    manufacturerCodeMatches {
+      items {
+        productId
+        productVariantId
+        productName
+        sku
+        slug
+        facetValueIds
+        availableForOrder
+        productAsset {
+          preview
+        }
+      }
+    }
     items {
       productId
       productVariantId
@@ -14691,6 +14753,27 @@ export const OrderCreateCustomersDocument = new TypedDocumentString(`
 export const OrderCreateProductSearchDocument = new TypedDocumentString(`
     query OrderCreateProductSearch($term: String!) {
   search(input: {term: $term, take: 20, groupByProduct: false}) {
+    skuMatches {
+      items {
+        productVariantId
+        productName
+        sku
+      }
+    }
+    partNumberMatches {
+      items {
+        productVariantId
+        productName
+        sku
+      }
+    }
+    manufacturerCodeMatches {
+      items {
+        productVariantId
+        productName
+        sku
+      }
+    }
     items {
       productVariantId
       productName

@@ -50,6 +50,48 @@ query CatalogPage(
         }
     ) {
         totalItems
+        skuMatches {
+            items {
+                productId
+                productVariantId
+                productName
+                sku
+                slug
+                facetValueIds
+                availableForOrder
+                productAsset {
+                    preview
+                }
+            }
+        }
+        partNumberMatches {
+            items {
+                productId
+                productVariantId
+                productName
+                sku
+                slug
+                facetValueIds
+                availableForOrder
+                productAsset {
+                    preview
+                }
+            }
+        }
+        manufacturerCodeMatches {
+            items {
+                productId
+                productVariantId
+                productName
+                sku
+                slug
+                facetValueIds
+                availableForOrder
+                productAsset {
+                    preview
+                }
+            }
+        }
         items {
             productId
             productVariantId

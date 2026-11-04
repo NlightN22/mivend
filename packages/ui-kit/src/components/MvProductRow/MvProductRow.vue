@@ -49,6 +49,7 @@ const DEFAULT_LABELS: ProductRowLabels = {
 interface Props {
     name: string;
     sku: string;
+    matchBadge?: string;
     brand?: string;
     imageUrl?: string;
     price?: number;
@@ -197,6 +198,7 @@ function onStepperChange(qty: number): void {
         <div class="mv-product-row__cell">
             <div class="mv-product-row__cell-label">{{ text.sku }}</div>
             <div class="mv-product-row__cell-value mv-product-row__sku">{{ sku }}</div>
+            <span v-if="matchBadge" class="mv-product-row__match-badge">{{ matchBadge }}</span>
         </div>
 
         <div class="mv-product-row__cell">
@@ -327,6 +329,17 @@ function onStepperChange(qty: number): void {
 </template>
 
 <style scoped>
+.mv-product-row__match-badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #e6f2ee;
+    color: #1f5d4b;
+    font-size: 11px;
+    font-weight: 600;
+}
+
 .mv-product-row {
     display: grid;
     grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 90px 110px 140px;

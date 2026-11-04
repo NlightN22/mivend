@@ -30,6 +30,27 @@ query OrderCreateCustomers($counterpartyIds: [String!]!, $take: Int!) {
 
 query OrderCreateProductSearch($term: String!) {
     search(input: { term: $term, take: 20, groupByProduct: false }) {
+        skuMatches {
+            items {
+                productVariantId
+                productName
+                sku
+            }
+        }
+        partNumberMatches {
+            items {
+                productVariantId
+                productName
+                sku
+            }
+        }
+        manufacturerCodeMatches {
+            items {
+                productVariantId
+                productName
+                sku
+            }
+        }
         items {
             productVariantId
             productName

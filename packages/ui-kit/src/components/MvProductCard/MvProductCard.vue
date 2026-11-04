@@ -32,6 +32,7 @@ const DEFAULT_LABELS: ProductCardLabels = {
 interface Props {
     name: string;
     sku: string;
+    matchBadge?: string;
     brand?: string;
     images?: string[];
     price?: number;
@@ -181,6 +182,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
                 <span class="mv-product-card__sku">{{ sku }}</span>
             </div>
 
+            <span v-if="matchBadge" class="mv-product-card__match-badge">{{ matchBadge }}</span>
             <a :href="`/product/${slug}`" class="mv-product-card__name">{{ name }}</a>
             <div v-if="packLabel" class="mv-product-card__pack">{{ packLabel }}</div>
             <MvTierLadder
@@ -278,6 +280,16 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 </template>
 
 <style scoped>
+.mv-product-card__match-badge {
+    align-self: flex-start;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e6f2ee;
+    color: #1f5d4b;
+    font-size: 11px;
+    font-weight: 600;
+}
+
 .mv-product-card {
     position: relative;
     border: 1px solid #dde7e2;

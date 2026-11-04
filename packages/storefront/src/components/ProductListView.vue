@@ -21,6 +21,8 @@ const props = defineProps<{
     title?: string;
     showPrices: boolean;
     gridColumns?: number;
+    hasCodeMatches?: boolean;
+    codeMatchesTruncated?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -65,6 +67,8 @@ onBeforeUnmount(() => observer?.disconnect());
             <div class="plv-toolbar__right">
                 <select
                     class="plv-toolbar__select"
+                    :disabled="hasCodeMatches"
+                    :title="hasCodeMatches ? t('productList.sortTextOnly') : undefined"
                     :value="sortKey"
                     @change="emit('update:sortKey', ($event.target as HTMLSelectElement).value)"
                 >
@@ -97,6 +101,9 @@ onBeforeUnmount(() => observer?.disconnect());
             </div>
         </div>
 
+        <div v-if="codeMatchesTruncated && !loading" class="plv-state" role="status">
+            {{ t('productList.codeMatchesTruncated') }}
+        </div>
         <div v-if="loading" class="plv-state">{{ t('productList.loading') }}</div>
         <MvErrorState
             v-else-if="loadError"
