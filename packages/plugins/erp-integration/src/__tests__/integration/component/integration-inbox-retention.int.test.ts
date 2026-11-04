@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { DataSource } from 'typeorm';
 import {
     createTestConnection,
@@ -35,6 +35,9 @@ beforeAll(async () => {
         synchronize: true,
     });
     await dataSource.initialize();
+});
+
+beforeEach(() => {
     retention = new IntegrationInboxRetentionService(
         createTestConnection(dataSource),
         testRequestContextService,
@@ -54,8 +57,8 @@ async function seed(): Promise<void> {
     await dataSource.query(
         `INSERT INTO integration_inbox_event (stream, entity_id, version, source_event_id, payload, status)
          SELECT 'price', 'e' || lpad(g::text, 6, '0'), v::text, 'evt-' || g || '-' || v, '{"real":1}'::jsonb, 'processed'
-           FROM generate_series(1, $1) g, generate_series(1, CASE WHEN g <= $2 THEN 3 ELSE 1 END) v`,
-        [SINGLES + TRIPLES, TRIPLES],
+           FROM generate_series(1, $1) g, generate_series(1, CASE WHEN g % $2::int = 0 THEN 3 ELSE 1 END) v`,
+        [SINGLES + TRIPLES, (SINGLES + TRIPLES) / TRIPLES],
     );
 }
 
