@@ -1665,6 +1665,9 @@ importers:
 
   packages/shared:
     dependencies:
+      dataloader:
+        specifier: 2.2.3
+        version: 2.2.3
       zod:
         specifier: ^3.23.0
         version: 3.25.76

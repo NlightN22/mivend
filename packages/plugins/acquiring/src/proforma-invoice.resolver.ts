@@ -5,7 +5,6 @@ import {
     Ctx,
     CustomerService,
     ForbiddenError,
-    OrderService,
     PaginatedList,
     Permission,
     RequestContext,
@@ -18,6 +17,11 @@ import { displayStatusOf } from './proforma-invoice-display';
 import { ProformaInvoiceOrderCancelService } from './proforma-invoice-order-cancel.service';
 import { ProformaInvoiceWithdrawService } from './proforma-invoice-withdraw.service';
 import { ProformaInvoiceService, ProformaInvoiceListOptions } from './proforma-invoice.service';
+import {
+    OrderRef,
+    ProformaInvoiceRefLoader,
+    VersionRef,
+} from './proforma-invoice-ref-loader.service';
 import { ProformaInvoiceIssuingService } from './proforma-invoice-issuing.service';
 import { PaymentAttemptService, PayProformaInvoiceOutcome } from './payment-attempt.service';
 import { PaymentChannel } from './entities/payment-attempt.entity';
@@ -181,18 +185,11 @@ interface SnapshotLine {
     linePriceWithTax: number;
 }
 
-interface VersionRef {
-    id: string;
-    number: string;
-    version: number;
-}
-
 @Resolver('ProformaInvoice')
 export class ProformaInvoiceFieldResolver {
     constructor(
-        private proformaInvoiceService: ProformaInvoiceService,
         private issuing: ProformaInvoiceIssuingService,
-        private orderService: OrderService,
+        private refLoader: ProformaInvoiceRefLoader,
     ) {}
 
     @ResolveField()
@@ -238,22 +235,12 @@ export class ProformaInvoiceFieldResolver {
     async order(
         @Ctx() ctx: RequestContext,
         @Parent() proformaInvoice: ProformaInvoice,
-    ): Promise<{ id: string; code: string } | null> {
+    ): Promise<OrderRef | null> {
         if (proformaInvoice.orderId == null) return null;
-        const order = await this.orderService.findOne(ctx, proformaInvoice.orderId);
-        if (!order) {
-            throw new Error(
-                `Order ${proformaInvoice.orderId} not found for proforma invoice ${proformaInvoice.id}`,
-            );
-        }
-        return { id: String(order.id), code: order.code };
+        return this.refLoader.order(ctx, proformaInvoice.orderId);
     }
 
-    private async versionRef(ctx: RequestContext, id: number | null): Promise<VersionRef | null> {
-        if (id == null) return null;
-        const other = await this.proformaInvoiceService.findOne(ctx, id);
-        return other
-            ? { id: String(other.id), number: other.number, version: other.version }
-            : null;
+    private versionRef(ctx: RequestContext, id: number | null): Promise<VersionRef | null> {
+        return id == null ? Promise.resolve(null) : this.refLoader.version(ctx, id);
     }
 }

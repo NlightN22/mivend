@@ -1,6 +1,7 @@
 export * from './sync';
 export * from './testing/postgres-test-schema';
 export * from './testing/transactional-test-connection';
+export * from './testing/query-counting-logger';
 // vendure-events.ts is backend-only (imports @vendure/core) — same "never touched by Vite"
 // carve-out as sync.ts above, see that comment.
 export * from './vendure-events';
@@ -13,6 +14,7 @@ export { lockAggregates, withAggregateLock } from './aggregate-lock';
 export { withOrderCancelLocks } from './order-cancel-locks';
 export { withSavepoint } from './savepoint';
 export { ctxQuery } from './ctx-query';
+export { CtxLoader } from './ctx-loader';
 export { contentHash } from './content-hash';
 export { replaceMembership } from './replace-membership';
 export type { MembershipTable } from './replace-membership';

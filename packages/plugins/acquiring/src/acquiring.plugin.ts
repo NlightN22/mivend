@@ -1,3 +1,4 @@
+import { ProformaInvoiceRefLoader } from './proforma-invoice-ref-loader.service';
 import {
     LanguageCode,
     PluginCommonModule,
@@ -99,6 +100,7 @@ import { ContractProformaPurgeService } from './contract-proforma-purge.service'
         InboxService,
         ProformaInvoiceService,
         ProformaInvoiceIssuingService,
+        ProformaInvoiceRefLoader,
         ProformaInvoiceWithdrawService,
         ProformaInvoiceOrderCancelService,
         PaymentAttemptService,
