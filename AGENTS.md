@@ -367,3 +367,17 @@ branch and close that issue (with a summary comment) — use the `finish-task` s
 handles both and skips cleanly if there's no remote or no linked issue. A local `make lint`/
 `make test` pass and an audit sign-off are not the end of the workflow by themselves — the issue
 being implemented is not actually done while it sits open on GitHub and the commits sit unpushed.
+
+## Release gate — audit before release
+
+A production release (version bump, image publish, prod deploy) ships only commits that the audit
+session has already signed off: every commit since the last release, from every session, not just
+the release owner's own. Order: implement, checks, audit, fixes, push, then bump/build/deploy.
+
+- The release owner runs `git log <last release tag>..HEAD` and confirms each commit's audit before
+  the version bump. An unaudited commit is either audited first or left out of the release
+  (push by sha, never `git push` of a shared tree that carries someone else's local commits).
+- Deploying first and auditing afterwards is not allowed, even on the owner's request to hurry,
+  unless the owner explicitly accepts an unaudited release in the chat for that release.
+- A coordinated multi-session release ships everything together in one version; the release owner
+  waits for every session's audit result before the bump.
