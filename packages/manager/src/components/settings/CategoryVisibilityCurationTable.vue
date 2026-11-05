@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
     MvAdvancedDataTable,
     MvSelect,
@@ -13,6 +13,7 @@ import {
     describeCategoryVisibility,
     type CategoryVisibilityCollection,
 } from '../../api/categoryVisibility';
+import { buildCategoryTreeRows } from '../../utils/categoryVisibilityTree';
 
 // See manager-table-standard skill. `name` is the identifying/required column, backed by a
 // client-side toolbar search (same exemption reasoning as WarehouseCurationTable.vue — a bounded
@@ -40,24 +41,10 @@ const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'name',
         header: 'Category',
-        width: 260,
+        width: 340,
         required: true,
         filterConfig: { type: 'text', placeholder: 'Name contains…' },
         mobile: { primary: true },
-    },
-    {
-        field: 'depth',
-        header: 'Level',
-        width: 90,
-        filterConfig: { type: 'none' },
-        mobile: { hidden: true },
-    },
-    {
-        field: 'parentName',
-        header: 'Parent',
-        width: 200,
-        filterConfig: { type: 'none' },
-        mobile: { hidden: true },
     },
     {
         field: 'slug',
@@ -112,29 +99,37 @@ interface CategoryVisibilityRow {
     name: string;
     slug: string;
     depth: number;
-    parentName: string;
+    hasChildren: boolean;
+    expanded: boolean;
     hiddenReason: string;
     isPrivate: boolean;
     isPrivateVariant: StatusBadgeVariant;
     visibilityOverride: string;
 }
 const visibilityInfo = computed(() => describeCategoryVisibility(props.collections));
+const expandedIds = ref(new Set<string>());
+function toggle(id: string): void {
+    const next = new Set(expandedIds.value);
+    if (!next.delete(id)) next.add(id);
+    expandedIds.value = next;
+}
 const rows = computed<CategoryVisibilityRow[]>(() =>
-    props.collections
-        .filter(c =>
-            c.name.toLowerCase().includes((tableState.value.filters.name ?? '').toLowerCase()),
-        )
-        .map(c => ({
-            id: c.id,
-            name: c.name,
-            slug: c.slug,
-            depth: visibilityInfo.value.get(c.id)?.depth ?? 1,
-            parentName: visibilityInfo.value.get(c.id)?.parentName || '—',
-            hiddenReason: visibilityInfo.value.get(c.id)?.hiddenReason || '—',
-            isPrivate: c.isPrivate,
-            isPrivateVariant: c.isPrivate ? 'neutral' : 'success',
-            visibilityOverride: c.customFields?.visibilityOverride ?? '',
-        })),
+    buildCategoryTreeRows(
+        props.collections,
+        expandedIds.value,
+        tableState.value.filters.name ?? '',
+    ).map(({ item: c, depth, hasChildren, expanded }) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        depth,
+        hasChildren,
+        expanded,
+        hiddenReason: visibilityInfo.value.get(c.id)?.hiddenReason || '—',
+        isPrivate: c.isPrivate,
+        isPrivateVariant: c.isPrivate ? 'neutral' : 'success',
+        visibilityOverride: c.customFields?.visibilityOverride ?? '',
+    })),
 );
 </script>
 
@@ -153,6 +148,25 @@ const rows = computed<CategoryVisibilityRow[]>(() =>
         :search="{ filterKey: 'name', placeholder: 'Search categories…' }"
         empty-message="No categories match your search"
     >
+        <template #cell-name="{ data }">
+            <span
+                class="category-tree__name"
+                :style="{ paddingLeft: `${(data as CategoryVisibilityRow).depth * 20}px` }"
+            >
+                <button
+                    v-if="(data as CategoryVisibilityRow).hasChildren"
+                    type="button"
+                    class="category-tree__toggle"
+                    :aria-expanded="(data as CategoryVisibilityRow).expanded"
+                    :aria-label="(data as CategoryVisibilityRow).expanded ? 'Collapse' : 'Expand'"
+                    @click="toggle((data as CategoryVisibilityRow).id)"
+                >
+                    {{ (data as CategoryVisibilityRow).expanded ? '▾' : '▸' }}
+                </button>
+                <span v-else class="category-tree__toggle" />
+                {{ (data as CategoryVisibilityRow).name }}
+            </span>
+        </template>
         <template #cell-isPrivate="{ data }">
             <MvStatusBadge :variant="(data as CategoryVisibilityRow).isPrivateVariant">
                 {{ (data as CategoryVisibilityRow).isPrivate ? 'Hidden' : 'Visible' }}
@@ -174,3 +188,21 @@ const rows = computed<CategoryVisibilityRow[]>(() =>
         </template>
     </MvAdvancedDataTable>
 </template>
+
+<style scoped>
+.category-tree__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.category-tree__toggle {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--el-text-color-secondary, #6b7280);
+    cursor: pointer;
+}
+</style>

@@ -77,11 +77,17 @@ onBeforeUnmount(() => {
 <style scoped>
 .mv-scroll-nav {
     position: fixed;
-    left: 16px;
-    bottom: calc(78px + env(safe-area-inset-bottom));
+    right: 16px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
     z-index: calc(var(--mv-z-floating) - 1);
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+@media (max-width: 800px) {
+    .mv-scroll-nav {
+        bottom: calc(150px + env(safe-area-inset-bottom));
+    }
 }
 </style>
