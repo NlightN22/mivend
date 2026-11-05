@@ -12,6 +12,7 @@ import {
     readSiteName,
 } from '@mivend/ui-kit';
 import { useLanguageSwitcher } from '../composables/useLanguageSwitcher';
+import { headerDeliveryLabel } from '../composables/headerDeliveryLabel';
 import { useHeaderSearch } from '../composables/useHeaderSearch';
 import { useNotificationPanelLabels } from '../composables/useNotificationPanelLabels';
 import { useAuthStore } from '../stores/auth';
@@ -27,6 +28,9 @@ const language = useLanguageSwitcher();
 const siteName = readSiteName();
 const siteIconUrl = readSiteIconUrl();
 const authStore = useAuthStore();
+const deliveryLabel = computed(() =>
+    headerDeliveryLabel(authStore.counterparty?.fullName, authStore.tradingPoint),
+);
 const cartStore = useCartStore();
 const catalogStore = useCatalogStore();
 const favoritesStore = useFavoritesStore();
@@ -266,12 +270,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
             <div v-if="authStore.isLoggedIn" class="app-header__delivery">
                 <span class="app-header__delivery-line">
-                    <template v-if="authStore.tradingPoint">
-                        {{ t('header.tradingPoint') }} &middot;
-                        <strong>{{ authStore.tradingPoint.name }}</strong>
-                        <span class="app-header__delivery-address"
-                            >&nbsp;— {{ authStore.tradingPoint.address }}</span
-                        >
+                    <template v-if="deliveryLabel.organization || deliveryLabel.place">
+                        <template v-if="deliveryLabel.organization">{{
+                            deliveryLabel.organization
+                        }}</template>
+                        <template v-if="deliveryLabel.organization && deliveryLabel.place">
+                            &middot;
+                        </template>
+                        <strong v-if="deliveryLabel.place">{{ deliveryLabel.place }}</strong>
                     </template>
                     <template v-else>
                         <span class="app-header__delivery-hint">{{

@@ -6,7 +6,7 @@ const ru: typeof en = {
         filters: {
             active: 'Активные',
             pending: 'На согласовании',
-            confirmed: 'Готовятся',
+            confirmed: 'Ждут отгрузки',
             inTransit: 'В пути',
             delivered: 'Выполнены',
             cancelled: 'Отменены',
@@ -14,7 +14,7 @@ const ru: typeof en = {
         },
         groupLabels: {
             pending: 'На согласовании',
-            confirmed: 'Готовится',
+            confirmed: 'Ждёт отгрузки',
             in_transit: 'В пути',
             delivered: 'Выполнен',
             cancelled: 'Отменён',

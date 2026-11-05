@@ -4,7 +4,7 @@ export default {
         filters: {
             active: 'Active',
             pending: 'Pending approval',
-            confirmed: 'Being prepared',
+            confirmed: 'Awaiting shipment',
             inTransit: 'In transit',
             delivered: 'Completed',
             cancelled: 'Cancelled',
@@ -12,7 +12,7 @@ export default {
         },
         groupLabels: {
             pending: 'Pending approval',
-            confirmed: 'Being prepared',
+            confirmed: 'Awaiting shipment',
             in_transit: 'In transit',
             delivered: 'Completed',
             cancelled: 'Cancelled',
