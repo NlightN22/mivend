@@ -25,6 +25,7 @@ import {
     MvBreadcrumbs,
     MvCatalogDropdown,
     layers,
+    reloadOnStaleChunk,
     AMOUNT_FORMATTER,
 } from '@mivend/ui-kit';
 
@@ -32,6 +33,8 @@ import App from './App.vue';
 import { router } from './router';
 import { i18n, initLocale } from './i18n';
 import { formatAmount } from './i18n/format';
+
+reloadOnStaleChunk();
 
 const app = createApp(App);
 

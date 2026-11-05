@@ -3,10 +3,10 @@ import { Logger } from '@vendure/core';
 
 const MIN_QUERY_LENGTH = 3;
 const MAX_RESULTS = 6;
-const REQUEST_TIMEOUT_MS = 1500;
+const REQUEST_TIMEOUT_MS = 2500;
 const CACHE_TTL_MS = 10 * 60_000;
 const CACHE_MAX_ENTRIES = 500;
-const PAUSE_AFTER_FAILURE_MS = 60_000;
+const PAUSE_AFTER_FAILURE_MS = 30_000;
 
 interface ProviderResponse {
     suggestions?: Array<{ unrestricted_value?: string }>;
@@ -38,7 +38,7 @@ export class AddressSuggestService {
         } catch (error) {
             this.pausedUntil = Date.now() + PAUSE_AFTER_FAILURE_MS;
             Logger.warn(
-                `Address suggestions unavailable, paused for 60 s: ${error instanceof Error ? error.message : String(error)}`,
+                `Address suggestions unavailable, paused for 30 s: ${error instanceof Error ? error.message : String(error)}`,
                 'AddressSuggest',
             );
             return [];

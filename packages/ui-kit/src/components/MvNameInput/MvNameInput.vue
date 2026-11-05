@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { nextTick, ref } from 'vue';
 import MvInput from '../MvInput/MvInput.vue';
-import { formatPersonName } from '../../utils/contactFormat';
+import { applyNameInput } from '../../utils/contactFormat';
 
 defineProps<{
     modelValue: string;
@@ -10,10 +11,21 @@ defineProps<{
     autocomplete?: string;
 }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string]; blur: [] }>();
+
+const wrapper = ref<HTMLElement | null>(null);
+
+function onInput(raw: string): void {
+    const input = wrapper.value?.querySelector('input') ?? null;
+    const result = applyNameInput(raw, input?.selectionStart ?? raw.length);
+    emit('update:modelValue', result.value);
+    if (!input) return;
+    input.value = result.value;
+    nextTick(() => input.setSelectionRange(result.caret, result.caret));
+}
 </script>
 
 <template>
-    <div @focusout="emit('blur')">
+    <div ref="wrapper" @focusout="emit('blur')">
         <MvInput
             :model-value="modelValue"
             :maxlength="100"
@@ -21,7 +33,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string]; blur: [] }>();
             :placeholder="placeholder"
             :disabled="disabled"
             :error="error"
-            @update:model-value="emit('update:modelValue', formatPersonName($event))"
+            @update:model-value="onInput"
         />
     </div>
 </template>

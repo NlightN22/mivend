@@ -57,6 +57,8 @@ function onKeydown(event: KeyboardEvent): void {
     } else if (event.key === 'Enter' && active.value >= 0) {
         event.preventDefault();
         pick(items.value[active.value]);
+    } else if (event.key === 'Tab' && active.value >= 0) {
+        pick(items.value[active.value]);
     } else if (event.key === 'Escape') {
         open.value = false;
     }

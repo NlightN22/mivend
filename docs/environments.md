@@ -160,7 +160,7 @@ per-contour deployment choice, never an admin-configurable runtime toggle, and t
 are never registered together. The internal index gained code-match fields (#307/#308, `docs/frontend.md` "Code matches"):
 run the admin `reindex` once on every existing `internal` contour (`make dev-reset` does it implicitly), otherwise code groups stay empty.
 
-**Address suggestions** (storefront trading-point form): `ADDRESS_SUGGEST_URL` and `ADDRESS_SUGGEST_API_KEY` (key sent as `Authorization: Token`), unset = off. Served by the `suggestAddress` shop query to logged-in customers. Fail-open: a timeout or error pauses suggestions for 60 s and the field stays plain text.
+**Address suggestions** (storefront trading-point form): `ADDRESS_SUGGEST_URL` and `ADDRESS_SUGGEST_API_KEY` (key sent as `Authorization: Token`), unset = off. Served by the `suggestAddress` shop query to logged-in customers. Fail-open: a timeout or error pauses suggestions for 30 s and the field stays plain text.
 
 **Data-drift report sources (issue #303)**: disabled by default; polled only on the central hub. See `docs/consistency-reports.md`.
 

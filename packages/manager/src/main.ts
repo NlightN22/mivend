@@ -19,10 +19,13 @@ import {
     MvCard,
     MvBreadcrumbs,
     layers,
+    reloadOnStaleChunk,
 } from '@mivend/ui-kit';
 
 import App from './App.vue';
 import { router } from './router';
+
+reloadOnStaleChunk();
 
 const app = createApp(App);
 

@@ -61,6 +61,7 @@ export { default as MvFormField } from './components/MvFormField/MvFormField.vue
 
 export { default as MvInput } from './components/MvInput/MvInput.vue';
 
+export { reloadOnStaleChunk } from './utils/staleChunkReload';
 export { default as MvPhoneInput } from './components/MvPhoneInput/MvPhoneInput.vue';
 export { default as MvAddressInput } from './components/MvAddressInput/MvAddressInput.vue';
 export { default as MvNameInput } from './components/MvNameInput/MvNameInput.vue';
