@@ -75,7 +75,7 @@ globally without an agreed design and a retry wrapper.
 - Both are released at transaction end. Never hold either across an external call (HTTP,
   Kafka, file download) unless the work is deliberately serialized per key and documented.
 
-`withAggregateLock` takes an optional `lockTimeoutMs` (`set_config('lock_timeout', ..., true)` inside the transaction); the long-held `category-tree` lock uses it so a stuck holder surfaces as an error, not a hang. It also sets `idle_in_transaction_session_timeout` (1 min) for the holder and restores `lock_timeout` once the lock is held.
+`withAggregateLock` takes optional `{ lockTimeoutMs, idleTimeoutMs, slowHoldWarnMs }`: `lockTimeoutMs` (`set_config('lock_timeout', ..., true)`, restored once the lock is held) makes a waiter fail with an error instead of holding a pool connection; `idleTimeoutMs` sets `idle_in_transaction_session_timeout` for the holder; `slowHoldWarnMs` logs a warning on a long hold. The long-held `category-tree` lock uses all three (60 s each).
 
 **Lock ordering.** When a unit of work takes more than one lock, take them in a fixed global
 order: advisory locks first, then row locks; among rows, ascending primary key; among

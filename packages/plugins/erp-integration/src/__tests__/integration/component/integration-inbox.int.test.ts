@@ -323,6 +323,27 @@ describe('IntegrationInboxService (integration, real Postgres)', () => {
         expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
     });
 
+    it('markFailed retries a Postgres lock_timeout error with backoff instead of parking the row', async () => {
+        const row = await inboxService.enqueue(testRequestContext, {
+            stream: 'category',
+            entityId: 'c-lock',
+            version: '1',
+            sourceEventId: 'evt-lock',
+            payload: {},
+        });
+        const lockTimeout = Object.assign(new Error('canceling statement due to lock timeout'), {
+            code: '55P03',
+        });
+
+        await inboxService.markFailedUnclaimed(testRequestContext, row.id, lockTimeout);
+
+        const updated = await dataSource
+            .getRepository(IntegrationInboxEvent)
+            .findOneOrFail({ where: { id: row.id } });
+        expect(updated.status).toBe('pending');
+        expect(updated.nextRetryAt!.getTime()).toBeGreaterThan(Date.now());
+    });
+
     // Issue #211: onBudgetExhausted reroutes a budget-exhausted markFailed to a noop outcome.
     it('markFailed resolves as noop with the given reason once the budget is exhausted, when onBudgetExhausted is passed', async () => {
         const row = await inboxService.enqueue(testRequestContext, {

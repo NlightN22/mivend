@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
     CATEGORY_FACET_CODE,
     CATEGORY_TREE_LOCK,
-    CATEGORY_TREE_LOCK_TIMEOUT_MS,
+    CATEGORY_TREE_LOCK_OPTIONS,
     buildCategoryFacetFilter,
     categorySlug,
     collectFacetValueIds,
@@ -97,7 +97,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
                     reparent: !isDeleted,
                     facetValueIdByCode,
                 }),
-            CATEGORY_TREE_LOCK_TIMEOUT_MS,
+            CATEGORY_TREE_LOCK_OPTIONS,
         );
     }
 

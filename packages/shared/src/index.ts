@@ -78,7 +78,10 @@ export {
 } from './categoryCollectionFilter';
 export {
     CATEGORY_TREE_LOCK,
-    CATEGORY_TREE_LOCK_TIMEOUT_MS,
+    CATEGORY_TREE_LOCK_IDLE_MS,
+    CATEGORY_TREE_LOCK_OPTIONS,
+    CATEGORY_TREE_LOCK_SLOW_HOLD_MS,
+    CATEGORY_TREE_LOCK_WAIT_MS,
     recomputeCategoryTree,
 } from './recomputeCategoryTree';
 export {

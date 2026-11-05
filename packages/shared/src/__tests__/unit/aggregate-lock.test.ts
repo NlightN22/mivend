@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { Logger } from '@vendure/core';
 import type { RequestContext } from '@vendure/core';
 
 import { withAggregateLock } from '../../aggregate-lock';
@@ -23,6 +24,24 @@ function makeConnection(order: string[] = []) {
 }
 
 describe('withAggregateLock', () => {
+    it('warns when the lock is held longer than slowHoldWarnMs, and not otherwise', async () => {
+        const warn = vi.spyOn(Logger, 'warn').mockImplementation(() => undefined);
+        const { connection } = makeConnection();
+        await withAggregateLock(connection as never, ctx, 'ns:1', async () => undefined, {
+            slowHoldWarnMs: 20,
+        });
+        expect(warn).not.toHaveBeenCalled();
+        await withAggregateLock(
+            connection as never,
+            ctx,
+            'ns:1',
+            () => new Promise(resolve => setTimeout(resolve, 60)),
+            { slowHoldWarnMs: 20 },
+        );
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('"ns:1" held'), 'AggregateLock');
+        warn.mockRestore();
+    });
+
     it('issues the advisory lock inside the transaction before the work runs', async () => {
         const { connection, query, order } = makeConnection();
         await withAggregateLock(connection as never, ctx, 'ns:1', async () => {

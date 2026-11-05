@@ -148,13 +148,9 @@ describe('category tree writers against real Postgres', () => {
         });
         await new Promise(resolve => setTimeout(resolve, 500));
         await expect(
-            withAggregateLock(
-                connection as never,
-                {} as never,
-                CATEGORY_TREE_LOCK,
-                async () => 1,
-                300,
-            ),
+            withAggregateLock(connection as never, {} as never, CATEGORY_TREE_LOCK, async () => 1, {
+                lockTimeoutMs: 300,
+            }),
         ).rejects.toThrow(/lock timeout/);
         await holder;
         expect(
@@ -163,7 +159,7 @@ describe('category tree writers against real Postgres', () => {
                 {} as never,
                 CATEGORY_TREE_LOCK,
                 async () => 1,
-                300,
+                { lockTimeoutMs: 300 },
             ),
         ).toBe(1);
     });
@@ -180,10 +176,30 @@ describe('category tree writers against real Postgres', () => {
                 );
                 return row;
             },
-            300,
+            { lockTimeoutMs: 300, idleTimeoutMs: 60_000 },
         );
         expect(seen.lt).toBe('0');
         expect(seen.it).toBe('1min');
+    });
+
+    it('kills an idle holder session and rolls its writes back whole', async () => {
+        await dataSource.query('truncate category restart identity');
+        await dataSource.query("insert into category (code) values ('root')");
+        await expect(
+            withAggregateLock(
+                connection as never,
+                {} as never,
+                CATEGORY_TREE_LOCK,
+                async tx => {
+                    const { manager } = tx as unknown as TestCtx;
+                    await manager.query('update category set "isPrivate" = true');
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    await manager.query('select 1');
+                },
+                { idleTimeoutMs: 300 },
+            ),
+        ).rejects.toThrow();
+        expect(await privateOf('root')).toBe(false);
     });
 
     it('recomputes a prod-sized tree (8000 categories, all hidden by one root) within a generous bound', async () => {
@@ -196,6 +212,7 @@ describe('category tree writers against real Postgres', () => {
         );
         const started = Date.now();
         const writes = await recomputeCategoryTree({} as never, deps as never);
+        // Covers only the SQL planning part; a real Vendure update (~70 ms each) is outside this bound.
         expect(Date.now() - started).toBeLessThan(120_000);
         expect(writes).toBeGreaterThanOrEqual(8000);
     });
