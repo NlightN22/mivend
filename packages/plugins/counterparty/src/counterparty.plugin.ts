@@ -65,6 +65,8 @@ import { visibilitySchema } from './visibility/visibility.schema';
 import { shopApiSchema } from './trading-point.schema';
 import { myContractsSchema } from './my-contracts.schema';
 import { MyContractsResolver } from './my-contracts.resolver';
+import { AddressSuggestResolver } from './address-suggest.resolver';
+import { AddressSuggestService } from './address-suggest.service';
 import { ScopedCustomerResolver } from './scoped-customer.resolver';
 
 const shopResolvers = [
@@ -75,6 +77,7 @@ const shopResolvers = [
     TradingPointResolver,
     CustomerTradingPointsQueryResolver,
     CustomerTradingPointsMutationResolver,
+    AddressSuggestResolver,
 ];
 
 const adminResolvers = [
@@ -128,6 +131,7 @@ const adminResolvers = [
         ErpIdLookupService,
         CounterpartyConsumer,
         TradingPointService,
+        AddressSuggestService,
         TradingPointConsumer,
         CreditTermExtensionCheck,
         CreditTermService,

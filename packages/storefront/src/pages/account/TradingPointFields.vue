@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue';
-import { MvFormField, MvInput, MvNameInput, MvPhoneInput } from '@mivend/ui-kit';
+import { MvAddressInput, MvFormField, MvInput, MvNameInput, MvPhoneInput } from '@mivend/ui-kit';
 import type { TradingPointAddForm } from './useTradingPoints';
+import { suggestAddress } from './suggestAddress';
 import { tradingPointErrors } from './tradingPointValidation';
 
 const model = defineModel<TradingPointAddForm>({ required: true });
+const props = defineProps<{ original?: TradingPointAddForm }>();
 const touched = reactive({ name: false, address: false, contactName: false, contactPhone: false });
-const errors = computed(() => tradingPointErrors(model.value));
+const errors = computed(() => tradingPointErrors(model.value, props.original));
 </script>
 
 <template>
@@ -29,12 +31,12 @@ const errors = computed(() => tradingPointErrors(model.value));
             :error="touched.address && errors.address ? $t(errors.address) : undefined"
             required
         >
-            <MvInput
+            <MvAddressInput
                 v-model="model.address"
-                autocomplete="street-address"
+                :fetch-suggestions="suggestAddress"
                 :placeholder="$t('tradingPoints.field.addressPlaceholder')"
                 :error="touched.address && !!errors.address"
-                @focusout="touched.address = true"
+                @blur="touched.address = true"
             />
         </MvFormField>
         <MvFormField

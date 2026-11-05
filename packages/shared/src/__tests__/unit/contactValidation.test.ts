@@ -12,6 +12,11 @@ describe('validateTradingPointContact', () => {
         expect(validateTradingPointContact({ ...valid, contactPhone: '+7 913' })).not.toBeNull();
         expect(validateTradingPointContact({ ...valid, contactName: 'Ivanov' })).not.toBeNull();
     });
+    it('skips fields the caller marks unchanged', () => {
+        const input = { ...valid, address: 'Somewhere', contactPhone: '123' };
+        expect(validateTradingPointContact(input)).not.toBeNull();
+        expect(validateTradingPointContact(input, ['address', 'contactPhone'])).toBeNull();
+    });
     it('normalizes phones to one format', () => {
         expect(normalizeRuPhone('89131234567')).toBe('+7 (913) 123-45-67');
         expect(normalizeRuPhone('123')).toBeNull();

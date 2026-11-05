@@ -23,12 +23,26 @@ export function isValidAddress(raw: string): boolean {
     return v.length >= 10 && /\d/.test(v) && /\p{L}/u.test(v);
 }
 
-export function validateTradingPointContact(input: ContactInput): string | null {
+export type ContactField = 'address' | 'contactName' | 'contactPhone';
+
+export function validateTradingPointContact(
+    input: ContactInput,
+    unchanged: readonly ContactField[] = [],
+): string | null {
     if (!input.name.trim()) return 'name is required';
-    if (!isValidAddress(input.address)) return 'address must include a street and a house number';
-    if (input.contactName && !isValidPersonName(input.contactName))
+    if (!unchanged.includes('address') && !isValidAddress(input.address))
+        return 'address must include a street and a house number';
+    if (
+        !unchanged.includes('contactName') &&
+        input.contactName &&
+        !isValidPersonName(input.contactName)
+    )
         return 'contact name must be a full name';
-    if (input.contactPhone && !normalizeRuPhone(input.contactPhone))
+    if (
+        !unchanged.includes('contactPhone') &&
+        input.contactPhone &&
+        !normalizeRuPhone(input.contactPhone)
+    )
         return 'contact phone must be a complete +7 number';
     return null;
 }

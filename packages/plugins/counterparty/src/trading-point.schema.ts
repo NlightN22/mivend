@@ -51,6 +51,7 @@ export const shopApiSchema = gql`
         tradingPoint(id: ID!): TradingPoint
         myTradingPoints: [TradingPoint!]!
         myHiddenTradingPoints: [TradingPoint!]!
+        suggestAddress(query: String!): [String!]!
     }
 
     extend type Mutation {

@@ -15,7 +15,7 @@ import { ContactPerson } from './entities/contact-person.entity';
 import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
 import { loggerCtx } from './types';
-import { ctxQuery, normalizeRuPhone, validateTradingPointContact } from 'shared';
+import { ctxQuery, normalizeRuPhone, validateTradingPointContact, type ContactField } from 'shared';
 
 export interface TradingPointDetailsPatch {
     name?: string;
@@ -553,6 +553,12 @@ export class TradingPointService {
             relations: ['contacts'],
         });
         if (!record) throw new UserInputError(`TradingPoint not found or access denied`);
+        const primary = record.contacts?.find(c => c.isPrimary) ?? record.contacts?.[0];
+        input = normalizeCustomerInput(input, {
+            address: record.address,
+            contactName: primary?.name ?? null,
+            contactPhone: primary?.phone ?? null,
+        });
         record.name = input.name;
         record.address = input.address;
         record.workingHours = input.workingHours ?? null;
@@ -608,19 +614,26 @@ export interface CustomerTradingPointInput {
     contactPhone?: string | null;
 }
 
-function normalizeCustomerInput(input: CustomerTradingPointInput): CustomerTradingPointInput {
-    const error = validateTradingPointContact({
-        name: input.name,
-        address: input.address,
-        contactName: input.contactName,
-        contactPhone: input.contactPhone,
-    });
+function normalizeCustomerInput(
+    input: CustomerTradingPointInput,
+    current?: { address: string; contactName: string | null; contactPhone: string | null },
+): CustomerTradingPointInput {
+    const unchanged: ContactField[] = [];
+    if (input.address.trim() === current?.address) unchanged.push('address');
+    if ((input.contactName?.trim() || null) === current?.contactName) unchanged.push('contactName');
+    if ((input.contactPhone?.trim() || null) === current?.contactPhone)
+        unchanged.push('contactPhone');
+    const error = validateTradingPointContact(input, unchanged);
     if (error) throw new UserInputError(error);
     return {
         ...input,
         name: input.name.trim(),
         address: input.address.trim(),
         contactName: input.contactName?.trim() || null,
-        contactPhone: input.contactPhone ? normalizeRuPhone(input.contactPhone) : null,
+        contactPhone: unchanged.includes('contactPhone')
+            ? (current?.contactPhone ?? null)
+            : input.contactPhone
+              ? normalizeRuPhone(input.contactPhone)
+              : null,
     };
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { formatRuPhone } from '@mivend/ui-kit';
+import type { TradingPointAddForm } from './useTradingPoints';
 import { isTradingPointValid } from './tradingPointValidation';
 import TradingPointFields from './TradingPointFields.vue';
 
@@ -49,6 +49,7 @@ const saving = ref(false);
 const primaryContact = () =>
     props.point.contacts.find(c => c.isPrimary) ?? props.point.contacts[0] ?? null;
 
+const original = ref<TradingPointAddForm | undefined>();
 const form = ref({
     name: '',
     address: '',
@@ -64,10 +65,11 @@ function startEdit() {
         name: props.point.name,
         address: props.point.address,
         contactName: c?.name ?? '',
-        contactPhone: c?.phone ? formatRuPhone(c.phone) : '',
+        contactPhone: c?.phone ?? '',
         workingHours: props.point.workingHours ?? '',
         deliveryComment: props.point.deliveryComment ?? '',
     };
+    original.value = { ...form.value };
     editing.value = true;
     confirmRemove.value = false;
 }
@@ -185,12 +187,12 @@ watch(
         <template v-else>
             <div class="tp-card__edit-title">{{ $t('tradingPoints.editTitle') }}</div>
             <div class="tp-card__form">
-                <TradingPointFields v-model="form" />
+                <TradingPointFields v-model="form" :original="original" />
             </div>
             <div class="tp-card__edit-actions">
                 <button
                     class="tp-card__btn tp-card__btn--primary"
-                    :disabled="saving || !isTradingPointValid(form)"
+                    :disabled="saving || !isTradingPointValid(form, original)"
                     @click="handleSave"
                 >
                     {{ saving ? $t('tradingPoints.saving') : $t('tradingPoints.saveChanges') }}
