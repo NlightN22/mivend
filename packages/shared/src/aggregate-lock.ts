@@ -3,6 +3,7 @@ import type { RequestContext, TransactionalConnection } from '@vendure/core';
 // Backend-only (type imports from @vendure/core). Any registered entity works as the repository
 // handle; it only provides the transaction-bound query runner.
 const LOCK_ENTITY = 'Channel';
+const IDLE_IN_TRANSACTION_TIMEOUT_MS = 60_000;
 
 export async function withAggregateLock<T>(
     connection: Pick<TransactionalConnection, 'withTransaction' | 'getRepository'>,
@@ -13,11 +14,23 @@ export async function withAggregateLock<T>(
 ): Promise<T> {
     return connection.withTransaction(ctx, async txCtx => {
         const repo = connection.getRepository(txCtx, LOCK_ENTITY);
-        // Fails the wait with a lock_timeout error (never swallowed) instead of hanging behind a stuck holder.
-        if (lockTimeoutMs !== undefined) {
-            await repo.query("select set_config('lock_timeout', $1, true)", [`${lockTimeoutMs}ms`]);
+        if (lockTimeoutMs === undefined) {
+            await repo.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+                String(key),
+            ]);
+            return work(txCtx);
         }
+        // Waiters fail with lock_timeout (never swallowed) and a holder idle between queries is cut off;
+        // lock_timeout is restored once the lock is held so later row-lock waits are unaffected.
+        const [{ previous }] = await repo.query(
+            "select current_setting('lock_timeout') as previous",
+        );
+        await repo.query(
+            "select set_config('lock_timeout', $1, true), set_config('idle_in_transaction_session_timeout', $2, true)",
+            [`${lockTimeoutMs}ms`, `${IDLE_IN_TRANSACTION_TIMEOUT_MS}ms`],
+        );
         await repo.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [String(key)]);
+        await repo.query("select set_config('lock_timeout', $1, true)", [previous]);
         return work(txCtx);
     });
 }

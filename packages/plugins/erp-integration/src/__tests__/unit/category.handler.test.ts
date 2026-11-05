@@ -31,7 +31,7 @@ function createServices(
 
 const lockedConnection = {
     withTransaction: (c: unknown, work: (tx: unknown) => unknown) => work(c),
-    getRepository: () => ({ query: async () => [] }),
+    getRepository: () => ({ query: async () => [{ previous: '0' }] }),
 };
 
 describe('CategoryStreamHandler', () => {

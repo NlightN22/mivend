@@ -28,7 +28,7 @@ function build(collections: ReturnType<typeof collection>[]): {
             withTransaction: (c: unknown, work: (tx: unknown) => unknown) => work(c),
             getRepository: () => ({
                 find: vi.fn().mockResolvedValue(collections),
-                query: vi.fn().mockResolvedValue([]),
+                query: vi.fn().mockResolvedValue([{ previous: '0' }]),
             }),
         },
         collectionService: { update },

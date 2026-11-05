@@ -144,9 +144,9 @@ describe('category tree writers against real Postgres', () => {
             await manager.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
                 CATEGORY_TREE_LOCK,
             ]);
-            await manager.query('select pg_sleep(1.5)');
+            await manager.query('select pg_sleep(3)');
         });
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 500));
         await expect(
             withAggregateLock(
                 connection as never,
@@ -168,7 +168,25 @@ describe('category tree writers against real Postgres', () => {
         ).toBe(1);
     });
 
-    it('recomputes a prod-sized tree (8000 categories, all hidden by one root) and reports the time', async () => {
+    it('restores lock_timeout after taking the lock and sets an idle-in-transaction timeout', async () => {
+        const seen = await withAggregateLock(
+            connection as never,
+            {} as never,
+            CATEGORY_TREE_LOCK,
+            async tx => {
+                const { manager } = tx as unknown as TestCtx;
+                const [row] = await manager.query(
+                    "select current_setting('lock_timeout') as lt, current_setting('idle_in_transaction_session_timeout') as it",
+                );
+                return row;
+            },
+            300,
+        );
+        expect(seen.lt).toBe('0');
+        expect(seen.it).toBe('1min');
+    });
+
+    it('recomputes a prod-sized tree (8000 categories, all hidden by one root) within a generous bound', async () => {
         await dataSource.query('truncate category restart identity');
         await dataSource.query("insert into category (code, override) values ('root', 'hidden')");
         await dataSource.query(
@@ -178,7 +196,7 @@ describe('category tree writers against real Postgres', () => {
         );
         const started = Date.now();
         const writes = await recomputeCategoryTree({} as never, deps as never);
-        console.log(`recompute of 8000 categories: ${Date.now() - started} ms, ${writes} writes`);
+        expect(Date.now() - started).toBeLessThan(120_000);
         expect(writes).toBeGreaterThanOrEqual(8000);
     });
 });

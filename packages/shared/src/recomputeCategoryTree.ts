@@ -32,7 +32,8 @@ interface CategoryCustomFields {
 }
 
 export const CATEGORY_TREE_LOCK = 'category-tree';
-export const CATEGORY_TREE_LOCK_TIMEOUT_MS = 300_000;
+// Worst-case full recompute is ~17 min (docs/category-hierarchy.md); waiters wait it out.
+export const CATEGORY_TREE_LOCK_TIMEOUT_MS = 1_800_000;
 
 // Rewrites each category Collection's filter to "any FacetValue in its subtree" and propagates
 // hidden state down the tree; writes only what changed. Returns the number of writes.
