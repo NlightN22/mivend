@@ -5,11 +5,11 @@ import {
     categorySlug,
     restoreCategoryPlan,
 } from '../../fixtures/visibility/categories';
-import { shopSlugs, waitForShopSlug } from '../../helpers/category-tree';
+import { shopSlugs, waitForShopProduct, waitForShopSlug } from '../../helpers/category-tree';
 import { loginAsManager } from '../../helpers/manager-auth';
 import { E2E_BROWSER_USER_AGENT } from '../../helpers/user-agent';
 import { catalogUrl, nameOf } from '../categories';
-import { openManagerAs, shot, superadminToken, type Session } from '../session';
+import { openManagerAs, openStorefrontAs, shot, superadminToken, type Session } from '../session';
 
 const MARKER = '[data-testid="category-hidden-marker"]';
 const SETTINGS = '/settings/category-visibility';
@@ -133,6 +133,44 @@ test.describe('15: category visibility, manager portal', () => {
             await expect(row(page, 'vis-a1')).not.toContainText('Manual override');
             await waitForShopSlug('cat-vis-a1', true);
             expect(await shopSlugs()).toContain('cat-vis-a1');
+        } finally {
+            await s.context.close();
+        }
+    });
+
+    test('hiding a category hides its products from customers, a visible override brings them back', async ({
+        browser,
+    }) => {
+        test.setTimeout(240_000);
+        const s = await openSuperadmin(browser);
+        try {
+            const { page } = s;
+            await page.goto(SETTINGS);
+            await waitForShopProduct('Product of vis-a1', 'Product of vis-a1', true);
+            await search(page, 'vis-a1');
+            await row(page, 'vis-a1').locator('select').selectOption('hidden');
+            await expect(row(page, 'vis-a1')).toContainText('Manual override');
+            await waitForShopProduct('Product of vis-a1', 'Product of vis-a1', false);
+
+            await waitForShopProduct('Product of vis-a2', 'Product of vis-a2', false);
+            await search(page, 'vis-a2');
+            await row(page, 'vis-a2').locator('select').selectOption('visible');
+            await waitForShopProduct('Product of vis-a2', 'Product of vis-a2', true);
+            await waitForShopProduct('Product of vis-a2x', 'Product of vis-a2x', true);
+
+            const customer = await openStorefrontAs(browser, 'customer-a');
+            try {
+                await customer.page.goto('/catalog?q=Product%20of%20vis-a');
+                await expect(
+                    customer.page.getByText('Product of vis-a2', { exact: true }),
+                ).toBeVisible();
+                await expect(
+                    customer.page.getByText('Product of vis-a1', { exact: true }),
+                ).toHaveCount(0);
+                await shot(customer.page, 'manager-override-reaches-customer');
+            } finally {
+                await customer.context.close();
+            }
         } finally {
             await s.context.close();
         }

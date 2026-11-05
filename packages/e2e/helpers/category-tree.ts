@@ -74,6 +74,22 @@ export async function pollUntil(check: () => Promise<boolean>, timeoutMs = 20_00
     throw new Error('Condition not met within timeout');
 }
 
+export async function shopProductNames(term: string): Promise<string[]> {
+    const data = await shopGql<{ search: { items: { productName: string }[] } }>(
+        `query($t: String!) { search(input: { term: $t, groupByProduct: true, take: 50 }) { items { productName } } }`,
+        { t: term },
+    );
+    return data.search.items.map(i => i.productName);
+}
+
+export async function waitForShopProduct(
+    term: string,
+    name: string,
+    present: boolean,
+): Promise<void> {
+    await pollUntil(async () => (await shopProductNames(term)).includes(name) === present);
+}
+
 export async function waitForShopSlug(slug: string, present: boolean): Promise<void> {
     await pollUntil(async () => (await shopSlugs()).includes(slug) === present);
 }

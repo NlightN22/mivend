@@ -79,14 +79,14 @@ describe.each(shopActors)('storefront categories for $name', ({ token: open }) =
         expect(result.data!.collection).toBeNull();
     });
 
-    it('the root lists its whole subtree and nothing from trees without a visible root', async () => {
+    it('the root lists the products of its visible subtree and nothing hidden or from other trees', async () => {
         const result = await shop<{
             collection: { productVariants: { items: { sku: string }[] } };
         }>(token, SHOP_ONE, { s: categorySlug('vis-root') });
         const skus = result.data!.collection.productVariants.items.map(v => v.sku);
         for (const plan of CATEGORY_PLAN) {
-            const inTree = categoryRootOf(plan.erpId) === 'vis-root';
-            expect(skus.includes(`VIS-SKU-${plan.erpId}`), plan.erpId).toBe(inTree);
+            const listed = categoryRootOf(plan.erpId) === 'vis-root' && plan.visible;
+            expect(skus.includes(`VIS-SKU-${plan.erpId}`), plan.erpId).toBe(listed);
         }
     });
 

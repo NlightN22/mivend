@@ -81,7 +81,7 @@ test.describe('14: category visibility, storefront as a customer', () => {
         await page.goto('/catalog?q=Product%20of%20vis');
         await settleCatalog(page);
         const nav = page.locator('.mv-category-nav');
-        await expect(nav.getByRole('button', { name: nameOf('vis-root') })).toContainText('9');
+        await expect(nav.getByRole('button', { name: nameOf('vis-root') })).toContainText('5');
         await expect(nav.getByRole('button', { name: nameOf('vis-root') })).toBeVisible();
         await shot(page, 'category-facets');
         expectNoHiddenCategory(s, await pageText(page));
@@ -96,16 +96,17 @@ test.describe('14: category visibility, storefront as a customer', () => {
         expectNoHiddenCategory(s, await pageText(page));
     });
 
-    test('favorites of products from hidden categories show no category names', async () => {
+    test('favorites hold visible products only, hidden-category products cannot be found to add', async () => {
         const { page } = s;
         await page.goto('/catalog?q=Product%20of%20vis-a');
         await settleCatalog(page);
+        await expect(page.getByText('Product of vis-a2x', { exact: true })).toHaveCount(0);
         await page.getByRole('button', { name: 'Grid' }).click();
-        const card = page.locator('.mv-product-card', { hasText: 'Product of vis-a2x' });
+        const card = page.locator('.mv-product-card', { hasText: 'Product of vis-a1' });
         await card.getByLabel('Toggle favorite').click();
         try {
             await page.goto('/favorites');
-            await expect(page.getByText('Product of vis-a2x')).toBeVisible({ timeout: 20_000 });
+            await expect(page.getByText('Product of vis-a1')).toBeVisible({ timeout: 20_000 });
             await shot(page, 'category-favorites');
             expectNoHiddenCategory(s, await pageText(page));
         } finally {
@@ -149,10 +150,11 @@ test.describe('14: category visibility, storefront as a customer', () => {
             for (const id of HIDDEN) expect(raw, id).not.toContain(`"${nameOf(id)}"`);
         });
 
-        test('product page of a hidden-category product does not name the category', async () => {
+        test('product page of a hidden-category product is not found and names no category', async () => {
             const { page } = s;
             await page.goto(`/product/${categoryProductSlug('vis-a2x')}`);
-            await expect(page.getByRole('heading', { name: 'Product of vis-a2x' })).toBeVisible();
+            await expect(page.getByText('Product not found')).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Product of vis-a2x' })).toHaveCount(0);
             await shot(page, 'category-product-hidden');
             expect(await pageText(page)).not.toContain(nameOf('vis-a2x'));
         });
