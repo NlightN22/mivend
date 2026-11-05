@@ -51,7 +51,7 @@ const emit = defineEmits<{ select: [key: string] }>();
     z-index: var(--mv-z-floating);
     height: var(--mv-bottom-bar-height);
     grid-auto-flow: column;
-    grid-auto-columns: 1fr;
+    grid-auto-columns: minmax(0, 1fr);
     gap: 2px;
     padding: 6px 6px env(safe-area-inset-bottom, 0px);
     box-sizing: border-box;
@@ -134,5 +134,17 @@ const emit = defineEmits<{ select: [key: string] }>();
     font-size: 11px;
     font-weight: 800;
     line-height: 1;
+}
+
+@media (max-width: 400px) {
+    .mv-bottom-tab-bar {
+        gap: 0;
+        padding-inline: 2px;
+    }
+
+    .mv-bottom-tab-bar__label {
+        font-size: 10px;
+        letter-spacing: -0.02em;
+    }
 }
 </style>
