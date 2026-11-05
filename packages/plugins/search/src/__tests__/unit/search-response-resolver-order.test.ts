@@ -23,6 +23,21 @@ describe('SearchResponse resolver precedence (internal backend)', () => {
         expect(forSearchResponse[0]).toBe(ShopSearchFacetValuesResolver);
     }, 20000);
 
+    it('registers our shop `search` query before the Elasticsearch one', async () => {
+        vi.resetModules();
+        process.env.SEARCH_BACKEND = 'internal';
+        const { searchPlugins } = await import('../../search.plugin');
+        const { InternalShopSearchResolver } = await import('../../internal-shop-search.resolver');
+        const resolvers = getPluginAPIExtensions(searchPlugins, 'shop').flatMap(
+            e => (typeof e.resolvers === 'function' ? e.resolvers() : (e.resolvers ?? [])) as Cls[],
+        );
+        const withSearch = resolvers.filter(r =>
+            Object.getOwnPropertyNames(r.prototype).includes('search'),
+        );
+        expect(withSearch.length).toBeGreaterThan(1);
+        expect(withSearch[0]).toBe(InternalShopSearchResolver);
+    }, 20000);
+
     it('registers the code-group resolvers on SearchResponse for both APIs (#307)', async () => {
         vi.resetModules();
         process.env.SEARCH_BACKEND = 'internal';

@@ -9,6 +9,26 @@ const base = () => ({ bool: { filter: [{ term: { channelId: 1 } }] as unknown[] 
 const fieldsIn = (value: unknown): string[] =>
     [...JSON.stringify(value).matchAll(/"(product-\w+Normalized)"/g)].map(m => m[1]);
 
+describe('mapSearchQuery hidden categories', () => {
+    const hiddenClause = { bool: { must_not: [{ terms: { facetValueIds: ['5'] } }] } };
+
+    it.each([
+        ['full text', { term: 'oil' }],
+        ['code group', { codeScope: { kind: 'sku' as const, codes: ['a1'] } }],
+        ['facet union', { term: '48.3855', facetUnion: true }],
+        ['browse', {}],
+    ])('keeps the exclusion for %s and does not touch must_not', (_name, input) => {
+        const q = mapSearchQuery(base(), { ...input, hiddenFacetValueIds: ['5'] }, true);
+        expect(q.bool.filter).toContainEqual(hiddenClause);
+    });
+
+    it('adds nothing for the admin API, which passes no ids', () => {
+        expect(mapSearchQuery(base(), { term: 'oil' }, false).bool.filter).toEqual([
+            { term: { channelId: 1 } },
+        ]);
+    });
+});
+
 describe('mapSearchQuery', () => {
     it('keeps the sellable filter and filters of the base query for every search', () => {
         const group = mapSearchQuery(base(), { codeScope: { kind: 'sku', codes: ['a1'] } }, true);

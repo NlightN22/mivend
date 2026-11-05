@@ -25,6 +25,7 @@ export interface ResolveQueryRequest {
     availableOnly?: boolean;
     availabilityMode?: typeof AVAILABILITY_MODE;
     requireOrganization?: boolean;
+    excludeCategoryIds?: string[];
 }
 
 // Code groups load once on the first page; later pages and facets-only requests ask for none so a

@@ -137,6 +137,10 @@ order fields added by mivend plugins are scoped by their own services (`OrderVis
 field errors for everyone); keep them scoped, never exempt them. Dashboard access for roles below
 portal-admin is unchanged: the Dashboard shows them only their scope.
 
+## Default roles are re-provisioned on every start
+
+`RoleProvisioning` rewrites the permissions of every default role (`default-roles.ts`) to the listed set at each server start, so a permission granted to such a role by hand in the Admin UI is lost on the next deploy. A needed permission goes into the role's definition; the category visibility page needs `UpdateCatalog` (general-director, portal-admin).
+
 ## Layer 3: `AccessScopeService` — one service, reused everywhere
 
 **Per-request memo.** `resolveScope` is memoized per `RequestContext`, user and resource, because list resolvers ask for it per row. A grant or role change made earlier in the same request is not seen by later reads of that request; a failed lookup is not kept, so a retry re-reads it. Never hold one `RequestContext` across logical operations (a loop or background task): its memo and the per-request loaders are never refreshed. Batch loaders for nested fields (`CounterpartyBatchLoaders`, `ShopCollectionBreadcrumbsLoader`) use the same memoized scope and apply the same SQL filters as the per-row path.

@@ -52,3 +52,11 @@ describe('default roles: price type permissions (#235)', () => {
         }
     });
 });
+
+describe('default roles: category visibility', () => {
+    it('general director and portal admin hold UpdateCatalog, which the category visibility page needs', () => {
+        for (const code of ['general-director', 'portal-admin']) {
+            expect(byCode(code)).toContain('UpdateCatalog');
+        }
+    });
+});

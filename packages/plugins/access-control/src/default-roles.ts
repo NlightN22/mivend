@@ -120,6 +120,7 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
             'ManageCounterpartyTeam',
             'ManageCounterpartyPortalAccess',
             'ManageVisibilityGrants',
+            'UpdateCatalog',
         ],
         accessScopeConfig: {
             counterparty: 'all',

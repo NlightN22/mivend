@@ -61,6 +61,10 @@ const noFilters = {
         .mockResolvedValue({ manufacturer: [], characteristics: [], unsatisfiable: false }),
 };
 const noDb = {};
+const noHidden = {
+    isCategoryHidden: vi.fn().mockResolvedValue(false),
+    hiddenCategoryErpIds: vi.fn().mockResolvedValue([]),
+};
 const noPriceType = { resolveExternalId: vi.fn().mockResolvedValue(null) };
 
 // Issue #69, test-design coverage areas 2 and 3.
@@ -75,6 +79,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
         const result = await service.search(ctx, { term: 'oil', take: 0 } as SearchInput);
         expect(result.items).toEqual([]);
@@ -99,6 +104,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
         const result = await service.search(ctx, { term: '48.3855', take: 24 } as SearchInput);
         expect(result.skuMatches?.total).toBe(3);
@@ -118,6 +124,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
         const result = await service.search(ctx, { term: 'oil', take: 24 } as SearchInput);
         expect(result).not.toHaveProperty('skuMatches');
@@ -138,6 +145,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
         const result = await service.search(ctx, { term: 'A1', take: 24 } as SearchInput);
         expect(result.skuMatches).toEqual({ items: [], total: 1 });
@@ -154,6 +162,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -173,6 +182,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
 
         await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -192,6 +202,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
 
         await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -230,6 +241,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -255,6 +267,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -290,6 +303,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
 
         const result = await service.search(ctx, { term: 'oil' } as SearchInput);
@@ -306,6 +320,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
 
         const result = await service.search(ctx, { term: 'no-match-xyz' } as SearchInput);
@@ -327,6 +342,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
 
         const result = await service.search(ctx, {
@@ -365,6 +381,7 @@ describe('ExternalSearchService.search', () => {
             filters as never,
             db as never,
             noPriceType as never,
+            noHidden as never,
         );
 
         const result = await service.search(ctx, { collectionSlug: 'cat-erp' } as SearchInput);
@@ -388,6 +405,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
         const result = await service.search(ctx, { take: 24, skip: 48 } as SearchInput);
         expect(client.resolveQuery).not.toHaveBeenCalled();
@@ -412,6 +430,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
         await service.search(ctx, { sort: { name: 'DESC' } } as SearchInput);
         expect(lookup.browse).toHaveBeenCalledWith(
@@ -435,6 +454,7 @@ describe('ExternalSearchService.search', () => {
             noFilters as never,
             noDb as never,
             { resolveExternalId: vi.fn().mockResolvedValue(null) } as never,
+            noHidden as never,
         );
         await service.search(ctx, {
             priceRangeWithTax: { min: 1000, max: 5000 },
@@ -469,6 +489,7 @@ describe('ExternalSearchService.search', () => {
             filters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
         const result = await service.search(ctx, {
             inStock: true,
@@ -502,6 +523,7 @@ describe('ExternalSearchService.search', () => {
             filters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
         const result = await service.search(ctx, { inStock: true } as SearchInput);
         expect(result.items).toEqual([]);
@@ -522,6 +544,7 @@ describe('ExternalSearchService.search', () => {
             filters as never,
             noDb as never,
             noPriceType as never,
+            noHidden as never,
         );
         const result = await service.search(ctx, {
             term: 'oil',
@@ -542,6 +565,7 @@ describe('ExternalSearchService price type', () => {
             noFilters as never,
             noDb as never,
             priceTypes as never,
+            noHidden as never,
         );
         return { client, priceTypes, service };
     }
@@ -563,5 +587,103 @@ describe('ExternalSearchService price type', () => {
         const { client, service } = build(null);
         await service.search(ctx, { term: 'oil', sort: { price: 'DESC' } } as SearchInput);
         expect(client.resolveQuery.mock.calls[0][0]).not.toHaveProperty('priceTypeId');
+    });
+});
+
+describe('ExternalSearchService hidden categories', () => {
+    const withCategory = {
+        resolve: vi.fn().mockResolvedValue({
+            categoryId: 'c1',
+            manufacturer: [],
+            characteristics: [],
+            unsatisfiable: false,
+        }),
+    };
+    const build = (hidden: boolean, client: object): ExternalSearchService =>
+        new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(makeProduct()) as unknown as ProductLookupService,
+            withCategory as never,
+            noDb as never,
+            noPriceType as never,
+            {
+                isCategoryHidden: vi.fn().mockResolvedValue(hidden),
+                hiddenCategoryErpIds: vi.fn().mockResolvedValue(['h1', 'h2']),
+            } as never,
+        );
+
+    it('answers a hidden category with an empty result without calling search-service', async () => {
+        const client = { resolveQuery: vi.fn() };
+        const result = await build(true, client).search(ctx, { term: 'oil' } as SearchInput);
+        expect(result).toEqual({ items: [], totalItems: 0, facetValues: [], collections: [] });
+        expect(client.resolveQuery).not.toHaveBeenCalled();
+    });
+
+    it('lets staff search a hidden category', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
+        };
+        const result = await build(true, client).search(ctx, { term: 'oil' } as SearchInput, true);
+        expect(client.resolveQuery).toHaveBeenCalled();
+        expect(result.items).toHaveLength(1);
+    });
+
+    it('searches a visible category normally', async () => {
+        const client = {
+            resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
+        };
+        const result = await build(false, client).search(ctx, { term: 'oil' } as SearchInput);
+        expect(result.items).toHaveLength(1);
+    });
+});
+
+describe('ExternalSearchService excludeCategoryIds', () => {
+    const make = (client: object, ids: string[]): ExternalSearchService =>
+        new ExternalSearchService(
+            client as unknown as SearchServiceClient,
+            makeLookup(makeProduct()) as unknown as ProductLookupService,
+            noFilters as never,
+            noDb as never,
+            noPriceType as never,
+            {
+                isCategoryHidden: vi.fn().mockResolvedValue(false),
+                hiddenCategoryErpIds: vi.fn().mockResolvedValue(ids),
+            } as never,
+        );
+    const client = () => ({
+        resolveQuery: vi.fn().mockResolvedValue({ items: [makeItem()], total: 1 }),
+    });
+
+    it('sends the hidden category ids with every shop query', async () => {
+        const c = client();
+        await make(c, ['h1', 'h2']).search(ctx, { term: 'oil' } as SearchInput);
+        expect(c.resolveQuery).toHaveBeenCalledWith(
+            expect.objectContaining({ excludeCategoryIds: ['h1', 'h2'] }),
+        );
+    });
+
+    it('omits the field when nothing is hidden and for staff searches', async () => {
+        const none = client();
+        await make(none, []).search(ctx, { term: 'oil' } as SearchInput);
+        expect(none.resolveQuery.mock.calls[0][0]).not.toHaveProperty('excludeCategoryIds');
+        const staff = client();
+        await make(staff, ['h1']).search(ctx, { term: 'oil' } as SearchInput, true);
+        expect(staff.resolveQuery.mock.calls[0][0]).not.toHaveProperty('excludeCategoryIds');
+    });
+
+    it('does not turn the exclusion alone into a search-service browse request', async () => {
+        const c = client();
+        const browse = vi.fn().mockResolvedValue({ products: [], total: 0 });
+        const service = new ExternalSearchService(
+            c as never,
+            { ...makeLookup(null), browse } as never,
+            noFilters as never,
+            noDb as never,
+            noPriceType as never,
+            { isCategoryHidden: vi.fn(), hiddenCategoryErpIds: async () => ['h1'] } as never,
+        );
+        await service.search(ctx, {} as SearchInput);
+        expect(c.resolveQuery).not.toHaveBeenCalled();
+        expect(browse).toHaveBeenCalled();
     });
 });

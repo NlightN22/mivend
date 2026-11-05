@@ -4,6 +4,7 @@ import type { ProductVariant } from '@vendure/core';
 import {
     HAS_ORGANIZATION_FIELD,
     hasOrganizationMapping,
+    excludeHiddenCategories,
     restrictToSellable,
 } from '../../sellable-filter';
 
@@ -33,5 +34,21 @@ describe('hasOrganizationMapping', () => {
         expect(hasOrganizationMapping.valueFn(variant({ organizationId: null }))).toBe(false);
         expect(hasOrganizationMapping.valueFn(variant({}))).toBe(false);
         expect(hasOrganizationMapping.valueFn(variant(undefined))).toBe(false);
+    });
+});
+
+describe('excludeHiddenCategories', () => {
+    it('adds a must_not clause on the hidden category facet values', () => {
+        const query = { bool: { filter: [] as unknown[] } };
+        excludeHiddenCategories(query, ['3', '9']);
+        expect(query.bool.filter).toEqual([
+            { bool: { must_not: [{ terms: { facetValueIds: ['3', '9'] } }] } },
+        ]);
+    });
+
+    it.each([undefined, []])('adds nothing without hidden ids (%j)', ids => {
+        const query = { bool: { filter: [] as unknown[] } };
+        excludeHiddenCategories(query, ids);
+        expect(query.bool.filter).toEqual([]);
     });
 });

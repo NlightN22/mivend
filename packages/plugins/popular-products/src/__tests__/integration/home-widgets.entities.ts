@@ -113,3 +113,9 @@ export class TVariantFacetValue {
     @PrimaryColumn({ type: 'int' }) productVariantId!: number;
     @PrimaryColumn({ type: 'int' }) facetValueId!: number;
 }
+
+@Entity('product_facet_values_facet_value')
+export class TProductFacetValue {
+    @PrimaryColumn({ type: 'int' }) productId!: number;
+    @PrimaryColumn({ type: 'int' }) facetValueId!: number;
+}

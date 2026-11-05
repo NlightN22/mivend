@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Product, RequestContext, TransactionalConnection } from '@vendure/core';
 import { andProductInStock } from '@mivend/plugin-reservation';
+import { productNotInHiddenCategorySql } from 'shared';
 
 import { variantExistsSql } from './variant-exists-sql';
 
@@ -32,7 +33,10 @@ export class ProductLookupService {
             .where('product.customFields.externalId IN (:...externalIds)', { externalIds })
             .andWhere('product.deletedAt IS NULL');
         if (!includeDisabled) {
-            query.andWhere('product.enabled = true').andWhere(variantExistsSql(true));
+            query
+                .andWhere('product.enabled = true')
+                .andWhere(variantExistsSql(true))
+                .andWhere(productNotInHiddenCategorySql());
         }
         const products = await query.getMany();
 
@@ -64,7 +68,9 @@ export class ProductLookupService {
             })
             .where('product.deletedAt IS NULL')
             .andWhere(variantExistsSql(!includeDisabled));
-        if (!includeDisabled) pageQuery.andWhere('product.enabled = true');
+        if (!includeDisabled) {
+            pageQuery.andWhere('product.enabled = true').andWhere(productNotInHiddenCategorySql());
+        }
         if (options.inStockWarehouseErpIds) {
             andProductInStock(pageQuery, options.inStockWarehouseErpIds);
         }

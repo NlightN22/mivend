@@ -7,6 +7,7 @@ import {
     Translation,
 } from '@vendure/core';
 import type { SearchInput } from '@vendure/common/lib/generated-types';
+import { HiddenCategoryProductsService } from '@mivend/plugin-access-control';
 
 import type { ResolveQueryCodeGroup, ResolveQueryResponseItem } from './search-service.client';
 import { ExternalCollectionResult, mapFacetsToCollections } from './category-facet-mapper';
@@ -71,6 +72,7 @@ export class ExternalSearchService {
         private filterResolver: SearchFilterResolver,
         private connection: TransactionalConnection,
         private priceTypes: SearchPriceTypeService,
+        private hidden: HiddenCategoryProductsService,
     ) {}
 
     async search(
@@ -82,12 +84,19 @@ export class ExternalSearchService {
         const priceTypeId = hasPriceCriteria(input)
             ? await this.priceTypes.resolveExternalId(ctx)
             : null;
+        const excludeCategoryIds = includeDisabled
+            ? []
+            : await this.hidden.hiddenCategoryErpIds(ctx);
         const request = {
             ...mapSearchInputToResolveQueryRequest(input, resolved, priceTypeId),
             ...(includeDisabled ? {} : { requireOrganization: true }),
+            ...(excludeCategoryIds.length > 0 ? { excludeCategoryIds } : {}),
         };
         const empty = { items: [], totalItems: 0, facetValues: [], collections: [] };
         if (resolved.unsatisfiable) return empty;
+        if (!includeDisabled && resolved.categoryId) {
+            if (await this.hidden.isCategoryHidden(ctx, resolved.categoryId)) return empty;
+        }
         if (!hasBrowseCriteria(request)) {
             if (resolved.warehouseIds?.length === 0) return empty;
             return this.browseLocally(ctx, input, includeDisabled, resolved.warehouseIds);

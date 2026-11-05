@@ -2,7 +2,7 @@ import type { ElasticSearchSortInput } from '@vendure/elasticsearch-plugin/lib/s
 
 import { CODE_FIELDS } from './code-index-fields';
 import { CODE_KINDS, CodeKind, extractCodes } from './code-query';
-import { restrictToSellable } from './sellable-filter';
+import { excludeHiddenCategories, restrictToSellable } from './sellable-filter';
 
 export interface CodeScope {
     kind: CodeKind;
@@ -13,6 +13,7 @@ export interface CodeQueryInput {
     term?: string | null;
     codeScope?: CodeScope;
     facetUnion?: boolean;
+    hiddenFacetValueIds?: string[];
 }
 
 // Facets and collections span code groups plus full-text hits, like the external backend.
@@ -62,6 +63,7 @@ export function mapSearchQuery(
     enabledOnly: boolean,
 ): EsBoolQuery {
     restrictToSellable(query, enabledOnly);
+    excludeHiddenCategories(query, input.hiddenFacetValueIds);
     if (input.codeScope) return mapGroupQuery(query, input.codeScope);
     if (!input.term) return query;
     const codes = extractCodes(input.term);

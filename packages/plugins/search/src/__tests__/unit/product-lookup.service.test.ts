@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { RequestContext, TransactionalConnection } from '@vendure/core';
 
 import { ProductLookupService } from '../../product-lookup.service';
+import { productNotInHiddenCategorySql } from 'shared';
+
 import { variantExistsSql } from '../../variant-exists-sql';
 
 function makeService(products: unknown[]): {
@@ -37,6 +39,16 @@ describe('ProductLookupService.findByExternalIds', () => {
         const staff = makeService([]);
         await staff.service.findByExternalIds(ctx, ['ext-001'], true);
         expect(staff.andWhere).not.toHaveBeenCalledWith(variantExistsSql(true));
+    });
+
+    it('hides products of hidden categories for the shop view only', async () => {
+        const shop = makeService([]);
+        await shop.service.findByExternalIds(ctx, ['ext-001']);
+        expect(shop.andWhere).toHaveBeenCalledWith(productNotInHiddenCategorySql());
+
+        const staff = makeService([]);
+        await staff.service.findByExternalIds(ctx, ['ext-001'], true);
+        expect(staff.andWhere).not.toHaveBeenCalledWith(productNotInHiddenCategorySql());
     });
 
     it('still excludes soft-deleted but keeps disabled products when includeDisabled', async () => {

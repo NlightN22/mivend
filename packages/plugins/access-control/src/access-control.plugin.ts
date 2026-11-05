@@ -8,6 +8,12 @@ import { CustomerPricingPlugin } from '@mivend/plugin-customer-pricing';
 import { departmentBranchBundle } from './department-branch.bundle';
 import { visibilityGrantBundle } from './visibility-grant.bundle';
 import { HiddenCategoryFacetValuesService } from './hidden-category-facet-values.service';
+import { HiddenCategoryProductsService } from './hidden-category-products.service';
+import { HiddenCategoryOrderInterceptor } from './hidden-category-order.interceptor';
+import {
+    ShopCollectionVisibleVariantsResolver,
+    ShopVisibleProductsResolver,
+} from './shop-visible-products.resolver';
 import {
     ShopProductFacetValuesResolver,
     ShopVariantFacetValuesResolver,
@@ -67,6 +73,7 @@ import { WarehouseService } from './warehouse.service';
         ...visibilityGrantBundle.providers,
         AccessScopeService,
         HiddenCategoryFacetValuesService,
+        HiddenCategoryProductsService,
         TeamAdministratorService,
         RoleScopeConfigService,
         DepartmentService,
@@ -91,6 +98,7 @@ import { WarehouseService } from './warehouse.service';
     ],
     exports: [
         HiddenCategoryFacetValuesService,
+        HiddenCategoryProductsService,
         ...departmentBranchBundle.providers,
         ...visibilityGrantBundle.providers,
         AccessScopeService,
@@ -125,9 +133,15 @@ import { WarehouseService } from './warehouse.service';
             ShopCollectionBreadcrumbsResolver,
             ShopProductFacetValuesResolver,
             ShopVariantFacetValuesResolver,
+            ShopVisibleProductsResolver,
+            ShopCollectionVisibleVariantsResolver,
         ],
     },
     configuration: (config: RuntimeVendureConfig) => {
+        config.orderOptions.orderInterceptors = [
+            ...(config.orderOptions.orderInterceptors ?? []),
+            new HiddenCategoryOrderInterceptor(),
+        ];
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
             ...departmentBranchBundle.scheduledTasks(),

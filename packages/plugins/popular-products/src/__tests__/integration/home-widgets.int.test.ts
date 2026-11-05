@@ -26,6 +26,7 @@ import {
     TOrderLine,
     TProduct,
     TProductChannel,
+    TProductFacetValue,
     TReservation,
     TVariant,
     TVariantFacetValue,
@@ -61,6 +62,7 @@ interface Seed {
     sold?: Array<[number, string]>;
     noOrganization?: boolean;
     collection?: 'private' | 'public' | 'both';
+    categoryOn?: 'product' | 'variant';
 }
 
 async function seed(s: Seed): Promise<void> {
@@ -84,9 +86,15 @@ async function seed(s: Seed): Promise<void> {
         both: [privateValue, publicValue],
     };
     for (const facetValueId of s.collection ? values[s.collection] : []) {
-        await dataSource
-            .getRepository(TVariantFacetValue)
-            .save({ productVariantId: variant.id, facetValueId });
+        if (s.categoryOn === 'product') {
+            await dataSource
+                .getRepository(TProductFacetValue)
+                .save({ productId: product.id, facetValueId });
+        } else {
+            await dataSource
+                .getRepository(TVariantFacetValue)
+                .save({ productVariantId: variant.id, facetValueId });
+        }
     }
     const where = s.stock ?? 'branch-a';
     if (where !== 'none') {
@@ -141,6 +149,7 @@ beforeAll(async () => {
             TFacet,
             TFacetValue,
             TVariantFacetValue,
+            TProductFacetValue,
         ],
         synchronize: true,
     });
@@ -180,6 +189,12 @@ beforeAll(async () => {
         sold: [[800, 'Delivered']],
     });
     await seed({ name: 'newInPrivate', createdAt: ago(1), collection: 'private' });
+    await seed({
+        name: 'newInPrivateOnProduct',
+        createdAt: ago(1),
+        collection: 'private',
+        categoryOn: 'product',
+    });
     await seed({ name: 'saleInPrivate', onSale: true, createdAt: ago(100), collection: 'private' });
     await seed({
         name: 'topSellerInPrivate',
@@ -357,6 +372,7 @@ describe('hidden categories (real Postgres)', () => {
         expect(arrivals).toContain('newInPublic');
         for (const list of [arrivals, sale, top]) {
             expect(list).not.toContain('newInPrivate');
+            expect(list).not.toContain('newInPrivateOnProduct');
             expect(list).not.toContain('newInBoth');
             expect(list).not.toContain('saleInPrivate');
             expect(list).not.toContain('topSellerInPrivate');
