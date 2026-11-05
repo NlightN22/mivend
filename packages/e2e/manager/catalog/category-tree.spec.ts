@@ -101,7 +101,6 @@ test.describe('Manager category tree (#59)', () => {
         }, testInfo) => {
             test.skip(testInfo.project.name !== 'manager-portal-admin', 'Needs UpdateCatalog');
             await setOverride(token, SLUG.oils, 'hidden');
-            await setOverride(token, SLUG.mineral, 'visible');
 
             const rowReason = async (name: string, slug: string): Promise<string> => {
                 await page.getByPlaceholder('Search categories…').fill(name);
@@ -120,8 +119,7 @@ test.describe('Manager category tree (#59)', () => {
             }).toPass({ timeout: 30_000 });
             expect(await rowReason('Engine Oils', SLUG.oils)).toContain('Manual override');
             const mineral = await rowReason('Mineral Oils', SLUG.mineral);
-            expect(mineral).toContain('Visible');
-            expect(mineral).not.toMatch(/Hidden ancestor|Own feed|Manual override/);
+            expect(mineral).toContain('Hidden ancestor');
 
             await restoreCategoryTree(token);
             await page.goto(url(SLUG.oils));

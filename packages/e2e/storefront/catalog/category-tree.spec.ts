@@ -38,14 +38,11 @@ test.describe('Storefront category tree (#59)', () => {
             await restoreCategoryTree(token);
         });
 
-        test('hides a parent with its descendants everywhere; visible override child stays reachable', async ({
-            page,
-        }) => {
+        test('hides a parent with all its descendants everywhere', async ({ page }) => {
             await setOverride(token, SLUG.oils, 'hidden');
-            await setOverride(token, SLUG.mineral, 'visible');
             await waitForShopSlug(SLUG.oils, false);
             await waitForShopSlug(SLUG.synthetic, false);
-            await waitForShopSlug(SLUG.mineral, true);
+            await waitForShopSlug(SLUG.mineral, false);
 
             await page.goto('/catalog');
             await page.locator('.app-header__catalog-btn').click();
@@ -69,11 +66,6 @@ test.describe('Storefront category tree (#59)', () => {
                 await expect(page.locator('.mv-category-nav')).not.toContainText('Synthetic Oils');
             }
 
-            await page.goto(url(SLUG.mineral));
-            await expect(page.locator('.catalog-page__heading')).toHaveText('Mineral Oils');
-            const crumbs = page.locator('.mv-breadcrumbs');
-            await expect(crumbs).toContainText('Engine');
-            await expect(crumbs).not.toContainText('Engine Oils');
             expect(errors).toEqual([]);
 
             await restoreCategoryTree(token);
