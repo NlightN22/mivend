@@ -71,6 +71,7 @@ const accountOpen = ref(false);
 const moreOpen = ref(false);
 const logout = useLogout();
 const compact = useIsMobileViewport(COMPACT_NAV_BREAKPOINT);
+const phone = useIsMobileViewport(600);
 watch(compact, isCompact => {
     if (!isCompact) moreOpen.value = false;
 });
@@ -182,7 +183,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 <div class="app-header__search">
                     <MvSearchInput
                         v-model="searchQuery"
-                        :placeholder="t('header.searchPlaceholder')"
+                        :placeholder="
+                            t(phone ? 'header.searchPlaceholderShort' : 'header.searchPlaceholder')
+                        "
                         :button-label="t('search.button')"
                         :open-search-label="t('search.open')"
                         :clear-label="t('search.clear')"

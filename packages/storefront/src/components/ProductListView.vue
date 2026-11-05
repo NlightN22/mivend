@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MvErrorState } from '@mivend/ui-kit';
-import { IconLayoutGrid, IconList } from '@tabler/icons-vue';
+import { IconAdjustmentsHorizontal, IconLayoutGrid, IconList } from '@tabler/icons-vue';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ConnectedProductCard from './ConnectedProductCard.vue';
@@ -24,6 +24,8 @@ const props = defineProps<{
     gridColumns?: number;
     hasCodeMatches?: boolean;
     codeMatchesTruncated?: boolean;
+    filterCount?: number;
+    showFilterButton?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -31,6 +33,7 @@ const emit = defineEmits<{
     'update:sortKey': [v: string];
     loadMore: [];
     retry: [];
+    openFilters: [];
 }>();
 
 const { t } = useI18n();
@@ -66,6 +69,19 @@ onBeforeUnmount(() => observer?.disconnect());
                 </div>
             </div>
             <div class="plv-toolbar__right">
+                <button
+                    v-if="showFilterButton"
+                    class="plv-toolbar__filters"
+                    type="button"
+                    :aria-label="t('catalogFilters.title')"
+                    :title="t('catalogFilters.title')"
+                    @click="emit('openFilters')"
+                >
+                    <IconAdjustmentsHorizontal :size="20" aria-hidden="true" />
+                    <span v-if="filterCount" class="plv-toolbar__filters-badge">{{
+                        filterCount
+                    }}</span>
+                </button>
                 <select
                     class="plv-toolbar__select"
                     :disabled="hasCodeMatches"
@@ -88,7 +104,7 @@ onBeforeUnmount(() => observer?.disconnect());
                         :title="t('productList.grid')"
                         @click="emit('update:viewMode', 'grid')"
                     >
-                        <IconLayoutGrid :size="18" />
+                        <IconLayoutGrid :size="18" aria-hidden="true" />
                         <span class="plv-toolbar__view-label">{{ t('productList.grid') }}</span>
                     </button>
                     <button
@@ -101,7 +117,7 @@ onBeforeUnmount(() => observer?.disconnect());
                         :title="t('productList.list')"
                         @click="emit('update:viewMode', 'list')"
                     >
-                        <IconList :size="18" />
+                        <IconList :size="18" aria-hidden="true" />
                         <span class="plv-toolbar__view-label">{{ t('productList.list') }}</span>
                     </button>
                 </div>
@@ -217,6 +233,36 @@ onBeforeUnmount(() => observer?.disconnect());
     cursor: pointer;
 }
 
+.plv-toolbar__filters {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1.5px solid #dde7e2;
+    border-radius: 10px;
+    background: #fff;
+    color: #2c3b36;
+    cursor: pointer;
+}
+
+.plv-toolbar__filters-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #00b894;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+}
+
 .plv-toolbar__view {
     display: flex;
     border: 1.5px solid #dde7e2;
@@ -241,7 +287,18 @@ onBeforeUnmount(() => observer?.disconnect());
         color 0.1s;
 }
 
+/* Phones: labels collapse to icons; 600px is a narrower cut-off than the compact nav. */
 @media (max-width: 600px) {
+    .plv-toolbar__right {
+        flex-wrap: nowrap;
+        width: 100%;
+    }
+
+    .plv-toolbar__select {
+        flex: 1;
+        min-width: 0;
+    }
+
     .plv-toolbar__view-label {
         display: none;
     }

@@ -164,6 +164,7 @@ export type {
 } from './components/MvAccountMenu/MvAccountMenu.vue';
 export { default as MvAccountDropdown } from './components/MvAccountDropdown/MvAccountDropdown.vue';
 export { default as MvAccountSheet } from './components/MvAccountSheet/MvAccountSheet.vue';
+export { default as MvFilterSheet } from './components/MvFilterSheet/MvFilterSheet.vue';
 export { default as MvBottomTabBar } from './components/MvBottomTabBar/MvBottomTabBar.vue';
 export type { BottomTabItem } from './components/MvBottomTabBar/MvBottomTabBar.vue';
 export { default as MvAppMobileMoreSheet } from './components/MvAppMobileMoreSheet/MvAppMobileMoreSheet.vue';

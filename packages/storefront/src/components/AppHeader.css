@@ -25,10 +25,18 @@
 }
 
 .app-header {
-    /* No backdrop-filter: it would trap position:fixed descendants inside this box. */
     position: relative;
-    background: rgba(255, 255, 255, 0.96);
     border-bottom: 1px solid #dde7e2;
+}
+
+/* The glass lives on a pseudo-element: backdrop-filter on the header itself would trap fixed descendants. */
+.app-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(14px) saturate(1.4);
 }
 
 .app-header__inner {

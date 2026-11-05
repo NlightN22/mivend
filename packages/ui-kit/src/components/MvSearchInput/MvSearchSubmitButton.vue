@@ -3,9 +3,27 @@ defineProps<{ label: string; loading: boolean; disabled: boolean }>();
 </script>
 
 <template>
-    <button class="mv-search__btn" type="button" :disabled="disabled">
+    <button class="mv-search__btn" type="button" :disabled="disabled" :aria-label="label">
         <span v-if="loading" class="mv-search__spinner" aria-hidden="true" />
-        <span v-else>{{ label }}</span>
+        <template v-else>
+            <span class="mv-search__btn-label">{{ label }}</span>
+            <svg
+                class="mv-search__btn-icon"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+            >
+                <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="2" />
+                <path
+                    d="M13.5 13.5L17 17"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                />
+            </svg>
+        </template>
     </button>
 </template>
 
@@ -33,6 +51,23 @@ defineProps<{ label: string; loading: boolean; disabled: boolean }>();
 .mv-search__btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+.mv-search__btn-icon {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .mv-search__btn {
+        min-width: 52px;
+        padding: 0 14px;
+    }
+    .mv-search__btn-label {
+        display: none;
+    }
+    .mv-search__btn-icon {
+        display: block;
+    }
 }
 
 .mv-search__spinner {

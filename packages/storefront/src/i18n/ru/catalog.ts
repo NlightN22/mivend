@@ -32,6 +32,8 @@ const ru: typeof en = {
         },
     },
     catalogFilters: {
+        title: 'Фильтры',
+        apply: 'Показать {n}',
         inStock: 'Только в наличии',
         price: 'Цена: {range}',
         clearAll: 'Сбросить всё',

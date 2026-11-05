@@ -55,7 +55,8 @@ const emit = defineEmits<{ select: [key: string] }>();
     gap: 2px;
     padding: 6px 6px env(safe-area-inset-bottom, 0px);
     box-sizing: border-box;
-    background: var(--app-surface);
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(14px) saturate(1.4);
     border-top: 1px solid var(--app-nav-border);
     box-shadow: 0 -8px 24px rgba(16, 24, 40, 0.08);
 }

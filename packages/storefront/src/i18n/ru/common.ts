@@ -3,6 +3,7 @@ import type en from '../en/common';
 const ru: typeof en = {
     common: {
         loading: 'Загрузка...',
+        close: 'Закрыть',
         error: 'Произошла ошибка',
         retry: 'Повторить',
         notImplemented: {
@@ -41,6 +42,7 @@ const ru: typeof en = {
         portal: 'B2B-портал',
         liveStock: 'Актуальные остатки и цены',
         searchPlaceholder: 'Артикул, VIN, бренд, название или OEM',
+        searchPlaceholderShort: 'Артикул, VIN, название',
         tradingPoint: 'Торговая точка',
         noTradingPoint: 'Торговая точка не выбрана',
     },

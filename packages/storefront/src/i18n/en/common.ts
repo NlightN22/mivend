@@ -1,6 +1,7 @@
 export default {
     common: {
         loading: 'Loading...',
+        close: 'Close',
         error: 'Something went wrong',
         retry: 'Retry',
         notImplemented: {
@@ -39,6 +40,7 @@ export default {
         portal: 'B2B Portal',
         liveStock: 'Live stock and prices',
         searchPlaceholder: 'Article, VIN, brand, name or OEM',
+        searchPlaceholderShort: 'Article, VIN, name',
         tradingPoint: 'Trading point',
         noTradingPoint: 'No trading point selected',
     },

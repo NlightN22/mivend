@@ -30,6 +30,8 @@ export default {
         },
     },
     catalogFilters: {
+        title: 'Filters',
+        apply: 'Show {n}',
         inStock: 'In stock only',
         price: 'Price: {range}',
         clearAll: 'Clear all',

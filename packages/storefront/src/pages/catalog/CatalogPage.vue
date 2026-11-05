@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, toRef } from 'vue';
+import { computed, onMounted, ref, toRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { useCatalogStore } from '../../stores/catalog';
 import { useCategoryPanel } from '../../composables/useCategoryPanel';
 import { useProductList } from '../../composables/useProductList';
-import { MvCatalogFacets, MvBreadcrumbs, MvActiveFilters } from '@mivend/ui-kit';
+import {
+    MvCatalogFacets,
+    MvBreadcrumbs,
+    MvActiveFilters,
+    MvFilterSheet,
+    useIsMobileViewport,
+} from '@mivend/ui-kit';
 import { useActiveFilterChips } from '../../composables/useActiveFilterChips';
 import { useCatalogFacetLabels } from '../../composables/useCatalogFacetLabels';
 import ProductListView from '../../components/ProductListView.vue';
@@ -70,6 +76,12 @@ const {
 
 const { labels: facetLabels, groups: facetGroupsLabelled } = useCatalogFacetLabels(facetGroups);
 
+const narrow = useIsMobileViewport(960);
+const filtersOpen = ref(false);
+watch(narrow, isNarrow => {
+    if (!isNarrow) filtersOpen.value = false;
+});
+
 const selectedFacetValues = computed(() => new Set(filters.value.facetValueIds));
 
 const selectedCategorySlug = computed(() => (route.query.collection as string) || undefined);
@@ -124,30 +136,39 @@ onMounted(() => {
         </template>
 
         <div class="catalog-page__inner">
-            <MvCatalogFacets
-                :facet-groups="facetGroupsLabelled"
-                :labels="facetLabels"
-                :in-stock-only="filters.inStock"
-                :selected-facet-values="selectedFacetValues"
-                :price-min="filters.priceMin"
-                :price-max="filters.priceMax"
-                :show-price="priceRangeSupported"
-                :category-panel="categoryPanel"
-                :category-loading="categoryCountsLoading"
-                :category-more-label="t('catalogNav.more')"
-                :category-less-label="t('catalogNav.less')"
-                :facet-show-all-label="t('catalogNav.showAll')"
-                :facet-collapse-label="t('catalogNav.less')"
-                :facet-clear-label="t('catalogNav.clearSelection')"
-                :facet-search-placeholder="t('catalogNav.search')"
-                @update:in-stock-only="filters = { ...filters, inStock: $event }"
-                @toggle-facet-value="toggleFacetValue"
-                @clear-facet-values="clearFacetValues"
-                @update:price-min="filters = { ...filters, priceMin: $event }"
-                @update:price-max="filters = { ...filters, priceMax: $event }"
-                @navigate-category="navigateCategory"
-                @reset="resetFilters"
-            />
+            <MvFilterSheet
+                :modal="narrow"
+                :open="filtersOpen"
+                :title="t('catalogFilters.title')"
+                :close-label="t('common.close')"
+                :apply-label="t('catalogFilters.apply', { n: totalItems })"
+                @close="filtersOpen = false"
+            >
+                <MvCatalogFacets
+                    :facet-groups="facetGroupsLabelled"
+                    :labels="facetLabels"
+                    :in-stock-only="filters.inStock"
+                    :selected-facet-values="selectedFacetValues"
+                    :price-min="filters.priceMin"
+                    :price-max="filters.priceMax"
+                    :show-price="priceRangeSupported"
+                    :category-panel="categoryPanel"
+                    :category-loading="categoryCountsLoading"
+                    :category-more-label="t('catalogNav.more')"
+                    :category-less-label="t('catalogNav.less')"
+                    :facet-show-all-label="t('catalogNav.showAll')"
+                    :facet-collapse-label="t('catalogNav.less')"
+                    :facet-clear-label="t('catalogNav.clearSelection')"
+                    :facet-search-placeholder="t('catalogNav.search')"
+                    @update:in-stock-only="filters = { ...filters, inStock: $event }"
+                    @toggle-facet-value="toggleFacetValue"
+                    @clear-facet-values="clearFacetValues"
+                    @update:price-min="filters = { ...filters, priceMin: $event }"
+                    @update:price-max="filters = { ...filters, priceMax: $event }"
+                    @navigate-category="navigateCategory"
+                    @reset="resetFilters"
+                />
+            </MvFilterSheet>
 
             <div class="catalog-page__main">
                 <MvActiveFilters
@@ -181,6 +202,9 @@ onMounted(() => {
                     @update:view-mode="setViewMode($event)"
                     @update:sort-key="sortKey = $event"
                     @load-more="loadMore"
+                    :show-filter-button="narrow"
+                    :filter-count="activeChips.length"
+                    @open-filters="filtersOpen = true"
                     @retry="load"
                 />
             </div>
