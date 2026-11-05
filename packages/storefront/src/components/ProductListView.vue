@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { MvErrorState } from '@mivend/ui-kit';
+import { IconLayoutGrid, IconList } from '@tabler/icons-vue';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ConnectedProductCard from './ConnectedProductCard.vue';
@@ -83,9 +84,12 @@ onBeforeUnmount(() => observer?.disconnect());
                             { 'plv-toolbar__view-btn--active': viewMode === 'grid' },
                         ]"
                         type="button"
+                        :aria-label="t('productList.grid')"
+                        :title="t('productList.grid')"
                         @click="emit('update:viewMode', 'grid')"
                     >
-                        &#9638; {{ t('productList.grid') }}
+                        <IconLayoutGrid :size="18" />
+                        <span class="plv-toolbar__view-label">{{ t('productList.grid') }}</span>
                     </button>
                     <button
                         :class="[
@@ -93,9 +97,12 @@ onBeforeUnmount(() => observer?.disconnect());
                             { 'plv-toolbar__view-btn--active': viewMode === 'list' },
                         ]"
                         type="button"
+                        :aria-label="t('productList.list')"
+                        :title="t('productList.list')"
                         @click="emit('update:viewMode', 'list')"
                     >
-                        &#9783; {{ t('productList.list') }}
+                        <IconList :size="18" />
+                        <span class="plv-toolbar__view-label">{{ t('productList.list') }}</span>
                     </button>
                 </div>
             </div>
@@ -218,6 +225,9 @@ onBeforeUnmount(() => observer?.disconnect());
 }
 
 .plv-toolbar__view-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     height: 36px;
     padding: 0 12px;
     border: none;
@@ -229,6 +239,12 @@ onBeforeUnmount(() => observer?.disconnect());
     transition:
         background 0.1s,
         color 0.1s;
+}
+
+@media (max-width: 600px) {
+    .plv-toolbar__view-label {
+        display: none;
+    }
 }
 
 .plv-toolbar__view-btn:hover {
