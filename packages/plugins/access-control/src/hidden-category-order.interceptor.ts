@@ -4,6 +4,7 @@ import {
     OrderInterceptor,
     RequestContext,
     WillAddItemToOrderInput,
+    WillAdjustOrderLineInput,
 } from '@vendure/core';
 
 import { HiddenCategoryProductsService } from './hidden-category-products.service';
@@ -23,6 +24,19 @@ export class HiddenCategoryOrderInterceptor implements OrderInterceptor {
     ): Promise<void | string> {
         if (ctx.apiType !== 'shop') return;
         const hidden = await this.hidden.hiddenProductIds(ctx, [input.productVariant.productId]);
+        if (hidden.size > 0) return 'error.product-not-available';
+    }
+
+    // Lowering or removing stays allowed so the customer can clean the cart.
+    async willAdjustOrderLine(
+        ctx: RequestContext,
+        _order: Order,
+        input: WillAdjustOrderLineInput,
+    ): Promise<void | string> {
+        if (ctx.apiType !== 'shop' || input.quantity <= input.orderLine.quantity) return;
+        const hidden = await this.hidden.hiddenProductIds(ctx, [
+            input.orderLine.productVariant.productId,
+        ]);
         if (hidden.size > 0) return 'error.product-not-available';
     }
 }

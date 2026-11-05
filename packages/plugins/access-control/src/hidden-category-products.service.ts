@@ -13,6 +13,8 @@ import {
 // feed, or a hidden ancestor). Read at query time, so nothing is denormalised or reindexed.
 @Injectable()
 export class HiddenCategoryProductsService {
+    private erpIdsCache = new WeakMap<RequestContext, Promise<string[]>>();
+
     constructor(private connection: TransactionalConnection) {}
 
     async hiddenFacetValueIds(ctx: RequestContext): Promise<string[]> {
@@ -24,8 +26,20 @@ export class HiddenCategoryProductsService {
         return rows.map(row => String(row.id));
     }
 
-    // ERP ids sent to search-service as `excludeCategoryIds`; read per request, so a recompute applies at once.
-    async hiddenCategoryErpIds(ctx: RequestContext): Promise<string[]> {
+    // ERP ids sent to search-service as `excludeCategoryIds`; memoised per request only, so a recompute applies on the next request.
+    hiddenCategoryErpIds(ctx: RequestContext): Promise<string[]> {
+        let cached = this.erpIdsCache.get(ctx);
+        if (!cached) {
+            cached = this.readHiddenCategoryErpIds(ctx).catch(error => {
+                this.erpIdsCache.delete(ctx);
+                throw error;
+            });
+            this.erpIdsCache.set(ctx, cached);
+        }
+        return cached;
+    }
+
+    private async readHiddenCategoryErpIds(ctx: RequestContext): Promise<string[]> {
         const rows = await ctxQuery<HiddenCategoryRow[]>(
             this.connection,
             ctx,

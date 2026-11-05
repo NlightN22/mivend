@@ -35,6 +35,33 @@ describe('HiddenCategoryProductsService', () => {
     });
 });
 
+describe('HiddenCategoryProductsService excluded category ids', () => {
+    const build = (query: ReturnType<typeof vi.fn>): HiddenCategoryProductsService =>
+        new HiddenCategoryProductsService({ getRepository: () => ({ query }) } as never);
+
+    it('reads once per request and again on the next request, so un-hiding applies at once', async () => {
+        const query = vi
+            .fn()
+            .mockResolvedValueOnce([{ id: 1, parentId: null, slug: 'cat-a' }])
+            .mockResolvedValueOnce([]);
+        const service = build(query);
+        const first = { apiType: 'shop' } as unknown as RequestContext;
+        expect(await service.hiddenCategoryErpIds(first)).toEqual(['a']);
+        expect(await service.hiddenCategoryErpIds(first)).toEqual(['a']);
+        expect(query).toHaveBeenCalledTimes(1);
+        const next = { apiType: 'shop' } as unknown as RequestContext;
+        expect(await service.hiddenCategoryErpIds(next)).toEqual([]);
+        expect(query).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not cache a failed read', async () => {
+        const query = vi.fn().mockRejectedValueOnce(new Error('db')).mockResolvedValueOnce([]);
+        const service = build(query);
+        await expect(service.hiddenCategoryErpIds(shopCtx)).rejects.toThrow('db');
+        expect(await service.hiddenCategoryErpIds(shopCtx)).toEqual([]);
+    });
+});
+
 describe('HiddenCategoryOrderInterceptor', () => {
     const input = { productVariant: { productId: 5 } } as never;
     const build = (hidden: ReturnType<typeof hiddenIds>): HiddenCategoryOrderInterceptor => {
@@ -52,6 +79,33 @@ describe('HiddenCategoryOrderInterceptor', () => {
         expect(
             await build(hiddenIds()).willAddItemToOrder(shopCtx, {} as Order, input),
         ).toBeUndefined();
+    });
+
+    describe('adjusting a line', () => {
+        const line = { quantity: 2, productVariant: { productId: 5 } };
+        const adjust = (
+            hidden: ReturnType<typeof hiddenIds>,
+            ctx: RequestContext,
+            quantity: number,
+        ) =>
+            build(hidden).willAdjustOrderLine(ctx, {} as Order, {
+                orderLine: line as never,
+                quantity,
+            });
+
+        it('blocks raising a hidden-category line for a customer', async () => {
+            expect(await adjust(hiddenIds(5), shopCtx, 3)).toBe('error.product-not-available');
+        });
+
+        it('lets the customer lower or remove it', async () => {
+            expect(await adjust(hiddenIds(5), shopCtx, 1)).toBeUndefined();
+            expect(await adjust(hiddenIds(5), shopCtx, 0)).toBeUndefined();
+        });
+
+        it('lets a visible line be raised and leaves staff alone', async () => {
+            expect(await adjust(hiddenIds(), shopCtx, 3)).toBeUndefined();
+            expect(await adjust(hiddenIds(5), adminCtx, 3)).toBeUndefined();
+        });
     });
 
     it('does not check staff adding through the admin API', async () => {
