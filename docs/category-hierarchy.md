@@ -48,6 +48,35 @@ Stream status lives in `ai/erp-streams-map.md`; this file is the design record.
 - Why `feedHidden` is stored: without it a revived parent could not tell "hidden by an ancestor" from
   "hidden by the feed", and would either keep children hidden or unhide deleted ones.
 
+## Products of hidden categories
+
+- Owner decision (2026-11-05): a product whose category is hidden (own override, feed, or a hidden
+  ancestor, i.e. its category Collection is `isPrivate`) is invisible to customers everywhere: shop
+  `search` (text, catalog listing, `collectionSlug`, suggestions, code groups, facet values, counts),
+  `products`, `product(id|slug)`, `Collection.productVariants`, home widgets, favorites and cart add
+  (`OrderInterceptor`, shop API only). A product sits in one category chain; there is no
+  "visible if any category is visible" case. Products with no category are unaffected.
+- One truth: `collection.isPrivate`, read at query time (`productInHiddenCategorySql` in
+  `packages/shared/src/hiddenCategoryProducts.ts`, `HiddenCategoryProductsService` in access-control).
+  Nothing is denormalised into the index, so the recompute that flips `isPrivate` hides and un-hides
+  products at once and no reindex or backfill is needed. The category FacetValue is read from the
+  product (local import) and from its live variants (ERP feed).
+- Internal backend: the shop `search` resolver puts the hidden category FacetValue ids on the input and
+  `mapSearchQuery` adds a `must_not` filter on `facetValueIds`, so hits, counts and facets agree.
+  External backend: hits are loaded through `ProductLookupService`, which drops hidden-category
+  products, and a hidden requested category answers empty without calling search-service.
+- Staff: the Admin API (manager portal, `UpdateCatalog`/`ReadCatalog`) is untouched, as hidden
+  Collections already are, so the Category visibility page keeps working.
+- External contract: every shop `POST /resolve-query` carries `excludeCategoryIds` (ERP ids of all hidden
+  categories, at most 1000, each 1-100 chars; past the cap only hidden nodes with a visible parent;
+  omitted when empty and for staff). search-service applies it to code groups, items, total and facets
+  with no index change. The param alone is not a browse filter. Known gap: it matches `categoryPath`
+  (subtree), so a category with a `visible` override under a hidden ancestor is hidden externally but
+  visible internally; ask search-service to match the product's own category id instead.
+- Deploy order: search-service (image `sha-dc51122` or later) first, mivend second. Local post-filtering in
+  `ProductLookupService` stays as a second guard.
+- Release: no migration, reindex or backfill step.
+
 ## Periodic recompute
 
 - `category-tree-recompute.scheduled-task.ts` (central hub with Kafka enabled only), default every

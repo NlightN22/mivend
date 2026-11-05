@@ -1,6 +1,11 @@
 # Project Context
 
-Updated: 2026-11-04
+Updated: 2026-11-05
+
+## Products of hidden categories (2026-11-05, owner decision, not committed/audited yet)
+- A product in a hidden category (`collection.isPrivate`, incl. inherited) is invisible to customers in shop search/suggestions/facets, `products`, `product`, `Collection.productVariants`, widgets, cart add. Staff Admin API unchanged. Query-time rule, no index field, no migration, no reindex. Design and limits: `docs/category-hierarchy.md`.
+- Code: `shared/hiddenCategoryProducts.ts`, access-control `HiddenCategoryProductsService` + `shop-visible-products.resolver.ts` + order interceptor, search `internal-shop-search.resolver.ts` (internal) and `ProductLookupService` (external).
+- External: `excludeCategoryIds` on /resolve-query (search-service `sha-dc51122`, deploy it first). Gap: its categoryPath match also hides a visible-override child under a hidden ancestor. `make test-int` not run by the agent.
 
 ## #297 prices keyed by product ERP id (DONE, prod 0.0.12; full text: `.backup/PROJECT_CONTEXT-2026-10-31-297-298-full.md`)
 - `product_variant_price_entry` is keyed by `productExternalId` + `priceTypeCode` (a price may arrive before its product); `PriceEntryService` keeps the variant-based API. Docs: `docs/pricing.md`, `make bench-pricing`.

@@ -732,3 +732,9 @@ server-side, payloads never selected) need `ManageErpIntegration`, like the rest
 page. `replayFailedIntegrationInbox` (1 to 100 row ids), `requeueFailedIntegrationOutbox` and
 `rebuildSkippedIntegrationOutbox` need `RecoverIntegrationEvents`; the dashboard shows their buttons
 only to holders of it.
+
+## Products of hidden categories (customers vs staff)
+
+Customers (Shop API, guests included) never see a product whose category Collection is private;
+staff on the Admin API see all of them. Design, entry points and limits: `docs/category-hierarchy.md`
+"Products of hidden categories". Tests: `apps/server/src/__tests__/access/category/category-products.test.ts`.

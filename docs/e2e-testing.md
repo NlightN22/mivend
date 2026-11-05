@@ -133,7 +133,7 @@ source id `INTEGRATION_RESYNC_SOURCE_SYSTEM`; both it and `INTEGRATION_SERVICE_B
 
 `category-feed` is the explicit exception to the 30-minute run limit: it waits for manual ERP-owner steps (per-step bounds 15/40 min, test timeout up to 125 min).
 
-Deliberate omissions of #264 (see #291): authorized-staff checks run as superadmin because no seeded role other than superadmin holds `UpdateCatalog`; search and suggestions are not covered on the access stand (the external search backend is dead there); `/catalog?collection=<hidden slug>` still listing the hidden category's products awaits an owner decision (#291).
+Deliberate omissions of #264 (see #291): authorized-staff checks run as superadmin because no seeded role other than superadmin holds `UpdateCatalog`; search and suggestions are not covered on the access stand (the external search backend is dead there); the hidden-category products rule (owner decision, `docs/category-hierarchy.md`) is covered by the `visibility-storefront` and `visibility-manager` category specs (16, 15) and the access stand `category-products.test.ts` (browse path only, text search is covered by unit/parity tests).
 
 ## Manager portal role projects
 
