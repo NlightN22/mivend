@@ -194,7 +194,8 @@ onBeforeUnmount(() => observer?.disconnect());
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-shrink: 0;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .plv-toolbar__select {

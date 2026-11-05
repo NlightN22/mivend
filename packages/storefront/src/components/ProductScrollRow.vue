@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import ConnectedProductCard from './ConnectedProductCard.vue';
-import { scrollRowItems } from './scroll-row-items';
 import type { ProductItem } from '../composables/useProductList';
 
 const props = defineProps<{
@@ -10,27 +9,34 @@ const props = defineProps<{
     loading: boolean;
 }>();
 
-const CARD_WIDTH = 220;
-const CARD_GAP = 14;
-const STEP = CARD_WIDTH + CARD_GAP;
-const VISIBLE = 5;
+const viewport = ref<HTMLElement | null>(null);
+const canPrev = ref(false);
+const canNext = ref(false);
 
-const offset = ref(0);
-
-const displayItems = computed(() => {
-    return scrollRowItems(props.items, VISIBLE);
-});
-
-const maxOffset = computed(() => Math.max(0, props.items.length * STEP));
-
-function prev(): void {
-    offset.value = offset.value <= 0 ? maxOffset.value - STEP : offset.value - STEP;
+function measure(): void {
+    const el = viewport.value;
+    if (!el) return;
+    canPrev.value = el.scrollLeft > 1;
+    canNext.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
 }
 
-function next(): void {
-    const n = offset.value + STEP;
-    offset.value = n >= maxOffset.value ? 0 : n;
+function scrollByPage(dir: 1 | -1): void {
+    const el = viewport.value;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
 }
+
+const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+
+watch(
+    () => [props.loading, props.items.length],
+    async () => {
+        await nextTick();
+        measure();
+        if (viewport.value) resizeObserver?.observe(viewport.value);
+    },
+);
+onMounted(measure);
+onBeforeUnmount(() => resizeObserver?.disconnect());
 </script>
 
 <template>
@@ -39,10 +45,10 @@ function next(): void {
         <div v-if="loading" class="psr-state">{{ $t('common.loading') }}</div>
         <div v-else class="psr-wrap">
             <button
-                v-if="items.length > VISIBLE"
+                v-if="canPrev"
                 class="psr-arrow psr-arrow--left"
                 :aria-label="$t('common.previous')"
-                @click="prev"
+                @click="scrollByPage(-1)"
             >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <path
@@ -55,23 +61,21 @@ function next(): void {
                 </svg>
             </button>
 
-            <div class="psr-viewport">
-                <div class="psr-track" :style="{ transform: `translateX(-${offset}px)` }">
-                    <ConnectedProductCard
-                        v-for="(p, i) in displayItems"
-                        :key="`${p.id}-${i}`"
-                        class="psr-card"
-                        :item="p"
-                        mode="card"
-                    />
-                </div>
+            <div ref="viewport" class="psr-viewport" @scroll.passive="measure">
+                <ConnectedProductCard
+                    v-for="p in items"
+                    :key="p.id"
+                    class="psr-card"
+                    :item="p"
+                    mode="card"
+                />
             </div>
 
             <button
-                v-if="items.length > VISIBLE"
+                v-if="canNext"
                 class="psr-arrow psr-arrow--right"
                 :aria-label="$t('common.next')"
-                @click="next"
+                @click="scrollByPage(1)"
             >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <path
@@ -138,26 +142,29 @@ function next(): void {
     }
 
     .psr-arrow--left {
-        left: -20px;
+        left: 4px;
     }
     .psr-arrow--right {
-        right: -20px;
+        right: 4px;
     }
 }
 
 .psr-viewport {
-    overflow: hidden;
-}
-
-.psr-track {
     display: flex;
     gap: 14px;
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: transform;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+}
+
+.psr-viewport::-webkit-scrollbar {
+    display: none;
 }
 
 .psr-card {
     flex: 0 0 220px;
+    scroll-snap-align: start;
 }
 
 .psr-state {
