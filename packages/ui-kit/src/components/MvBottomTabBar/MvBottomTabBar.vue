@@ -42,13 +42,13 @@ const emit = defineEmits<{ select: [key: string] }>();
 
 <style scoped>
 .mv-bottom-tab-bar {
+    display: none;
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: var(--mv-z-floating);
     height: var(--mv-bottom-bar-height);
-    display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
     gap: 2px;
@@ -57,6 +57,12 @@ const emit = defineEmits<{ select: [key: string] }>();
     background: var(--app-surface);
     border-top: 1px solid var(--app-nav-border);
     box-shadow: 0 -8px 24px rgba(16, 24, 40, 0.08);
+}
+
+@media (max-width: 1180px) {
+    .mv-bottom-tab-bar {
+        display: grid;
+    }
 }
 
 .mv-bottom-tab-bar__item {

@@ -29,6 +29,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 </template>
 
 <style scoped>
+.mv-account-sheet-backdrop,
+.mv-account-sheet {
+    display: none;
+}
+
 .mv-account-sheet-backdrop {
     position: fixed;
     inset: 0 0 var(--mv-bottom-bar-height);
@@ -56,5 +61,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     margin: 0 auto 12px;
     border-radius: 999px;
     background: var(--app-nav-border-strong);
+}
+</style>
+
+<style scoped>
+@media (max-width: 1180px) {
+    .mv-account-sheet-backdrop,
+    .mv-account-sheet {
+        display: block;
+    }
 }
 </style>

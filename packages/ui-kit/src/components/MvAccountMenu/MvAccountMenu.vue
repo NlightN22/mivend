@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, type Component } from 'vue';
 import { IconChevronDown, IconChevronRight, IconLogout, IconWorld } from '@tabler/icons-vue';
 import type { LanguageOption } from '../MvLanguageSwitcher/MvLanguageSwitcher.vue';
 
@@ -14,6 +14,7 @@ export interface AccountMenuEntry {
     key: string;
     label: string;
     to?: string;
+    icon?: Component;
     count?: number;
     children?: AccountMenuLink[];
 }
@@ -69,6 +70,13 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
                     :aria-expanded="isGroupOpen(entry)"
                     @click="expanded[entry.key] = !isGroupOpen(entry)"
                 >
+                    <component
+                        :is="entry.icon"
+                        v-if="entry.icon"
+                        :size="20"
+                        class="mv-account-menu__icon"
+                        aria-hidden="true"
+                    />
                     <span class="mv-account-menu__label">{{ entry.label }}</span>
                     <component
                         :is="isGroupOpen(entry) ? IconChevronDown : IconChevronRight"
@@ -84,6 +92,13 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
                     :aria-current="isActive(entry.to) ? 'page' : undefined"
                     @click="emit('navigate')"
                 >
+                    <component
+                        :is="entry.icon"
+                        v-if="entry.icon"
+                        :size="20"
+                        class="mv-account-menu__icon"
+                        aria-hidden="true"
+                    />
                     <span class="mv-account-menu__label">{{ entry.label }}</span>
                     <span v-if="entry.count" class="mv-account-menu__count">{{ entry.count }}</span>
                 </RouterLink>
@@ -222,6 +237,15 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
 .mv-account-menu__lang:focus-visible {
     outline: 2px solid var(--app-nav-accent);
     outline-offset: -2px;
+}
+
+.mv-account-menu__icon {
+    flex-shrink: 0;
+    color: var(--app-nav-label);
+}
+
+.mv-account-menu__item--active .mv-account-menu__icon {
+    color: var(--app-nav-accent);
 }
 
 .mv-account-menu__item--active {

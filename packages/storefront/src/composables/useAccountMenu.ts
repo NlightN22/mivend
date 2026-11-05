@@ -23,6 +23,7 @@ export function useAccountMenu(exclude: string[]): {
             key: node.key,
             label: label(node.key),
             to: node.to,
+            icon: node.icon,
             children: node.children?.map(c => ({ ...c, label: label(c.key) })),
         })),
     );
