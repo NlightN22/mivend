@@ -255,7 +255,7 @@ onBeforeUnmount(() => observer?.disconnect());
     height: 18px;
     padding: 0 5px;
     border-radius: 9px;
-    background: #00b894;
+    background: var(--el-color-primary);
     color: #fff;
     font-size: 11px;
     font-weight: 800;

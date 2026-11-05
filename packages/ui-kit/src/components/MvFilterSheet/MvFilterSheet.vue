@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { IconX } from '@tabler/icons-vue';
+import { useFocusTrap } from '../../composables/useFocusTrap';
 
 const props = defineProps<{
     modal: boolean;
@@ -14,19 +16,33 @@ function onKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') emit('close');
 }
 
+const sheet = ref<HTMLElement | null>(null);
+const shown = computed(() => props.modal && props.open);
+useFocusTrap(sheet, shown);
+
+let previousOverflow = '';
+
 function lock(locked: boolean): void {
-    document.body.style.overflow = locked ? 'hidden' : '';
-    if (locked) document.addEventListener('keydown', onKeydown);
-    else document.removeEventListener('keydown', onKeydown);
+    if (locked) {
+        previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.addEventListener('keydown', onKeydown);
+    } else {
+        document.body.style.overflow = previousOverflow;
+        document.removeEventListener('keydown', onKeydown);
+    }
 }
 
-watch(() => props.modal && props.open, lock);
-onBeforeUnmount(() => lock(false));
+watch(shown, lock);
+onBeforeUnmount(() => {
+    if (shown.value) lock(false);
+});
 </script>
 
 <template>
     <Teleport to="body" :disabled="!modal">
         <section
+            ref="sheet"
             class="mv-filter-sheet"
             :class="{ 'mv-filter-sheet--modal': modal, 'mv-filter-sheet--open': open }"
             :role="modal ? 'dialog' : undefined"
@@ -41,7 +57,7 @@ onBeforeUnmount(() => lock(false));
                     :aria-label="closeLabel"
                     @click="emit('close')"
                 >
-                    ✕
+                    <IconX :size="22" aria-hidden="true" />
                 </button>
             </header>
             <div class="mv-filter-sheet__body"><slot /></div>
@@ -61,7 +77,7 @@ onBeforeUnmount(() => lock(false));
     inset: 0;
     z-index: var(--mv-z-modal);
     flex-direction: column;
-    background: #f5f7fb;
+    background: var(--el-bg-color-page);
 }
 
 .mv-filter-sheet--modal.mv-filter-sheet--open {
@@ -113,7 +129,7 @@ onBeforeUnmount(() => lock(false));
     height: 48px;
     border: none;
     border-radius: 14px;
-    background: #00b894;
+    background: var(--el-color-primary);
     color: #fff;
     font-size: 16px;
     font-weight: 800;
