@@ -37,6 +37,20 @@ const OVERRIDE_OPTIONS: SelectOption[] = [
     { value: 'hidden', label: 'Hidden' },
 ];
 
+const HIDDEN_BY_PARENT = 'Hidden by parent: a hidden category hides everything below it';
+const LOCKED_OPTIONS: SelectOption[] = OVERRIDE_OPTIONS.filter(o => o.value !== 'visible');
+const STALE_VISIBLE_OPTIONS: SelectOption[] = OVERRIDE_OPTIONS.map(o =>
+    o.value === 'visible' ? { ...o, label: 'Visible (ignored: hidden by parent)' } : o,
+);
+
+function optionsFor(row: {
+    hiddenByAncestor: boolean;
+    visibilityOverride: string;
+}): SelectOption[] {
+    if (!row.hiddenByAncestor) return OVERRIDE_OPTIONS;
+    return row.visibilityOverride === 'visible' ? STALE_VISIBLE_OPTIONS : LOCKED_OPTIONS;
+}
+
 const ALL_COLUMNS: AdvancedDataTableColumn[] = [
     {
         field: 'name',
@@ -102,6 +116,7 @@ interface CategoryVisibilityRow {
     hasChildren: boolean;
     expanded: boolean;
     hiddenReason: string;
+    hiddenByAncestor: boolean;
     isPrivate: boolean;
     isPrivateVariant: StatusBadgeVariant;
     visibilityOverride: string;
@@ -126,6 +141,7 @@ const rows = computed<CategoryVisibilityRow[]>(() =>
         hasChildren,
         expanded,
         hiddenReason: visibilityInfo.value.get(c.id)?.hiddenReason || '—',
+        hiddenByAncestor: visibilityInfo.value.get(c.id)?.hiddenByAncestor ?? false,
         isPrivate: c.isPrivate,
         isPrivateVariant: c.isPrivate ? 'neutral' : 'success',
         visibilityOverride: c.customFields?.visibilityOverride ?? '',
@@ -174,8 +190,11 @@ const rows = computed<CategoryVisibilityRow[]>(() =>
         </template>
         <template #cell-visibilityOverride="{ data }">
             <MvSelect
+                :title="
+                    (data as CategoryVisibilityRow).hiddenByAncestor ? HIDDEN_BY_PARENT : undefined
+                "
                 :model-value="(data as CategoryVisibilityRow).visibilityOverride"
-                :options="OVERRIDE_OPTIONS"
+                :options="optionsFor(data as CategoryVisibilityRow)"
                 :disabled="savingCollectionId === (data as CategoryVisibilityRow).id"
                 @update:model-value="
                     (value: string) =>

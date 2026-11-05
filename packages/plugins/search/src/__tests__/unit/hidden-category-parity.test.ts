@@ -5,6 +5,7 @@ import type { RequestContext } from '@vendure/core';
 import { ExternalSearchService } from '../../external-search.service';
 import { InternalShopSearchResolver } from '../../internal-shop-search.resolver';
 import { mapSearchQuery } from '../../code-match-query';
+import { categorySlug, planCategoryVisibilityUpdates } from 'shared';
 
 const ctx = {
     languageCode: 'en',
@@ -41,7 +42,10 @@ const internal: Backend = {
     },
 };
 
-function externalService(hiddenCategory: boolean): {
+function externalService(
+    hiddenCategory: boolean,
+    hiddenErpIds: string[] = ['h1'],
+): {
     service: ExternalSearchService;
     client: { resolveQuery: ReturnType<typeof vi.fn> };
 } {
@@ -62,7 +66,7 @@ function externalService(hiddenCategory: boolean): {
         { resolveExternalId: async () => null } as never,
         {
             isCategoryHidden: async () => hiddenCategory,
-            hiddenCategoryErpIds: async () => ['h1'],
+            hiddenCategoryErpIds: async () => hiddenErpIds,
         } as never,
     );
     return { service, client };
@@ -100,5 +104,51 @@ describe('hidden categories reach each backend as the same hidden set', () => {
         const staff = externalService(false);
         await staff.service.search(ctx, { term: 'oil' } as SearchInput, true);
         expect(staff.client.resolveQuery.mock.calls[0][0]).not.toHaveProperty('excludeCategoryIds');
+    });
+});
+
+describe('a visible override under a hidden ancestor stays hidden on both backends', () => {
+    const node = (id: string, parentId: string | null, over: string | null) => ({
+        id,
+        parentId,
+        slug: categorySlug(id),
+        feedHidden: id === 'root',
+        visibilityOverride: over,
+        isPrivate: false,
+    });
+    const hiddenIds = planCategoryVisibilityUpdates([
+        node('root', null, null),
+        node('child', 'root', 'visible'),
+        node('grandchild', 'child', null),
+    ])
+        .filter(u => u.isPrivate)
+        .map(u => u.id)
+        .sort();
+
+    it('plans the whole subtree as hidden', () => {
+        expect(hiddenIds).toEqual(['child', 'grandchild', 'root']);
+    });
+
+    it('internal filters every hidden category facet value', async () => {
+        const search = vi.fn().mockResolvedValue({ items: [], totalItems: 0 });
+        const resolver = new InternalShopSearchResolver(
+            { get: () => ({ search }) } as never,
+            { hiddenFacetValueIds: async () => hiddenIds.map(id => `fv-${id}`) } as never,
+        );
+        const { input } = await resolver.search(ctx, { term: 'oil' });
+        const query = JSON.stringify(
+            mapSearchQuery(
+                { bool: { filter: [] } },
+                input as { hiddenFacetValueIds: string[] },
+                true,
+            ),
+        );
+        for (const id of hiddenIds) expect(query).toContain(`fv-${id}`);
+    });
+
+    it('external excludes every hidden category id', async () => {
+        const { service, client } = externalService(false, hiddenIds);
+        await service.search(ctx, { term: 'oil' } as SearchInput);
+        expect(client.resolveQuery.mock.calls[0][0].excludeCategoryIds).toEqual(hiddenIds);
     });
 });

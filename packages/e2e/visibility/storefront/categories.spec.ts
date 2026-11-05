@@ -35,7 +35,7 @@ test.describe('14: category visibility, storefront as a customer', () => {
         expectNoHiddenCategory(s, '');
     });
 
-    test('sidebar shows the visible children and a visible override under a hidden parent', async () => {
+    test('sidebar shows the visible children and nothing under a hidden parent', async () => {
         const { page } = s;
         await page.goto(catalogUrl('vis-a'));
         await settleCatalog(page);
@@ -48,18 +48,18 @@ test.describe('14: category visibility, storefront as a customer', () => {
         await settleCatalog(page);
         const root = await readSidebar(page);
         expect(root.back).toEqual([]);
-        expect(new Set(root.level)).toEqual(new Set([nameOf('vis-a'), nameOf('vis-b2')]));
+        expect(new Set(root.level)).toEqual(new Set([nameOf('vis-a')]));
         await shot(page, 'category-sidebar');
         expectNoHiddenCategory(s, await pageText(page));
     });
 
-    test('breadcrumbs of a visible override drop the hidden ancestor', async () => {
+    test('breadcrumbs of a nested visible category name only visible ancestors', async () => {
         const { page } = s;
-        await page.goto(catalogUrl('vis-b2x'));
+        await page.goto(catalogUrl('vis-a1'));
         await settleCatalog(page);
         const crumbs = page.locator('.mv-breadcrumbs');
-        await expect(crumbs).toContainText(nameOf('vis-b2'));
-        await expect(crumbs).toContainText(nameOf('vis-b2x'));
+        await expect(crumbs).toContainText(nameOf('vis-a'));
+        await expect(crumbs).toContainText(nameOf('vis-a1'));
         await shot(page, 'category-breadcrumbs');
         expectNoHiddenCategory(s, await pageText(page));
     });
@@ -81,7 +81,7 @@ test.describe('14: category visibility, storefront as a customer', () => {
         await page.goto('/catalog?q=Product%20of%20vis');
         await settleCatalog(page);
         const nav = page.locator('.mv-category-nav');
-        await expect(nav.getByRole('button', { name: nameOf('vis-root') })).toContainText('5');
+        await expect(nav.getByRole('button', { name: nameOf('vis-root') })).toContainText('3');
         await expect(nav.getByRole('button', { name: nameOf('vis-root') })).toBeVisible();
         await shot(page, 'category-facets');
         expectNoHiddenCategory(s, await pageText(page));
@@ -89,10 +89,10 @@ test.describe('14: category visibility, storefront as a customer', () => {
 
     test('product page breadcrumb and links name only visible categories', async () => {
         const { page } = s;
-        await page.goto(`/product/${categoryProductSlug('vis-b2x')}`);
+        await page.goto(`/product/${categoryProductSlug('vis-a1')}`);
         const crumbs = page.locator('.mv-breadcrumbs');
-        await expect(crumbs).toContainText(nameOf('vis-b2x'));
-        await expect(page.getByRole('heading', { name: 'Product of vis-b2x' })).toBeVisible();
+        await expect(crumbs).toContainText(nameOf('vis-a1'));
+        await expect(page.getByRole('heading', { name: 'Product of vis-a1' })).toBeVisible();
         expectNoHiddenCategory(s, await pageText(page));
     });
 
@@ -126,7 +126,7 @@ test.describe('14: category visibility, storefront as a customer', () => {
         }
     });
 
-    test('direct URL of a hidden category shows an empty catalog, a visible one lists products', async () => {
+    test('direct URL of a hidden category, even one with a visible override, shows an empty catalog; a visible one lists products', async () => {
         const { page } = s;
         await page.goto(catalogUrl('vis-a2'));
         await settleCatalog(page);
@@ -137,7 +137,12 @@ test.describe('14: category visibility, storefront as a customer', () => {
 
         await page.goto(catalogUrl('vis-b2x'));
         await settleCatalog(page);
-        await expect(page.getByText('Product of vis-b2x')).toBeVisible();
+        await expect(page.getByText('No products found')).toBeVisible();
+        expect(await pageText(page)).not.toContain('Product of vis-b2x');
+
+        await page.goto(catalogUrl('vis-a1'));
+        await settleCatalog(page);
+        await expect(page.getByText('Product of vis-a1')).toBeVisible();
         await expect(page.getByText('No products found')).toHaveCount(0);
     });
 

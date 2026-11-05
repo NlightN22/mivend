@@ -65,13 +65,21 @@ test.describe('15: category visibility, manager portal', () => {
             await menu
                 .locator('.mv-catalog-dropdown__cat', { hasText: nameOf('vis-root') })
                 .hover();
-            for (const id of ['vis-root', 'vis-a', 'vis-a1', 'vis-b2'])
+            for (const id of ['vis-root', 'vis-a', 'vis-a1'])
                 await expect(menu).toContainText(nameOf(id));
-            for (const id of ['vis-del', 'vis-off', 'vis-missing', 'vis-a2', 'vis-b', 'vis-b1'])
+            for (const id of [
+                'vis-del',
+                'vis-off',
+                'vis-missing',
+                'vis-a2',
+                'vis-b',
+                'vis-b1',
+                'vis-b2',
+            ])
                 await expect(
                     menu.locator(`a[href$="collection=${categorySlug(id)}"]`),
                 ).toContainText('Hidden');
-            for (const id of ['vis-a', 'vis-a1', 'vis-b2'])
+            for (const id of ['vis-a', 'vis-a1'])
                 await expect(
                     menu.locator(`a[href$="collection=${categorySlug(id)}"]`),
                 ).not.toContainText('Hidden');
@@ -97,6 +105,8 @@ test.describe('15: category visibility, manager portal', () => {
                 ['vis-a2x', 'Hidden ancestor'],
                 ['vis-b', 'Own feed'],
                 ['vis-b1', 'Hidden ancestor'],
+                ['vis-b2', 'Hidden ancestor'],
+                ['vis-b2x', 'Hidden ancestor'],
                 ['vis-del', 'Own feed'],
                 ['vis-off', 'Own feed'],
                 ['vis-missing', 'Own feed'],
@@ -105,13 +115,19 @@ test.describe('15: category visibility, manager portal', () => {
                 await search(page, id);
                 await expect(row(page, id)).toContainText(reason);
             }
-            for (const id of ['vis-a1', 'vis-b2']) {
+            for (const id of ['vis-a1']) {
                 await search(page, id);
                 await expect(row(page, id)).toContainText('Visible');
                 await expect(row(page, id)).not.toContainText(
                     /Hidden ancestor|Own feed|Manual override/,
                 );
             }
+            await search(page, 'vis-b1');
+            await expect(row(page, 'vis-b1').locator('select option[value="visible"]')).toHaveCount(
+                0,
+            );
+            await search(page, 'vis-b2');
+            await expect(row(page, 'vis-b2').locator('select')).toHaveValue('visible');
             await shot(page, 'manager-category-settings');
         } finally {
             await s.context.close();

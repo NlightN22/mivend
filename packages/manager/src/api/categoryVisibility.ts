@@ -23,6 +23,7 @@ export interface CategoryVisibilityInfo {
     depth: number;
     parentName: string;
     hiddenReason: HiddenReason;
+    hiddenByAncestor: boolean;
 }
 
 // `feedHidden` is internal (not readable via the API), so "own feed" is inferred: hidden with
@@ -42,10 +43,14 @@ export function describeCategoryVisibility(
             if (override === 'hidden') hiddenReason = 'Manual override';
             else hiddenReason = parent?.isPrivate ? 'Hidden ancestor' : 'Own feed';
         }
+        const hiddenByAncestor = crumbs
+            .slice(1, -1)
+            .some(crumb => byId.get(crumb.id)?.isPrivate === true);
         info.set(c.id, {
             depth: Math.max(crumbs.length - 1, 1),
             parentName: parentCrumb?.name ?? '',
             hiddenReason,
+            hiddenByAncestor,
         });
     }
     return info;

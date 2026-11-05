@@ -111,13 +111,29 @@ describe('planCategoryVisibilityUpdates', () => {
         ]);
     });
 
-    it('a manual override beats the ancestors, and its own children follow its state', () => {
+    it('a visible override never beats a hidden ancestor, at any depth', () => {
         const nodes = [
             vis('a', null, true, true),
-            vis('b', 'a', false, true, 'visible'),
-            vis('c', 'b', false, true),
+            vis('b', 'a', false, false, 'visible'),
+            vis('c', 'b', false, false, 'visible'),
+            vis('d', 'c', false, false),
         ];
         expect(planCategoryVisibilityUpdates(nodes)).toEqual([
+            { id: 'b', isPrivate: true },
+            { id: 'c', isPrivate: true },
+            { id: 'd', isPrivate: true },
+        ]);
+    });
+
+    it('un-hiding the ancestor restores a visible-override child, even if its feed hides it', () => {
+        const nodes = [
+            vis('a', null, false, true),
+            vis('b', 'a', true, true, 'visible'),
+            vis('c', 'b', false, true),
+            vis('d', 'a', true, true),
+        ];
+        expect(planCategoryVisibilityUpdates(nodes)).toEqual([
+            { id: 'a', isPrivate: false },
             { id: 'b', isPrivate: false },
             { id: 'c', isPrivate: false },
         ]);
@@ -144,13 +160,13 @@ describe('planCategoryVisibilityUpdates', () => {
         ]);
     });
 
-    it('a hidden override on a child does not hide its visible-override grandchild', () => {
+    it('a hidden override on a child hides its visible-override grandchild too', () => {
         const nodes = [
             vis('a', null, false, false),
             vis('b', 'a', false, true, 'hidden'),
             vis('c', 'b', false, false, 'visible'),
         ];
-        expect(planCategoryVisibilityUpdates(nodes)).toEqual([]);
+        expect(planCategoryVisibilityUpdates(nodes)).toEqual([{ id: 'c', isPrivate: true }]);
     });
 
     it('makes no writes when everything is already consistent, and survives a cycle', () => {
@@ -163,9 +179,11 @@ describe('planCategoryVisibilityUpdates', () => {
         ).not.toThrow();
     });
 
-    it('resolveCategoryIsPrivate: override first, then feed, then parent', () => {
+    it('resolveCategoryIsPrivate: hidden parent wins, then override, then own feed', () => {
         expect(resolveCategoryIsPrivate(false, 'hidden', false)).toBe(true);
-        expect(resolveCategoryIsPrivate(true, 'visible', true)).toBe(false);
+        expect(resolveCategoryIsPrivate(true, 'visible', false)).toBe(false);
+        expect(resolveCategoryIsPrivate(true, 'visible', true)).toBe(true);
+        expect(resolveCategoryIsPrivate(false, 'visible', true)).toBe(true);
         expect(resolveCategoryIsPrivate(false, null, true)).toBe(true);
         expect(resolveCategoryIsPrivate(false, null, false)).toBe(false);
     });

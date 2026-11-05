@@ -146,8 +146,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
             ? await ensureParentCategoryCollection(ctx, this.collectionService, parentErpId)
             : undefined;
         const parentId = parent?.id;
-        // The manual override (issue #90) wins over the feed and over a hidden parent; a first-seen
-        // category has none to read yet.
+        // The manual override (issue #90) beats the category's own feed state, never a hidden parent.
         const override = (existing as { customFields?: { visibilityOverride?: string | null } })
             ?.customFields?.visibilityOverride;
         const resolvedIsPrivate = resolveCategoryIsPrivate(

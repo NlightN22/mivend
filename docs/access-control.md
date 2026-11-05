@@ -736,5 +736,5 @@ only to holders of it.
 ## Products of hidden categories (customers vs staff)
 
 Customers (Shop API, guests included) never see a product whose category Collection is private;
-staff on the Admin API see all of them. Design, entry points and limits: `docs/category-hierarchy.md`
+staff on the Admin API see all of them. A hidden category hides its whole subtree: no `visible` override can un-hide a category that has a hidden ancestor. Design, entry points and limits: `docs/category-hierarchy.md`
 "Products of hidden categories". Tests: `apps/server/src/__tests__/access/category/category-products.test.ts`.

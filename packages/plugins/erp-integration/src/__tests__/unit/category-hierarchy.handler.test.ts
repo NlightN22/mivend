@@ -189,7 +189,7 @@ describe('CategoryStreamHandler hierarchy', () => {
         );
     });
 
-    it('a manual visible override beats a hidden parent', async () => {
+    it('a manual visible override never beats a hidden parent', async () => {
         const { handler, collectionService } = build({
             collections: {
                 'cat-p1': { id: 'col-p1', isPrivate: true },
@@ -200,7 +200,7 @@ describe('CategoryStreamHandler hierarchy', () => {
         await handler.apply(ctx, 'c1', { ...active, parentId: 'p1' });
         expect(collectionService.update).toHaveBeenCalledWith(
             ctx,
-            expect.objectContaining({ id: 'col-1', isPrivate: false }),
+            expect.objectContaining({ id: 'col-1', isPrivate: true }),
         );
     });
 

@@ -59,4 +59,17 @@ describe('describeCategoryVisibility', () => {
         ]);
         expect(info.get('3')?.hiddenReason).toBe('Hidden ancestor');
     });
+
+    it('flags rows with a hidden ancestor so the page can withhold the visible override', () => {
+        const info = describeCategoryVisibility([
+            col('2', [], true),
+            col('3', ['2'], true, 'visible'),
+            col('4', ['2', '3'], true),
+            col('5', [], false),
+        ]);
+        expect(info.get('2')?.hiddenByAncestor).toBe(false);
+        expect(info.get('3')?.hiddenByAncestor).toBe(true);
+        expect(info.get('4')?.hiddenByAncestor).toBe(true);
+        expect(info.get('5')?.hiddenByAncestor).toBe(false);
+    });
 });

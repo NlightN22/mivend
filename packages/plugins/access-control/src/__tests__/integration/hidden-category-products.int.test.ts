@@ -246,7 +246,7 @@ describe('hidden category products on real Postgres', () => {
         ]);
     });
 
-    it('a visible override beats a hidden ancestor, as the category tree shows it', async () => {
+    it('a visible override under a hidden ancestor stays hidden, products included', async () => {
         await applyVisibility(
             TREE.map(c =>
                 c.id === 'root'
@@ -256,7 +256,13 @@ describe('hidden category products on real Postgres', () => {
                       : c,
             ),
         );
-        expect(await hiddenNames()).toEqual(['inOther', 'inRoot']);
+        expect(await hiddenNames()).toEqual([
+            'inLeafOnProduct',
+            'inLeafOnVariant',
+            'inMid',
+            'inOther',
+            'inRoot',
+        ]);
     });
 
     it('moving a category under a hidden parent hides its products, moving it out restores them', async () => {

@@ -39,10 +39,15 @@ Stream status lives in `ai/erp-streams-map.md`; this file is the design record.
 
 ## Visibility
 
-- Effective `isPrivate`: manual `visibilityOverride` first (`hidden` or `visible`), otherwise
-  `feedHidden` OR the parent being hidden. **Children are hidden together with a deleted or
-  not-yet-synced parent**; reviving the parent unhides them, except those the feed hides itself.
-- A manual `visible` override beats a hidden ancestor, and that category's own children follow its state.
+- **Rule (owner, 2026-11-05): a hidden category hides everything below it, always. There is no visible
+  exception inside a hidden subtree.** A hidden ancestor wins over any override on a descendant.
+- Effective `isPrivate`: hidden when the parent is hidden; else `visibilityOverride` (`hidden` hides,
+  `visible` shows even if the category's own feed hides it); else `feedHidden`. **Children are hidden
+  together with a deleted or not-yet-synced parent**; reviving the parent restores each child to its
+  own state (a stored `visible` override takes effect again), except those the feed hides itself.
+- The manager page does not offer `visible` for a category with a hidden ancestor. The Admin API
+  still accepts the value (Vendure's `updateCollection`); it has no effect, the recompute that every
+  override change triggers keeps the category hidden.
 - A category's event applies this using its parent's current state. Propagation to the rest of the
   subtree when an ancestor flips is done by the periodic recompute, so it can lag by up to one interval.
 - Why `feedHidden` is stored: without it a revived parent could not tell "hidden by an ancestor" from
@@ -71,11 +76,12 @@ Stream status lives in `ai/erp-streams-map.md`; this file is the design record.
   categories, at most 1000, each 1-100 chars; past the cap only hidden nodes with a visible parent;
   omitted when empty and for staff). search-service applies it to code groups, items, total and facets
   with no index change. The param alone is not a browse filter. Known gap: it matches `categoryPath`
-  (subtree), so a category with a `visible` override under a hidden ancestor is hidden externally but
-  visible internally; ask search-service to match the product's own category id instead.
+  (subtree), which is the same set as `collection.isPrivate` since a hidden ancestor always hides its subtree.
 - Deploy order: search-service (image `sha-dc51122` or later) first, mivend second. Local post-filtering in
   `ProductLookupService` stays as a second guard.
-- Release: no migration, reindex or backfill step.
+- Release: no migration, reindex or backfill step. A stored `visible` override under a hidden ancestor
+  (plain data) stops having effect at the next recompute (override change, import batch or the hourly
+  task) and applies again only if the ancestor is un-hidden.
 
 ## Periodic recompute
 
@@ -91,7 +97,7 @@ Stream status lives in `ai/erp-streams-map.md`; this file is the design record.
 
 - Staging (2026-10-03): some categories deleted in the ERP still have live children and products. They
   stay as private placeholders, and their children are hidden (decision above). The only way to show
-  them again is a real event for the parent or a manual `visible` override on the child.
+  them again is a real event for the parent (the child is hidden while the parent is, whatever its override).
 - A tombstone seen before any real event for that category is a no-op for a nameless, unknown category.
 
 ## Backfill

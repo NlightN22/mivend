@@ -21,6 +21,7 @@ const SHOP_ONE = `query($s: String!) { collection(slug: $s) { slug productVarian
 const SHOP_PRODUCT = `query($s: String!) { product(slug: $s) { slug collections { slug } } }`;
 const SHOP_PRODUCTS = `{ products(options: { take: 100 }) { items { slug collections { slug } } } }`;
 const ADMIN_LIST = `{ collections(options: { take: 100 }) { items { id slug isPrivate customFields { visibilityOverride } } } }`;
+const RESET_OVERRIDE = `mutation($id: ID!) { updateCollection(input: { id: $id, isPrivate: true, customFields: { visibilityOverride: null } }) { id } }`;
 const SET_OVERRIDE = `mutation($id: ID!) { updateCollection(input: { id: $id, isPrivate: false, customFields: { visibilityOverride: "visible" } }) { id } }`;
 
 const shopActors: { name: string; token: () => Promise<string> }[] = [
@@ -67,10 +68,10 @@ describe.each(shopActors)('storefront categories for $name', ({ token: open }) =
                 expect(HIDDEN, `${c.slug} -> ${crumb.slug}`).not.toContain(crumb.slug);
     });
 
-    it('a visible override keeps its child reachable under a hidden parent', async () => {
+    it('a visible override under a hidden parent stays hidden with its child', async () => {
         const slugs = await shopSlugs(token);
-        expect(slugs).toContain(categorySlug('vis-b2'));
-        expect(slugs).toContain(categorySlug('vis-b2x'));
+        expect(slugs).not.toContain(categorySlug('vis-b2'));
+        expect(slugs).not.toContain(categorySlug('vis-b2x'));
     });
 
     it.each(HIDDEN)('direct slug %s resolves to nothing', async slug => {
@@ -135,7 +136,7 @@ describe.each(STAFF.map(s => s.key))('manager portal categories for %s', key => 
         }
     });
 
-    it('cannot change a visibility override without the catalog permission', async () => {
+    it('changes a visibility override only with the catalog permission (director holds it)', async () => {
         const superadmin = await staffToken('superadmin');
         const list = await admin<{
             collections: {
@@ -148,7 +149,12 @@ describe.each(STAFF.map(s => s.key))('manager portal categories for %s', key => 
         }>(superadmin, ADMIN_LIST);
         const target = list.data!.collections.items.find(c => c.slug === categorySlug('vis-b1'))!;
         const denied = await admin(token, SET_OVERRIDE, { id: target.id });
-        expect(denied.errors.join(' ')).toMatch(DENIED);
+        if (key === 'director') {
+            expect(denied.errors).toEqual([]);
+            await admin(superadmin, RESET_OVERRIDE, { id: target.id });
+        } else {
+            expect(denied.errors.join(' ')).toMatch(DENIED);
+        }
         const after = await admin<{
             collections: {
                 items: {

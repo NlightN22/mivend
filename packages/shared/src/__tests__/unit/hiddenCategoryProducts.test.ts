@@ -64,12 +64,15 @@ describe('which categories hide their products', () => {
         ]);
     });
 
-    it('restores the subtree when the override is removed or set to visible', () => {
+    it('restores the subtree when the override is removed', () => {
         const hidden = tree({ root: { override: 'hidden' } });
         expect(hiddenCategories(hidden).has('leaf')).toBe(true);
         expect(hiddenCategories(tree()).has('leaf')).toBe(false);
-        const revived = tree({ root: { override: 'hidden' }, mid: { override: 'visible' } });
-        expect([...hiddenCategories(revived)].sort()).toEqual(['root']);
+    });
+
+    it('a visible override never un-hides a category under a hidden ancestor', () => {
+        const stale = tree({ root: { override: 'hidden' }, mid: { override: 'visible' } });
+        expect([...hiddenCategories(stale)].sort()).toEqual(['leaf', 'mid', 'root']);
     });
 
     it('a feed-hidden category stays hidden even if the ancestor chain is visible', () => {

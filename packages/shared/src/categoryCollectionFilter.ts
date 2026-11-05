@@ -130,16 +130,16 @@ export function planCategoryFilterUpdates(
     return result;
 }
 
-// A manual override wins over everything; otherwise a category is hidden when the feed hides it
-// or any ancestor is hidden, so children vanish together with a deleted/not-yet-synced parent.
+// A hidden ancestor always hides its subtree; below that, `hidden` wins, then `visible` beats
+// the category's own feed state.
 export function resolveCategoryIsPrivate(
     feedHidden: boolean,
     visibilityOverride: string | null | undefined,
     parentIsPrivate: boolean,
 ): boolean {
-    if (visibilityOverride === 'hidden') return true;
+    if (parentIsPrivate || visibilityOverride === 'hidden') return true;
     if (visibilityOverride === 'visible') return false;
-    return feedHidden || parentIsPrivate;
+    return feedHidden;
 }
 
 export function planCategoryVisibilityUpdates(

@@ -77,7 +77,8 @@ onMounted(loadAll);
                     Force a category's storefront visibility regardless of what the ERP feed
                     reports. "Auto" follows the feed (hidden when the upstream category is inactive
                     or deleted); "Hidden"/"Visible" pin the category and survive the next feed
-                    update.
+                    update. A hidden category always hides everything below it; "Visible" is not
+                    offered under a hidden parent.
                 </p>
             </template>
 
