@@ -13,6 +13,11 @@ import { recomputeCategoryTree, subscribeAndLog } from 'shared';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
+const isLockTimeout = (error: unknown): boolean => {
+    const e = error as { code?: unknown; driverError?: { code?: unknown } } | null;
+    return e?.code === '55P03' || e?.driverError?.code === '55P03';
+};
+
 // A manual override changes one Collection; its subtree (and a cleared override's own state)
 // follows from the same recompute the feed uses, so it takes effect now, not at the next sweep.
 @Injectable()
@@ -62,12 +67,17 @@ export class CategoryOverrideRecomputeListener implements OnApplicationBootstrap
         do {
             this.rerun = false;
             const ctx = await this.requestContextService.create({ apiType: 'admin' });
-            await recomputeCategoryTree(ctx, {
-                connection: this.connection,
-                collectionService: this.collectionService,
-                facetService: this.facetService,
-                facetValueService: this.facetValueService,
-            });
+            try {
+                await recomputeCategoryTree(ctx, {
+                    connection: this.connection,
+                    collectionService: this.collectionService,
+                    facetService: this.facetService,
+                    facetValueService: this.facetValueService,
+                });
+            } catch (error) {
+                if (!isLockTimeout(error)) throw error;
+                this.rerun = true;
+            }
         } while (this.rerun);
     }
 }

@@ -28,7 +28,9 @@ const event = (type: string, input: unknown): CollectionEvent =>
     ({ type, input }) as unknown as CollectionEvent;
 
 describe('CategoryOverrideRecomputeListener', () => {
-    beforeEach(() => recompute.mockReset().mockResolvedValue(0));
+    beforeEach(() => {
+        recompute.mockReset().mockResolvedValue(0);
+    });
 
     it.each([['hidden'], ['visible'], [null]])(
         'recomputes the tree when the override is set to %s',
@@ -64,6 +66,26 @@ describe('CategoryOverrideRecomputeListener', () => {
         release();
         await Promise.all([first, ...others]);
         expect(recompute).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries after a tree lock_timeout (55P03) instead of waiting for the scheduler', async () => {
+        const timeout = Object.assign(new Error('lock timeout'), {
+            driverError: { code: '55P03' },
+        });
+        recompute.mockReset().mockRejectedValueOnce(timeout).mockResolvedValue(0);
+        await make().listener.handle(
+            event('updated', { customFields: { visibilityOverride: 'hidden' } }),
+        );
+        expect(recompute).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not swallow other errors', async () => {
+        recompute.mockRejectedValue(new Error('boom'));
+        const { listener } = make();
+        await expect(
+            listener.handle(event('updated', { customFields: { visibilityOverride: 'hidden' } })),
+        ).rejects.toThrow('boom');
+        expect(recompute).toHaveBeenCalledTimes(1);
     });
 
     it('does not subscribe on a branch', () => {
