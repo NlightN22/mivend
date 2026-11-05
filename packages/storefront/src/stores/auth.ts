@@ -19,6 +19,8 @@ const BACKGROUND_RETRY_INITIAL_MS = 2_000;
 const BACKGROUND_RETRY_MAX_MS = 20_000;
 const HEARTBEAT_INTERVAL_MS = 60_000;
 
+export const LOGGED_OUT_KEY = 'mv_logged_out';
+
 export const useAuthStore = defineStore('auth', () => {
     const customer = ref<ActiveCustomer | null>(null);
     const initialized = ref(false);
@@ -53,8 +55,6 @@ export const useAuthStore = defineStore('auth', () => {
         }
         return initPromise;
     }
-
-    const LOGGED_OUT_KEY = 'mv_logged_out';
 
     async function login(username: string, password: string, rememberMe = false): Promise<boolean> {
         const result = await shopApi(LoginDocument, { username, password, rememberMe });

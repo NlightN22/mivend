@@ -60,6 +60,8 @@
     --app-font-size-search: 16px;
     --app-font-size-title: 20px;
 
+    --app-badge-bg: #ff4f88;
+    --app-badge-text: #ffffff;
     --mv-bottom-bar-height: calc(64px + env(safe-area-inset-bottom, 0px));
 
     /* Page-level layers, mirrored in tokens/layers.ts. Never use a raw z-index between components. */

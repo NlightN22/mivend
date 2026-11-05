@@ -3,7 +3,7 @@ import { formatMoney } from '../i18n/format';
 import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { IconCategory, IconClipboardList, IconDots, IconHeart, IconUser } from '@tabler/icons-vue';
+import { IconClipboardList, IconHeart, IconUser } from '@tabler/icons-vue';
 import {
     MvAccountDropdown,
     MvAccountMenu,
@@ -13,10 +13,12 @@ import {
     MvNotificationPanel,
     readSiteIconUrl,
     readSiteName,
-    type BottomTabItem,
+    COMPACT_NAV_BREAKPOINT,
+    useIsMobileViewport,
 } from '@mivend/ui-kit';
 import { useLanguageSwitcher } from '../composables/useLanguageSwitcher';
 import { headerDeliveryLabel } from '../composables/headerDeliveryLabel';
+import { buildBottomTabs } from '../composables/bottomTabs';
 import { activeBottomTab } from '../composables/bottomTabActive';
 import { useAccountMenu } from '../composables/useAccountMenu';
 import { useLogout } from '../composables/useLogout';
@@ -68,6 +70,10 @@ const catalogOpen = ref(false);
 const accountOpen = ref(false);
 const moreOpen = ref(false);
 const logout = useLogout();
+const compact = useIsMobileViewport(COMPACT_NAV_BREAKPOINT);
+watch(compact, isCompact => {
+    if (!isCompact) moreOpen.value = false;
+});
 const desktopMenu = useAccountMenu(['orders', 'favorites']);
 const sheetMenu = useAccountMenu(['orders', 'favorites', 'home']);
 
@@ -105,37 +111,21 @@ function onKeydown(e: KeyboardEvent): void {
 const activeTab = computed(() =>
     activeBottomTab(route.path, { moreOpen: moreOpen.value, catalogOpen: catalogOpen.value }),
 );
-const tabs = computed<BottomTabItem[]>(() => [
-    {
-        key: 'catalog',
-        label: t('nav.catalog'),
-        icon: IconCategory,
-        active: activeTab.value === 'catalog',
-    },
-    {
-        key: 'orders',
-        label: t('nav.orders'),
-        icon: IconClipboardList,
-        to: '/orders',
-        active: activeTab.value === 'orders',
-    },
-    {
-        key: 'favorites',
-        label: t('nav.favourites'),
-        icon: IconHeart,
-        to: '/favorites',
-        active: activeTab.value === 'favorites',
-        badgeCount: favoritesStore.count,
-    },
-    {
-        key: 'cabinet',
-        label: t('nav.account'),
-        icon: IconUser,
-        to: '/account',
-        active: activeTab.value === 'cabinet',
-    },
-    { key: 'more', label: t('nav.more'), icon: IconDots, active: activeTab.value === 'more' },
-]);
+const tabs = computed(() =>
+    buildBottomTabs({
+        loggedIn: authStore.isLoggedIn,
+        active: activeTab.value,
+        favoritesCount: favoritesStore.count,
+        labels: {
+            catalog: t('nav.catalog'),
+            orders: t('nav.orders'),
+            favourites: t('nav.favourites'),
+            account: t('nav.account'),
+            more: t('nav.more'),
+            signIn: t('nav.signIn'),
+        },
+    }),
+);
 
 function onTabSelect(key: string): void {
     if (key === 'catalog') {
@@ -316,8 +306,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
         <div v-if="catalogOpen" class="app-header__backdrop" @click="closeAll" />
 
+        <MvBottomTabBar :items="tabs" :aria-label="t('nav.tabs')" @select="onTabSelect" />
         <template v-if="authStore.isLoggedIn">
-            <MvBottomTabBar :items="tabs" :aria-label="t('nav.tabs')" @select="onTabSelect" />
             <MvAccountSheet :open="moreOpen" :close-label="t('nav.more')" @close="moreOpen = false">
                 <MvAccountMenu
                     :user-name="sheetMenu.userName.value"

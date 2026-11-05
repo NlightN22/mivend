@@ -267,3 +267,4 @@ export type { LayerToken } from './tokens/layers';
 export type { FontSizeToken } from './tokens/typography';
 
 export { formatDocumentNumber } from './utils/documentNumber';
+export { COMPACT_NAV_BREAKPOINT } from './styles/breakpoints';

@@ -1,10 +1,15 @@
-import { useAuthStore } from '../stores/auth';
+import { LOGGED_OUT_KEY, useAuthStore } from '../stores/auth';
+import { runLogout } from './logoutFlow';
 
-// Hard navigation: logout() may itself hang during an outage, a reload resets all stuck state.
-export function useLogout(): () => void {
+// Hard navigation: a reload resets all stuck state if the logout request hangs during an outage.
+export function useLogout(): () => Promise<void> {
     const authStore = useAuthStore();
-    return () => {
-        void authStore.logout();
-        window.location.href = '/login';
-    };
+    return () =>
+        runLogout({
+            setGuard: () => sessionStorage.setItem(LOGGED_OUT_KEY, '1'),
+            logout: () => authStore.logout(),
+            navigate: () => {
+                window.location.href = '/login';
+            },
+        });
 }

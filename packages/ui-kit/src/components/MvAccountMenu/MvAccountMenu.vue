@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, type Component } from 'vue';
-import { IconCheck, IconChevronDown, IconLogout, IconWorld } from '@tabler/icons-vue';
+import { IconCheck, IconLogout, IconWorld } from '@tabler/icons-vue';
+import MvAccountMenuGroup from './MvAccountMenuGroup.vue';
 import type { LanguageOption } from '../MvLanguageSwitcher/MvLanguageSwitcher.vue';
 
 export interface AccountMenuLink {
@@ -73,30 +74,29 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
 
         <nav class="mv-account-menu__list">
             <template v-for="entry in entries" :key="entry.key">
-                <button
+                <MvAccountMenuGroup
                     v-if="entry.children"
-                    type="button"
-                    class="mv-account-menu__item"
-                    :class="{ 'mv-account-menu__item--open': isGroupOpen(entry) }"
-                    :aria-expanded="isGroupOpen(entry)"
-                    :aria-controls="`mv-account-menu-${entry.key}`"
-                    @click="expanded[entry.key] = !isGroupOpen(entry)"
+                    :id="`mv-account-menu-${entry.key}`"
+                    :label="entry.label"
+                    :icon="entry.icon"
+                    :open="isGroupOpen(entry)"
+                    @toggle="expanded[entry.key] = !isGroupOpen(entry)"
                 >
-                    <component
-                        :is="entry.icon"
-                        v-if="entry.icon"
-                        :size="20"
-                        class="mv-account-menu__icon"
-                        aria-hidden="true"
-                    />
-                    <span class="mv-account-menu__label">{{ entry.label }}</span>
-                    <IconChevronDown
-                        :size="16"
-                        class="mv-account-menu__chevron"
-                        :class="{ 'mv-account-menu__chevron--open': isGroupOpen(entry) }"
-                        aria-hidden="true"
-                    />
-                </button>
+                    <RouterLink
+                        v-for="child in entry.children"
+                        :key="child.key"
+                        :to="child.to"
+                        class="mv-account-menu__item mv-account-menu__item--sub"
+                        :class="{ 'mv-account-menu__item--active': isActive(child.to) }"
+                        :aria-current="isActive(child.to) ? 'page' : undefined"
+                        @click="emit('navigate')"
+                    >
+                        <span class="mv-account-menu__label">{{ child.label }}</span>
+                        <span v-if="child.count" class="mv-account-menu__count">{{
+                            child.count
+                        }}</span>
+                    </RouterLink>
+                </MvAccountMenuGroup>
                 <RouterLink
                     v-else-if="entry.to"
                     :to="entry.to"
@@ -115,49 +115,18 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
                     <span class="mv-account-menu__label">{{ entry.label }}</span>
                     <span v-if="entry.count" class="mv-account-menu__count">{{ entry.count }}</span>
                 </RouterLink>
-                <div
-                    v-if="entry.children && isGroupOpen(entry)"
-                    :id="`mv-account-menu-${entry.key}`"
-                    class="mv-account-menu__sub"
-                >
-                    <RouterLink
-                        v-for="child in entry.children"
-                        :key="child.key"
-                        :to="child.to"
-                        class="mv-account-menu__item mv-account-menu__item--sub"
-                        :class="{ 'mv-account-menu__item--active': isActive(child.to) }"
-                        :aria-current="isActive(child.to) ? 'page' : undefined"
-                        @click="emit('navigate')"
-                    >
-                        <span class="mv-account-menu__label">{{ child.label }}</span>
-                        <span v-if="child.count" class="mv-account-menu__count">{{
-                            child.count
-                        }}</span>
-                    </RouterLink>
-                </div>
             </template>
         </nav>
 
         <div class="mv-account-menu__lang-block">
-            <button
-                type="button"
-                class="mv-account-menu__item"
-                :class="{ 'mv-account-menu__item--open': languageOpen }"
-                :aria-expanded="languageOpen"
-                aria-controls="mv-account-menu-language"
-                @click="languageOpen = !languageOpen"
+            <MvAccountMenuGroup
+                id="mv-account-menu-language"
+                :label="languageLabel"
+                :icon="IconWorld"
+                :current="currentLanguageName"
+                :open="languageOpen"
+                @toggle="languageOpen = !languageOpen"
             >
-                <IconWorld :size="20" class="mv-account-menu__icon" aria-hidden="true" />
-                <span class="mv-account-menu__label">{{ languageLabel }}</span>
-                <span class="mv-account-menu__current">{{ currentLanguageName }}</span>
-                <IconChevronDown
-                    :size="16"
-                    class="mv-account-menu__chevron"
-                    :class="{ 'mv-account-menu__chevron--open': languageOpen }"
-                    aria-hidden="true"
-                />
-            </button>
-            <div v-if="languageOpen" id="mv-account-menu-language" class="mv-account-menu__sub">
                 <button
                     v-for="lang in languages"
                     :key="lang.code"
@@ -170,7 +139,7 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
                     <span class="mv-account-menu__label">{{ lang.nativeName }}</span>
                     <IconCheck v-if="lang.code === locale" :size="18" aria-hidden="true" />
                 </button>
-            </div>
+            </MvAccountMenuGroup>
         </div>
 
         <button
@@ -184,165 +153,4 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
     </div>
 </template>
 
-<style scoped>
-.mv-account-menu {
-    display: flex;
-    flex-direction: column;
-    font-family: inherit;
-    color: var(--app-nav-text-strong);
-}
-
-.mv-account-menu__user {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 4px 4px 14px;
-    border-bottom: 1px solid var(--app-nav-border);
-}
-
-.mv-account-menu__avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--app-nav-active-bg);
-    color: var(--app-nav-accent);
-    display: grid;
-    place-items: center;
-    font-size: 17px;
-    font-weight: 900;
-    flex-shrink: 0;
-}
-
-.mv-account-menu__user-text {
-    min-width: 0;
-}
-
-.mv-account-menu__name {
-    font-size: 15px;
-    font-weight: 900;
-    overflow-wrap: anywhere;
-}
-
-.mv-account-menu__role {
-    font-size: 12px;
-    color: var(--app-nav-label);
-}
-
-.mv-account-menu__list {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--app-nav-border);
-}
-
-.mv-account-menu__item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    min-height: 44px;
-    padding: 0 12px;
-    border: 0;
-    border-radius: var(--app-radius-md);
-    background: transparent;
-    color: var(--app-nav-text-strong);
-    font: inherit;
-    font-size: 14px;
-    font-weight: 700;
-    text-align: left;
-    text-decoration: none;
-    cursor: pointer;
-    transition:
-        background 0.14s,
-        color 0.14s;
-}
-
-.mv-account-menu__item:hover {
-    background: var(--app-nav-hover-bg);
-}
-
-.mv-account-menu__item:active {
-    background: var(--app-nav-active-bg);
-}
-
-.mv-account-menu__item:focus-visible {
-    outline: 2px solid var(--app-nav-accent);
-    outline-offset: -2px;
-}
-
-.mv-account-menu__icon {
-    flex-shrink: 0;
-    color: var(--app-nav-label);
-}
-
-.mv-account-menu__item--active .mv-account-menu__icon {
-    color: var(--app-nav-accent);
-}
-
-.mv-account-menu__item--active {
-    background: var(--app-nav-active-bg);
-    color: var(--app-nav-accent);
-    font-weight: 900;
-}
-
-.mv-account-menu__sub {
-    margin: 2px 0 4px 22px;
-    padding-left: 8px;
-    border-left: 2px solid var(--app-nav-border-strong);
-}
-
-.mv-account-menu__item--sub {
-    font-weight: 600;
-}
-
-.mv-account-menu__item--open {
-    background: var(--app-nav-hover-bg);
-}
-
-.mv-account-menu__chevron {
-    transition: transform 0.15s;
-}
-
-.mv-account-menu__chevron--open {
-    transform: rotate(180deg);
-}
-
-.mv-account-menu__label {
-    flex: 1;
-    min-width: 0;
-}
-
-.mv-account-menu__count {
-    min-width: 22px;
-    height: 22px;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: var(--app-nav-border);
-    font-size: 12px;
-    font-weight: 800;
-    display: grid;
-    place-items: center;
-}
-
-.mv-account-menu__lang-block {
-    padding: 10px 0;
-    border-bottom: 1px solid var(--app-nav-border);
-    margin-bottom: 8px;
-}
-
-.mv-account-menu__current {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--app-nav-label);
-}
-
-.mv-account-menu__item--danger {
-    color: var(--el-color-danger, #d92d20);
-    font-weight: 800;
-}
-
-.mv-account-menu__item--danger:hover {
-    background: var(--el-color-danger-light-9, #fef3f2);
-}
-</style>
+<style src="./MvAccountMenu.css"></style>

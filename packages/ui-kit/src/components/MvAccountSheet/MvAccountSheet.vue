@@ -1,12 +1,50 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{ open: boolean; closeLabel?: string }>();
 const emit = defineEmits<{ close: [] }>();
 
-function onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && props.open) emit('close');
+const sheet = ref<HTMLElement | null>(null);
+let opener: HTMLElement | null = null;
+
+function focusables(): HTMLElement[] {
+    return Array.from(sheet.value?.querySelectorAll<HTMLElement>('a[href], button') ?? []);
 }
+
+function onKeydown(event: KeyboardEvent): void {
+    if (!props.open) return;
+    if (event.key === 'Escape') {
+        emit('close');
+        return;
+    }
+    if (event.key !== 'Tab') return;
+    const items = focusables();
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !sheet.value?.contains(active))) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && (active === last || !sheet.value?.contains(active))) {
+        event.preventDefault();
+        first.focus();
+    }
+}
+
+watch(
+    () => props.open,
+    async isOpen => {
+        if (isOpen) {
+            opener = document.activeElement as HTMLElement | null;
+            await nextTick();
+            focusables()[0]?.focus();
+        } else {
+            opener?.focus();
+            opener = null;
+        }
+    },
+);
 
 onMounted(() => document.addEventListener('keydown', onKeydown));
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
@@ -17,6 +55,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         <div v-if="open" class="mv-account-sheet-backdrop" @click="emit('close')" />
         <section
             v-if="open"
+            ref="sheet"
             class="mv-account-sheet"
             role="dialog"
             aria-modal="true"
@@ -62,9 +101,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     border-radius: 999px;
     background: var(--app-nav-border-strong);
 }
-</style>
 
-<style scoped>
 @media (max-width: 1180px) {
     .mv-account-sheet-backdrop,
     .mv-account-sheet {

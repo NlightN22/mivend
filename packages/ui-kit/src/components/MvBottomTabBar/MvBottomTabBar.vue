@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
+import { RouterLink } from 'vue-router';
 
 export interface BottomTabItem {
     key: string;
@@ -18,7 +19,7 @@ const emit = defineEmits<{ select: [key: string] }>();
     <Teleport to="body">
         <nav class="mv-bottom-tab-bar" :aria-label="ariaLabel">
             <component
-                :is="item.to ? 'RouterLink' : 'button'"
+                :is="item.to ? RouterLink : 'button'"
                 v-for="item in items"
                 :key="item.key"
                 v-bind="item.to ? { to: item.to } : { type: 'button' }"
@@ -116,8 +117,8 @@ const emit = defineEmits<{ select: [key: string] }>();
     height: 16px;
     padding: 0 3px;
     border-radius: 999px;
-    background: #ff4f88;
-    color: #fff;
+    background: var(--app-badge-bg);
+    color: var(--app-badge-text);
     font-size: 10px;
     font-weight: 900;
     line-height: 1;

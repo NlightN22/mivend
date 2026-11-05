@@ -130,8 +130,8 @@
     min-width: 16px;
     height: 16px;
     border-radius: 999px;
-    background: #ff4f88;
-    color: #fff;
+    background: var(--app-badge-bg);
+    color: var(--app-badge-text);
     font-size: 10px;
     font-weight: 900;
     display: grid;
@@ -230,7 +230,8 @@
 @media (max-width: 1180px) {
     .app-header__strip,
     .app-header__catalog-btn,
-    .app-header__account-nav {
+    .app-header__account-nav,
+    .app-header__signin {
         display: none;
     }
 
