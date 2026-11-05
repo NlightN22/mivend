@@ -27,15 +27,15 @@ function scrollByPage(dir: 1 | -1): void {
 
 const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
 
-watch(
-    () => [props.loading, props.items.length],
-    async () => {
-        await nextTick();
-        measure();
-        if (viewport.value) resizeObserver?.observe(viewport.value);
-    },
-);
-onMounted(measure);
+async function attach(): Promise<void> {
+    await nextTick();
+    resizeObserver?.disconnect();
+    if (viewport.value) resizeObserver?.observe(viewport.value);
+    measure();
+}
+
+watch(() => [props.loading, props.items.length], attach);
+onMounted(attach);
 onBeforeUnmount(() => resizeObserver?.disconnect());
 </script>
 
