@@ -70,6 +70,8 @@ Stream status lives in `ai/erp-streams-map.md`; this file is the design record.
   `mapSearchQuery` adds a `must_not` filter on `facetValueIds`, so hits, counts and facets agree.
   External backend: hits are loaded through `ProductLookupService`, which drops hidden-category
   products, and a hidden requested category answers empty without calling search-service.
+- Checkout and cart blocking (`willAdjustOrderLine`, `hiddenCategoryOrderProcess`) applies to the shop `apiType` only; the Admin API and staff are untouched.
+- Tree lock: `category-tree` waiters set `lock_timeout` (5 min) and fail loudly behind a stuck holder. A synthetic 8000-category tree recomputes in about 14 s on the local stand with a thin SQL fake for `collectionService.update` (a lower bound; real Vendure updates cost more).
 - Staff: the Admin API (manager portal, `UpdateCatalog`/`ReadCatalog`) is untouched, as hidden
   Collections already are, so the Category visibility page keeps working.
 - External contract: every shop `POST /resolve-query` carries `excludeCategoryIds` (ERP ids of all hidden

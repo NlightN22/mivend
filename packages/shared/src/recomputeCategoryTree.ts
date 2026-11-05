@@ -32,6 +32,7 @@ interface CategoryCustomFields {
 }
 
 export const CATEGORY_TREE_LOCK = 'category-tree';
+export const CATEGORY_TREE_LOCK_TIMEOUT_MS = 300_000;
 
 // Rewrites each category Collection's filter to "any FacetValue in its subtree" and propagates
 // hidden state down the tree; writes only what changed. Returns the number of writes.
@@ -39,8 +40,12 @@ export function recomputeCategoryTree(
     ctx: RequestContext,
     deps: CategoryTreeRecomputeDeps,
 ): Promise<number> {
-    return withAggregateLock(deps.connection, ctx, CATEGORY_TREE_LOCK, txCtx =>
-        recomputeLocked(txCtx, deps),
+    return withAggregateLock(
+        deps.connection,
+        ctx,
+        CATEGORY_TREE_LOCK,
+        txCtx => recomputeLocked(txCtx, deps),
+        CATEGORY_TREE_LOCK_TIMEOUT_MS,
     );
 }
 

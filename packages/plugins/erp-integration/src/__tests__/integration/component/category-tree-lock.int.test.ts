@@ -138,4 +138,47 @@ describe('category tree writers against real Postgres', () => {
         expect(await privateOf('root')).toBe(true);
         expect(await privateOf('child')).toBe(true);
     });
+
+    it('a writer waiting behind a stuck holder fails with a lock timeout instead of hanging', async () => {
+        const holder = dataSource.transaction(async manager => {
+            await manager.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+                CATEGORY_TREE_LOCK,
+            ]);
+            await manager.query('select pg_sleep(1.5)');
+        });
+        await new Promise(resolve => setTimeout(resolve, 200));
+        await expect(
+            withAggregateLock(
+                connection as never,
+                {} as never,
+                CATEGORY_TREE_LOCK,
+                async () => 1,
+                300,
+            ),
+        ).rejects.toThrow(/lock timeout/);
+        await holder;
+        expect(
+            await withAggregateLock(
+                connection as never,
+                {} as never,
+                CATEGORY_TREE_LOCK,
+                async () => 1,
+                300,
+            ),
+        ).toBe(1);
+    });
+
+    it('recomputes a prod-sized tree (8000 categories, all hidden by one root) and reports the time', async () => {
+        await dataSource.query('truncate category restart identity');
+        await dataSource.query("insert into category (code, override) values ('root', 'hidden')");
+        await dataSource.query(
+            `insert into category ("parentId", code)
+             select case when g <= 100 then 1 else 2 + (g - 101) / 10 end, 'c' || g
+             from generate_series(1, 7999) g`,
+        );
+        const started = Date.now();
+        const writes = await recomputeCategoryTree({} as never, deps as never);
+        console.log(`recompute of 8000 categories: ${Date.now() - started} ms, ${writes} writes`);
+        expect(writes).toBeGreaterThanOrEqual(8000);
+    });
 });

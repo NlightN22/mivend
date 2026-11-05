@@ -9,11 +9,15 @@ export async function withAggregateLock<T>(
     ctx: RequestContext,
     key: string | number,
     work: (txCtx: RequestContext) => Promise<T>,
+    lockTimeoutMs?: number,
 ): Promise<T> {
     return connection.withTransaction(ctx, async txCtx => {
-        await connection
-            .getRepository(txCtx, LOCK_ENTITY)
-            .query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [String(key)]);
+        const repo = connection.getRepository(txCtx, LOCK_ENTITY);
+        // Fails the wait with a lock_timeout error (never swallowed) instead of hanging behind a stuck holder.
+        if (lockTimeoutMs !== undefined) {
+            await repo.query("select set_config('lock_timeout', $1, true)", [`${lockTimeoutMs}ms`]);
+        }
+        await repo.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [String(key)]);
         return work(txCtx);
     });
 }

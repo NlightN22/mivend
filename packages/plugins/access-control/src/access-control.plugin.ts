@@ -10,7 +10,7 @@ import { visibilityGrantBundle } from './visibility-grant.bundle';
 import { HiddenCategoryFacetValuesService } from './hidden-category-facet-values.service';
 import { HiddenCategoryProductsService } from './hidden-category-products.service';
 import { HiddenCategoryOrderInterceptor } from './hidden-category-order.interceptor';
-import { hiddenCategoryOrderProcess } from './hidden-category-order.process';
+import { HiddenCategoryOrderProcess } from './hidden-category-order.process';
 import {
     ShopCollectionVisibleVariantsResolver,
     ShopVisibleProductsResolver,
@@ -145,7 +145,7 @@ import { WarehouseService } from './warehouse.service';
         ];
         config.orderOptions.process = [
             ...(config.orderOptions.process ?? []),
-            hiddenCategoryOrderProcess,
+            new HiddenCategoryOrderProcess(),
         ];
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),

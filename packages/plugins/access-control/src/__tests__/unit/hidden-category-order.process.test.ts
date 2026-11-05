@@ -3,18 +3,21 @@ import type { Injector, Order, RequestContext } from '@vendure/core';
 
 import {
     HIDDEN_CATEGORY_LINES_MESSAGE,
-    hiddenCategoryOrderProcess,
+    HiddenCategoryOrderProcess,
 } from '../../hidden-category-order.process';
 
 const shopCtx = { apiType: 'shop' } as unknown as RequestContext;
 const adminCtx = { apiType: 'admin' } as unknown as RequestContext;
+
+let orderProcess: HiddenCategoryOrderProcess;
 
 function setup(hiddenProductIds: number[]): ReturnType<typeof vi.fn> {
     const query = vi.fn().mockResolvedValue([{ productId: 5 }]);
     const hidden = {
         hiddenProductIds: vi.fn().mockResolvedValue(new Set(hiddenProductIds.map(String))),
     };
-    hiddenCategoryOrderProcess.init!({
+    orderProcess = new HiddenCategoryOrderProcess();
+    orderProcess.init({
         get: (token: { name: string }) =>
             token.name === 'HiddenCategoryProductsService'
                 ? hidden
@@ -24,7 +27,7 @@ function setup(hiddenProductIds: number[]): ReturnType<typeof vi.fn> {
 }
 
 const run = (from: string, to: string, ctx: RequestContext) =>
-    hiddenCategoryOrderProcess.onTransitionStart!(from as never, to as never, {
+    orderProcess.onTransitionStart(from as never, to as never, {
         ctx,
         order: { id: 1 } as Order,
     });

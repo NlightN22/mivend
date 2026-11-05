@@ -75,6 +75,8 @@ globally without an agreed design and a retry wrapper.
 - Both are released at transaction end. Never hold either across an external call (HTTP,
   Kafka, file download) unless the work is deliberately serialized per key and documented.
 
+`withAggregateLock` takes an optional `lockTimeoutMs` (`set_config('lock_timeout', ..., true)` inside the transaction); the long-held `category-tree` lock uses it so a stuck holder surfaces as an error, not a hang.
+
 **Lock ordering.** When a unit of work takes more than one lock, take them in a fixed global
 order: advisory locks first, then row locks; among rows, ascending primary key; among
 namespaces, alphabetical by namespace string. Two paths that take the same locks in different

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
     CATEGORY_FACET_CODE,
     CATEGORY_TREE_LOCK,
+    CATEGORY_TREE_LOCK_TIMEOUT_MS,
     buildCategoryFacetFilter,
     categorySlug,
     collectFacetValueIds,
@@ -81,17 +82,22 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         const facetValueIdByCode = new Map(facetValues.map(v => [v.code, String(v.id)]));
         facetValueIdByCode.set(entityId, String(facetValue.id));
         // Override and parent state are read inside the lock shared with the tree recompute.
-        return withAggregateLock(this.connection, ctx, CATEGORY_TREE_LOCK, txCtx =>
-            this.ensureCollection(txCtx, {
-                entityId,
-                name,
-                facetValueId: String(facetValue.id),
-                feedHidden: isPrivate,
-                // A tombstone carries no hierarchy; it must not move the category to the top level.
-                parentErpId: isDeleted ? undefined : parentErpId,
-                reparent: !isDeleted,
-                facetValueIdByCode,
-            }),
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            CATEGORY_TREE_LOCK,
+            txCtx =>
+                this.ensureCollection(txCtx, {
+                    entityId,
+                    name,
+                    facetValueId: String(facetValue.id),
+                    feedHidden: isPrivate,
+                    // A tombstone carries no hierarchy; it must not move the category to the top level.
+                    parentErpId: isDeleted ? undefined : parentErpId,
+                    reparent: !isDeleted,
+                    facetValueIdByCode,
+                }),
+            CATEGORY_TREE_LOCK_TIMEOUT_MS,
         );
     }
 
