@@ -29,6 +29,11 @@ function createServices(
     return { facetService, facetValueService, collectionService };
 }
 
+const lockedConnection = {
+    withTransaction: (c: unknown, work: (tx: unknown) => unknown) => work(c),
+    getRepository: () => ({ query: async () => [] }),
+};
+
 describe('CategoryStreamHandler', () => {
     const ctx = {} as RequestContext;
 
@@ -38,6 +43,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', {});
@@ -52,6 +58,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: true });
@@ -70,6 +77,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', { name: 'Discontinued' });
@@ -88,6 +96,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: false });
@@ -106,6 +115,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: true });
@@ -124,6 +134,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', {
@@ -148,6 +159,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: true });
@@ -167,6 +179,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: false });
@@ -186,6 +199,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: false });
@@ -207,6 +221,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', { isDeleted: true });
@@ -228,6 +243,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', { isDeleted: true });
@@ -244,6 +260,7 @@ describe('CategoryStreamHandler', () => {
             facetService as never,
             facetValueService as never,
             collectionService as never,
+            lockedConnection as never,
         );
 
         await handler.apply(ctx, 'cat-1', { name: 'Beverages', isActive: false });

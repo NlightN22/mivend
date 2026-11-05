@@ -76,7 +76,7 @@ export {
     resolveCategoryIsPrivate,
     type CategoryVisibilityNode,
 } from './categoryCollectionFilter';
-export { recomputeCategoryTree } from './recomputeCategoryTree';
+export { CATEGORY_TREE_LOCK, recomputeCategoryTree } from './recomputeCategoryTree';
 export {
     HIDDEN_CATEGORY_FACET_VALUE_IDS_SQL,
     MAX_EXCLUDE_CATEGORY_IDS,

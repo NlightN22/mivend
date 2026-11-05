@@ -24,7 +24,13 @@ function build(collections: ReturnType<typeof collection>[]): {
 } {
     const update = vi.fn();
     const deps = {
-        connection: { getRepository: () => ({ find: vi.fn().mockResolvedValue(collections) }) },
+        connection: {
+            withTransaction: (c: unknown, work: (tx: unknown) => unknown) => work(c),
+            getRepository: () => ({
+                find: vi.fn().mockResolvedValue(collections),
+                query: vi.fn().mockResolvedValue([]),
+            }),
+        },
         collectionService: { update },
         facetService: { findByCode: vi.fn().mockResolvedValue({ id: 1 }) },
         facetValueService: {

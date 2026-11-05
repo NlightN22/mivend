@@ -40,6 +40,10 @@ function build({ collections = {}, facetValues = [], descendants = [], breadcrum
         facetService as never,
         facetValueService as never,
         collectionService as never,
+        {
+            withTransaction: (c: unknown, work: (tx: unknown) => unknown) => work(c),
+            getRepository: () => ({ query: async () => [] }),
+        } as never,
     );
     return { handler, collectionService };
 }

@@ -8,6 +8,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 
+import { withAggregateLock } from './aggregate-lock';
 import {
     CATEGORY_FACET_CODE,
     CategoryCollectionNode,
@@ -30,9 +31,20 @@ interface CategoryCustomFields {
     visibilityOverride?: string | null;
 }
 
+export const CATEGORY_TREE_LOCK = 'category-tree';
+
 // Rewrites each category Collection's filter to "any FacetValue in its subtree" and propagates
 // hidden state down the tree; writes only what changed. Returns the number of writes.
-export async function recomputeCategoryTree(
+export function recomputeCategoryTree(
+    ctx: RequestContext,
+    deps: CategoryTreeRecomputeDeps,
+): Promise<number> {
+    return withAggregateLock(deps.connection, ctx, CATEGORY_TREE_LOCK, txCtx =>
+        recomputeLocked(txCtx, deps),
+    );
+}
+
+async function recomputeLocked(
     ctx: RequestContext,
     deps: CategoryTreeRecomputeDeps,
 ): Promise<number> {

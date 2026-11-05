@@ -1,12 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
     CATEGORY_FACET_CODE,
+    CATEGORY_TREE_LOCK,
     buildCategoryFacetFilter,
     categorySlug,
     collectFacetValueIds,
     ensureParentCategoryCollection,
     moveCategoryIfParentChanged,
     resolveCategoryIsPrivate,
+    withAggregateLock,
 } from 'shared';
 import {
     CollectionService,
@@ -16,6 +18,7 @@ import {
     FacetValueService,
     LanguageCode,
     RequestContext,
+    TransactionalConnection,
 } from '@vendure/core';
 import { inboundApplied, inboundNoop } from './inbound-stream-handler';
 import type { InboundOutcome, InboundStreamHandler } from './inbound-stream-handler';
@@ -39,6 +42,7 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         private readonly facetService: FacetService,
         private readonly facetValueService: FacetValueService,
         private readonly collectionService: CollectionService,
+        private readonly connection: TransactionalConnection,
     ) {}
 
     async apply(
@@ -76,16 +80,19 @@ export class CategoryStreamHandler implements InboundStreamHandler {
         );
         const facetValueIdByCode = new Map(facetValues.map(v => [v.code, String(v.id)]));
         facetValueIdByCode.set(entityId, String(facetValue.id));
-        return this.ensureCollection(ctx, {
-            entityId,
-            name,
-            facetValueId: String(facetValue.id),
-            feedHidden: isPrivate,
-            // A tombstone carries no hierarchy; it must not move the category to the top level.
-            parentErpId: isDeleted ? undefined : parentErpId,
-            reparent: !isDeleted,
-            facetValueIdByCode,
-        });
+        // Override and parent state are read inside the lock shared with the tree recompute.
+        return withAggregateLock(this.connection, ctx, CATEGORY_TREE_LOCK, txCtx =>
+            this.ensureCollection(txCtx, {
+                entityId,
+                name,
+                facetValueId: String(facetValue.id),
+                feedHidden: isPrivate,
+                // A tombstone carries no hierarchy; it must not move the category to the top level.
+                parentErpId: isDeleted ? undefined : parentErpId,
+                reparent: !isDeleted,
+                facetValueIdByCode,
+            }),
+        );
     }
 
     private async ensureCategoryFacet(ctx: RequestContext): Promise<Facet> {
