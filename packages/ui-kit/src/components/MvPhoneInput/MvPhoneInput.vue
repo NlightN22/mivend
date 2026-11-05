@@ -21,6 +21,7 @@ function onInput(raw: string): void {
         ? inputType.startsWith('delete')
         : raw.length < props.modelValue.length;
     const result = applyPhoneInput(props.modelValue, raw, caret, deleting);
+    inputType = '';
     emit('update:modelValue', result.value);
     if (!input) return;
     input.value = result.value;

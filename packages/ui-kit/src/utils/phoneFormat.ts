@@ -52,7 +52,11 @@ export function applyPhoneInput(
         digitsLeft = digits.length;
     }
     digits = digits.slice(0, MAX_DIGITS);
-    while (digits.length > 1 && validatePhoneNumberLength(`+${digits}`) === 'TOO_LONG') {
+    while (
+        !national &&
+        digits.length > 1 &&
+        validatePhoneNumberLength(`+${digits}`) === 'TOO_LONG'
+    ) {
         digits = digits.slice(0, -1);
     }
     if (!digits) {

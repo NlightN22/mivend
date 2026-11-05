@@ -17,6 +17,18 @@ describe('validateTradingPointContact', () => {
         expect(validateTradingPointContact(input)).not.toBeNull();
         expect(validateTradingPointContact(input, ['address', 'contactPhone'])).toBeNull();
     });
+    it.each([
+        ['8 (495) 123-45-67', '+7 495 123 45 67'],
+        ['+7 (913) 123-45-67', '+7 913 123 45 67'],
+        ['+90-532-123-45-67', '+90 532 123 45 67'],
+        ['+380 44 123 4567', '+380 44 123 4567'],
+        ['+7 495 123 45 67 ext 12', '+7 495 123 45 67 ext. 12'],
+    ])('normalizes %s to one stored format', (raw, stored) => {
+        expect(normalizePhone(raw)).toBe(stored);
+    });
+    it.each(['+7 495 12', '8 (495) 123-45', '+99 1', 'abc'])('rejects %s', raw =>
+        expect(normalizePhone(raw)).toBeNull(),
+    );
     it('normalizes phones to one format', () => {
         expect(normalizePhone('89131234567')).toBe('+7 913 123 45 67');
         expect(normalizePhone('+44 20 7946 0958')).toBe('+44 20 7946 0958');
