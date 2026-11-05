@@ -16,16 +16,6 @@ import { useDemoMode } from '../../composables/useDemoMode';
 const authStore = useAuthStore();
 const route = useRoute();
 
-// Sidebar is always expanded on desktop; on mobile it collapses to a single toggle bar so it
-// doesn't push page content down by default (see AGENTS.md mobile-nav rules).
-const mobileOpen = ref(false);
-watch(
-    () => route.path,
-    () => {
-        mobileOpen.value = false;
-    },
-);
-
 const { totalItems: proformaInvoiceCount, load: loadProformaInvoices } = useProformaInvoices();
 const { totalItems: orderCount, load: loadOrders } = useOrders();
 const { totalItems: documentCount, load: loadDocuments } = useDocuments();
@@ -108,18 +98,7 @@ watch(inDocuments, inside => {
 
 <template>
     <aside class="account-sidebar">
-        <button
-            type="button"
-            class="account-sidebar__mobile-toggle"
-            :aria-expanded="mobileOpen"
-            :aria-label="$t('accountNav.menu')"
-            @click="mobileOpen = !mobileOpen"
-        >
-            <span class="account-sidebar__mobile-toggle-icon">{{ mobileOpen ? '✕' : '☰' }}</span>
-            <span>{{ companyName }}</span>
-        </button>
-
-        <div class="account-sidebar__body" :class="{ 'account-sidebar__body--open': mobileOpen }">
+        <div class="account-sidebar__body">
             <div class="account-sidebar__user-card">
                 <div class="account-sidebar__avatar">{{ initials }}</div>
                 <div>

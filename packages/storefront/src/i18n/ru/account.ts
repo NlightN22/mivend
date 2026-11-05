@@ -125,7 +125,6 @@ const ru: typeof en = {
         },
     },
     accountNav: {
-        menu: 'Меню кабинета',
         customerZone: 'Зона клиента',
         home: 'Главная',
         orders: 'Заказы',

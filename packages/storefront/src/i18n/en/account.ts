@@ -120,7 +120,6 @@ export default {
         },
     },
     accountNav: {
-        menu: 'Account menu',
         customerZone: 'Customer Zone',
         home: 'Home',
         orders: 'Orders',
