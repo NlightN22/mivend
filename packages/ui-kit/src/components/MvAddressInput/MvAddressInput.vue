@@ -61,6 +61,7 @@ function onKeydown(event: KeyboardEvent): void {
         pick(items.value[active.value]);
     } else if (event.key === 'Escape') {
         open.value = false;
+        active.value = -1;
     }
 }
 

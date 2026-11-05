@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue';
 import MvInput from '../MvInput/MvInput.vue';
-import { applyPhoneInput } from '../../utils/contactFormat';
+import { applyPhoneInput } from '../../utils/phoneFormat';
 
 const props = defineProps<{
     modelValue: string;
@@ -12,11 +12,15 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [value: string]; blur: [] }>();
 
 const wrapper = ref<HTMLElement | null>(null);
+let inputType = '';
 
 function onInput(raw: string): void {
     const input = wrapper.value?.querySelector('input') ?? null;
     const caret = input?.selectionStart ?? raw.length;
-    const result = applyPhoneInput(props.modelValue, raw, caret);
+    const deleting = inputType
+        ? inputType.startsWith('delete')
+        : raw.length < props.modelValue.length;
+    const result = applyPhoneInput(props.modelValue, raw, caret, deleting);
     emit('update:modelValue', result.value);
     if (!input) return;
     input.value = result.value;
@@ -25,14 +29,18 @@ function onInput(raw: string): void {
 </script>
 
 <template>
-    <div ref="wrapper" @focusout="emit('blur')">
+    <div
+        ref="wrapper"
+        @input.capture="inputType = ($event as InputEvent).inputType ?? ''"
+        @focusout="emit('blur')"
+    >
         <MvInput
             :model-value="modelValue"
             type="tel"
             inputmode="tel"
             autocomplete="tel"
-            :maxlength="18"
-            :placeholder="placeholder ?? '+7 (___) ___-__-__'"
+            :maxlength="24"
+            :placeholder="placeholder ?? '+7 900 000-00-00'"
             :disabled="disabled"
             :error="error"
             @update:model-value="onInput"

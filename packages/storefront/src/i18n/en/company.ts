@@ -26,7 +26,7 @@ export default {
             name: 'Enter a name',
             address: 'Enter a street and a house number',
             contactName: 'Enter first and last name',
-            phone: 'Enter the full number: +7 (XXX) XXX-XX-XX',
+            phone: 'Enter the full number with the country code',
         },
         field: {
             name: 'Name',
@@ -36,7 +36,7 @@ export default {
             contactName: 'Contact person',
             contactNamePlaceholder: 'Full name',
             phone: 'Phone',
-            phonePlaceholder: '+7 (___) ___-__-__',
+            phonePlaceholder: '+7 900 000-00-00',
             hours: 'Working hours',
             hoursPlaceholder: 'e.g. Mon–Fri 09:00–18:00',
             comment: 'Delivery comment',

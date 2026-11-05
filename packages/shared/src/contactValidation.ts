@@ -1,3 +1,5 @@
+import { parsePhoneNumberFromString } from 'libphonenumber-js/min';
+
 export interface ContactInput {
     name: string;
     address: string;
@@ -5,12 +7,9 @@ export interface ContactInput {
     contactPhone?: string | null;
 }
 
-export function normalizeRuPhone(raw: string): string | null {
-    let digits = raw.replace(/\D/g, '');
-    if (digits.length === 11 && (digits[0] === '7' || digits[0] === '8')) digits = digits.slice(1);
-    return digits.length === 10
-        ? `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`
-        : null;
+export function normalizePhone(raw: string): string | null {
+    const parsed = parsePhoneNumberFromString(raw, 'RU');
+    return parsed?.isValid() ? parsed.formatInternational() : null;
 }
 
 export function isValidPersonName(raw: string): boolean {
@@ -41,8 +40,8 @@ export function validateTradingPointContact(
     if (
         !unchanged.includes('contactPhone') &&
         input.contactPhone &&
-        !normalizeRuPhone(input.contactPhone)
+        !normalizePhone(input.contactPhone)
     )
-        return 'contact phone must be a complete +7 number';
+        return 'contact phone must be a full number with the country code';
     return null;
 }

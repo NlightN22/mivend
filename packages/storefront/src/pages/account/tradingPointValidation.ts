@@ -1,4 +1,5 @@
-import { isCompleteRuPhone, isValidPersonName } from '@mivend/ui-kit/src/utils/contactFormat';
+import { isValidPersonName } from '@mivend/ui-kit/src/utils/contactFormat';
+import { isValidPhone } from '@mivend/ui-kit/src/utils/phoneFormat';
 import type { TradingPointAddForm } from './useTradingPoints';
 
 export type TradingPointErrors = Partial<
@@ -18,7 +19,7 @@ export function tradingPointErrors(
         errors.address = 'tradingPoints.error.address';
     if (changed('contactName') && form.contactName && !isValidPersonName(form.contactName))
         errors.contactName = 'tradingPoints.error.contactName';
-    if (changed('contactPhone') && form.contactPhone && !isCompleteRuPhone(form.contactPhone))
+    if (changed('contactPhone') && form.contactPhone && !isValidPhone(form.contactPhone))
         errors.contactPhone = 'tradingPoints.error.phone';
     return errors;
 }

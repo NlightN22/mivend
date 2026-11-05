@@ -29,7 +29,7 @@ const ru: typeof en = {
             name: 'Укажите название',
             address: 'Укажите улицу и номер дома',
             contactName: 'Укажите имя и фамилию',
-            phone: 'Введите номер полностью: +7 (XXX) XXX-XX-XX',
+            phone: 'Введите номер полностью, с кодом страны',
         },
         field: {
             name: 'Название',
@@ -39,7 +39,7 @@ const ru: typeof en = {
             contactName: 'Контактное лицо',
             contactNamePlaceholder: 'ФИО',
             phone: 'Телефон',
-            phonePlaceholder: '+7 (___) ___-__-__',
+            phonePlaceholder: '+7 900 000-00-00',
             hours: 'Часы работы',
             hoursPlaceholder: 'например, Пн–Пт 09:00–18:00',
             comment: 'Комментарий к доставке',

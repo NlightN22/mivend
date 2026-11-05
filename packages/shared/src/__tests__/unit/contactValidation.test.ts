@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeRuPhone, validateTradingPointContact } from '../../contactValidation';
+import { normalizePhone, validateTradingPointContact } from '../../contactValidation';
 
 const valid = { name: 'Point', address: 'Street 1, building 5' };
 
@@ -18,7 +18,8 @@ describe('validateTradingPointContact', () => {
         expect(validateTradingPointContact(input, ['address', 'contactPhone'])).toBeNull();
     });
     it('normalizes phones to one format', () => {
-        expect(normalizeRuPhone('89131234567')).toBe('+7 (913) 123-45-67');
-        expect(normalizeRuPhone('123')).toBeNull();
+        expect(normalizePhone('89131234567')).toBe('+7 913 123 45 67');
+        expect(normalizePhone('+44 20 7946 0958')).toBe('+44 20 7946 0958');
+        expect(normalizePhone('123')).toBeNull();
     });
 });

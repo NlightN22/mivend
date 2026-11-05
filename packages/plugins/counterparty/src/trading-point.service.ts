@@ -15,7 +15,7 @@ import { ContactPerson } from './entities/contact-person.entity';
 import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
 import { loggerCtx } from './types';
-import { ctxQuery, normalizeRuPhone, validateTradingPointContact, type ContactField } from 'shared';
+import { ctxQuery, normalizePhone, validateTradingPointContact, type ContactField } from 'shared';
 
 export interface TradingPointDetailsPatch {
     name?: string;
@@ -633,7 +633,7 @@ function normalizeCustomerInput(
         contactPhone: unchanged.includes('contactPhone')
             ? (current?.contactPhone ?? null)
             : input.contactPhone
-              ? normalizeRuPhone(input.contactPhone)
+              ? normalizePhone(input.contactPhone)
               : null,
     };
 }

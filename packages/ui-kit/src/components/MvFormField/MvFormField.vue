@@ -19,6 +19,7 @@ defineProps<{
 <style scoped>
 .mv-field {
     display: grid;
+    align-content: start;
     gap: 7px;
 }
 
