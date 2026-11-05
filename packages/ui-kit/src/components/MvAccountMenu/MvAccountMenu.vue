@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { reactive, type Component } from 'vue';
-import { IconChevronDown, IconChevronRight, IconLogout, IconWorld } from '@tabler/icons-vue';
+import { computed, reactive, ref, type Component } from 'vue';
+import {
+    IconCheck,
+    IconChevronDown,
+    IconChevronRight,
+    IconLogout,
+    IconWorld,
+} from '@tabler/icons-vue';
 import type { LanguageOption } from '../MvLanguageSwitcher/MvLanguageSwitcher.vue';
 
 export interface AccountMenuLink {
@@ -41,6 +47,16 @@ const emit = defineEmits<{
 }>();
 
 const expanded = reactive<Record<string, boolean>>({});
+
+const languageOpen = ref(false);
+const currentLanguageName = computed(
+    () => props.languages.find(l => l.code === props.locale)?.nativeName ?? props.locale,
+);
+
+function selectLanguage(code: string): void {
+    languageOpen.value = false;
+    emit('select-language', code);
+}
 
 function isActive(to: string): boolean {
     return props.activePath === to;
@@ -121,21 +137,34 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
             </template>
         </nav>
 
-        <div class="mv-account-menu__row">
-            <IconWorld :size="20" aria-hidden="true" />
-            <span class="mv-account-menu__label">{{ languageLabel }}</span>
-            <div class="mv-account-menu__langs" role="group" :aria-label="languageLabel">
+        <div class="mv-account-menu__lang-block">
+            <button
+                type="button"
+                class="mv-account-menu__item"
+                :aria-expanded="languageOpen"
+                @click="languageOpen = !languageOpen"
+            >
+                <IconWorld :size="20" class="mv-account-menu__icon" aria-hidden="true" />
+                <span class="mv-account-menu__label">{{ languageLabel }}</span>
+                <span class="mv-account-menu__current">{{ currentLanguageName }}</span>
+                <component
+                    :is="languageOpen ? IconChevronDown : IconChevronRight"
+                    :size="18"
+                    aria-hidden="true"
+                />
+            </button>
+            <div v-if="languageOpen" class="mv-account-menu__sub">
                 <button
                     v-for="lang in languages"
                     :key="lang.code"
                     type="button"
-                    class="mv-account-menu__lang"
-                    :class="{ 'mv-account-menu__lang--active': lang.code === locale }"
+                    class="mv-account-menu__item mv-account-menu__item--sub"
+                    :class="{ 'mv-account-menu__item--active': lang.code === locale }"
                     :aria-pressed="lang.code === locale"
-                    :title="lang.nativeName"
-                    @click="emit('select-language', lang.code)"
+                    @click="selectLanguage(lang.code)"
                 >
-                    {{ lang.code.toUpperCase() }}
+                    <span class="mv-account-menu__label">{{ lang.nativeName }}</span>
+                    <IconCheck v-if="lang.code === locale" :size="18" aria-hidden="true" />
                 </button>
             </div>
         </div>
@@ -233,8 +262,7 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
     background: var(--app-nav-active-bg);
 }
 
-.mv-account-menu__item:focus-visible,
-.mv-account-menu__lang:focus-visible {
+.mv-account-menu__item:focus-visible {
     outline: 2px solid var(--app-nav-accent);
     outline-offset: -2px;
 }
@@ -276,44 +304,16 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
     place-items: center;
 }
 
-.mv-account-menu__row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
+.mv-account-menu__lang-block {
+    padding: 10px 0;
     border-bottom: 1px solid var(--app-nav-border);
     margin-bottom: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--app-nav-text);
 }
 
-.mv-account-menu__langs {
-    display: flex;
-    gap: 4px;
-}
-
-.mv-account-menu__lang {
-    min-width: 40px;
-    height: 32px;
-    border: 1px solid var(--app-nav-border-strong);
-    border-radius: var(--app-radius-sm);
-    background: var(--app-surface);
-    color: var(--app-nav-text);
-    font: inherit;
+.mv-account-menu__current {
     font-size: 13px;
-    font-weight: 800;
-    cursor: pointer;
-}
-
-.mv-account-menu__lang:hover {
-    background: var(--app-nav-hover-bg);
-}
-
-.mv-account-menu__lang--active {
-    background: var(--app-nav-active-bg);
-    border-color: var(--app-nav-accent);
-    color: var(--app-nav-accent);
+    font-weight: 600;
+    color: var(--app-nav-label);
 }
 
 .mv-account-menu__item--danger {

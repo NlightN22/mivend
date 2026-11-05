@@ -52,13 +52,15 @@ onBeforeUnmount(() => {
             @click="emit('update:open', !open)"
         >
             <IconUser :size="20" aria-hidden="true" />
-            <span>{{ label }}</span>
-            <IconChevronDown
-                :size="16"
-                class="mv-account-dropdown__chevron"
-                :class="{ 'mv-account-dropdown__chevron--open': open }"
-                aria-hidden="true"
-            />
+            <span class="mv-account-dropdown__label">
+                {{ label }}
+                <IconChevronDown
+                    :size="14"
+                    class="mv-account-dropdown__chevron"
+                    :class="{ 'mv-account-dropdown__chevron--open': open }"
+                    aria-hidden="true"
+                />
+            </span>
         </button>
         <div v-if="open" ref="panel" class="mv-account-dropdown__panel">
             <slot />
@@ -73,34 +75,46 @@ onBeforeUnmount(() => {
 
 .mv-account-dropdown__trigger {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    height: 44px;
-    padding: 0 12px;
+    gap: 3px;
+    min-width: 58px;
+    padding: 7px 6px 6px;
     border: 0;
     border-radius: var(--app-radius-md);
-    background: var(--app-nav-active-bg);
-    color: var(--app-nav-accent);
+    background: transparent;
+    color: var(--app-nav-label);
     font: inherit;
-    font-size: 14px;
-    font-weight: 800;
-    white-space: nowrap;
     cursor: pointer;
-    transition: background 0.14s;
+    transition:
+        background 0.14s,
+        color 0.14s;
 }
 
 .mv-account-dropdown__trigger:hover {
-    background: var(--app-catalog-active);
+    background: var(--app-nav-hover-bg);
+    color: var(--app-nav-accent);
 }
 
 .mv-account-dropdown__trigger:active,
 .mv-account-dropdown__trigger--open {
-    background: var(--app-catalog-active);
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .mv-account-dropdown__trigger:focus-visible {
     outline: 2px solid var(--app-nav-accent);
     outline-offset: 2px;
+}
+
+.mv-account-dropdown__label {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .mv-account-dropdown__chevron {

@@ -28,7 +28,11 @@ test.describe('Header log out', () => {
             await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
             await trigger.click();
-            await page.getByRole('button', { name: 'Sign out' }).click();
+            const languageRow = page.getByRole('button', { name: 'Interface language' });
+            await languageRow.click();
+            await page.getByRole('button', { name: 'Русский' }).click();
+            await expect(page.getByRole('button', { name: 'Кабинет' })).toBeVisible();
+            await page.getByRole('button', { name: 'Выйти' }).click();
             await page.waitForURL(url => url.pathname.includes('/login'));
         } finally {
             await page.context().close();
