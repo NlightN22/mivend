@@ -15,6 +15,9 @@ const ru: typeof en = {
         search: 'Найти',
         loading: 'Загрузка категорий…',
         empty: 'Нет доступных категорий',
+        back: 'Назад',
+        allInCategory: 'Все товары категории',
+        close: 'Закрыть',
     },
     catalogFacets: {
         category: 'Категория',

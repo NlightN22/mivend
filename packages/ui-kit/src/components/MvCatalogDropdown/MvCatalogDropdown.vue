@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue';
 import { IconCategory } from '@tabler/icons-vue';
 import MvStatusTag from '../MvStatusTag/MvStatusTag.vue';
+import MvCatalogMobileNav from './MvCatalogMobileNav.vue';
+import { useIsMobileViewport } from '../../composables/useIsMobileViewport';
 import MvCatalogDropdownGroup, { type CollectionNode } from './MvCatalogDropdownGroup.vue';
 
 export type { CollectionNode };
@@ -17,6 +19,9 @@ const props = withDefaults(
         loadingLabel?: string;
         emptyLabel?: string;
         titleLabel?: string;
+        backLabel?: string;
+        allLabel?: string;
+        closeLabel?: string;
     }>(),
     {
         moreLabel: 'More',
@@ -25,6 +30,9 @@ const props = withDefaults(
         loadingLabel: 'Loading categories…',
         emptyLabel: 'No categories available',
         titleLabel: 'Catalogue',
+        backLabel: 'Back',
+        allLabel: 'All in category',
+        closeLabel: 'Close',
     },
 );
 
@@ -32,6 +40,7 @@ const emit = defineEmits<{
     close: [];
 }>();
 
+const isMobile = useIsMobileViewport(960);
 const hoveredId = ref<string | null>(null);
 
 const activeCollection = computed(
@@ -46,7 +55,18 @@ function categoryLink(slug: string): { path: string; query: { collection: string
 <template>
     <Transition name="catalog-drop">
         <div v-if="open" class="mv-catalog-dropdown" @click.self="emit('close')">
-            <div class="mv-catalog-dropdown__inner">
+            <MvCatalogMobileNav
+                v-if="isMobile"
+                :collections="collections"
+                :open="open"
+                :title-label="titleLabel"
+                :back-label="backLabel"
+                :all-label="allLabel"
+                :close-label="closeLabel"
+                :hidden-label="hiddenLabel"
+                @close="emit('close')"
+            />
+            <div v-else class="mv-catalog-dropdown__inner">
                 <aside class="mv-catalog-dropdown__left">
                     <p class="mv-catalog-dropdown__label">{{ titleLabel }}</p>
                     <nav class="mv-catalog-dropdown__cat-list">

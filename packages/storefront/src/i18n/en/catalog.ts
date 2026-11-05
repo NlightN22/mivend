@@ -13,6 +13,9 @@ export default {
         search: 'Search',
         loading: 'Loading categories…',
         empty: 'No categories available',
+        back: 'Back',
+        allInCategory: 'All in category',
+        close: 'Close',
     },
     catalogFacets: {
         category: 'Category',

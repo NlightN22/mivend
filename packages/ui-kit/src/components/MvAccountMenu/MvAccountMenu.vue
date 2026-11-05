@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, type Component } from 'vue';
-import {
-    IconCheck,
-    IconChevronDown,
-    IconChevronRight,
-    IconLogout,
-    IconWorld,
-} from '@tabler/icons-vue';
+import { IconCheck, IconChevronDown, IconLogout, IconWorld } from '@tabler/icons-vue';
 import type { LanguageOption } from '../MvLanguageSwitcher/MvLanguageSwitcher.vue';
 
 export interface AccountMenuLink {
@@ -83,7 +77,9 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
                     v-if="entry.children"
                     type="button"
                     class="mv-account-menu__item"
+                    :class="{ 'mv-account-menu__item--open': isGroupOpen(entry) }"
                     :aria-expanded="isGroupOpen(entry)"
+                    :aria-controls="`mv-account-menu-${entry.key}`"
                     @click="expanded[entry.key] = !isGroupOpen(entry)"
                 >
                     <component
@@ -94,9 +90,10 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
                         aria-hidden="true"
                     />
                     <span class="mv-account-menu__label">{{ entry.label }}</span>
-                    <component
-                        :is="isGroupOpen(entry) ? IconChevronDown : IconChevronRight"
-                        :size="18"
+                    <IconChevronDown
+                        :size="16"
+                        class="mv-account-menu__chevron"
+                        :class="{ 'mv-account-menu__chevron--open': isGroupOpen(entry) }"
                         aria-hidden="true"
                     />
                 </button>
@@ -118,7 +115,11 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
                     <span class="mv-account-menu__label">{{ entry.label }}</span>
                     <span v-if="entry.count" class="mv-account-menu__count">{{ entry.count }}</span>
                 </RouterLink>
-                <div v-if="entry.children && isGroupOpen(entry)" class="mv-account-menu__sub">
+                <div
+                    v-if="entry.children && isGroupOpen(entry)"
+                    :id="`mv-account-menu-${entry.key}`"
+                    class="mv-account-menu__sub"
+                >
                     <RouterLink
                         v-for="child in entry.children"
                         :key="child.key"
@@ -141,19 +142,22 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
             <button
                 type="button"
                 class="mv-account-menu__item"
+                :class="{ 'mv-account-menu__item--open': languageOpen }"
                 :aria-expanded="languageOpen"
+                aria-controls="mv-account-menu-language"
                 @click="languageOpen = !languageOpen"
             >
                 <IconWorld :size="20" class="mv-account-menu__icon" aria-hidden="true" />
                 <span class="mv-account-menu__label">{{ languageLabel }}</span>
                 <span class="mv-account-menu__current">{{ currentLanguageName }}</span>
-                <component
-                    :is="languageOpen ? IconChevronDown : IconChevronRight"
-                    :size="18"
+                <IconChevronDown
+                    :size="16"
+                    class="mv-account-menu__chevron"
+                    :class="{ 'mv-account-menu__chevron--open': languageOpen }"
                     aria-hidden="true"
                 />
             </button>
-            <div v-if="languageOpen" class="mv-account-menu__sub">
+            <div v-if="languageOpen" id="mv-account-menu-language" class="mv-account-menu__sub">
                 <button
                     v-for="lang in languages"
                     :key="lang.code"
@@ -282,9 +286,26 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
     font-weight: 900;
 }
 
+.mv-account-menu__sub {
+    margin: 2px 0 4px 22px;
+    padding-left: 8px;
+    border-left: 2px solid var(--app-nav-border-strong);
+}
+
 .mv-account-menu__item--sub {
-    padding-left: 28px;
     font-weight: 600;
+}
+
+.mv-account-menu__item--open {
+    background: var(--app-nav-hover-bg);
+}
+
+.mv-account-menu__chevron {
+    transition: transform 0.15s;
+}
+
+.mv-account-menu__chevron--open {
+    transform: rotate(180deg);
 }
 
 .mv-account-menu__label {

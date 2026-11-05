@@ -289,6 +289,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                 :less-label="t('catalogNav.less')"
                 :loading-label="t('catalogNav.loading')"
                 :empty-label="t('catalogNav.empty')"
+                :back-label="t('catalogNav.back')"
+                :all-label="t('catalogNav.allInCategory')"
+                :close-label="t('catalogNav.close')"
                 @close="closeCatalog"
             />
         </header>

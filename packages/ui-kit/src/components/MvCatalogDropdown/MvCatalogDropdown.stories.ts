@@ -51,3 +51,13 @@ export const EmptyChildren: Story = {
             '<div style="position: relative; height: 520px;"><MvCatalogDropdown v-bind="args" @close="() => {}" /></div>',
     }),
 };
+
+export const Mobile: Story = {
+    parameters: { viewport: { defaultViewport: 'mvMobile' } },
+    render: args => ({
+        components: { MvCatalogDropdown },
+        setup: () => ({ args }),
+        template:
+            '<div style="position: relative; height: 520px;"><MvCatalogDropdown v-bind="args" @close="() => {}" /></div>',
+    }),
+};
