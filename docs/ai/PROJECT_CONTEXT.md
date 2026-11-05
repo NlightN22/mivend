@@ -3,7 +3,7 @@
 Updated: 2026-11-05
 
 ## Products of hidden categories (2026-11-05, owner decision, not committed/audited yet)
-- A product in a hidden category (`collection.isPrivate`, incl. inherited) is invisible to customers in shop search/suggestions/facets, `products`, `product`, `Collection.productVariants`, widgets, cart add. Staff Admin API unchanged. Query-time rule, no index field, no migration, no reindex. Design and limits: `docs/category-hierarchy.md`.
+- A product in a hidden category (`collection.isPrivate`, incl. inherited) is invisible to customers in shop search/suggestions/facets, `products`, `product`, `Collection.productVariants`, widgets, cart add. Staff Admin API unchanged. Query-time rule, no index field, no migration, no reindex. Design and limits: `docs/category-hierarchy.md`. Audit follow-up: tree writers share advisory lock `category-tree`; hidden lines in a cart block raise/checkout (not removal); excluded ids memoised per request.
 - Code: `shared/hiddenCategoryProducts.ts`, access-control `HiddenCategoryProductsService` + `shop-visible-products.resolver.ts` + order interceptor, search `internal-shop-search.resolver.ts` (internal) and `ProductLookupService` (external).
 - External: `excludeCategoryIds` on /resolve-query (search-service `sha-dc51122`, deploy it first). A hidden ancestor always hides its subtree (a `visible` override under it has no effect, `resolveCategoryIsPrivate`), so internal and external agree. `make test-int` not run by the agent.
 

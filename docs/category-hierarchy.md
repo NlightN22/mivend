@@ -77,6 +77,17 @@ Stream status lives in `ai/erp-streams-map.md`; this file is the design record.
   omitted when empty and for staff). search-service applies it to code groups, items, total and facets
   with no index change. The param alone is not a browse filter. Known gap: it matches `categoryPath`
   (subtree), which is the same set as `collection.isPrivate` since a hidden ancestor always hides its subtree.
+- Carts: a customer cannot raise a line whose category was hidden afterwards (`willAdjustOrderLine`) and
+  cannot move such a cart to `ArrangingPayment` or pay it (`hiddenCategoryOrderProcess`, shop API only);
+  lowering and removing stay allowed. Un-hiding makes the same cart work again. These are hard
+  invariants of the owner rule, not configurable policies, like the add-to-cart interceptor.
+- Per-request cost: the hidden ERP ids sent to search-service are read once per request context (memo
+  keyed by the request), never across requests, so a recompute applies on the next request.
+- Search precedence: on the internal backend `InternalShopSearchResolver` and the Elasticsearch plugin both
+  define shop `search`; a unit test pins the plugin order that makes ours the one registered first.
+- Known limitation: `products` and `Collection.productVariants` filter the already-selected page, so a page
+  can hold fewer than `take` items and `totalItems` drops only by the hidden items on that page. The
+  storefront calls `products` only with an id list, where this does not matter; `search` is exact.
 - Deploy order: search-service (image `sha-dc51122` or later) first, mivend second. Local post-filtering in
   `ProductLookupService` stays as a second guard.
 - Release: no migration, reindex or backfill step. A stored `visible` override under a hidden ancestor
@@ -92,6 +103,11 @@ Stream status lives in `ai/erp-streams-map.md`; this file is the design record.
   contains categories, so the local contour shows the same tree.
 - The planning logic is pure and shared (`packages/shared/src/categoryCollectionFilter.ts`); the
   Vendure-facing part is `recomputeCategoryTree.ts` in the same package.
+
+- Concurrency: the recompute and the feed category handler write `collection.isPrivate` under the
+  transaction advisory lock `category-tree` (`CATEGORY_TREE_LOCK`), reading overrides and the tree after
+  the lock. A manual override change triggers a recompute that queues behind any in-flight feed write, so
+  a stale feed write can never leave a subtree open. Test: `category-tree-lock.int.test.ts`.
 
 ## Known data quirks
 
