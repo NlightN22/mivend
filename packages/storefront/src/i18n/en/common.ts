@@ -30,7 +30,9 @@ export default {
         favourites: 'Favourites',
         signIn: 'Sign in',
         home: 'Home',
-        menu: 'Menu',
+        more: 'More',
+        tabs: 'Main navigation',
+        interfaceLanguage: 'Interface language',
     },
     header: {
         tagline: '{portal} for fast ordering of auto parts and consumables',

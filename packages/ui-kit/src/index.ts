@@ -157,6 +157,15 @@ export { default as MvAppSidebar } from './components/MvAppSidebar/MvAppSidebar.
 export type { AppSidebarItem } from './components/MvAppSidebar/MvAppSidebar.vue';
 export { default as MvAppMobileNav } from './components/MvAppMobileNav/MvAppMobileNav.vue';
 export type { AppMobileNavItem } from './components/MvAppMobileNav/MvAppMobileNav.vue';
+export { default as MvAccountMenu } from './components/MvAccountMenu/MvAccountMenu.vue';
+export type {
+    AccountMenuEntry,
+    AccountMenuLink,
+} from './components/MvAccountMenu/MvAccountMenu.vue';
+export { default as MvAccountDropdown } from './components/MvAccountDropdown/MvAccountDropdown.vue';
+export { default as MvAccountSheet } from './components/MvAccountSheet/MvAccountSheet.vue';
+export { default as MvBottomTabBar } from './components/MvBottomTabBar/MvBottomTabBar.vue';
+export type { BottomTabItem } from './components/MvBottomTabBar/MvBottomTabBar.vue';
 export { default as MvAppMobileMoreSheet } from './components/MvAppMobileMoreSheet/MvAppMobileMoreSheet.vue';
 export type { AppMobileSheetItem } from './components/MvAppMobileMoreSheet/MvAppMobileMoreSheet.vue';
 export { default as MvFab } from './components/MvFab/MvFab.vue';

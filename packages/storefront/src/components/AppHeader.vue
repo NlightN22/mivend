@@ -3,16 +3,23 @@ import { formatMoney } from '../i18n/format';
 import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { IconCategory, IconClipboardList, IconHeart, IconUser } from '@tabler/icons-vue';
+import { IconCategory, IconClipboardList, IconDots, IconHeart, IconUser } from '@tabler/icons-vue';
 import {
-    MvLanguageSwitcher,
+    MvAccountDropdown,
+    MvAccountMenu,
+    MvAccountSheet,
+    MvBottomTabBar,
     MvNotificationBell,
     MvNotificationPanel,
     readSiteIconUrl,
     readSiteName,
+    type BottomTabItem,
 } from '@mivend/ui-kit';
 import { useLanguageSwitcher } from '../composables/useLanguageSwitcher';
 import { headerDeliveryLabel } from '../composables/headerDeliveryLabel';
+import { activeBottomTab } from '../composables/bottomTabActive';
+import { useAccountMenu } from '../composables/useAccountMenu';
+import { useLogout } from '../composables/useLogout';
 import { useHeaderSearch } from '../composables/useHeaderSearch';
 import { useNotificationPanelLabels } from '../composables/useNotificationPanelLabels';
 import { useAuthStore } from '../stores/auth';
@@ -58,24 +65,11 @@ watch(
 );
 
 const catalogOpen = ref(false);
-const mobileNavOpen = ref(false);
-
-// These pages render AccountSidebar, which already lists Account/Orders/Favourites.
-const ACCOUNT_ZONE_PREFIXES = [
-    '/account',
-    '/orders',
-    '/documents',
-    '/proforma-invoices',
-    '/settlements',
-    '/reconciliation-acts',
-    '/favorites',
-    '/requests',
-];
-const inAccountZone = computed(() =>
-    ACCOUNT_ZONE_PREFIXES.some(
-        prefix => route.path === prefix || route.path.startsWith(`${prefix}/`),
-    ),
-);
+const accountOpen = ref(false);
+const moreOpen = ref(false);
+const logout = useLogout();
+const desktopMenu = useAccountMenu(['orders', 'favorites']);
+const sheetMenu = useAccountMenu(['orders', 'favorites', 'home']);
 
 const cartTotal = computed(() => {
     if (!cartStore.loaded) return '';
@@ -98,22 +92,59 @@ function closeCatalog(): void {
     catalogOpen.value = false;
 }
 
-function openCatalogFromNav(): void {
-    mobileNavOpen.value = false;
-    toggleCatalog();
-}
-
-function toggleMobileNav(): void {
-    mobileNavOpen.value = !mobileNavOpen.value;
-}
-
 function closeAll(): void {
     closeCatalog();
-    mobileNavOpen.value = false;
+    accountOpen.value = false;
+    moreOpen.value = false;
 }
 
 function onKeydown(e: KeyboardEvent): void {
-    if (e.key === 'Escape') closeAll();
+    if (e.key === 'Escape') closeCatalog();
+}
+
+const activeTab = computed(() =>
+    activeBottomTab(route.path, { moreOpen: moreOpen.value, catalogOpen: catalogOpen.value }),
+);
+const tabs = computed<BottomTabItem[]>(() => [
+    {
+        key: 'catalog',
+        label: t('nav.catalog'),
+        icon: IconCategory,
+        active: activeTab.value === 'catalog',
+    },
+    {
+        key: 'orders',
+        label: t('nav.orders'),
+        icon: IconClipboardList,
+        to: '/orders',
+        active: activeTab.value === 'orders',
+    },
+    {
+        key: 'favorites',
+        label: t('nav.favourites'),
+        icon: IconHeart,
+        to: '/favorites',
+        active: activeTab.value === 'favorites',
+        badgeCount: favoritesStore.count,
+    },
+    {
+        key: 'cabinet',
+        label: t('nav.account'),
+        icon: IconUser,
+        to: '/account',
+        active: activeTab.value === 'cabinet',
+    },
+    { key: 'more', label: t('nav.more'), icon: IconDots, active: activeTab.value === 'more' },
+]);
+
+function onTabSelect(key: string): void {
+    if (key === 'catalog') {
+        moreOpen.value = false;
+        toggleCatalog();
+    } else if (key === 'more') {
+        closeCatalog();
+        moreOpen.value = !moreOpen.value;
+    }
 }
 
 watch(
@@ -129,7 +160,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>
-    <div class="app-header-wrap" :class="{ 'app-header-wrap--open': catalogOpen || mobileNavOpen }">
+    <div class="app-header-wrap">
         <div v-if="authStore.isLoggedIn" class="app-header__strip">
             <div class="app-header__strip-inner">
                 <i18n-t keypath="header.tagline" tag="span">
@@ -175,68 +206,41 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     />
                 </div>
 
-                <nav
-                    class="app-header__nav"
-                    :class="{
-                        'app-header__nav--open': mobileNavOpen,
-                        'app-header__nav--in-zone': inAccountZone,
-                    }"
-                >
-                    <button
-                        type="button"
-                        class="app-header__nav-btn app-header__nav-btn--catalog"
-                        @click="openCatalogFromNav"
-                    >
-                        <IconCategory :size="20" aria-hidden="true" />
-                        <span>{{ t('nav.catalog') }}</span>
-                    </button>
-
-                    <template v-if="authStore.isLoggedIn">
-                        <RouterLink
-                            to="/account"
-                            class="app-header__nav-btn app-header__nav-btn--zone-dup"
-                        >
-                            <IconUser :size="20" aria-hidden="true" />
-                            <span>{{ t('nav.account') }}</span>
-                        </RouterLink>
-                        <RouterLink
-                            to="/orders"
-                            class="app-header__nav-btn app-header__nav-btn--zone-dup"
-                        >
-                            <IconClipboardList :size="20" aria-hidden="true" />
-                            <span>{{ t('nav.orders') }}</span>
-                        </RouterLink>
-                        <RouterLink
-                            to="/favorites"
-                            class="app-header__nav-btn app-header__nav-btn--zone-dup"
-                        >
-                            <span class="app-header__nav-icon-wrap">
-                                <IconHeart :size="20" aria-hidden="true" />
-                                <span
-                                    v-if="favoritesStore.count > 0"
-                                    class="app-header__fav-badge"
-                                    >{{ favoritesStore.count }}</span
-                                >
-                            </span>
-                            <span>{{ t('nav.favourites') }}</span>
-                        </RouterLink>
-                    </template>
-
-                    <template v-else>
-                        <RouterLink to="/login" class="app-header__nav-btn">
-                            <IconUser :size="20" aria-hidden="true" />
-                            <span>{{ t('nav.signIn') }}</span>
-                        </RouterLink>
-                    </template>
-                </nav>
-
-                <MvLanguageSwitcher
-                    class="app-header__language"
-                    :model-value="language.locale.value"
-                    :options="language.options"
-                    :aria-label="t('common.language')"
-                    @update:model-value="language.select"
-                />
+                <div v-if="authStore.isLoggedIn" class="app-header__account-nav">
+                    <MvAccountDropdown v-model:open="accountOpen" :label="t('nav.account')">
+                        <MvAccountMenu
+                            :user-name="desktopMenu.userName.value"
+                            :user-role="desktopMenu.userRole.value"
+                            :user-initials="desktopMenu.userInitials.value"
+                            :entries="desktopMenu.entries.value"
+                            :active-path="route.path"
+                            :languages="language.options"
+                            :locale="language.locale.value"
+                            :language-label="t('nav.interfaceLanguage')"
+                            :logout-label="t('account.logout')"
+                            @navigate="accountOpen = false"
+                            @select-language="language.select"
+                            @logout="logout"
+                        />
+                    </MvAccountDropdown>
+                    <RouterLink to="/orders" class="app-header__nav-btn">
+                        <IconClipboardList :size="20" aria-hidden="true" />
+                        <span>{{ t('nav.orders') }}</span>
+                    </RouterLink>
+                    <RouterLink to="/favorites" class="app-header__nav-btn">
+                        <span class="app-header__nav-icon-wrap">
+                            <IconHeart :size="20" aria-hidden="true" />
+                            <span v-if="favoritesStore.count > 0" class="app-header__fav-badge">{{
+                                favoritesStore.count
+                            }}</span>
+                        </span>
+                        <span>{{ t('nav.favourites') }}</span>
+                    </RouterLink>
+                </div>
+                <RouterLink v-else to="/login" class="app-header__nav-btn app-header__signin">
+                    <IconUser :size="20" aria-hidden="true" />
+                    <span>{{ t('nav.signIn') }}</span>
+                </RouterLink>
 
                 <MvNotificationBell
                     v-if="notificationsStore"
@@ -256,16 +260,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                         cartStore.itemCount
                     }}</span>
                 </RouterLink>
-
-                <button
-                    type="button"
-                    class="app-header__hamburger"
-                    :class="{ 'app-header__hamburger--open': mobileNavOpen }"
-                    :aria-label="t('nav.menu')"
-                    @click="toggleMobileNav"
-                >
-                    <span></span><span></span><span></span>
-                </button>
             </div>
 
             <div v-if="authStore.isLoggedIn" class="app-header__delivery">
@@ -317,12 +311,27 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
             />
         </div>
 
-        <div
-            v-if="catalogOpen || mobileNavOpen"
-            class="app-header__backdrop"
-            :class="{ 'app-header__backdrop--nav': mobileNavOpen }"
-            @click="closeAll"
-        />
+        <div v-if="catalogOpen" class="app-header__backdrop" @click="closeAll" />
+
+        <template v-if="authStore.isLoggedIn">
+            <MvBottomTabBar :items="tabs" :aria-label="t('nav.tabs')" @select="onTabSelect" />
+            <MvAccountSheet :open="moreOpen" :close-label="t('nav.more')" @close="moreOpen = false">
+                <MvAccountMenu
+                    :user-name="sheetMenu.userName.value"
+                    :user-role="sheetMenu.userRole.value"
+                    :user-initials="sheetMenu.userInitials.value"
+                    :entries="sheetMenu.entries.value"
+                    :active-path="route.path"
+                    :languages="language.options"
+                    :locale="language.locale.value"
+                    :language-label="t('nav.interfaceLanguage')"
+                    :logout-label="t('account.logout')"
+                    @navigate="moreOpen = false"
+                    @select-language="language.select"
+                    @logout="logout"
+                />
+            </MvAccountSheet>
+        </template>
     </div>
 </template>
 

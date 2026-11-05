@@ -3,6 +3,7 @@ import { onMounted } from 'vue';
 import { MvToastContainer, MvConnectionBar } from '@mivend/ui-kit';
 import { useAuthStore } from './stores/auth';
 import { useCartStore } from './stores/cart';
+import { useLogout } from './composables/useLogout';
 
 const authStore = useAuthStore();
 const cartStore = useCartStore();
@@ -24,11 +25,7 @@ onMounted(async () => {
     }
 });
 
-// Hard navigation: logout() may itself hang during an outage, a reload resets all stuck state.
-function handleRelogin(): void {
-    void authStore.logout();
-    window.location.href = '/login';
-}
+const handleRelogin = useLogout();
 </script>
 
 <template>

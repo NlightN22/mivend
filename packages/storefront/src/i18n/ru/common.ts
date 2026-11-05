@@ -32,7 +32,9 @@ const ru: typeof en = {
         favourites: 'Избранное',
         signIn: 'Войти',
         home: 'Главная',
-        menu: 'Меню',
+        more: 'Ещё',
+        tabs: 'Основная навигация',
+        interfaceLanguage: 'Язык интерфейса',
     },
     header: {
         tagline: '{portal} для быстрого заказа автозапчастей и расходников',
