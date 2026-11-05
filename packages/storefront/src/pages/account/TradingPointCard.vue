@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { formatRuPhone } from '@mivend/ui-kit';
+import { isTradingPointValid } from './tradingPointValidation';
 import TradingPointFields from './TradingPointFields.vue';
 
 export interface ContactPerson {
@@ -62,7 +64,7 @@ function startEdit() {
         name: props.point.name,
         address: props.point.address,
         contactName: c?.name ?? '',
-        contactPhone: c?.phone ?? '',
+        contactPhone: c?.phone ? formatRuPhone(c.phone) : '',
         workingHours: props.point.workingHours ?? '',
         deliveryComment: props.point.deliveryComment ?? '',
     };
@@ -188,7 +190,7 @@ watch(
             <div class="tp-card__edit-actions">
                 <button
                     class="tp-card__btn tp-card__btn--primary"
-                    :disabled="saving"
+                    :disabled="saving || !isTradingPointValid(form)"
                     @click="handleSave"
                 >
                     {{ saving ? $t('tradingPoints.saving') : $t('tradingPoints.saveChanges') }}

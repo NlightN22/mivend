@@ -115,3 +115,4 @@ export { evaluateCounterpartyTerms, evaluateProductTerms } from './selection-fil
 export type { ProductAttributes, RefResolution } from './selection-filter-eval';
 export { loadFilterTerms, replaceFilterTerms } from './filter-terms';
 export type { FilterTermTable } from './filter-terms';
+export * from './contactValidation';

@@ -11,6 +11,8 @@ withDefaults(
         autocomplete?: string;
         size?: InputSize;
         list?: string;
+        inputmode?: 'text' | 'tel' | 'numeric' | 'email';
+        maxlength?: number;
     }>(),
     { size: 'md' },
 );
@@ -33,6 +35,8 @@ defineEmits<{
         :disabled="disabled"
         :autocomplete="autocomplete"
         :list="list"
+        :inputmode="inputmode"
+        :maxlength="maxlength"
         @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
     />
 </template>

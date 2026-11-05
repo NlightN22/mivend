@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TradingPointAddForm } from './useTradingPoints';
+import { isTradingPointValid } from './tradingPointValidation';
 import TradingPointFields from './TradingPointFields.vue';
 
 const model = defineModel<TradingPointAddForm>({ required: true });
@@ -15,7 +16,7 @@ const emit = defineEmits<{ submit: []; cancel: [] }>();
         <div class="tp-add-actions">
             <button
                 class="tp-btn tp-btn--primary"
-                :disabled="saving || !model.name || !model.address"
+                :disabled="saving || !isTradingPointValid(model)"
                 @click="emit('submit')"
             >
                 {{ saving ? $t('tradingPoints.saving') : $t('tradingPoints.addPoint') }}

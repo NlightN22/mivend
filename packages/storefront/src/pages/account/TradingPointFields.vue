@@ -1,44 +1,71 @@
 <script setup lang="ts">
+import { computed, reactive } from 'vue';
+import { MvFormField, MvInput, MvNameInput, MvPhoneInput } from '@mivend/ui-kit';
 import type { TradingPointAddForm } from './useTradingPoints';
+import { tradingPointErrors } from './tradingPointValidation';
 
 const model = defineModel<TradingPointAddForm>({ required: true });
+const touched = reactive({ name: false, address: false, contactName: false, contactPhone: false });
+const errors = computed(() => tradingPointErrors(model.value));
 </script>
 
 <template>
     <div class="tp-form">
-        <label class="tp-field">
-            <span>{{ $t('tradingPoints.field.name') }}</span>
-            <input v-model="model.name" :placeholder="$t('tradingPoints.field.namePlaceholder')" />
-        </label>
-        <label class="tp-field tp-field--wide">
-            <span>{{ $t('tradingPoints.field.address') }}</span>
-            <input
-                v-model="model.address"
-                :placeholder="$t('tradingPoints.field.addressPlaceholder')"
+        <MvFormField
+            :label="$t('tradingPoints.field.name')"
+            :error="touched.name && errors.name ? $t(errors.name) : undefined"
+            required
+        >
+            <MvInput
+                v-model="model.name"
+                :placeholder="$t('tradingPoints.field.namePlaceholder')"
+                :error="touched.name && !!errors.name"
+                @focusout="touched.name = true"
             />
-        </label>
-        <label class="tp-field">
-            <span>{{ $t('tradingPoints.field.contactName') }}</span>
-            <input
+        </MvFormField>
+        <MvFormField
+            class="tp-field--wide"
+            :label="$t('tradingPoints.field.address')"
+            :error="touched.address && errors.address ? $t(errors.address) : undefined"
+            required
+        >
+            <MvInput
+                v-model="model.address"
+                autocomplete="street-address"
+                :placeholder="$t('tradingPoints.field.addressPlaceholder')"
+                :error="touched.address && !!errors.address"
+                @focusout="touched.address = true"
+            />
+        </MvFormField>
+        <MvFormField
+            :label="$t('tradingPoints.field.contactName')"
+            :error="touched.contactName && errors.contactName ? $t(errors.contactName) : undefined"
+        >
+            <MvNameInput
                 v-model="model.contactName"
                 :placeholder="$t('tradingPoints.field.contactNamePlaceholder')"
+                :error="touched.contactName && !!errors.contactName"
+                @blur="touched.contactName = true"
             />
-        </label>
-        <label class="tp-field">
-            <span>{{ $t('tradingPoints.field.phone') }}</span>
-            <input
+        </MvFormField>
+        <MvFormField
+            :label="$t('tradingPoints.field.phone')"
+            :error="
+                touched.contactPhone && errors.contactPhone ? $t(errors.contactPhone) : undefined
+            "
+        >
+            <MvPhoneInput
                 v-model="model.contactPhone"
-                :placeholder="$t('tradingPoints.field.phonePlaceholder')"
-                type="tel"
+                :error="touched.contactPhone && !!errors.contactPhone"
+                @blur="touched.contactPhone = true"
             />
-        </label>
-        <label class="tp-field tp-field--wide">
-            <span>{{ $t('tradingPoints.field.hours') }}</span>
-            <input
+        </MvFormField>
+        <MvFormField class="tp-field--wide" :label="$t('tradingPoints.field.hours')">
+            <MvInput
                 v-model="model.workingHours"
                 :placeholder="$t('tradingPoints.field.hoursPlaceholder')"
             />
-        </label>
+        </MvFormField>
         <label class="tp-field tp-field--wide">
             <span>{{ $t('tradingPoints.field.comment') }}</span>
             <textarea
@@ -71,7 +98,6 @@ const model = defineModel<TradingPointAddForm>({ required: true });
     grid-column: 1 / -1;
 }
 
-.tp-field input,
 .tp-field textarea {
     border: 1px solid #dde7e2;
     border-radius: 12px;
@@ -82,7 +108,6 @@ const model = defineModel<TradingPointAddForm>({ required: true });
     resize: vertical;
 }
 
-.tp-field input:focus,
 .tp-field textarea:focus {
     border-color: #00a878;
     box-shadow: 0 0 0 3px rgba(0, 168, 120, 0.1);

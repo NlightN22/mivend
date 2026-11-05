@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue';
 import { useAuthStore } from '../../stores/auth';
+import { isTradingPointValid } from './tradingPointValidation';
 import type { TradingPoint } from './TradingPointCard.vue';
 
 export interface TradingPointAddForm {
@@ -125,7 +126,7 @@ export function useTradingPoints(): {
     }
 
     async function submitAdd(): Promise<void> {
-        if (!addForm.value.name || !addForm.value.address) return;
+        if (!isTradingPointValid(addForm.value)) return;
         addSaving.value = true;
         await gql(
             `mutation($name:String! $address:String! $contactName:String $contactPhone:String $workingHours:String $deliveryComment:String){

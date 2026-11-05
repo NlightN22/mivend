@@ -128,9 +128,9 @@ describe('TradingPointService — customer methods', () => {
 
             const result = await service.customerAdd(mockCtx, 'cp1', {
                 name: 'Point A',
-                address: 'Addr 1',
-                contactName: 'Ivan',
-                contactPhone: '+7999',
+                address: 'Main street 12, office 3',
+                contactName: 'Ivan Petrov',
+                contactPhone: '89131234567',
             });
 
             const createCall = mockTpRepo.create.mock.calls[0][0];
@@ -139,6 +139,17 @@ describe('TradingPointService — customer methods', () => {
             expect(createCall.customerOwned).toBe(true);
             expect(createCall.counterpartyId).toBe('cp1');
             expect(result).toEqual(tp);
+        });
+
+        it('rejects an incomplete phone and stores the normalized one', async () => {
+            await expect(
+                service.customerAdd(mockCtx, 'cp1', {
+                    name: 'P',
+                    address: 'Main street 12',
+                    contactPhone: '+7999',
+                }),
+            ).rejects.toThrow(/phone/);
+            expect(mockTpRepo.save).not.toHaveBeenCalled();
         });
 
         it('creates ContactPerson when contactName provided', async () => {
@@ -150,12 +161,12 @@ describe('TradingPointService — customer methods', () => {
 
             await service.customerAdd(mockCtx, 'cp1', {
                 name: 'P',
-                address: 'A',
-                contactName: 'Ivan',
+                address: 'Main street 12',
+                contactName: 'Ivan Petrov',
             });
 
             expect(mockCpRepo.create).toHaveBeenCalledWith(
-                expect.objectContaining({ name: 'Ivan', isPrimary: true }),
+                expect.objectContaining({ name: 'Ivan Petrov', isPrimary: true }),
             );
             const createCall = mockTpRepo.create.mock.calls[0][0];
             expect(createCall.contacts).toHaveLength(1);
@@ -168,7 +179,7 @@ describe('TradingPointService — customer methods', () => {
 
             await service.customerAdd(mockCtx, 'cp1', {
                 name: 'P',
-                address: 'A',
+                address: 'Main street 12',
                 contactName: null,
             });
 

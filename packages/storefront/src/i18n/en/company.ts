@@ -22,6 +22,12 @@ export default {
         saving: 'Saving…',
         saveChanges: 'Save changes',
         addPoint: 'Add point',
+        error: {
+            name: 'Enter a name',
+            address: 'Enter a street and a house number',
+            contactName: 'Enter first and last name',
+            phone: 'Enter the full number: +7 (XXX) XXX-XX-XX',
+        },
         field: {
             name: 'Name',
             namePlaceholder: 'e.g. North AutoService',
@@ -30,7 +36,7 @@ export default {
             contactName: 'Contact person',
             contactNamePlaceholder: 'Full name',
             phone: 'Phone',
-            phonePlaceholder: '+7 ...',
+            phonePlaceholder: '+7 (___) ___-__-__',
             hours: 'Working hours',
             hoursPlaceholder: 'e.g. Mon–Fri 09:00–18:00',
             comment: 'Delivery comment',

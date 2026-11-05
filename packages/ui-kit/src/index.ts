@@ -61,6 +61,14 @@ export { default as MvFormField } from './components/MvFormField/MvFormField.vue
 
 export { default as MvInput } from './components/MvInput/MvInput.vue';
 
+export { default as MvPhoneInput } from './components/MvPhoneInput/MvPhoneInput.vue';
+export { default as MvNameInput } from './components/MvNameInput/MvNameInput.vue';
+export {
+    formatRuPhone,
+    isCompleteRuPhone,
+    formatPersonName,
+    isValidPersonName,
+} from './utils/contactFormat';
 export { default as MvPasswordInput } from './components/MvPasswordInput/MvPasswordInput.vue';
 
 export { default as MvNotice } from './components/MvNotice/MvNotice.vue';

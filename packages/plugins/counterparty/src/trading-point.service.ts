@@ -15,7 +15,7 @@ import { ContactPerson } from './entities/contact-person.entity';
 import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
 import { loggerCtx } from './types';
-import { ctxQuery } from 'shared';
+import { ctxQuery, normalizeRuPhone, validateTradingPointContact } from 'shared';
 
 export interface TradingPointDetailsPatch {
     name?: string;
@@ -507,6 +507,7 @@ export class TradingPointService {
         counterpartyId: string,
         input: CustomerTradingPointInput,
     ): Promise<TradingPoint> {
+        input = normalizeCustomerInput(input);
         const repo = this.connection.getRepository(ctx, TradingPoint);
         const cpRepo = this.connection.getRepository(ctx, ContactPerson);
         const counterparty = await this.connection
@@ -544,6 +545,7 @@ export class TradingPointService {
         counterpartyId: string,
         input: CustomerTradingPointInput,
     ): Promise<TradingPoint> {
+        input = normalizeCustomerInput(input);
         const repo = this.connection.getRepository(ctx, TradingPoint);
         const cpRepo = this.connection.getRepository(ctx, ContactPerson);
         const record = await repo.findOne({
@@ -604,4 +606,21 @@ export interface CustomerTradingPointInput {
     deliveryComment?: string | null;
     contactName?: string | null;
     contactPhone?: string | null;
+}
+
+function normalizeCustomerInput(input: CustomerTradingPointInput): CustomerTradingPointInput {
+    const error = validateTradingPointContact({
+        name: input.name,
+        address: input.address,
+        contactName: input.contactName,
+        contactPhone: input.contactPhone,
+    });
+    if (error) throw new UserInputError(error);
+    return {
+        ...input,
+        name: input.name.trim(),
+        address: input.address.trim(),
+        contactName: input.contactName?.trim() || null,
+        contactPhone: input.contactPhone ? normalizeRuPhone(input.contactPhone) : null,
+    };
 }

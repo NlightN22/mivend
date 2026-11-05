@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { MvPhoneInput } from '@mivend/ui-kit';
 import { useSettingsProfile } from './useSettingsProfile';
 
 const { form, email, pointId, points, loading, saving, save } = useSettingsProfile();
@@ -32,12 +33,7 @@ const { form, email, pointId, points, loading, saving, save } = useSettingsProfi
             </label>
             <label class="set-field">
                 <span>{{ $t('settings.profile.phone') }}</span>
-                <input
-                    v-model="form.phoneNumber"
-                    :disabled="loading"
-                    type="tel"
-                    autocomplete="tel"
-                />
+                <MvPhoneInput v-model="form.phoneNumber" :disabled="loading" />
             </label>
             <label class="set-field set-field--wide">
                 <span>{{ $t('settings.profile.defaultPoint') }}</span>

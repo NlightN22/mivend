@@ -25,6 +25,12 @@ const ru: typeof en = {
         saving: 'Сохранение…',
         saveChanges: 'Сохранить изменения',
         addPoint: 'Добавить точку',
+        error: {
+            name: 'Укажите название',
+            address: 'Укажите улицу и номер дома',
+            contactName: 'Укажите имя и фамилию',
+            phone: 'Введите номер полностью: +7 (XXX) XXX-XX-XX',
+        },
         field: {
             name: 'Название',
             namePlaceholder: 'например, Автосервис «Север»',
@@ -33,7 +39,7 @@ const ru: typeof en = {
             contactName: 'Контактное лицо',
             contactNamePlaceholder: 'ФИО',
             phone: 'Телефон',
-            phonePlaceholder: '+7 ...',
+            phonePlaceholder: '+7 (___) ___-__-__',
             hours: 'Часы работы',
             hoursPlaceholder: 'например, Пн–Пт 09:00–18:00',
             comment: 'Комментарий к доставке',
