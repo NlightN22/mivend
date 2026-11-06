@@ -16,7 +16,7 @@ test.describe('counterparty INN guard (#225)', () => {
     test('bulk activation refuses a duplicate inn and a missing inn with a clear message', async ({
         page,
     }) => {
-        await page.goto('/bulk-operations/counterparty-activation');
+        await page.goto('/bulk-operations/activate-customers');
         await page.getByPlaceholder('Search company name…').fill('E2E INN');
         await expect(row(page, INN_TWIN_B.shortName)).toBeVisible({ timeout: 15000 });
         await expect(row(page, INN_TWIN_A.shortName)).toContainText('Activated');

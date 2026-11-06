@@ -1,6 +1,7 @@
 import { computed, type Ref } from 'vue';
 import type { AppSidebarItem, AppMobileNavItem, AppMobileSheetItem } from '@mivend/ui-kit';
 import { useAuthStore } from '../stores/auth';
+import { availableBulkOperations } from '../pages/bulk-operations/operations';
 
 // Navigation entries of the default layout, gated by the same permissions as the pages they open.
 export function useNavItems(approvalsBadgeCount: Ref<number>) {
@@ -28,10 +29,8 @@ export function useNavItems(approvalsBadgeCount: Ref<number>) {
             { label: 'Approvals', path: '/approvals', badgeCount: approvalsBadgeCount.value },
             { label: 'Team', path: '/team' },
         );
-        // Issue #120 — gated on ManageCounterpartyPortalAccess, the new permission covering both
-        // this bulk-activation page and the Counterparty detail page's Portal Users tab.
-        if (authStore.hasPermission('ManageCounterpartyPortalAccess')) {
-            items.push({ label: 'Обработки', path: '/bulk-operations/counterparty-activation' });
+        if (availableBulkOperations(authStore.hasPermission).length) {
+            items.push({ label: 'Bulk operations', path: '/bulk-operations' });
         }
         // Gated on the same ManageAccessControl permission the Settings > Roles & Access page
         // itself checks — not a role-code allowlist, so granting/revoking this via the native

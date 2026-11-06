@@ -198,12 +198,25 @@ export const router = createRouter({
                     meta: { requiresAuth: true, title: 'Team' },
                 },
                 {
-                    // Intentionally a thin shell: a generic bulk-operations framework is deferred until more tabs need it.
+                    path: 'bulk-operations',
+                    name: 'bulk-operations',
+                    component: () => import('../pages/bulk-operations/BulkOperationsPage.vue'),
+                    meta: { requiresAuth: true, title: 'Bulk operations' },
+                },
+                {
                     path: 'bulk-operations/counterparty-activation',
-                    name: 'bulk-operations-counterparty-activation',
+                    redirect: '/bulk-operations/activate-customers',
+                },
+                {
+                    path: 'bulk-operations/activate-customers',
+                    name: 'bulk-operations-activate-customers',
                     component: () =>
                         import('../pages/bulk-operations/CounterpartyActivationPage.vue'),
-                    meta: { requiresAuth: true, title: 'Активация клиентов' },
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Activate customers',
+                        requiresAnyPermission: ['ManageCounterpartyPortalAccess'],
+                    },
                 },
                 ...[
                     { path: 'customers/new', title: 'New client' },

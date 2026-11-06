@@ -14,7 +14,7 @@ import {
 } from '../../api/counterpartyPortalAccess';
 import CounterpartyActivationDataTable from '../../components/bulk-operations/CounterpartyActivationDataTable.vue';
 
-// "Обработки" / "Активация клиентов" — issue #120. Same overall shape as
+// Bulk operations / Activate customers — issue #120. Same overall shape as
 // Settings > Users (UsersPage.vue, #119's own activation page): server-paginated candidates,
 // URL-synced filters, a client-side pending-change map applied as one real batch mutation on
 // Save (manager-table-standard's bulk pattern + #120's own carried-over "one batch mutation, not
@@ -191,7 +191,7 @@ async function applyPending(): Promise<void> {
 
 <template>
     <div class="counterparty-activation-page">
-        <h1 class="counterparty-activation-page__title">Активация клиентов</h1>
+        <h1 class="counterparty-activation-page__title">Activate customers</h1>
         <p class="counterparty-activation-page__subtitle">
             Filter counterparties, select rows, then choose an action. Changes stay pending until
             you Save — applied as one batch operation.
