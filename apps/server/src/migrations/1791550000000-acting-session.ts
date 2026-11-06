@@ -26,7 +26,7 @@ export class ActingSession1791550000000 implements MigrationInterface {
             `CREATE TABLE "acting_ticket" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "id" SERIAL NOT NULL, "uuid" uuid NOT NULL, "tokenHash" character varying NOT NULL, "administratorId" character varying NOT NULL, "parentSessionId" character varying NOT NULL, "counterpartyId" character varying NOT NULL, "customerId" character varying NOT NULL, "tradingPointId" character varying, "expiresAt" TIMESTAMP NOT NULL, "usedAt" TIMESTAMP, CONSTRAINT "UQ_acting_ticket_token_hash" UNIQUE ("tokenHash"), CONSTRAINT "PK_acting_ticket" PRIMARY KEY ("id"))`,
         );
         await queryRunner.query(
-            `CREATE UNIQUE INDEX "IDX_acting_ticket_uuid" ON "acting_ticket" ("uuid")`,
+            `CREATE UNIQUE INDEX "IDX_6f0111f0dcdcec6e14c35b218a" ON "acting_ticket" ("uuid")`,
         );
     }
 
