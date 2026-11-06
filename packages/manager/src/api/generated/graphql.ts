@@ -23,6 +23,12 @@ export type Scalars = {
     Upload: { input: any; output: any };
 };
 
+export type ActingTicketStart = {
+    expiresAt: Scalars['DateTime']['output'];
+    storefrontUrl: Scalars['String']['output'];
+    ticket: Scalars['String']['output'];
+};
+
 export type AddFulfillmentToOrderResult =
     | CreateFulfillmentError
     | EmptyOrderLineSelectionError
@@ -56,12 +62,6 @@ export type AddNoteToOrderInput = {
     id: Scalars['ID']['input'];
     isPublic: Scalars['Boolean']['input'];
     note: Scalars['String']['input'];
-};
-
-export type ActingTicketStart = {
-    expiresAt: Scalars['DateTime']['output'];
-    storefrontUrl: Scalars['String']['output'];
-    ticket: Scalars['String']['output'];
 };
 
 export type Address = Node & {
@@ -2005,6 +2005,11 @@ export type CustomFields = {
     TaxRate: Array<CustomFieldConfig>;
     User: Array<CustomFieldConfig>;
     Zone: Array<CustomFieldConfig>;
+};
+
+export type CustomProductMappings = {
+    fullName: Maybe<Scalars['String']['output']>;
+    oemCodes: Maybe<Array<Scalars['String']['output']>>;
 };
 
 export type Customer = Node & {
@@ -4273,7 +4278,6 @@ export type Mutation = {
     setCounterpartyBranchOverride: Scalars['Boolean']['output'];
     setCreditTermLimit: CreditTermLimit;
     setCustomerForDraftOrder: SetCustomerForDraftOrderResult;
-    startActingSession: ActingTicketStart;
     setDepartmentBranch: Scalars['Boolean']['output'];
     /** Sets the billing address for a draft Order */
     setDraftOrderBillingAddress: Order;
@@ -4305,6 +4309,7 @@ export type Mutation = {
     settleRefund: SettleRefundResult;
     /** Cuts the short lines to what stock covers and records the rest as shortfall. */
     splitOrderLinesByStock: Array<OrderLineSplitOutcome>;
+    startActingSession: ActingTicketStart;
     transitionFulfillmentToState: TransitionFulfillmentToStateResult;
     transitionOrderToState: Maybe<TransitionOrderToStateResult>;
     transitionPaymentToState: TransitionPaymentToStateResult;
@@ -5302,14 +5307,14 @@ export type MutationSplitOrderLinesByStockArgs = {
     orderId: Scalars['ID']['input'];
 };
 
-export type MutationTransitionFulfillmentToStateArgs = {
-    id: Scalars['ID']['input'];
-    state: Scalars['String']['input'];
-};
-
 export type MutationStartActingSessionArgs = {
     counterpartyId: Scalars['ID']['input'];
     tradingPointId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type MutationTransitionFulfillmentToStateArgs = {
+    id: Scalars['ID']['input'];
+    state: Scalars['String']['input'];
 };
 
 export type MutationTransitionOrderToStateArgs = {
@@ -5771,6 +5776,8 @@ export type OrderContractOption = {
 };
 
 export type OrderCustomFields = {
+    actingAdministratorId: Maybe<Scalars['String']['output']>;
+    actingSessionId: Maybe<Scalars['String']['output']>;
     branchId: Maybe<Scalars['String']['output']>;
     cancelReason: Maybe<Scalars['String']['output']>;
     cancelRefusalReason: Maybe<Scalars['String']['output']>;
@@ -5811,6 +5818,8 @@ export type OrderDeliveryMethod = 'COURIER' | 'PICKUP';
 export type OrderFilterParameter = {
     _and?: InputMaybe<Array<OrderFilterParameter>>;
     _or?: InputMaybe<Array<OrderFilterParameter>>;
+    actingAdministratorId?: InputMaybe<StringOperators>;
+    actingSessionId?: InputMaybe<StringOperators>;
     /** An order is active as long as the payment process has not been completed */
     active?: InputMaybe<BooleanOperators>;
     aggregateOrderId?: InputMaybe<IdOperators>;
@@ -6103,6 +6112,8 @@ export type OrderReservationDetail = {
 };
 
 export type OrderSortParameter = {
+    actingAdministratorId?: InputMaybe<SortOrder>;
+    actingSessionId?: InputMaybe<SortOrder>;
     aggregateOrderId?: InputMaybe<SortOrder>;
     branchId?: InputMaybe<SortOrder>;
     cancelReason?: InputMaybe<SortOrder>;
@@ -6736,6 +6747,16 @@ export type PriceEntryInput = {
 export type PriceRange = {
     max: Scalars['Money']['output'];
     min: Scalars['Money']['output'];
+};
+
+export type PriceRangeBucket = {
+    count: Scalars['Int']['output'];
+    to: Scalars['Int']['output'];
+};
+
+export type PriceRangeInput = {
+    max: Scalars['Int']['input'];
+    min: Scalars['Int']['input'];
 };
 
 export type PriceType = {
@@ -8680,6 +8701,10 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
+    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
+    inStock?: InputMaybe<Scalars['Boolean']['input']>;
+    priceRange?: InputMaybe<PriceRangeInput>;
+    priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
     take?: InputMaybe<Scalars['Int']['input']>;
@@ -8696,8 +8721,16 @@ export type SearchResponse = {
     items: Array<SearchResult>;
     manufacturerCodeMatches: Maybe<SearchCodeMatches>;
     partNumberMatches: Maybe<SearchCodeMatches>;
+    prices: SearchResponsePriceData;
     skuMatches: Maybe<SearchCodeMatches>;
     totalItems: Scalars['Int']['output'];
+};
+
+export type SearchResponsePriceData = {
+    buckets: Array<PriceRangeBucket>;
+    bucketsWithTax: Array<PriceRangeBucket>;
+    range: PriceRange;
+    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -8708,10 +8741,14 @@ export type SearchResult = {
     /** An array of ids of the Collections in which this result appears */
     collectionIds: Array<Scalars['ID']['output']>;
     currencyCode: CurrencyCode;
+    /** @deprecated Use customProductMappings or customProductVariantMappings */
+    customMappings: CustomProductMappings;
+    customProductMappings: CustomProductMappings;
     description: Scalars['String']['output'];
     enabled: Scalars['Boolean']['output'];
     facetIds: Array<Scalars['ID']['output']>;
     facetValueIds: Array<Scalars['ID']['output']>;
+    inStock: Maybe<Scalars['Boolean']['output']>;
     price: SearchResultPrice;
     priceWithTax: SearchResultPrice;
     productAsset: Maybe<SearchResultAsset>;
@@ -10025,6 +10062,62 @@ export type ChangeOwnPasswordMutationVariables = Exact<{
 }>;
 
 export type ChangeOwnPasswordMutation = { updateActiveAdministrator: { id: string } };
+
+export type ActingCounterpartiesQueryVariables = Exact<{
+    search: Scalars['String']['input'];
+}>;
+
+export type ActingCounterpartiesQuery = {
+    counterparties: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            shortName: string;
+            legalName: string;
+            inn: string | null;
+            priceType: string | null;
+            linkedCustomerId: string | null;
+            tradingPoints: Array<{
+                id: string;
+                name: string;
+                address: string;
+                isActive: boolean;
+                customerStatus: string;
+            }>;
+        }>;
+    };
+};
+
+export type ActingCounterpartyQueryVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type ActingCounterpartyQuery = {
+    counterparty: {
+        id: string;
+        shortName: string;
+        legalName: string;
+        inn: string | null;
+        priceType: string | null;
+        linkedCustomerId: string | null;
+        tradingPoints: Array<{
+            id: string;
+            name: string;
+            address: string;
+            isActive: boolean;
+            customerStatus: string;
+        }>;
+    } | null;
+};
+
+export type StartActingSessionMutationVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type StartActingSessionMutation = {
+    startActingSession: { ticket: string; storefrontUrl: string; expiresAt: any };
+};
 
 export type PendingApprovalsBadgeCountQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -11482,73 +11575,6 @@ export type RecomputeOrderChecksMutation = {
     }>;
 };
 
-export type ActingCounterpartiesQueryVariables = Exact<{
-    search: Scalars['String']['input'];
-}>;
-
-export type ActingCounterpartiesQuery = {
-    counterparties: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            shortName: string;
-            legalName: string;
-            inn: string | null;
-            priceType: string | null;
-            linkedCustomerId: string | null;
-            tradingPoints: Array<{
-                id: string;
-                name: string;
-                address: string;
-                isActive: boolean;
-                customerStatus: string;
-            }>;
-        }>;
-    };
-};
-
-export type ActingCounterpartyQueryVariables = Exact<{
-    id: Scalars['ID']['input'];
-}>;
-
-export type ActingCounterpartyQuery = {
-    counterparty: {
-        id: string;
-        shortName: string;
-        legalName: string;
-        inn: string | null;
-        priceType: string | null;
-        linkedCustomerId: string | null;
-        tradingPoints: Array<{
-            id: string;
-            name: string;
-            address: string;
-            isActive: boolean;
-            customerStatus: string;
-        }>;
-    } | null;
-};
-
-export type StartActingSessionMutationVariables = Exact<{
-    counterpartyId: Scalars['ID']['input'];
-    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-export type StartActingSessionMutation = {
-    startActingSession: { ticket: string; storefrontUrl: string; expiresAt: any };
-};
-
-export type RequestPriceAdjustmentMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-    orderLineId: Scalars['ID']['input'];
-    requestedPrice: Scalars['Int']['input'];
-    justification?: InputMaybe<Scalars['String']['input']>;
-}>;
-
-export type RequestPriceAdjustmentMutation = {
-    requestPriceAdjustment: { decision: string; approvalRequestId: string | null };
-};
-
 export type SetOrderDeliveryMutationVariables = Exact<{
     orderId: Scalars['ID']['input'];
     method: OrderDeliveryMethod;
@@ -12056,6 +12082,17 @@ export type PaymentsPageQuery = {
             counterpartyId: string | null;
         }>;
     };
+};
+
+export type RequestPriceAdjustmentMutationVariables = Exact<{
+    orderId: Scalars['ID']['input'];
+    orderLineId: Scalars['ID']['input'];
+    requestedPrice: Scalars['Int']['input'];
+    justification?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type RequestPriceAdjustmentMutation = {
+    requestPriceAdjustment: { decision: string; approvalRequestId: string | null };
 };
 
 export type PriceTypeGapCounterpartiesQueryVariables = Exact<{
@@ -13213,6 +13250,65 @@ export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ChangeOwnPasswordMutation,
     ChangeOwnPasswordMutationVariables
+>;
+export const ActingCounterpartiesDocument = new TypedDocumentString(`
+    query ActingCounterparties($search: String!) {
+  counterparties(options: {search: $search, take: 20, status: "active"}) {
+    totalItems
+    items {
+      id
+      shortName
+      legalName
+      inn
+      priceType
+      linkedCustomerId
+      tradingPoints {
+        id
+        name
+        address
+        isActive
+        customerStatus
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ActingCounterpartiesQuery,
+    ActingCounterpartiesQueryVariables
+>;
+export const ActingCounterpartyDocument = new TypedDocumentString(`
+    query ActingCounterparty($id: ID!) {
+  counterparty(id: $id) {
+    id
+    shortName
+    legalName
+    inn
+    priceType
+    linkedCustomerId
+    tradingPoints {
+      id
+      name
+      address
+      isActive
+      customerStatus
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<ActingCounterpartyQuery, ActingCounterpartyQueryVariables>;
+export const StartActingSessionDocument = new TypedDocumentString(`
+    mutation StartActingSession($counterpartyId: ID!, $tradingPointId: ID) {
+  startActingSession(
+    counterpartyId: $counterpartyId
+    tradingPointId: $tradingPointId
+  ) {
+    ticket
+    storefrontUrl
+    expiresAt
+  }
+}
+    `) as unknown as TypedDocumentString<
+    StartActingSessionMutation,
+    StartActingSessionMutationVariables
 >;
 export const PendingApprovalsBadgeCountDocument = new TypedDocumentString(`
     query PendingApprovalsBadgeCount {
@@ -14709,81 +14805,6 @@ export const RecomputeOrderChecksDocument = new TypedDocumentString(`
     RecomputeOrderChecksMutation,
     RecomputeOrderChecksMutationVariables
 >;
-export const ActingCounterpartiesDocument = new TypedDocumentString(`
-    query ActingCounterparties($search: String!) {
-  counterparties(options: {search: $search, take: 20, status: "active"}) {
-    totalItems
-    items {
-      id
-      shortName
-      legalName
-      inn
-      priceType
-      linkedCustomerId
-      tradingPoints {
-        id
-        name
-        address
-        isActive
-        customerStatus
-      }
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<
-    ActingCounterpartiesQuery,
-    ActingCounterpartiesQueryVariables
->;
-export const ActingCounterpartyDocument = new TypedDocumentString(`
-    query ActingCounterparty($id: ID!) {
-  counterparty(id: $id) {
-    id
-    shortName
-    legalName
-    inn
-    priceType
-    linkedCustomerId
-    tradingPoints {
-      id
-      name
-      address
-      isActive
-      customerStatus
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<ActingCounterpartyQuery, ActingCounterpartyQueryVariables>;
-export const StartActingSessionDocument = new TypedDocumentString(`
-    mutation StartActingSession($counterpartyId: ID!, $tradingPointId: ID) {
-  startActingSession(
-    counterpartyId: $counterpartyId
-    tradingPointId: $tradingPointId
-  ) {
-    ticket
-    storefrontUrl
-    expiresAt
-  }
-}
-    `) as unknown as TypedDocumentString<
-    StartActingSessionMutation,
-    StartActingSessionMutationVariables
->;
-export const RequestPriceAdjustmentDocument = new TypedDocumentString(`
-    mutation RequestPriceAdjustment($orderId: ID!, $orderLineId: ID!, $requestedPrice: Int!, $justification: String) {
-  requestPriceAdjustment(
-    orderId: $orderId
-    orderLineId: $orderLineId
-    requestedPrice: $requestedPrice
-    justification: $justification
-  ) {
-    decision
-    approvalRequestId
-  }
-}
-    `) as unknown as TypedDocumentString<
-    RequestPriceAdjustmentMutation,
-    RequestPriceAdjustmentMutationVariables
->;
 export const SetOrderDeliveryDocument = new TypedDocumentString(`
     mutation SetOrderDelivery($orderId: ID!, $method: OrderDeliveryMethod!, $tradingPointId: ID) {
   setOrderDelivery(
@@ -15293,6 +15314,22 @@ export const PaymentsPageDocument = new TypedDocumentString(`
   proformaInvoiceId
   counterpartyId
 }`) as unknown as TypedDocumentString<PaymentsPageQuery, PaymentsPageQueryVariables>;
+export const RequestPriceAdjustmentDocument = new TypedDocumentString(`
+    mutation RequestPriceAdjustment($orderId: ID!, $orderLineId: ID!, $requestedPrice: Int!, $justification: String) {
+  requestPriceAdjustment(
+    orderId: $orderId
+    orderLineId: $orderLineId
+    requestedPrice: $requestedPrice
+    justification: $justification
+  ) {
+    decision
+    approvalRequestId
+  }
+}
+    `) as unknown as TypedDocumentString<
+    RequestPriceAdjustmentMutation,
+    RequestPriceAdjustmentMutationVariables
+>;
 export const PriceTypeGapCounterpartiesDocument = new TypedDocumentString(`
     query PriceTypeGapCounterparties($take: Int, $skip: Int, $search: String) {
   priceTypeGapCounterparties(take: $take, skip: $skip, search: $search) {

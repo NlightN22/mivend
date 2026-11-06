@@ -23,6 +23,14 @@ export type Scalars = {
     Upload: { input: any; output: any };
 };
 
+export type ActingSessionToken = {
+    administratorId: Scalars['ID']['output'];
+    counterpartyId: Scalars['ID']['output'];
+    expiresAt: Scalars['DateTime']['output'];
+    token: Scalars['String']['output'];
+    tradingPointId?: Maybe<Scalars['ID']['output']>;
+};
+
 export type ActiveOrderResult = NoActiveOrderError | Order;
 
 export type AddItemInput = {
@@ -822,6 +830,11 @@ export type CustomFieldConfig =
     | StringCustomFieldConfig
     | StructCustomFieldConfig
     | TextCustomFieldConfig;
+
+export type CustomProductMappings = {
+    fullName?: Maybe<Scalars['String']['output']>;
+    oemCodes?: Maybe<Array<Scalars['String']['output']>>;
+};
 
 export type Customer = Node & {
     addresses?: Maybe<Array<Address>>;
@@ -1876,6 +1889,8 @@ export type Mutation = {
     endAllSessions: Scalars['Boolean']['output'];
     endOtherSessions: Scalars['Boolean']['output'];
     endSession: Scalars['Boolean']['output'];
+    exchangeActingTicket: ActingSessionToken;
+    finishActingSession: Scalars['Boolean']['output'];
     /** Payment request under an own active customer contract; a repeated idempotencyKey returns the same document. */
     issueContractProformaInvoice: ProformaInvoice;
     /**
@@ -2058,6 +2073,10 @@ export type MutationDeleteCustomerAddressArgs = {
 
 export type MutationEndSessionArgs = {
     id: Scalars['ID']['input'];
+};
+
+export type MutationExchangeActingTicketArgs = {
+    ticket: Scalars['String']['input'];
 };
 
 export type MutationIssueContractProformaInvoiceArgs = {
@@ -3146,6 +3165,11 @@ export type PriceRange = {
     min: Scalars['Money']['output'];
 };
 
+export type PriceRangeBucket = {
+    count: Scalars['Int']['output'];
+    to: Scalars['Int']['output'];
+};
+
 export type PriceRangeInput = {
     max: Scalars['Int']['input'];
     min: Scalars['Int']['input'];
@@ -3869,7 +3893,9 @@ export type SearchInput = {
     collectionSlugs?: InputMaybe<Array<Scalars['String']['input']>>;
     facetValueFilters?: InputMaybe<Array<FacetValueFilterInput>>;
     groupByProduct?: InputMaybe<Scalars['Boolean']['input']>;
+    groupBySKU?: InputMaybe<Scalars['Boolean']['input']>;
     inStock?: InputMaybe<Scalars['Boolean']['input']>;
+    priceRange?: InputMaybe<PriceRangeInput>;
     priceRangeWithTax?: InputMaybe<PriceRangeInput>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<SearchResultSortParameter>;
@@ -3887,8 +3913,16 @@ export type SearchResponse = {
     items: Array<SearchResult>;
     manufacturerCodeMatches?: Maybe<SearchCodeMatches>;
     partNumberMatches?: Maybe<SearchCodeMatches>;
+    prices: SearchResponsePriceData;
     skuMatches?: Maybe<SearchCodeMatches>;
     totalItems: Scalars['Int']['output'];
+};
+
+export type SearchResponsePriceData = {
+    buckets: Array<PriceRangeBucket>;
+    bucketsWithTax: Array<PriceRangeBucket>;
+    range: PriceRange;
+    rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -3896,6 +3930,9 @@ export type SearchResult = {
     collectionIds: Array<Scalars['ID']['output']>;
     compareAtPrice?: Maybe<Scalars['Int']['output']>;
     currencyCode: CurrencyCode;
+    /** @deprecated Use customProductMappings or customProductVariantMappings */
+    customMappings: CustomProductMappings;
+    customProductMappings: CustomProductMappings;
     customerPrice?: Maybe<Scalars['Int']['output']>;
     description: Scalars['String']['output'];
     discountTiers: Array<DiscountTier>;
@@ -3903,6 +3940,7 @@ export type SearchResult = {
     facetValueIds: Array<Scalars['ID']['output']>;
     /** Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels. */
     galleryPreviews: Array<Scalars['String']['output']>;
+    inStock?: Maybe<Scalars['Boolean']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
     /** Why the hit matched; the internal backend fills it for article matches only. */
     matchReasons?: Maybe<Array<Scalars['String']['output']>>;
@@ -5409,6 +5447,24 @@ export type SettlementBalancesQuery = {
     }>;
 };
 
+export type ExchangeActingTicketMutationVariables = Exact<{
+    ticket: Scalars['String']['input'];
+}>;
+
+export type ExchangeActingTicketMutation = {
+    exchangeActingTicket: {
+        token: string;
+        expiresAt: any;
+        administratorId: string;
+        counterpartyId: string;
+        tradingPointId?: string | null;
+    };
+};
+
+export type FinishActingSessionMutationVariables = Exact<{ [key: string]: never }>;
+
+export type FinishActingSessionMutation = { finishActingSession: boolean };
+
 export type ActiveCustomerForAuthQueryVariables = Exact<{ [key: string]: never }>;
 
 export type ActiveCustomerForAuthQuery = {
@@ -6853,6 +6909,28 @@ export const SettlementBalancesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<SettlementBalancesQuery, SettlementBalancesQueryVariables>;
+export const ExchangeActingTicketDocument = new TypedDocumentString(`
+    mutation ExchangeActingTicket($ticket: String!) {
+  exchangeActingTicket(ticket: $ticket) {
+    token
+    expiresAt
+    administratorId
+    counterpartyId
+    tradingPointId
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeActingTicketMutation,
+    ExchangeActingTicketMutationVariables
+>;
+export const FinishActingSessionDocument = new TypedDocumentString(`
+    mutation FinishActingSession {
+  finishActingSession
+}
+    `) as unknown as TypedDocumentString<
+    FinishActingSessionMutation,
+    FinishActingSessionMutationVariables
+>;
 export const ActiveCustomerForAuthDocument = new TypedDocumentString(`
     query ActiveCustomerForAuth {
   activeCustomer {
@@ -7234,48 +7312,3 @@ export const OrderStatusesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<OrderStatusesQuery, OrderStatusesQueryVariables>;
-
-export type MutationExchangeActingTicketArgs = {
-    ticket: Scalars['String']['input'];
-};
-
-export type ExchangeActingTicketMutationVariables = Exact<{
-    ticket: Scalars['String']['input'];
-}>;
-
-export type ExchangeActingTicketMutation = {
-    exchangeActingTicket: {
-        token: string;
-        expiresAt: any;
-        administratorId: string;
-        counterpartyId: string;
-        tradingPointId?: string | null;
-    };
-};
-
-export type FinishActingSessionMutationVariables = Exact<{ [key: string]: never }>;
-
-export type FinishActingSessionMutation = { finishActingSession: boolean };
-
-export const ExchangeActingTicketDocument = new TypedDocumentString(`
-    mutation ExchangeActingTicket($ticket: String!) {
-  exchangeActingTicket(ticket: $ticket) {
-    token
-    expiresAt
-    administratorId
-    counterpartyId
-    tradingPointId
-  }
-}
-    `) as unknown as TypedDocumentString<
-    ExchangeActingTicketMutation,
-    ExchangeActingTicketMutationVariables
->;
-export const FinishActingSessionDocument = new TypedDocumentString(`
-    mutation FinishActingSession {
-  finishActingSession
-}
-    `) as unknown as TypedDocumentString<
-    FinishActingSessionMutation,
-    FinishActingSessionMutationVariables
->;
