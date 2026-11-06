@@ -8,17 +8,25 @@ const emit = defineEmits<{ add: [product: ProductSearchResult] }>();
 const term = ref('');
 const results = ref<ProductSearchResult[]>([]);
 const showResults = ref(false);
+const searchError = ref('');
 let searchToken = 0;
 
 watch(term, async value => {
     showResults.value = value.trim().length > 0;
+    searchError.value = '';
     if (!value.trim()) {
         results.value = [];
         return;
     }
     const token = ++searchToken;
-    const found = await searchProducts(value);
-    if (token === searchToken) results.value = found;
+    try {
+        const found = await searchProducts(value);
+        if (token === searchToken) results.value = found;
+    } catch (e) {
+        if (token !== searchToken) return;
+        results.value = [];
+        searchError.value = e instanceof Error ? e.message : 'Search failed';
+    }
 });
 
 function addProduct(product: ProductSearchResult): void {
@@ -38,7 +46,8 @@ function addProduct(product: ProductSearchResult): void {
             @update:model-value="term = $event"
         />
         <ul v-if="showResults" class="item-search__results">
-            <li v-if="!results.length" class="item-search__empty">No products found</li>
+            <li v-if="searchError" class="item-search__empty">{{ searchError }}</li>
+            <li v-else-if="!results.length" class="item-search__empty">No products found</li>
             <li
                 v-for="product in results"
                 :key="product.productVariantId"
