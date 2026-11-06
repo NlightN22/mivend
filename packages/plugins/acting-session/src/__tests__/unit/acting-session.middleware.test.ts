@@ -3,13 +3,18 @@ import type { Request, Response } from 'express';
 
 import { ActingSessionMiddleware, bearerToken } from '../../acting-session.middleware';
 
-function run(headers: Record<string, string>, endDeadSession = vi.fn().mockResolvedValue(0)) {
+function run(
+    headers: Record<string, string>,
+    endDeadSession = vi.fn().mockResolvedValue(0),
+    onReq: (req: Request) => void = () => undefined,
+) {
     const middleware = new ActingSessionMiddleware(
         { endDeadSession } as never,
         { create: vi.fn().mockResolvedValue({}) } as never,
         { storefrontPublicUrl: '', sessionTtlMs: 1000 },
     );
     const req = { headers: { ...headers } } as unknown as Request;
+    onReq(req);
     const done = new Promise<unknown>(resolve => middleware.use(req, {} as Response, resolve));
     return { req, done, endDeadSession };
 }
@@ -19,6 +24,32 @@ describe('ActingSessionMiddleware', () => {
         const { req, done } = run({ 'x-acting-session': '1', cookie: 'session=real-customer' });
         await done;
         expect(req.headers.cookie).toBeUndefined();
+    });
+
+    it('detaches req.session on an acting request so a session write never reaches cookie-session', async () => {
+        const written: unknown[] = [];
+        const { req, done } = run(
+            { 'x-acting-session': '1', authorization: 'Bearer dead' },
+            undefined,
+            r =>
+                Object.defineProperty(r, 'session', {
+                    configurable: true,
+                    get: () => 'cookie-session',
+                    set: (v: unknown) => {
+                        written.push(v);
+                    },
+                }),
+        );
+        await done;
+        (req as unknown as { session: unknown }).session = { token: 'anon' };
+        expect(written).toEqual([]);
+        expect((req as unknown as { session: unknown }).session).toEqual({ token: 'anon' });
+    });
+
+    it('keeps req.session untouched on an ordinary storefront request', async () => {
+        const { req, done } = run({ cookie: 'session=real-customer' });
+        await done;
+        expect(Object.getOwnPropertyDescriptor(req, 'session')).toBeUndefined();
     });
 
     it('leaves the cookie of an ordinary storefront request untouched', async () => {

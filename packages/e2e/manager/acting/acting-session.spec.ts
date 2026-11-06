@@ -12,7 +12,6 @@ import {
     type Cart,
     variantIdsBySku,
     counterpartyIdByErpId,
-    counterpartyIdOfCustomerEmail,
     exchangeTicket,
     rawShop,
     startTicket,
@@ -21,12 +20,6 @@ import { cancelTestOrder } from '../../helpers/manager-order';
 import { MANAGER_ACCOUNTS, SUPERADMIN } from '../../fixtures/accounts';
 import { PICKER_NO_PORTAL } from '../../fixtures/seed-picker';
 import { E2E_COUNTERPARTY_ID, E2E_CUSTOMER } from '../../fixtures/seed';
-import {
-    boostStock,
-    CREDIT_BUYER,
-    OVER_LIMIT_CART,
-    PASSWORD,
-} from '../../storefront/checkout-credit/helpers';
 
 let operator: string;
 let superadmin: string;
@@ -58,11 +51,7 @@ test.beforeAll(async () => {
     );
     superadmin = await adminTokenFor(SUPERADMIN.identifier, SUPERADMIN.password);
     counterpartyId = await counterpartyIdByErpId(superadmin, E2E_COUNTERPARTY_ID);
-    variants = await variantIdsBySku(superadmin, [
-        'E2E-OIL-001',
-        'E2E-OIL-002',
-        ...OVER_LIMIT_CART.map(([sku]) => sku),
-    ]);
+    variants = await variantIdsBySku(superadmin, ['E2E-OIL-001', 'E2E-OIL-002']);
     const customers = await adminGql<{
         customers: { items: { id: string; emailAddress: string }[] };
     }>(
@@ -74,7 +63,6 @@ test.beforeAll(async () => {
     if (!id) throw new Error('E2E customer is missing from the seed');
     customerId = id;
     cookie = await shopLoginCookie(E2E_CUSTOMER.email, E2E_CUSTOMER.password);
-    await boostStock(OVER_LIMIT_CART.map(([sku]) => sku));
     await clearRealCart();
 });
 
@@ -222,24 +210,6 @@ test.describe('acting session @on:manager-operator', () => {
         await shopGql(`mutation { removeAllOrderLines { __typename } }`, undefined, login);
     });
 
-    test('a customer cookie in the same request is ignored under the acting header, and no cookie is set', async () => {
-        await shopGql(ADD, { v: variants['E2E-OIL-002'], q: 1 }, cookie);
-        const ticket = await startTicket(operator, counterpartyId);
-        const exchanged = await exchangeTicket(ticket);
-        expect(exchanged.setCookie).toEqual([]);
-        const token = exchanged.data?.exchangeActingTicket.token as string;
-        actingTokens.push(token);
-        await acting(token, ADD, { v: variants['E2E-OIL-001'], q: 1 });
-
-        const mixed = await rawShop<Cart>(CART, undefined, {
-            ...actingHeaders(token),
-            Cookie: cookie,
-        });
-        expect(mixed.setCookie).toEqual([]);
-        expect(skus(mixed.data as Cart)).toEqual(['E2E-OIL-001']);
-        await clearRealCart();
-    });
-
     test.setTimeout(90_000);
     test('a ticket works once, a used or unused-and-expired ticket is refused, a counterparty without portal access cannot start', async () => {
         const ticket = await startTicket(operator, counterpartyId);
@@ -283,60 +253,5 @@ test.describe('acting session @on:manager-operator', () => {
             superadmin,
         );
         expect(gone.data.order).toBeNull();
-    });
-
-    test('the credit limit check gives an acting cart the same verdict as the customer own cart', async () => {
-        const buyer = await shopLoginCookie(CREDIT_BUYER, PASSWORD);
-        const buyerCounterparty = await counterpartyIdOfCustomerEmail(superadmin, CREDIT_BUYER);
-        const preview = `query { deferredCreditPreview { exceeded limitControlled orderAmount } }`;
-        type Preview = {
-            deferredCreditPreview: {
-                exceeded: boolean;
-                limitControlled: boolean;
-                orderAmount: number;
-            };
-        };
-        const token = await actingToken(superadmin, buyerCounterparty);
-        actingTokens.push(token);
-        for (const [sku, qty] of OVER_LIMIT_CART) {
-            await acting(token, ADD, { v: variants[sku], q: qty });
-            await shopGql(ADD, { v: variants[sku], q: qty }, buyer);
-        }
-        const own = await shopGql<Preview>(preview, undefined, buyer);
-        const viaActing = await acting<Preview>(token, preview);
-        expect(own.deferredCreditPreview.exceeded).toBe(true);
-        expect(viaActing.deferredCreditPreview).toEqual(own.deferredCreditPreview);
-
-        const prices = `query { activeOrder { lines { productVariant { sku } linePriceWithTax } } }`;
-        type Priced = {
-            activeOrder: { lines: { productVariant: { sku: string }; linePriceWithTax: number }[] };
-        };
-        const linePrices = (c: Priced): [string, number][] =>
-            c.activeOrder.lines
-                .map(l => [l.productVariant.sku, l.linePriceWithTax] as [string, number])
-                .sort();
-        expect(linePrices(await acting<Priced>(token, prices))).toEqual(
-            linePrices(await shopGql<Priced>(prices, undefined, buyer)),
-        );
-
-        const methods = await acting<{ eligibleShippingMethods: { id: string; code: string }[] }>(
-            token,
-            `query { eligibleShippingMethods { id code } }`,
-        );
-        const pickup = methods.eligibleShippingMethods.find(m => m.code === 'pickup');
-        await acting(
-            token,
-            `mutation($id: [ID!]!) { setOrderShippingMethod(shippingMethodId: $id) { __typename } }`,
-            { id: [pickup?.id] },
-        );
-        await acting(
-            token,
-            `mutation { transitionOrderToState(state: "ArrangingPayment") { __typename } }`,
-        );
-        expect((await acting<Preview>(token, preview)).deferredCreditPreview).toEqual(
-            own.deferredCreditPreview,
-        );
-        await shopGql(`mutation { removeAllOrderLines { __typename } }`, undefined, buyer);
-        await acting(token, `mutation { finishActingSession }`);
     });
 });

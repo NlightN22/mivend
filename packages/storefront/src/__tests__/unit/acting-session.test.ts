@@ -41,13 +41,13 @@ describe('acting ticket capture', () => {
         expect(takeActingTicket()).toBeNull();
     });
 
-    it('falls back to the query and ignores other paths', () => {
+    it('ignores a query-string ticket and other paths', () => {
         const hist = { state: null, replaceState: vi.fn() } as unknown as History;
         captureActingTicket(
             { pathname: '/acting', hash: '', search: '?ticket=q1' } as Location,
             hist,
         );
-        expect(takeActingTicket()).toBe('q1');
+        expect(takeActingTicket()).toBeNull();
         captureActingTicket(
             { pathname: '/catalog', hash: '#ticket=x', search: '' } as Location,
             hist,

@@ -16,7 +16,7 @@ const binding = {
     tradingPointId: 'tp-1',
 };
 
-function setup(over: { admin?: unknown; target?: unknown; ended?: number } = {}) {
+function setup(over: { admin?: unknown; target?: unknown; ended?: number; url?: string } = {}) {
     const save = vi.fn(async (entity: unknown) => entity);
     const connection = {
         getRepository: (_ctx: unknown, entity: { name: string }) =>
@@ -43,7 +43,7 @@ function setup(over: { admin?: unknown; target?: unknown; ended?: number } = {})
         tickets as never,
         liveness as never,
         carts as never,
-        { storefrontPublicUrl: 'https://shop.example', sessionTtlMs: 5000 },
+        { storefrontPublicUrl: over.url ?? 'https://shop.example', sessionTtlMs: 5000 },
     );
     return { service, save, tickets, eligibility, carts };
 }
@@ -58,6 +58,14 @@ describe('ActingSessionService', () => {
 
         expect(result).toMatchObject({ ticket: 'tk', storefrontUrl: 'https://shop.example' });
         expect(tickets.issue).toHaveBeenCalledWith(managerCtx, binding);
+    });
+
+    it('fails before issuing a ticket when the storefront URL is not configured', async () => {
+        const { service, tickets } = setup({ url: '' });
+        await expect(service.start(managerCtx, 'cp-1', null)).rejects.toThrow(
+            'STOREFRONT_PUBLIC_URL',
+        );
+        expect(tickets.issue).not.toHaveBeenCalled();
     });
 
     it('refuses to start without an administrator behind the session', async () => {

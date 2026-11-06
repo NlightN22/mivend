@@ -102,12 +102,15 @@ describe('TradingPointService in an acting session', () => {
         expect(rawQuery).not.toHaveBeenCalled();
     });
 
-    it('falls back to the customer preference when the manager chose no point', async () => {
+    it('falls back to a read-only lookup of the customer preference when the manager chose no point', async () => {
         get.mockResolvedValue({ administratorId: '7', tradingPointId: null });
-        rawQuery.mockResolvedValue([[{ tpid: '7' }], 1]);
+        rawQuery.mockResolvedValue([{ tpid: '7' }]);
         findOne.mockResolvedValue({ id: '7' });
 
         expect(await service.getPreferredForCustomer({} as RequestContext, 2)).toEqual({ id: '7' });
+        const sql = String(rawQuery.mock.calls[0][0]);
+        expect(sql).toMatch(/^\s*SELECT/);
+        expect(sql).not.toMatch(/UPDATE/i);
     });
 
     it('stores a point change on the session and never on the customer', async () => {

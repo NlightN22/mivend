@@ -2,13 +2,11 @@ export const ACTING_ROUTE = '/acting';
 
 let pendingTicket: string | null = null;
 
-// The ticket is taken from the fragment (preferred) or query and stripped from the address bar
-// before anything else can read, log or share it.
+// Only the fragment is accepted: a query string would reach access logs and the Referer header.
+// The address bar is stripped before anything else can read or share it.
 export function captureActingTicket(loc: Location = location, hist: History = history): void {
     if (loc.pathname !== ACTING_ROUTE) return;
-    const fromHash = new URLSearchParams(loc.hash.replace(/^#/, '')).get('ticket');
-    const fromQuery = new URLSearchParams(loc.search).get('ticket');
-    pendingTicket = fromHash || fromQuery || null;
+    pendingTicket = new URLSearchParams(loc.hash.replace(/^#/, '')).get('ticket') || null;
     hist.replaceState(hist.state, '', ACTING_ROUTE);
 }
 

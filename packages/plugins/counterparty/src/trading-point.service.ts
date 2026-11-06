@@ -70,6 +70,8 @@ export interface TradingPointUpsertPayload {
     }>;
 }
 
+type TpRow = { tpid: string | null };
+
 @Injectable()
 export class TradingPointService {
     constructor(
@@ -387,32 +389,30 @@ export class TradingPointService {
         });
     }
 
-    // Self-heals a missing/inactive/hidden preferred point (first active one wins); the postgres
-    // driver returns [rows, rowCount] for UPDATE, hence rows[0][0].
+    // Self-heals a missing/inactive/hidden preferred point (first active one wins); an acting session only reads it.
     async getPreferredForCustomer(
         ctx: RequestContext,
         customerId: ID,
     ): Promise<TradingPoint | null> {
-        // An acting session's point is session-scoped and the customer's own preference is neither read nor healed.
-        const sessionPointId = (await this.actingContext?.get(ctx))?.tradingPointId;
-        if (sessionPointId) return this.findById(ctx, sessionPointId);
-        const rows = await ctxQuery<[Array<{ tpid: string | null }>, number]>(
+        const acting = await this.actingContext?.get(ctx);
+        if (acting?.tradingPointId) return this.findById(ctx, acting.tradingPointId);
+        const pick = `COALESCE(
+                 (SELECT tp.id::text FROM trading_point tp WHERE tp.id::text = cu."customFieldsPreferredtradingpointid"
+                    AND tp."isActive" AND tp."customerStatus" = 'active'),
+                 (SELECT tp.id::text FROM trading_point tp WHERE tp."counterpartyId"::text = cu."customFieldsCounterpartyid"::text
+                    AND tp."isActive" AND tp."customerStatus" = 'active' ORDER BY tp.name, tp.id LIMIT 1),
+                 cu."customFieldsPreferredtradingpointid")`;
+        const rows = await ctxQuery<TpRow[] | [TpRow[], number]>(
             this.connection,
             ctx,
-            `UPDATE customer cu SET "customFieldsPreferredtradingpointid" = COALESCE(
-                 (SELECT tp.id::text FROM trading_point tp
-                  WHERE tp.id::text = cu."customFieldsPreferredtradingpointid"
-                    AND tp."isActive" AND tp."customerStatus" = 'active'),
-                 (SELECT tp.id::text FROM trading_point tp
-                  WHERE tp."counterpartyId"::text = cu."customFieldsCounterpartyid"::text
-                    AND tp."isActive" AND tp."customerStatus" = 'active'
-                  ORDER BY tp.name, tp.id LIMIT 1),
-                 cu."customFieldsPreferredtradingpointid")
-             WHERE cu.id = $1
-             RETURNING cu."customFieldsPreferredtradingpointid" AS tpid`,
+            acting
+                ? `SELECT ${pick} AS tpid FROM customer cu WHERE cu.id = $1`
+                : `UPDATE customer cu SET "customFieldsPreferredtradingpointid" = ${pick}
+                   WHERE cu.id = $1 RETURNING cu."customFieldsPreferredtradingpointid" AS tpid`,
             [customerId],
         );
-        const tpId: string | null | undefined = rows[0]?.[0]?.tpid;
+        // UPDATE returns [rows, rowCount] from the postgres driver, SELECT a plain row list.
+        const tpId = (acting ? (rows as TpRow[]) : (rows as [TpRow[], number])[0])[0]?.tpid;
         if (!tpId) return null;
         return this.findById(ctx, tpId);
     }

@@ -15,8 +15,20 @@ export function bearerToken(header: string | undefined): string | undefined {
     return match?.[1];
 }
 
-// Vendure reads the cookie before the bearer token. cookie-session parses lazily, so dropping the header here
-// keeps a real customer's cookie out of an acting tab and leaves nothing to write back.
+// Vendure reads the cookie before the bearer token, so the header is dropped. A dead bearer token still makes core
+// AuthGuard write a session token to req.session; a detached object keeps cookie-session from emitting Set-Cookie.
+export function detachCookieSession(req: Request): void {
+    let detached: unknown = {};
+    Object.defineProperty(req, 'session', {
+        configurable: true,
+        enumerable: true,
+        get: () => detached,
+        set: (value: unknown) => {
+            detached = value;
+        },
+    });
+}
+
 @Injectable()
 export class ActingSessionMiddleware implements NestMiddleware {
     constructor(
@@ -26,7 +38,10 @@ export class ActingSessionMiddleware implements NestMiddleware {
     ) {}
 
     use(req: Request, _res: Response, next: NextFunction): void {
-        if (req.headers[ACTING_HEADER] !== undefined) delete req.headers.cookie;
+        if (req.headers[ACTING_HEADER] !== undefined) {
+            delete req.headers.cookie;
+            detachCookieSession(req);
+        }
         const token = bearerToken(req.headers.authorization);
         if (!token) return next();
         this.requestContextService

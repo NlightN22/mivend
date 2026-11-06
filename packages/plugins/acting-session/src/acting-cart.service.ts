@@ -48,14 +48,14 @@ export class ActingCartService {
     }
 
     deleteForSession(ctx: RequestContext, sessionId: string): Promise<number> {
-        return this.deleteWhere(ctx, '"customFieldsActingsessionid" = $1', [sessionId]);
+        return this.deleteWhere(ctx, n => `"customFieldsActingsessionid" = $${n}`, [sessionId]);
     }
 
     deleteAbandoned(ctx: RequestContext): Promise<number> {
         const cutoff = new Date(Date.now() - (this.options.cartTtlMs ?? CART_TTL_DEFAULT_MS));
         return this.deleteWhere(
             ctx,
-            '"customFieldsActingsessionid" IS NOT NULL AND "updatedAt" < $1',
+            n => `"customFieldsActingsessionid" IS NOT NULL AND "updatedAt" < $${n}`,
             [cutoff],
         );
     }
@@ -63,13 +63,13 @@ export class ActingCartService {
     // Each cart is re-checked under its row lock: a checkout that placed it meanwhile makes it inactive and it is kept.
     private async deleteWhere(
         ctx: RequestContext,
-        condition: string,
+        condition: (param: number) => string,
         params: unknown[],
     ): Promise<number> {
         const ids = await ctxQuery<Array<{ id: string }>>(
             this.connection,
             ctx,
-            `SELECT id FROM "order" WHERE active = true AND ${condition}`,
+            `SELECT id FROM "order" WHERE active = true AND ${condition(1)}`,
             params,
         );
         let deleted = 0;
@@ -78,10 +78,7 @@ export class ActingCartService {
                 const locked = await ctxQuery<Array<{ id: string }>>(
                     this.connection,
                     txCtx,
-                    `SELECT id FROM "order" WHERE id = $1 AND active = true AND ${condition.replace(
-                        /\$1/g,
-                        '$2',
-                    )} FOR UPDATE`,
+                    `SELECT id FROM "order" WHERE id = $1 AND active = true AND ${condition(2)} FOR UPDATE`,
                     [id, ...params],
                 );
                 if (locked.length === 0) return false;

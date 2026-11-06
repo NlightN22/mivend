@@ -47,6 +47,11 @@ export class ActingSessionService {
         counterpartyId: string,
         tradingPointId: string | null,
     ): Promise<ActingTicketStart> {
+        if (!this.options.storefrontPublicUrl) {
+            throw new UserInputError(
+                'STOREFRONT_PUBLIC_URL is not configured; acting sessions cannot start',
+            );
+        }
         const admin = ctx.activeUserId
             ? await this.administratorService.findOneByUserId(ctx, ctx.activeUserId)
             : undefined;
