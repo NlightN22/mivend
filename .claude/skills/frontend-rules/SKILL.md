@@ -58,10 +58,49 @@ shows `MvCopyButton` next to each human number it displays (document number, and
 registration number when present) and one `MvCopyButton icon="share"` that copies the page URL.
 Copy the number exactly as displayed. Never hand-roll clipboard code — use `MvCopyButton`.
 
-## Colors and button states
+## Colors, tokens and themes (hard rules)
 
-Canonical hover/active colors and tokens live in `docs/ui-standards.md`; follow it for any button or
-button-like element in either portal.
+All color lives in `packages/ui-kit/src/styles/`, in three layers. Nothing else may define a color.
+
+| Layer | File | Holds | Who may reference it |
+| ----- | ---- | ----- | -------------------- |
+| Palette | `palette.css` | `--palette-<family>-<step>` primitives; a hue per family (`--hue-brand`, `--hue-ink`, `--hue-night`) | only the theme files |
+| Roles, light | `theme-light.css` | `--app-*` / `--el-*` role tokens pointing at palette steps | components and pages |
+| Roles, dark | `theme-dark.css` | the same role names, pointing at other steps; scoped to `html[data-theme='dark']` | components and pages |
+
+- Components, pages and scoped CSS use **role tokens only** (`var(--app-nav-label)`), never a hex, `rgb()`,
+  `oklch()`, a named color or a `--palette-*` step. `make lint` (stylelint, `stylelint.config.mjs`)
+  fails on all of these in `packages/storefront` and `packages/ui-kit`.
+- Need a color that no role covers? Add a **role** to both `theme-light.css` and `theme-dark.css` (same
+  name, a palette step each; the unit test `theme-tokens.test.ts` fails if they differ), reusing an
+  existing palette step. Add a palette step only if no existing one fits, in `palette.css`. Never add a
+  one-off color to a component.
+- Retuning a color means changing one value in `palette.css` (a hue variable or a step), never editing
+  components. Do not fix a bright or dull color inside a component.
+- Pick the role by meaning (surface, text, border, brand, success, danger...), not by which hex looks
+  right today. Check the existing roles first; two roles with the same meaning are a defect.
+- Text roles and fill roles are different roles: `--app-nav-accent*` and `--app-price` are for text/icons, never a background or border (stylelint rejects it); a button or badge fill under light text uses `--app-brand-fill` (hover `--app-brand-fill-hover`, MvButton `--app-primary-btn*`). A text role is light in dark, so used as a fill it washes out.
+- Every UI change is checked in **both themes** (light and dark), including hover, active, disabled,
+  selected and focus states, with real screenshots.
+- Canonical hover/active behavior stays in `docs/ui-standards.md`; in dark, hover gets lighter.
+
+### Stop and ask before leaving the template
+
+If the task seems to need anything outside this structure — a color literal in a component, a
+`stylelint-disable`, a `--palette-*` reference in a component, a role defined in only one theme, a color
+defined in `.ts`/inline `style`, a new file that defines colors, a new top-level color token naming scheme —
+**do not do it and do not work around it silently.** Ask the user with `AskUserQuestion`:
+
+1. say exactly which rule it breaks and what breaks later (a theme gets a stray color, the next palette
+   change misses it);
+2. offer the in-structure alternative first (a role or a palette step);
+3. if the user still wants the exception, ask a **second** time, confirming the exact file, value and why
+   it cannot be a role, and say that it will be listed as an exception in the final report;
+4. only after that explicit second yes, write it with a one-line comment giving the reason, and record
+   it in `docs/ui-standards.md` "Exceptions".
+
+A request phrased as "just quickly", "temporary" or "only here" is still an exception. Never disable the
+linter to get past it.
 
 ## URL state for list pages
 
@@ -106,7 +145,8 @@ storefront route at 360px; run it after any storefront layout change.
 
 ## Final checklist (before calling frontend work done)
 
-- [ ] Only ui-kit components/tokens used; no parallel local component or hard-coded color.
+- [ ] Only ui-kit components/tokens used; no parallel local component. No color literal and no `--palette-*` outside `ui-kit/src/styles/` (`make lint` is green).
+- [ ] Both themes checked by screenshot, with hover/active/selected/disabled states; any new role exists in light and dark.
 - [ ] Every new `z-index` uses a `--mv-z-*` token (or `calc` on one); `make test` passes `layers.test.ts`.
 - [ ] Opened every new dropdown/popup/modal/panel on a real page and checked it sits above the header
       and below the connection bar and toasts; a library popup inside a modal is visible.

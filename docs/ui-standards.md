@@ -1,32 +1,57 @@
 # UI standards: colors and button states
 
-Single reference for interactive colors. Source of truth is `packages/ui-kit` (`styles/tokens.css`,
-`MvButton`). Pages never invent their own hover/active colors.
+Single reference for interactive colors. Source of truth is `packages/ui-kit` (`styles/palette.css`,
+`styles/theme-light.css`, `styles/theme-dark.css`, `MvButton`). Pages never invent their own hover/active
+colors and never write a color literal (`make lint` enforces it).
 
 ## Button states
 
-| Variant (`MvButton`) | Idle                            | Hover                                | Active                                 |
-| -------------------- | ------------------------------- | ------------------------------------ | -------------------------------------- |
-| `primary` (green)    | `#00b894`                       | `#00a884`                            | `#008a70`                              |
-| `buy` (orange)       | `--app-accent-orange` `#ff8a00` | `--app-accent-orange-hover` `#e67c00` | `--app-accent-orange-active` `#cc6e00` |
-| `catalog` (lime)     | `--app-accent-lime` `#c8f21a`   | `#b8e010`                            | `#a8cc0a`                              |
-| `secondary`, `ghost`, `danger` | see `MvButton.vue`    | defined there                        | defined there                          |
+Roles, not values: the value of each role per theme is in `theme-light.css` / `theme-dark.css`.
+
+| Variant (`MvButton`) | Idle                    | Hover                       | Active                       |
+| -------------------- | ----------------------- | --------------------------- | ---------------------------- |
+| `primary` (green)    | `--el-color-primary`    | `--app-primary-btn`         | `--app-primary-btn-active`   |
+| `buy` (orange)       | `--app-accent-orange`   | `--app-accent-orange-hover` | `--app-accent-orange-active` |
+| `catalog` (lime)     | `--app-lime-bg`         | `--app-lime-hover`          | `--app-lime-active`          |
+| custom green fill    | `--app-brand-fill`      | `--app-brand-fill-hover`    | (same as hover)              |
+| `secondary`, `ghost`, `danger` | see `MvButton.vue` | defined there            | defined there                |
+
+In the dark theme hover and active step **lighter** than idle (the inverse of light); this is already encoded
+in the roles, so a component needs no per-theme code.
 
 ## Rules
 
 - Use `MvButton` with a variant whenever the element is a button. Custom-styled buttons or
-  button-like links (e.g. a `RouterLink` styled as a button) must reuse the same tokens and define
+  button-like links (e.g. a `RouterLink` styled as a button) must reuse the same roles and define
   **idle, `:hover`, `:active`, and `:disabled`** states.
-- Orange/lime/accent colors come from `--app-*` tokens with the standard value as fallback; no raw
-  hex for interactive colors. A new interactive color means a new token in `tokens.css` first.
-- Hover/active are never improvised per page (`#e87800`, `#e07a00` etc. are the bug this file exists
-  to prevent).
+- Text roles (`--app-nav-accent*`, `--app-price`) are never a fill or border; a fill under light text uses
+  `--app-brand-fill*`.
+- A new color means a new role in both theme files (and a palette step only if none fits). Structure and
+  the ask-before-exception rule: `frontend-rules` skill, "Colors, tokens and themes".
+- Hover/active are never improvised per page.
+- Check every state in both themes in a real browser (Playwright `hover()` + computed `background-color`).
 
 ## Audit command
 
-Run before declaring UI work done; every hit on a button/link background must be explained or fixed:
+Storefront and ui-kit: `pnpm lint:css` (part of `make lint`) must be green; it rejects color literals,
+`--palette-*` in components and text roles used as fills. Manager portal (not yet migrated):
 
 ```
 grep -rnE "#ff8a00|#ff8900|#e67c00|#e87800|#e07a00|#cc6e00|#00b894|#00a884|#c8f21a" \
-  packages/storefront/src packages/manager/src --include=*.vue | grep -v "var(--app"
+  packages/manager/src --include=*.vue | grep -v "var(--app"
 ```
+
+## Colors and themes
+
+Structure and rules: `frontend-rules` skill, "Colors, tokens and themes". Palette steps are in
+`packages/ui-kit/src/styles/palette.css`; role tokens for each theme are in `theme-light.css` and
+`theme-dark.css`. Hover and active use the same role names in both themes; in dark they step lighter.
+`make lint` (stylelint) rejects any color literal or `--palette-*` reference in storefront and ui-kit
+components.
+
+## Exceptions
+
+Colors written outside the template, each approved by the user after the two-step question. Empty by default.
+
+| File | Value | Reason |
+| ---- | ----- | ------ |

@@ -110,17 +110,25 @@ Never report a UI change as complete from reading the code alone.
   isolated component verification, and a manual browser check via the running dev stack for the
   full page — do not skip visual verification just because no scripted driver exists yet.
 
-## Step 5 — colors and interactive states audit (mandatory, last step)
+## Step 5 — colors, tokens, themes and interactive states audit (mandatory, last step)
 
-Read `docs/ui-standards.md` (the canonical button-state table and the audit grep) and check the
-changed files against it:
+Rules: `frontend-rules` "Colors, tokens and themes". Read `docs/ui-standards.md` (button-state table), then
+check every changed file:
 
-- every button or button-like link has idle, hover, active, and disabled states;
-- hover/active colors come from `--app-*` tokens (or `MvButton`), never from a raw hex;
-- no new hex for an interactive color — add a token to `packages/ui-kit/src/styles/tokens.css` first;
-- run the audit grep from that doc and explain or fix every hit in the files you touched;
-- hover the element in a real browser (Playwright `hover()` + computed `background-color`) — a
-  screenshot alone does not show hover.
+- **Structure.** `make lint` is green (stylelint: no hex, `rgb()`, `oklch()`, named color or `--palette-*`
+  outside `packages/ui-kit/src/styles/`). Colors are defined only in `palette.css` (primitives),
+  `theme-light.css` and `theme-dark.css` (roles); nothing in a component, page, `.ts` or inline `style`.
+- **Roles.** Each color used is a role chosen by meaning. A new role is in both theme files with the same
+  name; no duplicate of an existing role; no value tweaked inside a component to "look right".
+- **Both themes.** Screenshot every changed screen in light and in dark, and look at them yourself:
+  contrast of text on surfaces, borders visible, no light patch left in dark, no dark patch left in light,
+  images/icons readable.
+- **States.** Every button or button-like element has idle, hover, active, disabled, and for selectable
+  things a selected state, in both themes; hover in dark is lighter. Use Playwright `hover()` and compare
+  computed colors; a still screenshot does not show hover.
+- **Exceptions.** If anything was written outside the template, confirm it went through the two-step
+  question in `frontend-rules` and is listed in `docs/ui-standards.md` "Exceptions"; otherwise remove it.
+  Report every exception in the final message.
 
 ## Step 6 — two-language audit (mandatory, storefront and ui-kit)
 
