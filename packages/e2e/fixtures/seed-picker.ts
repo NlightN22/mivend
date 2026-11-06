@@ -30,7 +30,7 @@ export const pickerSeedRecords = [
     ...Array.from({ length: PICKER_FILLER_COUNT }, (_, i) =>
         pickerCounterparty(
             `e2e-cnt-picker-f${i}`,
-            `Aaa Picker Filler ${String(i).padStart(4, '0')}`,
+            `Zza Picker Filler ${String(i).padStart(4, '0')}`,
             `52${String(i).padStart(8, '0')}`,
         ),
     ),
