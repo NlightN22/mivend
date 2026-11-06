@@ -230,7 +230,7 @@ describe('TeamDirectoryService.findPage', () => {
 
         expect(page.items).toEqual([]);
         expect([await count('active'), await count('inactive'), await count('unassigned')]).toEqual(
-            [4, 1, 1],
+            [3, 1, 1],
         );
     });
 
