@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import {
     CollectionEvent,
     CollectionService,
@@ -13,6 +13,8 @@ import { recomputeCategoryTree, subscribeAndLog } from 'shared';
 import { ERP_INTEGRATION_PLUGIN_OPTIONS } from './types';
 import type { ErpIntegrationPluginOptions } from './types';
 
+const MAX_LOCK_RETRY_MS = 30 * 60 * 1000;
+
 const isLockTimeout = (error: unknown): boolean => {
     const e = error as { code?: unknown; driverError?: { code?: unknown } } | null;
     return e?.code === '55P03' || e?.driverError?.code === '55P03';
@@ -24,6 +26,7 @@ const isLockTimeout = (error: unknown): boolean => {
 export class CategoryOverrideRecomputeListener implements OnApplicationBootstrap {
     private running: Promise<void> | null = null;
     private rerun = false;
+    private readonly logger = new Logger(CategoryOverrideRecomputeListener.name);
 
     constructor(
         private readonly eventBus: EventBus,
@@ -64,6 +67,8 @@ export class CategoryOverrideRecomputeListener implements OnApplicationBootstrap
     }
 
     private async recomputeUntilSettled(): Promise<void> {
+        const startedAt = Date.now();
+        let lockRetries = 0;
         do {
             this.rerun = false;
             const ctx = await this.requestContextService.create({ apiType: 'admin' });
@@ -75,7 +80,15 @@ export class CategoryOverrideRecomputeListener implements OnApplicationBootstrap
                     facetValueService: this.facetValueService,
                 });
             } catch (error) {
-                if (!isLockTimeout(error)) throw error;
+                const elapsedMs = Date.now() - startedAt;
+                if (!isLockTimeout(error) || elapsedMs >= MAX_LOCK_RETRY_MS) {
+                    this.rerun = false;
+                    throw error;
+                }
+                lockRetries += 1;
+                this.logger.warn(
+                    `Tree lock timeout, retry ${lockRetries} after ${Math.round(elapsedMs / 1000)} s`,
+                );
                 this.rerun = true;
             }
         } while (this.rerun);

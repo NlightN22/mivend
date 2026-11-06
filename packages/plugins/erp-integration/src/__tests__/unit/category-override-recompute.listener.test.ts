@@ -79,6 +79,56 @@ describe('CategoryOverrideRecomputeListener', () => {
         expect(recompute).toHaveBeenCalledTimes(2);
     });
 
+    it('retries across consecutive lock timeouts and merges a parallel event into the retry', async () => {
+        const timeout = (): Error => Object.assign(new Error('lock timeout'), { code: '55P03' });
+        let release: () => void = () => undefined;
+        recompute
+            .mockReset()
+            .mockImplementationOnce(
+                () => new Promise<number>((_, reject) => (release = () => reject(timeout()))),
+            )
+            .mockRejectedValueOnce(timeout())
+            .mockResolvedValue(0);
+        const { listener } = make();
+        const ev = event('updated', { customFields: { visibilityOverride: 'hidden' } });
+        const first = listener.handle(ev);
+        await vi.waitFor(() => expect(recompute).toHaveBeenCalledTimes(1));
+        const parallel = listener.handle(ev);
+        release();
+        await Promise.all([first, parallel]);
+        expect(recompute).toHaveBeenCalledTimes(3);
+    });
+
+    it('gives up after 30 minutes of lock timeouts so the scheduled task takes over', async () => {
+        vi.useFakeTimers();
+        try {
+            const timeout = Object.assign(new Error('lock timeout'), { code: '55P03' });
+            recompute.mockReset().mockImplementation(async () => {
+                vi.advanceTimersByTime(10 * 60 * 1000);
+                throw timeout;
+            });
+            await expect(
+                make().listener.handle(
+                    event('updated', { customFields: { visibilityOverride: 'hidden' } }),
+                ),
+            ).rejects.toBe(timeout);
+            expect(recompute).toHaveBeenCalledTimes(3);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('drops a pending rerun when a different error ends the run', async () => {
+        const { listener } = make();
+        recompute.mockReset().mockRejectedValueOnce(new Error('boom')).mockResolvedValue(0);
+        const ev = event('updated', { customFields: { visibilityOverride: 'hidden' } });
+        const first = listener.handle(ev);
+        const parallel = listener.handle(ev);
+        parallel.catch(() => undefined);
+        await expect(first).rejects.toThrow('boom');
+        expect(recompute).toHaveBeenCalledTimes(1);
+    });
+
     it('does not swallow other errors', async () => {
         recompute.mockRejectedValue(new Error('boom'));
         const { listener } = make();
