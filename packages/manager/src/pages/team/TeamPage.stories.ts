@@ -12,28 +12,71 @@ const meta: Meta<typeof TeamPage> = {
 export default meta;
 type Story = StoryObj<typeof TeamPage>;
 
+function registerTeamMocks(): void {
+    registerMock('Departments', () => ({
+        departments: [
+            { id: '1', erpId: 'dept-sales', name: 'Sales' },
+            { id: '2', erpId: 'dept-stock', name: 'Stock' },
+        ],
+    }));
+    registerMock('TeamDirectory', () => ({
+        teamDirectory: {
+            totalItems: 3,
+            items: [
+                {
+                    id: '1',
+                    erpId: 'user-1',
+                    firstName: 'Alex',
+                    lastName: 'Manager',
+                    active: true,
+                    roleCodes: ['manager'],
+                    departmentId: 'dept-sales',
+                    departmentName: 'Sales',
+                    branchId: 'branch-a',
+                    position: 'Sales manager',
+                },
+                {
+                    id: '2',
+                    erpId: 'user-2',
+                    firstName: null,
+                    lastName: null,
+                    active: true,
+                    roleCodes: ['operator'],
+                    departmentId: 'dept-stock',
+                    departmentName: 'Stock',
+                    branchId: 'branch-a',
+                    position: null,
+                },
+                {
+                    id: '3',
+                    erpId: 'user-3',
+                    firstName: null,
+                    lastName: null,
+                    active: false,
+                    roleCodes: [],
+                    departmentId: null,
+                    departmentName: null,
+                    branchId: null,
+                    position: null,
+                },
+            ],
+        },
+    }));
+    registerMock('TeamDirectoryCounts', () => ({
+        all: { totalItems: 3 },
+        active: { totalItems: 2 },
+        inactive: { totalItems: 1 },
+        unassigned: { totalItems: 0 },
+    }));
+    registerMock('Branches', () => ({
+        branches: [{ id: 'branch-a', erpId: 'branch-a', name: 'Branch A' }],
+    }));
+}
+
 export const Default: Story = {
     loaders: [
         async () => {
-            registerMock('Departments', () => ({
-                departments: [{ id: '1', erpId: 'dept-sales', name: 'Sales' }],
-            }));
-            registerMock('TeamDirectory', () => ({
-                teamDirectory: [
-                    {
-                        id: '1',
-                        firstName: 'Alex',
-                        lastName: 'Manager',
-                        roleCodes: ['manager'],
-                        departmentId: 'dept-sales',
-                        branchId: 'branch-a',
-                        position: 'Sales manager',
-                    },
-                ],
-            }));
-            registerMock('Branches', () => ({
-                branches: [{ erpId: 'branch-a', name: 'branch-a' }],
-            }));
+            registerTeamMocks();
             await router.push('/team');
         },
     ],
@@ -43,36 +86,10 @@ export const Default: Story = {
     }),
 };
 
-// Pinned to the mobile viewport; needs several departments to trigger the "More" tab collapse.
-// Default's single department never exercises that overflow path.
 export const Mobile: Story = {
     loaders: [
         async () => {
-            registerMock('Departments', () => ({
-                departments: [
-                    { id: '1', erpId: 'dept-sales', name: 'Sales' },
-                    { id: '2', erpId: 'dept-purchasing', name: 'Purchasing' },
-                    { id: '3', erpId: 'dept-warehouse', name: 'Warehouse' },
-                    { id: '4', erpId: 'dept-accounting', name: 'Accounting' },
-                    { id: '5', erpId: 'dept-support', name: 'Customer support' },
-                ],
-            }));
-            registerMock('TeamDirectory', () => ({
-                teamDirectory: [
-                    {
-                        id: '1',
-                        firstName: 'Alex',
-                        lastName: 'Manager',
-                        roleCodes: ['manager'],
-                        departmentId: 'dept-sales',
-                        branchId: 'branch-a',
-                        position: 'Sales manager',
-                    },
-                ],
-            }));
-            registerMock('Branches', () => ({
-                branches: [{ erpId: 'branch-a', name: 'branch-a' }],
-            }));
+            registerTeamMocks();
             await router.push('/team');
         },
     ],

@@ -14,14 +14,40 @@ query Positions {
     }
 }
 
-query TeamDirectory {
-    teamDirectory {
-        id
-        firstName
-        lastName
-        roleCodes
-        departmentId
-        branchId
-        position
+query TeamDirectory($options: TeamDirectoryListOptions) {
+    teamDirectory(options: $options) {
+        items {
+            id
+            erpId
+            firstName
+            lastName
+            active
+            roleCodes
+            departmentId
+            departmentName
+            branchId
+            position
+        }
+        totalItems
+    }
+}
+
+query TeamDirectoryCounts(
+    $all: TeamDirectoryListOptions
+    $active: TeamDirectoryListOptions
+    $inactive: TeamDirectoryListOptions
+    $unassigned: TeamDirectoryListOptions
+) {
+    all: teamDirectory(options: $all) {
+        totalItems
+    }
+    active: teamDirectory(options: $active) {
+        totalItems
+    }
+    inactive: teamDirectory(options: $inactive) {
+        totalItems
+    }
+    unassigned: teamDirectory(options: $unassigned) {
+        totalItems
     }
 }
