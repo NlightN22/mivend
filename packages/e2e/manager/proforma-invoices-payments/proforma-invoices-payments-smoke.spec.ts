@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-test('proforma invoices page loads and shows rows for an all-scope account', async ({ page }) => {
+test('proforma invoices page loads and shows rows for an all-scope account @on:manager-operator', async ({
+    page,
+}) => {
     await page.goto('/proforma-invoices');
     await expect(page.getByRole('heading', { name: 'Proforma invoices', exact: true })).toBeVisible(
         {
@@ -10,7 +12,9 @@ test('proforma invoices page loads and shows rows for an all-scope account', asy
     await expect(page.locator('.el-table-v2__row').first()).toBeVisible({ timeout: 15000 });
 });
 
-test('payments page loads and shows rows for an all-scope account', async ({ page }) => {
+test('payments page loads and shows rows for an all-scope account @on:manager-operator', async ({
+    page,
+}) => {
     await page.goto('/payments');
     await expect(page.getByRole('heading', { name: 'Payments', exact: true })).toBeVisible({
         timeout: 15000,
@@ -19,7 +23,7 @@ test('payments page loads and shows rows for an all-scope account', async ({ pag
 });
 
 // The customer tab lists its proforma invoices in place; the standalone page keeps the deep link.
-test('proforma invoices page pre-filters to one customer from the counterpartyId link', async ({
+test('proforma invoices page pre-filters to one customer from the counterpartyId link @on:manager-operator', async ({
     page,
 }) => {
     // The seeded e2e counterparty is the one every role project can see.

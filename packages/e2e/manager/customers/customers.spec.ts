@@ -52,7 +52,7 @@ test('customers page shows the client list with company meta and KPIs', async ({
     await expect(row).toBeVisible();
 });
 
-test('customers page CSV export downloads a file', async ({ page }) => {
+test('customers page CSV export downloads a file @on:manager-operator', async ({ page }) => {
     await page.goto('/customers');
     await expect(page.getByText('Client list')).toBeVisible({ timeout: 15000 });
 
@@ -63,7 +63,9 @@ test('customers page CSV export downloads a file', async ({ page }) => {
     expect(download.suggestedFilename()).toBe('customers.csv');
 });
 
-test('clicking a customer row navigates to the customer detail page', async ({ page }) => {
+test('clicking a customer row navigates to the customer detail page @on:manager-operator', async ({
+    page,
+}) => {
     await openE2eCustomerDetail(page);
 });
 
@@ -91,10 +93,12 @@ test('customer detail Orders tab shows the seeded e2e order', async ({ page }) =
     await page.getByRole('button', { name: 'Orders' }).click();
     // Orders other specs place and cancel push the seeded one off the first page.
     await page.getByPlaceholder('Search orders…').fill(order.displayCode);
-    await expect(page.getByText(order.displayCode)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('cell', { name: order.displayCode })).toBeVisible({
+        timeout: 15000,
+    });
 });
 
-test('customer detail Discounts tab shows a grant scoped to this customer (positive)', async ({
+test('customer detail Discounts tab shows a grant scoped to this customer (positive) @on:manager-operator', async ({
     page,
 }) => {
     await openE2eCustomerDetail(page);
@@ -117,7 +121,9 @@ test('customer detail Discounts tab does not leak a grant scoped to another cust
     await expect(page.getByText('99%')).not.toBeVisible();
 });
 
-test('customer detail Documents tab shows the customer document list', async ({ page }) => {
+test('customer detail Documents tab shows the customer document list @on:manager-operator', async ({
+    page,
+}) => {
     await openE2eCustomerDetail(page);
 
     await page.getByRole('button', { name: 'Documents' }).click();
@@ -161,11 +167,9 @@ test('reactivating the seeded inactive trading point flips its badge to Active (
 
 // ReadEntityHistory is leadership-only; see seed-access-roles.mjs for role grants.
 // Only manager-department-head is pre-authenticated here, so the positive case runs only there.
-test('History tab is visible for department-head and lists the edit/reactivate entries (positive)', async ({
+test('History tab is visible for department-head and lists the edit/reactivate entries (positive) @on:manager-department-head', async ({
     page,
-}, testInfo) => {
-    test.skip(testInfo.project.name !== 'manager-department-head', 'Leadership-only feature');
-
+}) => {
     await openE2eCustomerDetail(page);
     await page.waitForLoadState('networkidle');
 
@@ -180,13 +184,11 @@ test('History tab is visible for department-head and lists the edit/reactivate e
     );
 });
 
-test('History tab is absent for non-leadership roles (negative)', async ({ page }, testInfo) => {
+test('History tab is absent for non-leadership roles (negative) @on:manager-operator @on:manager-manager', async ({
+    page,
+}) => {
     // Leadership roles (department-head, portal-admin) hold ReadEntityHistory, so they see the tab.
     // This negative case therefore applies only to operator and manager.
-    test.skip(
-        ['manager-department-head', 'manager-portal-admin'].includes(testInfo.project.name),
-        'Covered by the positive case',
-    );
 
     await openE2eCustomerDetail(page);
     await page.waitForLoadState('networkidle');
@@ -196,11 +198,9 @@ test('History tab is absent for non-leadership roles (negative)', async ({ page 
 
 // The edit form always resubmits the full contacts array, so an unchanged contacts list
 // must not produce a spurious 'contacts' diff row. Only department-head can open this modal.
-test('editing a trading point contact records a readable contacts diff (positive)', async ({
+test('editing a trading point contact records a readable contacts diff (positive) @on:manager-department-head', async ({
     page,
-}, testInfo) => {
-    test.skip(testInfo.project.name !== 'manager-department-head', 'Needs ReadEntityHistory');
-
+}) => {
     const contactName = `QA Contact ${Date.now()}`;
     await openE2eCustomerDetail(page);
     await page.waitForLoadState('networkidle');
@@ -225,11 +225,9 @@ test('editing a trading point contact records a readable contacts diff (positive
     await expect(modal.getByText(contactName)).toBeVisible();
 });
 
-test('editing only the trading point address does not record a spurious contacts diff (negative)', async ({
+test('editing only the trading point address does not record a spurious contacts diff (negative) @on:manager-department-head', async ({
     page,
-}, testInfo) => {
-    test.skip(testInfo.project.name !== 'manager-department-head', 'Needs ReadEntityHistory');
-
+}) => {
     const newAddress = `Addr Only ${Date.now()}`;
     await openE2eCustomerDetail(page);
     await page.waitForLoadState('networkidle');
@@ -257,14 +255,9 @@ test('editing only the trading point address does not record a spurious contacts
 
 // reassignManager must call VersioningService.recordChange so EntityVersion rows exist.
 // Only department-head holds both needed permissions, so both cases run there.
-test('reassigning the counterparty manager records a Counterparty version entry (positive)', async ({
+test('reassigning the counterparty manager records a Counterparty version entry (positive) @on:manager-department-head', async ({
     page,
-}, testInfo) => {
-    test.skip(
-        testInfo.project.name !== 'manager-department-head',
-        'Needs ReassignCounterpartyManager + ReadEntityHistory',
-    );
-
+}) => {
     const cpData = await adminApiViaPage<{
         counterparties: {
             items: { id: string; erpId: string; assignedManagerId: string | null }[];
@@ -322,14 +315,9 @@ test('reassigning the counterparty manager records a Counterparty version entry 
     }
 });
 
-test('a rejected out-of-department reassignment records no Counterparty version entry (negative)', async ({
+test('a rejected out-of-department reassignment records no Counterparty version entry (negative) @on:manager-department-head', async ({
     page,
-}, testInfo) => {
-    test.skip(
-        testInfo.project.name !== 'manager-department-head',
-        'Needs ReassignCounterpartyManager + ReadEntityHistory',
-    );
-
+}) => {
     const cpData = await adminApiViaPage<{
         counterparties: { items: { id: string; erpId: string }[] };
     }>(page, `query { counterparties(options: { take: 200 }) { items { id erpId } } }`);

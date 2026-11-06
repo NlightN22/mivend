@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { readE2eOrder } from '../../helpers/e2e-order';
 
-test('KPI carousel right arrow scrolls the row and stops at the end', async ({ page }) => {
+test('KPI carousel right arrow scrolls the row and stops at the end @on:manager-operator', async ({
+    page,
+}) => {
     await page.goto('/orders');
     const track = page.locator('.mv-kpi-carousel__track');
     await expect(track).toBeVisible();

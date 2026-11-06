@@ -13,14 +13,9 @@ const PAGES = [
 ];
 
 for (const path of PAGES) {
-    test(`clicking Next on ${path} does not snap the page back to the top`, async ({
+    test(`clicking Next on ${path} does not snap the page back to the top @on:manager-portal-admin`, async ({
         page,
-    }, testInfo) => {
-        test.skip(
-            testInfo.project.name !== 'manager-portal-admin',
-            'UI-mechanics test, one project is enough',
-        );
-
+    }) => {
         await page.setViewportSize({ width: 1280, height: 500 });
         await page.goto(path);
 

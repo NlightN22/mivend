@@ -15,11 +15,9 @@ const OIL_SKUS = [
 const NON_OIL_SKU = 'FIL-OIL-C001';
 
 test.describe('Manager category tree (#59)', () => {
-    test('catalog sidebar matches the storefront block for the same positions', async ({
+    test('catalog sidebar matches the storefront block for the same positions @on:manager-operator', async ({
         page,
-    }, testInfo) => {
-        test.skip(testInfo.project.name !== 'manager-operator', 'Display parity runs once');
-
+    }) => {
         await page.goto(url(SLUG.oils));
         const parent = await readSidebar(page);
         expect(parent.back).toEqual(OILS_EXPECTED.back);
@@ -45,10 +43,9 @@ test.describe('Manager category tree (#59)', () => {
             await restoreCategoryTree(token);
         });
 
-        test('marks a hidden category in the sidebar and mega-menu, and it stays navigable', async ({
+        test('marks a hidden category in the sidebar and mega-menu, and it stays navigable @on:manager-operator', async ({
             page,
-        }, testInfo) => {
-            test.skip(testInfo.project.name !== 'manager-operator', 'Display check runs once');
+        }) => {
             await setOverride(token, SLUG.synthetic, 'hidden');
 
             await page.goto(url(SLUG.mineral));
@@ -73,8 +70,9 @@ test.describe('Manager category tree (#59)', () => {
             await expect(page.locator('.catalog-page__row').first()).toBeVisible();
         });
 
-        test('level-3 category lists only its own products', async ({ page }, testInfo) => {
-            test.skip(testInfo.project.name !== 'manager-operator', 'Listing check runs once');
+        test('level-3 category lists only its own products @on:manager-operator', async ({
+            page,
+        }) => {
             const rows = page.locator('.catalog-page__row');
             await page.goto(url(SLUG.oils));
             for (const sku of OIL_SKUS) await expect(rows.filter({ hasText: sku })).toHaveCount(1);
@@ -96,10 +94,9 @@ test.describe('Manager category tree (#59)', () => {
             await restoreCategoryTree(token);
         });
 
-        test('shows the hidden reason per category, then restores the tree', async ({
+        test('shows the hidden reason per category, then restores the tree @on:manager-portal-admin', async ({
             page,
-        }, testInfo) => {
-            test.skip(testInfo.project.name !== 'manager-portal-admin', 'Needs UpdateCatalog');
+        }) => {
             await setOverride(token, SLUG.oils, 'hidden');
 
             const rowReason = async (name: string, slug: string): Promise<string> => {

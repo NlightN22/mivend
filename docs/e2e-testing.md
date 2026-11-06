@@ -35,16 +35,9 @@ through the same teardown.
 `make e2e-resilience` runs `manager/resilience` on its own stack and SIGSTOPs that stack's server, found by its
 `DB_NAME`; `make dev` is never frozen.
 
-`skip-guard-reporter.ts` prints the skips by reason and fails the run when a skip's reason is not on its
-allow-list (a spec that runs under one role project, or needs a permission only some roles hold). Missing data is
-seeded, never skipped. The guard checks only the reason text, so a skip with an allowed reason must have a condition
-on `testInfo.project.name` alone. `manager/resilience` is not part of the suite at all: `playwright.config.ts` ignores it unless
-`E2E_RESILIENCE` is set.
-
-Runs are serialised on `/tmp/mivend-e2e.lock`, held for the whole make target including every shard; `run.ts`
-refuses to start without it, because its leftover sweep drops every `mivend_e2e_*` database. A second run waits. A run killed with SIGKILL leaves its processes,
-database, vhost and indices behind; the next run removes them first. Server, worker and portal logs are in
-`apps/server/.e2e-stack/`. Auth state in `packages/e2e/.auth/` is written by `global-setup` and removed at teardown.
+`skip-guard-reporter.ts` fails the run on any skipped test (zero skips). A test that applies to some role projects only
+is selected by an `@on:<project>` tag, never skipped (next section); missing data is seeded. `manager/resilience` is
+not part of the suite at all: `playwright.config.ts` ignores it unless `E2E_RESILIENCE` is set.
 
 ## Staging-integration order exchange suite (`make e2e-integration`, #255)
 
@@ -105,11 +98,11 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `storefront-session` | dev | session-ended bar | `--project=storefront storefront/session` |
 | `storefront-theme` | dev | storefront theme: system default before mount, live follow, menu choice persisted (#313) | `--project=storefront storefront/theme` |
 | `manager-auth` | dev | manager login, password reset (no stored session) | `--project=manager-noauth` |
-| `manager-catalog` | dev | manager category tree | `--project=manager-operator manager/catalog` |
+| `manager-catalog` | dev | manager category tree | `--project=manager-operator --project=manager-portal-admin manager/catalog` |
 | `manager-customers` | dev | customers, counterparties, history filters | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/customers` |
 | `manager-dashboard` | dev | dashboard KPIs per role | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/dashboard` |
 | `manager-discounts` | dev | discount grants | `--project=manager-operator manager/discounts` |
-| `manager-layout` | dev | mobile nav, pagination scroll | `--project=manager-operator manager/layout` |
+| `manager-layout` | dev | mobile nav, pagination scroll | `--project=manager-operator --project=manager-portal-admin manager/layout` |
 | `manager-orders` | dev | manager orders list, detail, delivery | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/orders` |
 | `manager-proforma-payments` | dev | proforma invoices and payments smoke | `--project=manager-operator manager/proforma-invoices-payments` |
 | `manager-settings` | dev | roles, users, security settings | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/settings` |
@@ -149,13 +142,45 @@ own-scope role would otherwise not see them. Cost: about 30-43 s of `global-setu
 
 ## Manager portal role projects
 
-`playwright.config.ts` defines one project per manager-portal role under test —
-`manager-operator`, `manager-manager`, `manager-department-head` — all running the same spec
-files in `packages/e2e/manager/`, pre-authenticated as the corresponding seeded account from
-`.tests/accounts.md`. A spec that asserts role-specific UI (e.g. which dashboard KPI cards are
-visible) reads `testInfo.project.name` to know which role it's running as — see
-`packages/e2e/manager/dashboard/dashboard.spec.ts` for the pattern. Keep the expectations there in
-sync with `packages/manager/src/api/dashboard-config.ts` whenever that config changes.
+`playwright.config.ts` defines one project per manager-portal role under test (`manager-operator`, `manager-manager`,
+`manager-department-head`, `manager-portal-admin`), each pre-authenticated as the corresponding seeded account from
+`.tests/accounts.md`, all over `packages/e2e/manager/`. A role changes the result only for scope, permission and
+visibility, so a scenario runs under every role only when it tests one of those (`docs/testing-patterns.md`:
+authorization, data isolation).
+
+**Declaring the roles (#318).** A test or `describe` title carries `@on:<project>` tags, one per project it runs
+under; no tag means all four. `helpers/role-projects.ts` turns them into each project's `grep`, so a test outside a
+project's list is not collected and is not a skip. Do not write `test.skip` on the project name. A test that reads
+`testInfo.project.name` to assert role-specific UI (the dashboard KPI cards) is a role-dependent test and carries no tag.
+
+Decision per spec (R = all four roles; O = operator, M = manager, D = department head, P = portal admin):
+
+| Spec | Runs under | Why |
+| --- | --- | --- |
+| `dashboard`: KPI cards | R | cards depend on the role |
+| `dashboard`: panels, filter chips | O | same component for every role |
+| `orders/orders-list`: seeded order row, row click | R | order visibility is scope-dependent (own / department) |
+| `orders/orders-list`: KPI carousel | O | UI mechanics |
+| `orders/order-detail`: layout, reservation confirm/release | R | detail read scope; confirm is a permissioned write |
+| `orders/order-create-picker` | O, M | department scope and own scope see the picker target differently |
+| `orders/order-delivery` | O | API-level, always the operator token |
+| `orders/orders-pagination` | O | UI mechanics |
+| `customers/customers`: list, Overview, Orders tab, other-customer grant leak | R | scope and isolation |
+| `customers/customers`: CSV export, row click, Documents tab, own-customer grant | O | same code for every role |
+| `customers/customers`: trading point edit and reactivate | R | `UpdateTradingPoint` is permissioned |
+| `customers/customers`: History tab visible / absent | D (and P is leadership too) / O, M | `ReadEntityHistory` is leadership-only |
+| `customers/customers`: contact diff, reassign manager | D | needs `ReadEntityHistory` + `ReassignCounterpartyManager` |
+| `customers/counterparty-inn`, `activation-filter-typing` | P | bulk activation needs portal admin rights |
+| `customers/customer-history-filters` | P | UI-kit overlay behaviour, role-independent |
+| `catalog/category-tree`: sidebar, hidden marks, listing | O | display, role-independent |
+| `catalog/category-tree`: visibility page | P | needs `UpdateCatalog` |
+| `settings/settings-roles`, `settings-users`: positive | P | `ManageAccessControl` / `ManageAdministratorLifecycle` |
+| `settings/settings-roles`, `settings-users`: negative | O, M, D | the other roles must be refused |
+| `settings/settings-security` | O | admin-api session mechanics, role-independent |
+| `discounts`, `proforma-invoices-payments`, `layout/mobile-nav`, `team` | O | role-independent display (the grant and team scopes are covered by `visibility/` and `make test-access`) |
+| `layout/pagination-scroll` | P | UI mechanics |
+
+Run time per group drops because a role-independent scenario costs one run instead of four.
 
 Coverage so far: `manager/dashboard/`, `manager/orders/` (list + detail, including reservation
 confirm/release), `manager/customers/` (list, CSV export, row navigation), and `manager/customers/counterparty-inn.spec.ts` (#225 inn guard: seeded twin/missing-inn counterparties from `fixtures/seed-inn.ts` through `erp-import`, `manager-portal-admin` only). All of them read a
@@ -169,8 +194,7 @@ since Vendure 3.7.3 a department head cannot read other administrators, so her o
 is refused), and relies on `seed-erp.mjs`'s `departmentBranch` mapping (`dept-sales` to the central branch): both e2e
 counterparties carry `departmentId: 'dept-sales'` and get their branch from `BranchAssignmentService` (#65) — this is what makes
 `manager-manager`'s `"own"` access scope see the same test data as `manager-operator`/
-`manager-department-head`'s `"department"` scope. All three role projects run the exact same
-spec files with no skips.
+`manager-department-head`'s `"department"` scope. 
 
 ## Sessions
 

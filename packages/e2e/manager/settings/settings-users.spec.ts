@@ -27,14 +27,9 @@ function userRow(
 
 // Built on ManageAdministratorLifecycle, not ManageAccessControl; table shape follows
 // the manager-table-standard skill in AGENTS.md.
-test('portal-admin can reach /settings/users and see the seeded administrators (positive)', async ({
+test('portal-admin can reach /settings/users and see the seeded administrators (positive) @on:manager-portal-admin', async ({
     page,
-}, testInfo) => {
-    test.skip(
-        testInfo.project.name !== 'manager-portal-admin',
-        'Needs ManageAdministratorLifecycle',
-    );
-
+}) => {
     await page.goto('/settings/users');
     // The mobile More sheet also renders the signed-in user's name, so scope to the page body.
     const main = page.getByRole('main');
@@ -45,14 +40,9 @@ test('portal-admin can reach /settings/users and see the seeded administrators (
     await expect(main.getByText('Anna PortalAdmin', { exact: true })).toBeVisible();
 });
 
-test('the Settings sub-nav links Roles & access and Users correctly (positive)', async ({
+test('the Settings sub-nav links Roles & access and Users correctly (positive) @on:manager-portal-admin', async ({
     page,
-}, testInfo) => {
-    test.skip(
-        testInfo.project.name !== 'manager-portal-admin',
-        'Needs ManageAdministratorLifecycle',
-    );
-
+}) => {
     await page.goto('/settings/roles');
     // The sidebar also has an unrelated top-level "Team" link (/team, a ComingSoon placeholder)
     // — scope to the in-page sub-nav specifically.
@@ -66,14 +56,9 @@ test('the Settings sub-nav links Roles & access and Users correctly (positive)',
     await expect(page.getByText('operator', { exact: true })).toBeVisible({ timeout: 15000 });
 });
 
-test("portal-admin can reassign a user's role and it persists (positive)", async ({
+test("portal-admin can reassign a user's role and it persists (positive) @on:manager-portal-admin", async ({
     page,
-}, testInfo) => {
-    test.skip(
-        testInfo.project.name !== 'manager-portal-admin',
-        'Needs ManageAdministratorLifecycle',
-    );
-
+}) => {
     const before = await adminApiViaPage<{
         administrators: {
             items: {
@@ -129,11 +114,9 @@ test("portal-admin can reassign a user's role and it persists (positive)", async
     }
 });
 
-test('non-portal-admin roles cannot reach /settings/users (negative)', async ({
+test('non-portal-admin roles cannot reach /settings/users (negative) @on:manager-operator @on:manager-manager @on:manager-department-head', async ({
     page,
-}, testInfo) => {
-    test.skip(testInfo.project.name === 'manager-portal-admin', 'Covered by the positive cases');
-
+}) => {
     await page.goto('/settings/users');
     await expect(page.getByText('Not authorized')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(TARGET_NAME, { exact: true })).toHaveCount(0);

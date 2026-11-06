@@ -4,7 +4,9 @@ import { test, expect } from '@playwright/test';
 // Runs under whichever role project executes it, so it must not assume a specific role.
 test.use({ viewport: { width: 390, height: 844 } });
 
-test('mobile bottom nav navigates and the sidebar is hidden', async ({ page }) => {
+test('mobile bottom nav navigates and the sidebar is hidden @on:manager-operator', async ({
+    page,
+}) => {
     await page.goto('/');
     await expect(page.locator('.mv-app-sidebar')).toBeHidden();
 
@@ -18,7 +20,9 @@ test('mobile bottom nav navigates and the sidebar is hidden', async ({ page }) =
     await expect(page).toHaveURL(/\/orders/);
 });
 
-test('More sheet opens, lists secondary nav, and closes on backdrop click', async ({ page }) => {
+test('More sheet opens, lists secondary nav, and closes on backdrop click @on:manager-operator', async ({
+    page,
+}) => {
     await page.goto('/');
     await page.locator('.mv-app-mobile-nav').getByRole('button', { name: 'More' }).click();
 
@@ -30,7 +34,9 @@ test('More sheet opens, lists secondary nav, and closes on backdrop click', asyn
     await expect(sheet).not.toHaveClass(/mv-mobile-sheet--open/);
 });
 
-test('More sheet items actually navigate, not just close the sheet', async ({ page }) => {
+test('More sheet items actually navigate, not just close the sheet @on:manager-operator', async ({
+    page,
+}) => {
     await page.goto('/');
     await page.locator('.mv-app-mobile-nav').getByRole('button', { name: 'More' }).click();
 
@@ -41,7 +47,9 @@ test('More sheet items actually navigate, not just close the sheet', async ({ pa
     await expect(sheet).not.toHaveClass(/mv-mobile-sheet--open/);
 });
 
-test('bottom nav highlights the correct item on a nested route', async ({ page }) => {
+test('bottom nav highlights the correct item on a nested route @on:manager-operator', async ({
+    page,
+}) => {
     await page.goto('/orders');
     const ordersLink = page.locator('.mv-app-mobile-nav').getByRole('link', { name: 'Orders' });
     await expect(ordersLink).toHaveClass(/mv-app-mobile-nav__item--active/);
@@ -53,7 +61,9 @@ test('bottom nav highlights the correct item on a nested route', async ({ page }
     ).toHaveClass(/mv-app-mobile-nav__item--active/);
 });
 
-test('Create-order FAB is shown on the orders page and creates a draft order', async ({ page }) => {
+test('Create-order FAB is shown on the orders page and creates a draft order @on:manager-operator', async ({
+    page,
+}) => {
     await page.goto('/orders');
     const fab = page.locator('.mv-fab');
     await expect(fab).toBeVisible();
@@ -62,12 +72,12 @@ test('Create-order FAB is shown on the orders page and creates a draft order', a
     await expect(page).toHaveURL(/\/orders\/new/);
 });
 
-test('Create-order FAB is not shown on unrelated pages', async ({ page }) => {
+test('Create-order FAB is not shown on unrelated pages @on:manager-operator', async ({ page }) => {
     await page.goto('/customers');
     await expect(page.locator('.mv-fab')).toHaveCount(0);
 });
 
-test('bottom nav "More" tab shows active on a page reached only via the sheet', async ({
+test('bottom nav "More" tab shows active on a page reached only via the sheet @on:manager-operator', async ({
     page,
 }) => {
     await page.goto('/discounts');
@@ -81,7 +91,9 @@ test('bottom nav "More" tab shows active on a page reached only via the sheet', 
     ).toHaveClass(/mv-mobile-sheet__item--active/);
 });
 
-test('orders page has no horizontal overflow at a narrow mobile viewport', async ({ page }) => {
+test('orders page has no horizontal overflow at a narrow mobile viewport @on:manager-operator', async ({
+    page,
+}) => {
     await page.setViewportSize({ width: 320, height: 690 });
     await page.goto('/orders');
     await expect(page.locator('.mv-app-mobile-nav')).toBeVisible();
@@ -91,7 +103,9 @@ test('orders page has no horizontal overflow at a narrow mobile viewport', async
     expect(overflowing).toBe(false);
 });
 
-test('bottom nav and FAB are hidden on desktop/tablet, sidebar shows instead', async ({ page }) => {
+test('bottom nav and FAB are hidden on desktop/tablet, sidebar shows instead @on:manager-operator', async ({
+    page,
+}) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/orders');
     await expect(page.locator('.mv-app-sidebar')).toBeVisible();
@@ -99,7 +113,7 @@ test('bottom nav and FAB are hidden on desktop/tablet, sidebar shows instead', a
     await expect(page.locator('.mv-fab')).toBeHidden();
 });
 
-test('scroll-to-top button appears after scrolling down and scrolls back to top', async ({
+test('scroll-to-top button appears after scrolling down and scrolls back to top @on:manager-operator', async ({
     page,
 }) => {
     // A short viewport and a loaded list keep the page scrollable past the button's threshold.

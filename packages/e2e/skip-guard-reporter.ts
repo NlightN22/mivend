@@ -1,25 +1,6 @@
 import type { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/reporter';
 
-// The only skips allowed: a spec that runs under one role project, or needs a permission only some
-// roles hold. Missing data is seeded, never skipped; any other skip fails the run.
-const ALLOWED_REASONS = new Set([
-    'UI-mechanics test, one project is enough',
-    'UI-kit-level test, runs once',
-    'UI test, runs once',
-    'API-level test, runs once',
-    'Display parity runs once',
-    'Display check runs once',
-    'Listing check runs once',
-    'Covered by the positive case',
-    'Covered by the positive cases',
-    'Leadership-only feature',
-    'needs portal access rights',
-    'Needs ManageAccessControl',
-    'Needs ManageAdministratorLifecycle',
-    'Needs ReadEntityHistory',
-    'Needs ReassignCounterpartyManager + ReadEntityHistory',
-    'Needs UpdateCatalog',
-]);
+// Zero skips: role-dependent runs are selected by runsOn() tags, missing data is seeded.
 
 export default class SkipGuardReporter implements Reporter {
     private readonly byReason = new Map<string, number>();
@@ -32,8 +13,7 @@ export default class SkipGuardReporter implements Reporter {
             .map(a => a.description ?? '');
         const reason = reasons[0] ?? '';
         this.byReason.set(reason, (this.byReason.get(reason) ?? 0) + 1);
-        if (!ALLOWED_REASONS.has(reason))
-            this.disallowed.push(`${test.titlePath().join(' > ')}: "${reason}"`);
+        this.disallowed.push(`${test.titlePath().join(' > ')}: "${reason}"`);
     }
 
     onEnd(result: FullResult): { status?: FullResult['status'] } | undefined {
@@ -43,7 +23,7 @@ export default class SkipGuardReporter implements Reporter {
             for (const [reason, count] of counts) console.log(`  ${count}  ${reason || '(none)'}`);
         }
         if (this.disallowed.length === 0) return undefined;
-        console.error(`\n${this.disallowed.length} skip(s) with a reason off the allow-list:`);
+        console.error(`\n${this.disallowed.length} skip(s), the suite allows none:`);
         for (const line of this.disallowed) console.error(`  ${line}`);
         return { status: result.status === 'interrupted' ? 'interrupted' : 'failed' };
     }

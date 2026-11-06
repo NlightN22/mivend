@@ -116,7 +116,7 @@ async function readDelivery(
     return result.data.order.customFields;
 }
 
-test.describe('delivery point of a staff-created order', () => {
+test.describe('delivery point of a staff-created order @on:manager-operator', () => {
     let token: string;
     let ids: Ids;
     const created: string[] = [];

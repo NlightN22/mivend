@@ -5,12 +5,9 @@ import { cancelTestOrder, createConfirmedOrder } from '../../helpers/manager-ord
 import { E2E_CUSTOMER } from '../../fixtures/seed';
 
 // Paging to the last page must not snap the window back to the top.
-test('orders list pagination does not collapse the page to the top', async ({ page }, testInfo) => {
-    test.skip(
-        testInfo.project.name !== 'manager-operator',
-        'UI-mechanics test, one project is enough',
-    );
-
+test('orders list pagination does not collapse the page to the top @on:manager-operator', async ({
+    page,
+}) => {
     // Short viewport so the page is guaranteed scrollable; on a tall viewport scrollY stays 0
     // and the 'snaps back to 0' assertion would pass vacuously.
     await page.setViewportSize({ width: 1280, height: 500 });

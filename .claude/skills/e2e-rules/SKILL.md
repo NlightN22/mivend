@@ -67,6 +67,9 @@ A test must pass in any order and alone.
   projects). The full `make e2e-dev` is run only on an explicit request.
 - The e2e server does not restart on source edits; changes to plugin sources need `make e2e-*` again.
 
+- **Manager roles and parallelism**: put `@on:<project>` tags in the title of a manager test that applies to some roles
+  only; never `test.skip` on the project name (`docs/e2e-testing.md` "Manager portal role projects").
+
 ## 5. Checklist (fill in before committing)
 
 Copy into your report and tick every item, or write why it does not apply.

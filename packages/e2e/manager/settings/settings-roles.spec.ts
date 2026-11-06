@@ -31,11 +31,9 @@ function fieldInput(
     return page.locator('.mv-field', { hasText: label }).locator('input');
 }
 
-test('portal-admin can reach /settings and see the roles list (positive)', async ({
+test('portal-admin can reach /settings and see the roles list (positive) @on:manager-portal-admin', async ({
     page,
-}, testInfo) => {
-    test.skip(testInfo.project.name !== 'manager-portal-admin', 'Needs ManageAccessControl');
-
+}) => {
     await page.goto('/settings');
     await expect(page).toHaveURL(/\/settings\/roles$/);
     await expect(page.getByText('operator', { exact: true })).toBeVisible({ timeout: 15000 });
@@ -46,11 +44,9 @@ test('portal-admin can reach /settings and see the roles list (positive)', async
     await expect(page.getByText('portal-admin', { exact: true })).toBeVisible();
 });
 
-test('portal-admin can edit a role permissions and it persists (positive)', async ({
+test('portal-admin can edit a role permissions and it persists (positive) @on:manager-portal-admin', async ({
     page,
-}, testInfo) => {
-    test.skip(testInfo.project.name !== 'manager-portal-admin', 'Needs ManageAccessControl');
-
+}) => {
     const before = await adminApiViaPage<{
         roles: { items: { id: string; permissions: string[] }[] };
     }>(
@@ -85,11 +81,9 @@ test('portal-admin can edit a role permissions and it persists (positive)', asyn
     }
 });
 
-test('portal-admin can edit a role access scope and it persists (positive)', async ({
+test('portal-admin can edit a role access scope and it persists (positive) @on:manager-portal-admin', async ({
     page,
-}, testInfo) => {
-    test.skip(testInfo.project.name !== 'manager-portal-admin', 'Needs ManageAccessControl');
-
+}) => {
     const before = await adminApiViaPage<{ roleAccessScopeConfig: string | null }>(
         page,
         `query { roleAccessScopeConfig(roleCode: "${TARGET_ROLE}") }`,
@@ -124,11 +118,9 @@ test('portal-admin can edit a role access scope and it persists (positive)', asy
     }
 });
 
-test('portal-admin can edit a role credit term limit and it persists (positive)', async ({
+test('portal-admin can edit a role credit term limit and it persists (positive) @on:manager-portal-admin', async ({
     page,
-}, testInfo) => {
-    test.skip(testInfo.project.name !== 'manager-portal-admin', 'Needs ManageAccessControl');
-
+}) => {
     const newMaxExtraDays = 17;
 
     await page.goto(`/settings/roles/${TARGET_ROLE}`);
@@ -143,9 +135,9 @@ test('portal-admin can edit a role credit term limit and it persists (positive)'
     expect(after.creditTermLimit?.maxExtraDays).toBe(newMaxExtraDays);
 });
 
-test('non-portal-admin roles cannot reach Settings (negative)', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name === 'manager-portal-admin', 'Covered by the positive cases');
-
+test('non-portal-admin roles cannot reach Settings (negative) @on:manager-operator @on:manager-manager @on:manager-department-head', async ({
+    page,
+}, testInfo) => {
     await page.goto('/');
     const settingsLink = page.getByRole('link', { name: 'Settings' });
     // A department head holds ManageVisibilityGrants (#123), so its Settings link opens that page only.

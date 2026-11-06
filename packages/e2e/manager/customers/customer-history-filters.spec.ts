@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 // Regression guard: PrimeVue's menu filter overlay swallows the next outside click after inner use.
 // E2E only: needs browser popover/event bubbling; History tab has always-enabled select filters.
-test.describe('customer History tab — column filter overlays', () => {
+test.describe('customer History tab — column filter overlays @on:manager-portal-admin', () => {
     async function openHistoryTab(page: import('@playwright/test').Page): Promise<void> {
         await page.goto('/customers');
         const row = page.locator('.el-table-v2__row', { hasText: 'E2E Co' });
@@ -29,8 +29,7 @@ test.describe('customer History tab — column filter overlays', () => {
 
     test('opening a second column filter closes the first, even after interacting inside it', async ({
         page,
-    }, testInfo) => {
-        test.skip(testInfo.project.name !== 'manager-portal-admin', 'UI-kit-level test, runs once');
+    }) => {
         await openHistoryTab(page);
 
         await filterButtonFor(page, 'When').click();
@@ -49,8 +48,7 @@ test.describe('customer History tab — column filter overlays', () => {
 
     test('a single outside click closes an overlay after interacting inside it', async ({
         page,
-    }, testInfo) => {
-        test.skip(testInfo.project.name !== 'manager-portal-admin', 'UI-kit-level test, runs once');
+    }) => {
         await openHistoryTab(page);
 
         await filterButtonFor(page, 'When').click();

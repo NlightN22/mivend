@@ -42,7 +42,9 @@ test('dashboard shows the KPI cards for the current role', async ({ page }, test
     }
 });
 
-test('dashboard shows recent orders and my approval requests panels', async ({ page }) => {
+test('dashboard shows recent orders and my approval requests panels @on:manager-operator', async ({
+    page,
+}) => {
     await page.goto('/');
     await expect(page.getByText('Recent orders')).toBeVisible();
     await expect(page.getByText('My approval requests status')).toBeVisible();
@@ -67,7 +69,7 @@ function orderCellLocator(
     return page.locator('.el-table-v2__cell-text', { hasText: formatDocumentNumber(code) });
 }
 
-test.describe('Recent orders filter chips', () => {
+test.describe('Recent orders filter chips @on:manager-operator', () => {
     // recentOrdersList is a take:20 window, so the global-setup order can age out of it.
     // Create a fresh order right before these tests; single-worker runs make it the newest.
     let orderId: string;

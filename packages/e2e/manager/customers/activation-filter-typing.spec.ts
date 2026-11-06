@@ -1,12 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // A column filter overlay must stay open and focused while the table reloads after the first keystroke.
-test.describe('bulk activation column filter typing', () => {
-    // eslint-disable-next-line no-empty-pattern
-    test.beforeEach(({}, testInfo) => {
-        test.skip(testInfo.project.name !== 'manager-portal-admin', 'needs portal access rights');
-    });
-
+test.describe('bulk activation column filter typing @on:manager-portal-admin', () => {
     test('a multi-character value can be typed into the Manager filter', async ({ page }) => {
         await page.goto('/bulk-operations/activate-customers');
         const header = page.locator('th').filter({ hasText: 'Manager' }).first();

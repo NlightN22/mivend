@@ -1,5 +1,6 @@
 import { defineConfig, devices, type PlaywrightTestOptions, type Project } from '@playwright/test';
 import { E2E_USER_AGENT_MARK } from './helpers/user-agent';
+import { roleProjectGrep } from './helpers/role-projects';
 
 function markSessions(
     projects: Project<PlaywrightTestOptions>[],
@@ -91,6 +92,7 @@ export default defineConfig({
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
             testIgnore: MANAGER_IGNORE,
+            grep: roleProjectGrep('manager-operator'),
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
@@ -102,6 +104,7 @@ export default defineConfig({
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
             testIgnore: MANAGER_IGNORE,
+            grep: roleProjectGrep('manager-manager'),
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
@@ -113,6 +116,7 @@ export default defineConfig({
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
             testIgnore: MANAGER_IGNORE,
+            grep: roleProjectGrep('manager-department-head'),
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',
@@ -124,6 +128,7 @@ export default defineConfig({
             testDir: './manager',
             testMatch: ['**/*.spec.ts'],
             testIgnore: MANAGER_IGNORE,
+            grep: roleProjectGrep('manager-portal-admin'),
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: process.env.MANAGER_URL ?? 'http://localhost:5174',

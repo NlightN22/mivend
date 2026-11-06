@@ -69,12 +69,11 @@ async function restoreOperatorAuthFile(): Promise<void> {
 }
 
 test.describe('Session management API (admin-api)', () => {
-    test('a second concurrent login shows up in mySessions and can be ended from the first (positive)', async ({
+    test('a second concurrent login shows up in mySessions and can be ended from the first (positive) @on:manager-operator', async ({
         browserName: _browserName,
-    }, testInfo) => {
+    }) => {
         // Hits admin-api directly, independent of the role project, so run it in only one project
         // to avoid redundant runs against the same operator account.
-        test.skip(testInfo.project.name !== 'manager-operator', 'API-level test, runs once');
 
         const cookieA = await loginViaApi();
         const cookieB = await loginViaApi();
@@ -97,11 +96,9 @@ test.describe('Session management API (admin-api)', () => {
         expect(await isSessionAlive(cookieA)).toBe(true);
     });
 
-    test("endAllSessions ends every session for the admin, including the caller's own (positive)", async ({
+    test("endAllSessions ends every session for the admin, including the caller's own (positive) @on:manager-operator", async ({
         browserName: _browserName,
-    }, testInfo) => {
-        test.skip(testInfo.project.name !== 'manager-operator', 'API-level test, runs once');
-
+    }) => {
         const cookieA = await loginViaApi();
         const cookieB = await loginViaApi();
 
@@ -117,11 +114,9 @@ test.describe('Session management API (admin-api)', () => {
         await restoreOperatorAuthFile();
     });
 
-    test('endSession with a session id that does not belong to the caller is a no-op (negative)', async ({
+    test('endSession with a session id that does not belong to the caller is a no-op (negative) @on:manager-operator', async ({
         browserName: _browserName,
-    }, testInfo) => {
-        test.skip(testInfo.project.name !== 'manager-operator', 'API-level test, runs once');
-
+    }) => {
         const cookieA = await loginViaApi();
         const { endSession } = await adminApiRequest<{ endSession: boolean }>(
             cookieA,
@@ -136,11 +131,9 @@ test.describe('Session management API (admin-api)', () => {
 test.describe('Settings > Security page — UI', () => {
     // Fresh, isolated context (not the shared .auth/manager-operator.json storageState) so
     // ending this session can't invalidate the auth file every other manager spec relies on.
-    test('lists a second session and "End session" removes it from the list (positive)', async ({
+    test('lists a second session and "End session" removes it from the list (positive) @on:manager-operator', async ({
         browser,
-    }, testInfo) => {
-        test.skip(testInfo.project.name !== 'manager-operator', 'UI test, runs once');
-
+    }) => {
         // Ends the shared storageState session too, so the baseline is zero. Restore that file only at the end:
         // restoring earlier would add a third live session and break the exactly-2-rows assertion.
         const cleanupCookie = await loginViaApi();
@@ -190,11 +183,9 @@ test.describe('Settings > Security page — UI', () => {
         );
     });
 
-    test('"Sign out everywhere" logs the current session out too (positive)', async ({
+    test('"Sign out everywhere" logs the current session out too (positive) @on:manager-operator', async ({
         browser,
-    }, testInfo) => {
-        test.skip(testInfo.project.name !== 'manager-operator', 'UI test, runs once');
-
+    }) => {
         const context = await browser.newContext({ userAgent: E2E_BROWSER_USER_AGENT });
         const page = await context.newPage();
         try {
