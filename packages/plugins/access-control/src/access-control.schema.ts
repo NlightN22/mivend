@@ -4,11 +4,13 @@ import gql from 'graphql-tag';
 import { departmentBranchSdl } from './department-branch.schema';
 import { priceTypeSdl } from './price-type.schema';
 import { systemHealthSdl } from './system-health.schema';
+import { teamDirectorySdl } from './team-directory.schema';
 
 export const adminApiSchema: DocumentNode = gql`
     ${priceTypeSdl}
     ${departmentBranchSdl}
     ${systemHealthSdl}
+    ${teamDirectorySdl}
 
     type ErpPosition {
         id: ID!
@@ -60,17 +62,6 @@ export const adminApiSchema: DocumentNode = gql`
         lastName: String!
         emailAddress: String!
         roleCodes: [String!]!
-    }
-
-    type TeamDirectoryMember {
-        id: ID!
-        firstName: String
-        lastName: String
-        roleCodes: [String!]!
-        departmentId: String
-        branchId: String
-        positionId: String
-        position: String
     }
 
     type CreditTermLimit {
@@ -174,7 +165,6 @@ export const adminApiSchema: DocumentNode = gql`
         warehouses: [Warehouse!]!
         branchSettings(branchId: String!): BranchSettings
         teamMembers: [TeamMember!]!
-        teamDirectory: [TeamDirectoryMember!]!
         creditTermLimit(roleCode: String!): CreditTermLimit
         roleAccessScopeConfig(roleCode: String!): String
         roleAccessScopeProvisioningStatus: [RoleAccessScopeProvisioningStatusItem!]!

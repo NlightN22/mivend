@@ -8,6 +8,11 @@ import { AccessScope } from './types';
 
 const TEAM_LIST_LIMIT = 200;
 
+export type TeamBranchScope =
+    | { kind: 'all' }
+    | { kind: 'none' }
+    | { kind: 'branch'; branchId: string };
+
 // Vendure 3.7.3's findAll hides administrators whose roles the caller could not grant, so the team
 // is read directly: 'all' sees every live administrator, others their branch (docs/access-control.md).
 @Injectable()
@@ -17,19 +22,22 @@ export class TeamAdministratorService {
         private accessScopeService: AccessScopeService,
     ) {}
 
-    async findTeam(ctx: RequestContext): Promise<Administrator[]> {
+    // 'all' scope sees every branch; otherwise the caller's own branch, or nobody without one.
+    async resolveBranch(ctx: RequestContext): Promise<TeamBranchScope> {
         const scope = await this.accessScopeService.resolveCounterpartyScope(ctx);
+        if (scope.kind === 'all') return { kind: 'all' };
         const branchId =
-            scope.kind === 'all'
-                ? null
-                : scope.kind === 'department'
-                  ? scope.branchId
-                  : await this.callerBranchId(ctx, scope);
-        if (scope.kind !== 'all' && branchId == null) return [];
+            scope.kind === 'department' ? scope.branchId : await this.callerBranchId(ctx, scope);
+        return branchId == null ? { kind: 'none' } : { kind: 'branch', branchId: String(branchId) };
+    }
+
+    async findTeam(ctx: RequestContext): Promise<Administrator[]> {
+        const branch = await this.resolveBranch(ctx);
+        if (branch.kind === 'none') return [];
         return this.connection.getRepository(ctx, Administrator).find({
             where: {
                 deletedAt: IsNull(),
-                ...(branchId != null && { customFields: { branchId: String(branchId) } }),
+                ...(branch.kind === 'branch' && { customFields: { branchId: branch.branchId } }),
             },
             relations: ['user', 'user.roles'],
             order: { id: 'ASC' },

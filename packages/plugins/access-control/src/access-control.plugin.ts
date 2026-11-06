@@ -28,6 +28,8 @@ import { SystemHealthService } from './system-health.service';
 import { AccessControlResolver, AdministratorStatusResolver } from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
 import { TeamAdministratorService } from './team-administrator.service';
+import { TeamDirectoryResolver } from './team-directory.resolver';
+import { TeamDirectoryService } from './team-directory.service';
 import { AdministratorActivationService } from './administrator-activation.service';
 import { AdministratorProvisioningService } from './administrator-provisioning.service';
 import { BranchService } from './branch.service';
@@ -78,6 +80,7 @@ import { WarehouseService } from './warehouse.service';
         HiddenCategoryFacetValuesService,
         HiddenCategoryProductsService,
         TeamAdministratorService,
+        TeamDirectoryService,
         RoleScopeConfigService,
         DepartmentService,
         PositionService,
@@ -125,6 +128,7 @@ import { WarehouseService } from './warehouse.service';
         schema: adminApiSchema,
         resolvers: [
             AccessControlResolver,
+            TeamDirectoryResolver,
             AdministratorStatusResolver,
             ErpUserResolver,
             PriceTypeAdminResolver,

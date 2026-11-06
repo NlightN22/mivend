@@ -151,8 +151,9 @@ colleagues through `TeamAdministratorService` for every `'department'`- and `'ow
 (department-head, operator, manager): live administrators of the caller's own `branchId`, a branchless
 caller sees none; `'all'` lists every live administrator directly (Vendure's list would drop the same ones). Reassignment targets are checked against the
 branch for `'department'` only; other scopes are unchanged. This grants no administrator-management
-permission. `teamDirectory` (`/team`) lists the same `findTeam` set, then applies its own
-name anonymization. Approval escalation resolves its target by id directly (live administrators only),
+permission. `teamDirectory` (`/team`) is a paginated list (`skip/take/search/filter`, `take: 0` for counts) over the same
+branch scope that also includes inactive administrators; names outside the caller's department are null
+unless `teamVisibility` is `all`, and `search` never matches a name the caller cannot see (ERP id still matches). Approval escalation resolves its target by id directly (live administrators only),
 not through `AdministratorService`, so the requester's grantable roles never hide a valid approver; the
 step's `escalatesTo` role check still applies.
 

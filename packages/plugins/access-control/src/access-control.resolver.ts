@@ -12,7 +12,6 @@ import {
 import { AdministratorActivationService } from './administrator-activation.service';
 import { AdministratorProvisioningService } from './administrator-provisioning.service';
 import { CustomPermission } from './custom-permission';
-import { AccessScopeService } from './access-scope.service';
 import { TeamAdministratorService } from './team-administrator.service';
 import { BranchService } from './branch.service';
 import { BranchSettingsService } from './branch-settings.service';
@@ -23,9 +22,7 @@ import { BranchSettings } from './entities/branch-settings.entity';
 import { CreditTermLimit } from './entities/credit-term-limit.entity';
 import { Department } from './entities/department.entity';
 import { Warehouse } from './entities/warehouse.entity';
-import { ErpUserService } from './erp-user.service';
 import { AccessScopeConfig, RoleScopeConfigService } from './role-scope-config.service';
-import { PositionService } from './position.service';
 import { WarehouseService } from './warehouse.service';
 
 interface TeamMember {
@@ -36,29 +33,15 @@ interface TeamMember {
     roleCodes: string[];
 }
 
-interface TeamDirectoryMember {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-    roleCodes: string[];
-    departmentId: string | null;
-    branchId: string | null;
-    positionId: string | null;
-    position: string | null;
-}
-
 @Resolver()
 export class AccessControlResolver {
     constructor(
         private roleScopeConfigService: RoleScopeConfigService,
         private departmentService: DepartmentService,
-        private positionService: PositionService,
         private branchService: BranchService,
         private warehouseService: WarehouseService,
         private branchSettingsService: BranchSettingsService,
         private creditTermLimitService: CreditTermLimitService,
-        private accessScopeService: AccessScopeService,
-        private erpUserService: ErpUserService,
         private administratorProvisioningService: AdministratorProvisioningService,
         private administratorActivationService: AdministratorActivationService,
         private teamAdministratorService: TeamAdministratorService,
@@ -77,51 +60,6 @@ export class AccessControlResolver {
             emailAddress: a.emailAddress,
             roleCodes: a.user?.roles?.map(r => r.code) ?? [],
         }));
-    }
-
-    // firstName/lastName are anonymized outside the caller's department unless teamVisibility is 'all'.
-    // Separate from teamMembers so picker call sites always get real names.
-    @Query()
-    @Allow(Permission.Authenticated)
-    async teamDirectory(@Ctx() ctx: RequestContext): Promise<TeamDirectoryMember[]> {
-        const team = await this.teamAdministratorService.findTeam(ctx);
-        const [ownDepartmentId, visibilityScope] = await Promise.all([
-            this.accessScopeService.getOwnDepartmentId(ctx),
-            this.accessScopeService.resolveTeamVisibilityScope(ctx),
-        ]);
-        const positionByErpId = await this.erpUserService.findPositionErpIds(
-            ctx,
-            team.flatMap(a => {
-                const erpId = (a.customFields as { erpId?: string | null } | undefined)?.erpId;
-                return erpId ? [erpId] : [];
-            }),
-        );
-        const positionNames = await this.positionService.findNamesByErpIds(ctx, [
-            ...new Set(positionByErpId.values()),
-        ]);
-        return team.map(a => {
-            const customFields = a.customFields as
-                | {
-                      departmentId?: string | null;
-                      branchId?: string | null;
-                      erpId?: string | null;
-                  }
-                | undefined;
-            const departmentId = customFields?.departmentId ?? null;
-            const sameDepartment = ownDepartmentId != null && departmentId === ownDepartmentId;
-            const nameVisible = visibilityScope.kind === 'all' || sameDepartment;
-            const positionId = positionByErpId.get(customFields?.erpId ?? '');
-            return {
-                id: String(a.id),
-                firstName: nameVisible ? a.firstName : null,
-                lastName: nameVisible ? a.lastName : null,
-                roleCodes: a.user?.roles?.map(r => r.code) ?? [],
-                departmentId,
-                branchId: customFields?.branchId ?? null,
-                positionId: positionId ?? null,
-                position: positionId ? (positionNames.get(positionId) ?? null) : null,
-            };
-        });
     }
 
     // Org structure is ERP master data, view-only in the portal for every authenticated
