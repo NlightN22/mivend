@@ -2,11 +2,15 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { ArrowDown } from '@element-plus/icons-vue';
 import type { SelectFilterConfig } from './columnFilterTypes';
+import { SEARCHABLE_OPTION_COUNT, filterOptionsByQuery } from './filterOptionsByQuery';
 
 const props = defineProps<{ config: SelectFilterConfig; modelValue: string }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
 const open = ref(false);
+const query = ref('');
+const searchable = computed(() => props.config.options.length > SEARCHABLE_OPTION_COUNT);
+const visibleOptions = computed(() => filterOptionsByQuery(props.config.options, query.value));
 const rootEl = ref<HTMLElement | null>(null);
 
 function onDocClick(e: MouseEvent): void {
@@ -21,6 +25,7 @@ const selectedLabel = computed(
 
 function select(value: string): void {
     emit('update:modelValue', value);
+    query.value = '';
     open.value = false;
 }
 </script>
@@ -43,8 +48,15 @@ function select(value: string): void {
             <ArrowDown v-else class="mv-column-filter-select__arrow" />
         </button>
         <div v-if="open" class="mv-column-filter-select__panel">
+            <input
+                v-if="searchable"
+                v-model="query"
+                type="text"
+                class="mv-column-filter-select__search"
+                placeholder="Search…"
+            />
             <button
-                v-for="option in config.options"
+                v-for="option in visibleOptions"
                 :key="option.value"
                 type="button"
                 class="mv-column-filter-select__option"
@@ -114,6 +126,18 @@ function select(value: string): void {
     display: flex;
     flex-direction: column;
     gap: 2px;
+}
+
+.mv-column-filter-select__search {
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--el-border-color, #e4e7ec);
+    border-radius: 6px;
+    font-size: 13px;
+    position: sticky;
+    top: 0;
+    background: var(--el-bg-color, #fff);
+    flex-shrink: 0;
 }
 
 .mv-column-filter-select__option {
