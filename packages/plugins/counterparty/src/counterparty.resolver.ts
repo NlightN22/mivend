@@ -120,6 +120,7 @@ export class CounterpartyResolver {
                 take?: number;
                 skip?: number;
                 search?: string;
+                erpIds?: string[];
                 status?: string;
                 managerId?: ID;
                 managerErpId?: string;

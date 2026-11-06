@@ -612,6 +612,19 @@ describe('CounterpartyService', () => {
             expect(qb.andWhere).toHaveBeenCalledWith('c.isActive = true');
         });
 
+        it('narrows by exact erpIds on top of the access scope', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await service.findVisiblePage(mockCtx, { erpIds: ['cp-a', 'cp-b'] });
+
+            expect(qb.andWhere).toHaveBeenCalledWith('c.erpId IN (:...erpIds)', {
+                erpIds: ['cp-a', 'cp-b'],
+            });
+        });
+
         it('applies an additional status=inactive filter', async () => {
             const qb = mockPageQueryBuilder();
             mockConnection.getRepository.mockReturnValueOnce({

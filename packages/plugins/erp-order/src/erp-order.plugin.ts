@@ -39,6 +39,8 @@ import { OrderStatusProvisioningService } from './order-status-provisioning.serv
 import { OrderStatusReferenceResolver } from './order-status-reference.resolver';
 import { OrderStatusReferenceService } from './order-status-reference.service';
 import { OrderVisibilityService } from './order-visibility.service';
+import { OrderVisibilityAggregatesService } from './order-visibility-aggregates.service';
+import { OrderVisibilityAggregatesResolver } from './order-visibility-aggregates.resolver';
 import { CoreOrderScopeInterceptor } from './core-order-scope/core-order-scope.interceptor';
 import { OrderTargetService } from './core-order-scope/order-target.service';
 import { CoreOrderScopeService } from './core-order-scope/core-order-scope.service';
@@ -59,7 +61,16 @@ const adminApiSchema = gql`
             customerId: ID
             search: String
         ): OrderList!
+        "Sum of totalWithTax over the caller's visible orders matching options.filter"
+        visibleOrdersAmount(options: OrderListOptions): Money!
+        "Latest placed-order date per listed counterparty, visible orders only"
+        lastOrderDates(counterpartyIds: [ID!]!): [CounterpartyLastOrder!]!
         orderStatuses: [OrderStatusInfo!]!
+    }
+
+    type CounterpartyLastOrder {
+        counterpartyId: ID!
+        lastOrderAt: DateTime!
     }
 
     type OrderStatusInfo {
@@ -91,6 +102,7 @@ const adminApiSchema = gql`
         OrderStatusReferenceService,
         OrderStatusProvisioningService,
         OrderVisibilityService,
+        OrderVisibilityAggregatesService,
         OrderTargetService,
         CoreOrderScopeService,
         { provide: 'APP_INTERCEPTOR', useClass: CoreOrderScopeInterceptor },
@@ -120,6 +132,7 @@ const adminApiSchema = gql`
         schema: adminApiSchema,
         resolvers: [
             AdminOrderVisibilityResolver,
+            OrderVisibilityAggregatesResolver,
             OrderStatusDictionaryResolver,
             DraftOrderDeliveryResolver,
             ScopedOrdersResolver,

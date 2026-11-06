@@ -85,6 +85,8 @@ export const adminApiSchema = gql`
         take: Int
         skip: Int
         search: String
+        "Exact ERP ids; narrows inside the caller's visibility scope (batch lookup for references)"
+        erpIds: [String!]
         "active | inactive"
         status: String
         managerId: ID

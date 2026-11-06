@@ -253,6 +253,21 @@ describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHigh
         expect(result.items.map(c => c.erpId)).toEqual(['cp-own-mine']);
     });
 
+    it('findVisiblePage erpIds returns only the listed ids and stays inside the scope', async () => {
+        await seedCounterparties();
+        mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
+            kind: 'own',
+            administratorId: 'admin-2',
+        });
+
+        const result = await service.findVisiblePage(mockCtx, {
+            erpIds: ['cp-own-mine', 'cp-own-other'],
+        });
+
+        expect(result.items.map(c => c.erpId)).toEqual(['cp-own-mine']);
+        expect((await service.findVisiblePage(mockCtx, { erpIds: [] })).items).toEqual([]);
+    });
+
     it('findVisiblePage still respects scope (own sees only their own row)', async () => {
         await seedCounterparties();
         mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({

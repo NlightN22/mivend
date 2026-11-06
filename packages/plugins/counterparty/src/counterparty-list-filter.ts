@@ -10,6 +10,7 @@ import { Counterparty } from './entities/counterparty.entity';
 // `CounterpartyListOptions`, shared by the list query and filter-shaped bulk mutations (#136).
 export interface CounterpartyListFilter {
     search?: string;
+    erpIds?: string[];
     status?: string;
     managerId?: ID;
     managerErpId?: string;
@@ -33,6 +34,11 @@ export function applyCounterpartyListFilter(
                 search: `%${filter.search}%`,
             },
         );
+    }
+    if (filter.erpIds) {
+        qb.andWhere('c.erpId IN (:...erpIds)', {
+            erpIds: filter.erpIds.length ? filter.erpIds : [''],
+        });
     }
     if (filter.status === 'active') {
         qb.andWhere('c.isActive = true');
