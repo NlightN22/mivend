@@ -71,7 +71,7 @@ test.describe('Login page', () => {
         await page.waitForTimeout(2000); // let shopApi's retry/backoff run its course
 
         expect(page.url()).not.toContain('/login');
-        await expect(page.getByRole('link', { name: 'Account' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Account' }).first()).toBeVisible();
     });
 
     // A ~6s outage that outlasts shopApi's ~4.2s retry must stay 'unknown', not 'unauthenticated'.
@@ -101,7 +101,9 @@ test.describe('Login page', () => {
 
         // Once the outage ends, the background retry (re-armed at up to 20s) eventually
         // succeeds and the page reflects the still-valid session without any re-login.
-        await expect(page.getByRole('link', { name: 'Account' })).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByRole('button', { name: 'Account' }).first()).toBeVisible({
+            timeout: 15_000,
+        });
         expect(page.url()).not.toContain('/login');
     });
 });
