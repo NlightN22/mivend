@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw';
 import ElementPlus from 'element-plus';
 import * as ElementPlusIconsVue from '@element-plus/icons-vue';
 import 'element-plus/dist/index.css';
+import 'element-plus/theme-chalk/dark/css-vars.css';
 import '@mivend/ui-kit/src/styles/tokens.css';
 import {
     MvButton,
@@ -34,6 +35,7 @@ import { i18n } from '../src/i18n';
 import { formatAmount } from '../src/i18n/format';
 import { extractOperationName, resetMocks, resolveMock } from './graphql-mock-registry';
 import { registerDefaultMocks } from './default-mocks';
+import { themeGlobalTypes, withTheme } from '../../ui-kit/.storybook/theme-toolbar';
 
 initialize({ onUnhandledRequest: 'bypass' });
 
@@ -97,19 +99,16 @@ const graphqlHandler = http.post('/shop-api', async ({ request }) => {
 });
 
 const preview: Preview = {
+    globalTypes: themeGlobalTypes,
+    initialGlobals: { theme: 'light' },
+    decorators: [withTheme],
     parameters: {
         msw: { handlers: [graphqlHandler] },
         viewport: {
             viewports: mvViewports,
             defaultViewport: 'mvMobile',
         },
-        backgrounds: {
-            default: 'page',
-            values: [
-                { name: 'page', value: '#F6F8FB' },
-                { name: 'surface', value: '#FFFFFF' },
-            ],
-        },
+        backgrounds: { disable: true },
     },
     loaders: [
         mswLoader,

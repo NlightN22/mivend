@@ -3,7 +3,9 @@ import { setup } from '@storybook/vue3';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
+import 'element-plus/theme-chalk/dark/css-vars.css';
 import '../src/styles/tokens.css';
+import { themeGlobalTypes, withTheme } from './theme-toolbar';
 
 const router = createRouter({
     history: createMemoryHistory(),
@@ -34,15 +36,11 @@ const mvViewports = {
 };
 
 const preview: Preview = {
+    globalTypes: themeGlobalTypes,
+    initialGlobals: { theme: 'light' },
+    decorators: [withTheme],
     parameters: {
-        backgrounds: {
-            default: 'page',
-            values: [
-                { name: 'page', value: '#F6F8FB' },
-                { name: 'surface', value: '#FFFFFF' },
-                { name: 'catalog', value: '#F2FFF8' },
-            ],
-        },
+        backgrounds: { disable: true },
         viewport: {
             viewports: mvViewports,
             defaultViewport: 'mvDesktop',
