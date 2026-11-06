@@ -23,11 +23,11 @@ defineProps<{ title?: string }>();
 
 <style scoped>
 .mv-panel {
-    background: var(--app-surface, #fff);
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-lg, 16px);
     padding: 16px 18px;
-    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+    box-shadow: 0 1px 0 var(--app-ink-05);
 }
 
 .mv-panel__header {
@@ -42,11 +42,11 @@ defineProps<{ title?: string }>();
     font-size: 15px;
     margin: 0;
     font-weight: 700;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-panel__header-actions {
-    color: var(--el-color-primary-dark-2, #008a70);
+    color: var(--el-color-primary-dark-2);
     font-weight: 700;
     font-size: 13px;
 }

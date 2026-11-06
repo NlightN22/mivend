@@ -41,8 +41,8 @@
     font-weight: 900;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #66736e;
-    background: #edf2ef;
+    color: var(--app-nav-label);
+    background: var(--app-nav-border);
     border-radius: 999px;
     padding: 4px 14px;
     margin-bottom: 20px;
@@ -53,12 +53,12 @@
     font-size: clamp(32px, 4vw, 52px);
     line-height: 1;
     letter-spacing: -0.05em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .empty-cart__sub {
     margin: 0 0 24px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 15px;
     line-height: 1.5;
 }
@@ -76,23 +76,23 @@
     min-height: 44px;
     padding: 0 18px;
     border-radius: 14px;
-    border: 1px solid #dde7e2;
-    background: #f3f8f6;
-    color: #263732;
+    border: 1px solid var(--app-nav-border-strong);
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
     font-size: 14px;
     font-weight: 800;
     text-decoration: none;
     transition: 0.14s;
 }
 .empty-cart__btn:hover {
-    background: #e8f2ed;
+    background: var(--app-chip-bg);
 }
 .empty-cart__btn--primary {
-    background: #00a878;
+    background: var(--app-brand-fill);
     border-color: transparent;
-    color: #fff;
+    color: var(--app-on-accent);
 }
 .empty-cart__btn--primary:hover {
-    background: #008a64;
+    background: var(--app-brand-fill-hover);
 }
 </style>

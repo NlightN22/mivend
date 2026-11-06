@@ -98,7 +98,7 @@ function rowKey(row: TRow): unknown {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
-    background: var(--el-fill-color-light, #f1f4f7);
+    background: var(--el-fill-color-light);
     padding: 10px;
     border-radius: 12px;
 }
@@ -106,13 +106,13 @@ function rowKey(row: TRow): unknown {
 .mv-advanced-mobile-cards__empty {
     padding: 24px;
     text-align: center;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 14px;
 }
 
 .mv-advanced-mobile-card {
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    background: #fff;
+    border: 1px solid var(--el-border-color);
+    background: var(--app-surface);
     border-radius: 12px;
     padding: 13px;
     display: grid;
@@ -148,7 +148,7 @@ function rowKey(row: TRow): unknown {
 }
 
 .mv-advanced-mobile-card__label {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 10px;
     text-transform: uppercase;
     font-weight: 800;

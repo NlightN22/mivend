@@ -55,10 +55,10 @@ const { t } = useI18n();
 }
 
 .settlement-cards__card {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 24px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 18px 20px;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -66,13 +66,13 @@ const { t } = useI18n();
 }
 
 .settlement-cards__label {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     font-weight: 800;
 }
 
 .is-overdue .settlement-cards__label {
-    color: #c0362c;
+    color: var(--app-orange-fg);
 }
 
 @media (max-width: 760px) {

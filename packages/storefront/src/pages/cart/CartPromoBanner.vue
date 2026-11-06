@@ -96,11 +96,11 @@ function isComplete(tp: TierProgress): boolean {
     flex-shrink: 0;
 }
 .cart-promo-banner__tier-icon--done {
-    background: #d3f3e6;
-    color: #008a64;
+    background: var(--el-color-primary-light-7);
+    color: var(--app-nav-accent);
 }
 .cart-promo-banner__tier-icon--pending {
-    background: #fdeee0;
-    color: #d97a1f;
+    background: var(--app-orange-bg);
+    color: var(--app-stock-low-fg);
 }
 </style>

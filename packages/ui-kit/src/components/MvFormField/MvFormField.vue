@@ -27,19 +27,19 @@ defineProps<{
 .mv-field__label {
     font-size: 13px;
     font-weight: 700;
-    color: #3e504a;
+    color: var(--app-text-body3);
     line-height: 1.3;
 }
 
 .mv-field__required {
-    color: #ef4444;
+    color: var(--app-danger-btn);
     margin-left: 2px;
 }
 
 .mv-field__error {
     margin: 0;
     font-size: 12px;
-    color: #ef4444;
+    color: var(--app-danger-btn);
     line-height: 1.35;
 }
 </style>

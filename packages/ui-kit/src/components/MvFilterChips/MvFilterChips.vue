@@ -72,65 +72,65 @@ const emit = defineEmits<{ select: [key: string] }>();
 .mv-filter-chip {
     height: 30px;
     padding: 0 12px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: 999px;
-    background: #fff;
-    color: var(--el-text-color-regular, #374151);
+    background: var(--app-surface);
+    color: var(--el-text-color-regular);
     font-weight: 600;
     font-size: 12px;
     cursor: pointer;
 }
 
 .mv-filter-chip:hover {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
 }
 
 .mv-filter-chip--active {
-    background: var(--el-color-primary-light-9, #f0fffa);
-    color: var(--el-color-primary-dark-2, #008a70);
-    border-color: var(--el-color-primary-light-7, #c8f7ec);
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary-dark-2);
+    border-color: var(--el-color-primary-light-7);
 }
 
 /* Higher specificity than .mv-filter-chip:hover (two classes vs one class + pseudo-class) so
    hovering an already-active chip stays in its active appearance instead of falling back to
    the plain hover background. */
 .mv-filter-chip--active:hover {
-    background: var(--el-color-primary-light-9, #f0fffa);
-    color: var(--el-color-primary-dark-2, #008a70);
-    border-color: var(--el-color-primary-light-7, #c8f7ec);
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary-dark-2);
+    border-color: var(--el-color-primary-light-7);
 }
 
 /* Same palette as MvStatusBadge's variants, at rest (unselected) — kept in sync by hand (no
    shared CSS module between the two components exists yet); if a third color-coded chip/badge
    component appears, extract this into a shared source instead of a third hand-copy. */
 .mv-filter-chip--neutral {
-    background: #f1f5f9;
-    color: #475569;
-    border-color: #f1f5f9;
+    background: var(--app-slate-bg);
+    color: var(--app-text-grey);
+    border-color: var(--app-slate-bg);
 }
 
 .mv-filter-chip--success {
-    background: #d1fae5;
-    color: #065f46;
-    border-color: #d1fae5;
+    background: var(--app-ok-bg);
+    color: var(--app-ok-fg);
+    border-color: var(--app-ok-bg);
 }
 
 .mv-filter-chip--warning {
-    background: #fef3c7;
-    color: #92400e;
-    border-color: #fef3c7;
+    background: var(--app-warn-bg);
+    color: var(--app-warn-fg);
+    border-color: var(--app-warn-bg);
 }
 
 .mv-filter-chip--danger {
-    background: #fee2e2;
-    color: #991b1b;
-    border-color: #fee2e2;
+    background: var(--app-danger-bg);
+    color: var(--app-danger-fg);
+    border-color: var(--app-danger-bg);
 }
 
 .mv-filter-chip--info {
-    background: #e0f2fe;
-    color: #0c4a6e;
-    border-color: #e0f2fe;
+    background: var(--app-info-bg);
+    color: var(--app-info-fg);
+    border-color: var(--app-info-bg);
 }
 
 /* Selection deepens the same variant color (darker background + a matching border) instead of
@@ -142,36 +142,36 @@ const emit = defineEmits<{ select: [key: string] }>();
 
 .mv-filter-chip--neutral.mv-filter-chip--selected,
 .mv-filter-chip--neutral.mv-filter-chip--selected:hover {
-    background: #e2e8f0;
-    color: #334155;
-    border-color: #94a3b8;
+    background: var(--app-sel-neutral-bg);
+    color: var(--app-sel-neutral-fg);
+    border-color: var(--app-sel-neutral-bd);
 }
 
 .mv-filter-chip--success.mv-filter-chip--selected,
 .mv-filter-chip--success.mv-filter-chip--selected:hover {
-    background: #a7f3d0;
-    color: #065f46;
-    border-color: #34d399;
+    background: var(--app-sel-ok-bg);
+    color: var(--app-ok-fg);
+    border-color: var(--app-sel-ok-bd);
 }
 
 .mv-filter-chip--warning.mv-filter-chip--selected,
 .mv-filter-chip--warning.mv-filter-chip--selected:hover {
-    background: #fde68a;
-    color: #78350f;
-    border-color: #f59e0b;
+    background: var(--app-sel-warn-bg);
+    color: var(--app-sel-warn-fg);
+    border-color: var(--app-sel-warn-bd);
 }
 
 .mv-filter-chip--danger.mv-filter-chip--selected,
 .mv-filter-chip--danger.mv-filter-chip--selected:hover {
-    background: #fecaca;
-    color: #7f1d1d;
-    border-color: #f87171;
+    background: var(--app-sel-danger-bg);
+    color: var(--app-danger2-fg);
+    border-color: var(--app-sel-danger-bd);
 }
 
 .mv-filter-chip--info.mv-filter-chip--selected,
 .mv-filter-chip--info.mv-filter-chip--selected:hover {
-    background: #bae6fd;
-    color: #0c4a6e;
-    border-color: #38bdf8;
+    background: var(--app-sel-info-bg);
+    color: var(--app-info-fg);
+    border-color: var(--app-sel-info-bd);
 }
 </style>

@@ -31,23 +31,23 @@ withDefaults(defineProps<{ items: BreadcrumbItem[]; ariaLabel?: string }>(), {
 }
 
 .mv-breadcrumbs__link {
-    color: #66736e;
+    color: var(--app-nav-label);
     text-decoration: none;
     transition: color 0.12s;
 }
 
 .mv-breadcrumbs__link:hover {
-    color: #00b894;
+    color: var(--el-color-primary);
 }
 
 .mv-breadcrumbs__sep {
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
 }
 
 .mv-breadcrumbs__current {
     min-width: 0;
     overflow-wrap: anywhere;
-    color: #2c3b36;
+    color: var(--app-text-body2);
     font-weight: 600;
 }
 </style>

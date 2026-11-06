@@ -74,10 +74,10 @@ const limitText = computed(() => {
 
 <style scoped>
 .quick-actions {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    box-shadow: 0 14px 36px var(--app-ink-08);
+    border: 1px solid var(--app-border-glass);
     padding: 22px;
     margin-bottom: 22px;
 }
@@ -97,7 +97,7 @@ const limitText = computed(() => {
 }
 
 .quick-actions__subtitle {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
@@ -110,10 +110,10 @@ const limitText = computed(() => {
 
 .quick-actions__card {
     min-height: 128px;
-    border: 1px solid #edf2ef;
+    border: 1px solid var(--app-nav-border);
     border-radius: 20px;
     padding: 18px;
-    background: #fbfdfc;
+    background: var(--app-fill-faint);
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     align-content: space-between;
@@ -124,7 +124,7 @@ const limitText = computed(() => {
 
 .quick-actions__card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 24px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 12px 24px var(--app-ink-08);
 }
 
 .quick-actions__icon {
@@ -133,8 +133,8 @@ const limitText = computed(() => {
     border-radius: 14px;
     display: grid;
     place-items: center;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
     font-size: 20px;
     font-weight: 950;
     margin-bottom: 12px;
@@ -147,7 +147,7 @@ const limitText = computed(() => {
 }
 
 .quick-actions__card-text {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.35;
 }

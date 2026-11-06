@@ -35,29 +35,29 @@ defineProps<{
     transition:
         background 0.14s,
         color 0.14s;
-    background: #f3f8f6;
-    color: #4a5e57;
+    background: var(--app-fill-soft);
+    color: var(--app-text-body3);
 }
 
 .mv-icon-btn:hover {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .mv-icon-btn--primary {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 .mv-icon-btn--primary:hover {
-    background: #c6f0df;
+    background: var(--el-color-primary-light-7);
 }
 
 .mv-icon-btn--orange {
-    background: #fff0df;
-    color: #e87800;
+    background: var(--app-orange-bg);
+    color: var(--app-stock-low-fg);
 }
 .mv-icon-btn--orange:hover {
-    background: #ffe0bf;
+    background: var(--app-danger-bg);
 }
 
 .mv-icon-btn__icon {

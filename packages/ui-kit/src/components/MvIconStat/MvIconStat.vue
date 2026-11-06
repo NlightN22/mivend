@@ -29,8 +29,8 @@ defineProps<{ icon: Component; label: string; value: string }>();
     width: 36px;
     height: 36px;
     border-radius: 12px;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 .mv-icon-stat__body {
     display: grid;
@@ -39,13 +39,13 @@ defineProps<{ icon: Component; label: string; value: string }>();
     min-width: 0;
 }
 .mv-icon-stat__label {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
 }
 .mv-icon-stat__value {
     font-size: 14px;
     font-weight: 950;
-    color: #1b2d26;
+    color: var(--app-nav-text-strong);
     overflow-wrap: anywhere;
 }
 </style>

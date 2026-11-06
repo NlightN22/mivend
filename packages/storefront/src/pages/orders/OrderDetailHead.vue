@@ -71,7 +71,7 @@ const pageUrl = (): string => window.location.href;
 }
 
 .od-meta {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
 }
 
@@ -82,26 +82,26 @@ const pageUrl = (): string => window.location.href;
     min-height: 32px;
     padding: 0 12px;
     border-radius: 999px;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
     font-size: 13px;
     font-weight: 950;
     white-space: nowrap;
 }
 
 .od-status.muted {
-    background: #eef4f1;
-    color: #5f6e68;
+    background: var(--app-nav-border);
+    color: var(--app-nav-label);
 }
 
 .od-status.warning {
-    background: #fff4e3;
-    color: #a45e00;
+    background: var(--app-orange-bg);
+    color: var(--app-orange-fg);
 }
 
 .od-status.error {
-    background: #ffeeed;
-    color: #c0362c;
+    background: var(--app-danger2-bg);
+    color: var(--app-orange-fg);
 }
 
 @media (max-width: 760px) {

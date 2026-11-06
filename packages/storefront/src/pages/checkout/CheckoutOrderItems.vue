@@ -85,10 +85,10 @@ const totalQty = computed(() => cartStore.totalQuantity);
 
 <style scoped>
 .checkout-items {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 22px;
 }
 
@@ -108,7 +108,7 @@ const totalQty = computed(() => cartStore.totalQuantity);
 
 .checkout-items__subtitle {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 
@@ -117,8 +117,8 @@ const totalQty = computed(() => cartStore.totalQuantity);
     min-height: 40px;
     border-radius: 13px;
     padding: 0 14px;
-    background: #f3f8f6;
-    color: #263732;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
     font-weight: 800;
     cursor: pointer;
     white-space: nowrap;
@@ -138,9 +138,9 @@ const totalQty = computed(() => cartStore.totalQuantity);
 .checkout-items__row {
     min-height: 68px;
     padding: 10px 12px;
-    border: 1px solid #edf2ef;
+    border: 1px solid var(--app-nav-border);
     border-radius: 18px;
-    background: #fbfdfc;
+    background: var(--app-fill-faint);
     display: grid;
     grid-template-columns: 52px minmax(0, 1fr) auto;
     gap: 12px;
@@ -153,9 +153,9 @@ const totalQty = computed(() => cartStore.totalQuantity);
     border-radius: 15px;
     display: grid;
     place-items: center;
-    background: #fff;
-    border: 1px solid #edf2ef;
-    color: #66736e;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border);
+    color: var(--app-nav-label);
     overflow: hidden;
 }
 
@@ -173,7 +173,7 @@ const totalQty = computed(() => cartStore.totalQuantity);
 }
 
 .checkout-items__meta {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
     font-weight: 700;
 }

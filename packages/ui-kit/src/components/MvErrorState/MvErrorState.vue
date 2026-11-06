@@ -32,20 +32,20 @@ const emit = defineEmits<{ retry: [] }>();
     gap: 8px;
     padding: 48px 24px;
     text-align: center;
-    background: var(--app-surface, #fff);
-    border: 1px solid var(--app-nav-border, #edf2ef);
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border);
     border-radius: var(--app-radius-lg, 16px);
 }
 
 .mv-error-state__title {
     font-size: var(--app-font-size-title, 20px);
     font-weight: 800;
-    color: var(--app-nav-text-strong, #14231f);
+    color: var(--app-nav-text-strong);
 }
 
 .mv-error-state__message {
     font-size: var(--app-font-size-body, 14px);
-    color: var(--app-nav-label, #66736e);
+    color: var(--app-nav-label);
     margin-bottom: 8px;
 }
 </style>

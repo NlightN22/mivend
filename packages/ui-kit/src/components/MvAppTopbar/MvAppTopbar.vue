@@ -61,8 +61,8 @@ const emit = defineEmits<{ logout: [] }>();
     gap: 20px;
     height: 64px;
     padding: 0 24px;
-    background: var(--app-surface, #fff);
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    background: var(--app-surface);
+    border-bottom: 1px solid var(--el-border-color);
     position: sticky;
     top: 0;
     z-index: var(--mv-z-sticky);
@@ -85,23 +85,23 @@ const emit = defineEmits<{ logout: [] }>();
     position: absolute;
     top: 10px;
     left: 14px;
-    color: var(--el-text-color-secondary, #9ca3af);
+    color: var(--el-text-color-secondary);
 }
 
 .mv-app-topbar__search-input {
     width: 100%;
     height: 40px;
     padding: 0 70px 0 38px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: 999px;
-    background: var(--el-fill-color-light, #f8fafc);
-    color: var(--el-text-color-primary, #17212b);
+    background: var(--el-fill-color-light);
+    color: var(--el-text-color-primary);
     font-size: 14px;
     outline: none;
 }
 
 .mv-app-topbar__search-input::placeholder {
-    color: var(--el-text-color-secondary, #9ca3af);
+    color: var(--el-text-color-secondary);
 }
 
 .mv-app-topbar__search-shortcut {
@@ -109,10 +109,10 @@ const emit = defineEmits<{ logout: [] }>();
     right: 10px;
     top: 7px;
     padding: 3px 7px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: 8px;
-    color: var(--el-text-color-secondary, #6b7280);
-    background: #fff;
+    color: var(--el-text-color-secondary);
+    background: var(--app-surface);
     font-size: 12px;
 }
 
@@ -128,7 +128,7 @@ const emit = defineEmits<{ logout: [] }>();
     align-items: center;
     gap: 10px;
     padding: 6px 10px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: 999px;
     color: inherit;
     text-decoration: none;
@@ -136,15 +136,15 @@ const emit = defineEmits<{ logout: [] }>();
 }
 
 .mv-app-topbar__user:hover {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
 }
 
 .mv-app-topbar__avatar {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: var(--el-text-color-primary, #17212b);
-    color: #fff;
+    background: var(--el-text-color-primary);
+    color: var(--app-on-accent);
     display: grid;
     place-items: center;
     font-size: 11px;
@@ -154,8 +154,8 @@ const emit = defineEmits<{ logout: [] }>();
 
 .mv-app-topbar__logout {
     background: none;
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    color: var(--el-text-color-primary, #17212b);
+    border: 1px solid var(--el-border-color);
+    color: var(--el-text-color-primary);
     border-radius: 999px;
     padding: 6px 12px;
     font-size: 13px;
@@ -163,7 +163,7 @@ const emit = defineEmits<{ logout: [] }>();
 }
 
 .mv-app-topbar__logout:hover {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
 }
 
 @media (max-width: 800px) {

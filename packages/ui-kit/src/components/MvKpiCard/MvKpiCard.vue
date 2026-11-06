@@ -36,13 +36,13 @@ withDefaults(
     display: flex;
     flex-direction: column;
     gap: 8px;
-    background: var(--app-surface, #fff);
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-lg, 16px);
     padding: 18px;
     text-decoration: none;
     color: inherit;
-    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+    box-shadow: 0 1px 0 var(--app-ink-05);
     transition:
         transform 0.16s ease,
         box-shadow 0.16s ease,
@@ -55,29 +55,29 @@ withDefaults(
 
 .mv-kpi-card--clickable:hover {
     transform: translateY(-2px);
-    border-color: var(--el-border-color-light, #d1d5db);
-    box-shadow: var(--app-shadow-md, 0 10px 28px rgba(16, 24, 40, 0.08));
+    border-color: var(--el-border-color-light);
+    box-shadow: var(--app-shadow-md, 0 10px 28px var(--app-ink-08));
 }
 
 .mv-kpi-card--accent .mv-kpi-card__value {
-    color: var(--app-accent-orange, #b45309);
+    color: var(--app-accent-orange);
 }
 
 .mv-kpi-card__label {
     font-weight: 700;
     font-size: 13px;
-    color: var(--el-text-color-secondary, #667085);
+    color: var(--el-text-color-secondary);
 }
 
 .mv-kpi-card__value {
     font-size: 32px;
     font-weight: 800;
     letter-spacing: -0.03em;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-kpi-card__caption {
     font-size: 12px;
-    color: var(--el-text-color-secondary, #667085);
+    color: var(--el-text-color-secondary);
 }
 </style>

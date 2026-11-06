@@ -117,7 +117,7 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
        real display, not just in a zoomed-in screenshot). A visibly tinted page background
        behind white cards is the standard mobile list pattern (iOS grouped lists, Material
        list) — contrast that actually survives a real screen, not just border color tuning. */
-    background: var(--el-fill-color-light, #f1f4f7);
+    background: var(--el-fill-color-light);
     padding: 10px;
     /* No border-radius of its own — this fills MvTable's outer wrapper (.mv-table), which
        already clips to its own 12px radius via overflow:hidden. */
@@ -126,13 +126,13 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
 .mv-mobile-cards__empty {
     padding: 24px;
     text-align: center;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 14px;
 }
 
 .mv-mobile-card {
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    background: #fff;
+    border: 1px solid var(--el-border-color);
+    background: var(--app-surface);
     border-radius: 12px;
     padding: 13px;
     display: grid;
@@ -158,7 +158,7 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
 }
 
 .mv-mobile-card__highlight {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
     border-radius: 9px;
     padding: 9px 10px;
     font-size: 12px;
@@ -175,7 +175,7 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
 }
 
 .mv-mobile-card__label {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 10px;
     text-transform: uppercase;
     font-weight: 800;

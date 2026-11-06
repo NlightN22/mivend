@@ -45,8 +45,8 @@ function isActive(path: string): boolean {
 .mv-app-sidebar {
     width: 224px;
     flex-shrink: 0;
-    background: var(--app-surface, #fff);
-    border-right: 1px solid var(--el-border-color, #e4e7ec);
+    background: var(--app-surface);
+    border-right: 1px solid var(--el-border-color);
     padding: 20px 12px;
     position: sticky;
     top: 64px;
@@ -59,7 +59,7 @@ function isActive(path: string): boolean {
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-weight: 800;
-    color: var(--el-text-color-secondary, #9ca3af);
+    color: var(--el-text-color-secondary);
 }
 
 .mv-app-sidebar__list {
@@ -75,7 +75,7 @@ function isActive(path: string): boolean {
     gap: 10px;
     padding: 10px 12px;
     border-radius: var(--app-radius-md, 12px);
-    color: var(--el-text-color-regular, #374151);
+    color: var(--el-text-color-regular);
     text-decoration: none;
     font-size: 14px;
     font-weight: 600;
@@ -83,12 +83,12 @@ function isActive(path: string): boolean {
 }
 
 .mv-app-sidebar__link:hover {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
 }
 
 .mv-app-sidebar__link--active {
-    background: var(--el-color-primary-light-9, #f0fffa);
-    color: var(--el-color-primary-dark-2, #008a70);
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary-dark-2);
 }
 
 @media (max-width: 800px) {

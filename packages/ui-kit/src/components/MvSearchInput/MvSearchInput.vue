@@ -222,38 +222,38 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
 .mv-search__icon-btn {
     width: 44px;
     height: 44px;
-    border: 1.5px solid #e4e7ec;
+    border: 1.5px solid var(--el-border-color);
     border-radius: 12px;
-    background: #fff;
+    background: var(--app-surface);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: #667085;
+    color: var(--el-text-color-secondary);
 }
 
 .mv-search__wrap {
     display: flex;
     height: 52px;
-    border: 2.5px solid #e4e7ec;
+    border: 2.5px solid var(--el-border-color);
     border-radius: 16px;
     overflow: hidden;
-    background: #fff;
+    background: var(--app-surface);
     transition:
         border-color 0.15s,
         box-shadow 0.15s;
 }
 
 .mv-search__wrap--focused {
-    border-color: #00b894;
-    box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.12);
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 3px var(--app-green-glow);
 }
 
 .mv-search__wrap--error {
-    border-color: #ef4444;
+    border-color: var(--app-danger-btn);
 }
 .mv-search__wrap--error.mv-search__wrap--focused {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+    box-shadow: 0 0 0 3px var(--app-danger-glow);
 }
 
 .mv-search__wrap--disabled {
@@ -268,13 +268,13 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
     padding: 0 14px;
     font-size: var(--app-font-size-search, 16px);
     font-family: var(--app-font-family, Inter, system-ui, sans-serif);
-    color: #17212b;
+    color: var(--el-text-color-primary);
     background: transparent;
     outline: none;
 }
 
 .mv-search__input::placeholder {
-    color: #667085;
+    color: var(--el-text-color-secondary);
 }
 
 .mv-search__clear {
@@ -282,7 +282,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
     border: none;
     background: transparent;
     font-size: 18px;
-    color: #667085;
+    color: var(--el-text-color-secondary);
     cursor: pointer;
     flex-shrink: 0;
     display: flex;
@@ -291,13 +291,13 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
     padding: 0;
 }
 .mv-search__clear:hover {
-    color: #17212b;
+    color: var(--el-text-color-primary);
 }
 
 .mv-search__error {
     margin: 6px 2px 0;
     font-size: 13px;
-    color: #ef4444;
+    color: var(--app-danger-btn);
 }
 
 .mv-search__empty {
@@ -305,13 +305,13 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick));
     top: calc(100% + 6px);
     left: 0;
     right: 0;
-    background: #fff;
-    border: 1px solid #e4e7ec;
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color);
     border-radius: 16px;
     padding: 24px 16px;
     text-align: center;
     font-size: 14px;
-    color: #667085;
-    box-shadow: 0 10px 28px rgba(16, 24, 40, 0.08);
+    color: var(--el-text-color-secondary);
+    box-shadow: 0 10px 28px var(--app-ink-08);
 }
 </style>

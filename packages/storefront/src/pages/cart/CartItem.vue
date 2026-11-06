@@ -225,12 +225,12 @@ function cancelRemove(): void {
     gap: 14px;
     align-items: center;
     padding: 18px 0;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 .cart-item__qty-note {
     margin-top: 4px;
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 .cart-item:last-child {
     border-bottom: none;
@@ -240,18 +240,18 @@ function cancelRemove(): void {
     width: 20px;
     height: 20px;
     margin: 0;
-    accent-color: #00a878;
+    accent-color: var(--app-nav-accent-soft);
 }
 
 .cart-item__img {
     width: 96px;
     height: 96px;
     border-radius: 18px;
-    background: linear-gradient(145deg, #f7fbfa, #ebf8f2);
-    border: 1px solid #edf2ef;
+    background: linear-gradient(145deg, var(--el-bg-color-page), var(--app-fill-soft));
+    border: 1px solid var(--app-nav-border);
     display: grid;
     place-items: center;
-    color: #8fb5a6;
+    color: var(--app-text-faint);
     overflow: hidden;
 }
 .cart-item__img img {
@@ -270,7 +270,7 @@ function cancelRemove(): void {
     font-size: 15px;
     font-weight: 850;
     line-height: 1.35;
-    color: #17231f;
+    color: var(--app-nav-text-strong);
     text-decoration: none;
     margin-bottom: 8px;
     overflow: hidden;
@@ -279,7 +279,7 @@ function cancelRemove(): void {
     -webkit-box-orient: vertical;
 }
 .cart-item__name:hover {
-    color: #00a878;
+    color: var(--app-nav-accent-soft);
 }
 
 .cart-item__meta {
@@ -287,7 +287,7 @@ function cancelRemove(): void {
     flex-wrap: wrap;
     gap: 6px;
     margin-bottom: 8px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
     font-weight: 800;
 }
@@ -326,7 +326,7 @@ function cancelRemove(): void {
     gap: 6px;
     font-size: 13px;
     font-weight: 800;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 @media (max-width: 900px) {
     .cart-item {

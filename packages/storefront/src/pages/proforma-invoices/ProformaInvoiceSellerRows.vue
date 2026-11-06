@@ -46,7 +46,7 @@ const bank = computed(() =>
     gap: 12px;
     font-size: 13px;
     padding: 5px 0;
-    color: #344640;
+    color: var(--app-text-body2);
 }
 .seller-val {
     font-weight: 850;

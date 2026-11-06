@@ -166,16 +166,16 @@ function onStepper(lineId: string | undefined, value: number): void {
 }
 
 .buy-panel__card {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 20px;
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    border: 1px solid var(--app-border-glass);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 20px;
 }
 
 .buy-panel__compare-at-price {
     font-size: 14px !important;
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
     text-decoration: line-through;
     margin-bottom: 2px;
 }
@@ -184,7 +184,7 @@ function onStepper(lineId: string | undefined, value: number): void {
     font-size: 32px;
     font-weight: 900;
     letter-spacing: -0.04em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     line-height: 1;
     margin-bottom: 6px;
 }
@@ -201,7 +201,7 @@ function onStepper(lineId: string | undefined, value: number): void {
 }
 .buy-panel__price-hint {
     font-size: 14px;
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
     margin-bottom: 6px;
 }
 .buy-panel__tier-progress {
@@ -210,7 +210,7 @@ function onStepper(lineId: string | undefined, value: number): void {
 
 .buy-panel__price-note {
     font-size: 12px;
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
     margin-bottom: 16px;
 }
 
@@ -223,8 +223,8 @@ function onStepper(lineId: string | undefined, value: number): void {
     height: 52px;
     border: none;
     border-radius: 14px;
-    background: var(--app-accent-orange, #ff8a00);
-    color: #fff;
+    background: var(--app-accent-orange);
+    color: var(--app-on-accent);
     font-size: 16px;
     font-weight: 800;
     font-family: inherit;
@@ -233,10 +233,10 @@ function onStepper(lineId: string | undefined, value: number): void {
     transition: background 0.15s;
 }
 .buy-panel__add:hover:not(:disabled) {
-    background: var(--app-accent-orange-hover, #e67c00);
+    background: var(--app-accent-orange-hover);
 }
 .buy-panel__add:active:not(:disabled) {
-    background: var(--app-accent-orange-active, #cc6e00);
+    background: var(--app-accent-orange-active);
 }
 .buy-panel__add:disabled {
     opacity: 0.45;

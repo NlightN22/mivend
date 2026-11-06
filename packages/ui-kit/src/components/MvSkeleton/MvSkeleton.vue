@@ -24,7 +24,12 @@ withDefaults(
 
 <style scoped>
 .mv-skeleton {
-    background: linear-gradient(90deg, #eef1f4 25%, #e4e7ec 37%, #eef1f4 63%);
+    background: linear-gradient(
+        90deg,
+        var(--app-tier-track) 25%,
+        var(--app-slate-bg) 37%,
+        var(--app-slate-bg) 63%
+    );
     background-size: 400% 100%;
     animation: mv-skeleton-shimmer 1.4s ease infinite;
 }
@@ -41,7 +46,7 @@ withDefaults(
 @media (prefers-reduced-motion: reduce) {
     .mv-skeleton {
         animation: none;
-        background: #e4e7ec;
+        background: var(--app-tier-track);
     }
 }
 </style>

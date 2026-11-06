@@ -50,7 +50,7 @@ function items(section: string): string[] {
 
 .terms-page__edition {
     margin: 0 0 16px;
-    color: var(--el-text-color-secondary, #66736e);
+    color: var(--el-text-color-secondary);
     font-size: 14px;
 }
 

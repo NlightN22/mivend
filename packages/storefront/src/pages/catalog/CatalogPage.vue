@@ -233,7 +233,7 @@ onMounted(() => {
     margin: 0 0 20px;
     font-size: 30px;
     letter-spacing: -0.03em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .catalog-page__inner {

@@ -58,9 +58,9 @@ const { demoAllowed } = useDemoMode();
     font-weight: 900;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #b42318;
-    background: #fff2f1;
-    border: 1px solid #fdd;
+    color: var(--app-danger-fg);
+    background: var(--app-danger2-bg);
+    border: 1px solid var(--el-border-color);
     border-radius: 999px;
     padding: 4px 14px;
     margin-bottom: 20px;
@@ -71,12 +71,12 @@ const { demoAllowed } = useDemoMode();
     font-size: clamp(32px, 4vw, 52px);
     line-height: 1;
     letter-spacing: -0.05em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .ad-sub {
     margin: 0 0 28px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 15px;
     line-height: 1.5;
 }
@@ -95,9 +95,9 @@ const { demoAllowed } = useDemoMode();
     min-height: 44px;
     padding: 0 18px;
     border-radius: 14px;
-    border: 1px solid #dde7e2;
-    background: #f3f8f6;
-    color: #263732;
+    border: 1px solid var(--app-nav-border-strong);
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
     font: inherit;
     font-size: 14px;
     font-weight: 800;
@@ -105,23 +105,23 @@ const { demoAllowed } = useDemoMode();
     transition: 0.14s;
 }
 .ad-btn:hover {
-    background: #e8f2ed;
+    background: var(--app-nav-border);
 }
 .ad-btn--primary {
-    background: #00a878;
+    background: var(--app-brand-fill);
     border-color: transparent;
-    color: #fff;
+    color: var(--app-on-accent);
 }
 .ad-btn--primary:hover {
-    background: #008a64;
+    background: var(--app-brand-fill-hover);
 }
 
 .ad-links {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 .ad-links a {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-weight: 700;
     text-decoration: none;
 }

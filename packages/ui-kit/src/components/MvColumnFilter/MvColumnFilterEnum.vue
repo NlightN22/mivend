@@ -95,14 +95,14 @@ function clearAll(): void {
     left: 8px;
     width: 14px;
     height: 14px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     pointer-events: none;
 }
 
 .mv-column-filter-enum__search input {
     width: 100%;
     padding: 6px 8px 6px 28px;
-    border: 1px solid #e4e7ec;
+    border: 1px solid var(--el-border-color);
     border-radius: 6px;
     font-size: 13px;
 }
@@ -126,13 +126,13 @@ function clearAll(): void {
 }
 
 .mv-column-filter-enum__row:hover {
-    background: #f8fafc;
+    background: var(--app-slate-bg);
 }
 
 .mv-column-filter-enum__empty {
     padding: 8px 6px;
     font-size: 12px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     text-align: center;
 }
 
@@ -140,7 +140,7 @@ function clearAll(): void {
     align-self: flex-start;
     border: none;
     background: transparent;
-    color: var(--el-color-primary, #00b894);
+    color: var(--el-color-primary);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;

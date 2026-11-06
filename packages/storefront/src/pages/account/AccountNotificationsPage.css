@@ -25,7 +25,7 @@
 
 .account-notifications-page__subtitle {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
@@ -50,26 +50,26 @@
 }
 
 .account-notifications-page__filter {
-    border: 1px solid rgba(221, 231, 226, 0.9);
+    border: 1px solid var(--app-border-glass);
     border-radius: 999px;
-    background: #fff;
+    background: var(--app-surface);
     padding: 8px 14px;
     font-weight: 800;
     font-size: 13px;
-    color: #263732;
+    color: var(--app-text-deep);
     cursor: pointer;
 }
 
 .account-notifications-page__filter--active {
-    background: #008a64;
-    color: #fff;
-    border-color: #008a64;
+    background: var(--app-brand-fill-hover);
+    color: var(--app-on-accent);
+    border-color: var(--app-brand-fill-hover);
 }
 
 .account-notifications-page__state {
     text-align: center;
     padding: 48px 24px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 15px;
 }
 
@@ -84,15 +84,15 @@
     gap: 12px;
     width: 100%;
     text-align: left;
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 16px;
     padding: 14px 16px;
     cursor: pointer;
 }
 
 .account-notifications-page__row--unread {
-    background: #f5fbf9;
+    background: var(--el-bg-color-page);
 }
 
 .account-notifications-page__indicator {
@@ -104,16 +104,16 @@
 }
 
 .account-notifications-page__indicator--info {
-    background: #00a878;
+    background: var(--app-brand-fill);
 }
 .account-notifications-page__indicator--success {
-    background: #10b981;
+    background: var(--el-color-primary);
 }
 .account-notifications-page__indicator--warning {
-    background: #ff8a00;
+    background: var(--app-accent-orange);
 }
 .account-notifications-page__indicator--error {
-    background: #ef4444;
+    background: var(--app-danger-btn);
 }
 
 .account-notifications-page__body {
@@ -136,13 +136,13 @@
 .account-notifications-page__row-time {
     flex-shrink: 0;
     font-size: 12px;
-    color: #8a968f;
+    color: var(--app-text-placeholder);
 }
 
 .account-notifications-page__row-message {
     margin: 4px 0 0;
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
     line-height: 1.4;
 }
 

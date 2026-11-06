@@ -136,11 +136,11 @@ const {
 .set-form--password {
     margin-bottom: 4px;
     padding-bottom: 16px;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 .set-password-error {
     font-size: 13px;
-    color: #c0392b;
+    color: var(--app-orange-fg);
 }
 .set-sessions {
     display: grid;
@@ -155,8 +155,8 @@ const {
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    background: #f7fbf9;
-    border: 1px solid #edf2ef;
+    background: var(--el-bg-color-page);
+    border: 1px solid var(--app-nav-border);
     border-radius: 14px;
 }
 .set-session__icon {
@@ -170,11 +170,11 @@ const {
 .set-session__title {
     font-size: 14px;
     font-weight: 800;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     margin-bottom: 2px;
 }
 .set-session__note {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 </style>

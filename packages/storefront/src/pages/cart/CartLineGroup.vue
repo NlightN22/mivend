@@ -40,7 +40,7 @@ const emit = defineEmits<{ 'update:checked': [id: string, value: boolean] }>();
     margin: 0 16px;
     padding: 14px 16px;
     border-radius: 18px;
-    background: #f6f9f8;
+    background: var(--el-bg-color-page);
     font-size: 17px;
     font-weight: 950;
     display: flex;
@@ -49,16 +49,16 @@ const emit = defineEmits<{ 'update:checked': [id: string, value: boolean] }>();
     align-items: center;
 }
 .line-group__title--blocked {
-    background: #fdecea;
-    color: #b3261e;
+    background: var(--app-danger2-bg);
+    color: var(--app-danger-fg);
 }
 .line-group__title small {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     font-weight: 800;
 }
 .line-group__title--blocked small {
-    color: #b3261e;
+    color: var(--app-danger-fg);
 }
 
 .line-group__items {
@@ -70,7 +70,7 @@ const emit = defineEmits<{ 'update:checked': [id: string, value: boolean] }>();
     grid-template-columns: 28px 96px minmax(0, 1fr) 112px 150px 120px;
     gap: 14px;
     padding: 10px 0 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;

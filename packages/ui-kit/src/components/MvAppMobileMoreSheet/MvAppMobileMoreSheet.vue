@@ -95,7 +95,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         position: fixed;
         inset: 0;
         z-index: var(--mv-z-overlay);
-        background: rgba(12, 24, 36, 0.42);
+        background: var(--app-ink-14);
     }
 
     .mv-mobile-sheet {
@@ -107,9 +107,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         z-index: calc(var(--mv-z-overlay) + 1);
         max-height: min(72vh, 620px);
         padding: 9px 14px calc(18px + env(safe-area-inset-bottom));
-        background: #fff;
+        background: var(--app-surface);
         border-radius: 20px 20px 0 0;
-        box-shadow: 0 -16px 40px rgba(12, 24, 36, 0.22);
+        box-shadow: 0 -16px 40px var(--app-ink-14);
         transform: translateY(105%);
         transition: transform 180ms ease;
         overflow-y: auto;
@@ -125,7 +125,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     height: 4px;
     margin: 2px auto 14px;
     border-radius: 999px;
-    background: #cdd6dc;
+    background: var(--app-nav-border-strong);
 }
 
 .mv-mobile-sheet__head {
@@ -144,8 +144,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 .mv-mobile-sheet__close {
     width: 32px;
     height: 32px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    background: #fff;
+    border: 1px solid var(--el-border-color);
+    background: var(--app-surface);
     border-radius: 8px;
     font-size: 18px;
     line-height: 1;
@@ -157,7 +157,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     align-items: center;
     gap: 10px;
     padding: 11px;
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
     border-radius: 12px;
     margin-bottom: 12px;
 }
@@ -166,8 +166,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--el-text-color-primary, #17212b);
-    color: #fff;
+    background: var(--el-text-color-primary);
+    color: var(--app-on-accent);
     display: grid;
     place-items: center;
     font-size: 12px;
@@ -182,7 +182,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
 .mv-mobile-sheet__user-role {
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary, var(--app-text-grey));
 }
 
 .mv-mobile-sheet__grid {
@@ -192,11 +192,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 }
 
 .mv-mobile-sheet__item {
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    background: #fff;
+    border: 1px solid var(--el-border-color);
+    background: var(--app-surface);
     border-radius: 12px;
     padding: 14px 12px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
     font-weight: 700;
     font-size: 13px;
     text-align: left;
@@ -209,12 +209,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 }
 
 .mv-mobile-sheet__item--danger {
-    color: var(--el-color-danger, #c63f4b);
+    color: var(--el-color-danger, var(--app-danger-btn));
 }
 
 .mv-mobile-sheet__item--active {
-    border-color: var(--el-color-primary, #00b894);
-    background: var(--el-color-primary-light-9, #f0fffa);
-    color: var(--el-color-primary-dark-2, #008a70);
+    border-color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary-dark-2);
 }
 </style>

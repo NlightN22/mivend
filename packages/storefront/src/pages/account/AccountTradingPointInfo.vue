@@ -88,10 +88,10 @@ const limitWarning = computed(() => {
 
 <style scoped>
 .trading-point-info {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    box-shadow: 0 14px 36px var(--app-ink-08);
+    border: 1px solid var(--app-border-glass);
     padding: 22px;
 }
 
@@ -110,13 +110,13 @@ const limitWarning = computed(() => {
 }
 
 .trading-point-info__subtitle {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
 
 .trading-point-info__link-more {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-weight: 950;
     font-size: 14px;
     white-space: nowrap;
@@ -137,8 +137,8 @@ const limitWarning = computed(() => {
     min-height: 58px;
     padding: 12px 14px;
     border-radius: 16px;
-    border: 1px solid #edf2ef;
-    background: #fbfdfc;
+    border: 1px solid var(--app-nav-border);
+    background: var(--app-fill-faint);
 }
 
 .trading-point-info__row-title {
@@ -147,7 +147,7 @@ const limitWarning = computed(() => {
 }
 
 .trading-point-info__row-note {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.3;
 }
@@ -155,12 +155,12 @@ const limitWarning = computed(() => {
 .trading-point-info__notice {
     padding: 14px 16px;
     border-radius: 18px;
-    border: 1px solid rgba(255, 138, 0, 0.22);
-    background: #fff4e3;
+    border: 1px solid var(--app-orange-glow);
+    background: var(--app-orange-bg);
     display: flex;
     gap: 12px;
     align-items: flex-start;
-    color: #573a14;
+    color: var(--app-warn2-fg);
     margin-top: 14px;
     font-size: 14px;
     line-height: 1.42;
@@ -168,7 +168,7 @@ const limitWarning = computed(() => {
 
 .trading-point-info__notice strong {
     display: block;
-    color: #33210a;
+    color: var(--app-lime-fg);
     margin-bottom: 2px;
 }
 </style>

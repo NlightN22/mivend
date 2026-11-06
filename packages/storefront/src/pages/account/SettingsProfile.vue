@@ -65,11 +65,11 @@ const { form, email, pointId, points, loading, saving, save } = useSettingsProfi
 .set-field__note {
     font-size: 12px;
     font-weight: 500;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 .set-field input:disabled,
 .set-field select:disabled {
-    background: #f3f6f5;
-    color: #66736e;
+    background: var(--app-fill-soft);
+    color: var(--app-nav-label);
 }
 </style>

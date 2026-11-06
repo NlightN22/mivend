@@ -43,13 +43,13 @@ const percent = computed(() => {
 
 .mv-progress-bar__label {
     font-size: 12px;
-    color: #2c3b36;
+    color: var(--app-text-body2);
 }
 
 .mv-progress-bar__track {
     height: 6px;
     border-radius: 4px;
-    background: #e3efe9;
+    background: var(--app-nav-border-strong);
     overflow: hidden;
 }
 
@@ -60,14 +60,14 @@ const percent = computed(() => {
 }
 
 .mv-progress-bar__fill--normal {
-    background: linear-gradient(90deg, #00b894, #00a878);
+    background: linear-gradient(90deg, var(--el-color-primary), var(--app-brand-fill-hover));
 }
 
 .mv-progress-bar__fill--warn {
-    background: #d97706;
+    background: var(--app-accent-orange-hover);
 }
 
 .mv-progress-bar__fill--danger {
-    background: #dc2626;
+    background: var(--app-danger-btn-hover);
 }
 </style>

@@ -91,19 +91,19 @@ const message = computed(() => {
     width: 100%;
     height: 3px;
     overflow: hidden;
-    background: rgba(217, 119, 6, 0.15);
+    background: var(--app-orange-glow);
     pointer-events: none;
 }
 
 .mv-connection-bar__stripe {
     height: 100%;
     width: 40%;
-    background: linear-gradient(90deg, transparent, #d97706, transparent);
+    background: linear-gradient(90deg, transparent, var(--app-accent-orange-hover), transparent);
     animation: mv-connection-bar-sweep 1.4s ease-in-out infinite;
 }
 
 .mv-connection-bar__stripe--escalated {
-    background: linear-gradient(90deg, transparent, #dc2626, transparent);
+    background: linear-gradient(90deg, transparent, var(--app-danger-btn-hover), transparent);
 }
 
 .mv-connection-bar__pill {
@@ -113,24 +113,24 @@ const message = computed(() => {
     gap: 10px;
     padding: 6px 8px 6px 14px;
     border-radius: 999px;
-    background: #2c3b36;
-    color: #fff;
+    background: var(--app-text-body2);
+    color: var(--app-on-accent);
     font-size: 12px;
     font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 4px 12px var(--app-ink-14);
     pointer-events: auto;
 }
 
 .mv-connection-bar__pill--escalated {
-    background: #7c2d12;
+    background: var(--app-danger-btn-active);
 }
 
 .mv-connection-bar__relogin {
     border: none;
     border-radius: 999px;
     padding: 4px 12px;
-    background: #fff;
-    color: #7c2d12;
+    background: var(--app-surface);
+    color: var(--app-warn2-fg);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;

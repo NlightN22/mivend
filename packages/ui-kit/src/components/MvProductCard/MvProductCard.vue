@@ -284,17 +284,17 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     align-self: flex-start;
     padding: 2px 8px;
     border-radius: 999px;
-    background: #e6f2ee;
-    color: #1f5d4b;
+    background: var(--app-chip-bg);
+    color: var(--app-chip-fg);
     font-size: 11px;
     font-weight: 600;
 }
 
 .mv-product-card {
     position: relative;
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 20px;
-    background: #fff;
+    background: var(--app-surface);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -305,7 +305,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 
 .mv-product-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 14px 26px rgba(27, 45, 38, 0.1);
+    box-shadow: 0 14px 26px var(--app-ink-10);
 }
 
 .mv-product-card__img-link {
@@ -319,8 +319,8 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     overflow: hidden;
     display: grid;
     place-items: center;
-    background: linear-gradient(145deg, #f7fbfa, #ebf8f2);
-    border-bottom: 1px solid #edf2ef;
+    background: linear-gradient(145deg, var(--app-ph-from), var(--app-ph-to));
+    border-bottom: 1px solid var(--app-nav-border);
 }
 
 .mv-product-card__discount-badge {
@@ -344,7 +344,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #b8e8d8, #d8f4ea);
+    background: linear-gradient(135deg, var(--app-ph-from), var(--app-ph-to));
 }
 
 .mv-product-card__fav {
@@ -362,9 +362,9 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     height: 28px;
     border: none;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.92);
-    color: #1b2d26;
-    box-shadow: 0 2px 8px rgba(27, 45, 38, 0.18);
+    background: var(--app-glass-strong);
+    color: var(--app-nav-text-strong);
+    box-shadow: 0 2px 8px var(--app-ink-14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -396,10 +396,10 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: rgba(27, 45, 38, 0.22);
+    background: var(--app-ink-14);
 }
 .mv-product-card__dot--active {
-    background: #1b2d26;
+    background: var(--app-nav-text-strong);
 }
 
 .mv-product-card__body {
@@ -416,14 +416,14 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     gap: 8px;
     font-size: 12px;
     font-weight: 700;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .mv-product-card__name {
     font-size: 14px;
     font-weight: 700;
     line-height: 1.35;
-    color: #17231f;
+    color: var(--app-nav-text-strong);
     text-decoration: none;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -433,7 +433,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 }
 
 .mv-product-card__name:hover {
-    color: var(--el-color-primary, #00b894);
+    color: var(--el-color-primary);
 }
 
 .mv-product-card__price-row {
@@ -449,7 +449,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 }
 
 .mv-product-card__unit-info {
-    color: #8fa39b;
+    color: var(--app-text-placeholder);
     cursor: help;
     align-self: center;
 }
@@ -461,11 +461,11 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 }
 .mv-product-card__pack {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 .mv-product-card__unit {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 .mv-product-card__prices {
     display: flex;
@@ -474,12 +474,12 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     min-width: 0;
 }
 .mv-product-card__customer-price {
-    color: #00a878;
+    color: var(--app-price);
     font-weight: 900;
 }
 .mv-product-card__base-price--strike {
     font-size: 12px !important;
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
     text-decoration: line-through;
 }
 
@@ -488,8 +488,8 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     height: 40px;
     border: none;
     border-radius: 12px;
-    background: var(--app-accent-orange, #ff8a00);
-    color: #fff;
+    background: var(--app-accent-orange);
+    color: var(--app-on-accent);
     font-size: 14px;
     font-weight: 800;
     cursor: pointer;
@@ -497,7 +497,7 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 }
 
 .mv-product-card__buy:hover {
-    background: #e67a00;
+    background: var(--app-accent-orange-hover);
 }
 
 .mv-product-card__stepper {
@@ -510,8 +510,8 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     height: 40px;
     border: none;
     border-radius: 12px;
-    background: #f3f8f6;
-    color: #263732;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
     font-size: 14px;
     font-weight: 800;
     cursor: pointer;
@@ -519,10 +519,10 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 
 .mv-product-card__guest {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
     text-align: center;
     padding: 8px 0;
-    border-top: 1px solid #edf2ef;
+    border-top: 1px solid var(--app-nav-border);
     margin-top: auto;
 }
 .mv-product-card__tier-progress {

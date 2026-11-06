@@ -69,8 +69,8 @@ onMounted(() => void load());
 
 <style scoped>
 .opi-card {
-    background: #fff;
-    border: 1px solid #edf2ef;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border);
     border-radius: 20px;
     padding: 18px 20px;
     display: grid;
@@ -84,7 +84,7 @@ onMounted(() => void load());
 }
 .opi-empty {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
 }
 .opi-row {
@@ -96,7 +96,7 @@ onMounted(() => void load());
 }
 .opi-number {
     font-weight: 850;
-    color: #00a878;
+    color: var(--app-nav-accent-soft);
     text-decoration: none;
 }
 .opi-amount {
@@ -106,6 +106,6 @@ onMounted(() => void load());
 .opi-diff {
     margin: 0;
     font-size: 12px;
-    color: #92400e;
+    color: var(--app-warn-fg);
 }
 </style>

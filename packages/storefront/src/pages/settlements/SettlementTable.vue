@@ -95,10 +95,10 @@ const formatDate = (value: string | null | undefined): string =>
 
 <style scoped>
 .settlement-table {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     overflow-x: auto;
 }
 
@@ -111,16 +111,16 @@ table {
 th {
     text-align: left;
     padding: 14px 16px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
     font-weight: 800;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
     white-space: nowrap;
 }
 
 td {
     padding: 12px 16px;
-    border-bottom: 1px solid #f2f6f4;
+    border-bottom: 1px solid var(--app-nav-border);
     vertical-align: middle;
 }
 
@@ -139,15 +139,15 @@ tr:last-child td {
 
 .sub {
     margin-top: 4px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
 }
 
 .debit {
-    color: #1b2d26;
+    color: var(--app-nav-text-strong);
 }
 
 .credit {
-    color: #008a64;
+    color: var(--app-nav-accent);
 }
 </style>

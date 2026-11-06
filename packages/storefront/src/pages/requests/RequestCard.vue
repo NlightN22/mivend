@@ -65,10 +65,10 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
 
 <style scoped>
 .req-card {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.9);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     overflow: hidden;
 }
 
@@ -78,7 +78,7 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
     gap: 14px;
     align-items: center;
     padding: 18px 20px;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 
 .req-card__title {
@@ -89,7 +89,7 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
 }
 
 .req-card__meta {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.38;
 }
@@ -104,25 +104,25 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
     font-size: 13px;
     font-weight: 950;
     white-space: nowrap;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .req-card__status--green {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 .req-card__status--blue {
-    background: #eaf4ff;
-    color: #1f65b2;
+    background: var(--app-slate-bg);
+    color: var(--app-slate-fg);
 }
 .req-card__status--warning {
-    background: #fff5df;
-    color: #e87800;
+    background: var(--app-warn2-bg);
+    color: var(--app-stock-low-fg);
 }
 .req-card__status--muted {
-    background: #eef4f1;
-    color: #5f6e68;
+    background: var(--app-nav-border);
+    color: var(--app-nav-label);
 }
 
 .req-card__body {
@@ -136,7 +136,7 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
@@ -150,21 +150,21 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
     font-size: 22px;
     font-weight: 950;
     flex-shrink: 0;
-    background: #eaf4ff;
-    color: #1f65b2;
+    background: var(--app-slate-bg);
+    color: var(--app-slate-fg);
 }
 
 .req-card__icon--green {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 .req-card__icon--orange {
-    background: #fff5df;
-    color: #e87800;
+    background: var(--app-warn2-bg);
+    color: var(--app-stock-low-fg);
 }
 .req-card__icon--blue {
-    background: #eaf4ff;
-    color: #1f65b2;
+    background: var(--app-slate-bg);
+    color: var(--app-slate-fg);
 }
 
 .req-card__message {
@@ -173,18 +173,18 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
     gap: 8px;
     padding: 12px 14px;
     border-radius: 16px;
-    background: #fbfdfc;
-    border: 1px solid #edf2ef;
+    background: var(--app-fill-faint);
+    border: 1px solid var(--app-nav-border);
 }
 
 .req-card__msg-author {
     font-weight: 950;
     font-size: 13px;
-    color: #008a64;
+    color: var(--app-nav-accent);
 }
 
 .req-card__msg-text {
-    color: #43524d;
+    color: var(--app-text-body3);
     font-size: 13px;
     line-height: 1.42;
 }
@@ -201,8 +201,8 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
     min-height: 40px;
     border-radius: 12px;
     padding: 0 14px;
-    background: #f3f8f6;
-    color: #263732;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
     font: inherit;
     font-weight: 950;
     cursor: pointer;
@@ -210,8 +210,8 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
 }
 
 .req-card__btn--primary {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 
 @media (max-width: 960px) {

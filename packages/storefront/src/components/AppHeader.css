@@ -5,8 +5,8 @@
 }
 
 .app-header__strip {
-    background: #14231f;
-    color: #d8eee7;
+    background: var(--app-strip-bg);
+    color: var(--app-strip-fg);
     font-size: 13px;
 }
 
@@ -21,12 +21,12 @@
 }
 
 .app-header__strip strong {
-    color: #fff;
+    color: var(--app-on-accent);
 }
 
 .app-header {
     position: relative;
-    border-bottom: 1px solid #dde7e2;
+    border-bottom: 1px solid var(--app-nav-border-strong);
 }
 
 /* The glass lives on a pseudo-element: backdrop-filter on the header itself would trap fixed descendants. */
@@ -35,7 +35,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: rgba(255, 255, 255, 0.82);
+    background: var(--app-glass);
     backdrop-filter: blur(14px) saturate(1.4);
 }
 
@@ -61,8 +61,8 @@
     height: 52px;
     border: none;
     border-radius: 14px;
-    background: var(--app-accent-lime, #c8f21a);
-    color: #14231f;
+    background: var(--app-lime-bg);
+    color: var(--app-lime-fg);
     font-size: 15px;
     font-weight: 800;
     font-family: inherit;
@@ -72,13 +72,13 @@
     justify-content: center;
     gap: 8px;
     white-space: nowrap;
-    box-shadow: 0 8px 18px rgba(200, 242, 26, 0.28);
+    box-shadow: 0 8px 18px var(--app-lime-glow);
     transition: background 0.15s;
 }
 
 .app-header__catalog-btn:hover,
 .app-header__catalog-btn--open {
-    background: #b8e010;
+    background: var(--app-lime-hover);
 }
 
 .app-header__search {
@@ -100,7 +100,7 @@
     padding: 7px 6px 6px;
     border-radius: 12px;
     text-decoration: none;
-    color: #66736e;
+    color: var(--app-nav-label);
     cursor: pointer;
     transition:
         background 0.14s,
@@ -115,13 +115,13 @@
 }
 
 .app-header__nav-btn:hover {
-    background: #f4faf7;
-    color: #008a64;
+    background: var(--app-row-hover);
+    color: var(--app-nav-accent);
 }
 
 .app-header__nav-btn.router-link-active {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .app-header__nav-icon-wrap {
@@ -152,8 +152,8 @@
     min-height: 52px;
     min-width: 160px;
     border-radius: 18px;
-    background: var(--app-accent-orange, #ff8a00);
-    color: #fff;
+    background: var(--app-accent-orange);
+    color: var(--app-on-accent);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -161,14 +161,14 @@
     font-weight: 800;
     font-size: 15px;
     text-decoration: none;
-    box-shadow: 0 10px 22px rgba(255, 138, 0, 0.22);
+    box-shadow: 0 10px 22px var(--app-orange-glow);
     transition: background 0.15s;
 }
 .app-header__cart:hover {
-    background: var(--app-accent-orange-hover, #e67c00);
+    background: var(--app-accent-orange-hover);
 }
 .app-header__cart:active {
-    background: var(--app-accent-orange-active, #cc6e00);
+    background: var(--app-accent-orange-active);
 }
 
 .app-header__cart-text {
@@ -187,8 +187,8 @@
     min-width: 32px;
     height: 32px;
     border-radius: 999px;
-    background: #fff;
-    color: var(--app-accent-orange, #ff8a00);
+    background: var(--app-surface);
+    color: var(--app-accent-orange);
     display: grid;
     place-items: center;
     font-weight: 900;
@@ -206,16 +206,16 @@
 
 .app-header__delivery-line {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .app-header__delivery-line strong {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-weight: 900;
 }
 
 .app-header__delivery-hint {
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
     font-style: italic;
 }
 
@@ -231,7 +231,7 @@
 .app-header__backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(20, 35, 31, 0.06);
+    background: var(--app-ink-05);
     z-index: -1;
 }
 

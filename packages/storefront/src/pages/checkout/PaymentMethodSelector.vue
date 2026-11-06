@@ -87,10 +87,10 @@ const methods = computed(() =>
 
 <style scoped>
 .payment-selector {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 22px;
 }
 
@@ -106,7 +106,7 @@ const methods = computed(() =>
 
 .payment-selector__subtitle {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 
@@ -119,9 +119,9 @@ const methods = computed(() =>
 .payment-selector__card {
     min-height: 132px;
     padding: 16px;
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 20px;
-    background: #fff;
+    background: var(--app-surface);
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 11px;
@@ -134,12 +134,12 @@ const methods = computed(() =>
 
 .payment-selector__card:hover {
     transform: translateY(-1px);
-    box-shadow: 0 10px 20px rgba(27, 45, 38, 0.06);
+    box-shadow: 0 10px 20px var(--app-ink-05);
 }
 
 .payment-selector__card--active {
-    border: 2px solid #00a878;
-    background: linear-gradient(135deg, #ffffff, #f3fff7);
+    border: 2px solid var(--el-color-primary);
+    background: linear-gradient(135deg, var(--app-surface), var(--el-color-primary-light-9));
 }
 
 .payment-selector__card-top {
@@ -153,22 +153,22 @@ const methods = computed(() =>
     width: 42px;
     height: 42px;
     border-radius: 15px;
-    background: #eaf4ff;
-    color: #1f65b2;
+    background: var(--app-slate-bg);
+    color: var(--app-slate-fg);
     display: grid;
     place-items: center;
     font-size: 20px;
 }
 
 .payment-selector__card--active .payment-selector__icon {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 
 .payment-selector__radio {
     width: 20px;
     height: 20px;
-    border: 2px solid #bccac4;
+    border: 2px solid var(--app-text-disabled);
     border-radius: 50%;
     display: grid;
     place-items: center;
@@ -176,7 +176,7 @@ const methods = computed(() =>
 }
 
 .payment-selector__card--active .payment-selector__radio {
-    border-color: #00a878;
+    border-color: var(--el-color-primary);
 }
 
 .payment-selector__card--active .payment-selector__radio::after {
@@ -184,7 +184,7 @@ const methods = computed(() =>
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #00a878;
+    background: var(--app-brand-fill);
 }
 
 .payment-selector__method-title {
@@ -195,7 +195,7 @@ const methods = computed(() =>
 }
 
 .payment-selector__method-note {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.35;
 }
@@ -207,15 +207,15 @@ const methods = computed(() =>
     width: fit-content;
     border-radius: 999px;
     padding: 0 9px;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
     font-size: 12px;
     font-weight: 800;
 }
 
 .payment-selector__badge--orange {
-    background: #fff5df;
-    color: #e87800;
+    background: var(--app-warn2-bg);
+    color: var(--app-stock-low-fg);
 }
 
 @media (max-width: 900px) {

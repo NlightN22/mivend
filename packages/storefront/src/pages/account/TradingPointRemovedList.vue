@@ -26,7 +26,7 @@ const emit = defineEmits<{ restore: [id: string] }>();
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #a8b8b2;
+    color: var(--app-text-faint);
     margin-bottom: 10px;
 }
 
@@ -43,8 +43,8 @@ const emit = defineEmits<{ restore: [id: string] }>();
     justify-content: space-between;
     gap: 12px;
     padding: 14px 20px;
-    background: #fff;
-    border: 1px solid #dde7e2;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 16px;
     opacity: 0.7;
 }
@@ -52,12 +52,12 @@ const emit = defineEmits<{ restore: [id: string] }>();
 .tp-removed-name {
     font-size: 15px;
     font-weight: 800;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     margin-bottom: 3px;
 }
 .tp-removed-addr {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .tp-btn {
@@ -72,9 +72,9 @@ const emit = defineEmits<{ restore: [id: string] }>();
     transition: 0.14s ease;
 }
 .tp-btn--ghost {
-    background: #f3f8f6;
-    color: #263732;
-    border: 1px solid #dde7e2;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
+    border: 1px solid var(--app-nav-border-strong);
 }
 .tp-btn--sm {
     min-height: 34px;

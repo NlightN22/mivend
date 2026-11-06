@@ -58,11 +58,11 @@ defineProps<{ steps: ApprovalStepperItem[] }>();
 .mv-approval-stepper__line {
     flex: 1;
     height: 2px;
-    background: var(--el-border-color, #e4e7ec);
+    background: var(--el-border-color);
 }
 
 .mv-approval-stepper__item--done .mv-approval-stepper__line {
-    background: var(--el-color-primary, #00b894);
+    background: var(--el-color-primary);
 }
 
 .mv-approval-stepper__dot {
@@ -74,9 +74,9 @@ defineProps<{ steps: ApprovalStepperItem[] }>();
     place-items: center;
     font-size: 13px;
     font-weight: 700;
-    background: #fff;
-    border: 2px solid var(--el-border-color, #e4e7ec);
-    color: var(--el-text-color-secondary, #6b7280);
+    background: var(--app-surface);
+    border: 2px solid var(--el-border-color);
+    color: var(--el-text-color-secondary);
     margin: 0 auto;
 }
 
@@ -85,39 +85,39 @@ defineProps<{ steps: ApprovalStepperItem[] }>();
 }
 
 .mv-approval-stepper__item--done .mv-approval-stepper__dot {
-    background: var(--el-color-primary, #00b894);
-    border-color: var(--el-color-primary, #00b894);
-    color: #fff;
+    background: var(--el-color-primary);
+    border-color: var(--el-color-primary);
+    color: var(--app-on-accent);
 }
 
 .mv-approval-stepper__item--current .mv-approval-stepper__dot {
-    border-color: var(--el-color-primary, #00b894);
-    color: var(--el-color-primary-dark-2, #008a70);
+    border-color: var(--el-color-primary);
+    color: var(--el-color-primary-dark-2);
 }
 
 .mv-approval-stepper__item--escalated .mv-approval-stepper__dot {
-    background: #fffbeb;
-    border-color: #f59e0b;
-    color: #b45309;
+    background: var(--app-warn2-bg);
+    border-color: var(--app-sel-warn-bd);
+    color: var(--app-orange-fg);
 }
 
 .mv-approval-stepper__item--rejected .mv-approval-stepper__dot {
-    background: #fee2e2;
-    border-color: #dc2626;
-    color: #dc2626;
+    background: var(--app-danger-bg);
+    border-color: var(--app-danger-btn-hover);
+    color: var(--app-danger-btn-hover);
 }
 
 .mv-approval-stepper__label {
     margin-top: 8px;
     font-size: 13px;
     font-weight: 700;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-approval-stepper__meta {
     margin-top: 2px;
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     padding: 0 8px;
 }
 </style>

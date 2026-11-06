@@ -173,7 +173,7 @@ const visibleLevel = computed(() => {
 
 .mv-category-nav__count {
     margin-left: 6px;
-    color: #8a9a94;
+    color: var(--app-text-placeholder);
     font-size: 12px;
 }
 

@@ -62,8 +62,8 @@ function formatUntil(iso: string): string {
 .olt {
     min-width: 0;
     overflow-x: auto;
-    background: #fff;
-    border: 1px solid #edf2ef;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border);
     border-radius: 20px;
     padding: 18px 20px;
 }
@@ -81,14 +81,14 @@ function formatUntil(iso: string): string {
 .olt-table th {
     text-align: left;
     padding: 10px;
-    background: #f6f9f8;
-    color: #66736e;
+    background: var(--el-bg-color-page);
+    color: var(--app-nav-label);
     font-weight: 850;
     font-size: 12px;
 }
 .olt-table td {
     padding: 12px 10px;
-    border-bottom: 1px solid #f3f8f6;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 .olt-table th.olt-num,
 .olt-num {
@@ -100,11 +100,11 @@ function formatUntil(iso: string): string {
 }
 .olt-until {
     margin-left: 6px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
 }
 .olt-sku {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-weight: 850;
     white-space: nowrap;
 }

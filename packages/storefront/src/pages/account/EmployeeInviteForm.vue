@@ -58,8 +58,8 @@ const form = ref({ name: '', contact: '', role: '', allPoints: false, points: []
 <style scoped src="./EmployeeButtons.css"></style>
 <style scoped>
 .emp-invite-card {
-    background: #fff;
-    border: 1px solid #00a878;
+    background: var(--app-surface);
+    border: 1px solid var(--el-color-primary);
     border-radius: 20px;
     padding: 18px 20px;
 }
@@ -84,7 +84,7 @@ const form = ref({ name: '', contact: '', role: '', allPoints: false, points: []
     gap: 5px;
     font-size: 13px;
     font-weight: 700;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .emp-field--points {
@@ -93,18 +93,18 @@ const form = ref({ name: '', contact: '', role: '', allPoints: false, points: []
 
 .emp-field input,
 .emp-field select {
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 12px;
     padding: 9px 12px;
     font: inherit;
     font-size: 14px;
     outline: none;
-    background: #fff;
+    background: var(--app-surface);
 }
 .emp-field input:focus,
 .emp-field select:focus {
-    border-color: #00a878;
-    box-shadow: 0 0 0 3px rgba(0, 168, 120, 0.1);
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 3px var(--app-green-glow);
 }
 
 .emp-check-list {
@@ -118,7 +118,7 @@ const form = ref({ name: '', contact: '', role: '', allPoints: false, points: []
     gap: 6px;
     font-size: 13px;
     font-weight: 700;
-    color: #263732;
+    color: var(--app-text-deep);
     cursor: pointer;
 }
 

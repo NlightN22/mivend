@@ -65,12 +65,12 @@ function formatThreshold(tier: DiscountTier): string {
     align-items: center;
     border: none;
     border-radius: 8px;
-    background: #ff4d4f;
-    color: #fff;
+    background: var(--app-danger-btn);
+    color: var(--app-on-accent);
     font-weight: 800;
     cursor: pointer;
     white-space: nowrap;
-    box-shadow: 0 4px 10px rgba(255, 77, 79, 0.3);
+    box-shadow: 0 4px 10px var(--app-danger-glow);
 }
 
 .mv-discount-badge--md {
@@ -86,7 +86,7 @@ function formatThreshold(tier: DiscountTier): string {
 .mv-discount-badge__title {
     font-weight: 800;
     margin-bottom: 4px;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .mv-discount-badge__list {

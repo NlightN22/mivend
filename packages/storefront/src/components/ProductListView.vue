@@ -190,11 +190,11 @@ onBeforeUnmount(() => observer?.disconnect());
 }
 
 .plv-toolbar {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 16px;
-    border: 1px solid #edf3f0;
+    border: 1px solid var(--app-row-border);
     padding: 14px 18px;
-    box-shadow: 0 4px 12px rgba(27, 45, 38, 0.05);
+    box-shadow: 0 4px 12px var(--app-ink-05);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -206,11 +206,11 @@ onBeforeUnmount(() => observer?.disconnect());
     font-size: 18px;
     font-weight: 900;
     letter-spacing: -0.03em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 .plv-toolbar__count {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
     margin-top: 2px;
 }
 .plv-toolbar__right {
@@ -224,12 +224,12 @@ onBeforeUnmount(() => observer?.disconnect());
 .plv-toolbar__select {
     height: 36px;
     padding: 0 10px;
-    border: 1.5px solid #dde7e2;
+    border: 1.5px solid var(--app-nav-border-strong);
     border-radius: 10px;
-    background: #fff;
+    background: var(--app-surface);
     font-size: 13px;
     font-family: inherit;
-    color: #2c3b36;
+    color: var(--app-text-body2);
     cursor: pointer;
 }
 
@@ -240,10 +240,10 @@ onBeforeUnmount(() => observer?.disconnect());
     justify-content: center;
     width: 38px;
     height: 38px;
-    border: 1.5px solid #dde7e2;
+    border: 1.5px solid var(--app-nav-border-strong);
     border-radius: 10px;
-    background: #fff;
-    color: #2c3b36;
+    background: var(--app-surface);
+    color: var(--app-text-body2);
     cursor: pointer;
 }
 
@@ -256,7 +256,7 @@ onBeforeUnmount(() => observer?.disconnect());
     padding: 0 5px;
     border-radius: 9px;
     background: var(--el-color-primary);
-    color: #fff;
+    color: var(--app-on-accent);
     font-size: 11px;
     font-weight: 800;
     line-height: 18px;
@@ -265,7 +265,7 @@ onBeforeUnmount(() => observer?.disconnect());
 
 .plv-toolbar__view {
     display: flex;
-    border: 1.5px solid #dde7e2;
+    border: 1.5px solid var(--app-nav-border-strong);
     border-radius: 10px;
     overflow: hidden;
 }
@@ -280,7 +280,7 @@ onBeforeUnmount(() => observer?.disconnect());
     background: transparent;
     font-size: 13px;
     font-family: inherit;
-    color: #66736e;
+    color: var(--app-nav-label);
     cursor: pointer;
     transition:
         background 0.1s,
@@ -306,33 +306,33 @@ onBeforeUnmount(() => observer?.disconnect());
 
 @media (hover: hover) {
     .plv-toolbar__view-btn:not(.plv-toolbar__view-btn--active):hover {
-        background: #f4faf7;
+        background: var(--app-row-hover);
     }
 }
 .plv-toolbar__view-btn--active {
-    background: #00b894;
-    color: #fff;
+    background: var(--el-color-primary);
+    color: var(--app-on-accent);
 }
 
 .plv-list {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 16px;
-    border: 1px solid #edf3f0;
+    border: 1px solid var(--app-row-border);
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(27, 45, 38, 0.05);
+    box-shadow: 0 4px 12px var(--app-ink-05);
 }
 
 .plv-list__header {
     display: grid;
     grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 90px 110px 140px;
     padding: 10px 16px;
-    background: #f7fbfa;
-    border-bottom: 2px solid #edf3f0;
+    background: var(--app-ph-from);
+    border-bottom: 2px solid var(--app-row-border);
     font-size: 11px;
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .plv-grid {
@@ -344,21 +344,21 @@ onBeforeUnmount(() => observer?.disconnect());
 .plv-note {
     margin-bottom: 10px;
     padding: 10px 16px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 12px;
-    border: 1px solid #edf3f0;
+    border: 1px solid var(--app-row-border);
 }
 
 .plv-state {
     padding: 60px;
     text-align: center;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 15px;
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 16px;
-    border: 1px solid #edf3f0;
+    border: 1px solid var(--app-row-border);
 }
 
 .plv-sentinel {
@@ -371,15 +371,15 @@ onBeforeUnmount(() => observer?.disconnect());
     justify-content: center;
     gap: 10px;
     padding: 20px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 
 .plv-loading-more__spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid #dde7e2;
-    border-top-color: #00b894;
+    border: 2px solid var(--app-nav-border-strong);
+    border-top-color: var(--el-color-primary);
     border-radius: 50%;
     animation: plv-spin 0.7s linear infinite;
 }

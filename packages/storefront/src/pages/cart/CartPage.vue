@@ -77,7 +77,7 @@ onMounted(() => cartStore.fetchCart());
 }
 
 .cart-page__count {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 22px;
     font-weight: 800;
     letter-spacing: -0.02em;
@@ -86,7 +86,7 @@ onMounted(() => cartStore.fetchCart());
 
 .cart-page__hint {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     max-width: 540px;
     text-align: right;

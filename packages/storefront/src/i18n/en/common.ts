@@ -34,6 +34,10 @@ export default {
         more: 'More',
         tabs: 'Main navigation',
         interfaceLanguage: 'Interface language',
+        theme: 'Theme',
+        themeSystem: 'System',
+        themeLight: 'Light',
+        themeDark: 'Dark',
     },
     header: {
         tagline: '{portal} for fast ordering of auto parts and consumables',

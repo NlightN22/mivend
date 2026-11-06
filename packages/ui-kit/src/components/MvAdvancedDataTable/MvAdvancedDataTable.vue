@@ -642,7 +642,7 @@ const isMobile = useIsMobileViewport(800);
 
 .mv-advanced-data-table__selection-count {
     font-weight: 600;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
     white-space: nowrap;
 }
 
@@ -705,7 +705,7 @@ const isMobile = useIsMobileViewport(800);
     border: none;
     border-radius: 6px;
     background: none;
-    color: var(--el-text-color-secondary, #98a2b3);
+    color: var(--el-text-color-secondary);
     cursor: pointer;
     transition:
         background-color 0.15s,
@@ -713,12 +713,12 @@ const isMobile = useIsMobileViewport(800);
 }
 
 .mv-advanced-data-table__sort-btn:hover {
-    background: var(--el-color-primary-light-9, #e6faf4);
-    color: var(--el-color-primary, #00b894);
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
 }
 
 .mv-advanced-data-table__sort-btn--active {
-    color: var(--el-color-primary, #00b894);
+    color: var(--el-color-primary);
 }
 
 .mv-advanced-data-table__sort-icon {
@@ -734,12 +734,12 @@ const isMobile = useIsMobileViewport(800);
     transform: translateY(-50%);
     width: 1px;
     height: 20px;
-    background: var(--el-border-color, #e4e7ec);
+    background: var(--el-border-color);
 }
 
 :deep(.p-datatable-column-resizer:hover)::after {
     width: 2px;
-    background: var(--el-color-primary, #00b894);
+    background: var(--el-color-primary);
 }
 
 :deep(.p-datatable-filter) {
@@ -747,8 +747,8 @@ const isMobile = useIsMobileViewport(800);
 }
 
 :deep(.p-datatable-column-filter-button:hover) {
-    background: var(--el-color-primary-light-9, #e6faf4) !important;
-    color: var(--el-color-primary, #00b894) !important;
+    background: var(--el-color-primary-light-9) !important;
+    color: var(--el-color-primary) !important;
 }
 
 :deep(.p-datatable-column-filter-button) {
@@ -766,6 +766,6 @@ const isMobile = useIsMobileViewport(800);
         ~ .p-datatable-filter
         .p-datatable-column-filter-button
 ) {
-    color: var(--el-color-primary, #00b894);
+    color: var(--el-color-primary);
 }
 </style>

@@ -334,8 +334,8 @@ function onStepperChange(qty: number): void {
     margin-top: 4px;
     padding: 1px 8px;
     border-radius: 999px;
-    background: #e6f2ee;
-    color: #1f5d4b;
+    background: var(--app-chip-bg);
+    color: var(--app-chip-fg);
     font-size: 11px;
     font-weight: 600;
 }
@@ -345,12 +345,12 @@ function onStepperChange(qty: number): void {
     grid-template-columns: 64px minmax(160px, 1fr) 120px 100px 80px 90px 110px 140px;
     align-items: center;
     padding: 12px 16px;
-    border-bottom: 1px solid #edf3f0;
-    background: #fff;
+    border-bottom: 1px solid var(--app-row-border);
+    background: var(--app-surface);
     transition: background 0.1s;
 }
 .mv-product-row:hover {
-    background: #f7fbfa;
+    background: var(--app-ph-from);
 }
 
 /* Extra track for the staff-only "Floor price" cell — see hasFloorPrice/props.floorPrice. */
@@ -375,7 +375,7 @@ function onStepperChange(qty: number): void {
     height: 48px;
     border-radius: 10px;
     overflow: hidden;
-    background: #f4f9f7;
+    background: var(--app-row-hover);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -388,7 +388,7 @@ function onStepperChange(qty: number): void {
 }
 .mv-product-row__img-placeholder {
     font-size: 22px;
-    color: #b4ccc4;
+    color: var(--app-text-disabled);
 }
 
 .mv-product-row__main {
@@ -401,7 +401,7 @@ function onStepperChange(qty: number): void {
 .mv-product-row__name {
     font-size: 14px;
     font-weight: 700;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     text-decoration: none;
     line-height: 1.3;
     overflow: hidden;
@@ -413,7 +413,7 @@ function onStepperChange(qty: number): void {
     cursor: default;
 }
 .mv-product-row__name:not(.mv-product-row__name--plain):hover {
-    color: #00b894;
+    color: var(--el-color-primary);
 }
 .mv-product-row__brand-row {
     display: flex;
@@ -423,7 +423,7 @@ function onStepperChange(qty: number): void {
 .mv-product-row__brand {
     font-size: 12px;
     font-weight: 700;
-    color: #66736e;
+    color: var(--app-nav-label);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -439,20 +439,20 @@ function onStepperChange(qty: number): void {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
 }
 .mv-product-row__cell-value {
     font-size: 13px;
-    color: #2c3b36;
+    color: var(--app-text-body2);
 }
 .mv-product-row__sku {
     font-family: monospace;
     font-size: 12px;
-    color: #2c3b36;
+    color: var(--app-text-body2);
 }
 .mv-product-row__stock-none {
     font-size: 13px;
-    color: #b4ccc4;
+    color: var(--app-text-disabled);
 }
 
 .mv-product-row__price {
@@ -465,29 +465,29 @@ function onStepperChange(qty: number): void {
     gap: 4px;
 }
 .mv-product-row__unit-info {
-    color: #8fa39b;
+    color: var(--app-text-placeholder);
     cursor: help;
 }
 .mv-product-row__unit {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 .mv-product-row__price--customer {
-    color: #00a878;
+    color: var(--app-price);
 }
 .mv-product-row__old-price {
     font-size: 12px !important;
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
     text-decoration: line-through;
 }
 .mv-product-row__price-hint {
     font-size: 12px;
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
 }
 .mv-product-row__floor-price {
     font-weight: 700;
     letter-spacing: -0.02em;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .mv-product-row__actions {
@@ -509,7 +509,7 @@ function onStepperChange(qty: number): void {
 .mv-product-row__qty {
     display: flex;
     align-items: center;
-    border: 1.5px solid #dde7e2;
+    border: 1.5px solid var(--app-nav-border-strong);
     border-radius: 10px;
     overflow: hidden;
     height: 36px;
@@ -520,7 +520,7 @@ function onStepperChange(qty: number): void {
     border: none;
     background: transparent;
     font-size: 18px;
-    color: #2c3b36;
+    color: var(--app-text-body2);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -528,14 +528,14 @@ function onStepperChange(qty: number): void {
     transition: background 0.1s;
 }
 .mv-product-row__qty-btn:hover {
-    background: #e8f5f0;
+    background: var(--app-chip-bg);
 }
 .mv-product-row__qty-val {
     min-width: 32px;
     text-align: center;
     font-size: 14px;
     font-weight: 700;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .mv-product-row__add-btn {
@@ -543,8 +543,8 @@ function onStepperChange(qty: number): void {
     padding: 0 14px;
     border: none;
     border-radius: 10px;
-    background: var(--app-accent-orange, #ff8a00);
-    color: #fff;
+    background: var(--app-accent-orange);
+    color: var(--app-on-accent);
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -558,7 +558,7 @@ function onStepperChange(qty: number): void {
     font-family: inherit;
 }
 .mv-product-row__add-btn:hover:not(:disabled) {
-    background: #e67a00;
+    background: var(--app-accent-orange-hover);
 }
 .mv-product-row__add-btn:disabled {
     opacity: 0.45;
@@ -568,10 +568,10 @@ function onStepperChange(qty: number): void {
 .mv-product-row__analog-btn {
     width: 100%;
     height: 36px;
-    border: 1.5px solid #dde7e2;
+    border: 1.5px solid var(--app-nav-border-strong);
     border-radius: 10px;
     background: transparent;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -580,8 +580,8 @@ function onStepperChange(qty: number): void {
         color 0.15s;
 }
 .mv-product-row__analog-btn:hover {
-    border-color: #00b894;
-    color: #00b894;
+    border-color: var(--el-color-primary);
+    color: var(--el-color-primary);
 }
 .mv-product-row__tier-progress {
     margin-top: 6px;

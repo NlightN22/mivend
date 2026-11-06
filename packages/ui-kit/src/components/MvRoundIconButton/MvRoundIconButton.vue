@@ -17,16 +17,16 @@ defineEmits<{ click: [] }>();
 
 <style scoped>
 .mv-round-icon-btn {
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: 50%;
-    background: var(--app-surface, #fff);
-    color: var(--el-text-color-primary, #17212b);
+    background: var(--app-surface);
+    color: var(--el-text-color-primary);
     font-size: 18px;
     line-height: 1;
     display: grid;
     place-items: center;
     cursor: pointer;
-    box-shadow: 0 6px 18px rgba(16, 24, 40, 0.12);
+    box-shadow: 0 6px 18px var(--app-ink-10);
     transition:
         transform 0.14s ease,
         box-shadow 0.14s ease,
@@ -35,7 +35,7 @@ defineEmits<{ click: [] }>();
 
 .mv-round-icon-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(16, 24, 40, 0.18);
+    box-shadow: 0 10px 24px var(--app-ink-14);
 }
 
 .mv-round-icon-btn:active:not(:disabled) {

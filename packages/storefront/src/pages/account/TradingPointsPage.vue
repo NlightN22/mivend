@@ -140,7 +140,7 @@ onMounted(loadPoints);
 }
 
 .tp-subtitle {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     margin: 0;
 }
@@ -162,13 +162,13 @@ onMounted(loadPoints);
     transition: 0.14s ease;
 }
 .tp-btn--primary {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 .tp-btn--ghost {
-    background: #f3f8f6;
-    color: #263732;
-    border: 1px solid #dde7e2;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
+    border: 1px solid var(--app-nav-border-strong);
 }
 .tp-btn:disabled {
     opacity: 0.6;
@@ -178,7 +178,7 @@ onMounted(loadPoints);
 .tp-empty {
     text-align: center;
     padding: 64px 24px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 15px;
     display: grid;
     grid-template-columns: minmax(0, 1fr);

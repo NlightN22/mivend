@@ -213,14 +213,14 @@ function onMaxInput(e: Event): void {
 .catalog-facets {
     min-width: 0;
     border-radius: 20px;
-    background: #fff;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    background: var(--app-surface);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 18px;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    border: 1px solid var(--app-border-glass);
 }
 
 .catalog-facets__block {
-    border-top: 1px solid #edf2ef;
+    border-top: 1px solid var(--app-nav-border);
     padding-top: 14px;
     margin-top: 14px;
 }
@@ -237,21 +237,21 @@ function onMaxInput(e: Event): void {
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #2c3b36;
+    color: var(--app-text-body2);
 }
 
 .catalog-facets__check {
     display: flex;
     align-items: center;
     gap: 9px;
-    color: #43524d;
+    color: var(--app-text-body3);
     font-size: 14px;
     margin: 8px 0;
     cursor: pointer;
 }
 
 .catalog-facets__check input {
-    accent-color: #00b894;
+    accent-color: var(--el-color-primary);
 }
 
 .catalog-facets__price-row {
@@ -269,7 +269,7 @@ function onMaxInput(e: Event): void {
 .catalog-facets__price-label {
     font-size: 11px;
     font-weight: 700;
-    color: #9aada6;
+    color: var(--app-text-placeholder);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -277,13 +277,13 @@ function onMaxInput(e: Event): void {
 .catalog-facets__price-input {
     width: 100%;
     height: 36px;
-    border: 1.5px solid #dde7e2;
+    border: 1.5px solid var(--app-nav-border-strong);
     border-radius: 10px;
     padding: 0 10px;
     font-size: 13px;
     font-weight: 700;
-    color: #2c3b36;
-    background: #f9fbfa;
+    color: var(--app-text-body2);
+    background: var(--app-fill-faint);
     font-family: inherit;
     outline: none;
     box-sizing: border-box;
@@ -296,17 +296,17 @@ function onMaxInput(e: Event): void {
 }
 
 .catalog-facets__price-input:focus {
-    border-color: #00b894;
-    background: #fff;
+    border-color: var(--el-color-primary);
+    background: var(--app-surface);
 }
 
 .catalog-facets__reset {
     width: 100%;
     height: 36px;
-    border: 1.5px solid #dde7e2;
+    border: 1.5px solid var(--app-nav-border-strong);
     border-radius: 10px;
     background: transparent;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -317,8 +317,8 @@ function onMaxInput(e: Event): void {
 }
 
 .catalog-facets__reset:hover {
-    border-color: #00b894;
-    color: #00b894;
+    border-color: var(--el-color-primary);
+    color: var(--el-color-primary);
 }
 
 .catalog-facets__skeleton {
@@ -329,7 +329,7 @@ function onMaxInput(e: Event): void {
 }
 
 .catalog-facets__count {
-    color: #9aada6;
+    color: var(--app-text-placeholder);
     font-size: 12px;
 }
 </style>

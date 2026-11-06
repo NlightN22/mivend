@@ -41,13 +41,13 @@ const { t } = useI18n();
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 1px;
     margin-bottom: 18px;
-    background: #edf2ef;
-    border: 1px solid #edf2ef;
+    background: var(--app-nav-border);
+    border: 1px solid var(--app-nav-border);
     border-radius: 20px;
     overflow: hidden;
 }
 .oss-item {
     padding: 14px 18px;
-    background: #fff;
+    background: var(--app-surface);
 }
 </style>

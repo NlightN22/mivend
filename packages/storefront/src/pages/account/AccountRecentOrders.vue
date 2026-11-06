@@ -59,10 +59,10 @@ onMounted(() => {
 
 <style scoped>
 .recent-orders {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    box-shadow: 0 14px 36px var(--app-ink-08);
+    border: 1px solid var(--app-border-glass);
     padding: 22px;
     margin-bottom: 22px;
 }
@@ -82,13 +82,13 @@ onMounted(() => {
 }
 
 .recent-orders__subtitle {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
 
 .recent-orders__link-more {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-weight: 950;
     font-size: 14px;
     white-space: nowrap;
@@ -111,9 +111,9 @@ onMounted(() => {
 
 .recent-orders__empty {
     padding: 22px 16px;
-    border: 1px dashed #dde7e2;
+    border: 1px dashed var(--app-nav-border-strong);
     border-radius: 18px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     text-align: center;
 }

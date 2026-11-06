@@ -26,23 +26,23 @@ withDefaults(defineProps<{ variant?: StatusBadgeVariant }>(), { variant: 'neutra
 }
 
 .mv-status-badge--neutral {
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--app-slate-bg);
+    color: var(--app-text-body3);
 }
 .mv-status-badge--success {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--app-ok-bg);
+    color: var(--app-ok-fg);
 }
 .mv-status-badge--warning {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--app-warn-bg);
+    color: var(--app-warn-fg);
 }
 .mv-status-badge--danger {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--app-danger-bg);
+    color: var(--app-danger-fg);
 }
 .mv-status-badge--info {
-    background: #e0f2fe;
-    color: #0c4a6e;
+    background: var(--app-info-bg);
+    color: var(--app-info-fg);
 }
 </style>

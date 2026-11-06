@@ -97,7 +97,7 @@ const {
 <style scoped>
 .oc-state {
     padding: 40px 0;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .oc-page {
@@ -124,10 +124,10 @@ const {
 .oc-status-card {
     max-width: 600px;
     margin: 0 auto 24px;
-    background: #fff;
-    border: 1.5px solid #00a878;
+    background: var(--app-surface);
+    border: 1.5px solid var(--el-color-primary);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 36px 32px;
     display: flex;
     flex-direction: column;
@@ -139,8 +139,8 @@ const {
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
     font-size: 28px;
     font-weight: 900;
     display: grid;
@@ -157,7 +157,7 @@ const {
 
 .oc-status-text {
     margin: 0 0 22px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.5;
 }
@@ -185,30 +185,30 @@ const {
 }
 
 .oc-btn--primary {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 .oc-btn--primary:hover {
-    background: #008a64;
+    background: var(--app-brand-fill-hover);
 }
 
 .oc-btn--secondary {
-    background: #f3f8f6;
-    color: #263732;
-    border: 1px solid #dde7e2;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
+    border: 1px solid var(--app-nav-border-strong);
 }
 .oc-btn--secondary:hover {
-    background: #e8f2ed;
+    background: var(--app-nav-border);
 }
 
 .oc-btn--ghost {
     background: transparent;
-    color: #66736e;
-    border: 1px solid #dde7e2;
+    color: var(--app-nav-label);
+    border: 1px solid var(--app-nav-border-strong);
 }
 .oc-btn--ghost:hover {
-    color: #263732;
-    background: #f4faf7;
+    color: var(--app-text-deep);
+    background: var(--el-bg-color-page);
 }
 
 @media (max-width: 760px) {

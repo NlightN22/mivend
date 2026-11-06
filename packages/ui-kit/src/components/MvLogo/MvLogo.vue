@@ -48,9 +48,14 @@ const mark = computed(() => resolveLogoMark(props.name, props.iconUrl, iconFaile
 .mv-logo__mark {
     display: grid;
     place-items: center;
-    color: #fff;
-    background: linear-gradient(135deg, #00b894, #75ef69 56%, #c8f21a);
-    box-shadow: 0 10px 22px rgba(0, 168, 120, 0.24);
+    color: var(--app-on-accent);
+    background: linear-gradient(
+        135deg,
+        var(--el-color-primary),
+        var(--app-lime-hover) 56%,
+        var(--app-lime-bg)
+    );
+    box-shadow: 0 10px 22px var(--app-green-glow);
     border-radius: 14px;
     font-weight: 900;
     flex-shrink: 0;
@@ -59,7 +64,7 @@ const mark = computed(() => resolveLogoMark(props.name, props.iconUrl, iconFaile
 .mv-logo__mark--image {
     display: block;
     object-fit: contain;
-    background: #fff;
+    background: var(--app-surface);
     box-shadow: none;
 }
 

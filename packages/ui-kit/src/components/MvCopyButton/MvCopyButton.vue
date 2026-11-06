@@ -37,23 +37,23 @@ function onClick(): void {
     width: 34px;
     height: 34px;
     padding: 0;
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 10px;
-    background: #fff;
-    color: #344640;
+    background: var(--app-surface);
+    color: var(--app-text-body2);
     cursor: pointer;
 }
 .mv-copy-button:hover {
-    background: #e2f8ef;
-    border-color: #00a878;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    border-color: var(--el-color-primary);
+    color: var(--app-nav-accent);
 }
 .mv-copy-button--done {
-    border-color: #00a878;
-    color: #008a64;
+    border-color: var(--el-color-primary);
+    color: var(--app-nav-accent);
 }
 .mv-copy-button--failed {
-    border-color: #d64545;
-    color: #d64545;
+    border-color: var(--app-danger-btn);
+    color: var(--app-danger-btn);
 }
 </style>

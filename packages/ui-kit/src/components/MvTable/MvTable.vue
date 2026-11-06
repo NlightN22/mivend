@@ -105,7 +105,7 @@ const rowEventHandlers = {
     width: 100%;
     border-radius: 12px;
     overflow: hidden;
-    border: 1px solid #e4e7ec;
+    border: 1px solid var(--el-border-color);
 }
 
 .mv-table--loading {
@@ -119,15 +119,15 @@ const rowEventHandlers = {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.7);
+    background: var(--app-glass);
     z-index: 10;
 }
 
 .mv-table__spinner {
     width: 28px;
     height: 28px;
-    border: 3px solid #e4e7ec;
-    border-top-color: #00b894;
+    border: 3px solid var(--el-border-color);
+    border-top-color: var(--el-color-primary);
     border-radius: 50%;
     animation: mv-table-spin 0.7s linear infinite;
 }
@@ -144,56 +144,56 @@ const rowEventHandlers = {
     justify-content: center;
     height: 120px;
     font-size: 14px;
-    color: #667085;
+    color: var(--app-slate-fg);
 }
 
 /* Header */
 .el-table-v2__header-row {
-    background: #f8fafc !important;
+    background: var(--app-slate-bg) !important;
 }
 .el-table-v2__header-cell {
     font-size: 12px !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.04em !important;
-    color: #667085 !important;
+    color: var(--app-slate-fg) !important;
 }
 
 /* Zebra striping — plain data rows only (a real _rowState always overrides, see rowClass).
    --el-fill-color-light (#f8fafc) was tried first and was practically indistinguishable from
    white on a real screen — needs a visibly darker tint to actually read as a stripe. */
 .mv-table-row--zebra {
-    background: var(--el-fill-color, #eef1f5) !important;
+    background: var(--el-fill-color, var(--app-nav-border)) !important;
 }
 
 /* Row states */
 .mv-table-row--in-stock .el-table-v2__row-cell {
-    color: #065f46;
+    color: var(--app-ok-fg);
 }
 .mv-table-row--low-stock {
-    background: #fffbeb !important;
+    background: var(--app-warn2-bg) !important;
 }
 .mv-table-row--low-stock .el-table-v2__row-cell {
-    color: #92400e;
+    color: var(--app-warn-fg);
 }
 .mv-table-row--by-order {
-    background: #f0f9ff !important;
+    background: var(--app-slate-bg) !important;
 }
 .mv-table-row--in-cart {
-    background: #fff8f0 !important;
+    background: var(--el-bg-color-page) !important;
 }
 .mv-table-row--reserved {
-    background: #f5f3ff !important;
+    background: var(--app-slate-bg) !important;
 }
 .mv-table-row--unavailable {
     opacity: 0.55;
 }
 .mv-table-row--analog {
-    background: #faf5ff !important;
+    background: var(--app-slate-bg) !important;
 }
 
 /* Row hover */
 .el-table-v2__row:hover .el-table-v2__row-cell {
-    background: #f0fffa !important;
+    background: var(--el-color-primary-light-9) !important;
 }
 </style>

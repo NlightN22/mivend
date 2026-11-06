@@ -130,7 +130,7 @@ onBeforeUnmount(() => {
     border: none;
     border-radius: 14px;
     background: var(--el-color-primary);
-    color: #fff;
+    color: var(--app-on-accent);
     font-size: 16px;
     font-weight: 800;
     cursor: pointer;

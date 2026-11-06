@@ -124,10 +124,10 @@ function cancelClear(): void {
 
 <style scoped>
 .item-list {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     overflow: hidden;
 }
 
@@ -138,7 +138,7 @@ function cancelClear(): void {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 
 .item-list__check-all {
@@ -152,7 +152,7 @@ function cancelClear(): void {
     width: 20px;
     height: 20px;
     margin: 0;
-    accent-color: #00a878;
+    accent-color: var(--app-nav-accent-soft);
 }
 
 .item-list__actions {
@@ -166,16 +166,16 @@ function cancelClear(): void {
     border: none;
     border-radius: 12px;
     padding: 0 12px;
-    background: #f4faf7;
-    color: #5d6d67;
+    background: var(--el-bg-color-page);
+    color: var(--app-nav-label);
     font-size: 13px;
     font-weight: 850;
     cursor: pointer;
     font-family: inherit;
 }
 .item-list__action:hover {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 .item-list__action:disabled {
     opacity: 0.45;
@@ -188,38 +188,38 @@ function cancelClear(): void {
     gap: 6px;
     font-size: 13px;
     font-weight: 800;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 .item-list__clear-confirm-yes {
     height: 32px;
     padding: 0 10px;
     border: none;
     border-radius: 10px;
-    background: #fff0ee;
-    color: #f04438;
+    background: var(--app-danger2-bg);
+    color: var(--app-danger-btn);
     font-size: 12px;
     font-weight: 900;
     cursor: pointer;
     font-family: inherit;
 }
 .item-list__clear-confirm-yes:hover {
-    background: #fde3e0;
+    background: var(--app-danger-bg);
 }
 .item-list__clear-confirm-no {
     height: 32px;
     padding: 0 10px;
     border: none;
     border-radius: 10px;
-    background: #f4faf7;
-    color: #66736e;
+    background: var(--el-bg-color-page);
+    color: var(--app-nav-label);
     font-size: 12px;
     font-weight: 900;
     cursor: pointer;
     font-family: inherit;
 }
 .item-list__clear-confirm-no:hover {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .item-list__spacer {
@@ -230,8 +230,8 @@ function cancelClear(): void {
     margin: 0 16px 18px;
     padding: 14px 16px;
     border-radius: 18px;
-    background: #f7fbfa;
-    color: #50615b;
+    background: var(--el-bg-color-page);
+    color: var(--app-text-body3);
     font-size: 14px;
     line-height: 1.45;
     display: flex;

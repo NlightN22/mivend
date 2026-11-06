@@ -31,18 +31,18 @@ defineEmits<{ 'update:modelValue': [value: string] }>();
     width: 100%;
     height: 40px;
     padding: 0 12px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
-    background: var(--el-fill-color-light, #f8fafc);
-    color: var(--el-text-color-primary, #17212b);
+    background: var(--el-fill-color-light);
+    color: var(--el-text-color-primary);
     font-size: 14px;
     outline: none;
 }
 
 .mv-select:focus {
-    border-color: var(--el-color-primary-light-7, #c8f7ec);
-    box-shadow: 0 0 0 4px var(--el-color-primary-light-9, #f0fffa);
-    background: #fff;
+    border-color: var(--el-color-primary-light-7);
+    box-shadow: 0 0 0 4px var(--el-color-primary-light-9);
+    background: var(--app-surface);
 }
 
 .mv-select:disabled {

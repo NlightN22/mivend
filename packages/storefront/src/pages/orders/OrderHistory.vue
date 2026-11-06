@@ -38,8 +38,8 @@ function label(entry: Entry): string {
 <style scoped>
 .oh {
     margin-top: 18px;
-    background: #fff;
-    border: 1px solid #edf2ef;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border);
     border-radius: 20px;
     padding: 18px 20px;
 }
@@ -70,7 +70,7 @@ function label(entry: Entry): string {
     top: 26px;
     bottom: 2px;
     width: 2px;
-    background: #c9ece0;
+    background: var(--app-nav-border-strong);
 }
 .oh-dot {
     flex-shrink: 0;
@@ -80,22 +80,22 @@ function label(entry: Entry): string {
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 .oh-status {
     font-size: 14px;
     font-weight: 950;
-    color: #1b2d26;
+    color: var(--app-nav-text-strong);
 }
 .oh-note {
     margin-top: 2px;
     font-size: 13px;
-    color: #344640;
+    color: var(--app-text-body2);
 }
 .oh-date {
     margin-top: 2px;
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 </style>

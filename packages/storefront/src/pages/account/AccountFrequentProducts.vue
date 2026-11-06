@@ -56,10 +56,10 @@ const fmt = (n: number): string => formatMoney(n);
 
 <style scoped>
 .frequent-products {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    box-shadow: 0 14px 36px var(--app-ink-08);
+    border: 1px solid var(--app-border-glass);
     padding: 22px;
     margin-bottom: 22px;
 }
@@ -79,13 +79,13 @@ const fmt = (n: number): string => formatMoney(n);
 }
 
 .frequent-products__subtitle {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
 
 .frequent-products__link-more {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-weight: 950;
     font-size: 14px;
     white-space: nowrap;
@@ -99,9 +99,9 @@ const fmt = (n: number): string => formatMoney(n);
 }
 
 .frequent-products__card {
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 20px;
-    background: #fff;
+    background: var(--app-surface);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -111,9 +111,9 @@ const fmt = (n: number): string => formatMoney(n);
     height: 116px;
     display: grid;
     place-items: center;
-    background: linear-gradient(145deg, #f7fbfa, #ebf8f2);
+    background: linear-gradient(145deg, var(--el-bg-color-page), var(--app-fill-soft));
     font-size: 42px;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 
 .frequent-products__body {
@@ -128,7 +128,7 @@ const fmt = (n: number): string => formatMoney(n);
     display: flex;
     justify-content: space-between;
     gap: 8px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
     font-weight: 850;
 }
@@ -159,17 +159,17 @@ const fmt = (n: number): string => formatMoney(n);
     height: 38px;
     border: 0;
     border-radius: 12px;
-    background: var(--app-accent-orange, #ff8a00);
-    color: #fff;
+    background: var(--app-accent-orange);
+    color: var(--app-on-accent);
     font-weight: 950;
     cursor: pointer;
     font: inherit;
 }
 .frequent-products__add:hover:not(:disabled) {
-    background: var(--app-accent-orange-hover, #e67c00);
+    background: var(--app-accent-orange-hover);
 }
 .frequent-products__add:active:not(:disabled) {
-    background: var(--app-accent-orange-active, #cc6e00);
+    background: var(--app-accent-orange-active);
 }
 
 @media (max-width: 1240px) {

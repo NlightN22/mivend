@@ -93,7 +93,7 @@ const errors = computed(() => tradingPointErrors(model.value, props.original));
     gap: 5px;
     font-size: 13px;
     font-weight: 700;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .tp-field--wide {
@@ -101,7 +101,7 @@ const errors = computed(() => tradingPointErrors(model.value, props.original));
 }
 
 .tp-field textarea {
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 12px;
     padding: 10px 12px;
     font: inherit;
@@ -111,8 +111,8 @@ const errors = computed(() => tradingPointErrors(model.value, props.original));
 }
 
 .tp-field textarea:focus {
-    border-color: #00a878;
-    box-shadow: 0 0 0 3px rgba(0, 168, 120, 0.1);
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 3px var(--app-green-glow);
 }
 
 @media (max-width: 960px) {

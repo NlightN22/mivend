@@ -295,12 +295,12 @@ function onClear(): void {
     width: 100%;
     height: 36px;
     padding: 0 10px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
     font-size: 13px;
     font-weight: 600;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-column-filter-date-range__custom {
@@ -319,7 +319,7 @@ function onClear(): void {
 
 .mv-column-filter-date-range__field label {
     font-size: 11px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .mv-column-filter-date-range__date-input {
@@ -327,11 +327,11 @@ function onClear(): void {
     min-width: 0;
     height: 36px;
     padding: 0 10px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
     font-size: 13px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-column-filter-date-range__date-input:focus {
@@ -339,25 +339,25 @@ function onClear(): void {
 }
 
 .mv-column-filter-date-range__date-input--active {
-    border-color: var(--el-color-primary, #00b894);
-    color: var(--el-color-primary, #00b894);
+    border-color: var(--el-color-primary);
+    color: var(--el-color-primary);
     font-weight: 600;
 }
 
 .mv-column-filter-date-range__date-input--invalid {
-    border-color: var(--el-color-danger, #dc2626);
-    color: var(--el-color-danger, #dc2626);
+    border-color: var(--el-color-danger, var(--app-danger-btn-hover));
+    color: var(--el-color-danger, var(--app-danger-btn-hover));
 }
 
 .mv-column-filter-date-range__error {
     margin: -6px 0 0;
     font-size: 11px;
-    color: var(--el-color-danger, #dc2626);
+    color: var(--el-color-danger, var(--app-danger-btn-hover));
 }
 
 .mv-column-filter-date-range__arrow {
     padding-bottom: 8px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     font-size: 14px;
     flex-shrink: 0;
 }
@@ -374,7 +374,7 @@ function onClear(): void {
 
 .mv-column-filter-date-range__caption {
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     text-align: center;
 }
 
@@ -382,7 +382,7 @@ function onClear(): void {
     align-self: flex-start;
     border: none;
     background: transparent;
-    color: var(--el-color-primary, #00b894);
+    color: var(--el-color-primary);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;

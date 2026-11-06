@@ -84,7 +84,7 @@ async function selectPoint(id: string): Promise<void> {
 .ds-modal-empty {
     text-align: center;
     padding: 24px 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 
@@ -102,20 +102,20 @@ async function selectPoint(id: string): Promise<void> {
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 16px;
     cursor: pointer;
     transition: 0.14s ease;
 }
 
 .ds-point-item:hover {
-    background: #f3f8f6;
-    border-color: #b0ccbf;
+    background: var(--app-fill-soft);
+    border-color: var(--app-text-disabled);
 }
 
 .ds-point-item--active {
-    border-color: #00a878;
-    background: linear-gradient(135deg, #fff, #f3fff7);
+    border-color: var(--el-color-primary);
+    background: linear-gradient(135deg, var(--app-surface), var(--el-color-primary-light-9));
 }
 
 .ds-point-item--saving {
@@ -127,30 +127,30 @@ async function selectPoint(id: string): Promise<void> {
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    border: 2px solid #dde7e2;
+    border: 2px solid var(--app-nav-border-strong);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    color: #00a878;
+    color: var(--app-nav-accent-soft);
     flex-shrink: 0;
 }
 
 .ds-point-item--active .ds-point-item__check {
-    border-color: #00a878;
-    background: #00a878;
-    color: #fff;
+    border-color: var(--el-color-primary);
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 
 .ds-point-item__name {
     font-size: 14px;
     font-weight: 800;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     margin-bottom: 2px;
 }
 
 .ds-point-item__addr {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 </style>

@@ -30,8 +30,8 @@ const emit = defineEmits<{ submit: []; cancel: [] }>();
 
 <style scoped>
 .tp-add-card {
-    background: #fff;
-    border: 1px solid #00a878;
+    background: var(--app-surface);
+    border: 1px solid var(--el-color-primary);
     border-radius: 20px;
     padding: 18px 20px;
     margin-bottom: 16px;
@@ -61,13 +61,13 @@ const emit = defineEmits<{ submit: []; cancel: [] }>();
     transition: 0.14s ease;
 }
 .tp-btn--primary {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 .tp-btn--ghost {
-    background: #f3f8f6;
-    color: #263732;
-    border: 1px solid #dde7e2;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
+    border: 1px solid var(--app-nav-border-strong);
 }
 .tp-btn:disabled {
     opacity: 0.6;

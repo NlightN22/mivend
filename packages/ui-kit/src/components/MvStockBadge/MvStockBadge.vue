@@ -47,19 +47,19 @@ const text = computed(() => {
 }
 
 .mv-stock-badge--high {
-    background: #e6f9f1;
-    color: #00a873;
+    background: var(--app-stock-in-bg);
+    color: var(--app-stock-in-fg);
 }
 .mv-stock-badge--medium {
-    background: #f1f6d8;
-    color: #6f8a00;
+    background: var(--app-stock-mid-bg);
+    color: var(--app-stock-mid-fg);
 }
 .mv-stock-badge--low {
-    background: #fff3e0;
-    color: #f57c00;
+    background: var(--app-stock-low-bg);
+    color: var(--app-stock-low-fg);
 }
 .mv-stock-badge--out {
-    background: #f5f5f5;
-    color: #b4ccc4;
+    background: var(--app-stock-none-bg);
+    color: var(--app-text-disabled);
 }
 </style>

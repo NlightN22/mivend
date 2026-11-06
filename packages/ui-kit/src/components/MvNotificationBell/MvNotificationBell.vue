@@ -24,14 +24,14 @@ defineEmits<{ click: [] }>();
 <style scoped>
 .mv-notification-bell {
     position: relative;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: 50%;
     width: 40px;
     height: 40px;
     display: grid;
     place-items: center;
-    background: var(--app-surface, #fff);
-    color: var(--el-text-color-primary, #17212b);
+    background: var(--app-surface);
+    color: var(--el-text-color-primary);
     cursor: pointer;
     transition:
         background 0.14s,
@@ -39,8 +39,8 @@ defineEmits<{ click: [] }>();
 }
 
 .mv-notification-bell:hover {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .mv-notification-bell__badge {

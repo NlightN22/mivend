@@ -35,9 +35,9 @@ function toggle(value: string): void {
     max-height: 160px;
     overflow-y: auto;
     padding: 8px 10px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
 }
 
 .mv-multi-select__option {
@@ -48,7 +48,7 @@ function toggle(value: string): void {
     font-weight: 400;
     text-transform: none;
     letter-spacing: normal;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
     cursor: pointer;
 }
 </style>

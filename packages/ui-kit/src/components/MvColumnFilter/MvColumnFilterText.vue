@@ -47,7 +47,7 @@ const { text, input, clear } = useDebouncedTextModel(
     left: 8px;
     width: 14px;
     height: 14px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     pointer-events: none;
 }
 
@@ -55,17 +55,17 @@ const { text, input, clear } = useDebouncedTextModel(
     width: 100%;
     height: 34px;
     padding: 0 28px 0 28px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
     font-size: 13px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
     outline: none;
 }
 
 .mv-column-filter-text input:focus {
-    border-color: var(--el-color-primary-light-7, #c8f7ec);
-    background: #fff;
+    border-color: var(--el-color-primary-light-7);
+    background: var(--app-surface);
 }
 
 .mv-column-filter-text__clear {
@@ -73,7 +73,7 @@ const { text, input, clear } = useDebouncedTextModel(
     right: 6px;
     border: none;
     background: transparent;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     font-size: 16px;
     line-height: 1;
     cursor: pointer;

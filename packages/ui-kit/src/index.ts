@@ -158,6 +158,7 @@ export type { AppSidebarItem } from './components/MvAppSidebar/MvAppSidebar.vue'
 export { default as MvAppMobileNav } from './components/MvAppMobileNav/MvAppMobileNav.vue';
 export type { AppMobileNavItem } from './components/MvAppMobileNav/MvAppMobileNav.vue';
 export { default as MvAccountMenu } from './components/MvAccountMenu/MvAccountMenu.vue';
+export type { ThemeOption } from './components/MvAccountMenu/MvAccountMenu.vue';
 export type {
     AccountMenuEntry,
     AccountMenuLink,
@@ -255,9 +256,6 @@ export type {
     ApprovalStepState,
     ApprovalStepperItem,
 } from './components/MvApprovalStepper/MvApprovalStepper.vue';
-
-export { colors } from './tokens/colors';
-export type { ColorToken } from './tokens/colors';
 
 export { spacing, radius, shadows } from './tokens/spacing';
 export type { SpacingToken, RadiusToken, ShadowToken } from './tokens/spacing';

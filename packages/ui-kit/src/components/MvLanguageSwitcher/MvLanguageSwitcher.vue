@@ -114,7 +114,7 @@ onBeforeUnmount(() => {
     border: none;
     border-radius: 12px;
     background: transparent;
-    color: #66736e;
+    color: var(--app-nav-label);
     font: inherit;
     font-size: 13px;
     font-weight: 700;
@@ -126,17 +126,17 @@ onBeforeUnmount(() => {
 
 .mv-lang__trigger:hover,
 .mv-lang__trigger--open {
-    background: #f4faf7;
-    color: #008a64;
+    background: var(--app-row-hover);
+    color: var(--app-nav-accent);
 }
 
 .mv-lang__trigger:active {
-    background: #e2f8ef;
+    background: var(--app-nav-active-bg);
 }
 
 .mv-lang__trigger:focus-visible,
 .mv-lang__option:focus-visible {
-    outline: 2px solid #00b894;
+    outline: 2px solid var(--el-color-primary);
     outline-offset: 2px;
 }
 
@@ -157,10 +157,10 @@ onBeforeUnmount(() => {
     margin: 0;
     padding: 6px;
     list-style: none;
-    background: #fff;
-    border: 1px solid #e3ebe7;
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color);
     border-radius: 12px;
-    box-shadow: 0 12px 32px rgba(20, 35, 31, 0.14);
+    box-shadow: 0 12px 32px var(--app-ink-14);
 }
 
 .mv-lang__option {
@@ -170,13 +170,13 @@ onBeforeUnmount(() => {
     gap: 8px;
     padding: 9px 10px;
     border-radius: 8px;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     font-size: 14px;
     cursor: pointer;
 }
 
 .mv-lang__option:hover {
-    background: #f4faf7;
+    background: var(--app-row-hover);
 }
 
 .mv-lang__option--active {
@@ -188,16 +188,16 @@ onBeforeUnmount(() => {
     height: 16px;
     border-radius: 3px;
     background-size: cover;
-    box-shadow: 0 0 0 1px rgba(20, 35, 31, 0.08);
+    box-shadow: 0 0 0 1px var(--app-ink-08);
 }
 
 .mv-lang__code {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
     font-weight: 700;
 }
 
 .mv-lang__check {
-    color: #00b894;
+    color: var(--el-color-primary);
 }
 </style>

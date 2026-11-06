@@ -162,7 +162,7 @@ onMounted(() => void reload());
 
 .orders-subtitle {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
@@ -170,9 +170,9 @@ onMounted(() => void reload());
 .toolbar-search {
     width: min(420px, 100%);
     min-height: 46px;
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 16px;
-    background: #fff;
+    background: var(--app-surface);
     padding: 0 16px;
     font-family: inherit;
     font-size: 14px;
@@ -181,7 +181,7 @@ onMounted(() => void reload());
 }
 
 .toolbar-search:focus {
-    border-color: #00a878;
+    border-color: var(--el-color-primary);
 }
 
 .filter-chips {
@@ -198,9 +198,9 @@ onMounted(() => void reload());
     gap: 7px;
     padding: 0 13px;
     border-radius: 999px;
-    border: 1px solid #dde7e2;
-    background: #fff;
-    color: #344640;
+    border: 1px solid var(--app-nav-border-strong);
+    background: var(--app-surface);
+    color: var(--app-text-body2);
     font-weight: 850;
     font-size: 13px;
     font-family: inherit;
@@ -209,17 +209,17 @@ onMounted(() => void reload());
 }
 
 .chip:hover {
-    background: #f4faf7;
+    background: var(--el-bg-color-page);
 }
 
 .chip.active {
-    background: #00a878;
-    border-color: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    border-color: var(--el-color-primary);
+    color: var(--app-on-accent);
 }
 
 .orders-state {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     padding: 32px 0;
     text-align: center;

@@ -208,10 +208,10 @@ function getBrand(p: RelatedProduct) {
 
 <style scoped>
 .pmc__card {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 20px;
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    border: 1px solid var(--app-border-glass);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 20px;
 }
 .pmc__card--mt {
@@ -228,16 +228,16 @@ function getBrand(p: RelatedProduct) {
 .pmc__label {
     padding: 3px 10px;
     border-radius: 999px;
-    background: #f4f9f7;
+    background: var(--app-row-hover);
     font-size: 12px;
     font-weight: 700;
-    color: #66736e;
-    border: 1px solid #dde7e2;
+    color: var(--app-nav-label);
+    border: 1px solid var(--app-nav-border-strong);
 }
 .pmc__label--brand {
-    background: #f0f4ff;
-    border-color: #c5d0f0;
-    color: #3a4a9a;
+    background: var(--app-slate-bg);
+    border-color: var(--app-text-disabled);
+    color: var(--app-info-fg);
 }
 
 .pmc__title {
@@ -245,18 +245,18 @@ function getBrand(p: RelatedProduct) {
     font-size: 22px;
     font-weight: 900;
     letter-spacing: -0.03em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     line-height: 1.2;
 }
 .pmc__meta {
     display: flex;
     gap: 18px;
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
     margin-bottom: 16px;
 }
 .pmc__meta strong {
-    color: #2c3b36;
+    color: var(--app-text-body2);
 }
 
 .pmc__mini {
@@ -264,14 +264,14 @@ function getBrand(p: RelatedProduct) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     padding-top: 14px;
-    border-top: 1px solid #edf2ef;
+    border-top: 1px solid var(--app-nav-border);
 }
 .pmc__mini-lbl {
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #a8b8b2;
+    color: var(--app-text-faint);
     margin-bottom: 4px;
 }
 .pmc__chips {
@@ -286,7 +286,7 @@ function getBrand(p: RelatedProduct) {
 .pmc__mini-val {
     font-size: 14px;
     font-weight: 700;
-    color: #2c3b36;
+    color: var(--app-text-body2);
 }
 
 .pmc__section-title {
@@ -298,7 +298,7 @@ function getBrand(p: RelatedProduct) {
 .pmc__section-sub {
     margin: -8px 0 14px;
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .pmc__specs {
@@ -311,18 +311,18 @@ function getBrand(p: RelatedProduct) {
     align-items: baseline;
     gap: 8px;
     padding: 9px 0;
-    border-bottom: 1px dotted #dde7e2;
+    border-bottom: 1px dotted var(--app-nav-border-strong);
     font-size: 14px;
 }
 .pmc__spec-row:last-child {
     border-bottom: none;
 }
 .pmc__spec-row span {
-    color: #66736e;
+    color: var(--app-nav-label);
     white-space: nowrap;
 }
 .pmc__spec-row strong {
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     font-weight: 700;
     text-align: right;
 }
@@ -336,7 +336,7 @@ function getBrand(p: RelatedProduct) {
     align-items: center;
     gap: 12px;
     padding: 10px 0;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 .pmc__analog:last-child {
     border-bottom: none;
@@ -345,7 +345,7 @@ function getBrand(p: RelatedProduct) {
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: #f4f9f7;
+    background: var(--app-row-hover);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -360,18 +360,18 @@ function getBrand(p: RelatedProduct) {
     display: block;
     font-size: 13px;
     font-weight: 700;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     text-decoration: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .pmc__analog-name:hover {
-    color: #00b894;
+    color: var(--el-color-primary);
 }
 .pmc__analog-brand {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -379,17 +379,17 @@ function getBrand(p: RelatedProduct) {
 .pmc__analog-price {
     font-size: 15px;
     font-weight: 900;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     white-space: nowrap;
     flex-shrink: 0;
 }
 .pmc__analog-btn {
     height: 34px;
     padding: 0 12px;
-    border: 1.5px solid #ff8a00;
+    border: 1.5px solid var(--app-accent-orange);
     border-radius: 10px;
     background: transparent;
-    color: #ff8a00;
+    color: var(--app-accent-orange);
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -400,7 +400,7 @@ function getBrand(p: RelatedProduct) {
         color 0.15s;
 }
 .pmc__analog-btn:hover {
-    background: #ff8a00;
-    color: #fff;
+    background: var(--app-accent-orange);
+    color: var(--app-on-accent);
 }
 </style>

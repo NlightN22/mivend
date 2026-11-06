@@ -18,12 +18,12 @@ withDefaults(defineProps<Props>(), {
 
 <style scoped>
 .mv-card {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 20px;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    border: 1px solid var(--app-border-glass);
 }
 
 .mv-card--shadow {
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
 }
 </style>

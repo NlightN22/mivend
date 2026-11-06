@@ -51,7 +51,7 @@ defineEmits<{ 'update:modelValue': [value: boolean] }>();
     height: 22px;
     flex: none;
     border-radius: 999px;
-    background: #cfd7e1;
+    background: var(--app-nav-border-strong);
     transition: background 0.15s;
 }
 
@@ -62,13 +62,13 @@ defineEmits<{ 'update:modelValue': [value: boolean] }>();
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+    background: var(--app-surface);
+    box-shadow: 0 1px 3px var(--app-ink-14);
     transition: transform 0.15s;
 }
 
 .mv-switch__input:checked + .mv-switch__track {
-    background: var(--el-color-primary, #00b894);
+    background: var(--el-color-primary);
 }
 
 .mv-switch__input:checked + .mv-switch__track .mv-switch__thumb {
@@ -76,12 +76,12 @@ defineEmits<{ 'update:modelValue': [value: boolean] }>();
 }
 
 .mv-switch__input:focus-visible + .mv-switch__track {
-    outline: 2px solid var(--el-color-primary, #00b894);
+    outline: 2px solid var(--el-color-primary);
     outline-offset: 2px;
 }
 
 .mv-switch__label {
     font-size: 13px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 </style>

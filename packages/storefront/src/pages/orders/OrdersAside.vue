@@ -80,10 +80,10 @@ onMounted(async () => {
 }
 
 .aside-card {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.9);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 20px;
 }
 
@@ -95,7 +95,7 @@ onMounted(async () => {
 }
 
 .aside-subtitle {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.45;
     margin-bottom: 14px;
@@ -109,8 +109,8 @@ onMounted(async () => {
     min-height: 48px;
     border: 0;
     border-radius: 16px;
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
     font-weight: 950;
     font-family: inherit;
     font-size: 15px;
@@ -120,16 +120,16 @@ onMounted(async () => {
 }
 
 .wide-btn:hover {
-    background: #008a64;
+    background: var(--app-brand-fill-hover);
 }
 .wide-btn.orange {
-    background: var(--app-accent-orange, #ff8a00);
+    background: var(--app-accent-orange);
 }
 .wide-btn.orange:hover {
-    background: var(--app-accent-orange-hover, #e67c00);
+    background: var(--app-accent-orange-hover);
 }
 .wide-btn.orange:active {
-    background: var(--app-accent-orange-active, #cc6e00);
+    background: var(--app-accent-orange-active);
 }
 
 .aside-line {
@@ -137,16 +137,16 @@ onMounted(async () => {
     justify-content: space-between;
     gap: 12px;
     padding: 9px 0;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
     font-size: 14px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .aside-line:last-child {
     border-bottom: none;
 }
 .aside-line strong {
-    color: #17231f;
+    color: var(--app-nav-text-strong);
 }
 
 @media (max-width: 1180px) {

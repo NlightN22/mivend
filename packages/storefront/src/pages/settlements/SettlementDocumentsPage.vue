@@ -166,12 +166,12 @@ onMounted(() => {
 
 .settlement-page__subtitle {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 
 .settlement-page__state {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     padding: 32px 0;
     text-align: center;

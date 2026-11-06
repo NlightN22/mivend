@@ -204,13 +204,13 @@ function onClear(): void {
 .mv-amount-range-filter__title {
     font-size: 13px;
     font-weight: 700;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-amount-range-filter__modes {
     display: flex;
     gap: 4px;
-    background: #f2f4f7;
+    background: var(--app-slate-bg);
     border-radius: 8px;
     padding: 3px;
 }
@@ -222,15 +222,15 @@ function onClear(): void {
     border-radius: 6px;
     padding: 5px 6px;
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     cursor: pointer;
 }
 
 .mv-amount-range-filter__mode-btn--active {
-    background: white;
-    color: var(--el-color-primary, #00b894);
+    background: var(--app-surface);
+    color: var(--el-color-primary);
     font-weight: 600;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+    box-shadow: 0 1px 2px var(--app-ink-08);
 }
 
 .mv-amount-range-filter__row {
@@ -253,22 +253,22 @@ function onClear(): void {
 
 .mv-amount-range-filter__field label {
     font-size: 11px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .mv-amount-range-filter__input {
     display: flex;
     align-items: center;
     gap: 4px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
     padding: 0 10px;
 }
 
 .mv-amount-range-filter__input span {
     font-size: 13px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
 }
 
 .mv-amount-range-filter__input input {
@@ -279,7 +279,7 @@ function onClear(): void {
     background: transparent;
     outline: none;
     font-size: 13px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-amount-range-filter__presets {
@@ -289,23 +289,23 @@ function onClear(): void {
 }
 
 .mv-amount-range-filter__preset {
-    border: 1px solid #e4e7ec;
-    background: white;
+    border: 1px solid var(--el-border-color);
+    background: var(--app-surface);
     border-radius: 999px;
     padding: 4px 10px;
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     cursor: pointer;
 }
 
 .mv-amount-range-filter__preset--active {
-    border-color: var(--el-color-primary, #00b894);
-    color: var(--el-color-primary, #00b894);
+    border-color: var(--el-color-primary);
+    color: var(--el-color-primary);
 }
 
 .mv-amount-range-filter__hint {
     font-size: 11px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     margin: 0;
 }
 
@@ -314,6 +314,6 @@ function onClear(): void {
     justify-content: flex-end;
     gap: 8px;
     padding-top: 4px;
-    border-top: 1px solid #e4e7ec;
+    border-top: 1px solid var(--el-border-color);
 }
 </style>

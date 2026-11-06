@@ -101,7 +101,7 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
 <style scoped>
 .stub-page {
     min-height: 100vh;
-    background: #f4f7f5;
+    background: var(--app-fill-soft);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -111,10 +111,10 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
 .stub-card {
     width: 100%;
     max-width: 480px;
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 24px;
     padding: 36px 32px 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.1);
+    box-shadow: 0 14px 36px var(--app-ink-10);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -125,7 +125,7 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: #e2f8ef;
+    background: var(--app-nav-active-bg);
     display: grid;
     place-items: center;
     font-size: 28px;
@@ -141,18 +141,18 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
 
 .stub-subtitle {
     margin: 0 0 20px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 
 .stub-warning {
     width: 100%;
-    background: #fff8e0;
-    border: 1px solid #ffe082;
+    background: var(--app-warn2-bg);
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 14px;
     padding: 12px 14px;
     font-size: 13px;
-    color: #7a5500;
+    color: var(--app-orange-fg);
     margin-bottom: 18px;
     text-align: left;
 }
@@ -160,9 +160,9 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
 .stub-order {
     font-size: 15px;
     font-weight: 800;
-    color: #263732;
-    background: #f4faf7;
-    border: 1px solid #dde7e2;
+    color: var(--app-text-deep);
+    background: var(--el-bg-color-page);
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 12px;
     padding: 10px 18px;
     margin-bottom: 22px;
@@ -189,7 +189,7 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
     font: inherit;
     font-size: 15px;
     font-weight: 800;
-    color: #fff;
+    color: var(--app-on-accent);
     cursor: pointer;
     transition: opacity 0.15s;
 }
@@ -202,31 +202,31 @@ async function choose(status: 'success' | 'pending' | 'fail'): Promise<void> {
 }
 
 .stub-btn--green {
-    background: #00a878;
-    box-shadow: 0 8px 20px rgba(0, 168, 120, 0.22);
+    background: var(--app-brand-fill);
+    box-shadow: 0 8px 20px var(--app-green-glow);
 }
 .stub-btn--orange {
-    background: var(--app-accent-orange, #ff8a00);
-    box-shadow: 0 8px 20px rgba(255, 138, 0, 0.22);
+    background: var(--app-accent-orange);
+    box-shadow: 0 8px 20px var(--app-orange-glow);
 }
 .stub-btn--orange:hover:not(:disabled) {
-    background: var(--app-accent-orange-hover, #e67c00);
+    background: var(--app-accent-orange-hover);
 }
 .stub-btn--orange:active:not(:disabled) {
-    background: var(--app-accent-orange-active, #cc6e00);
+    background: var(--app-accent-orange-active);
 }
 .stub-btn--red {
-    background: #d92d20;
-    box-shadow: 0 8px 20px rgba(217, 45, 32, 0.18);
+    background: var(--app-danger-btn-hover);
+    box-shadow: 0 8px 20px var(--app-danger-glow);
 }
 
 .stub-back {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
     text-decoration: none;
     font-weight: 700;
 }
 .stub-back:hover {
-    color: #263732;
+    color: var(--app-text-deep);
 }
 </style>

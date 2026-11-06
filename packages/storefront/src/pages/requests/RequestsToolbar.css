@@ -1,8 +1,8 @@
 .req-toolbar {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 18px;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -19,28 +19,28 @@
 .req-toolbar__search,
 .req-toolbar__select {
     min-height: 46px;
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 16px;
     padding: 0 15px;
     outline: none;
-    background: #fff;
+    background: var(--app-surface);
     font: inherit;
     font-size: 14px;
 }
 
 .req-toolbar__search:focus,
 .req-toolbar__select:focus {
-    border-color: #00a878;
-    box-shadow: 0 0 0 3px rgba(0, 168, 120, 0.1);
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 3px var(--app-green-glow);
 }
 
 .req-toolbar__quick-btn {
     min-height: 46px;
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 16px;
     padding: 0 15px;
-    background: #fff;
-    color: #263732;
+    background: var(--app-surface);
+    color: var(--app-text-deep);
     font: inherit;
     font-weight: 950;
     font-size: 14px;
@@ -50,9 +50,9 @@
 }
 
 .req-toolbar__quick-btn--active {
-    background: #e2f8ef;
-    border-color: #00a878;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    border-color: var(--el-color-primary);
+    color: var(--app-nav-accent);
 }
 
 .req-toolbar__chips {
@@ -68,9 +68,9 @@
     gap: 6px;
     padding: 0 12px;
     border-radius: 999px;
-    border: 1px solid #dde7e2;
-    background: #fff;
-    color: #344640;
+    border: 1px solid var(--app-nav-border-strong);
+    background: var(--app-surface);
+    color: var(--app-text-body2);
     font: inherit;
     font-weight: 850;
     font-size: 13px;
@@ -84,9 +84,9 @@
 }
 
 .req-toolbar__chip--active {
-    background: #00a878;
-    border-color: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    border-color: var(--el-color-primary);
+    color: var(--app-on-accent);
 }
 
 .req-toolbar__count {
@@ -95,19 +95,19 @@
     border-radius: 999px;
     display: grid;
     place-items: center;
-    background: #eef4f1;
-    color: #66736e;
+    background: var(--app-nav-border);
+    color: var(--app-nav-label);
     font-size: 11px;
     font-weight: 900;
 }
 
 .req-toolbar__chip--active .req-toolbar__count {
-    background: rgba(255, 255, 255, 0.25);
-    color: #fff;
+    background: var(--app-glass);
+    color: var(--app-on-accent);
 }
 
 .req-toolbar__quick {
-    border-top: 1px solid #edf2ef;
+    border-top: 1px solid var(--app-nav-border);
     padding-top: 14px;
 }
 
@@ -125,18 +125,18 @@
 }
 
 .req-toolbar__field label {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     font-weight: 850;
 }
 
 .req-toolbar__field select,
 .req-toolbar__field textarea {
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 13px;
     padding: 0 12px;
     outline: none;
-    background: #fff;
+    background: var(--app-surface);
     font: inherit;
     font-size: 14px;
 }
@@ -153,8 +153,8 @@
 
 .req-toolbar__field select:focus,
 .req-toolbar__field textarea:focus {
-    border-color: #00a878;
-    box-shadow: 0 0 0 3px rgba(0, 168, 120, 0.1);
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 3px var(--app-green-glow);
 }
 
 .req-toolbar__submit {
@@ -162,8 +162,8 @@
     border: 0;
     border-radius: 13px;
     padding: 0 14px;
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
     font: inherit;
     font-weight: 950;
     cursor: pointer;

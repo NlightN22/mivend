@@ -142,7 +142,7 @@ onMounted(reload);
 
 .proforma-invoices-page__subtitle {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
@@ -156,15 +156,15 @@ onMounted(reload);
 
 .proforma-invoices-page__stat-card {
     min-height: 112px;
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 20px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 18px;
 }
 
 .proforma-invoices-page__stat-title {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     font-weight: 850;
     margin-bottom: 13px;
@@ -178,7 +178,7 @@ onMounted(reload);
 }
 
 .proforma-invoices-page__stat-note {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.35;
 }
@@ -197,26 +197,26 @@ onMounted(reload);
 }
 
 .proforma-invoices-page__filter {
-    border: 1px solid rgba(221, 231, 226, 0.9);
+    border: 1px solid var(--app-border-glass);
     border-radius: 999px;
-    background: #fff;
+    background: var(--app-surface);
     padding: 9px 15px;
     font-weight: 800;
     font-size: 13px;
-    color: #263732;
+    color: var(--app-text-deep);
     cursor: pointer;
 }
 
 .proforma-invoices-page__filter--active {
-    background: #008a64;
-    color: #fff;
-    border-color: #008a64;
+    background: var(--app-brand-fill-hover);
+    color: var(--app-on-accent);
+    border-color: var(--app-brand-fill-hover);
 }
 
 .proforma-invoices-page__state {
     text-align: center;
     padding: 48px 24px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 15px;
 }
 

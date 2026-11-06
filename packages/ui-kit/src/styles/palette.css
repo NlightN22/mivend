@@ -1,0 +1,120 @@
+/* Primitives only: no component or theme may hard-code a color. Roles live in theme-light.css / theme-dark.css.
+   Retune a hue by changing its --hue-* below; every step of that family (both themes) follows. */
+:root {
+    --hue-brand: 172;
+    --hue-ink: 170;
+    --hue-night: 250;
+
+    --palette-brand-50: oklch(0.988 0.017 calc(var(--hue-brand) + 2));
+    --palette-brand-100: oklch(0.961 0.026 calc(var(--hue-brand) - 3));
+    --palette-brand-200: oklch(0.94 0.05 calc(var(--hue-brand) + 7));
+    --palette-brand-300: oklch(0.867 0.095 calc(var(--hue-brand) + 7));
+    --palette-brand-400: oklch(0.792 0.13 calc(var(--hue-brand) + 3));
+    --palette-brand-500: oklch(0.697 0.135 calc(var(--hue-brand) + 0));
+    --palette-brand-600: oklch(0.648 0.138 calc(var(--hue-brand) - 8));
+    --palette-brand-700: oklch(0.561 0.117 calc(var(--hue-brand) - 7));
+    --palette-brand-800: oklch(0.489 0.095 calc(var(--hue-brand) + 0));
+    --palette-brand-325: oklch(0.82 0.055 var(--hue-brand));
+    --palette-brand-350: oklch(0.764 0.083 var(--hue-brand));
+    --palette-brand-375: oklch(0.68 0.075 var(--hue-brand));
+    --palette-brand-750: oklch(0.522 0.09 var(--hue-brand));
+    --palette-brand-850: oklch(0.42 0.07 var(--hue-brand));
+    --palette-brand-900: oklch(0.34 0.055 var(--hue-brand));
+    --palette-brand-950: oklch(0.27 0.04 var(--hue-brand));
+
+    --palette-ink-0: #ffffff;
+    --palette-ink-25: oklch(0.992 0.002 calc(var(--hue-ink) - 5));
+    --palette-ink-50: oklch(0.979 0.004 calc(var(--hue-ink) - 13));
+    --palette-ink-75: oklch(0.975 0.006 calc(var(--hue-ink) + 0));
+    --palette-ink-100: oklch(0.957 0.007 calc(var(--hue-ink) - 10));
+    --palette-ink-150: oklch(0.932 0.008 calc(var(--hue-ink) - 5));
+    --palette-ink-200: oklch(0.919 0.013 calc(var(--hue-ink) - 5));
+    --palette-ink-300: oklch(0.825 0.028 calc(var(--hue-ink) + 4));
+    --palette-ink-400: oklch(0.768 0.02 calc(var(--hue-ink) + 1));
+    --palette-ink-450: oklch(0.697 0.025 calc(var(--hue-ink) + 0));
+    --palette-ink-500: oklch(0.543 0.017 calc(var(--hue-ink) + 1));
+    --palette-ink-600: oklch(0.427 0.021 calc(var(--hue-ink) - 1));
+    --palette-ink-650: oklch(0.377 0.025 calc(var(--hue-ink) + 2));
+    --palette-ink-700: oklch(0.32 0.024 calc(var(--hue-ink) + 5));
+    --palette-ink-900: oklch(0.241 0.022 calc(var(--hue-ink) + 6));
+
+    --palette-night-950: oklch(0.174 0.016 var(--hue-night));
+    --palette-night-900: oklch(0.223 0.021 var(--hue-night));
+    --palette-night-850: oklch(0.244 0.023 var(--hue-night));
+    --palette-night-800: oklch(0.272 0.024 var(--hue-night));
+    --palette-night-750: oklch(0.3 0.024 var(--hue-night));
+    --palette-night-700: oklch(0.327 0.023 var(--hue-night));
+    --palette-night-600: oklch(0.45 0.02 var(--hue-night));
+    --palette-night-500: oklch(0.6 0.02 var(--hue-night));
+    --palette-night-400: oklch(0.72 0.02 var(--hue-night));
+    --palette-night-300: oklch(0.83 0.015 var(--hue-night));
+    --palette-night-200: oklch(0.9 0.01 var(--hue-night));
+    --palette-night-100: oklch(0.946 0.009 var(--hue-night));
+
+    --palette-orange-50: #fff5df;
+    --palette-orange-100: #fff3e6;
+    --palette-orange-300: #fdba74;
+    --palette-orange-400: #fb9b3a;
+    --palette-orange-500: #ff8a00;
+    --palette-orange-600: #e67c00;
+    --palette-orange-700: #cc6e00;
+    --palette-orange-800: #9a4b00;
+    --palette-orange-950: #3d2a14;
+    --palette-orange-d1: #b4600d;
+    --palette-orange-d2: #c76d12;
+    --palette-orange-d3: #dc7c18;
+
+    --palette-red-50: #fff2f1;
+    --palette-red-100: #fee2e2;
+    --palette-red-200: #fecaca;
+    --palette-red-300: #fca5a5;
+    --palette-red-400: #f87171;
+    --palette-red-500: #ef4444;
+    --palette-red-600: #dc2626;
+    --palette-red-700: #b91c1c;
+    --palette-red-800: #991b1b;
+    --palette-red-900: #7f1d1d;
+    --palette-red-950: #3f1a1d;
+
+    --palette-amber-50: #fffbeb;
+    --palette-amber-100: #fef3c7;
+    --palette-amber-200: #fde68a;
+    --palette-amber-400: #fbbf24;
+    --palette-amber-500: #f59e0b;
+    --palette-amber-800: #92400e;
+    --palette-amber-900: #78350f;
+    --palette-amber-950: #3d3213;
+
+    --palette-blue-100: #e0f2fe;
+    --palette-blue-200: #bae6fd;
+    --palette-blue-300: #7dd3fc;
+    --palette-blue-400: #38bdf8;
+    --palette-blue-800: #0c4a6e;
+    --palette-blue-900: #082f49;
+    --palette-blue-950: #112b3d;
+
+    --palette-violet-100: #f3e8ff;
+    --palette-violet-150: #ede9fe;
+    --palette-violet-300: #d8b4fe;
+    --palette-violet-350: #c4b5fd;
+    --palette-violet-800: #6b21a8;
+    --palette-violet-900: #4c1d95;
+    --palette-violet-950: #2c1d45;
+
+    --palette-slate-100: #f1f5f9;
+    --palette-slate-200: #e2e8f0;
+    --palette-slate-400: #94a3b8;
+    --palette-slate-500: #64748b;
+    --palette-slate-700: #334155;
+
+    --palette-lime-100: #f1f6d8;
+    --palette-lime-300: #c3d96a;
+    --palette-lime-500: #c8f21a;
+    --palette-lime-600: #b8e010;
+    --palette-lime-700: #a8cc0a;
+    --palette-lime-800: #6f8a00;
+    --palette-lime-900: #1b2500;
+    --palette-lime-950: #2c3412;
+
+    --palette-pink-500: #ff4f88;
+}

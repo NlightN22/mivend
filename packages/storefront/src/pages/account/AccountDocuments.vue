@@ -91,10 +91,10 @@ const demoReconciliationNote = computed(() =>
 
 <style scoped>
 .account-documents {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    box-shadow: 0 14px 36px var(--app-ink-08);
+    border: 1px solid var(--app-border-glass);
     padding: 22px;
 }
 
@@ -113,13 +113,13 @@ const demoReconciliationNote = computed(() =>
 }
 
 .account-documents__subtitle {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
 
 .account-documents__link-more {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-weight: 950;
     font-size: 14px;
     white-space: nowrap;
@@ -140,8 +140,8 @@ const demoReconciliationNote = computed(() =>
     min-height: 58px;
     padding: 12px 14px;
     border-radius: 16px;
-    border: 1px solid #edf2ef;
-    background: #fbfdfc;
+    border: 1px solid var(--app-nav-border);
+    background: var(--app-fill-faint);
 }
 
 .account-documents__doc-title {
@@ -150,22 +150,22 @@ const demoReconciliationNote = computed(() =>
 }
 
 .account-documents__doc-note {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.3;
 }
 
 .account-documents__empty {
     padding: 22px 16px;
-    border: 1px dashed #dde7e2;
+    border: 1px dashed var(--app-nav-border-strong);
     border-radius: 18px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     text-align: center;
 }
 
 .account-documents__action {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-size: 13px;
     font-weight: 950;
     white-space: nowrap;

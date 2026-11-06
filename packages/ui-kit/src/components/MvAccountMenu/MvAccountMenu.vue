@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import { computed, reactive, ref, type Component } from 'vue';
-import { IconCheck, IconLogout, IconWorld } from '@tabler/icons-vue';
+import {
+    IconCheck,
+    IconLogout,
+    IconMoon,
+    IconSun,
+    IconSunMoon,
+    IconWorld,
+} from '@tabler/icons-vue';
 import MvAccountMenuGroup from './MvAccountMenuGroup.vue';
 import type { LanguageOption } from '../MvLanguageSwitcher/MvLanguageSwitcher.vue';
+
+export interface ThemeOption {
+    value: string;
+    label: string;
+}
 
 export interface AccountMenuLink {
     key: string;
@@ -30,14 +42,25 @@ const props = withDefaults(
         languages: LanguageOption[];
         locale: string;
         languageLabel?: string;
+        themes?: ThemeOption[];
+        theme?: string;
+        themeLabel?: string;
         logoutLabel?: string;
     }>(),
-    { userRole: '', languageLabel: 'Interface language', logoutLabel: 'Log out' },
+    {
+        userRole: '',
+        languageLabel: 'Interface language',
+        themes: () => [],
+        theme: 'system',
+        themeLabel: 'Theme',
+        logoutLabel: 'Log out',
+    },
 );
 
 const emit = defineEmits<{
     navigate: [];
     'select-language': [code: string];
+    'select-theme': [value: string];
     logout: [];
 }>();
 
@@ -52,6 +75,12 @@ function selectLanguage(code: string): void {
     languageOpen.value = false;
     emit('select-language', code);
 }
+
+const THEME_ICONS: Record<string, Component> = {
+    system: IconSunMoon,
+    light: IconSun,
+    dark: IconMoon,
+};
 
 function isActive(to: string): boolean {
     return props.activePath === to;
@@ -140,6 +169,29 @@ function isGroupOpen(entry: AccountMenuEntry): boolean {
                     <IconCheck v-if="lang.code === locale" :size="18" aria-hidden="true" />
                 </button>
             </MvAccountMenuGroup>
+        </div>
+
+        <div v-if="themes.length" class="mv-account-menu__theme-block">
+            <div class="mv-account-menu__theme-label">{{ themeLabel }}</div>
+            <div class="mv-account-menu__theme" role="group" :aria-label="themeLabel">
+                <button
+                    v-for="option in themes"
+                    :key="option.value"
+                    type="button"
+                    class="mv-account-menu__theme-btn"
+                    :class="{ 'mv-account-menu__theme-btn--active': option.value === theme }"
+                    :aria-pressed="option.value === theme"
+                    @click="emit('select-theme', option.value)"
+                >
+                    <component
+                        :is="THEME_ICONS[option.value]"
+                        v-if="THEME_ICONS[option.value]"
+                        :size="18"
+                        aria-hidden="true"
+                    />
+                    <span>{{ option.label }}</span>
+                </button>
+            </div>
         </div>
 
         <button

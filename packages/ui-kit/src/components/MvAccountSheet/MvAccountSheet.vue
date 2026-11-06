@@ -77,7 +77,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     position: fixed;
     inset: 0 0 var(--mv-bottom-bar-height);
     z-index: var(--mv-z-overlay);
-    background: rgba(20, 35, 31, 0.28);
+    background: var(--app-ink-14);
 }
 
 .mv-account-sheet {
@@ -91,7 +91,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
     padding: 10px 16px 12px;
     background: var(--app-surface);
     border-radius: var(--app-radius-xl) var(--app-radius-xl) 0 0;
-    box-shadow: 0 -16px 40px rgba(20, 35, 31, 0.18);
+    box-shadow: 0 -16px 40px var(--app-ink-14);
 }
 
 .mv-account-sheet__handle {

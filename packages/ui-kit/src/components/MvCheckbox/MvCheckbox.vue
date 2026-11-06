@@ -59,7 +59,7 @@ watch(
     gap: 8px;
     cursor: pointer;
     font-size: 14px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-checkbox--disabled {
@@ -70,7 +70,7 @@ watch(
 .mv-checkbox__input {
     width: 16px;
     height: 16px;
-    accent-color: var(--el-color-primary, #00b894);
+    accent-color: var(--el-color-primary);
     border-radius: var(--app-radius-sm, 8px);
     cursor: inherit;
 }

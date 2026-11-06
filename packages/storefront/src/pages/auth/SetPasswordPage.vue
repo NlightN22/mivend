@@ -114,7 +114,7 @@ const copy = computed(() => (props.flow === 'verify' ? 'auth.verifyAccount' : 'a
     display: grid;
     place-items: center;
     padding: 28px 16px;
-    background: var(--app-color-page, #f6f8fb);
+    background: var(--el-bg-color-page);
 }
 
 .login-wrap {
@@ -132,10 +132,10 @@ const copy = computed(() => (props.flow === 'verify' ? 'auth.verifyAccount' : 'a
 
 .login-card {
     width: 100%;
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.9);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 30px;
-    box-shadow: 0 18px 44px rgba(27, 45, 38, 0.1);
+    box-shadow: 0 18px 44px var(--app-ink-10);
     padding: 28px 24px;
 }
 
@@ -145,12 +145,12 @@ const copy = computed(() => (props.flow === 'verify' ? 'auth.verifyAccount' : 'a
     font-weight: 900;
     line-height: 1;
     letter-spacing: -0.055em;
-    color: #17212b;
+    color: var(--app-nav-text-strong);
 }
 
 .login-card__subtitle {
     margin: 0 0 20px;
-    color: #667085;
+    color: var(--app-slate-fg);
     font-size: 14px;
     line-height: 1.45;
 }

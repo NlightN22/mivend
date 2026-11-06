@@ -36,6 +36,10 @@ const ru: typeof en = {
         more: 'Ещё',
         tabs: 'Основная навигация',
         interfaceLanguage: 'Язык интерфейса',
+        theme: 'Тема оформления',
+        themeSystem: 'Системная',
+        themeLight: 'Светлая',
+        themeDark: 'Тёмная',
     },
     header: {
         tagline: '{portal} для быстрого заказа автозапчастей и расходников',

@@ -43,8 +43,8 @@ const emit = defineEmits<{
     height: 32px;
     border: none;
     border-radius: 50%;
-    background: #fff;
-    color: #b4ccc4;
+    background: var(--app-surface);
+    color: var(--app-text-disabled);
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
@@ -57,21 +57,21 @@ const emit = defineEmits<{
         background 0.15s;
 }
 .mv-favorite-btn:hover {
-    background: #f4f9f7;
+    background: var(--app-row-hover);
 }
 .mv-favorite-btn--active {
-    color: #ff4d6d;
+    color: var(--app-danger-btn);
 }
 .mv-favorite-btn--overlay {
     background: transparent;
-    color: #4a5b54;
-    filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 1px #fff);
+    color: var(--app-nav-label);
+    filter: drop-shadow(0 0 2px var(--app-surface)) drop-shadow(0 0 1px var(--app-surface));
 }
 .mv-favorite-btn--overlay:hover {
     background: transparent;
-    color: #ff4d6d;
+    color: var(--app-danger-btn);
 }
 .mv-favorite-btn--overlay.mv-favorite-btn--active {
-    color: #ff4d6d;
+    color: var(--app-danger-btn);
 }
 </style>

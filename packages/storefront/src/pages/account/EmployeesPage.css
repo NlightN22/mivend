@@ -36,12 +36,12 @@
 }
 
 .emp-roles-btn {
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 10px;
     padding: 0 12px;
     min-height: 32px;
-    background: #f3f8f6;
-    color: #66736e;
+    background: var(--app-fill-soft);
+    color: var(--app-nav-label);
     font: inherit;
     font-size: 13px;
     font-weight: 800;
@@ -50,9 +50,9 @@
     transition: 0.14s ease;
 }
 .emp-roles-btn--active {
-    background: #e2f8ef;
-    border-color: #00a878;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    border-color: var(--el-color-primary);
+    color: var(--app-nav-accent);
 }
 
 .emp-head__right {
@@ -62,8 +62,8 @@
 }
 
 .emp-roles-help {
-    background: #fff;
-    border: 1px solid #dde7e2;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 20px;
     padding: 18px 20px;
 }
@@ -74,14 +74,14 @@
     justify-content: space-between;
     margin-bottom: 14px;
     font-size: 14px;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .emp-roles-help__close {
     border: 0;
     background: none;
     font-size: 18px;
-    color: #a8b8b2;
+    color: var(--app-text-faint);
     cursor: pointer;
     line-height: 1;
     padding: 0 4px;
@@ -94,20 +94,20 @@
 }
 
 .emp-role-item {
-    background: #f7fbf9;
-    border: 1px solid #edf2ef;
+    background: var(--el-bg-color-page);
+    border: 1px solid var(--app-nav-border);
     border-radius: 14px;
     padding: 12px 14px;
 }
 .emp-role-item__title {
     font-size: 13px;
     font-weight: 900;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     margin-bottom: 4px;
 }
 .emp-role-item__note {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
     line-height: 1.4;
 }
 
@@ -126,9 +126,9 @@
     gap: 6px;
     padding: 0 12px;
     border-radius: 999px;
-    border: 1px solid #dde7e2;
-    background: #fff;
-    color: #344640;
+    border: 1px solid var(--app-nav-border-strong);
+    background: var(--app-surface);
+    color: var(--app-text-body2);
     font: inherit;
     font-weight: 850;
     font-size: 13px;
@@ -136,13 +136,13 @@
     transition: 0.14s ease;
 }
 .emp-chip--active {
-    background: #00a878;
-    border-color: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    border-color: var(--el-color-primary);
+    color: var(--app-on-accent);
 }
 .emp-chip--active .emp-chip__count {
-    background: rgba(255, 255, 255, 0.25);
-    color: #fff;
+    background: var(--app-glass);
+    color: var(--app-on-accent);
 }
 
 .emp-chip__count {
@@ -151,8 +151,8 @@
     border-radius: 999px;
     display: grid;
     place-items: center;
-    background: #eef4f1;
-    color: #66736e;
+    background: var(--app-nav-border);
+    color: var(--app-nav-label);
     font-size: 11px;
     font-weight: 900;
 }
@@ -161,18 +161,18 @@
 .emp-notice {
     padding: 14px 16px;
     border-radius: 16px;
-    border: 1px solid rgba(255, 138, 0, 0.22);
-    background: #fff5df;
+    border: 1px solid var(--app-orange-glow);
+    background: var(--app-warn2-bg);
     display: flex;
     gap: 12px;
     align-items: flex-start;
-    color: #573a14;
+    color: var(--app-warn2-fg);
     font-size: 13px;
     line-height: 1.42;
 }
 .emp-notice strong {
     display: block;
-    color: #33210a;
+    color: var(--app-lime-fg);
     margin-bottom: 2px;
 }
 

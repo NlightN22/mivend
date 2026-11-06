@@ -120,7 +120,7 @@ const config = computed(() => {
     max-width: 600px;
     margin: 0 auto;
     text-align: center;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 
@@ -141,25 +141,25 @@ const config = computed(() => {
 .pr-status-card {
     max-width: 600px;
     margin: 0 auto 24px;
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 36px 32px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    border: 1.5px solid #dde7e2;
+    border: 1.5px solid var(--app-nav-border-strong);
 }
 
 .pr-status-card--success {
-    border-color: #00a878;
+    border-color: var(--el-color-primary);
 }
 .pr-status-card--pending {
-    border-color: #ff8a00;
+    border-color: var(--app-accent-orange);
 }
 .pr-status-card--fail {
-    border-color: #d92d20;
+    border-color: var(--app-danger-btn);
 }
 
 .pr-icon {
@@ -174,17 +174,17 @@ const config = computed(() => {
 }
 
 .pr-icon--green {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 .pr-icon--orange {
-    background: #fff5df;
-    color: #e87800;
+    background: var(--app-warn2-bg);
+    color: var(--app-stock-low-fg);
     font-size: 32px;
 }
 .pr-icon--red {
-    background: #fde8e8;
-    color: #d92d20;
+    background: var(--app-danger-bg);
+    color: var(--app-danger-btn);
 }
 
 .pr-status-title {
@@ -196,7 +196,7 @@ const config = computed(() => {
 
 .pr-status-text {
     margin: 0 0 22px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.5;
 }
@@ -224,30 +224,30 @@ const config = computed(() => {
 }
 
 .pr-btn--primary {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 .pr-btn--primary:hover {
-    background: #008a64;
+    background: var(--app-brand-fill-hover);
 }
 
 .pr-btn--secondary {
-    background: #f3f8f6;
-    color: #263732;
-    border: 1px solid #dde7e2;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
+    border: 1px solid var(--app-nav-border-strong);
 }
 .pr-btn--secondary:hover {
-    background: #e8f2ed;
+    background: var(--app-nav-border);
 }
 
 .pr-btn--ghost {
     background: transparent;
-    color: #66736e;
-    border: 1px solid #dde7e2;
+    color: var(--app-nav-label);
+    border: 1px solid var(--app-nav-border-strong);
 }
 .pr-btn--ghost:hover {
-    color: #263732;
-    background: #f4faf7;
+    color: var(--app-text-deep);
+    background: var(--el-bg-color-page);
 }
 
 @media (max-width: 560px) {

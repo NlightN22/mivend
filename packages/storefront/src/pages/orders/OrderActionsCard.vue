@@ -25,8 +25,8 @@ const { t } = useI18n();
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
-    background: #fff;
-    border: 1px solid #edf2ef;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border);
     border-radius: 20px;
     padding: 18px 20px;
 }
@@ -34,7 +34,7 @@ const { t } = useI18n();
     margin: 0;
     font-size: 14px;
     font-weight: 700;
-    color: #a45e00;
+    color: var(--app-orange-fg);
 }
 .oac-title {
     margin: 0 0 4px;

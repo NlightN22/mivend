@@ -34,10 +34,10 @@ defineEmits<{ click: [] }>();
         border-radius: 50%;
         display: grid;
         place-items: center;
-        background: var(--el-color-primary, #00a884);
-        color: #fff;
+        background: var(--el-color-primary, var(--app-primary-btn));
+        color: var(--app-on-accent);
         text-decoration: none;
-        box-shadow: 0 10px 28px rgba(0, 168, 132, 0.34);
+        box-shadow: 0 10px 28px var(--app-green-glow);
         cursor: pointer;
     }
 }

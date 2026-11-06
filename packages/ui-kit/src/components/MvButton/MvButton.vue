@@ -116,87 +116,87 @@ function handleClick(event: MouseEvent): void {
 }
 
 .mv-button--primary {
-    background: #00b894;
-    color: #fff;
+    background: var(--el-color-primary);
+    color: var(--app-on-accent);
 }
 .mv-button--primary:hover:not(:disabled) {
-    background: #00a884;
+    background: var(--app-primary-btn);
 }
 .mv-button--primary:active:not(:disabled) {
-    background: #008a70;
+    background: var(--app-primary-btn-active);
 }
 
 .mv-button--secondary {
-    background: #fff;
-    color: #17212b;
-    border: 1.5px solid #e4e7ec;
+    background: var(--app-surface);
+    color: var(--el-text-color-primary);
+    border: 1.5px solid var(--el-border-color);
 }
 .mv-button--secondary:hover:not(:disabled) {
-    background: #f6f8fb;
-    border-color: #00b894;
-    color: #00b894;
+    background: var(--el-bg-color-page);
+    border-color: var(--el-color-primary);
+    color: var(--el-color-primary);
 }
 .mv-button--secondary:active:not(:disabled) {
-    background: #f0fffa;
+    background: var(--el-color-primary-light-9);
 }
 
 .mv-button--catalog {
-    background: #c8f21a;
-    color: #1b2500;
+    background: var(--app-lime-bg);
+    color: var(--app-lime-fg);
 }
 .mv-button--catalog:hover:not(:disabled) {
-    background: #b8e010;
-    box-shadow: 0 8px 18px rgba(200, 242, 26, 0.35);
+    background: var(--app-lime-hover);
+    box-shadow: 0 8px 18px var(--app-lime-glow);
 }
 .mv-button--catalog:active:not(:disabled) {
-    background: #a8cc0a;
+    background: var(--app-lime-active);
 }
 
 .mv-button--buy {
-    background: var(--app-accent-orange, #ff8a00);
-    color: #fff;
+    background: var(--app-accent-orange);
+    color: var(--app-on-accent);
 }
 .mv-button--buy:hover:not(:disabled) {
-    background: var(--app-accent-orange-hover, #e67c00);
+    background: var(--app-accent-orange-hover);
 }
 .mv-button--buy:active:not(:disabled) {
-    background: var(--app-accent-orange-active, #cc6e00);
+    background: var(--app-accent-orange-active);
 }
 
 .mv-button--ghost {
     background: transparent;
-    color: #00b894;
-    border: 1.5px solid #00b894;
+    color: var(--el-color-primary);
+    border: 1.5px solid var(--el-color-primary);
 }
 .mv-button--ghost:hover:not(:disabled) {
-    background: #f0fffa;
+    background: var(--el-color-primary-light-9);
 }
 .mv-button--ghost:active:not(:disabled) {
-    background: #c8f7ec;
+    background: var(--el-color-primary-light-7);
 }
 
 .mv-button--subtle {
-    background: #f4faf7;
-    color: #66736e;
+    background: var(--app-row-hover);
+    color: var(--app-nav-label);
     border: none;
 }
 .mv-button--subtle:hover:not(:disabled) {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 .mv-button--subtle:active:not(:disabled) {
-    background: #cdf1e1;
+    background: var(--app-ghost-hover);
 }
 
 .mv-button--danger {
-    background: #ef4444;
-    color: #fff;
+    background: var(--app-danger-btn);
+    color: var(--app-on-accent);
 }
 .mv-button--danger:hover:not(:disabled) {
-    background: #dc2626;
+    background: var(--app-danger-btn-hover);
 }
 .mv-button--danger:active:not(:disabled) {
-    background: #b91c1c;
+    background: var(--app-danger-btn-active);
 }
 
 .mv-button--disabled,

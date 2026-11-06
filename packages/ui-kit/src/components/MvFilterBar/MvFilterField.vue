@@ -17,7 +17,7 @@ defineProps<{ label: string }>();
 .mv-filter-field__label {
     display: block;
     margin-bottom: 6px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;

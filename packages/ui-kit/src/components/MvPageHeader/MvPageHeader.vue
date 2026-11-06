@@ -43,7 +43,7 @@ withDefaults(defineProps<Props>(), {
     margin: 0;
     font-size: var(--app-font-size-title, 20px);
     font-weight: 800;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
     line-height: 1.2;
     font-family: var(--app-font-family, Inter, system-ui, sans-serif);
 }

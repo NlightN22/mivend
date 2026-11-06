@@ -132,7 +132,7 @@ const stats = computed(() => [
 
 .documents-page__subtitle {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
@@ -146,15 +146,15 @@ const stats = computed(() => [
 
 .documents-page__stat-card {
     min-height: 112px;
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 20px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 18px;
 }
 
 .documents-page__stat-title {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     font-weight: 850;
     margin-bottom: 13px;
@@ -168,7 +168,7 @@ const stats = computed(() => [
 }
 
 .documents-page__stat-note {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.35;
 }
@@ -183,7 +183,7 @@ const stats = computed(() => [
 .documents-page__state {
     text-align: center;
     padding: 48px 24px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 15px;
 }
 

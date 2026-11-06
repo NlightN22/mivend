@@ -70,8 +70,8 @@ const { demoAllowed } = useDemoMode();
     font-weight: 900;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #66736e;
-    background: #edf2ef;
+    color: var(--app-nav-label);
+    background: var(--app-nav-border);
     border-radius: 999px;
     padding: 4px 14px;
     margin-bottom: 20px;
@@ -82,12 +82,12 @@ const { demoAllowed } = useDemoMode();
     font-size: clamp(32px, 4vw, 52px);
     line-height: 1;
     letter-spacing: -0.05em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .nf-sub {
     margin: 0 0 24px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 15px;
     line-height: 1.5;
 }
@@ -101,7 +101,7 @@ const { demoAllowed } = useDemoMode();
 
 .nf-search__input {
     min-height: 50px;
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 16px;
     padding: 0 16px;
     font: inherit;
@@ -109,8 +109,8 @@ const { demoAllowed } = useDemoMode();
     outline: none;
 }
 .nf-search__input:focus {
-    border-color: #00a878;
-    box-shadow: 0 0 0 3px rgba(0, 168, 120, 0.1);
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 3px var(--app-green-glow);
 }
 
 .nf-search__btn {
@@ -118,15 +118,15 @@ const { demoAllowed } = useDemoMode();
     padding: 0 22px;
     border: none;
     border-radius: 16px;
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
     font: inherit;
     font-size: 15px;
     font-weight: 800;
     cursor: pointer;
 }
 .nf-search__btn:hover {
-    background: #008a64;
+    background: var(--app-brand-fill-hover);
 }
 
 .nf-actions {
@@ -143,9 +143,9 @@ const { demoAllowed } = useDemoMode();
     min-height: 44px;
     padding: 0 18px;
     border-radius: 14px;
-    border: 1px solid #dde7e2;
-    background: #f3f8f6;
-    color: #263732;
+    border: 1px solid var(--app-nav-border-strong);
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
     font: inherit;
     font-size: 14px;
     font-weight: 800;
@@ -154,23 +154,23 @@ const { demoAllowed } = useDemoMode();
     transition: 0.14s;
 }
 .nf-btn:hover {
-    background: #e8f2ed;
+    background: var(--app-nav-border);
 }
 .nf-btn--primary {
-    background: #00a878;
+    background: var(--app-brand-fill);
     border-color: transparent;
-    color: #fff;
+    color: var(--app-on-accent);
 }
 .nf-btn--primary:hover {
-    background: #008a64;
+    background: var(--app-brand-fill-hover);
 }
 
 .nf-links {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 .nf-links a {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-weight: 700;
     text-decoration: none;
 }

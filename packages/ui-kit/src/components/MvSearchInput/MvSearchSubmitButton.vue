@@ -31,8 +31,8 @@ defineProps<{ label: string; loading: boolean; disabled: boolean }>();
 .mv-search__btn {
     min-width: 100px;
     border: none;
-    background: #00b894;
-    color: #fff;
+    background: var(--el-color-primary);
+    color: var(--app-on-accent);
     font-size: 15px;
     font-weight: 700;
     font-family: var(--app-font-family, Inter, system-ui, sans-serif);
@@ -46,7 +46,7 @@ defineProps<{ label: string; loading: boolean; disabled: boolean }>();
     transition: background 0.15s;
 }
 .mv-search__btn:hover:not(:disabled) {
-    background: #00a884;
+    background: var(--app-primary-btn);
 }
 .mv-search__btn:disabled {
     opacity: 0.6;
@@ -73,8 +73,8 @@ defineProps<{ label: string; loading: boolean; disabled: boolean }>();
 .mv-search__spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-top-color: #fff;
+    border: 2px solid var(--app-glass);
+    border-top-color: var(--app-surface);
     border-radius: 50%;
     animation: mv-spin 0.6s linear infinite;
 }

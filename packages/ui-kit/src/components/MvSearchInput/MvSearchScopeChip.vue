@@ -31,8 +31,8 @@ defineEmits<{ remove: [] }>();
     margin-left: 10px;
     padding: 4px 4px 4px 10px;
     border-radius: 10px;
-    background: #e6f7f2;
-    color: #00715a;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
     font-size: 13px;
     font-weight: 700;
 }
@@ -55,6 +55,6 @@ defineEmits<{ remove: [] }>();
     padding: 0;
 }
 .mv-search__scope-remove:hover {
-    background: rgba(0, 113, 90, 0.15);
+    background: var(--app-green-glow);
 }
 </style>

@@ -33,7 +33,7 @@ function labelFor(value: BooleanFilterValue, fallback: string): string {
 .mv-column-filter-boolean {
     display: flex;
     gap: 4px;
-    background: #f2f4f7;
+    background: var(--app-slate-bg);
     border-radius: 8px;
     padding: 3px;
     width: fit-content;
@@ -46,13 +46,13 @@ function labelFor(value: BooleanFilterValue, fallback: string): string {
     padding: 5px 12px;
     font-size: 12px;
     font-weight: 600;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     cursor: pointer;
 }
 
 .mv-column-filter-boolean__btn--active {
-    background: white;
-    color: var(--el-color-primary, #00b894);
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+    background: var(--app-surface);
+    color: var(--el-color-primary);
+    box-shadow: 0 1px 2px var(--app-ink-08);
 }
 </style>

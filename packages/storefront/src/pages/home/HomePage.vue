@@ -92,12 +92,12 @@ onMounted(() => {
     font-size: 24px;
     font-weight: 900;
     letter-spacing: -0.04em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .home-page__subtitle {
     margin: 0 0 18px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 

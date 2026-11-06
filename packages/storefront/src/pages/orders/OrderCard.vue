@@ -89,10 +89,10 @@ const preview = computed(() => {
 
 <style scoped>
 .order-card {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.9);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     overflow: hidden;
 }
 
@@ -102,7 +102,7 @@ const preview = computed(() => {
     gap: 14px;
     align-items: center;
     padding: 18px 20px;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 
 .order-title {
@@ -117,7 +117,7 @@ const preview = computed(() => {
 }
 
 .order-meta {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.38;
 }
@@ -139,8 +139,8 @@ const preview = computed(() => {
     justify-content: center;
     padding: 0 10px;
     border-radius: 999px;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
     font-size: 13px;
     font-weight: 950;
     white-space: nowrap;
@@ -151,16 +151,16 @@ const preview = computed(() => {
 }
 
 .status-pill.muted {
-    background: #eef4f1;
-    color: #5f6e68;
+    background: var(--app-nav-border);
+    color: var(--app-nav-label);
 }
 .status-pill.warning {
-    background: #fff4e3;
-    color: #a45e00;
+    background: var(--app-orange-bg);
+    color: var(--app-orange-fg);
 }
 .status-pill.error {
-    background: #ffeeed;
-    color: #c0362c;
+    background: var(--app-danger2-bg);
+    color: var(--app-orange-fg);
 }
 
 .order-card-body {
@@ -174,7 +174,7 @@ const preview = computed(() => {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.35;
 }
@@ -183,12 +183,12 @@ const preview = computed(() => {
     width: 46px;
     height: 46px;
     border-radius: 14px;
-    background: linear-gradient(145deg, #f7fbfa, #e8f6ef);
+    background: linear-gradient(145deg, var(--el-bg-color-page), var(--app-nav-active-bg));
     display: grid;
     place-items: center;
     font-size: 23px;
     flex: 0 0 auto;
-    border: 1px solid #edf2ef;
+    border: 1px solid var(--app-nav-border);
 }
 
 .order-card-actions {
@@ -206,8 +206,8 @@ const preview = computed(() => {
     min-height: 38px;
     border-radius: 12px;
     padding: 0 13px;
-    background: #f3f8f6;
-    color: #263732;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
     font-weight: 950;
     font-family: inherit;
     font-size: 14px;
@@ -217,14 +217,14 @@ const preview = computed(() => {
 }
 
 .small-btn:hover {
-    background: #e4f0eb;
+    background: var(--app-nav-border);
 }
 .small-btn.primary {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 .small-btn.primary:hover {
-    background: #008a64;
+    background: var(--app-brand-fill-hover);
 }
 
 @media (max-width: 760px) {

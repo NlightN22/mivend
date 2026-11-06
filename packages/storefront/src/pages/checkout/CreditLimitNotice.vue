@@ -21,7 +21,7 @@ const checkoutStore = useCheckoutStore();
 .deferred-credit-warning {
     padding: 12px 14px;
     border-radius: 14px;
-    background: #fff4e0;
+    background: var(--app-warn2-bg);
     font-size: 14px;
 }
 

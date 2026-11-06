@@ -152,17 +152,17 @@ onMounted(() => {
 .od-back {
     display: inline-block;
     margin-bottom: 18px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     font-weight: 850;
     text-decoration: none;
 }
 .od-back:hover {
-    color: #00a878;
+    color: var(--app-nav-accent-soft);
 }
 
 .od-state {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     padding: 32px 0;
     text-align: center;
@@ -175,7 +175,7 @@ onMounted(() => {
 }
 .od-cancel-msg {
     margin-bottom: 16px;
-    color: #c0362c;
+    color: var(--app-orange-fg);
     font-size: 14px;
 }
 

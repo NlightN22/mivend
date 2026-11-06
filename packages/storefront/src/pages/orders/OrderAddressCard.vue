@@ -26,14 +26,14 @@ const { t } = useI18n();
     letter-spacing: -0.03em;
 }
 .od-address-card {
-    background: #fff;
-    border: 1px solid #edf2ef;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border);
     border-radius: 20px;
     padding: 18px 20px;
 }
 .od-address-line {
     font-size: 13px;
-    color: #344640;
+    color: var(--app-text-body2);
     line-height: 1.55;
 }
 </style>

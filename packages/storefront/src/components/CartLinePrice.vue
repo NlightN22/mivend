@@ -56,7 +56,7 @@ const decimals = computed(() => (props.kind === 'unit' ? 2 : 0));
 }
 .line-price__label {
     display: none;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 11px;
     font-weight: 800;
     text-transform: uppercase;
@@ -64,7 +64,7 @@ const decimals = computed(() => (props.kind === 'unit' ? 2 : 0));
 .line-price__total {
     font-size: 19px !important;
     font-weight: 950 !important;
-    color: #008a64 !important;
+    color: var(--app-nav-accent) !important;
 }
 .line-price__unit {
     font-size: 15px !important;
@@ -73,7 +73,7 @@ const decimals = computed(() => (props.kind === 'unit' ? 2 : 0));
 .line-price__old {
     font-size: 12px !important;
     font-weight: 700 !important;
-    color: #a8b8b2 !important;
+    color: var(--app-nav-text-faint) !important;
     text-decoration: line-through;
 }
 @media (max-width: 900px) {

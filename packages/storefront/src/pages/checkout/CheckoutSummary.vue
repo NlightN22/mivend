@@ -181,10 +181,10 @@ async function handlePrimary(): Promise<void> {
 }
 
 .checkout-summary__card {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 20px;
 }
 
@@ -196,7 +196,7 @@ async function handlePrimary(): Promise<void> {
 }
 
 .checkout-summary__caption {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     margin-bottom: 14px;
 }
@@ -206,19 +206,19 @@ async function handlePrimary(): Promise<void> {
     justify-content: space-between;
     gap: 12px;
     padding: 10px 0;
-    border-bottom: 1px solid #edf2ef;
-    color: #66736e;
+    border-bottom: 1px solid var(--app-nav-border);
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 
 .checkout-summary__line strong {
-    color: #263732;
+    color: var(--app-text-deep);
     text-align: right;
     font-weight: 700;
 }
 
 .checkout-summary__discount {
-    color: #d92d20 !important;
+    color: var(--app-danger-btn) !important;
     font-weight: 800 !important;
 }
 
@@ -246,7 +246,7 @@ async function handlePrimary(): Promise<void> {
     min-height: 56px;
     border: 0;
     border-radius: 18px;
-    color: #fff;
+    color: var(--app-on-accent);
     font: inherit;
     font-size: 16px;
     font-weight: 800;
@@ -256,40 +256,40 @@ async function handlePrimary(): Promise<void> {
 }
 
 .checkout-summary__pay-btn--orange {
-    background: var(--app-accent-orange, #ff8a00);
-    box-shadow: 0 12px 24px rgba(255, 138, 0, 0.22);
+    background: var(--app-accent-orange);
+    box-shadow: 0 12px 24px var(--app-orange-glow);
 }
 .checkout-summary__pay-btn--orange:hover {
-    background: var(--app-accent-orange-hover, #e67c00);
+    background: var(--app-accent-orange-hover);
 }
 .checkout-summary__pay-btn--orange:active {
-    background: var(--app-accent-orange-active, #cc6e00);
+    background: var(--app-accent-orange-active);
 }
 
 .checkout-summary__pay-btn--green {
-    background: #00a878;
-    box-shadow: 0 12px 24px rgba(0, 168, 120, 0.22);
+    background: var(--app-brand-fill);
+    box-shadow: 0 12px 24px var(--app-green-glow);
 }
 .checkout-summary__pay-btn--green:hover {
-    background: #008a64;
+    background: var(--app-brand-fill-hover);
 }
 
 .checkout-summary__legal {
     margin: 12px 0 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
     line-height: 1.4;
 }
 
 .checkout-summary__legal a {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-weight: 800;
 }
 
 .checkout-summary__pay-btn:disabled {
-    background: #c9d2ce;
+    background: var(--app-nav-border-strong);
     box-shadow: none;
-    color: #fff;
+    color: var(--app-on-accent);
     cursor: not-allowed;
 }
 </style>

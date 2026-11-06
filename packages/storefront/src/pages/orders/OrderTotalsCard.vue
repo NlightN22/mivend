@@ -41,8 +41,8 @@ const { t } = useI18n();
 
 <style scoped>
 .otc {
-    background: #fff;
-    border: 1px solid #edf2ef;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border);
     border-radius: 20px;
     padding: 18px 20px;
 }
@@ -57,12 +57,12 @@ const { t } = useI18n();
     justify-content: space-between;
     padding: 5px 0;
     font-size: 13px;
-    color: #344640;
+    color: var(--app-text-body2);
 }
 .otc-total {
     margin-top: 8px;
     padding-top: 12px;
-    border-top: 1px solid #edf2ef;
+    border-top: 1px solid var(--app-nav-border);
     font-weight: 950;
     font-size: 16px;
 }

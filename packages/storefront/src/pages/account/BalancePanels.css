@@ -1,7 +1,7 @@
 /* Blocks */
 .bal-block {
-    background: #fff;
-    border: 1px solid #dde7e2;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 20px;
     padding: 20px;
 }
@@ -22,7 +22,7 @@
 }
 .bal-block__sub {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 /* Progress */
@@ -33,26 +33,26 @@
     display: flex;
     justify-content: space-between;
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-weight: 700;
     margin-bottom: 8px;
 }
 .bal-progress {
     height: 8px;
-    background: #edf2ef;
+    background: var(--app-nav-border);
     border-radius: 999px;
     overflow: hidden;
 }
 .bal-progress__fill {
     height: 100%;
-    background: #00a878;
+    background: var(--app-brand-fill);
     border-radius: 999px;
 }
 .bal-progress-foot {
     display: flex;
     justify-content: space-between;
     font-size: 12px;
-    color: #a8b8b2;
+    color: var(--app-text-faint);
     font-weight: 700;
     margin-top: 6px;
 }
@@ -70,26 +70,26 @@
     gap: 8px;
     align-items: center;
     padding: 12px 14px;
-    background: #f7fbf9;
-    border: 1px solid #edf2ef;
+    background: var(--el-bg-color-page);
+    border: 1px solid var(--app-nav-border);
     border-radius: 14px;
 }
 
 .bal-row__title {
     font-size: 14px;
     font-weight: 900;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     margin-bottom: 2px;
 }
 .bal-row__note {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .bal-cell__label {
     font-size: 11px;
     font-weight: 800;
-    color: #a8b8b2;
+    color: var(--app-text-faint);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: 2px;
@@ -97,7 +97,7 @@
 .bal-cell__value {
     font-size: 14px;
     font-weight: 800;
-    color: #263732;
+    color: var(--app-text-deep);
 }
 
 /* Pills */
@@ -109,18 +109,18 @@
     font-size: 12px;
     font-weight: 800;
     white-space: nowrap;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 .bal-pill--warning {
-    background: #fff5df;
-    color: #a05500;
+    background: var(--app-warn2-bg);
+    color: var(--app-orange-fg);
 }
 
 /* Aside panels */
 .bal-panel {
-    background: #fff;
-    border: 1px solid #dde7e2;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 20px;
     padding: 18px 20px;
 }
@@ -133,7 +133,7 @@
 }
 .bal-panel__sub {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
     margin-bottom: 14px;
     line-height: 1.42;
 }
@@ -142,18 +142,18 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
-    border-top: 1px solid #edf2ef;
+    border-top: 1px solid var(--app-nav-border);
     padding-top: 14px;
 }
 .bal-mini-title {
     font-size: 13px;
     font-weight: 900;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     margin-bottom: 3px;
 }
 .bal-mini-note {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
     line-height: 1.4;
 }
 
@@ -162,14 +162,14 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 0;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
     font-size: 13px;
 }
 .bal-info-line span {
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 .bal-info-line strong {
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     font-weight: 900;
 }
 
@@ -195,16 +195,16 @@
 }
 
 .bal-row--link:hover {
-    border-color: #cfe3da;
+    border-color: var(--app-nav-border-strong);
 }
 
 .bal-pill--danger {
-    background: #fde8e6;
-    color: #c0362c;
+    background: var(--app-danger-bg);
+    color: var(--app-orange-fg);
 }
 
 .bal-link {
-    color: #157a55;
+    color: var(--app-ok-fg);
     font-weight: 800;
     font-size: 14px;
     text-decoration: none;
@@ -214,7 +214,7 @@
 .bal-empty,
 .bal-truncated {
     padding: 12px 0 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 

@@ -32,33 +32,33 @@ defineEmits<{ dismiss: [] }>();
     border: 1px solid transparent;
     font-size: 13px;
     line-height: 1.45;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.14);
+    box-shadow: 0 14px 36px var(--app-ink-14);
     min-width: 240px;
     max-width: 360px;
 }
 
 .mv-toast--info {
-    background: #e2f8ef;
-    border-color: rgba(0, 168, 120, 0.18);
-    color: #155c48;
+    background: var(--app-nav-active-bg);
+    border-color: var(--app-green-glow);
+    color: var(--app-ok2-fg);
 }
 
 .mv-toast--success {
-    background: #d1fae5;
-    border-color: rgba(0, 168, 120, 0.28);
-    color: #065f46;
+    background: var(--app-ok-bg);
+    border-color: var(--app-green-glow);
+    color: var(--app-ok-fg);
 }
 
 .mv-toast--warning {
-    background: #fff5df;
-    border-color: rgba(255, 138, 0, 0.22);
-    color: #573a14;
+    background: var(--app-warn2-bg);
+    border-color: var(--app-orange-glow);
+    color: var(--app-warn2-fg);
 }
 
 .mv-toast--error {
-    background: #fff2f1;
-    border-color: rgba(239, 68, 68, 0.2);
-    color: #7f1d1d;
+    background: var(--app-danger2-bg);
+    border-color: var(--app-danger-glow);
+    color: var(--app-danger2-fg);
 }
 
 .mv-toast__message {

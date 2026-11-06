@@ -40,6 +40,6 @@ const timeLabel = computed(() =>
 
 .mv-date-time-cell__time {
     font-size: 11px;
-    color: var(--el-text-color-secondary, #98a2b3);
+    color: var(--el-text-color-secondary);
 }
 </style>

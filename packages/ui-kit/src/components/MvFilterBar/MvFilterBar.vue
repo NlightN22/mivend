@@ -18,7 +18,7 @@ const emit = defineEmits<{ reset: [] }>();
     gap: 10px;
     align-items: end;
     padding: 14px 0 16px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
     margin-bottom: 14px;
     min-width: 0;
     max-width: 100%;
@@ -27,17 +27,17 @@ const emit = defineEmits<{ reset: [] }>();
 .mv-filter-bar__reset {
     height: 40px;
     padding: 0 14px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
-    background: #fff;
-    color: var(--el-text-color-regular, #374151);
+    background: var(--app-surface);
+    color: var(--el-text-color-regular);
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
 }
 
 .mv-filter-bar__reset:hover {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
 }
 
 @media (max-width: 900px) {

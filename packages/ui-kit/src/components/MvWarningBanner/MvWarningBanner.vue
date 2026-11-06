@@ -29,16 +29,16 @@ defineEmits<{ action: [] }>();
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    background: #fffbeb;
-    border: 1px solid #fde68a;
+    background: var(--app-warn2-bg);
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: var(--app-radius-md, 12px);
     padding: 14px 16px;
     margin-bottom: 18px;
-    color: #92400e;
+    color: var(--app-warn-fg);
 }
 
 .mv-warning-banner__icon {
-    color: #b45309;
+    color: var(--app-orange-fg);
     font-size: 18px;
 }
 
@@ -50,8 +50,8 @@ defineEmits<{ action: [] }>();
 
 .mv-warning-banner__action {
     background: none;
-    border: 1px solid #b45309;
-    color: #b45309;
+    border: 1px solid var(--app-danger-btn);
+    color: var(--app-orange-fg);
     border-radius: 999px;
     padding: 4px 12px;
     font-size: 13px;

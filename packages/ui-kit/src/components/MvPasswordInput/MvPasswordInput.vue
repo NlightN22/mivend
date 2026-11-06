@@ -62,8 +62,8 @@ const visible = ref(false);
     padding: 0 12px;
     border: none;
     border-radius: 12px;
-    background: #f3f8f6;
-    color: #40514b;
+    background: var(--app-fill-soft);
+    color: var(--app-text-body3);
     font-size: 13px;
     font-weight: 700;
     font-family: inherit;
@@ -72,6 +72,6 @@ const visible = ref(false);
 }
 
 .mv-pw__toggle:hover {
-    background: #e2f0eb;
+    background: var(--app-tier-track);
 }
 </style>

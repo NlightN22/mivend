@@ -54,10 +54,10 @@ const paidAt = computed(() =>
 .pr-details-card {
     max-width: 600px;
     margin: 0 auto;
-    background: #fff;
-    border: 1px solid #dde7e2;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 24px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 22px;
 }
 
@@ -79,16 +79,16 @@ const paidAt = computed(() =>
     justify-content: space-between;
     gap: 12px;
     font-size: 14px;
-    color: #66736e;
+    color: var(--app-nav-label);
     padding: 10px 0;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 
 .pr-detail:last-child {
     border-bottom: none;
 }
 .pr-detail strong {
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     font-weight: 700;
     text-align: right;
 }

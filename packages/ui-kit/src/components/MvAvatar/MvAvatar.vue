@@ -33,9 +33,9 @@ const initials = computed(() => {
     justify-content: center;
     flex: none;
     border-radius: var(--app-radius-md, 12px);
-    background: #eafbf7;
-    color: #087965;
-    border: 1px solid #c8f1e7;
+    background: var(--app-fill-soft);
+    color: var(--app-ok-fg);
+    border: 1px solid var(--el-color-primary-light-7);
     font-weight: 800;
     font-family: var(--app-font-family, Inter, system-ui, sans-serif);
     line-height: 1;

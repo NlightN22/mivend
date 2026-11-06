@@ -1,17 +1,17 @@
 .tp-card {
-    background: #fff;
-    border: 1px solid #dde7e2;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 20px;
     overflow: hidden;
     transition: border-color 0.14s;
 }
 
 .tp-card--current {
-    border-color: #00a878;
-    box-shadow: 0 0 0 3px rgba(0, 168, 120, 0.1);
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 3px var(--app-green-glow);
 }
 .tp-card--editing {
-    border-color: #00a878;
+    border-color: var(--el-color-primary);
 }
 
 .tp-card__head {
@@ -33,11 +33,11 @@
     font-size: 17px;
     font-weight: 900;
     letter-spacing: -0.03em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 .tp-card__addr {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .tp-card__pill {
@@ -50,12 +50,12 @@
     white-space: nowrap;
 }
 .tp-card__pill--green {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 .tp-card__pill--blue {
-    background: #eaf4ff;
-    color: #1f65b2;
+    background: var(--app-slate-bg);
+    color: var(--app-slate-fg);
 }
 
 .tp-card__head-actions {
@@ -74,8 +74,8 @@
 }
 
 .tp-card__info-cell {
-    background: #f7fbf9;
-    border: 1px solid #edf2ef;
+    background: var(--el-bg-color-page);
+    border: 1px solid var(--app-nav-border);
     border-radius: 12px;
     padding: 10px 12px;
 }
@@ -83,7 +83,7 @@
 .tp-card__info-label {
     font-size: 11px;
     font-weight: 800;
-    color: #a8b8b2;
+    color: var(--app-text-faint);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 4px;
@@ -92,7 +92,7 @@
 .tp-card__info-value {
     font-size: 13px;
     font-weight: 700;
-    color: #263732;
+    color: var(--app-text-deep);
     line-height: 1.35;
 }
 
@@ -102,7 +102,7 @@
     font-weight: 900;
     letter-spacing: -0.03em;
     padding: 16px 20px 0;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .tp-card__form {
@@ -129,18 +129,18 @@
     transition: 0.14s ease;
 }
 .tp-card__btn--primary {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 .tp-card__btn--ghost {
-    background: #f3f8f6;
-    color: #263732;
-    border: 1px solid #dde7e2;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
+    border: 1px solid var(--app-nav-border-strong);
 }
 .tp-card__btn--danger {
-    background: #fff2f1;
-    color: #b42318;
-    border: 1px solid #fdd;
+    background: var(--app-danger2-bg);
+    color: var(--app-danger-fg);
+    border: 1px solid var(--el-border-color);
 }
 .tp-card__btn--sm {
     min-height: 34px;

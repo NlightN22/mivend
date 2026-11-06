@@ -113,30 +113,30 @@ function activityText(emp: Employee): string {
     grid-template-columns: 44px minmax(0, 1fr) 140px 180px 110px auto auto;
     gap: 12px;
     align-items: center;
-    background: #fff;
-    border: 1px solid #dde7e2;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 18px;
     padding: 14px 16px;
     transition: border-color 0.14s;
 }
 .emp-row:hover {
-    border-color: #b8d8cc;
+    border-color: var(--app-text-disabled);
 }
 .emp-row--disabled {
     opacity: 0.6;
-    background: #f9fbfa;
+    background: var(--app-fill-faint);
 }
 .emp-row--invited {
-    border-color: #ffd88a;
-    background: #fffcf5;
+    border-color: var(--app-nav-border-strong);
+    background: var(--app-fill-faint);
 }
 
 .emp-avatar {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: linear-gradient(145deg, #e2f8ef, #f4fbff);
-    color: #008a64;
+    background: linear-gradient(145deg, var(--app-nav-active-bg), var(--el-bg-color-page));
+    color: var(--app-nav-accent);
     display: grid;
     place-items: center;
     font-size: 14px;
@@ -150,13 +150,13 @@ function activityText(emp: Employee): string {
 .emp-row__name {
     font-size: 15px;
     font-weight: 900;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     margin-bottom: 2px;
     letter-spacing: -0.02em;
 }
 .emp-row__contact {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
     margin-bottom: 5px;
     white-space: nowrap;
     overflow: hidden;
@@ -175,14 +175,14 @@ function activityText(emp: Employee): string {
     border-radius: 999px;
     font-size: 11px;
     font-weight: 800;
-    background: #eef4f1;
-    color: #66736e;
+    background: var(--app-nav-border);
+    color: var(--app-nav-label);
 }
 
 .emp-cell__label {
     font-size: 11px;
     font-weight: 800;
-    color: #a8b8b2;
+    color: var(--app-text-faint);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: 3px;
@@ -190,7 +190,7 @@ function activityText(emp: Employee): string {
 .emp-cell__value {
     font-size: 13px;
     font-weight: 800;
-    color: #263732;
+    color: var(--app-text-deep);
     line-height: 1.3;
 }
 
@@ -202,16 +202,16 @@ function activityText(emp: Employee): string {
     font-size: 12px;
     font-weight: 800;
     white-space: nowrap;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 .emp-pill--warning {
-    background: #fff5df;
-    color: #a05500;
+    background: var(--app-warn2-bg);
+    color: var(--app-orange-fg);
 }
 .emp-pill--muted {
-    background: #f0f2f1;
-    color: #8a9e98;
+    background: var(--app-nav-border);
+    color: var(--app-text-placeholder);
 }
 
 .emp-row__actions {

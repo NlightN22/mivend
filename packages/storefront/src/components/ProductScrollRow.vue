@@ -101,7 +101,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
     font-size: 20px;
     font-weight: 900;
     letter-spacing: -0.03em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .psr-wrap {
@@ -125,9 +125,9 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
         height: 40px;
         border-radius: 50%;
         border: none;
-        background: #fff;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
-        color: #14231f;
+        background: var(--app-surface);
+        box-shadow: 0 2px 12px var(--app-ink-10);
+        color: var(--app-nav-text-strong);
         cursor: pointer;
         transition:
             background 0.15s,
@@ -136,9 +136,9 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
     }
 
     .psr-arrow:hover {
-        background: #2db87a;
-        color: #fff;
-        box-shadow: 0 4px 16px rgba(45, 184, 122, 0.35);
+        background: var(--el-color-primary);
+        color: var(--app-on-accent);
+        box-shadow: 0 4px 16px var(--app-green-glow);
     }
 
     .psr-arrow--left {
@@ -171,7 +171,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
     height: 60px;
     display: flex;
     align-items: center;
-    color: #a8b8b2;
+    color: var(--app-nav-text-faint);
     font-size: 14px;
 }
 </style>

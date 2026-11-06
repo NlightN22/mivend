@@ -12,7 +12,7 @@ import AppHeader from '../components/AppHeader.vue';
 <style scoped>
 .default-layout {
     min-height: 100vh;
-    background: var(--app-color-page, #f6f8fb);
+    background: var(--el-bg-color-page);
 }
 
 @media (max-width: 1180px) {

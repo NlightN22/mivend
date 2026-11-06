@@ -146,11 +146,11 @@ function another(): void {
 }
 .bal-pay__overdue {
     display: block;
-    color: #b42318;
+    color: var(--app-danger-fg);
     font-weight: 800;
 }
 .bal-pay__link {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-size: 13px;
     font-weight: 800;
     text-decoration: none;

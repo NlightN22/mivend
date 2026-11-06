@@ -100,10 +100,10 @@ const unavailableCount = computed(
 }
 
 .cart-summary__card {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 24px;
 }
 
@@ -112,8 +112,8 @@ const unavailableCount = computed(
     min-height: 56px;
     border: none;
     border-radius: 18px;
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
     font-size: 16px;
     font-weight: 800;
     font-family: inherit;
@@ -122,27 +122,27 @@ const unavailableCount = computed(
     transition: background 0.15s;
 }
 .cart-summary__checkout:hover {
-    background: #008a64;
+    background: var(--app-brand-fill-hover);
 }
 .cart-summary__checkout:disabled {
-    background: #c5cdc9;
+    background: var(--app-nav-text-faint);
     cursor: not-allowed;
 }
 
 .cart-summary__blocked {
     margin: -4px 0 16px;
-    color: #991b1b;
+    color: var(--app-danger-fg);
     font-size: 13px;
     line-height: 1.45;
 }
 
 .cart-summary__help {
     margin: 0 0 18px;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.45;
     padding-bottom: 18px;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 
 .cart-summary__title-row {
@@ -158,7 +158,7 @@ const unavailableCount = computed(
     letter-spacing: -0.035em;
 }
 .cart-summary__count {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     font-weight: 850;
 }
@@ -168,7 +168,7 @@ const unavailableCount = computed(
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     padding-bottom: 16px;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 .cart-summary__line {
     display: flex;
@@ -178,14 +178,14 @@ const unavailableCount = computed(
     line-height: 1.3;
 }
 .cart-summary__line span {
-    color: #53645e;
+    color: var(--app-nav-label);
 }
 .cart-summary__line strong {
     white-space: nowrap;
-    color: #2c3b36;
+    color: var(--app-text-deep);
 }
 .cart-summary__line--discount strong {
-    color: #e40066;
+    color: var(--app-danger-btn);
 }
 
 .cart-summary__total {
@@ -201,7 +201,7 @@ const unavailableCount = computed(
     letter-spacing: -0.04em;
 }
 .cart-summary__total strong {
-    color: #008a64;
+    color: var(--app-nav-accent);
     font-size: 27px;
     font-weight: 950;
     letter-spacing: -0.045em;

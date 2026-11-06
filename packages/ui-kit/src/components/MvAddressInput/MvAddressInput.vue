@@ -112,10 +112,10 @@ function onFocusout(event: FocusEvent): void {
     margin: 0;
     padding: 6px;
     list-style: none;
-    background: #fff;
-    border: 1px solid #e4e7ec;
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color);
     border-radius: 16px;
-    box-shadow: 0 12px 32px rgba(16, 24, 40, 0.12);
+    box-shadow: 0 12px 32px var(--app-ink-10);
 }
 
 .mv-address__item {
@@ -123,12 +123,12 @@ function onFocusout(event: FocusEvent): void {
     border-radius: 10px;
     font-size: 14px;
     font-weight: 600;
-    color: #17212b;
+    color: var(--app-nav-text-strong);
     cursor: pointer;
 }
 
 .mv-address__item:hover,
 .mv-address__item--active {
-    background: #eefaf6;
+    background: var(--app-fill-soft);
 }
 </style>

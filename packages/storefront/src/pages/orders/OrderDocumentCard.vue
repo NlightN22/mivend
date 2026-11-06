@@ -37,8 +37,8 @@ const { t } = useI18n();
 
 <style scoped>
 .odc {
-    background: #fff;
-    border: 1px solid #edf2ef;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border);
     border-radius: 20px;
     padding: 18px 20px;
 }
@@ -54,13 +54,13 @@ const { t } = useI18n();
     justify-content: space-between;
     padding: 3px 0;
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 .odc-val {
     display: inline-flex;
     align-items: center;
     gap: 4px;
     font-weight: 850;
-    color: #344640;
+    color: var(--app-text-body2);
 }
 </style>

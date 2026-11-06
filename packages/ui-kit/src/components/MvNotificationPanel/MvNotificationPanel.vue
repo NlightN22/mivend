@@ -195,10 +195,10 @@ function formatRelativeTime(value: string): string {
     max-height: 480px;
     display: flex;
     flex-direction: column;
-    background: var(--app-surface, #fff);
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-lg, 16px);
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.14);
+    box-shadow: 0 14px 36px var(--app-ink-14);
     overflow: hidden;
 }
 
@@ -207,21 +207,21 @@ function formatRelativeTime(value: string): string {
     align-items: center;
     justify-content: space-between;
     padding: 14px 16px;
-    border-bottom: 1px solid var(--el-border-color, #e4e7ec);
+    border-bottom: 1px solid var(--el-border-color);
 }
 
 .mv-notification-panel__title {
     margin: 0;
     font-size: 14px;
     font-weight: 800;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-notification-panel__close {
     border: none;
     background: transparent;
     cursor: pointer;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary, var(--app-text-grey));
     display: grid;
     place-items: center;
 }
@@ -230,7 +230,7 @@ function formatRelativeTime(value: string): string {
     padding: 24px 16px;
     text-align: center;
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary, var(--app-text-grey));
 }
 
 .mv-notification-panel__list {
@@ -244,11 +244,11 @@ function formatRelativeTime(value: string): string {
     display: flex;
     gap: 10px;
     padding: 12px 16px;
-    border-bottom: 1px solid var(--el-border-color-lighter, #f0f2f5);
+    border-bottom: 1px solid var(--el-border-color-lighter, var(--app-nav-border));
 }
 
 .mv-notification-panel__row--unread {
-    background: #f5fbf9;
+    background: var(--el-bg-color-page);
 }
 
 .mv-notification-panel__indicator {
@@ -260,16 +260,16 @@ function formatRelativeTime(value: string): string {
 }
 
 .mv-notification-panel__indicator--info {
-    background: #00a878;
+    background: var(--app-brand-fill);
 }
 .mv-notification-panel__indicator--success {
-    background: #10b981;
+    background: var(--el-color-primary);
 }
 .mv-notification-panel__indicator--warning {
-    background: #ff8a00;
+    background: var(--app-accent-orange);
 }
 .mv-notification-panel__indicator--error {
-    background: #ef4444;
+    background: var(--app-danger-btn);
 }
 
 .mv-notification-panel__body {
@@ -287,19 +287,19 @@ function formatRelativeTime(value: string): string {
 .mv-notification-panel__row-title {
     font-size: 13px;
     font-weight: 700;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-notification-panel__row-time {
     flex-shrink: 0;
     font-size: 11px;
-    color: var(--el-text-color-secondary, #98a2b3);
+    color: var(--el-text-color-secondary, var(--app-text-faint));
 }
 
 .mv-notification-panel__row-message {
     margin: 2px 0 0;
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary, var(--app-text-grey));
     line-height: 1.4;
 }
 
@@ -316,7 +316,7 @@ function formatRelativeTime(value: string): string {
     cursor: pointer;
     font-size: 11px;
     font-weight: 700;
-    color: var(--el-color-primary-dark-2, #008a70);
+    color: var(--el-color-primary-dark-2);
 }
 
 .mv-notification-panel__resolve-form {
@@ -331,7 +331,7 @@ function formatRelativeTime(value: string): string {
 }
 
 .mv-notification-panel__footer {
-    border-top: 1px solid var(--el-border-color, #e4e7ec);
+    border-top: 1px solid var(--el-border-color);
     padding: 10px 16px;
     text-align: center;
     flex-shrink: 0;
@@ -344,6 +344,6 @@ function formatRelativeTime(value: string): string {
     cursor: pointer;
     font-size: 12px;
     font-weight: 700;
-    color: var(--el-color-primary-dark-2, #008a70);
+    color: var(--el-color-primary-dark-2);
 }
 </style>

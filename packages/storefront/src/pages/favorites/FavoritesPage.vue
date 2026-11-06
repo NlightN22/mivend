@@ -145,7 +145,7 @@ function handleClearUnavailable(): void {
 
 .favorites-page__subtitle {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     line-height: 1.45;
 }
@@ -167,7 +167,7 @@ function handleClearUnavailable(): void {
 .favorites-page__empty {
     padding: 48px 0;
     text-align: center;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 15px;
 }
 

@@ -151,10 +151,67 @@
 }
 
 .mv-account-menu__item--danger {
-    color: var(--el-color-danger, #d92d20);
+    color: var(--el-color-danger, var(--app-danger-btn));
     font-weight: 800;
 }
 
 .mv-account-menu__item--danger:hover {
-    background: var(--el-color-danger-light-9, #fef3f2);
+    background: var(--el-color-danger-light-9, var(--app-danger2-bg));
+}
+
+.mv-account-menu__theme-block {
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--app-nav-border);
+    margin-bottom: 8px;
+}
+
+.mv-account-menu__theme-label {
+    padding: 0 12px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--app-nav-label);
+}
+
+.mv-account-menu__theme {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--app-radius-md);
+    background: var(--app-nav-hover-bg);
+}
+
+.mv-account-menu__theme-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-height: 52px;
+    padding: 8px 4px;
+    border: 0;
+    border-radius: var(--app-radius-sm);
+    background: transparent;
+    color: var(--app-nav-label);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        background 0.14s,
+        color 0.14s;
+}
+
+.mv-account-menu__theme-btn:hover {
+    color: var(--app-nav-text-strong);
+}
+
+.mv-account-menu__theme-btn--active {
+    background: var(--app-surface);
+    color: var(--app-nav-accent);
+    box-shadow: var(--app-shadow-sm);
+}
+
+.mv-account-menu__theme-btn:focus-visible {
+    outline: 2px solid var(--app-nav-accent);
+    outline-offset: -2px;
 }

@@ -223,27 +223,27 @@ function selectAllOnFocus(event: FocusEvent): void {
     width: 100%;
     height: 36px;
     padding: 0 10px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
     font-size: 13px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-date-picker__input:focus {
     outline: none;
-    border-color: var(--el-color-primary, #00b894);
+    border-color: var(--el-color-primary);
 }
 
 .mv-date-picker__input--invalid {
-    border-color: var(--el-color-danger, #dc2626);
-    color: var(--el-color-danger, #dc2626);
+    border-color: var(--el-color-danger, var(--app-danger-btn-hover));
+    color: var(--el-color-danger, var(--app-danger-btn-hover));
 }
 
 .mv-date-picker__error {
     margin: -4px 0 0;
     font-size: 11px;
-    color: var(--el-color-danger, #dc2626);
+    color: var(--el-color-danger, var(--app-danger-btn-hover));
 }
 
 .mv-date-picker__header {
@@ -255,7 +255,7 @@ function selectAllOnFocus(event: FocusEvent): void {
 .mv-date-picker__month {
     font-size: 13px;
     font-weight: 700;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
 }
 
 .mv-date-picker__nav {
@@ -267,12 +267,12 @@ function selectAllOnFocus(event: FocusEvent): void {
     border: none;
     background: transparent;
     border-radius: 6px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     cursor: pointer;
 }
 
 .mv-date-picker__nav:hover {
-    background: #f8fafc;
+    background: var(--app-slate-bg);
 }
 
 .mv-date-picker__nav svg {
@@ -289,7 +289,7 @@ function selectAllOnFocus(event: FocusEvent): void {
 .mv-date-picker__weekdays span {
     text-align: center;
     font-size: 11px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     padding: 2px 0;
 }
 
@@ -299,26 +299,26 @@ function selectAllOnFocus(event: FocusEvent): void {
     background: transparent;
     border-radius: 8px;
     font-size: 12px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
     cursor: pointer;
 }
 
 .mv-date-picker__day:hover {
-    background: #f8fafc;
+    background: var(--app-slate-bg);
 }
 
 .mv-date-picker__day--muted {
-    color: #d0d5dd;
+    color: var(--app-text-disabled);
 }
 
 .mv-date-picker__day--today {
     font-weight: 700;
-    color: var(--el-color-primary, #00b894);
+    color: var(--el-color-primary);
 }
 
 .mv-date-picker__day--selected {
-    background: var(--el-color-primary, #00b894);
-    color: white;
+    background: var(--el-color-primary);
+    color: var(--app-on-accent);
     font-weight: 700;
 }
 
@@ -326,7 +326,7 @@ function selectAllOnFocus(event: FocusEvent): void {
     align-self: center;
     border: none;
     background: transparent;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
     font-size: 12px;
     cursor: pointer;
     padding: 4px;

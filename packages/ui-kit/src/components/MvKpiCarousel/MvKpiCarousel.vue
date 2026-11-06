@@ -113,11 +113,11 @@ onBeforeUnmount(() => {
 
 .mv-kpi-carousel__fade--left {
     left: 0;
-    background: linear-gradient(to right, var(--app-bg, #f6f8fb), transparent);
+    background: linear-gradient(to right, var(--el-bg-color-page), transparent);
 }
 
 .mv-kpi-carousel__fade--right {
     right: 0;
-    background: linear-gradient(to left, var(--app-bg, #f6f8fb), transparent);
+    background: linear-gradient(to left, var(--el-bg-color-page), transparent);
 }
 </style>

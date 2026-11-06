@@ -115,7 +115,7 @@ function collapse(): void {
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #2c3b36;
+    color: var(--app-text-body2);
 }
 
 .mv-facet-group__search {
@@ -123,9 +123,9 @@ function collapse(): void {
     box-sizing: border-box;
     margin-bottom: 8px;
     padding: 8px 12px;
-    border: 1.5px solid #dde7e2;
+    border: 1.5px solid var(--app-nav-border-strong);
     border-radius: 10px;
-    background: #f9fbfa;
+    background: var(--app-fill-faint);
     font-size: 14px;
     transition:
         border-color 0.15s,
@@ -134,8 +134,8 @@ function collapse(): void {
 
 .mv-facet-group__search:focus {
     outline: none;
-    border-color: #00b894;
-    background: #fff;
+    border-color: var(--el-color-primary);
+    background: var(--app-surface);
 }
 
 .mv-facet-group__list--scroll {
@@ -152,7 +152,7 @@ function collapse(): void {
     padding: 5px 8px;
     margin: 0 -8px;
     border-radius: 10px;
-    color: #43524d;
+    color: var(--app-text-body3);
     font-size: 14px;
     cursor: pointer;
     transition:
@@ -161,8 +161,8 @@ function collapse(): void {
 }
 
 .mv-facet-group__row:hover {
-    color: var(--app-nav-accent, #008a64);
-    background: var(--app-nav-hover-bg, #f3f7f5);
+    color: var(--app-nav-accent);
+    background: var(--app-nav-hover-bg);
 }
 
 .mv-facet-group__check {
@@ -179,7 +179,7 @@ function collapse(): void {
     margin: 0;
     opacity: 1;
     pointer-events: auto;
-    accent-color: #00b894;
+    accent-color: var(--el-color-primary);
     cursor: pointer;
 }
 
@@ -190,11 +190,11 @@ function collapse(): void {
     justify-content: center;
     width: 36px;
     height: 36px;
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 10px;
-    background: #fff;
+    background: var(--app-surface);
     font-weight: 800;
-    color: #6b7c75;
+    color: var(--app-nav-label);
     overflow: hidden;
     transition:
         border-color 0.12s,
@@ -209,14 +209,14 @@ function collapse(): void {
 
 .mv-facet-group__row--on .mv-facet-group__icon,
 .mv-facet-group__check:focus-visible + .mv-facet-group__icon {
-    border: 2px solid #00b894;
-    color: var(--app-nav-accent, #008a64);
+    border: 2px solid var(--el-color-primary);
+    color: var(--app-nav-accent);
 }
 
 .mv-facet-group__row--on,
 .mv-facet-group__row--on:hover {
-    color: var(--app-nav-accent, #008a64);
-    background: var(--app-nav-active-bg, #e2f8ef);
+    color: var(--app-nav-accent);
+    background: var(--app-nav-active-bg);
 }
 
 .mv-facet-group__row--on .mv-facet-group__name {
@@ -232,7 +232,7 @@ function collapse(): void {
 }
 
 .mv-facet-group__count {
-    color: #8a9a94;
+    color: var(--app-text-placeholder);
     font-size: 12px;
 }
 
@@ -244,7 +244,7 @@ function collapse(): void {
 }
 
 .mv-facet-group__clear {
-    color: #8a9a94;
+    color: var(--app-text-placeholder);
 }
 
 .mv-facet-group__toggle {
@@ -252,7 +252,7 @@ function collapse(): void {
     padding: 0;
     border: 0;
     background: none;
-    color: #00997a;
+    color: var(--app-nav-accent);
     font-weight: 700;
     font-size: 14px;
     cursor: pointer;

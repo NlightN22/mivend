@@ -78,10 +78,10 @@ const showThumbs = computed(() => props.images.length > 1 || !hasImages.value);
 }
 
 .gallery__card {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 20px;
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    border: 1px solid var(--app-border-glass);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 16px;
     display: flex;
     gap: 12px;
@@ -99,8 +99,8 @@ const showThumbs = computed(() => props.images.length > 1 || !hasImages.value);
     height: 52px;
     padding: 0;
     border-radius: 10px;
-    border: 1.5px solid #dde7e2;
-    background: #f7fbfa;
+    border: 1.5px solid var(--app-nav-border-strong);
+    background: var(--app-ph-from);
     font-size: 20px;
     cursor: pointer;
     overflow: hidden;
@@ -111,11 +111,11 @@ const showThumbs = computed(() => props.images.length > 1 || !hasImages.value);
 }
 
 .gallery__thumb--active {
-    border-color: #00b894;
-    background: #e8f5f0;
+    border-color: var(--el-color-primary);
+    background: var(--app-nav-border);
 }
 .gallery__thumb:hover:not(.gallery__thumb--active) {
-    border-color: #aad4c8;
+    border-color: var(--app-text-disabled);
 }
 
 .gallery__thumb-photo {
@@ -130,7 +130,7 @@ const showThumbs = computed(() => props.images.length > 1 || !hasImages.value);
     position: relative;
     aspect-ratio: 1 / 1;
     overflow: hidden;
-    background: linear-gradient(135deg, #f4f9f7, #e8f5ee);
+    background: linear-gradient(135deg, var(--app-row-hover), var(--app-nav-active-bg));
     border-radius: 14px;
     display: flex;
     align-items: center;

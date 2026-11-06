@@ -39,10 +39,10 @@ const ROWS = 3;
 
 .cart-skeleton__list,
 .cart-skeleton__aside {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
 }
 
 .cart-skeleton__list {
@@ -55,7 +55,7 @@ const ROWS = 3;
     gap: 14px;
     align-items: center;
     padding: 18px 0;
-    border-bottom: 1px solid #edf2ef;
+    border-bottom: 1px solid var(--app-nav-border);
 }
 .cart-skeleton__row:last-child {
     border-bottom: none;

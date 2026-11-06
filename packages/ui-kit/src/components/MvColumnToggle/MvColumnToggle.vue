@@ -167,10 +167,10 @@ function onRowClick(col: ColumnVisibilityDef & { visible: boolean }): void {
     z-index: var(--mv-z-dropdown);
     width: 260px;
     padding: 12px;
-    background: white;
-    border: 1px solid #e4e7ec;
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color);
     border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(20, 42, 65, 0.12);
+    box-shadow: 0 10px 30px var(--app-ink-10);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -186,12 +186,12 @@ function onRowClick(col: ColumnVisibilityDef & { visible: boolean }): void {
 .mv-column-toggle__title {
     font-size: 13px;
     font-weight: 600;
-    color: #101828;
+    color: var(--app-nav-text-strong);
 }
 
 .mv-column-toggle__subtitle {
     font-size: 12px;
-    color: #667085;
+    color: var(--app-slate-fg);
 }
 
 .mv-column-toggle__search {
@@ -205,14 +205,14 @@ function onRowClick(col: ColumnVisibilityDef & { visible: boolean }): void {
     left: 8px;
     width: 14px;
     height: 14px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     pointer-events: none;
 }
 
 .mv-column-toggle__search input {
     width: 100%;
     padding: 6px 8px 6px 28px;
-    border: 1px solid #e4e7ec;
+    border: 1px solid var(--el-border-color);
     border-radius: 6px;
     font-size: 13px;
 }
@@ -236,13 +236,13 @@ function onRowClick(col: ColumnVisibilityDef & { visible: boolean }): void {
 }
 
 .mv-column-toggle__row:hover {
-    background: #f8fafc;
+    background: var(--app-slate-bg);
 }
 
 .mv-column-toggle__handle {
     width: 14px;
     height: 14px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     cursor: grab;
     flex-shrink: 0;
 }
@@ -254,14 +254,14 @@ function onRowClick(col: ColumnVisibilityDef & { visible: boolean }): void {
 .mv-column-toggle__pin {
     width: 14px;
     height: 14px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     flex-shrink: 0;
 }
 
 .mv-column-toggle__empty {
     padding: 8px 6px;
     font-size: 12px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     text-align: center;
 }
 
@@ -270,6 +270,6 @@ function onRowClick(col: ColumnVisibilityDef & { visible: boolean }): void {
     justify-content: flex-end;
     gap: 8px;
     padding-top: 6px;
-    border-top: 1px solid #e4e7ec;
+    border-top: 1px solid var(--el-border-color);
 }
 </style>

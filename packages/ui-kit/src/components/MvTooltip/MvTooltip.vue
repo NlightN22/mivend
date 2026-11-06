@@ -30,9 +30,9 @@ withDefaults(defineProps<Props>(), {
 
 <style>
 .mv-tooltip__popper {
-    --el-bg-color-overlay: #fff;
-    box-shadow: 0 8px 24px rgba(27, 45, 38, 0.14) !important;
-    border: 1px solid #dde7e2 !important;
+    --el-bg-color-overlay: var(--app-surface);
+    box-shadow: 0 8px 24px var(--app-ink-14) !important;
+    border: 1px solid var(--app-nav-border-strong) !important;
     border-radius: 12px !important;
     max-width: 260px;
 }
@@ -41,7 +41,7 @@ withDefaults(defineProps<Props>(), {
 <style scoped>
 .mv-tooltip__content {
     font-size: 13px;
-    color: #2c3b36;
+    color: var(--app-text-body2);
     line-height: 1.5;
 }
 </style>

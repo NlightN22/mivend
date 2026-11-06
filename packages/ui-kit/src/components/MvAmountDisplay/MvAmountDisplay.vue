@@ -44,7 +44,7 @@ const format = inject(AMOUNT_FORMATTER, formatAmount);
     display: inline-block;
     font-family: var(--app-font-family, Inter, system-ui, sans-serif);
     font-weight: 700;
-    color: var(--el-text-color-primary, #14231f);
+    color: var(--el-text-color-primary, var(--app-nav-text-strong));
     font-variant-numeric: tabular-nums;
 }
 

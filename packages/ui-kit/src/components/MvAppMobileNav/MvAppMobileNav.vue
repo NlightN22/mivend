@@ -90,9 +90,9 @@ const isMoreActive = computed(
         grid-template-columns: repeat(5, minmax(0, 1fr));
         min-height: 62px;
         padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-        background: rgba(255, 255, 255, 0.97);
-        border-top: 1px solid var(--el-border-color, #e4e7ec);
-        box-shadow: 0 -8px 24px rgba(20, 42, 65, 0.1);
+        background: var(--app-glass-strong);
+        border-top: 1px solid var(--el-border-color);
+        box-shadow: 0 -8px 24px var(--app-ink-10);
     }
 }
 
@@ -102,7 +102,7 @@ const isMoreActive = computed(
     gap: 2px;
     border: 0;
     background: transparent;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary, var(--app-text-grey));
     text-decoration: none;
     font-size: 10px;
     font-weight: 700;
@@ -113,8 +113,8 @@ const isMoreActive = computed(
 }
 
 .mv-app-mobile-nav__item--active {
-    color: var(--el-color-primary-dark-2, #008a70);
-    background: var(--el-color-primary-light-9, #f0fffa);
+    color: var(--el-color-primary-dark-2);
+    background: var(--el-color-primary-light-9);
 }
 
 .mv-app-mobile-nav__icon-wrap {

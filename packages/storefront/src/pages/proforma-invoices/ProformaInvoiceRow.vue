@@ -100,10 +100,10 @@ const isPayable =
 
 <style scoped>
 .proforma-invoice-row {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.9);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 22px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 16px 18px;
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) 150px 120px 180px;
@@ -119,13 +119,13 @@ const isPayable =
 }
 
 .proforma-invoice-row__meta {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.35;
 }
 
 .proforma-invoice-row__cell-title {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
     margin-bottom: 4px;
     font-weight: 850;

@@ -100,10 +100,10 @@ const modalOpen = ref(false);
 
 <style scoped>
 .delivery-selector {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 22px;
 }
 
@@ -123,7 +123,7 @@ const modalOpen = ref(false);
 
 .delivery-selector__subtitle {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
 }
 
@@ -132,8 +132,8 @@ const modalOpen = ref(false);
     min-height: 40px;
     border-radius: 13px;
     padding: 0 14px;
-    background: #f3f8f6;
-    color: #263732;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
     font-weight: 800;
     cursor: pointer;
     white-space: nowrap;
@@ -142,7 +142,7 @@ const modalOpen = ref(false);
 }
 
 .delivery-selector__change-btn:hover {
-    background: #e6f0ec;
+    background: var(--app-nav-border);
 }
 
 .delivery-selector__grid {
@@ -152,10 +152,10 @@ const modalOpen = ref(false);
 }
 
 .delivery-selector__card {
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 20px;
     padding: 16px;
-    background: #fff;
+    background: var(--app-surface);
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
@@ -172,13 +172,13 @@ const modalOpen = ref(false);
     margin-top: 12px;
     padding: 14px 16px;
     border-radius: 18px;
-    background: #f3fff7;
-    border: 1px solid #cdeedd;
+    background: var(--el-color-primary-light-9);
+    border: 1px solid var(--el-color-primary-light-7);
 }
 
 .delivery-selector__point-icon {
     flex: 0 0 auto;
-    color: #00a878;
+    color: var(--app-nav-accent-soft);
 }
 
 .delivery-selector__point-body {
@@ -188,18 +188,18 @@ const modalOpen = ref(false);
 
 .delivery-selector__point-label {
     font-size: 12px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .delivery-selector__point-name {
     font-size: 14px;
     font-weight: 800;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .delivery-selector__point-addr {
     font-size: 13px;
-    color: #66736e;
+    color: var(--app-nav-label);
 }
 
 .delivery-selector__card--disabled {
@@ -209,13 +209,13 @@ const modalOpen = ref(false);
 
 .delivery-selector__blocker {
     margin: 12px 0 0;
-    color: #b42318;
+    color: var(--app-danger-fg);
     font-size: 13px;
 }
 
 .delivery-selector__card--active {
-    border: 2px solid #00a878;
-    background: linear-gradient(135deg, #fff, #f3fff7);
+    border: 2px solid var(--el-color-primary);
+    background: linear-gradient(135deg, var(--app-surface), var(--el-color-primary-light-9));
 }
 
 .delivery-selector__card-title {
@@ -228,7 +228,7 @@ const modalOpen = ref(false);
 
 .delivery-selector__card-note {
     margin: 0;
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.4;
 }

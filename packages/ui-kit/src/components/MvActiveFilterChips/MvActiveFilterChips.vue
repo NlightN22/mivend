@@ -42,7 +42,7 @@ const emit = defineEmits<{ remove: [key: string]; 'clear-all': [] }>();
 }
 
 .mv-active-filter-chips__label {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary, var(--app-text-grey));
     font-weight: 600;
 }
 
@@ -52,15 +52,15 @@ const emit = defineEmits<{ remove: [key: string]; 'clear-all': [] }>();
     gap: 6px;
     padding: 3px 8px;
     border-radius: 999px;
-    background: var(--el-fill-color-light, #f0f4f8);
-    color: var(--el-text-color-primary, #17212b);
+    background: var(--el-fill-color-light, var(--app-fill-soft));
+    color: var(--el-text-color-primary);
     font-size: 12px;
 }
 
 .mv-active-filter-chips__chip button {
     border: none;
     background: transparent;
-    color: #98a2b3;
+    color: var(--app-text-faint);
     font-size: 14px;
     line-height: 1;
     cursor: pointer;
@@ -70,7 +70,7 @@ const emit = defineEmits<{ remove: [key: string]; 'clear-all': [] }>();
 .mv-active-filter-chips__clear-all {
     border: none;
     background: transparent;
-    color: var(--el-color-primary, #00b894);
+    color: var(--el-color-primary);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;

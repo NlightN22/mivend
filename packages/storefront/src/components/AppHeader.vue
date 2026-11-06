@@ -17,6 +17,7 @@ import {
     useIsMobileViewport,
 } from '@mivend/ui-kit';
 import { useLanguageSwitcher } from '../composables/useLanguageSwitcher';
+import { useThemeSwitcher } from '../composables/useThemeSwitcher';
 import { headerDeliveryLabel } from '../composables/headerDeliveryLabel';
 import { buildBottomTabs } from '../composables/bottomTabs';
 import { activeBottomTab } from '../composables/bottomTabActive';
@@ -34,6 +35,7 @@ const router = useRouter();
 const route = useRoute();
 const { t } = useI18n();
 const language = useLanguageSwitcher();
+const themeSwitcher = useThemeSwitcher();
 const siteName = readSiteName();
 const siteIconUrl = readSiteIconUrl();
 const authStore = useAuthStore();
@@ -210,9 +212,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                             :languages="language.options"
                             :locale="language.locale.value"
                             :language-label="t('nav.interfaceLanguage')"
+                            :themes="themeSwitcher.options.value"
+                            :theme="themeSwitcher.theme.value"
+                            :theme-label="t('nav.theme')"
                             :logout-label="t('auth.logout')"
                             @navigate="accountOpen = false"
                             @select-language="language.select"
+                            @select-theme="themeSwitcher.select"
                             @logout="logout"
                         />
                     </MvAccountDropdown>
@@ -321,9 +327,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                     :languages="language.options"
                     :locale="language.locale.value"
                     :language-label="t('nav.interfaceLanguage')"
+                    :themes="themeSwitcher.options.value"
+                    :theme="themeSwitcher.theme.value"
+                    :theme-label="t('nav.theme')"
                     :logout-label="t('auth.logout')"
                     @navigate="moreOpen = false"
                     @select-language="language.select"
+                    @select-theme="themeSwitcher.select"
                     @logout="logout"
                 />
             </MvAccountSheet>

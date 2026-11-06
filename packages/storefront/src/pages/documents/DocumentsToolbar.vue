@@ -42,10 +42,10 @@ const { t } = useI18n();
 
 <style scoped>
 .docs-toolbar {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 28px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 18px;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -60,17 +60,17 @@ const { t } = useI18n();
 
 .docs-toolbar__search {
     min-height: 46px;
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 16px;
     padding: 0 15px;
     outline: none;
     font: inherit;
-    background: #fff;
+    background: var(--app-surface);
 }
 
 .docs-toolbar__search:focus {
-    border-color: #00a878;
-    box-shadow: 0 0 0 3px rgba(0, 168, 120, 0.1);
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 3px var(--app-green-glow);
 }
 
 .docs-toolbar__chips {
@@ -86,9 +86,9 @@ const { t } = useI18n();
     gap: 6px;
     padding: 0 12px;
     border-radius: 999px;
-    border: 1px solid #dde7e2;
-    background: #fff;
-    color: #344640;
+    border: 1px solid var(--app-nav-border-strong);
+    background: var(--app-surface);
+    color: var(--app-text-body2);
     font: inherit;
     font-weight: 850;
     font-size: 13px;
@@ -97,8 +97,8 @@ const { t } = useI18n();
 }
 
 .docs-toolbar__chip--active {
-    background: #00a878;
-    border-color: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    border-color: var(--el-color-primary);
+    color: var(--app-on-accent);
 }
 </style>

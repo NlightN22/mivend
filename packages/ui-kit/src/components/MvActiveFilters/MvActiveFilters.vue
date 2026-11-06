@@ -61,9 +61,9 @@ const emit = defineEmits<{ remove: [key: string]; clear: [] }>();
 
 .mv-active-filters__chip {
     padding: 0 4px 0 12px;
-    border: 1px solid var(--el-color-primary-light-7, #c8f7ec);
-    background: var(--el-color-primary-light-9, #f0fffa);
-    color: var(--el-color-primary-dark-2, #008a70);
+    border: 1px solid var(--el-color-primary-light-7);
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary-dark-2);
 }
 
 .mv-active-filters__label {
@@ -88,24 +88,24 @@ const emit = defineEmits<{ remove: [key: string]; clear: [] }>();
 }
 
 .mv-active-filters__remove:hover {
-    background: rgba(0, 113, 90, 0.15);
+    background: var(--app-green-glow);
 }
 
 .mv-active-filters__clear {
     padding: 0 12px 0 8px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
-    background: #fff;
-    color: var(--el-text-color-regular, #374151);
+    border: 1px solid var(--el-border-color);
+    background: var(--app-surface);
+    color: var(--el-text-color-regular);
     cursor: pointer;
 }
 
 .mv-active-filters__clear:hover {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
 }
 
 .mv-active-filters__remove:focus-visible,
 .mv-active-filters__clear:focus-visible {
-    outline: 2px solid var(--el-color-primary, #00b894);
+    outline: 2px solid var(--el-color-primary);
     outline-offset: 1px;
 }
 </style>

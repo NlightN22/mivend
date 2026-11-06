@@ -65,7 +65,7 @@ function goTo(target: number, event: MouseEvent): void {
     justify-content: space-between;
     padding-top: 14px;
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--el-text-color-secondary);
 }
 
 .mv-pagination__controls {
@@ -77,10 +77,10 @@ function goTo(target: number, event: MouseEvent): void {
 .mv-pagination__btn {
     height: 32px;
     padding: 0 12px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
-    background: #fff;
-    color: var(--el-text-color-primary, #17212b);
+    background: var(--app-surface);
+    color: var(--el-text-color-primary);
     font-size: 13px;
     cursor: pointer;
 }
@@ -91,6 +91,6 @@ function goTo(target: number, event: MouseEvent): void {
 }
 
 .mv-pagination__btn:not(:disabled):hover {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
 }
 </style>

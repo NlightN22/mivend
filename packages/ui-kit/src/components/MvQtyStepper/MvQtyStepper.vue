@@ -158,7 +158,7 @@ function inc() {
 .mv-qty-stepper {
     display: inline-flex;
     align-items: center;
-    border: 1.5px solid #dde7e2;
+    border: 1.5px solid var(--app-nav-border-strong);
     border-radius: 12px;
     overflow: hidden;
     height: 44px;
@@ -191,8 +191,8 @@ function inc() {
 }
 .mv-qty-stepper__confirm {
     width: 34px;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .mv-qty-stepper__val {
@@ -206,7 +206,7 @@ function inc() {
     border: none;
     background: transparent;
     font-size: 20px;
-    color: #2c3b36;
+    color: var(--app-text-body2);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -216,7 +216,7 @@ function inc() {
 }
 
 .mv-qty-stepper__btn:hover:not(:disabled) {
-    background: #f4faf7;
+    background: var(--app-row-hover);
 }
 .mv-qty-stepper__btn:disabled {
     opacity: 0.4;
@@ -231,21 +231,21 @@ function inc() {
     border: none;
     border-radius: 8px;
     outline: none;
-    background: #f1f5f3;
+    background: var(--app-slate-bg);
     font-family: inherit;
     user-select: text;
     transition: background 0.1s;
 }
 .mv-qty-stepper__input:hover {
-    background: #e8efec;
+    background: var(--app-nav-border);
 }
 .mv-qty-stepper__input:focus {
-    background: #e2f8ef;
+    background: var(--app-nav-active-bg);
 }
 .mv-qty-stepper__confirm {
     width: 34px;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .mv-qty-stepper__val {
@@ -253,7 +253,7 @@ function inc() {
     text-align: center;
     font-size: 15px;
     font-weight: 700;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
     user-select: none;
 }
 </style>

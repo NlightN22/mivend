@@ -30,7 +30,7 @@ defineEmits<{ close: [] }>();
 .mv-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(14, 28, 22, 0.45);
+    background: var(--app-ink-14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -39,9 +39,9 @@ defineEmits<{ close: [] }>();
 }
 
 .mv-modal {
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 24px;
-    box-shadow: 0 24px 64px rgba(14, 28, 22, 0.18);
+    box-shadow: 0 24px 64px var(--app-ink-14);
     width: 100%;
     max-width: 480px;
     max-height: 80vh;
@@ -56,7 +56,7 @@ defineEmits<{ close: [] }>();
     justify-content: space-between;
     gap: 12px;
     padding: 20px 20px 16px;
-    border-bottom: 1px solid #eef3f0;
+    border-bottom: 1px solid var(--app-nav-border);
     flex-shrink: 0;
 }
 
@@ -64,18 +64,18 @@ defineEmits<{ close: [] }>();
     font-size: 18px;
     font-weight: 900;
     letter-spacing: -0.03em;
-    color: #14231f;
+    color: var(--app-nav-text-strong);
 }
 
 .mv-modal__close {
     border: 0;
-    background: #f3f8f6;
+    background: var(--app-fill-soft);
     border-radius: 10px;
     width: 32px;
     height: 32px;
     font-size: 13px;
     cursor: pointer;
-    color: #66736e;
+    color: var(--app-nav-label);
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -83,8 +83,8 @@ defineEmits<{ close: [] }>();
 }
 
 .mv-modal__close:hover {
-    background: #e6f0ec;
-    color: #14231f;
+    background: var(--app-nav-border);
+    color: var(--app-nav-text-strong);
 }
 
 .mv-modal__body {

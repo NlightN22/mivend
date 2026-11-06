@@ -25,10 +25,14 @@ const { companyName: displayName } = useCompanyName();
     min-height: 170px;
     border-radius: 28px;
     background:
-        radial-gradient(circle at 88% 20%, rgba(217, 255, 79, 0.78), transparent 32%),
-        linear-gradient(135deg, #ffffff 0%, #eafff4 100%);
-    border: 1px solid rgba(221, 231, 226, 0.86);
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+        radial-gradient(
+            circle at 88% 20%,
+            color-mix(in srgb, var(--app-lime-bg) 78%, transparent),
+            transparent 32%
+        ),
+        linear-gradient(135deg, var(--app-surface) 0%, var(--el-color-primary-light-9) 100%);
+    border: 1px solid var(--app-border-glass);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 28px;
     margin-bottom: 22px;
 }
@@ -41,7 +45,7 @@ const { companyName: displayName } = useCompanyName();
     width: 280px;
     height: 280px;
     border-radius: 50%;
-    background: rgba(0, 168, 120, 0.11);
+    background: var(--app-green-glow);
 }
 
 .account-hero__copy {
@@ -54,9 +58,9 @@ const { companyName: displayName } = useCompanyName();
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: #fff;
-    border: 1px solid #dde7e2;
-    color: #008a64;
+    background: var(--app-surface);
+    border: 1px solid var(--app-nav-border-strong);
+    color: var(--app-nav-accent);
     border-radius: 999px;
     padding: 8px 12px;
     font-size: 13px;
@@ -73,7 +77,7 @@ const { companyName: displayName } = useCompanyName();
 
 .account-hero__text {
     margin: 0;
-    color: #4b5c56;
+    color: var(--app-text-body3);
     font-size: 16px;
     line-height: 1.48;
 }

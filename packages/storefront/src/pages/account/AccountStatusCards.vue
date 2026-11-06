@@ -69,10 +69,10 @@ const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);
 }
 
 .status-cards__card {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.86);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 20px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 20px;
     min-height: 138px;
 }
@@ -86,7 +86,7 @@ const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);
 }
 
 .status-cards__title {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 14px;
     font-weight: 800;
 }
@@ -97,20 +97,20 @@ const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);
     border-radius: 14px;
     display: grid;
     place-items: center;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
     font-size: 21px;
     font-weight: 950;
 }
 
 .status-cards__card--blue .status-cards__icon {
-    background: #edf5ff;
-    color: #1c65b8;
+    background: var(--app-slate-bg);
+    color: var(--app-slate-fg);
 }
 
 .status-cards__card--warning .status-cards__icon {
-    background: #fff4e3;
-    color: #b36a00;
+    background: var(--app-orange-bg);
+    color: var(--app-accent-orange-active);
 }
 
 .status-cards__value {
@@ -121,7 +121,7 @@ const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);
 }
 
 .status-cards__note {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.35;
 }

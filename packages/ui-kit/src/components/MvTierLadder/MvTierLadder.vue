@@ -36,8 +36,8 @@ const fraction = computed(() =>
 
 <style scoped>
 .mv-tier-ladder {
-    --tier-orange: var(--app-accent-orange, #ff8a00);
-    --tier-green: #00a878;
+    --tier-orange: var(--app-accent-orange);
+    --tier-green: var(--app-nav-accent-soft);
     --tier-color: color-mix(
         in srgb,
         var(--tier-green) calc(var(--tier-progress, 0) * 100%),
@@ -59,19 +59,19 @@ const fraction = computed(() =>
 
 .mv-tier-ladder__current {
     font-weight: 700;
-    color: #5b6b65;
+    color: var(--app-tier-text);
 }
 
 .mv-tier-ladder__target {
     font-weight: 600;
-    color: color-mix(in srgb, var(--tier-color) 70%, #000);
+    color: color-mix(in srgb, var(--tier-color) 70%, var(--app-mix-dark));
 }
 
 .mv-tier-ladder__track {
     position: relative;
     height: 6px;
     border-radius: 4px;
-    background: #e3efe9;
+    background: var(--app-tier-track);
 }
 
 .mv-tier-ladder__fill {
@@ -90,10 +90,10 @@ const fraction = computed(() =>
     height: 12px;
     margin-left: -6px;
     box-sizing: border-box;
-    border: 2px solid #fff;
+    border: 2px solid var(--app-surface);
     border-radius: 50%;
-    background: color-mix(in srgb, var(--tier-color) 70%, #000);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    background: color-mix(in srgb, var(--tier-color) 70%, var(--app-mix-dark));
+    box-shadow: 0 1px 2px var(--app-ink-14);
     transition: left 0.25s ease;
 }
 
@@ -102,7 +102,7 @@ const fraction = computed(() =>
     align-items: center;
     justify-content: center;
     gap: 6px;
-    color: #00875f;
+    color: var(--app-tier-ok);
 }
 
 .mv-tier-ladder__achieved {

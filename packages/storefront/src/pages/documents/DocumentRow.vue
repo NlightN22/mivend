@@ -157,10 +157,10 @@ const { t } = useI18n();
 
 <style scoped>
 .doc-row {
-    background: #fff;
-    border: 1px solid rgba(221, 231, 226, 0.9);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-glass);
     border-radius: 22px;
-    box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
+    box-shadow: 0 14px 36px var(--app-ink-08);
     padding: 16px 18px;
     display: grid;
     grid-template-columns: 46px minmax(0, 1.25fr) 150px 140px 120px 180px;
@@ -176,21 +176,21 @@ const { t } = useI18n();
     place-items: center;
     font-size: 22px;
     font-weight: 950;
-    background: #eaf4ff;
-    color: #1f65b2;
+    background: var(--app-slate-bg);
+    color: var(--app-slate-fg);
 }
 
 .doc-row__icon--green {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 .doc-row__icon--orange {
-    background: #fff5df;
-    color: #e87800;
+    background: var(--app-warn2-bg);
+    color: var(--app-stock-low-fg);
 }
 .doc-row__icon--blue {
-    background: #eaf4ff;
-    color: #1f65b2;
+    background: var(--app-slate-bg);
+    color: var(--app-slate-fg);
 }
 
 .doc-row__name {
@@ -201,13 +201,13 @@ const { t } = useI18n();
 }
 
 .doc-row__meta {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.35;
 }
 
 .doc-row__cell-title {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 12px;
     margin-bottom: 4px;
     font-weight: 850;
@@ -229,21 +229,21 @@ const { t } = useI18n();
     font-size: 13px;
     font-weight: 950;
     white-space: nowrap;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .doc-row__pill--warning {
-    background: #fff5df;
-    color: #e87800;
+    background: var(--app-warn2-bg);
+    color: var(--app-stock-low-fg);
 }
 .doc-row__pill--muted {
-    background: #eef4f1;
-    color: #5f6e68;
+    background: var(--app-nav-border);
+    color: var(--app-nav-label);
 }
 .doc-row__pill--green {
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
 }
 
 .doc-row__actions {

@@ -1,5 +1,5 @@
 .emp-btn {
-    border: 1px solid #dde7e2;
+    border: 1px solid var(--app-nav-border-strong);
     border-radius: 12px;
     padding: 0 14px;
     min-height: 38px;
@@ -8,19 +8,19 @@
     font-size: 13px;
     cursor: pointer;
     white-space: nowrap;
-    background: #f3f8f6;
-    color: #263732;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
     transition: 0.14s ease;
 }
 .emp-btn--primary {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
     border-color: transparent;
 }
 .emp-btn--danger {
-    background: #fff2f1;
-    color: #b42318;
-    border-color: #fdd;
+    background: var(--app-danger2-bg);
+    color: var(--app-danger-fg);
+    border-color: var(--el-border-color);
 }
 .emp-btn--sm {
     min-height: 32px;

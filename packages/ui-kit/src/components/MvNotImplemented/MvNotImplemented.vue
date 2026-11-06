@@ -28,8 +28,8 @@ withDefaults(
     justify-content: center;
     gap: 6px;
     text-align: center;
-    background: var(--app-surface, #fff);
-    border: 1px dashed var(--app-nav-border, #dfe7e3);
+    background: var(--app-surface);
+    border: 1px dashed var(--app-nav-border);
     border-radius: var(--app-radius-lg, 16px);
 }
 
@@ -43,7 +43,7 @@ withDefaults(
 
 .mv-not-implemented__title {
     font-weight: 800;
-    color: var(--app-nav-text-strong, #14231f);
+    color: var(--app-nav-text-strong);
 }
 
 .mv-not-implemented--page .mv-not-implemented__title {
@@ -56,7 +56,7 @@ withDefaults(
 
 .mv-not-implemented__message {
     font-size: var(--app-font-size-body, 14px);
-    color: var(--app-nav-label, #66736e);
+    color: var(--app-nav-label);
 }
 
 .mv-not-implemented--widget .mv-not-implemented__message {

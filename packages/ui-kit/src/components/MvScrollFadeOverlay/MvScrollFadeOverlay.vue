@@ -58,12 +58,12 @@ const emit = defineEmits<{
 
 .mv-scroll-fade-overlay__fade--left {
     left: 0;
-    background: linear-gradient(to right, var(--app-bg, #f6f8fb), transparent);
+    background: linear-gradient(to right, var(--el-bg-color-page), transparent);
 }
 
 .mv-scroll-fade-overlay__fade--right {
     right: 0;
-    background: linear-gradient(to left, var(--app-bg, #f6f8fb), transparent);
+    background: linear-gradient(to left, var(--el-bg-color-page), transparent);
 }
 
 /* Positioned via `top: calc(50% - half the button's own size)`, not `transform: translateY(-50%)`

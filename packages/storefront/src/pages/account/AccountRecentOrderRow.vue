@@ -83,9 +83,9 @@ const meta = computed(() =>
     align-items: center;
     gap: 14px;
     padding: 14px 16px;
-    border: 1px solid #edf2ef;
+    border: 1px solid var(--app-nav-border);
     border-radius: 18px;
-    background: #fbfdfc;
+    background: var(--app-fill-faint);
 }
 
 .recent-order__cell {
@@ -99,7 +99,7 @@ const meta = computed(() =>
 }
 
 .recent-order__meta {
-    color: #66736e;
+    color: var(--app-nav-label);
     font-size: 13px;
     line-height: 1.32;
 }
@@ -123,8 +123,8 @@ const meta = computed(() =>
     align-items: center;
     padding: 0 10px;
     border-radius: 999px;
-    background: #e2f8ef;
-    color: #008a64;
+    background: var(--app-nav-active-bg);
+    color: var(--app-nav-accent);
     font-size: 13px;
     font-weight: 950;
     white-space: nowrap;
@@ -133,18 +133,18 @@ const meta = computed(() =>
 }
 
 .recent-order__pill--muted {
-    background: #eef4f1;
-    color: #5f6e68;
+    background: var(--app-nav-border);
+    color: var(--app-nav-label);
 }
 
 .recent-order__pill--warning {
-    background: #fff4e3;
-    color: #a45e00;
+    background: var(--app-orange-bg);
+    color: var(--app-orange-fg);
 }
 
 .recent-order__pill--error {
-    background: #ffeeed;
-    color: #c0362c;
+    background: var(--app-danger2-bg);
+    color: var(--app-orange-fg);
 }
 
 .recent-order__actions {
@@ -161,8 +161,8 @@ const meta = computed(() =>
     min-width: 86px;
     border-radius: 12px;
     padding: 0 13px;
-    background: #f3f8f6;
-    color: #263732;
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
     font: inherit;
     font-weight: 950;
     font-size: 13px;
@@ -177,7 +177,7 @@ const meta = computed(() =>
 }
 
 .recent-order__btn--primary {
-    background: #00a878;
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-on-accent);
 }
 </style>

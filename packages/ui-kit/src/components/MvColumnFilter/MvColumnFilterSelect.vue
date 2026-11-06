@@ -84,29 +84,29 @@ function select(value: string): void {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: var(--app-radius-md, 12px);
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--el-fill-color-light);
     font-size: 13px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
     cursor: pointer;
 }
 
 .mv-column-filter-select__placeholder {
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
 }
 
 .mv-column-filter-select__arrow {
     width: 12px;
     height: 12px;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     flex-shrink: 0;
 }
 
 .mv-column-filter-select__clear {
     border: none;
     background: transparent;
-    color: #98a2b3;
+    color: var(--app-text-placeholder);
     font-size: 15px;
     line-height: 1;
     cursor: pointer;
@@ -120,10 +120,10 @@ function select(value: string): void {
     z-index: var(--mv-z-dropdown);
     max-height: 220px;
     overflow-y: auto;
-    background: white;
-    border: 1px solid #e4e7ec;
+    background: var(--app-surface);
+    border: 1px solid var(--el-border-color);
     border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(20, 42, 65, 0.12);
+    box-shadow: 0 10px 30px var(--app-ink-10);
     padding: 4px;
     display: flex;
     flex-direction: column;
@@ -133,12 +133,12 @@ function select(value: string): void {
 .mv-column-filter-select__search {
     height: 30px;
     padding: 0 8px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--el-border-color);
     border-radius: 6px;
     font-size: 13px;
     position: sticky;
     top: 0;
-    background: var(--el-bg-color, #fff);
+    background: var(--app-surface);
     flex-shrink: 0;
 }
 
@@ -149,16 +149,16 @@ function select(value: string): void {
     padding: 6px 8px;
     border-radius: 6px;
     font-size: 13px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--el-text-color-primary);
     cursor: pointer;
 }
 
 .mv-column-filter-select__option:hover {
-    background: #f8fafc;
+    background: var(--app-slate-bg);
 }
 
 .mv-column-filter-select__option--active {
-    color: var(--el-color-primary, #00b894);
+    color: var(--el-color-primary);
     font-weight: 600;
 }
 </style>

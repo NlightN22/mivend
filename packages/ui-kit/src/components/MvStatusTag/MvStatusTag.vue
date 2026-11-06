@@ -50,40 +50,40 @@ const defaultLabels: Record<StatusTagVariant, string> = {
 }
 
 .mv-status-tag--in-stock {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--app-ok-bg);
+    color: var(--app-ok-fg);
 }
 .mv-status-tag--low-stock {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--app-warn-bg);
+    color: var(--app-warn-fg);
 }
 .mv-status-tag--by-order {
-    background: #e0f2fe;
-    color: #0c4a6e;
+    background: var(--app-info-bg);
+    color: var(--app-info-fg);
 }
 .mv-status-tag--promo {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--app-danger-bg);
+    color: var(--app-danger-fg);
 }
 .mv-status-tag--analog {
-    background: #f3e8ff;
-    color: #6b21a8;
+    background: var(--app-violet-bg);
+    color: var(--app-violet-fg);
 }
 .mv-status-tag--original {
-    background: #f0fffa;
-    color: #065f46;
-    border: 1px solid #00b894;
+    background: var(--el-color-primary-light-9);
+    color: var(--app-ok-fg);
+    border: 1px solid var(--el-color-primary);
 }
 .mv-status-tag--in-cart {
-    background: #fff3e6;
-    color: #9a4b00;
+    background: var(--app-orange-bg);
+    color: var(--app-orange-fg);
 }
 .mv-status-tag--reserved {
-    background: #ede9fe;
-    color: #4c1d95;
+    background: var(--app-violet2-bg);
+    color: var(--app-violet2-fg);
 }
 .mv-status-tag--unavailable {
-    background: #f1f5f9;
-    color: #64748b;
+    background: var(--app-slate-bg);
+    color: var(--app-slate-fg);
 }
 </style>

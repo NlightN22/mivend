@@ -3,10 +3,10 @@
     left: 0;
     right: 0;
     top: 100%;
-    background: rgba(255, 255, 255, 0.98);
+    background: var(--app-glass-strong);
     border-top: 1px solid var(--app-nav-border);
     border-bottom: 1px solid var(--app-nav-border-strong);
-    box-shadow: 0 26px 60px rgba(20, 35, 31, 0.16);
+    box-shadow: 0 26px 60px var(--app-ink-14);
     backdrop-filter: blur(18px);
     z-index: var(--mv-z-dropdown);
     max-height: calc(100vh - 140px);
