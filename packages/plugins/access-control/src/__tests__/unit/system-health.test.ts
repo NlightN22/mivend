@@ -33,13 +33,21 @@ const HEALTHY: Counts = {
     defaultTaxZone: { id: 1 },
 };
 
+const countArgs: unknown[] = [];
+const countIn =
+    (n: number) =>
+    async (arg: unknown): Promise<number> => {
+        countArgs.push(arg);
+        return n;
+    };
+
 function serviceWith(counts: Counts): SystemHealthService {
     const repos = new Map<unknown, object>([
         [Zone, { count: async () => counts.zone }],
         [TaxCategory, { count: async () => counts.taxCategory }],
         [TaxRate, { count: async () => counts.taxRate }],
-        [ShippingMethod, { count: async () => counts.shipping }],
-        [PaymentMethod, { count: async () => counts.payment }],
+        [ShippingMethod, { count: countIn(counts.shipping) }],
+        [PaymentMethod, { count: countIn(counts.payment) }],
         [Channel, { findOne: async () => ({ defaultTaxZone: counts.defaultTaxZone }) }],
     ]);
     const connection = { getRepository: (_ctx: unknown, entity: unknown) => repos.get(entity) };
@@ -53,6 +61,15 @@ describe('SystemHealthService.checklist', () => {
         const items = await serviceWith(HEALTHY).checklist(ctx);
         expect(items).toHaveLength(6);
         expect(items.every(item => item.ok)).toBe(true);
+    });
+
+    it('counts shipping and payment methods only in the request channel', async () => {
+        countArgs.length = 0;
+        await serviceWith(HEALTHY).checklist(ctx);
+        expect(countArgs).toHaveLength(2);
+        for (const arg of countArgs) {
+            expect(arg).toMatchObject({ where: { channels: { id: 1 } } });
+        }
     });
 
     it('flags only the default tax zone when everything else exists', async () => {

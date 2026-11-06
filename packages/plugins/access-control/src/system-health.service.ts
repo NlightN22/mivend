@@ -39,10 +39,10 @@ export class SystemHealthService {
                     .findOne({ where: { id: ctx.channelId }, relations: { defaultTaxZone: true } }),
                 this.connection
                     .getRepository(ctx, ShippingMethod)
-                    .count({ where: { deletedAt: IsNull() } }),
+                    .count({ where: { deletedAt: IsNull(), channels: { id: ctx.channelId } } }),
                 this.connection
                     .getRepository(ctx, PaymentMethod)
-                    .count({ where: { enabled: true } }),
+                    .count({ where: { enabled: true, channels: { id: ctx.channelId } } }),
             ]);
         const hasDefaultTaxZone = Boolean(channel?.defaultTaxZone);
         return [
