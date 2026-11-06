@@ -77,4 +77,34 @@ test.describe('Team directory', () => {
             await s.context.close();
         }
     });
+
+    test('the department column filter narrows the list', async ({ browser }) => {
+        const s = await openManagerAs(browser, 'director');
+        try {
+            const { page } = s;
+            await page.goto('/team');
+            const main = page.getByRole('main');
+            await expect(main.getByText('Petr Manager', { exact: true })).toBeVisible({
+                timeout: 15000,
+            });
+            await main
+                .locator('th')
+                .filter({ hasText: 'Department' })
+                .first()
+                .locator('.p-datatable-filter button')
+                .click();
+            const overlay = page.locator('.p-datatable-filter-overlay');
+            await overlay.locator('.mv-column-filter-select__trigger').click();
+            await overlay
+                .locator('.mv-column-filter-select__option')
+                .filter({ hasText: 'E2E Vis department A' })
+                .click();
+            await expect(main.getByText(searchable, { exact: true })).toBeVisible({
+                timeout: 15000,
+            });
+            await expect(main.getByText('Petr Manager', { exact: true })).toHaveCount(0);
+        } finally {
+            await s.context.close();
+        }
+    });
 });
