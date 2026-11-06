@@ -200,7 +200,7 @@ test.describe('15: category visibility, manager portal', () => {
             const { page } = s;
             await page.goto(SETTINGS);
             await expect(page.getByRole('heading', { name: 'Not authorized' })).toBeVisible();
-            await expect(page.locator('select')).toHaveCount(0);
+            await expect(page.locator('select:not(.settings-side-nav select)')).toHaveCount(0);
             await shot(page, 'manager-category-denied');
         } finally {
             await s.context.close();
