@@ -13,7 +13,9 @@ const searchable = computed(() => props.config.options.length > SEARCHABLE_OPTIO
 const visibleOptions = computed(() => filterOptionsByQuery(props.config.options, query.value));
 const rootEl = ref<HTMLElement | null>(null);
 
+// The overlay's click fix re-dispatches a synthetic click on body, which must not close our own panel.
 function onDocClick(e: MouseEvent): void {
+    if (!e.isTrusted) return;
     if (rootEl.value && !rootEl.value.contains(e.target as Node)) open.value = false;
 }
 onMounted(() => document.addEventListener('click', onDocClick));
