@@ -251,7 +251,7 @@ ci:
 
 # ── Tests ──────────────────────────────────────────────────────────────────────
 
-# One heavy unit/int/access run at a time across sessions: the box has 8 cores and parallel runs make every one of them slow.
+# One heavy unit/int/access run at a time across sessions: the box has 8 cores and parallel runs make every one of them slow. `make ci` runs outside it on purpose (audit session only).
 TEST_LOCK = flock /tmp/mivend-test.lock
 
 test:

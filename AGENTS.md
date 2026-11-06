@@ -148,7 +148,7 @@ Always run tests via Makefile, not directly through pnpm:
 - `make test-access` — role x entity API visibility matrix on a throwaway server and database (no contour needed)
 - `make e2e-dev` — Playwright E2E (requires `make dev` + `make seed`)
 
-`make test`, `make test-int` and `make test-access` share one `flock` (`/tmp/mivend-test.lock`), so sessions queue instead of running in parallel; a silent wait is a queue, not a hang.
+`make test`, `make test-int` and `make test-access` share one `flock` (`/tmp/mivend-test.lock`), so sessions queue instead of running in parallel; a silent wait is a queue, not a hang; run it in the background when it may wait.
 
 E2E runs by group (`make e2e-group G=<name>`), full suite only for audit/owner request: `docs/testing-strategy.md` "E2E groups".
 
