@@ -7,6 +7,7 @@ import {
     MvPanel,
     MvWarningBanner,
     MvPagination,
+    MvSkeleton,
     MvStatusBadge,
     MvDataTableToolbar,
     useColumnVisibility,
@@ -58,6 +59,7 @@ const summary = ref<OrdersSummary | null>(null);
 const managers = ref<ManagerOption[]>([]);
 const branches = ref<BranchOption[]>([]);
 const loading = ref(true);
+const summaryLoading = ref(true);
 const departmentName = ref<string | null>(null);
 
 const CHIPS: FilterChip[] = [
@@ -227,18 +229,28 @@ async function loadOrders(): Promise<void> {
     totalItems.value = result.totalItems;
 }
 
+async function loadSummary(): Promise<void> {
+    summaryLoading.value = true;
+    try {
+        summary.value = await fetchOrdersSummary();
+    } catch (e) {
+        console.warn('[orders] could not load summary:', e);
+    } finally {
+        summaryLoading.value = false;
+    }
+}
+
 async function loadAll(): Promise<void> {
     loading.value = true;
+    void loadSummary();
     try {
-        const [ordersResult, summaryResult, managerOptions, branchOptions] = await Promise.all([
+        const [ordersResult, managerOptions, branchOptions] = await Promise.all([
             fetchOrdersPage(filters, page.value, pageSize, sort.value),
-            fetchOrdersSummary(),
             managers.value.length ? Promise.resolve(managers.value) : fetchManagerOptions(),
             branches.value.length ? Promise.resolve(branches.value) : fetchBranchOptions(),
         ]);
         orders.value = ordersResult.items;
         totalItems.value = ordersResult.totalItems;
-        summary.value = summaryResult;
         managers.value = managerOptions;
         branches.value = branchOptions;
     } finally {
@@ -335,7 +347,7 @@ const todayAmountFormatted = computed(() => {
             Some are overdue for shipment or have a price adjustment awaiting approval.
         </MvWarningBanner>
 
-        <MvKpiCarousel v-if="summary" class="orders-page__kpis">
+        <MvKpiCarousel v-if="summary" class="orders-page__kpis" data-testid="orders-kpis">
             <MvKpiCard label="Open orders" :value="summary.openCount" />
             <MvKpiCard label="Waiting approval" :value="summary.waitingApprovalCount" accent />
             <MvKpiCard
@@ -344,6 +356,12 @@ const todayAmountFormatted = computed(() => {
                 :caption="`${summary.todayCount} orders today`"
             />
         </MvKpiCarousel>
+        <MvSkeleton
+            v-else-if="summaryLoading"
+            class="orders-page__kpis"
+            height="96px"
+            data-testid="orders-kpis-skeleton"
+        />
 
         <div class="orders-page__grid">
             <MvPanel title="Orders list">

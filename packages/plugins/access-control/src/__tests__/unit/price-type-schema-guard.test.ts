@@ -29,6 +29,7 @@ const INVENTORY: Record<string, string> = {
         'lists counterparties without a resolved type; exposes no price type',
     'counterparty/src/trading-point.schema.ts::priceType':
         'storefront: the customer own counterparty type',
+    'erp-order/src/erp-order.plugin.ts::pendingPriceAdjustmentOrderIds': 'order ids only',
     'price-entry/src/price-entry.schema.ts::bulkUpsertPriceEntries':
         'PriceEntryAdminResolver: every code asserted',
     'price-entry/src/price-entry.schema.ts::compareAtPrice': 'storefront: own price type',

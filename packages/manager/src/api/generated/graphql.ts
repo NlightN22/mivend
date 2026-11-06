@@ -11903,22 +11903,6 @@ export type OrdersPageQuery = {
     };
 };
 
-export type OrdersSummaryQueryVariables = Exact<{
-    overdueBefore: Scalars['DateTime']['input'];
-    todayStart: Scalars['DateTime']['input'];
-}>;
-
-export type OrdersSummaryQuery = {
-    pendingPriceAdjustmentOrderIds: Array<string>;
-    todayAmount: any;
-    openAmount: any;
-    open: { totalItems: number };
-    overdue: { totalItems: number };
-    today: { totalItems: number };
-    processing: { totalItems: number };
-    drafts: { totalItems: number };
-};
-
 export type AttentionOrderFieldsFragment = {
     id: string;
     code: string;
@@ -11927,32 +11911,42 @@ export type AttentionOrderFieldsFragment = {
     customer: { firstName: string; lastName: string } | null;
 };
 
-export type OrdersAttentionQueryVariables = Exact<{
-    pendingIds: Array<Scalars['String']['input']> | Scalars['String']['input'];
+export type OrdersSummaryQueryVariables = Exact<{
     overdueBefore: Scalars['DateTime']['input'];
+    todayStart: Scalars['DateTime']['input'];
 }>;
 
-export type OrdersAttentionQuery = {
-    waiting: {
-        totalItems: number;
-        items: Array<{
-            id: string;
-            code: string;
-            state: string;
-            orderPlacedAt: any | null;
-            customer: { firstName: string; lastName: string } | null;
-        }>;
+export type OrdersSummaryQuery = {
+    todayAmount: any;
+    openAmount: any;
+    open: { totalItems: number };
+    overdue: { totalItems: number };
+    today: { totalItems: number };
+    processing: { totalItems: number };
+    drafts: { totalItems: number };
+    ordersAttention: {
+        pendingPriceAdjustmentOrderIds: Array<string>;
+        waiting: {
+            totalItems: number;
+            items: Array<{
+                id: string;
+                code: string;
+                state: string;
+                orderPlacedAt: any | null;
+                customer: { firstName: string; lastName: string } | null;
+            }>;
+        };
+        overdueRows: {
+            items: Array<{
+                id: string;
+                code: string;
+                state: string;
+                orderPlacedAt: any | null;
+                customer: { firstName: string; lastName: string } | null;
+            }>;
+        };
+        both: { totalItems: number };
     };
-    overdueRows: {
-        items: Array<{
-            id: string;
-            code: string;
-            state: string;
-            orderPlacedAt: any | null;
-            customer: { firstName: string; lastName: string } | null;
-        }>;
-    };
-    both: { totalItems: number };
 };
 
 export type TeamMembersQueryVariables = Exact<{ [key: string]: never }>;
@@ -15148,30 +15142,22 @@ export const OrdersSummaryDocument = new TypedDocumentString(`
   drafts: visibleOrders(options: {take: 0, filter: {state: {eq: "Draft"}}}) {
     totalItems
   }
-  pendingPriceAdjustmentOrderIds
-}
-    `) as unknown as TypedDocumentString<OrdersSummaryQuery, OrdersSummaryQueryVariables>;
-export const OrdersAttentionDocument = new TypedDocumentString(`
-    query OrdersAttention($pendingIds: [String!]!, $overdueBefore: DateTime!) {
-  waiting: visibleOrders(
-    options: {take: 5, filter: {id: {in: $pendingIds}, state: {notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"]}}}
-  ) {
-    totalItems
-    items {
-      ...AttentionOrderFields
+  ordersAttention(overdueBefore: $overdueBefore) {
+    pendingPriceAdjustmentOrderIds
+    waiting {
+      totalItems
+      items {
+        ...AttentionOrderFields
+      }
     }
-  }
-  overdueRows: visibleOrders(
-    options: {take: 5, sort: {orderPlacedAt: ASC}, filter: {state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
-  ) {
-    items {
-      ...AttentionOrderFields
+    overdueRows {
+      items {
+        ...AttentionOrderFields
+      }
     }
-  }
-  both: visibleOrders(
-    options: {take: 0, filter: {id: {in: $pendingIds}, state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
-  ) {
-    totalItems
+    both {
+      totalItems
+    }
   }
 }
     fragment AttentionOrderFields on Order {
@@ -15183,7 +15169,7 @@ export const OrdersAttentionDocument = new TypedDocumentString(`
     firstName
     lastName
   }
-}`) as unknown as TypedDocumentString<OrdersAttentionQuery, OrdersAttentionQueryVariables>;
+}`) as unknown as TypedDocumentString<OrdersSummaryQuery, OrdersSummaryQueryVariables>;
 export const TeamMembersDocument = new TypedDocumentString(`
     query TeamMembers {
   teamMembers {

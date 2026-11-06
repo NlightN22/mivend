@@ -12,6 +12,7 @@ import {
 import gql from 'graphql-tag';
 import { subscribeAndLog } from 'shared';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
+import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { ErpOrderStatusEvent } from './erp-order.events';
@@ -39,6 +40,8 @@ import {
 import { OrderStatusProvisioningService } from './order-status-provisioning.service';
 import { OrderStatusReferenceResolver } from './order-status-reference.resolver';
 import { OrderStatusReferenceService } from './order-status-reference.service';
+import { OrdersAttentionResolver } from './orders-attention.resolver';
+import { OrdersAttentionService } from './orders-attention.service';
 import { OrderVisibilityService } from './order-visibility.service';
 import { OrderVisibilityAggregatesService } from './order-visibility-aggregates.service';
 import { OrderVisibilityAggregatesResolver } from './order-visibility-aggregates.resolver';
@@ -64,9 +67,22 @@ const adminApiSchema = gql`
         ): OrderList!
         "Sum of totalWithTax over the caller's visible orders matching options.filter"
         visibleOrdersAmount(options: OrderListOptions): Money!
+        "Orders needing attention (pending price adjustment or overdue shipment), in one request"
+        ordersAttention(overdueBefore: DateTime!): OrdersAttention!
         "Latest placed-order date per listed counterparty, visible orders only"
         lastOrderDates(counterpartyIds: [ID!]!): [CounterpartyLastOrder!]!
         orderStatuses: [OrderStatusInfo!]!
+    }
+
+    type OrdersAttention {
+        waiting: OrderList!
+        overdueRows: OrderList!
+        both: OrdersAttentionCount!
+        pendingPriceAdjustmentOrderIds: [String!]!
+    }
+
+    type OrdersAttentionCount {
+        totalItems: Int!
     }
 
     type CounterpartyLastOrder {
@@ -96,7 +112,13 @@ const adminApiSchema = gql`
 `;
 
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin, SessionManagementPlugin],
+    imports: [
+        PluginCommonModule,
+        AccessControlPlugin,
+        ApprovalWorkflowPlugin,
+        CounterpartyPlugin,
+        SessionManagementPlugin,
+    ],
     providers: [
         ErpOrderService,
         OrderStatusHistoryService,
@@ -104,6 +126,7 @@ const adminApiSchema = gql`
         OrderStatusProvisioningService,
         OrderVisibilityService,
         OrderVisibilityAggregatesService,
+        OrdersAttentionService,
         OrderTargetService,
         CoreOrderScopeService,
         { provide: 'APP_INTERCEPTOR', useClass: CoreOrderScopeInterceptor },
@@ -134,6 +157,7 @@ const adminApiSchema = gql`
         resolvers: [
             AdminOrderVisibilityResolver,
             OrderVisibilityAggregatesResolver,
+            OrdersAttentionResolver,
             OrderStatusDictionaryResolver,
             DraftOrderDeliveryResolver,
             ScopedOrdersResolver,

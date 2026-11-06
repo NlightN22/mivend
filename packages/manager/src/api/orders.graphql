@@ -35,6 +35,17 @@ query OrdersPage($options: OrderListOptions, $managerId: ID, $search: String) {
     }
 }
 
+fragment AttentionOrderFields on Order {
+    id
+    code
+    state
+    orderPlacedAt
+    customer {
+        firstName
+        lastName
+    }
+}
+
 query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
     open: visibleOrders(
         options: {
@@ -69,57 +80,22 @@ query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
     drafts: visibleOrders(options: { take: 0, filter: { state: { eq: "Draft" } } }) {
         totalItems
     }
-    pendingPriceAdjustmentOrderIds
-}
-
-fragment AttentionOrderFields on Order {
-    id
-    code
-    state
-    orderPlacedAt
-    customer {
-        firstName
-        lastName
-    }
-}
-
-query OrdersAttention($pendingIds: [String!]!, $overdueBefore: DateTime!) {
-    waiting: visibleOrders(
-        options: {
-            take: 5
-            filter: {
-                id: { in: $pendingIds }
-                state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] }
+    ordersAttention(overdueBefore: $overdueBefore) {
+        pendingPriceAdjustmentOrderIds
+        waiting {
+            totalItems
+            items {
+                ...AttentionOrderFields
             }
         }
-    ) {
-        totalItems
-        items {
-            ...AttentionOrderFields
-        }
-    }
-    overdueRows: visibleOrders(
-        options: {
-            take: 5
-            sort: { orderPlacedAt: ASC }
-            filter: { state: { eq: "PaymentSettled" }, orderPlacedAt: { before: $overdueBefore } }
-        }
-    ) {
-        items {
-            ...AttentionOrderFields
-        }
-    }
-    both: visibleOrders(
-        options: {
-            take: 0
-            filter: {
-                id: { in: $pendingIds }
-                state: { eq: "PaymentSettled" }
-                orderPlacedAt: { before: $overdueBefore }
+        overdueRows {
+            items {
+                ...AttentionOrderFields
             }
         }
-    ) {
-        totalItems
+        both {
+            totalItems
+        }
     }
 }
 

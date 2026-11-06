@@ -5,7 +5,6 @@ import {
     DeleteTableViewDocument,
     MyTableViewsDocument,
     OrdersPageDocument,
-    OrdersAttentionDocument,
     OrdersSummaryDocument,
     SaveTableViewDocument,
     TeamMembersDocument,
@@ -183,11 +182,8 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
     ).toISOString();
 
     const result = await adminApi(OrdersSummaryDocument, { overdueBefore, todayStart });
-    const pendingIds = new Set(result.pendingPriceAdjustmentOrderIds);
-    const attention = await adminApi(OrdersAttentionDocument, {
-        pendingIds: [...pendingIds],
-        overdueBefore,
-    });
+    const attention = result.ordersAttention;
+    const pendingIds = new Set(attention.pendingPriceAdjustmentOrderIds);
 
     const seen = new Set<string>();
     const attentionCandidates: AttentionCandidate[] = [

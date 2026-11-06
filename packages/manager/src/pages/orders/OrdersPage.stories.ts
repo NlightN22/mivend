@@ -176,12 +176,12 @@ function mockOrdersData(): void {
         openAmount: ORDERS.reduce((sum, o) => sum + o.totalWithTax, 0),
         processing: { totalItems: 2 },
         drafts: { totalItems: 0 },
-        pendingPriceAdjustmentOrderIds: [],
-    }));
-    registerMock('OrdersAttention', () => ({
-        waiting: { totalItems: 0, items: [] },
-        overdueRows: { items: [] },
-        both: { totalItems: 0 },
+        ordersAttention: {
+            pendingPriceAdjustmentOrderIds: [],
+            waiting: { totalItems: 0, items: [] },
+            overdueRows: { items: [] },
+            both: { totalItems: 0 },
+        },
     }));
     registerMock('TeamMembers', () => ({
         teamMembers: [
@@ -223,12 +223,12 @@ export const Empty: Story = {
                 openAmount: 0,
                 processing: { totalItems: 0 },
                 drafts: { totalItems: 0 },
-                pendingPriceAdjustmentOrderIds: [],
-            }));
-            registerMock('OrdersAttention', () => ({
-                waiting: { totalItems: 0, items: [] },
-                overdueRows: { items: [] },
-                both: { totalItems: 0 },
+                ordersAttention: {
+                    pendingPriceAdjustmentOrderIds: [],
+                    waiting: { totalItems: 0, items: [] },
+                    overdueRows: { items: [] },
+                    both: { totalItems: 0 },
+                },
             }));
             registerMock('TeamMembers', () => ({ teamMembers: [] }));
             registerMock('Branches', () => ({ branches: [] }));
