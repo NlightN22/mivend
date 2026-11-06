@@ -255,10 +255,8 @@ onMounted(() => {
     uninstallFilterOverlayClickFix = installFilterOverlayClickFix();
 });
 onBeforeUnmount(() => uninstallFilterOverlayClickFix?.());
-function filterActiveClass(field: string): string | undefined {
-    return hasValue(tableState.value.filters[field])
-        ? 'mv-advanced-data-table__th--filtered'
-        : undefined;
+function isFiltered(field: string): boolean {
+    return hasValue(tableState.value.filters[field]);
 }
 const activeFilterChips = computed<ActiveFilterChip[]>(() => {
     const f = tableState.value.filters;
@@ -562,7 +560,6 @@ const isMobile = useIsMobileViewport(800);
                     :key="col.field"
                     :field="col.field"
                     :style="columnStyle(col)"
-                    :pt="{ headerCell: { class: filterActiveClass(col.field) } }"
                     :show-filter-match-modes="false"
                     :show-filter-operator="false"
                     :show-add-button="false"
@@ -571,6 +568,10 @@ const isMobile = useIsMobileViewport(800);
                 >
                     <template #header>
                         <span class="mv-advanced-data-table__col-title">{{ col.header }}</span>
+                        <i
+                            class="mv-advanced-data-table__filter-flag"
+                            :class="{ 'is-on': isFiltered(col.field) }"
+                        />
                         <button
                             v-if="col.sortField"
                             type="button"
@@ -755,7 +756,16 @@ const isMobile = useIsMobileViewport(800);
     height: 22px;
 }
 
-:deep(.mv-advanced-data-table__th--filtered .p-datatable-column-filter-button) {
+/* The flag sits in the header slot because a dynamic class/pt on Column rebuilds the cell and closes an open filter overlay mid-typing. */
+:deep(.mv-advanced-data-table__filter-flag) {
+    display: none;
+}
+
+:deep(
+    .mv-advanced-data-table__filter-flag.is-on
+        ~ .p-datatable-filter
+        .p-datatable-column-filter-button
+) {
     color: var(--el-color-primary, #00b894);
 }
 </style>
