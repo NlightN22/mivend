@@ -126,6 +126,7 @@ html[data-theme='dark'] {
     --app-green-glow: rgba(47, 191, 150, 0.14);
     --app-lime-glow: rgba(0, 0, 0, 0.35);
     --app-danger-glow: rgba(239, 68, 68, 0.28);
+    --app-on-accent-soft: rgba(255, 255, 255, 0.25);
     --app-glass: rgba(20, 28, 37, 0.82);
     --app-glass-strong: rgba(20, 28, 37, 0.92);
     --app-mix-dark: #ffffff;

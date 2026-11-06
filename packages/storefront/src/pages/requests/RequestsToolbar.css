@@ -102,7 +102,7 @@
 }
 
 .req-toolbar__chip--active .req-toolbar__count {
-    background: var(--app-glass);
+    background: var(--app-on-accent-soft);
     color: var(--app-on-accent);
 }
 

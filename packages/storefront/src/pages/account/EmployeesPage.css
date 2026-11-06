@@ -141,7 +141,7 @@
     color: var(--app-on-accent);
 }
 .emp-chip--active .emp-chip__count {
-    background: var(--app-glass);
+    background: var(--app-on-accent-soft);
     color: var(--app-on-accent);
 }
 

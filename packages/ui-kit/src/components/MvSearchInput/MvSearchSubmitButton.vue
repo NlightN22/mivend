@@ -73,7 +73,7 @@ defineProps<{ label: string; loading: boolean; disabled: boolean }>();
 .mv-search__spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid var(--app-glass);
+    border: 2px solid var(--app-on-accent-soft);
     border-top-color: var(--app-surface);
     border-radius: 50%;
     animation: mv-spin 0.6s linear infinite;

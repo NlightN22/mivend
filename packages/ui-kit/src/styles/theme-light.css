@@ -124,6 +124,7 @@
     --app-green-glow: rgba(0, 168, 120, 0.1);
     --app-lime-glow: rgba(200, 242, 26, 0.28);
     --app-danger-glow: rgba(239, 68, 68, 0.2);
+    --app-on-accent-soft: rgba(255, 255, 255, 0.25);
     --app-glass: rgba(255, 255, 255, 0.82);
     --app-glass-strong: rgba(255, 255, 255, 0.92);
     --app-mix-dark: #000000;
