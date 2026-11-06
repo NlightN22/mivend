@@ -352,4 +352,17 @@ function cancelRemove(): void {
         grid-column: 1 / -1;
     }
 }
+
+@media (max-width: 600px) {
+    .cart-item__unit {
+        grid-column: 3 / -1;
+    }
+    .cart-item__total {
+        grid-column: 3 / -1;
+        grid-row: 3;
+    }
+    .cart-item__qty {
+        grid-row: 4;
+    }
+}
 </style>

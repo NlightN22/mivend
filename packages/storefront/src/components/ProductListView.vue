@@ -304,8 +304,10 @@ onBeforeUnmount(() => observer?.disconnect());
     }
 }
 
-.plv-toolbar__view-btn:hover {
-    background: #f4faf7;
+@media (hover: hover) {
+    .plv-toolbar__view-btn:not(.plv-toolbar__view-btn--active):hover {
+        background: #f4faf7;
+    }
 }
 .plv-toolbar__view-btn--active {
     background: #00b894;
