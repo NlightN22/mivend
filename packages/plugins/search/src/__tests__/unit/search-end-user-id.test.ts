@@ -29,17 +29,30 @@ describe('searchEndUserId', () => {
         expect(id).not.toBe(searchEndUserId(ctx(undefined, 'tok-2')));
     });
 
-    it('falls back to the first forwarded IP for a request without a session', () => {
+    it('takes the guest IP from the right by the trusted proxy count, ignoring spoofed hops', () => {
         const req = (xff: string | undefined, ip = '10.0.0.1'): RequestContext =>
             ({
                 activeUserId: undefined,
                 req: { headers: { 'x-forwarded-for': xff }, ip },
             }) as never;
-        const id = searchEndUserId(req('203.0.113.5, 10.0.0.9'));
+        const id = searchEndUserId(req('spoofed-1, 203.0.113.5, 10.0.0.9'));
         expect(id).toMatch(/^[a-f0-9]{64}$/);
-        expect(id).toBe(searchEndUserId(req('203.0.113.5')));
-        expect(id).not.toBe(searchEndUserId(req('203.0.113.6')));
-        expect(searchEndUserId(req(undefined, '198.51.100.1'))).toMatch(/^[a-f0-9]{64}$/);
+        expect(id).toBe(searchEndUserId(req('spoofed-2, 203.0.113.5, 10.0.0.9')));
+        expect(id).not.toBe(searchEndUserId(req('spoofed-1, 203.0.113.6, 10.0.0.9')));
+        process.env.SEARCH_TRUSTED_PROXY_HOPS = '1';
+        expect(searchEndUserId(req('spoofed-1, 203.0.113.5, 10.0.0.9'))).not.toBe(id);
+        delete process.env.SEARCH_TRUSTED_PROXY_HOPS;
+    });
+
+    it('falls back to req.ip when the chain is shorter than the trusted hops', () => {
+        const req = (xff: string | undefined, ip: string): RequestContext =>
+            ({
+                activeUserId: undefined,
+                req: { headers: { 'x-forwarded-for': xff }, ip },
+            }) as never;
+        expect(searchEndUserId(req('only-one', '198.51.100.1'))).toBe(
+            searchEndUserId(req(undefined, '198.51.100.1')),
+        );
     });
 
     it('depends on the secret and is omitted without one or without a subject', () => {

@@ -4,6 +4,7 @@ import type { RequestContext } from '@vendure/core';
 import { SearchOffsetTooLargeError } from './search-errors';
 
 const DEFAULT_MAX_OFFSET = 1900;
+const DEFAULT_TRUSTED_PROXY_HOPS = 2;
 
 // Keyed hash (64 hex chars) of the customer, the anonymous session, or (no session yet) the client IP.
 export function searchEndUserId(ctx: RequestContext): string | undefined {
@@ -18,12 +19,14 @@ export function searchEndUserId(ctx: RequestContext): string | undefined {
     return createHmac('sha256', secret).update(subject).digest('hex');
 }
 
-// First X-Forwarded-For hop (the front proxy appends the real client); spoofable if it does not.
+// Counted from the right: each trusted proxy appends the address it saw, anything left of that is client-supplied.
 function clientIp(ctx: RequestContext): string | null {
     const req = ctx.req as { headers?: Record<string, unknown>; ip?: string } | undefined;
     const forwarded = req?.headers?.['x-forwarded-for'];
-    const first = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : '';
-    const ip = first || req?.ip;
+    const parts = typeof forwarded === 'string' ? forwarded.split(',').map(p => p.trim()) : [];
+    const raw = Number(process.env.SEARCH_TRUSTED_PROXY_HOPS);
+    const hops = Number.isInteger(raw) && raw > 0 ? raw : DEFAULT_TRUSTED_PROXY_HOPS;
+    const ip = (parts.length >= hops ? parts[parts.length - hops] : '') || req?.ip;
     return ip ? `ip:${ip}` : null;
 }
 
