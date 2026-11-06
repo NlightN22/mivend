@@ -1,0 +1,23 @@
+query CounterpartyActivationCounts(
+    $all: CounterpartyListOptions
+    $ready: CounterpartyListOptions
+    $missing: CounterpartyListOptions
+    $inactive: CounterpartyListOptions
+    $activated: CounterpartyListOptions
+) {
+    all: counterparties(options: $all) {
+        totalItems
+    }
+    ready: counterparties(options: $ready) {
+        totalItems
+    }
+    missing: counterparties(options: $missing) {
+        totalItems
+    }
+    inactive: counterparties(options: $inactive) {
+        totalItems
+    }
+    activated: counterparties(options: $activated) {
+        totalItems
+    }
+}

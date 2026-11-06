@@ -12,8 +12,8 @@ import {
 describe('activation table columns', () => {
     it('branch filter lists Unassigned first, then every loaded branch', () => {
         const columns = buildActivationColumns([
-            { id: 'b1', name: 'Branch A' },
-            { id: 'b2', name: 'Branch B' },
+            { id: 'b1', erpId: 'e1', name: 'Branch A' },
+            { id: 'b2', erpId: 'e2', name: 'Branch B' },
         ]);
         const filter = columns.find(c => c.field === 'branch')?.filterConfig;
         expect(filter).toMatchObject({ type: 'select' });
@@ -26,7 +26,7 @@ describe('activation table columns', () => {
 
     it('branch options follow the branches passed in, so a late load reaches the filter', () => {
         const before = buildActivationColumns([]).find(c => c.field === 'branch')?.filterConfig;
-        const after = buildActivationColumns([{ id: 'b1', name: 'Branch A' }]).find(
+        const after = buildActivationColumns([{ id: 'b1', erpId: 'e1', name: 'Branch A' }]).find(
             c => c.field === 'branch',
         )?.filterConfig;
         expect(before && 'options' in before ? before.options : []).toHaveLength(1);

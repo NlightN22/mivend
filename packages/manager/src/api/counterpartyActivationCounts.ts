@@ -1,4 +1,5 @@
 import { adminApi } from './client';
+import { CounterpartyActivationCountsDocument } from './generated/graphql';
 import {
     activationReadiness,
     toListOptions,
@@ -7,40 +8,12 @@ import {
 
 export type ReadinessCounts = Record<ReturnType<typeof activationReadiness> | 'all', number>;
 
-const COUNTS_QUERY = /* GraphQL */ `
-    query CounterpartyActivationCounts(
-        $all: CounterpartyListOptions
-        $ready: CounterpartyListOptions
-        $missing: CounterpartyListOptions
-        $inactive: CounterpartyListOptions
-        $activated: CounterpartyListOptions
-    ) {
-        all: counterparties(options: $all) {
-            totalItems
-        }
-        ready: counterparties(options: $ready) {
-            totalItems
-        }
-        missing: counterparties(options: $missing) {
-            totalItems
-        }
-        inactive: counterparties(options: $inactive) {
-            totalItems
-        }
-        activated: counterparties(options: $activated) {
-            totalItems
-        }
-    }
-`;
-
-type CountsResult = Record<string, { totalItems: number }>;
-
 // Counts follow every active filter except readiness itself, so a chip shows what clicking it yields.
 export async function fetchReadinessCounts(
     filters: Omit<ActivationFilterOptions, 'readiness'>,
 ): Promise<ReadinessCounts> {
     const base = { ...toListOptions(filters), take: 0 };
-    const result = await adminApi<CountsResult>(COUNTS_QUERY, {
+    const result = await adminApi(CounterpartyActivationCountsDocument, {
         all: base,
         ready: { ...base, readiness: 'ready' },
         missing: { ...base, readiness: 'missing-data' },

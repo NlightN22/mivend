@@ -1079,11 +1079,15 @@ export type CounterpartyList = PaginatedList & {
 /** Narrowing half of CounterpartyListOptions, for mutations that act on every row a list filter matches (issue #136) */
 export type CounterpartyListFilter = {
     branchId?: InputMaybe<Scalars['String']['input']>;
+    /** When true, overrides branchId and filters to counterparties with no branch */
+    branchUnassigned?: InputMaybe<Scalars['Boolean']['input']>;
     groupLabel?: InputMaybe<Scalars['String']['input']>;
     /** missing | duplicate — counterparties that cannot be bound to the portal until fixed in the ERP (#225) */
     innStatus?: InputMaybe<Scalars['String']['input']>;
     managerErpId?: InputMaybe<Scalars['String']['input']>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
+    /** ready | missing-data | erp-inactive | activated — whether portal access can be switched on */
+    readiness?: InputMaybe<Scalars['String']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
     status?: InputMaybe<Scalars['String']['input']>;
     unassignedOnly?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1091,6 +1095,8 @@ export type CounterpartyListFilter = {
 
 export type CounterpartyListOptions = {
     branchId?: InputMaybe<Scalars['String']['input']>;
+    /** When true, overrides branchId and filters to counterparties with no branch */
+    branchUnassigned?: InputMaybe<Scalars['Boolean']['input']>;
     /** Exact ERP ids; narrows inside the caller's visibility scope (batch lookup for references) */
     erpIds?: InputMaybe<Array<Scalars['String']['input']>>;
     /** Allows the results to be filtered */
@@ -1104,6 +1110,8 @@ export type CounterpartyListOptions = {
     /** Substring match (case-insensitive) against Counterparty.managerErpId OR the ERP-reported administrator name (access-control's erp_user.fullName) — the raw ERP-side manager assignment, independent of whether it has resolved to an Administrator yet */
     managerErpId?: InputMaybe<Scalars['String']['input']>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
+    /** ready | missing-data | erp-inactive | activated — whether portal access can be switched on */
+    readiness?: InputMaybe<Scalars['String']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     sort?: InputMaybe<CounterpartySortParameter>;
@@ -10615,6 +10623,22 @@ export type ResetCheckPolicyOverrideMutationVariables = Exact<{
 
 export type ResetCheckPolicyOverrideMutation = { resetCheckPolicyOverride: boolean };
 
+export type CounterpartyActivationCountsQueryVariables = Exact<{
+    all?: InputMaybe<CounterpartyListOptions>;
+    ready?: InputMaybe<CounterpartyListOptions>;
+    missing?: InputMaybe<CounterpartyListOptions>;
+    inactive?: InputMaybe<CounterpartyListOptions>;
+    activated?: InputMaybe<CounterpartyListOptions>;
+}>;
+
+export type CounterpartyActivationCountsQuery = {
+    all: { totalItems: number };
+    ready: { totalItems: number };
+    missing: { totalItems: number };
+    inactive: { totalItems: number };
+    activated: { totalItems: number };
+};
+
 export type CounterpartyTeamMemberFieldsFragment = {
     id: string;
     administratorId: string;
@@ -14029,6 +14053,28 @@ export const ResetCheckPolicyOverrideDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ResetCheckPolicyOverrideMutation,
     ResetCheckPolicyOverrideMutationVariables
+>;
+export const CounterpartyActivationCountsDocument = new TypedDocumentString(`
+    query CounterpartyActivationCounts($all: CounterpartyListOptions, $ready: CounterpartyListOptions, $missing: CounterpartyListOptions, $inactive: CounterpartyListOptions, $activated: CounterpartyListOptions) {
+  all: counterparties(options: $all) {
+    totalItems
+  }
+  ready: counterparties(options: $ready) {
+    totalItems
+  }
+  missing: counterparties(options: $missing) {
+    totalItems
+  }
+  inactive: counterparties(options: $inactive) {
+    totalItems
+  }
+  activated: counterparties(options: $activated) {
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    CounterpartyActivationCountsQuery,
+    CounterpartyActivationCountsQueryVariables
 >;
 export const CounterpartyTeamDocument = new TypedDocumentString(`
     query CounterpartyTeam($id: ID!) {
