@@ -67,7 +67,7 @@ Rules:
 - Migrations are forward-only; production runs `synchronize: false`. A migration that cannot be undone by
   redeploying the old image needs the database backup as its rollback.
 
-## 4. Current limitation: one shared IMAGE_TAG
+## 4. Current limitation: one shared IMAGE_TAG (follow-up #321)
 
 `infrastructure/docker/docker-compose.yml` takes a single `IMAGE_TAG` for all five image users
 (`migrate`, `server`, `worker`, `worker-email` via the shared server anchor, plus `storefront`, `manager`,

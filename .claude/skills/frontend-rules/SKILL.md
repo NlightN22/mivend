@@ -61,7 +61,7 @@ Copy the number exactly as displayed. Never hand-roll clipboard code — use `Mv
 ## Colors, tokens and themes (hard rules)
 
 All color lives in `packages/ui-kit/src/styles/`, in three layers. Nothing else may define a color.
-Scope: enforced by stylelint in `packages/storefront` and `packages/ui-kit`. The manager portal still has color literals and is outside the lint until its migration (follow-up, no issue filed yet); do not copy its literals into new code.
+Scope: enforced by stylelint in `packages/storefront` and `packages/ui-kit`. The manager portal still has color literals and is outside the lint until its migration (#320); do not copy its literals into new code.
 
 | Layer | File | Holds | Who may reference it |
 | ----- | ---- | ----- | -------------------- |
