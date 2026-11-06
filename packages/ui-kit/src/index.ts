@@ -158,7 +158,8 @@ export type { AppSidebarItem } from './components/MvAppSidebar/MvAppSidebar.vue'
 export { default as MvAppMobileNav } from './components/MvAppMobileNav/MvAppMobileNav.vue';
 export type { AppMobileNavItem } from './components/MvAppMobileNav/MvAppMobileNav.vue';
 export { default as MvAccountMenu } from './components/MvAccountMenu/MvAccountMenu.vue';
-export type { ThemeOption } from './components/MvAccountMenu/MvAccountMenu.vue';
+export { default as MvThemeSwitch } from './components/MvThemeSwitch/MvThemeSwitch.vue';
+export type { ThemeOption } from './components/MvThemeSwitch/MvThemeSwitch.vue';
 export type {
     AccountMenuEntry,
     AccountMenuLink,

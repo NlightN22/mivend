@@ -11,6 +11,7 @@ import {
     MvBottomTabBar,
     MvNotificationBell,
     MvNotificationPanel,
+    MvThemeSwitch,
     readSiteIconUrl,
     readSiteName,
     COMPACT_NAV_BREAKPOINT,
@@ -236,10 +237,20 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                         <span>{{ t('nav.favourites') }}</span>
                     </RouterLink>
                 </div>
-                <RouterLink v-else to="/login" class="app-header__nav-btn app-header__signin">
-                    <IconUser :size="20" aria-hidden="true" />
-                    <span>{{ t('nav.signIn') }}</span>
-                </RouterLink>
+                <template v-else>
+                    <MvThemeSwitch
+                        class="app-header__guest-theme"
+                        compact
+                        :options="themeSwitcher.options.value"
+                        :model-value="themeSwitcher.theme.value"
+                        :aria-label="t('nav.theme')"
+                        @update:model-value="themeSwitcher.select"
+                    />
+                    <RouterLink to="/login" class="app-header__nav-btn app-header__signin">
+                        <IconUser :size="20" aria-hidden="true" />
+                        <span>{{ t('nav.signIn') }}</span>
+                    </RouterLink>
+                </template>
 
                 <MvNotificationBell
                     v-if="notificationsStore"

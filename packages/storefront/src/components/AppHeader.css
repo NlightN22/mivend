@@ -281,3 +281,7 @@
         display: none;
     }
 }
+
+.app-header__guest-theme {
+    flex-shrink: 0;
+}
