@@ -344,6 +344,8 @@ The default final checks are:
     make lint
     make test
 
+E2E groups are heavy and run after the final audit (next section), not here.
+
 Do not claim the task is complete until these checks are run successfully or explicitly skipped with a reason.
 
 `make ci` (CI's own steps on a clean checkout of HEAD) is not a pre-push step: it runs only in the separate
@@ -360,7 +362,8 @@ prone to rationalize away. This project's own convention for naming that session
 session's own `<project>.<issue-number-or-description>` naming. The audit session's own name
 varies per task, so don't assume a fixed one; ask, or check recently-active sessions, if you need
 to hand off to it and don't already know its name. Report the audit's findings back to the
-implementation session/user; fix anything it flags before considering the work done.
+implementation session/user; fix anything it flags before considering the work done. Run the
+targeted E2E groups only after the audit has no open findings, once, on the final audited state.
 
 Once the audit has no remaining objections: if the work implements a GitHub issue, push the
 branch and close that issue (with a summary comment) — use the `finish-task` skill for this, it
