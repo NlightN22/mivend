@@ -152,7 +152,7 @@ colleagues through `TeamAdministratorService` for every `'department'`- and `'ow
 caller sees none; `'all'` lists every live administrator directly (Vendure's list would drop the same ones). Reassignment targets are checked against the
 branch for `'department'` only; other scopes are unchanged. This grants no administrator-management
 permission. `teamDirectory` (`/team`) is a paginated list (`skip/take/search/filter`, `take: 0` for counts) over the same
-branch scope that also includes inactive administrators; names outside the caller's department are null
+branch scope. It lists live administrators only; inactive (soft-deleted) ones, the `inactive` status and its chip count are served solely to callers holding `ManageAdministratorLifecycle` (the Settings > Users gate), for everyone else that status is empty and deleted rows never appear. `take` is capped at 100. Names outside the caller's department are null
 unless `teamVisibility` is `all`, and `search` never matches a name the caller cannot see (ERP id still matches). Approval escalation resolves its target by id directly (live administrators only),
 not through `AdministratorService`, so the requester's grantable roles never hide a valid approver; the
 step's `escalatesTo` role check still applies.

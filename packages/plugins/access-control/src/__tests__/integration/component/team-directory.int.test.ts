@@ -70,7 +70,8 @@ class TestAdministrator {
     user?: TestUser;
 }
 
-const ctx = {} as RequestContext;
+const ctx = { userHasPermissions: () => true } as unknown as RequestContext;
+const operatorCtx = { userHasPermissions: () => false } as unknown as RequestContext;
 const { schema, extra } = testSchemaOptions('access_control_team_directory');
 let dataSource: DataSource;
 const resolveCounterpartyScope = vi.fn();
@@ -255,5 +256,18 @@ describe('TeamDirectoryService.findPage', () => {
         resolveCounterpartyScope.mockResolvedValue({ kind: 'department', administratorId: 1 });
 
         expect(await service.findPage(ctx, {})).toEqual({ items: [], totalItems: 0 });
+    });
+
+    it('operator cannot see inactive administrators', async () => {
+        resolveCounterpartyScope.mockResolvedValue(branchA);
+        resolveTeamVisibilityScope.mockResolvedValue({ kind: 'all' });
+
+        const all = await service.findPage(operatorCtx, {});
+        expect(all.items.map(i => i.erpId)).not.toContain('e-5');
+        expect(all.items.every(i => i.active)).toBe(true);
+        const inactive = await service.findPage(operatorCtx, { filter: { status: 'inactive' } });
+        expect(inactive).toEqual({ items: [], totalItems: 0 });
+        const counts = await service.findPage(operatorCtx, { take: 0 });
+        expect(counts.totalItems).toBe(3 + 1);
     });
 });

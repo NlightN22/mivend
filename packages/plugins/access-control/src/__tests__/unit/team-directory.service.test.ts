@@ -8,7 +8,8 @@ import type { PositionService } from '../../position.service';
 import type { TeamAdministratorService } from '../../team-administrator.service';
 import { TeamDirectoryService } from '../../team-directory.service';
 
-const ctx = {} as RequestContext;
+const ctx = { userHasPermissions: () => true } as unknown as RequestContext;
+const operatorCtx = { userHasPermissions: () => false } as unknown as RequestContext;
 
 interface Built {
     service: TeamDirectoryService;
@@ -101,5 +102,22 @@ describe('TeamDirectoryService.findPage', () => {
 
         expect(await service.findPage(ctx, { take: 0 })).toEqual({ items: [], totalItems: 7 });
         expect(qb.leftJoinAndSelect).not.toHaveBeenCalled();
+    });
+
+    it('without ManageAdministratorLifecycle: live rows only, inactive filter is empty, take is capped', async () => {
+        const { service, qb } = build([admin(1, 'dept-sales')], 'all');
+
+        await service.findPage(operatorCtx, { take: 1000 });
+        expect(qb.withDeleted).not.toHaveBeenCalled();
+        expect(qb.take).toHaveBeenCalledWith(100);
+
+        expect(await service.findPage(operatorCtx, { filter: { status: 'inactive' } })).toEqual({
+            items: [],
+            totalItems: 0,
+        });
+        expect(qb.getManyAndCount).toHaveBeenCalledTimes(1);
+
+        await service.findPage(ctx, {});
+        expect(qb.withDeleted).toHaveBeenCalledTimes(1);
     });
 });

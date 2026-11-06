@@ -8,6 +8,7 @@ import {
 import type { SelectQueryBuilder } from 'typeorm';
 
 import { AccessScopeService } from './access-scope.service';
+import { CustomPermission } from './custom-permission';
 import { DepartmentService } from './department.service';
 import { ErpUserService } from './erp-user.service';
 import { PositionService } from './position.service';
@@ -48,6 +49,7 @@ interface AdministratorCustomFields {
 }
 
 const DEPARTMENT = 'a.customFields.departmentId';
+const MAX_TAKE = 100;
 
 @Injectable()
 export class TeamDirectoryService {
@@ -60,6 +62,7 @@ export class TeamDirectoryService {
         private positionService: PositionService,
     ) {}
 
+    // Inactive (soft-deleted) rows only for ManageAdministratorLifecycle holders, like Settings > Users.
     // Names outside the caller's department are null unless teamVisibility is 'all'; search never
     // matches a name the caller cannot see. take: 0 is a lean count (no joins, no rows).
     async findPage(
@@ -73,16 +76,19 @@ export class TeamDirectoryService {
             this.accessScopeService.resolveTeamVisibilityScope(ctx),
         ]);
         const nameVisibleToAll = visibility.kind === 'all';
-        const qb = this.connection
-            .getRepository(ctx, Administrator)
-            .createQueryBuilder('a')
-            .withDeleted();
+        const seesInactive = ctx.userHasPermissions([
+            CustomPermission.ManageAdministratorLifecycle.Permission,
+        ]);
+        if (!seesInactive && options.filter?.status === 'inactive')
+            return { items: [], totalItems: 0 };
+        const qb = this.connection.getRepository(ctx, Administrator).createQueryBuilder('a');
+        if (seesInactive) qb.withDeleted();
         if (branch.kind === 'branch') {
             qb.andWhere('a.customFields.branchId = :scopeBranch', { scopeBranch: branch.branchId });
         }
         this.applyFilter(qb, options);
         this.applySearch(qb, options.search, nameVisibleToAll, ownDepartmentId);
-        const take = options.take ?? 20;
+        const take = Math.min(options.take ?? 20, MAX_TAKE);
         if (take === 0) return { items: [], totalItems: await qb.getCount() };
         qb.leftJoinAndSelect('a.user', 'user')
             .leftJoinAndSelect('user.roles', 'role')

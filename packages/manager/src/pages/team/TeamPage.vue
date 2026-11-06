@@ -37,8 +37,9 @@ const VIEWS = [
     { key: 'unassigned', label: 'Unassigned', variant: TEAM_STATUS_BADGE_VARIANT.unassigned },
     { key: 'inactive', label: 'Inactive', variant: TEAM_STATUS_BADGE_VARIANT.inactive },
 ] as const;
+const canSeeInactive = computed(() => authStore.hasPermission('ManageAdministratorLifecycle'));
 const viewChips = computed<FilterChip[]>(() =>
-    VIEWS.map(v => ({
+    VIEWS.filter(v => v.key !== 'inactive' || canSeeInactive.value).map(v => ({
         key: v.key,
         label: `${v.label} ${counts.value[v.key]}`,
         variant: v.variant,
