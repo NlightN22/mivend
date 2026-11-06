@@ -1,6 +1,11 @@
 # Project Context
 
-Updated: 2026-11-06 10:30
+Updated: 2026-11-06 12:45
+
+## Product card photo corners (2026-11-06, DONE: audited, commit 7b74d48e on main, NOT on origin/main, not in 0.0.45)
+- `MvProductCard.vue`: photo has `border-radius: var(--app-radius-md)` and `height: 100%` so small photos scale up; the `.mv-product-card__img` container is a `grid-template: minmax(0, 1fr) / minmax(0, 1fr)` grid with 6px padding (a percent max-height did not clamp inside an auto track and big photos overflowed).
+- Known limit: photos wider than about 2:1 are letterboxed and keep square corners at the frame edge; follow-up if it shows on real photos: wrapper with the radius and `overflow: hidden`. Checked on synthetic images in both themes (staging products have no photos), real photos not seen.
+- `mivend.issue.313` (release owner) takes the sha into the next release; push by sha onto origin/main, not the branch. First `make test` once had 2 unexplained failed files (second run 569/569); if it returns, record the file names.
 
 ## #313 storefront dark theme + color system (2026-11-06, DONE: audited, released in 0.0.45 and deployed to prod, issue closed; follow-ups #320 manager color migration, #321 per-service image tags)
 - All color lives in `packages/ui-kit/src/styles/`: `palette.css` (oklch primitives, one hue variable per family `--hue-brand/-ink/-night`), `theme-light.css` and `theme-dark.css` (the same role names `--app-*`/`--el-*` pointing at palette steps; dark scoped to `html[data-theme='dark']`, declared after Element Plus `html.dark`). `tokens.css` keeps radii, fonts, z-index and imports the three. Retune a hue = change one variable.
