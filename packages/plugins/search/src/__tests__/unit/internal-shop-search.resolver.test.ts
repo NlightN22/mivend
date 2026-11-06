@@ -30,4 +30,16 @@ describe('InternalShopSearchResolver', () => {
         await resolver.search({} as never, { term: 'oil' });
         expect(search.mock.calls[0][1]).toMatchObject({ hiddenFacetValueIds: [] });
     });
+
+    it('refuses a skip above the depth cap and allows the cap itself', async () => {
+        const { search, resolver } = build([]);
+        await expect(
+            resolver.search({} as never, { term: 'oil', skip: 1901 }),
+        ).rejects.toMatchObject({
+            extensions: { code: 'SEARCH_REFINE_QUERY' },
+        });
+        expect(search).not.toHaveBeenCalled();
+        await resolver.search({} as never, { term: 'oil', skip: 1900 });
+        expect(search).toHaveBeenCalledTimes(1);
+    });
 });

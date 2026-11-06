@@ -1,5 +1,6 @@
 import {
     LanguageCode,
+    Logger,
     PluginCommonModule,
     RuntimeVendureConfig,
     Type,
@@ -22,7 +23,7 @@ import { SearchResultResolver } from './search.resolver';
 import { HAS_ORGANIZATION_FIELD, hasOrganizationMapping } from './sellable-filter';
 import { ShopSearchFacetValuesResolver } from './shop-search-facet-values.resolver';
 import { SearchService } from './search.service';
-import { getSearchBackend } from './types';
+import { getSearchBackend, loggerCtx } from './types';
 
 const codeMatchesSchema = gql`
     "Products matched by an article, part number or manufacturer code, disjoint and excluded from the full-text items."
@@ -183,6 +184,13 @@ function buildSearchPlugins(): Array<Type<unknown>> {
                         'docs/environments.md) — refusing to start without it.',
                 );
             }
+        }
+        if (!process.env.SEARCH_END_USER_ID_SECRET) {
+            Logger.warn(
+                'SEARCH_END_USER_ID_SECRET is not set: no X-End-User-Id is sent, search-service ' +
+                    'rate limits count every shopper against the single API key.',
+                loggerCtx,
+            );
         }
         return [SearchPlugin, ExternalSearchPlugin];
     }

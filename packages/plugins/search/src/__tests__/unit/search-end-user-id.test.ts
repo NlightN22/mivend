@@ -29,6 +29,19 @@ describe('searchEndUserId', () => {
         expect(id).not.toBe(searchEndUserId(ctx(undefined, 'tok-2')));
     });
 
+    it('falls back to the first forwarded IP for a request without a session', () => {
+        const req = (xff: string | undefined, ip = '10.0.0.1'): RequestContext =>
+            ({
+                activeUserId: undefined,
+                req: { headers: { 'x-forwarded-for': xff }, ip },
+            }) as never;
+        const id = searchEndUserId(req('203.0.113.5, 10.0.0.9'));
+        expect(id).toMatch(/^[a-f0-9]{64}$/);
+        expect(id).toBe(searchEndUserId(req('203.0.113.5')));
+        expect(id).not.toBe(searchEndUserId(req('203.0.113.6')));
+        expect(searchEndUserId(req(undefined, '198.51.100.1'))).toMatch(/^[a-f0-9]{64}$/);
+    });
+
     it('depends on the secret and is omitted without one or without a subject', () => {
         const withSecret = searchEndUserId(ctx(1));
         process.env.SEARCH_END_USER_ID_SECRET = 'other';

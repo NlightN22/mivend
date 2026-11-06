@@ -38,6 +38,7 @@ server {
         proxy_pass $api_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         # Without this, nginx proxies to the upstream over HTTP/1.0 (its own default for
         # proxy_pass), which opens a brand-new TCP connection per request instead of reusing one
         # — a real, measurable extra cost per shop-api call, on top of the real network RTT a
