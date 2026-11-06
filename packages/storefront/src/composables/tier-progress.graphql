@@ -1,5 +1,6 @@
 query VariantTierProgress($ids: [String!]) {
     products(options: { take: 100, filter: { id: { in: $ids } } }) {
+        # bounded: by-id lookup of the visible tiers
         items {
             variants {
                 id
