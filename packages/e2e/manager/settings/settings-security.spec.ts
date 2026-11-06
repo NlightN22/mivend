@@ -178,14 +178,16 @@ test.describe('Settings > Security page — UI', () => {
 
     // Must run before 'Sign out everywhere': that test ends every operator session, including
     // the one in shared .auth/manager-operator.json that other manager specs depend on.
-    test('/settings/security is reachable directly and shows the Security sub-nav tab as active (positive)', async ({
+    test('/settings/security is reachable directly and shows the Security side-nav entry as active (positive)', async ({
         page,
     }) => {
         await page.goto('/settings/security');
         await expect(page.getByRole('heading', { name: 'Security' })).toBeVisible({
             timeout: 15000,
         });
-        await expect(page.locator('.settings-sub-nav a.active')).toHaveText('Security');
+        await expect(page.locator('.settings-side-nav a.router-link-active')).toHaveText(
+            'Security',
+        );
     });
 
     test('"Sign out everywhere" logs the current session out too (positive)', async ({
