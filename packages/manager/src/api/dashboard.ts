@@ -1,9 +1,15 @@
 import { adminApi } from './client';
-import { ManagerDashboardDocument, type ManagerDashboardQuery } from './generated/graphql';
+import {
+    DashboardApprovalsDocument,
+    DashboardClientsDocument,
+    DashboardOrdersDocument,
+    type DashboardApprovalsQuery,
+    type DashboardOrdersQuery,
+} from './generated/graphql';
 
-export type RecentOrder = ManagerDashboardQuery['recentOrdersList']['items'][number];
+export type RecentOrder = DashboardOrdersQuery['recentOrdersList']['items'][number];
 export type SubmittedApproval =
-    ManagerDashboardQuery['myApprovalRequestsSummary']['recent'][number];
+    DashboardApprovalsQuery['myApprovalRequestsSummary']['recent'][number];
 
 export interface ActivityItem {
     id: string;
@@ -53,6 +59,8 @@ export function buildActivityFeed(
         .slice(0, limit);
 }
 
+export type DashboardSection = 'orders' | 'clients' | 'approvals';
+
 export interface DashboardData {
     activeOrdersCount: number;
     activeOrdersPlacedLast24h: number;
@@ -66,34 +74,88 @@ export interface DashboardData {
     awaitingMyDecisionCount: number;
 }
 
+export interface DashboardLoadResult {
+    data: DashboardData;
+    // Sections whose query rejected; their fields in `data` are empty defaults, not real zeros.
+    failed: Partial<Record<DashboardSection, string>>;
+}
+
 // Vendure has no overdue state or SLA field: awaiting shipment is approximated as PaymentSettled
 // and overdue as such orders placed more than 3 days ago.
 const IN_PROGRESS_STATES_EXCLUDED = ['AddingItems', 'Draft', 'Cancelled', 'Delivered'];
 const OVERDUE_AFTER_DAYS = 3;
 
-export async function fetchDashboardData(): Promise<DashboardData> {
+async function fetchOrdersSection(): Promise<Partial<DashboardData>> {
     const now = new Date();
     const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
     const overdueBefore = new Date(
         now.getTime() - OVERDUE_AFTER_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString();
-
-    const result = await adminApi(ManagerDashboardDocument, {
+    const result = await adminApi(DashboardOrdersDocument, {
         excludedStates: IN_PROGRESS_STATES_EXCLUDED,
         since24h,
         overdueBefore,
     });
-
     return {
         activeOrdersCount: result.activeOrders.totalItems,
         activeOrdersPlacedLast24h: result.activeOrdersLast24h.totalItems,
         awaitingShipmentCount: result.awaitingShipment.totalItems,
         overdueCount: result.overdue.totalItems,
+        recentOrders: result.recentOrdersList.items,
+    };
+}
+
+async function fetchClientsSection(): Promise<Partial<DashboardData>> {
+    const result = await adminApi(DashboardClientsDocument);
+    return {
         myClientsCount: result.counterpartySummary.totalCount,
         unassignedClientsCount: result.unassignedCounterpartyCount,
-        recentOrders: result.recentOrdersList.items,
+    };
+}
+
+async function fetchApprovalsSection(): Promise<Partial<DashboardData>> {
+    const result = await adminApi(DashboardApprovalsDocument);
+    return {
         pendingApprovalsCount: result.myApprovalRequestsSummary.pendingCount,
         recentApprovals: result.myApprovalRequestsSummary.recent,
         awaitingMyDecisionCount: result.myApprovalsInbox.awaitingMyDecision.totalItems,
     };
+}
+
+const SECTION_FETCHERS: Record<DashboardSection, () => Promise<Partial<DashboardData>>> = {
+    orders: fetchOrdersSection,
+    clients: fetchClientsSection,
+    approvals: fetchApprovalsSection,
+};
+
+function emptyDashboardData(): DashboardData {
+    return {
+        activeOrdersCount: 0,
+        activeOrdersPlacedLast24h: 0,
+        awaitingShipmentCount: 0,
+        overdueCount: 0,
+        myClientsCount: 0,
+        unassignedClientsCount: 0,
+        recentOrders: [],
+        pendingApprovalsCount: 0,
+        recentApprovals: [],
+        awaitingMyDecisionCount: 0,
+    };
+}
+
+// One query per section so a single failing query (permission, resolver error) blanks only its own tiles.
+export async function fetchDashboardData(): Promise<DashboardLoadResult> {
+    const sections = Object.keys(SECTION_FETCHERS) as DashboardSection[];
+    const settled = await Promise.allSettled(sections.map(section => SECTION_FETCHERS[section]()));
+    const data = emptyDashboardData();
+    const failed: DashboardLoadResult['failed'] = {};
+    settled.forEach((outcome, index) => {
+        if (outcome.status === 'fulfilled') Object.assign(data, outcome.value);
+        else {
+            const reason: unknown = outcome.reason;
+            failed[sections[index]] = reason instanceof Error ? reason.message : String(reason);
+            console.warn(`[dashboard] section "${sections[index]}" failed:`, reason);
+        }
+    });
+    return { data, failed };
 }

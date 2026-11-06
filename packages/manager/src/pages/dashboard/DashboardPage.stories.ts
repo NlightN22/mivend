@@ -13,7 +13,7 @@ export default meta;
 type Story = StoryObj<typeof DashboardPage>;
 
 function mockDashboardData(): void {
-    registerMock('ManagerDashboard', () => ({
+    registerMock('DashboardOrders', () => ({
         activeOrders: { totalItems: 12 },
         activeOrdersLast24h: { totalItems: 3 },
         awaitingShipment: { totalItems: 5 },
@@ -40,8 +40,12 @@ function mockDashboardData(): void {
                 },
             ],
         },
+    }));
+    registerMock('DashboardClients', () => ({
         counterpartySummary: { totalCount: 34 },
         unassignedCounterpartyCount: 2,
+    }));
+    registerMock('DashboardApprovals', () => ({
         myApprovalRequestsSummary: {
             pendingCount: 3,
             recent: [
@@ -75,14 +79,18 @@ export const Default: Story = {
 export const Empty: Story = {
     loaders: [
         async () => {
-            registerMock('ManagerDashboard', () => ({
+            registerMock('DashboardOrders', () => ({
                 activeOrders: { totalItems: 0 },
                 activeOrdersLast24h: { totalItems: 0 },
                 awaitingShipment: { totalItems: 0 },
                 overdue: { totalItems: 0 },
                 recentOrdersList: { items: [] },
+            }));
+            registerMock('DashboardClients', () => ({
                 counterpartySummary: { totalCount: 0 },
                 unassignedCounterpartyCount: 0,
+            }));
+            registerMock('DashboardApprovals', () => ({
                 myApprovalRequestsSummary: { pendingCount: 0, recent: [] },
                 myApprovalsInbox: { awaitingMyDecision: { totalItems: 0 } },
             }));

@@ -1,29 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import {
+    MvButton,
     MvKpiCard,
     MvKpiCarousel,
+    MvNotice,
     MvPanel,
     MvStatusBadge,
     MvFilterChips,
     type FilterChip,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
-import { fetchDashboardData, buildActivityFeed, type DashboardData } from '../../api/dashboard';
+import { buildActivityFeed, type DashboardSection } from '../../api/dashboard';
 import { getDashboardKpiCards } from '../../api/dashboard-config';
-import { fetchExpiringDiscountGrants } from '../../api/discounts';
-import {
-    fetchFailedIntegrationInboxEvents,
-    type FailedIntegrationInboxEvent,
-} from '../../api/integration-health';
-import { fetchNotifications } from '../../api/notifications';
-import { fetchDepartments } from '../../api/team';
-import type { NotificationItem } from '@mivend/ui-kit';
+import { useDashboard } from '../../composables/useDashboard';
 import RecentOrdersTable from '../../components/dashboard/RecentOrdersTable.vue';
 import ApprovalStatusList from '../../components/dashboard/ApprovalStatusList.vue';
-import ExpiringDiscountsBanner, {
-    type ExpiringDiscount,
-} from '../../components/dashboard/ExpiringDiscountsBanner.vue';
+import ExpiringDiscountsBanner from '../../components/dashboard/ExpiringDiscountsBanner.vue';
 import QuickActionsPanel from '../../components/dashboard/QuickActionsPanel.vue';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.vue';
 import IntegrationInboxErrorsPanel from '../../components/dashboard/IntegrationInboxErrorsPanel.vue';
@@ -31,21 +24,25 @@ import ReservationReconciliationPanel from '../../components/dashboard/Reservati
 import PaymentReconciliationPanel from '../../components/dashboard/PaymentReconciliationPanel.vue';
 
 const authStore = useAuthStore();
-const data = ref<DashboardData | null>(null);
-const departmentName = ref<string | null>(null);
-const expiringDiscounts = ref<ExpiringDiscount[]>([]);
-const failedInboxEvents = ref<FailedIntegrationInboxEvent[]>([]);
-const reservationIssues = ref<NotificationItem[]>([]);
-const paymentIssues = ref<NotificationItem[]>([]);
-const loading = ref(true);
+const {
+    data,
+    failedSections,
+    departmentName,
+    expiringDiscounts,
+    failedInboxEvents,
+    reservationIssues,
+    paymentIssues,
+    loading,
+    load,
+} = useDashboard();
 
-// Small, fixed row cap for dashboard attention panels — these are "is anything on fire" widgets,
-// not paginated lists (there is no "view all" target page for any of the three yet).
-const HEALTH_PANEL_TAKE = 10;
-
-// Same placeholder threshold used on /discounts (docs/ai/manager-portal-concept.md §8.2 — no
-// exact "expiring soon" window has been decided yet).
-const EXPIRING_SOON_DAYS = 14;
+const failedSectionKeys = computed(() => Object.keys(failedSections.value) as DashboardSection[]);
+const failedSummary = computed(() =>
+    failedSectionKeys.value
+        .map(section => `${section}: ${failedSections.value[section]}`)
+        .join('; '),
+);
+const everySectionFailed = computed(() => failedSectionKeys.value.length === 3);
 
 const FILTER_CHIPS: FilterChip[] = [
     { key: 'all', label: 'All' },
@@ -72,7 +69,11 @@ const filteredOrders = computed(() => {
     return matched.slice(0, 5);
 });
 
-const kpiCards = computed(() => getDashboardKpiCards(authStore.roleCode));
+const kpiCards = computed(() =>
+    getDashboardKpiCards(authStore.roleCode).filter(
+        card => !(card.section in failedSections.value),
+    ),
+);
 
 const activityItems = computed(() =>
     data.value ? buildActivityFeed(data.value.recentOrders, data.value.recentApprovals) : [],
@@ -89,73 +90,7 @@ const pendingBreakdown = computed(() => {
     return [...counts.entries()].map(([type, count]) => `${count} ${type}`).join(', ');
 });
 
-onMounted(async () => {
-    try {
-        // Each of these three health panels comes from a plugin's own new query — caught
-        // individually so one plugin's outage (or, right now, one query not deployed yet) never
-        // blanks the whole dashboard, same reasoning as the department-name fetch below.
-        const wantsReconciliationPanels =
-            authStore.hasPermission('ReadOrder') || authStore.hasPermission('ReadPayment');
-
-        const [dashboard, grants, failedEvents, unreadNotifications] = await Promise.all([
-            fetchDashboardData(),
-            fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
-            authStore.hasPermission('ManageAccessControl')
-                ? fetchFailedIntegrationInboxEvents(HEALTH_PANEL_TAKE).catch(e => {
-                      console.warn(
-                          '[dashboard] could not load failed integration inbox events:',
-                          e,
-                      );
-                      return [];
-                  })
-                : Promise.resolve([]),
-            // The two reconciliation panels below both read from this single generic
-            // notifications(status: 'unread') query (issue #87), filtered client-side by
-            // sourceType — see ReservationReconciliationPanel/PaymentReconciliationPanel
-            // and the sourceType strings each plugin's reconciliation service writes.
-            // (ErpReconciliationPanel moved to Settings > System Health — issue #98.)
-            wantsReconciliationPanels
-                ? fetchNotifications({ status: 'unread' })
-                      .then(page => page.items)
-                      .catch(e => {
-                          console.warn('[dashboard] could not load notifications:', e);
-                          return [] as NotificationItem[];
-                      })
-                : Promise.resolve([] as NotificationItem[]),
-        ]);
-        data.value = dashboard;
-        failedInboxEvents.value = failedEvents;
-        reservationIssues.value = unreadNotifications
-            .filter(n => n.sourceType === 'reservation-reconciliation')
-            .slice(0, HEALTH_PANEL_TAKE);
-        paymentIssues.value = unreadNotifications
-            .filter(n => n.sourceType === 'payment-reconciliation')
-            .slice(0, HEALTH_PANEL_TAKE);
-        // One grant can list several customers (see DiscountGrant.counterparties) — the banner
-        // shows one line per customer, same shape as the design mock.
-        expiringDiscounts.value = grants.flatMap(grant =>
-            grant.counterparties.map(cp => ({
-                id: `${grant.id}-${cp.id}`,
-                customerName: cp.legalName,
-                validTo: grant.validTo,
-            })),
-        );
-
-        // Cosmetic (department name badge next to the role badge) — kept independent of the
-        // main dashboard data so a failure here never blanks the whole page.
-        try {
-            const departmentId = authStore.administrator?.customFields.departmentId;
-            const departments = await fetchDepartments();
-            // administrator.customFields.departmentId stores the ERP id (see
-            // EmployeeService.assign), not Department's DB row id — match on erpId.
-            departmentName.value = departments.find(d => d.erpId === departmentId)?.name ?? null;
-        } catch (e) {
-            console.warn('[dashboard] could not load department name:', e);
-        }
-    } finally {
-        loading.value = false;
-    }
-});
+onMounted(load);
 </script>
 
 <template>
@@ -185,9 +120,28 @@ onMounted(async () => {
             </div>
         </div>
 
+        <MvNotice
+            v-if="failedSectionKeys.length"
+            variant="error"
+            class="dashboard__error"
+            role="alert"
+        >
+            <div class="dashboard__error-row">
+                <span>
+                    {{
+                        everySectionFailed
+                            ? 'The dashboard data could not be loaded.'
+                            : 'Part of the dashboard data could not be loaded.'
+                    }}
+                    {{ failedSummary }}
+                </span>
+                <MvButton variant="secondary" :disabled="loading" @click="load">Retry</MvButton>
+            </div>
+        </MvNotice>
+
         <ExpiringDiscountsBanner :discounts="expiringDiscounts" />
 
-        <MvKpiCarousel v-if="data" class="dashboard__kpis">
+        <MvKpiCarousel v-if="data && kpiCards.length" class="dashboard__kpis">
             <MvKpiCard
                 v-for="card in kpiCards"
                 :key="card.key"
@@ -290,6 +244,18 @@ onMounted(async () => {
     gap: 8px;
     flex-wrap: wrap;
     justify-content: flex-end;
+}
+
+.dashboard__error {
+    margin-bottom: 18px;
+}
+
+.dashboard__error-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .dashboard__kpis {

@@ -11002,14 +11002,13 @@ export type LastOrderDatesQuery = {
     };
 };
 
-export type ManagerDashboardQueryVariables = Exact<{
+export type DashboardOrdersQueryVariables = Exact<{
     excludedStates: Array<Scalars['String']['input']> | Scalars['String']['input'];
     since24h: Scalars['DateTime']['input'];
     overdueBefore: Scalars['DateTime']['input'];
 }>;
 
-export type ManagerDashboardQuery = {
-    unassignedCounterpartyCount: number;
+export type DashboardOrdersQuery = {
     activeOrders: { totalItems: number };
     activeOrdersLast24h: { totalItems: number };
     awaitingShipment: { totalItems: number };
@@ -11025,7 +11024,18 @@ export type ManagerDashboardQuery = {
             customer: { firstName: string; lastName: string } | null;
         }>;
     };
+};
+
+export type DashboardClientsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type DashboardClientsQuery = {
+    unassignedCounterpartyCount: number;
     counterpartySummary: { totalCount: number };
+};
+
+export type DashboardApprovalsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type DashboardApprovalsQuery = {
     myApprovalRequestsSummary: {
         pendingCount: number;
         recent: Array<{
@@ -14371,8 +14381,8 @@ export const LastOrderDatesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<LastOrderDatesQuery, LastOrderDatesQueryVariables>;
-export const ManagerDashboardDocument = new TypedDocumentString(`
-    query ManagerDashboard($excludedStates: [String!]!, $since24h: DateTime!, $overdueBefore: DateTime!) {
+export const DashboardOrdersDocument = new TypedDocumentString(`
+    query DashboardOrders($excludedStates: [String!]!, $since24h: DateTime!, $overdueBefore: DateTime!) {
   activeOrders: visibleOrders(
     options: {filter: {state: {notIn: $excludedStates}}}
   ) {
@@ -14409,10 +14419,18 @@ export const ManagerDashboardDocument = new TypedDocumentString(`
       }
     }
   }
+}
+    `) as unknown as TypedDocumentString<DashboardOrdersQuery, DashboardOrdersQueryVariables>;
+export const DashboardClientsDocument = new TypedDocumentString(`
+    query DashboardClients {
   counterpartySummary {
     totalCount
   }
   unassignedCounterpartyCount
+}
+    `) as unknown as TypedDocumentString<DashboardClientsQuery, DashboardClientsQueryVariables>;
+export const DashboardApprovalsDocument = new TypedDocumentString(`
+    query DashboardApprovals {
   myApprovalRequestsSummary(recentLimit: 10) {
     pendingCount
     recent {
@@ -14430,7 +14448,7 @@ export const ManagerDashboardDocument = new TypedDocumentString(`
     }
   }
 }
-    `) as unknown as TypedDocumentString<ManagerDashboardQuery, ManagerDashboardQueryVariables>;
+    `) as unknown as TypedDocumentString<DashboardApprovalsQuery, DashboardApprovalsQueryVariables>;
 export const DepartmentBranchOverviewDocument = new TypedDocumentString(`
     query DepartmentBranchOverview {
   departmentBranchOverview {

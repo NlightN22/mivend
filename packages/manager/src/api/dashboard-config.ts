@@ -1,7 +1,8 @@
-import type { DashboardData } from './dashboard';
+import type { DashboardData, DashboardSection } from './dashboard';
 
 export interface KpiCardConfig {
     key: string;
+    section: DashboardSection;
     label: string;
     to: string;
     accent?: boolean;
@@ -14,6 +15,7 @@ export interface KpiCardConfig {
 const MANAGER_CARDS: KpiCardConfig[] = [
     {
         key: 'active-orders',
+        section: 'orders',
         label: 'Active orders',
         to: '/orders',
         value: data => data.activeOrdersCount,
@@ -21,6 +23,7 @@ const MANAGER_CARDS: KpiCardConfig[] = [
     },
     {
         key: 'awaiting-shipment',
+        section: 'orders',
         label: 'Awaiting shipment / overdue',
         to: '/orders',
         accent: true,
@@ -29,6 +32,7 @@ const MANAGER_CARDS: KpiCardConfig[] = [
     },
     {
         key: 'pending-approvals',
+        section: 'approvals',
         label: 'My pending approval requests',
         to: '/approvals',
         accent: true,
@@ -36,6 +40,7 @@ const MANAGER_CARDS: KpiCardConfig[] = [
     },
     {
         key: 'my-clients',
+        section: 'clients',
         label: 'My clients',
         to: '/customers',
         value: data => data.myClientsCount,
@@ -47,6 +52,7 @@ const MANAGER_CARDS: KpiCardConfig[] = [
 const OPERATOR_CARDS: KpiCardConfig[] = [
     {
         key: 'department-orders',
+        section: 'orders',
         label: 'Department orders',
         to: '/orders',
         value: data => data.activeOrdersCount,
@@ -54,6 +60,7 @@ const OPERATOR_CARDS: KpiCardConfig[] = [
     },
     {
         key: 'awaiting-shipment',
+        section: 'orders',
         label: 'Awaiting shipment / overdue',
         to: '/orders',
         accent: true,
@@ -62,6 +69,7 @@ const OPERATOR_CARDS: KpiCardConfig[] = [
     },
     {
         key: 'department-clients',
+        section: 'clients',
         label: 'Department clients',
         to: '/customers',
         value: data => data.myClientsCount,
@@ -71,6 +79,7 @@ const OPERATOR_CARDS: KpiCardConfig[] = [
 const APPROVER_CARDS: KpiCardConfig[] = [
     {
         key: 'awaiting-my-decision',
+        section: 'approvals',
         label: 'Awaiting my decision',
         to: '/approvals',
         accent: true,
@@ -78,6 +87,7 @@ const APPROVER_CARDS: KpiCardConfig[] = [
     },
     {
         key: 'department-orders',
+        section: 'orders',
         label: 'Department orders',
         to: '/orders',
         value: data => data.activeOrdersCount,
@@ -85,6 +95,7 @@ const APPROVER_CARDS: KpiCardConfig[] = [
     },
     {
         key: 'awaiting-shipment',
+        section: 'orders',
         label: 'Awaiting shipment / overdue',
         to: '/orders',
         accent: true,
@@ -93,12 +104,14 @@ const APPROVER_CARDS: KpiCardConfig[] = [
     },
     {
         key: 'department-clients',
+        section: 'clients',
         label: 'Department clients',
         to: '/customers',
         value: data => data.myClientsCount,
     },
     {
         key: 'unassigned-clients',
+        section: 'clients',
         label: 'Unassigned clients',
         to: '/customers?managerId=__unassigned__',
         accent: true,

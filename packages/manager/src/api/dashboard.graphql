@@ -1,4 +1,4 @@
-query ManagerDashboard(
+query DashboardOrders(
     $excludedStates: [String!]!
     $since24h: DateTime!
     $overdueBefore: DateTime!
@@ -43,10 +43,16 @@ query ManagerDashboard(
             }
         }
     }
+}
+
+query DashboardClients {
     counterpartySummary {
         totalCount
     }
     unassignedCounterpartyCount
+}
+
+query DashboardApprovals {
     myApprovalRequestsSummary(recentLimit: 10) {
         pendingCount
         recent {
