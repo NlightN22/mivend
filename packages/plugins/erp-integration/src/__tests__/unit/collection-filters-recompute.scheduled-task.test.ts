@@ -155,15 +155,19 @@ describe('createCollectionFiltersRecomputeTask', () => {
     it('only counts unsettled sweeps created within the stale window', async () => {
         const findMany = vi.fn().mockResolvedValue({ items: [], totalItems: 0 });
         const task = createCollectionFiltersRecomputeTask(makeOptions('central', true));
+        vi.useFakeTimers({ toFake: ['Date'] });
         const before = Date.now();
-        await task.options.execute({
-            injector: makeInjector(vi.fn(), findMany) as never,
-            scheduledContext: {} as never,
-            params: {},
-        });
+        try {
+            await task.options.execute({
+                injector: makeInjector(vi.fn(), findMany) as never,
+                scheduledContext: {} as never,
+                params: {},
+            });
+        } finally {
+            vi.useRealTimers();
+        }
         const { after } = findMany.mock.calls[0][0].filter.createdAt as { after: Date };
-        expect(before - after.getTime()).toBeGreaterThanOrEqual(COLLECTION_FILTERS_SWEEP_STALE_MS);
-        expect(before - after.getTime()).toBeLessThan(COLLECTION_FILTERS_SWEEP_STALE_MS + 60_000);
+        expect(before - after.getTime()).toBe(COLLECTION_FILTERS_SWEEP_STALE_MS);
     });
 
     it('logs a stale unsettled job and still triggers the sweep', async () => {
