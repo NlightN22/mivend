@@ -91,12 +91,16 @@ export const adminApiSchema = gql`
         "Substring match (case-insensitive) against Counterparty.managerErpId OR the ERP-reported administrator name (access-control's erp_user.fullName) — the raw ERP-side manager assignment, independent of whether it has resolved to an Administrator yet"
         managerErpId: String
         branchId: String
+        "When true, overrides branchId and filters to counterparties with no branch"
+        branchUnassigned: Boolean
         "Exact match against Counterparty.erpGroupLabel"
         groupLabel: String
         "When true, overrides managerId and filters to counterparties with no assigned manager"
         unassignedOnly: Boolean
         "missing | duplicate — counterparties that cannot be bound to the portal until fixed in the ERP (#225)"
         innStatus: String
+        "ready | missing-data | erp-inactive | activated — whether portal access can be switched on"
+        readiness: String
         sort: CounterpartySortParameter
     }
 
@@ -107,10 +111,14 @@ export const adminApiSchema = gql`
         managerId: ID
         managerErpId: String
         branchId: String
+        "When true, overrides branchId and filters to counterparties with no branch"
+        branchUnassigned: Boolean
         groupLabel: String
         unassignedOnly: Boolean
         "missing | duplicate — counterparties that cannot be bound to the portal until fixed in the ERP (#225)"
         innStatus: String
+        "ready | missing-data | erp-inactive | activated — whether portal access can be switched on"
+        readiness: String
     }
 
     "Only real Counterparty columns a human would actually want to order by — never a UUID/id-shaped one (branchId), and never a derived/joined display value (the Manager column shows an ERP-resolved name, not managerErpId itself) — see manager-table-standard skill's sorting follow-up, issue #138."

@@ -3,6 +3,7 @@ import { ID } from '@vendure/common/lib/shared-types';
 import type { SelectQueryBuilder } from 'typeorm';
 
 import { INN_DIGITS_SQL } from './counterparty-inn-guard';
+import { portalReadinessSql } from './counterparty-readiness-filter';
 import { Counterparty } from './entities/counterparty.entity';
 
 // Mirrors the GraphQL `CounterpartyListFilter` input — the narrowing half of
@@ -13,9 +14,11 @@ export interface CounterpartyListFilter {
     managerId?: ID;
     managerErpId?: string;
     branchId?: string;
+    branchUnassigned?: boolean;
     groupLabel?: string;
     unassignedOnly?: boolean;
     innStatus?: string;
+    readiness?: string;
 }
 
 // Narrows on top of the access-scope restriction, never replaces it.
@@ -52,7 +55,10 @@ export function applyCounterpartyListFilter(
             { managerErpId: `%${filter.managerErpId}%` },
         );
     }
-    if (filter.branchId) {
+    // Separate flag, same reason as unassignedOnly: omitted and explicit null are ambiguous.
+    if (filter.branchUnassigned) {
+        qb.andWhere('c.branchId IS NULL');
+    } else if (filter.branchId) {
         qb.andWhere('c.branchId = :branchId', { branchId: filter.branchId });
     }
     if (filter.groupLabel) {
@@ -67,6 +73,9 @@ export function applyCounterpartyListFilter(
         qb.andWhere(`c.isActive = true AND ${INN_DIGITS_SQL} <> '' AND EXISTS (
             SELECT 1 FROM counterparty d WHERE d.id <> c.id AND d."isActive" = true
             AND regexp_replace(d.inn, '\\D', '', 'g') = ${INN_DIGITS_SQL})`);
+    }
+    if (filter.readiness) {
+        qb.andWhere(`(${portalReadinessSql(filter.readiness)})`);
     }
     return qb;
 }

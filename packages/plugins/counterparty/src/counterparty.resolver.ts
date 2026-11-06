@@ -124,9 +124,11 @@ export class CounterpartyResolver {
                 managerId?: ID;
                 managerErpId?: string;
                 branchId?: string;
+                branchUnassigned?: boolean;
                 groupLabel?: string;
                 unassignedOnly?: boolean;
                 innStatus?: string;
+                readiness?: string;
                 sort?: CounterpartySortParameter;
             };
         },

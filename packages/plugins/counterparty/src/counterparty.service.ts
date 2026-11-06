@@ -185,6 +185,7 @@ export class CounterpartyService {
         const qb = await this.visibleFilteredQb(ctx, options);
         applyCounterpartySort(qb, options.sort);
         const totalItems = await qb.getCount();
+        if (options.take === 0) return { items: [], totalItems };
         const items = await qb
             .take(options.take ?? 50)
             .skip(options.skip ?? 0)
