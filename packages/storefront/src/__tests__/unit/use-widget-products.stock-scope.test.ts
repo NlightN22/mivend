@@ -9,6 +9,7 @@ const product = (id: string): unknown => ({
     id,
     name: id,
     slug: id,
+    assets: [],
     variants: [],
     facetValues: [],
 });

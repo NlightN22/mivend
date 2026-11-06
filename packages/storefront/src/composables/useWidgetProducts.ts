@@ -6,6 +6,7 @@ import {
     SaleProductIdsDocument,
     WidgetProductsDocument,
 } from '../api/generated/graphql';
+import { assetUrl } from './assetUrl';
 import type { ProductItem } from './useProductList';
 
 type ItemVariant = ProductItem['variants'][number];
@@ -52,7 +53,14 @@ async function loadByIds(ids: string[], size: number): Promise<ProductItem[]> {
     const ordered = ids
         .map(id => byId.get(id))
         .filter((item): item is (typeof result.products.items)[number] => !!item);
-    return withResolvedPrice(ordered.slice(0, size) as ProductItem[]);
+    const withImages = ordered.slice(0, size).map(
+        item =>
+            ({
+                ...item,
+                images: item.assets.map(a => assetUrl(a.preview, 'small')),
+            }) as unknown as ProductItem,
+    );
+    return withResolvedPrice(withImages);
 }
 
 async function loadIds(mode: WidgetMode): Promise<string[]> {

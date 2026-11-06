@@ -3633,6 +3633,7 @@ export type Query = {
     searchCapabilities: SearchCapabilities;
     settlementBalances: Array<SettlementBalanceCard>;
     settlementDocuments: SettlementDocumentPage;
+    suggestAddress: Array<Scalars['String']['output']>;
     tradingPoint?: Maybe<TradingPoint>;
 };
 
@@ -3725,6 +3726,10 @@ export type QuerySettlementDocumentsArgs = {
     filter?: InputMaybe<SettlementDocumentFilter>;
     skip?: InputMaybe<Scalars['Int']['input']>;
     take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QuerySuggestAddressArgs = {
+    query: Scalars['String']['input'];
 };
 
 export type QueryTradingPointArgs = {
@@ -3851,7 +3856,7 @@ export type SearchCapabilities = {
     sortKeys: Array<Scalars['String']['output']>;
 };
 
-/** Products matched by an article, part number or manufacturer code; the internal backend never fills them. */
+/** Products matched by an article, part number or manufacturer code, disjoint and excluded from the full-text items. */
 export type SearchCodeMatches = {
     items: Array<SearchResult>;
     total: Scalars['Int']['output'];
@@ -3899,7 +3904,7 @@ export type SearchResult = {
     /** Preview URLs of all the product's photos in gallery order (max 10), for catalog carousels. */
     galleryPreviews: Array<Scalars['String']['output']>;
     manufacturer?: Maybe<ProductManufacturer>;
-    /** Why the hit matched, from the external search backend; null on the internal one. */
+    /** Why the hit matched; the internal backend fills it for article matches only. */
     matchReasons?: Maybe<Array<Scalars['String']['output']>>;
     /** Order quantity step of the variant, in base units. */
     multiplicity?: Maybe<Scalars['Int']['output']>;
@@ -4816,6 +4821,7 @@ export type ProductWidgetFieldsFragment = {
     id: string;
     name: string;
     slug: string;
+    assets: Array<{ preview: string }>;
     manufacturer?: { name?: string | null } | null;
     variants: Array<{
         id: string;
@@ -4862,6 +4868,7 @@ export type WidgetProductsQuery = {
             id: string;
             name: string;
             slug: string;
+            assets: Array<{ preview: string }>;
             manufacturer?: { name?: string | null } | null;
             variants: Array<{
                 id: string;
@@ -5825,6 +5832,9 @@ export const ProductWidgetFieldsFragmentDoc = new TypedDocumentString(
   id
   name
   slug
+  assets {
+    preview
+  }
   manufacturer {
     name
   }
@@ -6206,6 +6216,9 @@ export const WidgetProductsDocument = new TypedDocumentString(`
   id
   name
   slug
+  assets {
+    preview
+  }
   manufacturer {
     name
   }
