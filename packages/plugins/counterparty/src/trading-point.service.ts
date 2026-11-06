@@ -9,6 +9,7 @@ import {
 } from '@vendure/core';
 import { randomUUID } from 'crypto';
 import { AccessScopeService, BranchSettingsService } from '@mivend/plugin-access-control';
+import { ActingContextService } from '@mivend/plugin-session-management';
 import { ChangedFieldDiff, VersioningService } from '@mivend/plugin-versioning';
 
 import { ContactPerson } from './entities/contact-person.entity';
@@ -77,6 +78,7 @@ export class TradingPointService {
         private accessScopeService: AccessScopeService,
         private versioningService: VersioningService,
         private branchSettingsService: BranchSettingsService,
+        private actingContext?: ActingContextService,
     ) {}
 
     // Staff role visibility scope is enforced here, not ownership; customer* shop-API methods differ.
@@ -391,6 +393,9 @@ export class TradingPointService {
         ctx: RequestContext,
         customerId: ID,
     ): Promise<TradingPoint | null> {
+        // An acting session's point is session-scoped and the customer's own preference is neither read nor healed.
+        const sessionPointId = (await this.actingContext?.get(ctx))?.tradingPointId;
+        if (sessionPointId) return this.findById(ctx, sessionPointId);
         const rows = await ctxQuery<[Array<{ tpid: string | null }>, number]>(
             this.connection,
             ctx,
@@ -439,6 +444,10 @@ export class TradingPointService {
             [customerId, String(tradingPointId)],
         );
         if (!rows[0]) throw new UserInputError(`TradingPoint not found or access denied`);
+        if (await this.actingContext?.get(ctx)) {
+            await this.actingContext?.setTradingPoint(ctx, String(tradingPointId));
+            return;
+        }
         await this.customerService.update(ctx, {
             id: customerId,
             customFields: { preferredTradingPointId: String(tradingPointId) } as Record<

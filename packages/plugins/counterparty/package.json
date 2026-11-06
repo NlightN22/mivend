@@ -25,10 +25,11 @@
         "vitest": "^4.1.9"
     },
     "dependencies": {
-        "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-access-control": "workspace:*",
         "@mivend/plugin-approval-workflow": "workspace:*",
         "@mivend/plugin-checks": "workspace:*",
+        "@mivend/plugin-customer-pricing": "workspace:*",
+        "@mivend/plugin-session-management": "workspace:*",
         "@mivend/plugin-versioning": "workspace:*",
         "graphql-tag": "^2.12.6"
     }

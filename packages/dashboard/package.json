@@ -12,6 +12,7 @@
     "dependencies": {
         "@vendure/dashboard": "^3.7.3",
         "@mivend/plugin-access-control": "workspace:*",
+        "@mivend/plugin-acting-session": "workspace:*",
         "@mivend/plugin-acquiring": "workspace:*",
         "@mivend/plugin-approval-workflow": "workspace:*",
         "@mivend/plugin-checks": "workspace:*",

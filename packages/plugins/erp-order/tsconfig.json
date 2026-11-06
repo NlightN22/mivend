@@ -7,8 +7,17 @@
     },
     "include": ["src/**/*", "index.ts"],
     "references": [
-        { "path": "../access-control" },
-        { "path": "../counterparty" },
-        { "path": "../../shared" }
+        {
+            "path": "../access-control"
+        },
+        {
+            "path": "../counterparty"
+        },
+        {
+            "path": "../../shared"
+        },
+        {
+            "path": "../session-management"
+        }
     ]
 }

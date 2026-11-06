@@ -96,6 +96,8 @@ beforeAll(async () => {
         null as never,
         { record: async () => undefined } as never,
         { dictionary: async () => testOrderStatusDictionary() } as never,
+        { get: async () => null } as never,
+        null as never,
     );
     const eventBus = {
         publish: (event: unknown) => {

@@ -73,3 +73,58 @@ describe('TradingPointService.setPreferred', () => {
         expect(update).not.toHaveBeenCalled();
     });
 });
+
+describe('TradingPointService in an acting session', () => {
+    const update = vi.fn();
+    const setTradingPoint = vi.fn();
+    const get = vi.fn();
+    let service: TradingPointService;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        service = new TradingPointService(
+            connection as unknown as TransactionalConnection,
+            { update } as unknown as CustomerService,
+            {} as never,
+            {} as never,
+            {} as never,
+            { get, setTradingPoint } as never,
+        );
+    });
+
+    it("returns the session-scoped point without reading or healing the customer's preference", async () => {
+        get.mockResolvedValue({ administratorId: '7', tradingPointId: '12' });
+        findOne.mockResolvedValue({ id: '12' });
+
+        expect(await service.getPreferredForCustomer({} as RequestContext, 2)).toEqual({
+            id: '12',
+        });
+        expect(rawQuery).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the customer preference when the manager chose no point', async () => {
+        get.mockResolvedValue({ administratorId: '7', tradingPointId: null });
+        rawQuery.mockResolvedValue([[{ tpid: '7' }], 1]);
+        findOne.mockResolvedValue({ id: '7' });
+
+        expect(await service.getPreferredForCustomer({} as RequestContext, 2)).toEqual({ id: '7' });
+    });
+
+    it('stores a point change on the session and never on the customer', async () => {
+        get.mockResolvedValue({ administratorId: '7', tradingPointId: null });
+        rawQuery.mockResolvedValue([{ id: '7' }]);
+
+        await service.setPreferred({} as RequestContext, 2, 7);
+
+        expect(setTradingPoint).toHaveBeenCalledWith(expect.anything(), '7');
+        expect(update).not.toHaveBeenCalled();
+    });
+
+    it('still validates the point against the customer counterparty in an acting session', async () => {
+        get.mockResolvedValue({ administratorId: '7', tradingPointId: null });
+        rawQuery.mockResolvedValue([]);
+
+        await expect(service.setPreferred({} as RequestContext, 2, 9)).rejects.toThrow();
+        expect(setTradingPoint).not.toHaveBeenCalled();
+    });
+});

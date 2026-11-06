@@ -13,8 +13,10 @@ import { subscribeAndLog } from 'shared';
 
 import { SessionManagementResolver } from './api/session-management.resolver';
 import { sessionManagementSchema } from './api/session-management.schema';
+import { ActingContextService } from './acting-context.service';
 import { SessionCapService } from './session-cap.service';
 import { createSessionCleanupTask } from './session-cleanup.scheduled-task';
+import { actingSessionCustomFields } from './acting-session-custom-fields';
 import { SessionLoginListenerService } from './session-login-listener.service';
 import { SessionManagementService } from './session-management.service';
 import { SESSION_MANAGEMENT_PLUGIN_OPTIONS } from './session.types';
@@ -26,12 +28,13 @@ import type { SessionManagementPluginOptions } from './session.types';
         SessionManagementService,
         SessionLoginListenerService,
         SessionCapService,
+        ActingContextService,
         {
             provide: SESSION_MANAGEMENT_PLUGIN_OPTIONS,
             useFactory: (): SessionManagementPluginOptions => SessionManagementPlugin.options,
         },
     ],
-    exports: [SessionManagementService],
+    exports: [SessionManagementService, ActingContextService],
     shopApiExtensions: {
         schema: sessionManagementSchema,
         resolvers: [SessionManagementResolver],
@@ -49,6 +52,7 @@ import type { SessionManagementPluginOptions } from './session.types';
                 nullable: true,
                 label: [{ languageCode: LanguageCode.en, value: 'User agent' }],
             },
+            ...actingSessionCustomFields,
         ];
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),

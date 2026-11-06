@@ -11,6 +11,12 @@ import {
 
 import { labelForUserAgent, SessionSummary } from './session.types';
 
+// A manager's acting session is not the customer's own: it stays out of their list and their bulk sign-out.
+function isOwn(session: AuthenticatedSession): boolean {
+    return !(session.customFields as { actingAdministratorId?: string | null } | undefined)
+        ?.actingAdministratorId;
+}
+
 @Injectable()
 export class SessionManagementService {
     constructor(
@@ -31,7 +37,7 @@ export class SessionManagementService {
             order: { createdAt: 'DESC' },
         });
         const currentToken = ctx.session?.token;
-        return sessions.map(session => this.toSummary(session, currentToken));
+        return sessions.filter(isOwn).map(session => this.toSummary(session, currentToken));
     }
 
     async endSession(ctx: RequestContext, sessionId: string): Promise<boolean> {
@@ -41,7 +47,7 @@ export class SessionManagementService {
         }
         const repo = this.connection.getRepository(ctx, AuthenticatedSession);
         const session = await repo.findOne({ where: { id: sessionId, user: { id: userId } } });
-        if (!session) {
+        if (!session || !isOwn(session)) {
             return false;
         }
         await this.invalidate(ctx, session);
@@ -56,7 +62,7 @@ export class SessionManagementService {
         const currentToken = ctx.session?.token;
         const repo = this.connection.getRepository(ctx, AuthenticatedSession);
         const sessions = await repo.find({ where: { user: { id: userId }, invalidated: false } });
-        for (const session of sessions) {
+        for (const session of sessions.filter(isOwn)) {
             if (session.token !== currentToken) {
                 await this.invalidate(ctx, session);
             }

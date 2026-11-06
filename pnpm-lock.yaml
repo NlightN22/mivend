@@ -89,6 +89,9 @@ importers:
       '@mivend/plugin-acquiring':
         specifier: workspace:*
         version: link:../../packages/plugins/acquiring
+      '@mivend/plugin-acting-session':
+        specifier: workspace:*
+        version: link:../../packages/plugins/acting-session
       '@mivend/plugin-approval-workflow':
         specifier: workspace:*
         version: link:../../packages/plugins/approval-workflow
@@ -252,6 +255,9 @@ importers:
       '@mivend/plugin-acquiring':
         specifier: workspace:*
         version: link:../plugins/acquiring
+      '@mivend/plugin-acting-session':
+        specifier: workspace:*
+        version: link:../plugins/acting-session
       '@mivend/plugin-approval-workflow':
         specifier: workspace:*
         version: link:../plugins/approval-workflow
@@ -542,6 +548,52 @@ importers:
         specifier: ^1.0.0
         version: 1.6.1(@types/node@20.19.43)(lightningcss@1.32.0)(supports-color@8.1.1)
 
+  packages/plugins/acting-session:
+    dependencies:
+      '@mivend/plugin-access-control':
+        specifier: workspace:*
+        version: link:../access-control
+      '@mivend/plugin-counterparty':
+        specifier: workspace:*
+        version: link:../counterparty
+      '@mivend/plugin-session-management':
+        specifier: workspace:*
+        version: link:../session-management
+      graphql-tag:
+        specifier: ^2.12.6
+        version: 2.12.7(graphql@16.14.2)
+      shared:
+        specifier: workspace:*
+        version: link:../../shared
+    devDependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
+      '@nestjs/graphql':
+        specifier: ^13.0.0
+        version: 13.1.0(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.1.27)(graphql@16.14.2)(reflect-metadata@0.2.2)
+      '@types/express':
+        specifier: ^4.17.0
+        version: 4.17.25
+      '@vendure/common':
+        specifier: ^3.7.3
+        version: 3.7.3
+      '@vendure/core':
+        specifier: ^3.7.3
+        version: 3.7.3(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))(typescript@5.9.3)
+      graphql:
+        specifier: ^16.0.0
+        version: 16.14.2
+      typeorm:
+        specifier: ^0.3.0
+        version: 0.3.30(ioredis@5.10.1(supports-color@8.1.1))(pg@8.22.0)(supports-color@8.1.1)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.9
+        version: 4.1.9(@types/node@20.19.43)(msw@2.15.0(@types/node@20.19.43)(typescript@5.9.3))(vite@8.1.0(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+
   packages/plugins/approval-workflow:
     dependencies:
       '@mivend/plugin-access-control':
@@ -633,6 +685,9 @@ importers:
       '@mivend/plugin-customer-pricing':
         specifier: workspace:*
         version: link:../customer-pricing
+      '@mivend/plugin-session-management':
+        specifier: workspace:*
+        version: link:../session-management
       '@mivend/plugin-versioning':
         specifier: workspace:*
         version: link:../versioning
@@ -997,6 +1052,9 @@ importers:
       '@mivend/plugin-counterparty':
         specifier: workspace:*
         version: link:../counterparty
+      '@mivend/plugin-session-management':
+        specifier: workspace:*
+        version: link:../session-management
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
@@ -15938,7 +15996,7 @@ snapshots:
   css-tree@2.2.1:
     dependencies:
       mdn-data: 2.0.28
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   css-tree@3.2.1:
     dependencies:
@@ -20499,8 +20557,8 @@ snapshots:
   vite@8.1.0(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.32.0
-      picomatch: 4.0.4
-      postcss: 8.5.28
+      picomatch: 4.0.7
+      postcss: 8.5.32
       rolldown: 1.1.3
       tinyglobby: 0.2.17
     optionalDependencies:

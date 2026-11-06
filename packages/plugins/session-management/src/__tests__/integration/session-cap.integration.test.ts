@@ -31,12 +31,12 @@ async function insertSession(
     token: string,
     userId: number,
     minutesAgo: number,
-    overrides: { invalidated?: boolean; expired?: boolean; type?: string } = {},
+    overrides: { invalidated?: boolean; expired?: boolean; type?: string; acting?: boolean } = {},
 ): Promise<void> {
     const now = Date.now();
     await dataSource.query(
-        `INSERT INTO session (token, "userId", type, invalidated, expires, "createdAt")
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+        `INSERT INTO session (token, "userId", type, invalidated, expires, "createdAt", "customFieldsActingadministratorid")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
             token,
             userId,
@@ -44,6 +44,7 @@ async function insertSession(
             overrides.invalidated ?? false,
             new Date(now + (overrides.expired ? -1 : 1) * 86_400_000),
             new Date(now - minutesAgo * 60_000),
+            overrides.acting ? '9' : null,
         ],
     );
 }
@@ -68,7 +69,8 @@ beforeAll(async () => {
         type varchar NOT NULL,
         invalidated boolean NOT NULL,
         expires timestamp NOT NULL,
-        "createdAt" timestamp NOT NULL DEFAULT now()
+        "createdAt" timestamp NOT NULL DEFAULT now(),
+        "customFieldsActingadministratorid" varchar
     )`);
 });
 
@@ -112,6 +114,18 @@ describe('SessionCapService (integration, real Postgres)', () => {
         expect(ended).toBe(0);
         expect(await activeTokens(2)).toEqual(['other-user']);
         expect(await activeTokens(1)).toEqual(['anonymous', 'mine-a', 'mine-b', 'old-expired']);
+    });
+
+    it('neither counts acting sessions against the cap nor evicts them', async () => {
+        await insertSession('acting-old', 1, 90, { acting: true });
+        await insertSession('mine-a', 1, 20);
+        await insertSession('mine-b', 1, 10);
+        await insertSession('acting-new', 1, 0, { acting: true });
+
+        const ended = await capService(2).enforceCap(testRequestContext, 1);
+
+        expect(ended).toBe(0);
+        expect(await activeTokens(1)).toEqual(['acting-new', 'acting-old', 'mine-a', 'mine-b']);
     });
 
     it('two concurrent logins of one user leave exactly the cap active', async () => {

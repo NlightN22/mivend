@@ -49,6 +49,7 @@ import { NumberingPlugin } from '@mivend/plugin-numbering';
 import { OrderIdentityPlugin } from '@mivend/plugin-order-identity';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
 import { SessionManagementPlugin } from '@mivend/plugin-session-management';
+import { ActingSessionPlugin } from '@mivend/plugin-acting-session';
 import {
     AcquiringPlugin,
     cashPaymentHandler,
@@ -604,6 +605,8 @@ export const config: VendureConfig = {
         SessionManagementPlugin.init({
             maxActiveSessionsPerUser: sessionOptions.maxActiveSessionsPerUser,
         }),
+        // Before OrderIdentityPlugin: that plugin wraps whatever active-order strategy exists when it configures.
+        ActingSessionPlugin.init({ storefrontPublicUrl: process.env.STOREFRONT_PUBLIC_URL ?? '' }),
         ApprovalWorkflowPlugin,
         VersioningPlugin,
         CounterpartyPlugin,

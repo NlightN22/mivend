@@ -11,6 +11,7 @@ import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { ApprovalWorkflowPlugin } from '@mivend/plugin-approval-workflow';
 import { ChecksPlugin } from '@mivend/plugin-checks';
 import { VersioningPlugin } from '@mivend/plugin-versioning';
+import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 
 import { CounterpartyConsumer } from './consumers/counterparty.consumer';
 import { TradingPointConsumer } from './consumers/trading-point.consumer';
@@ -108,6 +109,7 @@ const adminResolvers = [
         ApprovalWorkflowPlugin,
         ChecksPlugin,
         VersioningPlugin,
+        SessionManagementPlugin,
     ],
     entities: [Counterparty, TradingPoint, ContactPerson, CounterpartyTeamMember, Contract],
     shopApiExtensions: {

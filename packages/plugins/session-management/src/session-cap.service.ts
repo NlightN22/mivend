@@ -14,6 +14,7 @@ export class SessionCapService {
         private connection: TransactionalConnection,
     ) {}
 
+    // Acting sessions are excluded: a manager's tabs must neither count against nor evict the customer's own sessions.
     // Invalidates the user's oldest active sessions beyond the cap; returns how many were ended.
     async enforceCap(ctx: RequestContext, userId: ID): Promise<number> {
         const cap = this.options.maxActiveSessionsPerUser ?? MAX_ACTIVE_SESSIONS_DEFAULT;
@@ -32,6 +33,7 @@ export class SessionCapService {
                         SELECT id FROM session
                         WHERE "userId" = $1 AND type = 'AuthenticatedSession'
                             AND invalidated = false AND expires > $2
+                            AND "customFieldsActingadministratorid" IS NULL
                         ORDER BY "createdAt" DESC, id DESC
                         OFFSET $3
                     ) RETURNING token

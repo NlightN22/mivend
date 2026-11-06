@@ -45,6 +45,8 @@ const mockStatusHistory = { record: vi.fn() };
 const mockStatusReference = {
     dictionary: vi.fn().mockResolvedValue(testOrderStatusDictionary()),
 };
+const mockActingContext = { get: vi.fn().mockResolvedValue(null) };
+const mockHistoryService = { createHistoryEntryForOrder: vi.fn() };
 const mockCtx = { activeUserId: 'user-1' } as unknown as RequestContext;
 
 describe('ErpOrderService', () => {
@@ -52,6 +54,7 @@ describe('ErpOrderService', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockActingContext.get.mockResolvedValue(null);
         mockOrderRepo.update.mockResolvedValue({ affected: 1 });
         mockFulfillmentQb.innerJoin.mockReturnValue(mockFulfillmentQb);
         mockFulfillmentQb.where.mockReturnValue(mockFulfillmentQb);
@@ -64,10 +67,45 @@ describe('ErpOrderService', () => {
             mockCounterpartyService as never,
             mockStatusHistory as never,
             mockStatusReference as never,
+            mockActingContext as never,
+            mockHistoryService as never,
         );
     });
 
     describe('onOrderPlaced', () => {
+        it('attributes an acting-session order to the acting administrator and records a history entry', async () => {
+            mockAdministratorService.findOneByUserId.mockResolvedValue(null);
+            mockActingContext.get.mockResolvedValue({
+                administratorId: 'admin-7',
+                tradingPointId: null,
+            });
+            const order = { id: 5, customFields: {}, customerId: null } as never;
+
+            await service.denormalizePlacement(mockCtx, order);
+
+            expect(
+                (order as { customFields: { placedByAdministratorId?: string } }).customFields
+                    .placedByAdministratorId,
+            ).toBe('admin-7');
+            expect(mockHistoryService.createHistoryEntryForOrder).toHaveBeenCalledWith(
+                expect.objectContaining({ orderId: 5 }),
+                false,
+            );
+        });
+
+        it('leaves placedByAdministratorId null for a plain customer checkout', async () => {
+            mockAdministratorService.findOneByUserId.mockResolvedValue(null);
+            const order = { customFields: {}, customerId: null } as never;
+
+            await service.denormalizePlacement(mockCtx, order);
+
+            expect(
+                (order as { customFields: { placedByAdministratorId?: string } }).customFields
+                    .placedByAdministratorId,
+            ).toBeUndefined();
+            expect(mockHistoryService.createHistoryEntryForOrder).not.toHaveBeenCalled();
+        });
+
         it('denormalizes placedByAdministratorId when the actor resolves to a real Administrator', async () => {
             mockAdministratorService.findOneByUserId.mockResolvedValue({ id: 'admin-1' });
             const order = { customFields: {}, customerId: null } as never;

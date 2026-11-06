@@ -13,6 +13,7 @@ import gql from 'graphql-tag';
 import { subscribeAndLog } from 'shared';
 import { AccessControlPlugin } from '@mivend/plugin-access-control';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
+import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 import { ErpOrderStatusEvent } from './erp-order.events';
 import { ErpOrderResolver } from './erp-order.resolver';
 import { AdminOrderVisibilityResolver } from './admin-order-visibility.resolver';
@@ -95,7 +96,7 @@ const adminApiSchema = gql`
 `;
 
 @VendurePlugin({
-    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin],
+    imports: [PluginCommonModule, AccessControlPlugin, CounterpartyPlugin, SessionManagementPlugin],
     providers: [
         ErpOrderService,
         OrderStatusHistoryService,

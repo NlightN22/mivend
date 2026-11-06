@@ -3,12 +3,15 @@ import {
     AdministratorService,
     EventBus,
     Fulfillment,
+    HistoryService,
     Order,
     RequestContext,
     TransactionalConnection,
 } from '@vendure/core';
 import { IsNull } from 'typeorm';
 import { CounterpartyService, TradingPointService } from '@mivend/plugin-counterparty';
+import { ActingContextService } from '@mivend/plugin-session-management';
+import { HistoryEntryType } from '@vendure/common/lib/generated-types';
 import { OrderReadyForErpEvent } from './erp-order.events';
 import { OrderStatusHistoryService } from './order-status-history.service';
 import { OrderStatusReferenceService } from './order-status-reference.service';
@@ -27,6 +30,8 @@ export class ErpOrderService {
         private readonly counterpartyService: CounterpartyService,
         private readonly statusHistory: OrderStatusHistoryService,
         private readonly statusReference: OrderStatusReferenceService,
+        private readonly actingContext: ActingContextService,
+        private readonly historyService: HistoryService,
     ) {}
 
     // Runs after commit on a stale event.order, so it writes only its own keys (#241); never save() the entity.
@@ -95,8 +100,11 @@ export class ErpOrderService {
         }
 
         // Stored once at creation, not derived per request from the first HistoryEntry (pagination).
-        // Stays null for storefront checkout: ctx.activeUserId doesn't resolve to an Administrator there.
-        if (admin) changed.placedByAdministratorId = String(admin.id);
+        // Null for plain storefront checkout; an acting session carries the administrator on the session row.
+        const acting = admin ? null : await this.actingContext.get(ctx);
+        const placedBy = admin?.id ?? acting?.administratorId;
+        if (placedBy !== undefined) changed.placedByAdministratorId = String(placedBy);
+        if (acting) await this.recordActingPlacement(ctx, order, acting.administratorId);
 
         if (Object.keys(changed).length > 0) {
             await this.connection
@@ -104,6 +112,22 @@ export class ErpOrderService {
                 .update(order.id, { customFields: changed });
         }
         Object.assign(order.customFields, changed);
+    }
+
+    private async recordActingPlacement(
+        ctx: RequestContext,
+        order: Order,
+        administratorId: string,
+    ): Promise<void> {
+        await this.historyService.createHistoryEntryForOrder(
+            {
+                ctx,
+                orderId: order.id,
+                type: HistoryEntryType.ORDER_NOTE,
+                data: { note: `Placed by administrator ${administratorId} in an acting session` },
+            },
+            false,
+        );
     }
 
     // Re-read: the placement event carries a snapshot that may predate the staff choice (docs/concurrency.md (d)).

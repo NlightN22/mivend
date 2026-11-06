@@ -14,6 +14,8 @@ function erpOrderService(publish: () => void = () => undefined): ErpOrderService
         { getForCustomer: async () => null } as never,
         { record: async () => undefined } as never,
         { dictionary: async () => ({ codeWith: () => 'PENDING' }) } as never,
+        { get: async () => null } as never,
+        null as never,
     );
 }
 

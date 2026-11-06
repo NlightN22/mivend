@@ -15,7 +15,7 @@ interface FakeSession {
     invalidated: boolean;
     createdAt: Date;
     expires: Date;
-    customFields: { userAgent?: string | null };
+    customFields: { userAgent?: string | null; actingAdministratorId?: string | null };
 }
 
 function makeSession(overrides: Partial<FakeSession>): FakeSession {
@@ -103,6 +103,26 @@ describe('SessionManagementService', () => {
         expect(result.find(s => s.id === 'session-1')?.current).toBe(true);
         expect(result.find(s => s.id === 'session-2')?.current).toBe(false);
         expect(result.find(s => s.id === 'session-2')?.deviceLabel).toBe('Unknown device');
+    });
+
+    it('keeps a manager acting session out of the customer list, single end and bulk end', async () => {
+        const acting = makeSession({
+            id: 'session-9',
+            token: 'token-9',
+            customFields: { actingAdministratorId: '7' },
+        });
+        const mine = makeSession({ id: 'session-1', token: 'token-1' });
+        repo.find.mockResolvedValue([mine, acting]);
+        repo.findOne.mockResolvedValue(acting);
+
+        const listed = await service.getMySessions(ctxFor('user-1'));
+        const endedOne = await service.endSession(ctxFor('user-1'), 'session-9');
+        await service.endOtherSessions(ctxFor('user-1', 'other'));
+
+        expect(listed.map(s => s.id)).toEqual(['session-1']);
+        expect(endedOne).toBe(false);
+        expect(deleteFromCache).toHaveBeenCalledTimes(1);
+        expect(deleteFromCache).toHaveBeenCalledWith('token-1');
     });
 
     it('returns an empty list when there is no active user', async () => {
