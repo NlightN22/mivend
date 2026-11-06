@@ -1,9 +1,11 @@
 # Project Context
 
-Updated: 2026-11-05
+Updated: 2026-11-06
 
-## Products of hidden categories (2026-11-05, owner decision, not committed/audited yet)
+## Products of hidden categories (2026-11-05, DONE: audited, on prod since 0.0.33; lock follow-ups in 0.0.41)
 - A product in a hidden category (`collection.isPrivate`, incl. inherited) is invisible to customers in shop search/suggestions/facets, `products`, `product`, `Collection.productVariants`, widgets, cart add. Staff Admin API unchanged. Query-time rule, no index field, no migration, no reindex. Design and limits: `docs/category-hierarchy.md`. Audit follow-up: tree writers share advisory lock `category-tree`; hidden lines in a cart block raise/checkout (not removal); excluded ids memoised per request.
+- Tree lock (`category-tree`, `withAggregateLock` opts `{lockTimeoutMs, idleTimeoutMs, slowHoldWarnMs}`): waiters wait 60 s, holder idle cutoff, warn on >60 s hold; full recompute of ~8000 categories measured ~9-17 min (real `updateCollection` ~70 ms each); override listener retries on 55P03 up to 30 min. Chunked per-subtree recompute is open: issue #309. Docs: `docs/category-hierarchy.md`, `docs/concurrency.md`.
+- Release flow: `.claude/skills/release` (checks, audit BEFORE release, push by sha, bump, build, `deploy-prod`); gate in AGENTS.md. Releases are owned by `mivend.bugs.1`; 0.0.41 (backend restart, no migration) carries my commits (origin/main d57420a3) plus its storefront batch.
 - Code: `shared/hiddenCategoryProducts.ts`, access-control `HiddenCategoryProductsService` + `shop-visible-products.resolver.ts` + order interceptor, search `internal-shop-search.resolver.ts` (internal) and `ProductLookupService` (external).
 - External: `excludeCategoryIds` on /resolve-query (search-service `sha-dc51122`, deploy it first). A hidden ancestor always hides its subtree (a `visible` override under it has no effect, `resolveCategoryIsPrivate`), so internal and external agree. `make test-int` not run by the agent.
 
