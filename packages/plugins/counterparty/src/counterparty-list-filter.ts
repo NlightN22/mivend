@@ -8,6 +8,8 @@ import { Counterparty } from './entities/counterparty.entity';
 
 // Mirrors the GraphQL `CounterpartyListFilter` input — the narrowing half of
 // `CounterpartyListOptions`, shared by the list query and filter-shaped bulk mutations (#136).
+export const MAX_ERP_IDS = 200;
+
 export interface CounterpartyListFilter {
     search?: string;
     erpIds?: string[];
@@ -36,6 +38,9 @@ export function applyCounterpartyListFilter(
         );
     }
     if (filter.erpIds) {
+        if (filter.erpIds.length > MAX_ERP_IDS) {
+            throw new UserInputError(`At most ${MAX_ERP_IDS} erpIds per request`);
+        }
         qb.andWhere('c.erpId IN (:...erpIds)', {
             erpIds: filter.erpIds.length ? filter.erpIds : [''],
         });

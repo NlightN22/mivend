@@ -54,11 +54,24 @@ function toCustomerOption(c: CounterpartyRow): CustomerOption {
     };
 }
 
-export async function searchCustomerOptions(term: string): Promise<CustomerOption[]> {
+export interface CustomerSearchResult {
+    items: CustomerOption[];
+    totalItems: number;
+}
+
+export const CUSTOMER_SEARCH_PAGE_SIZE = 20;
+
+export const hasMoreCustomerMatches = (totalItems: number): boolean =>
+    totalItems > CUSTOMER_SEARCH_PAGE_SIZE;
+
+export async function searchCustomerOptions(term: string): Promise<CustomerSearchResult> {
     const search = term.trim();
-    if (!search) return [];
+    if (!search) return { items: [], totalItems: 0 };
     const result = await adminApi(OrderCreateCounterpartiesDocument, { search });
-    return result.counterparties.items.map(toCustomerOption);
+    return {
+        items: result.counterparties.items.map(toCustomerOption),
+        totalItems: result.counterparties.totalItems,
+    };
 }
 
 export async function fetchCustomerOption(counterpartyId: string): Promise<CustomerOption | null> {

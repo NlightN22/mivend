@@ -1,20 +1,21 @@
 import { getCurrentInstance, onBeforeUnmount, ref, watch, type Ref } from 'vue';
 import { useLatestRequest } from '@mivend/ui-kit/src/composables/useLatestRequest';
 
-export interface DebouncedSearch<T> {
+export interface DebouncedSearch<R> {
     term: Ref<string>;
-    results: Ref<T[]>;
+    results: Ref<R>;
     loading: Ref<boolean>;
 }
 
-// One server request per pause in typing; a stale response never overwrites a newer one.
-export function useDebouncedSearch<T>(
-    fetcher: (term: string) => Promise<T[]>,
+// One server request per pause in typing; a stale or post-clear response never overwrites newer state.
+export function useDebouncedSearch<R>(
+    fetcher: (term: string) => Promise<R>,
+    empty: R,
     delayMs = 300,
-): DebouncedSearch<T> {
+): DebouncedSearch<R> {
     const term = ref('');
-    const results = ref<T[]>([]) as Ref<T[]>;
-    const { loading, run } = useLatestRequest(fetcher, items => {
+    const results = ref(empty) as Ref<R>;
+    const { loading, run, cancel } = useLatestRequest(fetcher, items => {
         results.value = items;
     });
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -22,7 +23,8 @@ export function useDebouncedSearch<T>(
     watch(term, value => {
         clearTimeout(timer);
         if (!value.trim()) {
-            results.value = [];
+            cancel();
+            results.value = empty;
             return;
         }
         timer = setTimeout(() => void run(value), delayMs);

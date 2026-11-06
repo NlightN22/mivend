@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useCurrency } from '../../composables/useCurrency';
 import { useDebouncedSearch } from '../../composables/useDebouncedSearch';
 import { MvInput, MvStatusBadge } from '@mivend/ui-kit';
@@ -7,6 +7,8 @@ import {
     searchCustomerOptions,
     fetchCustomerCredit,
     PORTAL_NOT_ACTIVATED_REASON,
+    CUSTOMER_SEARCH_PAGE_SIZE,
+    hasMoreCustomerMatches,
     type CustomerOption,
     type CustomerCredit,
 } from '../../api/orderCreate';
@@ -14,7 +16,16 @@ import {
 const emit = defineEmits<{ select: [customer: CustomerOption] }>();
 
 const { formatWhole } = useCurrency();
-const { term: search, results: matches, loading } = useDebouncedSearch(searchCustomerOptions);
+const {
+    term: search,
+    results,
+    loading,
+} = useDebouncedSearch(searchCustomerOptions, {
+    items: [],
+    totalItems: 0,
+});
+const matches = computed(() => results.value.items);
+const hasMore = computed(() => hasMoreCustomerMatches(results.value.totalItems));
 const selected = ref<CustomerOption | null>(null);
 const credit = ref<CustomerCredit | null>(null);
 const showResults = ref(false);
@@ -67,6 +78,10 @@ watch(search, () => {
                         PORTAL_NOT_ACTIVATED_REASON
                     }}</span>
                     <span v-else-if="customer.inn">INN {{ customer.inn }}</span>
+                </li>
+                <li v-if="hasMore" class="customer-picker__empty">
+                    Showing the first {{ CUSTOMER_SEARCH_PAGE_SIZE }} of
+                    {{ results.totalItems }} matches, refine your search
                 </li>
             </ul>
         </div>

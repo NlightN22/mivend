@@ -1,5 +1,6 @@
 query OrderCreateCounterparties($search: String!) {
     counterparties(options: { search: $search, take: 20, status: "active" }) {
+        totalItems
         items {
             id
             shortName

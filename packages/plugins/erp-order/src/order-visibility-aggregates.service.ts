@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Order, RequestContext, TransactionalConnection } from '@vendure/core';
+import { Order, RequestContext, TransactionalConnection, UserInputError } from '@vendure/core';
 import { OrderListOptions } from '@vendure/common/lib/generated-types';
 
 import { OrderVisibilityService } from './order-visibility.service';
+
+export const MAX_COUNTERPARTY_IDS = 200;
 
 export interface CounterpartyLastOrder {
     counterpartyId: string;
@@ -18,7 +20,12 @@ export class OrderVisibilityAggregatesService {
     ) {}
 
     async sumVisibleTotals(ctx: RequestContext, options?: OrderListOptions): Promise<number> {
-        const idsQb = await this.visibility.buildVisibleOrdersQuery(ctx, options);
+        // Paging and sort would change which orders are summed; one currency assumed (as in getOutstandingBalance).
+        const filterOnly: OrderListOptions = {
+            filter: options?.filter,
+            filterOperator: options?.filterOperator,
+        };
+        const idsQb = await this.visibility.buildVisibleOrdersQuery(ctx, filterOnly);
         idsQb.select(`${idsQb.alias}.id`).orderBy();
         // Summed over an id subquery: the visible query joins order lines, which would repeat rows.
         const row = await this.connection
@@ -35,6 +42,9 @@ export class OrderVisibilityAggregatesService {
         counterpartyIds: string[],
     ): Promise<CounterpartyLastOrder[]> {
         if (counterpartyIds.length === 0) return [];
+        if (counterpartyIds.length > MAX_COUNTERPARTY_IDS) {
+            throw new UserInputError(`At most ${MAX_COUNTERPARTY_IDS} counterparty ids per call`);
+        }
         const qb = await this.visibility.buildVisibleOrdersQuery(ctx);
         const rows = await qb
             .select('counterparty.id::text', 'counterpartyId')

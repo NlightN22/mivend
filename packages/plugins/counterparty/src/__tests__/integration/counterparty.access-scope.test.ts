@@ -257,7 +257,7 @@ describe('CounterpartyService.findVisiblePage/findOneVisible/getSummary/findHigh
         await seedCounterparties();
         mockAccessScopeService.resolveCounterpartyScope.mockResolvedValue({
             kind: 'own',
-            administratorId: 'admin-2',
+            administratorId: 'admin-1',
         });
 
         const result = await service.findVisiblePage(mockCtx, {

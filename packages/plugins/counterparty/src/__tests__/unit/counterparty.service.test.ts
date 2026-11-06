@@ -625,6 +625,19 @@ describe('CounterpartyService', () => {
             });
         });
 
+        it('refuses more than 200 erpIds', async () => {
+            const qb = mockPageQueryBuilder();
+            mockConnection.getRepository.mockReturnValueOnce({
+                createQueryBuilder: vi.fn(() => qb),
+            } as unknown as typeof mockRepo);
+
+            await expect(
+                service.findVisiblePage(mockCtx, {
+                    erpIds: Array.from({ length: 201 }, (_, i) => `cp-${i}`),
+                }),
+            ).rejects.toThrow('At most 200 erpIds');
+        });
+
         it('applies an additional status=inactive filter', async () => {
             const qb = mockPageQueryBuilder();
             mockConnection.getRepository.mockReturnValueOnce({

@@ -1,5 +1,6 @@
 import { innSeedRecords } from './seed-inn';
 import { markupSeedRecords } from './seed-markup';
+import { pickerSeedRecords } from './seed-picker';
 
 export const E2E_CUSTOMER = {
     email: 'e2e@test.example',
@@ -370,4 +371,5 @@ export const seedRecords = [
     },
     ...innSeedRecords,
     ...markupSeedRecords,
+    ...pickerSeedRecords,
 ];

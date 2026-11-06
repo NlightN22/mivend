@@ -9,7 +9,7 @@ describe('useDebouncedSearch', () => {
 
     it('sends one server request for a burst of typing and exposes its results', async () => {
         const fetcher = vi.fn(async (term: string) => [`hit:${term}`]);
-        const { term, results } = useDebouncedSearch(fetcher, 300);
+        const { term, results } = useDebouncedSearch(fetcher, [] as string[], 300);
 
         term.value = 'ak';
         await nextTick();
@@ -27,7 +27,7 @@ describe('useDebouncedSearch', () => {
         const fetcher = vi.fn(async (term: string) =>
             all.filter(n => n.endsWith(term)).slice(0, 20),
         );
-        const { term, results } = useDebouncedSearch(fetcher, 300);
+        const { term, results } = useDebouncedSearch(fetcher, [] as string[], 300);
 
         term.value = '-24000';
         await nextTick();
@@ -41,7 +41,7 @@ describe('useDebouncedSearch', () => {
         const fetcher = vi.fn(
             (t: string) => new Promise<string[]>(resolve => (resolvers[t] = resolve)),
         );
-        const { term, results } = useDebouncedSearch(fetcher, 100);
+        const { term, results } = useDebouncedSearch(fetcher, [] as string[], 100);
 
         term.value = 'a';
         await nextTick();
@@ -59,7 +59,7 @@ describe('useDebouncedSearch', () => {
 
     it('clears results and skips the request for an empty term', async () => {
         const fetcher = vi.fn(async () => ['x']);
-        const { term, results } = useDebouncedSearch(fetcher, 100);
+        const { term, results } = useDebouncedSearch(fetcher, [] as string[], 100);
 
         term.value = 'a';
         await nextTick();
@@ -69,6 +69,22 @@ describe('useDebouncedSearch', () => {
         await vi.advanceTimersByTimeAsync(100);
 
         expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(results.value).toEqual([]);
+    });
+
+    it('drops a response that arrives after the term was cleared', async () => {
+        let resolve: (v: string[]) => void = () => undefined;
+        const fetcher = vi.fn(() => new Promise<string[]>(r => (resolve = r)));
+        const { term, results } = useDebouncedSearch(fetcher, [] as string[], 100);
+
+        term.value = 'a';
+        await nextTick();
+        await vi.advanceTimersByTimeAsync(100);
+        term.value = '';
+        await nextTick();
+        resolve(['late']);
+        await vi.advanceTimersByTimeAsync(0);
+
         expect(results.value).toEqual([]);
     });
 });

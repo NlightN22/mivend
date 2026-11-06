@@ -84,7 +84,11 @@ beforeAll(async () => {
     const realScope = new AccessScopeService({} as never, {} as never, {} as never);
     const visibility = new OrderVisibilityService(
         {
-            build: () => dataSource.getRepository(TestOrder).createQueryBuilder('order'),
+            build: (_entity: unknown, options?: { take?: number; skip?: number }) => {
+                const qb = dataSource.getRepository(TestOrder).createQueryBuilder('order');
+                if (options?.take) qb.limit(options.take).offset(options.skip ?? 0);
+                return qb;
+            },
         } as unknown as ListQueryBuilder,
         {
             resolveOrderScope: async () => scope,
@@ -148,6 +152,20 @@ describe('visible order aggregates (real Postgres)', () => {
         expect(await service.sumVisibleTotals(ctx)).toBe(1315);
         scope = { kind: 'own', administratorId: 'm-1' } as AccessScope;
         expect(await service.sumVisibleTotals(ctx)).toBe(315);
+    });
+
+    it('ignores paging and sort in options when summing', async () => {
+        scope = { kind: 'all' } as AccessScope;
+        expect(await service.sumVisibleTotals(ctx, { take: 1, skip: 1 })).toBe(1315);
+    });
+
+    it('refuses more than 200 counterparty ids', async () => {
+        await expect(
+            service.lastOrderDates(
+                ctx,
+                Array.from({ length: 201 }, (_, i) => String(i)),
+            ),
+        ).rejects.toThrow('At most 200');
     });
 
     it('returns the latest placed date per listed counterparty and skips unplaced ones', async () => {

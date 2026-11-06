@@ -3,6 +3,7 @@ import { ref, type Ref } from 'vue';
 export interface UseLatestRequest<Args extends unknown[]> {
     loading: Ref<boolean>;
     run: (...args: Args) => Promise<void>;
+    cancel: () => void;
 }
 
 // Responses can arrive out of order, and the last to arrive wins, so stale results must be dropped.
@@ -26,5 +27,11 @@ export function useLatestRequest<T, Args extends unknown[]>(
         }
     }
 
-    return { loading, run };
+    // Invalidates any in-flight run so its late result is dropped.
+    function cancel(): void {
+        seq++;
+        loading.value = false;
+    }
+
+    return { loading, run, cancel };
 }

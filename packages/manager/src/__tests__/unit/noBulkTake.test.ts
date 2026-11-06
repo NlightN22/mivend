@@ -14,10 +14,14 @@ function graphqlFiles(dir: string): string[] {
         const path = join(dir, name);
         if (name === 'node_modules' || name === 'generated') return [];
         if (statSync(path).isDirectory()) return graphqlFiles(path);
-        return name.endsWith('.graphql') ? [path] : [];
+        return name.endsWith('.graphql') ||
+            (name.endsWith('.ts') && !name.includes('.test.') && !name.includes('.stories.'))
+            ? [path]
+            : [];
     });
 }
 
+// Covers .graphql files and gql strings in non-test .ts; a variable `take: $take` is not checked.
 // A fixed large `take` whose result is filtered, searched or summed in the browser is a bug:
 // use server-side search, take: 0 counts, by-id lookups or an aggregate (issue #312).
 describe('no bulk take in manager/storefront GraphQL documents', () => {

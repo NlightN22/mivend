@@ -139,6 +139,7 @@ export async function applyCounterpartyPortalAccessChanges(
 const MANAGER_LOOKUP_QUERY = /* GraphQL */ `
     query CounterpartyActivationManagerLookup {
         administrators(options: { take: 999 }) {
+            # bounded: staff accounts
             items {
                 id
                 firstName
@@ -149,6 +150,7 @@ const MANAGER_LOOKUP_QUERY = /* GraphQL */ `
             }
         }
         pendingErpUsers(options: { take: 999 }) {
+            # bounded: ERP staff users
             items {
                 erpId
                 fullName

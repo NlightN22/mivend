@@ -19,6 +19,7 @@ const priceTypes = ref<string[]>([]);
 const facets = ref<FacetOption[]>([]);
 const { term: customerSearch, results: customerMatches } = useDebouncedSearch(
     searchDiscountCounterparties,
+    [],
 );
 const pickedCustomers = ref(new Map<string, CounterpartyOption>());
 const submitting = ref(false);

@@ -11452,6 +11452,7 @@ export type OrderCreateCounterpartiesQueryVariables = Exact<{
 
 export type OrderCreateCounterpartiesQuery = {
     counterparties: {
+        totalItems: number;
         items: Array<{
             id: string;
             shortName: string;
@@ -14922,6 +14923,7 @@ export const RecomputeOrderChecksDocument = new TypedDocumentString(`
 export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
     query OrderCreateCounterparties($search: String!) {
   counterparties(options: {search: $search, take: 20, status: "active"}) {
+    totalItems
     items {
       id
       shortName
