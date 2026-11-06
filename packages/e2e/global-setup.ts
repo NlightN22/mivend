@@ -1,4 +1,5 @@
 import { chromium, type Page } from '@playwright/test';
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { adminGql, postBatch, shopGql, shopLoginCookie, waitForRun } from './helpers/api';
@@ -37,6 +38,11 @@ const PICKER_BATCH_SIZE = 100;
 
 export default async function globalSetup(): Promise<void> {
     if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
+    // A second Playwright pass or group on the same stack reuses the seed and sessions of the first one.
+    const doneMarker = path.join(AUTH_DIR, 'setup-done');
+    const stackName = process.env.E2E_DB_NAME;
+    if (stackName && fs.existsSync(doneMarker) && fs.readFileSync(doneMarker, 'utf8') === stackName)
+        return;
     // Cached admin tokens belong to the previous run's database.
     fs.rmSync(path.join(AUTH_DIR, 'admin-tokens.json'), { force: true });
 
@@ -309,4 +315,12 @@ export default async function globalSetup(): Promise<void> {
     }
 
     await browser.close();
+    if (stackName) fs.writeFileSync(doneMarker, stackName);
+    const leakBaseline = process.env.E2E_LEAK_SNAPSHOT;
+    if (leakBaseline)
+        execFileSync('bash', [
+            path.join(__dirname, '../../infrastructure/scripts/e2e-leak.sh'),
+            'snapshot',
+            leakBaseline,
+        ]);
 }

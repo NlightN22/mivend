@@ -11,6 +11,7 @@ Rules, checklist and the final checklist audit for every e2e change: the `e2e-ru
 ```bash
 make e2e-dev                                   # full suite, E2E_SHARDS (4) shards
 make e2e-dev E2E_ARGS="storefront/orders --project=storefront"
+make e2e-groups G="manager-customers manager-orders"   # several registry groups on one stack
 make e2e-cart / make e2e-smoke / make e2e-ui / make e2e-resilience
 ```
 
@@ -38,6 +39,23 @@ through the same teardown.
 `skip-guard-reporter.ts` fails the run on any skipped test (zero skips). A test that applies to some role projects only
 is selected by an `@on:<project>` tag, never skipped (next section); missing data is seeded. `manager/resilience` is
 not part of the suite at all: `playwright.config.ts` ignores it unless `E2E_RESILIENCE` is set.
+
+## Several groups on one stack (#316)
+
+`make e2e-groups G="manager-customers manager-orders"` validates every name, boots one stack, and runs the groups
+one after another; `make e2e-group G=<name>` is unchanged and still runs one group. The
+stack boot and the seed (about 90 s plus the 30-45 s picker seed) are paid once instead of once per group. The target
+holds the same `/tmp/mivend-e2e.lock` as every e2e target.
+
+Between groups `infrastructure/scripts/e2e-leak.sh` compares a snapshot of the stack database before and after each
+group: active reservations and orders in any state except Cancelled, AddingItems, ArrangingPayment and Draft. A difference
+stops the run with `e2e leak: group '<name>' left data behind` and the diff, so the next group never starts on top of
+leftovers. A failing group does not stop the others from running, and the target still exits non-zero at the end.
+
+Runs are serialised on `/tmp/mivend-e2e.lock`, held for the whole make target including every shard; `run.ts`
+refuses to start without it, because its leftover sweep drops every `mivend_e2e_*` database. A second run waits. A run killed with SIGKILL leaves its processes,
+database, vhost and indices behind; the next run removes them first. Server, worker and portal logs are in
+`apps/server/.e2e-stack/`. Auth state in `packages/e2e/.auth/` is written by `global-setup` and removed at teardown.
 
 ## Staging-integration order exchange suite (`make e2e-integration`, #255)
 

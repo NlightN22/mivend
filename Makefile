@@ -9,7 +9,7 @@ GIT_SHA = $(shell git rev-parse --short HEAD)
 -include .env.local
 export
 
-.PHONY: e2e-group e2e-integration-group up up-rebuild down logs ps restart \
+.PHONY: e2e-group e2e-groups e2e-integration-group up up-rebuild down logs ps restart \
         build lint fmt ci \
         test test-int test-access test-e2e bench-pricing mutation-pilot \
         e2e-dev e2e-stack-build e2e-smoke e2e-cart e2e-ui e2e-integration e2e-report \
@@ -398,6 +398,12 @@ e2e-dev test-e2e: e2e-stack-build
 e2e-group:
 	@test -n "$(G)" || { echo "usage: make e2e-group G=<name>"; exit 1; }
 	$(MAKE) e2e-dev E2E_ARGS="$$(bash infrastructure/scripts/e2e-group.sh dev $(G))"
+
+# Several groups on one stack: make e2e-groups G="manager-customers manager-orders" (fails if a group leaks data)
+e2e-groups: e2e-stack-build
+	@test -n "$(G)" || { echo "usage: make e2e-groups G=\"<name> <name>\""; exit 1; }
+	@for g in $(G); do bash infrastructure/scripts/e2e-group.sh dev $$g >/dev/null || exit 1; done
+	$(E2E_STACK) bash infrastructure/scripts/e2e-groups.sh $(G)
 
 # Minimal critical-route subset (login, order creation) — see docs/testing-strategy.md's
 # "E2E strategy".
