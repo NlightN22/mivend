@@ -67,16 +67,16 @@ const ru: typeof en = {
         serverBusyMessage: 'Подождите немного и попробуйте снова.',
         genericTitle: 'Что-то пошло не так',
         genericMessage: 'Попробуйте снова.',
-    },
-    errorPages: {
-        notFoundCode: '404 · Не найдено',
-        notFoundTitle: 'Мы искали, но не нашли',
         searchRateLimitedTitle: 'Слишком много запросов',
         searchRateLimitedMessage: 'Подождите {seconds} сек. и попробуйте снова.',
         searchBlockedTitle: 'Поиск недоступен',
         searchBlockedMessage: 'Попробуйте позже.',
         searchRefineTitle: 'Слишком много результатов',
         searchRefineMessage: 'Уточните запрос: добавьте слово, выберите категорию или фильтр.',
+    },
+    errorPages: {
+        notFoundCode: '404 · Не найдено',
+        notFoundTitle: 'Мы искали, но не нашли',
         notFoundText:
             'Страница могла быть перемещена или удалена, либо ссылка неверна. Попробуйте поиск по каталогу или вернитесь на главную.',
         searchPlaceholder: 'Поиск по каталогу…',

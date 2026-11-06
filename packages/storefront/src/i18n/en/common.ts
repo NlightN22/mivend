@@ -65,16 +65,16 @@ export default {
         serverBusyMessage: 'Please wait a moment and try again.',
         genericTitle: 'Something went wrong',
         genericMessage: 'Please try again.',
-    },
-    errorPages: {
-        notFoundCode: '404 · Not found',
-        notFoundTitle: "We looked, but didn't find it",
         searchRateLimitedTitle: 'Too many searches',
         searchRateLimitedMessage: 'Please wait {seconds} seconds and try again.',
         searchBlockedTitle: 'Search is unavailable',
         searchBlockedMessage: 'Please try again later.',
         searchRefineTitle: 'Too many results',
         searchRefineMessage: 'Refine your search: add a word or choose a category or filter.',
+    },
+    errorPages: {
+        notFoundCode: '404 · Not found',
+        notFoundTitle: "We looked, but didn't find it",
         notFoundText:
             'The page may have been moved, deleted, or the link is incorrect. Try searching the catalog or go back to the homepage.',
         searchPlaceholder: 'Search catalog…',
