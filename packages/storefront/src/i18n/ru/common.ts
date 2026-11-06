@@ -71,6 +71,12 @@ const ru: typeof en = {
     errorPages: {
         notFoundCode: '404 · Не найдено',
         notFoundTitle: 'Мы искали, но не нашли',
+        searchRateLimitedTitle: 'Слишком много запросов',
+        searchRateLimitedMessage: 'Подождите {seconds} сек. и попробуйте снова.',
+        searchBlockedTitle: 'Поиск недоступен',
+        searchBlockedMessage: 'Попробуйте позже.',
+        searchRefineTitle: 'Слишком много результатов',
+        searchRefineMessage: 'Уточните запрос: добавьте слово, выберите категорию или фильтр.',
         notFoundText:
             'Страница могла быть перемещена или удалена, либо ссылка неверна. Попробуйте поиск по каталогу или вернитесь на главную.',
         searchPlaceholder: 'Поиск по каталогу…',

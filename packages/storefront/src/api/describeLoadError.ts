@@ -17,7 +17,26 @@ function text(kind: ErrorKind): LoadErrorText {
 const TIMEOUT_PATTERN = /abort|timeout|timed out/i;
 const SERVER_ERROR_PATTERN = /^Shop API error: 5\d\d$/;
 
+const SEARCH_ERROR_KINDS: Record<string, string> = {
+    SEARCH_RATE_LIMITED: 'searchRateLimited',
+    SEARCH_END_USER_BLOCKED: 'searchBlocked',
+    SEARCH_REFINE_QUERY: 'searchRefine',
+};
+
 export function describeLoadError(err: unknown): LoadErrorText {
+    const { code, retryAfterSeconds } = (err ?? {}) as {
+        code?: unknown;
+        retryAfterSeconds?: number;
+    };
+    const searchKind = typeof code === 'string' && SEARCH_ERROR_KINDS[code];
+    if (searchKind) {
+        return {
+            title: i18n.global.t(`loadError.${searchKind}Title`),
+            message: i18n.global.t(`loadError.${searchKind}Message`, {
+                seconds: retryAfterSeconds ?? 1,
+            }),
+        };
+    }
     const isNetworkError = err instanceof Error && err.name === 'ApiNetworkError';
     if (isNetworkError && TIMEOUT_PATTERN.test(err.message)) return text('serverBusy');
     if (isNetworkError || err instanceof TypeError) return text('noConnection');

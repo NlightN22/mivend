@@ -15,6 +15,19 @@ export class ApiNetworkError extends Error {
     name = 'ApiNetworkError';
 }
 
+// GraphQL error from the server; `code` and `retryAfterSeconds` come from the error extensions.
+export class ShopApiError extends Error {
+    readonly code?: string;
+    readonly retryAfterSeconds?: number;
+
+    constructor(message: string, extensions?: Record<string, unknown>) {
+        super(message);
+        this.code = typeof extensions?.code === 'string' ? extensions.code : undefined;
+        const seconds = extensions?.retryAfterSeconds;
+        this.retryAfterSeconds = typeof seconds === 'number' ? seconds : undefined;
+    }
+}
+
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 600;
 
@@ -78,10 +91,16 @@ export async function shopApi<
         throw new Error(`Shop API error: ${response.status}`);
     }
 
-    const json = (await response.json()) as { data?: TResult; errors?: { message: string }[] };
+    const json = (await response.json()) as {
+        data?: TResult;
+        errors?: { message: string; extensions?: Record<string, unknown> }[];
+    };
 
     if (json.errors?.length) {
-        throw new Error(json.errors.map(e => e.message).join('; '));
+        throw new ShopApiError(
+            json.errors.map(e => e.message).join('; '),
+            json.errors[0].extensions,
+        );
     }
 
     return json.data as TResult;
