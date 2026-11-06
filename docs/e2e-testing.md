@@ -52,7 +52,7 @@ stack boot and the seed (about 90 s plus the 30-45 s picker seed) are paid once 
 holds the same `/tmp/mivend-e2e.lock` as every e2e target.
 
 Between groups `infrastructure/scripts/e2e-leak.sh` compares a snapshot of the stack database before and after each
-group: active reservations and orders in any state except Cancelled, AddingItems, ArrangingPayment and Draft. A difference
+group: active reservations and orders in any state except Cancelled, AddingItems, ArrangingPayment and Draft. Carts (AddingItems, ArrangingPayment, Draft) are deliberately not counted, and only an increase counts. A difference
 stops the run with `e2e leak: group '<name>' left data behind` and the diff, so the next group never starts on top of
 leftovers. A failing group does not stop the others from running, and the target still exits non-zero at the end.
 
@@ -200,7 +200,7 @@ Decision per spec (R = all four roles; O = operator, M = manager, D = department
 | `settings/settings-roles`, `settings-users`: positive | P | `ManageAccessControl` / `ManageAdministratorLifecycle` |
 | `settings/settings-roles`, `settings-users`: negative | O, M, D | the other roles must be refused |
 | `settings/settings-security` | O | admin-api session mechanics, role-independent |
-| `discounts`, `proforma-invoices-payments`, `layout/mobile-nav`, `team` | O | role-independent display (the grant and team scopes are covered by `visibility/` and `make test-access`) |
+| `discounts`, `proforma-invoices-payments`, `layout/mobile-nav`, `team` | O | role-independent display: the pages render the same component for every role, and their scope visibility is covered by `make test-access` (proforma, payment, discount-grant, dashboard matrices) and `visibility/` (entity lists, servicing team) |
 | `layout/pagination-scroll` | P | UI mechanics |
 
 Run time per group drops because a role-independent scenario costs one run instead of four.

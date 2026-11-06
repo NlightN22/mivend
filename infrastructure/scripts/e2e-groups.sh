@@ -13,6 +13,7 @@ for g in "$@"; do
     echo "e2e group: $g"
     # shellcheck disable=SC2086
     bash "$here/e2e-playwright.sh" $args || failed="$failed $g"
+    [ -s "$snap" ] || { echo "e2e leak: no baseline snapshot after group '$g'" >&2; exit 1; }
     bash "$here/e2e-leak.sh" check "$snap" "$g" || exit 1
 done
 if [ -n "$failed" ]; then

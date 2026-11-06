@@ -1,6 +1,6 @@
 import type { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/reporter';
 
-// Zero skips: role-dependent runs are selected by runsOn() tags, missing data is seeded.
+// Zero skips: role-dependent runs are selected by @on: tags (roleProjectGrep), missing data is seeded.
 
 export default class SkipGuardReporter implements Reporter {
     private readonly byReason = new Map<string, number>();
