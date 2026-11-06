@@ -3,7 +3,6 @@ import { onMounted, ref } from 'vue';
 import { MvNotice, MvPanel, MvSwitch } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useDepartmentBranch } from '../../composables/useDepartmentBranch';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import DepartmentBranchTable from '../../components/settings/DepartmentBranchTable.vue';
 
 const authStore = useAuthStore();
@@ -34,7 +33,6 @@ onMounted(() => {
     <div v-else class="department-branch">
         <div class="department-branch__breadcrumb">Workspace / Settings</div>
         <h1 class="department-branch__title">Departments to branch</h1>
-        <SettingsSubNav active="department-branch" />
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
@@ -69,7 +67,6 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 18px;
-    max-width: 1100px;
 }
 
 .department-branch__lead {

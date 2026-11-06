@@ -4,7 +4,6 @@ import { MvFormField, MvNotice, MvPanel, MvSelect } from '@mivend/ui-kit';
 import { fetchBranchOptions, type BranchOption } from '../../api/branchSettings';
 import { useAuthStore } from '../../stores/auth';
 import { useCheckPolicies } from '../../composables/useCheckPolicies';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import CheckPoliciesTable from '../../components/settings/CheckPoliciesTable.vue';
 
 const authStore = useAuthStore();
@@ -43,7 +42,6 @@ onMounted(() => {
     <div v-else class="check-policies">
         <div class="check-policies__breadcrumb">Workspace / Settings</div>
         <h1 class="check-policies__title">Controls and policies</h1>
-        <SettingsSubNav active="check-policies" />
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 

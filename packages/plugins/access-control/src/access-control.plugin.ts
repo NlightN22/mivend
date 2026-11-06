@@ -22,6 +22,8 @@ import {
 import { ShopCollectionBreadcrumbsLoader } from './shop-collection-breadcrumbs.loader';
 import { ShopCollectionBreadcrumbsResolver } from './shop-collection-breadcrumbs.resolver';
 import { adminApiSchema } from './access-control.schema';
+import { SystemHealthResolver } from './system-health.resolver';
+import { SystemHealthService } from './system-health.service';
 
 import { AccessControlResolver, AdministratorStatusResolver } from './access-control.resolver';
 import { AccessScopeService } from './access-scope.service';
@@ -89,6 +91,7 @@ import { WarehouseService } from './warehouse.service';
         ErpUserService,
         AdministratorActivationService,
         AdministratorProvisioningService,
+        SystemHealthService,
         RoleProvisioningService,
         DefaultBranchBootstrapService,
         DefaultChannelCurrencyBootstrapService,
@@ -125,6 +128,7 @@ import { WarehouseService } from './warehouse.service';
             AdministratorStatusResolver,
             ErpUserResolver,
             PriceTypeAdminResolver,
+            SystemHealthResolver,
             ...departmentBranchBundle.resolvers,
             CustomerPriceTypeResolver,
         ],

@@ -2,7 +2,6 @@
 import { onMounted, ref } from 'vue';
 import { MvButton, MvFormField, MvNotice, MvPanel, MvPasswordInput } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import {
     endAllSessions,
     endSession,
@@ -89,7 +88,6 @@ async function handleSignOutEverywhere(): Promise<void> {
     <div class="security-page">
         <div class="security-page__breadcrumb">Workspace / Settings</div>
         <h1 class="security-page__title">Security</h1>
-        <SettingsSubNav active="security" />
 
         <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 

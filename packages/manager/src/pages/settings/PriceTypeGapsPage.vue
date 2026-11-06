@@ -3,7 +3,6 @@ import { onMounted, watch } from 'vue';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { usePriceTypeGaps } from '../../composables/usePriceTypeGaps';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import PriceTypeGapsTable from '../../components/settings/PriceTypeGapsTable.vue';
 
 const authStore = useAuthStore();
@@ -19,7 +18,6 @@ onMounted(() => void g.load());
     <div class="price-type-gaps-page">
         <div class="price-type-gaps-page__breadcrumb">Workspace / Settings</div>
         <h1 class="price-type-gaps-page__title">Price type gaps</h1>
-        <SettingsSubNav active="price-type-gaps" />
 
         <MvNotice variant="info">
             These counterparties fall back to the branch default price type because the price type

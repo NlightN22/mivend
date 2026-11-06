@@ -5,7 +5,6 @@ import type { SelectOption } from '@mivend/ui-kit';
 import { useLatestRequest } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import WarehouseCurationTable from '../../components/settings/WarehouseCurationTable.vue';
 import BranchSettingsForm from '../../components/settings/BranchSettingsForm.vue';
 import {
@@ -211,7 +210,6 @@ onMounted(loadAll);
     <div v-else class="branch-settings-page">
         <div class="branch-settings-page__breadcrumb">Workspace / Settings</div>
         <h1 class="branch-settings-page__title">Branches</h1>
-        <SettingsSubNav active="branches" />
 
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>
 

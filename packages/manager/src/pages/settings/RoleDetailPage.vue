@@ -274,7 +274,6 @@ async function save(): Promise<void> {
     display: flex;
     flex-direction: column;
     gap: 14px;
-    max-width: 900px;
 }
 
 .role-detail__breadcrumb {

@@ -4,7 +4,6 @@ import { MvButton, MvNotice } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
 import { useVisibilityGrants } from '../../composables/useVisibilityGrants';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import VisibilityGrantModal from '../../components/settings/VisibilityGrantModal.vue';
 import VisibilityGrantsDataTable from '../../components/settings/VisibilityGrantsDataTable.vue';
 import type { GrantInput } from '../../api/visibilityGrants';
@@ -58,7 +57,6 @@ onMounted(() => {
     <div v-else class="visibility-grants-page">
         <div class="visibility-grants-page__breadcrumb">Workspace / Settings</div>
         <h1 class="visibility-grants-page__title">Visibility grants</h1>
-        <SettingsSubNav active="visibility-grants" />
 
         <MvNotice variant="info">
             A grant adds the clients of one more manager to an administrator's own scope. It never

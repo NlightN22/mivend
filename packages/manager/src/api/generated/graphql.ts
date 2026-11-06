@@ -7665,6 +7665,7 @@ export type Query = {
     stockLocations: StockLocationList;
     tag: Tag;
     tags: TagList;
+    systemHealthChecklist: Array<SystemHealthCheckItem>;
     taxCategories: TaxCategoryList;
     taxCategory: Maybe<TaxCategory>;
     taxRate: Maybe<TaxRate>;
@@ -9197,6 +9198,13 @@ export type TagSortParameter = {
     id?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
     value?: InputMaybe<SortOrder>;
+};
+
+export type SystemHealthCheckItem = {
+    detail: Maybe<Scalars['String']['output']>;
+    id: Scalars['String']['output'];
+    label: Scalars['String']['output'];
+    ok: Scalars['Boolean']['output'];
 };
 
 export type TaxCategory = Node & {
@@ -12537,15 +12545,10 @@ export type PermissionCatalogQuery = {
     globalSettings: { serverConfig: { permissions: Array<{ name: string; description: string }> } };
 };
 
-export type SystemHealthCheckDataQueryVariables = Exact<{ [key: string]: never }>;
+export type SystemHealthChecklistQueryVariables = Exact<{ [key: string]: never }>;
 
-export type SystemHealthCheckDataQuery = {
-    zones: { totalItems: number };
-    taxCategories: { totalItems: number };
-    taxRates: { items: Array<{ enabled: boolean }> };
-    activeChannel: { defaultTaxZone: { id: string } | null };
-    shippingMethods: { totalItems: number };
-    paymentMethods: { items: Array<{ enabled: boolean }> };
+export type SystemHealthChecklistQuery = {
+    systemHealthChecklist: Array<{ id: string; label: string; ok: boolean; detail: string | null }>;
 };
 
 export type DepartmentsQueryVariables = Exact<{ [key: string]: never }>;
@@ -16028,36 +16031,18 @@ export const PermissionCatalogDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<PermissionCatalogQuery, PermissionCatalogQueryVariables>;
-export const SystemHealthCheckDataDocument = new TypedDocumentString(`
-    query SystemHealthCheckData {
-  zones(options: {take: 1}) {
-    totalItems
-  }
-  taxCategories(options: {take: 1}) {
-    totalItems
-  }
-  taxRates(options: {take: 100}) {
-    items {
-      enabled
-    }
-  }
-  activeChannel {
-    defaultTaxZone {
-      id
-    }
-  }
-  shippingMethods(options: {take: 1}) {
-    totalItems
-  }
-  paymentMethods(options: {take: 100}) {
-    items {
-      enabled
-    }
+export const SystemHealthChecklistDocument = new TypedDocumentString(`
+    query SystemHealthChecklist {
+  systemHealthChecklist {
+    id
+    label
+    ok
+    detail
   }
 }
     `) as unknown as TypedDocumentString<
-    SystemHealthCheckDataQuery,
-    SystemHealthCheckDataQueryVariables
+    SystemHealthChecklistQuery,
+    SystemHealthChecklistQueryVariables
 >;
 export const DepartmentsDocument = new TypedDocumentString(`
     query Departments {

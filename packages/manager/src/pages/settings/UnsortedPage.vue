@@ -3,7 +3,6 @@ import { onMounted, watch } from 'vue';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useUnsorted } from '../../composables/useUnsorted';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import UnsortedAdministratorsTable from '../../components/settings/UnsortedAdministratorsTable.vue';
 import UnsortedCounterpartiesTable from '../../components/settings/UnsortedCounterpartiesTable.vue';
 
@@ -36,7 +35,6 @@ onMounted(() => {
     <div v-else class="unsorted-page">
         <div class="unsorted-page__breadcrumb">Workspace / Settings</div>
         <h1 class="unsorted-page__title">Unsorted</h1>
-        <SettingsSubNav active="unsorted" />
 
         <MvNotice variant="info">
             These counterparties and administrators have no resolvable branch, so branch-scoped

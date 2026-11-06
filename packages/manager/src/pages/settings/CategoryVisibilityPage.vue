@@ -2,7 +2,6 @@
 import { onMounted, ref } from 'vue';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import CategoryVisibilityCurationTable from '../../components/settings/CategoryVisibilityCurationTable.vue';
 import {
     fetchCategoryVisibilityCollections,
@@ -67,7 +66,6 @@ onMounted(loadAll);
     <div v-else class="category-visibility-page">
         <div class="category-visibility-page__breadcrumb">Workspace / Settings</div>
         <h1 class="category-visibility-page__title">Category visibility</h1>
-        <SettingsSubNav active="category-visibility" />
 
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>
 
@@ -99,7 +97,6 @@ onMounted(loadAll);
     display: flex;
     flex-direction: column;
     gap: 18px;
-    max-width: 1000px;
 }
 
 .category-visibility-page__description {

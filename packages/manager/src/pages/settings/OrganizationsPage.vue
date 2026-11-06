@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { MvNotice, MvPanel } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import OrganizationsTable from '../../components/settings/OrganizationsTable.vue';
 import { fetchOrganizations, type OrganizationRequisites } from '../../api/organizations';
 
@@ -87,7 +86,6 @@ onMounted(loadAll);
     <div v-else class="organizations-page">
         <div class="organizations-page__breadcrumb">Workspace / Settings</div>
         <h1 class="organizations-page__title">Organizations</h1>
-        <SettingsSubNav active="organizations" />
 
         <MvNotice v-if="loadError" variant="error">{{ loadError }}</MvNotice>
 
@@ -120,7 +118,6 @@ onMounted(loadAll);
     display: flex;
     flex-direction: column;
     gap: 18px;
-    max-width: 1000px;
 }
 
 .organizations-page__description {

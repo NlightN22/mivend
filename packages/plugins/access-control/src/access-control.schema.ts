@@ -3,10 +3,12 @@ import gql from 'graphql-tag';
 
 import { departmentBranchSdl } from './department-branch.schema';
 import { priceTypeSdl } from './price-type.schema';
+import { systemHealthSdl } from './system-health.schema';
 
 export const adminApiSchema: DocumentNode = gql`
     ${priceTypeSdl}
     ${departmentBranchSdl}
+    ${systemHealthSdl}
 
     type ErpPosition {
         id: ID!

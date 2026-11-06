@@ -1,15 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { MvNotice, MvPanel } from '@mivend/ui-kit';
+import { MvButton, MvNotice, MvPanel } from '@mivend/ui-kit';
 import type { NotificationItem } from '@mivend/ui-kit';
 import { IconCircleCheck, IconAlertTriangle } from '@tabler/icons-vue';
 import { useAuthStore } from '../../stores/auth';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
-import {
-    buildSystemHealthChecklist,
-    fetchSystemHealthData,
-    type SystemHealthCheckItem,
-} from '../../api/system-health';
+import { fetchSystemHealthChecklist, type SystemHealthCheckItem } from '../../api/system-health';
 import { fetchNotifications } from '../../api/notifications';
 import OrderCheckHealthPanel from '../../components/settings/OrderCheckHealthPanel.vue';
 import ErpReconciliationPanel from '../../components/dashboard/ErpReconciliationPanel.vue';
@@ -21,17 +16,17 @@ const HEALTH_PANEL_TAKE = 10;
 const authStore = useAuthStore();
 const checklist = ref<SystemHealthCheckItem[]>([]);
 const loading = ref(true);
-const error = ref('');
+const checklistFailed = ref(false);
 const erpIssues = ref<NotificationItem[]>([]);
 
 async function load(): Promise<void> {
     loading.value = true;
-    error.value = '';
+    checklistFailed.value = false;
     try {
-        const data = await fetchSystemHealthData();
-        checklist.value = buildSystemHealthChecklist(data);
+        checklist.value = await fetchSystemHealthChecklist();
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Could not load system health data';
+        console.warn('[system-health] could not load the store setup checklist:', e);
+        checklistFailed.value = true;
     } finally {
         loading.value = false;
     }
@@ -70,19 +65,22 @@ onMounted(() => {
     <div v-else class="system-health-page">
         <div class="system-health-page__breadcrumb">Workspace / Settings</div>
         <h1 class="system-health-page__title">System health</h1>
-        <SettingsSubNav active="system-health" />
-
-        <MvNotice v-if="error" variant="error">{{ error }}</MvNotice>
 
         <MvPanel
             v-if="authStore.hasPermission('ManageAccessControl') && !loading"
             title="Store setup checklist"
         >
-            <ul class="system-health-page__items">
+            <MvNotice v-if="checklistFailed" variant="error">
+                <div class="system-health-page__failure">
+                    <span>The store setup checklist could not be loaded.</span>
+                    <MvButton variant="secondary" @click="load">Retry</MvButton>
+                </div>
+            </MvNotice>
+            <ul v-else class="system-health-page__items">
                 <li v-for="item in checklist" :key="item.id" class="system-health-page__row">
                     <div class="system-health-page__row-main">
                         <IconCircleCheck
-                            v-if="item.status === 'ok'"
+                            v-if="item.ok"
                             class="system-health-page__icon system-health-page__icon--ok"
                             :size="20"
                         />
@@ -112,6 +110,20 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.system-health-page {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.system-health-page__failure {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .system-health-page__breadcrumb {
     color: var(--el-text-color-secondary, #6b7280);
     font-size: 13px;

@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useLatestRequest, MvFilterChips, MvNotice, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
-import SettingsSubNav from '../../components/settings/SettingsSubNav.vue';
 import UsersDataTable from '../../components/settings/UsersDataTable.vue';
 import PendingErpUsersDataTable from '../../components/settings/PendingErpUsersDataTable.vue';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
@@ -263,7 +262,6 @@ onMounted(async () => {
     <div v-else class="users-page">
         <div class="users-page__breadcrumb">Workspace / Settings</div>
         <h1 class="users-page__title">Users</h1>
-        <SettingsSubNav active="users" />
 
         <MvNotice v-if="actionError" variant="error">{{ actionError }}</MvNotice>
         <MvNotice v-else-if="actionNotice" variant="success">{{ actionNotice }}</MvNotice>

@@ -105,91 +105,103 @@ export const router = createRouter({
                 },
                 {
                     path: 'settings',
-                    redirect: '/settings/roles',
-                },
-                {
-                    path: 'settings/roles',
-                    name: 'settings-roles',
-                    component: () => import('../pages/settings/RolesListPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'settings/roles/:code',
-                    name: 'settings-role-detail',
-                    component: () => import('../pages/settings/RoleDetailPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'settings/users',
-                    name: 'settings-users',
-                    component: () => import('../pages/settings/UsersPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'settings/branches',
-                    name: 'settings-branches',
-                    component: () => import('../pages/settings/BranchSettingsPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'settings/department-branch',
-                    name: 'settings-department-branch',
-                    component: () => import('../pages/settings/DepartmentBranchPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'settings/visibility-grants',
-                    name: 'settings-visibility-grants',
-                    component: () => import('../pages/settings/VisibilityGrantsPage.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        requiresAnyPermission: ['ManageVisibilityGrants', 'ManageAccessControl'],
-                    },
-                },
-                {
-                    path: 'settings/unsorted',
-                    name: 'settings-unsorted',
-                    component: () => import('../pages/settings/UnsortedPage.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        requiresAnyPermission: ['ManageVisibilityGrants', 'ManageAccessControl'],
-                    },
-                },
-                {
-                    path: 'settings/price-type-gaps',
-                    name: 'settings-price-type-gaps',
-                    component: () => import('../pages/settings/PriceTypeGapsPage.vue'),
-                    meta: { requiresAuth: true, requiresAnyPermission: ['ReadCounterparty'] },
-                },
-                {
-                    path: 'settings/organizations',
-                    name: 'settings-organizations',
-                    component: () => import('../pages/settings/OrganizationsPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'settings/category-visibility',
-                    name: 'settings-category-visibility',
-                    component: () => import('../pages/settings/CategoryVisibilityPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'settings/security',
-                    name: 'settings-security',
-                    component: () => import('../pages/settings/SecurityPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'settings/system-health',
-                    name: 'settings-system-health',
-                    component: () => import('../pages/settings/SystemHealthPage.vue'),
-                    meta: { requiresAuth: true },
-                },
-                {
-                    path: 'settings/check-policies',
-                    name: 'settings-check-policies',
-                    component: () => import('../pages/settings/CheckPoliciesPage.vue'),
-                    meta: { requiresAuth: true },
+                    component: () => import('../pages/settings/SettingsLayout.vue'),
+                    children: [
+                        { path: '', redirect: '/settings/roles' },
+                        {
+                            path: 'roles',
+                            name: 'settings-roles',
+                            component: () => import('../pages/settings/RolesListPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'roles/:code',
+                            name: 'settings-role-detail',
+                            component: () => import('../pages/settings/RoleDetailPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'users',
+                            name: 'settings-users',
+                            component: () => import('../pages/settings/UsersPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'branches',
+                            name: 'settings-branches',
+                            component: () => import('../pages/settings/BranchSettingsPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'department-branch',
+                            name: 'settings-department-branch',
+                            component: () => import('../pages/settings/DepartmentBranchPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'visibility-grants',
+                            name: 'settings-visibility-grants',
+                            component: () => import('../pages/settings/VisibilityGrantsPage.vue'),
+                            meta: {
+                                requiresAuth: true,
+                                requiresAnyPermission: [
+                                    'ManageVisibilityGrants',
+                                    'ManageAccessControl',
+                                ],
+                            },
+                        },
+                        {
+                            path: 'unsorted',
+                            name: 'settings-unsorted',
+                            component: () => import('../pages/settings/UnsortedPage.vue'),
+                            meta: {
+                                requiresAuth: true,
+                                requiresAnyPermission: [
+                                    'ManageVisibilityGrants',
+                                    'ManageAccessControl',
+                                ],
+                            },
+                        },
+                        {
+                            path: 'price-type-gaps',
+                            name: 'settings-price-type-gaps',
+                            component: () => import('../pages/settings/PriceTypeGapsPage.vue'),
+                            meta: {
+                                requiresAuth: true,
+                                requiresAnyPermission: ['ReadCounterparty'],
+                            },
+                        },
+                        {
+                            path: 'organizations',
+                            name: 'settings-organizations',
+                            component: () => import('../pages/settings/OrganizationsPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'category-visibility',
+                            name: 'settings-category-visibility',
+                            component: () => import('../pages/settings/CategoryVisibilityPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'security',
+                            name: 'settings-security',
+                            component: () => import('../pages/settings/SecurityPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'system-health',
+                            name: 'settings-system-health',
+                            component: () => import('../pages/settings/SystemHealthPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                        {
+                            path: 'check-policies',
+                            name: 'settings-check-policies',
+                            component: () => import('../pages/settings/CheckPoliciesPage.vue'),
+                            meta: { requiresAuth: true },
+                        },
+                    ],
                 },
                 {
                     path: 'team',
