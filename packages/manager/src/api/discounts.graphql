@@ -51,3 +51,12 @@ query ExpiringDiscountGrants($withinDays: Int!) {
         }
     }
 }
+
+query DiscountCounterpartySearch($search: String!) {
+    counterparties(options: { search: $search, take: 20 }) {
+        items {
+            id
+            legalName
+        }
+    }
+}

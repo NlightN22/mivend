@@ -1,5 +1,6 @@
 import { adminApi } from './client';
 import {
+    DiscountCounterpartySearchDocument,
     DiscountFacetsDocument,
     DiscountRegistryPageDocument,
     ExpiringDiscountGrantsDocument,
@@ -157,4 +158,14 @@ export async function fetchExpiringDiscountGrants(
 ): Promise<ExpiringDiscountGrant[]> {
     const result = await adminApi(ExpiringDiscountGrantsDocument, { withinDays });
     return result.expiringDiscountGrants;
+}
+
+export interface CounterpartyOption {
+    value: string;
+    label: string;
+}
+
+export async function searchDiscountCounterparties(term: string): Promise<CounterpartyOption[]> {
+    const result = await adminApi(DiscountCounterpartySearchDocument, { search: term.trim() });
+    return result.counterparties.items.map(c => ({ value: c.id, label: c.legalName }));
 }

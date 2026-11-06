@@ -94,6 +94,7 @@ query PriceAdjustmentRequestsForOrder($orderId: ID!) {
 
 query RelatedDocuments($orderId: ID!) {
     documents(options: { take: 100 }, orderId: $orderId) {
+        # bounded: documents of one order
         items {
             id
             type

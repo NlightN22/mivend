@@ -596,6 +596,13 @@ qty/location context, so the manager-portal UI can show exactly what's wrong per
 - `multiplicity` data: will arrive correctly once the ERP integration is live; current seed data
   is a placeholder only — no separate data-cleanup step needed before enforcing validation.
 
+## Placing an order on behalf of a counterparty (manager portal, #312)
+
+Decision: the new-order customer picker lists any active counterparty found by a server-side search
+(name, legal name, INN; 20 results per query). An order can be placed only for a counterparty that has a
+linked, activated portal customer; one without it is shown with the reason "Portal access not
+activated" and cannot be selected. Activation stays in the portal-access flow, not in order entry.
+
 ## Implementation order
 
 Follow the staged rollout from "Recommended sequence" implicit above: (1) data model —

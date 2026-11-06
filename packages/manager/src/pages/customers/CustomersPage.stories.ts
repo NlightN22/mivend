@@ -169,7 +169,7 @@ function mockCustomersData(): void {
     }));
     registerMock('ExpiringDiscountGrants', () => ({ expiringDiscountGrants: [] }));
     registerMock('ActiveDiscountCounts', () => ({ activeDiscountCounts: [] }));
-    registerMock('LastOrderDates', () => ({ visibleOrders: { items: [] } }));
+    registerMock('LastOrderDates', () => ({ lastOrderDates: [] }));
 }
 
 export const Default: Story = {
@@ -201,7 +201,7 @@ export const Empty: Story = {
             registerMock('TeamMembers', () => ({ teamMembers: [] }));
             registerMock('ExpiringDiscountGrants', () => ({ expiringDiscountGrants: [] }));
             registerMock('ActiveDiscountCounts', () => ({ activeDiscountCounts: [] }));
-            registerMock('LastOrderDates', () => ({ visibleOrders: { items: [] } }));
+            registerMock('LastOrderDates', () => ({ lastOrderDates: [] }));
             await router.push('/customers');
         },
     ],

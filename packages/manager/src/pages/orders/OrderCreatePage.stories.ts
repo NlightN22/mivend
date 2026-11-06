@@ -17,11 +17,21 @@ function mockOrderCreateData(): void {
         counterparties: {
             items: [
                 {
+                    id: '2',
+                    shortName: 'customer-124',
+                    legalName: 'customer-124 LLC',
+                    inn: '7701234568',
+                    priceType: 'price-type-wholesale',
+                    linkedCustomerId: null,
+                    tradingPoints: [],
+                },
+                {
                     id: '1',
                     shortName: 'customer-123',
                     legalName: 'customer-123 LLC',
                     inn: '7701234567',
                     priceType: 'price-type-wholesale',
+                    linkedCustomerId: '1',
                     tradingPoints: [
                         {
                             id: '1',
@@ -34,9 +44,6 @@ function mockOrderCreateData(): void {
                 },
             ],
         },
-    }));
-    registerMock('OrderCreateCustomers', () => ({
-        customers: { items: [{ id: '1', counterparty: { id: '1' } }] },
     }));
 }
 

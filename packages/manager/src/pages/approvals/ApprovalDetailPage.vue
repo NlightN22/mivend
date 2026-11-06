@@ -63,10 +63,9 @@ async function load(): Promise<void> {
         } else if (detail.requestType.startsWith('creditTermApproval')) {
             try {
                 const payload = JSON.parse(detail.payload) as { counterpartyErpId?: string };
-                const refs = await fetchCounterpartyReferencesByErpId();
-                counterpartyReference.value = payload.counterpartyErpId
-                    ? (refs.get(payload.counterpartyErpId) ?? null)
-                    : null;
+                const erpId = payload.counterpartyErpId;
+                const refs = await fetchCounterpartyReferencesByErpId(erpId ? [erpId] : []);
+                counterpartyReference.value = erpId ? (refs.get(erpId) ?? null) : null;
             } catch {
                 counterpartyReference.value = null;
             }

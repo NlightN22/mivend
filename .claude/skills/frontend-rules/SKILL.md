@@ -86,6 +86,15 @@ sticky < dropdown < floating < overlay < modal < popover < connection-bar < toas
 - A new layer role is added to both `tokens.css` and `layers.ts`; `layers.test.ts` enforces sync and
   rejects raw page-level values.
 
+## No capped lists filtered in the browser
+
+No list query with a fixed `take` above one page whose result is then filtered, searched, counted or
+aggregated in the browser (issue #312: a 500-row cap hid a customer among 24585). Pickers use server-side
+search (`search` + `take: 20`, debounced, `useDebouncedSearch`/`useLatestRequest`); counts use `take: 0`;
+per-entity names use a by-id lookup; sums and "last X" use a server aggregate. A genuinely small dictionary
+may keep a large `take` only with a `# bounded: <reason>` comment on the `take` line or the line after it;
+`noBulkTake.test.ts` (manager) fails on `take: <N>` with N >= 100 in `*.graphql` under manager/storefront without one.
+
 ## Phone width
 
 A page must never scroll horizontally at 360px. Single-column and flexible grid tracks are `minmax(0, 1fr)`,

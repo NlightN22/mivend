@@ -171,14 +171,17 @@ function mockOrdersData(): void {
     registerMock('OrdersSummary', () => ({
         open: { totalItems: ORDERS.length },
         overdue: { totalItems: 1 },
-        today: {
-            totalItems: 2,
-            items: ORDERS.slice(0, 2).map(o => ({ totalWithTax: o.totalWithTax })),
-        },
+        today: { totalItems: 2 },
+        todayAmount: ORDERS.slice(0, 2).reduce((sum, o) => sum + o.totalWithTax, 0),
+        openAmount: ORDERS.reduce((sum, o) => sum + o.totalWithTax, 0),
         processing: { totalItems: 2 },
         drafts: { totalItems: 0 },
-        allOpen: { items: ORDERS },
         pendingPriceAdjustmentOrderIds: [],
+    }));
+    registerMock('OrdersAttention', () => ({
+        waiting: { totalItems: 0, items: [] },
+        overdueRows: { items: [] },
+        both: { totalItems: 0 },
     }));
     registerMock('TeamMembers', () => ({
         teamMembers: [
@@ -215,11 +218,17 @@ export const Empty: Story = {
             registerMock('OrdersSummary', () => ({
                 open: { totalItems: 0 },
                 overdue: { totalItems: 0 },
-                today: { totalItems: 0, items: [] },
+                today: { totalItems: 0 },
+                todayAmount: 0,
+                openAmount: 0,
                 processing: { totalItems: 0 },
                 drafts: { totalItems: 0 },
-                allOpen: { items: [] },
                 pendingPriceAdjustmentOrderIds: [],
+            }));
+            registerMock('OrdersAttention', () => ({
+                waiting: { totalItems: 0, items: [] },
+                overdueRows: { items: [] },
+                both: { totalItems: 0 },
             }));
             registerMock('TeamMembers', () => ({ teamMembers: [] }));
             registerMock('Branches', () => ({ branches: [] }));

@@ -126,12 +126,12 @@ export interface CounterpartyReference {
     shortName: string;
 }
 
-// creditTermApproval payloads carry the ERP id, not the portal id (see CreditTermRequestInput),
-// matched against caller's scoped counterparties; capped at 500 as a stopgap, not a true fix
-export async function fetchCounterpartyReferencesByErpId(): Promise<
-    Map<string, CounterpartyReference>
-> {
-    const result = await adminApi(ApprovalCounterpartiesDocument);
+// creditTermApproval payloads carry the ERP id, not the portal id (see CreditTermRequestInput).
+export async function fetchCounterpartyReferencesByErpId(
+    erpIds: string[],
+): Promise<Map<string, CounterpartyReference>> {
+    if (erpIds.length === 0) return new Map();
+    const result = await adminApi(ApprovalCounterpartiesDocument, { erpIds });
     return new Map(result.counterparties.items.map(c => [c.erpId, c]));
 }
 

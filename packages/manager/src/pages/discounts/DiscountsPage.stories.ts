@@ -134,6 +134,7 @@ function mockDiscountsData(): void {
         }
         return { discountRegistryPage: paginate(filtered, o) };
     });
+    registerMock('CounterpartyShortName', () => ({ counterparty: { shortName: 'customer-123' } }));
     registerMock('CustomersPage', () => ({
         counterparties: { items: CUSTOMERS, totalItems: CUSTOMERS.length },
     }));

@@ -275,15 +275,9 @@ query CustomerDiscountGrantsPage(
     }
 }
 
-query LastOrderDates {
-    visibleOrders(options: { take: 500, sort: { orderPlacedAt: DESC } }) {
-        items {
-            orderPlacedAt
-            customer {
-                counterparty {
-                    id
-                }
-            }
-        }
+query LastOrderDates($counterpartyIds: [ID!]!) {
+    lastOrderDates(counterpartyIds: $counterpartyIds) {
+        counterpartyId
+        lastOrderAt
     }
 }

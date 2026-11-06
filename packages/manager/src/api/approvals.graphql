@@ -82,6 +82,7 @@ mutation DecideCreditTermRequest($requestId: ID!, $decision: String!, $comment: 
 
 query ApprovalOrderReferences($ids: [String!]!) {
     visibleOrders(options: { take: 200, filter: { id: { in: $ids } } }) {
+        # bounded: by-id lookup for one inbox page
         items {
             id
             code
@@ -102,8 +103,9 @@ query ApprovalOrderReferences($ids: [String!]!) {
     }
 }
 
-query ApprovalCounterparties {
-    counterparties(options: { take: 500 }) {
+query ApprovalCounterparties($erpIds: [String!]!) {
+    counterparties(options: { erpIds: $erpIds, take: 200 }) {
+        # bounded: by-id lookup for one inbox page
         items {
             erpId
             shortName

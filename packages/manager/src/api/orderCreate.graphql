@@ -1,11 +1,12 @@
-query OrderCreateCounterparties {
-    counterparties(options: { take: 500 }) {
+query OrderCreateCounterparties($search: String!) {
+    counterparties(options: { search: $search, take: 20, status: "active" }) {
         items {
             id
             shortName
             legalName
             inn
             priceType
+            linkedCustomerId
             tradingPoints {
                 id
                 name
@@ -17,13 +18,20 @@ query OrderCreateCounterparties {
     }
 }
 
-query OrderCreateCustomers($counterpartyIds: [String!]!, $take: Int!) {
-    customers(options: { take: $take, filter: { counterpartyId: { in: $counterpartyIds } } }) {
-        items {
+query OrderCreateCounterparty($id: ID!) {
+    counterparty(id: $id) {
+        id
+        shortName
+        legalName
+        inn
+        priceType
+        linkedCustomerId
+        tradingPoints {
             id
-            counterparty {
-                id
-            }
+            name
+            address
+            isActive
+            customerStatus
         }
     }
 }

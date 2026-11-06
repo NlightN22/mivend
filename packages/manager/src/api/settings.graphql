@@ -49,6 +49,7 @@ mutation SetCreditTermLimit($code: String!, $maxExtraDays: Int!, $maxAmount: Int
 
 query SecurityAdministrators {
     administrators(options: { take: 200 }) {
+        # bounded: staff accounts, a small dictionary
         items {
             id
             firstName

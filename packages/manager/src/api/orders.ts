@@ -5,6 +5,7 @@ import {
     DeleteTableViewDocument,
     MyTableViewsDocument,
     OrdersPageDocument,
+    OrdersAttentionDocument,
     OrdersSummaryDocument,
     SaveTableViewDocument,
     TeamMembersDocument,
@@ -168,6 +169,7 @@ export interface OrdersSummary {
     draftCount: number;
     totalAmount: number;
     pendingApprovalOrderIds: Set<string>;
+    attentionCount: number;
     attentionCandidates: AttentionCandidate[];
 }
 
@@ -181,16 +183,18 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
     ).toISOString();
 
     const result = await adminApi(OrdersSummaryDocument, { overdueBefore, todayStart });
-
     const pendingIds = new Set(result.pendingPriceAdjustmentOrderIds);
-    const overdueBeforeMs = new Date(overdueBefore).getTime();
-    const isOverdue = (o: (typeof result.allOpen.items)[number]): boolean =>
-        o.state === 'PaymentSettled' &&
-        !!o.orderPlacedAt &&
-        new Date(o.orderPlacedAt).getTime() < overdueBeforeMs;
+    const attention = await adminApi(OrdersAttentionDocument, {
+        pendingIds: [...pendingIds],
+        overdueBefore,
+    });
 
-    const attentionCandidates: AttentionCandidate[] = result.allOpen.items
-        .filter(o => pendingIds.has(o.id) || isOverdue(o))
+    const seen = new Set<string>();
+    const attentionCandidates: AttentionCandidate[] = [
+        ...attention.waiting.items,
+        ...attention.overdueRows.items,
+    ]
+        .filter(o => !seen.has(o.id) && seen.add(o.id))
         .map(o => ({
             id: o.id,
             code: o.code,
@@ -203,12 +207,14 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
         openCount: result.open.totalItems,
         overdueCount: result.overdue.totalItems,
         todayCount: result.today.totalItems,
-        todayAmount: result.today.items.reduce((sum, o) => sum + o.totalWithTax, 0),
-        waitingApprovalCount: result.allOpen.items.filter(o => pendingIds.has(o.id)).length,
+        todayAmount: result.todayAmount,
+        waitingApprovalCount: attention.waiting.totalItems,
         processingCount: result.processing.totalItems,
         draftCount: result.drafts.totalItems,
-        totalAmount: result.allOpen.items.reduce((sum, o) => sum + o.totalWithTax, 0),
+        totalAmount: result.openAmount,
         pendingApprovalOrderIds: pendingIds,
+        attentionCount:
+            attention.waiting.totalItems + result.overdue.totalItems - attention.both.totalItems,
         attentionCandidates,
     };
 }

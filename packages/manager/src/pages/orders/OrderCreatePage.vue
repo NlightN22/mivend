@@ -9,7 +9,7 @@ import {
     adjustDraftOrderLineQuantity,
     removeDraftOrderLine,
     fetchOrder,
-    fetchCustomerOptions,
+    fetchCustomerOption,
     finalizeOrder,
     setDraftOrderTradingPoint,
     type DeliveryMethod,
@@ -42,6 +42,7 @@ const selectedTradingPoint = computed(() =>
 );
 
 async function handleCustomerSelected(selected: CustomerOption): Promise<void> {
+    if (!selected.customerId) return;
     customer.value = selected;
     deliveryMethod.value = 'pickup';
     tradingPointId.value = '';
@@ -60,9 +61,8 @@ async function handleCustomerSelected(selected: CustomerOption): Promise<void> {
 onMounted(async () => {
     const preselectCounterpartyId = route.query.customerId;
     if (typeof preselectCounterpartyId !== 'string' || !preselectCounterpartyId) return;
-    const options = await fetchCustomerOptions();
-    const match = options.find(o => o.counterpartyId === preselectCounterpartyId);
-    if (match) await handleCustomerSelected(match);
+    const match = await fetchCustomerOption(preselectCounterpartyId);
+    if (match?.customerId) await handleCustomerSelected(match);
 });
 
 async function handleDeliveryMethod(method: string): Promise<void> {

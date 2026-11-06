@@ -6,7 +6,7 @@ import {
     CreateDraftOrderDocument,
     EligibleShippingMethodsForDraftOrderDocument,
     OrderCreateCounterpartiesDocument,
-    OrderCreateCustomersDocument,
+    OrderCreateCounterpartyDocument,
     OrderCreateOrderDocument,
     OrderCreateProductSearchDocument,
     RemoveDraftOrderLineDocument,
@@ -17,11 +17,12 @@ import {
     SetDraftOrderTradingPointDocument,
     TransitionOrderToStateDocument,
     type DraftOrderFieldsFragment,
+    type OrderCreateCounterpartyQuery,
 } from './generated/graphql';
 
 export interface CustomerOption {
     counterpartyId: string;
-    customerId: string;
+    customerId: string | null;
     shortName: string;
     legalName: string;
     inn: string | null;
@@ -29,44 +30,40 @@ export interface CustomerOption {
     tradingPoints: { id: string; name: string; address: string }[];
 }
 
+export const PORTAL_NOT_ACTIVATED_REASON = 'Portal access not activated';
+
 export interface CustomerCredit {
     creditLimit: number;
     creditBalance: number;
 }
 
-// Bounded at 500 as a stopgap; the real fix is a search-as-you-type picker
-// using counterparties(options:{search}) instead of fetching everything.
-export async function fetchCustomerOptions(): Promise<CustomerOption[]> {
-    const result = await adminApi(OrderCreateCounterpartiesDocument);
-    // Batched lookup filtered to exactly the fetched counterparty ids, not a flat cap:
-    // a flat cap silently dropped customers once the customer book passed 200 rows.
-    const counterpartyIds = result.counterparties.items.map(c => c.id);
-    // counterpartyId is a customField: filter it with StringOperators, not IDOperators,
-    // even though it holds an id.
-    const customersResult = await adminApi(OrderCreateCustomersDocument, {
-        counterpartyIds,
-        take: counterpartyIds.length,
-    });
-    const customerIdByCounterpartyId = new Map(
-        customersResult.customers.items
-            .filter(c => c.counterparty)
-            .map(c => [c.counterparty?.id as string, c.id]),
-    );
+type CounterpartyRow = NonNullable<OrderCreateCounterpartyQuery['counterparty']>;
 
-    return result.counterparties.items
-        .filter(c => customerIdByCounterpartyId.has(c.id))
-        .map(c => ({
-            counterpartyId: c.id,
-            customerId: customerIdByCounterpartyId.get(c.id) as string,
-            shortName: c.shortName,
-            legalName: c.legalName,
-            inn: c.inn,
-            priceType: c.priceType,
-            // Same rule as the server: only active, visible points can be chosen for delivery.
-            tradingPoints: c.tradingPoints
-                .filter(p => p.isActive && p.customerStatus === 'active')
-                .map(({ id, name, address }) => ({ id, name, address })),
-        }));
+function toCustomerOption(c: CounterpartyRow): CustomerOption {
+    return {
+        counterpartyId: c.id,
+        customerId: c.linkedCustomerId,
+        shortName: c.shortName,
+        legalName: c.legalName,
+        inn: c.inn,
+        priceType: c.priceType,
+        // Same rule as the server: only active, visible points can be chosen for delivery.
+        tradingPoints: c.tradingPoints
+            .filter(p => p.isActive && p.customerStatus === 'active')
+            .map(({ id, name, address }) => ({ id, name, address })),
+    };
+}
+
+export async function searchCustomerOptions(term: string): Promise<CustomerOption[]> {
+    const search = term.trim();
+    if (!search) return [];
+    const result = await adminApi(OrderCreateCounterpartiesDocument, { search });
+    return result.counterparties.items.map(toCustomerOption);
+}
+
+export async function fetchCustomerOption(counterpartyId: string): Promise<CustomerOption | null> {
+    const result = await adminApi(OrderCreateCounterpartyDocument, { id: counterpartyId });
+    return result.counterparty ? toCustomerOption(result.counterparty) : null;
 }
 
 // Kept separate: a ForbiddenError on a non-null field (creditLimit/creditBalance need

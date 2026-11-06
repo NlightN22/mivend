@@ -256,9 +256,11 @@ async function loadPage(): Promise<void> {
         customers.value = pageResult.items;
         totalItems.value = pageResult.totalItems;
         credit.value = creditMap;
-        discountCounts.value = await fetchActiveDiscountCountsByCustomer(
-            pageResult.items.map(c => c.id),
-        );
+        const pageIds = pageResult.items.map(c => c.id);
+        [discountCounts.value, lastOrderDates.value] = await Promise.all([
+            fetchActiveDiscountCountsByCustomer(pageIds),
+            fetchLastOrderDatesByCounterpartyId(pageIds),
+        ]);
     } finally {
         loading.value = false;
     }
@@ -275,7 +277,6 @@ watch([search, statusFilter, managerFilter, branchFilter, groupFilter, innFilter
 onMounted(async () => {
     await loadPage();
     const [
-        lastOrderMap,
         branchOptionsResult,
         managerOptionsResult,
         expiringGrants,
@@ -283,7 +284,6 @@ onMounted(async () => {
         highUsage,
         exceededIds,
     ] = await Promise.all([
-        fetchLastOrderDatesByCounterpartyId(),
         fetchBranchOptions(),
         fetchManagerOptions(),
         fetchExpiringDiscountGrants(EXPIRING_SOON_DAYS),
@@ -291,7 +291,6 @@ onMounted(async () => {
         fetchHighUsageCustomers(ATTENTION_TOP_N),
         fetchCreditLimitExceededCounterpartyIds(),
     ]);
-    lastOrderDates.value = lastOrderMap;
     branches.value = branchOptionsResult;
     managers.value = managerOptionsResult;
     summary.value = summaryResult;

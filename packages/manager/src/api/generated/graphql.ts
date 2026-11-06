@@ -1066,6 +1066,11 @@ export type CounterpartyFilterParameter = {
     shortName?: InputMaybe<StringOperators>;
 };
 
+export type CounterpartyLastOrder = {
+    counterpartyId: Scalars['ID']['output'];
+    lastOrderAt: Scalars['DateTime']['output'];
+};
+
 export type CounterpartyList = PaginatedList & {
     items: Array<Counterparty>;
     totalItems: Scalars['Int']['output'];
@@ -1086,6 +1091,8 @@ export type CounterpartyListFilter = {
 
 export type CounterpartyListOptions = {
     branchId?: InputMaybe<Scalars['String']['input']>;
+    /** Exact ERP ids; narrows inside the caller's visibility scope (batch lookup for references) */
+    erpIds?: InputMaybe<Array<Scalars['String']['input']>>;
     /** Allows the results to be filtered */
     filter?: InputMaybe<CounterpartyFilterParameter>;
     /** Specifies whether multiple top-level "filter" fields should be combined with a logical AND or OR operation. Defaults to AND. */
@@ -7564,6 +7571,8 @@ export type Query = {
     jobsById: Array<Job>;
     /** Per-topic/per-partition Kafka consumer lag for every inbound ERP stream (issue #91), as of the last scheduled poll. */
     kafkaConsumerLag: Array<KafkaTopicLag>;
+    /** Latest placed-order date per listed counterparty, visible orders only */
+    lastOrderDates: Array<CounterpartyLastOrder>;
     me: Maybe<CurrentUser>;
     myApprovalRequestsSummary: ApprovalRequestsSummary;
     myApprovalsInbox: ApprovalsInbox;
@@ -7663,14 +7672,14 @@ export type Query = {
     slugForEntity: Scalars['String']['output'];
     stockLocation: Maybe<StockLocation>;
     stockLocations: StockLocationList;
+    systemHealthChecklist: Array<SystemHealthCheckItem>;
     tag: Tag;
     tags: TagList;
-    systemHealthChecklist: Array<SystemHealthCheckItem>;
     taxCategories: TaxCategoryList;
     taxCategory: Maybe<TaxCategory>;
     taxRate: Maybe<TaxRate>;
     taxRates: TaxRateList;
-    teamDirectory: Array<TeamDirectoryMember>;
+    teamDirectory: TeamDirectoryMemberList;
     teamMembers: Array<TeamMember>;
     testEligibleShippingMethods: Array<ShippingMethodQuote>;
     testShippingMethod: TestShippingMethodResult;
@@ -7688,6 +7697,8 @@ export type Query = {
     visibilityGrantCandidates: Array<VisibilityCandidate>;
     visibilityGrants: VisibilityGrantPage;
     visibleOrders: OrderList;
+    /** Sum of totalWithTax over the caller's visible orders matching options.filter */
+    visibleOrdersAmount: Scalars['Money']['output'];
     /** Manager-portal payment list — derived-from-ProformaInvoice scoping, see PaymentVisibilityService. */
     visiblePayments: PaymentAttemptList;
     /** Manager-portal proforma invoice list, branch-scoped via AccessScopeService.resolveProformaInvoiceScope — see AdminProformaInvoiceVisibilityResolver / docs/access-control.md. */
@@ -7945,6 +7956,10 @@ export type QueryJobsByIdArgs = {
     jobIds: Array<Scalars['ID']['input']>;
 };
 
+export type QueryLastOrderDatesArgs = {
+    counterpartyIds: Array<Scalars['ID']['input']>;
+};
+
 export type QueryMyApprovalRequestsSummaryArgs = {
     recentLimit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -8200,6 +8215,10 @@ export type QueryTaxRatesArgs = {
     options?: InputMaybe<TaxRateListOptions>;
 };
 
+export type QueryTeamDirectoryArgs = {
+    options?: InputMaybe<TeamDirectoryListOptions>;
+};
+
 export type QueryTestEligibleShippingMethodsArgs = {
     input: TestEligibleShippingMethodsInput;
 };
@@ -8240,6 +8259,10 @@ export type QueryVisibleOrdersArgs = {
     managerId?: InputMaybe<Scalars['ID']['input']>;
     options?: InputMaybe<OrderListOptions>;
     search?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QueryVisibleOrdersAmountArgs = {
+    options?: InputMaybe<OrderListOptions>;
 };
 
 export type QueryVisiblePaymentsArgs = {
@@ -9159,6 +9182,13 @@ export type SurchargeInput = {
     taxRate?: InputMaybe<Scalars['Float']['input']>;
 };
 
+export type SystemHealthCheckItem = {
+    detail: Maybe<Scalars['String']['output']>;
+    id: Scalars['String']['output'];
+    label: Scalars['String']['output'];
+    ok: Scalars['Boolean']['output'];
+};
+
 export type Tag = Node & {
     createdAt: Scalars['DateTime']['output'];
     id: Scalars['ID']['output'];
@@ -9198,13 +9228,6 @@ export type TagSortParameter = {
     id?: InputMaybe<SortOrder>;
     updatedAt?: InputMaybe<SortOrder>;
     value?: InputMaybe<SortOrder>;
-};
-
-export type SystemHealthCheckItem = {
-    detail: Maybe<Scalars['String']['output']>;
-    id: Scalars['String']['output'];
-    label: Scalars['String']['output'];
-    ok: Scalars['Boolean']['output'];
 };
 
 export type TaxCategory = Node & {
@@ -9314,9 +9337,25 @@ export type TaxRateSortParameter = {
     value?: InputMaybe<SortOrder>;
 };
 
+export type TeamDirectoryFilter = {
+    branchId?: InputMaybe<Scalars['String']['input']>;
+    departmentId?: InputMaybe<Scalars['String']['input']>;
+    status?: InputMaybe<TeamDirectoryStatus>;
+};
+
+export type TeamDirectoryListOptions = {
+    filter?: InputMaybe<TeamDirectoryFilter>;
+    search?: InputMaybe<Scalars['String']['input']>;
+    skip?: InputMaybe<Scalars['Int']['input']>;
+    take?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type TeamDirectoryMember = {
+    active: Scalars['Boolean']['output'];
     branchId: Maybe<Scalars['String']['output']>;
     departmentId: Maybe<Scalars['String']['output']>;
+    departmentName: Maybe<Scalars['String']['output']>;
+    erpId: Maybe<Scalars['String']['output']>;
     firstName: Maybe<Scalars['String']['output']>;
     id: Scalars['ID']['output'];
     lastName: Maybe<Scalars['String']['output']>;
@@ -9324,6 +9363,13 @@ export type TeamDirectoryMember = {
     positionId: Maybe<Scalars['String']['output']>;
     roleCodes: Array<Scalars['String']['output']>;
 };
+
+export type TeamDirectoryMemberList = {
+    items: Array<TeamDirectoryMember>;
+    totalItems: Scalars['Int']['output'];
+};
+
+export type TeamDirectoryStatus = 'active' | 'inactive' | 'unassigned';
 
 export type TeamMember = {
     emailAddress: Scalars['String']['output'];
@@ -10177,7 +10223,9 @@ export type ApprovalOrderReferencesQuery = {
     };
 };
 
-export type ApprovalCounterpartiesQueryVariables = Exact<{ [key: string]: never }>;
+export type ApprovalCounterpartiesQueryVariables = Exact<{
+    erpIds: Array<Scalars['String']['input']> | Scalars['String']['input'];
+}>;
 
 export type ApprovalCounterpartiesQuery = {
     counterparties: { items: Array<{ erpId: string; shortName: string }> };
@@ -11001,15 +11049,12 @@ export type CustomerDiscountGrantsPageQuery = {
     };
 };
 
-export type LastOrderDatesQueryVariables = Exact<{ [key: string]: never }>;
+export type LastOrderDatesQueryVariables = Exact<{
+    counterpartyIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
 
 export type LastOrderDatesQuery = {
-    visibleOrders: {
-        items: Array<{
-            orderPlacedAt: any | null;
-            customer: { counterparty: { id: string } | null } | null;
-        }>;
-    };
+    lastOrderDates: Array<{ counterpartyId: string; lastOrderAt: any }>;
 };
 
 export type DashboardOrdersQueryVariables = Exact<{
@@ -11153,6 +11198,14 @@ export type ExpiringDiscountGrantsQuery = {
         validTo: any;
         counterparties: Array<{ id: string; legalName: string }>;
     }>;
+};
+
+export type DiscountCounterpartySearchQueryVariables = Exact<{
+    search: Scalars['String']['input'];
+}>;
+
+export type DiscountCounterpartySearchQuery = {
+    counterparties: { items: Array<{ id: string; legalName: string }> };
 };
 
 export type EntityVersionRowFieldsFragment = {
@@ -11393,7 +11446,9 @@ export type RecomputeOrderChecksMutation = {
     }>;
 };
 
-export type OrderCreateCounterpartiesQueryVariables = Exact<{ [key: string]: never }>;
+export type OrderCreateCounterpartiesQueryVariables = Exact<{
+    search: Scalars['String']['input'];
+}>;
 
 export type OrderCreateCounterpartiesQuery = {
     counterparties: {
@@ -11403,6 +11458,7 @@ export type OrderCreateCounterpartiesQuery = {
             legalName: string;
             inn: string | null;
             priceType: string | null;
+            linkedCustomerId: string | null;
             tradingPoints: Array<{
                 id: string;
                 name: string;
@@ -11414,13 +11470,26 @@ export type OrderCreateCounterpartiesQuery = {
     };
 };
 
-export type OrderCreateCustomersQueryVariables = Exact<{
-    counterpartyIds: Array<Scalars['String']['input']> | Scalars['String']['input'];
-    take: Scalars['Int']['input'];
+export type OrderCreateCounterpartyQueryVariables = Exact<{
+    id: Scalars['ID']['input'];
 }>;
 
-export type OrderCreateCustomersQuery = {
-    customers: { items: Array<{ id: string; counterparty: { id: string } | null }> };
+export type OrderCreateCounterpartyQuery = {
+    counterparty: {
+        id: string;
+        shortName: string;
+        legalName: string;
+        inn: string | null;
+        priceType: string | null;
+        linkedCustomerId: string | null;
+        tradingPoints: Array<{
+            id: string;
+            name: string;
+            address: string;
+            isActive: boolean;
+            customerStatus: string;
+        }>;
+    } | null;
 };
 
 export type OrderCreateProductSearchQueryVariables = Exact<{
@@ -12022,22 +12091,49 @@ export type OrdersSummaryQueryVariables = Exact<{
 
 export type OrdersSummaryQuery = {
     pendingPriceAdjustmentOrderIds: Array<string>;
+    todayAmount: any;
+    openAmount: any;
     open: { totalItems: number };
     overdue: { totalItems: number };
-    today: { totalItems: number; items: Array<{ totalWithTax: any }> };
+    today: { totalItems: number };
     processing: { totalItems: number };
     drafts: { totalItems: number };
-    allOpen: {
+};
+
+export type AttentionOrderFieldsFragment = {
+    id: string;
+    code: string;
+    state: string;
+    orderPlacedAt: any | null;
+    customer: { firstName: string; lastName: string } | null;
+};
+
+export type OrdersAttentionQueryVariables = Exact<{
+    pendingIds: Array<Scalars['String']['input']> | Scalars['String']['input'];
+    overdueBefore: Scalars['DateTime']['input'];
+}>;
+
+export type OrdersAttentionQuery = {
+    waiting: {
+        totalItems: number;
         items: Array<{
             id: string;
             code: string;
             state: string;
             orderPlacedAt: any | null;
-            totalWithTax: any;
-            currencyCode: CurrencyCode;
             customer: { firstName: string; lastName: string } | null;
         }>;
     };
+    overdueRows: {
+        items: Array<{
+            id: string;
+            code: string;
+            state: string;
+            orderPlacedAt: any | null;
+            customer: { firstName: string; lastName: string } | null;
+        }>;
+    };
+    both: { totalItems: number };
 };
 
 export type TeamMembersQueryVariables = Exact<{ [key: string]: never }>;
@@ -12245,6 +12341,7 @@ export type ProformaInvoicesPageQuery = {
             createdAt: any;
             orderId: string | null;
             counterpartyId: string;
+            counterpartyShortName: string | null;
             amount: number;
             currencyCode: string;
             displayStatus: string;
@@ -12559,18 +12656,40 @@ export type PositionsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type PositionsQuery = { positions: Array<{ id: string; erpId: string; name: string }> };
 
-export type TeamDirectoryQueryVariables = Exact<{ [key: string]: never }>;
+export type TeamDirectoryQueryVariables = Exact<{
+    options?: InputMaybe<TeamDirectoryListOptions>;
+}>;
 
 export type TeamDirectoryQuery = {
-    teamDirectory: Array<{
-        id: string;
-        firstName: string | null;
-        lastName: string | null;
-        roleCodes: Array<string>;
-        departmentId: string | null;
-        branchId: string | null;
-        position: string | null;
-    }>;
+    teamDirectory: {
+        totalItems: number;
+        items: Array<{
+            id: string;
+            erpId: string | null;
+            firstName: string | null;
+            lastName: string | null;
+            active: boolean;
+            roleCodes: Array<string>;
+            departmentId: string | null;
+            departmentName: string | null;
+            branchId: string | null;
+            position: string | null;
+        }>;
+    };
+};
+
+export type TeamDirectoryCountsQueryVariables = Exact<{
+    all?: InputMaybe<TeamDirectoryListOptions>;
+    active?: InputMaybe<TeamDirectoryListOptions>;
+    inactive?: InputMaybe<TeamDirectoryListOptions>;
+    unassigned?: InputMaybe<TeamDirectoryListOptions>;
+}>;
+
+export type TeamDirectoryCountsQuery = {
+    all: { totalItems: number };
+    active: { totalItems: number };
+    inactive: { totalItems: number };
+    unassigned: { totalItems: number };
 };
 
 export type PortalUsersQueryVariables = Exact<{
@@ -13186,6 +13305,21 @@ export const OrderListItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'OrderListItemFields' },
 ) as unknown as TypedDocumentString<OrderListItemFieldsFragment, unknown>;
+export const AttentionOrderFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment AttentionOrderFields on Order {
+  id
+  code
+  state
+  orderPlacedAt
+  customer {
+    firstName
+    lastName
+  }
+}
+    `,
+    { fragmentName: 'AttentionOrderFields' },
+) as unknown as TypedDocumentString<AttentionOrderFieldsFragment, unknown>;
 export const SavedTableViewFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment SavedTableViewFields on SavedTableView {
@@ -13474,8 +13608,8 @@ export const ApprovalOrderReferencesDocument = new TypedDocumentString(`
     ApprovalOrderReferencesQueryVariables
 >;
 export const ApprovalCounterpartiesDocument = new TypedDocumentString(`
-    query ApprovalCounterparties {
-  counterparties(options: {take: 500}) {
+    query ApprovalCounterparties($erpIds: [String!]!) {
+  counterparties(options: {erpIds: $erpIds, take: 200}) {
     items {
       erpId
       shortName
@@ -14375,16 +14509,10 @@ export const CustomerDiscountGrantsPageDocument = new TypedDocumentString(`
     CustomerDiscountGrantsPageQueryVariables
 >;
 export const LastOrderDatesDocument = new TypedDocumentString(`
-    query LastOrderDates {
-  visibleOrders(options: {take: 500, sort: {orderPlacedAt: DESC}}) {
-    items {
-      orderPlacedAt
-      customer {
-        counterparty {
-          id
-        }
-      }
-    }
+    query LastOrderDates($counterpartyIds: [ID!]!) {
+  lastOrderDates(counterpartyIds: $counterpartyIds) {
+    counterpartyId
+    lastOrderAt
   }
 }
     `) as unknown as TypedDocumentString<LastOrderDatesQuery, LastOrderDatesQueryVariables>;
@@ -14559,6 +14687,19 @@ export const ExpiringDiscountGrantsDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ExpiringDiscountGrantsQuery,
     ExpiringDiscountGrantsQueryVariables
+>;
+export const DiscountCounterpartySearchDocument = new TypedDocumentString(`
+    query DiscountCounterpartySearch($search: String!) {
+  counterparties(options: {search: $search, take: 20}) {
+    items {
+      id
+      legalName
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<
+    DiscountCounterpartySearchQuery,
+    DiscountCounterpartySearchQueryVariables
 >;
 export const EntityVersionsDocument = new TypedDocumentString(`
     query EntityVersions($entityName: String!, $entityId: ID!) {
@@ -14779,14 +14920,15 @@ export const RecomputeOrderChecksDocument = new TypedDocumentString(`
     RecomputeOrderChecksMutationVariables
 >;
 export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
-    query OrderCreateCounterparties {
-  counterparties(options: {take: 500}) {
+    query OrderCreateCounterparties($search: String!) {
+  counterparties(options: {search: $search, take: 20, status: "active"}) {
     items {
       id
       shortName
       legalName
       inn
       priceType
+      linkedCustomerId
       tradingPoints {
         id
         name
@@ -14801,22 +14943,27 @@ export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
     OrderCreateCounterpartiesQuery,
     OrderCreateCounterpartiesQueryVariables
 >;
-export const OrderCreateCustomersDocument = new TypedDocumentString(`
-    query OrderCreateCustomers($counterpartyIds: [String!]!, $take: Int!) {
-  customers(
-    options: {take: $take, filter: {counterpartyId: {in: $counterpartyIds}}}
-  ) {
-    items {
+export const OrderCreateCounterpartyDocument = new TypedDocumentString(`
+    query OrderCreateCounterparty($id: ID!) {
+  counterparty(id: $id) {
+    id
+    shortName
+    legalName
+    inn
+    priceType
+    linkedCustomerId
+    tradingPoints {
       id
-      counterparty {
-        id
-      }
+      name
+      address
+      isActive
+      customerStatus
     }
   }
 }
     `) as unknown as TypedDocumentString<
-    OrderCreateCustomersQuery,
-    OrderCreateCustomersQueryVariables
+    OrderCreateCounterpartyQuery,
+    OrderCreateCounterpartyQueryVariables
 >;
 export const OrderCreateProductSearchDocument = new TypedDocumentString(`
     query OrderCreateProductSearch($term: String!) {
@@ -15453,48 +15600,70 @@ export const OrdersPageDocument = new TypedDocumentString(`
 export const OrdersSummaryDocument = new TypedDocumentString(`
     query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
   open: visibleOrders(
-    options: {filter: {state: {notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"]}}}
+    options: {take: 0, filter: {state: {notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"]}}}
   ) {
     totalItems
   }
   overdue: visibleOrders(
-    options: {filter: {state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
+    options: {take: 0, filter: {state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
   ) {
     totalItems
   }
   today: visibleOrders(
-    options: {take: 500, filter: {orderPlacedAt: {after: $todayStart}}}
+    options: {take: 0, filter: {orderPlacedAt: {after: $todayStart}}}
   ) {
     totalItems
-    items {
-      totalWithTax
-    }
   }
-  processing: visibleOrders(options: {filter: {state: {eq: "PaymentAuthorized"}}}) {
-    totalItems
-  }
-  drafts: visibleOrders(options: {filter: {state: {eq: "Draft"}}}) {
-    totalItems
-  }
-  allOpen: visibleOrders(
-    options: {take: 500, filter: {state: {notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"]}}}
+  todayAmount: visibleOrdersAmount(
+    options: {filter: {orderPlacedAt: {after: $todayStart}}}
+  )
+  openAmount: visibleOrdersAmount(
+    options: {filter: {state: {notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"]}}}
+  )
+  processing: visibleOrders(
+    options: {take: 0, filter: {state: {eq: "PaymentAuthorized"}}}
   ) {
-    items {
-      id
-      code
-      state
-      orderPlacedAt
-      totalWithTax
-      currencyCode
-      customer {
-        firstName
-        lastName
-      }
-    }
+    totalItems
+  }
+  drafts: visibleOrders(options: {take: 0, filter: {state: {eq: "Draft"}}}) {
+    totalItems
   }
   pendingPriceAdjustmentOrderIds
 }
     `) as unknown as TypedDocumentString<OrdersSummaryQuery, OrdersSummaryQueryVariables>;
+export const OrdersAttentionDocument = new TypedDocumentString(`
+    query OrdersAttention($pendingIds: [String!]!, $overdueBefore: DateTime!) {
+  waiting: visibleOrders(
+    options: {take: 5, filter: {id: {in: $pendingIds}, state: {notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"]}}}
+  ) {
+    totalItems
+    items {
+      ...AttentionOrderFields
+    }
+  }
+  overdueRows: visibleOrders(
+    options: {take: 5, sort: {orderPlacedAt: ASC}, filter: {state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
+  ) {
+    items {
+      ...AttentionOrderFields
+    }
+  }
+  both: visibleOrders(
+    options: {take: 0, filter: {id: {in: $pendingIds}, state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
+  ) {
+    totalItems
+  }
+}
+    fragment AttentionOrderFields on Order {
+  id
+  code
+  state
+  orderPlacedAt
+  customer {
+    firstName
+    lastName
+  }
+}`) as unknown as TypedDocumentString<OrdersAttentionQuery, OrdersAttentionQueryVariables>;
 export const TeamMembersDocument = new TypedDocumentString(`
     query TeamMembers {
   teamMembers {
@@ -16063,18 +16232,43 @@ export const PositionsDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<PositionsQuery, PositionsQueryVariables>;
 export const TeamDirectoryDocument = new TypedDocumentString(`
-    query TeamDirectory {
-  teamDirectory {
-    id
-    firstName
-    lastName
-    roleCodes
-    departmentId
-    branchId
-    position
+    query TeamDirectory($options: TeamDirectoryListOptions) {
+  teamDirectory(options: $options) {
+    items {
+      id
+      erpId
+      firstName
+      lastName
+      active
+      roleCodes
+      departmentId
+      departmentName
+      branchId
+      position
+    }
+    totalItems
   }
 }
     `) as unknown as TypedDocumentString<TeamDirectoryQuery, TeamDirectoryQueryVariables>;
+export const TeamDirectoryCountsDocument = new TypedDocumentString(`
+    query TeamDirectoryCounts($all: TeamDirectoryListOptions, $active: TeamDirectoryListOptions, $inactive: TeamDirectoryListOptions, $unassigned: TeamDirectoryListOptions) {
+  all: teamDirectory(options: $all) {
+    totalItems
+  }
+  active: teamDirectory(options: $active) {
+    totalItems
+  }
+  inactive: teamDirectory(options: $inactive) {
+    totalItems
+  }
+  unassigned: teamDirectory(options: $unassigned) {
+    totalItems
+  }
+}
+    `) as unknown as TypedDocumentString<
+    TeamDirectoryCountsQuery,
+    TeamDirectoryCountsQueryVariables
+>;
 export const PortalUsersDocument = new TypedDocumentString(`
     query PortalUsers($options: AdministratorListOptions, $status: PortalUserStatus) {
   portalUsers(options: $options, status: $status) {

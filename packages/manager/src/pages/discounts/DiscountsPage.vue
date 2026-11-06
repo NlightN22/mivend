@@ -19,7 +19,7 @@ import {
     type DiscountRow,
     type DiscountRegistryFilterStatus,
 } from '../../api/discounts';
-import { fetchAllCustomersCapped } from '../../api/customers';
+import { fetchCounterpartyNames } from '../../api/customers';
 import DiscountsTable from '../../components/discounts/DiscountsTable.vue';
 import DiscountGrantForm from '../../components/discounts/DiscountGrantForm.vue';
 
@@ -69,6 +69,8 @@ async function loadRows(): Promise<void> {
             status: statusFilter.value || undefined,
         });
         totalItems.value = result.totalItems;
+        const ids = result.items.flatMap(entry => entry.counterpartyIds ?? []);
+        namesById.value = await fetchCounterpartyNames(ids);
         rows.value = buildDiscountRegistryRows(result.items, namesById.value);
     } finally {
         loading.value = false;
@@ -110,11 +112,7 @@ async function handleSubmitted(): Promise<void> {
 }
 
 onMounted(async () => {
-    const [customers, priceTypeCodes] = await Promise.all([
-        fetchAllCustomersCapped(),
-        fetchPriceTypeCodes(),
-    ]);
-    namesById.value = new Map(customers.map(c => [c.id, c.legalName]));
+    const priceTypeCodes = await fetchPriceTypeCodes();
     priceTypeOptions.value = [
         { value: '', label: 'All price types' },
         ...priceTypeCodes.map(p => ({ value: p, label: p })),

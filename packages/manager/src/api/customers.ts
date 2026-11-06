@@ -112,13 +112,6 @@ export async function fetchCreditLimitExceededCounterpartyIds(): Promise<string[
     }
 }
 
-// Stopgap: silently truncates past 500 rows
-// A real fix needs a search-as-you-type picker over counterparties
-export async function fetchAllCustomersCapped(): Promise<CustomerListItem[]> {
-    const { items } = await fetchCustomersPage({ take: 500 });
-    return items;
-}
-
 // Dedicated single-entity lookup (see counterparty.resolver.ts's `counterparty(id)`) — no longer
 // depends on fetching the (now paginated) full list and filtering client-side by id.
 export async function fetchCustomerById(counterpartyId: string): Promise<CustomerListItem | null> {
@@ -573,16 +566,10 @@ export async function fetchDiscountGrantsPage(
     };
 }
 
-// Capped at 500 rows: there is no per-customer MAX(orderPlacedAt) aggregate query yet
-export async function fetchLastOrderDatesByCounterpartyId(): Promise<Map<string, string>> {
-    const result = await adminApi(LastOrderDatesDocument);
-    const map = new Map<string, string>();
-    for (const item of result.visibleOrders.items) {
-        const counterpartyId = item.customer?.counterparty?.id;
-        if (!counterpartyId || !item.orderPlacedAt) continue;
-        if (!map.has(counterpartyId)) {
-            map.set(counterpartyId, item.orderPlacedAt);
-        }
-    }
-    return map;
+export async function fetchLastOrderDatesByCounterpartyId(
+    counterpartyIds: string[],
+): Promise<Map<string, string>> {
+    if (counterpartyIds.length === 0) return new Map();
+    const result = await adminApi(LastOrderDatesDocument, { counterpartyIds });
+    return new Map(result.lastOrderDates.map(r => [r.counterpartyId, r.lastOrderAt]));
 }

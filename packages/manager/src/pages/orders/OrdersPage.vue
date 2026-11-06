@@ -278,7 +278,7 @@ onMounted(loadAll);
 
 const attentionItems = computed(
     () =>
-        summary.value?.attentionCandidates.slice(0, 5).map(c => ({
+        summary.value?.attentionCandidates.map(c => ({
             code: c.code,
             title: `${c.code} ${c.state === 'PaymentSettled' ? 'shipment overdue' : 'price limit exceeded'}`,
             meta: `${c.customerName}`,
@@ -327,11 +327,11 @@ const todayAmountFormatted = computed(() => {
         </div>
 
         <MvWarningBanner
-            v-if="summary && summary.attentionCandidates.length"
+            v-if="summary && summary.attentionCount"
             action-text="Open problem orders"
             action-to="/orders"
         >
-            <strong>{{ summary.attentionCandidates.length }} orders need attention.</strong>
+            <strong>{{ summary.attentionCount }} orders need attention.</strong>
             Some are overdue for shipment or have a price adjustment awaiting approval.
         </MvWarningBanner>
 

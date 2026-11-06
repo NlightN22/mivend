@@ -5,17 +5,22 @@ import {
     fetchPriceTypeCodes,
     fetchFacets,
     requestDiscountGrant,
+    searchDiscountCounterparties,
+    type CounterpartyOption,
     type DiscountRow,
     type FacetOption,
 } from '../../api/discounts';
-import { fetchAllCustomersCapped, type CustomerListItem } from '../../api/customers';
+import { useDebouncedSearch } from '../../composables/useDebouncedSearch';
 
 const props = defineProps<{ renewFrom: DiscountRow | null }>();
 const emit = defineEmits<{ submitted: []; cancel: [] }>();
 
 const priceTypes = ref<string[]>([]);
 const facets = ref<FacetOption[]>([]);
-const customers = ref<CustomerListItem[]>([]);
+const { term: customerSearch, results: customerMatches } = useDebouncedSearch(
+    searchDiscountCounterparties,
+);
+const pickedCustomers = ref(new Map<string, CounterpartyOption>());
 const submitting = ref(false);
 const error = ref('');
 
@@ -42,16 +47,19 @@ const facetValueOptions = computed(() => {
     return facet ? facet.values.map(v => ({ value: v.code, label: v.name })) : [];
 });
 
-const customerOptions = computed(() =>
-    customers.value.map(c => ({ value: c.id, label: c.legalName })),
-);
+const customerOptions = computed(() => {
+    const picked = form.counterpartyIds.flatMap(id => pickedCustomers.value.get(id) ?? []);
+    const pickedIds = new Set(picked.map(o => o.value));
+    return [...picked, ...customerMatches.value.filter(o => !pickedIds.has(o.value))];
+});
+
+function updateCustomers(ids: string[]): void {
+    for (const option of customerOptions.value) pickedCustomers.value.set(option.value, option);
+    form.counterpartyIds = ids;
+}
 
 onMounted(async () => {
-    [priceTypes.value, facets.value, customers.value] = await Promise.all([
-        fetchPriceTypeCodes(),
-        fetchFacets(),
-        fetchAllCustomersCapped(),
-    ]);
+    [priceTypes.value, facets.value] = await Promise.all([fetchPriceTypeCodes(), fetchFacets()]);
     if (props.renewFrom) {
         form.priceTypeCode = props.renewFrom.priceType;
         form.percent = String(props.renewFrom.percent);
@@ -187,10 +195,16 @@ async function submit(): Promise<void> {
             <span class="discount-grant-form__hint">
                 Leave empty for a company-wide discount, or select specific customers
             </span>
+            <MvInput
+                size="sm"
+                :model-value="customerSearch"
+                placeholder="Search by company name or INN..."
+                @update:model-value="customerSearch = $event"
+            />
             <MvMultiSelect
                 :model-value="form.counterpartyIds"
                 :options="customerOptions"
-                @update:model-value="form.counterpartyIds = $event"
+                @update:model-value="updateCustomers"
             />
         </label>
 

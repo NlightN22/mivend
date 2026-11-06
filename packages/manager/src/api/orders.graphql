@@ -38,6 +38,7 @@ query OrdersPage($options: OrderListOptions, $managerId: ID, $search: String) {
 query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
     open: visibleOrders(
         options: {
+            take: 0
             filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] } }
         }
     ) {
@@ -45,49 +46,81 @@ query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
     }
     overdue: visibleOrders(
         options: {
+            take: 0
             filter: { state: { eq: "PaymentSettled" }, orderPlacedAt: { before: $overdueBefore } }
         }
     ) {
         totalItems
     }
-    today: visibleOrders(
-        options: { take: 500, filter: { orderPlacedAt: { after: $todayStart } } }
-    ) {
-        totalItems
-        items {
-            totalWithTax
-        }
-    }
-    processing: visibleOrders(options: { filter: { state: { eq: "PaymentAuthorized" } } }) {
+    today: visibleOrders(options: { take: 0, filter: { orderPlacedAt: { after: $todayStart } } }) {
         totalItems
     }
-    drafts: visibleOrders(options: { filter: { state: { eq: "Draft" } } }) {
-        totalItems
-    }
-    # Capped at 500 rows — there is no server-side SUM aggregate on the order list yet,
-    # so "total amount"/attention/waiting-approval below are derived from this page
-    # client-side. Fine for realistic scope sizes today; revisit with real aggregates
-    # if that changes.
-    allOpen: visibleOrders(
+    todayAmount: visibleOrdersAmount(options: { filter: { orderPlacedAt: { after: $todayStart } } })
+    openAmount: visibleOrdersAmount(
         options: {
-            take: 500
             filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] } }
         }
+    )
+    processing: visibleOrders(
+        options: { take: 0, filter: { state: { eq: "PaymentAuthorized" } } }
     ) {
-        items {
-            id
-            code
-            state
-            orderPlacedAt
-            totalWithTax
-            currencyCode
-            customer {
-                firstName
-                lastName
-            }
-        }
+        totalItems
+    }
+    drafts: visibleOrders(options: { take: 0, filter: { state: { eq: "Draft" } } }) {
+        totalItems
     }
     pendingPriceAdjustmentOrderIds
+}
+
+fragment AttentionOrderFields on Order {
+    id
+    code
+    state
+    orderPlacedAt
+    customer {
+        firstName
+        lastName
+    }
+}
+
+query OrdersAttention($pendingIds: [String!]!, $overdueBefore: DateTime!) {
+    waiting: visibleOrders(
+        options: {
+            take: 5
+            filter: {
+                id: { in: $pendingIds }
+                state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] }
+            }
+        }
+    ) {
+        totalItems
+        items {
+            ...AttentionOrderFields
+        }
+    }
+    overdueRows: visibleOrders(
+        options: {
+            take: 5
+            sort: { orderPlacedAt: ASC }
+            filter: { state: { eq: "PaymentSettled" }, orderPlacedAt: { before: $overdueBefore } }
+        }
+    ) {
+        items {
+            ...AttentionOrderFields
+        }
+    }
+    both: visibleOrders(
+        options: {
+            take: 0
+            filter: {
+                id: { in: $pendingIds }
+                state: { eq: "PaymentSettled" }
+                orderPlacedAt: { before: $overdueBefore }
+            }
+        }
+    ) {
+        totalItems
+    }
 }
 
 query TeamMembers {

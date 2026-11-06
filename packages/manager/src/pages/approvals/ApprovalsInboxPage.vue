@@ -62,11 +62,17 @@ async function load(): Promise<void> {
         // api/approvals.ts) — a customer/order name search across the FULL inbox would need the
         // backend to resolve those names itself, not just this page's ~10 rows.
         const orderIds = new Set<string>();
+        const counterpartyErpIds = new Set<string>();
         for (const request of activePage.items) {
-            if (request.requestType !== 'priceAdjustmentApproval') continue;
             try {
-                const payload = JSON.parse(request.payload) as { orderId?: string };
-                if (payload.orderId) orderIds.add(payload.orderId);
+                const payload = JSON.parse(request.payload) as {
+                    orderId?: string;
+                    counterpartyErpId?: string;
+                };
+                if (request.requestType === 'priceAdjustmentApproval' && payload.orderId) {
+                    orderIds.add(payload.orderId);
+                }
+                if (payload.counterpartyErpId) counterpartyErpIds.add(payload.counterpartyErpId);
             } catch {
                 // ignore malformed payload — reference just won't resolve for this row
             }
@@ -76,7 +82,7 @@ async function load(): Promise<void> {
             Map<string, CounterpartyReference>,
         ] = await Promise.all([
             fetchOrderReferences([...orderIds]),
-            fetchCounterpartyReferencesByErpId(),
+            fetchCounterpartyReferencesByErpId([...counterpartyErpIds]),
         ]);
 
         rows.value = buildApprovalRows(

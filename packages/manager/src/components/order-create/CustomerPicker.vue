@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useCurrency } from '../../composables/useCurrency';
+import { useDebouncedSearch } from '../../composables/useDebouncedSearch';
 import { MvInput, MvStatusBadge } from '@mivend/ui-kit';
 import {
-    fetchCustomerOptions,
+    searchCustomerOptions,
     fetchCustomerCredit,
+    PORTAL_NOT_ACTIVATED_REASON,
     type CustomerOption,
     type CustomerCredit,
 } from '../../api/orderCreate';
@@ -12,30 +14,13 @@ import {
 const emit = defineEmits<{ select: [customer: CustomerOption] }>();
 
 const { formatWhole } = useCurrency();
-const allCustomers = ref<CustomerOption[]>([]);
-const search = ref('');
+const { term: search, results: matches, loading } = useDebouncedSearch(searchCustomerOptions);
 const selected = ref<CustomerOption | null>(null);
 const credit = ref<CustomerCredit | null>(null);
 const showResults = ref(false);
 
-onMounted(async () => {
-    allCustomers.value = await fetchCustomerOptions();
-});
-
-const matches = computed(() => {
-    const term = search.value.trim().toLowerCase();
-    if (!term) return [];
-    return allCustomers.value
-        .filter(
-            c =>
-                c.shortName.toLowerCase().includes(term) ||
-                c.legalName.toLowerCase().includes(term) ||
-                (c.inn ?? '').includes(term),
-        )
-        .slice(0, 8);
-});
-
 async function selectCustomer(customer: CustomerOption): Promise<void> {
+    if (!customer.customerId) return;
     selected.value = customer;
     showResults.value = false;
     search.value = '';
@@ -63,15 +48,25 @@ watch(search, () => {
                 @update:model-value="search = $event"
             />
             <ul v-if="showResults" class="customer-picker__results">
-                <li v-if="!matches.length" class="customer-picker__empty">No matching customers</li>
+                <li v-if="loading && !matches.length" class="customer-picker__empty">
+                    Searching...
+                </li>
+                <li v-else-if="!loading && !matches.length" class="customer-picker__empty">
+                    No matching customers
+                </li>
                 <li
                     v-for="customer in matches"
                     :key="customer.counterpartyId"
                     class="customer-picker__result"
+                    :class="{ 'customer-picker__result--disabled': !customer.customerId }"
+                    :aria-disabled="!customer.customerId"
                     @click="selectCustomer(customer)"
                 >
                     <strong>{{ customer.shortName }}</strong>
-                    <span v-if="customer.inn">INN {{ customer.inn }}</span>
+                    <span v-if="!customer.customerId" class="customer-picker__reason">{{
+                        PORTAL_NOT_ACTIVATED_REASON
+                    }}</span>
+                    <span v-else-if="customer.inn">INN {{ customer.inn }}</span>
                 </li>
             </ul>
         </div>
@@ -127,7 +122,17 @@ watch(search, () => {
     font-size: 13px;
 }
 
-.customer-picker__result:hover {
+.customer-picker__result--disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.customer-picker__reason {
+    font-size: 12px;
+    color: var(--el-text-color-secondary, #6b7280);
+}
+
+.customer-picker__result:not(.customer-picker__result--disabled):hover {
     background: var(--el-fill-color-light, #f8fafc);
 }
 
