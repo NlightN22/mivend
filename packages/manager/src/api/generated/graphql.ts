@@ -7229,6 +7229,8 @@ export type ProformaInvoice = {
     /** Set only on contract payment kinds. */
     contractName: Maybe<Scalars['String']['output']>;
     counterpartyId: Scalars['ID']['output'];
+    /** Filled only by visibleProformaInvoices; null elsewhere. */
+    counterpartyShortName: Maybe<Scalars['String']['output']>;
     createdAt: Scalars['DateTime']['output'];
     currencyCode: Scalars['String']['output'];
     /** User-facing status: current | superseded | cancelled. Never 'paid': payment is shown at order level. */
@@ -12209,6 +12211,7 @@ export type ProformaInvoiceListItemFieldsFragment = {
     createdAt: any;
     orderId: string | null;
     counterpartyId: string;
+    counterpartyShortName: string | null;
     amount: number;
     currencyCode: string;
     displayStatus: string;
@@ -13234,6 +13237,7 @@ export const ProformaInvoiceListItemFieldsFragmentDoc = new TypedDocumentString(
   createdAt
   orderId
   counterpartyId
+  counterpartyShortName
   amount
   currencyCode
   displayStatus
@@ -15695,6 +15699,7 @@ export const ProformaInvoicesPageDocument = new TypedDocumentString(`
   createdAt
   orderId
   counterpartyId
+  counterpartyShortName
   amount
   currencyCode
   displayStatus

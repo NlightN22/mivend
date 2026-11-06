@@ -61,6 +61,7 @@ const CUSTOMER_PROFORMA_INVOICES: ProformaInvoiceListItem[] = Array.from({ lengt
     createdAt: new Date(2026, 6, 1 + i).toISOString(),
     orderId: String(200 + i),
     counterpartyId: '1',
+    counterpartyShortName: null,
     amount: 45000 + i * 8760,
     currencyCode: 'RUB',
     displayStatus: PROFORMA_INVOICE_STATUSES[i % PROFORMA_INVOICE_STATUSES.length],

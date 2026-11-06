@@ -33,6 +33,7 @@ const counterpartySchema = new EntitySchema({
     columns: {
         id: { type: Number, primary: true, generated: true },
         erpId: { type: String },
+        shortName: { type: String, nullable: true },
         assignedManagerId: { type: String, nullable: true },
         branchId: { type: String, nullable: true },
     },
@@ -88,8 +89,8 @@ beforeEach(async () => {
         ['none', null],
     ] as const) {
         const [row]: Array<{ id: number }> = await dataSource.query(
-            `INSERT INTO counterparty ("erpId", "assignedManagerId", "branchId") VALUES ($1, $2, $3) RETURNING id`,
-            [`cp-${key}`, `m-${key}`, branch],
+            `INSERT INTO counterparty ("erpId", "shortName", "assignedManagerId", "branchId") VALUES ($1, $2, $3, $4) RETURNING id`,
+            [`cp-${key}`, `Short ${key}`, `m-${key}`, branch],
         );
         cps[key] = row.id;
     }
@@ -135,5 +136,40 @@ describe('proforma branch resolved at read time for department scope (#263, real
         ]);
         expect(await visibleFor('branch-c')).toEqual(['PI-CONTRACT', 'PI-POINT-NONE']);
         expect(await visibleFor('branch-a')).toEqual([]);
+    });
+
+    it("also lists the caller's own clients regardless of branch (manager union)", async () => {
+        scope = {
+            kind: 'department',
+            branchId: 'branch-b',
+            administratorId: 'm-none',
+        } as AccessScope;
+        const numbers = (await service.findVisible(ctx)).items.map(i => i.number).sort();
+        expect(numbers).toEqual(['PI-DEFAULT', 'PI-POINT-B']);
+    });
+
+    it('pages newest first with a total that ignores skip/take, and carries the counterparty short name', async () => {
+        scope = { kind: 'department', branchId: 'branch-a' } as AccessScope;
+
+        const page = await service.findVisible(ctx, { skip: 1, take: 1 });
+
+        expect(page.totalItems).toBe(2);
+        expect(page.items.map(i => i.number)).toEqual(['PI-POINT-NONE']);
+        expect(page.items[0].counterpartyShortName).toBe('Short a');
+    });
+
+    it('take 0 returns only the scoped total', async () => {
+        scope = { kind: 'department', branchId: 'branch-a' } as AccessScope;
+
+        expect(await service.findVisible(ctx, { take: 0 })).toEqual({ items: [], totalItems: 2 });
+    });
+
+    it('all scope returns every proforma without branch joins affecting the count', async () => {
+        scope = { kind: 'all' } as AccessScope;
+
+        const page = await service.findVisible(ctx, { take: 10 });
+
+        expect(page.totalItems).toBe(4);
+        expect(page.items.map(i => i.id)).toEqual([4, 3, 2, 1]);
     });
 });

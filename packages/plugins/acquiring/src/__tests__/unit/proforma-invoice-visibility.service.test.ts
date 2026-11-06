@@ -12,16 +12,23 @@ function mockQueryBuilder() {
         andWhere: vi.fn(),
         orderBy: vi.fn(),
         addOrderBy: vi.fn(),
-        skip: vi.fn(),
-        take: vi.fn(),
-        getManyAndCount: vi.fn(async () => [[], 0]),
+        clone: vi.fn(),
+        select: vi.fn(),
+        addSelect: vi.fn(),
+        offset: vi.fn(),
+        limit: vi.fn(),
+        getRawOne: vi.fn(async () => ({ total: '0' })),
+        getRawAndEntities: vi.fn(async () => ({ entities: [], raw: [] })),
     };
+    qb.clone.mockReturnValue(qb);
+    qb.select.mockReturnValue(qb);
+    qb.addSelect.mockReturnValue(qb);
+    qb.offset.mockReturnValue(qb);
+    qb.limit.mockReturnValue(qb);
     qb.leftJoin.mockReturnValue(qb);
     qb.andWhere.mockReturnValue(qb);
     qb.orderBy.mockReturnValue(qb);
     qb.addOrderBy.mockReturnValue(qb);
-    qb.skip.mockReturnValue(qb);
-    qb.take.mockReturnValue(qb);
     return qb;
 }
 
@@ -63,7 +70,10 @@ describe('ProformaInvoiceVisibilityService', () => {
     beforeEach(() => {
         qb = mockQueryBuilder();
         const connection = {
-            getRepository: vi.fn(() => ({ createQueryBuilder: vi.fn(() => qb) })),
+            getRepository: vi.fn(() => ({
+                createQueryBuilder: vi.fn(() => qb),
+                metadata: { columns: [{ propertyName: 'id' }, { propertyName: 'lines' }] },
+            })),
         };
         accessScopeService = mockAccessScopeService();
         service = new ProformaInvoiceVisibilityService(
@@ -98,19 +108,65 @@ describe('ProformaInvoiceVisibilityService', () => {
         await service.findVisible(mockCtx);
 
         const [sql, params] = qb.andWhere.mock.calls[0];
-        expect(sql).toContain('"proformaInvoice"."orderId"');
+        expect(qb.leftJoin).toHaveBeenCalledWith(
+            'order',
+            'proformaInvoiceOrder',
+            '"proformaInvoiceOrder".id = "proformaInvoice"."orderId"',
+        );
+        expect(qb.leftJoin).toHaveBeenCalledWith(
+            'trading_point',
+            'proformaInvoiceTradingPoint',
+            '"proformaInvoiceTradingPoint".id::text = "proformaInvoiceOrder"."customFieldsTradingpointid"',
+        );
+        expect(sql).toContain('"proformaInvoiceTradingPoint"."servicingBranchId"');
+        expect(sql).not.toContain('SELECT');
         expect(sql).toContain('counterparty."branchId"');
         expect(sql).not.toContain('proformaInvoice.branchId');
         expect(sql).not.toContain('IS NULL');
         expect(params).toEqual({ branchId: 'branch-1', orderDefaultBranchId: 'branch-default' });
     });
 
-    it('applies no scope filter for "all" scope', async () => {
+    it('applies no scope filter and no branch joins for "all" scope', async () => {
         accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
 
         await service.findVisible(mockCtx);
 
         expect(qb.andWhere).not.toHaveBeenCalled();
+        expect(qb.leftJoin).toHaveBeenCalledTimes(1);
+    });
+
+    it('joins counterparty on typed ids, selects list columns without lines and the counterparty short name', async () => {
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
+        qb.getRawOne.mockResolvedValue({ total: '7' });
+        qb.getRawAndEntities.mockResolvedValue({
+            entities: [{ id: 1 }] as never[],
+            raw: [{ counterpartyShortName: 'Acme' }] as never[],
+        });
+
+        const result = await service.findVisible(mockCtx, { skip: 10, take: 5 });
+
+        expect(qb.leftJoin.mock.calls[0][2]).not.toContain('::text');
+        expect(qb.select).toHaveBeenLastCalledWith(['proformaInvoice.id']);
+        expect(qb.addSelect).toHaveBeenCalledWith(
+            'counterparty.shortName',
+            'counterpartyShortName',
+        );
+        expect(qb.offset).toHaveBeenCalledWith(10);
+        expect(qb.limit).toHaveBeenCalledWith(5);
+        expect(result).toEqual({
+            items: [{ id: 1, counterpartyShortName: 'Acme' }],
+            totalItems: 7,
+        });
+    });
+
+    it('take 0 returns only the count without loading rows', async () => {
+        accessScopeService.resolveProformaInvoiceScope.mockResolvedValue({ kind: 'all' });
+        qb.getRawOne.mockResolvedValue({ total: '3' });
+
+        const result = await service.findVisible(mockCtx, { take: 0 });
+
+        expect(qb.getRawAndEntities).not.toHaveBeenCalled();
+        expect(result).toEqual({ items: [], totalItems: 3 });
     });
 
     it('filters by status when provided, in addition to scope', async () => {

@@ -21,6 +21,7 @@ const MIGRATION_ONLY_INDEXES = [
     'IDX_integration_outbox_event_order',
     'IDX_order_custom_fields_counterpartyid',
     'IDX_order_custom_fields_pendingcounterpartyerpid',
+    'IDX_proforma_invoice_created_at_id',
 ];
 
 async function onMaintenanceDb(sql: string): Promise<void> {

@@ -28,16 +28,15 @@ export function orderBranchClause(
 }
 
 // A proforma takes its order's point; a contract proforma (no order) falls through to its counterparty.
+// The caller left-joins the order's trading point as tradingPointAlias (a join, not per-row subqueries).
 export function proformaBranchClause(
-    proformaAlias: string,
+    tradingPointAlias: string,
     counterpartyAlias: string,
     branchId: string | null,
     defaultBranchId: string | null,
 ): BranchClause {
-    return readTimeBranchClause(
-        `(SELECT o."customFieldsTradingpointid" FROM "order" o WHERE o.id = "${proformaAlias}"."orderId")`,
-        counterpartyAlias,
-        branchId,
-        defaultBranchId,
-    );
+    return {
+        sql: `COALESCE("${tradingPointAlias}"."servicingBranchId", ${counterpartyAlias}."branchId", :orderDefaultBranchId) = :branchId`,
+        params: { branchId, orderDefaultBranchId: defaultBranchId },
+    };
 }

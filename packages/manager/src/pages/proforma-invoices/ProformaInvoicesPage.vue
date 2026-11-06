@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue';
-import { MvPanel, MvPagination, MvWarningBanner } from '@mivend/ui-kit';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { MvPanel, MvPagination, MvSkeleton, MvWarningBanner } from '@mivend/ui-kit';
 import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
-import { fetchCounterpartyNames } from '../../api/customers';
 import {
     DEFAULT_PROFORMA_INVOICE_FILTERS,
     fetchProformaInvoicesPage,
@@ -18,7 +17,16 @@ const pageSize = 10;
 
 const proformaInvoices = ref<ProformaInvoiceListItem[]>([]);
 const totalItems = ref(0);
-const counterpartyNames = ref<Map<string, string>>(new Map());
+const counterpartyNames = computed(
+    () =>
+        new Map(
+            proformaInvoices.value.flatMap(i =>
+                i.counterpartyShortName
+                    ? [[i.counterpartyId, i.counterpartyShortName] as const]
+                    : [],
+            ),
+        ),
+);
 const loading = ref(true);
 
 // Manager portal rule (see the manager-portal-rules skill): every filtered/sorted/paginated view must be a shareable
@@ -32,9 +40,6 @@ async function load(): Promise<void> {
         const result = await fetchProformaInvoicesPage(filters, page.value, pageSize);
         proformaInvoices.value = result.items;
         totalItems.value = result.totalItems;
-        counterpartyNames.value = await fetchCounterpartyNames(
-            result.items.map(i => i.counterpartyId),
-        );
     } finally {
         loading.value = false;
     }
@@ -95,7 +100,15 @@ onMounted(load);
                 :total="totalItems"
                 @update:page="page = $event"
             />
+            <div
+                v-if="loading && !proformaInvoices.length"
+                class="proforma-invoices-page__skeleton"
+                :style="{ height: `${pageSize * 52 + 40}px` }"
+            >
+                <MvSkeleton v-for="i in pageSize" :key="i" height="40px" />
+            </div>
             <ProformaInvoicesTable
+                v-else
                 :proformaInvoices="proformaInvoices"
                 :counterparty-names="counterpartyNames"
                 :page-size="pageSize"
@@ -112,6 +125,12 @@ onMounted(load);
 </template>
 
 <style scoped>
+.proforma-invoices-page__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 .proforma-invoices-page__header {
     margin-bottom: 18px;
 }

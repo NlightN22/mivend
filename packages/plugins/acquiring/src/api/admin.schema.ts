@@ -42,6 +42,8 @@ export const adminApiExtensions: DocumentNode = gql`
         orderId: ID
         organizationId: ID!
         counterpartyId: ID!
+        "Filled only by visibleProformaInvoices; null elsewhere."
+        counterpartyShortName: String
         amount: Int!
         currencyCode: String!
         status: String!

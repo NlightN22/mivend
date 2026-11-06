@@ -76,6 +76,9 @@ export class ProformaInvoice extends UuidEntity {
     @Column({ type: 'varchar', nullable: true })
     branchId!: string | null;
 
+    // Transient: filled only by the visibility list query from its counterparty join.
+    counterpartyShortName?: string | null;
+
     // Immutable snapshot of the organization's order lines at issue time (#206).
     @Column({ type: 'jsonb', default: () => "'[]'" })
     lines!: ProformaInvoiceLineSnapshot[];

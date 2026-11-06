@@ -9,6 +9,7 @@ fragment ProformaInvoiceListItemFields on ProformaInvoice {
     createdAt
     orderId
     counterpartyId
+    counterpartyShortName
     amount
     currencyCode
     displayStatus

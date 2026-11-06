@@ -38,13 +38,31 @@ export class ProformaInvoiceVisibilityService {
         if (counterpartyId) {
             qb.andWhere('proformaInvoice.counterpartyId = :counterpartyId', { counterpartyId });
         }
-        const [items, totalItems] = await qb
+        const countRow = await qb
+            .clone()
+            .select('COUNT(*)', 'total')
+            .getRawOne<{ total: string }>();
+        if (take === 0) return { items: [], totalItems: Number(countRow?.total ?? 0) };
+        // Joins are to-one, so offset/limit is exact. `lines` is never read by the list, so it is not selected.
+        const { entities, raw } = await qb
+            .select(this.listColumns(ctx))
+            .addSelect('counterparty.shortName', 'counterpartyShortName')
             .orderBy('proformaInvoice.createdAt', 'DESC')
             .addOrderBy('proformaInvoice.id', 'DESC')
-            .skip(skip)
-            .take(take)
-            .getManyAndCount();
-        return { items, totalItems };
+            .offset(skip)
+            .limit(take)
+            .getRawAndEntities<{ counterpartyShortName: string | null }>();
+        entities.forEach((item, i) => {
+            item.counterpartyShortName = raw[i]?.counterpartyShortName ?? null;
+        });
+        return { items: entities, totalItems: Number(countRow?.total ?? 0) };
+    }
+
+    private listColumns(ctx: RequestContext): string[] {
+        return this.connection
+            .getRepository(ctx, ProformaInvoice)
+            .metadata.columns.filter(column => column.propertyName !== 'lines')
+            .map(column => `proformaInvoice.${column.propertyName}`);
     }
 
     // Scoped like findVisible so a department manager cannot probe balances outside their branch.
@@ -60,7 +78,7 @@ export class ProformaInvoiceVisibilityService {
             .leftJoin(
                 Counterparty,
                 'counterparty',
-                'counterparty.id::text = "proformaInvoice"."counterpartyId"::text',
+                'counterparty.id = "proformaInvoice"."counterpartyId"',
             )
             .andWhere('proformaInvoice.counterpartyId = :counterpartyId', { counterpartyId })
             .andWhere('proformaInvoice.status IN (:...statuses)', {
@@ -110,8 +128,9 @@ export class ProformaInvoiceVisibilityService {
                 break;
             case 'department': {
                 // Read-time branch, never the issue-time snapshot (#263); plus own and granted managers' clients.
+                const tradingPointAlias = this.joinBranchSource(qb, proformaInvoiceAlias);
                 const branch = proformaBranchClause(
-                    proformaInvoiceAlias,
+                    tradingPointAlias,
                     counterpartyAlias,
                     scope.branchId ?? null,
                     scope.defaultBranchId,
@@ -128,6 +147,26 @@ export class ProformaInvoiceVisibilityService {
         }
     }
 
+    // Left-joins order -> trading point (both to-one, indexed by primary key) once instead of correlated subqueries per row.
+    private joinBranchSource<T extends ObjectLiteral>(
+        qb: SelectQueryBuilder<T>,
+        proformaAlias: string,
+    ): string {
+        const orderAlias = `${proformaAlias}Order`;
+        const tradingPointAlias = `${proformaAlias}TradingPoint`;
+        // Table names, not entities: the order table belongs to Vendure core and trading_point to another plugin.
+        qb.leftJoin(
+            'order',
+            orderAlias,
+            `"${orderAlias}".id = "${proformaAlias}"."orderId"`,
+        ).leftJoin(
+            'trading_point',
+            tradingPointAlias,
+            `"${tradingPointAlias}".id::text = "${orderAlias}"."customFieldsTradingpointid"`,
+        );
+        return tradingPointAlias;
+    }
+
     private buildScopedQuery(
         ctx: RequestContext,
         scope: ProformaInvoiceScope,
@@ -139,9 +178,8 @@ export class ProformaInvoiceVisibilityService {
             .leftJoin(
                 Counterparty,
                 'counterparty',
-                // Raw ON-clause: TypeORM only auto-quotes alias.property inside where clauses, not here.
-                // Quote the camelCase alias and column by hand, or Postgres lowercases them and the query fails.
-                'counterparty.id::text = "proformaInvoice"."counterpartyId"::text',
+                // Raw ON-clause: quote the camelCase alias and column by hand, or Postgres lowercases them.
+                'counterparty.id = "proformaInvoice"."counterpartyId"',
             );
         if (options?.status) {
             applyStatusFilter(qb, 'proformaInvoice', options.status);

@@ -111,7 +111,7 @@ export class PaymentReconciliationIssueService {
             ).leftJoin(
                 Counterparty,
                 'counterparty',
-                'counterparty.id::text = "proformaInvoice"."counterpartyId"::text',
+                'counterparty.id = "proformaInvoice"."counterpartyId"',
             );
             this.proformaInvoiceVisibilityService.applyScope(qb, scope);
         }
