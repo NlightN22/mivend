@@ -109,6 +109,7 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
 <style scoped>
 .mv-mobile-cards {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     /* A border + shadow alone weren't enough real separation on an actual phone screen (real
        incident: cards read as one continuous block when the border sits flush against the
@@ -135,6 +136,7 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
     border-radius: 12px;
     padding: 13px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 11px;
     cursor: pointer;
     min-width: 0;
@@ -189,5 +191,6 @@ const VNodeHost = (renderProps: { render: () => VNode | string }): VNode | strin
 
 .mv-mobile-card__actions {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
 }
 </style>

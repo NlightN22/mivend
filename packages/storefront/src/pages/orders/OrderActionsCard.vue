@@ -23,6 +23,7 @@ const { t } = useI18n();
 <style scoped>
 .oac {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     background: #fff;
     border: 1px solid #edf2ef;

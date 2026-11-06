@@ -19,6 +19,7 @@ defineProps<{
 <style scoped>
 .mv-field {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     align-content: start;
     gap: 7px;
 }

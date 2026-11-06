@@ -75,6 +75,7 @@ onMounted(async () => {
     position: sticky;
     top: 118px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
 }
 

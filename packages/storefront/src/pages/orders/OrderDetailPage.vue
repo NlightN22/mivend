@@ -181,6 +181,7 @@ onMounted(() => {
 
 .od-main {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0;
     min-width: 0;
 }
@@ -194,6 +195,7 @@ onMounted(() => {
 
 .od-aside {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
 }
 

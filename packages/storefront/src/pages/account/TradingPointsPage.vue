@@ -181,6 +181,7 @@ onMounted(loadPoints);
     color: #66736e;
     font-size: 15px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
 }
 
@@ -190,6 +191,7 @@ onMounted(loadPoints);
 
 .tp-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     margin-bottom: 20px;
 }

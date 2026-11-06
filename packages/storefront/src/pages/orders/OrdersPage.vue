@@ -234,6 +234,7 @@ onMounted(() => void reload());
 
 .orders-page-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
 }
 
@@ -256,6 +257,7 @@ onMounted(() => void reload());
     }
     .orders-toolbar {
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
     }
     .toolbar-search {
         width: 100%;

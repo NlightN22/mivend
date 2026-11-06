@@ -104,6 +104,7 @@ function activityText(emp: Employee): string {
 <style scoped>
 .emp-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
 }
 

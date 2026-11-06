@@ -138,6 +138,7 @@ function another(): void {
 <style scoped>
 .bal-pay {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
 }
 .bal-pay .bal-panel__sub {
@@ -156,6 +157,7 @@ function another(): void {
 }
 .bal-pay__actions {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     margin-top: 12px;
     justify-items: start;

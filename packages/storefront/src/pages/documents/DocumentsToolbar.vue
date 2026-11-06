@@ -48,6 +48,7 @@ const { t } = useI18n();
     box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
     padding: 18px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
 }
 

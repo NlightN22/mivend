@@ -175,6 +175,7 @@ const stats = computed(() => [
 
 .documents-page__main {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     min-width: 0;
 }
@@ -188,6 +189,7 @@ const stats = computed(() => [
 
 .documents-page__list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
 }
 

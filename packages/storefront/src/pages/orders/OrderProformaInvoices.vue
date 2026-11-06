@@ -74,6 +74,7 @@ onMounted(() => void load());
     border-radius: 20px;
     padding: 18px 20px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
 }
 .opi-title {

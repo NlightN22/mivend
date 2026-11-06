@@ -141,6 +141,7 @@ async function choose(outcome: PayProformaInvoiceOutcome): Promise<void> {
 
 .stub-actions {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     width: 100%;
     margin-bottom: 18px;

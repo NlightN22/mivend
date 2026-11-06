@@ -176,6 +176,7 @@ async function handlePrimary(): Promise<void> {
 <style scoped>
 .checkout-summary {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
 }
 

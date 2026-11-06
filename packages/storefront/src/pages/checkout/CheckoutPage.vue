@@ -76,6 +76,7 @@ onMounted(() => Promise.all([cartStore.fetchCart(), checkoutStore.loadDeliveryMe
 
 .checkout-page__main {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 18px;
     min-width: 0;
 }

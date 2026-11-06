@@ -67,6 +67,7 @@ function items(section: string): string[] {
     margin: 0;
     padding-left: 20px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     line-height: 1.5;
 }

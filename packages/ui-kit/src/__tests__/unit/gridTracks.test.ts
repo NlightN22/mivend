@@ -27,4 +27,23 @@ describe('grid tracks', () => {
             );
         expect(offenders).toEqual([]);
     });
+
+    // Without explicit columns a grid gets one automatic column that grows to its widest content.
+    it('every grid container declares its columns, unless it only centres a single item', () => {
+        const dirs = ['ui-kit/src', 'storefront/src'].map(d => join(PACKAGES, d));
+        const offenders = dirs
+            .flatMap(styleFiles)
+            .flatMap(file =>
+                [...readFileSync(file, 'utf8').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+                    .filter(
+                        m =>
+                            /display:\s*(inline-)?grid/.test(m[2]) &&
+                            !/grid-template|grid-auto-flow:\s*column|place-items:\s*center/.test(
+                                m[2],
+                            ),
+                    )
+                    .map(m => `${file}: ${m[1].trim().split('\n').pop()}`),
+            );
+        expect(offenders).toEqual([]);
+    });
 });

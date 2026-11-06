@@ -153,6 +153,7 @@ onMounted(() => {
 .settlement-page__content {
     min-width: 0;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
 }
 

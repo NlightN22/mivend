@@ -52,6 +52,7 @@ const { t } = useI18n();
 <style scoped>
 .version-notices {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     margin-bottom: 16px;
 }

@@ -180,6 +180,7 @@ function categoryLink(slug: string): { path: string; query: { collection: string
 
 .mv-catalog-mobile__list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
 }
 

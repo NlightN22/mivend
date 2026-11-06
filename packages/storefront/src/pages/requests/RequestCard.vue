@@ -128,6 +128,7 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
 .req-card__body {
     padding: 16px 20px 18px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
 }
 
@@ -168,6 +169,7 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
 
 .req-card__message {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     padding: 12px 14px;
     border-radius: 16px;

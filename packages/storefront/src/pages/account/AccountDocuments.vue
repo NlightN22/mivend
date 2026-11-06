@@ -128,6 +128,7 @@ const demoReconciliationNote = computed(() =>
 
 .account-documents__list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
 }
 

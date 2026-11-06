@@ -166,6 +166,7 @@ const preview = computed(() => {
 .order-card-body {
     padding: 16px 20px 18px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
 }
 

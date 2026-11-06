@@ -96,6 +96,7 @@ function rowKey(row: TRow): unknown {
    one continuous block there, even though they look fine zoomed in on a screenshot). */
 .mv-advanced-mobile-cards {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     background: var(--el-fill-color-light, #f1f4f7);
     padding: 10px;
@@ -115,6 +116,7 @@ function rowKey(row: TRow): unknown {
     border-radius: 12px;
     padding: 13px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 11px;
     cursor: pointer;
     min-width: 0;

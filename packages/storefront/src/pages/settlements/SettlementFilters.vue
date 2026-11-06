@@ -110,6 +110,7 @@ function setBound(bound: 'from' | 'to', value: string): void {
     box-shadow: 0 14px 36px rgba(27, 45, 38, 0.08);
     padding: 18px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
 }
 
@@ -122,6 +123,7 @@ function setBound(bound: 'from' | 'to', value: string): void {
 
 .settlement-filters__field {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     color: #66736e;
     font-size: 12px;

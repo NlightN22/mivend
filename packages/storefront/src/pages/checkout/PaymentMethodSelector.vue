@@ -123,6 +123,7 @@ const methods = computed(() =>
     border-radius: 20px;
     background: #fff;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 11px;
     cursor: pointer;
     transition: 0.16s ease;

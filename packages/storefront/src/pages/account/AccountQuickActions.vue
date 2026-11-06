@@ -115,6 +115,7 @@ const limitText = computed(() => {
     padding: 18px;
     background: #fbfdfc;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     align-content: space-between;
     text-decoration: none;
     color: inherit;

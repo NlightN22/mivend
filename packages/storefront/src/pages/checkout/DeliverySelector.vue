@@ -157,6 +157,7 @@ const modalOpen = ref(false);
     padding: 16px;
     background: #fff;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     cursor: pointer;
     text-align: left;

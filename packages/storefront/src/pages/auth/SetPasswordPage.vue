@@ -161,6 +161,7 @@ const copy = computed(() => (props.flow === 'verify' ? 'auth.verifyAccount' : 'a
 
 .login-form {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
 }
 

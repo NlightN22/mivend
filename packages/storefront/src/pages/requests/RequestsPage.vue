@@ -149,6 +149,7 @@ const { demoAllowed } = useDemoMode();
 
 .requests-page__main {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     min-width: 0;
 }
@@ -174,6 +175,7 @@ const { demoAllowed } = useDemoMode();
 
 .requests-page__list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
 }
 
@@ -185,6 +187,7 @@ const { demoAllowed } = useDemoMode();
     }
     .requests-page__head {
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
     }
     .requests-page__head-actions {
         justify-content: flex-start;

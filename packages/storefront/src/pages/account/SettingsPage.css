@@ -11,6 +11,7 @@
 .set-content {
     min-width: 0;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
 }
 
@@ -169,6 +170,7 @@
 /* Toggle rows */
 .set-toggles {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0;
 }
 .set-toggle-row {

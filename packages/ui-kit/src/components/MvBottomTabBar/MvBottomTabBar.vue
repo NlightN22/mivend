@@ -64,6 +64,7 @@ const emit = defineEmits<{ select: [key: string] }>();
 @media (max-width: 1180px) {
     .mv-bottom-tab-bar {
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

@@ -34,6 +34,7 @@ defineProps<{ icon: Component; label: string; value: string }>();
 }
 .mv-icon-stat__body {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 4px;
     min-width: 0;
 }

@@ -60,6 +60,7 @@
 /* Table rows */
 .bal-table {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
 }
 
@@ -139,6 +140,7 @@
 
 .bal-mini-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     border-top: 1px solid #edf2ef;
     padding-top: 14px;

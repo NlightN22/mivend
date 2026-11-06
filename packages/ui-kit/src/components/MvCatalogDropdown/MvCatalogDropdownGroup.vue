@@ -78,6 +78,7 @@ function categoryLink(slug: string): { path: string; query: { collection: string
 <style scoped>
 .mv-catalog-dropdown-group {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
 }
 

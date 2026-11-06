@@ -63,11 +63,13 @@ const ROWS = 3;
 
 .cart-skeleton__info {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
 }
 
 .cart-skeleton__aside {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
     padding: 24px;
 }

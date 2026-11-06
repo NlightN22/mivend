@@ -95,6 +95,7 @@ const unavailableCount = computed(
 <style scoped>
 .cart-summary {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
 }
 
@@ -164,6 +165,7 @@ const unavailableCount = computed(
 
 .cart-summary__lines {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     padding-bottom: 16px;
     border-bottom: 1px solid #edf2ef;

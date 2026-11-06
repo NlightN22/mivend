@@ -77,6 +77,7 @@ defineProps<{
 
 .oc-detail-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
 }
 
@@ -106,6 +107,7 @@ defineProps<{
     padding: 0;
     list-style: none;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
 }
 

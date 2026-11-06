@@ -32,6 +32,7 @@ const emit = defineEmits<{ restore: [id: string] }>();
 
 .tp-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     margin-bottom: 20px;
 }

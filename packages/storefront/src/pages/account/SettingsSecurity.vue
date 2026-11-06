@@ -144,6 +144,7 @@ const {
 }
 .set-sessions {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
 }
 .set-sessions--spaced {
