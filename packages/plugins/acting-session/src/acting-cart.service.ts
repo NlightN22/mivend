@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Order, OrderService, RequestContext, TransactionalConnection } from '@vendure/core';
+import { ID, Order, OrderService, RequestContext, TransactionalConnection } from '@vendure/core';
 import { ctxQuery } from 'shared';
 
 import { ACTING_SESSION_PLUGIN_OPTIONS, CART_TTL_DEFAULT_MS } from './acting-session.types';
 import type { ActingSessionPluginOptions } from './acting-session.types';
 
-// The acting cart carries no customer link until checkout, so the customer's login and order lists never see it.
+// The acting cart is linked to the customer like a real one; the marker keeps it out of the customer's own sessions.
 @Injectable()
 export class ActingCartService {
     constructor(
@@ -25,8 +25,21 @@ export class ActingCartService {
         return rows[0] ? this.orderService.findOne(ctx, rows[0].id) : undefined;
     }
 
+    async findCustomerCart(ctx: RequestContext, customerId: ID): Promise<Order | undefined> {
+        const rows = await ctxQuery<Array<{ id: string }>>(
+            this.connection,
+            ctx,
+            `SELECT o.id FROM "order" o
+             JOIN order_channels_channel oc ON oc."orderId" = o.id AND oc."channelId" = $2
+             WHERE o."customerId" = $1 AND o.active = true AND o."customFieldsActingsessionid" IS NULL
+             ORDER BY o."createdAt" DESC LIMIT 1`,
+            [customerId, ctx.channelId],
+        );
+        return rows[0] ? this.orderService.findOne(ctx, rows[0].id) : undefined;
+    }
+
     async create(ctx: RequestContext, sessionId: string, administratorId: string): Promise<Order> {
-        const order = await this.orderService.create(ctx);
+        const order = await this.orderService.create(ctx, ctx.activeUserId);
         await this.connection.getRepository(ctx, Order).update(order.id, {
             customFields: { actingSessionId: sessionId, actingAdministratorId: administratorId },
         });

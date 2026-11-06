@@ -4,7 +4,6 @@ import type {
     RequestContext,
     TransactionalConnection,
     UserService,
-    SessionService,
 } from '@vendure/core';
 
 import { SessionManagementService } from '../../session-management.service';
@@ -35,12 +34,12 @@ describe('SessionManagementService', () => {
         find: ReturnType<typeof vi.fn>;
         findOne: ReturnType<typeof vi.fn>;
         update: ReturnType<typeof vi.fn>;
+        remove: ReturnType<typeof vi.fn>;
     };
     let connection: { getRepository: ReturnType<typeof vi.fn> };
     let deleteFromCache: ReturnType<typeof vi.fn>;
     let configService: ConfigService;
     let userService: { getUserById: ReturnType<typeof vi.fn> };
-    let sessionService: { deleteSessionsByUser: ReturnType<typeof vi.fn> };
     let queryBuilder: {
         delete: ReturnType<typeof vi.fn>;
         from: ReturnType<typeof vi.fn>;
@@ -57,14 +56,13 @@ describe('SessionManagementService', () => {
     }
 
     beforeEach(() => {
-        repo = { find: vi.fn(), findOne: vi.fn(), update: vi.fn() };
+        repo = { find: vi.fn(), findOne: vi.fn(), update: vi.fn(), remove: vi.fn() };
         connection = { getRepository: vi.fn(() => repo) };
         deleteFromCache = vi.fn();
         configService = {
             authOptions: { sessionCacheStrategy: { delete: deleteFromCache } },
         } as unknown as ConfigService;
         userService = { getUserById: vi.fn() };
-        sessionService = { deleteSessionsByUser: vi.fn() };
 
         queryBuilder = {
             delete: vi.fn(),
@@ -83,7 +81,6 @@ describe('SessionManagementService', () => {
             connection as unknown as TransactionalConnection,
             configService,
             userService as unknown as UserService,
-            sessionService as unknown as SessionService,
         );
     });
 
@@ -167,14 +164,22 @@ describe('SessionManagementService', () => {
         expect(deleteFromCache).toHaveBeenCalledWith('other-token-2');
     });
 
-    it('ends all sessions including the current one via SessionService.deleteSessionsByUser', async () => {
-        const user = { id: 'user-1' };
-        userService.getUserById.mockResolvedValue(user);
+    it("ends all the user's own sessions including the current one, but never an acting session", async () => {
+        userService.getUserById.mockResolvedValue({ id: 'user-1' });
+        const own = makeSession({ id: 'session-1', token: 'own-token' });
+        const acting = makeSession({
+            id: 'session-2',
+            token: 'acting-token',
+            customFields: { actingAdministratorId: '7' },
+        });
+        repo.find.mockResolvedValue([own, acting]);
 
-        const ok = await service.endAllSessions(ctxFor('user-1'));
+        const ok = await service.endAllSessions(ctxFor('user-1', 'own-token'));
 
         expect(ok).toBe(true);
-        expect(sessionService.deleteSessionsByUser).toHaveBeenCalledWith(expect.anything(), user);
+        expect(repo.remove).toHaveBeenCalledWith([own]);
+        expect(deleteFromCache).toHaveBeenCalledWith('own-token');
+        expect(deleteFromCache).not.toHaveBeenCalledWith('acting-token');
     });
 
     it('endAllSessions is a no-op when the user cannot be resolved', async () => {
@@ -183,7 +188,7 @@ describe('SessionManagementService', () => {
         const ok = await service.endAllSessions(ctxFor('user-1'));
 
         expect(ok).toBe(false);
-        expect(sessionService.deleteSessionsByUser).not.toHaveBeenCalled();
+        expect(repo.remove).not.toHaveBeenCalled();
     });
 
     it('deleteEndedSessions removes expired and invalidated sessions', async () => {

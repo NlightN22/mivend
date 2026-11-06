@@ -11,6 +11,7 @@ import {
 } from '@vendure/core';
 import { subscribeAndLog } from 'shared';
 
+import { ShopLogoutResolver } from './api/shop-logout.resolver';
 import { SessionManagementResolver } from './api/session-management.resolver';
 import { sessionManagementSchema } from './api/session-management.schema';
 import { ActingContextService } from './acting-context.service';
@@ -37,7 +38,7 @@ import type { SessionManagementPluginOptions } from './session.types';
     exports: [SessionManagementService, ActingContextService],
     shopApiExtensions: {
         schema: sessionManagementSchema,
-        resolvers: [SessionManagementResolver],
+        resolvers: [SessionManagementResolver, ShopLogoutResolver],
     },
     adminApiExtensions: {
         schema: sessionManagementSchema,

@@ -91,9 +91,29 @@ export async function createConfirmedOrder(
                 )
             ).addPaymentToOrder,
         );
+        await settlePayments(token, placed.id as string);
         return { id: placed.id as string, code: placed.code as string };
     } finally {
         await shop(`mutation { finishActingSession }`).catch(() => undefined);
+    }
+}
+
+// The offline-terms payment is only authorized; the earlier manual-payment helper left orders PaymentSettled.
+async function settlePayments(token: string, orderId: string): Promise<void> {
+    const order = await adminGql<{ order: { payments: { id: string; state: string }[] } }>(
+        `query($id: ID!) { order(id: $id) { payments { id state } } }`,
+        { id: orderId },
+        token,
+    );
+    for (const payment of order.data.order.payments.filter(p => p.state === 'Authorized')) {
+        const settled = await adminGql<{ settlePayment: ShopResult }>(
+            `mutation($id: ID!) { settlePayment(id: $id) { __typename ... on ErrorResult { message } } }`,
+            { id: payment.id },
+            token,
+        );
+        if (settled.data.settlePayment.__typename !== 'Payment') {
+            throw new Error(`settlePayment failed: ${JSON.stringify(settled.data.settlePayment)}`);
+        }
     }
 }
 

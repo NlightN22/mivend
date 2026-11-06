@@ -7,7 +7,6 @@ import { SessionManagementPlugin } from '@mivend/plugin-session-management';
 
 import { ActingActiveOrderStrategy } from './acting-active-order.strategy';
 import { ActingCartService } from './acting-cart.service';
-import { ActingCheckoutLinkProcess } from './acting-checkout-link.process';
 import { ActingEligibilityService } from './acting-eligibility.service';
 import { ActingMutationLogInterceptor } from './acting-mutation-log.interceptor';
 import { createActingSessionCleanupTask } from './acting-session-cleanup.scheduled-task';
@@ -64,10 +63,6 @@ const orderField = (config: { name: string }): CustomFieldConfig => ({
         config.orderOptions.activeOrderStrategy = Array.isArray(strategies)
             ? strategies.map(s => new ActingActiveOrderStrategy(s))
             : new ActingActiveOrderStrategy(strategies);
-        config.orderOptions.process = [
-            new ActingCheckoutLinkProcess(),
-            ...(config.orderOptions.process ?? []),
-        ];
         config.schedulerOptions.tasks = [
             ...(config.schedulerOptions.tasks ?? []),
             createActingSessionCleanupTask(ActingSessionPlugin.options),

@@ -202,6 +202,26 @@ test.describe('acting session @on:manager-operator', () => {
         await clearRealCart();
     });
 
+    test('a real login for a customer whose only cart is an acting one gets no acting lines, and the own cart works afterwards', async () => {
+        const token = await newActing();
+        await acting(token, ADD, { v: variants['E2E-OIL-001'], q: 3 });
+
+        const login = await shopLoginCookie(E2E_CUSTOMER.email, E2E_CUSTOMER.password);
+        expect(skus(await shopGql<Cart>(CART, undefined, login))).toEqual([]);
+        const orders = await shopGql<{ myOrders: { items: { id: string }[] } }>(
+            `query { myOrders(options: { take: 100 }) { items { id } } }`,
+            undefined,
+            login,
+        );
+        const actingCartId = (await acting<Cart>(token, CART)).activeOrder?.id;
+        expect(orders.myOrders.items.map(o => o.id)).not.toContain(actingCartId);
+
+        await shopGql(ADD, { v: variants['E2E-OIL-002'], q: 1 }, login);
+        expect(skus(await shopGql<Cart>(CART, undefined, login))).toEqual(['E2E-OIL-002']);
+        expect(skus(await acting<Cart>(token, CART))).toEqual(['E2E-OIL-001']);
+        await shopGql(`mutation { removeAllOrderLines { __typename } }`, undefined, login);
+    });
+
     test('a customer cookie in the same request is ignored under the acting header, and no cookie is set', async () => {
         await shopGql(ADD, { v: variants['E2E-OIL-002'], q: 1 }, cookie);
         const ticket = await startTicket(operator, counterpartyId);
@@ -283,6 +303,22 @@ test.describe('acting session @on:manager-operator', () => {
             await shopGql(ADD, { v: variants[sku], q: qty }, buyer);
         }
         const own = await shopGql<Preview>(preview, undefined, buyer);
+        const viaActing = await acting<Preview>(token, preview);
+        expect(own.deferredCreditPreview.exceeded).toBe(true);
+        expect(viaActing.deferredCreditPreview).toEqual(own.deferredCreditPreview);
+
+        const prices = `query { activeOrder { lines { productVariant { sku } linePriceWithTax } } }`;
+        type Priced = {
+            activeOrder: { lines: { productVariant: { sku: string }; linePriceWithTax: number }[] };
+        };
+        const linePrices = (c: Priced): [string, number][] =>
+            c.activeOrder.lines
+                .map(l => [l.productVariant.sku, l.linePriceWithTax] as [string, number])
+                .sort();
+        expect(linePrices(await acting<Priced>(token, prices))).toEqual(
+            linePrices(await shopGql<Priced>(prices, undefined, buyer)),
+        );
+
         const methods = await acting<{ eligibleShippingMethods: { id: string; code: string }[] }>(
             token,
             `query { eligibleShippingMethods { id code } }`,
@@ -297,9 +333,9 @@ test.describe('acting session @on:manager-operator', () => {
             token,
             `mutation { transitionOrderToState(state: "ArrangingPayment") { __typename } }`,
         );
-        const viaActing = await acting<Preview>(token, preview);
-        expect(own.deferredCreditPreview.exceeded).toBe(true);
-        expect(viaActing.deferredCreditPreview).toEqual(own.deferredCreditPreview);
+        expect((await acting<Preview>(token, preview)).deferredCreditPreview).toEqual(
+            own.deferredCreditPreview,
+        );
         await shopGql(`mutation { removeAllOrderLines { __typename } }`, undefined, buyer);
         await acting(token, `mutation { finishActingSession }`);
     });

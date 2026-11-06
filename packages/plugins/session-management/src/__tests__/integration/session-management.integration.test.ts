@@ -5,7 +5,6 @@ import type {
     RequestContext,
     TransactionalConnection,
     UserService,
-    SessionService,
 } from '@vendure/core';
 import {
     createTestSchema,
@@ -36,7 +35,6 @@ let dataSource: DataSource;
 let service: SessionManagementService;
 let deleteFromCache: ReturnType<typeof vi.fn>;
 let userService: { getUserById: ReturnType<typeof vi.fn> };
-let sessionService: { deleteSessionsByUser: ReturnType<typeof vi.fn> };
 
 function ctxFor(userId: string, currentToken?: string): RequestContext {
     return {
@@ -86,13 +84,11 @@ beforeAll(async () => {
         authOptions: { sessionCacheStrategy: { delete: deleteFromCache } },
     } as unknown as ConfigService;
     userService = { getUserById: vi.fn() };
-    sessionService = { deleteSessionsByUser: vi.fn() };
 
     service = new SessionManagementService(
         connectionShim,
         configService,
         userService as unknown as UserService,
-        sessionService as unknown as SessionService,
     );
 });
 

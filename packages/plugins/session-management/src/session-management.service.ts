@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import {
     AuthenticatedSession,
     ConfigService,
+    ID,
     RequestContext,
     Session,
-    SessionService,
     TransactionalConnection,
     UserService,
 } from '@vendure/core';
@@ -23,7 +23,6 @@ export class SessionManagementService {
         private connection: TransactionalConnection,
         private configService: ConfigService,
         private userService: UserService,
-        private sessionService: SessionService,
     ) {}
 
     async getMySessions(ctx: RequestContext): Promise<SessionSummary[]> {
@@ -81,8 +80,18 @@ export class SessionManagementService {
         if (!user) {
             return false;
         }
-        await this.sessionService.deleteSessionsByUser(ctx, user);
+        await this.deleteOwnSessions(ctx, user.id);
         return true;
+    }
+
+    // Core's deleteSessionsByUser also removes the acting sessions, which share the customer's user.
+    async deleteOwnSessions(ctx: RequestContext, userId: ID): Promise<void> {
+        const repo = this.connection.getRepository(ctx, AuthenticatedSession);
+        const own = (await repo.find({ where: { user: { id: userId } } })).filter(isOwn);
+        await repo.remove(own);
+        for (const session of own) {
+            await this.configService.authOptions.sessionCacheStrategy.delete(session.token);
+        }
     }
 
     // Targets base Session so anonymous cart sessions are swept too (STI shares one table).

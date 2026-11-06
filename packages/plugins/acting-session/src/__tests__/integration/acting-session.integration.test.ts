@@ -10,6 +10,7 @@ import {
     testSchemaOptions,
 } from 'shared';
 
+import { ActingCartService } from '../../acting-cart.service';
 import { ActingSessionLivenessService } from '../../acting-session-liveness.service';
 import { ActingTicketService, hashTicket } from '../../acting-ticket.service';
 
@@ -89,6 +90,9 @@ beforeAll(async () => {
         CREATE TABLE administrator (id int PRIMARY KEY, "userId" int, "deletedAt" timestamp);
         CREATE TABLE role (id int PRIMARY KEY, permissions text NOT NULL);
         CREATE TABLE user_roles_role ("userId" int, "roleId" int);
+        CREATE TABLE "order" (id int PRIMARY KEY, "customerId" int, active boolean NOT NULL,
+            "createdAt" timestamp NOT NULL, "customFieldsActingsessionid" varchar);
+        CREATE TABLE order_channels_channel ("orderId" int, "channelId" int);
         CREATE TABLE acting_ticket (
             id serial PRIMARY KEY, "tokenHash" varchar NOT NULL UNIQUE, "administratorId" varchar NOT NULL,
             "parentSessionId" varchar NOT NULL, "counterpartyId" varchar NOT NULL, "customerId" varchar NOT NULL,
@@ -103,7 +107,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await dataSource.query(
-        'TRUNCATE session, "user", administrator, role, user_roles_role, acting_ticket RESTART IDENTITY',
+        'TRUNCATE "order", order_channels_channel, session, "user", administrator, role, user_roles_role, acting_ticket RESTART IDENTITY',
     );
     deleteFromCache = vi.fn();
 });
@@ -205,5 +209,52 @@ describe('ActingSessionLivenessService (real Postgres)', () => {
         await insertSession('acting', { acting: true, parent: '10' });
 
         expect(await liveness().endDeadSessions(testRequestContext, SESSION_TTL)).toBe(0);
+    });
+});
+
+describe('ActingCartService.findCustomerCart (real Postgres)', () => {
+    async function insertOrder(
+        id: number,
+        customerId: number,
+        ageMs: number,
+        acting: string | null,
+    ) {
+        await dataSource.query(
+            `INSERT INTO "order" (id, "customerId", active, "createdAt", "customFieldsActingsessionid")
+             VALUES ($1, $2, true, $3, $4)`,
+            [id, customerId, new Date(Date.now() - ageMs), acting],
+        );
+        await dataSource.query('INSERT INTO order_channels_channel VALUES ($1, 1)', [id]);
+    }
+
+    function carts() {
+        const findOne = vi.fn(async (_ctx: unknown, id: string) => ({ id }));
+        const service = new ActingCartService(
+            createTestConnection(dataSource),
+            { findOne } as never,
+            { storefrontPublicUrl: '' },
+        );
+        return service;
+    }
+
+    it("skips a newer acting cart and returns the customer's own, never another customer's", async () => {
+        await insertOrder(1, 7, 5000, null);
+        await insertOrder(2, 7, 0, 'sess-9');
+        await insertOrder(3, 8, 1000, null);
+
+        const found = await carts().findCustomerCart(
+            { ...testRequestContext, channelId: 1 } as never,
+            7,
+        );
+
+        expect(found).toEqual({ id: 1 });
+    });
+
+    it('returns nothing when the customer only has an acting cart', async () => {
+        await insertOrder(2, 7, 0, 'sess-9');
+
+        expect(
+            await carts().findCustomerCart({ ...testRequestContext, channelId: 1 } as never, 7),
+        ).toBeUndefined();
     });
 });

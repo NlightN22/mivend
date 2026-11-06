@@ -23,13 +23,13 @@ function setup(queryResults: unknown[][]) {
 }
 
 describe('ActingCartService', () => {
-    it('creates the cart without a customer link and binds it to the session and administrator', async () => {
+    it('creates the cart linked to the customer user and binds it to the session and administrator', async () => {
         const { service, update, orderService } = setup([]);
         const ctx = { activeUserId: 'user-1' } as never;
 
         await service.create(ctx, 'sess-1', '7');
 
-        expect(orderService.create).toHaveBeenCalledWith(ctx);
+        expect(orderService.create).toHaveBeenCalledWith(ctx, 'user-1');
         expect(update).toHaveBeenCalledWith(5, {
             customFields: { actingSessionId: 'sess-1', actingAdministratorId: '7' },
         });
@@ -49,6 +49,16 @@ describe('ActingCartService', () => {
 
         expect(await service.deleteAbandoned({} as never)).toBe(0);
         expect(orderService.deleteOrder).not.toHaveBeenCalled();
+    });
+
+    it("finds the customer's newest active cart that is not an acting one", async () => {
+        const { service, query, orderService } = setup([[{ id: '9' }]]);
+
+        await service.findCustomerCart({ channelId: 1 } as never, 3);
+
+        expect(query.mock.calls[0][0]).toContain('"customFieldsActingsessionid" IS NULL');
+        expect(query.mock.calls[0][1]).toEqual([3, 1]);
+        expect(orderService.findOne).toHaveBeenCalledWith({ channelId: 1 }, '9');
     });
 
     it('selects only acting carts, never a customer cart', async () => {
