@@ -119,6 +119,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `storefront-proforma` | dev | proforma invoices and per-organization proformas | `--project=storefront storefront/proforma-invoices storefront/proforma-organizations` |
 | `storefront-session` | dev | session-ended bar | `--project=storefront storefront/session` |
 | `storefront-theme` | dev | storefront theme: system default before mount, live follow, menu choice persisted (#313) | `--project=storefront storefront/theme` |
+| `manager-acting` | dev | acting-as-customer sessions: attribution, isolation from the customer's own cart and sessions, single-use ticket, finish, credit check (#322) | `--project=manager-operator manager/acting` |
 | `manager-auth` | dev | manager login, password reset (no stored session) | `--project=manager-noauth` |
 | `manager-catalog` | dev | manager category tree | `--project=manager-operator --project=manager-portal-admin manager/catalog` |
 | `manager-customers` | dev | customers, counterparties, history filters | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/customers` |
