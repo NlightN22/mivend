@@ -5,6 +5,8 @@ import { Allow, Ctx, Permission, RequestContext } from '@vendure/core';
 import { ElasticsearchService } from '@vendure/elasticsearch-plugin/lib/src/elasticsearch.service';
 import { HiddenCategoryProductsService } from '@mivend/plugin-access-control';
 
+import { assertSearchDepth } from './search-end-user-id';
+
 // Replaces the Elasticsearch plugin's shop `search`: the input carries the hidden category facet
 // values, so hits, counts, code groups and facets all drop hidden-category products identically.
 @Resolver()
@@ -20,6 +22,7 @@ export class InternalShopSearchResolver {
         @Ctx() ctx: RequestContext,
         @Args('input') input: SearchInput,
     ): Promise<Record<string, unknown>> {
+        assertSearchDepth(input.skip);
         const scoped = {
             ...input,
             hiddenFacetValueIds: await this.hidden.hiddenFacetValueIds(ctx),

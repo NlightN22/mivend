@@ -125,3 +125,105 @@ describe('SearchServiceClient.resolveQuery', () => {
         });
     });
 });
+
+describe('SearchServiceClient end-user id and limit errors', () => {
+    const headers = (h: Record<string, string> = {}): Headers => new Headers(h);
+    const failing = (status: number, body: unknown, h: Record<string, string> = {}) => ({
+        ok: false,
+        status,
+        headers: headers(h),
+        text: async () => JSON.stringify(body),
+    });
+
+    beforeEach(() => {
+        process.env.SEARCH_SERVICE_URL = 'http://search-service.test';
+        process.env.SEARCH_SERVICE_API_KEY = 'test-key';
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+    });
+
+    it('sends X-End-User-Id only when given', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ items: [], total: 0 }),
+        });
+        vi.stubGlobal('fetch', fetchMock);
+        const client = new SearchServiceClient();
+        await client.resolveQuery({ query: 'a' }, 'abc123');
+        await client.resolveQuery({ query: 'a' });
+        expect(fetchMock.mock.calls[0][1].headers['X-End-User-Id']).toBe('abc123');
+        expect(fetchMock.mock.calls[1][1].headers).not.toHaveProperty('X-End-User-Id');
+    });
+
+    it('retries a 429 once after a short Retry-After and then succeeds', async () => {
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValueOnce(failing(429, {}, { 'Retry-After': '1' }))
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({ items: [], total: 0 }),
+            });
+        vi.stubGlobal('fetch', fetchMock);
+        const promise = new SearchServiceClient().resolveQuery({ query: 'a' });
+        await vi.advanceTimersByTimeAsync(1000);
+        await expect(promise).resolves.toEqual({ items: [], total: 0 });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not loop: a second 429 becomes a rate-limited error', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(failing(429, {}, { 'Retry-After': '2' }));
+        vi.stubGlobal('fetch', fetchMock);
+        const promise = new SearchServiceClient().resolveQuery({ query: 'a' });
+        const assertion = expect(promise).rejects.toMatchObject({
+            extensions: { code: 'SEARCH_RATE_LIMITED', retryAfterSeconds: 2 },
+        });
+        await vi.advanceTimersByTimeAsync(2000);
+        await assertion;
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('uses a default wait without Retry-After', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(failing(429, {}));
+        vi.stubGlobal('fetch', fetchMock);
+        const promise = new SearchServiceClient().resolveQuery({ query: 'a' });
+        const assertion = expect(promise).rejects.toMatchObject({
+            extensions: { retryAfterSeconds: 1 },
+        });
+        await vi.advanceTimersByTimeAsync(1000);
+        await assertion;
+    });
+
+    it('does not wait when Retry-After is above the backoff cap', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(failing(429, {}, { 'Retry-After': '30' }));
+        vi.stubGlobal('fetch', fetchMock);
+        await expect(new SearchServiceClient().resolveQuery({ query: 'a' })).rejects.toMatchObject({
+            extensions: { code: 'SEARCH_RATE_LIMITED', retryAfterSeconds: 30 },
+        });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('maps 403 END_USER_BLOCKED without retry', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(failing(403, { code: 'END_USER_BLOCKED' }));
+        vi.stubGlobal('fetch', fetchMock);
+        await expect(new SearchServiceClient().resolveQuery({ query: 'a' })).rejects.toMatchObject({
+            extensions: { code: 'SEARCH_END_USER_BLOCKED' },
+        });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('maps 400 OFFSET_TOO_LARGE', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue(failing(400, { code: 'OFFSET_TOO_LARGE' })),
+        );
+        await expect(new SearchServiceClient().resolveQuery({ query: 'a' })).rejects.toMatchObject({
+            extensions: { code: 'SEARCH_REFINE_QUERY' },
+        });
+    });
+});

@@ -40,7 +40,7 @@ Nothing is configured inside a container by hand.
   pipeline's secret store); no image contains one. The app images are built with the registry
   token as a BuildKit secret (`--secret id=npmrc`), which never reaches a layer.
 - `INSTANCE_NUMBER_CODE` (exactly 3 digits, unique per instance) is required: the server refuses to boot without it.
-- `SEARCH_BACKEND` is required (no default): `internal` needs `COMPOSE_PROFILES=internal-search`, otherwise the workers log a failed Elasticsearch bootstrap; `external` needs `SEARCH_SERVICE_URL` and `SEARCH_SERVICE_API_KEY`.
+- `SEARCH_BACKEND` is required (no default): `internal` needs `COMPOSE_PROFILES=internal-search`, otherwise the workers log a failed Elasticsearch bootstrap; `external` needs `SEARCH_SERVICE_URL` and `SEARCH_SERVICE_API_KEY`. `SEARCH_END_USER_ID_SECRET` (any random string) keys the per-shopper id sent to search-service; without it no id is sent. `SEARCH_MAX_OFFSET` (default 1900) caps the shop `skip` on both backends.
 - **Optional** variables have the default shown in the example file.
 - Dead variables removed from the example: none were read by code; missing ones added
   (`INSTANCE_ID`, `RABBITMQ_URL`, `S3_*`, `GARAGE_RPC_SECRET`, search, `INTEGRATION_*`).

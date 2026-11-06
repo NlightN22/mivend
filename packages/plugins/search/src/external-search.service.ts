@@ -20,6 +20,7 @@ import {
 import { SearchFilterResolver } from './search-filter-resolver.service';
 import { ProductLookupService } from './product-lookup.service';
 import { SearchPriceTypeService } from './search-price-type.service';
+import { assertSearchDepth, searchEndUserId } from './search-end-user-id';
 import { SearchServiceClient } from './search-service.client';
 
 interface SearchResultAssetVM {
@@ -80,6 +81,7 @@ export class ExternalSearchService {
         input: SearchInput,
         includeDisabled = false,
     ): Promise<ExternalSearchResponse> {
+        assertSearchDepth(input.skip);
         const resolved = await this.filterResolver.resolve(ctx, input);
         const priceTypeId = hasPriceCriteria(input)
             ? await this.priceTypes.resolveExternalId(ctx)
@@ -102,7 +104,7 @@ export class ExternalSearchService {
             return this.browseLocally(ctx, input, includeDisabled, resolved.warehouseIds);
         }
 
-        const response = await this.client.resolveQuery(request);
+        const response = await this.client.resolveQuery(request, searchEndUserId(ctx));
 
         const groups = {
             skuMatches: response.skuMatches,

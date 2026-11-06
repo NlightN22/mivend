@@ -157,7 +157,9 @@ against local Elasticsearch, `SEARCH_BACKEND=internal` or unset); `staging-integ
 required `SEARCH_SERVICE_URL` and `SEARCH_SERVICE_API_KEY`, sent as `X-Api-Key`). `SearchBackend` (`SEARCH_BACKEND_DEFAULT` in
 `packages/plugins/search/src/types.ts`) is decided once at bootstrap in `search.plugin.ts` — a
 per-contour deployment choice, never an admin-configurable runtime toggle, and the two backends
-are never registered together. The internal index gained code-match fields (#307/#308, `docs/frontend.md` "Code matches"):
+are never registered together.
+
+**Search-service contract (#314)**: every `/resolve-query` call carries `X-End-User-Id`, an HMAC-SHA256 hex digest (keyed by `SEARCH_END_USER_ID_SECRET`) of `user:<customer user id>` or, for a guest, `session:<anonymous session token>`: stable, no personal data, no raw IP. A `429` is retried once after `Retry-After` (waits at most 2 s, default 1 s), then surfaces as GraphQL code `SEARCH_RATE_LIMITED` with `retryAfterSeconds`; `403 END_USER_BLOCKED` becomes `SEARCH_END_USER_BLOCKED` (no retry); `skip` above `SEARCH_MAX_OFFSET` (default 1900, service ceiling 2000) and `400 OFFSET_TOO_LARGE` become `SEARCH_REFINE_QUERY`. The cap applies to both backends. Storefront localisation of these codes is not done yet. The internal index gained code-match fields (#307/#308, `docs/frontend.md` "Code matches"):
 run the admin `reindex` once on every existing `internal` contour (`make dev-reset` does it implicitly), otherwise code groups stay empty.
 
 **Address suggestions** (storefront trading-point form): `ADDRESS_SUGGEST_URL` and `ADDRESS_SUGGEST_API_KEY` (key sent as `Authorization: Token`), unset = off. Served by the `suggestAddress` shop query to logged-in customers. Fail-open: a timeout or error pauses suggestions for 30 s and the field stays plain text.

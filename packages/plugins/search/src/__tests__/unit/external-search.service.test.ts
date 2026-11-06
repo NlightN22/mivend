@@ -211,6 +211,7 @@ describe('ExternalSearchService.search', () => {
         expect(client.resolveQuery).toHaveBeenNthCalledWith(
             1,
             expect.objectContaining({ requireOrganization: true }),
+            undefined,
         );
         expect(client.resolveQuery.mock.calls[1][0]).not.toHaveProperty('requireOrganization');
     });
@@ -351,7 +352,10 @@ describe('ExternalSearchService.search', () => {
         } as SearchInput);
 
         expect(result.items).toHaveLength(1);
-        expect(client.resolveQuery).toHaveBeenCalledWith(expect.objectContaining({ query: 'oil' }));
+        expect(client.resolveQuery).toHaveBeenCalledWith(
+            expect.objectContaining({ query: 'oil' }),
+            undefined,
+        );
     });
 
     it('browses by category with an empty query and returns mapped manufacturer facets', async () => {
@@ -388,6 +392,7 @@ describe('ExternalSearchService.search', () => {
 
         expect(client.resolveQuery).toHaveBeenCalledWith(
             expect.objectContaining({ query: '', categoryId: 'cat-erp' }),
+            undefined,
         );
         expect(result.totalItems).toBe(410);
         expect(result.facetValues).toEqual([{ facetValue, count: 3 }]);
@@ -466,6 +471,7 @@ describe('ExternalSearchService.search', () => {
                 sort: 'priceDesc',
                 filters: { priceRange: { min: 10, max: 50 } },
             }),
+            undefined,
         );
     });
 
@@ -659,6 +665,7 @@ describe('ExternalSearchService excludeCategoryIds', () => {
         await make(c, ['h1', 'h2']).search(ctx, { term: 'oil' } as SearchInput);
         expect(c.resolveQuery).toHaveBeenCalledWith(
             expect.objectContaining({ excludeCategoryIds: ['h1', 'h2'] }),
+            undefined,
         );
     });
 
