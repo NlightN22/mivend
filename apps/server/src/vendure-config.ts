@@ -17,6 +17,7 @@ import { DeferredPaymentPlugin } from '@mivend/plugin-deferred-payment';
 import { FreightShippingPlugin } from '@mivend/plugin-freight-shipping';
 import { PickupShippingPlugin } from '@mivend/plugin-pickup-shipping';
 import { OnlinePaymentPlugin, onlineStubPaymentHandler } from '@mivend/plugin-online-payment';
+import { assetUrlPrefix } from './asset-url-prefix';
 import { AssetServerPlugin, configureS3AssetStorage } from '@vendure/asset-server-plugin';
 import { EmailPlugin } from '@vendure/email-plugin';
 import { createEmailHandlers } from './email-handlers';
@@ -540,9 +541,8 @@ export const config: VendureConfig = {
         AssetServerPlugin.init({
             route: 'assets',
             assetUploadDir: path.join(__dirname, '../static/assets'),
-            // Root-relative: Host-header detection bakes internal hosts into asset URLs behind a rewriting proxy.
-            // Requires /assets proxied under the storefront's own origin (see storefront/vite.config.ts).
-            assetUrlPrefix: process.env.ASSET_URL_PREFIX ?? '/assets/',
+            // Root-relative for shop-api (storefront proxies /assets); absolute for admin-api (dashboard needs it).
+            assetUrlPrefix: assetUrlPrefix(process.env.ASSET_URL_PREFIX),
             // S3-compatible storage (Garage in dev) when S3_ENDPOINT is set, else the local dir.
             ...(process.env.S3_ENDPOINT
                 ? {
