@@ -51,6 +51,7 @@ async function overflow(page: Page): Promise<string[]> {
                 !clipped(el)
             );
         });
+        if (!wide.length) return [`document ${document.documentElement.scrollWidth} > ${width}`];
         return wide.slice(0, 5).map(el => `${el.tagName}.${String(el.className).slice(0, 50)}`);
     });
 }
