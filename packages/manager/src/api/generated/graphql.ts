@@ -6220,6 +6220,25 @@ export type OrderTaxSummary = {
 
 export type OrderType = 'Aggregate' | 'Regular' | 'Seller';
 
+export type OrdersAttention = {
+    both: OrdersAttentionCount;
+    overdueRows: OrderList;
+    pendingPriceAdjustmentOrderIds: Array<Scalars['String']['output']>;
+    waiting: OrderList;
+};
+
+export type OrdersAttentionOverdueRowsArgs = {
+    options?: InputMaybe<OrderListOptions>;
+};
+
+export type OrdersAttentionWaitingArgs = {
+    options?: InputMaybe<OrderListOptions>;
+};
+
+export type OrdersAttentionCount = {
+    totalItems: Scalars['Int']['output'];
+};
+
 export type OrganizationRequisites = {
     createdAt: Scalars['DateTime']['output'];
     erpId: Scalars['String']['output'];
@@ -7643,6 +7662,8 @@ export type Query = {
     orderReservations: Array<Reservation>;
     orderStatuses: Array<OrderStatusInfo>;
     orders: OrderList;
+    /** Orders needing attention in one request: pending price adjustment (waiting), overdue shipment (overdueRows) and their intersection (both) */
+    ordersAttention: OrdersAttention;
     organizationRequisites: Array<OrganizationRequisites>;
     /** Seed-script idempotency helper only — see seed-payment-refunds.mjs. */
     paymentDisputeExists: Scalars['Boolean']['output'];
@@ -8060,6 +8081,10 @@ export type QueryOrderReservationsArgs = {
 
 export type QueryOrdersArgs = {
     options?: InputMaybe<OrderListOptions>;
+};
+
+export type QueryOrdersAttentionArgs = {
+    overdueBefore: Scalars['DateTime']['input'];
 };
 
 export type QueryPaymentDisputeExistsArgs = {

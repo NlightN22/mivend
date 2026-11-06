@@ -7,6 +7,7 @@ import {
     MvPanel,
     MvWarningBanner,
     MvPagination,
+    MvButton,
     MvNotice,
     MvSkeleton,
     MvStatusBadge,
@@ -362,7 +363,7 @@ const todayAmountFormatted = computed(() => {
         </MvKpiCarousel>
         <MvNotice v-else-if="summaryError" variant="error" class="orders-page__kpis">
             Could not load the orders summary.
-            <button type="button" @click="loadSummary">Retry</button>
+            <MvButton size="sm" variant="ghost" @click="loadSummary">Retry</MvButton>
         </MvNotice>
         <MvSkeleton
             v-else-if="summaryLoading"
