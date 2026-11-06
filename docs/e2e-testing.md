@@ -40,10 +40,14 @@ through the same teardown.
 is selected by an `@on:<project>` tag, never skipped (next section); missing data is seeded. `manager/resilience` is
 not part of the suite at all: `playwright.config.ts` ignores it unless `E2E_RESILIENCE` is set.
 
+Every Playwright run is two passes on the same stack (`infrastructure/scripts/e2e-playwright.sh`): tests tagged
+`@read-only` on `E2E_PARALLEL_WORKERS` workers (default 3), then everything else on one worker. The second pass reuses
+the seed and sessions of the first (`global-setup` writes `.auth/setup-done`). Rules: `docs/testing-strategy.md` "E2E parallelism".
+
 ## Several groups on one stack (#316)
 
 `make e2e-groups G="manager-customers manager-orders"` validates every name, boots one stack, and runs the groups
-one after another; `make e2e-group G=<name>` is unchanged and still runs one group. The
+one after another through the same two passes; `make e2e-group G=<name>` is unchanged and still runs one group. The
 stack boot and the seed (about 90 s plus the 30-45 s picker seed) are paid once instead of once per group. The target
 holds the same `/tmp/mivend-e2e.lock` as every e2e target.
 
@@ -170,6 +174,7 @@ authorization, data isolation).
 under; no tag means all four. `helpers/role-projects.ts` turns them into each project's `grep`, so a test outside a
 project's list is not collected and is not a skip. Do not write `test.skip` on the project name. A test that reads
 `testInfo.project.name` to assert role-specific UI (the dashboard KPI cards) is a role-dependent test and carries no tag.
+Add `@read-only` as well for a test that changes no shared data (see "E2E parallelism" in `docs/testing-strategy.md`).
 
 Decision per spec (R = all four roles; O = operator, M = manager, D = department head, P = portal admin):
 

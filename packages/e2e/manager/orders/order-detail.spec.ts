@@ -5,7 +5,9 @@ import { adminTokenFor } from '../../helpers/api-tokens';
 import { releaseOrderReservation } from '../../helpers/manager-order';
 import { MANAGER_ACCOUNTS } from '../../fixtures/accounts';
 
-test('order detail shows the two-column layout with order lines and context', async ({ page }) => {
+test('order detail shows the two-column layout with order lines and context @read-only', async ({
+    page,
+}) => {
     const order = readE2eOrder();
 
     await page.goto(`/orders/${order.code}`);

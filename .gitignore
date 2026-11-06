@@ -63,3 +63,4 @@ backups/
 infrastructure/backup/.env
 infrastructure/backup/ssh/
 infrastructure/backup/data/
+packages/e2e/test-results-read-only/

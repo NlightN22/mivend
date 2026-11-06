@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 // Regression guard: PrimeVue's menu filter overlay swallows the next outside click after inner use.
 // E2E only: needs browser popover/event bubbling; History tab has always-enabled select filters.
-test.describe('customer History tab — column filter overlays @on:manager-portal-admin', () => {
+test.describe('customer History tab — column filter overlays @on:manager-portal-admin @read-only', () => {
     async function openHistoryTab(page: import('@playwright/test').Page): Promise<void> {
         await page.goto('/customers');
         const row = page.locator('.el-table-v2__row', { hasText: 'E2E Co' });

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 // Reads from the DiscountRegistryEntry CQRS read-model projection, not the rule/approval tables.
 // The projection is maintained by DiscountRegistryService on the backend.
-test('discounts page loads the grant registry and at least one seeded row @on:manager-operator', async ({
+test('discounts page loads the grant registry and at least one seeded row @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/discounts');
@@ -15,7 +15,9 @@ test('discounts page loads the grant registry and at least one seeded row @on:ma
     await expect(table.first()).toBeVisible({ timeout: 15000 });
 });
 
-test('grant registry search filters server-side @on:manager-operator', async ({ page }) => {
+test('grant registry search filters server-side @on:manager-operator @read-only', async ({
+    page,
+}) => {
     await page.goto('/discounts');
     await expect(page.getByRole('heading', { name: 'Grant registry' })).toBeVisible({
         timeout: 15000,
@@ -28,7 +30,7 @@ test('grant registry search filters server-side @on:manager-operator', async ({ 
     await expect(page.getByText(/No discount grants/i)).toBeVisible({ timeout: 10000 });
 });
 
-test('status chips filter the registry and stay in sync with the Status dropdown @on:manager-operator', async ({
+test('status chips filter the registry and stay in sync with the Status dropdown @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/discounts');

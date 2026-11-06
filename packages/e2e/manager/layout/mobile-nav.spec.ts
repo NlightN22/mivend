@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 // Runs under whichever role project executes it, so it must not assume a specific role.
 test.use({ viewport: { width: 390, height: 844 } });
 
-test('mobile bottom nav navigates and the sidebar is hidden @on:manager-operator', async ({
+test('mobile bottom nav navigates and the sidebar is hidden @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/');
@@ -20,7 +20,7 @@ test('mobile bottom nav navigates and the sidebar is hidden @on:manager-operator
     await expect(page).toHaveURL(/\/orders/);
 });
 
-test('More sheet opens, lists secondary nav, and closes on backdrop click @on:manager-operator', async ({
+test('More sheet opens, lists secondary nav, and closes on backdrop click @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/');
@@ -34,7 +34,7 @@ test('More sheet opens, lists secondary nav, and closes on backdrop click @on:ma
     await expect(sheet).not.toHaveClass(/mv-mobile-sheet--open/);
 });
 
-test('More sheet items actually navigate, not just close the sheet @on:manager-operator', async ({
+test('More sheet items actually navigate, not just close the sheet @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/');
@@ -47,7 +47,7 @@ test('More sheet items actually navigate, not just close the sheet @on:manager-o
     await expect(sheet).not.toHaveClass(/mv-mobile-sheet--open/);
 });
 
-test('bottom nav highlights the correct item on a nested route @on:manager-operator', async ({
+test('bottom nav highlights the correct item on a nested route @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/orders');
@@ -77,7 +77,7 @@ test('Create-order FAB is not shown on unrelated pages @on:manager-operator', as
     await expect(page.locator('.mv-fab')).toHaveCount(0);
 });
 
-test('bottom nav "More" tab shows active on a page reached only via the sheet @on:manager-operator', async ({
+test('bottom nav "More" tab shows active on a page reached only via the sheet @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/discounts');
@@ -91,7 +91,7 @@ test('bottom nav "More" tab shows active on a page reached only via the sheet @o
     ).toHaveClass(/mv-mobile-sheet__item--active/);
 });
 
-test('orders page has no horizontal overflow at a narrow mobile viewport @on:manager-operator', async ({
+test('orders page has no horizontal overflow at a narrow mobile viewport @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 320, height: 690 });
@@ -113,7 +113,7 @@ test('bottom nav and FAB are hidden on desktop/tablet, sidebar shows instead @on
     await expect(page.locator('.mv-fab')).toBeHidden();
 });
 
-test('scroll-to-top button appears after scrolling down and scrolls back to top @on:manager-operator', async ({
+test('scroll-to-top button appears after scrolling down and scrolls back to top @on:manager-operator @read-only', async ({
     page,
 }) => {
     // A short viewport and a loaded list keep the page scrollable past the button's threshold.

@@ -1,5 +1,5 @@
 // A manager test without an `@on:<project>` tag in its title runs under every role project; a tagged one
-// only under the listed ones, so nothing is reported as skipped.
+// only under the listed ones, so nothing is reported as skipped. `@read-only` marks parallel-safe tests.
 export const ROLE_TAG_PREFIX = '@on:';
 
 export function roleProjectGrep(project: string): RegExp {

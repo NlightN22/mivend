@@ -11,7 +11,7 @@ async function chipCount(page: Page, label: string): Promise<number> {
     return Number(text.match(/(\d+)$/)?.[1]);
 }
 
-test.describe('Team directory @on:manager-operator', () => {
+test.describe('Team directory @on:manager-operator @read-only', () => {
     test('search finds a member by name and by ERP id (operator)', async ({ browser }) => {
         const s = await openManagerAs(browser, 'operator-a');
         try {

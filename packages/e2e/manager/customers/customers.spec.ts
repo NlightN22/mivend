@@ -42,7 +42,9 @@ async function forceInactiveTradingPoint(page: import('@playwright/test').Page):
     );
 }
 
-test('customers page shows the client list with company meta and KPIs', async ({ page }) => {
+test('customers page shows the client list with company meta and KPIs @read-only', async ({
+    page,
+}) => {
     await page.goto('/customers');
     await expect(page.getByText('Client list')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Active clients')).toBeVisible();
@@ -52,7 +54,9 @@ test('customers page shows the client list with company meta and KPIs', async ({
     await expect(row).toBeVisible();
 });
 
-test('customers page CSV export downloads a file @on:manager-operator', async ({ page }) => {
+test('customers page CSV export downloads a file @on:manager-operator @read-only', async ({
+    page,
+}) => {
     await page.goto('/customers');
     await expect(page.getByText('Client list')).toBeVisible({ timeout: 15000 });
 
@@ -63,13 +67,13 @@ test('customers page CSV export downloads a file @on:manager-operator', async ({
     expect(download.suggestedFilename()).toBe('customers.csv');
 });
 
-test('clicking a customer row navigates to the customer detail page @on:manager-operator', async ({
+test('clicking a customer row navigates to the customer detail page @on:manager-operator @read-only', async ({
     page,
 }) => {
     await openE2eCustomerDetail(page);
 });
 
-test('customer detail Overview tab shows contacts, price type and trading points', async ({
+test('customer detail Overview tab shows contacts, price type and trading points @read-only', async ({
     page,
 }) => {
     await openE2eCustomerDetail(page);
@@ -86,7 +90,7 @@ test('customer detail Overview tab shows contacts, price type and trading points
     await expect(page.getByText('Open orders')).toBeVisible();
 });
 
-test('customer detail Orders tab shows the seeded e2e order', async ({ page }) => {
+test('customer detail Orders tab shows the seeded e2e order @read-only', async ({ page }) => {
     const order = readE2eOrder();
     await openE2eCustomerDetail(page);
 
@@ -98,7 +102,7 @@ test('customer detail Orders tab shows the seeded e2e order', async ({ page }) =
     });
 });
 
-test('customer detail Discounts tab shows a grant scoped to this customer (positive) @on:manager-operator', async ({
+test('customer detail Discounts tab shows a grant scoped to this customer (positive) @on:manager-operator @read-only', async ({
     page,
 }) => {
     await openE2eCustomerDetail(page);
@@ -109,7 +113,7 @@ test('customer detail Discounts tab shows a grant scoped to this customer (posit
     await expect(page.getByText('8%')).toBeVisible({ timeout: 15000 });
 });
 
-test('customer detail Discounts tab does not leak a grant scoped to another customer (negative)', async ({
+test('customer detail Discounts tab does not leak a grant scoped to another customer (negative) @read-only', async ({
     page,
 }) => {
     await openE2eCustomerDetail(page);
@@ -121,7 +125,7 @@ test('customer detail Discounts tab does not leak a grant scoped to another cust
     await expect(page.getByText('99%')).not.toBeVisible();
 });
 
-test('customer detail Documents tab shows the customer document list @on:manager-operator', async ({
+test('customer detail Documents tab shows the customer document list @on:manager-operator @read-only', async ({
     page,
 }) => {
     await openE2eCustomerDetail(page);

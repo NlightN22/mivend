@@ -391,7 +391,7 @@ e2e-stack-build: up
 # The full suite runs as E2E_SHARDS shards, each on its own fresh stack, so no run hits the 30-min cap.
 E2E_SHARDS ?= 4
 e2e-dev test-e2e: e2e-stack-build
-	@if [ -n "$(E2E_ARGS)" ]; then $(E2E_STACK) pnpm --filter @mivend/e2e test $(E2E_ARGS); \
+	@if [ -n "$(E2E_ARGS)" ]; then $(E2E_STACK) bash infrastructure/scripts/e2e-playwright.sh $(E2E_ARGS); \
 	else $(E2E_LOCK) bash infrastructure/scripts/e2e-shards.sh $(E2E_SHARDS); fi
 
 # One registry group (docs/e2e-testing.md): make e2e-group G=cart-totals

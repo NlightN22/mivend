@@ -27,7 +27,9 @@ const CARDS_BY_ROLE: Record<string, { visible: string[]; hidden: string[] }> = {
     },
 };
 
-test('dashboard shows the KPI cards for the current role', async ({ page }, testInfo) => {
+test('dashboard shows the KPI cards for the current role @read-only', async ({
+    page,
+}, testInfo) => {
     const expected = CARDS_BY_ROLE[testInfo.project.name];
     if (!expected) throw new Error(`No KPI expectations for project "${testInfo.project.name}"`);
 
@@ -42,7 +44,7 @@ test('dashboard shows the KPI cards for the current role', async ({ page }, test
     }
 });
 
-test('dashboard shows recent orders and my approval requests panels @on:manager-operator', async ({
+test('dashboard shows recent orders and my approval requests panels @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/');

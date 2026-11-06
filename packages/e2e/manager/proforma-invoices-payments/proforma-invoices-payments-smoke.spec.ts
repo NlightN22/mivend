@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('proforma invoices page loads and shows rows for an all-scope account @on:manager-operator', async ({
+test('proforma invoices page loads and shows rows for an all-scope account @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/proforma-invoices');
@@ -12,7 +12,7 @@ test('proforma invoices page loads and shows rows for an all-scope account @on:m
     await expect(page.locator('.el-table-v2__row').first()).toBeVisible({ timeout: 15000 });
 });
 
-test('payments page loads and shows rows for an all-scope account @on:manager-operator', async ({
+test('payments page loads and shows rows for an all-scope account @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/payments');
@@ -23,7 +23,7 @@ test('payments page loads and shows rows for an all-scope account @on:manager-op
 });
 
 // The customer tab lists its proforma invoices in place; the standalone page keeps the deep link.
-test('proforma invoices page pre-filters to one customer from the counterpartyId link @on:manager-operator', async ({
+test('proforma invoices page pre-filters to one customer from the counterpartyId link @on:manager-operator @read-only', async ({
     page,
 }) => {
     // The seeded e2e counterparty is the one every role project can see.

@@ -68,7 +68,8 @@ A test must pass in any order and alone.
 - The e2e server does not restart on source edits; changes to plugin sources need `make e2e-*` again.
 
 - **Manager roles and parallelism**: put `@on:<project>` tags in the title of a manager test that applies to some roles
-  only; never `test.skip` on the project name (`docs/e2e-testing.md` "Manager portal role projects").
+  only, and `@read-only` on one that changes no shared data; never `test.skip` on the project name
+  (`docs/e2e-testing.md` "Manager portal role projects", `docs/testing-strategy.md` "E2E parallelism").
 
 ## 5. Checklist (fill in before committing)
 

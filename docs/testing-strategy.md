@@ -277,6 +277,24 @@ filename prefix of specs and runs in isolation. The registry (name, covers, args
 - `e2e-integration` runs still announce any contour restart first.
 - Exception to the 30-minute run limit: the `category-feed` group waits for manual ERP-owner steps (per-step bounds 15/40 min, test timeout up to 125 min); run it with the owner at hand.
 
+## E2E parallelism
+
+Playwright runs one worker by default; `infrastructure/scripts/e2e-playwright.sh` runs every `make e2e-*` invocation in
+two passes on the same stack: tests tagged `@read-only` on `E2E_PARALLEL_WORKERS` workers (default 3 on the 8-core
+shared box), then all remaining tests on one worker. The passes never overlap, so a writer never runs beside a reader.
+
+A test may carry `@read-only` in its title only if it changes no data another test reads or writes: no order, cart,
+reservation, proforma invoice, setting, role, session or catalog override created or changed by it, and no dependency on
+state an earlier test of the same file leaves behind. A `beforeAll`/`beforeEach` that creates data makes its whole `describe` a
+writer: with several workers each one would run its own copy (the dashboard filter chips create an order in `beforeAll`). Browser
+contexts of a read-only test are its own, so `storageState` reuse is fine. Currently tagged: the manager specs that only
+open pages (`dashboard` KPI cards and panels, `orders-list`, `order-detail` layout, `order-create-picker`, `discounts`,
+`proforma-invoices-payments`, `team`, `mobile-nav` except the FAB draft, `customers` list/detail reads,
+`customer-history-filters`, `pagination-scroll`). Writers stay serial: anything that places, confirms or cancels orders,
+edits trading points, roles, users, sessions or the category tree, and all storefront specs (they share one cart and one
+storage state). The `visibility/` projects are read-mostly but some specs change category overrides, so they are not
+tagged. Raise `E2E_PARALLEL_WORKERS` only after measuring the load of other sessions on the box.
+
 ## CI
 
 Target pipeline: lint → format check → type check → unit → integration → component → contract →

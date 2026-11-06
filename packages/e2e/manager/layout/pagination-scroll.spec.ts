@@ -13,7 +13,7 @@ const PAGES = [
 ];
 
 for (const path of PAGES) {
-    test(`clicking Next on ${path} does not snap the page back to the top @on:manager-portal-admin`, async ({
+    test(`clicking Next on ${path} does not snap the page back to the top @on:manager-portal-admin @read-only`, async ({
         page,
     }) => {
         await page.setViewportSize({ width: 1280, height: 500 });

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readE2eOrder } from '../../helpers/e2e-order';
 
-test('KPI carousel right arrow scrolls the row and stops at the end @on:manager-operator', async ({
+test('KPI carousel right arrow scrolls the row and stops at the end @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/orders');
@@ -17,7 +17,9 @@ test('KPI carousel right arrow scrolls the row and stops at the end @on:manager-
     }
 });
 
-test('orders list shows the seeded order with customer, branch and INN', async ({ page }) => {
+test('orders list shows the seeded order with customer, branch and INN @read-only', async ({
+    page,
+}) => {
     const order = readE2eOrder();
 
     await page.goto('/orders');
@@ -33,7 +35,7 @@ test('orders list shows the seeded order with customer, branch and INN', async (
     await expect(row).toContainText('WHOLESALE');
 });
 
-test('orders list opens the order detail page on row click', async ({ page }) => {
+test('orders list opens the order detail page on row click @read-only', async ({ page }) => {
     const order = readE2eOrder();
 
     await page.goto('/orders');

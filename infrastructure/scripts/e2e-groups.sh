@@ -12,7 +12,7 @@ for g in "$@"; do
     [ -s "$snap" ] && { bash "$here/e2e-leak.sh" snapshot "$snap" || exit 1; }
     echo "e2e group: $g"
     # shellcheck disable=SC2086
-    pnpm --filter @mivend/e2e test $args || failed="$failed $g"
+    bash "$here/e2e-playwright.sh" $args || failed="$failed $g"
     bash "$here/e2e-leak.sh" check "$snap" "$g" || exit 1
 done
 if [ -n "$failed" ]; then
