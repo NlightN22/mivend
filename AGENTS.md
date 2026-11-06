@@ -363,7 +363,7 @@ session's own `<project>.<issue-number-or-description>` naming. The audit sessio
 varies per task, so don't assume a fixed one; ask, or check recently-active sessions, if you need
 to hand off to it and don't already know its name. Report the audit's findings back to the
 implementation session/user; fix anything it flags before considering the work done. Run the
-targeted E2E groups only after the audit has no open findings, once, on the final audited state.
+targeted E2E groups only after the audit has no open findings, once, on the final audited state. Any change to non-test code made after the audit, including a fix for a failing e2e, goes back to the audit as a delta; changes only to e2e specs or fixtures stay with the author and are reported.
 
 Once the audit has no remaining objections: if the work implements a GitHub issue, push the
 branch and close that issue (with a summary comment) — use the `finish-task` skill for this, it

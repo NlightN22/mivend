@@ -28,7 +28,7 @@ If integration/component tests were added or changed (per AGENTS.md's testing re
 
 ## Heavy checks run after the audit
 
-E2E groups (`make e2e-group`, `make e2e-dev`) are not part of these final checks. Run them once, after the independent audit session has no open findings, on the final audited state: an audit finding changes the code and invalidates any e2e run made before it. Order: light checks above, then audit, then e2e (see the `release` skill).
+E2E groups (`make e2e-group`, `make e2e-dev`) are not part of these final checks. Run them once, after the independent audit session has no open findings, on the final audited state: an audit finding changes the code and invalidates any e2e run made before it. Order: light checks above, then audit, then e2e (see the `release` skill). Any change to non-test code made after the audit, including a fix for a failing e2e, goes back to the audit as a delta; changes only to e2e specs or fixtures stay with the author and are reported.
 
 ## Before pushing
 
