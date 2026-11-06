@@ -6,6 +6,7 @@ import { importClients, importEmployees, importStructure, importWidgetProducts }
 import { seedOrders } from './orders';
 import { seedRelations } from './relations';
 import { seedStaff } from './staff';
+import { seedTeam } from './team';
 
 // Branches A/B, staff per role and scope, and every client variant of the #263 browser checks.
 export async function seedVisibility(superadmin: string): Promise<VisIds> {
@@ -22,6 +23,7 @@ export async function seedVisibility(superadmin: string): Promise<VisIds> {
     await importStructure();
     await seedStaff(superadmin);
     await importEmployees();
+    await seedTeam(superadmin);
     await importClients(Number(org.id));
     await seedCategoryTree(superadmin, Number(org.id));
     await importWidgetProducts(Number(org.id));
