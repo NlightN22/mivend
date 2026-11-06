@@ -25,9 +25,9 @@ Updated: 2026-11-06 12:45
 - Open: #309 chunked category-tree recompute, #311 manager portal (Settings tabs), MvColumnFilterSelect search (unaudited), `MvAccountSheet` still has its own focus trap (move to `useFocusTrap`).
 - Release handoff (owner decision 2026-11-06): session mivend.issue.311 is the release owner from now on (collects all audited commits, coordinates with other sessions, asks the owner for per-release permission). Local-only commits at handoff: this docs commit and 5d6aec12 are not pushed; push by sha in the next release. Recipe above (worktree from origin/main, explicit shas, package.json-only bump, pull only app services).
 
-## #314 search-service end-user id and limits (2026-11-06, audited, local until the release push)
-- `X-End-User-Id` = HMAC of `user:`/`session:`/`ip:` (IP counted from the right of `X-Forwarded-For` by `SEARCH_TRUSTED_PROXY_HOPS`, default 2); errors `SEARCH_RATE_LIMITED`/`SEARCH_END_USER_BLOCKED`/`SEARCH_REFINE_QUERY`; `SEARCH_MAX_OFFSET` caps skip on both backends. Env and limits: `docs/environments.md`. Prod needs `SEARCH_END_USER_ID_SECRET` set (else a start warning and no id) and the real proxy count checked.
-- Open: storefront and manager portal do not localise or display the new codes (a deep page in the manager catalogue shows a raw error); reply to the search service owners with the id scheme not sent. Commits a1c187f6, 8562d0d4, f54d7cc3.
+## #314 search-service end-user id and limits (2026-11-06, DONE: audited, on prod 0.0.44; frontend follow-up on origin/main after 0.0.44, issue closed)
+- `X-End-User-Id` = HMAC-SHA256 of `user:`/`session:`/`ip:` (IP counted from the right of `X-Forwarded-For` by `SEARCH_TRUSTED_PROXY_HOPS`, default 2; a spoofed left hop cannot change the id); prod has `SEARCH_END_USER_ID_SECRET`. Errors `SEARCH_RATE_LIMITED` (one retry, wait <= 2 s) / `SEARCH_END_USER_BLOCKED` / `SEARCH_REFINE_QUERY`; `SEARCH_MAX_OFFSET` (1900) caps skip on both backends. Docs: `docs/environments.md`. Storefront shows them via `ShopApiError` + `describeLoadError` (keys under `loadError`); manager order item search shows the server message.
+- Open: re-check search-service logs (read-only via sp.auditor) once real traffic exists: first look had 8 events, 3 with an id, limits still shadow (`limit.enforce=0`: 600/min per key, 120/min per user); id scheme was sent to the service owners through sp.auditor (no confirmation). Gotcha: applying a partial index patch with `--unidiff-zero` put keys in the wrong i18n block; use `git add -p` or a worktree.
 
 ## #312 manager customer picker + capped-list anti-pattern (2026-11-06, DONE: audited, on prod 0.0.44, issue closed)
 - New-order picker uses server search (`counterparties(search, take:20)`, `useDebouncedSearch` + `useLatestRequest.cancel`); any active counterparty is listed, an order only for one with an activated portal customer ("Portal access not activated", not selectable; `docs/order-flow.md`). Server side: `erpIds` filter (cap 200), `visibleOrdersAmount`, `lastOrderDates` follow the ORDER scope, not the counterparty scope (`docs/access-control.md`).
@@ -119,53 +119,8 @@ Updated: 2026-11-06 12:45
 
 `Order.customFields.erpStatus` REJECTED (non-terminal, cleared by a later non-rejected
 
-## #195/#200 integration health + gateways (2026-10-10, shipped/audited/closed; pushed to a6c7028b) — full text: `.backup/PROJECT_CONTEXT-2026-10-09-195-integration-health.md`, runbook `docs/integration-health.md`
-
-- Dashboard System -> Integration health: Inbound tab (stream x contract x Kafka lag x inbox backlog, drift rows, contract version vs registry via `EVENT_CONTRACTS_REGISTRY_TOKEN`, variants-without-organization/unit lines), Outbound tab (outbox per event type, skipped, schema source), Inbox issues / Outbound problems lists with Replay/Requeue/Rebuild (permission `RecoverIntegrationEvents`, SuperAdmin only so far). Count links work via user table settings (a ListPage with a `pageId` ignores URL filters).
-
-## #198 order branch fallback + auto-reserve switch (compressed, shipped/audited — full text: `.backup/PROJECT_CONTEXT-2026-10-12-198-branch-fallback-full.md`)
-
-- Branch of an order/proforma-invoice = `TradingPointService.resolveServicingBranchId` (point servicingBranchId -> Counterparty.branchId -> global default). `GlobalSettings.autoReserveOnPlacement` (default off) switches auto-reserve; a cart stuck in `ArrangingPayment` keeps its old `branchId`.
-
-## #188 credit control MVP (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-10-188-credit-control.md`)
-
-- Contracts stream feeds price type (main contract -> `CustomerPriceType` -> branch default, resolved at read time) and credit limit (job `erp-integration-credit-limit-recompute`, every 15 min); deferred payment needs limit>0 AND days>0; over-limit orders are placed with `creditLimitExceeded`, not rejected; customers see only `fullName`.
-
-## #180 checkout payment methods + credit control (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-06-180-checkout-payment-credit.md`)
-
-Over-limit deferred order is NOT rejected (flag `creditLimitExceeded`, manager confirms later); payment-method availability = server's `eligiblePaymentMethods`; `OpenDeferredExposureService` sums pending + open deferred orders with `erpStatus` PENDING/SENT_TO_ERP/RESERVED (now also excludes REJECTED, see #204 below). Open follow-up #182 (shipping method selector ignores choice).
-
-## #176 / cart-checkout UX 2026-10-06 (compressed — full text: `.backup/PROJECT_CONTEXT-2026-10-11-176-cart-ux-full.md`)
-
-- #176: characteristics/manufacturer-code replace runs under a per-product advisory lock. Cart mutations go through one queue in `stores/cart.ts`. Lesson: storefront must `import type` only from `shared` (a runtime import pulls `@vendure/core` into the Vite bundle).
-
-## Product photos (issue #181, shipped/audited/closed; pushed to d845536; earlier design text: `.backup/PROJECT_CONTEXT.20261006-181-photos-design.md`)
-
-- **Flow**: Integration Service stream `product-photo` (`ProductPhotoChanged`, event-contracts 0.46.0+, upstream issue 170) -> `ProductPhotoStreamHandler` stores metadata in `ProductPhoto` (+ `syncQueuedAt`, `replayAttempts`) -> `ProductPhotoSyncService` (Vendure job queue `product-photo-sync`, must be in `worker.ts` activeQueues) downloads the pre-signed URL, checks MD5, `AssetService.createFromFileStream`, sets product assets by `position` (0 = featured). Same hash stored once; tombstone detaches. Serialized per product by `pg_advisory_xact_lock`; queue concurrency 1 (long transaction by design). ERP owns product photos: sync REPLACES the product's whole asset list.
-
-## #166/#168/#164/#170 + 2026-10-05 storefront UX (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT.20261007-166-168-164-170-storefront-ux.md`)
-
-- Characteristics: every key is a checkbox facet group (`characteristic:<key>`, FacetValue code = normalized value, `CharacteristicFacetService`, per-key advisory lock). No sliders/refId facets yet; internal search backend does not know characteristics (#177). Brand = `Product.manufacturer` (no brand facet); manufacturers have their own stream `manufacturer`.
-
-## #162 favorites (compressed, shipped — full text: `.backup/PROJECT_CONTEXT-2026-10-12-162-favorites-full.md`)
-
-- `stores/favorites.ts` keeps only ids (`mv_favorites`); `useFavoriteProducts` resolves prices/stock live in batches; the favorites page reuses `ProductListView` (#214).
-
-## #164 category browse/filters on ExternalSearchPlugin (compressed, closed/audited — full text: `.backup/PROJECT_CONTEXT.20261006-164-category-facets.md`)
-
-- Category = Collection slug `cat-<ErpId>`; manufacturer = Facet `manufacturer` (FacetValue code = ERP id, mirrored by `ManufacturerFacetService`). An unresolvable filter = empty result, never the unfiltered set.
-
-## #70 guest price, branch stock tiers (compressed, closed/audited — full text: `.backup/PROJECT_CONTEXT.20261005-70-stock-tiers.md`)
-
-- Price type visibility (#235): deny by default via `PriceType.visibility` + `PriceTypeAccessService` (branch allow-list union `ReadAllCustomerPriceTypes`/`ReadConfidentialPriceTypes`); floor is derived (`FloorPriceService`, purchase type x multiplier from the price-type stream), no `FLOOR` code. Classify customer types with `infrastructure/scripts/price-type-visibility.sql` (data step; unclassified stay confidential).
-- Guests: API resolves default price (branch default `PriceType`); UI hides price AND stock tier. Default branch/price type/RUB currency bootstrapped from options (`BOOTSTRAP_BRANCH_NAMES`, `DEFAULT_PRICE_TYPE_CODE`, `DEFAULT_CURRENCY_CODE`); branch is mivend's own entity.
-
-## #160/#59/#158 search backend + category tree/hierarchy (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT-2026-10-03-04-160-59-158-full.md`)
-
-Kafka `CategoryChanged.parent_id` builds the real Collection tree (design: `docs/category-hierarchy.md`); both portals render it (mega-menu/drill-down, `packages/shared/src/collectionTree.ts`); `SEARCH_BACKEND=external` resolves `totalItems`/ranking via search-service. Open: #159 (34 storefront e2e specs), staging products/facets blocked by #69.
-
-## #117 Position entity (compressed, shipped/audited/closed — full text: `.backup/PROJECT_CONTEXT.20261005-117-position.md`)
-`Position` (ERP master data) in `plugin-access-control`, fed by the `position` stream; #251: renamed `ErpPosition` (`erp_position`); the position lives on `erp_user.positionErpId` (soft link, always written by `UserChanged`, linked or not); `Administrator.customFields.positionId` dropped, Administrator position read via its `erp_user`; `positions` query + pending-list position filter. erp-import `EmployeeRecord.position` -> `positionErpId`. Dev gotcha: ts-node-dev children can hang in `waitForFile` under load — free load, restart via `make dev`, never raw kill.
+## Older shipped work #195/#200, #198, #188, #180, #176, #181, #166/#168/#164/#170, #162, #164, #70, #160/#59/#158, #117 (closed, audited)
+- Full text: `.backup/PROJECT_CONTEXT-2026-11-06-195-to-117-compressed-full.md` (integration health, branch fallback, credit control, checkout payments, cart UX, photos, favorites, category facets, stock tiers, search backend, Position). Decisions live in `docs/` (integration-health, order-flow, payments, frontend).
 
 ## Kafka reference streams #101/#102/#106/#108 (compressed, shipped/audited/closed)
 
