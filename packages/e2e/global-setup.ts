@@ -69,12 +69,14 @@ export default async function globalSetup(): Promise<void> {
     await postBatch(exchangeId, seedRecordsWithOrganization);
     await waitForRun(exchangeId);
 
+    const pickerSeedStart = Date.now();
     // Many records: sent in chunks so no single request exceeds the server body limit.
     for (let i = 0; i < pickerSeedRecords.length; i += PICKER_BATCH_SIZE) {
         const chunkId = `e2e-seed-picker-${i}-${Date.now()}`;
         await postBatch(chunkId, pickerSeedRecords.slice(i, i + PICKER_BATCH_SIZE));
         await waitForRun(chunkId);
     }
+    console.log(`e2e picker seed: ${Math.round((Date.now() - pickerSeedStart) / 1000)}s`);
 
     // The own-scope manager role sees only counterparties assigned to it; the picker spec runs for that role too.
     const pickerManager = await adminGql<{ administrators: { items: { id: string }[] } }>(

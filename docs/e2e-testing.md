@@ -112,6 +112,7 @@ read by `infrastructure/scripts/e2e-group.sh`. Add a row for every new folder or
 | `manager-orders` | dev | manager orders list, detail, delivery | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/orders` |
 | `manager-proforma-payments` | dev | proforma invoices and payments smoke | `--project=manager-operator manager/proforma-invoices-payments` |
 | `manager-settings` | dev | roles, users, security settings | `--project=manager-operator --project=manager-manager --project=manager-department-head --project=manager-portal-admin manager/settings` |
+| `manager-team` | dev | Team directory: search, department filter, status chips, deactivated administrators (#311) | `--project=manager-operator manager/team` |
 | `manager-resilience` | dev | recovery after transient failure (use make e2e-resilience) | `manager/resilience` |
 | `visibility-storefront` | dev | own-data, price-type, category visibility incl. hidden-category URL empty catalog (storefront) | `--project=visibility-storefront` |
 | `visibility-manager` | dev | entity lists, counterparties, price types, servicing team, categories (manager) | `--project=visibility-manager` |
@@ -135,6 +136,15 @@ source id `INTEGRATION_RESYNC_SOURCE_SYSTEM`; both it and `INTEGRATION_SERVICE_B
 `category-feed` is the explicit exception to the 30-minute run limit: it waits for manual ERP-owner steps (per-step bounds 15/40 min, test timeout up to 125 min).
 
 Deliberate omissions of #264 (see #291): authorized-staff checks run as superadmin because no seeded role other than superadmin holds `UpdateCatalog`; search and suggestions are not covered on the access stand (the external search backend is dead there); the hidden-category products rule (owner decision, `docs/category-hierarchy.md`) is covered by the `visibility-storefront` and `visibility-manager` category specs (16, 15) and the access stand `category-products.test.ts` (browse path only, text search is covered by unit/parity tests).
+
+## Picker seed (#312)
+
+`fixtures/seed-picker.ts` adds 510 filler counterparties named `Zza Picker Filler NNNN` plus `Zzz Picker Target` (with a
+portal customer) and `Zzz Picker No Portal` (without one), so the new-order picker spec finds a counterparty beyond
+the old 500-row cap. The `Zz` names sort after every other seed counterparty, so helpers that read the first page of
+`counterparties` keep finding their own records. `global-setup.ts` sends them after the main seed in chunks of 100 (one
+batch exceeds the server body limit) and assigns the two `Zzz Picker` counterparties to the manager account, whose
+own-scope role would otherwise not see them. Cost: about 30-43 s of `global-setup` per run (`e2e picker seed: Ns` line).
 
 ## Manager portal role projects
 
