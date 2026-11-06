@@ -86,12 +86,22 @@ sticky < dropdown < floating < overlay < modal < popover < connection-bar < toas
 - A new layer role is added to both `tokens.css` and `layers.ts`; `layers.test.ts` enforces sync and
   rejects raw page-level values.
 
+## Phone width
+
+A page must never scroll horizontally at 360px. Single-column and flexible grid tracks are `minmax(0, 1fr)`,
+never a bare `1fr` (its automatic minimum is the content, so one long word widens the whole page);
+`gridTracks.test.ts` fails on a bare `1fr` in storefront and ui-kit. Long text in a flex/grid child
+needs `min-width: 0` plus `overflow-wrap`, wide tables scroll inside their own card, and media rules sit in
+the same scoped style file as the element they style. `make e2e-group G=storefront-layout` checks every
+storefront route at 360px; run it after any storefront layout change.
+
 ## Final checklist (before calling frontend work done)
 
 - [ ] Only ui-kit components/tokens used; no parallel local component or hard-coded color.
 - [ ] Every new `z-index` uses a `--mv-z-*` token (or `calc` on one); `make test` passes `layers.test.ts`.
 - [ ] Opened every new dropdown/popup/modal/panel on a real page and checked it sits above the header
       and below the connection bar and toasts; a library popup inside a modal is visible.
-- [ ] Checked the mobile width (390px) too: bottom nav, sheets, drawers do not cover each other wrongly.
+- [ ] Checked the mobile widths (320, 360 and 390px) too: bottom nav, sheets, drawers do not cover each other wrongly, and
+      `storefront-layout` shows no horizontal overflow.
 - [ ] Took the screenshots myself and looked at them; `toBeVisible` does not prove an element is not
       covered — use `document.elementFromPoint` when overlap matters.
