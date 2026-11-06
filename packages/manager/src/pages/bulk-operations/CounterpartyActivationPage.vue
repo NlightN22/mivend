@@ -10,9 +10,14 @@ import {
     formatManagerName,
     type ActivationCandidate,
     type CounterpartySortParameter,
+    type ActivationFilterOptions,
     type ManagerLookup,
 } from '../../api/counterpartyPortalAccess';
-import CounterpartyActivationDataTable from '../../components/bulk-operations/CounterpartyActivationDataTable.vue';
+import { fetchReadinessCounts, type ReadinessCounts } from '../../api/counterpartyActivationCounts';
+import { UNASSIGNED_BRANCH } from '../../components/bulk-operations/activationColumns';
+import CounterpartyActivationDataTable, {
+    type ActivationFilters,
+} from '../../components/bulk-operations/CounterpartyActivationDataTable.vue';
 
 // Bulk operations / Activate customers — issue #120. Same overall shape as
 // Settings > Users (UsersPage.vue, #119's own activation page): server-paginated candidates,
@@ -23,12 +28,19 @@ const page = ref(1);
 const pageSize = ref(20);
 const totalItems = ref(0);
 const items = ref<ActivationCandidate[]>([]);
-const searchFilter = ref('');
-const managerFilter = ref('');
-const branchFilter = ref('');
+const filters = ref<ActivationFilters>({ shortName: '', manager: '', branch: '', readiness: '' });
 const statusFilter = ref<'active' | 'inactive' | ''>('');
 // Mirrors CounterpartyService.baseVisibleQb's own default until the table changes it.
 const sort = ref<CounterpartySortParameter>({ shortName: 'ASC' });
+
+const readinessCounts = ref<ReadinessCounts>({
+    all: 0,
+    ready: 0,
+    'missing-data': 0,
+    'erp-inactive': 0,
+    activated: 0,
+});
+const activatingIds = ref<Set<string>>(new Set());
 
 const managerLookup = ref<ManagerLookup>({ administrators: [], erpUsers: [] });
 const branches = ref<BranchOption[]>([]);
@@ -57,6 +69,7 @@ interface UrlFilters {
     search: string;
     manager: string;
     branch: string;
+    readiness: string;
     pageSize: string;
 }
 const URL_FILTER_DEFAULTS: UrlFilters = {
@@ -64,6 +77,7 @@ const URL_FILTER_DEFAULTS: UrlFilters = {
     search: '',
     manager: '',
     branch: '',
+    readiness: '',
     pageSize: '20',
 };
 const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
@@ -72,31 +86,43 @@ const { fromQuery, toQuery } = useUrlSyncedState(URL_FILTER_DEFAULTS);
     const parsed = { ...URL_FILTER_DEFAULTS };
     fromQuery(parsed, page);
     if (parsed.status) statusFilter.value = parsed.status as 'active' | 'inactive';
-    if (parsed.search) searchFilter.value = parsed.search;
-    if (parsed.manager) managerFilter.value = parsed.manager;
-    if (parsed.branch) branchFilter.value = parsed.branch;
+    filters.value = {
+        shortName: parsed.search,
+        manager: parsed.manager,
+        branch: parsed.branch,
+        readiness: parsed.readiness,
+    };
     if (parsed.pageSize) pageSize.value = Number(parsed.pageSize);
 }
 
 function buildUrlFilters(): UrlFilters {
     return {
         status: statusFilter.value,
-        search: searchFilter.value,
-        manager: managerFilter.value,
-        branch: branchFilter.value,
+        search: filters.value.shortName,
+        manager: filters.value.manager,
+        branch: filters.value.branch,
+        readiness: filters.value.readiness,
         pageSize: String(pageSize.value),
+    };
+}
+
+function currentFilterOptions(): Omit<ActivationFilterOptions, 'readiness'> {
+    return {
+        search: filters.value.shortName || undefined,
+        status: statusFilter.value || undefined,
+        managerErpId: filters.value.manager || undefined,
+        branchId: filters.value.branch || undefined,
+        branchUnassigned: filters.value.branch === UNASSIGNED_BRANCH,
     };
 }
 
 const { loading, run: loadCandidates } = useLatestRequest(
     () =>
         fetchActivationCandidates({
+            ...currentFilterOptions(),
+            readiness: filters.value.readiness || undefined,
             take: pageSize.value,
             skip: (page.value - 1) * pageSize.value,
-            search: searchFilter.value || undefined,
-            status: statusFilter.value || undefined,
-            managerErpId: managerFilter.value || undefined,
-            branchId: branchFilter.value || undefined,
             sort: sort.value,
         }),
     result => {
@@ -105,9 +131,16 @@ const { loading, run: loadCandidates } = useLatestRequest(
     },
 );
 
+const { run: loadCounts } = useLatestRequest(
+    () => fetchReadinessCounts(currentFilterOptions()),
+    result => {
+        readinessCounts.value = result;
+    },
+);
+
 async function safeLoad(): Promise<void> {
     try {
-        await loadCandidates();
+        await Promise.all([loadCandidates(), loadCounts()]);
     } catch (e) {
         actionError.value = e instanceof Error ? e.message : 'Could not load counterparties';
     }
@@ -128,10 +161,14 @@ async function loadLookups(): Promise<void> {
 void loadLookups();
 void safeLoad();
 
-watch([statusFilter, searchFilter, managerFilter, branchFilter, pageSize], () => {
+function setFilters(next: ActivationFilters): void {
+    filters.value = next;
+}
+
+watch([statusFilter, filters, pageSize], () => {
     page.value = 1;
 });
-watch([page, statusFilter, searchFilter, managerFilter, branchFilter, pageSize, sort], () => {
+watch([page, statusFilter, filters, pageSize, sort], () => {
     void safeLoad();
     toQuery(buildUrlFilters(), page);
 });
@@ -155,6 +192,26 @@ function clearPending(): void {
     const next = new Map(pendingActions.value);
     for (const id of selectedIds.value) next.delete(id);
     pendingActions.value = next;
+}
+
+async function activateOne(counterpartyId: string): Promise<void> {
+    activatingIds.value = new Set(activatingIds.value).add(counterpartyId);
+    actionError.value = '';
+    actionNotice.value = '';
+    try {
+        const [result] = await applyCounterpartyPortalAccessChanges([
+            { counterpartyId, action: 'activate' },
+        ]);
+        if (result?.success) actionNotice.value = 'Portal access activated.';
+        else actionError.value = result?.error ?? 'Could not activate portal access';
+        await safeLoad();
+    } catch (e) {
+        actionError.value = e instanceof Error ? e.message : 'Could not activate portal access';
+    } finally {
+        const next = new Set(activatingIds.value);
+        next.delete(counterpartyId);
+        activatingIds.value = next;
+    }
 }
 
 const hasPending = computed(() => pendingActions.value.size > 0);
@@ -206,18 +263,17 @@ async function applyPending(): Promise<void> {
             :total-items="totalItems"
             :page="page"
             :page-size="pageSize"
-            :search-filter="searchFilter"
-            :manager-filter="managerFilter"
-            :branch-filter="branchFilter"
+            :filters="filters"
             :status-filter="statusFilter"
             :branch-options="branches"
+            :readiness-counts="readinessCounts"
+            :activating-ids="activatingIds"
             :selected-ids="selectedIds"
             :pending-actions="pendingActions"
             :manager-name="managerName"
             :branch-name="branchName"
-            @update:search="searchFilter = $event"
-            @update:manager-filter="managerFilter = $event"
-            @update:branch-filter="branchFilter = $event"
+            @update:filters="setFilters"
+            @activate="activateOne"
             @update:status-filter="statusFilter = $event"
             @update:page="page = $event"
             @update:page-size="pageSize = $event"

@@ -25,18 +25,30 @@ export interface CounterpartySortParameter {
     officialEmail?: 'ASC' | 'DESC';
 }
 
-export interface ActivationCandidatesOptions {
-    take: number;
-    skip: number;
+export interface ActivationFilterOptions {
     search?: string;
     status?: 'active' | 'inactive';
     managerErpId?: string;
     branchId?: string;
-    erpGroupLabel?: string;
-    // 'ready' = has phone+email, ERP-active, not yet linked; 'missing' = ERP-active but missing
-    // phone/email; 'activated' = already linked to a Customer.
-    portalAccess?: 'ready' | 'missing' | 'activated';
+    branchUnassigned?: boolean;
+    readiness?: string;
+}
+
+export interface ActivationCandidatesOptions extends ActivationFilterOptions {
+    take: number;
+    skip: number;
     sort?: CounterpartySortParameter;
+}
+
+export function toListOptions(filters: ActivationFilterOptions): Record<string, unknown> {
+    return {
+        search: filters.search || undefined,
+        status: filters.status,
+        managerErpId: filters.managerErpId || undefined,
+        branchId: filters.branchUnassigned ? undefined : filters.branchId || undefined,
+        branchUnassigned: filters.branchUnassigned || undefined,
+        readiness: filters.readiness || undefined,
+    };
 }
 
 const ACTIVATION_CANDIDATES_QUERY = /* GraphQL */ `
@@ -62,18 +74,13 @@ const ACTIVATION_CANDIDATES_QUERY = /* GraphQL */ `
 export async function fetchActivationCandidates(
     options: ActivationCandidatesOptions,
 ): Promise<{ items: ActivationCandidate[]; totalItems: number }> {
-    // Readiness has no backend column, so it is computed per row client-side, not sent as a filter.
     const result = await adminApi<{
         counterparties: { items: ActivationCandidate[]; totalItems: number };
     }>(ACTIVATION_CANDIDATES_QUERY, {
         options: {
+            ...toListOptions(options),
             take: options.take,
             skip: options.skip,
-            search: options.search || undefined,
-            status: options.status,
-            managerErpId: options.managerErpId || undefined,
-            branchId: options.branchId || undefined,
-            groupLabel: options.erpGroupLabel || undefined,
             sort: options.sort,
         },
     });
