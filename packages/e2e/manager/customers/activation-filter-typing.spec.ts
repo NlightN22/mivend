@@ -11,7 +11,7 @@ test.describe('bulk activation column filter typing', () => {
         await page.goto('/bulk-operations/activate-customers');
         const header = page.locator('th').filter({ hasText: 'Manager' }).first();
         await header.locator('.p-datatable-filter button').click();
-        const input = page.locator('.mv-column-filter-text input');
+        const input = page.getByPlaceholder('Manager contains…');
         await input.click();
         await input.pressSequentially('abcdefghij', { delay: 150 });
         await expect(input).toBeFocused();
