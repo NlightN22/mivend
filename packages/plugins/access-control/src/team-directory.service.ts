@@ -82,7 +82,7 @@ export class TeamDirectoryService {
         if (!seesInactive && options.filter?.status === 'inactive')
             return { items: [], totalItems: 0 };
         const qb = this.connection.getRepository(ctx, Administrator).createQueryBuilder('a');
-        if (seesInactive) qb.withDeleted();
+        if (!seesInactive) qb.andWhere('a.deletedAt IS NULL');
         if (branch.kind === 'branch') {
             qb.andWhere('a.customFields.branchId = :scopeBranch', { scopeBranch: branch.branchId });
         }

@@ -2,7 +2,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import {
     Column,
     DataSource,
-    DeleteDateColumn,
     Entity,
     JoinColumn,
     JoinTable,
@@ -57,7 +56,7 @@ class TestAdministrator {
     @Column({ type: 'varchar' }) firstName!: string;
     @Column({ type: 'varchar' }) lastName!: string;
 
-    @DeleteDateColumn({ type: 'timestamp', nullable: true })
+    @Column({ type: 'timestamp', nullable: true })
     deletedAt!: Date | null;
 
     @Column({ type: 'int', nullable: true }) userId!: number | null;

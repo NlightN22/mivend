@@ -22,7 +22,7 @@ function build(
     ownDepartmentId = 'dept-sales',
 ): Built {
     const qb: Record<string, unknown> = {};
-    for (const m of ['withDeleted', 'andWhere', 'leftJoinAndSelect', 'orderBy', 'skip', 'take']) {
+    for (const m of ['andWhere', 'leftJoinAndSelect', 'orderBy', 'skip', 'take']) {
         qb[m] = vi.fn().mockReturnValue(qb);
     }
     qb.getManyAndCount = vi.fn().mockResolvedValue([admins, admins.length]);
@@ -108,7 +108,7 @@ describe('TeamDirectoryService.findPage', () => {
         const { service, qb } = build([admin(1, 'dept-sales')], 'all');
 
         await service.findPage(operatorCtx, { take: 1000 });
-        expect(qb.withDeleted).not.toHaveBeenCalled();
+        expect(qb.andWhere).toHaveBeenCalledWith('a.deletedAt IS NULL');
         expect(qb.take).toHaveBeenCalledWith(100);
 
         expect(await service.findPage(operatorCtx, { filter: { status: 'inactive' } })).toEqual({
@@ -117,7 +117,8 @@ describe('TeamDirectoryService.findPage', () => {
         });
         expect(qb.getManyAndCount).toHaveBeenCalledTimes(1);
 
+        vi.mocked(qb.andWhere as () => unknown).mockClear();
         await service.findPage(ctx, {});
-        expect(qb.withDeleted).toHaveBeenCalledTimes(1);
+        expect(qb.andWhere).not.toHaveBeenCalledWith('a.deletedAt IS NULL');
     });
 });
