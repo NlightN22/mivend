@@ -15,7 +15,7 @@ import {
 import type { OrderReservation } from '../../api/reservation';
 import OrderLineCheckCells from './OrderLineCheckCells.vue';
 import OrderLineUnitPrice from './OrderLineUnitPrice.vue';
-import PriceAdjustmentPanel from '../order-create/PriceAdjustmentPanel.vue';
+import PriceAdjustmentPanel from './PriceAdjustmentPanel.vue';
 import OrderLineEditCell from './OrderLineEditCell.vue';
 import OrderLinesEditBar from './OrderLinesEditBar.vue';
 

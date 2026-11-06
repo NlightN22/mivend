@@ -1,4 +1,4 @@
-query OrderCreateCounterparties($search: String!) {
+query ActingCounterparties($search: String!) {
     counterparties(options: { search: $search, take: 20, status: "active" }) {
         totalItems
         items {
@@ -19,7 +19,7 @@ query OrderCreateCounterparties($search: String!) {
     }
 }
 
-query OrderCreateCounterparty($id: ID!) {
+query ActingCounterparty($id: ID!) {
     counterparty(id: $id) {
         id
         shortName
@@ -37,184 +37,10 @@ query OrderCreateCounterparty($id: ID!) {
     }
 }
 
-query OrderCreateProductSearch($term: String!) {
-    search(input: { term: $term, take: 20, groupByProduct: false }) {
-        skuMatches {
-            items {
-                productVariantId
-                productName
-                sku
-            }
-        }
-        partNumberMatches {
-            items {
-                productVariantId
-                productName
-                sku
-            }
-        }
-        manufacturerCodeMatches {
-            items {
-                productVariantId
-                productName
-                sku
-            }
-        }
-        items {
-            productVariantId
-            productName
-            sku
-        }
-    }
-}
-
-fragment DraftOrderFields on Order {
-    id
-    code
-    state
-    currencyCode
-    subTotalWithTax
-    shippingWithTax
-    totalWithTax
-    lines {
-        id
-        quantity
-        discountedUnitPriceWithTax
-        discountedLinePriceWithTax
-        productVariant {
-            id
-            name
-            sku
-        }
-    }
-}
-
-query OrderCreateOrder($id: ID!) {
-    order(id: $id) {
-        ...DraftOrderFields
-    }
-}
-
-mutation CreateDraftOrder {
-    createDraftOrder {
-        ...DraftOrderFields
-    }
-}
-
-mutation SetCustomerForDraftOrder($orderId: ID!, $customerId: ID!) {
-    setCustomerForDraftOrder(orderId: $orderId, customerId: $customerId) {
-        __typename
-        ... on Order {
-            ...DraftOrderFields
-        }
-        ... on ErrorResult {
-            errorCode
-            message
-        }
-    }
-}
-
-mutation AddItemToDraftOrder($orderId: ID!, $input: AddItemToDraftOrderInput!) {
-    addItemToDraftOrder(orderId: $orderId, input: $input) {
-        __typename
-        ... on Order {
-            ...DraftOrderFields
-        }
-        ... on ErrorResult {
-            errorCode
-            message
-        }
-    }
-}
-
-mutation AdjustDraftOrderLineQuantity($orderId: ID!, $input: AdjustDraftOrderLineInput!) {
-    adjustDraftOrderLine(orderId: $orderId, input: $input) {
-        __typename
-        ... on Order {
-            ...DraftOrderFields
-        }
-        ... on ErrorResult {
-            errorCode
-            message
-        }
-    }
-}
-
-mutation RemoveDraftOrderLine($orderId: ID!, $orderLineId: ID!) {
-    removeDraftOrderLine(orderId: $orderId, orderLineId: $orderLineId) {
-        __typename
-        ... on Order {
-            ...DraftOrderFields
-        }
-        ... on ErrorResult {
-            errorCode
-            message
-        }
-    }
-}
-
-mutation RequestPriceAdjustment(
-    $orderId: ID!
-    $orderLineId: ID!
-    $requestedPrice: Int!
-    $justification: String
-) {
-    requestPriceAdjustment(
-        orderId: $orderId
-        orderLineId: $orderLineId
-        requestedPrice: $requestedPrice
-        justification: $justification
-    ) {
-        decision
-        approvalRequestId
-    }
-}
-
-mutation SetDraftOrderShippingAddress($orderId: ID!, $input: CreateAddressInput!) {
-    setDraftOrderShippingAddress(orderId: $orderId, input: $input) {
-        id
-    }
-}
-
-query EligibleShippingMethodsForDraftOrder($orderId: ID!) {
-    eligibleShippingMethodsForDraftOrder(orderId: $orderId) {
-        id
-        code
-    }
-}
-
-mutation SetDraftOrderTradingPoint($orderId: ID!, $tradingPointId: ID) {
-    setDraftOrderTradingPoint(orderId: $orderId, tradingPointId: $tradingPointId)
-}
-
-mutation SetDraftOrderShippingMethod($orderId: ID!, $id: ID!) {
-    setDraftOrderShippingMethod(orderId: $orderId, shippingMethodId: $id) {
-        __typename
-    }
-}
-
-mutation TransitionOrderToState($id: ID!) {
-    transitionOrderToState(id: $id, state: "ArrangingPayment") {
-        __typename
-        ... on Order {
-            code
-        }
-        ... on OrderStateTransitionError {
-            errorCode
-            message
-        }
-    }
-}
-
-mutation AddManualPaymentToOrder($input: ManualPaymentInput!) {
-    addManualPaymentToOrder(input: $input) {
-        __typename
-        ... on Order {
-            code
-        }
-        ... on ManualPaymentStateError {
-            errorCode
-            message
-        }
+mutation StartActingSession($counterpartyId: ID!, $tradingPointId: ID) {
+    startActingSession(counterpartyId: $counterpartyId, tradingPointId: $tradingPointId) {
+        ticket
+        storefrontUrl
+        expiresAt
     }
 }

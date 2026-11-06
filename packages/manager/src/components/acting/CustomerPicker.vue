@@ -11,7 +11,7 @@ import {
     hasMoreCustomerMatches,
     type CustomerOption,
     type CustomerCredit,
-} from '../../api/orderCreate';
+} from '../../api/actingSession';
 
 const emit = defineEmits<{ select: [customer: CustomerOption] }>();
 

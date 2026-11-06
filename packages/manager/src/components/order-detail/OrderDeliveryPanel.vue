@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { MvButton, MvNotice, MvSelect } from '@mivend/ui-kit';
-import { DELIVERY_METHOD_OPTIONS, type DeliveryMethod } from '../../api/orderCreate';
+import { DELIVERY_METHOD_OPTIONS, type DeliveryMethod } from '../../api/deliveryMethods';
 import { setOrderDelivery } from '../../api/orderDelivery';
 
 const props = defineProps<{

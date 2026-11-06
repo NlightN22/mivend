@@ -1,0 +1,16 @@
+mutation RequestPriceAdjustment(
+    $orderId: ID!
+    $orderLineId: ID!
+    $requestedPrice: Int!
+    $justification: String
+) {
+    requestPriceAdjustment(
+        orderId: $orderId
+        orderLineId: $orderLineId
+        requestedPrice: $requestedPrice
+        justification: $justification
+    ) {
+        decision
+        approvalRequestId
+    }
+}

@@ -34,7 +34,7 @@ export const router = createRouter({
                 {
                     path: 'orders/new',
                     name: 'orders-new',
-                    component: () => import('../pages/orders/OrderCreatePage.vue'),
+                    component: () => import('../pages/orders/NewOrderPage.vue'),
                     meta: { requiresAuth: true },
                 },
                 {

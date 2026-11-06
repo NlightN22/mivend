@@ -1,106 +1,100 @@
-import { adminGql } from './api';
+import { actingShopGql, adminGql } from './api';
 
-// Mirrors the portal's /orders/new mutations so the order takes the real path to PaymentSettled.
-// Gives e2e specs a deterministic order instead of relying on pre-existing dev DB orders.
+interface ShopResult {
+    __typename: string;
+    id?: string;
+    code?: string;
+    message?: string;
+}
+
+async function counterpartyIdOf(token: string, customerId: string): Promise<string> {
+    const found = await adminGql<{
+        counterparties: { items: { id: string; linkedCustomerId: string | null }[] };
+    }>(
+        `query { counterparties(options: { take: 100 }) { items { id linkedCustomerId } } }`,
+        undefined,
+        token,
+    );
+    const id = found.data.counterparties.items.find(c => c.linkedCustomerId === customerId)?.id;
+    if (!id) throw new Error(`No counterparty linked to customer ${customerId}`);
+    return id;
+}
+
+function mustBeOrder(step: string, result: ShopResult | null): ShopResult {
+    if (result?.__typename !== 'Order') {
+        throw new Error(`Acting checkout failed at ${step}: ${JSON.stringify(result)}`);
+    }
+    return result;
+}
+
+// Same path as the portal: a ticket from the Admin API, exchanged for an acting session, then a storefront checkout.
 export async function createConfirmedOrder(
     token: string,
     customerId: string,
     productVariantId: string,
 ): Promise<{ id: string; code: string }> {
-    const draft = await adminGql<{ createDraftOrder: { id: string } }>(
-        `mutation { createDraftOrder { id } }`,
-        undefined,
+    const counterpartyId = await counterpartyIdOf(token, customerId);
+    const started = await adminGql<{ startActingSession: { ticket: string } }>(
+        `mutation($c: ID!) { startActingSession(counterpartyId: $c) { ticket } }`,
+        { c: counterpartyId },
         token,
     );
-    const orderId = draft.data.createDraftOrder.id;
-
-    await adminGql(
-        `mutation($orderId: ID!, $customerId: ID!) {
-            setCustomerForDraftOrder(orderId: $orderId, customerId: $customerId) {
-                __typename
-                ... on ErrorResult { errorCode message }
-            }
-        }`,
-        { orderId, customerId },
-        token,
+    const exchanged = await actingShopGql<{ exchangeActingTicket: { token: string } }>(
+        `mutation($t: String!) { exchangeActingTicket(ticket: $t) { token } }`,
+        { t: started.data.startActingSession.ticket },
     );
-
-    await adminGql(
-        `mutation($orderId: ID!, $input: AddItemToDraftOrderInput!) {
-            addItemToDraftOrder(orderId: $orderId, input: $input) {
-                __typename
-                ... on ErrorResult { errorCode message }
-            }
-        }`,
-        { orderId, input: { productVariantId, quantity: 2 } },
-        token,
-    );
-
-    await adminGql(
-        `mutation($orderId: ID!, $input: CreateAddressInput!) {
-            setDraftOrderShippingAddress(orderId: $orderId, input: $input) { id }
-        }`,
-        { orderId, input: { streetLine1: 'E2E Test Street 1', countryCode: 'RU' } },
-        token,
-    );
-
-    const eligible = await adminGql<{
-        eligibleShippingMethodsForDraftOrder: { id: string; code: string }[];
-    }>(
-        `query($orderId: ID!) { eligibleShippingMethodsForDraftOrder(orderId: $orderId) { id code } }`,
-        { orderId },
-        token,
-    );
-    // Self-pickup: courier delivery needs a chosen trading point, which this helper does not set.
-    const shippingMethodId = eligible.data.eligibleShippingMethodsForDraftOrder.find(
-        m => m.code === 'pickup',
-    )?.id;
-    if (shippingMethodId) {
-        await adminGql(
-            `mutation($orderId: ID!, $id: ID!) {
-                setDraftOrderShippingMethod(orderId: $orderId, shippingMethodId: $id) { __typename }
-            }`,
-            { orderId, id: shippingMethodId },
-            token,
+    const acting = exchanged.exchangeActingTicket.token;
+    const shop = <T>(query: string, variables?: Record<string, unknown>): Promise<T> =>
+        actingShopGql<T>(query, variables, acting);
+    try {
+        mustBeOrder(
+            'addItemToOrder',
+            (
+                await shop<{ addItemToOrder: ShopResult }>(
+                    `mutation($v: ID!) { addItemToOrder(productVariantId: $v, quantity: 2) {
+                        __typename ... on ErrorResult { message } } }`,
+                    { v: productVariantId },
+                )
+            ).addItemToOrder,
         );
-    }
-
-    const transition = await adminGql<{
-        transitionOrderToState: { __typename: string; code?: string };
-    }>(
-        `mutation($id: ID!) {
-            transitionOrderToState(id: $id, state: "ArrangingPayment") {
-                __typename
-                ... on Order { code }
-                ... on OrderStateTransitionError { errorCode message transitionError }
-            }
-        }`,
-        { id: orderId },
-        token,
-    );
-    if (transition.data.transitionOrderToState.__typename !== 'Order') {
-        throw new Error(
-            `Could not move order ${orderId} to ArrangingPayment: ${JSON.stringify(transition.data.transitionOrderToState)}`,
+        const eligible = await shop<{ eligibleShippingMethods: { id: string; code: string }[] }>(
+            `query { eligibleShippingMethods { id code } }`,
         );
+        // Self-pickup: courier delivery needs a chosen trading point, which this helper does not set.
+        const pickup = eligible.eligibleShippingMethods.find(m => m.code === 'pickup');
+        if (!pickup) throw new Error('Self-pickup shipping method is not available');
+        mustBeOrder(
+            'setOrderShippingMethod',
+            (
+                await shop<{ setOrderShippingMethod: ShopResult }>(
+                    `mutation($id: [ID!]!) { setOrderShippingMethod(shippingMethodId: $id) {
+                        __typename ... on ErrorResult { message } } }`,
+                    { id: [pickup.id] },
+                )
+            ).setOrderShippingMethod,
+        );
+        mustBeOrder(
+            'transitionOrderToState',
+            (
+                await shop<{ transitionOrderToState: ShopResult }>(
+                    `mutation { transitionOrderToState(state: "ArrangingPayment") {
+                        __typename ... on ErrorResult { message } } }`,
+                )
+            ).transitionOrderToState,
+        );
+        const placed = mustBeOrder(
+            'addPaymentToOrder',
+            (
+                await shop<{ addPaymentToOrder: ShopResult }>(
+                    `mutation { addPaymentToOrder(input: { method: "offline-terms", metadata: {} }) {
+                        __typename ... on Order { id code } ... on ErrorResult { message } } }`,
+                )
+            ).addPaymentToOrder,
+        );
+        return { id: placed.id as string, code: placed.code as string };
+    } finally {
+        await shop(`mutation { finishActingSession }`).catch(() => undefined);
     }
-
-    const payment = await adminGql<{
-        addManualPaymentToOrder: { __typename: string; code?: string };
-    }>(
-        `mutation($input: ManualPaymentInput!) {
-            addManualPaymentToOrder(input: $input) {
-                __typename
-                ... on Order { code }
-                ... on ManualPaymentStateError { errorCode message }
-            }
-        }`,
-        { input: { orderId, method: 'offline-terms', metadata: {} } },
-        token,
-    );
-    const code = payment.data.addManualPaymentToOrder.code;
-    if (!code) throw new Error(`Could not settle payment for order ${orderId}`);
-
-    return { id: orderId, code };
 }
 
 export async function releaseOrderReservation(token: string, orderId: string): Promise<void> {

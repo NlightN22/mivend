@@ -58,6 +58,12 @@ export type AddNoteToOrderInput = {
     note: Scalars['String']['input'];
 };
 
+export type ActingTicketStart = {
+    expiresAt: Scalars['DateTime']['output'];
+    storefrontUrl: Scalars['String']['output'];
+    ticket: Scalars['String']['output'];
+};
+
 export type Address = Node & {
     city: Maybe<Scalars['String']['output']>;
     company: Maybe<Scalars['String']['output']>;
@@ -4267,6 +4273,7 @@ export type Mutation = {
     setCounterpartyBranchOverride: Scalars['Boolean']['output'];
     setCreditTermLimit: CreditTermLimit;
     setCustomerForDraftOrder: SetCustomerForDraftOrderResult;
+    startActingSession: ActingTicketStart;
     setDepartmentBranch: Scalars['Boolean']['output'];
     /** Sets the billing address for a draft Order */
     setDraftOrderBillingAddress: Order;
@@ -5298,6 +5305,11 @@ export type MutationSplitOrderLinesByStockArgs = {
 export type MutationTransitionFulfillmentToStateArgs = {
     id: Scalars['ID']['input'];
     state: Scalars['String']['input'];
+};
+
+export type MutationStartActingSessionArgs = {
+    counterpartyId: Scalars['ID']['input'];
+    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type MutationTransitionOrderToStateArgs = {
@@ -11470,11 +11482,11 @@ export type RecomputeOrderChecksMutation = {
     }>;
 };
 
-export type OrderCreateCounterpartiesQueryVariables = Exact<{
+export type ActingCounterpartiesQueryVariables = Exact<{
     search: Scalars['String']['input'];
 }>;
 
-export type OrderCreateCounterpartiesQuery = {
+export type ActingCounterpartiesQuery = {
     counterparties: {
         totalItems: number;
         items: Array<{
@@ -11495,11 +11507,11 @@ export type OrderCreateCounterpartiesQuery = {
     };
 };
 
-export type OrderCreateCounterpartyQueryVariables = Exact<{
+export type ActingCounterpartyQueryVariables = Exact<{
     id: Scalars['ID']['input'];
 }>;
 
-export type OrderCreateCounterpartyQuery = {
+export type ActingCounterpartyQuery = {
     counterparty: {
         id: string;
         shortName: string;
@@ -11517,201 +11529,13 @@ export type OrderCreateCounterpartyQuery = {
     } | null;
 };
 
-export type OrderCreateProductSearchQueryVariables = Exact<{
-    term: Scalars['String']['input'];
+export type StartActingSessionMutationVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
-export type OrderCreateProductSearchQuery = {
-    search: {
-        skuMatches: {
-            items: Array<{ productVariantId: string; productName: string; sku: string }>;
-        } | null;
-        partNumberMatches: {
-            items: Array<{ productVariantId: string; productName: string; sku: string }>;
-        } | null;
-        manufacturerCodeMatches: {
-            items: Array<{ productVariantId: string; productName: string; sku: string }>;
-        } | null;
-        items: Array<{ productVariantId: string; productName: string; sku: string }>;
-    };
-};
-
-export type DraftOrderFieldsFragment = {
-    id: string;
-    code: string;
-    state: string;
-    currencyCode: CurrencyCode;
-    subTotalWithTax: any;
-    shippingWithTax: any;
-    totalWithTax: any;
-    lines: Array<{
-        id: string;
-        quantity: number;
-        discountedUnitPriceWithTax: any;
-        discountedLinePriceWithTax: any;
-        productVariant: { id: string; name: string; sku: string };
-    }>;
-};
-
-export type OrderCreateOrderQueryVariables = Exact<{
-    id: Scalars['ID']['input'];
-}>;
-
-export type OrderCreateOrderQuery = {
-    order: {
-        id: string;
-        code: string;
-        state: string;
-        currencyCode: CurrencyCode;
-        subTotalWithTax: any;
-        shippingWithTax: any;
-        totalWithTax: any;
-        lines: Array<{
-            id: string;
-            quantity: number;
-            discountedUnitPriceWithTax: any;
-            discountedLinePriceWithTax: any;
-            productVariant: { id: string; name: string; sku: string };
-        }>;
-    } | null;
-};
-
-export type CreateDraftOrderMutationVariables = Exact<{ [key: string]: never }>;
-
-export type CreateDraftOrderMutation = {
-    createDraftOrder: {
-        id: string;
-        code: string;
-        state: string;
-        currencyCode: CurrencyCode;
-        subTotalWithTax: any;
-        shippingWithTax: any;
-        totalWithTax: any;
-        lines: Array<{
-            id: string;
-            quantity: number;
-            discountedUnitPriceWithTax: any;
-            discountedLinePriceWithTax: any;
-            productVariant: { id: string; name: string; sku: string };
-        }>;
-    };
-};
-
-export type SetCustomerForDraftOrderMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-    customerId: Scalars['ID']['input'];
-}>;
-
-export type SetCustomerForDraftOrderMutation = {
-    setCustomerForDraftOrder:
-        | { __typename: 'EmailAddressConflictError'; errorCode: ErrorCode; message: string }
-        | {
-              __typename: 'Order';
-              id: string;
-              code: string;
-              state: string;
-              currencyCode: CurrencyCode;
-              subTotalWithTax: any;
-              shippingWithTax: any;
-              totalWithTax: any;
-              lines: Array<{
-                  id: string;
-                  quantity: number;
-                  discountedUnitPriceWithTax: any;
-                  discountedLinePriceWithTax: any;
-                  productVariant: { id: string; name: string; sku: string };
-              }>;
-          };
-};
-
-export type AddItemToDraftOrderMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-    input: AddItemToDraftOrderInput;
-}>;
-
-export type AddItemToDraftOrderMutation = {
-    addItemToDraftOrder:
-        | { __typename: 'InsufficientStockError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'NegativeQuantityError'; errorCode: ErrorCode; message: string }
-        | {
-              __typename: 'Order';
-              id: string;
-              code: string;
-              state: string;
-              currencyCode: CurrencyCode;
-              subTotalWithTax: any;
-              shippingWithTax: any;
-              totalWithTax: any;
-              lines: Array<{
-                  id: string;
-                  quantity: number;
-                  discountedUnitPriceWithTax: any;
-                  discountedLinePriceWithTax: any;
-                  productVariant: { id: string; name: string; sku: string };
-              }>;
-          }
-        | { __typename: 'OrderInterceptorError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'OrderLimitError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'OrderModificationError'; errorCode: ErrorCode; message: string };
-};
-
-export type AdjustDraftOrderLineQuantityMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-    input: AdjustDraftOrderLineInput;
-}>;
-
-export type AdjustDraftOrderLineQuantityMutation = {
-    adjustDraftOrderLine:
-        | { __typename: 'InsufficientStockError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'NegativeQuantityError'; errorCode: ErrorCode; message: string }
-        | {
-              __typename: 'Order';
-              id: string;
-              code: string;
-              state: string;
-              currencyCode: CurrencyCode;
-              subTotalWithTax: any;
-              shippingWithTax: any;
-              totalWithTax: any;
-              lines: Array<{
-                  id: string;
-                  quantity: number;
-                  discountedUnitPriceWithTax: any;
-                  discountedLinePriceWithTax: any;
-                  productVariant: { id: string; name: string; sku: string };
-              }>;
-          }
-        | { __typename: 'OrderInterceptorError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'OrderLimitError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'OrderModificationError'; errorCode: ErrorCode; message: string };
-};
-
-export type RemoveDraftOrderLineMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-    orderLineId: Scalars['ID']['input'];
-}>;
-
-export type RemoveDraftOrderLineMutation = {
-    removeDraftOrderLine:
-        | {
-              __typename: 'Order';
-              id: string;
-              code: string;
-              state: string;
-              currencyCode: CurrencyCode;
-              subTotalWithTax: any;
-              shippingWithTax: any;
-              totalWithTax: any;
-              lines: Array<{
-                  id: string;
-                  quantity: number;
-                  discountedUnitPriceWithTax: any;
-                  discountedLinePriceWithTax: any;
-                  productVariant: { id: string; name: string; sku: string };
-              }>;
-          }
-        | { __typename: 'OrderInterceptorError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'OrderModificationError'; errorCode: ErrorCode; message: string };
+export type StartActingSessionMutation = {
+    startActingSession: { ticket: string; storefrontUrl: string; expiresAt: any };
 };
 
 export type RequestPriceAdjustmentMutationVariables = Exact<{
@@ -11723,62 +11547,6 @@ export type RequestPriceAdjustmentMutationVariables = Exact<{
 
 export type RequestPriceAdjustmentMutation = {
     requestPriceAdjustment: { decision: string; approvalRequestId: string | null };
-};
-
-export type SetDraftOrderShippingAddressMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-    input: CreateAddressInput;
-}>;
-
-export type SetDraftOrderShippingAddressMutation = { setDraftOrderShippingAddress: { id: string } };
-
-export type EligibleShippingMethodsForDraftOrderQueryVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-}>;
-
-export type EligibleShippingMethodsForDraftOrderQuery = {
-    eligibleShippingMethodsForDraftOrder: Array<{ id: string; code: string }>;
-};
-
-export type SetDraftOrderTradingPointMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-export type SetDraftOrderTradingPointMutation = { setDraftOrderTradingPoint: boolean };
-
-export type SetDraftOrderShippingMethodMutationVariables = Exact<{
-    orderId: Scalars['ID']['input'];
-    id: Scalars['ID']['input'];
-}>;
-
-export type SetDraftOrderShippingMethodMutation = {
-    setDraftOrderShippingMethod:
-        | { __typename: 'IneligibleShippingMethodError' }
-        | { __typename: 'NoActiveOrderError' }
-        | { __typename: 'Order' }
-        | { __typename: 'OrderModificationError' };
-};
-
-export type TransitionOrderToStateMutationVariables = Exact<{
-    id: Scalars['ID']['input'];
-}>;
-
-export type TransitionOrderToStateMutation = {
-    transitionOrderToState:
-        | { __typename: 'Order'; code: string }
-        | { __typename: 'OrderStateTransitionError'; errorCode: ErrorCode; message: string }
-        | null;
-};
-
-export type AddManualPaymentToOrderMutationVariables = Exact<{
-    input: ManualPaymentInput;
-}>;
-
-export type AddManualPaymentToOrderMutation = {
-    addManualPaymentToOrder:
-        | { __typename: 'ManualPaymentStateError'; errorCode: ErrorCode; message: string }
-        | { __typename: 'Order'; code: string };
 };
 
 export type SetOrderDeliveryMutationVariables = Exact<{
@@ -13248,31 +13016,6 @@ export const OrderCheckResultFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'OrderCheckResultFields' },
 ) as unknown as TypedDocumentString<OrderCheckResultFieldsFragment, unknown>;
-export const DraftOrderFieldsFragmentDoc = new TypedDocumentString(
-    `
-    fragment DraftOrderFields on Order {
-  id
-  code
-  state
-  currencyCode
-  subTotalWithTax
-  shippingWithTax
-  totalWithTax
-  lines {
-    id
-    quantity
-    discountedUnitPriceWithTax
-    discountedLinePriceWithTax
-    productVariant {
-      id
-      name
-      sku
-    }
-  }
-}
-    `,
-    { fragmentName: 'DraftOrderFields' },
-) as unknown as TypedDocumentString<DraftOrderFieldsFragment, unknown>;
 export const OrderLineAvailabilityFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment OrderLineAvailabilityFields on OrderLineAvailability {
@@ -14966,8 +14709,8 @@ export const RecomputeOrderChecksDocument = new TypedDocumentString(`
     RecomputeOrderChecksMutation,
     RecomputeOrderChecksMutationVariables
 >;
-export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
-    query OrderCreateCounterparties($search: String!) {
+export const ActingCounterpartiesDocument = new TypedDocumentString(`
+    query ActingCounterparties($search: String!) {
   counterparties(options: {search: $search, take: 20, status: "active"}) {
     totalItems
     items {
@@ -14988,11 +14731,11 @@ export const OrderCreateCounterpartiesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<
-    OrderCreateCounterpartiesQuery,
-    OrderCreateCounterpartiesQueryVariables
+    ActingCounterpartiesQuery,
+    ActingCounterpartiesQueryVariables
 >;
-export const OrderCreateCounterpartyDocument = new TypedDocumentString(`
-    query OrderCreateCounterparty($id: ID!) {
+export const ActingCounterpartyDocument = new TypedDocumentString(`
+    query ActingCounterparty($id: ID!) {
   counterparty(id: $id) {
     id
     shortName
@@ -15009,240 +14752,21 @@ export const OrderCreateCounterpartyDocument = new TypedDocumentString(`
     }
   }
 }
-    `) as unknown as TypedDocumentString<
-    OrderCreateCounterpartyQuery,
-    OrderCreateCounterpartyQueryVariables
->;
-export const OrderCreateProductSearchDocument = new TypedDocumentString(`
-    query OrderCreateProductSearch($term: String!) {
-  search(input: {term: $term, take: 20, groupByProduct: false}) {
-    skuMatches {
-      items {
-        productVariantId
-        productName
-        sku
-      }
-    }
-    partNumberMatches {
-      items {
-        productVariantId
-        productName
-        sku
-      }
-    }
-    manufacturerCodeMatches {
-      items {
-        productVariantId
-        productName
-        sku
-      }
-    }
-    items {
-      productVariantId
-      productName
-      sku
-    }
+    `) as unknown as TypedDocumentString<ActingCounterpartyQuery, ActingCounterpartyQueryVariables>;
+export const StartActingSessionDocument = new TypedDocumentString(`
+    mutation StartActingSession($counterpartyId: ID!, $tradingPointId: ID) {
+  startActingSession(
+    counterpartyId: $counterpartyId
+    tradingPointId: $tradingPointId
+  ) {
+    ticket
+    storefrontUrl
+    expiresAt
   }
 }
     `) as unknown as TypedDocumentString<
-    OrderCreateProductSearchQuery,
-    OrderCreateProductSearchQueryVariables
->;
-export const OrderCreateOrderDocument = new TypedDocumentString(`
-    query OrderCreateOrder($id: ID!) {
-  order(id: $id) {
-    ...DraftOrderFields
-  }
-}
-    fragment DraftOrderFields on Order {
-  id
-  code
-  state
-  currencyCode
-  subTotalWithTax
-  shippingWithTax
-  totalWithTax
-  lines {
-    id
-    quantity
-    discountedUnitPriceWithTax
-    discountedLinePriceWithTax
-    productVariant {
-      id
-      name
-      sku
-    }
-  }
-}`) as unknown as TypedDocumentString<OrderCreateOrderQuery, OrderCreateOrderQueryVariables>;
-export const CreateDraftOrderDocument = new TypedDocumentString(`
-    mutation CreateDraftOrder {
-  createDraftOrder {
-    ...DraftOrderFields
-  }
-}
-    fragment DraftOrderFields on Order {
-  id
-  code
-  state
-  currencyCode
-  subTotalWithTax
-  shippingWithTax
-  totalWithTax
-  lines {
-    id
-    quantity
-    discountedUnitPriceWithTax
-    discountedLinePriceWithTax
-    productVariant {
-      id
-      name
-      sku
-    }
-  }
-}`) as unknown as TypedDocumentString<CreateDraftOrderMutation, CreateDraftOrderMutationVariables>;
-export const SetCustomerForDraftOrderDocument = new TypedDocumentString(`
-    mutation SetCustomerForDraftOrder($orderId: ID!, $customerId: ID!) {
-  setCustomerForDraftOrder(orderId: $orderId, customerId: $customerId) {
-    __typename
-    ... on Order {
-      ...DraftOrderFields
-    }
-    ... on ErrorResult {
-      errorCode
-      message
-    }
-  }
-}
-    fragment DraftOrderFields on Order {
-  id
-  code
-  state
-  currencyCode
-  subTotalWithTax
-  shippingWithTax
-  totalWithTax
-  lines {
-    id
-    quantity
-    discountedUnitPriceWithTax
-    discountedLinePriceWithTax
-    productVariant {
-      id
-      name
-      sku
-    }
-  }
-}`) as unknown as TypedDocumentString<
-    SetCustomerForDraftOrderMutation,
-    SetCustomerForDraftOrderMutationVariables
->;
-export const AddItemToDraftOrderDocument = new TypedDocumentString(`
-    mutation AddItemToDraftOrder($orderId: ID!, $input: AddItemToDraftOrderInput!) {
-  addItemToDraftOrder(orderId: $orderId, input: $input) {
-    __typename
-    ... on Order {
-      ...DraftOrderFields
-    }
-    ... on ErrorResult {
-      errorCode
-      message
-    }
-  }
-}
-    fragment DraftOrderFields on Order {
-  id
-  code
-  state
-  currencyCode
-  subTotalWithTax
-  shippingWithTax
-  totalWithTax
-  lines {
-    id
-    quantity
-    discountedUnitPriceWithTax
-    discountedLinePriceWithTax
-    productVariant {
-      id
-      name
-      sku
-    }
-  }
-}`) as unknown as TypedDocumentString<
-    AddItemToDraftOrderMutation,
-    AddItemToDraftOrderMutationVariables
->;
-export const AdjustDraftOrderLineQuantityDocument = new TypedDocumentString(`
-    mutation AdjustDraftOrderLineQuantity($orderId: ID!, $input: AdjustDraftOrderLineInput!) {
-  adjustDraftOrderLine(orderId: $orderId, input: $input) {
-    __typename
-    ... on Order {
-      ...DraftOrderFields
-    }
-    ... on ErrorResult {
-      errorCode
-      message
-    }
-  }
-}
-    fragment DraftOrderFields on Order {
-  id
-  code
-  state
-  currencyCode
-  subTotalWithTax
-  shippingWithTax
-  totalWithTax
-  lines {
-    id
-    quantity
-    discountedUnitPriceWithTax
-    discountedLinePriceWithTax
-    productVariant {
-      id
-      name
-      sku
-    }
-  }
-}`) as unknown as TypedDocumentString<
-    AdjustDraftOrderLineQuantityMutation,
-    AdjustDraftOrderLineQuantityMutationVariables
->;
-export const RemoveDraftOrderLineDocument = new TypedDocumentString(`
-    mutation RemoveDraftOrderLine($orderId: ID!, $orderLineId: ID!) {
-  removeDraftOrderLine(orderId: $orderId, orderLineId: $orderLineId) {
-    __typename
-    ... on Order {
-      ...DraftOrderFields
-    }
-    ... on ErrorResult {
-      errorCode
-      message
-    }
-  }
-}
-    fragment DraftOrderFields on Order {
-  id
-  code
-  state
-  currencyCode
-  subTotalWithTax
-  shippingWithTax
-  totalWithTax
-  lines {
-    id
-    quantity
-    discountedUnitPriceWithTax
-    discountedLinePriceWithTax
-    productVariant {
-      id
-      name
-      sku
-    }
-  }
-}`) as unknown as TypedDocumentString<
-    RemoveDraftOrderLineMutation,
-    RemoveDraftOrderLineMutationVariables
+    StartActingSessionMutation,
+    StartActingSessionMutationVariables
 >;
 export const RequestPriceAdjustmentDocument = new TypedDocumentString(`
     mutation RequestPriceAdjustment($orderId: ID!, $orderLineId: ID!, $requestedPrice: Int!, $justification: String) {
@@ -15259,79 +14783,6 @@ export const RequestPriceAdjustmentDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     RequestPriceAdjustmentMutation,
     RequestPriceAdjustmentMutationVariables
->;
-export const SetDraftOrderShippingAddressDocument = new TypedDocumentString(`
-    mutation SetDraftOrderShippingAddress($orderId: ID!, $input: CreateAddressInput!) {
-  setDraftOrderShippingAddress(orderId: $orderId, input: $input) {
-    id
-  }
-}
-    `) as unknown as TypedDocumentString<
-    SetDraftOrderShippingAddressMutation,
-    SetDraftOrderShippingAddressMutationVariables
->;
-export const EligibleShippingMethodsForDraftOrderDocument = new TypedDocumentString(`
-    query EligibleShippingMethodsForDraftOrder($orderId: ID!) {
-  eligibleShippingMethodsForDraftOrder(orderId: $orderId) {
-    id
-    code
-  }
-}
-    `) as unknown as TypedDocumentString<
-    EligibleShippingMethodsForDraftOrderQuery,
-    EligibleShippingMethodsForDraftOrderQueryVariables
->;
-export const SetDraftOrderTradingPointDocument = new TypedDocumentString(`
-    mutation SetDraftOrderTradingPoint($orderId: ID!, $tradingPointId: ID) {
-  setDraftOrderTradingPoint(orderId: $orderId, tradingPointId: $tradingPointId)
-}
-    `) as unknown as TypedDocumentString<
-    SetDraftOrderTradingPointMutation,
-    SetDraftOrderTradingPointMutationVariables
->;
-export const SetDraftOrderShippingMethodDocument = new TypedDocumentString(`
-    mutation SetDraftOrderShippingMethod($orderId: ID!, $id: ID!) {
-  setDraftOrderShippingMethod(orderId: $orderId, shippingMethodId: $id) {
-    __typename
-  }
-}
-    `) as unknown as TypedDocumentString<
-    SetDraftOrderShippingMethodMutation,
-    SetDraftOrderShippingMethodMutationVariables
->;
-export const TransitionOrderToStateDocument = new TypedDocumentString(`
-    mutation TransitionOrderToState($id: ID!) {
-  transitionOrderToState(id: $id, state: "ArrangingPayment") {
-    __typename
-    ... on Order {
-      code
-    }
-    ... on OrderStateTransitionError {
-      errorCode
-      message
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<
-    TransitionOrderToStateMutation,
-    TransitionOrderToStateMutationVariables
->;
-export const AddManualPaymentToOrderDocument = new TypedDocumentString(`
-    mutation AddManualPaymentToOrder($input: ManualPaymentInput!) {
-  addManualPaymentToOrder(input: $input) {
-    __typename
-    ... on Order {
-      code
-    }
-    ... on ManualPaymentStateError {
-      errorCode
-      message
-    }
-  }
-}
-    `) as unknown as TypedDocumentString<
-    AddManualPaymentToOrderMutation,
-    AddManualPaymentToOrderMutationVariables
 >;
 export const SetOrderDeliveryDocument = new TypedDocumentString(`
     mutation SetOrderDelivery($orderId: ID!, $method: OrderDeliveryMethod!, $tradingPointId: ID) {

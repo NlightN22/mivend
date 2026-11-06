@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { MvInput, MvNotice, MvButton } from '@mivend/ui-kit';
-import { requestPriceAdjustment, type DraftOrderLine } from '../../api/orderCreate';
+import { requestPriceAdjustment } from '../../api/priceAdjustment';
 
-const props = defineProps<{ orderId: string; line: DraftOrderLine }>();
+const props = defineProps<{
+    orderId: string;
+    line: { id: string; discountedUnitPriceWithTax: number };
+}>();
 const emit = defineEmits<{
     applied: [decision: 'apply-directly' | 'requires-approval'];
     close: [];

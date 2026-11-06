@@ -5,9 +5,10 @@ vi.mock('../../api/client', () => ({ adminApi: (...a: unknown[]) => adminApi(...
 
 import {
     PORTAL_NOT_ACTIVATED_REASON,
+    actingStorefrontUrl,
     hasMoreCustomerMatches,
     searchCustomerOptions,
-} from '../../api/orderCreate';
+} from '../../api/actingSession';
 
 const point = (id: string, isActive: boolean, customerStatus: string) => ({
     id,
@@ -61,5 +62,13 @@ describe('searchCustomerOptions', () => {
     it('asks to refine the search only when more matches exist than one page shows', () => {
         expect(hasMoreCustomerMatches(20)).toBe(false);
         expect(hasMoreCustomerMatches(21)).toBe(true);
+    });
+});
+
+describe('actingStorefrontUrl', () => {
+    it('puts the ticket in the fragment of the storefront acting route', () => {
+        expect(actingStorefrontUrl('https://shop.example/', 'a b')).toBe(
+            'https://shop.example/acting#ticket=a%20b',
+        );
     });
 });

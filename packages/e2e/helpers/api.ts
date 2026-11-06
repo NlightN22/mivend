@@ -102,3 +102,23 @@ export async function shopLoginCookie(username: string, password: string): Promi
         .map(c => c.split(';')[0])
         .join('; ');
 }
+
+export async function actingShopGql<T>(
+    query: string,
+    variables?: Record<string, unknown>,
+    actingToken?: string,
+): Promise<T> {
+    const res = await fetch(`${SERVER_URL}/shop-api`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': E2E_API_USER_AGENT,
+            'x-acting-session': '1',
+            ...(actingToken ? { Authorization: `Bearer ${actingToken}` } : {}),
+        },
+        body: JSON.stringify({ query, variables }),
+    });
+    const json = (await res.json()) as { data: T; errors?: Array<{ message: string }> };
+    if (json.errors?.length) throw new Error(json.errors[0].message);
+    return json.data;
+}
