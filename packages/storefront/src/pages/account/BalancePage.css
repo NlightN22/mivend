@@ -135,6 +135,12 @@
     color: #66736e;
 }
 
+.bal-aside {
+    display: grid;
+    min-width: 0;
+    gap: 14px;
+}
+
 /* Notice */
 .bal-notice {
     padding: 15px 16px;

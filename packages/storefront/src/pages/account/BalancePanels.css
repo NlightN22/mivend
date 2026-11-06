@@ -117,12 +117,6 @@
 }
 
 /* Aside panels */
-.bal-aside {
-    display: grid;
-    min-width: 0;
-    gap: 14px;
-}
-
 .bal-panel {
     background: #fff;
     border: 1px solid #dde7e2;
