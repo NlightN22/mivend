@@ -1,4 +1,5 @@
 import account from './account';
+import acting from './acting';
 import balance from './balance';
 import cart from './cart';
 import catalog from './catalog';
@@ -26,4 +27,5 @@ export default {
     ...requests,
     ...demo,
     ...terms,
+    ...acting,
 };

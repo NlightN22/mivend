@@ -1,8 +1,9 @@
+import { actingCredentials, actingHeaders } from '../../api/actingToken';
 export async function suggestAddress(query: string): Promise<string[]> {
     const response = await fetch('/shop-api', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...actingHeaders() },
+        credentials: actingCredentials(),
         body: JSON.stringify({
             query: 'query($q:String!){ suggestAddress(query:$q) }',
             variables: { q: query },

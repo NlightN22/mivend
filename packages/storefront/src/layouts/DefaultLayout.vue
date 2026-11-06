@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import ActingBanner from '../components/ActingBanner.vue';
 import AppHeader from '../components/AppHeader.vue';
 </script>
 
 <template>
     <div class="default-layout">
+        <ActingBanner />
         <AppHeader />
         <RouterView />
     </div>

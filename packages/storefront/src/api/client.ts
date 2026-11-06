@@ -1,3 +1,5 @@
+import { actingCredentials, actingHeaders, readActingSession } from './actingToken';
+
 const SHOP_API_URL = '/shop-api';
 
 // WS subscriptions (graphql-ws) have no cookie jar, so auth goes via connectionParams.authorization
@@ -74,16 +76,17 @@ export async function shopApi<
     document: TypedDocumentLike<TResult, TVariables> | string,
     variables?: TVariables,
 ): Promise<TResult> {
+    const acting = readActingSession() !== null;
     const query = typeof document === 'string' ? document : document.toString();
     const response = await fetchWithRetry(SHOP_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...actingHeaders() },
+        credentials: actingCredentials(),
         body: JSON.stringify({ query, variables }),
     });
 
     const authToken = response.headers.get(AUTH_TOKEN_HEADER);
-    if (authToken) {
+    if (authToken && !acting) {
         capturedAuthToken = authToken;
     }
 

@@ -255,6 +255,7 @@ services:
             API_TARGET: http://server:3000
             SITE_NAME: ${SITE_NAME:-Shop}
             SITE_FAVICON_URL: ${SITE_FAVICON_URL:-/favicon.svg}
+            MANAGER_PUBLIC_URL: ${MANAGER_PUBLIC_URL:-}
         ports:
             - '${STOREFRONT_BIND_ADDRESS:-127.0.0.1}:${STOREFRONT_PORT:-8004}:80'
         depends_on:

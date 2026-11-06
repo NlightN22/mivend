@@ -1,3 +1,4 @@
+import { actingCredentials, actingHeaders } from '../../api/actingToken';
 import { ref, type Ref } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { isTradingPointValid } from './tradingPointValidation';
@@ -32,8 +33,8 @@ function gql(
 ): Promise<{ data?: Record<string, unknown> }> {
     return fetch('/shop-api', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...actingHeaders() },
+        credentials: actingCredentials(),
         body: JSON.stringify({ query, variables }),
     }).then(r => r.json());
 }

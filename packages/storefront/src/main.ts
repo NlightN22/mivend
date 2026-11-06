@@ -1,3 +1,4 @@
+import { captureActingTicket } from './utils/actingTicket';
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import ElementPlus from 'element-plus';
@@ -38,6 +39,8 @@ import { initTheme } from './theme';
 
 reloadOnStaleChunk();
 initTheme();
+
+captureActingTicket();
 
 const app = createApp(App);
 

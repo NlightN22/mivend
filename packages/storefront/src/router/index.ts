@@ -10,6 +10,10 @@ export const router = createRouter({
             meta: { layout: 'auth' },
         },
         {
+            path: '/acting',
+            component: () => import('../pages/acting/ActingEntryPage.vue'),
+        },
+        {
             path: '/set-password',
             component: () => import('../pages/auth/SetPasswordPage.vue'),
             props: { flow: 'reset' },

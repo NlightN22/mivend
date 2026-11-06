@@ -31,6 +31,7 @@ server {
         sub_filter '<title>Shop</title>' '<title>${SITE_NAME}</title>';
         sub_filter 'href="/favicon.svg"' 'href="${SITE_FAVICON_URL}"';
         sub_filter '<meta name="site-name" content="Shop" />' '<meta name="site-name" content="${SITE_NAME}" />';
+        sub_filter '<meta name="manager-url" content="" />' '<meta name="manager-url" content="${MANAGER_PUBLIC_URL}" />';
     }
 
     location /shop-api {

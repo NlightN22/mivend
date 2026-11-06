@@ -7234,3 +7234,48 @@ export const OrderStatusesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<OrderStatusesQuery, OrderStatusesQueryVariables>;
+
+export type MutationExchangeActingTicketArgs = {
+    ticket: Scalars['String']['input'];
+};
+
+export type ExchangeActingTicketMutationVariables = Exact<{
+    ticket: Scalars['String']['input'];
+}>;
+
+export type ExchangeActingTicketMutation = {
+    exchangeActingTicket: {
+        token: string;
+        expiresAt: any;
+        administratorId: string;
+        counterpartyId: string;
+        tradingPointId?: string | null;
+    };
+};
+
+export type FinishActingSessionMutationVariables = Exact<{ [key: string]: never }>;
+
+export type FinishActingSessionMutation = { finishActingSession: boolean };
+
+export const ExchangeActingTicketDocument = new TypedDocumentString(`
+    mutation ExchangeActingTicket($ticket: String!) {
+  exchangeActingTicket(ticket: $ticket) {
+    token
+    expiresAt
+    administratorId
+    counterpartyId
+    tradingPointId
+  }
+}
+    `) as unknown as TypedDocumentString<
+    ExchangeActingTicketMutation,
+    ExchangeActingTicketMutationVariables
+>;
+export const FinishActingSessionDocument = new TypedDocumentString(`
+    mutation FinishActingSession {
+  finishActingSession
+}
+    `) as unknown as TypedDocumentString<
+    FinishActingSessionMutation,
+    FinishActingSessionMutationVariables
+>;

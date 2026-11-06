@@ -2,6 +2,8 @@ import { computed, onMounted, ref, type ComputedRef, type Ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { formatDate } from '../../i18n/format';
 import { shopApi } from '../../api/client';
+import { useActingStore } from '../../stores/acting';
+import { managerOrderUrl } from '../../utils/managerUrl';
 import { useAuthStore } from '../../stores/auth';
 import { describeLoadError, type LoadErrorText } from '../../api/describeLoadError';
 import {
@@ -27,6 +29,7 @@ export interface UseOrderCreated {
     tradingPoint: ComputedRef<string | null>;
     paymentLabel: ComputedRef<string>;
     delivery: ComputedRef<string | null>;
+    managerOrderHref: ComputedRef<string | null>;
     load: () => Promise<void>;
 }
 
@@ -34,6 +37,7 @@ export function useOrderCreated(): UseOrderCreated {
     const route = useRoute();
     const authStore = useAuthStore();
     const router = useRouter();
+    const actingStore = useActingStore();
     const code = computed(() => (typeof route.query.code === 'string' ? route.query.code : ''));
 
     const data = ref<OrderCreatedQuery | null>(null);
@@ -109,6 +113,10 @@ export function useOrderCreated(): UseOrderCreated {
 
     onMounted(load);
 
+    const managerOrderHref = computed(() =>
+        actingStore.isActing && order.value ? managerOrderUrl(order.value.code) : null,
+    );
+
     return {
         loading,
         error,
@@ -121,6 +129,7 @@ export function useOrderCreated(): UseOrderCreated {
         tradingPoint,
         paymentLabel,
         delivery,
+        managerOrderHref,
         load,
     };
 }

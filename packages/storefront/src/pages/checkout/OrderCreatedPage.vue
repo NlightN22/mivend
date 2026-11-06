@@ -17,6 +17,7 @@ const {
     tradingPoint,
     paymentLabel,
     delivery,
+    managerOrderHref,
     load,
 } = useOrderCreated();
 </script>
@@ -76,6 +77,14 @@ const {
                         >{{ $t('orderCreated.printProforma', { number: proformaInvoice.number }) }}
                         <ProformaInvoiceVersionBadge :version="proformaInvoice.version"
                     /></a>
+                    <a
+                        v-if="managerOrderHref"
+                        :href="managerOrderHref"
+                        target="_blank"
+                        rel="noopener"
+                        class="oc-btn oc-btn--secondary"
+                        >{{ $t('acting.openInManager') }}</a
+                    >
                     <RouterLink to="/catalog" class="oc-btn oc-btn--ghost">{{
                         $t('orderCreated.continueShopping')
                     }}</RouterLink>

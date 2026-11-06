@@ -1,0 +1,13 @@
+mutation ExchangeActingTicket($ticket: String!) {
+    exchangeActingTicket(ticket: $ticket) {
+        token
+        expiresAt
+        administratorId
+        counterpartyId
+        tradingPointId
+    }
+}
+
+mutation FinishActingSession {
+    finishActingSession
+}

@@ -2,11 +2,13 @@
 import { onMounted } from 'vue';
 import { MvToastContainer, MvConnectionBar } from '@mivend/ui-kit';
 import { useAuthStore } from './stores/auth';
+import { useActingStore } from './stores/acting';
 import { useCartStore } from './stores/cart';
 import { useLogout } from './composables/useLogout';
 
 const authStore = useAuthStore();
 const cartStore = useCartStore();
+const actingStore = useActingStore();
 
 onMounted(async () => {
     await Promise.all([authStore.init(), cartStore.fetchCart()]);
@@ -18,6 +20,7 @@ onMounted(async () => {
         // restart would silently mint a brand-new session on top of a still-valid one.
         authStore.authStatus === 'unauthenticated' &&
         import.meta.env.DEV &&
+        !actingStore.isActing &&
         !sessionStorage.getItem('mv_logged_out')
     ) {
         await authStore.login('ivan@autoservice-nord.example', 'Password123!');
