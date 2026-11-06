@@ -82,7 +82,7 @@ const errors = computed(() => tradingPointErrors(model.value, props.original));
 <style scoped>
 .tp-form {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 10px;
     margin-bottom: 14px;
 }
@@ -117,7 +117,7 @@ const errors = computed(() => tradingPointErrors(model.value, props.original));
 
 @media (max-width: 960px) {
     .tp-form {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     .tp-field--wide {
         grid-column: auto;

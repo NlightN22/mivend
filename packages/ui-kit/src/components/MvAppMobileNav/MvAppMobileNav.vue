@@ -87,7 +87,7 @@ const isMoreActive = computed(
         bottom: 0;
         z-index: var(--mv-z-floating);
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         min-height: 62px;
         padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
         background: rgba(255, 255, 255, 0.97);

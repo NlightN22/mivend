@@ -60,6 +60,8 @@ function formatUntil(iso: string): string {
 
 <style scoped>
 .olt {
+    min-width: 0;
+    overflow-x: auto;
     background: #fff;
     border: 1px solid #edf2ef;
     border-radius: 20px;

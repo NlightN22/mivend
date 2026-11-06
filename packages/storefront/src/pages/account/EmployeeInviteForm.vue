@@ -73,7 +73,7 @@ const form = ref({ name: '', contact: '', role: '', allPoints: false, points: []
 
 .emp-invite-form {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
     gap: 10px;
     margin-bottom: 14px;
 }
@@ -131,7 +131,7 @@ const form = ref({ name: '', contact: '', role: '', allPoints: false, points: []
 
 @media (max-width: 960px) {
     .emp-invite-form {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
     .emp-field--points {
         grid-column: auto;
@@ -140,7 +140,7 @@ const form = ref({ name: '', contact: '', role: '', allPoints: false, points: []
 
 @media (max-width: 640px) {
     .emp-invite-form {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

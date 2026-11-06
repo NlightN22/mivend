@@ -193,12 +193,12 @@ const stats = computed(() => [
 
 @media (max-width: 960px) {
     .documents-page {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         padding-left: 16px;
         padding-right: 16px;
     }
     .documents-page__stats {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

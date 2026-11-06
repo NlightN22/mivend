@@ -75,7 +75,7 @@ const { t } = useI18n();
 
 @media (max-width: 760px) {
     .settlement-cards__group {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

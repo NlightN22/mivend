@@ -40,7 +40,7 @@ const { t } = useI18n();
 
 @media (max-width: 960px) {
     .acts-page {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

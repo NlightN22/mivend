@@ -8,6 +8,14 @@
     padding: 24px 28px 56px;
 }
 
+@media (max-width: 960px) {
+    .bal-page {
+        grid-template-columns: minmax(0, 1fr);
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+
 .bal-content {
     min-width: 0;
 }
@@ -16,6 +24,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 16px;
     margin-bottom: 24px;
 }
@@ -35,8 +44,8 @@
 
 .bal-head-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
-    flex-shrink: 0;
 }
 
 .bal-btn {
@@ -91,6 +100,8 @@
 }
 
 .bal-metric {
+    min-width: 0;
+    overflow-wrap: anywhere;
     background: #fff;
     border: 1px solid #dde7e2;
     border-radius: 20px;
@@ -113,7 +124,7 @@
     margin-bottom: 6px;
 }
 .bal-metric__value {
-    font-size: 22px;
+    font-size: clamp(17px, 5.4vw, 22px);
     font-weight: 950;
     letter-spacing: -0.04em;
     color: #14231f;
@@ -155,4 +166,25 @@
 .bal-state {
     padding: 24px 0;
     color: #66736e;
+}
+
+@media (max-width: 1100px) {
+    .bal-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .bal-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .bal-aside {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .bal-head {
+        flex-direction: column;
+    }
+    .bal-aside {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }

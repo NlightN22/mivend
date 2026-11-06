@@ -119,6 +119,7 @@
 /* Aside panels */
 .bal-aside {
     display: grid;
+    min-width: 0;
     gap: 14px;
 }
 
@@ -176,41 +177,15 @@
     font-weight: 900;
 }
 
-@media (max-width: 1100px) {
-    .bal-metrics {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    .bal-layout {
-        grid-template-columns: 1fr;
-    }
-    .bal-aside {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
 @media (max-width: 960px) {
-    .bal-page {
-        grid-template-columns: 1fr;
-        padding-left: 16px;
-        padding-right: 16px;
-    }
     .bal-row {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
 }
 
 @media (max-width: 640px) {
-    .bal-head {
-        flex-direction: column;
-    }
-    .bal-metrics {
-        grid-template-columns: 1fr 1fr;
-    }
-    .bal-aside {
-        grid-template-columns: 1fr;
-    }
     .bal-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
@@ -249,6 +224,6 @@
 
 @media (max-width: 960px) {
     .bal-row--contract {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
 }

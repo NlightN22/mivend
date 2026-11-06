@@ -187,7 +187,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
 .mv-mobile-sheet__grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 8px;
 }
 

@@ -178,7 +178,7 @@ onMounted(() => {
 
 @media (max-width: 960px) {
     .settlement-page {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

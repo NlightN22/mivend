@@ -261,7 +261,7 @@ function getBrand(p: RelatedProduct) {
 
 .pmc__mini {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     padding-top: 14px;
     border-top: 1px solid #edf2ef;

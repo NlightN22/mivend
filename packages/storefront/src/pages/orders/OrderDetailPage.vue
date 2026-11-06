@@ -199,13 +199,13 @@ onMounted(() => {
 
 @media (max-width: 1100px) {
     .od-body {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
 @media (max-width: 960px) {
     .od-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

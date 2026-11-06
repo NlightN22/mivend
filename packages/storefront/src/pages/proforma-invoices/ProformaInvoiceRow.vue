@@ -157,7 +157,7 @@ const isPayable =
 
 @media (max-width: 640px) {
     .proforma-invoice-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     .proforma-invoice-row__actions {
         grid-column: auto;

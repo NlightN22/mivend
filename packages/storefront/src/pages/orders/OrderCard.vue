@@ -228,7 +228,7 @@ const preview = computed(() => {
 
 @media (max-width: 760px) {
     .order-card-head {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     .order-pay {
         text-align: left;

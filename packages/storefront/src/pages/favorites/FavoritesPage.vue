@@ -173,7 +173,7 @@ function handleClearUnavailable(): void {
 
 @media (max-width: 900px) {
     .favorites-page {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         padding: 16px;
     }
     .favorites-page__head {

@@ -180,7 +180,7 @@ const fmt = (n: number): string => formatMoney(n);
 
 @media (max-width: 620px) {
     .frequent-products__grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

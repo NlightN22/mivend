@@ -219,7 +219,7 @@ const methods = computed(() =>
 
 @media (max-width: 900px) {
     .payment-selector__grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

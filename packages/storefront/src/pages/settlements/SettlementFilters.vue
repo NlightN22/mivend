@@ -140,7 +140,7 @@ function setBound(bound: 'from' | 'to', value: string): void {
 
 @media (max-width: 560px) {
     .settlement-filters__row {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

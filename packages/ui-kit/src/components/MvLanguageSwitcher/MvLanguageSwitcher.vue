@@ -165,7 +165,7 @@ onBeforeUnmount(() => {
 
 .mv-lang__option {
     display: grid;
-    grid-template-columns: 22px 28px 1fr 16px;
+    grid-template-columns: 22px 28px minmax(0, 1fr) 16px;
     align-items: center;
     gap: 8px;
     padding: 9px 10px;

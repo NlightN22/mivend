@@ -406,7 +406,7 @@ onBeforeUnmount(() => observer?.disconnect());
 }
 @media (max-width: 480px) {
     .plv-grid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: minmax(0, 1fr) !important;
     }
 }
 </style>

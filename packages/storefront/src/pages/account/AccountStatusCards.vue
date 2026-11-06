@@ -128,7 +128,7 @@ const delayDays = computed(() => authStore.counterparty?.paymentDelayDays ?? 0);
 
 @media (max-width: 1240px) {
     .status-cards {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

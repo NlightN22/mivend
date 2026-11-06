@@ -108,7 +108,7 @@ onMounted(() => cartStore.fetchCart());
 
 @media (max-width: 1180px) {
     .cart-page__layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

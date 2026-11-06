@@ -175,12 +175,12 @@
         display: none;
     }
     .req-toolbar__quick-fields {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
 @media (max-width: 640px) {
     .req-toolbar__line {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }

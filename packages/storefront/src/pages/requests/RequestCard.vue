@@ -214,7 +214,7 @@ const text = (field: string): string => t(`requests.demo.r${props.request.id}.${
 
 @media (max-width: 960px) {
     .req-card__head {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     .req-card__actions {
         justify-content: flex-start;

@@ -25,7 +25,8 @@ withDefaults(defineProps<{ items: BreadcrumbItem[]; ariaLabel?: string }>(), {
 .mv-breadcrumbs {
     display: flex;
     align-items: center;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 4px 8px;
     font-size: 13px;
 }
 
@@ -44,6 +45,8 @@ withDefaults(defineProps<{ items: BreadcrumbItem[]; ariaLabel?: string }>(), {
 }
 
 .mv-breadcrumbs__current {
+    min-width: 0;
+    overflow-wrap: anywhere;
     color: #2c3b36;
     font-weight: 600;
 }

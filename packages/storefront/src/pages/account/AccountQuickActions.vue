@@ -163,7 +163,7 @@ const limitText = computed(() => {
 
 @media (max-width: 620px) {
     .quick-actions__grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

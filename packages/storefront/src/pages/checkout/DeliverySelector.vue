@@ -234,7 +234,7 @@ const modalOpen = ref(false);
 
 @media (max-width: 900px) {
     .delivery-selector__grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

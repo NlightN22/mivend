@@ -239,13 +239,13 @@ onMounted(() => void reload());
 
 @media (max-width: 1180px) {
     .orders-page-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
 @media (max-width: 960px) {
     .orders-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

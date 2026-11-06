@@ -179,7 +179,7 @@ const { demoAllowed } = useDemoMode();
 
 @media (max-width: 960px) {
     .requests-page {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         padding-left: 16px;
         padding-right: 16px;
     }

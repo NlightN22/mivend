@@ -226,12 +226,12 @@ onMounted(reload);
 
 @media (max-width: 960px) {
     .proforma-invoices-page {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         padding-left: 16px;
         padding-right: 16px;
     }
     .proforma-invoices-page__stats {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

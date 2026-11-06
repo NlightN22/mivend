@@ -266,7 +266,7 @@ const { t } = useI18n();
 
 @media (max-width: 640px) {
     .doc-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     .doc-row__actions {
         grid-column: auto;

@@ -196,7 +196,7 @@ onMounted(loadPoints);
 
 @media (max-width: 960px) {
     .tp-page {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         padding-left: 16px;
         padding-right: 16px;
     }

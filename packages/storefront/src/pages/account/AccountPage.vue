@@ -84,10 +84,10 @@ onMounted(load);
 
 @media (max-width: 960px) {
     .account-page__layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     .account-page__two-col {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

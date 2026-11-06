@@ -87,7 +87,7 @@ onMounted(() => Promise.all([cartStore.fetchCart(), checkoutStore.loadDeliveryMe
 
 @media (max-width: 1260px) {
     .checkout-page__layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     .checkout-page__side {
         position: static;

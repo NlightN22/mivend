@@ -283,7 +283,7 @@ function selectAllOnFocus(event: FocusEvent): void {
 .mv-date-picker__weekdays,
 .mv-date-picker__grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .mv-date-picker__weekdays span {

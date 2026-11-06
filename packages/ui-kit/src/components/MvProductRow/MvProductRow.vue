@@ -492,7 +492,7 @@ function onStepperChange(qty: number): void {
 
 .mv-product-row__actions {
     display: grid;
-    grid-template-columns: 28px 1fr;
+    grid-template-columns: 28px minmax(0, 1fr);
     align-items: center;
     gap: 8px;
     padding: 0 0 0 8px;

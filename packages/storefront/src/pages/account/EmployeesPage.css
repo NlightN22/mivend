@@ -179,12 +179,12 @@
 
 @media (max-width: 960px) {
     .emp-page {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         padding-left: 16px;
         padding-right: 16px;
     }
     .emp-roles-help__grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
 }
 
@@ -194,7 +194,7 @@
         align-items: flex-start;
     }
     .emp-roles-help__grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

@@ -131,7 +131,7 @@
 /* Form */
 .set-form {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px;
 }
 .set-form--narrow {
@@ -255,12 +255,12 @@
 
 @media (max-width: 960px) {
     .set-page {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         padding-left: 16px;
         padding-right: 16px;
     }
     .set-form {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     .set-field--wide {
         grid-column: auto;
