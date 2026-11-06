@@ -251,13 +251,16 @@ ci:
 
 # ── Tests ──────────────────────────────────────────────────────────────────────
 
+# One heavy unit/int/access run at a time across sessions: the box has 8 cores and parallel runs make every one of them slow.
+TEST_LOCK = flock /tmp/mivend-test.lock
+
 test:
-	pnpm test
-	bash infrastructure/scripts/tests/dev-kill-lib.test.sh
-	bash infrastructure/scripts/tests/site-identity-envsh.test.sh
+	$(TEST_LOCK) pnpm test
+	$(TEST_LOCK) bash infrastructure/scripts/tests/dev-kill-lib.test.sh
+	$(TEST_LOCK) bash infrastructure/scripts/tests/site-identity-envsh.test.sh
 
 test-int: up
-	pnpm --filter "{packages/**}" --filter server --no-bail test:integration
+	$(TEST_LOCK) pnpm --filter "{packages/**}" --filter server --no-bail test:integration
 
 # Price read paths and price-event ingest on synthetic data in a throwaway schema; manual, not in CI.
 # Results are also appended to BENCH_OUT when set (docs/testing-strategy.md "Pricing benchmark").
@@ -268,7 +271,7 @@ bench-pricing: up
 # Role x entity API matrix against a throwaway server, database and RabbitMQ vhost, about 4 min (docs/testing-strategy.md).
 test-access: up
 	pnpm build:plugins
-	pnpm --filter server test:access
+	$(TEST_LOCK) pnpm --filter server test:access
 
 # Mutation testing pilot (docs/testing-strategy.md "Mutation testing") — ad hoc only, not part
 # of CI or `make test`. Scoped in stryker.config.mjs to one small module at a time.
