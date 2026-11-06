@@ -318,7 +318,10 @@ const canOrder = computed(() => props.stockVariant !== 'out');
     height: 138px;
     overflow: hidden;
     display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
     place-items: center;
+    padding: 6px;
+    box-sizing: border-box;
     background: linear-gradient(145deg, var(--app-ph-from), var(--app-ph-to));
     border-bottom: 1px solid var(--app-nav-border);
 }
@@ -330,13 +333,10 @@ const canOrder = computed(() => props.stockVariant !== 'out');
 }
 
 .mv-product-card__img-photo {
-    position: absolute;
-    inset: 0;
-    width: 100%;
     height: 100%;
+    max-width: 100%;
     object-fit: contain;
-    padding: 6px;
-    box-sizing: border-box;
+    border-radius: var(--app-radius-md);
 }
 
 .mv-product-card__img-icon {
