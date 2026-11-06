@@ -1,45 +1,16 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
 import { Search } from '@element-plus/icons-vue';
-import { useDebouncedCallback } from '../../composables/useDebouncedCallback';
+import { useDebouncedTextModel } from '../../composables/useDebouncedTextModel';
 import type { TextFilterConfig } from './columnFilterTypes';
 
 const props = defineProps<{ config: TextFilterConfig; modelValue: string }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
-// Local, immediate state for what the input displays — decoupled from `modelValue` itself (which
-// only updates on the debounced emit below). Binding the input's :value directly to `modelValue`
-// while a PARENT also debounces at its own end double-debounces the display: the input wouldn't
-// visibly accept a keystroke until the parent's own timer fires and writes back down, and any
-// reactive state the parent derives from `modelValue` (this table's `tableState.filters`, which
-// drives header classes/visible-columns/etc.) still re-renders on every synchronous write to it
-// regardless of whether the *emit to the grandparent* was debounced — that re-render is what
-// tears down and rebuilds this very input, killing focus mid-word (real, confirmed-live incident,
-// twice: once before this component existed, once again here because only the outbound emit was
-// debounced, not the parent's own local state write that the emit triggers). Debouncing here,
-// fully inside this component with its own untouched-by-the-parent local ref, is the only way to
-// guarantee typing itself never causes a re-render upstream.
-const localValue = ref(props.modelValue);
-watch(
+const { text, input, clear } = useDebouncedTextModel(
     () => props.modelValue,
-    v => {
-        if (v !== localValue.value) localValue.value = v;
-    },
-);
-
-const debouncedEmit = useDebouncedCallback(
-    (value: string) => emit('update:modelValue', value),
+    value => emit('update:modelValue', value),
     props.config.debounceMs,
 );
-
-function onInput(e: Event): void {
-    localValue.value = (e.target as HTMLInputElement).value;
-    debouncedEmit(localValue.value);
-}
-function onClear(): void {
-    localValue.value = '';
-    emit('update:modelValue', '');
-}
 </script>
 
 <template>
@@ -47,16 +18,16 @@ function onClear(): void {
         <Search class="mv-column-filter-text__icon" />
         <input
             type="text"
-            :value="localValue"
+            :value="text"
             :placeholder="config.placeholder ?? 'Search…'"
-            @input="onInput"
+            @input="input(($event.target as HTMLInputElement).value)"
         />
         <button
-            v-if="localValue"
+            v-if="text"
             type="button"
             class="mv-column-filter-text__clear"
             aria-label="Clear"
-            @click="onClear"
+            @click="clear"
         >
             ×
         </button>

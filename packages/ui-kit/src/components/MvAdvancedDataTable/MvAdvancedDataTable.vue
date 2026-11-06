@@ -222,16 +222,29 @@ function sortIconFor(col: AdvancedDataTableColumn): Component {
 // `filterDisplay` set AND that column's field has an entry here — actual values never live here
 // (`tableState.filters` is the single source of truth), this only makes PrimeVue draw the
 // funnel/overlay chrome and own its open/close.
-const columnFilters = ref<DataTableFilterMeta>(
-    Object.fromEntries(
-        props.columns
-            .filter(c => c.filterConfig.type !== 'none')
-            .map(c => [c.field, { value: null, matchMode: 'equals' }]),
-    ),
+const columnFilters = ref<DataTableFilterMeta>({});
+watch(
+    () => props.columns,
+    columns => {
+        const next: DataTableFilterMeta = {};
+        for (const c of columns) {
+            if (c.filterConfig.type === 'none') continue;
+            next[c.field] = columnFilters.value[c.field] ?? { value: null, matchMode: 'equals' };
+        }
+        columnFilters.value = next;
+    },
+    { immediate: true },
 );
 
+// Writing an unchanged value would still replace the filters object and trigger a page reset and
+// a refetch, which is what made the overlay rebuild under a user who was typing.
+function setFilter(key: string, value: unknown): void {
+    if (JSON.stringify(tableState.value.filters[key]) === JSON.stringify(value)) return;
+    tableState.value.filters = { ...tableState.value.filters, [key]: value };
+}
+
 function onFilterValueChange(col: AdvancedDataTableColumn, value: unknown): void {
-    tableState.value.filters = { ...tableState.value.filters, [col.field]: value };
+    setFilter(col.field, value);
     if (interactionMode(col.filterConfig) === 'instant-close') closePrimeVueFilterOverlay();
 }
 
@@ -429,9 +442,7 @@ const isMobile = useIsMobileViewport(800);
                         debounceMs: search.debounceMs,
                     }"
                     :model-value="(tableState.filters[search.filterKey] as string) ?? ''"
-                    @update:model-value="
-                        tableState.filters = { ...tableState.filters, [search.filterKey]: $event }
-                    "
+                    @update:model-value="setFilter(search.filterKey, $event)"
                 />
                 <slot name="toolbar-start" />
             </div>
