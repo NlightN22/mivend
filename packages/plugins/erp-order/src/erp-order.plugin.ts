@@ -67,7 +67,7 @@ const adminApiSchema = gql`
         ): OrderList!
         "Sum of totalWithTax over the caller's visible orders matching options.filter"
         visibleOrdersAmount(options: OrderListOptions): Money!
-        "Orders needing attention (pending price adjustment or overdue shipment), in one request"
+        "Orders needing attention in one request: pending price adjustment (waiting), overdue shipment (overdueRows) and their intersection (both)"
         ordersAttention(overdueBefore: DateTime!): OrdersAttention!
         "Latest placed-order date per listed counterparty, visible orders only"
         lastOrderDates(counterpartyIds: [ID!]!): [CounterpartyLastOrder!]!

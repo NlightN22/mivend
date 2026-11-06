@@ -7,6 +7,7 @@ import {
     MvPanel,
     MvWarningBanner,
     MvPagination,
+    MvNotice,
     MvSkeleton,
     MvStatusBadge,
     MvDataTableToolbar,
@@ -60,6 +61,7 @@ const managers = ref<ManagerOption[]>([]);
 const branches = ref<BranchOption[]>([]);
 const loading = ref(true);
 const summaryLoading = ref(true);
+const summaryError = ref(false);
 const departmentName = ref<string | null>(null);
 
 const CHIPS: FilterChip[] = [
@@ -231,10 +233,12 @@ async function loadOrders(): Promise<void> {
 
 async function loadSummary(): Promise<void> {
     summaryLoading.value = true;
+    summaryError.value = false;
     try {
         summary.value = await fetchOrdersSummary();
     } catch (e) {
         console.warn('[orders] could not load summary:', e);
+        summaryError.value = true;
     } finally {
         summaryLoading.value = false;
     }
@@ -356,6 +360,10 @@ const todayAmountFormatted = computed(() => {
                 :caption="`${summary.todayCount} orders today`"
             />
         </MvKpiCarousel>
+        <MvNotice v-else-if="summaryError" variant="error" class="orders-page__kpis">
+            Could not load the orders summary.
+            <button type="button" @click="loadSummary">Retry</button>
+        </MvNotice>
         <MvSkeleton
             v-else-if="summaryLoading"
             class="orders-page__kpis"
