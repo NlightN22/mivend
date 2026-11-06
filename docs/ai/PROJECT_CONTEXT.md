@@ -9,6 +9,12 @@ Updated: 2026-11-06
 - Code: `shared/hiddenCategoryProducts.ts`, access-control `HiddenCategoryProductsService` + `shop-visible-products.resolver.ts` + order interceptor, search `internal-shop-search.resolver.ts` (internal) and `ProductLookupService` (external).
 - External: `excludeCategoryIds` on /resolve-query (search-service `sha-dc51122`, deploy it first). A hidden ancestor always hides its subtree (a `visible` override under it has no effect, `resolveCategoryIsPrivate`), so internal and external agree. `make test-int` not run by the agent.
 
+## #307/#308 search code matches + N+1 round (2026-11-04..06, DONE, prod 0.0.27-0.0.33, issues closed)
+- Per-request batching: `CtxLoader` (packages/shared, ctx must not outlive one operation), `CatalogPricingService`/`LookupMemo`/`OrderLineContextService`, `AccessScopeService` per-ctx memo; a failing key returns an Error in its slot (never fails the batch). `activeDiscountCounts` refuses >200 ids. Measured: home 152->7 queries, cart fields 165->11, repricing 152->8.
+- Header shows "counterparty full name · trading point name (else address)"; order status `confirmed` is "Ждёт отгрузки" (filter "Ждут отгрузки").
+- Gotcha: `RoleProvisioningService` rewrites default roles' permissions on EVERY start, hand-granted rights vanish on deploy; category visibility needs `UpdateCatalog`, now in `default-roles.ts` (general-director, portal-admin). See docs/access-control.md.
+- Flaky `collection-filters-recompute.scheduled-task.test.ts` fixed by freezing Date (`5d6aec12`, local only, handed to mivend.bugs.1 to ship). Open, not investigated: prod hang 2026-11-05 05:46 UTC (pool exhaustion after a manager /orders 499; owner said to drop it).
+
 ## #297 prices keyed by product ERP id (DONE, prod 0.0.12; full text: `.backup/PROJECT_CONTEXT-2026-10-31-297-298-full.md`)
 - `product_variant_price_entry` is keyed by `productExternalId` + `priceTypeCode` (a price may arrive before its product); `PriceEntryService` keeps the variant-based API. Docs: `docs/pricing.md`, `make bench-pricing`.
 - Inbox retry: backoff 30 s to 30 min, 24 h budget, then `failed`; streams depending on a parent (contracts, photos, `order-changed`) can still fail this way (no issue, owner: not critical). Locally requeueing failed price events by SQL needs the owner's approval.
