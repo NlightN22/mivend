@@ -55,3 +55,23 @@ Colors written outside the template, each approved by the user after the two-ste
 
 | File | Value | Reason |
 | ---- | ----- | ------ |
+
+## Manager list tables
+
+Every manager list (orders, proforma invoices, payments, discounts, customers, approvals) is an
+`MvAdvancedDataTable` and provides, in this order:
+
+- **Views control** in the table toolbar (`#toolbar-end`, left of the column settings): `TableViewsMenu`
+  with a unique `viewsKey`. A view is personal and stores filters, sort, the search term, column order
+  and visibility. It is never a separate widget on the page. Rename, duplicate and delete live in the
+  control; the last chosen view reopens with the list, unless the page was opened with filters in its link.
+- **Status chips with counts** (`MvFilterChips`, `count` from one grouped `take: 0` request, never a
+  request per chip). The most operational chip goes first and sets `emphasis` so its count stands out
+  while non-zero. Chips replace KPI tiles and "needs attention" banners for the same information.
+- **Preset filter** where the list is also shown inside another entity (a fixed customer): narrows the
+  list, is never shown as a filter, and does not widen server-side scope.
+- **Quick panel** (`MvSidePanel`) on row click for a glance; full-screen on a phone.
+
+Layout: the table takes the full page width; at a 1360px viewport the identifying columns fit without
+horizontal scroll and the rest start hidden behind the column settings. On a phone the list is a card
+list and the chips are one horizontally scrolling row (`scrollable`).
