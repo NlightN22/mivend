@@ -34,7 +34,9 @@ const connection = {
     getRepository: (ctx: TestCtx) => ({
         query: (sql: string, params: unknown[]) => ctx.manager.query(sql, params),
         find: async () => {
-            const rows: Row[] = await ctx.manager.query('select * from category order by id');
+            const rows: Row[] = await (ctx.manager ?? dataSource.manager).query(
+                'select * from category order by id',
+            );
             return rows.map(r => ({
                 id: r.id,
                 parentId: r.parentId,
@@ -200,6 +202,67 @@ describe('category tree writers against real Postgres', () => {
             ),
         ).rejects.toThrow();
         expect(await privateOf('root')).toBe(false);
+    });
+
+    it('releases the lock between top-level subtrees so a feed writer is not blocked for the whole run', async () => {
+        await dataSource.query('truncate category restart identity');
+        await dataSource.query(
+            "insert into category (code, override) values ('root', 'hidden'), ('other', 'hidden')",
+        );
+        await dataSource.query(
+            "insert into category (\"parentId\", code) values (1, 'a'), (2, 'b')",
+        );
+        const order: string[] = [];
+        let feed: Promise<void> | undefined;
+        const slowDeps = {
+            ...deps,
+            collectionService: {
+                update: async (ctx: TestCtx, input: { id: number; isPrivate?: boolean }) => {
+                    await deps.collectionService.update(ctx, input);
+                    if (feed === undefined) {
+                        feed = withAggregateLock(
+                            connection as never,
+                            {} as never,
+                            CATEGORY_TREE_LOCK,
+                            async () => {
+                                order.push('feed');
+                            },
+                        );
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    }
+                },
+            },
+        };
+        await recomputeCategoryTree({} as never, slowDeps as never);
+        order.push('recompute-done');
+        await feed;
+        expect(order).toEqual(['feed', 'recompute-done']);
+    });
+
+    it('a failure in a later subtree rolls back only that chunk', async () => {
+        await dataSource.query('truncate category restart identity');
+        await dataSource.query(
+            "insert into category (code, override) values ('root', 'hidden'), ('other', 'hidden')",
+        );
+        await dataSource.query(
+            "insert into category (\"parentId\", code) values (1, 'a'), (2, 'b')",
+        );
+        const failingDeps = {
+            ...deps,
+            collectionService: {
+                update: async (ctx: TestCtx, input: { id: number; isPrivate?: boolean }) => {
+                    await deps.collectionService.update(ctx, input);
+                    if (input.id === 4) throw new Error('boom');
+                },
+            },
+        };
+        await expect(recomputeCategoryTree({} as never, failingDeps as never)).rejects.toThrow(
+            'boom',
+        );
+        expect(await privateOf('root')).toBe(true);
+        expect(await privateOf('a')).toBe(true);
+        expect(await privateOf('other')).toBe(false);
+        expect(await privateOf('b')).toBe(false);
     });
 
     it('recomputes a prod-sized tree (8000 categories, all hidden by one root) within a generous bound', async () => {
