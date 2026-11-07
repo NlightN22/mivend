@@ -11664,6 +11664,36 @@ export type CancelOrderAsStaffMutation = {
         | { outcome: OrderCancelOutcome };
 };
 
+export type OrderCheckDefinitionsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type OrderCheckDefinitionsQuery = {
+    checkDefinitions: Array<{
+        code: string;
+        subjectType: string;
+        stages: Array<string>;
+        description: string;
+        defaultConsequence: string;
+        allowedConsequences: Array<string>;
+        stageConsequences: any | null;
+        stageDefaults: any | null;
+        defaultEnabled: any;
+    }>;
+};
+
+export type OrderCheckPoliciesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type OrderCheckPoliciesQuery = {
+    checkPolicies: Array<{
+        id: string;
+        checkCode: string;
+        stage: string;
+        branchId: string | null;
+        consequence: string;
+        recipient: string | null;
+        enabled: boolean;
+    }>;
+};
+
 export type OrderCheckResultFieldsFragment = {
     id: string;
     checkCode: string;
@@ -11759,6 +11789,7 @@ export type OrderDetailQuery = {
             lines: Array<{
                 id: string;
                 quantity: number;
+                unitPriceWithTax: any;
                 discountedUnitPriceWithTax: any;
                 discountedLinePriceWithTax: any;
                 productVariant: {
@@ -14879,6 +14910,37 @@ export const CancelOrderAsStaffDocument = new TypedDocumentString(`
     CancelOrderAsStaffMutation,
     CancelOrderAsStaffMutationVariables
 >;
+export const OrderCheckDefinitionsDocument = new TypedDocumentString(`
+    query OrderCheckDefinitions {
+  checkDefinitions(subjectType: "order") {
+    code
+    subjectType
+    stages
+    description
+    defaultConsequence
+    allowedConsequences
+    stageConsequences
+    stageDefaults
+    defaultEnabled
+  }
+}
+    `) as unknown as TypedDocumentString<
+    OrderCheckDefinitionsQuery,
+    OrderCheckDefinitionsQueryVariables
+>;
+export const OrderCheckPoliciesDocument = new TypedDocumentString(`
+    query OrderCheckPolicies {
+  checkPolicies(subjectType: "order") {
+    id
+    checkCode
+    stage
+    branchId
+    consequence
+    recipient
+    enabled
+  }
+}
+    `) as unknown as TypedDocumentString<OrderCheckPoliciesQuery, OrderCheckPoliciesQueryVariables>;
 export const OrderCheckResultsDocument = new TypedDocumentString(`
     query OrderCheckResults($orderId: String!) {
   checkResults(subjectType: "order", subjectId: $orderId) {
@@ -14972,6 +15034,7 @@ export const OrderDetailDocument = new TypedDocumentString(`
       lines {
         id
         quantity
+        unitPriceWithTax
         discountedUnitPriceWithTax
         discountedLinePriceWithTax
         productVariant {

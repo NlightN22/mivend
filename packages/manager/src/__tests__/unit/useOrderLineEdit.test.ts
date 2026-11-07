@@ -2,14 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 
 const api = vi.hoisted(() => ({
-    changeOrderLineQuantity: vi.fn(),
     fetchOrderLineAvailability: vi.fn(),
-    removeOrderLine: vi.fn(),
     splitOrderLinesByStock: vi.fn(),
 }));
 vi.mock('../../api/orderLineEdit', () => api);
 
-import { stepperMin, stepperOutcome } from '../../composables/orderLineStepper';
+import { stepperMin } from '../../composables/orderLineStepper';
 import { useOrderLineEdit } from '../../composables/useOrderLineEdit';
 
 describe('useOrderLineEdit', () => {
@@ -25,21 +23,20 @@ describe('useOrderLineEdit', () => {
         expect(edit.availability.value.get('7')?.step).toBe(5);
     });
 
-    it('reports the change to the page after a successful edit', async () => {
+    it('reports the change to the page after a successful edit and resolves true', async () => {
         const changed = vi.fn();
         const edit = useOrderLineEdit(ref('1'), changed);
-        await edit.setQuantity('7', 3);
-        expect(api.changeOrderLineQuantity).toHaveBeenCalledWith('1', '7', 3);
+        await expect(edit.apply(async () => undefined)).resolves.toBe(true);
         expect(changed).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps the server reason and does not reload on a refused edit', async () => {
-        api.removeOrderLine.mockRejectedValue(
-            new Error('Release the reservation before editing the lines'),
-        );
+    it('keeps the server reason, resolves false and does not reload on a refused edit', async () => {
         const changed = vi.fn();
         const edit = useOrderLineEdit(ref('1'), changed);
-        await edit.remove('7');
+        const refused = edit.apply(async () => {
+            throw new Error('Release the reservation before editing the lines');
+        });
+        await expect(refused).resolves.toBe(false);
         expect(edit.error.value).toMatch(/Release the reservation/);
         expect(changed).not.toHaveBeenCalled();
         expect(edit.busy.value).toBe(false);
@@ -62,23 +59,13 @@ describe('useOrderLineEdit', () => {
         expect(edit.error.value).toBe('');
     });
 
-    describe('stepper remove flow', () => {
-        it('stepping to 0 on a multi-line order asks to confirm, and confirming removes the line', async () => {
+    describe('stepper minimum', () => {
+        it('lets a multi-line order step down to 0 (remove)', () => {
             expect(stepperMin(true, 5)).toBe(0);
-            expect(stepperOutcome(0, 10, true)).toEqual({ kind: 'confirm-remove' });
-            const edit = useOrderLineEdit(ref('1'), vi.fn());
-            await edit.remove('7');
-            expect(api.removeOrderLine).toHaveBeenCalledWith('1', '7');
         });
 
-        it('keeps the last line: the minimum is one pack and zero is ignored', () => {
+        it('keeps the last line: the minimum is one pack', () => {
             expect(stepperMin(false, 5)).toBe(5);
-            expect(stepperOutcome(0, 10, false)).toBeNull();
-        });
-
-        it('saves any other changed quantity and ignores an unchanged one', () => {
-            expect(stepperOutcome(15, 10, true)).toEqual({ kind: 'save', quantity: 15 });
-            expect(stepperOutcome(10, 10, true)).toBeNull();
         });
     });
 });

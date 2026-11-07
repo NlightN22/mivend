@@ -5,7 +5,7 @@ import { adminTokenFor } from '../../helpers/api-tokens';
 import { releaseOrderReservation } from '../../helpers/manager-order';
 import { MANAGER_ACCOUNTS } from '../../fixtures/accounts';
 
-test('order detail shows the two-column layout with order lines and context @read-only', async ({
+test('order detail shows the header, order lines, findings, approvals and context @read-only', async ({
     page,
 }) => {
     const order = readE2eOrder();
@@ -18,7 +18,10 @@ test('order detail shows the two-column layout with order lines and context @rea
     await expect(page.getByRole('heading', { name: 'Reservation', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible();
 
+    await expect(page.getByRole('heading', { name: 'Approvals for this order' })).toBeVisible();
     await expect(page.locator('.order-lines thead')).toContainText('Available');
+    await expect(page.locator('.order-lines thead')).toContainText('Discount');
+    await expect(page.locator('.order-lines thead')).toContainText('Reserve');
     await expect(page.locator('.order-detail__panels')).toContainText('E2E Co');
 });
 
@@ -63,8 +66,10 @@ test.describe('reservation of the shared e2e order', () => {
         const panel = page.locator('.order-detail__panels');
         await expect(panel).toContainText('Not confirmed yet', { timeout: 15000 });
         await page.getByRole('button', { name: 'Confirm order' }).click();
+        await page.getByRole('button', { name: 'Confirm', exact: true }).click();
 
         await expect(panel).toContainText('Reserved');
-        await expect(panel.getByRole('button', { name: 'Release reservation' })).toBeVisible();
+        await page.getByRole('button', { name: 'More actions' }).click();
+        await expect(page.getByRole('menuitem', { name: 'Release reservation' })).toBeVisible();
     });
 });

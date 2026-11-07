@@ -1,8 +1,6 @@
 import { ref, type Ref } from 'vue';
 import {
-    changeOrderLineQuantity,
     fetchOrderLineAvailability,
-    removeOrderLine,
     splitOrderLinesByStock,
     type OrderLineAvailability,
     type SplitOutcome,
@@ -27,34 +25,24 @@ export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
         }
     }
 
-    async function run(action: () => Promise<void>): Promise<void> {
+    async function run(action: () => Promise<void>): Promise<boolean> {
         busy.value = true;
         error.value = '';
+        lastSplit.value = [];
+        alreadyWithinStock.value = false;
         try {
             await action();
             onChanged();
+            return true;
         } catch (e) {
             error.value = e instanceof Error ? e.message : 'The change was not applied';
+            return false;
         } finally {
             busy.value = false;
         }
     }
 
-    const setQuantity = (lineId: string, quantity: number): Promise<void> =>
-        run(async () => {
-            lastSplit.value = [];
-            alreadyWithinStock.value = false;
-            await changeOrderLineQuantity(orderId.value, lineId, quantity);
-        });
-
-    const remove = (lineId: string): Promise<void> =>
-        run(async () => {
-            lastSplit.value = [];
-            alreadyWithinStock.value = false;
-            await removeOrderLine(orderId.value, lineId);
-        });
-
-    const cutToStock = (): Promise<void> =>
+    const cutToStock = (): Promise<boolean> =>
         run(async () => {
             lastSplit.value = await splitOrderLinesByStock(orderId.value);
             alreadyWithinStock.value = lastSplit.value.length === 0;
@@ -67,8 +55,7 @@ export function useOrderLineEdit(orderId: Ref<string>, onChanged: () => void) {
         lastSplit,
         alreadyWithinStock,
         load,
-        setQuantity,
-        remove,
+        apply: run,
         cutToStock,
     };
 }

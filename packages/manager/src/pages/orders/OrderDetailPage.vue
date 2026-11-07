@@ -1,75 +1,60 @@
 <script setup lang="ts">
-import { useAuthStore } from '../../stores/auth';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { MvPanel, MvStatusBadge, formatDocumentNumber } from '@mivend/ui-kit';
-import {
-    fetchOrderDetail,
-    fetchPriceAdjustmentRequestsForOrder,
-    fetchRelatedDocuments,
-    NON_EDITABLE_ORDER_STATES,
-    type OrderDetail,
-    type PriceAdjustmentRequestSummary,
-    type RelatedDocument,
-} from '../../api/orderDetail';
-import { fetchManagerOptions, type ManagerOption } from '../../api/orders';
-import { fetchCreditForCounterparty, type CustomerCredit } from '../../api/customers';
-import { fetchOrderLineShortfalls, type OrderLineShortfallRow } from '../../api/orderLineEdit';
-import { fetchOrderReservations, type OrderReservation } from '../../api/reservation';
+import { MvPanel } from '@mivend/ui-kit';
+import { useAuthStore } from '../../stores/auth';
+import { NON_EDITABLE_ORDER_STATES } from '../../api/orderDetail';
 import { isNotRegisteredInErp } from '../../composables/isNotRegisteredInErp';
-import { formatPackaging, useOrderPackaging } from '../../composables/useOrderPackaging';
-import OrderDeliveryPanel from '../../components/order-detail/OrderDeliveryPanel.vue';
-import OrderContextPanel from '../../components/order-detail/OrderContextPanel.vue';
-import OrderStatusCards from '../../components/order-detail/OrderStatusCards.vue';
+import { useCustomerKpiData } from '../../composables/useCustomerKpiData';
+import { useFindingConsequences } from '../../composables/useFindingConsequences';
 import { useOrderChecks } from '../../composables/useOrderChecks';
-import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
-import PriceAdjustmentHistoryPanel from '../../components/order-detail/PriceAdjustmentHistoryPanel.vue';
-import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
-import OrderShortfallPanel from '../../components/order-detail/OrderShortfallPanel.vue';
-import OrderOverpaymentNotice from '../../components/order-detail/OrderOverpaymentNotice.vue';
-import OrderPaidAmount from '../../components/order-detail/OrderPaidAmount.vue';
-import OrderCancelPanel from '../../components/order-detail/OrderCancelPanel.vue';
-import ProformaInvoicesPanel from '../../components/order-detail/ProformaInvoicesPanel.vue';
-import PaymentReceivedPanel from '../../components/order-detail/PaymentReceivedPanel.vue';
+import { useOrderDetail } from '../../composables/useOrderDetail';
+import { useReservationActions } from '../../composables/useReservationActions';
+import { summarizeFindings } from '../../utils/orderFindingsSummary';
+import CustomerKpiStrip from '../../components/customers/CustomerKpiStrip.vue';
+import OrderApprovalsPanel from '../../components/order-detail/OrderApprovalsPanel.vue';
+import OrderContextPanel from '../../components/order-detail/OrderContextPanel.vue';
 import OrderContractPanel from '../../components/order-detail/OrderContractPanel.vue';
+import OrderDeliveryPanel from '../../components/order-detail/OrderDeliveryPanel.vue';
+import OrderErpRegistration from '../../components/order-detail/OrderErpRegistration.vue';
 import OrderErpStatusPanels from '../../components/order-detail/OrderErpStatusPanels.vue';
+import OrderFindingsPanel from '../../components/order-detail/OrderFindingsPanel.vue';
+import OrderFindingsStrip from '../../components/order-detail/OrderFindingsStrip.vue';
+import OrderHeader from '../../components/order-detail/OrderHeader.vue';
+import OrderLinesTable from '../../components/order-detail/OrderLinesTable.vue';
+import OrderLinesTotals from '../../components/order-detail/OrderLinesTotals.vue';
+import OrderShortfallPanel from '../../components/order-detail/OrderShortfallPanel.vue';
+import PaymentReceivedPanel from '../../components/order-detail/PaymentReceivedPanel.vue';
+import ProformaInvoicesPanel from '../../components/order-detail/ProformaInvoicesPanel.vue';
+import RelatedDocumentsPanel from '../../components/order-detail/RelatedDocumentsPanel.vue';
 import ReservationHolds from '../../components/order-detail/ReservationHolds.vue';
 import ReservationPanel from '../../components/order-detail/ReservationPanel.vue';
 
 const authStore = useAuthStore();
 const route = useRoute();
-const order = ref<OrderDetail | null>(null);
-const managers = ref<ManagerOption[]>([]);
-const adjustmentRequests = ref<PriceAdjustmentRequestSummary[]>([]);
-const documents = ref<RelatedDocument[]>([]);
-const loading = ref(true);
-const notFound = ref(false);
-const credit = ref<CustomerCredit | null>(null);
-const reservations = ref<OrderReservation[]>([]);
-const shortfalls = ref<OrderLineShortfallRow[]>([]);
+const data = useOrderDetail(() => route.params.code as string);
+const { order, reservations } = data;
 const orderId = computed(() => order.value?.id ?? '');
 const checks = useOrderChecks(orderId);
 const canSeeChecks = computed(() => authStore.hasPermission('ReadCheckResults'));
+const findings = computed(() => (canSeeChecks.value ? checks.findings.value : []));
+const { consequences } = useFindingConsequences(findings, () => canSeeChecks.value);
+const counterpartyId = computed(() => order.value?.customer?.counterparty?.id ?? null);
+const kpiData = useCustomerKpiData(counterpartyId);
 const contractPanel = ref<{ $el: HTMLElement } | null>(null);
-const contractAnchor = computed(() => contractPanel.value?.$el ?? null);
 
-// Mirrors DEFAULT_RESERVATION_DAYS in packages/plugins/reservation/src/types.ts — used only as
-// the form's initial value before an order's own customFields.reservationDays default loads.
+// Mirrors DEFAULT_RESERVATION_DAYS in packages/plugins/reservation/src/types.ts; the form's value until the order loads.
 const FALLBACK_RESERVATION_DAYS = 3;
-const defaultReservationDays = computed(
-    () => order.value?.customFields.reservationDays ?? FALLBACK_RESERVATION_DAYS,
-);
-
-const managerName = computed(() => {
-    const managerId = order.value?.customer?.counterparty?.assignedManagerId;
-    if (!managerId) return null;
-    return managers.value.find(m => m.id === managerId)?.name ?? null;
+const reservation = useReservationActions({
+    orderId: () => orderId.value,
+    reservations,
+    defaultDays: () => order.value?.customFields.reservationDays ?? FALLBACK_RESERVATION_DAYS,
+    onChanged: () => void data.reload(),
 });
 
 const editable = computed(
     () => !!order.value && !NON_EDITABLE_ORDER_STATES.includes(order.value.state),
 );
-
 const canEditLines = computed(
     () =>
         editable.value &&
@@ -77,116 +62,36 @@ const canEditLines = computed(
         !!order.value &&
         isNotRegisteredInErp(order.value.customFields),
 );
+const summary = computed(() =>
+    summarizeFindings(findings.value, consequences.value, data.adjustmentRequests.value),
+);
 
-const overpaidAmount = computed(() => {
-    const paid = order.value?.customFields.erpPaidAmount;
-    if (!order.value || paid == null || paid <= order.value.totalWithTax) return null;
-    return money(paid - order.value.totalWithTax);
-});
-
-const packagingLabel = computed(() => {
-    if (!order.value) return null;
-    return formatPackaging(useOrderPackaging(order.value.lines));
-});
-
-function money(amount: number): string {
-    if (!order.value) return '';
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: order.value.currencyCode,
-    }).format(amount / 100);
-}
-
-async function load(): Promise<void> {
-    loading.value = true;
-    notFound.value = false;
-    try {
-        const code = route.params.code as string;
-        const [detail, managerOptions] = await Promise.all([
-            fetchOrderDetail(code),
-            managers.value.length ? Promise.resolve(managers.value) : fetchManagerOptions(),
-        ]);
-        managers.value = managerOptions;
-        if (!detail) {
-            notFound.value = true;
-            return;
-        }
-        order.value = detail;
-        const counterpartyId = detail.customer?.counterparty?.id;
-        [
-            adjustmentRequests.value,
-            documents.value,
-            reservations.value,
-            shortfalls.value,
-            credit.value,
-        ] = await Promise.all([
-            fetchPriceAdjustmentRequestsForOrder(detail.id),
-            fetchRelatedDocuments(detail.id),
-            fetchOrderReservations(detail.id),
-            fetchOrderLineShortfalls(detail.id),
-            counterpartyId ? fetchCreditForCounterparty(counterpartyId) : Promise.resolve(null),
-        ]);
-    } finally {
-        loading.value = false;
-    }
-}
-
-async function reload(): Promise<void> {
-    if (!order.value) return;
-    const [detail, requests, reservationRows, shortfallRows] = await Promise.all([
-        fetchOrderDetail(order.value.code),
-        fetchPriceAdjustmentRequestsForOrder(order.value.id),
-        fetchOrderReservations(order.value.id),
-        fetchOrderLineShortfalls(order.value.id),
-    ]);
-    shortfalls.value = shortfallRows;
-    order.value = detail;
-    adjustmentRequests.value = requests;
-    reservations.value = reservationRows;
-}
-
-onMounted(load);
 watch([orderId, reservations], () => {
     if (orderId.value && canSeeChecks.value) void checks.load();
 });
-watch(() => route.params.code, load);
 </script>
 
 <template>
-    <div v-if="notFound" class="order-detail__not-found">
+    <div v-if="data.notFound.value" class="order-detail__not-found">
         <h1>Order not found</h1>
         <RouterLink to="/orders">Back to orders</RouterLink>
     </div>
 
     <div v-else-if="order" class="order-detail">
-        <div class="order-detail__header">
-            <div class="order-detail__breadcrumb">
-                <RouterLink to="/orders">Orders</RouterLink> /
-                {{ formatDocumentNumber(order.code) }}
-            </div>
-            <h1 class="order-detail__title">
-                {{ formatDocumentNumber(order.code) }}
-                <MvStatusBadge variant="info">{{ order.state }}</MvStatusBadge>
-                <MvStatusBadge v-if="order.creditLimitExceeded" variant="warning"
-                    >Credit limit exceeded</MvStatusBadge
-                >
-            </h1>
-            <p class="order-detail__subtitle">
-                Created
-                {{ new Date(order.createdAt).toLocaleDateString('en-US') }}
-            </p>
-        </div>
-
-        <OrderStatusCards
-            :findings="canSeeChecks ? checks.findings.value : []"
-            :not-registered="isNotRegisteredInErp(order.customFields)"
-            :erp-status="order.customFields.erpRegistrationStatus ?? null"
+        <OrderHeader
+            :order="order"
+            :manager-name="data.managerName.value"
             :can-see-checks="canSeeChecks"
-            :can-recompute="canSeeChecks"
-            :recomputing="checks.recomputing.value"
-            :error="checks.error.value"
+            :reservation="reservation"
             @recompute="checks.recompute"
-            @go-to-contract="contractAnchor?.scrollIntoView({ behavior: 'smooth' })"
+            @cancelled="data.reload"
+        />
+
+        <CustomerKpiStrip
+            v-if="counterpartyId && kpiData.loaded.value"
+            :orders="kpiData.orders.value"
+            :credit="data.credit.value"
+            :outstanding="kpiData.outstanding.value"
         />
 
         <MvPanel title="Order lines">
@@ -197,70 +102,51 @@ watch(() => route.params.code, load);
                 :editable="editable"
                 :can-edit-lines="canEditLines"
                 :packages-only="order.packagesOnlySales"
-                :adjustment-requests="adjustmentRequests"
-                :findings="canSeeChecks ? checks.findings.value : []"
+                :adjustment-requests="data.adjustmentRequests.value"
+                :findings="findings"
                 :reservations="reservations"
-                @adjusted="reload"
+                @adjusted="data.reload"
             />
-            <div class="order-detail__totals">
-                <span>Subtotal: {{ money(order.subTotalWithTax) }}</span>
-                <span>Shipping: {{ money(order.shippingWithTax) }}</span>
-                <span v-if="packagingLabel">Weight / volume: {{ packagingLabel }}</span>
-                <OrderPaidAmount
-                    v-if="order.customFields.erpPaidAmount != null"
-                    :paid="money(order.customFields.erpPaidAmount)"
-                    :total="money(order.totalWithTax)"
-                    :overpaid="
-                        order.customFields.erpPaidAmount > order.totalWithTax
-                            ? money(order.customFields.erpPaidAmount - order.totalWithTax)
-                            : null
-                    "
-                />
-                <strong>Total: {{ money(order.totalWithTax) }}</strong>
-            </div>
-            <OrderOverpaymentNotice v-if="overpaidAmount" :amount="overpaidAmount" />
+            <OrderLinesTotals :order="order" />
         </MvPanel>
 
-        <MvPanel v-if="shortfalls.length" title="Cut for lack of stock">
-            <OrderShortfallPanel :rows="shortfalls" />
-        </MvPanel>
+        <OrderFindingsStrip v-if="canSeeChecks" :summary="summary" />
+        <div class="order-detail__review">
+            <MvPanel v-if="canSeeChecks" title="Order controls">
+                <OrderFindingsPanel
+                    :findings="findings"
+                    :consequences="consequences"
+                    :lines="order.lines"
+                    :can-recompute="canSeeChecks"
+                    :recomputing="checks.recomputing.value"
+                    :error="checks.error.value"
+                    @recompute="checks.recompute"
+                    @go-to-contract="contractPanel?.$el.scrollIntoView({ behavior: 'smooth' })"
+                />
+            </MvPanel>
+            <MvPanel title="Approvals for this order">
+                <OrderApprovalsPanel
+                    :requests="data.adjustmentRequests.value"
+                    :lines="order.lines"
+                />
+            </MvPanel>
+        </div>
 
         <div class="order-detail__panels">
-            <MvPanel v-if="adjustmentRequests.length" title="Price adjustment history">
-                <PriceAdjustmentHistoryPanel :requests="adjustmentRequests" />
+            <MvPanel v-if="data.shortfalls.value.length" title="Cut for lack of stock">
+                <OrderShortfallPanel :rows="data.shortfalls.value" />
             </MvPanel>
-
-            <PaymentReceivedPanel
-                :order-id="order.id"
-                :payments="order.payments ?? []"
-                @confirmed="reload"
-            />
-            <ProformaInvoicesPanel :order-id="order.id" :cancelled="order.state === 'Cancelled'" />
-            <OrderCancelPanel
-                :order-id="order.id"
-                :cancellable="order.cancellable"
-                @cancelled="reload"
-            />
-            <OrderErpStatusPanels :order="order" />
-
             <MvPanel title="Reservation">
-                <ReservationPanel
-                    :order-id="order.id"
-                    :reservations="reservations"
-                    :default-reservation-days="defaultReservationDays"
-                    @changed="reload"
-                />
+                <ReservationPanel :reservations="reservations" />
                 <ReservationHolds :order-id="order.id" :refresh-on="reservations" />
             </MvPanel>
-
             <MvPanel ref="contractPanel" title="Contract">
                 <OrderContractPanel
                     :order-id="order.id"
                     :locked="reservations.some(r => r.status === 'active')"
-                    @changed="reload"
+                    @changed="data.reload"
                 />
             </MvPanel>
-
             <MvPanel title="Delivery">
                 <OrderDeliveryPanel
                     :order-id="order.id"
@@ -269,16 +155,31 @@ watch(() => route.params.code, load);
                     :delivery-address="order.customFields.deliveryAddress"
                     :points="order.customer?.counterparty?.tradingPoints ?? []"
                     :can-edit="canEditLines"
-                    @changed="reload"
+                    @changed="data.reload"
                 />
             </MvPanel>
-
-            <MvPanel title="Order context">
-                <OrderContextPanel :order="order" :manager-name="managerName" :credit="credit" />
+            <PaymentReceivedPanel
+                :order-id="order.id"
+                :payments="order.payments ?? []"
+                @confirmed="data.reload"
+            />
+            <ProformaInvoicesPanel :order-id="order.id" :cancelled="order.state === 'Cancelled'" />
+            <MvPanel title="ERP registration">
+                <OrderErpRegistration
+                    :not-registered="isNotRegisteredInErp(order.customFields)"
+                    :erp-status="order.customFields.erpRegistrationStatus ?? null"
+                />
             </MvPanel>
-
+            <OrderErpStatusPanels :order="order" />
+            <MvPanel title="Order context">
+                <OrderContextPanel
+                    :order="order"
+                    :manager-name="data.managerName.value"
+                    :credit="data.credit.value"
+                />
+            </MvPanel>
             <MvPanel title="Documents">
-                <RelatedDocumentsPanel :documents="documents" />
+                <RelatedDocumentsPanel :documents="data.documents.value" />
             </MvPanel>
         </div>
     </div>
@@ -291,6 +192,13 @@ watch(() => route.params.code, load);
     gap: 18px;
 }
 
+.order-detail__review {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 18px;
+    align-items: start;
+}
+
 .order-detail__panels {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -298,43 +206,9 @@ watch(() => route.params.code, load);
     align-items: start;
 }
 
-.order-detail__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
-    font-size: 13px;
-    margin-bottom: 6px;
-}
-
-.order-detail__breadcrumb a {
-    color: inherit;
-    text-decoration: none;
-}
-
-.order-detail__title {
-    margin: 0;
-    font-size: 28px;
-    letter-spacing: -0.03em;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.order-detail__subtitle {
-    margin: 8px 0 0;
-    color: var(--el-text-color-secondary, #6b7280);
-}
-
-.order-detail__totals {
-    display: flex;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 8px 20px;
-    margin-top: 14px;
-    font-size: 13px;
-}
-
 .order-detail__not-found {
     padding: 60px 0;
     text-align: center;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
 }
 </style>

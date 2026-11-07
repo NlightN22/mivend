@@ -33,6 +33,7 @@ function mockOrderDetailData(erpPaidAmount: number | null = null): void {
                         {
                             id: '1',
                             quantity: 2,
+                            unitPriceWithTax: 220000,
                             discountedUnitPriceWithTax: 200000,
                             discountedLinePriceWithTax: 400000,
                             productVariant: { id: '1', name: 'Brake pad set', sku: 'SKU-001' },
