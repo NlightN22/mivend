@@ -49,6 +49,7 @@ import {
 import { CreditTermResolver } from './credit-term.resolver';
 import { CounterpartyService } from './counterparty.service';
 import { TradingPointService } from './trading-point.service';
+import { TradingPointLocationReportService } from './trading-point-location-report.service';
 import { CreditTermExtensionCheck } from './credit-term-extension.check';
 import { CreditTermService } from './credit-term.service';
 import { EntityVersionScopeRegistrar } from './entity-version-scope.registrar';
@@ -67,6 +68,9 @@ import { shopApiSchema } from './trading-point.schema';
 import { myContractsSchema } from './my-contracts.schema';
 import { MyContractsResolver } from './my-contracts.resolver';
 import { AddressSuggestResolver } from './address-suggest.resolver';
+import { GeoResolver } from './geo/geo.resolver';
+import { geoSchema } from './geo/geo.schema';
+import { GeoService } from './geo/geo.service';
 import { AddressSuggestService } from './address-suggest.service';
 import { ScopedCustomerResolver } from './scoped-customer.resolver';
 
@@ -79,6 +83,7 @@ const shopResolvers = [
     CustomerTradingPointsQueryResolver,
     CustomerTradingPointsMutationResolver,
     AddressSuggestResolver,
+    GeoResolver,
 ];
 
 const adminResolvers = [
@@ -116,6 +121,7 @@ const adminResolvers = [
         schema: gql`
             ${shopApiSchema}
             ${myContractsSchema}
+            ${geoSchema}
         `,
         resolvers: shopResolvers,
     },
@@ -133,7 +139,9 @@ const adminResolvers = [
         ErpIdLookupService,
         CounterpartyConsumer,
         TradingPointService,
+        TradingPointLocationReportService,
         AddressSuggestService,
+        GeoService,
         TradingPointConsumer,
         CreditTermExtensionCheck,
         CreditTermService,
@@ -152,6 +160,7 @@ const adminResolvers = [
         CounterpartyService,
         ErpIdLookupService,
         TradingPointService,
+        TradingPointLocationReportService,
         ContractService,
         CreditLimitCheckService,
         CreditLimitRecomputeService,
