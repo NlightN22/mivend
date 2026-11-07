@@ -41,67 +41,61 @@ query OrdersPage($options: OrderListOptions, $managerId: ID, $customerId: ID, $s
     }
 }
 
-fragment AttentionOrderFields on Order {
-    id
-    code
-    state
-    orderPlacedAt
-    customer {
-        firstName
-        lastName
+query OrdersViewCounts(
+    $customerId: ID
+    $overdueBefore: DateTime!
+    $awaitingConfirmation: OrderFilterParameter
+    $processing: OrderFilterParameter
+    $awaitingShipment: OrderFilterParameter
+    $rejectedByErp: OrderFilterParameter
+    $reservationFailed: OrderFilterParameter
+    $erpRequirements: OrderFilterParameter
+    $overdue: OrderFilterParameter
+) {
+    all: visibleOrders(options: { take: 0 }, customerId: $customerId) {
+        totalItems
     }
-}
-
-query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
-    open: visibleOrders(
-        options: {
-            take: 0
-            filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] } }
-        }
+    awaitingConfirmation: visibleOrders(
+        options: { take: 0, filter: $awaitingConfirmation }
+        customerId: $customerId
     ) {
         totalItems
     }
-    overdue: visibleOrders(
-        options: {
-            take: 0
-            filter: { state: { eq: "PaymentSettled" }, orderPlacedAt: { before: $overdueBefore } }
-        }
-    ) {
-        totalItems
-    }
-    today: visibleOrders(options: { take: 0, filter: { orderPlacedAt: { after: $todayStart } } }) {
-        totalItems
-    }
-    todayAmount: visibleOrdersAmount(options: { filter: { orderPlacedAt: { after: $todayStart } } })
-    openAmount: visibleOrdersAmount(
-        options: {
-            filter: { state: { notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"] } }
-        }
-    )
     processing: visibleOrders(
-        options: { take: 0, filter: { state: { eq: "PaymentAuthorized" } } }
+        options: { take: 0, filter: $processing }
+        customerId: $customerId
     ) {
         totalItems
     }
-    drafts: visibleOrders(options: { take: 0, filter: { state: { eq: "Draft" } } }) {
+    awaitingShipment: visibleOrders(
+        options: { take: 0, filter: $awaitingShipment }
+        customerId: $customerId
+    ) {
+        totalItems
+    }
+    rejectedByErp: visibleOrders(
+        options: { take: 0, filter: $rejectedByErp }
+        customerId: $customerId
+    ) {
+        totalItems
+    }
+    reservationFailed: visibleOrders(
+        options: { take: 0, filter: $reservationFailed }
+        customerId: $customerId
+    ) {
+        totalItems
+    }
+    erpRequirements: visibleOrders(
+        options: { take: 0, filter: $erpRequirements }
+        customerId: $customerId
+    ) {
+        totalItems
+    }
+    overdue: visibleOrders(options: { take: 0, filter: $overdue }, customerId: $customerId) {
         totalItems
     }
     ordersAttention(overdueBefore: $overdueBefore) {
         pendingPriceAdjustmentOrderIds
-        waiting {
-            totalItems
-            items {
-                ...AttentionOrderFields
-            }
-        }
-        overdueRows {
-            items {
-                ...AttentionOrderFields
-            }
-        }
-        both {
-            totalItems
-        }
     }
 }
 
@@ -121,37 +115,4 @@ query Branches {
         erpId
         name
     }
-}
-
-fragment SavedTableViewFields on SavedTableView {
-    id
-    name
-    filters
-    visibleColumns
-}
-
-query MyTableViews($pageKey: String!) {
-    myTableViews(pageKey: $pageKey) {
-        ...SavedTableViewFields
-    }
-}
-
-mutation SaveTableView(
-    $pageKey: String!
-    $name: String!
-    $filters: String!
-    $visibleColumns: [String!]!
-) {
-    saveTableView(
-        pageKey: $pageKey
-        name: $name
-        filters: $filters
-        visibleColumns: $visibleColumns
-    ) {
-        ...SavedTableViewFields
-    }
-}
-
-mutation DeleteTableView($id: ID!) {
-    deleteTableView(id: $id)
 }

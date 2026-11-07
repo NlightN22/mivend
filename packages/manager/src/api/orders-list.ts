@@ -15,14 +15,14 @@ export type OrdersView =
     | 'overdue';
 
 export const ORDERS_VIEWS: { key: OrdersView; label: string }[] = [
+    { key: 'awaiting-confirmation', label: 'Awaiting confirmation' },
     { key: 'all', label: 'All' },
     { key: 'processing', label: 'Processing' },
     { key: 'awaiting-shipment', label: 'Awaiting shipment' },
-    { key: 'awaiting-confirmation', label: 'Awaiting confirmation' },
+    { key: 'overdue', label: 'Overdue' },
     { key: 'rejected-by-erp', label: 'Rejected by ERP' },
     { key: 'reservation-failed', label: 'Reservation failed' },
     { key: 'erp-requirements', label: 'Blocked by ERP requirements' },
-    { key: 'overdue', label: 'Overdue' },
 ];
 
 // Same colors as the row badges and flags the view stands for.
@@ -182,32 +182,33 @@ export async function fetchOrdersList(
     return result.visibleOrders;
 }
 
-function localDate(date: Date): string {
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${date.getFullYear()}-${month}-${day}`;
+function str(value: unknown): string | undefined {
+    return typeof value === 'string' ? value : undefined;
+}
+function num(value: unknown): number | undefined {
+    return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
-export function todayRange(now: Date = new Date()): DateRangeFilterValue {
-    const today = localDate(now);
-    return { preset: 'today', from: today, to: today };
-}
-
-// A saved view stores filters as JSON; older saves use another shape, so keep only what parses.
-export function restoreSavedFilters(json: string): OrdersListFilters {
+// Rebuilds list filters from a stored view; anything missing or of the wrong type falls back to blank.
+export function restoreOrdersFilters(raw: unknown): OrdersListFilters {
     const restored: OrdersListFilters = { ...BLANK_ORDERS_FILTERS };
-    let raw: Record<string, unknown>;
-    try {
-        raw = JSON.parse(json) as Record<string, unknown>;
-    } catch {
-        return restored;
+    if (typeof raw !== 'object' || raw === null) return restored;
+    const r = raw as Record<string, unknown>;
+    restored.search = str(r.search) ?? '';
+    if (ORDERS_VIEWS.some(v => v.key === r.view)) restored.view = r.view as OrdersView;
+    if (Array.isArray(r.state)) restored.state = r.state.filter(v => typeof v === 'string');
+    restored.reservationState = str(r.reservationState) ?? '';
+    restored.managerId = str(r.managerId) ?? '';
+    restored.placedBy = str(r.placedBy) ?? '';
+    restored.totalMin = num(r.totalMin);
+    restored.totalMax = num(r.totalMax);
+    const range = r.dateRange as Record<string, unknown> | null;
+    if (range && typeof range === 'object') {
+        restored.dateRange = {
+            preset: str(range.preset) ?? '',
+            from: str(range.from) ?? '',
+            to: str(range.to) ?? '',
+        };
     }
-    if (typeof raw.search === 'string') restored.search = raw.search;
-    if (ORDERS_VIEWS.some(v => v.key === raw.view)) restored.view = raw.view as OrdersView;
-    if (Array.isArray(raw.state)) restored.state = raw.state.filter(v => typeof v === 'string');
-    else if (typeof raw.state === 'string' && raw.state) restored.state = [raw.state];
-    if (typeof raw.reservationState === 'string') restored.reservationState = raw.reservationState;
-    if (typeof raw.managerId === 'string') restored.managerId = raw.managerId;
-    if (typeof raw.placedBy === 'string') restored.placedBy = raw.placedBy;
     return restored;
 }

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { MvFilterChips, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
 import { useOrderStatusesStore } from '../../stores/orderStatuses';
 import { useOrdersList } from '../../composables/useOrdersList';
+import { useOrdersViewCounts } from '../../composables/useOrdersViewCounts';
 import {
     BLANK_ORDERS_FILTERS,
     ORDERS_VIEWS,
@@ -18,10 +19,7 @@ import { toOrderRows, type OrderListRow } from './ordersListRows';
 
 // `customerId` is a preset: it narrows the list, is never shown as a filter, and the server
 // scopes the result exactly as it does the unfiltered list.
-const props = withDefaults(
-    defineProps<{ customerId?: string; pendingApprovalOrderIds?: Set<string> }>(),
-    { customerId: undefined, pendingApprovalOrderIds: () => new Set() },
-);
+const props = defineProps<{ customerId?: string }>();
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -29,6 +27,8 @@ const statuses = useOrderStatusesStore();
 void statuses.load();
 
 const list = useOrdersList({ customerId: props.customerId });
+const viewCounts = useOrdersViewCounts(props.customerId);
+watch(() => list.filters.value.view, viewCounts.refresh);
 
 // Manager sees only their own customers, so a manager column and filter would be redundant.
 const showManagerColumn = computed(() => authStore.roleCode !== 'manager');
@@ -38,15 +38,19 @@ const rows = computed(() =>
         managers: list.managers.value,
         branches: list.branches.value,
         isRejected: code => statuses.isRejected(code),
-        pendingApprovalOrderIds: props.pendingApprovalOrderIds,
+        pendingApprovalOrderIds: viewCounts.pendingApprovalOrderIds.value,
     }),
 );
 
-const chips: FilterChip[] = ORDERS_VIEWS.map(v => ({
-    key: v.key,
-    label: v.label,
-    variant: ORDERS_VIEW_VARIANT[v.key],
-}));
+const chips = computed<FilterChip[]>(() =>
+    ORDERS_VIEWS.map(v => ({
+        key: v.key,
+        label: v.label,
+        variant: ORDERS_VIEW_VARIANT[v.key],
+        count: viewCounts.counts.value?.[v.key],
+        emphasis: v.key === 'awaiting-confirmation',
+    })),
+);
 
 const selected = ref<OrderListRow | null>(null);
 
@@ -87,7 +91,12 @@ function openOrder(code: string): void {
         @row-click="selected = $event"
     >
         <template #view-chips>
-            <MvFilterChips :chips="chips" :active="list.filters.value.view" @select="selectView" />
+            <MvFilterChips
+                scrollable
+                :chips="chips"
+                :active="list.filters.value.view"
+                @select="selectView"
+            />
         </template>
     </OrdersListTable>
     <OrderQuickPanel v-if="selected" :row="selected" @close="selected = null" @open="openOrder" />

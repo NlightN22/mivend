@@ -2,10 +2,6 @@ import type { StatusBadgeVariant } from '@mivend/ui-kit';
 import { adminApi } from './client';
 import {
     BranchesDocument,
-    DeleteTableViewDocument,
-    MyTableViewsDocument,
-    OrdersSummaryDocument,
-    SaveTableViewDocument,
     TeamMembersDocument,
     type OrderListItemFieldsFragment,
 } from './generated/graphql';
@@ -62,71 +58,6 @@ export const ORDER_STATE_OPTIONS = [
 // Must use real Vendure OrderSortParameter keys: DataTable column fields don't map 1:1
 // (e.g. 'total' -> totalWithTax), so callers map through this before building sort.
 export type OrderSortField = 'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt';
-
-export interface AttentionCandidate {
-    id: string;
-    code: string;
-    state: string;
-    orderPlacedAt: string | null;
-    customerName: string;
-}
-
-export interface OrdersSummary {
-    openCount: number;
-    overdueCount: number;
-    todayCount: number;
-    todayAmount: number;
-    waitingApprovalCount: number;
-    processingCount: number;
-    draftCount: number;
-    totalAmount: number;
-    pendingApprovalOrderIds: Set<string>;
-    attentionCount: number;
-    attentionCandidates: AttentionCandidate[];
-}
-
-const OVERDUE_AFTER_DAYS = 3;
-
-export async function fetchOrdersSummary(): Promise<OrdersSummary> {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const overdueBefore = new Date(
-        now.getTime() - OVERDUE_AFTER_DAYS * 24 * 60 * 60 * 1000,
-    ).toISOString();
-
-    const result = await adminApi(OrdersSummaryDocument, { overdueBefore, todayStart });
-    const attention = result.ordersAttention;
-    const pendingIds = new Set(attention.pendingPriceAdjustmentOrderIds);
-
-    const seen = new Set<string>();
-    const attentionCandidates: AttentionCandidate[] = [
-        ...attention.waiting.items,
-        ...attention.overdueRows.items,
-    ]
-        .filter(o => !seen.has(o.id) && seen.add(o.id))
-        .map(o => ({
-            id: o.id,
-            code: o.code,
-            state: o.state,
-            orderPlacedAt: o.orderPlacedAt,
-            customerName: o.customer ? `${o.customer.firstName} ${o.customer.lastName}` : '—',
-        }));
-
-    return {
-        openCount: result.open.totalItems,
-        overdueCount: result.overdue.totalItems,
-        todayCount: result.today.totalItems,
-        todayAmount: result.todayAmount,
-        waitingApprovalCount: attention.waiting.totalItems,
-        processingCount: result.processing.totalItems,
-        draftCount: result.drafts.totalItems,
-        totalAmount: result.openAmount,
-        pendingApprovalOrderIds: pendingIds,
-        attentionCount:
-            attention.waiting.totalItems + result.overdue.totalItems - attention.both.totalItems,
-        attentionCandidates,
-    };
-}
 
 // Shared between OrdersTable.vue and CustomerOrdersTab.vue — the same Order.state values must
 // read the same everywhere in the manager portal.
@@ -216,36 +147,4 @@ export interface BranchOption {
 export async function fetchBranchOptions(): Promise<BranchOption[]> {
     const result = await adminApi(BranchesDocument);
     return result.branches;
-}
-
-export interface SavedTableView {
-    id: string;
-    name: string;
-    filters: string;
-    visibleColumns: string[];
-}
-
-export async function fetchMyTableViews(pageKey: string): Promise<SavedTableView[]> {
-    const result = await adminApi(MyTableViewsDocument, { pageKey });
-    return result.myTableViews;
-}
-
-export async function saveTableView(
-    pageKey: string,
-    name: string,
-    filters: string,
-    visibleColumns: string[],
-): Promise<SavedTableView> {
-    const result = await adminApi(SaveTableViewDocument, {
-        pageKey,
-        name,
-        filters,
-        visibleColumns,
-    });
-    return result.saveTableView;
-}
-
-export async function deleteTableView(id: string): Promise<boolean> {
-    const result = await adminApi(DeleteTableViewDocument, { id });
-    return result.deleteTableView;
 }

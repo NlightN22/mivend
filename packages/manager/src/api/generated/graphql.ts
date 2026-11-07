@@ -11842,50 +11842,28 @@ export type OrdersPageQuery = {
     };
 };
 
-export type AttentionOrderFieldsFragment = {
-    id: string;
-    code: string;
-    state: string;
-    orderPlacedAt: any | null;
-    customer: { firstName: string; lastName: string } | null;
-};
-
-export type OrdersSummaryQueryVariables = Exact<{
+export type OrdersViewCountsQueryVariables = Exact<{
+    customerId?: InputMaybe<Scalars['ID']['input']>;
     overdueBefore: Scalars['DateTime']['input'];
-    todayStart: Scalars['DateTime']['input'];
+    awaitingConfirmation?: InputMaybe<OrderFilterParameter>;
+    processing?: InputMaybe<OrderFilterParameter>;
+    awaitingShipment?: InputMaybe<OrderFilterParameter>;
+    rejectedByErp?: InputMaybe<OrderFilterParameter>;
+    reservationFailed?: InputMaybe<OrderFilterParameter>;
+    erpRequirements?: InputMaybe<OrderFilterParameter>;
+    overdue?: InputMaybe<OrderFilterParameter>;
 }>;
 
-export type OrdersSummaryQuery = {
-    todayAmount: any;
-    openAmount: any;
-    open: { totalItems: number };
-    overdue: { totalItems: number };
-    today: { totalItems: number };
+export type OrdersViewCountsQuery = {
+    all: { totalItems: number };
+    awaitingConfirmation: { totalItems: number };
     processing: { totalItems: number };
-    drafts: { totalItems: number };
-    ordersAttention: {
-        pendingPriceAdjustmentOrderIds: Array<string>;
-        waiting: {
-            totalItems: number;
-            items: Array<{
-                id: string;
-                code: string;
-                state: string;
-                orderPlacedAt: any | null;
-                customer: { firstName: string; lastName: string } | null;
-            }>;
-        };
-        overdueRows: {
-            items: Array<{
-                id: string;
-                code: string;
-                state: string;
-                orderPlacedAt: any | null;
-                customer: { firstName: string; lastName: string } | null;
-            }>;
-        };
-        both: { totalItems: number };
-    };
+    awaitingShipment: { totalItems: number };
+    rejectedByErp: { totalItems: number };
+    reservationFailed: { totalItems: number };
+    erpRequirements: { totalItems: number };
+    overdue: { totalItems: number };
+    ordersAttention: { pendingPriceAdjustmentOrderIds: Array<string> };
 };
 
 export type TeamMembersQueryVariables = Exact<{ [key: string]: never }>;
@@ -11903,43 +11881,6 @@ export type TeamMembersQuery = {
 export type BranchesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type BranchesQuery = { branches: Array<{ id: string; erpId: string; name: string }> };
-
-export type SavedTableViewFieldsFragment = {
-    id: string;
-    name: string;
-    filters: string;
-    visibleColumns: Array<string>;
-};
-
-export type MyTableViewsQueryVariables = Exact<{
-    pageKey: Scalars['String']['input'];
-}>;
-
-export type MyTableViewsQuery = {
-    myTableViews: Array<{
-        id: string;
-        name: string;
-        filters: string;
-        visibleColumns: Array<string>;
-    }>;
-};
-
-export type SaveTableViewMutationVariables = Exact<{
-    pageKey: Scalars['String']['input'];
-    name: Scalars['String']['input'];
-    filters: Scalars['String']['input'];
-    visibleColumns: Array<Scalars['String']['input']> | Scalars['String']['input'];
-}>;
-
-export type SaveTableViewMutation = {
-    saveTableView: { id: string; name: string; filters: string; visibleColumns: Array<string> };
-};
-
-export type DeleteTableViewMutationVariables = Exact<{
-    id: Scalars['ID']['input'];
-}>;
-
-export type DeleteTableViewMutation = { deleteTableView: boolean };
 
 export type OrganizationRequisitesFieldsFragment = {
     id: string;
@@ -12371,6 +12312,43 @@ export type SystemHealthChecklistQueryVariables = Exact<{ [key: string]: never }
 export type SystemHealthChecklistQuery = {
     systemHealthChecklist: Array<{ id: string; label: string; ok: boolean; detail: string | null }>;
 };
+
+export type SavedTableViewFieldsFragment = {
+    id: string;
+    name: string;
+    filters: string;
+    visibleColumns: Array<string>;
+};
+
+export type MyTableViewsQueryVariables = Exact<{
+    pageKey: Scalars['String']['input'];
+}>;
+
+export type MyTableViewsQuery = {
+    myTableViews: Array<{
+        id: string;
+        name: string;
+        filters: string;
+        visibleColumns: Array<string>;
+    }>;
+};
+
+export type SaveTableViewMutationVariables = Exact<{
+    pageKey: Scalars['String']['input'];
+    name: Scalars['String']['input'];
+    filters: Scalars['String']['input'];
+    visibleColumns: Array<Scalars['String']['input']> | Scalars['String']['input'];
+}>;
+
+export type SaveTableViewMutation = {
+    saveTableView: { id: string; name: string; filters: string; visibleColumns: Array<string> };
+};
+
+export type DeleteTableViewMutationVariables = Exact<{
+    id: Scalars['ID']['input'];
+}>;
+
+export type DeleteTableViewMutation = { deleteTableView: boolean };
 
 export type DepartmentsQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -13007,32 +12985,6 @@ export const OrderListItemFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'OrderListItemFields' },
 ) as unknown as TypedDocumentString<OrderListItemFieldsFragment, unknown>;
-export const AttentionOrderFieldsFragmentDoc = new TypedDocumentString(
-    `
-    fragment AttentionOrderFields on Order {
-  id
-  code
-  state
-  orderPlacedAt
-  customer {
-    firstName
-    lastName
-  }
-}
-    `,
-    { fragmentName: 'AttentionOrderFields' },
-) as unknown as TypedDocumentString<AttentionOrderFieldsFragment, unknown>;
-export const SavedTableViewFieldsFragmentDoc = new TypedDocumentString(
-    `
-    fragment SavedTableViewFields on SavedTableView {
-  id
-  name
-  filters
-  visibleColumns
-}
-    `,
-    { fragmentName: 'SavedTableViewFields' },
-) as unknown as TypedDocumentString<SavedTableViewFieldsFragment, unknown>;
 export const OrganizationRequisitesFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment OrganizationRequisitesFields on OrganizationRequisites {
@@ -13119,6 +13071,17 @@ export const OrderContractOptionFieldsFragmentDoc = new TypedDocumentString(
     `,
     { fragmentName: 'OrderContractOptionFields' },
 ) as unknown as TypedDocumentString<OrderContractOptionFieldsFragment, unknown>;
+export const SavedTableViewFieldsFragmentDoc = new TypedDocumentString(
+    `
+    fragment SavedTableViewFields on SavedTableView {
+  id
+  name
+  filters
+  visibleColumns
+}
+    `,
+    { fragmentName: 'SavedTableViewFields' },
+) as unknown as TypedDocumentString<SavedTableViewFieldsFragment, unknown>;
 export const VisibilityGrantFieldsFragmentDoc = new TypedDocumentString(
     `
     fragment VisibilityGrantFields on VisibilityGrant {
@@ -14825,7 +14788,12 @@ export const OrderStatusesDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<OrderStatusesQuery, OrderStatusesQueryVariables>;
 export const OrdersPageDocument = new TypedDocumentString(`
     query OrdersPage($options: OrderListOptions, $managerId: ID, $customerId: ID, $search: String) {
-  visibleOrders(options: $options, managerId: $managerId, customerId: $customerId, search: $search) {
+  visibleOrders(
+    options: $options
+    managerId: $managerId
+    customerId: $customerId
+    search: $search
+  ) {
     totalItems
     items {
       ...OrderListItemFields
@@ -14860,65 +14828,58 @@ export const OrdersPageDocument = new TypedDocumentString(`
     }
   }
 }`) as unknown as TypedDocumentString<OrdersPageQuery, OrdersPageQueryVariables>;
-export const OrdersSummaryDocument = new TypedDocumentString(`
-    query OrdersSummary($overdueBefore: DateTime!, $todayStart: DateTime!) {
-  open: visibleOrders(
-    options: {take: 0, filter: {state: {notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"]}}}
+export const OrdersViewCountsDocument = new TypedDocumentString(`
+    query OrdersViewCounts($customerId: ID, $overdueBefore: DateTime!, $awaitingConfirmation: OrderFilterParameter, $processing: OrderFilterParameter, $awaitingShipment: OrderFilterParameter, $rejectedByErp: OrderFilterParameter, $reservationFailed: OrderFilterParameter, $erpRequirements: OrderFilterParameter, $overdue: OrderFilterParameter) {
+  all: visibleOrders(options: {take: 0}, customerId: $customerId) {
+    totalItems
+  }
+  awaitingConfirmation: visibleOrders(
+    options: {take: 0, filter: $awaitingConfirmation}
+    customerId: $customerId
+  ) {
+    totalItems
+  }
+  processing: visibleOrders(
+    options: {take: 0, filter: $processing}
+    customerId: $customerId
+  ) {
+    totalItems
+  }
+  awaitingShipment: visibleOrders(
+    options: {take: 0, filter: $awaitingShipment}
+    customerId: $customerId
+  ) {
+    totalItems
+  }
+  rejectedByErp: visibleOrders(
+    options: {take: 0, filter: $rejectedByErp}
+    customerId: $customerId
+  ) {
+    totalItems
+  }
+  reservationFailed: visibleOrders(
+    options: {take: 0, filter: $reservationFailed}
+    customerId: $customerId
+  ) {
+    totalItems
+  }
+  erpRequirements: visibleOrders(
+    options: {take: 0, filter: $erpRequirements}
+    customerId: $customerId
   ) {
     totalItems
   }
   overdue: visibleOrders(
-    options: {take: 0, filter: {state: {eq: "PaymentSettled"}, orderPlacedAt: {before: $overdueBefore}}}
+    options: {take: 0, filter: $overdue}
+    customerId: $customerId
   ) {
-    totalItems
-  }
-  today: visibleOrders(
-    options: {take: 0, filter: {orderPlacedAt: {after: $todayStart}}}
-  ) {
-    totalItems
-  }
-  todayAmount: visibleOrdersAmount(
-    options: {filter: {orderPlacedAt: {after: $todayStart}}}
-  )
-  openAmount: visibleOrdersAmount(
-    options: {filter: {state: {notIn: ["AddingItems", "Draft", "Cancelled", "Delivered"]}}}
-  )
-  processing: visibleOrders(
-    options: {take: 0, filter: {state: {eq: "PaymentAuthorized"}}}
-  ) {
-    totalItems
-  }
-  drafts: visibleOrders(options: {take: 0, filter: {state: {eq: "Draft"}}}) {
     totalItems
   }
   ordersAttention(overdueBefore: $overdueBefore) {
     pendingPriceAdjustmentOrderIds
-    waiting {
-      totalItems
-      items {
-        ...AttentionOrderFields
-      }
-    }
-    overdueRows {
-      items {
-        ...AttentionOrderFields
-      }
-    }
-    both {
-      totalItems
-    }
   }
 }
-    fragment AttentionOrderFields on Order {
-  id
-  code
-  state
-  orderPlacedAt
-  customer {
-    firstName
-    lastName
-  }
-}`) as unknown as TypedDocumentString<OrdersSummaryQuery, OrdersSummaryQueryVariables>;
+    `) as unknown as TypedDocumentString<OrdersViewCountsQuery, OrdersViewCountsQueryVariables>;
 export const TeamMembersDocument = new TypedDocumentString(`
     query TeamMembers {
   teamMembers {
@@ -14939,40 +14900,6 @@ export const BranchesDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<BranchesQuery, BranchesQueryVariables>;
-export const MyTableViewsDocument = new TypedDocumentString(`
-    query MyTableViews($pageKey: String!) {
-  myTableViews(pageKey: $pageKey) {
-    ...SavedTableViewFields
-  }
-}
-    fragment SavedTableViewFields on SavedTableView {
-  id
-  name
-  filters
-  visibleColumns
-}`) as unknown as TypedDocumentString<MyTableViewsQuery, MyTableViewsQueryVariables>;
-export const SaveTableViewDocument = new TypedDocumentString(`
-    mutation SaveTableView($pageKey: String!, $name: String!, $filters: String!, $visibleColumns: [String!]!) {
-  saveTableView(
-    pageKey: $pageKey
-    name: $name
-    filters: $filters
-    visibleColumns: $visibleColumns
-  ) {
-    ...SavedTableViewFields
-  }
-}
-    fragment SavedTableViewFields on SavedTableView {
-  id
-  name
-  filters
-  visibleColumns
-}`) as unknown as TypedDocumentString<SaveTableViewMutation, SaveTableViewMutationVariables>;
-export const DeleteTableViewDocument = new TypedDocumentString(`
-    mutation DeleteTableView($id: ID!) {
-  deleteTableView(id: $id)
-}
-    `) as unknown as TypedDocumentString<DeleteTableViewMutation, DeleteTableViewMutationVariables>;
 export const OrganizationsDocument = new TypedDocumentString(`
     query Organizations {
   organizationRequisites {
@@ -15429,6 +15356,40 @@ export const SystemHealthChecklistDocument = new TypedDocumentString(`
     SystemHealthChecklistQuery,
     SystemHealthChecklistQueryVariables
 >;
+export const MyTableViewsDocument = new TypedDocumentString(`
+    query MyTableViews($pageKey: String!) {
+  myTableViews(pageKey: $pageKey) {
+    ...SavedTableViewFields
+  }
+}
+    fragment SavedTableViewFields on SavedTableView {
+  id
+  name
+  filters
+  visibleColumns
+}`) as unknown as TypedDocumentString<MyTableViewsQuery, MyTableViewsQueryVariables>;
+export const SaveTableViewDocument = new TypedDocumentString(`
+    mutation SaveTableView($pageKey: String!, $name: String!, $filters: String!, $visibleColumns: [String!]!) {
+  saveTableView(
+    pageKey: $pageKey
+    name: $name
+    filters: $filters
+    visibleColumns: $visibleColumns
+  ) {
+    ...SavedTableViewFields
+  }
+}
+    fragment SavedTableViewFields on SavedTableView {
+  id
+  name
+  filters
+  visibleColumns
+}`) as unknown as TypedDocumentString<SaveTableViewMutation, SaveTableViewMutationVariables>;
+export const DeleteTableViewDocument = new TypedDocumentString(`
+    mutation DeleteTableView($id: ID!) {
+  deleteTableView(id: $id)
+}
+    `) as unknown as TypedDocumentString<DeleteTableViewMutation, DeleteTableViewMutationVariables>;
 export const DepartmentsDocument = new TypedDocumentString(`
     query Departments {
   departments {

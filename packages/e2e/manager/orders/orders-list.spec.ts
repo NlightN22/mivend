@@ -1,20 +1,46 @@
 import { test, expect } from '@playwright/test';
 import { readE2eOrder } from '../../helpers/e2e-order';
 
-test('KPI carousel right arrow scrolls the row and stops at the end @on:manager-operator @read-only', async ({
+test('status chips carry counts and Awaiting confirmation comes first @on:manager-operator @read-only', async ({
     page,
 }) => {
     await page.goto('/orders');
-    const track = page.locator('.mv-kpi-carousel__track');
-    await expect(track).toBeVisible({ timeout: 15000 });
+    const chips = page.locator('.mv-filter-chip');
+    await expect(chips.first()).toContainText('Awaiting confirmation', { timeout: 15000 });
+    await expect(chips.first()).toContainText(/\d+$/);
+    await expect(page.getByRole('button', { name: /^All \d+$/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Saved views' })).toHaveCount(0);
+    await expect(page.getByTestId('orders-kpis')).toHaveCount(0);
+});
 
-    const rightArrow = page.getByRole('button', { name: 'Scroll KPIs right' });
-    // On a narrow layout the three KPI cards overflow the track and the arrow renders;
-    // on a wide layout there may be nothing to scroll, so this is a soft check.
-    if (await rightArrow.isVisible()) {
-        await rightArrow.click();
-        await expect.poll(() => track.evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
+test('the seven main columns fit the page width without horizontal scroll @read-only', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 1360, height: 900 });
+    await page.goto('/orders');
+    for (const name of ['Order #', 'Date created', 'Customer', 'Status', 'Total', 'Placed by']) {
+        await expect(page.getByRole('columnheader', { name: new RegExp(name) })).toBeInViewport({
+            timeout: 15000,
+        });
     }
+});
+
+test('a table view stores the chip and is recalled from the Views control', async ({ page }) => {
+    const name = `e2e view ${Date.now()}`;
+    await page.goto('/orders?view=overdue');
+    await page.getByTestId('table-views-trigger').click();
+    await page.getByTestId('table-views-name').fill(name);
+    await page.getByTestId('table-views-save').click();
+    await expect(page.getByTestId('table-views-trigger')).toContainText(name);
+
+    await page.goto('/orders?view=all');
+    await page.getByTestId('table-views-trigger').click();
+    await page.getByRole('button', { name }).click();
+    await expect(page).toHaveURL(/view=overdue/);
+
+    await page.getByTestId('table-views-trigger').click();
+    await page.locator('.mv-table-views__item', { hasText: name }).getByTitle('Delete').click();
+    await expect(page.getByRole('button', { name })).toHaveCount(0);
 });
 
 test('orders list shows the seeded order with customer, branch and INN @read-only', async ({
@@ -23,9 +49,7 @@ test('orders list shows the seeded order with customer, branch and INN @read-onl
     const order = readE2eOrder();
 
     await page.goto('/orders');
-    await expect(page.getByRole('heading', { name: 'Saved views' })).toBeVisible({
-        timeout: 15000,
-    });
+    await expect(page.getByPlaceholder('Search orders…')).toBeVisible({ timeout: 15000 });
     // Other runs keep adding orders, so search instead of relying on page one.
     await page.getByPlaceholder('Search orders…').fill(order.code);
 

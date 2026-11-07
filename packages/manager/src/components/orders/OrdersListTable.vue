@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import {
     MvStatusBadge,
     MvAdvancedDataTable,
@@ -10,16 +11,17 @@ import {
     type AdvancedDataTableRowClickPayload,
 } from '@mivend/ui-kit';
 import { useCurrency } from '../../composables/useCurrency';
-import {
-    ORDER_STATE_OPTIONS,
-    ORDER_STATE_BADGE_VARIANT,
-    ORDER_RESERVATION_STATE_OPTIONS,
-    ORDER_RESERVATION_STATE_BADGE_VARIANT,
-    type ManagerOption,
-} from '../../api/orders';
+import type { ManagerOption } from '../../api/orders';
+import { ALL_COLUMNS, DEFAULT_HIDDEN_COLUMNS } from './ordersColumns';
 import { PLACED_BY_CUSTOMER_VALUE } from '../../api/customers';
-import type { OrdersListFilters, OrdersView } from '../../api/orders-list';
-import type { OrdersSort } from '../../composables/ordersListUrl';
+import {
+    restoreOrdersFilters,
+    type OrdersListFilters,
+    type OrdersView,
+} from '../../api/orders-list';
+import { ORDERS_URL_DEFAULTS, type OrdersSort } from '../../composables/ordersListUrl';
+import type { TableViewState } from '../../composables/tableViewState';
+import TableViewsMenu from '../TableViewsMenu.vue';
 import type { OrderListRow } from './ordersListRows';
 import {
     BLANK_TABLE_FILTERS,
@@ -54,94 +56,6 @@ const emit = defineEmits<{
     'row-click': [row: OrderListRow];
 }>();
 
-const NON_BLANK_STATES = ORDER_STATE_OPTIONS.filter(o => o.value);
-const NON_BLANK_RESERVATIONS = ORDER_RESERVATION_STATE_OPTIONS.filter(o => o.value);
-
-const ALL_COLUMNS: AdvancedDataTableColumn[] = [
-    {
-        field: 'code',
-        header: 'Order #',
-        sortField: 'code',
-        width: 170,
-        required: true,
-        filterConfig: { type: 'text', placeholder: 'Order, company, INN or phone contains…' },
-        mobile: { primary: true },
-    },
-    {
-        field: 'date',
-        header: 'Date created',
-        sortField: 'createdAt',
-        width: 140,
-        filterConfig: { type: 'date-range' },
-    },
-    // customer, branch and attention have no server-side filter; the search box covers the customer.
-    { field: 'customer', header: 'Customer', width: 230, filterConfig: { type: 'none' } },
-    {
-        field: 'manager',
-        header: 'Manager',
-        width: 150,
-        filterConfig: { type: 'enum', placeholder: 'Any manager', options: [] },
-    },
-    {
-        field: 'state',
-        header: 'Status',
-        sortField: 'state',
-        width: 230,
-        filterConfig: {
-            type: 'status',
-            multiple: true,
-            placeholder: 'All statuses',
-            options: NON_BLANK_STATES.map(o => ({
-                ...o,
-                variant: ORDER_STATE_BADGE_VARIANT[o.value] ?? 'neutral',
-            })),
-        },
-        mobile: { badge: true },
-    },
-    {
-        field: 'total',
-        header: 'Total',
-        sortField: 'totalWithTax',
-        width: 130,
-        filterConfig: { type: 'amount-range', currencyCode: '' },
-    },
-    {
-        field: 'placedBy',
-        header: 'Placed by',
-        width: 170,
-        filterConfig: { type: 'enum', placeholder: 'Anyone', options: [] },
-        mobile: { hidden: true },
-    },
-    {
-        field: 'reservationState',
-        header: 'Reservation',
-        width: 160,
-        filterConfig: {
-            type: 'status',
-            placeholder: 'Any reservation state',
-            options: NON_BLANK_RESERVATIONS.map(o => ({
-                ...o,
-                variant: ORDER_RESERVATION_STATE_BADGE_VARIANT[o.value] ?? 'neutral',
-            })),
-        },
-        mobile: { hidden: true },
-    },
-    {
-        field: 'branch',
-        header: 'Branch',
-        width: 140,
-        filterConfig: { type: 'none' },
-        mobile: { hidden: true },
-    },
-    {
-        field: 'attention',
-        header: 'Attention',
-        width: 170,
-        filterConfig: { type: 'none' },
-        mobile: { hidden: true },
-    },
-];
-
 const { currencyCode: channelCurrency } = useCurrency();
 const currencyCode = computed(() => props.rows[0]?.currencyCode ?? channelCurrency.value ?? '');
 
@@ -169,11 +83,11 @@ const resolvedColumns = computed<AdvancedDataTableColumn[]>(() =>
 );
 
 const { state: tableState } = useDataTableState<OrdersTableFilters>(
-    `orders-list-v1:${props.customerPreset ? 'customer:' : ''}${props.administratorId}`,
+    `orders-list-v2:${props.customerPreset ? 'customer:' : ''}${props.administratorId}`,
     {
         columnOrder: ALL_COLUMNS.map(c => c.field),
         columnWidths: Object.fromEntries(ALL_COLUMNS.map(c => [c.field, c.width])),
-        hiddenColumns: [],
+        hiddenColumns: DEFAULT_HIDDEN_COLUMNS,
         sort: sortToState(props.sort, ALL_COLUMNS),
         filters: listFiltersToTable(props.filters),
         pageSize: props.pageSize,
@@ -220,6 +134,34 @@ watch(
     },
 );
 
+const viewsKey = props.customerPreset ? 'customer-orders' : 'orders';
+const openedWithLink = Object.keys(ORDERS_URL_DEFAULTS).some(k => k in useRoute().query);
+
+function captureView(): TableViewState {
+    return {
+        filters: { ...props.filters },
+        sort: { ...props.sort },
+        columnOrder: [...tableState.value.columnOrder],
+        hiddenColumns: [...tableState.value.hiddenColumns],
+    };
+}
+
+function applyView(state: TableViewState): void {
+    const fields = ALL_COLUMNS.map(c => c.field);
+    const order = state.columnOrder.filter(f => fields.includes(f));
+    tableState.value.columnOrder = [...order, ...fields.filter(f => !order.includes(f))];
+    tableState.value.hiddenColumns = state.hiddenColumns.filter(
+        f => fields.includes(f) && !ALL_COLUMNS.find(c => c.field === f)?.required,
+    );
+    const sort = sortToState(
+        { field: state.sort.field as OrdersSort['field'], dir: state.sort.dir },
+        ALL_COLUMNS,
+    );
+    tableState.value.sort = sort;
+    emit('update:sort', sortFromState(sort, ALL_COLUMNS));
+    emit('update:filters', restoreOrdersFilters(state.filters));
+}
+
 function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void {
     emit('row-click', event.row);
 }
@@ -246,6 +188,16 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
     >
         <template #toolbar-start>
             <slot name="view-chips" />
+        </template>
+
+        <template #toolbar-end>
+            <TableViewsMenu
+                :views-key="viewsKey"
+                :owner-key="administratorId"
+                :capture="captureView"
+                :apply="applyView"
+                :skip-restore="() => openedWithLink"
+            />
         </template>
 
         <template #cell-code="{ data }">{{

@@ -3,8 +3,7 @@ import {
     BLANK_ORDERS_FILTERS,
     buildOrdersListQuery,
     fetchOrdersList,
-    restoreSavedFilters,
-    todayRange,
+    restoreOrdersFilters,
     type OrdersListFilters,
 } from '../../api/orders-list';
 import { PLACED_BY_CUSTOMER_VALUE } from '../../api/customers';
@@ -146,29 +145,23 @@ describe('fetchOrdersList preset', () => {
 });
 
 describe('saved views', () => {
-    it('restores the current shape', () => {
-        const saved = filters({ view: 'overdue', state: ['Shipped'], managerId: '3' });
-        expect(restoreSavedFilters(JSON.stringify(saved))).toEqual(saved);
-    });
-
-    it('upgrades the older flat shape and drops what no longer applies', () => {
-        const restored = restoreSavedFilters(
-            JSON.stringify({ state: 'PaymentSettled', dateRange: 'today', search: 'acme' }),
-        );
-        expect(restored.state).toEqual(['PaymentSettled']);
-        expect(restored.search).toBe('acme');
-        expect(restored.dateRange).toEqual(BLANK_ORDERS_FILTERS.dateRange);
-    });
-
-    it('falls back to a blank list on corrupt JSON', () => {
-        expect(restoreSavedFilters('{oops')).toEqual(BLANK_ORDERS_FILTERS);
-    });
-
-    it('builds a one-day range for today', () => {
-        expect(todayRange(new Date(2026, 10, 7))).toEqual({
-            preset: 'today',
-            from: '2026-11-07',
-            to: '2026-11-07',
+    it('restores every filter of the current shape', () => {
+        const saved = filters({
+            view: 'overdue',
+            state: ['Shipped'],
+            managerId: '3',
+            dateRange: { preset: '', from: '2026-11-01', to: '2026-11-05' },
+            totalMin: 500,
         });
+        expect(restoreOrdersFilters(JSON.parse(JSON.stringify(saved)))).toEqual(saved);
+    });
+
+    it('drops values of the wrong type and unknown views', () => {
+        const restored = restoreOrdersFilters({ state: 'PaymentSettled', view: 'nope', search: 7 });
+        expect(restored).toEqual(BLANK_ORDERS_FILTERS);
+    });
+
+    it('falls back to a blank list for a non-object', () => {
+        expect(restoreOrdersFilters(null)).toEqual(BLANK_ORDERS_FILTERS);
     });
 });

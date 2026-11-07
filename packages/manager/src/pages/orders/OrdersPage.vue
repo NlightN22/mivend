@@ -1,41 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import {
-    MvKpiCard,
-    MvKpiCarousel,
-    MvPanel,
-    MvWarningBanner,
-    MvButton,
-    MvNotice,
-    MvSkeleton,
-    MvStatusBadge,
-} from '@mivend/ui-kit';
+import { MvStatusBadge } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
-import { useOrdersOverview } from '../../composables/useOrdersOverview';
-import { BLANK_ORDERS_FILTERS, restoreSavedFilters, todayRange } from '../../api/orders-list';
-import type { SavedTableView } from '../../api/orders';
+import { useDepartmentName } from '../../composables/useDepartmentName';
 import OrdersList from '../../components/orders/OrdersList.vue';
-import AttentionList from '../../components/orders/AttentionList.vue';
-import OperationalPanel from '../../components/orders/OperationalPanel.vue';
-import SavedViewsPanel from '../../components/orders/SavedViewsPanel.vue';
-import MyTableViewsPanel from '../../components/orders/MyTableViewsPanel.vue';
 
 const authStore = useAuthStore();
-const overview = useOrdersOverview();
-const list = ref<InstanceType<typeof OrdersList> | null>(null);
-
-// "Waiting approval" has no order filter of its own; it resets to the unfiltered list.
-function applySavedView(key: string): void {
-    const base = { ...BLANK_ORDERS_FILTERS };
-    if (key === 'processing') base.state = ['PaymentAuthorized'];
-    else if (key === 'drafts') base.state = ['Draft'];
-    else if (key === 'today') base.dateRange = todayRange();
-    list.value?.applyFilters(base);
-}
-
-function recallTableView(view: SavedTableView): void {
-    list.value?.applyFilters(restoreSavedFilters(view.filters));
-}
+const departmentName = useDepartmentName();
 </script>
 
 <template>
@@ -49,79 +19,13 @@ function recallTableView(view: SavedTableView): void {
                 <MvStatusBadge variant="info">{{
                     authStore.roleLabel ?? authStore.roleCode
                 }}</MvStatusBadge>
-                <MvStatusBadge v-if="overview.departmentName.value" variant="neutral">{{
-                    overview.departmentName.value
+                <MvStatusBadge v-if="departmentName" variant="neutral">{{
+                    departmentName
                 }}</MvStatusBadge>
             </div>
         </div>
 
-        <MvWarningBanner
-            v-if="overview.summary.value && overview.summary.value.attentionCount"
-            action-text="Open problem orders"
-            action-to="/orders"
-        >
-            <strong>{{ overview.summary.value.attentionCount }} orders need attention.</strong>
-            Some are overdue for shipment or have a price adjustment awaiting approval.
-        </MvWarningBanner>
-
-        <MvKpiCarousel
-            v-if="overview.summary.value"
-            class="orders-page__kpis"
-            data-testid="orders-kpis"
-        >
-            <MvKpiCard label="Open orders" :value="overview.summary.value.openCount" />
-            <MvKpiCard
-                label="Waiting approval"
-                :value="overview.summary.value.waitingApprovalCount"
-                accent
-            />
-            <MvKpiCard
-                label="Today's amount"
-                :value="overview.todayAmountFormatted.value"
-                :caption="`${overview.summary.value.todayCount} orders today`"
-            />
-        </MvKpiCarousel>
-        <MvNotice v-else-if="overview.summaryError.value" variant="error" class="orders-page__kpis">
-            Could not load the orders summary.
-            <MvButton size="sm" variant="ghost" @click="overview.loadSummary">Retry</MvButton>
-        </MvNotice>
-        <MvSkeleton
-            v-else-if="overview.summaryLoading.value"
-            class="orders-page__kpis"
-            height="96px"
-            data-testid="orders-kpis-skeleton"
-        />
-
-        <div class="orders-page__grid">
-            <MvPanel title="Orders list">
-                <OrdersList
-                    ref="list"
-                    :pending-approval-order-ids="
-                        overview.summary.value?.pendingApprovalOrderIds ?? new Set()
-                    "
-                />
-            </MvPanel>
-
-            <aside class="orders-page__right-stack">
-                <MvPanel title="Operational panel">
-                    <OperationalPanel :metrics="overview.operationalMetrics.value" />
-                </MvPanel>
-                <MvPanel title="Attention">
-                    <AttentionList :items="overview.attentionItems.value" />
-                </MvPanel>
-                <MvPanel title="Saved views">
-                    <SavedViewsPanel :views="overview.savedViews.value" @select="applySavedView" />
-                </MvPanel>
-                <MvPanel title="My table views">
-                    <MyTableViewsPanel
-                        page-key="orders"
-                        :current-filters="{ ...(list?.filters ?? BLANK_ORDERS_FILTERS) }"
-                        :current-visible-columns="[]"
-                        @recall="recallTableView"
-                    />
-                </MvPanel>
-            </aside>
-        </div>
+        <OrdersList />
     </div>
 </template>
 
@@ -131,7 +35,7 @@ function recallTableView(view: SavedTableView): void {
     align-items: flex-start;
     justify-content: space-between;
     gap: 20px;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 }
 
 .orders-page__context {
@@ -153,25 +57,14 @@ function recallTableView(view: SavedTableView): void {
     letter-spacing: -0.03em;
 }
 
-.orders-page__kpis {
-    margin-bottom: 18px;
-}
+@media (max-width: 800px) {
+    .orders-page__breadcrumb,
+    .orders-page__context {
+        display: none;
+    }
 
-.orders-page__grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 18px;
-    align-items: start;
-}
-
-.orders-page__right-stack {
-    display: grid;
-    gap: 18px;
-}
-
-@media (max-width: 1200px) {
-    .orders-page__grid {
-        grid-template-columns: 1fr;
+    .orders-page__title {
+        font-size: 22px;
     }
 }
 </style>

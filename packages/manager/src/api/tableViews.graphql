@@ -1,0 +1,32 @@
+fragment SavedTableViewFields on SavedTableView {
+    id
+    name
+    filters
+    visibleColumns
+}
+
+query MyTableViews($pageKey: String!) {
+    myTableViews(pageKey: $pageKey) {
+        ...SavedTableViewFields
+    }
+}
+
+mutation SaveTableView(
+    $pageKey: String!
+    $name: String!
+    $filters: String!
+    $visibleColumns: [String!]!
+) {
+    saveTableView(
+        pageKey: $pageKey
+        name: $name
+        filters: $filters
+        visibleColumns: $visibleColumns
+    ) {
+        ...SavedTableViewFields
+    }
+}
+
+mutation DeleteTableView($id: ID!) {
+    deleteTableView(id: $id)
+}
