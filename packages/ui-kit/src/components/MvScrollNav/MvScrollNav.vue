@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { IconArrowDown, IconArrowUp } from '@tabler/icons-vue';
 import MvRoundIconButton from '../MvRoundIconButton/MvRoundIconButton.vue';
 
 const props = withDefaults(
@@ -67,7 +68,7 @@ onBeforeUnmount(() => {
             :title="props.upLabel"
             @click="scrollToTop"
         >
-            ↑
+            <IconArrowUp :size="22" :stroke="2.25" aria-hidden="true" />
         </MvRoundIconButton>
         <MvRoundIconButton
             v-if="props.down && showDown"
@@ -76,7 +77,7 @@ onBeforeUnmount(() => {
             :title="props.downLabel"
             @click="scrollToBottom"
         >
-            ↓
+            <IconArrowDown :size="22" :stroke="2.25" aria-hidden="true" />
         </MvRoundIconButton>
     </div>
 </template>
