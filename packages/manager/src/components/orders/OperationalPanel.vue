@@ -31,11 +31,11 @@ defineProps<{ metrics: OperationalMetric[] }>();
 }
 
 .operational-panel__label {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
 }
 
 .operational-panel__value {
     font-weight: 700;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--app-text-deep);
 }
 </style>

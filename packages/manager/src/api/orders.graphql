@@ -12,6 +12,7 @@ fragment OrderListItemFields on Order {
         reservationFailureReason
         erpStatus
         hasCheckFindings
+        placedByAdministratorId
     }
     customer {
         firstName
@@ -26,8 +27,13 @@ fragment OrderListItemFields on Order {
     }
 }
 
-query OrdersPage($options: OrderListOptions, $managerId: ID, $search: String) {
-    visibleOrders(options: $options, managerId: $managerId, search: $search) {
+query OrdersPage($options: OrderListOptions, $managerId: ID, $customerId: ID, $search: String) {
+    visibleOrders(
+        options: $options
+        managerId: $managerId
+        customerId: $customerId
+        search: $search
+    ) {
         totalItems
         items {
             ...OrderListItemFields

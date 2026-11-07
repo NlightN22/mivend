@@ -4,7 +4,6 @@ import {
     BranchesDocument,
     DeleteTableViewDocument,
     MyTableViewsDocument,
-    OrdersPageDocument,
     OrdersSummaryDocument,
     SaveTableViewDocument,
     TeamMembersDocument,
@@ -12,31 +11,6 @@ import {
 } from './generated/graphql';
 
 export type OrderListItem = OrderListItemFieldsFragment;
-
-export interface OrdersFilters {
-    // Index signature so OrdersFilters satisfies useUrlSyncedState's Record<string, string> constraint.
-    // All fields are flat strings, so this loosens nothing.
-    [key: string]: string;
-    search: string;
-    state: string;
-    dateRange: string;
-    managerId: string;
-    reservationState: string;
-    erpStatus: string;
-    reservationFailed: string;
-    hasCheckFindings: string;
-}
-
-export const DEFAULT_FILTERS: OrdersFilters = {
-    search: '',
-    state: '',
-    dateRange: '',
-    managerId: '',
-    reservationState: '',
-    erpStatus: '',
-    reservationFailed: '',
-    hasCheckFindings: '',
-};
 
 // Order.customFields.reservationState — an internal technical enum fixed by app logic (see
 // plugin-reservation/src/types.ts), not ERP business data, same carve-out as ORDER_STATE_OPTIONS.
@@ -85,70 +59,9 @@ export const ORDER_STATE_OPTIONS = [
     { value: 'Cancelled', label: 'Cancelled' },
 ] as const;
 
-export const DATE_RANGE_OPTIONS = [
-    { value: '', label: 'Last 7 days' },
-    { value: 'today', label: 'Today' },
-    { value: 'yesterday', label: 'Yesterday' },
-    { value: 'month', label: 'This month' },
-] as const;
-
-export function dateRangeToAfter(range: string): string {
-    const now = new Date();
-    switch (range) {
-        case 'today':
-            return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-        case 'yesterday':
-            return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toISOString();
-        case 'month':
-            return new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        default:
-            return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    }
-}
-
-function buildFilter(filters: OrdersFilters): Record<string, unknown> {
-    const filter: Record<string, unknown> = {
-        orderPlacedAt: { after: dateRangeToAfter(filters.dateRange) },
-    };
-    if (filters.state) filter.state = { eq: filters.state };
-    if (filters.reservationState) {
-        // Must be flat, not under customFields: filter.customFields is not a valid OrderFilterParameter
-        // shape and silently matches nothing.
-        filter.reservationState = { eq: filters.reservationState };
-    }
-    if (filters.erpStatus) {
-        filter.erpStatus = { in: filters.erpStatus.split(',') };
-    }
-    if (filters.reservationFailed) {
-        filter.reservationFailureReason = { isNull: false };
-    }
-    if (filters.hasCheckFindings) filter.hasCheckFindings = { eq: true };
-    return filter;
-}
-
 // Must use real Vendure OrderSortParameter keys: DataTable column fields don't map 1:1
 // (e.g. 'total' -> totalWithTax), so callers map through this before building sort.
 export type OrderSortField = 'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt';
-
-export async function fetchOrdersPage(
-    filters: OrdersFilters,
-    page: number,
-    pageSize: number,
-    // Key insertion order is the ORDER BY clause order; multi-field sort relies on it.
-    sort: Partial<Record<OrderSortField, 'ASC' | 'DESC'>> = { createdAt: 'DESC' },
-): Promise<{ items: OrderListItem[]; totalItems: number }> {
-    const result = await adminApi(OrdersPageDocument, {
-        options: {
-            skip: (page - 1) * pageSize,
-            take: pageSize,
-            sort,
-            filter: buildFilter(filters),
-        },
-        managerId: filters.managerId || undefined,
-        search: filters.search || undefined,
-    });
-    return result.visibleOrders;
-}
 
 export interface AttentionCandidate {
     id: string;

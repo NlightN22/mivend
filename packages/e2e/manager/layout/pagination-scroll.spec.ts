@@ -2,14 +2,8 @@ import { test, expect } from '@playwright/test';
 
 // Covers every page using MvPagination: the blur() on Next/Previous and MvTable height from the
 // current page's row count (not pageSize) must hold everywhere, not only on the original page.
-const PAGES = [
-    '/orders',
-    '/proforma-invoices',
-    '/payments',
-    '/discounts',
-    '/customers',
-    '/approvals',
-];
+// /orders uses the table paginator and is covered by orders/orders-pagination.spec.ts.
+const PAGES = ['/proforma-invoices', '/payments', '/discounts', '/customers', '/approvals'];
 
 for (const path of PAGES) {
     test(`clicking Next on ${path} does not snap the page back to the top @on:manager-portal-admin @read-only`, async ({

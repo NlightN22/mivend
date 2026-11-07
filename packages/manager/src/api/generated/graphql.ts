@@ -11786,6 +11786,7 @@ export type OrderListItemFieldsFragment = {
         reservationFailureReason: string | null;
         erpStatus: string | null;
         hasCheckFindings: boolean | null;
+        placedByAdministratorId: string | null;
     } | null;
     customer: {
         firstName: string;
@@ -11803,6 +11804,7 @@ export type OrderListItemFieldsFragment = {
 export type OrdersPageQueryVariables = Exact<{
     options?: InputMaybe<OrderListOptions>;
     managerId?: InputMaybe<Scalars['ID']['input']>;
+    customerId?: InputMaybe<Scalars['ID']['input']>;
     search?: InputMaybe<Scalars['String']['input']>;
 }>;
 
@@ -11823,6 +11825,7 @@ export type OrdersPageQuery = {
                 reservationFailureReason: string | null;
                 erpStatus: string | null;
                 hasCheckFindings: boolean | null;
+                placedByAdministratorId: string | null;
             } | null;
             customer: {
                 firstName: string;
@@ -12987,6 +12990,7 @@ export const OrderListItemFieldsFragmentDoc = new TypedDocumentString(
     reservationFailureReason
     erpStatus
     hasCheckFindings
+    placedByAdministratorId
   }
   customer {
     firstName
@@ -14820,8 +14824,8 @@ export const OrderStatusesDocument = new TypedDocumentString(`
 }
     `) as unknown as TypedDocumentString<OrderStatusesQuery, OrderStatusesQueryVariables>;
 export const OrdersPageDocument = new TypedDocumentString(`
-    query OrdersPage($options: OrderListOptions, $managerId: ID, $search: String) {
-  visibleOrders(options: $options, managerId: $managerId, search: $search) {
+    query OrdersPage($options: OrderListOptions, $managerId: ID, $customerId: ID, $search: String) {
+  visibleOrders(options: $options, managerId: $managerId, customerId: $customerId, search: $search) {
     totalItems
     items {
       ...OrderListItemFields
@@ -14842,6 +14846,7 @@ export const OrdersPageDocument = new TypedDocumentString(`
     reservationFailureReason
     erpStatus
     hasCheckFindings
+    placedByAdministratorId
   }
   customer {
     firstName

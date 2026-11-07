@@ -1,326 +1,41 @@
 <script setup lang="ts">
-import { useOrderStatusesStore } from '../../stores/orderStatuses';
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { ref } from 'vue';
 import {
     MvKpiCard,
     MvKpiCarousel,
     MvPanel,
     MvWarningBanner,
-    MvPagination,
     MvButton,
     MvNotice,
     MvSkeleton,
     MvStatusBadge,
-    MvDataTableToolbar,
-    useColumnVisibility,
-    toColumnVisibilityDefs,
-    type FilterChip,
-    type MvDataTableColumn,
 } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
-import { useCurrency } from '../../composables/useCurrency';
-import { useUrlSyncedState } from '../../composables/useUrlSyncedState';
-import {
-    DEFAULT_FILTERS,
-    fetchOrdersPage,
-    fetchOrdersSummary,
-    fetchManagerOptions,
-    fetchBranchOptions,
-    ORDER_STATE_OPTIONS,
-    ORDER_RESERVATION_STATE_OPTIONS,
-    DATE_RANGE_OPTIONS,
-    type OrdersFilters,
-    type OrderListItem,
-    type OrdersSummary,
-    type ManagerOption,
-    type BranchOption,
-} from '../../api/orders';
-import { fetchDepartments } from '../../api/team';
-import OrdersTableResponsive from '../../components/orders/OrdersTableResponsive.vue';
+import { useOrdersOverview } from '../../composables/useOrdersOverview';
+import { BLANK_ORDERS_FILTERS, restoreSavedFilters, todayRange } from '../../api/orders-list';
+import type { SavedTableView } from '../../api/orders';
+import OrdersList from '../../components/orders/OrdersList.vue';
 import AttentionList from '../../components/orders/AttentionList.vue';
 import OperationalPanel from '../../components/orders/OperationalPanel.vue';
-import SavedViewsPanel, { type SavedView } from '../../components/orders/SavedViewsPanel.vue';
+import SavedViewsPanel from '../../components/orders/SavedViewsPanel.vue';
 import MyTableViewsPanel from '../../components/orders/MyTableViewsPanel.vue';
-import type { SavedTableView } from '../../api/orders';
 
-const statuses = useOrderStatusesStore();
-void statuses.load();
 const authStore = useAuthStore();
+const overview = useOrdersOverview();
+const list = ref<InstanceType<typeof OrdersList> | null>(null);
 
-// Operator/Dept Head/Director/SB see multiple managers' orders; Manager always sees only their
-// own, so the column/filter would be redundant (see docs/ai/manager-portal-pages/02-orders-list.md).
-const showManagerColumn = computed(() => authStore.roleCode !== 'manager');
-
-const filters = reactive<OrdersFilters>({ ...DEFAULT_FILTERS });
-const page = ref(1);
-const pageSize = 10;
-
-const orders = ref<OrderListItem[]>([]);
-const totalItems = ref(0);
-const summary = ref<OrdersSummary | null>(null);
-const managers = ref<ManagerOption[]>([]);
-const branches = ref<BranchOption[]>([]);
-const loading = ref(true);
-const summaryLoading = ref(true);
-const summaryError = ref(false);
-const departmentName = ref<string | null>(null);
-
-const CHIPS: FilterChip[] = [
-    { key: 'all', label: 'All' },
-    { key: 'processing', label: 'Processing' },
-    { key: 'awaiting-shipment', label: 'Awaiting shipment' },
-    { key: 'awaiting-confirmation', label: 'Awaiting confirmation' },
-    { key: 'rejected-by-erp', label: 'Rejected by ERP' },
-    { key: 'reservation-failed', label: 'Reservation failed' },
-    { key: 'erp-requirements', label: 'Blocked by ERP requirements' },
-    { key: 'overdue', label: 'Overdue' },
-];
-const activeChip = ref('all');
-
-// Single source of truth for this table's toolbar (AGENTS.md/MvDataTableToolbar consolidation —
-// replaces the old separate ORDER_COLUMNS/OrdersFilterBar-fields/CHIPS trio). Entries with no
-// matching visible column (search/reservationState/dateRange/managerId — OrdersTable.vue has no
-// such columns) are marked `required` too so they're excluded from the Columns toggle, which
-// only makes sense for entries that ARE real display columns. 'code'/'action' are marked
-// required for the usual reason: a manager can never hide the one column they need to
-// identify/open a row.
-const ORDER_TABLE_COLUMNS = computed<MvDataTableColumn[]>(() => {
-    const cols: MvDataTableColumn[] = [
-        {
-            key: 'search',
-            title: 'Search',
-            required: true,
-            filter: { kind: 'search', placeholder: 'Order number, customer...' },
-        },
-        { key: 'code', title: 'Order #', required: true },
-        { key: 'customer', title: 'Customer' },
-    ];
-    if (showManagerColumn.value) {
-        cols.push({ key: 'manager', title: 'Manager' });
-        cols.push({
-            key: 'managerId',
-            title: 'Manager filter',
-            required: true,
-            filter: {
-                kind: 'select',
-                options: [
-                    { value: '', label: 'All managers' },
-                    ...managers.value.map(m => ({ value: m.id, label: m.name })),
-                ],
-            },
-        });
-    }
-    cols.push(
-        {
-            key: 'state',
-            title: 'Status',
-            filter: { kind: 'select', options: [...ORDER_STATE_OPTIONS] },
-        },
-        {
-            key: 'reservationState',
-            title: 'Reservation',
-            required: true,
-            filter: { kind: 'select', options: [...ORDER_RESERVATION_STATE_OPTIONS] },
-        },
-        {
-            key: 'dateRange',
-            title: 'Date range',
-            required: true,
-            filter: { kind: 'select', options: [...DATE_RANGE_OPTIONS] },
-        },
-        { key: 'total', title: 'Total amount' },
-        { key: 'date', title: 'Date placed' },
-        { key: 'branch', title: 'Branch' },
-        { key: 'attention', title: 'Attention' },
-        { key: 'action', title: '', required: true },
-    );
-    return cols;
-});
-const { hiddenKeys: hiddenColumnKeys, toggle: toggleColumn } = useColumnVisibility(
-    `orders-columns:${authStore.administrator?.id ?? 'anonymous'}`,
-    toColumnVisibilityDefs(ORDER_TABLE_COLUMNS.value),
-);
-const HIDEABLE_COLUMN_KEYS = computed(() =>
-    ORDER_TABLE_COLUMNS.value.filter(c => !c.required).map(c => c.key),
-);
-
-function applyMyTableView(view: SavedTableView): void {
-    const restoredFilters = JSON.parse(view.filters) as Partial<OrdersFilters>;
-    Object.assign(filters, DEFAULT_FILTERS, restoredFilters);
-    activeChip.value = chipFromFilters(filters);
-    hiddenColumnKeys.value = new Set(
-        HIDEABLE_COLUMN_KEYS.value.filter(key => !view.visibleColumns.includes(key)),
-    );
-    page.value = 1;
-}
-
-function applyChip(key: string): void {
-    activeChip.value = key;
-    filters.state =
-        key === 'processing'
-            ? 'PaymentAuthorized'
-            : key === 'awaiting-shipment'
-              ? 'PaymentSettled'
-              : '';
-    filters.reservationState = key === 'awaiting-confirmation' ? 'AWAITING_CONFIRMATION' : '';
-    filters.erpStatus = key === 'rejected-by-erp' ? statuses.rejectedCodes.join(',') : '';
-    filters.reservationFailed = key === 'reservation-failed' ? '1' : '';
-    filters.hasCheckFindings = key === 'erp-requirements' ? '1' : '';
-    page.value = 1;
-}
-
-// Chip is UI sugar over the filters themselves — derive it back from a restored filter set (e.g.
-// after loading a shared URL) so the highlighted chip matches what's actually being filtered.
-// 'overdue' has no filter value of its own (it's a summary-derived view, not a server filter),
-// so it can't be round-tripped and always falls back to 'all'.
-function chipFromFilters(f: OrdersFilters): string {
-    if (f.reservationState === 'AWAITING_CONFIRMATION') return 'awaiting-confirmation';
-    if (f.erpStatus && f.erpStatus === statuses.rejectedCodes.join(',')) return 'rejected-by-erp';
-    if (f.reservationFailed) return 'reservation-failed';
-    if (f.hasCheckFindings) return 'erp-requirements';
-    if (f.state === 'PaymentAuthorized') return 'processing';
-    if (f.state === 'PaymentSettled') return 'awaiting-shipment';
-    return 'all';
-}
-
-// Manager portal rule (see the manager-portal-rules skill): every filtered/sorted/paginated view must be a shareable
-// URL. useUrlSyncedState reads on mount (below, before the watchers are set up) and writes back
-// on every filter/page change via router.replace.
-const { fromQuery, toQuery } = useUrlSyncedState(DEFAULT_FILTERS);
-fromQuery(filters, page);
-activeChip.value = chipFromFilters(filters);
-
-const savedViews = computed<SavedView[]>(() => [
-    { key: 'processing', label: 'My processing', count: summary.value?.processingCount ?? 0 },
-    {
-        key: 'waiting-approval',
-        label: 'Waiting approval',
-        count: summary.value?.waitingApprovalCount ?? 0,
-    },
-    { key: 'today', label: "Today's orders", count: summary.value?.todayCount ?? 0 },
-    { key: 'drafts', label: 'Drafts', count: summary.value?.draftCount ?? 0 },
-]);
-
+// "Waiting approval" has no order filter of its own; it resets to the unfiltered list.
 function applySavedView(key: string): void {
-    resetFilters();
-    if (key === 'processing') filters.state = 'PaymentAuthorized';
-    else if (key === 'drafts') filters.state = 'Draft';
-    else if (key === 'today') filters.dateRange = 'today';
-    // "Waiting approval" has no Order.state of its own — it's derived from
-    // pendingPriceAdjustmentOrderIds (see fetchOrdersSummary), which OrdersFilters doesn't
-    // support filtering by yet. Resets to an unfiltered list; the Attention column/panel
-    // already surfaces these orders individually.
+    const base = { ...BLANK_ORDERS_FILTERS };
+    if (key === 'processing') base.state = ['PaymentAuthorized'];
+    else if (key === 'drafts') base.state = ['Draft'];
+    else if (key === 'today') base.dateRange = todayRange();
+    list.value?.applyFilters(base);
 }
 
-// Set by OrdersDataTable.vue's (desktop-only) column sort — see api/orders.ts's
-// OrderSortField/fetchOrdersPage doc comment for why only these fields are real.
-const sort = ref<
-    Partial<
-        Record<'code' | 'state' | 'totalWithTax' | 'orderPlacedAt' | 'createdAt', 'ASC' | 'DESC'>
-    >
->({
-    createdAt: 'DESC',
-});
-function handleSortChange(next: typeof sort.value): void {
-    sort.value = next;
-    void loadOrders();
+function recallTableView(view: SavedTableView): void {
+    list.value?.applyFilters(restoreSavedFilters(view.filters));
 }
-
-async function loadOrders(): Promise<void> {
-    const result = await fetchOrdersPage(filters, page.value, pageSize, sort.value);
-    orders.value = result.items;
-    totalItems.value = result.totalItems;
-}
-
-async function loadSummary(): Promise<void> {
-    summaryLoading.value = true;
-    summaryError.value = false;
-    try {
-        summary.value = await fetchOrdersSummary();
-    } catch (e) {
-        console.warn('[orders] could not load summary:', e);
-        summaryError.value = true;
-    } finally {
-        summaryLoading.value = false;
-    }
-}
-
-async function loadAll(): Promise<void> {
-    loading.value = true;
-    void loadSummary();
-    try {
-        const [ordersResult, managerOptions, branchOptions] = await Promise.all([
-            fetchOrdersPage(filters, page.value, pageSize, sort.value),
-            managers.value.length ? Promise.resolve(managers.value) : fetchManagerOptions(),
-            branches.value.length ? Promise.resolve(branches.value) : fetchBranchOptions(),
-        ]);
-        orders.value = ordersResult.items;
-        totalItems.value = ordersResult.totalItems;
-        managers.value = managerOptions;
-        branches.value = branchOptions;
-    } finally {
-        loading.value = false;
-    }
-
-    // Cosmetic (department badge next to the role badge) — kept independent so a failure here
-    // never affects the rest of the page (same pattern as DashboardPage.vue).
-    try {
-        const departmentId = authStore.administrator?.customFields.departmentId;
-        const departments = await fetchDepartments();
-        // administrator.customFields.departmentId stores the ERP id (see
-        // EmployeeService.assign), not Department's DB row id — match on erpId.
-        departmentName.value = departments.find(d => d.erpId === departmentId)?.name ?? null;
-    } catch (e) {
-        console.warn('[orders] could not load department name:', e);
-    }
-}
-
-function resetFilters(): void {
-    Object.assign(filters, DEFAULT_FILTERS);
-    activeChip.value = 'all';
-    page.value = 1;
-}
-
-watch(page, () => {
-    loadOrders();
-    toQuery(filters, page);
-});
-watch(filters, () => {
-    page.value = 1;
-    loadOrders();
-    toQuery(filters, page);
-});
-
-onMounted(loadAll);
-
-const attentionItems = computed(
-    () =>
-        summary.value?.attentionCandidates.map(c => ({
-            code: c.code,
-            title: `${c.code} ${c.state === 'PaymentSettled' ? 'shipment overdue' : 'price limit exceeded'}`,
-            meta: `${c.customerName}`,
-        })) ?? [],
-);
-
-const { formatMinor } = useCurrency();
-
-const operationalMetrics = computed(() => {
-    if (!summary.value) return [];
-    return [
-        { label: 'Open orders', value: String(summary.value.openCount) },
-        { label: 'Waiting approval', value: String(summary.value.waitingApprovalCount) },
-        { label: 'Overdue', value: String(summary.value.overdueCount) },
-        {
-            label: 'Open orders amount',
-            value: formatMinor(summary.value.totalAmount),
-        },
-    ];
-});
-
-const todayAmountFormatted = computed(() => {
-    if (!summary.value) return '';
-    return formatMinor(summary.value.todayAmount);
-});
 </script>
 
 <template>
@@ -329,44 +44,49 @@ const todayAmountFormatted = computed(() => {
             <div>
                 <div class="orders-page__breadcrumb">Workspace / Orders</div>
                 <h1 class="orders-page__title">Orders</h1>
-                <p class="orders-page__subtitle">
-                    {{ totalItems }} orders across your accessible scope.
-                </p>
             </div>
             <div class="orders-page__context">
                 <MvStatusBadge variant="info">{{
                     authStore.roleLabel ?? authStore.roleCode
                 }}</MvStatusBadge>
-                <MvStatusBadge v-if="departmentName" variant="neutral">{{
-                    departmentName
+                <MvStatusBadge v-if="overview.departmentName.value" variant="neutral">{{
+                    overview.departmentName.value
                 }}</MvStatusBadge>
             </div>
         </div>
 
         <MvWarningBanner
-            v-if="summary && summary.attentionCount"
+            v-if="overview.summary.value && overview.summary.value.attentionCount"
             action-text="Open problem orders"
             action-to="/orders"
         >
-            <strong>{{ summary.attentionCount }} orders need attention.</strong>
+            <strong>{{ overview.summary.value.attentionCount }} orders need attention.</strong>
             Some are overdue for shipment or have a price adjustment awaiting approval.
         </MvWarningBanner>
 
-        <MvKpiCarousel v-if="summary" class="orders-page__kpis" data-testid="orders-kpis">
-            <MvKpiCard label="Open orders" :value="summary.openCount" />
-            <MvKpiCard label="Waiting approval" :value="summary.waitingApprovalCount" accent />
+        <MvKpiCarousel
+            v-if="overview.summary.value"
+            class="orders-page__kpis"
+            data-testid="orders-kpis"
+        >
+            <MvKpiCard label="Open orders" :value="overview.summary.value.openCount" />
+            <MvKpiCard
+                label="Waiting approval"
+                :value="overview.summary.value.waitingApprovalCount"
+                accent
+            />
             <MvKpiCard
                 label="Today's amount"
-                :value="todayAmountFormatted"
-                :caption="`${summary.todayCount} orders today`"
+                :value="overview.todayAmountFormatted.value"
+                :caption="`${overview.summary.value.todayCount} orders today`"
             />
         </MvKpiCarousel>
-        <MvNotice v-else-if="summaryError" variant="error" class="orders-page__kpis">
+        <MvNotice v-else-if="overview.summaryError.value" variant="error" class="orders-page__kpis">
             Could not load the orders summary.
-            <MvButton size="sm" variant="ghost" @click="loadSummary">Retry</MvButton>
+            <MvButton size="sm" variant="ghost" @click="overview.loadSummary">Retry</MvButton>
         </MvNotice>
         <MvSkeleton
-            v-else-if="summaryLoading"
+            v-else-if="overview.summaryLoading.value"
             class="orders-page__kpis"
             height="96px"
             data-testid="orders-kpis-skeleton"
@@ -374,64 +94,30 @@ const todayAmountFormatted = computed(() => {
 
         <div class="orders-page__grid">
             <MvPanel title="Orders list">
-                <MvDataTableToolbar
-                    :columns="ORDER_TABLE_COLUMNS"
-                    :filters="filters"
-                    :hidden-column-keys="hiddenColumnKeys"
-                    :chips="CHIPS"
-                    :active-chip="activeChip"
-                    @update:filters="Object.assign(filters, $event)"
-                    @reset="resetFilters"
-                    @toggle-column="toggleColumn"
-                    @select-chip="applyChip"
-                    hide-column-toggle
-                />
-                <MvPagination
-                    :page="page"
-                    :page-size="pageSize"
-                    :total="totalItems"
-                    @update:page="page = $event"
-                />
-                <OrdersTableResponsive
-                    :orders="orders"
-                    :managers="managers"
-                    :branches="branches"
-                    :show-manager-column="showManagerColumn"
-                    :pending-approval-order-ids="summary?.pendingApprovalOrderIds ?? new Set()"
-                    :loading="loading"
-                    :total-items="totalItems"
-                    :page-size="pageSize"
-                    :state-filter="filters.state"
-                    :administrator-id="authStore.administrator?.id ?? 'anonymous'"
-                    @update:sort="handleSortChange"
-                    @update:state-filter="filters.state = $event"
-                />
-                <MvPagination
-                    :page="page"
-                    :page-size="pageSize"
-                    :total="totalItems"
-                    @update:page="page = $event"
+                <OrdersList
+                    ref="list"
+                    :pending-approval-order-ids="
+                        overview.summary.value?.pendingApprovalOrderIds ?? new Set()
+                    "
                 />
             </MvPanel>
 
             <aside class="orders-page__right-stack">
                 <MvPanel title="Operational panel">
-                    <OperationalPanel :metrics="operationalMetrics" />
+                    <OperationalPanel :metrics="overview.operationalMetrics.value" />
                 </MvPanel>
                 <MvPanel title="Attention">
-                    <AttentionList :items="attentionItems" />
+                    <AttentionList :items="overview.attentionItems.value" />
                 </MvPanel>
                 <MvPanel title="Saved views">
-                    <SavedViewsPanel :views="savedViews" @select="applySavedView" />
+                    <SavedViewsPanel :views="overview.savedViews.value" @select="applySavedView" />
                 </MvPanel>
                 <MvPanel title="My table views">
                     <MyTableViewsPanel
                         page-key="orders"
-                        :current-filters="filters"
-                        :current-visible-columns="
-                            HIDEABLE_COLUMN_KEYS.filter(k => !hiddenColumnKeys.has(k))
-                        "
-                        @recall="applyMyTableView"
+                        :current-filters="{ ...(list?.filters ?? BLANK_ORDERS_FILTERS) }"
+                        :current-visible-columns="[]"
+                        @recall="recallTableView"
                     />
                 </MvPanel>
             </aside>
@@ -456,7 +142,7 @@ const todayAmountFormatted = computed(() => {
 }
 
 .orders-page__breadcrumb {
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
     font-size: 13px;
     margin-bottom: 6px;
 }
@@ -465,11 +151,6 @@ const todayAmountFormatted = computed(() => {
     margin: 0;
     font-size: 28px;
     letter-spacing: -0.03em;
-}
-
-.orders-page__subtitle {
-    margin: 8px 0 0;
-    color: var(--el-text-color-secondary, #6b7280);
 }
 
 .orders-page__kpis {

@@ -10,7 +10,7 @@ import {
 
 const props = defineProps<{
     pageKey: string;
-    currentFilters: Record<string, string>;
+    currentFilters: Record<string, unknown>;
     currentVisibleColumns: string[];
 }>();
 const emit = defineEmits<{ recall: [view: SavedTableView] }>();
@@ -113,18 +113,18 @@ load();
 }
 
 .my-table-views__save {
-    border: 1px dashed var(--el-border-color, #d1d5db);
+    border: 1px dashed var(--app-nav-border);
     border-radius: var(--app-radius-md, 14px);
     background: transparent;
     padding: 8px 12px;
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--app-text-deep);
 }
 
 .my-table-views__save:hover {
-    background: var(--el-fill-color-light, #f8fafc);
+    background: var(--app-fill-soft);
 }
 
 .my-table-views__list {
@@ -143,27 +143,27 @@ load();
     gap: 8px;
     padding: 6px 10px;
     border-radius: var(--app-radius-md, 14px);
-    background: var(--el-fill-color-lighter, #f3f8f6);
+    background: var(--app-fill-faint);
 }
 
 .my-table-views__name {
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--app-text-deep);
 }
 
 .my-table-views__delete {
     border: 0;
     background: transparent;
     cursor: pointer;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
     font-size: 11px;
 }
 
 .my-table-views__empty {
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
     margin: 0;
 }
 
@@ -171,7 +171,7 @@ load();
     width: 100%;
     box-sizing: border-box;
     padding: 8px 10px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--app-nav-border);
     border-radius: 10px;
     font-size: 14px;
 }
@@ -194,13 +194,13 @@ load();
 }
 
 .my-table-views__cancel {
-    background: var(--el-fill-color-light, #f3f8f6);
-    color: var(--el-text-color-primary, #17212b);
+    background: var(--app-fill-soft);
+    color: var(--app-text-deep);
 }
 
 .my-table-views__confirm {
-    background: var(--el-color-primary, #14231f);
-    color: #fff;
+    background: var(--app-primary-btn);
+    color: var(--app-on-accent);
 }
 
 .my-table-views__confirm:disabled {

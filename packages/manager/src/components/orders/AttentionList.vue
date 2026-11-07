@@ -53,23 +53,23 @@ const router = useRouter();
     height: 8px;
     margin-top: 6px;
     border-radius: 50%;
-    background: #dc2626;
+    background: var(--app-danger-btn);
     flex-shrink: 0;
 }
 
 .attention-list__title {
     font-size: 13px;
     font-weight: 700;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--app-text-deep);
 }
 
 .attention-list__meta {
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
 }
 
 .attention-list__empty {
     font-size: 13px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
 }
 </style>

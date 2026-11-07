@@ -39,26 +39,26 @@ const emit = defineEmits<{ select: [key: string] }>();
     justify-content: space-between;
     gap: 10px;
     padding: 10px 12px;
-    border: 1px solid var(--el-border-color, #e4e7ec);
+    border: 1px solid var(--app-nav-border);
     border-radius: var(--app-radius-md, 14px);
-    background: #fff;
+    background: var(--app-surface);
     cursor: pointer;
 }
 
 .saved-views__item:hover {
-    background: var(--el-fill-color-light, #f8fafc);
-    border-color: var(--el-border-color-light, #d1d5db);
+    background: var(--app-fill-soft);
+    border-color: var(--app-nav-border-strong);
 }
 
 .saved-views__name {
     font-weight: 700;
     font-size: 13px;
-    color: var(--el-text-color-primary, #17212b);
+    color: var(--app-text-deep);
 }
 
 .saved-views__count {
     font-weight: 800;
     font-size: 12px;
-    color: var(--el-text-color-secondary, #6b7280);
+    color: var(--app-text-grey);
 }
 </style>
