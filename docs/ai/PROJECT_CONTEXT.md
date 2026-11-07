@@ -2,6 +2,12 @@
 
 Updated: 2026-11-07 12:00
 
+## #316/#317/#318 e2e speed-up (2026-11-06..07, DONE: audited, in prod release 0.0.47, issues closed)
+- `make e2e-groups G="a b"` runs several groups on one stack under the shared flock (`infrastructure/scripts/e2e-groups.sh`); `e2e-leak.sh` fails the run if a group leaves more placed orders or active reservations (carts not counted). `make e2e-group` unchanged.
+- Every `make e2e-*` runs two passes (`e2e-playwright.sh`): specs tagged `@read-only` on `E2E_PARALLEL_WORKERS` (default 3), the rest on 1 worker. A `describe` whose `beforeAll` creates data is a writer, never `@read-only`. Rules: `docs/testing-strategy.md` "E2E parallelism".
+- Manager role projects: tag `@on:<project>` in the test/describe title (`helpers/role-projects.ts` builds each project's grep); untagged = all four roles. No project-name `test.skip` (skip guard fails on any skip). Per-spec decisions: table in `docs/e2e-testing.md`.
+- Open: no quiet-box stability series for #317 (do not raise the worker count without measuring load); `orders-list` "row click" flakes under heavy load (follow-up #324 area).
+
 ## #322 manager order creation as the customer (acting mode) (2026-11-06, DONE: audited, prod 0.0.47, closed with #316-#318; follow-ups #323 change journal, #324 done in 0.0.48)
 - Flow: manager portal NewOrderPage (customer picker + trading point) -> Admin `startActingSession` (CreateOrder) gives a one-time hashed ticket (~60s) -> opens storefront `/acting#ticket=` -> Shop `exchangeActingTicket` returns a session token in the body (no cookie). Storefront keeps it in `sessionStorage`, sends `Authorization: Bearer` + `x-acting-session: 1`, `credentials: 'omit'`. `finishActingSession` ends it. Plugin: `packages/plugins/acting-session/` (migration 1791550000000).
 - Isolation: middleware drops the Cookie header and swaps `req.session` for a detached object (`detachCookieSession`) so Set-Cookie never leaves; liveness = 4h from createdAt, parent manager session alive, CreateOrder/SuperAdmin. Acting cart is linked to the customer at creation and marked `actingSessionId`; `ActingActiveOrderStrategy` self-heals real sessions; cleanup task `acting-session-cleanup` (24h carts). Acting sessions are excluded from session cap, mySessions, login history. Attribution: `placedByAdministratorId` + private order note.
