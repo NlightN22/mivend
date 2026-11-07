@@ -238,6 +238,10 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
             </div>
         </template>
 
+        <template #cell-manager="{ data }">
+            <div class="orders-list-table__customer">{{ (data as OrderListRow).manager }}</div>
+        </template>
+
         <template #cell-state="{ data }">
             <div class="orders-list-table__badges">
                 <MvStatusBadge :variant="(data as OrderListRow).stateVariant">{{
