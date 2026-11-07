@@ -2,9 +2,8 @@ import type en from '../en/acting';
 
 const ru: typeof en = {
     acting: {
-        line: 'Менеджер {manager} работает как клиент',
-        lineUnknown: 'Менеджер работает как клиент',
-        finish: 'Завершить',
+        line: 'Менеджер {manager} →',
+        lineUnknown: 'Менеджер →',
         entryLoading: 'Открываем сессию клиента…',
         entryFailedTitle: 'Ссылка недействительна или устарела',
         entryFailedMessage: 'Начните сессию заново в портале менеджера.',

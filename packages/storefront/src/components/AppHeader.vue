@@ -276,9 +276,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 
             <div v-if="authStore.isLoggedIn" class="app-header__delivery">
                 <span class="app-header__delivery-line">
-                    <span v-if="acting.isActing.value" class="app-header__acting">
-                        {{ acting.label.value }}:
-                    </span>
+                    <template v-if="acting.isActing.value">{{ acting.label.value }}&nbsp;</template>
                     <template v-if="deliveryLabel.organization || deliveryLabel.place">
                         <template v-if="deliveryLabel.organization">{{
                             deliveryLabel.organization
@@ -294,13 +292,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                         }}</span>
                     </template>
                 </span>
-                <MvButton
-                    v-if="acting.isActing.value"
-                    size="sm"
-                    :loading="acting.finishing.value"
-                    @click="acting.finish"
-                    >{{ t('acting.finish') }}</MvButton
-                >
             </div>
 
             <MvCatalogDropdown
