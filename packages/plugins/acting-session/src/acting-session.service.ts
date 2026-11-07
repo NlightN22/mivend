@@ -124,19 +124,11 @@ export class ActingSessionService {
         };
     }
 
-    // Display only: a failed lookup must not strand a session whose ticket is already spent.
     private async administratorName(ctx: RequestContext, administratorId: string): Promise<string> {
-        try {
-            const administrator = await this.connection
-                .getRepository(ctx, Administrator)
-                .findOne({ where: { id: administratorId } });
-            return administrator
-                ? `${administrator.firstName} ${administrator.lastName}`.trim()
-                : '';
-        } catch (e) {
-            Logger.warn(`Acting session manager name lookup failed: ${String(e)}`, loggerCtx);
-            return '';
-        }
+        const administrator = await this.connection
+            .getRepository(ctx, Administrator)
+            .findOne({ where: { id: administratorId } });
+        return administrator ? `${administrator.firstName} ${administrator.lastName}`.trim() : '';
     }
 
     async finish(ctx: RequestContext): Promise<boolean> {

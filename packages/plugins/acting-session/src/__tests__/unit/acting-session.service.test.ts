@@ -118,14 +118,9 @@ describe('ActingSessionService', () => {
         expect(result.token).toMatch(/^[0-9a-f]{64}$/);
     });
 
-    it('still returns the session with an empty manager name when the name lookup fails', async () => {
-        const { service, save } = setup({ nameLookupFails: true });
-
-        const result = await service.exchange({} as never, 'tk');
-
-        expect(save).toHaveBeenCalledTimes(1);
-        expect(result.administratorName).toBe('');
-        expect(result.token).toMatch(/^[0-9a-f]{64}$/);
+    it('fails the exchange when the manager name cannot be read, so the transaction rolls back with the ticket', async () => {
+        const { service } = setup({ nameLookupFails: true });
+        await expect(service.exchange({} as never, 'tk')).rejects.toThrow('db down');
     });
 
     it('refuses the exchange when the portal customer changed since the ticket was issued', async () => {
