@@ -1,6 +1,10 @@
 # Project Context
 
-Updated: 2026-11-07 18:00
+Updated: 2026-11-07 19:00
+
+## #309 chunked category-tree recompute (2026-11-07, DONE: audited, pushed to origin/main e429ca50, issue closed)
+- `recomputeCategoryTree` plans the whole tree once unlocked, then takes the `category-tree` lock per top-level subtree that has writes; each chunk re-reads and re-plans under the lock. Idle tick takes no lock (~0.16 s for 8000 categories). Gap: a category created or moved mid-run waits for the next tick. Docs: `docs/category-hierarchy.md`.
+- Process lesson: another session switched the shared tree to its branch, so #309 commits landed there; fixed by cherry-picking onto a worktree of origin/main. Check `git branch --show-current` before every commit. e2e from a worktree needs a ts-node shim in `apps/server/node_modules/.bin` and copies of `.env.local`, `apps/server/.env.central|.env.branch`; `make e2e-group` from a worktree recreates the shared postgres/garage containers.
 
 ## Manager portal redesign concept (2026-11-07, concept agreed, no code yet; issue #320 rewritten)
 - Source of truth: `docs/manager-portal-ui-concept.md` (a concept, not a literal spec; owner refines pages one at a time, never implement mockups literally). Older per-page texts: `docs/ai/manager-portal-pages/` (local), `docs/ai/manager-portal-concept.md`.
@@ -242,7 +246,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 `Permission.SuperAdmin`.
 
 ## Planned next work (full list: `.backup/PROJECT_CONTEXT-2026-10-13-sections-full.md`)
-- Open issues from the 2026-11-07 session: #325 CI `lint:css` fails (workflow pins Node 20, stylelint 18 needs 22; CI on main is red since 0.0.47), #326 detect a dev-contour child stuck at high CPU without listening and restart only it, #327 acting-token security review, #323 acting change journal, #320 manager color migration, #321 per-service image tags. Not touched by this role: #309 (another session has uncommitted work in the shared tree).
+- Open issues from the 2026-11-07 session: #325 CI `lint:css` fails (workflow pins Node 20, stylelint 18 needs 22; CI on main is red since 0.0.47), #326 detect a dev-contour child stuck at high CPU without listening and restart only it, #327 acting-token security review, #323 acting change journal, #320 manager color migration, #321 per-service image tags.
 
 - #228 follow-ups of the settlement section (i18n, organization names from `organization_requisites`, e2e with data via the real ingestion path); #229 role gating of receivables (low); #226 reconciliation acts.
 - #181 follow-ups (#187 asset GC, card chips, `garage-init` into `make up`); #154 discount-rule follow-ups; #44 shipping selector and freight pricing; #143 deferred routing UX.
