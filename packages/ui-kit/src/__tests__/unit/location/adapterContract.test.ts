@@ -13,6 +13,21 @@ const options = {
     publicKey: 'key',
 };
 
+const setApikeysA = vi.fn();
+const suggestA = vi.fn(async () => [
+    { title: { text: 'Street 1' }, subtitle: { text: 'City' }, uri: 'ymapsbm1://x' },
+]);
+const searchA = vi.fn(async (o: { uri?: string; text?: string }) =>
+    o.uri
+        ? [
+              {
+                  properties: { name: 'Street 1' },
+                  geometry: { coordinates: [8, 7] as [number, number] },
+              },
+          ]
+        : [{ properties: { name: 'Street 1', description: 'City' } }],
+);
+
 function stubA(): { click: (c: [number, number]) => void } {
     let onClick: (_: unknown, e: { coordinates: [number, number] }) => void = () => undefined;
     class YMap {
@@ -43,6 +58,9 @@ function stubA(): { click: (c: [number, number]) => void } {
         YMapDefaultFeaturesLayer: Any,
         YMapListener: Any,
         YMapMarker: Any,
+        getDefaultConfig: () => ({ setApikeys: setApikeysA }),
+        suggest: suggestA,
+        search: searchA,
     });
     return { click: c => onClick({}, { coordinates: c }) };
 }
@@ -170,6 +188,50 @@ describe('provider-b browser search and reverse', () => {
             expect.objectContaining({ input: 'pla', origin: { lat: 1, lng: 2 } }),
         );
         expect(await adapter.reverse({ latitude: 1, longitude: 2 })).toBe('Some street 1');
+    });
+});
+
+describe('provider-a browser search and reverse', () => {
+    const params = { suggest_key: 'sk', search_key: 'ck', host: 'yandex.ru' };
+
+    it('suggests with the bias, resolves a pick to coordinates and reverses the marker', async () => {
+        stubA();
+        const adapter = new ProviderAAdapter();
+        await adapter.mount(document.createElement('div'), { ...options, params });
+        expect(setApikeysA).toHaveBeenCalledWith({ suggest: 'sk', search: 'ck' });
+        const found = await adapter.search('str', { latitude: 1, longitude: 2 });
+        expect(suggestA).toHaveBeenCalledWith(
+            expect.objectContaining({ text: 'str', center: [2, 1] }),
+        );
+        expect(found[0].address).toBe('Street 1, City');
+        expect(await found[0].resolve?.()).toEqual({ latitude: 7, longitude: 8 });
+        expect(await adapter.reverse({ latitude: 7, longitude: 8 })).toBe('Street 1, City');
+        expect(searchA).toHaveBeenLastCalledWith(expect.objectContaining({ text: '8,7' }));
+    });
+
+    it('rejects search without a suggest key and skips reverse without a search key', async () => {
+        stubA();
+        const adapter = new ProviderAAdapter();
+        await adapter.mount(document.createElement('div'), options);
+        await expect(adapter.search('str', null)).rejects.toThrow();
+        expect(await adapter.reverse({ latitude: 1, longitude: 2 })).toBeNull();
+    });
+
+    it('loads the script from the configured host with the host language', async () => {
+        const added: string[] = [];
+        const orig = document.head.appendChild.bind(document.head);
+        vi.spyOn(document.head, 'appendChild').mockImplementation(n => {
+            added.push((n as HTMLScriptElement).src);
+            stubA();
+            queueMicrotask(() => (n as HTMLScriptElement).onload?.(new Event('load')));
+            return orig(n);
+        });
+        await new ProviderAAdapter().mount(document.createElement('div'), {
+            ...options,
+            params,
+            locale: 'ru',
+        });
+        expect(added[0]).toBe('https://api-maps.yandex.ru/v3/?apikey=key&lang=ru_RU');
     });
 });
 

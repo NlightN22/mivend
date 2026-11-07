@@ -3,6 +3,7 @@ query GeoConfig {
         providers {
             key
             publicKey
+            params
         }
         defaultProvider
         defaultLatitude

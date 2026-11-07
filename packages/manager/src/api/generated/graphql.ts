@@ -2920,6 +2920,7 @@ export type GeoConfig = {
 
 export type GeoProviderInfo = {
     key: Scalars['String']['output'];
+    params: Maybe<Scalars['String']['output']>;
     publicKey: Maybe<Scalars['String']['output']>;
 };
 
@@ -11426,7 +11427,7 @@ export type GeoConfigQuery = {
         defaultLatitude: number | null;
         defaultLongitude: number | null;
         defaultZoom: number | null;
-        providers: Array<{ key: string; publicKey: string | null }>;
+        providers: Array<{ key: string; publicKey: string | null; params: string | null }>;
     };
 };
 
@@ -14707,6 +14708,7 @@ export const GeoConfigDocument = new TypedDocumentString(`
     providers {
       key
       publicKey
+      params
     }
     defaultProvider
     defaultLatitude

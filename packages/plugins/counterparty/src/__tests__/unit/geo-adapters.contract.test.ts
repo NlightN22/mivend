@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { GeoFetch, GeoProvider } from '../../geo/geo-provider';
 import { OpenAdapter } from '../../geo/open.adapter';
-import { ProviderAAdapter } from '../../geo/provider-a.adapter';
 
 const json = (body: unknown, ok = true, status = 200) =>
     ({ ok, status, json: async () => body }) as Response;
@@ -15,44 +14,6 @@ interface Case {
 }
 
 const cases: Case[] = [
-    {
-        name: 'provider-a',
-        make: f => new ProviderAAdapter({ apiKey: 'k', fetch: f as unknown as GeoFetch }),
-        searchBody: {
-            response: {
-                GeoObjectCollection: {
-                    featureMember: [
-                        {
-                            GeoObject: {
-                                metaDataProperty: { GeocoderMetaData: { text: 'Street 1, City' } },
-                                Point: { pos: '37.5 55.7' },
-                            },
-                        },
-                        {
-                            GeoObject: {
-                                metaDataProperty: { GeocoderMetaData: { text: 'No point' } },
-                            },
-                        },
-                    ],
-                },
-            },
-        },
-        reverseBody: {
-            response: {
-                GeoObjectCollection: {
-                    featureMember: [
-                        {
-                            GeoObject: {
-                                metaDataProperty: { GeocoderMetaData: { text: 'Street 1, City' } },
-                                Point: { pos: '37.5 55.7' },
-                            },
-                        },
-                    ],
-                },
-            },
-        },
-        emptyBody: { response: { GeoObjectCollection: { featureMember: [] } } },
-    },
     {
         name: 'open',
         make: f =>

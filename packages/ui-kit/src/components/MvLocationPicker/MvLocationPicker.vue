@@ -23,6 +23,7 @@ const props = withDefaults(
         siblingPoint?: GeoPoint | null;
         initialQuery?: string;
         cooperative?: boolean;
+        locale?: string;
         labels?: Partial<LocationPickerLabels>;
         providerNames?: Record<string, string>;
         createAdapter?: AdapterFactory;
@@ -39,6 +40,7 @@ const picker = useLocationPicker({
     suggestionPoint: props.suggestionPoint,
     siblingPoint: props.siblingPoint,
     cooperative: props.cooperative,
+    locale: props.locale,
     search: props.search,
     reverse: props.reverse,
     createAdapter: props.createAdapter,

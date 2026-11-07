@@ -6,6 +6,7 @@ export interface GeoPoint {
 export interface GeoProviderInfo {
     key: string;
     publicKey?: string | null;
+    params?: string | null;
 }
 
 export interface GeoConfig {
@@ -32,6 +33,8 @@ export interface MapMountOptions extends MapView {
     marker: GeoPoint | null;
     cooperative: boolean;
     publicKey: string | null;
+    params?: Record<string, string>;
+    locale?: string;
 }
 
 export interface MapAdapter {

@@ -10,6 +10,7 @@ export const geoSchema = gql`
     type GeoProviderInfo {
         key: String!
         publicKey: String
+        params: String
     }
 
     type GeoConfig {

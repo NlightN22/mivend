@@ -13,6 +13,7 @@ const MAX_QUEUE_WAIT_MS = 3000;
 export interface GeoPublicProvider {
     key: string;
     publicKey: string | null;
+    params: string | null;
 }
 
 export interface GeoPublicConfig {
@@ -26,9 +27,18 @@ export interface GeoPublicConfig {
 interface ProviderState {
     provider: GeoProvider;
     publicKey: string | null;
+    params: string | null;
     cache: Map<string, { at: number; value: unknown }>;
     pausedUntil: number;
     nextSlot: number;
+}
+
+function browserParams(prefix: string): string | null {
+    const head = `${prefix}_BROWSER_`;
+    const entries = Object.entries(process.env)
+        .filter(([name, value]) => name.startsWith(head) && name !== `${head}KEY` && value)
+        .map(([name, value]) => [name.slice(head.length).toLowerCase(), value]);
+    return entries.length ? JSON.stringify(Object.fromEntries(entries)) : null;
 }
 
 @Injectable()
@@ -69,7 +79,11 @@ export class GeoService {
             v && Number.isFinite(Number(v)) ? Number(v) : null;
         const all = [...this.load().values()];
         return {
-            providers: all.map(s => ({ key: s.provider.key, publicKey: s.publicKey })),
+            providers: all.map(s => ({
+                key: s.provider.key,
+                publicKey: s.publicKey,
+                params: s.params,
+            })),
             defaultProvider: this.defaultKey(),
             defaultLat: num(process.env.GEO_DEFAULT_CENTER_LAT),
             defaultLng: num(process.env.GEO_DEFAULT_CENTER_LNG),
@@ -120,6 +134,7 @@ export class GeoService {
             states.set(key, {
                 provider,
                 publicKey: process.env[`${prefix}_BROWSER_KEY`] || null,
+                params: browserParams(prefix),
                 cache: new Map(),
                 pausedUntil: 0,
                 nextSlot: 0,

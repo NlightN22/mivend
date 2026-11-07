@@ -1,4 +1,4 @@
-import type { GeoPoint, MapAdapter, MapMountOptions, MapView } from '../types';
+import type { GeoPoint, GeoSuggestion, MapAdapter, MapMountOptions, MapView } from '../types';
 import { loadScript } from './loadScript';
 
 interface Ymaps3 {
@@ -12,6 +12,18 @@ interface Ymaps3 {
     YMapDefaultFeaturesLayer: new (props: Record<string, unknown>) => unknown;
     YMapListener: new (props: Record<string, unknown>) => unknown;
     YMapMarker: new (props: Record<string, unknown>, el: HTMLElement) => YMapMarkerInstance;
+    getDefaultConfig(): { setApikeys(keys: { suggest?: string; search?: string }): void };
+    suggest(o: Record<string, unknown>): Promise<SuggestItem[]>;
+    search(o: Record<string, unknown>): Promise<SearchItem[]>;
+}
+interface SuggestItem {
+    title: { text: string };
+    subtitle?: { text: string };
+    uri?: string;
+}
+interface SearchItem {
+    properties: { name: string; description?: string };
+    geometry?: { coordinates: [number, number] };
 }
 interface YMapInstance {
     location: { center: [number, number]; zoom: number };
@@ -24,11 +36,18 @@ interface YMapMarkerInstance {
     update(props: Record<string, unknown>): void;
 }
 
+const DEFAULT_HOST = 'yandex.com';
+const MAX_SUGGESTIONS = 6;
+const BIAS_SPAN: [number, number] = [0.5, 0.5];
+const toLang = (locale?: string): string =>
+    (locale ?? navigator.language).toLowerCase().startsWith('ru') ? 'ru_RU' : 'en_US';
 const toPoint = (c: [number, number]): GeoPoint => ({ latitude: c[1], longitude: c[0] });
 
 export class ProviderAAdapter implements MapAdapter {
     private map: YMapInstance | null = null;
     private lib: Ymaps3 | null = null;
+    private hasSuggest = false;
+    private hasSearch = false;
     private marker: YMapMarkerInstance | null = null;
     private markerEl: HTMLElement | null = null;
     private listener: (p: GeoPoint) => void = () => undefined;
@@ -40,12 +59,18 @@ export class ProviderAAdapter implements MapAdapter {
         const w = window as unknown as { ymaps3?: Ymaps3 };
         if (!w.ymaps3)
             await loadScript(
-                `https://api-maps.yandex.ru/v3/?apikey=${encodeURIComponent(o.publicKey)}&lang=en_US`,
+                `https://api-maps.${o.params?.host || DEFAULT_HOST}/v3/?apikey=${encodeURIComponent(o.publicKey)}&lang=${toLang(o.locale)}`,
             );
         const lib = w.ymaps3;
         if (!lib) throw new Error('library missing');
         await lib.ready;
         this.lib = lib;
+        lib.getDefaultConfig().setApikeys({
+            suggest: o.params?.suggest_key,
+            search: o.params?.search_key,
+        });
+        this.hasSuggest = !!o.params?.suggest_key;
+        this.hasSearch = !!o.params?.search_key;
         const behaviors = o.cooperative
             ? ['drag', 'pinchZoom', 'dblClick']
             : ['drag', 'pinchZoom', 'scrollZoom', 'dblClick'];
@@ -111,6 +136,38 @@ export class ProviderAAdapter implements MapAdapter {
 
     onMarkerChange(listener: (p: GeoPoint) => void): void {
         this.listener = listener;
+    }
+
+    async search(query: string, bias: GeoPoint | null): Promise<GeoSuggestion[]> {
+        const lib = this.lib;
+        if (!lib || !this.hasSuggest) throw new Error('suggest key missing');
+        const items = await lib.suggest({
+            text: query,
+            limit: MAX_SUGGESTIONS,
+            ...(bias && { center: [bias.longitude, bias.latitude], span: BIAS_SPAN }),
+        });
+        return items.slice(0, MAX_SUGGESTIONS).map(item => {
+            const address = [item.title.text, item.subtitle?.text].filter(Boolean).join(', ');
+            const resolve = async (): Promise<GeoPoint | null> => {
+                if (!this.hasSearch) return null;
+                const [hit] = await lib.search(
+                    item.uri ? { uri: item.uri, limit: 1 } : { text: address, limit: 1 },
+                );
+                return hit?.geometry ? toPoint(hit.geometry.coordinates) : null;
+            };
+            return { address, resolve };
+        });
+    }
+
+    async reverse(p: GeoPoint): Promise<string | null> {
+        if (!this.lib || !this.hasSearch) return null;
+        const [hit] = await this.lib.search({
+            text: `${p.longitude},${p.latitude}`,
+            type: ['toponyms'],
+            limit: 1,
+        });
+        if (!hit) return null;
+        return [hit.properties.name, hit.properties.description].filter(Boolean).join(', ');
     }
 
     destroy(): void {

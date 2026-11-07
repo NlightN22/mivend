@@ -21,9 +21,18 @@ export interface LocationPickerInput {
     suggestionPoint?: GeoPoint | null;
     siblingPoint?: GeoPoint | null;
     cooperative: boolean;
+    locale?: string;
     search: SearchFn;
     reverse: ReverseFn;
     createAdapter: AdapterFactory;
+}
+
+function parseParams(raw?: string | null): Record<string, string> {
+    try {
+        return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    } catch {
+        return {};
+    }
 }
 
 export function useLocationPicker(input: LocationPickerInput) {
@@ -85,13 +94,15 @@ export function useLocationPicker(input: LocationPickerInput) {
         teardown();
         try {
             const next = await input.createAdapter(provider.value);
-            const publicKey =
-                input.config.providers.find(p => p.key === provider.value)?.publicKey ?? null;
+            const info = input.config.providers.find(p => p.key === provider.value);
+            const publicKey = info?.publicKey ?? null;
             await next.mount(element, {
                 ...view.value,
                 marker: point.value,
                 cooperative: input.cooperative,
                 publicKey,
+                params: parseParams(info?.params),
+                locale: input.locale,
             });
             if (mine !== generation) {
                 next.destroy();

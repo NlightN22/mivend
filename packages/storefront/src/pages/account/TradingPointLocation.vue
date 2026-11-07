@@ -9,7 +9,7 @@ import { locationLabels, providerNames } from './locationLabels';
 const model = defineModel<GeoPoint | null>({ required: true });
 const props = defineProps<{ address: string; sibling: GeoPoint | null; error?: string }>();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const pick = useLocationPick(
     () => props.address,
     () => model.value,
@@ -55,6 +55,7 @@ function onPicked(point: GeoPoint): void {
             :sibling-point="sibling"
             :initial-query="address"
             :labels="locationLabels(t)"
+            :locale="locale"
             :provider-names="providerNames(t, pick.config.value.providers)"
             @update:model-value="onPicked"
             @close="pick.open.value = false"
