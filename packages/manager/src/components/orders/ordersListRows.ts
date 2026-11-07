@@ -19,7 +19,6 @@ export type OrderListRow = {
     code: string;
     createdAt: string;
     customer: string;
-    customerMeta: string;
     inn: string;
     priceTypeCode: string;
     manager: string;
@@ -87,9 +86,6 @@ export function toOrderRows(items: OrderListItem[], ctx: OrderRowContext): Order
             code: order.code,
             createdAt: order.createdAt,
             customer: counterparty?.shortName ?? '—',
-            customerMeta: counterparty
-                ? `INN ${counterparty.inn ?? '—'} · ${counterparty.priceType ?? '—'}`
-                : '',
             inn: counterparty?.inn ?? '',
             priceTypeCode: counterparty?.priceType ?? '',
             manager: lookup(ctx.managers, counterparty?.assignedManagerId, m => m.name),

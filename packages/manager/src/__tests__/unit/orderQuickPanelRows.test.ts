@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { quickPanelRows } from '../../components/orders/orderQuickPanelRows';
+import { customerMetaText, quickPanelRows } from '../../components/orders/orderQuickPanelRows';
 import type { OrderListRow } from '../../components/orders/ordersListRows';
 
 const ROW = {
@@ -50,5 +50,23 @@ describe('order quick panel rows', () => {
         expect(labels(ROW, new Map())).not.toContain('Price type');
         const sameName = new Map([['price-type-wholesale', 'PRICE-TYPE-WHOLESALE']]);
         expect(labels(ROW, sameName)).not.toContain('Price type');
+    });
+});
+
+describe('customer cell second line', () => {
+    it('shows INN and the price type name, joined', () => {
+        expect(customerMetaText(ROW, NAMES)).toBe('INN 7700000000 · Wholesale prices');
+    });
+
+    it('drops a name that only repeats the code, and a missing INN', () => {
+        const sameName = new Map([['price-type-wholesale', 'price-type-wholesale']]);
+        expect(customerMetaText(ROW, sameName)).toBe('INN 7700000000');
+        expect(customerMetaText({ ...ROW, inn: '' }, NAMES)).toBe('Wholesale prices');
+    });
+
+    it('is empty when there is nothing meaningful, never a dash or a raw code', () => {
+        expect(
+            customerMetaText({ inn: '', priceTypeCode: 'price-type-wholesale' }, new Map()),
+        ).toBe('');
     });
 });

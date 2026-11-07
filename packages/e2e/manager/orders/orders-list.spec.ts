@@ -75,7 +75,8 @@ test('orders list shows the seeded order with customer, branch and INN @read-onl
     const row = page.getByRole('row').filter({ hasText: order.displayCode });
     await expect(row).toBeVisible();
     await expect(row).toContainText('E2E Co');
-    await expect(row).toContainText('WHOLESALE');
+    await expect(row).toContainText('INN 5100000001');
+    await expect(row).not.toContainText(/INN —/);
 });
 
 test('orders list row click opens the quick panel and Open goes to the order card @read-only', async ({

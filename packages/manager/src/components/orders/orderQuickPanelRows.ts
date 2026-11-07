@@ -8,9 +8,18 @@ export interface QuickPanelRow {
 const EMPTY = new Set(['', '—']);
 
 // A name that merely repeats the code adds nothing, so only a real display name is shown.
-function priceTypeName(code: string, names: Map<string, string>): string {
+export function priceTypeName(code: string, names: Map<string, string>): string {
     const name = names.get(code) ?? '';
     return name.toLowerCase() === code.toLowerCase() ? '' : name;
+}
+
+// Second line of the customer cell: only real data, an empty string when there is none.
+export function customerMetaText(
+    row: Pick<OrderListRow, 'inn' | 'priceTypeCode'>,
+    priceTypes: Map<string, string>,
+): string {
+    const parts = [row.inn ? `INN ${row.inn}` : '', priceTypeName(row.priceTypeCode, priceTypes)];
+    return parts.filter(Boolean).join(' · ');
 }
 
 // Rows with nothing to show are left out instead of rendering a dash.

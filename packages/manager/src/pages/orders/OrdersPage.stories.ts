@@ -66,3 +66,19 @@ export const Empty: Story = {
         template: '<OrdersPage />',
     }),
 };
+
+export const LoadFailed: Story = {
+    loaders: [
+        async () => {
+            mockOrdersData();
+            registerMock('OrdersPage', () => {
+                throw new Error('Network error');
+            });
+            await router.push('/orders');
+        },
+    ],
+    render: () => ({
+        components: { OrdersPage },
+        template: '<OrdersPage />',
+    }),
+};

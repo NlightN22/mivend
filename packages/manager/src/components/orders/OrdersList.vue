@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { MvFilterChips, type FilterChip } from '@mivend/ui-kit';
 import { useAuthStore } from '../../stores/auth';
@@ -27,8 +27,7 @@ const statuses = useOrderStatusesStore();
 void statuses.load();
 
 const list = useOrdersList({ customerId: props.customerId });
-const viewCounts = useOrdersViewCounts(props.customerId);
-watch(() => list.filters.value.view, viewCounts.refresh);
+const viewCounts = useOrdersViewCounts(props.customerId, list.filters);
 
 // Manager sees only their own customers, so a manager column and filter would be redundant.
 const showManagerColumn = computed(() => authStore.roleCode !== 'manager');
@@ -74,6 +73,7 @@ function openOrder(code: string): void {
     <OrdersListTable
         :rows="rows"
         :loading="list.loading.value"
+        :failed="list.failed.value"
         :total-items="list.totalItems.value"
         :page="list.page.value"
         :page-size="list.pageSize.value"
@@ -88,6 +88,7 @@ function openOrder(code: string): void {
         @update:page="list.page.value = $event"
         @update:page-size="list.pageSize.value = $event"
         @clear-filters="clearFilters"
+        @retry="list.reload"
         @row-click="selected = $event"
     >
         <template #view-chips>

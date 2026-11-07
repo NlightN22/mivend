@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import {
     MvStatusBadge,
     MvAdvancedDataTable,
     MvDateTimeCell,
+    MvErrorState,
     useDataTableState,
     formatDocumentNumber,
     type AdvancedDataTableColumn,
@@ -16,6 +17,8 @@ import { PLACED_BY_CUSTOMER_VALUE } from '../../api/customers';
 import { restoreOrdersFilters, type OrdersListFilters } from '../../api/orders-list';
 import { ORDERS_URL_DEFAULTS, type OrdersSort } from '../../composables/ordersListUrl';
 import type { TableViewState } from '../../composables/tableViewState';
+import { usePriceTypeNames } from '../../composables/usePriceTypeNames';
+import { customerMetaText } from './orderQuickPanelRows';
 import TableViewsMenu from '../TableViewsMenu.vue';
 import type { OrderListRow } from './ordersListRows';
 import {
@@ -28,6 +31,7 @@ import {
 const props = defineProps<{
     rows: OrderListRow[];
     loading: boolean;
+    failed: boolean;
     totalItems: number;
     page: number;
     pageSize: number;
@@ -46,8 +50,12 @@ const emit = defineEmits<{
     'update:page': [page: number];
     'update:page-size': [size: number];
     'clear-filters': [];
+    retry: [];
     'row-click': [row: OrderListRow];
 }>();
+
+const priceTypes = usePriceTypeNames();
+onMounted(() => void priceTypes.load());
 
 const managerOptions = computed(() => props.managers.map(m => ({ value: m.id, label: m.name })));
 const placedByOptions = computed(() => [
@@ -176,6 +184,16 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
         @clear-filters="emit('clear-filters')"
         @row-click="onRowClick"
     >
+        <template #empty>
+            <MvErrorState
+                v-if="failed"
+                title="Could not load orders"
+                message="Check the connection and try again."
+                @retry="emit('retry')"
+            />
+            <template v-else>{{ loading ? '' : 'No orders match your filters' }}</template>
+        </template>
+
         <template #toolbar-start>
             <slot name="view-chips" />
         </template>
@@ -203,9 +221,11 @@ function onRowClick(event: AdvancedDataTableRowClickPayload<OrderListRow>): void
                 <span class="orders-list-table__customer-name">{{
                     (data as OrderListRow).customer
                 }}</span>
-                <span class="orders-list-table__customer-meta">{{
-                    (data as OrderListRow).customerMeta
-                }}</span>
+                <span
+                    v-if="customerMetaText(data as OrderListRow, priceTypes.names.value)"
+                    class="orders-list-table__customer-meta"
+                    >{{ customerMetaText(data as OrderListRow, priceTypes.names.value) }}</span
+                >
             </div>
         </template>
 

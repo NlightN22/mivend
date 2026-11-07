@@ -11865,7 +11865,10 @@ export type OrdersPageQuery = {
 
 export type OrdersViewCountsQueryVariables = Exact<{
     customerId?: InputMaybe<Scalars['ID']['input']>;
+    managerId?: InputMaybe<Scalars['ID']['input']>;
+    search?: InputMaybe<Scalars['String']['input']>;
     overdueBefore: Scalars['DateTime']['input'];
+    all?: InputMaybe<OrderFilterParameter>;
     awaitingConfirmation?: InputMaybe<OrderFilterParameter>;
     processing?: InputMaybe<OrderFilterParameter>;
     awaitingShipment?: InputMaybe<OrderFilterParameter>;
@@ -14898,49 +14901,68 @@ export const OrdersPageDocument = new TypedDocumentString(`
   }
 }`) as unknown as TypedDocumentString<OrdersPageQuery, OrdersPageQueryVariables>;
 export const OrdersViewCountsDocument = new TypedDocumentString(`
-    query OrdersViewCounts($customerId: ID, $overdueBefore: DateTime!, $awaitingConfirmation: OrderFilterParameter, $processing: OrderFilterParameter, $awaitingShipment: OrderFilterParameter, $rejectedByErp: OrderFilterParameter, $reservationFailed: OrderFilterParameter, $erpRequirements: OrderFilterParameter, $overdue: OrderFilterParameter) {
-  all: visibleOrders(options: {take: 0}, customerId: $customerId) {
+    query OrdersViewCounts($customerId: ID, $managerId: ID, $search: String, $overdueBefore: DateTime!, $all: OrderFilterParameter, $awaitingConfirmation: OrderFilterParameter, $processing: OrderFilterParameter, $awaitingShipment: OrderFilterParameter, $rejectedByErp: OrderFilterParameter, $reservationFailed: OrderFilterParameter, $erpRequirements: OrderFilterParameter, $overdue: OrderFilterParameter) {
+  all: visibleOrders(
+    options: {take: 0, filter: $all}
+    customerId: $customerId
+    managerId: $managerId
+    search: $search
+  ) {
     totalItems
   }
   awaitingConfirmation: visibleOrders(
     options: {take: 0, filter: $awaitingConfirmation}
     customerId: $customerId
+    managerId: $managerId
+    search: $search
   ) {
     totalItems
   }
   processing: visibleOrders(
     options: {take: 0, filter: $processing}
     customerId: $customerId
+    managerId: $managerId
+    search: $search
   ) {
     totalItems
   }
   awaitingShipment: visibleOrders(
     options: {take: 0, filter: $awaitingShipment}
     customerId: $customerId
+    managerId: $managerId
+    search: $search
   ) {
     totalItems
   }
   rejectedByErp: visibleOrders(
     options: {take: 0, filter: $rejectedByErp}
     customerId: $customerId
+    managerId: $managerId
+    search: $search
   ) {
     totalItems
   }
   reservationFailed: visibleOrders(
     options: {take: 0, filter: $reservationFailed}
     customerId: $customerId
+    managerId: $managerId
+    search: $search
   ) {
     totalItems
   }
   erpRequirements: visibleOrders(
     options: {take: 0, filter: $erpRequirements}
     customerId: $customerId
+    managerId: $managerId
+    search: $search
   ) {
     totalItems
   }
   overdue: visibleOrders(
     options: {take: 0, filter: $overdue}
     customerId: $customerId
+    managerId: $managerId
+    search: $search
   ) {
     totalItems
   }

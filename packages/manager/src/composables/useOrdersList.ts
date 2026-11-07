@@ -22,6 +22,8 @@ export interface OrdersListState {
     items: Ref<OrderListItem[]>;
     totalItems: Ref<number>;
     loading: Ref<boolean>;
+    failed: Ref<boolean>;
+    reload: () => void;
     filters: Ref<OrdersListFilters>;
     sort: Ref<OrdersSort>;
     page: Ref<number>;
@@ -48,34 +50,42 @@ export function useOrdersList(preset: OrdersListPreset): OrdersListState {
     const sort = ref<OrdersSort>(initial.sort);
     const pageSize = ref(initial.pageSize);
 
+    const failed = ref(false);
     const { loading, run } = useLatestRequest(
         async () => {
-            await statuses.load();
-            return fetchOrdersList(
-                filters.value,
-                preset,
-                statuses.rejectedCodes,
-                page.value,
-                pageSize.value,
-                { [sort.value.field]: sort.value.dir },
-            );
+            try {
+                await statuses.load();
+                return await fetchOrdersList(
+                    filters.value,
+                    preset,
+                    statuses.rejectedCodes,
+                    page.value,
+                    pageSize.value,
+                    { [sort.value.field]: sort.value.dir },
+                );
+            } catch (e) {
+                console.warn('[orders] could not load the list:', e);
+                return null;
+            }
         },
         result => {
-            items.value = result.items;
-            totalItems.value = result.totalItems;
+            failed.value = result === null;
+            items.value = result?.items ?? [];
+            totalItems.value = result?.totalItems ?? 0;
         },
     );
+    const reload = (): void => void run();
 
     watch([filters, sort, pageSize], () => {
         page.value = 1;
     });
     watch([filters, sort, pageSize, page], () => {
-        void run();
+        reload();
         toQuery(toUrlState(filters.value, sort.value, pageSize.value), page);
     });
 
     onMounted(() => {
-        void run();
+        reload();
         void fetchManagerOptions().then(result => (managers.value = result));
         void fetchBranchOptions().then(result => (branches.value = result));
     });
@@ -84,6 +94,8 @@ export function useOrdersList(preset: OrdersListPreset): OrdersListState {
         items,
         totalItems,
         loading,
+        failed,
+        reload,
         filters,
         sort,
         page,

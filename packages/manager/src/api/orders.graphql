@@ -43,7 +43,10 @@ query OrdersPage($options: OrderListOptions, $managerId: ID, $customerId: ID, $s
 
 query OrdersViewCounts(
     $customerId: ID
+    $managerId: ID
+    $search: String
     $overdueBefore: DateTime!
+    $all: OrderFilterParameter
     $awaitingConfirmation: OrderFilterParameter
     $processing: OrderFilterParameter
     $awaitingShipment: OrderFilterParameter
@@ -52,46 +55,68 @@ query OrdersViewCounts(
     $erpRequirements: OrderFilterParameter
     $overdue: OrderFilterParameter
 ) {
-    all: visibleOrders(options: { take: 0 }, customerId: $customerId) {
+    all: visibleOrders(
+        options: { take: 0, filter: $all }
+        customerId: $customerId
+        managerId: $managerId
+        search: $search
+    ) {
         totalItems
     }
     awaitingConfirmation: visibleOrders(
         options: { take: 0, filter: $awaitingConfirmation }
         customerId: $customerId
+        managerId: $managerId
+        search: $search
     ) {
         totalItems
     }
     processing: visibleOrders(
         options: { take: 0, filter: $processing }
         customerId: $customerId
+        managerId: $managerId
+        search: $search
     ) {
         totalItems
     }
     awaitingShipment: visibleOrders(
         options: { take: 0, filter: $awaitingShipment }
         customerId: $customerId
+        managerId: $managerId
+        search: $search
     ) {
         totalItems
     }
     rejectedByErp: visibleOrders(
         options: { take: 0, filter: $rejectedByErp }
         customerId: $customerId
+        managerId: $managerId
+        search: $search
     ) {
         totalItems
     }
     reservationFailed: visibleOrders(
         options: { take: 0, filter: $reservationFailed }
         customerId: $customerId
+        managerId: $managerId
+        search: $search
     ) {
         totalItems
     }
     erpRequirements: visibleOrders(
         options: { take: 0, filter: $erpRequirements }
         customerId: $customerId
+        managerId: $managerId
+        search: $search
     ) {
         totalItems
     }
-    overdue: visibleOrders(options: { take: 0, filter: $overdue }, customerId: $customerId) {
+    overdue: visibleOrders(
+        options: { take: 0, filter: $overdue }
+        customerId: $customerId
+        managerId: $managerId
+        search: $search
+    ) {
         totalItems
     }
     ordersAttention(overdueBefore: $overdueBefore) {

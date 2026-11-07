@@ -1,31 +1,45 @@
-import { onMounted, ref, type Ref } from 'vue';
+import { onMounted, ref, watch, type Ref } from 'vue';
+import { useDebouncedCallback, useLatestRequest } from '@mivend/ui-kit';
 import { fetchOrdersViewCounts, type OrdersViewCounts } from '../api/orders-counts';
+import type { OrdersListFilters } from '../api/orders-list';
 import { useOrderStatusesStore } from '../stores/orderStatuses';
 
 export interface OrdersViewCountsState {
     counts: Ref<OrdersViewCounts | null>;
     pendingApprovalOrderIds: Ref<Set<string>>;
-    refresh: () => Promise<void>;
 }
 
-// Chip counts and the price-adjustment flags come in one request; a failure leaves the chips without numbers.
-export function useOrdersViewCounts(customerId: string | undefined): OrdersViewCountsState {
+// Chip counts follow the list's search and conditions; a failure keeps the previous numbers.
+export function useOrdersViewCounts(
+    customerId: string | undefined,
+    filters: Ref<OrdersListFilters>,
+): OrdersViewCountsState {
     const statuses = useOrderStatusesStore();
     const counts = ref<OrdersViewCounts | null>(null);
     const pendingApprovalOrderIds = ref<Set<string>>(new Set());
 
-    async function refresh(): Promise<void> {
-        try {
+    const { run } = useLatestRequest(
+        async () => {
             await statuses.load();
-            const result = await fetchOrdersViewCounts(customerId, statuses.rejectedCodes);
+            return fetchOrdersViewCounts(filters.value, customerId, statuses.rejectedCodes);
+        },
+        result => {
             counts.value = result.counts;
             pendingApprovalOrderIds.value = result.pendingApprovalOrderIds;
-        } catch (e) {
+        },
+    );
+    function refresh(): void {
+        run().catch(e => {
             console.warn('[orders] could not load view counts:', e);
-        }
+        });
     }
+    const refreshSoon = useDebouncedCallback(refresh, 250);
 
-    onMounted(() => void refresh());
+    watch(
+        () => [filters.value.search, filters.value.conditions],
+        () => refreshSoon(),
+    );
+    onMounted(refresh);
 
-    return { counts, pendingApprovalOrderIds, refresh };
+    return { counts, pendingApprovalOrderIds };
 }
