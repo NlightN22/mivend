@@ -164,16 +164,17 @@ run the admin `reindex` once on every existing `internal` contour (`make dev-res
 
 **Address suggestions** (storefront trading-point form): `ADDRESS_SUGGEST_URL` and `ADDRESS_SUGGEST_API_KEY` (key sent as `Authorization: Token`), unset = off. Served by the `suggestAddress` shop query to logged-in customers. Fail-open: a timeout or error pauses suggestions for 30 s and the field stays plain text.
 
-**Geo provider (issue #315)**: server-side place search and reverse lookup behind the `searchAddress`, `reverseGeocode` and `geoConfig` shop queries (logged-in customers only; fail-open, cache, 30 s pause after a failure, per-provider call spacing). Unset `GEO_PROVIDER` = off. The legacy `suggestAddress` query is unchanged.
+**Geo provider (issue #315)**: server-side place search and reverse lookup behind the `searchAddress`, `reverseGeocode` and `geoConfig` shop queries (logged-in customers only; fail-open, cache, 30 s pause after a failure and call spacing, all per provider). The deployment enables a list of providers and a default; the picker lets the user switch among them. `searchAddress`/`reverseGeocode` take an optional `provider` key (default = deployment default) and reject a key that is not enabled with a user-input error. `geoConfig` returns the enabled providers with their public browser keys, the default and the start view, never a server key. Empty `GEO_PROVIDERS` = off. The legacy `suggestAddress` query is unchanged.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `GEO_PROVIDER` | unset | Registry key: `provider-a`, `provider-b` or `open` (key-to-vendor mapping lives only in the adapter files under `packages/plugins/counterparty/src/geo/`). An unknown key fails on first use. |
-| `GEO_PROVIDER_API_KEY` | unset | Server-side key; required for `provider-a`/`provider-b` (provider stays off without it), unused by `open`. Never sent to the browser. |
-| `GEO_PUBLIC_BROWSER_KEY` | unset | Origin-restricted key for the provider's map script; returned by `geoConfig`. |
+| `GEO_PROVIDERS` | unset (off) | Comma-separated registry keys to enable: `provider-a`, `provider-b`, `open` (key-to-vendor mapping lives only in the adapter files under `packages/plugins/counterparty/src/geo/`). An unknown key fails on first use; a keyed provider without its server key is left out. |
+| `GEO_DEFAULT_PROVIDER` | first enabled | Provider used when the query names none; ignored if not enabled. |
+| `GEO_PROVIDER_A_API_KEY`, `GEO_PROVIDER_B_API_KEY` | unset | Per-provider server-side key (never sent to the browser); required to enable that provider, unused by `open`. |
+| `GEO_PROVIDER_A_BROWSER_KEY`, `GEO_PROVIDER_B_BROWSER_KEY` | unset | Per-provider origin-restricted key for the map script; returned by `geoConfig`. |
+| `GEO_OPEN_URL`, `GEO_PROVIDER_A_URL`, `GEO_PROVIDER_B_URL` | adapter default | Override a provider endpoint, e.g. an own instance of the open geocoder. |
 | `GEO_DEFAULT_CENTER_LAT`, `GEO_DEFAULT_CENTER_LNG`, `GEO_DEFAULT_ZOOM` | unset | Map start view when no coordinates are known; returned by `geoConfig`. |
-| `GEO_PROVIDER_URL` | adapter default | Override the endpoint, e.g. an own instance of the open geocoder. |
-| `GEO_PROVIDER_USER_AGENT` | `mivend-geo` | Identifying User-Agent; the public open instance requires a real one with a contact. |
+| `GEO_PROVIDER_USER_AGENT` | `mivend-geo` | Identifying User-Agent for `open`; the public open instance requires a real one with a contact. |
 
 Suggestions carry coordinates when the provider returns them (all three geocoders do for search; an item without a point has no coordinates). `open` is spaced to at most one call per 1.1 s and, per its public-instance policy, must not be driven by per-keystroke autocomplete: the future UI submits a search on Enter or after a long pause. Provider terms (login-protected portal, storing coordinates, showing results on the provider's map) and paid tiers are still to be confirmed by the owner before a keyed provider ships.
 

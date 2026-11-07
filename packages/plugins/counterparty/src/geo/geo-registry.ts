@@ -9,16 +9,15 @@ const factories: Record<string, (config: GeoProviderConfig) => GeoProvider> = {
     open: c => new OpenAdapter(c),
 };
 
-export function createGeoProvider(
-    key: string | undefined,
-    config: GeoProviderConfig,
-): GeoProvider | null {
-    if (!key) return null;
+export function createGeoProvider(key: string, config: GeoProviderConfig): GeoProvider {
     const factory = factories[key];
     if (!factory)
         throw new Error(
-            `Unknown GEO_PROVIDER "${key}", expected one of: ${Object.keys(factories).join(', ')}`,
+            `Unknown geo provider "${key}" in GEO_PROVIDERS, expected: ${Object.keys(factories).join(', ')}`,
         );
-    if (key !== 'open' && !config.apiKey) return null;
     return factory(config);
+}
+
+export function geoEnvPrefix(key: string): string {
+    return `GEO_${key.toUpperCase().replace(/-/g, '_')}`;
 }

@@ -6,15 +6,17 @@ const okOpen = { ok: true, json: async () => [{ display_name: 'Street 1', lat: '
 
 describe('GeoService', () => {
     beforeEach(() => {
-        process.env.GEO_PROVIDER = 'open';
+        process.env.GEO_PROVIDERS = 'open';
         vi.stubGlobal('fetch', fetchMock);
         fetchMock.mockReset();
     });
     afterEach(() => {
         for (const k of [
-            'GEO_PROVIDER',
-            'GEO_PROVIDER_API_KEY',
-            'GEO_PUBLIC_BROWSER_KEY',
+            'GEO_PROVIDERS',
+            'GEO_DEFAULT_PROVIDER',
+            'GEO_PROVIDER_A_API_KEY',
+            'GEO_PROVIDER_A_BROWSER_KEY',
+            'GEO_OPEN_BROWSER_KEY',
             'GEO_DEFAULT_ZOOM',
         ])
             delete process.env[k];
@@ -24,17 +26,17 @@ describe('GeoService', () => {
 
     it('is off without a provider and for short queries', async () => {
         const off = new GeoService();
-        delete process.env.GEO_PROVIDER;
+        delete process.env.GEO_PROVIDERS;
         expect(await new GeoService().search('Street 1')).toEqual([]);
         expect(await off.search('ab')).toEqual([]);
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('is off for a keyed provider without a server key and rejects unknown keys', async () => {
-        process.env.GEO_PROVIDER = 'provider-a';
+        process.env.GEO_PROVIDERS = 'provider-a';
         expect(await new GeoService().search('Street 1')).toEqual([]);
-        process.env.GEO_PROVIDER = 'nope';
-        await expect(new GeoService().search('Street 1')).rejects.toThrow('Unknown GEO_PROVIDER');
+        process.env.GEO_PROVIDERS = 'nope';
+        expect(() => new GeoService().publicConfig()).toThrow('Unknown geo provider');
     });
 
     it('caches repeated searches and reverse lookups', async () => {
@@ -68,16 +70,68 @@ describe('GeoService', () => {
         expect(fetchMock).toHaveBeenCalledTimes(3);
     });
 
-    it('exposes only the public browser key and defaults', () => {
-        process.env.GEO_PROVIDER_API_KEY = 'server-secret';
-        process.env.GEO_PUBLIC_BROWSER_KEY = 'browser-key';
+    it('rejects a provider that is not enabled', async () => {
+        const service = new GeoService();
+        await expect(service.search('Street 1', undefined, 'provider-a')).rejects.toThrow(
+            'not enabled',
+        );
+        await expect(service.reverse({ lat: 1, lng: 2 }, 'provider-b')).rejects.toThrow(
+            'not enabled',
+        );
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('keeps cache and failure pause separate per provider', async () => {
+        process.env.GEO_PROVIDERS = 'open,provider-a';
+        process.env.GEO_PROVIDER_A_API_KEY = 'k';
+        const service = new GeoService();
+        fetchMock.mockResolvedValue({ ok: false, status: 500 });
+        expect(await service.search('Street 1')).toEqual([]);
+        expect(await service.search('Street 2')).toEqual([]);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        fetchMock.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                response: {
+                    GeoObjectCollection: {
+                        featureMember: [
+                            {
+                                GeoObject: {
+                                    metaDataProperty: { GeocoderMetaData: { text: 'A 1' } },
+                                    Point: { pos: '2 1' },
+                                },
+                            },
+                        ],
+                    },
+                },
+            }),
+        });
+        expect(await service.search('Street 1', undefined, 'provider-a')).toHaveLength(1);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        await service.search('Street 1', undefined, 'provider-a');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('exposes enabled providers with public keys only and the default', () => {
+        process.env.GEO_PROVIDERS = 'open,provider-a,provider-b';
+        process.env.GEO_PROVIDER_A_API_KEY = 'server-secret';
+        process.env.GEO_PROVIDER_A_BROWSER_KEY = 'browser-key';
+        process.env.GEO_DEFAULT_PROVIDER = 'provider-a';
         process.env.GEO_DEFAULT_ZOOM = '9';
         const config = new GeoService().publicConfig();
         expect(JSON.stringify(config)).not.toContain('server-secret');
         expect(config).toMatchObject({
-            provider: 'open',
-            publicKey: 'browser-key',
+            providers: [
+                { key: 'open', publicKey: null },
+                { key: 'provider-a', publicKey: 'browser-key' },
+            ],
+            defaultProvider: 'provider-a',
             defaultZoom: 9,
         });
+    });
+
+    it('falls back to the first enabled provider when the default is not enabled', () => {
+        process.env.GEO_DEFAULT_PROVIDER = 'provider-b';
+        expect(new GeoService().publicConfig().defaultProvider).toBe('open');
     });
 });

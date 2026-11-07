@@ -7,9 +7,14 @@ export const geoSchema = gql`
         longitude: Float
     }
 
-    type GeoConfig {
-        provider: String
+    type GeoProviderInfo {
+        key: String!
         publicKey: String
+    }
+
+    type GeoConfig {
+        providers: [GeoProviderInfo!]!
+        defaultProvider: String
         defaultLatitude: Float
         defaultLongitude: Float
         defaultZoom: Int
@@ -20,8 +25,9 @@ export const geoSchema = gql`
             query: String!
             biasLatitude: Float
             biasLongitude: Float
+            provider: String
         ): [AddressSuggestion!]!
-        reverseGeocode(latitude: Float!, longitude: Float!): String
+        reverseGeocode(latitude: Float!, longitude: Float!, provider: String): String
         geoConfig: GeoConfig!
     }
 `;

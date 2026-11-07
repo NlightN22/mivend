@@ -4,8 +4,8 @@ import { Ctx, RequestContext } from '@vendure/core';
 import { GeoPublicConfig, GeoService } from './geo.service';
 
 const EMPTY_CONFIG: GeoPublicConfig = {
-    provider: null,
-    publicKey: null,
+    providers: [],
+    defaultProvider: null,
     defaultLat: null,
     defaultLng: null,
     defaultZoom: null,
@@ -19,7 +19,12 @@ export class GeoResolver {
     async searchAddress(
         @Ctx() ctx: RequestContext,
         @Args()
-        args: { query: string; biasLatitude?: number | null; biasLongitude?: number | null },
+        args: {
+            query: string;
+            biasLatitude?: number | null;
+            biasLongitude?: number | null;
+            provider?: string | null;
+        },
     ): Promise<Array<{ address: string; latitude?: number; longitude?: number }>> {
         if (!ctx.activeUserId) return [];
         const { biasLatitude: lat, biasLongitude: lng } = args;
@@ -27,25 +32,25 @@ export class GeoResolver {
             typeof lat === 'number' && typeof lng === 'number' && isCoordinate(lat, lng)
                 ? { lat, lng }
                 : undefined;
-        const found = await this.geo.search(args.query, bias);
+        const found = await this.geo.search(args.query, bias, args.provider);
         return found.map(s => ({ address: s.address, latitude: s.lat, longitude: s.lng }));
     }
 
     @Query()
     async reverseGeocode(
         @Ctx() ctx: RequestContext,
-        @Args() args: { latitude: number; longitude: number },
+        @Args() args: { latitude: number; longitude: number; provider?: string | null },
     ): Promise<string | null> {
         if (!ctx.activeUserId || !isCoordinate(args.latitude, args.longitude)) return null;
-        return this.geo.reverse({ lat: args.latitude, lng: args.longitude });
+        return this.geo.reverse({ lat: args.latitude, lng: args.longitude }, args.provider);
     }
 
     @Query()
     geoConfig(@Ctx() ctx: RequestContext): Record<string, unknown> {
         const c = ctx.activeUserId ? this.geo.publicConfig() : EMPTY_CONFIG;
         return {
-            provider: c.provider,
-            publicKey: c.publicKey,
+            providers: c.providers,
+            defaultProvider: c.defaultProvider,
             defaultLatitude: c.defaultLat,
             defaultLongitude: c.defaultLng,
             defaultZoom: c.defaultZoom === null ? null : Math.round(c.defaultZoom),
