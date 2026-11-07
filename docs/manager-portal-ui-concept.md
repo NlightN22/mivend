@@ -21,7 +21,9 @@ the first stage. Colors and button states follow `docs/ui-standards.md`; table s
   store; the portal only renders the ready tables and charts it returns.
 - **No second catalog.** The catalog is viewed through the storefront: anonymous (no
   customer prices), as a customer via acting-as-customer, or as the manager themselves.
-  Creating an order uses the same acting flow; the portal has no order-creation screen.
+  Creating an order uses the same acting flow, started by the "Act as customer" button on the
+  customer card (one click, opens the storefront in a new tab); the portal has no order-creation
+  screen, and old `/catalog` and `/orders/new` links fall to the not-found page.
 
 ## Page types
 
@@ -81,6 +83,7 @@ quick article entry, change-of-assignment action, dashboard redesign (a separate
 ## Order of work
 
 1. Entity lists in the standard shape, each with a preset-filter variant for its parent card.
-2. Customer card with tabs on top of those lists.
+2. Customer card with tabs on top of those lists (the card tab layout comes in this stage, later;
+   until then the card keeps its current layout with the "Act as customer" button).
 3. Shell and menu per this document.
 4. Dashboard, then the deferred items, one page at a time.

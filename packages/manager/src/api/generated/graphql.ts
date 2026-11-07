@@ -10158,6 +10158,15 @@ export type ChangeOwnPasswordMutationVariables = Exact<{
 
 export type ChangeOwnPasswordMutation = { updateActiveAdministrator: { id: string } };
 
+export type StartActingSessionMutationVariables = Exact<{
+    counterpartyId: Scalars['ID']['input'];
+    tradingPointId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type StartActingSessionMutation = {
+    startActingSession: { ticket: string; storefrontUrl: string; expiresAt: any };
+};
+
 export type PendingApprovalsBadgeCountQueryVariables = Exact<{ [key: string]: never }>;
 
 export type PendingApprovalsBadgeCountQuery = {
@@ -13182,6 +13191,21 @@ export const ChangeOwnPasswordDocument = new TypedDocumentString(`
     `) as unknown as TypedDocumentString<
     ChangeOwnPasswordMutation,
     ChangeOwnPasswordMutationVariables
+>;
+export const StartActingSessionDocument = new TypedDocumentString(`
+    mutation StartActingSession($counterpartyId: ID!, $tradingPointId: ID) {
+  startActingSession(
+    counterpartyId: $counterpartyId
+    tradingPointId: $tradingPointId
+  ) {
+    ticket
+    storefrontUrl
+    expiresAt
+  }
+}
+    `) as unknown as TypedDocumentString<
+    StartActingSessionMutation,
+    StartActingSessionMutationVariables
 >;
 export const PendingApprovalsBadgeCountDocument = new TypedDocumentString(`
     query PendingApprovalsBadgeCount {

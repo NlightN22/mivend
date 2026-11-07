@@ -1,0 +1,7 @@
+mutation StartActingSession($counterpartyId: ID!, $tradingPointId: ID) {
+    startActingSession(counterpartyId: $counterpartyId, tradingPointId: $tradingPointId) {
+        ticket
+        storefrontUrl
+        expiresAt
+    }
+}

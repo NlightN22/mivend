@@ -1,7 +1,8 @@
 <template>
     <div class="not-found">
         <h1>404</h1>
-        <p>This page is not implemented yet.</p>
+        <p>This page does not exist.</p>
+        <RouterLink to="/">Back to dashboard</RouterLink>
     </div>
 </template>
 

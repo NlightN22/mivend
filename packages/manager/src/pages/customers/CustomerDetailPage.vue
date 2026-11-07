@@ -45,6 +45,7 @@ import CustomerProformaInvoicesTab from '../../components/customers/CustomerProf
 import CustomerPaymentsTab from '../../components/customers/CustomerPaymentsTab.vue';
 import CustomerTeamTab from '../../components/customers/CustomerTeamTab.vue';
 import CustomerPortalUsersTab from '../../components/customers/CustomerPortalUsersTab.vue';
+import ActAsCustomerButton from '../../components/acting/ActAsCustomerButton.vue';
 import EntityHistoryPanel from '../../components/history/EntityHistoryPanel.vue';
 
 // Human labels for the generic EntityHistoryPanel widget — only the entity types this page
@@ -313,6 +314,7 @@ function initials(name: string | null): string {
             </MvStatusBadge>
         </h1>
         <p v-if="customer.inn" class="customer-detail__subtitle">INN {{ customer.inn }}</p>
+        <ActAsCustomerButton :counterparty-id="customer.id" />
         <MvStatusBadge v-if="customer.innStatus === 'missing'" variant="warning">
             INN missing — fill it in the ERP before portal access
         </MvStatusBadge>
