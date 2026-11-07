@@ -12,7 +12,7 @@ export class DiscountLimit1791552000000 implements MigrationInterface {
             `CREATE UNIQUE INDEX "IDX_10e2d777f23bdeb2fa0fa660b1" ON "discount_limit" ("uuid")`,
         );
         await queryRunner.query(
-            `CREATE UNIQUE INDEX "IDX_2832ef5d8a455d37775f24b7f8" ON "discount_limit" ("roleCode", "groupRef")`,
+            `CREATE UNIQUE INDEX "IDX_538d4f03d8db9cec179af4636e" ON "discount_limit" ("roleCode", "groupRef")`,
         );
     }
 
