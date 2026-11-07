@@ -20,7 +20,7 @@ the first stage. Colors and button states follow `docs/ui-standards.md`; table s
 - **The portal shows, it does not compute.** Heavy analytics will live in a separate analytical
   store; the portal only renders the ready tables and charts it returns.
 - **No second catalog.** The catalog is viewed through the storefront: anonymous (no
-  customer prices), as a customer via acting-as-customer (#322), or as the manager themselves.
+  customer prices), as a customer via acting-as-customer, or as the manager themselves.
   Creating an order uses the same acting flow; the portal has no order-creation screen.
 
 ## Page types
