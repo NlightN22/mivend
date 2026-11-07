@@ -39,6 +39,7 @@ describe('ReconciliationService.runComparison', () => {
             localCounts as never,
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
+            { countMissing: async () => 0 } as never,
         );
         return { service, save, findOne, notificationService };
     }
@@ -174,6 +175,7 @@ describe('ReconciliationService.runComparison', () => {
             localCounts as never,
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
+            { countMissing: async () => 0 } as never,
         );
 
         await service.runComparison({ triggeredBy: 'scheduled' });
@@ -265,6 +267,7 @@ describe('ReconciliationService.runComparison', () => {
             localCounts as never,
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
+            { countMissing: async () => 0 } as never,
         );
 
         await service.runComparison({ triggeredBy: 'scheduled' });
@@ -303,6 +306,7 @@ describe('ReconciliationService.resolve', () => {
             {} as never,
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
+            { countMissing: async () => 0 } as never,
         );
 
         const result = await service.resolve({} as never, {
@@ -338,6 +342,7 @@ describe('ReconciliationService.resolve', () => {
             {} as never,
             notificationService as never,
             { getBacklogByStream: async () => [] } as never,
+            { countMissing: async () => 0 } as never,
         );
 
         await service.resolve({} as never, { id: '3', resolution: 'stale seed row' });

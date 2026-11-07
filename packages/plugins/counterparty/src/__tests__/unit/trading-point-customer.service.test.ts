@@ -112,6 +112,89 @@ describe('TradingPointService — customer methods', () => {
         });
     });
 
+    describe('customer location', () => {
+        const valid = { name: 'Point A', address: 'Main street 12, office 3' };
+
+        it('customerAdd refuses a point without a location', async () => {
+            await expect(service.customerAdd(mockCtx, 'cp1', valid)).rejects.toThrow(
+                UserInputError,
+            );
+            expect(mockTpRepo.save).not.toHaveBeenCalled();
+        });
+
+        it.each([
+            ['out of range', { latitude: 95, longitude: 20 }],
+            ['NaN', { latitude: NaN, longitude: 20 }],
+            ['(0, 0)', { latitude: 0, longitude: 0 }],
+        ])('customerAdd refuses %s', async (_n, loc) => {
+            await expect(service.customerAdd(mockCtx, 'cp1', { ...valid, ...loc })).rejects.toThrow(
+                UserInputError,
+            );
+            expect(mockTpRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('customerAdd stores the supplied location', async () => {
+            mockTpRepo.create.mockReturnValue({ contacts: [] });
+            mockTpRepo.save.mockResolvedValue({ id: 'tp1' });
+            await service.customerAdd(mockCtx, 'cp1', { ...valid, latitude: 1.5, longitude: 2.5 });
+            expect(mockTpRepo.create).toHaveBeenCalledWith(
+                expect.objectContaining({ latitude: 1.5, longitude: 2.5 }),
+            );
+        });
+
+        it('customerEdit keeps the stored location when the edit omits it', async () => {
+            const record = {
+                id: 'tp1',
+                address: valid.address,
+                latitude: 5,
+                longitude: 6,
+                contacts: [],
+            };
+            mockTpRepo.findOne.mockResolvedValue(record);
+            mockTpRepo.save.mockImplementation(async (r: unknown) => r);
+            await service.customerEdit(mockCtx, 'tp1', 'cp1', valid);
+            expect(record).toMatchObject({ latitude: 5, longitude: 6 });
+        });
+
+        it('customerEdit refuses to clear the location', async () => {
+            mockTpRepo.findOne.mockResolvedValue({
+                id: 'tp1',
+                address: valid.address,
+                latitude: 5,
+                longitude: 6,
+                contacts: [],
+            });
+            await expect(
+                service.customerEdit(mockCtx, 'tp1', 'cp1', {
+                    ...valid,
+                    latitude: null,
+                    longitude: null,
+                }),
+            ).rejects.toThrow(UserInputError);
+        });
+
+        it('customerEdit of a legacy point needs a location, and saves one when supplied', async () => {
+            const record = {
+                id: 'tp1',
+                address: valid.address,
+                latitude: null,
+                longitude: null,
+                contacts: [],
+            };
+            mockTpRepo.findOne.mockResolvedValue(record);
+            mockTpRepo.save.mockImplementation(async (r: unknown) => r);
+            await expect(service.customerEdit(mockCtx, 'tp1', 'cp1', valid)).rejects.toThrow(
+                UserInputError,
+            );
+            await service.customerEdit(mockCtx, 'tp1', 'cp1', {
+                ...valid,
+                latitude: 3,
+                longitude: 4,
+            });
+            expect(record).toMatchObject({ latitude: 3, longitude: 4 });
+        });
+    });
+
     describe('customerAdd', () => {
         it('creates TradingPoint with customerStatus=active, customerOwned=true, erpId starting with cust_', async () => {
             const contact = { name: 'Ivan', phone: '+7999', email: null, isPrimary: true };
@@ -127,6 +210,8 @@ describe('TradingPointService — customer methods', () => {
             mockTpRepo.save.mockResolvedValue(tp);
 
             const result = await service.customerAdd(mockCtx, 'cp1', {
+                latitude: 10,
+                longitude: 20,
                 name: 'Point A',
                 address: 'Main street 12, office 3',
                 contactName: 'Ivan Petrov',
@@ -144,6 +229,8 @@ describe('TradingPointService — customer methods', () => {
         it('rejects an incomplete phone and stores the normalized one', async () => {
             await expect(
                 service.customerAdd(mockCtx, 'cp1', {
+                    latitude: 10,
+                    longitude: 20,
                     name: 'P',
                     address: 'Main street 12',
                     contactPhone: '+7999',
@@ -160,6 +247,8 @@ describe('TradingPointService — customer methods', () => {
             mockTpRepo.save.mockResolvedValue(tp);
 
             await service.customerAdd(mockCtx, 'cp1', {
+                latitude: 10,
+                longitude: 20,
                 name: 'P',
                 address: 'Main street 12',
                 contactName: 'Ivan Petrov',
@@ -178,6 +267,8 @@ describe('TradingPointService — customer methods', () => {
             mockTpRepo.save.mockResolvedValue(tp);
 
             await service.customerAdd(mockCtx, 'cp1', {
+                latitude: 10,
+                longitude: 20,
                 name: 'P',
                 address: 'Main street 12',
                 contactName: null,

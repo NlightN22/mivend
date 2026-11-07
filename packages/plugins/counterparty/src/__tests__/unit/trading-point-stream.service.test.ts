@@ -96,6 +96,24 @@ describe('TradingPointService — Kafka stream methods (issue #100)', () => {
             expect(mockTpRepo.save).toHaveBeenCalled();
         });
 
+        it('stores a point that arrives without coordinates (reported by the drift check, not rejected)', async () => {
+            mockTpRepo.findOne.mockResolvedValue(null);
+            mockTpRepo.create.mockReturnValue({ erpId: 'pos-1', contacts: [] });
+
+            await service.upsertFromStream(mockCtx, 'pos-1', {
+                name: 'Kiosk A',
+                counterpartyId: 'cp1',
+                servicingBranchId: null,
+                isActive: true,
+                address: 'Addr 1',
+            });
+
+            expect(mockTpRepo.create).toHaveBeenCalledWith(
+                expect.objectContaining({ latitude: null, longitude: null }),
+            );
+            expect(mockTpRepo.save).toHaveBeenCalled();
+        });
+
         // address is required, never fabricated (audit LOW: deferred-create must warn, not verbose).
         it('does not create a row when address is missing and none exists yet, and warns', async () => {
             mockTpRepo.findOne.mockResolvedValue(null);

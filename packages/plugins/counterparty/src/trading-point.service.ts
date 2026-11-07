@@ -16,6 +16,7 @@ import { ContactPerson } from './entities/contact-person.entity';
 import { Counterparty } from './entities/counterparty.entity';
 import { TradingPoint } from './entities/trading-point.entity';
 import { loggerCtx } from './types';
+import { resolveTradingPointLocation } from './trading-point-location';
 import { ctxQuery, normalizePhone, validateTradingPointContact, type ContactField } from 'shared';
 
 export interface TradingPointDetailsPatch {
@@ -26,6 +27,8 @@ export interface TradingPointDetailsPatch {
     // Explicit staff override for a chain account whose locations span multiple branches — see
     // TradingPoint.servicingBranchId. Not set by ERP sync; only by a staff edit through this patch.
     servicingBranchId?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
     contacts?: Array<{
         name: string;
         phone?: string | null;
@@ -132,6 +135,15 @@ export class TradingPointService {
                 to: patch.deliveryComment,
             };
             record.deliveryComment = patch.deliveryComment;
+        }
+        const location = resolveTradingPointLocation(patch, record);
+        if (location.latitude !== record.latitude || location.longitude !== record.longitude) {
+            changedFields.location = {
+                from: { latitude: record.latitude, longitude: record.longitude },
+                to: location,
+            };
+            record.latitude = location.latitude;
+            record.longitude = location.longitude;
         }
         if (
             patch.servicingBranchId !== undefined &&
@@ -517,6 +529,7 @@ export class TradingPointService {
         input: CustomerTradingPointInput,
     ): Promise<TradingPoint> {
         input = normalizeCustomerInput(input);
+        const location = resolveTradingPointLocation(input);
         const repo = this.connection.getRepository(ctx, TradingPoint);
         const cpRepo = this.connection.getRepository(ctx, ContactPerson);
         const counterparty = await this.connection
@@ -536,6 +549,8 @@ export class TradingPointService {
             servicingBranchId: counterparty?.branchId ?? null,
             name: input.name,
             address: input.address,
+            latitude: location.latitude,
+            longitude: location.longitude,
             workingHours: input.workingHours ?? null,
             deliveryComment: input.deliveryComment ?? null,
             isActive: true,
@@ -568,8 +583,11 @@ export class TradingPointService {
             contactName: primary?.name ?? null,
             contactPhone: primary?.phone ?? null,
         });
+        const location = resolveTradingPointLocation(input, record);
         record.name = input.name;
         record.address = input.address;
+        record.latitude = location.latitude;
+        record.longitude = location.longitude;
         record.workingHours = input.workingHours ?? null;
         record.deliveryComment = input.deliveryComment ?? null;
         if (input.contactName !== undefined) {
@@ -621,6 +639,8 @@ export interface CustomerTradingPointInput {
     deliveryComment?: string | null;
     contactName?: string | null;
     contactPhone?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
 }
 
 function normalizeCustomerInput(

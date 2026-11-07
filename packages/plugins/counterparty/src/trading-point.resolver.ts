@@ -14,6 +14,7 @@ import { CounterpartyService } from './counterparty.service';
 import { CounterpartyBatchLoaders } from './counterparty-batch-loaders.service';
 import { hiddenOnAdmin } from './hidden-on-admin';
 import { ctxQuery } from 'shared';
+import { resolveTradingPointLocation } from './trading-point-location';
 
 @Resolver('Customer')
 export class CustomerTradingPointResolver {
@@ -202,7 +203,8 @@ export class TradingPointAdminResolver {
             isActive: boolean;
         },
     ): Promise<TradingPoint> {
-        return this.tradingPointService.upsert(ctx, args);
+        const location = resolveTradingPointLocation(args);
+        return this.tradingPointService.upsert(ctx, { ...args, ...location });
     }
 
     // Gated by the same permission pair as the counterparties query, not Permission.UpdateCustomer;

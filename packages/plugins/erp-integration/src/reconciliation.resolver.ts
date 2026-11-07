@@ -1,6 +1,7 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Allow, Ctx, PaginatedList, RequestContext } from '@vendure/core';
 import { CustomPermission } from '@mivend/plugin-access-control';
+import { TradingPoint, TradingPointLocationReportService } from '@mivend/plugin-counterparty';
 
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import {
@@ -11,7 +12,19 @@ import {
 
 @Resolver()
 export class ReconciliationResolver {
-    constructor(private reconciliationService: ReconciliationService) {}
+    constructor(
+        private reconciliationService: ReconciliationService,
+        private locationReport: TradingPointLocationReportService,
+    ) {}
+
+    @Query()
+    @Allow(CustomPermission.ManageErpIntegration.Permission)
+    async tradingPointsWithoutLocation(
+        @Ctx() ctx: RequestContext,
+        @Args() args: { options?: OpenErpReconciliationIssueListOptions },
+    ): Promise<PaginatedList<TradingPoint>> {
+        return this.locationReport.listMissing(ctx, args.options);
+    }
 
     @Query()
     @Allow(CustomPermission.ManageErpIntegration.Permission)

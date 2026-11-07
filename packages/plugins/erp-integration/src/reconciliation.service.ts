@@ -6,6 +6,7 @@ import {
     TransactionalConnection,
 } from '@vendure/core';
 import { NotificationService } from '@mivend/plugin-notification';
+import { TradingPointLocationReportService } from '@mivend/plugin-counterparty';
 
 import { ErpReconciliationIssue } from './entities/erp-reconciliation-issue.entity';
 import type {
@@ -23,6 +24,7 @@ import { classifyDiscrepancy, resolveTheirCount } from './reconciliation-decisio
 import { ALL_INBOUND_STREAMS, loggerCtx } from './types';
 
 export const FAILED_INBOX_ISSUE_PREFIX = 'inbox-failed:';
+export const MISSING_COORDINATES_AGGREGATE = 'trading-point-no-coordinates';
 
 export interface RunComparisonInput {
     triggeredBy: ErpReconciliationTrigger;
@@ -53,6 +55,7 @@ export class ReconciliationService {
         private readonly localCounts: ReconciliationLocalCountsService,
         private readonly notificationService: NotificationService,
         private readonly inboxHealth: IntegrationInboxHealthService,
+        private readonly locationReport: TradingPointLocationReportService,
     ) {}
 
     async runComparison(input: RunComparisonInput): Promise<RunComparisonResult> {
@@ -112,7 +115,29 @@ export class ReconciliationService {
         }
 
         issuesFound += await this.reconcileFailedInboxRows(ctx, input);
+        issuesFound += await this.reconcileMissingCoordinates(ctx, input);
         return { checked, issuesFound, skipped };
+    }
+
+    // ERP points may arrive without coordinates; they stay valid but are reported until backfilled.
+    private async reconcileMissingCoordinates(
+        ctx: RequestContext,
+        input: RunComparisonInput,
+    ): Promise<number> {
+        const missing = await this.locationReport.countMissing(ctx);
+        if (missing === 0) {
+            await this.autoResolveIfOpen(ctx, MISSING_COORDINATES_AGGREGATE);
+            return 0;
+        }
+        await this.recordIssue(ctx, {
+            aggregateType: MISSING_COORDINATES_AGGREGATE,
+            issueType: 'missing-coordinates',
+            ourCount: missing,
+            theirActiveCount: 0,
+            triggeredBy: input.triggeredBy,
+            triggeredByAdministratorId: input.triggeredByAdministratorId ?? null,
+        });
+        return 1;
     }
 
     // Failed rows never leave the inbox on their own; one open issue per stream until none remain.

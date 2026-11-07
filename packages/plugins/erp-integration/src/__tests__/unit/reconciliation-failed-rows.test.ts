@@ -7,7 +7,11 @@ function makeSummary(aggregateType: string, activeCount: number) {
 }
 
 describe('ReconciliationService failed inbox rows', () => {
-    function make(failedByStream: Record<string, number>, open: object | undefined) {
+    function make(
+        failedByStream: Record<string, number>,
+        open: object | undefined,
+        missingCoordinates = 0,
+    ) {
         const save = vi.fn().mockResolvedValue(undefined);
         const findOne = vi.fn().mockResolvedValue(open);
         const connection = { getRepository: () => ({ save, findOne }) };
@@ -24,6 +28,7 @@ describe('ReconciliationService failed inbox rows', () => {
                 getBacklogByStream: async () =>
                     Object.entries(failedByStream).map(([stream, failed]) => ({ stream, failed })),
             } as never,
+            { countMissing: async () => missingCoordinates } as never,
         );
         return { service, save, findOne };
     }
@@ -51,6 +56,26 @@ describe('ReconciliationService failed inbox rows', () => {
         const { service, save } = make({}, open);
         await service.runComparison({ triggeredBy: 'scheduled' });
         expect(save).toHaveBeenCalled();
+        expect(open).toMatchObject({ status: 'resolved' });
+    });
+
+    it('opens a missing-coordinates issue with the count of points without a location', async () => {
+        const { service, save } = make({}, undefined, 7);
+        const result = await service.runComparison({ triggeredBy: 'scheduled' });
+        expect(result.issuesFound).toBe(1);
+        expect(save).toHaveBeenCalledWith(
+            expect.objectContaining({
+                issueType: 'missing-coordinates',
+                aggregateType: 'trading-point-no-coordinates',
+                ourCount: 7,
+            }),
+        );
+    });
+
+    it('auto-resolves the missing-coordinates issue once every point has a location', async () => {
+        const open = { aggregateType: 'trading-point-no-coordinates', status: 'open' };
+        const { service } = make({}, open, 0);
+        await service.runComparison({ triggeredBy: 'scheduled' });
         expect(open).toMatchObject({ status: 'resolved' });
     });
 });

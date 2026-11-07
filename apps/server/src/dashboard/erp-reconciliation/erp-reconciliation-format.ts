@@ -9,6 +9,8 @@ export function formatIssueTypeLabel(issueType: string): string {
             return 'mivend has more than Integration Service';
         case 'failed-inbox-rows':
             return 'Inbox rows failed processing and need attention';
+        case 'missing-coordinates':
+            return 'Trading points have no coordinates and need a location';
         default:
             return issueType;
     }

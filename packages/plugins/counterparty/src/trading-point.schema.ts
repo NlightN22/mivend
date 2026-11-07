@@ -60,6 +60,8 @@ export const shopApiSchema = gql`
         customerAddTradingPoint(
             name: String!
             address: String!
+            latitude: Float
+            longitude: Float
             workingHours: String
             deliveryComment: String
             contactName: String
@@ -69,6 +71,8 @@ export const shopApiSchema = gql`
             id: ID!
             name: String!
             address: String!
+            latitude: Float
+            longitude: Float
             workingHours: String
             deliveryComment: String
             contactName: String

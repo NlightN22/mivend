@@ -1,6 +1,7 @@
 export { CounterpartyPlugin } from './src/counterparty.plugin';
 export { CounterpartyService } from './src/counterparty.service';
 export { TradingPointService } from './src/trading-point.service';
+export { TradingPointLocationReportService } from './src/trading-point-location-report.service';
 export type { TradingPointUpsertPayload } from './src/trading-point.service';
 export { ErpIdLookupService } from './src/erp-id-lookup.service';
 export { ContractService } from './src/contract.service';

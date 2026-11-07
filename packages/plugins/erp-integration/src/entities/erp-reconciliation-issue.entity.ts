@@ -2,12 +2,17 @@ import { DeepPartial } from '@vendure/common/lib/shared-types';
 import { UuidEntity } from 'shared';
 import { Column, Entity, Index } from 'typeorm';
 
-export type ErpReconciliationIssueType = 'upstream-higher' | 'local-higher' | 'failed-inbox-rows';
+export type ErpReconciliationIssueType =
+    | 'upstream-higher'
+    | 'local-higher'
+    | 'failed-inbox-rows'
+    | 'missing-coordinates';
 export type ErpReconciliationIssueStatus = 'open' | 'resolved';
 export type ErpReconciliationTrigger = 'scheduled' | 'manual';
 
 // Never auto-resolved: upstream-higher needs a human replay via operator-only resync (no point API).
 // failed-inbox-rows (aggregateType `inbox-failed:<stream>`, ourCount = failed rows) clears when none remain.
+// missing-coordinates (aggregateType `trading-point-no-coordinates`, ourCount = active points) clears when none remain.
 // local-higher is flagged for review and never auto-deleted (may be stale or orphaned).
 @Entity()
 export class ErpReconciliationIssue extends UuidEntity {

@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CustomerService, RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    CustomerService,
+    RequestContext,
+    TransactionalConnection,
+    UserInputError,
+} from '@vendure/core';
 import type { AccessScopeService } from '@mivend/plugin-access-control';
 import type { VersioningService } from '@mivend/plugin-versioning';
 import { TradingPointService } from '../../trading-point.service';
@@ -54,6 +59,57 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
         );
     });
 
+    describe('updateDetails location', () => {
+        const base = {
+            id: 'tp-1',
+            name: 'Point A',
+            address: 'Addr',
+            workingHours: null,
+            deliveryComment: null,
+            counterpartyId: 'cp-1',
+            contacts: [],
+        };
+
+        it('refuses to clear the location', async () => {
+            mockTpRepo.findOne.mockResolvedValue({ ...base, latitude: 10, longitude: 20 });
+            await expect(
+                service.updateDetails(mockCtx, 'tp-1', { latitude: null, longitude: null }),
+            ).rejects.toThrow(UserInputError);
+            expect(mockTpRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('refuses an edit of a point without location unless it supplies one', async () => {
+            mockTpRepo.findOne.mockResolvedValue({ ...base, latitude: null, longitude: null });
+            await expect(
+                service.updateDetails(mockCtx, 'tp-1', { address: 'New' }),
+            ).rejects.toThrow(UserInputError);
+        });
+
+        it('rejects an out-of-range location', async () => {
+            mockTpRepo.findOne.mockResolvedValue({ ...base, latitude: 10, longitude: 20 });
+            await expect(
+                service.updateDetails(mockCtx, 'tp-1', { latitude: 91, longitude: 20 }),
+            ).rejects.toThrow(UserInputError);
+        });
+
+        it('saves and versions a supplied location for a legacy point', async () => {
+            mockTpRepo.findOne.mockResolvedValue({ ...base, latitude: null, longitude: null });
+            mockTpRepo.save.mockImplementation(async (r: unknown) => r);
+            await service.updateDetails(mockCtx, 'tp-1', { latitude: 1.5, longitude: 2.5 });
+            expect(mockVersioningService.recordChange).toHaveBeenCalledWith(
+                mockCtx,
+                expect.objectContaining({
+                    changedFields: {
+                        location: {
+                            from: { latitude: null, longitude: null },
+                            to: { latitude: 1.5, longitude: 2.5 },
+                        },
+                    },
+                }),
+            );
+        });
+    });
+
     describe('updateDetails', () => {
         it('records the real from/to contact values, not just counts', async () => {
             mockTpRepo.findOne.mockResolvedValue({
@@ -63,6 +119,8 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
                 workingHours: null,
                 deliveryComment: null,
                 counterpartyId: 'cp-1',
+                latitude: 10,
+                longitude: 20,
                 contacts: [{ name: 'Ivan', phone: '123', email: null, isPrimary: true }],
             });
 
@@ -95,6 +153,8 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
                 workingHours: null,
                 deliveryComment: null,
                 counterpartyId: 'cp-1',
+                latitude: 10,
+                longitude: 20,
                 contacts: [{ name: 'Ivan', phone: '123', email: null, isPrimary: true }],
             });
 
@@ -118,6 +178,8 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
                 workingHours: null,
                 deliveryComment: null,
                 counterpartyId: 'cp-1',
+                latitude: 10,
+                longitude: 20,
                 contacts: [petr, ivan],
             });
 
@@ -135,6 +197,8 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
                 workingHours: null,
                 deliveryComment: null,
                 counterpartyId: 'cp-1',
+                latitude: 10,
+                longitude: 20,
                 contacts: [],
             });
 
@@ -156,6 +220,8 @@ describe('TradingPointService — staff-initiated edits (updateDetails/setActive
                 isActive: false,
                 customerStatus: 'hidden',
                 counterpartyId: 'cp-1',
+                latitude: 10,
+                longitude: 20,
             });
 
             await service.setActive(mockCtx, 'tp-1', true);

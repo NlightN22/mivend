@@ -374,6 +374,14 @@ Service's own `GET /api/reconciliation/v1/summary?aggregateType=<type>` endpoint
   `failed-inbox-rows` issue per stream (`aggregateType` `inbox-failed:<stream>`, `ourCount` = failed rows)
   while any `failed` inbox row exists, and auto-resolves it when none remain. The integration-health page
   shows a red alert and highlights the stream row.
+- **Trading points without coordinates (#315)**: a `point-of-sale` event may arrive without coordinates; it is
+  stored, not rejected. Each run opens one `missing-coordinates` issue (`aggregateType`
+  `trading-point-no-coordinates`, `ourCount` = active points with a null latitude or longitude) and auto-resolves
+  it when none remain. The admin query `tradingPointsWithoutLocation` (ManageErpIntegration) lists them for backfill.
+- **Location rule (#315)**: `customerAddTradingPoint`, `customerEditTradingPoint`, `upsertTradingPoint` and
+  `updateTradingPointDetails` require latitude -90..90 and longitude -180..180, finite, not (0, 0). An edit cannot
+  clear them, and any edit of a point stored without coordinates must supply them
+  (`trading-point-location.ts`). Internal `TradingPointService.upsert` (seed, hub-branch event) is not gated.
 - **Local count rules (#304)**: each local count mirrors what upstream `activeCount` includes.
   - `category`: non-root, `feedHidden = false`; a manager `isPrivate` override does not hide one.
   - `warehouse`: active warehouses plus active folder nodes (upstream counts folders, mivend skips them).

@@ -68,6 +68,11 @@ export const coreTypes = `
         totalItems: Int!
     }
 
+    type TradingPointList {
+        items: [TradingPoint!]!
+        totalItems: Int!
+    }
+
     input OpenErpReconciliationIssueListOptions {
         take: Int
         skip: Int

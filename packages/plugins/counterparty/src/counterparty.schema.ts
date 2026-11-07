@@ -249,6 +249,8 @@ export const adminApiSchema = gql`
         workingHours: String
         deliveryComment: String
         servicingBranchId: String
+        latitude: Float
+        longitude: Float
         contacts: [ContactPersonInput!]
     }
 `;
