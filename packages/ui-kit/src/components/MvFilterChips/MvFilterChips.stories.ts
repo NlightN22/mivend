@@ -30,3 +30,26 @@ export const Default: Story = {
             '<MvFilterChips :chips="args.chips" :active="active" @select="active = $event" />',
     }),
 };
+
+export const WithCounts: Story = {
+    render: () => ({
+        components: { MvFilterChips },
+        setup: () => {
+            const active = ref('awaiting');
+            const chips: FilterChip[] = [
+                {
+                    key: 'awaiting',
+                    label: 'Awaiting confirmation',
+                    variant: 'warning',
+                    count: 7,
+                    emphasis: true,
+                },
+                { key: 'all', label: 'All', count: 1240 },
+                { key: 'overdue', label: 'Overdue', variant: 'danger', count: 0 },
+            ];
+            return { active, chips };
+        },
+        template:
+            '<MvFilterChips scrollable :chips="chips" :active="active" @select="active = $event" />',
+    }),
+};

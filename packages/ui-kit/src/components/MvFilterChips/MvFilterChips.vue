@@ -26,14 +26,20 @@ export interface FilterChip {
     key: string;
     label: string;
     variant?: StatusBadgeVariant;
+    // Server COUNT for the chip; shown as a pill after the label.
+    count?: number;
+    // Inverts the count pill while count > 0, for the chip people look at first.
+    emphasis?: boolean;
 }
 
-defineProps<{ chips: FilterChip[]; active: string }>();
+withDefaults(defineProps<{ chips: FilterChip[]; active: string; scrollable?: boolean }>(), {
+    scrollable: false,
+});
 const emit = defineEmits<{ select: [key: string] }>();
 </script>
 
 <template>
-    <div class="mv-filter-chips">
+    <div class="mv-filter-chips" :class="{ 'mv-filter-chips--scrollable': scrollable }">
         <button
             v-for="chip in chips"
             :key="chip.key"
@@ -50,6 +56,12 @@ const emit = defineEmits<{ select: [key: string] }>();
             @click="emit('select', chip.key)"
         >
             {{ chip.label }}
+            <span
+                v-if="chip.count !== undefined"
+                class="mv-filter-chip__count"
+                :class="{ 'mv-filter-chip__count--emphasis': chip.emphasis && chip.count > 0 }"
+                >{{ chip.count }}</span
+            >
         </button>
     </div>
 </template>
@@ -79,6 +91,32 @@ const emit = defineEmits<{ select: [key: string] }>();
     font-weight: 600;
     font-size: 12px;
     cursor: pointer;
+    white-space: nowrap;
+}
+
+.mv-filter-chip__count {
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--app-fill-soft);
+    color: inherit;
+    font-size: 11px;
+}
+
+.mv-filter-chip__count--emphasis {
+    background: var(--app-warn-fg);
+    color: var(--app-warn-bg);
+}
+
+.mv-filter-chips--scrollable {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    scrollbar-width: none;
+}
+
+.mv-filter-chips--scrollable .mv-filter-chip {
+    flex: none;
 }
 
 .mv-filter-chip:hover {

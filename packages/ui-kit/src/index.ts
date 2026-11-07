@@ -192,6 +192,8 @@ export type { SelectOption } from './components/MvSelect/MvSelect.vue';
 export { default as MvCheckbox } from './components/MvCheckbox/MvCheckbox.vue';
 export { default as MvSwitch } from './components/MvSwitch/MvSwitch.vue';
 export { default as MvColumnToggle } from './components/MvColumnToggle/MvColumnToggle.vue';
+export { default as MvTableViews } from './components/MvTableViews/MvTableViews.vue';
+export type { TableViewItem } from './components/MvTableViews/MvTableViews.vue';
 export { useColumnVisibility } from './composables/useColumnVisibility';
 export type { ColumnVisibilityDef } from './composables/useColumnVisibility';
 export { useIsMobileViewport } from './composables/useIsMobileViewport';
