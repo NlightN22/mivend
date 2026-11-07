@@ -203,6 +203,28 @@ describe('shared table views (integration, real Postgres)', () => {
         expect(await defaultsOf()).toBe(0);
     });
 
+    it('un-defaulting a non-default view keeps the real default; un-defaulting the default clears it', async () => {
+        const m = ctxFor('user-m', true);
+        const a = await service.save(m, { ...base, name: 'A', scope: 'SHARED' });
+        const b = await service.save(m, { ...base, name: 'B', scope: 'SHARED' });
+        await service.setDefault(m, idOf(a), true);
+        await service.setDefault(m, idOf(b), false);
+        expect(
+            (await dataSource.getRepository(TestSavedTableView).findBy({ isDefault: true })).map(
+                r => r.name,
+            ),
+        ).toEqual(['A']);
+        await service.setDefault(m, idOf(a), false);
+        expect(await defaultsOf()).toBe(0);
+        await service.setDefault(m, idOf(a), true);
+        await service.setDefault(m, idOf(b), true);
+        expect(
+            (await dataSource.getRepository(TestSavedTableView).findBy({ isDefault: true })).map(
+                r => r.name,
+            ),
+        ).toEqual(['B']);
+    });
+
     it('keeps the default of one list untouched when another list gets its own', async () => {
         const orders = await service.save(ctxFor('user-m', true), {
             ...base,
@@ -273,5 +295,43 @@ describe('shared table views (integration, real Postgres)', () => {
         await service.setDefault(ctxFor('user-m', true), idOf(shared), true);
         expect(await service.delete(ctxFor('user-m', true), idOf(shared))).toBe(true);
         expect(await defaultsOf()).toBe(0);
+    });
+});
+
+describe('saved view caps (integration, real Postgres)', () => {
+    it('never exceeds the personal cap when one administrator saves concurrently', async () => {
+        const results = await Promise.allSettled(
+            Array.from({ length: 55 }, (_, i) =>
+                service.save(ctxFor('user-a'), { ...base, name: `V${i}` }),
+            ),
+        );
+        expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(50);
+        expect(
+            await dataSource.getRepository(TestSavedTableView).countBy({ pageKey: 'orders' }),
+        ).toBe(50);
+        await expect(
+            service.save(ctxFor('user-b'), { ...base, name: 'Other' }),
+        ).resolves.toBeDefined();
+    });
+
+    it('never exceeds the shared cap per list when managers save concurrently', async () => {
+        const results = await Promise.allSettled(
+            Array.from({ length: 55 }, (_, i) =>
+                service.save(ctxFor(`user-m${i % 3}`, true), {
+                    ...base,
+                    name: `S${i}`,
+                    scope: 'SHARED',
+                }),
+            ),
+        );
+        expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(50);
+        await expect(
+            service.save(ctxFor('user-m0', true), {
+                ...base,
+                pageKey: 'products',
+                name: 'P',
+                scope: 'SHARED',
+            }),
+        ).resolves.toBeDefined();
     });
 });

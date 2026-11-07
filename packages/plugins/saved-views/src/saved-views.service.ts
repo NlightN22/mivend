@@ -5,10 +5,19 @@ import {
     ForbiddenError,
     RequestContext,
     TransactionalConnection,
+    UserInputError,
 } from '@vendure/core';
 import { withAggregateLock } from 'shared';
 
 import { SavedTableView, SavedTableViewScope } from './entities/saved-table-view.entity';
+import {
+    MAX_PERSONAL_VIEWS,
+    MAX_SHARED_VIEWS,
+    normalizeName,
+    validateColumns,
+    validateFilters,
+    validatePageKey,
+} from './saved-views.limits';
 
 export interface SaveTableViewInput {
     pageKey: string;
@@ -51,16 +60,36 @@ export class SavedViewsService {
         const administratorId = await this.requireAdministratorId(ctx);
         const scope = input.scope ?? 'PERSONAL';
         if (scope === 'SHARED') this.requireManageShared(ctx);
+        validatePageKey(input.pageKey);
+        const name = normalizeName(input.name);
+        validateFilters(input.filters);
+        validateColumns(input.visibleColumns);
         const view = new SavedTableView({
             administratorId,
             pageKey: input.pageKey,
-            name: input.name,
+            name,
             filters: input.filters,
             visibleColumns: input.visibleColumns,
             scope,
             isDefault: false,
         });
-        return this.connection.getRepository(ctx, SavedTableView).save(view);
+        // The cap is counted under the per-list lock so concurrent saves cannot exceed it.
+        return withAggregateLock(
+            this.connection,
+            ctx,
+            `table-view-save:${input.pageKey}`,
+            async txCtx => {
+                const repo = this.connection.getRepository(txCtx, SavedTableView);
+                const owned = scope === 'SHARED' ? {} : { administratorId };
+                const count = await repo.count({
+                    where: { pageKey: input.pageKey, scope, ...owned },
+                });
+                if (count >= (scope === 'SHARED' ? MAX_SHARED_VIEWS : MAX_PERSONAL_VIEWS)) {
+                    throw new UserInputError(`Too many ${scope.toLowerCase()} views for this list`);
+                }
+                return repo.save(view);
+            },
+        );
     }
 
     // One UPDATE keyed by id, scope and owner: rename and state change are atomic, and a foreign
@@ -68,6 +97,9 @@ export class SavedViewsService {
     async update(ctx: RequestContext, input: UpdateTableViewInput): Promise<SavedTableView | null> {
         const where = await this.writableWhere(ctx, input.id);
         if (!where) return null;
+        if (input.name !== undefined) input = { ...input, name: normalizeName(input.name) };
+        if (input.filters !== undefined) validateFilters(input.filters);
+        if (input.visibleColumns !== undefined) validateColumns(input.visibleColumns);
         const repo = this.connection.getRepository(ctx, SavedTableView);
         const patch: Partial<SavedTableView> = {};
         if (input.name !== undefined) patch.name = input.name;
@@ -108,11 +140,15 @@ export class SavedViewsService {
                     where: { id: key as unknown as number, scope: 'SHARED' },
                 });
                 if (!locked) return null;
-                await repo.update(
-                    { pageKey: locked.pageKey, isDefault: true },
-                    { isDefault: false },
-                );
-                if (isDefault) await repo.update({ id: locked.id }, { isDefault: true });
+                if (isDefault) {
+                    await repo.update(
+                        { pageKey: locked.pageKey, isDefault: true },
+                        { isDefault: false },
+                    );
+                    await repo.update({ id: locked.id }, { isDefault: true });
+                } else {
+                    await repo.update({ id: locked.id, isDefault: true }, { isDefault: false });
+                }
                 return repo.findOne({ where: { id: locked.id } });
             },
         );

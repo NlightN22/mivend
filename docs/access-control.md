@@ -100,6 +100,7 @@ table views and assigns the team default of a list. Reading and applying a team 
 authenticated staff member: a view stores filters, sort and column choices (UI state), never rows, so it
 cannot widen data scope; the data a view shows still passes the list's own permission and scope. Personal views
 stay private to their administrator; a foreign personal view is a silent no-op.
+Saved views are capped (name 80, pageKey 64 of `[A-Za-z0-9._-]`, filters 16 KB JSON, 100 columns, 50 personal per administrator and 50 shared per list). The query is `tableViews` (renamed from `myTableViews`), so the manager and server must ship together.
 
 ### Check results and policies (#237)
 

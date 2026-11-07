@@ -10,6 +10,8 @@ function createMockRepo(): Record<string, ReturnType<typeof vi.fn>> {
         save: vi.fn(async (x: unknown) => x),
         update: vi.fn(async () => ({ affected: 1 })),
         delete: vi.fn(async () => ({ affected: 1 })),
+        count: vi.fn(async () => 0),
+        query: vi.fn(async () => [] as unknown[]),
     } as unknown as Record<string, ReturnType<typeof vi.fn>>;
 }
 
@@ -31,7 +33,11 @@ describe('SavedViewsService', () => {
 
     beforeEach(() => {
         repo = createMockRepo();
-        const connection = { getRepository: () => repo };
+        const connection = {
+            getRepository: () => repo,
+            withTransaction: async (ctx: RequestContext, work: (c: RequestContext) => unknown) =>
+                work(ctx),
+        };
         administratorService = { findOneByUserId: vi.fn(async () => ({ id: 'admin-1' })) };
         service = new SavedViewsService(
             connection as unknown as TransactionalConnection,
@@ -98,5 +104,56 @@ describe('SavedViewsService', () => {
         await expect(service.save({} as RequestContext, input)).rejects.toThrow(
             /No active administrator/,
         );
+    });
+
+    it('trims the name and rejects invalid input before any write', async () => {
+        await service.save(plain, { ...input, name: '  Trimmed  ' });
+        expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'Trimmed' }));
+        repo.save.mockClear();
+        const bad = [
+            { name: '   ' },
+            { name: 'x'.repeat(81) },
+            { pageKey: 'a b' },
+            { pageKey: 'k'.repeat(65) },
+            { filters: '{nope' },
+            { filters: JSON.stringify({ a: 'x'.repeat(16 * 1024) }) },
+            { visibleColumns: Array.from({ length: 101 }, (_, i) => `c${i}`) },
+            { visibleColumns: ['c'.repeat(65)] },
+        ];
+        for (const patch of bad) {
+            await expect(service.save(plain, { ...input, ...patch })).rejects.toThrow();
+        }
+        expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('refuses a save past the personal and shared caps', async () => {
+        repo.count.mockResolvedValue(50);
+        await expect(service.save(plain, input)).rejects.toThrow(/Too many/);
+        await expect(service.save(manager, { ...input, scope: 'SHARED' })).rejects.toThrow(
+            /Too many/,
+        );
+        expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('validates update fields', async () => {
+        repo.findOne.mockResolvedValue({ id: 5, scope: 'PERSONAL', administratorId: 'admin-1' });
+        await expect(service.update(plain, { id: '5', name: '' })).rejects.toThrow();
+        await expect(service.update(plain, { id: '5', filters: 'x' })).rejects.toThrow();
+        expect(repo.update).not.toHaveBeenCalled();
+    });
+
+    it('un-defaulting only touches the target view, setting clears the list first', async () => {
+        repo.findOne.mockResolvedValue({ id: 7, scope: 'SHARED', pageKey: 'orders' });
+        await service.setDefault(manager, '7', false);
+        expect(repo.update).toHaveBeenCalledTimes(1);
+        expect(repo.update).toHaveBeenCalledWith({ id: 7, isDefault: true }, { isDefault: false });
+        repo.update.mockClear();
+        await service.setDefault(manager, '7', true);
+        expect(repo.update).toHaveBeenNthCalledWith(
+            1,
+            { pageKey: 'orders', isDefault: true },
+            { isDefault: false },
+        );
+        expect(repo.update).toHaveBeenNthCalledWith(2, { id: 7 }, { isDefault: true });
     });
 });
