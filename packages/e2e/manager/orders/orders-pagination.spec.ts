@@ -59,10 +59,13 @@ test('orders list pagination does not collapse the page to the top @on:manager-o
         await page.goto('/orders');
         const rows = page.locator('.mv-advanced-data-table__grid tbody tr');
         await expect(rows).toHaveCount(PAGE_SIZE, { timeout: 15000 });
+        // Skeleton rows also number PAGE_SIZE; a link in every row means real data is loaded.
+        await expect(rows.getByRole('link')).toHaveCount(PAGE_SIZE, { timeout: 15000 });
 
         // Other specs add and cancel orders of this customer meanwhile, so the end of the list is
         // found by the disabled Next button instead of a total computed once.
         const nextButton = page.getByRole('button', { name: 'Next Page' });
+        await expect(nextButton).toBeEnabled();
         const currentPage = page.locator('.p-paginator-page[aria-current="page"]');
         for (let guard = 0; guard < 100; guard++) {
             if (await nextButton.isDisabled()) break;

@@ -96,7 +96,7 @@ test('customer detail Orders tab shows the seeded e2e order @read-only', async (
 
     await page.getByRole('button', { name: 'Orders' }).click();
     // Orders other specs place and cancel push the seeded one off the first page.
-    await page.getByPlaceholder('Search orders…').fill(order.displayCode);
+    await page.getByPlaceholder('Search orders…').fill(order.code);
     await expect(page.getByRole('cell', { name: order.displayCode })).toBeVisible({
         timeout: 15000,
     });
