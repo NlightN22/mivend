@@ -16,7 +16,15 @@ const binding = {
     tradingPointId: 'tp-1',
 };
 
-function setup(over: { admin?: unknown; target?: unknown; ended?: number; url?: string } = {}) {
+function setup(
+    over: {
+        admin?: unknown;
+        target?: unknown;
+        ended?: number;
+        url?: string;
+        nameLookupFails?: boolean;
+    } = {},
+) {
     const save = vi.fn(async (entity: unknown) => entity);
     const connection = {
         getRepository: (_ctx: unknown, entity: { name: string }) =>
@@ -40,7 +48,10 @@ function setup(over: { admin?: unknown; target?: unknown; ended?: number; url?: 
         { authOptions: { sessionCacheStrategy: { delete: cacheDelete } } } as never,
         {
             findOneByUserId: async () => ('admin' in over ? over.admin : { id: 7 }),
-            findOne: async () => ({ id: 7, firstName: 'Ivan', lastName: 'Manager' }),
+            findOne: async () => {
+                if (over.nameLookupFails) throw new Error('db down');
+                return { id: 7, firstName: 'Ivan', lastName: 'Manager' };
+            },
         } as never,
         eligibility as never,
         tickets as never,
@@ -101,6 +112,16 @@ describe('ActingSessionService', () => {
             counterpartyId: 'cp-1',
             tradingPointId: 'tp-1',
         });
+        expect(result.token).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it('still returns the session with an empty manager name when the name lookup fails', async () => {
+        const { service, save } = setup({ nameLookupFails: true });
+
+        const result = await service.exchange({} as never, 'tk');
+
+        expect(save).toHaveBeenCalledTimes(1);
+        expect(result.administratorName).toBe('');
         expect(result.token).toMatch(/^[0-9a-f]{64}$/);
     });
 

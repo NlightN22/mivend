@@ -108,7 +108,7 @@ export class ActingSessionService {
         );
         const ended = await this.liveness.endDeadSession(ctx, token, ttl);
         if (ended > 0) throw new ForbiddenError();
-        const administrator = await this.administratorService.findOne(ctx, binding.administratorId);
+        const administratorName = await this.administratorName(ctx, binding.administratorId);
         Logger.info(
             `Acting session started: administrator=${binding.administratorId} customer=${binding.customerId}`,
             loggerCtx,
@@ -117,12 +117,23 @@ export class ActingSessionService {
             token,
             expiresAt,
             administratorId: binding.administratorId,
-            administratorName: administrator
-                ? `${administrator.firstName} ${administrator.lastName}`.trim()
-                : '',
+            administratorName,
             counterpartyId: binding.counterpartyId,
             tradingPointId: binding.tradingPointId,
         };
+    }
+
+    // Display only: a failed lookup must not strand a session whose ticket is already spent.
+    private async administratorName(ctx: RequestContext, administratorId: string): Promise<string> {
+        try {
+            const administrator = await this.administratorService.findOne(ctx, administratorId);
+            return administrator
+                ? `${administrator.firstName} ${administrator.lastName}`.trim()
+                : '';
+        } catch (e) {
+            Logger.warn(`Acting session manager name lookup failed: ${String(e)}`, loggerCtx);
+            return '';
+        }
     }
 
     async finish(ctx: RequestContext): Promise<boolean> {
