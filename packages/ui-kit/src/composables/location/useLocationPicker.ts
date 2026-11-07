@@ -8,6 +8,7 @@ import type {
     MapView,
     ReverseFn,
     SearchFn,
+    SearchMode,
 } from '../../components/MvLocationPicker/types';
 import { isValidPoint, nudgePoint, parseCoordinate, validateCoordinates } from './coordinates';
 import { resolveInitialView } from './initialView';
@@ -50,6 +51,8 @@ export function useLocationPicker(input: LocationPickerInput) {
     let adapter: MapAdapter | null = null;
     let element: HTMLElement | null = null;
     let generation = 0;
+    let pickSeq = 0;
+    const searchMode = ref<SearchMode>('host');
 
     const reverse = useLatestRequest(
         async (p: GeoPoint, key: string) => {
@@ -66,6 +69,7 @@ export function useLocationPicker(input: LocationPickerInput) {
             adapter?.search ? adapter.search(text, bias) : input.search(text, bias, key),
         getBias: () => point.value ?? view.value.center,
         getProvider: () => provider.value,
+        getMode: () => searchMode.value,
     });
     const canSave = computed(() => isValidPoint(point.value));
 
@@ -85,6 +89,7 @@ export function useLocationPicker(input: LocationPickerInput) {
         if (adapter) view.value = adapter.getView();
         adapter?.destroy();
         adapter = null;
+        element?.replaceChildren();
     }
 
     async function load(): Promise<void> {
@@ -92,11 +97,19 @@ export function useLocationPicker(input: LocationPickerInput) {
         const mine = ++generation;
         status.value = 'loading';
         teardown();
+        let next: MapAdapter | null = null;
         try {
-            const next = await input.createAdapter(provider.value);
+            next = await input.createAdapter(provider.value);
+            if (mine !== generation) {
+                next.destroy();
+                return;
+            }
+            const host = document.createElement('div');
+            host.style.cssText = 'width:100%;height:100%';
+            element.replaceChildren(host);
             const info = input.config.providers.find(p => p.key === provider.value);
             const publicKey = info?.publicKey ?? null;
-            await next.mount(element, {
+            await next.mount(host, {
                 ...view.value,
                 marker: point.value,
                 cooperative: input.cooperative,
@@ -106,12 +119,15 @@ export function useLocationPicker(input: LocationPickerInput) {
             });
             if (mine !== generation) {
                 next.destroy();
+                host.remove();
                 return;
             }
             next.onMarkerChange(p => setPoint(p, false));
             adapter = next;
+            searchMode.value = next.searchMode ?? 'host';
             status.value = 'ready';
         } catch (error) {
+            next?.destroy();
             console.warn('MvLocationPicker: map failed to load', error);
             if (mine === generation) status.value = 'failed';
         }
@@ -125,12 +141,14 @@ export function useLocationPicker(input: LocationPickerInput) {
     function switchProvider(key: string): Promise<void> {
         if (key === provider.value && status.value !== 'failed') return Promise.resolve();
         provider.value = key;
+        pickSeq++;
         storeProvider(key);
         search.clear();
         return load();
     }
 
     async function pickSuggestion(s: GeoSuggestion): Promise<void> {
+        const mine = ++pickSeq;
         search.clear();
         search.query.value = s.address;
         let p: GeoPoint | null = {
@@ -138,6 +156,7 @@ export function useLocationPicker(input: LocationPickerInput) {
             longitude: s.longitude as number,
         };
         if (!isValidPoint(p) && s.resolve) p = await s.resolve().catch(() => null);
+        if (mine !== pickSeq) return;
         if (isValidPoint(p)) setPoint(p, true);
     }
 
@@ -157,6 +176,7 @@ export function useLocationPicker(input: LocationPickerInput) {
 
     function destroy(): void {
         generation++;
+        pickSeq++;
         search.dispose();
         reverse.cancel();
         teardown();
@@ -171,6 +191,7 @@ export function useLocationPicker(input: LocationPickerInput) {
         manualError,
         canSave,
         search,
+        searchMode,
         attach,
         switchProvider,
         retry: load,

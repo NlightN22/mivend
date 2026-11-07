@@ -192,13 +192,14 @@ describe('provider-b browser search and reverse', () => {
 });
 
 describe('provider-a browser search and reverse', () => {
-    const params = { suggest_key: 'sk', search_key: 'ck', host: 'yandex.ru' };
+    const params = { suggest_key: 'sk', search_key: 'ck', host: 'maps.example.test' };
 
     it('suggests with the bias, resolves a pick to coordinates and reverses the marker', async () => {
         stubA();
         const adapter = new ProviderAAdapter();
         await adapter.mount(document.createElement('div'), { ...options, params });
         expect(setApikeysA).toHaveBeenCalledWith({ suggest: 'sk', search: 'ck' });
+        expect(adapter.searchMode).toBe('native');
         const found = await adapter.search('str', { latitude: 1, longitude: 2 });
         expect(suggestA).toHaveBeenCalledWith(
             expect.objectContaining({ text: 'str', center: [2, 1] }),
@@ -213,6 +214,7 @@ describe('provider-a browser search and reverse', () => {
         stubA();
         const adapter = new ProviderAAdapter();
         await adapter.mount(document.createElement('div'), options);
+        expect(adapter.searchMode).toBe('none');
         await expect(adapter.search('str', null)).rejects.toThrow();
         expect(await adapter.reverse({ latitude: 1, longitude: 2 })).toBeNull();
     });
@@ -231,11 +233,15 @@ describe('provider-a browser search and reverse', () => {
             params,
             locale: 'ru',
         });
-        expect(added[0]).toBe('https://api-maps.yandex.ru/v3/?apikey=key&lang=ru_RU');
+        expect(added[0]).toBe('https://api-maps.maps.example.test/v3/?apikey=key&lang=ru_RU');
     });
 });
 
 describe('adapter contract: open', () => {
+    it('is submit-only for host search', () => {
+        expect(new OpenAdapter().searchMode).toBe('host-submit');
+    });
+
     it('mounts, sets the view, places a marker and shows attribution', async () => {
         const adapter = new OpenAdapter();
         const el = document.createElement('div');

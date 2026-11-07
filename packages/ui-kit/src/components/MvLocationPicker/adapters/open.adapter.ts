@@ -1,11 +1,13 @@
 import type * as Leaflet from 'leaflet';
-import type { GeoPoint, MapAdapter, MapMountOptions, MapView } from '../types';
+import type { GeoPoint, MapAdapter, MapMountOptions, MapView, SearchMode } from '../types';
 
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ATTRIBUTION =
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 export class OpenAdapter implements MapAdapter {
+    readonly searchMode: SearchMode = 'host-submit';
+
     private L: typeof Leaflet | null = null;
     private map: Leaflet.Map | null = null;
     private marker: Leaflet.Marker | null = null;

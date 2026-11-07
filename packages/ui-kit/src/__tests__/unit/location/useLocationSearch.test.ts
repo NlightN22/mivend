@@ -6,12 +6,16 @@ const bias = { latitude: 1, longitude: 2 };
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
-function setup(search: (q: string) => Promise<{ address: string }[]>) {
+function setup(
+    search: (q: string) => Promise<{ address: string }[]>,
+    getMode?: () => 'host-submit',
+) {
     return useLocationSearch({
         search: (q, b, p) =>
             p === 'open' && b === bias ? search(q) : Promise.reject(new Error('args')),
         getBias: () => bias,
         getProvider: () => 'open',
+        getMode,
     });
 }
 
@@ -52,5 +56,21 @@ describe('useLocationSearch', () => {
         await vi.advanceTimersByTimeAsync(0);
         expect(s.failed.value).toBe(true);
         expect(s.suggestions.value).toEqual([]);
+    });
+
+    it('waits for Enter or a 1.5 s pause when the provider is submit-only', async () => {
+        const fn = vi.fn(async (q: string) => [{ address: q }]);
+        const s = setup(fn, () => 'host-submit');
+        s.onInput('berlin');
+        await vi.advanceTimersByTimeAsync(1400);
+        expect(fn).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(150);
+        expect(fn).toHaveBeenCalledTimes(1);
+        s.onInput('berlin 1');
+        s.submit();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(fn).toHaveBeenCalledTimes(2);
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(fn).toHaveBeenCalledTimes(2);
     });
 });

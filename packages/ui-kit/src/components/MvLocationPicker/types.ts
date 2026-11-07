@@ -37,7 +37,12 @@ export interface MapMountOptions extends MapView {
     locale?: string;
 }
 
+// native: the adapter searches in the browser; host: search goes through the host callbacks;
+// host-submit: like host, but never per keystroke; none: no search available.
+export type SearchMode = 'native' | 'host' | 'host-submit' | 'none';
+
 export interface MapAdapter {
+    readonly searchMode?: SearchMode;
     mount(element: HTMLElement, options: MapMountOptions): Promise<void>;
     setView(view: MapView): void;
     getView(): MapView;

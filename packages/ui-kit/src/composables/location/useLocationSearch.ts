@@ -1,13 +1,20 @@
 import { ref } from 'vue';
-import type { GeoPoint, GeoSuggestion, SearchFn } from '../../components/MvLocationPicker/types';
+import type {
+    GeoPoint,
+    GeoSuggestion,
+    SearchFn,
+    SearchMode,
+} from '../../components/MvLocationPicker/types';
 import { useLatestRequest } from '../useLatestRequest';
 
 export const MIN_QUERY_LENGTH = 3;
+export const SUBMIT_ONLY_PAUSE_MS = 1500;
 
 export function useLocationSearch(options: {
     search: SearchFn;
     getBias: () => GeoPoint | null;
     getProvider: () => string;
+    getMode?: () => SearchMode;
     debounceMs?: number;
 }) {
     const query = ref('');
@@ -45,7 +52,11 @@ export function useLocationSearch(options: {
             clear();
             return;
         }
-        timer = setTimeout(() => void run(text.trim()), options.debounceMs ?? 350);
+        const pause =
+            options.getMode?.() === 'host-submit'
+                ? SUBMIT_ONLY_PAUSE_MS
+                : (options.debounceMs ?? 350);
+        timer = setTimeout(() => void run(text.trim()), pause);
     }
 
     function submit(): void {

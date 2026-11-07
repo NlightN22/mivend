@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLocationPicker } from '../../../composables/location/useLocationPicker';
 import type { GeoConfig, ReverseFn, SearchFn } from '../../../components/MvLocationPicker/types';
@@ -10,7 +11,7 @@ const config: GeoConfig = {
     defaultLongitude: 20,
     defaultZoom: 6,
 };
-const el = {} as HTMLElement;
+const el = document.createElement('div');
 const store: Record<string, string> = {};
 
 beforeEach(() => {
@@ -152,5 +153,64 @@ describe('useLocationPicker', () => {
         await picker.attach(el);
         picker.nudge('up');
         expect(picker.point.value?.latitude).toBeGreaterThan(10);
+    });
+
+    it('never attaches a stale mount when the provider is switched mid-load', async () => {
+        const adapters: StubAdapter[] = [];
+        const gates: Array<() => void> = [];
+        const picker = useLocationPicker({
+            config,
+            current: null,
+            cooperative: false,
+            search: async () => [],
+            reverse: async () => null,
+            createAdapter: async () => {
+                const a = makeStubAdapter();
+                const mount = a.mount;
+                a.mount = vi.fn(async (host, o) => {
+                    await new Promise<void>(release => gates.push(release));
+                    await mount(host, o);
+                });
+                adapters.push(a);
+                return a;
+            },
+        });
+        const first = picker.attach(el);
+        await vi.waitFor(() => expect(gates).toHaveLength(1));
+        const second = picker.switchProvider('open');
+        await vi.waitFor(() => expect(gates).toHaveLength(2));
+        gates.forEach(release => release());
+        await Promise.all([first, second]);
+        expect(adapters[0].destroy).toHaveBeenCalled();
+        expect(adapters[1].destroy).not.toHaveBeenCalled();
+        expect(picker.status.value).toBe('ready');
+        expect(el.children).toHaveLength(1);
+        picker.destroy();
+        expect(el.children).toHaveLength(0);
+    });
+
+    it('lets the latest picked suggestion win when resolves finish out of order', async () => {
+        const { picker } = setup();
+        await picker.attach(el);
+        const release: Record<string, (p: { latitude: number; longitude: number }) => void> = {};
+        const lazy = (name: string) => ({
+            address: name,
+            resolve: () =>
+                new Promise<{ latitude: number; longitude: number }>(r => (release[name] = r)),
+        });
+        const a = picker.pickSuggestion(lazy('a'));
+        const b = picker.pickSuggestion(lazy('b'));
+        release.b({ latitude: 2, longitude: 2 });
+        await b;
+        release.a({ latitude: 1, longitude: 1 });
+        await a;
+        expect(picker.point.value).toEqual({ latitude: 2, longitude: 2 });
+    });
+
+    it('exposes the mounted adapter search mode', async () => {
+        const { picker } = setup();
+        expect(picker.searchMode.value).toBe('host');
+        await picker.attach(el);
+        expect(picker.searchMode.value).toBe('host');
     });
 });

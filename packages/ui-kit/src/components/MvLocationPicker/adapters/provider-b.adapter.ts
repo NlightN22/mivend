@@ -1,5 +1,13 @@
-import type { GeoPoint, GeoSuggestion, MapAdapter, MapMountOptions, MapView } from '../types';
+import type {
+    GeoPoint,
+    GeoSuggestion,
+    MapAdapter,
+    MapMountOptions,
+    MapView,
+    SearchMode,
+} from '../types';
 import { loadScript } from './loadScript';
+import { withTimeout } from './withTimeout';
 
 interface LatLng {
     lat(): number;
@@ -55,6 +63,8 @@ const toLiteral = (p: GeoPoint) => ({ lat: p.latitude, lng: p.longitude });
 const fromLatLng = (l: LatLng): GeoPoint => ({ latitude: l.lat(), longitude: l.lng() });
 
 export class ProviderBAdapter implements MapAdapter {
+    readonly searchMode: SearchMode = 'native';
+
     private map: GMap | null = null;
     private maps: GoogleMaps | null = null;
     private marker: GMarker | null = null;
@@ -71,11 +81,15 @@ export class ProviderBAdapter implements MapAdapter {
             await loadScript(
                 `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(o.publicKey)}&loading=async&v=weekly&callback=${READY_CALLBACK}`,
             );
-            await ready;
+            await withTimeout(ready, 'maps ready callback');
         }
         const maps = w.google?.maps;
-        await maps?.importLibrary?.('maps');
-        await maps?.importLibrary?.('marker');
+        if (maps?.importLibrary) {
+            await withTimeout(
+                Promise.all([maps.importLibrary('maps'), maps.importLibrary('marker')]),
+                'importLibrary',
+            );
+        }
         if (!maps?.Map) throw new Error('library missing');
         this.maps = maps;
         this.map = new maps.Map(element, {
@@ -129,7 +143,7 @@ export class ProviderBAdapter implements MapAdapter {
     async search(query: string, bias: GeoPoint | null): Promise<GeoSuggestion[]> {
         const maps = this.maps;
         if (!maps?.importLibrary) throw new Error('library missing');
-        const lib = (await maps.importLibrary('places')) as PlacesLib;
+        const lib = (await withTimeout(maps.importLibrary('places'), 'importLibrary')) as PlacesLib;
         this.token ??= new lib.AutocompleteSessionToken();
         const { suggestions } = await lib.AutocompleteSuggestion.fetchAutocompleteSuggestions({
             input: query,

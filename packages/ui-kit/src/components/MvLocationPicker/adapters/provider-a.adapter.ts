@@ -1,5 +1,13 @@
-import type { GeoPoint, GeoSuggestion, MapAdapter, MapMountOptions, MapView } from '../types';
+import type {
+    GeoPoint,
+    GeoSuggestion,
+    MapAdapter,
+    MapMountOptions,
+    MapView,
+    SearchMode,
+} from '../types';
 import { loadScript } from './loadScript';
+import { withTimeout } from './withTimeout';
 
 interface Ymaps3 {
     ready: Promise<void>;
@@ -44,6 +52,10 @@ const toLang = (locale?: string): string =>
 const toPoint = (c: [number, number]): GeoPoint => ({ latitude: c[1], longitude: c[0] });
 
 export class ProviderAAdapter implements MapAdapter {
+    get searchMode(): SearchMode {
+        return this.hasSuggest ? 'native' : 'none';
+    }
+
     private map: YMapInstance | null = null;
     private lib: Ymaps3 | null = null;
     private hasSuggest = false;
@@ -63,7 +75,7 @@ export class ProviderAAdapter implements MapAdapter {
             );
         const lib = w.ymaps3;
         if (!lib) throw new Error('library missing');
-        await lib.ready;
+        await withTimeout(lib.ready, 'ymaps3.ready');
         this.lib = lib;
         lib.getDefaultConfig().setApikeys({
             suggest: o.params?.suggest_key,
