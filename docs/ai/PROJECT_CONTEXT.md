@@ -1,6 +1,6 @@
 # Project Context
 
-Updated: 2026-11-07 12:00
+Updated: 2026-11-07 14:00
 
 ## #316/#317/#318 e2e speed-up (2026-11-06..07, DONE: audited, in prod release 0.0.47, issues closed)
 - `make e2e-groups G="a b"` runs several groups on one stack under the shared flock (`infrastructure/scripts/e2e-groups.sh`); `e2e-leak.sh` fails the run if a group leaves more placed orders or active reservations (carts not counted). `make e2e-group` unchanged.
@@ -8,11 +8,12 @@ Updated: 2026-11-07 12:00
 - Manager role projects: tag `@on:<project>` in the test/describe title (`helpers/role-projects.ts` builds each project's grep); untagged = all four roles. No project-name `test.skip` (skip guard fails on any skip). Per-spec decisions: table in `docs/e2e-testing.md`.
 - Open: no quiet-box stability series for #317 (do not raise the worker count without measuring load); `orders-list` "row click" flakes under heavy load (follow-up #324 area).
 
-## #322 manager order creation as the customer (acting mode) (2026-11-06, DONE: audited, prod 0.0.47, closed with #316-#318; follow-ups #323 change journal, #324 done in 0.0.48)
+## #322 manager order creation as the customer (acting mode) (2026-11-06, DONE: audited, prod 0.0.47, polished in prod 0.0.49; follow-ups #323 change journal, #327 token security review)
 - Flow: manager portal NewOrderPage (customer picker + trading point) -> Admin `startActingSession` (CreateOrder) gives a one-time hashed ticket (~60s) -> opens storefront `/acting#ticket=` -> Shop `exchangeActingTicket` returns a session token in the body (no cookie). Storefront keeps it in `sessionStorage`, sends `Authorization: Bearer` + `x-acting-session: 1`, `credentials: 'omit'`. `finishActingSession` ends it. Plugin: `packages/plugins/acting-session/` (migration 1791550000000).
 - Isolation: middleware drops the Cookie header and swaps `req.session` for a detached object (`detachCookieSession`) so Set-Cookie never leaves; liveness = 4h from createdAt, parent manager session alive, CreateOrder/SuperAdmin. Acting cart is linked to the customer at creation and marked `actingSessionId`; `ActingActiveOrderStrategy` self-heals real sessions; cleanup task `acting-session-cleanup` (24h carts). Acting sessions are excluded from session cap, mySessions, login history. Attribution: `placedByAdministratorId` + private order note.
 - Core untouched; divergences (logout/endAllSessions override, password change ends acting sessions) in `docs/vendure-core-divergences.md`, tripwire test `vendure-core-assumptions.test.ts`. Env `STOREFRONT_PUBLIC_URL`, storefront `MANAGER_PUBLIC_URL`.
-- Open: prod smoke needs the owner's word (writes data; customer and depth not chosen); mutation journal #323; `trading-point.service.ts` is 648 lines (split debt); matrix scenarios 1,3,4,8 are e2e-only (group `manager-acting`).
+- UI (0.0.49, owner-decided): no banner and no Finish button; the storefront header line is `{manager full name} → {customer} · {point}` (the word 'Manager' dropped so long point names fit; fallback 'Manager →' when the name is empty). Sign-out in an acting tab (`useLogout`) ends the acting session, closes the tab and goes to the manager portal; a customer's sign-out is unchanged. Favourites persist per customer under a manager (liked); the acting cart resets on re-entry (accepted, not critical) and never duplicates the customer's real cart. `exchangeActingTicket` returns `administratorName`, read through the Administrator repository because `AdministratorService.findOne` returned nothing in that request on the integration contour (cause unknown, add a line to #322 if found). `getLinkedCustomerId` filters `deletedAt IS NULL ORDER BY id`.
+- Open: prod smoke needs the owner's word (writes data; customer and depth not chosen); token security review #327; mutation journal #323; `trading-point.service.ts` is 648 lines (split debt); matrix scenarios 1,3,4,8 are e2e-only (group `manager-acting`).
 
 ## Product card photo corners (2026-11-06, DONE: audited, commit 7b74d48e on main, NOT on origin/main, not in 0.0.45)
 - `MvProductCard.vue`: photo has `border-radius: var(--app-radius-md)` and `height: 100%` so small photos scale up; the `.mv-product-card__img` container is a `grid-template: minmax(0, 1fr) / minmax(0, 1fr)` grid with 6px padding (a percent max-height did not clamp inside an auto track and big photos overflowed).
@@ -233,6 +234,7 @@ Org-structure-blocking infra actions (creating a Branch) live in the native Dash
 `Permission.SuperAdmin`.
 
 ## Planned next work (full list: `.backup/PROJECT_CONTEXT-2026-10-13-sections-full.md`)
+- Open issues from the 2026-11-07 session: #325 CI `lint:css` fails (workflow pins Node 20, stylelint 18 needs 22; CI on main is red since 0.0.47), #326 detect a dev-contour child stuck at high CPU without listening and restart only it, #327 acting-token security review, #323 acting change journal, #320 manager color migration, #321 per-service image tags. Not touched by this role: #309 (another session has uncommitted work in the shared tree).
 
 - #228 follow-ups of the settlement section (i18n, organization names from `organization_requisites`, e2e with data via the real ingestion path); #229 role gating of receivables (low); #226 reconciliation acts.
 - #181 follow-ups (#187 asset GC, card chips, `garage-init` into `make up`); #154 discount-rule follow-ups; #44 shipping selector and freight pricing; #143 deferred routing UX.
@@ -381,3 +383,5 @@ Dev defaults: local `:3000`/`:5173`/`:5174`/`:5175`; staging-integration
   (string-prefix matching) — a later, unrelated write to that same column (e.g. a failed replay
   attempt) silently erases the fact. Use a dedicated column set once at insert and never touched
   again (#212's `undecodable` boolean, after the `lastError`-prefix version broke live on staging).
+- Branches: the owner wants no leftover branches or worktrees; push by sha onto `origin/main` (fast-forward, rebase first), delete local and remote branches once their content is on `origin/main` (rebased copies show as unmerged by sha, compare by subject/patch-id), keep local `main` equal to `origin/main` with `git branch -f main origin/main` when it is not checked out.
+- The working tree `/opt/mivend` is shared with other sessions: never `git reset --hard` or `git add` anything but explicit paths, and check `git status --short` before every commit (a chained `git switch` that failed once let a commit take another session's uncommitted `PROJECT_CONTEXT.md` lines).
