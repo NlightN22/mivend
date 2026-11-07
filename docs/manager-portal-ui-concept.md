@@ -37,6 +37,19 @@ the first stage. Colors and button states follow `docs/ui-standards.md`; table s
 Mobile: menu becomes a drawer or bottom bar, tables become compact lists or cards, the side panel
 becomes a full screen, tabs show the main ones plus "More".
 
+## Styles and themes
+
+- **Same look as the storefront.** The manager portal uses the same ui-kit components, tokens and
+  typography as the client portal. Shared parts (tables, filter chips, pagination, badges, side
+  panel, tabs, KPI tiles, buttons) live in `packages/ui-kit`; nothing is restyled inside the manager.
+- **Colors only from ui-kit.** No color literal and no `--palette-*` in `packages/manager`; only
+  role tokens from `packages/ui-kit/src/styles/` (palette, light and dark roles), enforced by
+  stylelint in the manager too. A missing role is added to both theme files, never inline.
+- **Two themes: light and dark.** Both are supported in the manager, switched the same way as in
+  the storefront (the manager's PrimeVue preset follows the same dark selector).
+- **One state per button role** as in `docs/ui-standards.md`.
+- Every changed page is checked by screenshot in both themes, desktop and phone width.
+
 ## Menu
 
 | Item | Content | Status |
