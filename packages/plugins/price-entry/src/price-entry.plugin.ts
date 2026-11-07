@@ -10,6 +10,7 @@ import { ChecksPlugin } from '@mivend/plugin-checks';
 import { CounterpartyPlugin } from '@mivend/plugin-counterparty';
 import { ErpOrderPlugin } from '@mivend/plugin-erp-order';
 import { NumberingPlugin } from '@mivend/plugin-numbering';
+import { ReservationPlugin } from '@mivend/plugin-reservation';
 
 import { ProductVariantPriceEntry } from './price-entry.entity';
 import { DiscountRule } from './discount-rule.entity';
@@ -30,7 +31,16 @@ import {
     PriceEntryAdminResolver,
     ProductVariantPriceResolver,
 } from './price-entry.resolver';
+import { concatAST } from 'graphql';
 import { adminApiSchema, shopApiSchema } from './price-entry.schema';
+import { discountLimitSchema } from './discount-limit.schema';
+import { DiscountLimit } from './discount-limit.entity';
+import { DiscountLimitResolver } from './discount-limit.resolver';
+import { DiscountLimitService } from './discount-limit.service';
+import { LineDiscountService } from './line-discount.service';
+import { OrderLineDiscountService } from './order-line-discount.service';
+import { OrderDiscountLimitCheck } from './order-discount-limit.check';
+import { PriceAdjustmentLimitCheck } from './price-adjustment-limit.check';
 import { PriceAdjustmentResolver } from './price-adjustment.resolver';
 import { DiscountGrantResolver } from './discount-grant.resolver';
 import { DiscountRegistryResolver } from './discount-registry.resolver';
@@ -66,6 +76,7 @@ import { GrantedDiscountService } from './granted-discount.service';
         CounterpartyPlugin,
         ErpOrderPlugin,
         NumberingPlugin,
+        ReservationPlugin,
     ],
     entities: [
         ProductVariantPriceEntry,
@@ -79,19 +90,21 @@ import { GrantedDiscountService } from './granted-discount.service';
         DiscountGrant,
         DiscountRegistryEntry,
         GrantedDiscount,
+        DiscountLimit,
     ],
     shopApiExtensions: {
         schema: shopApiSchema,
         resolvers: [ProductVariantPriceResolver, OrderLineDiscountResolver],
     },
     adminApiExtensions: {
-        schema: adminApiSchema,
+        schema: concatAST([adminApiSchema, discountLimitSchema]),
         resolvers: [
             PriceEntryAdminResolver,
             DiscountRuleAdminResolver,
             PriceAdjustmentResolver,
             DiscountGrantResolver,
             DiscountRegistryResolver,
+            DiscountLimitResolver,
         ],
     },
     providers: [
@@ -116,6 +129,11 @@ import { GrantedDiscountService } from './granted-discount.service';
         DiscountGrantService,
         DiscountRegistryService,
         GrantedDiscountService,
+        DiscountLimitService,
+        LineDiscountService,
+        OrderLineDiscountService,
+        OrderDiscountLimitCheck,
+        PriceAdjustmentLimitCheck,
     ],
     exports: [
         PriceEntryService,

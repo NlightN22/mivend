@@ -1378,6 +1378,9 @@ importers:
       '@mivend/plugin-numbering':
         specifier: workspace:*
         version: link:../numbering
+      '@mivend/plugin-reservation':
+        specifier: workspace:*
+        version: link:../reservation
       dataloader:
         specifier: 2.2.3
         version: 2.2.3

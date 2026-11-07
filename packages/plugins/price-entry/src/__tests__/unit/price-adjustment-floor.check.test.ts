@@ -12,7 +12,16 @@ function run(floor: number | null, requestedPrice: number) {
         forVariants: vi.fn(async () => (floor === null ? new Map() : new Map([['v1', floor]]))),
     } as unknown as FloorPriceService);
     return check.evaluate(
-        { roleCodes: [], branchId: null, params: { variantId: 'v1', requestedPrice } },
+        {
+            roleCodes: [],
+            branchId: null,
+            params: {
+                variantId: 'v1',
+                requestedPrice,
+                referencePrice: null,
+                direction: 'unchanged',
+            },
+        },
         { ctx, stage: 'adjust-price', recipient: null },
     );
 }

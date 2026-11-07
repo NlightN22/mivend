@@ -17,6 +17,7 @@ import { withAggregateLock } from 'shared';
 
 import { OrderLineShortfall } from './entities/order-line-shortfall.entity';
 import { OrderLinesEditedEvent } from './order-line-edit.events';
+import type { OrderLineEditKind } from './order-line-edit.events';
 import { OrderLineAvailabilityPortRegistry } from './order-line-availability.port';
 import type { LineAvailability } from './order-line-availability.port';
 import { planSplit } from './order-line-split';
@@ -174,10 +175,10 @@ export class OrderLineEditService {
         return outcomes;
     }
 
-    private async edit(
+    async edit(
         ctx: RequestContext,
         orderId: ID,
-        kind: 'quantity' | 'remove' | 'split',
+        kind: OrderLineEditKind,
         change: (txCtx: RequestContext, order: Order) => Promise<string | null>,
     ): Promise<void> {
         await this.visible(ctx, orderId);
@@ -193,7 +194,7 @@ export class OrderLineEditService {
     private async editLocked(
         ctx: RequestContext,
         orderId: ID,
-        kind: 'quantity' | 'remove' | 'split',
+        kind: OrderLineEditKind,
         change: (txCtx: RequestContext, order: Order) => Promise<string | null>,
     ): Promise<void> {
         await withAggregateLock(this.connection, ctx, `reserve-order:${orderId}`, async txCtx => {
@@ -237,7 +238,7 @@ export class OrderLineEditService {
         }
     }
 
-    private lineOf(order: Order, lineId: ID): OrderLine {
+    lineOf(order: Order, lineId: ID): OrderLine {
         const line = order.lines.find(l => String(l.id) === String(lineId));
         if (!line) throw new UserInputError('The order has no such line');
         return line;
@@ -266,7 +267,7 @@ export class OrderLineEditService {
         }
     }
 
-    private async persist(ctx: RequestContext, order: Order, updated: OrderLine[]): Promise<void> {
+    async persist(ctx: RequestContext, order: Order, updated: OrderLine[]): Promise<void> {
         await this.connection.getRepository(ctx, OrderLine).save(updated.filter(l => l.id != null));
         // Prices are re-resolved for every line: a quantity change moves tiers of sibling lines too.
         await this.orderService.applyPriceAdjustments(ctx, order, order.lines);

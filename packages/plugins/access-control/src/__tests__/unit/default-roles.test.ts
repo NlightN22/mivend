@@ -13,6 +13,11 @@ describe('default roles: check permissions (#237)', () => {
         }
     });
 
+    it('only leadership and the portal admin manage discount limits', () => {
+        const managers = DEFAULT_ROLES.filter(r => r.permissions.includes('ManageDiscountLimits'));
+        expect(managers.map(r => r.code).sort()).toEqual(['general-director', 'portal-admin']);
+    });
+
     it('only leadership and the portal admin manage check policies', () => {
         const managers = DEFAULT_ROLES.filter(r => r.permissions.includes('ManageCheckPolicies'));
         expect(managers.map(r => r.code).sort()).toEqual(['general-director', 'portal-admin']);

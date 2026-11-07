@@ -6,9 +6,14 @@ import { FloorPriceService } from './floor-price.service';
 
 export const PRICE_FLOOR_CHECK_CODE = 'manager.price-adjustment-floor';
 
+export type PriceDirection = 'increases-discount' | 'reduces-discount' | 'unchanged';
+
 export interface PriceAdjustmentParams {
     variantId: string;
     requestedPrice: number;
+    // The line's price without any discount (null when unknown) and which way the request moves the discount.
+    referencePrice: number | null;
+    direction: PriceDirection;
 }
 
 // Runs regardless of the viewer's rights; the only consumer besides the floorPrice query.

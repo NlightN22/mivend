@@ -155,6 +155,7 @@ import type { ReservationPluginOptions } from './types';
         OrderCheckSubjectLoader,
         OrderLineAvailabilityPortRegistry,
         OrderLinesEditPortRegistry,
+        OrderLineEditService,
         OrderChecksService,
         OrderCheckStaleService,
         ReservationWriteOffSyncService,

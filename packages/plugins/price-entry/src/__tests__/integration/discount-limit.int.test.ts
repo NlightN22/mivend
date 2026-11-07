@@ -1,0 +1,165 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { Column, DataSource, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import type { RequestContext, TransactionalConnection } from '@vendure/core';
+import {
+    createTestConnection,
+    createTestSchema,
+    dropTestSchema,
+    testDataSourceConnectionOptions,
+    testRequestContext,
+    testSchemaOptions,
+} from 'shared';
+import { CheckRegistry, MANAGER_STAGES } from '@mivend/plugin-checks';
+
+import { DiscountLimit } from '../../discount-limit.entity';
+import { DiscountLimitService } from '../../discount-limit.service';
+import { PriceAdjustmentLimitCheck } from '../../price-adjustment-limit.check';
+import type { PriceDirection } from '../../price-adjustment-floor.check';
+
+// VendureEntity's primary column needs a bootstrapped EntityIdStrategy; a bare DataSource has none.
+@Entity('discount_limit')
+@Index(['roleCode', 'groupRef'], { unique: true })
+class TestDiscountLimit {
+    @PrimaryGeneratedColumn() id!: number;
+    @Column({ type: 'uuid', default: () => 'gen_random_uuid()' }) uuid!: string;
+    @Column({ type: 'varchar' }) roleCode!: string;
+    @Column({ type: 'varchar', default: '' }) groupRef!: string;
+    @Column({ type: 'double precision' }) maxDiscountPercent!: number;
+}
+
+function mapEntity(base: TransactionalConnection): TransactionalConnection {
+    return {
+        withTransaction: base.withTransaction.bind(base),
+        getRepository: (ctx: never, entity: unknown) =>
+            base.getRepository(
+                ctx,
+                entity === DiscountLimit ? (TestDiscountLimit as never) : (entity as never),
+            ),
+    } as unknown as TransactionalConnection;
+}
+
+let dataSource: DataSource;
+let service: DiscountLimitService;
+const { schema, extra } = testSchemaOptions('price_entry_discount_limit');
+const ctx: RequestContext = testRequestContext;
+
+// Minimal shape of the tables loadProductAttributes reads: two products of one manufacturer, one of another.
+// The manufacturer relation column is not a declared custom field name, so it is spelled here only.
+const MAKER_COLUMN = `"customFields${'Manufacturerid'}"`;
+const PRODUCT_TABLES = `
+CREATE TABLE manufacturer (id serial PRIMARY KEY, "externalId" varchar);
+CREATE TABLE product (id serial PRIMARY KEY, "customFieldsExternalid" varchar, ${MAKER_COLUMN} int);
+CREATE TABLE product_variant (id serial PRIMARY KEY, "productId" int, "deletedAt" timestamp);
+CREATE TABLE product_variant_facet_values_facet_value ("productVariantId" int, "facetValueId" int);
+CREATE TABLE product_facet_values_facet_value ("productId" int, "facetValueId" int);
+CREATE TABLE facet_value (id serial PRIMARY KEY, code varchar, "facetId" int);
+CREATE TABLE facet (id serial PRIMARY KEY, code varchar);
+CREATE TABLE collection_translation ("baseId" int, slug varchar);
+CREATE TABLE collection_closure (id_ancestor int, id_descendant int);
+INSERT INTO manufacturer ("externalId") VALUES ('brand-a'), ('brand-b');
+INSERT INTO product ("customFieldsExternalid", ${MAKER_COLUMN}) VALUES ('p-a1', 1), ('p-a2', 1), ('p-b1', 2), ('p-none', NULL);
+`;
+
+beforeAll(async () => {
+    await createTestSchema(schema);
+    dataSource = new DataSource({
+        type: 'postgres',
+        ...testDataSourceConnectionOptions(),
+        schema,
+        extra,
+        entities: [TestDiscountLimit],
+        synchronize: true,
+    });
+    await dataSource.initialize();
+    await dataSource.query(PRODUCT_TABLES);
+    service = new DiscountLimitService(mapEntity(createTestConnection(dataSource)));
+});
+
+beforeEach(async () => {
+    await dataSource.getRepository(TestDiscountLimit).clear();
+});
+
+afterAll(async () => {
+    await dataSource.destroy();
+    await dropTestSchema(schema);
+});
+
+const ceiling = async (roles: string[], product: string) =>
+    (await service.ceilingsForProducts(ctx, roles, [product])).get(product);
+
+describe('DiscountLimitService (integration, real Postgres)', () => {
+    it('has no limit for anyone while the table is empty', async () => {
+        expect(await ceiling(['manager'], 'p-a1')).toBeNull();
+    });
+
+    it('limits only the product group it names; other products fall back to the all-products row or none', async () => {
+        await service.setLimit(ctx, 'manager', 'brand-a', 3);
+        expect(await ceiling(['manager'], 'p-a1')).toBe(3);
+        expect(await ceiling(['manager'], 'p-a2')).toBe(3);
+        expect(await ceiling(['manager'], 'p-b1')).toBeNull();
+        expect(await ceiling(['manager'], 'p-none')).toBeNull();
+        await service.setLimit(ctx, 'manager', '', 8);
+        expect(await ceiling(['manager'], 'p-b1')).toBe(8);
+        expect(await ceiling(['manager'], 'p-a1')).toBe(3);
+    });
+
+    it('scopes a limit to its role and takes the most permissive across the actor roles', async () => {
+        await service.setLimit(ctx, 'manager', '', 5);
+        await service.setLimit(ctx, 'department-head', '', 12);
+        expect(await ceiling(['operator'], 'p-a1')).toBeNull();
+        expect(await ceiling(['manager'], 'p-a1')).toBe(5);
+        expect(await ceiling(['manager', 'department-head'], 'p-a1')).toBe(12);
+    });
+
+    it('keeps one row per role and group when the same limit is set concurrently', async () => {
+        await Promise.all(
+            [1, 2, 3, 4, 5, 6].map(percent => service.setLimit(ctx, 'manager', 'brand-a', percent)),
+        );
+        const rows = await dataSource.getRepository(TestDiscountLimit).find();
+        expect(rows).toHaveLength(1);
+        expect(rows[0].maxDiscountPercent).toBeGreaterThanOrEqual(1);
+    });
+
+    it('removes a limit, after which the product has none', async () => {
+        await service.setLimit(ctx, 'manager', '', 5);
+        expect(await service.removeLimit(ctx, 'manager', '')).toBe(true);
+        expect(await service.removeLimit(ctx, 'manager', '')).toBe(false);
+        expect(await ceiling(['manager'], 'p-a1')).toBeNull();
+    });
+});
+
+describe('adjust-price limit check against stored limits (integration)', () => {
+    const connection = {
+        getRepository: () => ({
+            findOne: async () => ({ product: { customFields: { externalId: 'p-a1' } } }),
+        }),
+    } as unknown as TransactionalConnection;
+
+    function run(direction: PriceDirection, requestedPrice: number) {
+        const registry = new CheckRegistry();
+        const check = new PriceAdjustmentLimitCheck(registry, connection, service);
+        check.onModuleInit();
+        return {
+            registry,
+            findings: check.evaluate(
+                {
+                    roleCodes: ['manager'],
+                    branchId: null,
+                    params: { variantId: 'v1', requestedPrice, referencePrice: 100, direction },
+                },
+                { ctx, stage: MANAGER_STAGES.adjustPrice, recipient: null },
+            ),
+        };
+    }
+
+    it('raises a finding whose default consequence is block once a limit is set, and none while unset', async () => {
+        expect(await run('increases-discount', 50).findings).toEqual([]);
+        await service.setLimit(ctx, 'manager', 'brand-a', 10);
+        const { registry, findings } = run('increases-discount', 50);
+        expect(await findings).toHaveLength(1);
+        const provider = registry.getCheck('manager.price-adjustment-discount-limit');
+        expect(registry.defaultConsequence(provider!, MANAGER_STAGES.adjustPrice)).toBe('block');
+        expect(await run('increases-discount', 95).findings).toEqual([]);
+        expect(await run('reduces-discount', 50).findings).toEqual([]);
+    });
+});

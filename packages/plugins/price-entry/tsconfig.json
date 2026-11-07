@@ -13,6 +13,7 @@
         { "path": "../counterparty" },
         { "path": "../customer-pricing" },
         { "path": "../erp-order" },
+        { "path": "../reservation" },
         { "path": "../../shared" }
     ]
 }

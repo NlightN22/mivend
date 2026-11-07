@@ -52,6 +52,11 @@ describe('PriceAdjustmentService', () => {
                         new Set(ids.filter(id => visibleOrders.includes(id))),
                 ),
             } as never,
+            {
+                forOrderId: vi.fn(async () => [
+                    { lineId: 'line-1', reference: 100, effective: 80, percent: 20 },
+                ]),
+            } as never,
         );
         visibleOrders = ['order-1'];
     });
@@ -114,7 +119,12 @@ describe('PriceAdjustmentService', () => {
                 {
                     roleCodes: ['r'],
                     branchId: 'b1',
-                    params: { variantId: 'variant-1', requestedPrice: 1 },
+                    params: {
+                        variantId: 'variant-1',
+                        requestedPrice: 1,
+                        referencePrice: 100,
+                        direction: 'increases-discount',
+                    },
                 },
                 'adjust-price',
             );

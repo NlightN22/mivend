@@ -65,6 +65,11 @@ export const CustomPermission = {
         description:
             'Read and change the consequence policy of each check (docs/checks-and-policies.md)',
     }),
+    ManageDiscountLimits: new PermissionDefinition({
+        name: 'ManageDiscountLimits',
+        description:
+            'Set the maximum order line discount per staff role and product group (layer 5)',
+    }),
     ManageSharedTableViews: new PermissionDefinition({
         name: 'ManageSharedTableViews',
         description:

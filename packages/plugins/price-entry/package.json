@@ -32,6 +32,7 @@
         "@mivend/plugin-erp-order": "workspace:*",
         "@mivend/plugin-customer-pricing": "workspace:*",
         "@mivend/plugin-numbering": "workspace:*",
+        "@mivend/plugin-reservation": "workspace:*",
         "shared": "workspace:*"
     }
 }

@@ -30,6 +30,8 @@ const INVENTORY: Record<string, string> = {
     'counterparty/src/trading-point.schema.ts::priceType':
         'storefront: the customer own counterparty type',
     'erp-order/src/erp-order.plugin.ts::pendingPriceAdjustmentOrderIds': 'order ids only',
+    'price-entry/src/discount-limit.schema.ts::targetUnitPrice':
+        'AdjustPriceWithinLimit: staff input of reduceOrderLineDiscount, not a read',
     'price-entry/src/price-entry.schema.ts::bulkUpsertPriceEntries':
         'PriceEntryAdminResolver: every code asserted',
     'price-entry/src/price-entry.schema.ts::compareAtPrice': 'storefront: own price type',

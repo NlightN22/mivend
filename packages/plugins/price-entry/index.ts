@@ -36,3 +36,5 @@ export { DiscountGrantService } from './src/discount-grant.service';
 export type { DiscountGrantInput } from './src/discount-grant.types';
 export { DiscountGrant } from './src/discount-grant.entity';
 export type { DiscountGrantScopeType } from './src/discount-grant.entity';
+export { DiscountLimit } from './src/discount-limit.entity';
+export { DiscountLimitService } from './src/discount-limit.service';

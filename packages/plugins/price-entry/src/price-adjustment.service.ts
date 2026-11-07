@@ -20,7 +20,8 @@ import { ChecksService, MANAGER_STAGES, MANAGER_SUBJECT_TYPE } from '@mivend/plu
 import type { ManagerActionSubject } from '@mivend/plugin-checks';
 import { OrderVisibilityService } from '@mivend/plugin-erp-order';
 
-import type { PriceAdjustmentParams } from './price-adjustment-floor.check';
+import type { PriceAdjustmentParams, PriceDirection } from './price-adjustment-floor.check';
+import { LineDiscountService } from './line-discount.service';
 import { PriceAdjustmentDecision, loggerCtx } from './types';
 
 export const PRICE_ADJUSTMENT_REQUEST_TYPE = 'priceAdjustmentApproval';
@@ -49,6 +50,7 @@ export class PriceAdjustmentService {
         private checks: ChecksService,
         private approvalRequestService: ApprovalRequestService,
         private orderVisibility: OrderVisibilityService,
+        private lineDiscounts: LineDiscountService,
     ) {}
 
     async requestAdjustment(
@@ -68,9 +70,24 @@ export class PriceAdjustmentService {
         });
 
         const actor = await this.accessScope.getActorIdentity(ctx);
+        const discount = (await this.lineDiscounts.forOrderId(ctx, orderId)).find(
+            d => d.lineId === String(orderLineId),
+        );
+        const direction: PriceDirection = !discount
+            ? 'unchanged'
+            : requestedPrice < discount.effective
+              ? 'increases-discount'
+              : requestedPrice > discount.effective
+                ? 'reduces-discount'
+                : 'unchanged';
         const subject: ManagerActionSubject<PriceAdjustmentParams> = {
             ...actor,
-            params: { variantId: String(orderLine.productVariant.id), requestedPrice },
+            params: {
+                variantId: String(orderLine.productVariant.id),
+                requestedPrice,
+                referencePrice: discount?.reference ?? null,
+                direction,
+            },
         };
         const { strongestConsequence } = await this.checks.evaluate(
             ctx,
